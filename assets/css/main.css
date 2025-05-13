@@ -1,0 +1,33 @@
+/* filepath: d:\Nuxt Projects\cloudless.gr\assets\css\main.css */
+
+/* Removed imports; global/custom styles only */
+
+/* Global custom styles */
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: inter, sans-serif;
+
+    /* Consider setting a base font size here */
+
+    /* font-size: 16px; */
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    line-height: 1.5; /* Example line height */
+    color: #333; /* Example default text color */
+    background-color: #fff; /* Example default background color */
+  }
+
+  /* Add a basic focus style for accessibility */
+  :focus-visible {
+    outline: 2px solid blue; /* Customize as needed */
+    outline-offset: 2px;
+  }
+}
