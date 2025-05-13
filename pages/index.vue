@@ -6,12 +6,7 @@
 </template>
 
 <script setup lang="ts">
-import Footer from '@/components/Layout/Footer.vue';
-import { useHead, useSeoMeta } from 'nuxt/app';
-
-defineOptions({
-  name: 'IndexPage'
-});
+import { useHead, useSeoMeta } from '#app';
 
 useHead({ title: 'Cloudless | Full Stack Web Developer' });
 
@@ -29,12 +24,14 @@ useSeoMeta({
   min-height: 100vh;
   box-sizing: border-box;
 }
+
 @media (max-width: 900px) {
   .index-page {
     padding: 1.5rem 0.5rem;
     gap: 1.5rem;
   }
 }
+
 @media (max-width: 600px) {
   .index-page {
     padding: 1rem 0.25rem;

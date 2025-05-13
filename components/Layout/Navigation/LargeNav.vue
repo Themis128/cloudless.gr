@@ -14,6 +14,7 @@ const navItems = [
   { text: 'Projects', link: '/projects' },
   { text: 'About', link: '/about' },
   { text: 'Contact', link: '/contact' },
+  { text: 'Codegen', link: '/codegen' },
 ];
 </script>
 

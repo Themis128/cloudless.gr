@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "shell",
+      "label": "Delete model.vue layout",
+      "command": "Remove-Item -Path \"layouts/model.vue\"",
+      "args": [],
+      "group": "build",
+      "isBackground": false,
+      "problemMatcher": []
+    }
+  ]
+}

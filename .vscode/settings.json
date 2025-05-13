@@ -6,5 +6,6 @@
     "source.fixAll.eslint": "explicit"
   },
   "cSpell.words": ["Ewell", "Supabase", "Vuetify"],
-  "vuePreview.autoOpen": true
+  "vuePreview.autoOpen": true,
+  "vue-preview.transparentGrid": true
 }
