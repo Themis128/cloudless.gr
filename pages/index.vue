@@ -1,36 +1,44 @@
 <template>
-  <div class="flex flex-col justify-center">
+  <div class="index-page">
     <LayoutHero />
-    <LayoutPortfolio />
-    <LayoutAbout />
-    <LayoutServices />
-    <LayoutContact />
+    <Footer />
   </div>
 </template>
 
 <script setup lang="ts">
+import Footer from '@/components/Layout/Footer.vue';
+import { useHead, useSeoMeta } from 'nuxt/app';
+
 defineOptions({
   name: 'IndexPage'
 });
-import { useHead, useSeoMeta } from 'nuxt/app';
 
-useHead({ title: 'Full Stack Web Developer' });
+useHead({ title: 'Cloudless | Full Stack Web Developer' });
 
 useSeoMeta({
-  description: 'A showcase of projects by Austin Ewell at AuEwellify, a full-stack developer specializing in front-end excellence.',
-  ogTitle: 'Austin Ewell - AuEwellify',
-  ogDescription: 'Explore development by Austin Ewell at AuEwellify, a full-stack developer specializing in front-end excellence.',
-  ogImage: 'https://i.postimg.cc/gkXvpDLb/portfolio-hero-dark.png',
-  ogUrl: 'https://auewellify.dev/',
-  twitterTitle: 'Austin Ewell - AuEwellify',
-  twitterDescription: 'A showcase of projects by Austin Ewell at AuEwellify, a full-stack developer specializing in front-end excellence.',
-  twitterImage: 'https://i.postimg.cc/gkXvpDLb/portfolio-hero-dark.png'
+  description: 'A showcase of projects and services at Cloudless, a full-stack developer studio.'
 });
 </script>
 
 <style scoped>
-/* Add styles specific to this page */
-h1 {
-  color: #1E40AF; /* Tailwind primary color */
+.index-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem 0;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+@media (max-width: 900px) {
+  .index-page {
+    padding: 1.5rem 0.5rem;
+    gap: 1.5rem;
+  }
+}
+@media (max-width: 600px) {
+  .index-page {
+    padding: 1rem 0.25rem;
+    gap: 1rem;
+  }
 }
 </style>

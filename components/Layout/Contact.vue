@@ -45,6 +45,10 @@
             required
           ></textarea>
           <span v-if="errors.message" class="error-message">{{ errors.message }}</span>
+          <div v-if="suggestionLoading" class="copilot-suggestion">Loading suggestion...</div>
+          <div v-else-if="suggestion" class="copilot-suggestion" @click="acceptSuggestion">
+            💡 {{ suggestion }} <span style="cursor:pointer;color:#007bff;">(Click to accept)</span>
+          </div>
         </div>
 
         <button 
@@ -64,7 +68,7 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { reactive, ref, watch } from 'vue';
 
 const form = reactive({
   name: '',
@@ -80,6 +84,8 @@ const errors = reactive({
 
 const isSubmitting = ref(false);
 const submitStatus = ref(null);
+const suggestion = ref('');
+const suggestionLoading = ref(false);
 
 const validateForm = () => {
   let isValid = true;
@@ -137,11 +143,56 @@ const handleSubmit = async () => {
     isSubmitting.value = false;
   }
 };
+
+watch(() => form.message, async (newMessage) => {
+  if (!newMessage || newMessage.length < 5) {
+    suggestion.value = '';
+    return;
+  }
+  suggestionLoading.value = true;
+  try {
+    const res = await fetch('/api/llm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: `Continue this message: ${newMessage}` }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      suggestion.value = data.response || data.result || '';
+    } else {
+      suggestion.value = '';
+    }
+  } catch {
+    suggestion.value = '';
+  } finally {
+    suggestionLoading.value = false;
+  }
+});
+
+function acceptSuggestion() {
+  if (suggestion.value) {
+    form.message += suggestion.value;
+    suggestion.value = '';
+  }
+}
 </script>
 
 <style scoped>
 .contact {
   padding: 2rem;
   text-align: center;
+}
+.copilot-suggestion {
+  margin-top: 0.5rem;
+  background: #f6f8fa;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: #222;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.copilot-suggestion:hover {
+  background: #e0e7ef;
 }
 </style>

@@ -7,6 +7,7 @@ export default defineNuxtConfig({
     "nuxt-windicss",
     "@nuxt/content",
     "@pinia/nuxt",
+    "nuxt-llms",
   ],
 
   experimental: {
@@ -53,5 +54,9 @@ export default defineNuxtConfig({
     prerender: {
       routes: ["/", "/about", "/contact"],
     },
+  },
+
+  llms: {
+    domain: "http://localhost:3000", // Set your local or production domain here
   },
 });

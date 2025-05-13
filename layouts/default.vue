@@ -1,8 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 text-gray-900">
-    <header class="py-6 shadow bg-white">
+  <div class="layout-root">
+    <header class="main-header header-transparent">
       <div class="container mx-auto flex items-center justify-between">
-        <span class="font-bold text-xl tracking-tight text-indigo-700">Cloudless</span>
+        <NuxtLink to="/" class="font-bold text-xl tracking-tight text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded px-2 py-1 hover:bg-indigo-50 transition">
+          Cloudless
+        </NuxtLink>
         <slot name="header" />
       </div>
     </header>
@@ -18,9 +20,24 @@
 
 <script setup>
 const year = new Date().getFullYear();
-// Layout-level logic if needed
 </script>
 
 <style>
-/* You can add global layout styles here if needed */
+.layout-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.main-header.header-transparent {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  width: 100%;
+  background: transparent;
+  box-shadow: none;
+  color: transparent;
+}
+footer {
+  flex-shrink: 0;
+}
 </style>

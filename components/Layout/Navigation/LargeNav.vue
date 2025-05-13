@@ -21,7 +21,7 @@ const navItems = [
 .large-nav {
   display: flex;
   justify-content: space-around;
-  background-color: #333;
+  background-color: transparent;
   padding: 1rem;
 }
 
@@ -32,12 +32,13 @@ const navItems = [
 }
 
 .large-nav a {
-  color: white;
+  color: #2563eb;
   text-decoration: none;
   font-size: 1.2rem;
 }
 
 .large-nav a:hover {
   text-decoration: underline;
+  color: #1e40af;
 }
 </style>

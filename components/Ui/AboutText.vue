@@ -1,6 +1,6 @@
 <template>
   <div class="about-text">
-    <p>{{ text }}</p>
+    <p>{{ props.text }}</p>
   </div>
 </template>
 

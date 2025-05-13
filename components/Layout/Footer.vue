@@ -1,6 +1,6 @@
 <template>
   <footer class="footer">
-    <p>&copy; 2025 Your Company. All rights reserved.</p>
+    <p>&copy; 2025 Your Cloudless. All rights reserved.</p>
   </footer>
 </template>
 
@@ -14,5 +14,10 @@
   color: white;
   text-align: center;
   padding: 1rem;
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100vw;
+  z-index: 100;
 }
 </style>

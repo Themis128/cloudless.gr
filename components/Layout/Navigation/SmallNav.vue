@@ -27,14 +27,14 @@ const navItems = [
 
 <style scoped>
 .small-nav {
-  background-color: #333;
+  background-color: transparent;
   padding: 1rem;
 }
 
 .small-nav button {
   background: none;
   border: none;
-  color: white;
+  color: #2563eb;
   font-size: 1.5rem;
   cursor: pointer;
 }
@@ -43,7 +43,7 @@ const navItems = [
   list-style: none;
   padding: 0;
   margin: 0;
-  background-color: #444;
+  background-color: transparent;
 }
 
 .small-nav li {
@@ -51,11 +51,12 @@ const navItems = [
 }
 
 .small-nav a {
-  color: white;
+  color: #2563eb;
   text-decoration: none;
 }
 
 .small-nav a:hover {
   text-decoration: underline;
+  color: #1e40af;
 }
 </style>
