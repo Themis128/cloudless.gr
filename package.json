@@ -27,6 +27,7 @@
     "nuxt-llms": "^0.1.2",
     "nuxt-windicss": "^3.0.1",
     "pinia": "^3.0.2",
+    "three": "^0.176.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.1"
   },
@@ -34,6 +35,7 @@
     "@eslint/js": "^9.26.0",
     "@pinia/nuxt": "^0.11.0",
     "@tailwindcss/postcss": "^4.1.6",
+    "@types/three": "^0.176.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.26.0",
     "eslint-plugin-vue": "^10.1.0",

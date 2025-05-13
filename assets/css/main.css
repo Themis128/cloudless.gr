@@ -11,6 +11,7 @@
 
   html {
     font-family: inter, sans-serif;
+    text-size-adjust: 100%; /* For modern browsers: Chrome 54+, Edge 79+, Firefox, Safari, Android */
 
     /* Consider setting a base font size here */
 
@@ -30,4 +31,17 @@
     outline: 2px solid blue; /* Customize as needed */
     outline-offset: 2px;
   }
+}
+
+/* Touch-action support for all interactive elements */
+a,
+area,
+button,
+input,
+label,
+select,
+summary,
+textarea,
+[tabindex] { /* IE/Edge legacy */
+  touch-action: manipulation;     /* Modern browsers: Firefox 52+, Safari 13+, Chrome, Edge */
 }
