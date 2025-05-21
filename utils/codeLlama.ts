@@ -15,13 +15,11 @@ export async function generateLLMResponse(
 ): Promise<string> {
   // Use endpoint argument, then env, then fallback
   const apiEndpoint =
-    endpoint ||
-    (typeof process !== "undefined" && process.env.LLM_API_URL) ||
-    "/api/generate";
+    endpoint || (typeof process !== 'undefined' && process.env.LLM_API_URL) || '/api/generate';
   const response = await fetch(apiEndpoint, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({ prompt }),
   });
@@ -44,8 +42,8 @@ export async function generateLLMResponse(
   if (response.body && onData) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let result = "";
-    let buffer = "";
+    let result = '';
+    let buffer = '';
     try {
       while (true) {
         const { done, value } = await reader.read();
@@ -54,12 +52,12 @@ export async function generateLLMResponse(
         buffer += chunk;
         // Extract complete JSON objects from buffer
         let boundary;
-        while ((boundary = buffer.indexOf("}\n{")) !== -1) {
+        while ((boundary = buffer.indexOf('}\n{')) !== -1) {
           const jsonStr = buffer.slice(0, boundary + 1);
           buffer = buffer.slice(boundary + 2); // skip the newline
           try {
             const obj = JSON.parse(jsonStr);
-            if (typeof obj.response === "string") {
+            if (typeof obj.response === 'string') {
               result += obj.response;
               onData(obj.response);
             }
@@ -70,13 +68,13 @@ export async function generateLLMResponse(
         // Try to parse last complete JSON object
         try {
           const trimmed = buffer.trim();
-          if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+          if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
             const obj = JSON.parse(trimmed);
-            if (typeof obj.response === "string") {
+            if (typeof obj.response === 'string') {
               result += obj.response;
               onData(obj.response);
             }
-            buffer = "";
+            buffer = '';
           }
         } catch {
           // Incomplete or malformed, wait for more data
@@ -85,7 +83,7 @@ export async function generateLLMResponse(
     } catch (streamErr) {
       // Streaming error, propagate
       throw new Error(
-        "Error while streaming LLM response: " +
+        'Error while streaming LLM response: ' +
           (streamErr instanceof Error ? streamErr.message : streamErr)
       );
     }
@@ -96,13 +94,13 @@ export async function generateLLMResponse(
     try {
       data = await response.json();
     } catch (e) {
-      throw new Error("Failed to parse LLM response as JSON.");
+      throw new Error('Failed to parse LLM response as JSON.');
     }
     return (
-      (typeof data.response === "string" && data.response) ||
-      (typeof data.generated_text === "string" && data.generated_text) ||
-      (typeof data.result === "string" && data.result) ||
-      "" // Never return JSON.stringify(data)
+      (typeof data.response === 'string' && data.response) ||
+      (typeof data.generated_text === 'string' && data.generated_text) ||
+      (typeof data.result === 'string' && data.result) ||
+      '' // Never return JSON.stringify(data)
     );
   }
 }

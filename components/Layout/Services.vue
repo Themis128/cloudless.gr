@@ -14,4 +14,12 @@
   padding: 2rem;
   text-align: center;
 }
+
+.services-container {
+  background: transparent !important;
+  color: #1e293b;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  font-family: inherit;
+}
 </style>

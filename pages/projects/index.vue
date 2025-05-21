@@ -1,16 +1,22 @@
 <template>
   <div>
-    <h1>Projects</h1>
-    <p>Welcome to the projects page. Here you can find all the projects listed.</p>
+    <!-- Content for /projects page -->
+    <h1>Projects Overview</h1>
+    <p>This is the main projects listing page.</p>
+    <!-- You might want to add a component here to list projects, e.g., <ProjectsList /> -->
   </div>
 </template>
 
-<script setup>
-// Add any necessary logic here
+<script setup lang="ts">
+// No additional logic needed for this page structure
+</script>
+
+<script lang="ts">
+export default {
+  layout: 'default',
+};
 </script>
 
 <style scoped>
-h1 {
-  color: #1E40AF; /* Tailwind primary color */
-}
+/* No extra styles needed */
 </style>

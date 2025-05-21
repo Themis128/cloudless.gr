@@ -28,16 +28,19 @@ import { defineEmits, defineProps, ref, watch } from 'vue';
 const props = defineProps({
   show: Boolean,
   code: String,
-  files: Array
+  files: Array,
 });
 const emit = defineEmits(['close', 'insert', 'undo']);
 const selectedFile = ref(props.files[0] || '');
 const position = ref('bottom');
 const inserted = ref(false);
 
-watch(() => props.files, (newFiles) => {
-  if (newFiles.length) selectedFile.value = newFiles[0];
-});
+watch(
+  () => props.files,
+  (newFiles) => {
+    if (newFiles.length) selectedFile.value = newFiles[0];
+  }
+);
 
 function insertCode() {
   emit('insert', { file: selectedFile.value, position: position.value });
@@ -52,8 +55,11 @@ function undoInsert() {
 <style scoped>
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.3);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -64,7 +70,7 @@ function undoInsert() {
   border-radius: 1rem;
   padding: 2rem;
   min-width: 320px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
 }
 .modal-actions {
   margin-top: 1.5rem;

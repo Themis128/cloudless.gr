@@ -13,8 +13,14 @@ const slug = route.params.slug;
 const pageTitle = `Project: ${slug}`;
 </script>
 
+<script>
+export default {
+  layout: 'default',
+};
+</script>
+
 <style scoped>
 h1 {
-  color: #1E40AF; /* Tailwind primary color */
+  color: #1e40af; /* Tailwind primary color */
 }
 </style>

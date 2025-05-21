@@ -1,21 +1,13 @@
 <template>
-  <div class="about-text">
-    <p>{{ props.text }}</p>
+  <div class="text-base text-gray-700 leading-relaxed text-center max-w-2xl mx-auto">
+    <p>
+      Cloudless is a modern technology company specializing in cloud computing, data analytics, and
+      full-stack web development. We help businesses scale efficiently, gain actionable insights,
+      and launch high-performance web platforms with secure, scalable hosting.
+    </p>
   </div>
 </template>
 
 <script setup>
-const props = defineProps({
-  text: {
-    type: String,
-    default: 'This is a reusable component for displaying about text.'
-  }
-});
+// No props needed now – static content only
 </script>
-
-<style scoped>
-.about-text {
-  font-size: 1rem;
-  color: #333;
-}
-</style>

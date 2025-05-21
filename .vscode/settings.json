@@ -7,5 +7,5 @@
   },
   "cSpell.words": ["Ewell", "Supabase", "Vuetify"],
   "vuePreview.autoOpen": true,
-  "vue-preview.transparentGrid": true
+  "vue-preview.transparentGrid": false
 }

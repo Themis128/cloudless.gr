@@ -48,9 +48,9 @@ LLM_MODEL=phind-codellama:34b
 ## Example
 
 ```ts
-import { generateLLMResponse } from "@/utils/codeLlama";
+import { generateLLMResponse } from '@/utils/codeLlama';
 
-const response = await generateLLMResponse("Your prompt here");
+const response = await generateLLMResponse('Your prompt here');
 ```
 
 ---

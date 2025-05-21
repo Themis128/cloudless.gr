@@ -3,7 +3,13 @@
 </template>
 
 <script setup>
-import Contact from '@/components/Layout/Contact.vue';
+import Contact from '~/components/Layout/Contact.vue';
+</script>
+
+<script>
+export default {
+  layout: 'default',
+};
 </script>
 
 <style scoped>

@@ -1,245 +1,173 @@
 <template>
-  <div class="contact-page">
-    <div class="contact-card">
-      <h1>Contact Us</h1>
-      <p class="mb-6">Get in touch with us using the form below.</p>
+  <div class="contact-container">
+    <div class="contact-content">
+      <h1 class="contact-title">Contact Us</h1>
+      <p class="contact-subtitle">Have a question or want to work with us? Get in touch!</p>
 
-      <form @submit.prevent="handleSubmit" class="space-y-4">
+      <form class="contact-form">
         <div class="form-group">
-          <label for="name">Name</label>
-          <input id="name" v-model="form.name" type="text" class="form-input" :class="{ 'error': errors.name }"
-            placeholder="Your name" required />
-          <span v-if="errors.name" class="error-message">{{ errors.name }}</span>
+          <label for="name">Full Name</label>
+          <input type="text" id="name" placeholder="Enter your full name" class="form-input" />
         </div>
 
         <div class="form-group">
-          <label for="email">Email</label>
-          <input id="email" v-model="form.email" type="email" class="form-input" :class="{ 'error': errors.email }"
-            placeholder="your@email.com" required />
-          <span v-if="errors.email" class="error-message">{{ errors.email }}</span>
+          <label for="email">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            placeholder="Enter your email address"
+            class="form-input"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="subject">Subject</label>
+          <input type="text" id="subject" placeholder="What's this about?" class="form-input" />
         </div>
 
         <div class="form-group">
           <label for="message">Message</label>
-          <textarea id="message" v-model="form.message" class="form-input" :class="{ 'error': errors.message }" rows="4"
-            placeholder="Your message" required></textarea>
-          <span v-if="errors.message" class="error-message">{{ errors.message }}</span>
-          <div v-if="suggestionLoading" class="copilot-suggestion">Loading suggestion...</div>
-          <div v-else-if="suggestion" class="copilot-suggestion">
-            💡 LLM has a suggestion for your message.
-            <button type="button" class="diff-merge-btn" @click="showDiffModal = true">Diff & Merge</button>
-          </div>
+          <textarea
+            id="message"
+            rows="5"
+            placeholder="Tell us what you need"
+            class="form-textarea"
+          ></textarea>
         </div>
 
-        <button type="submit" class="submit-button" :disabled="isSubmitting">
-          {{ isSubmitting ? 'Sending...' : 'Send Message' }}
-        </button>
+        <button type="submit" class="submit-button">Send Message</button>
       </form>
 
-      <div v-if="submitStatus" :class="['submit-status', submitStatus.type]">
-        {{ submitStatus.message }}
-      </div>
-    </div>
-  </div>
-
-  <!-- Add a stub for the diff/merge modal -->
-  <div v-if="showDiffModal" class="modal-overlay">
-    <div class="modal-content">
-      <h3>Diff & Merge</h3>
-      <p>Current message:</p>
-      <pre class="diff-block">{{ form.message }}</pre>
-      <p>LLM suggestion:</p>
-      <pre class="diff-block">{{ suggestion }}</pre>
-      <div class="modal-actions">
-        <button @click="mergeSuggestion">Merge</button>
-        <button @click="showDiffModal = false">Cancel</button>
+      <div class="contact-info">
+        <div class="info-item"><strong>Email:</strong> contact@cloudless.gr</div>
+        <div class="info-item"><strong>Location:</strong> Athens, Greece</div>
+        <div class="info-item"><strong>Working Hours:</strong> 9:00 AM - 6:00 PM EET</div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue';
-
-const form = reactive({
-  name: '',
-  email: '',
-  message: ''
-});
-
-const errors = reactive({
-  name: '',
-  email: '',
-  message: ''
-});
-
-const isSubmitting = ref(false);
-const submitStatus = ref(null);
-const suggestion = ref('');
-const suggestionLoading = ref(false);
-const showDiffModal = ref(false);
-
-const validateForm = () => {
-  let isValid = true;
-  errors.name = '';
-  errors.email = '';
-  errors.message = '';
-
-  if (!form.name.trim()) {
-    errors.name = 'Name is required';
-    isValid = false;
-  }
-
-  if (!form.email.trim()) {
-    errors.email = 'Email is required';
-    isValid = false;
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    errors.email = 'Please enter a valid email';
-    isValid = false;
-  }
-
-  if (!form.message.trim()) {
-    errors.message = 'Message is required';
-    isValid = false;
-  }
-
-  return isValid;
+// Contact form logic can be added here
+const handleSubmit = () => {
+  // Form submission logic
+  console.log('Form submitted');
 };
-
-const handleSubmit = async () => {
-  if (!validateForm()) return;
-
-  isSubmitting.value = true;
-  submitStatus.value = null;
-
-  try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    submitStatus.value = {
-      type: 'success',
-      message: 'Thank you! Your message has been sent successfully.'
-    };
-
-    // Reset form
-    form.name = '';
-    form.email = '';
-    form.message = '';
-
-  } catch (error) {
-    submitStatus.value = {
-      type: 'error',
-      message: 'Sorry, there was an error sending your message. Please try again.'
-    };
-  } finally {
-    isSubmitting.value = false;
-  }
-};
-
-watch(() => form.message, async (newMessage) => {
-  if (!newMessage || newMessage.length < 5) {
-    suggestion.value = '';
-    return;
-  }
-  suggestionLoading.value = true;
-  try {
-    const res = await fetch('/api/llm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: `Continue this message: ${newMessage}` }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      suggestion.value = data.response || data.result || '';
-    } else {
-      suggestion.value = '';
-    }
-  } catch {
-    suggestion.value = '';
-  } finally {
-    suggestionLoading.value = false;
-  }
-});
-
-function mergeSuggestion() {
-  form.message += suggestion.value;
-  suggestion.value = '';
-  showDiffModal.value = false;
-}
 </script>
 
 <style scoped>
-.contact {
-  padding: 2rem;
+.contact-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 1rem;
+  min-height: 80vh;
+}
+
+.contact-content {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 2.5rem;
+  max-width: 650px;
+  width: 100%;
+}
+
+.contact-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 0.5rem;
   text-align: center;
 }
 
-.copilot-suggestion {
-  margin-top: 0.5rem;
-  background: #f6f8fa;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  color: #222;
-  cursor: pointer;
-  transition: background 0.2s;
+.contact-subtitle {
+  font-size: 1.1rem;
+  color: #64748b;
+  margin-bottom: 2rem;
+  text-align: center;
 }
 
-.copilot-suggestion:hover {
-  background: #e0e7ef;
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
-.diff-merge-btn {
-  margin-left: 0.5rem;
-  background: #2563eb;
-  color: #fff;
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.form-input,
+.form-textarea {
+  padding: 0.75rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.submit-button {
+  background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
+  color: white;
   border: none;
-  border-radius: 0.3rem;
-  padding: 0.2rem 0.7rem;
-  font-size: 0.95rem;
+  border-radius: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  margin-top: 1rem;
+  text-align: center;
 }
 
-.diff-merge-btn:hover {
-  background: #1e40af;
+.submit-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
+.contact-info {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.modal-content {
-  background: #fff;
-  border-radius: 1rem;
-  padding: 2rem;
-  min-width: 320px;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
+.info-item {
+  font-size: 1rem;
+  color: #475569;
 }
 
-.diff-block {
-  background: #f6f8fa;
-  border-radius: 0.4rem;
-  padding: 0.5rem 1rem;
-  font-family: 'Fira Mono', 'Consolas', monospace;
-  font-size: 0.98rem;
-  margin-bottom: 1rem;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
+@media (max-width: 640px) {
+  .contact-content {
+    padding: 1.5rem;
+  }
 
-.modal-actions {
-  margin-top: 1.5rem;
-  display: flex;
-  gap: 1rem;
+  .contact-title {
+    font-size: 1.75rem;
+  }
 }
 </style>

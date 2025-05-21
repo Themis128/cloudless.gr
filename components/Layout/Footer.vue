@@ -1,23 +1,19 @@
 <template>
-  <footer class="footer">
-    <p>&copy; 2025 Your Cloudless. All rights reserved.</p>
+  <footer
+    class="w-full text-center py-4 text-gray-800 font-medium text-base bg-transparent mt-auto"
+  >
+    <p>&copy; 2025 Cloudless. All rights reserved.</p>
   </footer>
 </template>
 
 <script setup>
-// Add any necessary logic here
+// No logic needed here yet
 </script>
 
 <style scoped>
-.footer {
-  background-color: #333;
-  color: white;
-  text-align: center;
-  padding: 1rem;
-  position: fixed;
-  left: 0;
+footer {
+  position: relative;
   bottom: 0;
-  width: 100vw;
-  z-index: 100;
+  width: 100%;
 }
 </style>

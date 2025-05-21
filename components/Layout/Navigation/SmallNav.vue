@@ -1,21 +1,38 @@
 <template>
-  <nav class="small-nav">
-    <button @click="toggleMenu">☰</button>
-    <ul v-if="isMenuOpen">
-      <li v-for="item in navItems" :key="item.text">
-        <a :href="item.link">{{ item.text }}</a>
-      </li>
-    </ul>
+  <nav class="relative z-20">
+    <button
+      @click="toggleMenu"
+      class="text-blue-600 text-2xl focus:outline-none"
+      aria-label="Toggle navigation"
+    >
+      ☰
+    </button>
+
+    <transition name="fade">
+      <ul
+        v-if="isMenuOpen"
+        class="absolute right-0 mt-2 w-48 bg-white text-blue-700 shadow-lg rounded-lg py-2 space-y-2"
+      >
+        <li v-for="item in navItems" :key="item.text">
+          <NuxtLink
+            :to="item.link"
+            class="block px-4 py-2 hover:bg-blue-50 hover:text-blue-900"
+            @click="closeMenu"
+          >
+            {{ item.text }}
+          </NuxtLink>
+        </li>
+      </ul>
+    </transition>
   </nav>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue';
 
 const isMenuOpen = ref(false);
-const toggleMenu = () => {
-  isMenuOpen.value = !isMenuOpen.value;
-};
+const toggleMenu = () => (isMenuOpen.value = !isMenuOpen.value);
+const closeMenu = () => (isMenuOpen.value = false);
 
 const navItems = [
   { text: 'Home', link: '/' },
@@ -27,37 +44,12 @@ const navItems = [
 </script>
 
 <style scoped>
-.small-nav {
-  background-color: transparent;
-  padding: 1rem;
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
 }
-
-.small-nav button {
-  background: none;
-  border: none;
-  color: #2563eb;
-  font-size: 1.5rem;
-  cursor: pointer;
-}
-
-.small-nav ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  background-color: transparent;
-}
-
-.small-nav li {
-  padding: 0.5rem 1rem;
-}
-
-.small-nav a {
-  color: #2563eb;
-  text-decoration: none;
-}
-
-.small-nav a:hover {
-  text-decoration: underline;
-  color: #1e40af;
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

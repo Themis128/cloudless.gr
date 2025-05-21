@@ -11,12 +11,12 @@
 const props = defineProps({
   title: {
     type: String,
-    required: true
+    required: true,
   },
   description: {
     type: String,
-    default: ''
-  }
+    default: '',
+  },
 });
 </script>
 
@@ -33,7 +33,7 @@ const props = defineProps({
 .service-card {
   background: var(--color-card, #fff);
   border-radius: 1.25rem;
-  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.07);
+  box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.07);
   padding: 2.5rem 2rem;
   max-width: 400px;
   width: 100%;
@@ -41,8 +41,9 @@ const props = defineProps({
   transition: box-shadow 0.2s;
 }
 
-.service-card:focus-within, .service-card:hover {
-  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.12);
+.service-card:focus-within,
+.service-card:hover {
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12);
 }
 
 h3 {

@@ -1,14 +1,24 @@
 <template>
-  <About />
+  <div>
+    <div class="about-section">
+      <AboutText />
+    </div>
+  </div>
 </template>
 
 <script setup>
-import About from '@/components/Layout/About.vue';
+import AboutText from '~/components/Ui/AboutText.vue';
+</script>
+
+<script>
+export default {
+  layout: 'default',
+};
 </script>
 
 <style scoped>
-.page {
-  min-height: 100vh;
+.about-section {
+  min-height: 70vh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -17,12 +27,12 @@ import About from '@/components/Layout/About.vue';
   box-sizing: border-box;
 }
 @media (max-width: 900px) {
-  .page {
+  .about-section {
     padding: 1.5rem 0.5rem;
   }
 }
 @media (max-width: 600px) {
-  .page {
+  .about-section {
     padding: 1rem 0.25rem;
   }
 }

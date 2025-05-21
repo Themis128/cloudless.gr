@@ -1,11 +1,14 @@
 /* filepath: d:\Nuxt Projects\cloudless.gr\assets\css\main.css */
 
-/* Removed imports; global/custom styles only */
+/* Tailwind CSS imports */
+@import "tailwindcss";
 
 /* Global custom styles */
 
 @layer base {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     box-sizing: border-box;
   }
 
@@ -42,6 +45,7 @@ label,
 select,
 summary,
 textarea,
-[tabindex] { /* IE/Edge legacy */
-  touch-action: manipulation;     /* Modern browsers: Firefox 52+, Safari 13+, Chrome, Edge */
+[tabindex] {
+  /* IE/Edge legacy */
+  touch-action: manipulation; /* Modern browsers: Firefox 52+, Safari 13+, Chrome, Edge */
 }

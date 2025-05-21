@@ -13,8 +13,8 @@
 const props = defineProps({
   techStack: {
     type: Array,
-    default: () => []
-  }
+    default: () => [],
+  },
 });
 </script>
 
@@ -31,7 +31,7 @@ const props = defineProps({
 .tech-stack-card {
   background: var(--color-card, #fff);
   border-radius: 1.25rem;
-  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.07);
+  box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.07);
   padding: 2.5rem 2rem;
   max-width: 400px;
   width: 100%;
@@ -39,8 +39,9 @@ const props = defineProps({
   transition: box-shadow 0.2s;
 }
 
-.tech-stack-card:focus-within, .tech-stack-card:hover {
-  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.12);
+.tech-stack-card:focus-within,
+.tech-stack-card:hover {
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12);
 }
 
 h3 {

@@ -9,12 +9,12 @@
 const props = defineProps({
   toolName: {
     type: String,
-    required: true
+    required: true,
   },
   description: {
     type: String,
-    default: ''
-  }
+    default: '',
+  },
 });
 </script>
 

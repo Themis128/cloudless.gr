@@ -8,8 +8,8 @@
 const props = defineProps({
   pitch: {
     type: String,
-    default: 'Quickly explain your value proposition here.'
-  }
+    default: 'Quickly explain your value proposition here.',
+  },
 });
 </script>
 

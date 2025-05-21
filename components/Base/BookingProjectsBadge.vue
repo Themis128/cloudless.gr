@@ -1,12 +1,10 @@
 <template>
-  <span class="booking-projects-badge">
-    {{ count }} Projects Booked
-  </span>
+  <span class="booking-projects-badge"> {{ count }} Projects Booked </span>
 </template>
 
 <script setup>
 const props = defineProps({
-  count: { type: Number, default: 0 }
+  count: { type: Number, default: 0 },
 });
 </script>
 

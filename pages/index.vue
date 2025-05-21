@@ -1,41 +1,51 @@
 <template>
-  <div class="index-page">
-    <LayoutHero />
-    <Footer />
+  <div class="relative min-h-screen flex flex-col justify-between overflow-hidden">
+    <!-- Background image covering the full page with shadow effect -->
+    <img
+      src="/images/cloud1.png"
+      alt="Cloud background"
+      class="fixed inset-0 w-screen h-screen object-cover object-center z-0 select-none pointer-events-none shadow-lg"
+      draggable="false"
+    />
+
+    <!-- Header -->
+    <header class="relative z-20 w-full px-4 sm:px-6 lg:px-8 py-12">
+      <h1 class="text-3xl md:text-5xl font-light text-center text-white font-serif italic">
+        Empowering the Future of Cloud and Data
+      </h1>
+      <p class="text-lg md:text-2xl text-center text-gray-300 mt-2 font-light font-serif italic">
+        Revolutionizing Web Development, Big Data, and Serverless Applications with Cutting-Edge
+        Solutions
+      </p>
+    </header>
+
+    <!-- Footer -->
+    <footer class="relative z-20 w-full px-4 sm:px-6 lg:px-8 py-4">
+      &copy; 2025 Cloudless. All rights reserved.
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useHead, useSeoMeta } from '#app';
+// No JS needed for static background version
+</script>
 
-useHead({ title: 'Cloudless | Full Stack Web Developer' });
-
-useSeoMeta({
-  description: 'A showcase of projects and services at Cloudless, a full-stack developer studio.'
-});
+<script lang="ts">
+export default {
+  layout: 'default',
+};
 </script>
 
 <style scoped>
-.index-page {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  padding: 2rem 0;
-  min-height: 100vh;
-  box-sizing: border-box;
-}
-
-@media (max-width: 900px) {
-  .index-page {
-    padding: 1.5rem 0.5rem;
-    gap: 1.5rem;
-  }
-}
-
-@media (max-width: 600px) {
-  .index-page {
-    padding: 1rem 0.25rem;
-    gap: 1rem;
-  }
+/* Ensure the background image covers the full page with shadow effect */
+img {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5);
 }
 </style>

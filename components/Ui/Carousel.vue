@@ -1,8 +1,14 @@
 <template>
   <div class="carousel">
-    <p v-if="!items.length">Carousel component goes here.</p>
-    <ul v-else>
-      <li v-for="(item, idx) in items" :key="idx">{{ item }}</li>
+    <p v-if="!items.length">No certifications found.</p>
+    <ul v-else class="carousel-list">
+      <li v-for="(item, idx) in items" :key="idx" class="carousel-item">
+        <a :href="item.link" target="_blank" rel="noopener" class="carousel-link">
+          <img :src="item.image" :alt="item.title" class="carousel-img" />
+          <div class="carousel-title">{{ item.title }}</div>
+          <div class="carousel-desc">{{ item.description }}</div>
+        </a>
+      </li>
     </ul>
   </div>
 </template>
@@ -13,47 +19,70 @@ import { defineProps } from 'vue';
 defineProps({
   items: {
     type: Array,
-    default: () => []
-  }
+    default: () => [],
+  },
 });
-const reply = ref('')
-
-function sendReply() {
-  // You can emit an event or handle the reply as needed
-  // For now, just log it
-  console.log('User reply:', reply.value)
-  showReply.value = false
-  reply.value = ''
-}
 </script>
 
 <style scoped>
 .carousel {
   width: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-</style>
 
-<style scoped>
-.carousel {
+.carousel-list {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  justify-content: center;
+  align-items: stretch;
   width: 100%;
-  overflow: hidden;
+  overflow-x: auto;
+  padding: 1rem 0;
+  list-style: none;
 }
-.carousel-reply-textarea {
-  width: 100%;
-  margin-top: 1rem;
-  padding: 0.5rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
+
+.carousel-item {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(30, 41, 59, 0.08);
+  padding: 1.5rem 1rem;
+  min-width: 220px;
+  max-width: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: box-shadow 0.2s;
 }
-.carousel-reply-btn {
-  margin-top: 0.5rem;
-  padding: 0.4rem 1.2rem;
-  border-radius: 6px;
-  background: #007bff;
-  color: #fff;
-  border: none;
-  cursor: pointer;
+
+.carousel-item:hover {
+  box-shadow: 0 4px 24px rgba(30, 64, 175, 0.18);
+}
+
+.carousel-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.carousel-img {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  margin-bottom: 1rem;
+}
+
+.carousel-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.carousel-desc {
+  font-size: 0.98rem;
+  color: #334155;
 }
 </style>
