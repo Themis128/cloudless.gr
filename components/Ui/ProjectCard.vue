@@ -2,8 +2,12 @@
   <div class="project-card">
     <h3>{{ project.project_name }}</h3>
     <p>{{ project.overview }}</p>
-    <a v-if="project.github_url" :href="project.github_url" target="_blank" class="project-link">GitHub</a>
-    <a v-if="project.live_url" :href="project.live_url" target="_blank" class="project-link">Live</a>
+    <a v-if="project.github_url" :href="project.github_url" target="_blank" class="project-link"
+      >GitHub</a
+    >
+    <a v-if="project.live_url" :href="project.live_url" target="_blank" class="project-link"
+      >Live</a
+    >
   </div>
 </template>
 

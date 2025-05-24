@@ -5,15 +5,23 @@
       <!-- Simple LLM chat UI using the composable -->
       <div style="margin-top: 2.5rem; max-width: 520px; width: 100%">
         <form @submit.prevent="handleSend" style="display: flex; gap: 0.5rem">
-          <input v-model="prompt" :disabled="loading" placeholder="Ask the LLM anything..." style="
+          <input
+            v-model="prompt"
+            :disabled="loading"
+            placeholder="Ask the LLM anything..."
+            style="
               flex: 1;
               padding: 0.8rem 1.1rem;
               border-radius: 1rem;
               border: 1.5px solid #c7d2fe;
               font-size: 1.08rem;
               outline: none;
-            " />
-          <button type="submit" :disabled="loading || !prompt" style="
+            "
+          />
+          <button
+            type="submit"
+            :disabled="loading || !prompt"
+            style="
               background: linear-gradient(90deg, #22d3ee 60%, #2563eb 100%);
               color: #fff;
               border: none;
@@ -21,28 +29,35 @@
               padding: 0.8rem 1.5rem;
               font-size: 1.08rem;
               cursor: pointer;
-            ">
+            "
+          >
             {{ loading ? '...' : 'Send' }}
           </button>
         </form>
-        <div v-if="error" style="
+        <div
+          v-if="error"
+          style="
             color: #dc2626;
             background: #fef2f2;
             border-radius: 0.7rem;
             padding: 0.7rem 1rem;
             margin-top: 0.5rem;
             border: 1.5px solid #fca5a5;
-          ">
+          "
+        >
           {{ error }}
         </div>
-        <div v-if="response" style="
+        <div
+          v-if="response"
+          style="
             background: #f8fafc;
             border-radius: 0.7rem;
             padding: 1rem 1.2rem;
             margin-top: 1rem;
             color: #1e293b;
             font-family: 'Fira Mono', Consolas, monospace;
-          ">
+          "
+        >
           {{ response }}
         </div>
       </div>
@@ -59,7 +74,7 @@ const { response, loading, error, sendPrompt } = useLLMAndFileViewer();
 
 async function handleSend() {
   if (!prompt.value) return;
-  await sendPrompt(prompt.value, () => { });
+  await sendPrompt(prompt.value, () => {});
   prompt.value = '';
 }
 </script>
@@ -110,7 +125,10 @@ async function handleSend() {
 .codegen-main-section,
 .codegen-title,
 .codegen-page-wrapper {
-  font-family: Consolas, Courier New, monospace;
+  font-family:
+    Consolas,
+    Courier New,
+    monospace;
 }
 
 .background-3d {

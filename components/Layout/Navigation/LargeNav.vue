@@ -4,11 +4,24 @@
       <li v-for="item in navItems" :key="item.text">
         <a :href="item.link">{{ item.text }}</a>
       </li>
+      <li v-if="!isLoggedIn" class="auth-links">
+        <a href="/auth/login" class="login-btn">Login</a>
+        <a href="/auth/signup" class="signup-btn">Sign Up</a>
+      </li>
+      <li v-else class="auth-links">
+        <a href="/dashboard" class="dashboard-btn">My Dashboard</a>
+        <a href="/profile" class="profile-btn">My Profile</a>
+        <button @click="handleLogout" class="logout-btn">Logout</button>
+      </li>
     </ul>
   </nav>
 </template>
 
 <script setup>
+import { useUserAuth } from '~/composables/useUserAuth';
+
+const { isLoggedIn, currentUser, logout } = useUserAuth();
+
 const navItems = [
   { text: 'Home', link: '/' },
   { text: 'Projects', link: '/projects' },
@@ -16,6 +29,11 @@ const navItems = [
   { text: 'Contact', link: '/contact' },
   { text: 'Codegen', link: '/codegen' },
 ];
+
+const handleLogout = () => {
+  logout();
+  navigateTo('/');
+};
 </script>
 
 <style scoped>
@@ -85,5 +103,54 @@ const navItems = [
 .logo-link,
 .text-indigo-700 {
   color: #fff !important;
+}
+
+/* Authentication links styling */
+.auth-links {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-left: 1rem;
+}
+
+.login-btn,
+.profile-btn,
+.dashboard-btn {
+  color: #fff !important;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+}
+
+.login-btn:hover,
+.profile-btn:hover,
+.dashboard-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.signup-btn,
+.logout-btn {
+  color: #fff !important;
+  background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+.signup-btn:hover,
+.logout-btn:hover {
+  background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%);
+  text-decoration: none;
+}
+
+.logout-btn {
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
 }
 </style>

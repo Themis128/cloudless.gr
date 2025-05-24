@@ -1,7 +1,7 @@
-/* filepath: d:\Nuxt Projects\cloudless.gr\assets\css\main.css */
-
-/* Tailwind CSS imports */
-@import "tailwindcss";
+/* Tailwind CSS directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Global custom styles */
 

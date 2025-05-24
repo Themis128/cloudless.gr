@@ -5,7 +5,10 @@ interface LLMOptions {
   endpoint?: string;
 }
 
-export function useLLMAndFileViewer(llmOptions: LLMOptions = {}, defaultFilePath = 'components/CodegenWidget.vue') {
+export function useLLMAndFileViewer(
+  llmOptions: LLMOptions = {},
+  defaultFilePath = 'components/CodegenWidget.vue'
+) {
   // LLM logic
   const response = ref('');
   const loading = ref(false);

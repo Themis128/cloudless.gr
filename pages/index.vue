@@ -18,11 +18,7 @@
         Solutions
       </p>
     </header>
-
-    <!-- Footer -->
-    <footer class="relative z-20 w-full px-4 sm:px-6 lg:px-8 py-4">
-      &copy; 2025 Cloudless. All rights reserved.
-    </footer>
+    <!-- Removed local footer to avoid duplicate -->
   </div>
 </template>
 

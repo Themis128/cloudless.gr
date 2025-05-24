@@ -9,10 +9,26 @@ export default defineNuxtConfig({
     'nuxt-llms',
     '@nuxtjs/tailwindcss', // ✅ Tailwind CSS module
   ],
-
   experimental: {
     headNext: true,
   },
+
+  // Nitro configuration
+  nitro: {
+    // Adding the recommended compatibility date
+    compatibilityDate: '2025-05-21',
+    prerender: {
+      routes: ['/', '/about', '/contact'],
+    },
+  },
+
+  // Tailwind CSS configuration
+  tailwindcss: {
+    exposeConfig: true,
+    viewer: true,
+    configPath: '~/tailwind.config.js',
+  },
+
   // Ensure static assets are properly served
   vite: {
     server: {
@@ -20,18 +36,15 @@ export default defineNuxtConfig({
         strict: false,
       },
     },
-    plugins: [
-      // Include plugins from vite.config.ts
-      // Any Vite plugins here will be used
-    ],
   },
 
-  // Add PostCSS configuration directly to Nuxt config
+  // PostCSS configuration
   postcss: {
     plugins: {
+      'tailwindcss/nesting': {},
       tailwindcss: {},
-      autoprefixer: {}
-    }
+      autoprefixer: {},
+    },
   },
 
   devtools: {
@@ -41,7 +54,10 @@ export default defineNuxtConfig({
     },
   },
 
-  css: ['@/assets/css/main.css'], // ✅ Should include Tailwind directives
+  css: [
+    '@/assets/css/main.css', // ✅ Should include Tailwind directives
+    '@/assets/css/admin.css', // Admin styles
+  ],
 
   app: {
     head: {
@@ -65,12 +81,6 @@ export default defineNuxtConfig({
     debug: true,
     documentDriven: true,
     highlight: {
-      theme: 'github-dark',
-    },
-  },
-  nitro: {
-    compatibilityDate: '2025-05-21',
-    prerender: {
       routes: ['/', '/about', '/contact'],
     },
   },

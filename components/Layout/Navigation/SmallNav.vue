@@ -22,6 +22,48 @@
             {{ item.text }}
           </NuxtLink>
         </li>
+        
+        <!-- Authentication links -->
+        <li class="border-t border-gray-200 mt-2 pt-2">
+          <template v-if="!isLoggedIn">
+            <NuxtLink 
+              to="/auth/login" 
+              class="block px-4 py-2 hover:bg-blue-50 hover:text-blue-900"
+              @click="closeMenu"
+            >
+              Login
+            </NuxtLink>
+            <NuxtLink 
+              to="/auth/signup" 
+              class="block px-4 py-2 hover:bg-blue-50 hover:text-blue-900"
+              @click="closeMenu"
+            >
+              Sign Up
+            </NuxtLink>
+          </template>
+          <template v-else>
+            <NuxtLink 
+              to="/dashboard" 
+              class="block px-4 py-2 hover:bg-blue-50 hover:text-blue-900"
+              @click="closeMenu"
+            >
+              My Dashboard
+            </NuxtLink>
+            <NuxtLink 
+              to="/profile" 
+              class="block px-4 py-2 hover:bg-blue-50 hover:text-blue-900"
+              @click="closeMenu"
+            >
+              My Profile
+            </NuxtLink>
+            <button 
+              @click="handleLogout" 
+              class="w-full text-left block px-4 py-2 hover:bg-blue-50 hover:text-blue-900"
+            >
+              Logout
+            </button>
+          </template>
+        </li>
       </ul>
     </transition>
   </nav>
@@ -29,6 +71,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useUserAuth } from '~/composables/useUserAuth';
+
+const { isLoggedIn, logout } = useUserAuth();
 
 const isMenuOpen = ref(false);
 const toggleMenu = () => (isMenuOpen.value = !isMenuOpen.value);
@@ -41,6 +86,12 @@ const navItems = [
   { text: 'Contact', link: '/contact' },
   { text: 'Codegen', link: '/codegen' },
 ];
+
+const handleLogout = () => {
+  logout();
+  closeMenu();
+  navigateTo('/');
+};
 </script>
 
 <style scoped>
