@@ -1,47 +1,123 @@
 <template>
-  <div class="relative min-h-screen flex flex-col justify-between overflow-hidden">
-    <!-- Background image covering the full page with shadow effect -->
-    <img
-      src="/images/cloud1.png"
-      alt="Cloud background"
-      class="fixed inset-0 w-screen h-screen object-cover object-center z-0 select-none pointer-events-none shadow-lg"
-      draggable="false"
-    />
-
-    <!-- Header -->
-    <header class="relative z-20 w-full px-4 sm:px-6 lg:px-8 py-12">
-      <h1 class="text-3xl md:text-5xl font-light text-center text-white font-serif italic">
-        Empowering the Future of Cloud and Data
-      </h1>
-      <p class="text-lg md:text-2xl text-center text-gray-300 mt-2 font-light font-serif italic">
-        Revolutionizing Web Development, Big Data, and Serverless Applications with Cutting-Edge
-        Solutions
-      </p>
-    </header>
-    <!-- Removed local footer to avoid duplicate -->
+  <div class="index-container">
+    <div class="welcome-card">
+      <h1>Welcome to Cloudless</h1>
+      <p>Please log in to access the application.</p>
+      <div class="auth-buttons">
+        <NuxtLink to="/auth/login" class="login-btn">
+          Login
+        </NuxtLink>
+        <NuxtLink to="/auth/signup" class="signup-btn">
+          Sign Up
+        </NuxtLink>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// No JS needed for static background version
-</script>
+import { useUserAuth } from '~/composables/useUserAuth';
 
-<script lang="ts">
-export default {
-  layout: 'default',
-};
+const { isLoggedIn } = useUserAuth();
+
+// If user is already logged in, redirect to dashboard
+if (process.client && isLoggedIn.value) {
+  await navigateTo('/dashboard');
+}
 </script>
 
 <style scoped>
-/* Ensure the background image covers the full page with shadow effect */
-img {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  z-index: 0;
-  pointer-events: none;
-  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5);
+.index-container {
+  min-height: 90vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+.welcome-card {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  padding: 3rem 2rem;
+  text-align: center;
+  width: 100%;
+  max-width: 500px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+h1 {
+  color: #1e40af;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+p {
+  color: #64748b;
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.login-btn,
+.signup-btn {
+  padding: 0.75rem 2rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  min-width: 120px;
+  text-align: center;
+}
+
+.login-btn {
+  background-color: transparent;
+  color: #1e40af;
+  border: 2px solid #1e40af;
+}
+
+.login-btn:hover {
+  background-color: #1e40af;
+  color: white;
+}
+
+.signup-btn {
+  background-color: #1e40af;
+  color: white;
+  border: 2px solid #1e40af;
+}
+
+.signup-btn:hover {
+  background-color: #1e3a8a;
+  border-color: #1e3a8a;
+}
+
+@media (max-width: 640px) {
+  .welcome-card {
+    padding: 2rem 1.5rem;
+  }
+  
+  h1 {
+    font-size: 2rem;
+  }
+  
+  .auth-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .login-btn,
+  .signup-btn {
+    width: 100%;
+    max-width: 200px;
+  }
 }
 </style>

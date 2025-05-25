@@ -1,583 +1,656 @@
 <template>
-  <div class="codegen-page">
-    <div class="codegen-hero">
-      <h1 class="codegen-heading">Code Generation</h1>
-      <p class="codegen-subheading">Create efficient, clean code with AI assistance</p>
+  <div class="codegen-container">
+    <div class="codegen-header">
+      <h1>Code Generation Tools</h1>
+      <p class="header-description">
+        Powerful AI-assisted code generation tools to accelerate your development workflow 
+        and boost productivity with intelligent code suggestions and automation.
+      </p>
     </div>
 
-    <div class="codegen-container">
-      <div class="codegen-layout">
-        <!-- Text Editor Component -->
-        <div class="editor-container">
-          <div class="editor-header">
-            <h3 class="editor-title">Code Editor</h3>
-            <div class="editor-actions">
-              <button @click="handleClearEditor" class="action-button clear-button" type="button">
-                Clear
-              </button>
-              <button
-                @click="handleRunCode"
-                class="action-button run-button"
-                type="button"
-                :disabled="!editorContent.trim()"
-              >
-                Run
-              </button>
-            </div>
-          </div>
-          <textarea
-            v-model="editorContent"
-            class="code-editor"
-            placeholder="Type or paste your code here..."
-            spellcheck="false"
-          ></textarea>
-          <div class="editor-footer">
-            <span class="editor-info">{{ editorContent.length }} characters</span>
-            <div class="language-selector">
-              <label for="language">Language:</label>
-              <select id="language" v-model="selectedLanguage">
-                <option value="javascript">JavaScript</option>
-                <option value="typescript">TypeScript</option>
-                <option value="python">Python</option>
-                <option value="html">HTML</option>
-                <option value="css">CSS</option>
-                <option value="vue">Vue</option>
-              </select>
-            </div>
+    <div class="tools-grid">
+      <div class="tool-card featured">
+        <div class="tool-header">
+          <div class="tool-icon">🤖</div>
+          <div class="tool-info">
+            <h3>AI Code Assistant</h3>
+            <span class="tool-status">Available</span>
           </div>
         </div>
+        <p class="tool-description">
+          Intelligent code completion and generation powered by advanced language models. 
+          Get context-aware suggestions for functions, components, and entire modules.
+        </p>
+        <div class="tool-features">
+          <span class="feature">Multi-language support</span>
+          <span class="feature">Context-aware</span>
+          <span class="feature">Real-time suggestions</span>
+        </div>
+        <button class="tool-button primary">
+          Try AI Assistant
+        </button>
+      </div>
 
-        <!-- Answers Container Component -->
-        <div class="answers-container">
-          <div class="answers-header">
-            <h3 class="answers-title">AI Responses</h3>
-            <button
-              @click="handleClearHistory"
-              class="action-button clear-history-button"
-              type="button"
-            >
-              Clear History
-            </button>
-          </div>
-
-          <div class="conversation-history" ref="historyContainer">
-            <div v-if="conversationHistory.length === 0" class="empty-history">
-              <p>Your conversation with AI will appear here.</p>
-            </div>
-
-            <div
-              v-for="(item, index) in conversationHistory"
-              :key="index"
-              class="conversation-item"
-            >
-              <div class="user-message">
-                <div class="message-header">
-                  <span class="user-icon">👤</span>
-                  <span class="user-label">You</span>
-                </div>
-                <div class="message-content">{{ item.prompt }}</div>
-              </div>
-
-              <div class="ai-message">
-                <div class="message-header">
-                  <span class="ai-icon">🤖</span>
-                  <span class="ai-label">AI</span>
-                </div>
-                <div class="message-content">
-                  <pre><code>{{ item.response }}</code></pre>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="prompt-input-container">
-            <input
-              v-model="prompt"
-              @keyup.enter="handleSendPrompt"
-              :disabled="loading"
-              placeholder="Ask a question or request code..."
-              class="prompt-input"
-            />
-            <button
-              @click="handleSendPrompt"
-              :disabled="loading || !prompt.trim()"
-              class="send-button"
-              type="button"
-            >
-              {{ loading ? 'Processing...' : 'Send' }}
-            </button>
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon">⚡</div>
+          <div class="tool-info">
+            <h3>Component Generator</h3>
+            <span class="tool-status">Available</span>
           </div>
         </div>
+        <p class="tool-description">
+          Generate Vue.js, React, and other framework components with proper structure, 
+          styling, and functionality based on your specifications.
+        </p>
+        <div class="tool-features">
+          <span class="feature">Vue.js Components</span>
+          <span class="feature">React Components</span>
+          <span class="feature">Custom Templates</span>
+        </div>
+        <button class="tool-button">
+          Generate Components
+        </button>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon">🗄️</div>
+          <div class="tool-info">
+            <h3>API Generator</h3>
+            <span class="tool-status">Available</span>
+          </div>
+        </div>
+        <p class="tool-description">
+          Automatically generate REST API endpoints, database models, and documentation 
+          from schemas or existing database structures.
+        </p>
+        <div class="tool-features">
+          <span class="feature">REST APIs</span>
+          <span class="feature">Database Models</span>
+          <span class="feature">Auto Documentation</span>
+        </div>
+        <button class="tool-button">
+          Create APIs
+        </button>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon">🎨</div>
+          <div class="tool-info">
+            <h3>CSS Generator</h3>
+            <span class="tool-status">Available</span>
+          </div>
+        </div>
+        <p class="tool-description">
+          Generate optimized CSS styles, animations, and responsive layouts with 
+          modern design patterns and best practices.
+        </p>
+        <div class="tool-features">
+          <span class="feature">Tailwind CSS</span>
+          <span class="feature">CSS Animations</span>
+          <span class="feature">Responsive Design</span>
+        </div>
+        <button class="tool-button">
+          Style Generator
+        </button>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon">🧪</div>
+          <div class="tool-info">
+            <h3>Test Generator</h3>
+            <span class="tool-status">Coming Soon</span>
+          </div>
+        </div>
+        <p class="tool-description">
+          Automatically generate comprehensive unit tests, integration tests, 
+          and end-to-end test suites for your applications.
+        </p>
+        <div class="tool-features">
+          <span class="feature">Unit Tests</span>
+          <span class="feature">Integration Tests</span>
+          <span class="feature">E2E Tests</span>
+        </div>
+        <button class="tool-button disabled" disabled>
+          Coming Soon
+        </button>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon">📚</div>
+          <div class="tool-info">
+            <h3>Documentation Generator</h3>
+            <span class="tool-status">Coming Soon</span>
+          </div>
+        </div>
+        <p class="tool-description">
+          Generate comprehensive documentation from your code comments, 
+          API definitions, and project structure automatically.
+        </p>
+        <div class="tool-features">
+          <span class="feature">API Docs</span>
+          <span class="feature">Code Comments</span>
+          <span class="feature">Interactive Docs</span>
+        </div>
+        <button class="tool-button disabled" disabled>
+          Coming Soon
+        </button>
+      </div>
+    </div>
+
+    <div class="demo-section">
+      <h2>See it in Action</h2>
+      <p>Experience our code generation tools with live examples and interactive demos.</p>
+      
+      <div class="demo-grid">
+        <div class="demo-card">
+          <h3>Interactive Code Demo</h3>
+          <p>Try our AI code assistant in a live coding environment.</p>
+          <NuxtLink to="/responsive-demo" class="demo-link">
+            View Demo →
+          </NuxtLink>
+        </div>
+        
+        <div class="demo-card">
+          <h3>Component Library</h3>
+          <p>Browse generated components and see the code behind them.</p>
+          <button class="demo-link" disabled>
+            Coming Soon
+          </button>
+        </div>
+        
+        <div class="demo-card">
+          <h3>API Playground</h3>
+          <p>Test generated APIs and explore their capabilities.</p>
+          <button class="demo-link" disabled>
+            Coming Soon
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pricing-section">
+      <h2>Pricing Plans</h2>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <h3>Free</h3>
+          <div class="price">$0<span>/month</span></div>
+          <ul class="features-list">
+            <li>✅ Basic code completion</li>
+            <li>✅ 50 generations/month</li>
+            <li>✅ Community support</li>
+            <li>❌ Advanced AI features</li>
+          </ul>
+          <button class="pricing-button">
+            Get Started
+          </button>
+        </div>
+        
+        <div class="pricing-card featured">
+          <div class="featured-badge">Most Popular</div>
+          <h3>Pro</h3>
+          <div class="price">$29<span>/month</span></div>
+          <ul class="features-list">
+            <li>✅ Advanced AI assistance</li>
+            <li>✅ Unlimited generations</li>
+            <li>✅ Custom templates</li>
+            <li>✅ Priority support</li>
+          </ul>
+          <button class="pricing-button primary">
+            Start Free Trial
+          </button>
+        </div>
+        
+        <div class="pricing-card">
+          <h3>Team</h3>
+          <div class="price">$99<span>/month</span></div>
+          <ul class="features-list">
+            <li>✅ Everything in Pro</li>
+            <li>✅ Team collaboration</li>
+            <li>✅ Custom integrations</li>
+            <li>✅ Dedicated support</li>
+          </ul>
+          <button class="pricing-button">
+            Contact Sales
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta-section">
+      <h2>Ready to Boost Your Productivity?</h2>
+      <p>Join thousands of developers who are already using our code generation tools to build better software faster.</p>
+      <div class="cta-buttons">
+        <button class="cta-button primary">
+          Start Free Trial
+        </button>
+        <NuxtLink to="/contact" class="cta-button secondary">
+          Contact Sales
+        </NuxtLink>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
-
-// Define types
-interface ConversationItem {
-  prompt: string;
-  response: string;
-}
-
-// Editor state
-const editorContent = ref<string>('');
-const selectedLanguage = ref<string>('javascript');
-
-// Conversation state
-const prompt = ref<string>('');
-const loading = ref<boolean>(false);
-const conversationHistory = ref<ConversationItem[]>([]);
-const historyContainer = ref<HTMLElement | null>(null);
-
-// Error handling
-const error = ref<string>('');
-
-// Methods
-const handleClearEditor = (): void => {
-  editorContent.value = '';
-};
-
-const handleClearHistory = (): void => {
-  conversationHistory.value = [];
-};
-
-const handleSendPrompt = async (): Promise<void> => {
-  if (!prompt.value.trim() || loading.value) return;
-
-  try {
-    loading.value = true;
-    error.value = '';
-
-    // In a real application, this would call your API
-    // For this example, we'll simulate an API response
-    const userPrompt = prompt.value;
-
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Mock response - in real app this would come from your API
-    const mockResponse = `Here's a response to: "${userPrompt}"
-    
-// Example code based on your query
-function processUserRequest(input) {
-  console.log("Processing:", input);
-  return {
-    status: "success",
-    data: input.toUpperCase()
-  };
-}`;
-
-    // Add to conversation history
-    conversationHistory.value.push({
-      prompt: userPrompt,
-      response: mockResponse,
-    });
-
-    // Clear input
-    prompt.value = '';
-
-    // Scroll to the bottom of the conversation history
-    scrollToBottom();
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'An unknown error occurred';
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleRunCode = (): void => {
-  if (!editorContent.value.trim()) return;
-
-  // Use the editor content as the prompt
-  prompt.value = `Please analyze/improve/run this ${selectedLanguage.value} code:\n\n${editorContent.value}`;
-  handleSendPrompt();
-};
-
-const scrollToBottom = (): void => {
-  setTimeout(() => {
-    if (historyContainer.value) {
-      historyContainer.value.scrollTop = historyContainer.value.scrollHeight;
-    }
-  }, 100);
-};
-
-// Scroll to bottom when conversation history changes
-watch(conversationHistory, () => {
-  scrollToBottom();
+// Set page meta
+definePageMeta({
+  layout: 'default'
 });
-
-onMounted(() => {
-  // Auto-focus the editor when the component mounts
-  const editorEl = document.querySelector('.code-editor') as HTMLTextAreaElement;
-  if (editorEl) {
-    editorEl.focus();
-  }
-});
-</script>
-
-<script lang="ts">
-export default {
-  layout: 'default',
-};
 </script>
 
 <style scoped>
-.codegen-page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 2rem 1rem;
-  min-height: 85vh;
-}
-
-.codegen-hero {
-  text-align: center;
-  margin-bottom: 2rem;
-  animation: fadeIn 0.8s ease-out;
-}
-
-.codegen-heading {
-  font-size: 2.5rem;
-  font-weight: 700;
-  background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 0.5rem;
-}
-
-.codegen-subheading {
-  font-size: 1.2rem;
-  color: #64748b;
-  max-width: 800px;
-}
-
 .codegen-container {
-  background: rgba(255, 255, 255, 0.97);
-  border-radius: 1.5rem;
-  box-shadow:
-    0 10px 25px -5px rgba(0, 0, 0, 0.1),
-    0 8px 10px -6px rgba(0, 0, 0, 0.05),
-    0 0 0 1px rgba(0, 0, 0, 0.05);
-  padding: 2rem;
-  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
-  backdrop-filter: blur(10px);
+  padding: 2rem 1rem;
 }
 
-.codegen-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-gap: 2rem;
-  width: 100%;
-}
-
-/* Editor styles */
-.editor-container {
-  display: flex;
-  flex-direction: column;
-  border-radius: 0.75rem;
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
-}
-
-.editor-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f8fafc;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.editor-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #334155;
-  margin: 0;
-}
-
-.editor-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.action-button {
-  padding: 0.35rem 0.75rem;
-  border: none;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.clear-button {
-  background-color: #f1f5f9;
-  color: #64748b;
-}
-
-.clear-button:hover {
-  background-color: #e2e8f0;
-}
-
-.run-button {
-  background-color: #2563eb;
-  color: white;
-}
-
-.run-button:hover {
-  background-color: #1d4ed8;
-}
-
-.run-button:disabled {
-  background-color: #93c5fd;
-  cursor: not-allowed;
-}
-
-.code-editor {
-  flex: 1;
-  width: 100%;
-  min-height: 350px;
-  padding: 1rem;
-  font-family: 'Fira Code', 'Consolas', monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: #1e293b;
-  background: #ffffff;
-  border: none;
-  resize: none;
-  outline: none;
-}
-
-.editor-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
-  font-size: 0.875rem;
-}
-
-.editor-info {
-  color: #64748b;
-}
-
-.language-selector {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.language-selector label {
-  color: #64748b;
-}
-
-.language-selector select {
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  border: 1px solid #cbd5e1;
-  color: #1e293b;
-  font-size: 0.875rem;
-}
-
-/* Answers container styles */
-.answers-container {
-  display: flex;
-  flex-direction: column;
-  border-radius: 0.75rem;
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
-}
-
-.answers-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f8fafc;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.answers-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #334155;
-  margin: 0;
-}
-
-.clear-history-button {
-  background-color: #f1f5f9;
-  color: #64748b;
-}
-
-.clear-history-button:hover {
-  background-color: #e2e8f0;
-}
-
-.conversation-history {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem;
-  background: #ffffff;
-  max-height: 350px;
-}
-
-.empty-history {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #94a3b8;
+.codegen-header {
   text-align: center;
-  font-style: italic;
+  margin-bottom: 4rem;
 }
 
-.conversation-item {
-  margin-bottom: 1.5rem;
-}
-
-.conversation-item:last-child {
-  margin-bottom: 0;
-}
-
-.user-message,
-.ai-message {
+.codegen-header h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #1e40af;
   margin-bottom: 1rem;
 }
 
-.message-header {
+.header-description {
+  font-size: 1.2rem;
+  color: #64748b;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+.tool-card {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 2rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.tool-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.tool-card.featured {
+  border: 2px solid #2563eb;
+  position: relative;
+}
+
+.tool-card.featured::before {
+  content: "Featured";
+  position: absolute;
+  top: -10px;
+  left: 1rem;
+  background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tool-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.375rem;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.user-icon,
-.ai-icon {
-  font-size: 1.25rem;
-}
-
-.user-label,
-.ai-label {
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.user-label {
-  color: #4b5563;
-}
-
-.ai-label {
-  color: #2563eb;
-}
-
-.message-content {
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-}
-
-.user-message .message-content {
-  background: #f1f5f9;
-  color: #334155;
-}
-
-.ai-message .message-content {
-  background: #eff6ff;
-  color: #1e40af;
-}
-
-.ai-message pre {
-  margin: 0;
-  white-space: pre-wrap;
-  font-family: 'Fira Code', 'Consolas', monospace;
-}
-
-.prompt-input-container {
+.tool-icon {
+  font-size: 2rem;
+  width: 3rem;
+  height: 3rem;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #eff6ff;
+  border-radius: 50%;
+}
+
+.tool-info h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e40af;
+  margin-bottom: 0.25rem;
+}
+
+.tool-status {
+  font-size: 0.875rem;
+  color: #059669;
+  background-color: #ecfdf5;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.tool-description {
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.tool-features {
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  padding: 1rem;
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
+  margin-bottom: 1.5rem;
 }
 
-.prompt-input {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid #cbd5e1;
-  font-size: 0.9375rem;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.prompt-input:focus {
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-}
-
-.send-button {
-  padding: 0.75rem 1.25rem;
-  background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 0.9375rem;
+.feature {
+  background-color: #eff6ff;
+  color: #2563eb;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
   font-weight: 500;
+}
+
+.tool-button {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  border: none;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background-color 0.2s ease;
 }
 
-.send-button:hover {
-  background: linear-gradient(90deg, #1d4ed8 0%, #2563eb 100%);
+.tool-button.primary {
+  background-color: #1e40af;
+  color: white;
 }
 
-.send-button:disabled {
-  background: #93c5fd;
+.tool-button.primary:hover {
+  background-color: #1e3a8a;
+}
+
+.tool-button:not(.primary):not(.disabled) {
+  background-color: #f8fafc;
+  color: #1e40af;
+  border: 1px solid #e2e8f0;
+}
+
+.tool-button:not(.primary):not(.disabled):hover {
+  background-color: #f1f5f9;
+}
+
+.tool-button.disabled {
+  background-color: #f1f5f9;
+  color: #94a3b8;
   cursor: not-allowed;
 }
 
-/* Responsive styles */
-@media (max-width: 900px) {
-  .codegen-layout {
-    grid-template-columns: 1fr;
-    grid-gap: 1.5rem;
-  }
-
-  .codegen-container {
-    padding: 1.5rem;
-  }
-
-  .codegen-heading {
-    font-size: 2rem;
-  }
-
-  .code-editor,
-  .conversation-history {
-    min-height: 250px;
-    max-height: 300px;
-  }
+.demo-section,
+.pricing-section {
+  margin-bottom: 4rem;
+  text-align: center;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+.demo-section h2,
+.pricing-section h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 1rem;
+}
+
+.demo-section p {
+  font-size: 1.1rem;
+  color: #64748b;
+  margin-bottom: 2rem;
+}
+
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.demo-card {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 2rem;
+}
+
+.demo-card h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e40af;
+  margin-bottom: 0.75rem;
+}
+
+.demo-card p {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
+.demo-link {
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  transition: all 0.2s ease;
+}
+
+.demo-link:hover:not(:disabled) {
+  background-color: #f1f5f9;
+  border-color: #2563eb;
+}
+
+.demo-link:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.pricing-card {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 2rem;
+  position: relative;
+  text-align: center;
+}
+
+.pricing-card.featured {
+  border: 2px solid #2563eb;
+  transform: scale(1.05);
+}
+
+.featured-badge {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pricing-card h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1e40af;
+  margin-bottom: 1rem;
+}
+
+.price {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 1.5rem;
+}
+
+.price span {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #64748b;
+}
+
+.features-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.features-list li {
+  padding: 0.5rem 0;
+  color: #374151;
+}
+
+.pricing-button {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.pricing-button.primary {
+  background-color: #1e40af;
+  color: white;
+}
+
+.pricing-button.primary:hover {
+  background-color: #1e3a8a;
+}
+
+.pricing-button:not(.primary) {
+  background-color: #f8fafc;
+  color: #1e40af;
+  border: 1px solid #e2e8f0;
+}
+
+.pricing-button:not(.primary):hover {
+  background-color: #f1f5f9;
+}
+
+.cta-section {
+  text-align: center;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 3rem 2rem;
+}
+
+.cta-section h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 1rem;
+}
+
+.cta-section p {
+  font-size: 1.1rem;
+  color: #64748b;
+  margin-bottom: 2rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.cta-button {
+  padding: 0.75rem 2rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.cta-button.primary {
+  background-color: #1e40af;
+  color: white;
+  border: none;
+}
+
+.cta-button.primary:hover {
+  background-color: #1e3a8a;
+}
+
+.cta-button.secondary {
+  background-color: transparent;
+  color: #1e40af;
+  border: 2px solid #1e40af;
+}
+
+.cta-button.secondary:hover {
+  background-color: #1e40af;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .codegen-header h1 {
+    font-size: 2.5rem;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  
+  .tools-grid,
+  .demo-grid,
+  .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .pricing-card.featured {
+    transform: none;
+  }
+  
+  .cta-buttons {
+    flex-direction: column;
+  }
+  
+  .cta-button {
+    width: 100%;
+    max-width: 300px;
   }
 }
 </style>

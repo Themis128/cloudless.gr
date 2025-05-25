@@ -56,15 +56,21 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useUserAuth } from '~/composables/useUserAuth';
 
 const { currentUser, isLoggedIn } = useUserAuth();
 
 // Redirect if not logged in
 if (process.client && !isLoggedIn.value) {
-  navigateTo('/auth/login');
+  await navigateTo('/auth/login');
 }
+
+// Set page meta
+definePageMeta({
+  layout: 'default',
+  middleware: 'user-auth'
+});
 </script>
 
 <style scoped>
@@ -75,50 +81,49 @@ if (process.client && !isLoggedIn.value) {
 }
 
 .dashboard-header {
-  margin-bottom: 2rem;
   text-align: center;
+  margin-bottom: 3rem;
 }
 
 .dashboard-header h1 {
-  font-size: 2.25rem;
-  color: #1e40af;
+  font-size: 2.5rem;
   font-weight: 700;
+  color: #1e40af;
   margin-bottom: 0.5rem;
 }
 
 .welcome-message {
-  font-size: 1.125rem;
+  font-size: 1.2rem;
   color: #64748b;
 }
 
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
 .dashboard-card {
   background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(10px);
   border-radius: 0.75rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s;
 }
 
 .dashboard-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
 }
 
 .dashboard-card h2 {
-  color: #334155;
   font-size: 1.25rem;
   font-weight: 600;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(203, 213, 225, 0.5);
+  color: #1e40af;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.5rem;
 }
 
 .activity-stats {
@@ -128,11 +133,13 @@ if (process.client && !isLoggedIn.value) {
 }
 
 .stat-item {
-  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .stat-value {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 700;
   color: #1e40af;
 }
@@ -143,37 +150,45 @@ if (process.client && !isLoggedIn.value) {
 }
 
 .empty-state {
-  color: #94a3b8;
   text-align: center;
-  padding: 1rem 0;
+  color: #94a3b8;
   font-style: italic;
+  padding: 2rem 0;
 }
 
 .action-buttons {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .action-button {
-  background-color: #f1f5f9;
-  color: #334155;
-  padding: 0.75rem;
+  background-color: #1e40af;
+  color: white;
+  text-decoration: none;
+  padding: 0.75rem 1.5rem;
   border-radius: 0.375rem;
   text-align: center;
   font-weight: 500;
   transition: background-color 0.2s;
-  text-decoration: none;
 }
 
 .action-button:hover {
-  background-color: #e2e8f0;
-  text-decoration: none;
+  background-color: #1e3a8a;
 }
 
 @media (max-width: 768px) {
+  .dashboard-header h1 {
+    font-size: 2rem;
+  }
+  
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .activity-stats {
+    flex-direction: column;
+    gap: 1rem;
   }
 }
 </style>

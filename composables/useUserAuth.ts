@@ -1,13 +1,6 @@
 // Authentication composable for user management
 import { ref, onMounted } from 'vue';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  createdAt: string;
-  role: string;
-}
+import type { User, UserAuth, LoginCredentials, SignupCredentials, AuthError } from '~/types/user';
 
 export const useUserAuth = () => {
   const isLoggedIn = ref(false);

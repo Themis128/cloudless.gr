@@ -4,9 +4,11 @@
   </div>
 </template>
 
-<script setup>
-// This page just redirects to the contact submissions
-onMounted(() => {
-  navigateTo('/admin/contact-submissions');
+<script setup lang="ts">
+import { onMounted } from 'vue';
+
+// Redirect to the admin dashboard
+onMounted(async (): Promise<void> => {
+  await navigateTo('/admin/dashboard');
 });
 </script>

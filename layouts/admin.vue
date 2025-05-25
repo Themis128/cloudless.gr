@@ -4,8 +4,16 @@
       <div class="admin-toolbar-content">
         <div class="admin-branding">
           <h2>Admin Dashboard</h2>
-        </div>
-        <nav class="admin-nav">
+        </div>        <nav class="admin-nav">
+          <NuxtLink to="/admin/dashboard" class="nav-link">
+            Dashboard
+          </NuxtLink>
+          <NuxtLink to="/admin/users" class="nav-link">
+            Users
+          </NuxtLink>
+          <NuxtLink to="/admin/projects" class="nav-link">
+            Projects
+          </NuxtLink>
           <NuxtLink to="/admin/contact-submissions" class="nav-link">
             Contact Submissions
           </NuxtLink>
@@ -24,14 +32,18 @@
   </NuxtLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { useRouter } from 'nuxt/app';
+
+const router = useRouter();
+
 // Logout function
-const logout = () => {
+const logout = async (): Promise<void> => {
   // Clear authentication state
   localStorage.removeItem('admin_authenticated');
 
   // Redirect to login
-  navigateTo('/admin/login');
+  await navigateTo('/admin/login');
 };
 </script>
 

@@ -17,22 +17,30 @@
   </nav>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useUserAuth } from '~/composables/useUserAuth';
+import { useRouter } from 'nuxt/app';
 
+interface NavItem {
+  text: string;
+  link: string;
+}
+
+const router = useRouter();
 const { isLoggedIn, currentUser, logout } = useUserAuth();
 
-const navItems = [
+const navItems: NavItem[] = [
   { text: 'Home', link: '/' },
   { text: 'Projects', link: '/projects' },
   { text: 'About', link: '/about' },
   { text: 'Contact', link: '/contact' },
   { text: 'Codegen', link: '/codegen' },
+  { text: 'FAQ', link: '/faq' },
 ];
 
-const handleLogout = () => {
+const handleLogout = async (): Promise<void> => {
   logout();
-  navigateTo('/');
+  await router.push('/');
 };
 </script>
 

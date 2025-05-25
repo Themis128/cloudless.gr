@@ -85,12 +85,13 @@ const navItems = [
   { text: 'About', link: '/about' },
   { text: 'Contact', link: '/contact' },
   { text: 'Codegen', link: '/codegen' },
+  { text: 'FAQ', link: '/faq' },
 ];
 
-const handleLogout = () => {
+const handleLogout = async (): Promise<void> => {
   logout();
   closeMenu();
-  navigateTo('/');
+  await useRouter().push('/');
 };
 </script>
 

@@ -28,13 +28,15 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import VantaBackground from '@/components/Base/VantaBackground.vue';
 import Footer from '@/components/Layout/Footer.vue';
 import LargeNav from '@/components/Layout/Navigation/LargeNav.vue';
 import SmallNav from '@/components/Layout/Navigation/SmallNav.vue';
 import { useBreakpoints } from '@vueuse/core';
-const year = new Date().getFullYear();
+import { computed } from 'vue';
+
+const year = computed(() => new Date().getFullYear());
 const breakpoints = useBreakpoints({ md: 768 });
 const isDesktop = breakpoints.greaterOrEqual('md');
 </script>

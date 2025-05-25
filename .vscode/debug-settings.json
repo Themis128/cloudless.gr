@@ -1,0 +1,71 @@
+{
+  "html.format.wrapLineLength": 0,
+  "js/ts.implicitProjectConfig.experimentalDecorators": true,
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+
+  "debug.javascript.autoAttachFilter": "smart",
+  "debug.javascript.terminalOptions": {
+    "skipFiles": ["<node_internals>/**"]
+  },
+
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": true,
+  "editor.stickyScroll.enabled": true,
+
+  "terminal.integrated.env.windows": {
+    "NODE_OPTIONS": "--inspect"
+  },
+
+  "workbench.editor.enablePreview": false,
+  "workbench.colorCustomizations": {
+    "editorError.foreground": "#ff5370",
+    "editorWarning.foreground": "#ffcb6b",
+    "editorInfo.foreground": "#82aaff"
+  },
+
+  "editor.tokenColorCustomizations": {
+    "comments": "#7c8a98"
+  },
+
+  "diffEditor.ignoreTrimWhitespace": false,
+  "editor.linkedEditing": true,
+  "search.useGlobalIgnoreFiles": true,
+
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true,
+
+  "editor.suggest.showStatusBar": true,
+  "workbench.editor.highlightModifiedTabs": true,
+
+  "diffEditor.renderSideBySide": true,
+  "editor.accessibilitySupport": "off",
+
+  "todohighlight.isEnable": true,
+  "todohighlight.keywords": [
+    {
+      "text": "TODO:",
+      "color": "white",
+      "backgroundColor": "#ffbd2a",
+      "overviewRulerColor": "#ffbd2a"
+    },
+    {
+      "text": "FIXME:",
+      "color": "white",
+      "backgroundColor": "#f06292",
+      "overviewRulerColor": "#f06292"
+    },
+    {
+      "text": "NOTE:",
+      "color": "white",
+      "backgroundColor": "#8be9fd",
+      "overviewRulerColor": "#8be9fd"
+    },
+    {
+      "text": "HACK:",
+      "color": "white",
+      "backgroundColor": "#d57eeb",
+      "overviewRulerColor": "#d57eeb"
+    }
+  ]
+}

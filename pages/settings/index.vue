@@ -36,42 +36,43 @@
               class="save-button" 
               :disabled="isUpdating"
             >
-              {{ isUpdating ? 'Saving...' : 'Save Changes' }}
+              {{ isUpdating ? 'Updating...' : 'Update Profile' }}
             </button>
           </form>
         </section>
-
+        
         <section class="settings-section">
-          <h2>Password</h2>
-          <p class="section-description">Update your password</p>
+          <h2>Change Password</h2>
+          <p class="section-description">Update your account password</p>
           
           <form @submit.prevent="updatePassword" class="settings-form">
             <div class="form-group">
-              <label for="currentPassword">Current Password</label>
+              <label for="current-password">Current Password</label>
               <input 
                 type="password" 
-                id="currentPassword" 
-                v-model="passwordData.currentPassword" 
-                placeholder="Current password"
+                id="current-password" 
+                v-model="passwordData.currentPassword"
+                placeholder="Enter current password"
               />
             </div>
             
             <div class="form-group">
-              <label for="newPassword">New Password</label>
+              <label for="new-password">New Password</label>
               <input 
                 type="password" 
-                id="newPassword" 
-                v-model="passwordData.newPassword" 
-                placeholder="New password"
+                id="new-password" 
+                v-model="passwordData.newPassword"
+                placeholder="Enter new password"
+                minlength="6"
               />
             </div>
             
             <div class="form-group">
-              <label for="confirmPassword">Confirm New Password</label>
+              <label for="confirm-password">Confirm New Password</label>
               <input 
                 type="password" 
-                id="confirmPassword" 
-                v-model="passwordData.confirmPassword" 
+                id="confirm-password" 
+                v-model="passwordData.confirmPassword"
                 placeholder="Confirm new password"
               />
             </div>
@@ -104,7 +105,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue';
 import { useUserAuth } from '~/composables/useUserAuth';
 
@@ -112,87 +113,108 @@ const { currentUser, isLoggedIn } = useUserAuth();
 
 // Redirect if not logged in
 if (process.client && !isLoggedIn.value) {
-  navigateTo('/auth/login');
+  await navigateTo('/auth/login');
+}
+
+interface ProfileData {
+  name: string;
+  email: string;
+}
+
+interface PasswordData {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 // Form data
-const profileData = ref({
+const profileData = ref<ProfileData>({
   name: currentUser.value?.name || '',
   email: currentUser.value?.email || ''
 });
 
-const passwordData = ref({
+const passwordData = ref<PasswordData>({
   currentPassword: '',
   newPassword: '',
   confirmPassword: ''
 });
 
-const isUpdating = ref(false);
+const isUpdating = ref<boolean>(false);
 
-// Form submission handlers
-const updateProfile = async () => {
+// Update profile function
+const updateProfile = async (): Promise<void> => {
   isUpdating.value = true;
   
-  // This is a mock implementation - in a real app, you would call an API
-  setTimeout(() => {
-    // Update local storage user data
-    const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
-    userData.name = profileData.value.name;
-    localStorage.setItem('user_data', JSON.stringify(userData));
+  try {
+    // In a real app, you would call an API to update the profile
+    // For now, we'll just simulate a successful update
+    await new Promise<void>(resolve => setTimeout(resolve, 1000));
     
-    // Update reactive state
+    // Update the current user data (in a real app, this would come from the API response)
     if (currentUser.value) {
       currentUser.value.name = profileData.value.name;
     }
     
-    // Show success message (in a real app)
     alert('Profile updated successfully!');
+  } catch (error) {
+    alert('Failed to update profile. Please try again.');
+    console.error('Profile update error:', error);
+  } finally {
     isUpdating.value = false;
-  }, 800);
+  }
 };
 
-const updatePassword = async () => {
-  isUpdating.value = true;
-  
-  // Validate passwords
+// Update password function
+const updatePassword = async (): Promise<void> => {
   if (passwordData.value.newPassword !== passwordData.value.confirmPassword) {
     alert('New passwords do not match');
-    isUpdating.value = false;
     return;
   }
   
   if (passwordData.value.newPassword.length < 6) {
-    alert('Password must be at least 6 characters');
-    isUpdating.value = false;
+    alert('Password must be at least 6 characters long');
     return;
   }
   
-  // This is a mock implementation - in a real app, you would call an API
-  setTimeout(() => {
-    // In a real app, you would update the password on the server
-    alert('Password updated successfully!');
+  isUpdating.value = true;
+  
+  try {
+    // In a real app, you would call an API to update the password
+    await new Promise<void>(resolve => setTimeout(resolve, 1000));
     
-    // Reset form
+    // Clear password fields
     passwordData.value = {
       currentPassword: '',
       newPassword: '',
       confirmPassword: ''
     };
     
+    alert('Password updated successfully!');
+  } catch (error) {
+    alert('Failed to update password. Please try again.');
+    console.error('Password update error:', error);
+  } finally {
     isUpdating.value = false;
-  }, 800);
+  }
 };
 
-const confirmDeleteAccount = () => {
+// Delete account function
+const confirmDeleteAccount = (): void => {
   const confirmed = confirm(
     'Are you sure you want to delete your account? This action cannot be undone.'
   );
   
   if (confirmed) {
-    // This is a mock implementation - in a real app, you would call an API
-    alert('Account deletion is just a demo feature. Your account is still active.');
+    // In a real app, you would call an API to delete the account
+    alert('Account deletion feature will be implemented soon.');
   }
 };
+
+// Set page meta
+definePageMeta({
+  layout: 'default',
+  middleware: 'user-auth'
+});
 </script>
 
 <style scoped>
@@ -236,22 +258,21 @@ h1 {
 }
 
 h2 {
-  font-size: 1.25rem;
-  color: #334155;
+  color: #1e40af;
+  font-size: 1.3rem;
   margin-bottom: 0.5rem;
   font-weight: 600;
 }
 
 .section-description {
   color: #64748b;
-  font-size: 0.875rem;
   margin-bottom: 1.5rem;
 }
 
 .settings-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .form-group {
@@ -261,52 +282,50 @@ h2 {
 }
 
 label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #334155;
+  font-weight: 600;
+  color: #374151;
 }
 
 input {
   padding: 0.75rem;
+  border: 1px solid rgba(203, 213, 225, 0.8);
   border-radius: 0.375rem;
-  border: 1px solid #cbd5e1;
-  background-color: white;
   font-size: 1rem;
-  width: 100%;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: all 0.2s;
+  background-color: rgba(255, 255, 255, 0.9);
 }
 
 input:focus {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 input:disabled {
-  background-color: #f1f5f9;
+  background-color: #f8fafc;
+  color: #94a3b8;
   cursor: not-allowed;
 }
 
 .input-help {
-  font-size: 0.75rem;
   color: #64748b;
+  font-size: 0.875rem;
 }
 
 .save-button {
-  background-color: #1e40af;
+  background-color: #3b82f6;
   color: white;
   font-weight: 600;
-  padding: 0.75rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 0.375rem;
   border: none;
   cursor: pointer;
   transition: background-color 0.2s;
-  margin-top: 0.5rem;
-  width: fit-content;
+  align-self: flex-start;
 }
 
-.save-button:hover {
-  background-color: #1e3a8a;
+.save-button:hover:not(:disabled) {
+  background-color: #2563eb;
 }
 
 .save-button:disabled {

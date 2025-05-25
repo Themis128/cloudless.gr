@@ -54,29 +54,34 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue';
 import { useUserAuth } from '~/composables/useUserAuth';
 
 const { signup, loginError, isLoading, isLoggedIn } = useUserAuth();
 
 // Form state
-const name = ref('');
-const email = ref('');
-const password = ref('');
+const name = ref<string>('');
+const email = ref<string>('');
+const password = ref<string>('');
 
 // Redirect if already logged in
 if (process.client && isLoggedIn.value) {
-  navigateTo('/dashboard');
+  await navigateTo('/dashboard');
 }
 
 // Handle signup form submission
-const handleSignup = async () => {
+const handleSignup = async (): Promise<void> => {
   if (await signup(email.value, password.value, name.value)) {
     // Redirect to dashboard if signup successful
-    navigateTo('/dashboard');
+    await navigateTo('/dashboard');
   }
 };
+
+// Set page meta
+definePageMeta({
+  layout: 'default'
+});
 </script>
 
 <style scoped>

@@ -108,27 +108,54 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
 export default {
   layout: 'admin',
 };
 </script>
 
-<script setup>
+<script setup lang="ts">
 import { onMounted, ref } from 'vue';
 
+interface ContactSubmission {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: 'new' | 'read' | 'replied' | 'archived';
+  notes?: string;
+  metadata?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+interface SubmissionMetadata {
+  ip?: string;
+  userAgent?: string;
+  referrer?: string;
+  submissionTime?: string;
+  [key: string]: any;
+}
+
+interface PaginationInfo {
+  page: number;
+  pages: number;
+  total: number;
+}
+
 // State management
-const submissions = ref([]);
-const loading = ref(true);
-const currentPage = ref(1);
-const totalPages = ref(1);
-const totalSubmissions = ref(0);
-const statusFilter = ref('');
-const notesMap = ref({});
-const isMetadataOpen = ref({});
+const submissions = ref<ContactSubmission[]>([]);
+const loading = ref<boolean>(true);
+const currentPage = ref<number>(1);
+const totalPages = ref<number>(1);
+const totalSubmissions = ref<number>(0);
+const statusFilter = ref<string>('');
+const notesMap = ref<Record<string, string>>({});
+const isMetadataOpen = ref<Record<string, boolean>>({});
 
 // Function to parse metadata JSON string
-const parsedMetadata = (metadataString) => {
+const parsedMetadata = (metadataString: string): SubmissionMetadata => {
   if (!metadataString) return {};
   try {
     return JSON.parse(metadataString);
@@ -139,7 +166,7 @@ const parsedMetadata = (metadataString) => {
 };
 
 // Function to format exact submission time
-const formatExactTime = (timeString) => {
+const formatExactTime = (timeString: string): string => {
   if (!timeString) return '';
   try {
     const date = new Date(timeString);
@@ -158,12 +185,12 @@ const formatExactTime = (timeString) => {
 };
 
 // Toggle metadata visibility
-const toggleMetadata = (id) => {
+const toggleMetadata = (id: string): void => {
   isMetadataOpen.value[id] = !isMetadataOpen.value[id];
 };
 
 // Get auth token - in a real app, this would be from a proper auth system
-const getAuthToken = () => {
+const getAuthToken = (): string => {
   if (process.client) {
     return localStorage.getItem('admin_authenticated') === 'true' ? 'admin-token' : '';
   }
@@ -171,7 +198,7 @@ const getAuthToken = () => {
 };
 
 // Fetch submissions from the API
-const fetchSubmissions = async () => {
+const fetchSubmissions = async (): Promise<void> => {
   loading.value = true;
   try {
     const response = await fetch(
@@ -195,8 +222,10 @@ const fetchSubmissions = async () => {
     totalSubmissions.value = data.pagination.total;
 
     // Initialize notes map
-    data.submissions.forEach((submission) => {
-      notesMap.value[submission.id] = submission.notes || '';
+    submissions.value.forEach((submission) => {
+      if (submission.notes && !notesMap.value[submission.id]) {
+        notesMap.value[submission.id] = submission.notes;
+      }
     });
   } catch (error) {
     console.error('Error fetching submissions:', error);
@@ -206,92 +235,84 @@ const fetchSubmissions = async () => {
 };
 
 // Update submission status
-const updateStatus = async (id, status) => {
+const updateStatus = async (id: string, status: string): Promise<void> => {
   try {
-    const response = await fetch('/api/contact-submissions', {
+    const response = await fetch(`/api/contact-submissions/${id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${getAuthToken()}`,
       },
-      body: JSON.stringify({ id, status }),
+      body: JSON.stringify({ status }),
     });
 
-    if (response.ok) {
-      // Update the status in the local state
-      const index = submissions.value.findIndex((s) => s.id === id);
-      if (index !== -1) {
-        submissions.value[index].status = status;
-      }
-    } else {
-      throw new Error('Failed to update status');
+    if (!response.ok) {
+      throw new Error('Failed to update submission status');
+    }
+
+    // Update local state
+    const index = submissions.value.findIndex((s) => s.id === id);
+    if (index !== -1) {
+      submissions.value[index].status = status as 'new' | 'read' | 'replied' | 'archived';
     }
   } catch (error) {
-    console.error('Error updating status:', error);
-    alert('Failed to update status. Please check your connection and try again.');
+    console.error('Error updating submission status:', error);
   }
 };
 
 // Update submission notes
-const updateNotes = async (id) => {
+const updateNotes = async (id: string): Promise<void> => {
+  const notes = notesMap.value[id];
+  
   try {
-    const notes = notesMap.value[id];
-    const response = await fetch('/api/contact-submissions', {
+    const response = await fetch(`/api/contact-submissions/${id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${getAuthToken()}`,
       },
-      body: JSON.stringify({ id, notes }),
+      body: JSON.stringify({ notes }),
     });
 
-    if (response.ok) {
-      // Update the notes in the local state
-      const index = submissions.value.findIndex((s) => s.id === id);
-      if (index !== -1) {
-        submissions.value[index].notes = notes;
-      }
-    } else {
-      throw new Error('Failed to update notes');
+    if (!response.ok) {
+      throw new Error('Failed to update submission notes');
     }
+
+    // Update was successful
+    console.log('Notes updated successfully');
   } catch (error) {
-    console.error('Error updating notes:', error);
-    alert('Failed to update notes. Please check your connection and try again.');
+    console.error('Error updating submission notes:', error);
   }
 };
 
-// Delete a submission
-const confirmDelete = async (id) => {
-  if (confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
-    try {
-      const response = await fetch('/api/contact-submissions', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getAuthToken()}`,
-        },
-        body: JSON.stringify({ id }),
-      });
+// Delete submission
+const confirmDelete = async (id: string): Promise<void> => {
+  if (!confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
+    return;
+  }
 
-      if (response.ok) {
-        // Remove the submission from the local state
-        submissions.value = submissions.value.filter((s) => s.id !== id);
-        // If the current page is now empty and not the first page, go to the previous page
-        if (submissions.value.length === 0 && currentPage.value > 1) {
-          changePage(currentPage.value - 1);
-        } else {
-          // Otherwise, just refresh the current page
-          fetchSubmissions();
-        }
-      }
-    } catch (error) {
-      console.error('Error deleting submission:', error);
+  try {
+    const response = await fetch(`/api/contact-submissions/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete submission');
     }
+
+    // Remove from local state
+    submissions.value = submissions.value.filter((s) => s.id !== id);
+  } catch (error) {
+    console.error('Error deleting submission:', error);
   }
 };
 
-// Format date with Intl.DateTimeFormat
-const formatDate = (dateString) => {
+// Format date for display
+const formatDate = (dateString: string): string => {
+  if (!dateString) return '';
   const date = new Date(dateString);
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
@@ -303,13 +324,13 @@ const formatDate = (dateString) => {
 };
 
 // Change page
-const changePage = (page) => {
+const changePage = (page: number): void => {
   currentPage.value = page;
   fetchSubmissions();
 };
 
 // Initial data fetch
-onMounted(() => {
+onMounted((): void => {
   fetchSubmissions();
 });
 </script>
@@ -343,9 +364,9 @@ onMounted(() => {
 .loading,
 .no-submissions {
   text-align: center;
-  padding: 3rem;
+  padding: 3rem 0;
   color: #64748b;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .submissions-list {
@@ -355,109 +376,95 @@ onMounted(() => {
 }
 
 .submission-card {
-  background-color: white;
+  background-color: rgba(15, 23, 42, 0.7);
   border-radius: 0.5rem;
-  box-shadow:
-    0 1px 3px 0 rgba(0, 0, 0, 0.1),
-    0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   overflow: hidden;
-  transition: box-shadow 0.3s ease;
-}
-
-.submission-card:hover {
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  color: white;
 }
 
 .submission-header {
-  padding: 1rem;
-  background-color: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 1rem;
+  background-color: rgba(30, 64, 175, 0.8);
 }
 
 .submission-header h3 {
-  font-size: 1.1rem;
-  color: #1e293b;
   margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
 }
 
 .submission-meta {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  font-size: 0.875rem;
+  gap: 0.75rem;
 }
 
 .date {
-  color: #64748b;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .status {
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-weight: 500;
   font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 500;
   text-transform: uppercase;
 }
 
 .status.new {
-  background-color: #eff6ff;
-  color: #2563eb;
+  background-color: #2563eb;
+  color: white;
 }
 
 .status.read {
-  background-color: #ecfdf5;
-  color: #059669;
+  background-color: #9ca3af;
+  color: white;
 }
 
 .status.replied {
-  background-color: #f0fdfa;
-  color: #0d9488;
+  background-color: #059669;
+  color: white;
 }
 
 .status.archived {
-  background-color: #f1f5f9;
-  color: #64748b;
+  background-color: #475569;
+  color: white;
 }
 
 .submission-body {
   padding: 1rem;
-  display: grid;
-  grid-template-columns: 3fr 1fr;
-  gap: 1rem;
+}
+
+.submission-info {
+  margin-bottom: 1rem;
 }
 
 .submission-info p {
   margin: 0.5rem 0;
 }
 
-.message {
-  background-color: #f8fafc;
+.submission-info p.message {
+  white-space: pre-wrap;
+  background-color: rgba(255, 255, 255, 0.1);
   padding: 0.75rem;
   border-radius: 0.375rem;
-  white-space: pre-wrap;
-  color: #334155;
+  margin-top: 0.5rem;
 }
 
 .submission-notes textarea {
   width: 100%;
-  min-height: 120px;
+  height: 80px;
   padding: 0.75rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 0.375rem;
+  background-color: rgba(0, 0, 0, 0.2);
+  color: white;
   resize: vertical;
-  font-family: inherit;
-  color: #334155;
-}
-
-.submission-metadata {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px dashed #e2e8f0;
 }
 
 .toggle-metadata-button {
@@ -494,22 +501,22 @@ onMounted(() => {
   gap: 0.5rem;
   padding: 1rem;
   background-color: #f8fafc;
-  border-top: 1px solid #e2e8f0;
+  flex-wrap: wrap;
 }
 
 .action-button {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 0.375rem;
   font-size: 0.875rem;
-  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: 1px solid;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .action-button.read {
   background-color: #eff6ff;
-  color: #2563eb;
+  border-color: #93c5fd;
+  color: #1e40af;
 }
 
 .action-button.read:hover {
@@ -518,7 +525,8 @@ onMounted(() => {
 
 .action-button.replied {
   background-color: #ecfdf5;
-  color: #059669;
+  border-color: #6ee7b7;
+  color: #065f46;
 }
 
 .action-button.replied:hover {
@@ -527,7 +535,8 @@ onMounted(() => {
 
 .action-button.archived {
   background-color: #f1f5f9;
-  color: #64748b;
+  border-color: #cbd5e1;
+  color: #334155;
 }
 
 .action-button.archived:hover {
@@ -535,12 +544,13 @@ onMounted(() => {
 }
 
 .action-button.delete {
-  background-color: #fef2f2;
-  color: #dc2626;
+  background-color: #fee2e2;
+  border-color: #fecaca;
+  color: #b91c1c;
 }
 
 .action-button.delete:hover {
-  background-color: #fee2e2;
+  background-color: #fecaca;
 }
 
 .pagination {
@@ -552,52 +562,49 @@ onMounted(() => {
 }
 
 .pagination-button {
+  background-color: #1e40af;
+  color: white;
   padding: 0.5rem 1rem;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
   border-radius: 0.375rem;
-  font-size: 0.875rem;
+  border: none;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s;
+  font-size: 0.875rem;
 }
 
 .pagination-button:hover:not(:disabled) {
-  background-color: #f1f5f9;
+  background-color: #1e3a8a;
 }
 
 .pagination-button:disabled {
-  opacity: 0.5;
+  background-color: #94a3b8;
   cursor: not-allowed;
 }
 
 .pagination-info {
-  font-size: 0.875rem;
   color: #64748b;
+  font-size: 0.875rem;
 }
 
 @media (max-width: 768px) {
-  .submission-body {
-    grid-template-columns: 1fr;
+  .admin-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
   }
-
+  
   .submission-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-
-  .submission-meta {
-    width: 100%;
-    justify-content: space-between;
-  }
-
+  
   .submission-actions {
-    flex-wrap: wrap;
+    flex-direction: column;
   }
-
+  
   .action-button {
-    flex: 1;
-    min-width: calc(50% - 0.25rem);
+    width: 100%;
     text-align: center;
   }
 }
