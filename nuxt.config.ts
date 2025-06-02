@@ -33,16 +33,6 @@ export default defineNuxtConfig({
     '@nuxtjs/supabase'
   ],
 
-  supabase: {
-    url: process.env.SUPABASE_URL,
-    key: process.env.SUPABASE_ANON_KEY,
-    redirectOptions: {
-      login: '/auth/login',
-      callback: '/dashboard',
-      exclude: ['/', '/about', '/contact', '/auth/*'],
-    }
-  },
-
   runtimeConfig: {
     minio: {
       endpoint: process.env.MINIO_ENDPOINT || 'localhost',
@@ -61,6 +51,10 @@ export default defineNuxtConfig({
       },
       publicUrl: process.env.NUXT_PUBLIC_URL || 'http://localhost:3000',
       adminEmail: process.env.ADMIN_EMAIL || 'admin@cloudless.gr',
+      supabase: {
+        url: process.env.NUXT_SUPABASE_URL,
+        anonKey: process.env.NUXT_SUPABASE_ANON_KEY,
+      },
     },
   },
 

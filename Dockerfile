@@ -90,5 +90,9 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3000/ || exit 1
 
-# Start the application
-CMD ["node", ".output/server/index.mjs"]
+# Add wait-for-it.sh for coordinated startup (Jenkins or Compose can override entrypoint)
+COPY wait-for-it.sh /wait-for-it.sh
+RUN chmod +x /wait-for-it.sh
+
+# Default entrypoint (can be overridden by Compose or Jenkins)
+ENTRYPOINT ["/wait-for-it.sh", "jenkins:8080", "--", "node", ".output/server/index.mjs"]

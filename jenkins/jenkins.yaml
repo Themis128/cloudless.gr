@@ -1,0 +1,41 @@
+jenkins:
+  systemMessage: "Jenkins configured automatically by JCasC!"
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "admin"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+unclassified:
+  location:
+    url: "http://localhost:8080/"
+  mailer:
+    smtpHost: "smtp.gmail.com"
+    smtpPort: "465"
+    useSsl: true
+    authentication:
+      username: "themis.baltzakis@gmail.com"
+      password: "password"
+    replyToAddress: "themis.baltzakis@gmail.com"
+    charset: "UTF-8"
+jobs:
+  - script: >
+      pipelineJob('cloudless-platform') {
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('https://github.com/Themis128/cloudless.gr.git') }
+                branches('*/platform')
+              }
+            }
+            scriptPath('Jenkinsfile')
+          }
+        }
+        triggers {
+          githubPush()
+        }
+      }

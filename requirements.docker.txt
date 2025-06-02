@@ -132,3 +132,6 @@ memory-profiler>=0.61.0
 python-magic>=0.4.27
 chardet>=5.2.0
 tqdm>=4.66.0
+
+# Slack Notifications (for Dockerized environments)
+slack_sdk>=3.27.0

@@ -1,0 +1,8 @@
+workflow-aggregator
+email-ext
+configuration-as-code
+docker-plugin
+blueocean
+git
+pipeline-github
+pipeline-stage-view
