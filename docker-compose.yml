@@ -1,0 +1,272 @@
+version: '3.8'
+
+services:
+  cloudlessgr-app:
+    image: sha256:b985d64de3548c88cfd08b6892b6c8611d00dd96adbb57c5a47015a40545cb0b
+    container_name: cloudlessgr-app
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+    volumes:
+      - ./data:/app/data
+    networks:
+      - app-network
+      - db-network
+      - monitoring-network
+      - cicd-network
+      - logging-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      db:
+        condition: service_healthy
+
+  jenkins:
+    image: jenkins/jenkins:2.426.3-lts
+    ports:
+      - "8080:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - ./jenkins/jenkins.yaml:/var/jenkins_home/casc_configs/jenkins.yaml
+      - ./jenkins/plugins.txt:/usr/share/jenkins/ref/plugins.txt
+      - ./jenkins/deployment.yml:/var/jenkins_home/casc_configs/deployment.yml
+      - jenkins_backup:/backup
+    environment:
+      - CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs/jenkins.yaml
+      - TZ=Europe/Athens
+      - JAVA_OPTS=-Xmx2048m -Djenkins.install.runSetupWizard=false
+      - JENKINS_EMAIL_USER=themis.baltzakis@gmail.com
+      - JENKINS_EMAIL_PASSWORD_FILE=/run/secrets/jenkins_email_password
+      - JENKINS_EMAIL_SMTP_SERVER=smtp.gmail.com
+      - JENKINS_EMAIL_SMTP_PORT=465
+      - JENKINS_EMAIL_USE_SSL=true
+    secrets:
+      - jenkins_email_password
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login" ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2g
+        reservations:
+          cpus: '1'
+          memory: 1g
+    networks:
+      - app-network
+      - cicd-network
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.49.1
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - app-network
+      - monitoring-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: 1.0
+          memory: 512M
+        reservations:
+          cpus: 0.5
+          memory: 256M
+
+  grafana:
+    image: grafana/grafana:10.3.3
+    container_name: grafana
+    ports:
+      - "3002:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_PATHS_PROVISIONING_DASHBOARDS=/etc/grafana/provisioning/dashboards
+      - GF_PATHS_PROVISIONING_DATASOURCES=/etc/grafana/provisioning/datasources
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana-provisioning-dashboards.yaml:/etc/grafana/provisioning/dashboards/default.yaml:ro
+      - ./grafana-provisioning-datasources.yaml:/etc/grafana/provisioning/datasources/default.yaml:ro
+      - ./platform-overview.json:/var/lib/grafana/dashboards/platform-overview.json:ro
+      - ./supabase-overview.json:/var/lib/grafana/dashboards/supabase-overview.json:ro
+      - ./logging-overview.json:/var/lib/grafana/dashboards/logging-overview.json:ro
+    networks:
+      - app-network
+      - monitoring-network
+      - logging-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: 1.0
+          memory: 512M
+        reservations:
+          cpus: 0.5
+          memory: 256M
+
+  pgadmin:
+    image: dpage/pgadmin4:8.3
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@cloudless.gr
+      PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/pgadmin_password
+    secrets:
+      - pgadmin_password
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - db-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/misc/ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 256M
+        reservations:
+          cpus: 0.25
+          memory: 128M
+
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml:ro
+    networks:
+      - logging-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 256M
+        reservations:
+          cpus: 0.25
+          memory: 128M
+
+  portainer:
+    image: portainer/portainer-ce:2.19.4
+    container_name: portainer
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    restart: unless-stopped
+    networks:
+      - app-network
+    environment:
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD_FILE=/run/secrets/portainer_admin_password
+    secrets:
+      - portainer_admin_password
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9000/api/status"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 256M
+        reservations:
+          cpus: 0.25
+          memory: 128M
+
+  db:
+    image: supabase/postgres:15.1.0.147
+    container_name: supabase-db
+    ports:
+      - "54322:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - supabase_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - app-network
+      - db-network
+    restart: unless-stopped
+
+secrets:
+  pgadmin_password:
+    file: ./secrets/pgadmin_password.txt
+  jenkins_email_password:
+    file: ./secrets/jenkins_email_password.txt
+  portainer_admin_password:
+    file: ./secrets/portainer_admin_password.txt
+
+volumes:
+  jenkins_home:
+  jenkins_backup:
+  supabase_data:
+  grafana_data:
+  pgadmin_data:
+  portainer_data:
+
+networks:
+  app-network:
+    driver: bridge
+  db-network:
+    driver: bridge
+  monitoring-network:
+    driver: bridge
+  cicd-network:
+    driver: bridge
+  logging-network:
+    driver: bridge
