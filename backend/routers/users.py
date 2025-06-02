@@ -14,8 +14,8 @@ user_profile = {"id": "1", "name": "Test User", "email": "test@example.com"}
 
 
 class UserProfileUpdate(BaseModel):
-    name: str = None
-    email: str = None
+    name: Optional[str] = None
+    email: Optional[str] = None
 
 
 SECRET_KEY = "your-secret-key"
@@ -33,7 +33,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
+        username = payload.get("sub")
         if username is None:
             raise credentials_exception
     except JWTError:
@@ -67,11 +67,11 @@ class UserProfile(BaseModel):
     avatar_url: Optional[str] = None
 
 
-@router.get("/profile")
-async def get_profile(token: str) -> Dict[str, Any]:
+@router.get("/profile-by-token")
+async def get_profile_by_token(token: str) -> Dict[str, Any]:
     try:
         payload = jwt.decode(token, "your-secret-key", algorithms=["HS256"])
-        username: Optional[str] = payload.get("sub")
+        username = payload.get("sub")
         if username is None:
             raise HTTPException(status_code=401, detail="Invalid token")
 

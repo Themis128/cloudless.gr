@@ -26,7 +26,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
+        username = payload.get("sub")
         if username is None:
             raise credentials_exception
     except JWTError:
@@ -69,7 +69,7 @@ async def create_workflow(
     current_user: dict = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    db_workflow = Workflow(**workflow.dict(), owner=current_user["username"])
+    db_workflow = Workflow(**workflow.model_dump(), owner=current_user["username"])
     session.add(db_workflow)
     await session.commit()
     await session.refresh(db_workflow)
@@ -108,7 +108,7 @@ async def update_workflow(
     db_workflow = result.scalar_one_or_none()
     if not db_workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
-    for key, value in workflow.dict().items():
+    for key, value in workflow.model_dump().items():
         setattr(db_workflow, key, value)
     session.add(db_workflow)
     await session.commit()
@@ -138,9 +138,9 @@ async def delete_workflow(
 @router.post("/{workflow_id}/run")
 async def run_workflow(
     workflow_id: int,
-    input: dict,
+    input_data: dict,
     current_user: dict = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
     # Simulate workflow execution
-    return {"output": f"Workflow {workflow_id} ran with input {input}", "logs": []}
+    return {"output": f"Workflow {workflow_id} ran with input {input_data}", "logs": []}
