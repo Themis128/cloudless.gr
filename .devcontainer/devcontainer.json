@@ -78,7 +78,7 @@
         "editor.acceptSuggestionOnCommitCharacter": false,
         "editor.acceptSuggestionOnEnter": "on",
         "editor.tabCompletion": "on",
-        "editor.wordBasedSuggestions": true,
+        "editor.wordBasedSuggestions": "currentDocument",
         "editor.quickSuggestions": {
           "other": true,
           "comments": false,
@@ -109,9 +109,9 @@
         "editor.formatOnSave": true,
         "editor.formatOnPaste": true,
         "editor.codeActionsOnSave": {
-          "source.fixAll.eslint": true,
-          "source.fixAll.stylelint": true,
-          "source.organizeImports": true
+          "source.fixAll.eslint": "always",
+          "source.fixAll.stylelint": "always",
+          "source.organizeImports": "always"
         },
         "eslint.validate": [
           "javascript",
@@ -139,7 +139,14 @@
           "vue.volar": 1,
           "ms-python.python": 2,
           "github.copilot": 1
-        }
+        },
+        // Clipboard workaround for remote/headless: fallback to system clipboard if available
+        "terminal.integrated.copyOnSelection": true,
+        // Robustness: always use latest extension versions
+        "extensions.autoUpdate": true,
+        "extensions.autoCheckUpdates": true,
+        // Editor: fallback for missing commands
+        "editor.suggest.showCommands": true
       }
     }
   },
@@ -188,5 +195,7 @@
 
   "remoteUser": "node",
   "overrideCommand": false,
-  "updateContentCommand": "npm install"
+  "updateContentCommand": "npm install",
+  // Robustness: fallback for missing workspace folder
+  "onCreateCommand": "if [ ! -d /app ]; then mkdir -p /app; fi"
 }
