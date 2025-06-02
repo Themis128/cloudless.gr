@@ -1,0 +1,51 @@
+{
+  "models": [
+    {
+      "name": "phind",
+      "title": "Phind CodeLlama 34B",
+      "provider": "ollama",
+      "model": "phind-codellama:34b",
+      "tools": true
+    },
+    {
+      "name": "codellama",
+      "title": "CodeLlama",
+      "provider": "ollama",
+      "model": "codellama:latest",
+      "tools": true
+    },
+    {
+      "name": "llama3_8b",
+      "title": "Llama 3.1 8B",
+      "provider": "ollama",
+      "model": "llama3.1:8b",
+      "tools": false
+    },
+    {
+      "name": "qwenCoder",
+      "title": "Qwen2.5 Coder 1.5B",
+      "provider": "ollama",
+      "model": "qwen2.5-coder:1.5b-base",
+      "tools": false
+    },
+    {
+      "name": "llama3_latest",
+      "title": "Llama 3 Latest",
+      "provider": "ollama",
+      "model": "llama3:latest",
+      "tools": false
+    }
+  ],
+  "defaultModel": "phind",
+  "toolPolicies": {
+    "editFile": "always",
+    "readFile": "always",
+    "runCommand": "ask"
+  },
+  "promptsPath": ".continue/prompts/vue-tasks.json",
+  "features": {
+    "agentMode": true,
+    "tools": true
+  },
+  "projectType": "nuxt-vuetify"
+}

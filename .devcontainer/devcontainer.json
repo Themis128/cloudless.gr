@@ -1,0 +1,192 @@
+{
+  "name": "Cloudless.gr Development Environment",
+  "dockerComposeFile": ["../docker-compose.dev.yml"],
+  "service": "nuxt-app",
+  "workspaceFolder": "/app",
+  "shutdownAction": "stopCompose",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vue.volar",
+        "vue.vscode-typescript-vue-plugin",
+        "nuxt.mdc",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss",
+        "stylelint.vscode-stylelint",
+        "ms-vscode.vscode-typescript-next",
+        "ms-vscode.vscode-js-debug",
+        "supabase.supabase",
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-pg",
+        "ms-azuretools.vscode-docker",
+        "ms-vscode-remote.remote-containers",
+        "redhat.vscode-yaml",
+        "ms-python.python",
+        "ms-python.debugpy",
+        "ms-python.pylint",
+        "ms-python.black-formatter",
+        "github.copilot",
+        "github.copilot-chat",
+        "continue.continue",
+        "usernamehw.errorlens",
+        "eamodio.gitlens",
+        "rangav.vscode-thunder-client",
+        "streetsidesoftware.code-spell-checker",
+        "gruntfuggly.todo-tree",
+        "ms-vscode.vscode-json",
+        "redhat.vscode-xml",
+        "alefragnani.bookmarks",
+        "ms-vscode.hexeditor",
+        "aaron-bond.better-comments",
+        "formulahendry.auto-rename-tag",
+        "christian-kohler.path-intellisense",
+        "ms-vscode.live-server",
+        "vitest.explorer",
+        "ms-vscode.test-adapter-converter",
+        "mhutchie.git-graph",
+        "github.vscode-pull-request-github"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/app/shared_venv/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.formatting.provider": "black",
+        "python.analysis.autoImportCompletions": true,
+        "docker.dockerPath": "/usr/bin/docker",
+        "docker.dockerComposePath": "/usr/bin/docker-compose",
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash"
+          }
+        },
+        "vue.inlayHints.missingProps": true,
+        "vue.inlayHints.inlineHandlerLeading": true,
+        "vue.inlayHints.optionsWrapper": true,
+        "vue.server.hybridMode": true,
+        "volar.takeOverMode.enabled": true,
+        "typescript.preferences.includePackageJsonAutoImports": "auto",
+        "typescript.suggest.autoImports": true,
+        "typescript.updateImportsOnFileMove.enabled": "always",
+        "typescript.inlayHints.parameterNames.enabled": "all",
+        "typescript.inlayHints.functionLikeReturnTypes.enabled": true,
+        "editor.suggest.snippetsPreventQuickSuggestions": false,
+        "editor.suggestOnTriggerCharacters": true,
+        "editor.acceptSuggestionOnCommitCharacter": false,
+        "editor.acceptSuggestionOnEnter": "on",
+        "editor.tabCompletion": "on",
+        "editor.wordBasedSuggestions": true,
+        "editor.quickSuggestions": {
+          "other": true,
+          "comments": false,
+          "strings": true
+        },
+        "files.watcherExclude": {
+          "**/.git/objects/**": true,
+          "**/.git/subtree-cache/**": true,
+          "**/node_modules/**": true,
+          "**/.nuxt/**": true,
+          "**/.output/**": true,
+          "**/dist/**": true,
+          "**/.pytest_cache/**": true,
+          "**/__pycache__/**": true,
+          "**/shared_venv/**": true
+        },
+        "search.exclude": {
+          "**/node_modules": true,
+          "**/.nuxt": true,
+          "**/.output": true,
+          "**/dist": true,
+          "**/.git": true,
+          "**/.pytest_cache": true,
+          "**/__pycache__": true,
+          "**/shared_venv": true,
+          "**/package-lock.json": true
+        },
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": true,
+          "source.fixAll.stylelint": true,
+          "source.organizeImports": true
+        },
+        "eslint.validate": [
+          "javascript",
+          "javascriptreact",
+          "typescript",
+          "typescriptreact",
+          "vue"
+        ],
+        "eslint.workingDirectories": ["/app"],
+        "prettier.requireConfig": true,
+        "prettier.useEditorConfig": false,
+        "tailwindCSS.includeLanguages": {
+          "vue": "html",
+          "vue-html": "html"
+        },
+        "tailwindCSS.experimental.classRegex": [
+          ["class:\\s*['\"]([^'\"]*)['\"]", "['\"]([^'\"]*)['\"]"]
+        ],
+        // 🔐 Supabase CLI extension support (replace with your project ref if available)
+        "supabase.projectRef": "your-supabase-project-ref",
+        "git.enableSmartCommit": true,
+        "git.confirmSync": false,
+        "git.autofetch": true,
+        "extensions.experimental.affinity": {
+          "vue.volar": 1,
+          "ms-python.python": 2,
+          "github.copilot": 1
+        }
+      }
+    }
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+
+  "forwardPorts": [3000, 9229, 5432, 6379, 9000, 9001],
+  "portsAttributes": {
+    "3000": {
+      "label": "Nuxt Development Server",
+      "onAutoForward": "notify"
+    },
+    "9229": {
+      "label": "Node.js Debug Port",
+      "onAutoForward": "silent"
+    },
+    "5432": {
+      "label": "PostgreSQL Database",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis Cache",
+      "onAutoForward": "silent"
+    },
+    "9000": {
+      "label": "MinIO S3 API",
+      "onAutoForward": "silent"
+    },
+    "9001": {
+      "label": "MinIO Console",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "postCreateCommand": "npm install && npm run docker:init",
+  "postStartCommand": "npm run health",
+
+  "remoteUser": "node",
+  "overrideCommand": false,
+  "updateContentCommand": "npm install"
+}

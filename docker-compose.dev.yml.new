@@ -1,0 +1,171 @@
+# docker-compose.yml — Nuxt Platform Development
+version: '3.8'
+
+services:
+  nuxt-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: cloudless-nuxt-dev
+    ports:
+      - '3000:3000'
+      - '24678:24678' # Vite HMR
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.nuxt
+    environment:
+      NODE_ENV: development
+      NUXT_HOST: 0.0.0.0
+      NUXT_PORT: 3000
+      CHOKIDAR_USEPOLLING: 'true'
+      # Auth0 Configuration
+      NUXT_AUTH0_DOMAIN: '${NUXT_AUTH0_DOMAIN:-}'
+      NUXT_AUTH0_CLIENT_ID: '${NUXT_AUTH0_CLIENT_ID:-}'
+      NUXT_AUTH0_AUDIENCE: '${NUXT_AUTH0_AUDIENCE:-}'
+      # Supabase Configuration - Multiple formats for compatibility
+      SUPABASE_URL: '${SUPABASE_URL:-https://placeholder.supabase.co}'
+      SUPABASE_ANON_KEY: '${SUPABASE_ANON_KEY:-placeholder-key}'
+      SUPABASE_SERVICE_KEY: '${SUPABASE_SERVICE_KEY:-}'
+      NUXT_SUPABASE_URL: '${SUPABASE_URL:-https://placeholder.supabase.co}'
+      NUXT_SUPABASE_ANON_KEY: '${SUPABASE_ANON_KEY:-placeholder-key}'
+      SUPABASE_KEY: '${SUPABASE_ANON_KEY:-placeholder-key}'
+      # JWT & Auth Configuration
+      NUXT_JWT_SECRET: '${NUXT_JWT_SECRET:-development-secret}'
+      NUXT_AUTH_SECRET: '${NUXT_AUTH_SECRET:-development-auth-secret}'
+      AUTH_ORIGIN: 'http://localhost:3000'
+      ADMIN_EMAIL: '${ADMIN_EMAIL:-admin@cloudless.gr}'
+      ADMIN_PASSWORD: '${ADMIN_PASSWORD:-cloudless2025}'
+      # MinIO Configuration
+      MINIO_ENDPOINT: '${MINIO_ENDPOINT:-minio}'
+      MINIO_PORT: '${MINIO_PORT:-9000}'
+      MINIO_ACCESS_KEY: '${MINIO_ACCESS_KEY:-minioadmin}'
+      MINIO_SECRET_KEY: '${MINIO_SECRET_KEY:-minioadmin}'
+    networks:
+      - nuxt-network
+    restart: unless-stopped
+    depends_on:
+      - minio
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3000/ || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  minio:
+    image: minio/minio:latest
+    container_name: cloudless-minio
+    ports:
+      - '9000:9000'
+      - '9001:9001' # Admin console
+    volumes:
+      - minio-data:/data
+    environment:
+      MINIO_ROOT_USER: '${MINIO_ACCESS_KEY:-minioadmin}'
+      MINIO_ROOT_PASSWORD: '${MINIO_SECRET_KEY:-minioadmin}'
+    command: server /data --console-address ":9001"
+    networks:
+      - nuxt-network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: cloudless-postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: '${POSTGRES_DB:-cloudless_dev}'
+      POSTGRES_USER: '${POSTGRES_USER:-postgres}'
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD:-postgres}'
+    networks:
+      - nuxt-network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER:-postgres}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: cloudless-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    networks:
+      - nuxt-network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+    container_name: cloudless-jenkins
+    user: root
+    ports:
+      - '8080:8080'
+      - '50000:50000'
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - jenkins-venv:/opt/jenkins_venv
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/workspace
+    environment:
+      JAVA_OPTS: '-Djenkins.install.runSetupWizard=false'
+      JENKINS_OPTS: '--httpPort=8080'
+      PYTHONPATH: '/opt/jenkins_venv/lib/python3.*/site-packages'
+      API_KEY: '${API_KEY:-}'
+      DATABASE_URL: '${DATABASE_URL:-file:../data/cloudless.db}'
+      NODE_ENV: '${NODE_ENV:-development}'
+    networks:
+      - nuxt-network
+    restart: unless-stopped
+    working_dir: /workspace
+    healthcheck:
+      test: ['CMD-SHELL', 'curl --fail http://localhost:8080/login || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: cloudless-portainer
+    ports:
+      - '9002:9000' # Custom UI port
+      - '9443:9443' # HTTPS
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+    environment:
+      PORTAINER_LOG_LEVEL: INFO
+    networks:
+      - nuxt-network
+    restart: unless-stopped
+
+volumes:
+  minio-data:
+  postgres-data:
+  redis-data:
+  jenkins-data:
+  jenkins-venv:
+  portainer-data:
+
+networks:
+  nuxt-network:
+    driver: bridge

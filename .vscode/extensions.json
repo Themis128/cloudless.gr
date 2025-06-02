@@ -1,0 +1,130 @@
+{
+  "recommendations": [
+    // === Core Vue/Nuxt Development ===
+    "vue.volar", // Vue Language Features (Volar)
+    "vue.vscode-typescript-vue-plugin", // TypeScript Vue Plugin (Volar)
+    "esbenp.prettier-vscode", // Prettier - Code formatter
+    "dbaeumer.vscode-eslint", // ESLint
+    "bradlc.vscode-tailwindcss", // Tailwind CSS IntelliSense
+
+    // === Docker & Container Development ===
+    "ms-azuretools.vscode-docker", // Docker Support
+    "ms-vscode-remote.remote-containers", // Dev Containers
+    "ms-vscode-remote.remote-ssh", // Remote SSH
+    "ms-vscode-remote.vscode-remote-extensionpack", // Remote Development Pack
+    "redhat.vscode-yaml", // YAML Language Support (for Docker Compose)
+    "timonwong.shellcheck", // Shell script linting
+
+    // === AI-Powered Development & Automation ===
+    "github.copilot", // GitHub Copilot
+    "github.copilot-chat", // GitHub Copilot Chat
+    "continue.continue", // Continue - AI Code Assistant
+    "rubberduck.rubberduck-vscode", // AI-powered code assistance
+    "tabnine.tabnine-vscode", // AI code completion
+    "codeium.codeium", // Free AI code completion
+    "sourcegraph.cody-ai", // Cody AI Assistant
+
+    // === Advanced Debugging & Error Detection ===
+    "usernamehw.errorlens", // Error Lens - Inline error display
+    "ms-vscode.vscode-js-debug", // JavaScript Debugger
+    "firefox-devtools.vscode-firefox-debug", // Firefox Debugger
+    "ms-vscode.vscode-js-debug-companion", // Debug Companion
+    "yoavbls.pretty-ts-errors", // Pretty TypeScript Errors
+    "wallabyjs.quokka-vscode", // Live JS/TS scratchpad
+    "ms-python.python", // Python support
+    "ms-python.debugpy", // Python debugging
+
+    // === Intelligent Refactoring & Code Actions ===
+    "ms-vscode.vscode-typescript-next", // TypeScript Nightly
+    "formulahendry.auto-close-tag", // Auto Close Tag
+    "formulahendry.auto-rename-tag", // Auto Rename Tag
+    "steoates.autoimport", // Auto Import - ES6, TS, JSX, TSX
+    "typescript-importer.typescript-importer", // Auto import TypeScript
+    "ms-vscode.vscode-json", // JSON Language Features
+    "redhat.vscode-xml", // XML Language Support
+
+    // === Code Quality & Analysis ===
+    "sonarlint-vscode.sonarlint-vscode", // SonarLint - Code quality
+    "pflannery.vscode-versionlens", // Version Lens - package versions
+    "christian-kohler.npm-intellisense", // NPM IntelliSense
+    "ms-vscode.vscode-node-azure-pack", // Azure tools
+    "ms-vscode.vscode-eslint", // ESLint Advanced
+    "stylelint.vscode-stylelint", // Stylelint for CSS
+
+    // === Enhanced Development Experience ===
+    "eamodio.gitlens", // GitLens - Git supercharged
+    "mhutchie.git-graph", // Git Graph
+    "donjayamanne.githistory", // Git History
+    "streetsidesoftware.code-spell-checker", // Code Spell Checker
+    "wayou.vscode-todo-highlight", // TODO Highlight
+    "gruntfuggly.todo-tree", // Todo Tree
+    "aaron-bond.better-comments", // Better Comments
+    "oderwat.indent-rainbow", // Indent Rainbow
+    "mechatroner.rainbow-csv", // Rainbow CSV
+
+    // === File & Project Management ===
+    "christian-kohler.path-intellisense", // Path IntelliSense
+    "ms-vscode.vscode-file-watcher", // File Watcher
+    "alefragnani.project-manager", // Project Manager
+    "ms-vscode.references-view", // References View
+    "alefragnani.bookmarks", // Bookmarks
+    "shardulm94.trailing-spaces", // Trailing Spaces
+
+    // === Testing & Quality Assurance ===
+    "ms-vscode.test-adapter-converter", // Test Adapter Converter
+    "hbenl.vscode-test-explorer", // Test Explorer
+    "ms-playwright.playwright", // Playwright Test
+    "rangav.vscode-thunder-client", // Thunder Client for API Testing
+    "humao.rest-client", // REST Client
+    "ryanluker.vscode-coverage-gutters", // Coverage Gutters
+    "vitest.explorer", // Vitest Test Explorer
+
+    // === Database & API Development ===
+    "mtxr.sqltools", // SQLTools
+    "mtxr.sqltools-driver-pg", // PostgreSQL Driver
+    "cweijan.vscode-redis-client", // Redis Client
+    "ms-mssql.mssql", // SQL Server
+    "oracle.oracledevtools", // Oracle Developer Tools
+
+    // === Utilities & Productivity ===
+    "naumovs.color-highlight", // Color Highlight
+    "mikestead.dotenv", // DotENV
+    "csstools.postcss", // PostCSS Language Support
+    "ms-vscode.vscode-markdown", // Markdown Language Features
+    "davidanson.vscode-markdownlint", // Markdown Linting
+    "yzhang.markdown-all-in-one", // Markdown All in One
+    "bierner.markdown-mermaid", // Mermaid diagram support
+    "ms-vscode.powershell", // PowerShell support
+
+    // === Performance & Monitoring ===
+    "ms-vscode.vscode-performance", // Performance Monitor
+    "ms-vscode.vscode-memory-usage", // Memory Usage Monitor
+    "wallabyjs.console-ninja", // Console Ninja - Enhanced console
+    "chunsen.bracket-select", // Bracket Select
+    "ms-vscode.hexeditor", // Hex Editor
+
+    // === Environment & Configuration ===
+    "editorconfig.editorconfig", // EditorConfig
+    "tyriar.sort-lines", // Sort Lines
+    "ms-vscode.vscode-github-issue-notebooks", // GitHub Issues
+    "github.vscode-pull-request-github", // GitHub Pull Requests
+    "ms-vsliveshare.vsliveshare", // Live Share
+    "ms-vscode.azure-account", // Azure Account
+
+    // === Specialized Tools ===
+    "ms-vscode.vscode-npm-script", // NPM Script runner
+    "christian-kohler.npm-intellisense", // NPM IntelliSense
+    "eg2.vscode-npm-script", // NPM Script Commands
+    "ms-vscode.vscode-json", // JSON tools
+    "quicktype.quicktype", // JSON to TypeScript
+    "wix.vscode-import-cost", // Import Cost analyzer
+    "ms-vscode.vscode-github-issue-notebooks" // GitHub Issues Notebooks
+  ],
+  "unwantedRecommendations": [
+    // Extensions that might conflict or are redundant
+    "hookyqr.beautify", // Conflicts with Prettier
+    "ms-vscode.vscode-typescript", // Replaced by newer TypeScript support
+    "ms-vscode.typescript-hero", // Discontinued
+    "formulahendry.code-runner" // Can interfere with integrated debugging
+  ]
+}

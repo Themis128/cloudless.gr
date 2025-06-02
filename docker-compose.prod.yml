@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "3000:3000"
+    environment:
+      # Nuxt specific
+      NODE_ENV: production
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+
+      # Auth0 Configuration
+      NUXT_AUTH0_DOMAIN: ${NUXT_AUTH0_DOMAIN}
+      NUXT_AUTH0_CLIENT_ID: ${NUXT_AUTH0_CLIENT_ID}
+      NUXT_AUTH0_AUDIENCE: ${NUXT_AUTH0_AUDIENCE}
+      NUXT_PUBLIC_URL: ${NUXT_PUBLIC_URL}
+
+      # Database Configuration
+      DATABASE_URL: ${DATABASE_URL}
+
+      # Supabase Configuration (multiple formats for compatibility)
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      NUXT_SUPABASE_URL: ${NUXT_SUPABASE_URL}
+      NUXT_SUPABASE_ANON_KEY: ${NUXT_SUPABASE_ANON_KEY}
+      SUPABASE_KEY: ${SUPABASE_KEY}
+
+      # Auth Secret for JWT signing
+      NUXT_AUTH_SECRET: ${NUXT_AUTH_SECRET}
+      AUTH_ORIGIN: ${NUXT_PUBLIC_URL:-https://www.cloudless.gr}
+
+      # Admin credentials
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+
+      # JWT configuration for admin authentication
+      NUXT_JWT_SECRET: ${NUXT_JWT_SECRET}
+      NUXT_JWT_EXPIRES_IN: ${NUXT_JWT_EXPIRES_IN}
+      NUXT_AUTH_COOKIE_NAME: ${NUXT_AUTH_COOKIE_NAME}
+
+      # LLM integration
+      LLM_API_URL: ${LLM_API_URL}
+      LLM_MODEL: ${LLM_MODEL}
+
+    volumes:
+      - ./data:/app/data
+    networks:
+      - app-network
+    restart: unless-stopped
+    depends_on:
+      - minio
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${ADMIN_EMAIL:-admin@cloudless.gr}
+      MINIO_ROOT_PASSWORD: ${ADMIN_PASSWORD:-cloudless2025}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  minio_data:
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,119 @@
+{
+  "version": "1.0.0",
+  "description": "Docker development configuration for Cloudless.gr Platform",
+  "configurations": {
+    "development": {
+      "composeFile": "docker-compose.dev.yml",
+      "environment": ".env.docker",
+      "services": {
+        "nuxt-app": {
+          "ports": ["3000:3000", "9229:9229"],
+          "volumes": ["./:/app", "/app/node_modules"],
+          "debugPort": 9229
+        },
+        "postgres": {
+          "ports": ["5432:5432"],
+          "volumes": ["postgres-data:/var/lib/postgresql/data"]
+        },
+        "redis": {
+          "ports": ["6379:6379"],
+          "volumes": ["redis-data:/data"]
+        },
+        "minio": {
+          "ports": ["9000:9000", "9001:9001"],
+          "volumes": ["minio-data:/data"]
+        }
+      }
+    },
+    "production": {
+      "composeFile": "docker-compose.prod.yml",
+      "environment": ".env.docker",
+      "services": {
+        "nuxt-app": {
+          "ports": ["3000:3000"],
+          "volumes": ["./logs:/app/logs"]
+        },
+        "nginx": {
+          "ports": ["80:80", "443:443"],
+          "volumes": ["./nginx:/etc/nginx/conf.d"]
+        }
+      }
+    }
+  },
+  "commands": {
+    "init": {
+      "description": "Initialize Docker environment",
+      "command": "npm run docker:init"
+    },
+    "dev": {
+      "description": "Start development environment",
+      "command": "npm run docker:dev"
+    },
+    "prod": {
+      "description": "Start production environment",
+      "command": "npm run docker:prod"
+    },
+    "stop": {
+      "description": "Stop all containers",
+      "command": "npm run docker:stop"
+    },
+    "clean": {
+      "description": "Clean all Docker data",
+      "command": "npm run docker:clean"
+    },
+    "logs": {
+      "description": "View container logs",
+      "command": "npm run docker:logs"
+    },
+    "shell": {
+      "description": "Open shell in container",
+      "command": "npm run docker:shell"
+    },
+    "status": {
+      "description": "Check container status",
+      "command": "npm run docker:status"
+    }
+  },
+  "healthChecks": {
+    "nuxt-app": {
+      "url": "http://localhost:3000/api/health",
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3
+    },
+    "postgres": {
+      "command": "pg_isready -U postgres",
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3
+    },
+    "redis": {
+      "command": "redis-cli ping",
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3
+    },
+    "minio": {
+      "url": "http://localhost:9000/minio/health/live",
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3
+    }
+  },
+  "volumes": {
+    "postgres-data": {
+      "driver": "local"
+    },
+    "redis-data": {
+      "driver": "local"
+    },
+    "minio-data": {
+      "driver": "local"
+    }
+  },
+  "networks": {
+    "cloudless-network": {
+      "driver": "bridge"
+    }
+  }
+}

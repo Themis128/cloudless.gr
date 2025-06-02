@@ -1,0 +1,143 @@
+{
+  "TypeScript Utility Types": {
+    "prefix": "ts-utility",
+    "body": [
+      "// Utility Types",
+      "type Partial${1:Type} = Partial<${2:OriginalType}>;",
+      "type Required${1:Type} = Required<${2:OriginalType}>;",
+      "type Pick${1:Type} = Pick<${2:OriginalType}, '${3:key1}' | '${4:key2}'>;",
+      "type Omit${1:Type} = Omit<${2:OriginalType}, '${5:key1}' | '${6:key2}'>;",
+      "type Record${1:Type} = Record<${7:string}, ${8:any}>;"
+    ],
+    "description": "TypeScript utility types collection"
+  },
+  "Generic Function": {
+    "prefix": "ts-generic-fn",
+    "body": [
+      "function ${1:functionName}<T${2:, K extends keyof T}>(${3:param}: T): ${4:T} {",
+      "  ${5:// Function implementation}",
+      "  return ${3:param};",
+      "}"
+    ],
+    "description": "Generic TypeScript function"
+  },
+  "TypeScript Enum": {
+    "prefix": "ts-enum",
+    "body": [
+      "export enum ${1:EnumName} {",
+      "  ${2:VALUE_ONE} = '${3:value-one}',",
+      "  ${4:VALUE_TWO} = '${5:value-two}',",
+      "  ${6:VALUE_THREE} = '${7:value-three}'",
+      "}"
+    ],
+    "description": "TypeScript enum definition"
+  },
+  "TypeScript Class": {
+    "prefix": "ts-class",
+    "body": [
+      "export class ${1:ClassName} {",
+      "  private ${2:property}: ${3:string};",
+      "  ",
+      "  constructor(${2:property}: ${3:string}) {",
+      "    this.${2:property} = ${2:property};",
+      "  }",
+      "  ",
+      "  public ${4:method}(): ${5:void} {",
+      "    ${6:// Method implementation}",
+      "  }",
+      "  ",
+      "  get ${2:property}(): ${3:string} {",
+      "    return this.${2:property};",
+      "  }",
+      "  ",
+      "  set ${2:property}(value: ${3:string}) {",
+      "    this.${2:property} = value;",
+      "  }",
+      "}"
+    ],
+    "description": "TypeScript class with constructor, methods, and accessors"
+  },
+  "TypeScript Module Declaration": {
+    "prefix": "ts-module",
+    "body": [
+      "declare module '${1:module-name}' {",
+      "  export interface ${2:InterfaceName} {",
+      "    ${3:property}: ${4:string};",
+      "  }",
+      "  ",
+      "  export function ${5:functionName}(${6:param}: ${7:string}): ${8:Promise<${2:InterfaceName}>};",
+      "  ",
+      "  const ${9:defaultExport}: ${2:InterfaceName};",
+      "  export default ${9:defaultExport};",
+      "}"
+    ],
+    "description": "TypeScript module declaration"
+  },
+  "TypeScript Conditional Type": {
+    "prefix": "ts-conditional",
+    "body": [
+      "type ${1:ConditionalType}<T> = T extends ${2:string} ? ${3:string} : ${4:never};"
+    ],
+    "description": "TypeScript conditional type"
+  },
+  "TypeScript Mapped Type": {
+    "prefix": "ts-mapped",
+    "body": [
+      "type ${1:MappedType}<T> = {",
+      "  [K in keyof T]: ${2:string};",
+      "};"
+    ],
+    "description": "TypeScript mapped type"
+  },
+  "TypeScript Decorator": {
+    "prefix": "ts-decorator",
+    "body": [
+      "function ${1:decoratorName}(${2:target}: any, ${3:propertyName}: string, ${4:descriptor}: PropertyDescriptor) {",
+      "  ${5:// Decorator implementation}",
+      "  const originalMethod = ${4:descriptor}.value;",
+      "  ",
+      "  ${4:descriptor}.value = function (...args: any[]) {",
+      "    ${6:// Before method execution}",
+      "    const result = originalMethod.apply(this, args);",
+      "    ${7:// After method execution}",
+      "    return result;",
+      "  };",
+      "  ",
+      "  return ${4:descriptor};",
+      "}"
+    ],
+    "description": "TypeScript method decorator"
+  },
+  "TypeScript Async Function": {
+    "prefix": "ts-async",
+    "body": [
+      "async function ${1:functionName}(${2:param}: ${3:string}): Promise<${4:string}> {",
+      "  try {",
+      "    ${5:// Async operation}",
+      "    const result = await ${6:someAsyncOperation}(${2:param});",
+      "    return result;",
+      "  } catch (error) {",
+      "    console.error('Error in ${1:functionName}:', error);",
+      "    throw error;",
+      "  }",
+      "}"
+    ],
+    "description": "Async TypeScript function with error handling"
+  },
+  "TypeScript Union Type": {
+    "prefix": "ts-union",
+    "body": [
+      "type ${1:UnionType} = ${2:'option1'} | ${3:'option2'} | ${4:'option3'};"
+    ],
+    "description": "TypeScript union type"
+  },
+  "TypeScript Type Guard": {
+    "prefix": "ts-guard",
+    "body": [
+      "function is${1:TypeName}(value: any): value is ${1:TypeName} {",
+      "  return value && typeof value === '${2:object}' && '${3:property}' in value;",
+      "}"
+    ],
+    "description": "TypeScript type guard function"
+  }
+}

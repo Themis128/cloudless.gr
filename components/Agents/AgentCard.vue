@@ -1,0 +1,56 @@
+<template>
+  <v-card class="agent-card" :loading="loading">
+    <v-card-title class="d-flex align-center">
+      {{ agent.name }}
+      <v-chip :color="agent.status === 'active' ? 'success' : 'error'" class="ml-2" size="small">
+        {{ agent.status }}
+      </v-chip>
+    </v-card-title>
+
+    <v-card-text>
+      <p class="text-body-1">{{ agent.description }}</p>
+      <v-list density="compact">
+        <v-list-item>
+          <template v-slot:prepend>
+            <v-icon>mdi-brain</v-icon>
+          </template>
+          <v-list-item-title>Model: {{ agent.model }}</v-list-item-title>
+        </v-list-item>
+        <v-list-item>
+          <template v-slot:prepend>
+            <v-icon>mdi-memory</v-icon>
+          </template>
+          <v-list-item-title>Memory: {{ agent.memoryType }}</v-list-item-title>
+        </v-list-item>
+      </v-list>
+    </v-card-text>
+
+    <v-card-actions>
+      <v-btn variant="text" color="primary" :to="`/agents/${agent.id}`"> View Details </v-btn>
+      <v-btn variant="text" color="error" @click="emit('delete', agent.id)"> Delete </v-btn>
+    </v-card-actions>
+  </v-card>
+</template>
+
+<script setup lang="ts">
+import type { Agent } from '~/types/agents';
+
+const props = defineProps<{
+  agent: Agent;
+  loading?: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: 'delete', id: string): void;
+}>();
+</script>
+
+<style scoped>
+.agent-card {
+  transition: transform 0.2s;
+}
+
+.agent-card:hover {
+  transform: translateY(-4px);
+}
+</style>

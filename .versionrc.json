@@ -1,0 +1,87 @@
+{
+  "standard-version": {
+    "types": [
+      {
+        "type": "feat",
+        "section": "✨ Features"
+      },
+      {
+        "type": "fix",
+        "section": "🐛 Bug Fixes"
+      },
+      {
+        "type": "perf",
+        "section": "⚡ Performance Improvements"
+      },
+      {
+        "type": "refactor",
+        "section": "♻️ Code Refactoring"
+      },
+      {
+        "type": "docs",
+        "section": "📚 Documentation"
+      },
+      {
+        "type": "test",
+        "section": "🧪 Tests"
+      },
+      {
+        "type": "build",
+        "section": "🏗️ Build System"
+      },
+      {
+        "type": "ci",
+        "section": "👷 CI/CD"
+      },
+      {
+        "type": "chore",
+        "section": "🔧 Chores"
+      },
+      {
+        "type": "style",
+        "section": "💄 Styles"
+      }
+    ],
+    "commitUrlFormat": "https://github.com/cloudless-gr/platform/commit/{{hash}}",
+    "compareUrlFormat": "https://github.com/cloudless-gr/platform/compare/{{previousTag}}...{{currentTag}}",
+    "issueUrlFormat": "https://github.com/cloudless-gr/platform/issues/{{id}}",
+    "userUrlFormat": "https://github.com/{{user}}",
+    "releaseCommitMessageFormat": "chore(release): {{currentTag}}",
+    "scripts": {
+      "precommit": "npm run lint && npm run test:run",
+      "prebump": "npm run build",
+      "postchangelog": "npm run format"
+    },
+    "skip": {
+      "tag": false,
+      "commit": false,
+      "changelog": false
+    },
+    "infile": "CHANGELOG.md",
+    "header": "# Changelog\n\nAll notable changes to the Cloudless.gr platform will be documented in this file.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),\nand this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n\n",
+    "packageFiles": [
+      {
+        "filename": "package.json",
+        "type": "json"
+      }
+    ],
+    "bumpFiles": [
+      {
+        "filename": "package.json",
+        "type": "json"
+      },
+      {
+        "filename": "docker-compose.dev.yml",
+        "updater": "regex",
+        "pattern": "image: cloudless-nuxt:(.+)",
+        "replacement": "image: cloudless-nuxt:{{version}}"
+      },
+      {
+        "filename": "docker-compose.prod.yml",
+        "updater": "regex",
+        "pattern": "image: cloudless-nuxt:(.+)",
+        "replacement": "image: cloudless-nuxt:{{version}}"
+      }
+    ]
+  }
+}

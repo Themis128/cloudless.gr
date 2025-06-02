@@ -1,0 +1,124 @@
+{
+  "folders": [
+    {
+      "name": "🏠 Cloudless.gr Platform",
+      "path": ".",
+    },
+  ],
+  "settings": {
+    // === PROJECT STRUCTURE ===
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.expand": false,
+    "explorer.fileNesting.patterns": {
+      "*.ts": "${capture}.js, ${capture}.d.ts, ${capture}.js.map",
+      "*.vue": "${capture}.vue.d.ts",
+      "package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml, .npmrc",
+      "tsconfig.json": "tsconfig.*.json",
+      "docker-compose.yml": "docker-compose.*.yml, Dockerfile, .dockerignore",
+      ".env": ".env.*, .envrc",
+      "README.md": "CHANGELOG.md, LICENSE, CODE_OF_CONDUCT.md, CONTRIBUTING.md",
+      "nuxt.config.ts": "app.vue, nuxt.config.js, nuxt.config.ts, tailwind.config.*",
+    },
+
+    // === WORKSPACE TASKS ===
+    "tasks.autoDetect": "on",
+    "typescript.preferences.includePackageJsonAutoImports": "on",
+    "typescript.suggest.autoImports": true,
+
+    // === INTEGRATED DEVELOPMENT ===
+    "editor.rulers": [80, 100, 120],
+    "workbench.editor.enablePreview": true,
+    "workbench.editor.enablePreviewFromQuickOpen": false,
+
+    // === DOCKER INTEGRATION ===
+    "docker.enableDockerComposeLanguageService": true,
+    "docker.commands.build": "docker build --pull --rm -f \"${dockerfile}\" -t ${tag} \"${context}\"",
+    "docker.commands.run": "docker run --rm -d ${exposedPorts} ${tag}",
+
+    // === PYTHON INTEGRATION ===
+    // Use the correct interpreter path for both Windows and Linux/Dev Container
+    "python.defaultInterpreterPath": "${workspaceFolder}/shared_venv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+
+    // === FILE ASSOCIATIONS ===
+    "files.associations": {
+      "*.env.*": "dotenv",
+      "docker-compose*.yml": "dockercompose",
+      "Dockerfile*": "dockerfile",
+    },
+    "containers.commands.build": "docker build --pull --rm -f \"${dockerfile}\" -t ${tag} \"${context}\"",
+    // === AWS TOOLKIT AUTOMATION ===
+    // Automatically prompt to connect AWS Toolkit on startup
+    "aws.enablePromptOnStartup": true,
+    "aws.showRegionInStatusBar": true,
+    "aws.telemetry": true,
+    // Optionally, set a default region (replace with your preferred region)
+    // "aws.region": "us-east-1",
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-azuretools.vscode-docker",
+      "ms-vscode-remote.remote-containers",
+      "vue.volar",
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      "ms-python.python",
+      "github.copilot",
+    ],
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "🚀 Start Development Environment",
+        "type": "shell",
+        "command": "npm",
+        "args": ["run", "docker:dev"],
+        "group": {
+          "kind": "build",
+          "isDefault": true,
+        },
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared",
+        },
+        "isBackground": true,
+        "problemMatcher": [
+          {
+            "pattern": [
+              {
+                "regexp": ".*",
+                "file": 1,
+                "location": 2,
+                "message": 3,
+              },
+            ],
+            "background": {
+              "activeOnStart": true,
+              "beginsPattern": "^.*Starting.*",
+              "endsPattern": "^.*ready.*|^.*listening.*",
+            },
+          },
+        ],
+      },
+    ],
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "🐳 Debug Docker Container",
+        "type": "node",
+        "request": "attach",
+        "port": 9229,
+        "address": "localhost",
+        "localRoot": "${workspaceFolder}",
+        "remoteRoot": "/app",
+        "skipFiles": ["<node_internals>/**"],
+        "sourceMaps": true,
+      },
+    ],
+  },
+}
