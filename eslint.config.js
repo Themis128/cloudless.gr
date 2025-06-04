@@ -1,28 +1,59 @@
-import ts from '@typescript-eslint/eslint-plugin'
-import tsParser from '@typescript-eslint/parser'
+// @ts-check
 import vue from 'eslint-plugin-vue'
+import typescript from '@typescript-eslint/eslint-plugin'
+import typescriptParser from '@typescript-eslint/parser'
+import vueParser from 'vue-eslint-parser'
 
 export default [
   {
-    files: ['**/*.{js,ts,vue}'],
-    ignores: ['node_modules', '.output', 'dist', '.nuxt'],
+    ignores: [
+      'node_modules/**',
+      '.output/**',
+      'dist/**',
+      '.nuxt/**',
+      '.nitro/**',
+      'coverage/**',
+      'public/**',
+      '*.d.ts'
+    ]
+  },
+  // Vue files
+  {
+    files: ['**/*.vue'],
     languageOptions: {
-      parser: tsParser,
+      parser: vueParser,
       parserOptions: {
+        parser: typescriptParser,
         ecmaVersion: 2022,
-        sourceType: 'module',
-        project: './tsconfig.json',
-        extraFileExtensions: ['.vue'],
-      },
+        sourceType: 'module'
+      }
     },
     plugins: {
       vue,
-      '@typescript-eslint': ts,
+      '@typescript-eslint': typescript
     },
     rules: {
+      ...vue.configs.essential.rules,
       'vue/multi-word-component-names': 'off',
       'vue/no-v-html': 'off',
-      '@typescript-eslint/no-unused-vars': 'warn',
-    },
+      '@typescript-eslint/no-unused-vars': 'warn'
+    }
   },
+  // TypeScript/JavaScript files
+  {
+    files: ['**/*.{js,ts}'],
+    languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'module'
+      }
+    },
+    plugins: {
+      '@typescript-eslint': typescript
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'warn'
+    }
+  }
 ]

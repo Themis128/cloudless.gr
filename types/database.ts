@@ -49,7 +49,24 @@ export interface Database {
             submissionTime: string;
           } | null;
           created_at?: string;
-          updated_at?: string;
+          updated_at?: string;        };
+        Relationships: [];
+      };
+      instruments: {
+        Row: {
+          id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          created_at?: string;
         };
         Relationships: [];
       };

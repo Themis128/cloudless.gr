@@ -394,7 +394,7 @@ const deployAgent = async () => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000))
 
-    const agent = availableAgents.value.find(a => a.id === deployForm.value.agentId)
+    const agent = availableAgents.value.find((a: any) => a.id === deployForm.value.agentId)
     const newDeployment = {
       id: `deploy-${Date.now()}`,
       agent: agent!,
@@ -459,7 +459,7 @@ const deleteDeployment = (deployment: any) => {
       confirmAction.value.loading = true
       try {
         await new Promise(resolve => setTimeout(resolve, 1000))
-        const index = deployments.value.findIndex(d => d.id === deployment.id)
+        const index = deployments.value.findIndex((d: any) => d.id === deployment.id)
         if (index > -1) {
           deployments.value.splice(index, 1)
           if (deployment.status === 'active') deploymentStats.value.active--

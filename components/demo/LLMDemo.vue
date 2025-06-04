@@ -32,7 +32,7 @@
 
 <script setup lang="ts">
 import { useLLMAndFileViewer } from '@/composables/useLLMAndFileViewer';
-import { ref } from 'vue';
+import { ref } from '#imports';
 
 const prompt = ref('');
 const { response, loading, error, sendPrompt } = useLLMAndFileViewer();

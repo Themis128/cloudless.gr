@@ -143,6 +143,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from '#imports'
+import type { Database } from '~/types/database'
 
 // Define page meta
 definePageMeta({
@@ -158,12 +159,19 @@ useHead({
 // Get runtime config
 const config = useRuntimeConfig()
 
-// Get Supabase client (using @nuxtjs/supabase module)
-const supabase = useSupabaseClient()
+// Get Supabase client with proper typing
+const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
 
+// Define types for instruments
+interface Instrument {
+  id: string
+  name: string
+  created_at: string
+}
+
 // Reactive data
-const instruments = ref([])
+const instruments = ref<Instrument[]>([])
 const newInstrumentName = ref('')
 const loading = ref(false)
 const error = ref('')

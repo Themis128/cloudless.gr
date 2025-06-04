@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref } from '#imports';
 
 interface ToastOptions {
   title?: string;
@@ -33,7 +33,6 @@ export function useToast() {
 
     return id;
   };
-
   const removeToast = (id: number) => {
     const index = toasts.value.findIndex((t: { id: number }) => t.id === id);
     if (index !== -1) {
@@ -41,8 +40,17 @@ export function useToast() {
     }
   };
 
+  // Helper function that accepts message and type like the pages expect
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    return toast({
+      title: message,
+      type
+    });
+  };
+
   return {
     toast,
+    showToast,
     toasts,
     removeToast,
   };

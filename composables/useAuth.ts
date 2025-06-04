@@ -3,7 +3,7 @@
 // Uses mock API endpoints for authentication
 //
 
-import { navigateTo } from '#app'
+import { navigateTo } from '#imports'
 import { computed, onMounted, ref } from '#imports'
 import { useUserStore } from '~/stores/useUserStore'
 

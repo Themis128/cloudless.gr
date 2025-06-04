@@ -1,6 +1,7 @@
-import { serverSupabaseClient } from '#supabase/server';
+import { defineEventHandler, getMethod, readBody, createError } from 'h3';
 import type { ContactFormData, ContactSubmissionInsert, Database } from '~/types/database';
 import { getClientIP } from '../utils/helpers';
+import { supabase } from '../../utils/supabase';
 
 export default defineEventHandler(async (_event) => {
   const method = getMethod(_event);
@@ -15,7 +16,6 @@ export default defineEventHandler(async (_event) => {
 
   try {
     const body = await readBody<ContactFormData>(_event);
-    const supabase = await serverSupabaseClient<Database>(_event);
 
     // Validate required fields
     if (!body.name || !body.email || !body.message) {

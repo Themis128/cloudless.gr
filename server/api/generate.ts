@@ -94,10 +94,10 @@ export default defineEventHandler(async (event) => {
     setHeader(event, 'content-type', 'application/json; charset=utf-8');
     // Improved error logging for debugging
     if (err instanceof Error) {
-      // eslint-disable-next-line no-console
+       
       console.error('LLM API error:', err.message, err.stack);
     } else {
-      // eslint-disable-next-line no-console
+       
       console.error('LLM API error:', err);
     }
     if (err && typeof err === 'object' && 'name' in err && (err as any).name === 'AbortError') {

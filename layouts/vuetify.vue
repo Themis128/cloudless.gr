@@ -29,7 +29,7 @@
 
 <script setup lang="ts">
 // Vuetify layout
-import { ref } from 'vue';
+import { ref } from '#imports';
 import VantaClouds2Background from '@/components/VantaClouds2Background.vue';
 
 // Enable vanta background

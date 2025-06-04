@@ -1,10 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
-import { defineEventHandler, readBody } from 'h3';
+import { defineEventHandler, readBody, createError } from 'h3';
+import { supabase } from '../../../utils/supabase';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+  console.warn('Admin credentials not configured in environment variables');
+}
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);

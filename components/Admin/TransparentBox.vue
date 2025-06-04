@@ -1,10 +1,15 @@
-<!-- White box for content overlay if needed later
-<div class="content-overlay">
-  <div class="content-inner">
-    <slot />
+<template>
+  <!-- White box for content overlay if needed later -->
+  <div class="content-overlay">
+    <div class="content-inner">
+      <slot />
+    </div>
   </div>
-</div>
--->
+</template>
+
+<script setup lang="ts">
+// Transparent box component for admin content
+</script>
 
 <style>
 /* 

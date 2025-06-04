@@ -1,6 +1,6 @@
 // middleware/admin-required.ts
 
-import { navigateTo } from '#app'
+import { navigateTo } from '#imports'
 import type { NavigationFailure, RouteLocationAsPathGeneric, RouteLocationAsRelativeGeneric, RouteLocationNormalizedLoaded } from 'vue-router'
 
 interface User {
@@ -9,15 +9,10 @@ interface User {
   role: string
 }
 
-// Nuxt 3 provides defineNuxtRouteMiddleware globally, but if you need to define it manually for testing or SSR, use this:
-function defineNuxtRouteMiddleware(
-  middleware: (to: RouteLocationNormalizedLoaded) => string | false | void | RouteLocationAsRelativeGeneric | RouteLocationAsPathGeneric | Promise<false | void | NavigationFailure>
-) {
-  return middleware
-}
-
-export default defineNuxtRouteMiddleware((to: RouteLocationNormalizedLoaded) => {
-  if (process.client) {
+// Nuxt 3: Use built-in defineNuxtRouteMiddleware for route protection
+export default defineNuxtRouteMiddleware((to) => {
+  // Only run on client (localStorage is not available on server)
+  if (typeof window !== 'undefined') {
     const adminToken = localStorage.getItem('admin_token')
     const adminUser = localStorage.getItem('admin_user')
 
@@ -33,8 +28,9 @@ export default defineNuxtRouteMiddleware((to: RouteLocationNormalizedLoaded) => 
         localStorage.removeItem('admin_user')
       }
     }
+    // ❌ Not authorized → redirect
+    return navigateTo(`/auth/admin-login?redirect=${encodeURIComponent(to.fullPath)}`)
   }
-
-  // ❌ Not authorized → redirect
-  return navigateTo(`/auth/admin-login?redirect=${encodeURIComponent(to.fullPath)}`)
+  // On server, do not block navigation (but recommend API-side validation for true security)
+  // See: https://nuxt.com/docs/guide/directory-structure/middleware#server-side-middleware
 })

@@ -22,39 +22,29 @@ export default defineNuxtConfig({
         },
       ],
     },
-  },
-
-  modules: [
+  },  modules: [
     '@nuxtjs/color-mode',
     '@vueuse/nuxt',
     '@nuxt/image-edge',
     '@nuxt/content',
-    '@pinia/nuxt',
-    '@nuxtjs/supabase'
+    '@pinia/nuxt'
   ],
 
-  runtimeConfig: {
-    minio: {
+  runtimeConfig: {    minio: {
       endpoint: process.env.MINIO_ENDPOINT || 'localhost',
       port: parseInt(process.env.MINIO_PORT || '9000'),
       useSSL: process.env.MINIO_USE_SSL === 'true',
       accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
       secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
     },
-    supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY,
     jwtSecret: process.env.NUXT_JWT_SECRET,
     public: {
       auth0: {
         domain: process.env.NUXT_AUTH0_DOMAIN || '',
         clientId: process.env.NUXT_AUTH0_CLIENT_ID || '',
         audience: process.env.NUXT_AUTH0_AUDIENCE || '',
-      },
-      publicUrl: process.env.NUXT_PUBLIC_URL || 'http://localhost:3000',
+      },      publicUrl: process.env.NUXT_PUBLIC_URL || 'http://localhost:3000',
       adminEmail: process.env.ADMIN_EMAIL || 'admin@cloudless.gr',
-      supabase: {
-        url: process.env.NUXT_SUPABASE_URL,
-        anonKey: process.env.NUXT_SUPABASE_ANON_KEY,
-      },
     },
   },
 

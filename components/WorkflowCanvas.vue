@@ -187,8 +187,8 @@ const addNode = (type: WorkflowNode['type']) => {
 }
 
 const getConnectionPath = (connection: NodeConnection): string => {
-  const fromNode = nodes.value.find(n => n.id === connection.from)
-  const toNode = nodes.value.find(n => n.id === connection.to)
+  const fromNode = nodes.value.find((n: WorkflowNode) => n.id === connection.from)
+  const toNode = nodes.value.find((n: WorkflowNode) => n.id === connection.to)
 
   if (!fromNode || !toNode) return ''
 
