@@ -258,7 +258,12 @@ const handleMagicLink = async () => {
     const { error: magicError } = await supabase.auth.signInWithOtp({
       email: magicEmail.value,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        shouldCreateUser: true,
+        data: {
+          email: magicEmail.value,
+          provider: 'magic_link'
+        }
       }
     })
 

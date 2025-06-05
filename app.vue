@@ -13,7 +13,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from '#imports'
 import { useColorMode } from '@vueuse/core'
-import { useSupabaseClient } from '@supabase/auth-helpers-nuxt'
 
 interface ConnectionStatus {
   status: 'success' | 'error'

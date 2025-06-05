@@ -20,6 +20,16 @@ definePageMeta({
   layout: 'auth'
 })
 
-// The Supabase module will automatically handle the callback
-// and redirect to the appropriate page
+import { handleAuthRedirect } from '~/utils/auth-helpers'
+import { useRouter } from '#imports'
+
+const router = useRouter()
+
+onMounted(async () => {
+  const success = await handleAuthRedirect()
+  if (!success) {
+    // If auth fails, redirect back to login
+    router.push('/auth/login')
+  }
+})
 </script>

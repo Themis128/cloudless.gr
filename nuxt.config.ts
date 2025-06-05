@@ -30,15 +30,24 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@nuxtjs/supabase'
   ],
-
   supabase: {
     redirectOptions: {
-      exclude: ['/*']  // Disable automatic redirects
+      login: '/auth/callback',
+      callback: '/dashboard',
+      exclude: [
+        '/auth/login',
+        '/auth/signup',
+        '/',
+        '/about',
+        '/contact'
+      ]
     },
     url: process.env.SUPABASE_URL,
     key: process.env.SUPABASE_KEY,
     cookieOptions: {
-      secure: process.env.NODE_ENV === 'production'
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      sameSite: 'lax'
     }
   },
 

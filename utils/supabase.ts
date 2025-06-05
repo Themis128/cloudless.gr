@@ -91,6 +91,29 @@ export function getSupabaseServerClient() {
   )
 }
 
+// Check if Supabase is available
+export function isSupabaseAvailable(): boolean {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_KEY
+  return !!(url && key)
+}
+
+// Create a client-side Supabase client for testing
+export function createSupabaseClient() {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_KEY
+  
+  if (!url || !key) {
+    return null
+  }
+
+  return createClient<Database>(url, key)
+}
+
+// Default export for tests
+const supabase = createSupabaseClient()
+export default supabase
+
 // For composables and components, use useSupabaseClient() from @nuxtjs/supabase
 // Example:
 // const client = useSupabaseClient<Database>()
