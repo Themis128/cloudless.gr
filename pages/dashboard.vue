@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import { onMounted } from '#imports';
-import DashboardStats from '~/components/dashboard/DashboardStats.vue';
+  import DashboardStats from '~/components/dashboard/DashboardStats.vue';
 import RecentActivity from '~/components/dashboard/RecentActivity.vue';
 import { useAuth } from '~/composables/useAuth';
 import { usePlatformStats } from '~/composables/usePlatformStats';
+import { onMounted } from '#imports';
 
   const { user } = useAuth();
   const { stats, fetchStats, loading } = usePlatformStats();
@@ -17,7 +17,7 @@ import { usePlatformStats } from '~/composables/usePlatformStats';
   <v-container fluid>
     <v-row>
       <v-col cols="12">
-        <h1>Welcome, {{ user?.name || 'Guest' }}</h1>
+        <h1 class="text-h4 font-weight-bold mb-4">Welcome, {{ user?.name || 'Guest' }}</h1>
       </v-col>
       <v-col cols="12" md="4">
         <DashboardStats :stats="stats" :loading="loading" />
@@ -25,6 +25,15 @@ import { usePlatformStats } from '~/composables/usePlatformStats';
       <v-col cols="12" md="8">
         <RecentActivity />
       </v-col>
+      <v-col cols="12" v-if="user?.role === 'admin'">
+        <v-btn color="primary" to="/admin" class="mt-4" block>
+          Go to Admin Dashboard
+        </v-btn>
+      </v-col>
     </v-row>
   </v-container>
 </template>
+
+<style scoped>
+/* No custom styles needed, Vuetify handles layout and theming */
+</style>

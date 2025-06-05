@@ -3,16 +3,19 @@
     <!-- The VantaClouds2Background will be rendered behind all content -->
     <VantaClouds2Background />
 
-    <v-navigation-drawer app permanent>
-      <v-list nav>
-        <v-list-item to="/" prepend-icon="mdi-view-dashboard" title="Dashboard" />
-        <v-list-item to="/builder" prepend-icon="mdi-cube-outline" title="Builder" />
-        <v-list-item to="/workflows" prepend-icon="mdi-graph-outline" title="Workflows" />
-        <v-list-item to="/projects" prepend-icon="mdi-folder" title="Projects" />
-        <v-list-item to="/logs" prepend-icon="mdi-file-document-outline" title="Logs" />
-        <v-list-item to="/docs" prepend-icon="mdi-book-open-page-variant-outline" title="Docs" />
-      </v-list>
-    </v-navigation-drawer>
+    <!-- Only show nav if not on /auth/login -->
+    <template v-if="$route.path !== '/auth/login'">
+      <v-navigation-drawer app permanent>
+        <v-list nav>
+          <v-list-item to="/" prepend-icon="mdi-view-dashboard" title="Dashboard" />
+          <v-list-item to="/builder" prepend-icon="mdi-cube-outline" title="Builder" />
+          <v-list-item to="/workflows" prepend-icon="mdi-graph-outline" title="Workflows" />
+          <v-list-item to="/projects" prepend-icon="mdi-folder" title="Projects" />
+          <v-list-item to="/logs" prepend-icon="mdi-file-document-outline" title="Logs" />
+          <v-list-item to="/docs" prepend-icon="mdi-book-open-page-variant-outline" title="Docs" />
+        </v-list>
+      </v-navigation-drawer>
+    </template>
 
     <v-app-bar
       color="primary"
