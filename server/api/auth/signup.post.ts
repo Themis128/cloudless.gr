@@ -1,13 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
 import { defineEventHandler, readBody } from 'h3';
 import { generateToken } from '../../../utils/auth';
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+import supabase, { isSupabaseAvailable } from '../../../utils/supabase';
 
 export default defineEventHandler(async (event) => {
+  if (!isSupabaseAvailable()) {
+    return {
+      success: false,
+      message: 'Supabase is not configured on this server.',
+    };
+  }
   try {
     const body = await readBody(event);
     const { email, password, fullName } = body;
@@ -21,7 +22,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Check if user exists
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await supabase! // non-null assertion
       .from('users')
       .select('id, email')
       .eq('email', email)
@@ -35,7 +36,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Create user
-    const { data: newUser, error: createError } = await supabase
+    const { data: newUser, error: createError } = await supabase!
       .rpc('create_user', {
         email,
         password,
@@ -43,51 +44,27 @@ export default defineEventHandler(async (event) => {
       });
 
     if (createError) {
-      console.error('Error creating user:', createError);
       return {
         success: false,
-        message: 'Failed to create user',
+        message: createError.message,
       };
     }
 
-    // Generate session token
-    const token = generateToken(newUser.id, newUser.email);
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
-
-    // Create session
-    const { error: sessionError } = await supabase
-      .from('sessions')
-      .insert({
-        user_id: newUser.id,
-        token,
-        expires_at: expiresAt.toISOString(),
-      });
-
-    if (sessionError) {
-      console.error('Error creating session:', sessionError);
-      return {
-        success: false,
-        message: 'Failed to create session',
-      };
+    // Generate token (if needed)
+    let token = '';
+    if (newUser?.id && newUser?.email) {
+      token = generateToken(newUser.id, newUser.email);
     }
 
     return {
       success: true,
-      message: 'User created successfully',
-      user: {
-        id: newUser.id,
-        email: newUser.email,
-        fullName: newUser.full_name,
-      },
+      user: newUser,
       token,
-      expiresAt: expiresAt.toISOString(),
     };
-  } catch (error) {
-    console.error('Error in signup handler:', error);
+  } catch (error: any) {
     return {
       success: false,
-      message: 'Internal server error',
+      message: error.message || 'Unknown error',
     };
   }
 });

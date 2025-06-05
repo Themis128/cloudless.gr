@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="1" failures="0" errors="0" time="0.0096634">
+    <testsuite name="tests/supabase.test.ts" timestamp="2025-06-05T00:37:53.061Z" hostname="Office" tests="1" failures="0" errors="0" skipped="0" time="0.0096634">
+        <testcase classname="tests/supabase.test.ts" name="Supabase Client &gt; should provide verbose info about credentials and client status" time="0.0088133">
+            <system-out>
+[Supabase Test] SUPABASE_URL: https://test.supabase.co
+[Supabase Test] SUPABASE_KEY: test-k...
+[Supabase Test] Client available: [33mtrue[39m
+[Supabase Test] Client methods verified
+
+[Supabase Test] Auth check completed (expected: no user logged in)
+[Supabase Test] Attempting table query...
+
+[Supabase Test] Tables may not exist yet. Run the SQL schema files first.
+
+            </system-out>
+            <system-err>
+[Supabase Test] Instruments table query failed: TypeError: Cannot read properties of undefined (reading &apos;status&apos;)
+
+[Supabase Test] Contact submissions query also failed: TypeError: Cannot read properties of undefined (reading &apos;status&apos;)
+
+            </system-err>
+        </testcase>
+    </testsuite>
+</testsuites>

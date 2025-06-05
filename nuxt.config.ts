@@ -30,7 +30,8 @@ export default defineNuxtConfig({
     '@pinia/nuxt'
   ],
 
-  runtimeConfig: {    minio: {
+  runtimeConfig: {
+    minio: {
       endpoint: process.env.MINIO_ENDPOINT || 'localhost',
       port: parseInt(process.env.MINIO_PORT || '9000'),
       useSSL: process.env.MINIO_USE_SSL === 'true',
@@ -38,13 +39,17 @@ export default defineNuxtConfig({
       secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
     },
     jwtSecret: process.env.NUXT_JWT_SECRET,
+    supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE_KEY, // private, not exposed to client
     public: {
       auth0: {
         domain: process.env.NUXT_AUTH0_DOMAIN || '',
         clientId: process.env.NUXT_AUTH0_CLIENT_ID || '',
         audience: process.env.NUXT_AUTH0_AUDIENCE || '',
-      },      publicUrl: process.env.NUXT_PUBLIC_URL || 'http://localhost:3000',
+      },
+      publicUrl: process.env.NUXT_PUBLIC_URL || 'http://localhost:3000',
       adminEmail: process.env.ADMIN_EMAIL || 'admin@cloudless.gr',
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseKey: process.env.SUPABASE_KEY, // anon key only!
     },
   },
 

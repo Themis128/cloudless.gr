@@ -9,64 +9,38 @@
 
 <script setup lang="ts">
 import { supabase } from './utils/supabase'
-import { ref, onMounted } from 'vue'
+import { ref } from '#imports'
+import { onMounted } from '#imports'
 
-const connectionStatus = ref<{ status: 'success' | 'error', message: string } | null>(null)
+const connectionStatus = ref<{ status: 'success' | 'error'; message: string } | null>(null)
 
 async function checkSupabaseConnection() {
   try {
-    // Try to connect to Supabase by making a simple query
-    const { data, error } = await supabase.from('_test_connection_').select('*').limit(1)
-    
+    if (!supabase) {
+      throw new Error('Supabase client is not initialized')
+    }
+    const { error } = await supabase.from('_test_connection_').select('*').limit(1)
+
     if (error && error.code === 'PGRST116') {
-      // This error means the table doesn't exist, but the connection works
-      connectionStatus.value = {
-        status: 'success',
-        message: 'Connected successfully'
-      }
+      connectionStatus.value = { status: 'success', message: 'Connected successfully ✅' }
     } else if (error) {
       throw error
     } else {
-      connectionStatus.value = {
-        status: 'success',
-        message: 'Connected successfully'
-      }
+      connectionStatus.value = { status: 'success', message: 'Connected successfully ✅' }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Supabase connection error:', error)
     connectionStatus.value = {
       status: 'error',
-      message: `Connection failed: ${error.message || 'Unknown error'}`
+      message: `Connection failed: ${error.message || 'Unknown error'} ❌`
     }
   }
 }
 
-onMounted(() => {
-  checkSupabaseConnection()
-})
+onMounted(checkSupabaseConnection)
 </script>
 
 <style>
-html,
-body {
-  margin: 0;
-  padding: 0;
-  min-height: 100%;
-  overflow-x: hidden;
-  background-color: #f5f5f5;
-}
-
-.page-enter-active,
-.page-leave-active {
-  transition: all 0.15s ease-out;
-}
-
-.page-enter-from,
-.page-leave-to {
-  opacity: 0;
-  transform: translateY(-20px);
-}
-
 .connection-status {
   position: fixed;
   top: 20px;
