@@ -37,30 +37,38 @@ describe('Supabase Client', () => {
       }
         // Test 3: Try a simple table query with known tables
       console.log('[Supabase Test] Attempting table query...');
+        // Try instruments table first (has public read policy)
+      const { data, error } = await supabase!.from('instruments').select('*');
       
-      // Try instruments table first (has public read policy)
-      const { data, error } = await supabase!.from('instruments').select('id, name').limit(1);
+      console.log('[Supabase Test] Instruments query result:', { data, error });
       
       if (error) {
-        console.warn('[Supabase Test] Instruments table query failed:', error.message);
+        console.error('[Supabase Test] Instruments query error:', error);
+        console.warn('[Supabase Test] Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         
         // Try contact_submissions table as fallback
-        const { data: contactData, error: contactError } = await supabase!.from('contact_submissions').select('id').limit(1);
+        const { data: contactData, error: contactError } = await supabase!.from('contact_submissions').select('*');
+        
+        console.log('[Supabase Test] Contact submissions query result:', { data: contactData, error: contactError });
         
         if (contactError) {
-          console.warn('[Supabase Test] Contact submissions query also failed:', contactError.message);
+          console.error('[Supabase Test] Contact submissions query error:', contactError);
           console.log('[Supabase Test] Tables may not exist yet. Run the SQL schema files first.');
+          
+          // Still expect basic functionality to work
+          expect(supabase).toBeTruthy();
         } else {
           console.log('[Supabase Test] Contact submissions query successful');
-          expect(contactError).toBeFalsy();
           expect(contactData).toBeDefined();
+          expect(Array.isArray(contactData)).toBe(true);
         }
-        
-        // Don't fail the test - client is working, just no tables setup
-        expect(supabase).toBeTruthy();
       } else {
         console.log('[Supabase Test] Instruments query successful, found', data?.length || 0, 'records');
-        expect(error).toBeFalsy();
         expect(data).toBeDefined();
         expect(Array.isArray(data)).toBe(true);
       }

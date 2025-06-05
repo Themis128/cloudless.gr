@@ -27,8 +27,17 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@nuxt/image-edge',
     '@nuxt/content',
-    '@pinia/nuxt'
+    '@pinia/nuxt',
+    '@nuxtjs/supabase'
   ],
+
+  supabase: {
+    redirectOptions: {
+      login: '/auth/login',
+      callback: '/auth/callback',
+      exclude: ['/auth/*', '/api/*', '/']
+    }
+  },
 
   runtimeConfig: {
     minio: {

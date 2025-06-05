@@ -15,11 +15,13 @@ export default defineConfig({
       '#build': resolve(__dirname, '.nuxt'),
       '#components': resolve(__dirname, '.nuxt/components'),
     },
-  },
-  test: {
+  },  test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
+    env: {
+      // You can specify environment variables here if needed
+    },
     include: ['**/*.{test,spec}.{js,ts,vue}'],
     exclude: ['node_modules', '.nuxt', 'dist'],
     reporters: ['default', 'junit'],

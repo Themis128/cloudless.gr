@@ -1,218 +1,170 @@
 <template>
-  <div class="position-relative">
-    <v-container fluid :class="containerClasses">
-      <v-row justify="center" align="center" class="min-h-screen">
-        <v-col cols="12" sm="10" md="8" lg="6" xl="4">
-          <v-card elevation="3" rounded="lg" :class="cardClasses" :color="cardColor">
-            <v-card-title :class="titleClasses">Create Account</v-card-title>
-            <v-card-text>
-              <form @submit.prevent="handleSignup" class="signup-form">
-                <v-text-field
-                  v-model="form.fullName"
-                  label="Full Name"
-                  :rules="[rules.required]"
-                  required
-                  variant="outlined"
-                  :disabled="loading"
-                />
+  <v-container fluid class="fill-height login-container">
+    <v-row align="center" justify="center">
+      <v-col cols="12" sm="8" md="6" lg="4">
+        <v-card class="login-card">
+          <div class="text-center mb-8">
+            <h1 class="text-h4 font-weight-bold text-white">Create your account</h1>
+          </div>
 
-                <v-text-field
-                  v-model="form.email"
-                  label="Email"
-                  type="email"
-                  :rules="[rules.required, rules.email]"
-                  required
-                  variant="outlined"
-                  :disabled="loading"
-                />                <v-text-field
-                  v-model="form.password"
-                  label="Password"
-                  :rules="[rules.required, rules.password]"
-                  required
-                  variant="outlined"
-                  :disabled="loading"
-                  :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-                  @click:append-inner="showPassword = !showPassword"
-                  :type="showPassword ? 'text' : 'password'"
-                />
+          <v-form @submit.prevent="handleSignup">
+            <v-text-field
+              v-model="email"
+              label="Email"
+              type="email"
+              required
+              :error-messages="emailError"
+              @input="emailError = ''"
+              variant="outlined"
+              bg-color="rgba(255, 255, 255, 0.05)"
+              color="white"
+              class="login-field"
+            />
 
-                <v-text-field
-                  v-model="form.confirmPassword"
-                  label="Confirm Password"
-                  :rules="[rules.required, rules.confirmPassword]"
-                  required
-                  variant="outlined"
-                  :disabled="loading"
-                  :type="showPassword ? 'text' : 'password'"
-                />
+            <v-text-field
+              v-model="password"
+              label="Password"
+              type="password"
+              required
+              :error-messages="passwordError"
+              @input="passwordError = ''"
+              variant="outlined"
+              bg-color="rgba(255, 255, 255, 0.05)"
+              color="white"
+              class="login-field mb-4"
+            />
 
-                <div class="d-flex flex-column gap-4 mt-6">
-                  <v-alert
-                    v-if="error"
-                    type="error"
-                    variant="tonal"
-                    :text="error"
-                    class="mb-4"
-                  />
+            <v-btn
+              type="submit"
+              block
+              size="large"
+              :loading="isLoading"
+              class="mb-4"
+            >
+              Sign Up
+            </v-btn>
+          </v-form>
 
-                  <v-btn
-                    type="submit"
-                    color="primary"
-                    :loading="loading"
-                    block
-                    :size="buttonSize"
-                  >
-                    Sign Up
-                  </v-btn>
+          <v-alert
+            v-if="error"
+            type="error"
+            class="mt-4"
+            closable
+            @click:close="error = ''"
+          >
+            {{ error }}
+          </v-alert>
 
-                  <v-divider class="my-4"></v-divider>
+          <v-alert
+            v-if="successMessage"
+            type="success"
+            class="mt-4"
+            closable
+            @click:close="successMessage = ''"
+          >
+            {{ successMessage }}
+          </v-alert>
 
-                  <p class="text-center text-body-2">
-                    Already have an account?
-                    <v-btn
-                      variant="text"
-                      size="small"
-                      class="font-weight-medium px-2"
-                      to="/auth/login"
-                    >
-                      Log In
-                    </v-btn>
-                  </p>
-                </div>
-              </form>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
-  </div>
+          <div class="text-center mt-6">
+            <p class="text-body-2 text-medium-emphasis">
+              Already have an account?
+              <NuxtLink to="/auth/login" class="text-primary">
+                Sign in here
+              </NuxtLink>
+            </p>
+          </div>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from '#imports';
-import { navigateTo } from 'nuxt/app';
-import { useDisplay } from 'vuetify';
-import { validateEmail, validatePassword } from '~/utils/auth';
-
 definePageMeta({
-  layout: 'login',
+  layout: 'default',
   auth: false
 })
-const { mobile } = useDisplay();
 
-// Form state
-const form = ref({
-  fullName: '',
-  email: '',
-  password: '',
-  confirmPassword: '',
-});
+const supabase = useSupabaseClient()
+const router = useRouter()
 
-const showPassword = ref(false);
-const loading = ref(false);
-const error = ref('');
+const email = ref('')
+const password = ref('')
+const emailError = ref('')
+const passwordError = ref('')
+const error = ref('')
+const successMessage = ref('')
+const isLoading = ref(false)
 
-// Validation rules
-const rules = {
-  required: (v: string) => !!v || 'This field is required',
-  email: (v: string) => validateEmail(v) || 'Invalid email address',
-  password: (v: string) => validatePassword(v) || 'Password must be at least 8 characters with uppercase, lowercase and numbers',
-  confirmPassword: (v: string) => v === form.value.password || 'Passwords do not match',
-};
-
-// Computed classes for responsive design
-const containerClasses = computed(() => ['index-container', mobile ? 'px-4 py-4' : 'px-6 py-8']);
-const cardClasses = computed(() => ['text-center signup-card backdrop-blur', mobile ? 'pa-6' : 'pa-8']);
-const titleClasses = computed(() => ['font-weight-bold text-primary mb-4', mobile ? 'text-h4' : 'text-h3']);
-const buttonSize = computed(() => (mobile ? 'large' : 'x-large'));
-const cardColor = computed(() => 'rgb(255, 255, 255, 0.85)');
-
-// Handle form submission
 const handleSignup = async () => {
-  error.value = '';
-  loading.value = true;
-
-  try {
-    interface SignupResponse {
-      success: boolean
-      message: string
-      user?: any
-      token?: string
-    }
-
-    const response = await $fetch<SignupResponse>('/api/auth/signup', {
-      method: 'POST',
-      body: {
-        fullName: form.value.fullName,
-        email: form.value.email,
-        password: form.value.password,
-      },
-    });
-
-    if (!response.success) {
-      error.value = response.message;
-      return;
-    }
-
-    // Store token and user data
-    if (response.token && response.user) {
-      localStorage.setItem('auth_token', response.token);
-      localStorage.setItem('auth_user', JSON.stringify(response.user));
-    }
-
-    // Redirect to dashboard
-    await navigateTo('/dashboard');
-  } catch (err: any) {
-    error.value = err.data?.message || 'Failed to create account. Please try again.';
-    console.error('Signup error:', err);
-  } finally {
-    loading.value = false;
+  if (!email.value) {
+    emailError.value = 'Email is required'
+    return
   }
-};
+  if (!password.value) {
+    passwordError.value = 'Password is required'
+    return
+  }
+  isLoading.value = true
+  error.value = ''
+  try {
+    const { error: signupError } = await supabase.auth.signUp({
+      email: email.value,
+      password: password.value
+    })
+    if (signupError) {
+      error.value = signupError.message
+    } else {
+      successMessage.value = 'Signup successful! Check your email to confirm your account.'
+      setTimeout(() => router.push('/auth/login'), 2000)
+    }
+  } catch (err) {
+    error.value = 'An unexpected error occurred'
+    console.error('Signup error:', err)
+  } finally {
+    isLoading.value = false
+  }
+}
 </script>
 
 <style scoped>
-.position-relative {
+.login-container {
   position: relative;
-  width: 100%;
-  min-height: 100vh;
-  overflow: hidden;
-}
-
-.index-container {
-  background: transparent;
   z-index: 1;
-  position: relative;
 }
-
-.min-h-screen {
-  min-height: 90vh;
-}
-
-.signup-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.login-card {
+  background: rgba(0, 0, 0, 0.5) !important;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2rem;
 }
-
-.backdrop-blur {
-  position: relative;
-  overflow: hidden;
+:deep(.login-field) {
+  .v-field__overlay {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  .v-field__field {
+    color: white !important;
+  }
+  .v-label {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  input {
+    color: white !important;
+  }
+  .v-field {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
 }
-
-.backdrop-blur::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  z-index: -1;
+:deep(.v-btn) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
-
-.signup-form {
-  max-width: 100%;
+:deep(.v-alert) {
+  background: rgba(76, 175, 80, 0.1) !important;
+  color: white;
+  border: 1px solid rgba(76, 175, 80, 0.2);
 }
 </style>

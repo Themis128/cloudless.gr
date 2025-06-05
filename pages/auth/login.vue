@@ -5,9 +5,11 @@
         <v-card class="login-card">
           <div class="text-center mb-8">
             <h1 class="text-h4 font-weight-bold text-white">Welcome to Cloudless</h1>
+            <p class="text-body-1 text-medium-emphasis">Sign in to your account</p>
           </div>
 
-          <v-form @submit.prevent="handleEmailLogin">
+          <!-- Email/Password Login -->
+          <v-form @submit.prevent="handleEmailLogin" v-if="!showMagicLink">
             <v-text-field
               v-model="email"
               label="Email"
@@ -31,51 +33,130 @@
               variant="outlined"
               bg-color="rgba(255, 255, 255, 0.05)"
               color="white"
-              class="login-field"
+              class="login-field mb-4"
             />
-
-            <v-checkbox
-              v-model="rememberMe"
-              label="Remember me"
-              color="primary"
-              class="mb-4"
-            />
-
-            <v-alert
-              v-if="error"
-              type="error"
-              class="mb-4"
-              variant="tonal"
-            >
-              {{ error }}
-            </v-alert>
 
             <v-btn
               type="submit"
-              color="primary"
               block
-              class="mb-4"
+              size="large"
               :loading="isLoading"
+              class="mb-4"
             >
               Sign In
             </v-btn>
 
-            <v-divider class="mb-4" />
+            <v-divider class="my-4" />
 
-            <div class="text-center">
-              <p class="text-caption text-white">
-                Demo credentials: user@cloudless.gr / demo123
-              </p>
-              <p class="text-caption text-white mb-4">
-                Or: demo@cloudless.gr / password123
-              </p>
-
-              <p class="text-white">
-                Don't have an account?
-                <nuxt-link to="/auth/signup" class="text-primary">Sign up</nuxt-link>
-              </p>
-            </div>
+            <v-btn
+              @click="showMagicLink = true"
+              variant="outlined"
+              block
+              size="large"
+              class="mb-4"
+            >
+              Sign in with Magic Link
+            </v-btn>
           </v-form>
+
+          <!-- Magic Link Form -->
+          <v-form @submit.prevent="handleMagicLink" v-else>
+            <v-text-field
+              v-model="magicEmail"
+              label="Email"
+              type="email"
+              required
+              :error-messages="emailError"
+              @input="emailError = ''"
+              variant="outlined"
+              bg-color="rgba(255, 255, 255, 0.05)"
+              color="white"
+              class="login-field"
+              hint="We'll send you a secure login link"
+            />
+
+            <v-btn
+              type="submit"
+              block
+              size="large"
+              :loading="isLoading"
+              class="mb-4"
+            >
+              Send Magic Link
+            </v-btn>
+
+            <v-btn
+              @click="showMagicLink = false"
+              variant="text"
+              block
+              size="large"
+            >
+              Back to Password Login
+            </v-btn>
+          </v-form>
+
+          <!-- Social Auth -->
+          <v-divider class="my-6" />
+          
+          <div class="text-center mb-4">
+            <p class="text-body-2 text-medium-emphasis">Or continue with</p>
+          </div>
+
+          <div class="d-flex flex-column gap-3">
+            <v-btn
+              @click="handleGoogleLogin"
+              variant="outlined"
+              block
+              size="large"
+              prepend-icon="mdi-google"
+              :loading="socialLoading === 'google'"
+            >
+              Continue with Google
+            </v-btn>
+
+            <v-btn
+              @click="handleGitHubLogin"
+              variant="outlined"
+              block
+              size="large"
+              prepend-icon="mdi-github"
+              :loading="socialLoading === 'github'"
+            >
+              Continue with GitHub
+            </v-btn>
+          </div>
+
+          <!-- Error Display -->
+          <v-alert
+            v-if="error"
+            type="error"
+            class="mt-4"
+            closable
+            @click:close="error = ''"
+          >
+            {{ error }}
+          </v-alert>
+
+          <!-- Success Message -->
+          <v-alert
+            v-if="successMessage"
+            type="success"
+            class="mt-4"
+            closable
+            @click:close="successMessage = ''"
+          >
+            {{ successMessage }}
+          </v-alert>
+
+          <!-- Sign Up Link -->
+          <div class="text-center mt-6">
+            <p class="text-body-2 text-medium-emphasis">
+              Don't have an account?
+              <NuxtLink to="/auth/signup" class="text-primary">
+                Sign up here
+              </NuxtLink>
+            </p>
+          </div>
         </v-card>
       </v-col>
     </v-row>
@@ -83,45 +164,142 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from '#imports'
-import { navigateTo } from 'nuxt/app'
-import { useAuth } from '~/composables/useAuth'
-
 definePageMeta({
-  layout: 'login',
+  layout: 'default',
   auth: false
 })
 
-const { login, isLoading, error } = useAuth()
+const supabase = useSupabaseClient()
+const user = useSupabaseUser()
+const router = useRouter()
 
+// Reactive state
 const email = ref('')
 const password = ref('')
-const rememberMe = ref(false)
+const magicEmail = ref('')
 const emailError = ref('')
 const passwordError = ref('')
+const error = ref('')
+const successMessage = ref('')
+const isLoading = ref(false)
+const socialLoading = ref('')
+const showMagicLink = ref(false)
 
-async function handleEmailLogin() {
-  // Clear previous errors
-  emailError.value = ''
-  passwordError.value = ''
+// Redirect if already logged in
+watchEffect(() => {
+  if (user.value) {
+    router.push('/dashboard')
+  }
+})
 
-  // Validate fields
-  if (!email.value) {
+// Email/Password Login
+const handleEmailLogin = async () => {
+  if (!email.value || !password.value) {
+    if (!email.value) emailError.value = 'Email is required'
+    if (!password.value) passwordError.value = 'Password is required'
+    return
+  }
+
+  isLoading.value = true
+  error.value = ''
+
+  try {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.value,
+      password: password.value,
+    })
+
+    if (signInError) {
+      error.value = signInError.message
+    } else {
+      // Success - user will be automatically redirected by watchEffect
+      successMessage.value = 'Successfully signed in!'
+    }
+  } catch (err) {
+    error.value = 'An unexpected error occurred'
+    console.error('Login error:', err)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Magic Link Login
+const handleMagicLink = async () => {
+  if (!magicEmail.value) {
     emailError.value = 'Email is required'
     return
   }
 
-  if (!password.value) {
-    passwordError.value = 'Password is required'
-    return
-  }
-  try {
-    const success = await login(email.value, password.value, rememberMe.value)
+  isLoading.value = true
+  error.value = ''
 
-    if (success) {
-      await navigateTo('/dashboard')
-    }  } catch (err: any) {
-    console.error('Login failed:', err)
+  try {
+    const { error: magicError } = await supabase.auth.signInWithOtp({
+      email: magicEmail.value,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`
+      }
+    })
+
+    if (magicError) {
+      error.value = magicError.message
+    } else {
+      successMessage.value = 'Magic link sent! Check your email.'
+      showMagicLink.value = false
+    }
+  } catch (err) {
+    error.value = 'Failed to send magic link'
+    console.error('Magic link error:', err)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Google OAuth
+const handleGoogleLogin = async () => {
+  socialLoading.value = 'google'
+  error.value = ''
+
+  try {
+    const { error: googleError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
+      }
+    })
+
+    if (googleError) {
+      error.value = googleError.message
+    }
+  } catch (err) {
+    error.value = 'Failed to sign in with Google'
+    console.error('Google login error:', err)
+  } finally {
+    socialLoading.value = ''
+  }
+}
+
+// GitHub OAuth
+const handleGitHubLogin = async () => {
+  socialLoading.value = 'github'
+  error.value = ''
+
+  try {
+    const { error: githubError } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
+      }
+    })
+
+    if (githubError) {
+      error.value = githubError.message
+    }
+  } catch (err) {
+    error.value = 'Failed to sign in with GitHub'
+    console.error('GitHub login error:', err)
+  } finally {
+    socialLoading.value = ''
   }
 }
 </script>
