@@ -24,10 +24,9 @@ export default defineEventHandler(async (event) => {
         created_at: '2024-03-12T14:15:00Z',
         image_url: '/images/projects/fitness-app.jpg',
       },
-    ];
-
-    // Mock successful response
+    ];    // Mock successful response - data variable kept for future use
     const data = projects;
+    console.log('Fetched projects data:', data);
     const error = null;
 
     if (error) {

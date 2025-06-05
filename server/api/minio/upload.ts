@@ -12,14 +12,13 @@ export default defineEventHandler(async (_event) => {
       throw createError({
         statusCode: 400,
         statusMessage: 'Missing fileName or fileContent',
-      });
-    } // Initialize MinIO client with runtime config
+      });    } // Initialize MinIO client with runtime config
     const minio = new MinioClient({
-      endPoint: config.minio.endpoint,
-      port: config.minio.port,
-      useSSL: config.minio.useSSL,
-      accessKey: config.minio.accessKey,
-      secretKey: config.minio.secretKey,
+      endPoint: config.minio.endpoint as string,
+      port: Number(config.minio.port),
+      useSSL: Boolean(config.minio.useSSL),
+      accessKey: config.minio.accessKey as string,
+      secretKey: config.minio.secretKey as string,
     });
 
     // Ensure the bucket exists

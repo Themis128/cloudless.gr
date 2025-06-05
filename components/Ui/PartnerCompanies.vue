@@ -1,9 +1,8 @@
-<template>
-  <div class="partner-companies-page">
+<template>  <div class="partner-companies-page">
     <div class="partner-companies-card">
       <h3>Our Partners</h3>
       <ul>
-        <li v-for="company in companies" :key="company.name">{{ company.name }}</li>
+        <li v-for="company in props.companies" :key="company.name">{{ company.name }}</li>
       </ul>
     </div>
   </div>

@@ -52,9 +52,8 @@
         </v-btn>
       </template>
 
-      <!-- User Menu -->
-      <v-menu offset-y>
-        <template v-slot:activator="{ props }">
+      <!-- User Menu -->      <v-menu offset-y>
+        <template #activator="{ props }">
           <v-btn v-bind="props" icon class="ml-2">
             <v-avatar size="32">
               <v-icon>mdi-account-circle</v-icon>
@@ -63,13 +62,13 @@
         </template>
         <v-list>
           <v-list-item to="/admin/profile">
-            <template v-slot:prepend>
+            <template #prepend>
               <v-icon>mdi-account</v-icon>
             </template>
             <v-list-item-title>Profile</v-list-item-title>
           </v-list-item>
           <v-list-item @click="handleLogout">
-            <template v-slot:prepend>
+            <template #prepend>
               <v-icon>mdi-logout</v-icon>
             </template>
             <v-list-item-title>Logout</v-list-item-title>

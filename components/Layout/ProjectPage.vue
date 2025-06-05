@@ -85,13 +85,12 @@
 
         <v-card>
           <v-card-title>Related Projects</v-card-title>
-          <v-list>
-            <v-list-item
+          <v-list>            <v-list-item
               v-for="relatedProject in relatedProjects"
               :key="relatedProject.id"
               :to="`/projects/${relatedProject.slug}`"
             >
-              <template v-slot:prepend>
+              <template v-slot:[`prepend`]>
                 <v-avatar size="40" class="mr-2">
                   <v-img :src="relatedProject.image" cover></v-img>
                 </v-avatar>
@@ -105,16 +104,47 @@
   </v-container>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
+interface Project {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  fullDescription: string;
+  image: string;
+  client: string;
+  date: string;
+  category: string;
+  technologies: string[];
+  liveUrl?: string;
+  githubUrl?: string;
+}
+
+interface RelatedProject {
+  id: string;
+  slug: string;
+  title: string;
+  image: string;
+}
+
+interface Breadcrumb {
+  title: string;
+  disabled: boolean;
+  to?: string;
+}
+
 const route = useRoute();
 
-// Example project data
-const project = ref({
+// Get project slug from route params
+const projectSlug = computed(() => String(route.params.slug || ''));
+
+// Example project data (in a real app, this would be fetched based on the slug)
+const project = ref<Project>({
   id: '1',
-  slug: 'e-commerce-platform',
+  slug: projectSlug.value || 'e-commerce-platform',
   title: 'E-Commerce Platform',
   description:
     'A complete solution for online retail with payment processing and inventory management.',
@@ -130,7 +160,7 @@ const project = ref({
 });
 
 // Breadcrumbs for navigation
-const breadcrumbs = computed(() => [
+const breadcrumbs = computed<Breadcrumb[]>(() => [
   {
     title: 'Home',
     disabled: false,
@@ -148,7 +178,7 @@ const breadcrumbs = computed(() => [
 ]);
 
 // Related projects
-const relatedProjects = [
+const relatedProjects: RelatedProject[] = [
   {
     id: '2',
     slug: 'healthcare-dashboard',

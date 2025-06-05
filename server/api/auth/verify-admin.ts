@@ -31,12 +31,10 @@ export default defineEventHandler(async (event) => {
         valid: false,
         message: 'No token provided',
       };
-    }
-
-    try {
+    }    try {
       // Verify JWT token
       const runtimeConfig = useRuntimeConfig();
-      const decoded = jwt.verify(token, runtimeConfig.jwtSecret || 'default-secret') as any;
+      const decoded = jwt.verify(token, (runtimeConfig.jwtSecret as string) || 'default-secret') as any;
 
       // Check if it's an admin token
       if (decoded.role !== 'admin') {

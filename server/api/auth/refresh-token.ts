@@ -21,8 +21,8 @@ interface UserPayload {
 // Function to validate JWT token
 function validateToken(token: string): UserPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as UserPayload;
-  } catch (_error) {
+    return jwt.verify(token, JWT_SECRET) as UserPayload;  } catch (error) {
+    console.error('Token validation error:', error)
     return null;
   }
 }

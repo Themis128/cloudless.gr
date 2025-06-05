@@ -160,15 +160,21 @@ export function useAuth() {
       ? roles.includes(user.value.role)
       : user.value.role === roles
   }
-
   const hasPermission = (permission: string): boolean => {
     const permissions = user.value?.permissions || []
     return permissions.includes(permission)
   }
 
+  // Add isAdmin computed property
+  const isAdmin = computed(() => user.value?.role === 'admin')
+
+  // Add checkSession alias for checkAuthStatus
+  const checkSession = checkAuthStatus
+
   return {
     user,
     isAuthenticated,
+    isAdmin,
     isLoading,
     error,
     login,
@@ -176,5 +182,6 @@ export function useAuth() {
     hasRole,
     hasPermission,
     checkAuthStatus,
+    checkSession,
   }
 }

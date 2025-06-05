@@ -2,6 +2,10 @@ import { defineNuxtConfig } from 'nuxt/config'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineNuxtConfig({
+  devServer: {
+    port: 3000
+  },
+  
   app: {
     head: {
       viewport: 'width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes',
@@ -42,18 +46,25 @@ export default defineNuxtConfig({
         '/contact'
       ]
     },
-    url: process.env.SUPABASE_URL,
-    key: process.env.SUPABASE_KEY,
+    url: process.env.SUPABASE_URL,    key: process.env.SUPABASE_KEY,
     cookieOptions: {
       secure: process.env.NODE_ENV === 'production',
-      path: '/',
       sameSite: 'lax'
     }
   },
-
   runtimeConfig: {
     // Private keys
     supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    jwtSecret: process.env.JWT_SECRET || 'default-secret',
+    
+    // MinIO configuration
+    minio: {
+      endpoint: process.env.MINIO_ENDPOINT || 'localhost',
+      port: parseInt(process.env.MINIO_PORT || '9000'),
+      useSSL: process.env.MINIO_USE_SSL === 'true',
+      accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
+      secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+    },
     
     public: {
       supabase: {

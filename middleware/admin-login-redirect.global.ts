@@ -1,9 +1,5 @@
 import { defineNuxtRouteMiddleware, navigateTo } from '#imports';
 
-interface AdminLoginRedirectQuery {
-  redirect: string;
-}
-
 interface AdminLoginRoute {
   path: string;
   fullPath: string;

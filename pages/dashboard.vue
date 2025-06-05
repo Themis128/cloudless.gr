@@ -5,6 +5,11 @@ import { useAuth } from '~/composables/useAuth';
 import { usePlatformStats } from '~/composables/usePlatformStats';
 import { onMounted } from '#imports';
 
+// Protect this page with auth middleware
+definePageMeta({
+  middleware: 'auth-required'
+});
+
 const { user } = useAuth();
 const { stats, fetchStats, loading } = usePlatformStats();
 

@@ -29,11 +29,11 @@ describe('Supabase Client', () => {
       
       // Test 2: Try auth status check (should always work, even without user)
       const { data: authData, error: authError } = await supabase!.auth.getUser();
-      
-      if (authError && authError.message !== 'Auth session missing!') {
+        if (authError && authError.message !== 'Auth session missing!') {
         console.error('[Supabase Test] Unexpected auth error:', authError.message);
       } else {
         console.log('[Supabase Test] Auth check completed (expected: no user logged in)');
+        console.log('[Supabase Test] Auth data:', authData ? 'user data present' : 'no user data');
       }
         // Test 3: Try a simple table query with known tables
       console.log('[Supabase Test] Attempting table query...');

@@ -42,8 +42,19 @@ interface ExecuteWorkflowResponse {
 export default defineEventHandler(async (event: H3Event): Promise<ExecuteWorkflowResponse> => {
   const id = getRouterParam(event, 'id');
   const body = await readBody<ExecuteWorkflowRequest>(event);
+  // Mock workflow for demonstration
+  const workflow: Workflow = {
+    id: id || '',
+    name: 'Sample Workflow',
+    description: 'A sample workflow for testing',
+    nodes: [],
+    edges: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
 
   // TODO: Implement workflow execution logic
+  console.log('Executing workflow:', workflow.name);
   const response: ExecuteWorkflowResponse = {
     output: { result: `Executed workflow ${id} with input: ${JSON.stringify(body.input)}` },
     executionId: crypto.randomUUID(),

@@ -1,33 +1,32 @@
-<template>
-  <v-card class="agent-card" :loading="loading">
+<template>  <v-card class="agent-card" :loading="props.loading">
     <v-card-title class="d-flex align-center">
-      {{ agent.name }}
-      <v-chip :color="agent.status === 'active' ? 'success' : 'error'" class="ml-2" size="small">
-        {{ agent.status }}
+      {{ props.agent.name }}
+      <v-chip :color="props.agent.status === 'active' ? 'success' : 'error'" class="ml-2" size="small">
+        {{ props.agent.status }}
       </v-chip>
     </v-card-title>
 
     <v-card-text>
-      <p class="text-body-1">{{ agent.description }}</p>
+      <p class="text-body-1">{{ props.agent.description }}</p>
       <v-list density="compact">
         <v-list-item>
-          <template v-slot:prepend>
+          <template #prepend>
             <v-icon>mdi-brain</v-icon>
           </template>
-          <v-list-item-title>Model: {{ agent.model }}</v-list-item-title>
+          <v-list-item-title>Model: {{ props.agent.model }}</v-list-item-title>
         </v-list-item>
         <v-list-item>
-          <template v-slot:prepend>
+          <template #prepend>
             <v-icon>mdi-memory</v-icon>
           </template>
-          <v-list-item-title>Memory: {{ agent.memoryType }}</v-list-item-title>
+          <v-list-item-title>Memory: {{ props.agent.memoryType }}</v-list-item-title>
         </v-list-item>
       </v-list>
     </v-card-text>
 
     <v-card-actions>
-      <v-btn variant="text" color="primary" :to="`/agents/${agent.id}`"> View Details </v-btn>
-      <v-btn variant="text" color="error" @click="emit('delete', agent.id)"> Delete </v-btn>
+      <v-btn variant="text" color="primary" :to="`/agents/${props.agent.id}`"> View Details </v-btn>
+      <v-btn variant="text" color="error" @click="emit('delete', props.agent.id)"> Delete </v-btn>
     </v-card-actions>
   </v-card>
 </template>

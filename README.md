@@ -43,6 +43,20 @@ docker-compose -f docker-compose.dev.yml up --build
 
 ---
 
+## 🔐 Admin Access
+
+### Default Admin Credentials (Development)
+```
+Email: admin@cloudless.gr
+Password: cloudless2025
+```
+
+**Admin Panel**: http://localhost:3000/auth/admin-login
+
+For detailed authentication setup and middleware configuration, see [ADMIN_ACCESS.md](./ADMIN_ACCESS.md).
+
+---
+
 ## Supabase Setup
 
 ### Test Credentials (for local/dev only)

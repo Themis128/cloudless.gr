@@ -31,8 +31,7 @@
           closable
           @click:close="inserted = false"
         >
-          Code inserted!
-          <template v-slot:append>
+          Code inserted!          <template #append>
             <v-btn color="success" variant="text" size="small" @click="undoInsert">Undo</v-btn>
           </template>
         </v-alert>

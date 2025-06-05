@@ -1,5 +1,4 @@
 import { navigateTo } from '#imports'
-import { useSupabaseClient } from '#supabase/composables/useSupabaseClient'
 
 export function useLogout() {
   const supabase = useSupabaseClient()

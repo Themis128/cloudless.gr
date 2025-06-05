@@ -1,7 +1,7 @@
 import { defineEventHandler, getHeader, getMethod, H3Error, readBody } from 'h3';
 import type { ContactFormData, ContactSubmissionInsert, Database } from '~/types/database';
 import { getClientIP } from '../utils/helpers';
-import { supabase } from '../../utils/supabase';
+import { serverSupabaseClient } from '#supabase/server';
 
 export default defineEventHandler(async (event) => {
   if (getMethod(event) !== 'POST') {

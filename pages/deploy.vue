@@ -100,8 +100,7 @@
               :loading="loading"
               item-key="id"
               class="elevation-0"
-            >
-              <template #item.status="{ item }">
+            >              <template v-slot:[`item.status`]="{ item }">
                 <v-chip
                   :color="getStatusColor(item.status)"
                   size="small"
@@ -111,7 +110,7 @@
                 </v-chip>
               </template>
 
-              <template #item.agent="{ item }">
+              <template v-slot:[`item.agent`]="{ item }">
                 <div class="d-flex align-center">
                   <v-avatar size="32" class="me-2">
                     <v-icon :icon="getAgentIcon(item.agent.type)" />
@@ -123,7 +122,7 @@
                 </div>
               </template>
 
-              <template #item.environment="{ item }">
+              <template v-slot:[`item.environment`]="{ item }">
                 <v-chip
                   :color="getEnvironmentColor(item.environment)"
                   size="small"
@@ -133,7 +132,7 @@
                 </v-chip>
               </template>
 
-              <template #item.deployedAt="{ item }">
+              <template v-slot:[`item.deployedAt`]="{ item }">
                 <div>
                   <div>{{ formatDate(item.deployedAt) }}</div>
                   <div class="text-caption text-medium-emphasis">
@@ -142,7 +141,7 @@
                 </div>
               </template>
 
-              <template #item.actions="{ item }">
+              <template v-slot:[`item.actions`]="{ item }">
                 <v-btn-group variant="text" size="small">
                   <v-btn
                     icon="mdi-eye"
@@ -243,7 +242,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from '#imports'
+import { ref, onMounted } from '#imports'
 import { useToast } from '~/composables/useToast'
 
 // Define page meta
@@ -409,8 +408,8 @@ const deployAgent = async () => {
     deploymentStats.value.total++
 
     showToast('Agent deployment started successfully', 'success')
-    deployDialog.value = false
-  } catch (error) {
+    deployDialog.value = false  } catch (error) {
+    console.error('Deployment start error:', error)
     showToast('Failed to start deployment', 'error')
   } finally {
     deploying.value = false
@@ -437,8 +436,8 @@ const stopDeployment = (deployment: any) => {
         deployment.status = 'stopped'
         deploymentStats.value.active--
         showToast('Deployment stopped successfully', 'success')
-        confirmDialog.value = false
-      } catch (error) {
+        confirmDialog.value = false      } catch (error) {
+        console.error('Stop deployment error:', error)
         showToast('Failed to stop deployment', 'error')
       } finally {
         confirmAction.value.loading = false
@@ -468,8 +467,8 @@ const deleteDeployment = (deployment: any) => {
           deploymentStats.value.total--
         }
         showToast('Deployment deleted successfully', 'success')
-        confirmDialog.value = false
-      } catch (error) {
+        confirmDialog.value = false      } catch (error) {
+        console.error('Delete deployment error:', error)
         showToast('Failed to delete deployment', 'error')
       } finally {
         confirmAction.value.loading = false
@@ -490,8 +489,8 @@ const refreshDeployments = async () => {
   try {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000))
-    showToast('Deployments refreshed', 'success')
-  } catch (error) {
+    showToast('Deployments refreshed', 'success')  } catch (error) {
+    console.error('Refresh deployments error:', error)
     showToast('Failed to refresh deployments', 'error')
   } finally {
     loading.value = false

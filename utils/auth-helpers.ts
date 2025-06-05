@@ -1,5 +1,3 @@
-import { useSupabaseClient } from '#supabase/client'
-
 export async function handleAuthRedirect() {
   const supabase = useSupabaseClient()
   const { error } = await supabase.auth.getSession()

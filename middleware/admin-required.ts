@@ -1,7 +1,6 @@
 // middleware/admin-required.ts
 
 import { navigateTo } from '#imports'
-import type { NavigationFailure, RouteLocationAsPathGeneric, RouteLocationAsRelativeGeneric, RouteLocationNormalizedLoaded } from 'vue-router'
 
 interface User {
   id: string
@@ -28,7 +27,7 @@ export default defineNuxtRouteMiddleware((to) => {
         localStorage.removeItem('admin_user')
       }
     }
-    // ❌ Not authorized → redirect
+    // ❌ Not authorized → redirect to admin login (not admin-login)
     return navigateTo(`/auth/admin-login?redirect=${encodeURIComponent(to.fullPath)}`)
   }
   // On server, do not block navigation (but recommend API-side validation for true security)

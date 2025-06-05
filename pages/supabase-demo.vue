@@ -149,7 +149,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from '#imports'
-import { useSupabaseClient } from '~/composables/useSupabase'
 
 // Debug info
 const config = useRuntimeConfig()
@@ -210,7 +209,7 @@ const addInstrument = async () => {
     loading.value = true
     error.value = ''
     success.value = ''
-    const { error: supabaseError } = await supabase!.from('instruments').insert([{ name: newInstrumentName.value.trim() }]).select()
+    const { error: supabaseError } = await supabase!.from('instruments').insert([{ name: newInstrumentName.value.trim() }] as any).select()
     if (supabaseError) {
       throw supabaseError
     }

@@ -45,6 +45,8 @@ if (typeof global.window === 'undefined') {
 }
 
 // Clean up all mocks between tests
+import { beforeEach, afterEach } from 'vitest'
+
 beforeEach(() => {
   vi.clearAllMocks()
 })

@@ -23,8 +23,8 @@ export default defineEventHandler(async (event) => {
 
   let body;
   try {
-    body = await readBody(event);
-  } catch (e) {
+    body = await readBody(event);  } catch (e) {
+    console.error('JSON parsing error:', e);
     setHeader(event, 'content-type', 'application/json; charset=utf-8');
     event.node.res.statusCode = 400;
     event.node.res.end(JSON.stringify({ error: 'Invalid JSON body' }));

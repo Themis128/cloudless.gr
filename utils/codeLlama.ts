@@ -63,9 +63,9 @@ export async function generateLLMResponse(
             if (typeof obj.response === 'string') {
               result += obj.response;
               onData(obj.response);
-            }
-          } catch (e) {
+            }          } catch (e) {
             // Malformed chunk, skip
+            console.debug('Malformed JSON chunk:', e);
           }
         }
         // Try to parse last complete JSON object
@@ -95,8 +95,8 @@ export async function generateLLMResponse(
     // Non-streaming fallback
     let data: any;
     try {
-      data = await response.json();
-    } catch (e) {
+      data = await response.json();    } catch (e) {
+      console.error('Failed to parse LLM response:', e);
       throw new Error('Failed to parse LLM response as JSON.');
     }
     return (

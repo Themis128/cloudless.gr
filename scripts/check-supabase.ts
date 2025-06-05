@@ -53,9 +53,7 @@ async function checkSupabaseSetup() {
       } else {
         console.log('✅ Administrative access verified')
       }
-    }
-
-    // Test auth configuration
+    }    // Test auth configuration
     console.log('\n🔒 Testing authentication configuration...')
     const {
       data: { session },
@@ -64,8 +62,7 @@ async function checkSupabaseSetup() {
 
     if (authError) {
       console.warn('⚠️  Auth configuration check failed:', authError.message)
-    } else {
-      console.log('✅ Authentication is properly configured')
+    } else {      console.log('✅ Auth configuration is valid, session:', session ? 'active' : 'none')
     }
 
     // Overall status

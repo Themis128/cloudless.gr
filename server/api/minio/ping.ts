@@ -4,14 +4,12 @@ export default defineEventHandler(async () => {
     const config = useRuntimeConfig();
 
     // Dynamic import to avoid client-side issues
-    const { Client } = await import('minio');
-
-    const minioClient = new Client({
-      endPoint: config.minio.endpoint,
-      port: config.minio.port,
-      useSSL: config.minio.useSSL,
-      accessKey: config.minio.accessKey,
-      secretKey: config.minio.secretKey,
+    const { Client } = await import('minio');    const minioClient = new Client({
+      endPoint: config.minio.endpoint as string,
+      port: Number(config.minio.port),
+      useSSL: Boolean(config.minio.useSSL),
+      accessKey: config.minio.accessKey as string,
+      secretKey: config.minio.secretKey as string,
     });
 
     // Simple ping by trying to list buckets

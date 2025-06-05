@@ -159,11 +159,10 @@ export class SecretsManager {
 
     if (!vaultAddr || !vaultToken) {
       return;
-    }
-
-    try {
+    }    try {
       // This would require vault client library in a real implementation
       console.log('Vault secrets loading is configured but not implemented in this demo');
+      console.log('Using secret path:', secretPath);
       // const vault = new VaultClient({ endpoint: vaultAddr, token: vaultToken });
       // const secrets = await vault.read(secretPath);
       // for (const [key, value] of Object.entries(secrets.data)) {

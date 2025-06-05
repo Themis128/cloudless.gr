@@ -7,15 +7,13 @@ export default defineEventHandler(async (event) => {
     if (!event) throw new Error('Event is required');
     const config = useRuntimeConfig();
     const query = getQuery(event);
-    const { bucket = 'default-bucket', prefix = '' } = query;
-
-    // Initialize MinIO client with runtime config
+    const { bucket = 'default-bucket', prefix = '' } = query;    // Initialize MinIO client with runtime config
     const minio = new MinioClient({
-      endPoint: config.minio.endpoint,
+      endPoint: config.minio.endpoint as string,
       port: Number(config.minio.port),
       useSSL: Boolean(config.minio.useSSL),
-      accessKey: config.minio.accessKey,
-      secretKey: config.minio.secretKey,
+      accessKey: config.minio.accessKey as string,
+      secretKey: config.minio.secretKey as string,
     });
 
     // Check if bucket exists

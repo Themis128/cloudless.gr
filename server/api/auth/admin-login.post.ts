@@ -1,73 +1,79 @@
-import { defineEventHandler, readBody } from 'h3';
-import { getSupabaseServerClient } from '../../../utils/supabase';
+import { defineEventHandler, readBody, setCookie } from 'h3'
+import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production'
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@cloudless.gr'
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
+
+if (!process.env.JWT_SECRET) {
+  console.warn('JWT_SECRET not set in environment variables. Using default (not recommended for production)')
+}
 
 if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
-  console.warn('Admin credentials not configured in environment variables');
+  console.warn('Admin credentials not configured in environment variables. Using defaults.')
 }
 
 export default defineEventHandler(async (event) => {
-  const supabase = getSupabaseServerClient();
-  const body = await readBody(event);
-  const { email, password } = body;
+  try {
+    const body = await readBody(event)
+    const { email, password } = body
 
-  // For development, check against env vars
-  if (process.env.NODE_ENV === 'development') {
-    if (
-      email === process.env.ADMIN_EMAIL &&
-      password === process.env.ADMIN_PASSWORD
-    ) {
+    // Validate input
+    if (!email || !password) {
       return {
-        success: true,
-        message: 'Admin login successful',
-        user: {
-          id: 'dev-admin',
-          email: process.env.ADMIN_EMAIL,
-          role: 'admin',
-        },
-      };
+        success: false,
+        message: 'Email and password are required'
+      }
+    }
+
+    // Check admin credentials
+    const isValidEmail = email === ADMIN_EMAIL
+    const isValidPassword = await bcrypt.compare(password, await bcrypt.hash(ADMIN_PASSWORD, 10)) || password === ADMIN_PASSWORD
+
+    if (!isValidEmail || !isValidPassword) {
+      return {
+        success: false,
+        message: 'Invalid credentials'
+      }
+    }
+
+    // Generate JWT token
+    const payload = {
+      id: 'admin-1',
+      email: ADMIN_EMAIL,
+      role: 'admin',
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+    }
+
+    const token = jwt.sign(payload, JWT_SECRET)
+
+    // Set HTTP-only cookie for security
+    setCookie(event, 'admin-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+      path: '/'
+    })
+
+    return {
+      success: true,
+      message: 'Admin login successful',
+      user: {
+        id: 'admin-1',
+        email: ADMIN_EMAIL,
+        role: 'admin'
+      },
+      token // Also return token for client-side storage if needed
+    }
+
+  } catch (error) {
+    console.error('Admin login error:', error)
+    return {
+      success: false,
+      message: 'An error occurred during login'
     }
   }
-
-  // For production, check against admin_users table
-  const { data: adminUser } = await supabase
-    .from('admin_users')
-    .select('id, email, password_hash')
-    .eq('email', email)
-    .single();
-
-  if (!adminUser) {
-    return {
-      success: false,
-      message: 'Invalid credentials',
-    };
-  }
-
-  // Verify password
-  const { data: validPass } = await supabase.rpc('check_password', {
-    input_password: password,
-    stored_hash: adminUser.password_hash,
-  });
-
-  if (!validPass) {
-    return {
-      success: false,
-      message: 'Invalid credentials',
-    };
-  }
-
-  // Update last login
-  await supabase
-    .from('admin_users')
-    .update({ last_login: new Date().toISOString() })
-    .eq('id', adminUser.id);
-
-  return {
-    success: true,
-    message: 'Admin login successful',
-    user: {
-      id: adminUser.id,
-      email: adminUser.email,
-      role: 'admin',
-    },
-  };
-});
+})

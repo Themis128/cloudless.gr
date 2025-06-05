@@ -20,8 +20,7 @@
         prepend-avatar="/images/agent-avatar.png"
         :title="activeAgent?.name || 'AI Agent Platform'"
         nav
-      >
-        <template v-slot:append>
+      >        <template #append>
           <v-btn v-if="!is_mobile" variant="text" icon="mdi-chevron-left" @click.stop="rail = !rail"></v-btn>
         </template>
       </v-list-item>

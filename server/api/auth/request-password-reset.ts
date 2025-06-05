@@ -52,15 +52,14 @@ export default defineEventHandler(async (event) => {
     if (user) {
       // Mock email sending
       // In production, integrate with your email service
-      console.log(`[PASSWORD RESET] Reset link would be sent to: ${email}`);
-
-      // Generate a reset token valid for 1 hour
-      const _resetToken = `reset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log(`[PASSWORD RESET] Reset link would be sent to: ${email}`);      // Generate a reset token valid for 1 hour
+      const resetToken = `reset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const expiresIn = 60 * 60 * 1000; // 1 hour in milliseconds
-      const _expiresAt = new Date(Date.now() + expiresIn);
+      const expiresAt = new Date(Date.now() + expiresIn);
 
       // Store the reset token (in production, save to database)
       // resetTokens.set(resetToken, { email, expiresAt });
+      console.log('Generated reset token:', resetToken, 'expires at:', expiresAt);
     }
 
     // Return success response
