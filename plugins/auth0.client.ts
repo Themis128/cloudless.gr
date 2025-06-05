@@ -1,14 +1,29 @@
-import { createAuth0 } from '@auth0/auth0-vue';
+import { createAuth0, type Auth0Plugin } from '@auth0/auth0-vue';
 import type { PublicRuntimeConfig } from '~/types/nuxt';
 
-export default defineNuxtPlugin((nuxtApp) => {
+type Auth0PluginReturn = {
+  provide: {
+    auth0: Auth0Plugin | null;
+  };
+};
+
+export default defineNuxtPlugin((): Auth0PluginReturn => {
   const config = useRuntimeConfig();
 
-  // Type-safe access to auth0 config
-  const auth0Config = config.public.auth0 as PublicRuntimeConfig['auth0'];
+  // Provide a fallback empty object for type safety
+  const auth0Config = (config.public.auth0 ?? {}) as Partial<PublicRuntimeConfig['auth0']>;
+
+  if (process.dev) {
+    console.log('🔐 Auth0 Plugin: Initializing...');
+    console.log('📍 Runtime Config:', {
+      domain: auth0Config.domain || 'Not set',
+      clientId: auth0Config.clientId ? '****' : 'Not set',
+      audience: auth0Config.audience || 'Not set',
+    });
+  }
 
   // Check if Auth0 is properly configured
-  const isAuth0Configured = auth0Config.domain && auth0Config.clientId;
+  const isAuth0Configured = !!auth0Config.domain && !!auth0Config.clientId;
 
   if (!isAuth0Configured) {
     // In development, provide helpful warnings
@@ -20,30 +35,41 @@ export default defineNuxtPlugin((nuxtApp) => {
       console.warn('   - NUXT_AUTH0_AUDIENCE (optional)');
       console.warn('🔄 The app will run without authentication.');
     }
-
-    // Provide auth0 availability status
-    nuxtApp.provide('auth0Available', false);
-    return;
+    // Return empty plugin when not configured
+    return {
+      provide: {
+        auth0: null,
+      },
+    };
   }
 
   try {
+    // Create Auth0 client
     const auth0 = createAuth0({
-      domain: auth0Config.domain,
-      clientId: auth0Config.clientId,
+      domain: auth0Config.domain!,
+      clientId: auth0Config.clientId!,
       authorizationParams: {
-        redirect_uri: `${config.public.publicUrl}/auth/callback`,
-        audience: auth0Config.audience || undefined,
+        redirect_uri: window.location.origin,
+        ...(auth0Config.audience ? { audience: auth0Config.audience } : {}),
       },
     });
 
-    nuxtApp.vueApp.use(auth0);
-    nuxtApp.provide('auth0Available', true);
-
     if (process.dev) {
-      console.log('✅ Auth0 initialized successfully');
+      console.log('✅ Auth0 Plugin: Successfully initialized');
     }
+
+    // Provide Auth0 client to the app
+    return {
+      provide: {
+        auth0,
+      },
+    };
   } catch (error) {
-    console.error('❌ Failed to initialize Auth0:', error);
-    nuxtApp.provide('auth0Available', false);
+    console.error('❌ Auth0 Plugin: Failed to initialize', error);
+    return {
+      provide: {
+        auth0: null,
+      },
+    };
   }
 });

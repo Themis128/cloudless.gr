@@ -186,7 +186,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-  layout: 'login', // Use the minimal login layout with no app bar or nav
+  layout: 'auth',
   auth: false
 })
 

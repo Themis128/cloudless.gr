@@ -1,11 +1,12 @@
-import { defineEventHandler, readBody, createError } from 'h3';
-import { supabase } from '../../../utils/supabase';
+import { defineEventHandler, readBody } from 'h3';
+import { getSupabaseServerClient } from '../../../utils/supabase';
 
 if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
   console.warn('Admin credentials not configured in environment variables');
 }
 
 export default defineEventHandler(async (event) => {
+  const supabase = getSupabaseServerClient();
   const body = await readBody(event);
   const { email, password } = body;
 

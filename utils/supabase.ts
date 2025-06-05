@@ -1,25 +1,96 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-
-let supabase: SupabaseClient | null = null;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.warn('[Supabase] Missing SUPABASE_URL or SUPABASE_KEY environment variable. Supabase client will not be available.');
-} else {
-  supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
+export interface Database {
+  public: {
+    Tables: {
+      admin_users: {
+        Row: {
+          id: string
+          email: string
+          password_hash: string
+          last_login: string | null
+        }
+        Insert: {
+          id: string
+          email: string
+          password_hash: string
+          last_login?: string | null
+        }
+        Update: {
+          id?: string
+          email?: string
+          password_hash?: string
+          last_login?: string | null
+        }
+      }
+      contact_submissions: {
+        Row: {
+          id: string
+          name: string
+          email: string
+          subject: string | null
+          message: string
+          status: 'pending' | 'in_progress' | 'resolved' | 'spam'
+          metadata: {
+            ip: string
+            userAgent: string
+            referrer: string
+            submissionTime: string
+          } | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email: string
+          subject?: string | null
+          message: string
+          status?: 'pending' | 'in_progress' | 'resolved' | 'spam'
+          metadata?: {
+            ip: string
+            userAgent: string
+            referrer: string
+            submissionTime: string
+          } | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string
+          subject?: string | null
+          message?: string
+          status?: 'pending' | 'in_progress' | 'resolved' | 'spam'
+          metadata?: {
+            ip: string
+            userAgent: string
+            referrer: string
+            submissionTime: string
+          } | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
-  });
+  }
 }
 
-export function isSupabaseAvailable(): boolean {
-  return !!supabase;
+// Create a server-side Supabase client (for API routes)
+export function getSupabaseServerClient() {
+  const config = useRuntimeConfig()
+  
+  if (!config.public?.supabase?.url || !config.supabaseServiceRole) {
+    throw new Error('Missing Supabase configuration. Check environment variables.')
+  }
+
+  return createClient<Database>(
+    config.public.supabase.url,
+    config.supabaseServiceRole
+  )
 }
 
-export { supabase };
-export default supabase;
+// For composables and components, use useSupabaseClient() from @nuxtjs/supabase
+// Example:
+// const client = useSupabaseClient<Database>()

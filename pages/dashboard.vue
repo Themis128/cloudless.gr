@@ -1,16 +1,16 @@
 <script setup lang="ts">
-  import DashboardStats from '~/components/dashboard/DashboardStats.vue';
+import DashboardStats from '~/components/dashboard/DashboardStats.vue';
 import RecentActivity from '~/components/dashboard/RecentActivity.vue';
 import { useAuth } from '~/composables/useAuth';
 import { usePlatformStats } from '~/composables/usePlatformStats';
 import { onMounted } from '#imports';
 
-  const { user } = useAuth();
-  const { stats, fetchStats, loading } = usePlatformStats();
+const { user } = useAuth();
+const { stats, fetchStats, loading } = usePlatformStats();
 
-  onMounted(() => {
-    fetchStats();
-  });
+onMounted(() => {
+  fetchStats();
+});
 </script>
 
 <template>
@@ -33,7 +33,3 @@ import { onMounted } from '#imports';
     </v-row>
   </v-container>
 </template>
-
-<style scoped>
-/* No custom styles needed, Vuetify handles layout and theming */
-</style>

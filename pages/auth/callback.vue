@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default'
+  layout: 'auth'
 })
 
 // The Supabase module will automatically handle the callback

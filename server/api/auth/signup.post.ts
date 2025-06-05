@@ -1,14 +1,9 @@
 import { defineEventHandler, readBody } from 'h3';
 import { generateToken } from '../../../utils/auth';
-import supabase, { isSupabaseAvailable } from '../../../utils/supabase';
+import { getSupabaseServerClient } from '../../../utils/supabase';
 
 export default defineEventHandler(async (event) => {
-  if (!isSupabaseAvailable()) {
-    return {
-      success: false,
-      message: 'Supabase is not configured on this server.',
-    };
-  }
+  const supabase = getSupabaseServerClient();
   try {
     const body = await readBody(event);
     const { email, password, fullName } = body;
@@ -22,7 +17,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Check if user exists
-    const { data: existingUser } = await supabase! // non-null assertion
+    const { data: existingUser } = await supabase
       .from('users')
       .select('id, email')
       .eq('email', email)
@@ -36,7 +31,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Create user
-    const { data: newUser, error: createError } = await supabase!
+    const { data: newUser, error: createError } = await supabase
       .rpc('create_user', {
         email,
         password,

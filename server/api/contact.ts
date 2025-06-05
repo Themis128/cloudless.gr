@@ -1,10 +1,11 @@
 import { defineEventHandler, getMethod, readBody, createError } from 'h3';
-import type { ContactFormData, ContactSubmissionInsert, Database } from '~/types/database';
+import type { ContactFormData, ContactSubmissionInsert } from '~/types/database';
 import { getClientIP } from '../utils/helpers';
-import { supabase } from '../../utils/supabase';
+import { getSupabaseServerClient } from '../../utils/supabase';
 
 export default defineEventHandler(async (_event) => {
   const method = getMethod(_event);
+  const supabase = getSupabaseServerClient();
 
   // Only allow POST requests for contact form submissions
   if (method !== 'POST') {

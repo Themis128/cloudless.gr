@@ -33,33 +33,25 @@ export default defineNuxtConfig({
 
   supabase: {
     redirectOptions: {
-      login: '/auth/login',
-      callback: '/auth/callback',
-      exclude: ['/auth/*', '/api/*', '/']
+      exclude: ['/*']  // Disable automatic redirects
+    },
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_KEY,
+    cookieOptions: {
+      secure: process.env.NODE_ENV === 'production'
     }
   },
 
   runtimeConfig: {
-    minio: {
-      endpoint: process.env.MINIO_ENDPOINT || 'localhost',
-      port: parseInt(process.env.MINIO_PORT || '9000'),
-      useSSL: process.env.MINIO_USE_SSL === 'true',
-      accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-      secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
-    },
-    jwtSecret: process.env.NUXT_JWT_SECRET,
-    supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE_KEY, // private, not exposed to client
+    // Private keys
+    supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    
     public: {
-      auth0: {
-        domain: process.env.NUXT_AUTH0_DOMAIN || '',
-        clientId: process.env.NUXT_AUTH0_CLIENT_ID || '',
-        audience: process.env.NUXT_AUTH0_AUDIENCE || '',
-      },
-      publicUrl: process.env.NUXT_PUBLIC_URL || 'http://localhost:3000',
-      adminEmail: process.env.ADMIN_EMAIL || 'admin@cloudless.gr',
-      supabaseUrl: process.env.SUPABASE_URL,
-      supabaseKey: process.env.SUPABASE_KEY, // anon key only!
-    },
+      supabase: {
+        url: process.env.SUPABASE_URL,
+        key: process.env.SUPABASE_KEY
+      }
+    }
   },
 
   css: [

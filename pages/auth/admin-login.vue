@@ -74,6 +74,11 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+  layout: 'auth',
+  auth: false
+})
+
 import { computed, ref, useRouter } from '#imports'
 import { useDisplay } from 'vuetify'
 import { useAdminAuth } from '~/composables/useAdminAuth'
