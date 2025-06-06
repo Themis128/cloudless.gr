@@ -1,0 +1,36 @@
+﻿{
+    "Results":  {
+                    "JWTValidation":  {
+
+                                      },
+                    "AdminAuthentication":  {
+                                                "ValidLogin":  false,
+                                                "DashboardAccess":  false,
+                                                "InvalidLoginRejected":  true
+                                            },
+                    "ServerAvailability":  {
+                                               "Available":  false
+                                           },
+                    "MiddlewareProtection":  {
+                                                 "AdminRouteProtected":  true,
+                                                 "UnauthenticatedBlocked":  false
+                                             }
+                },
+    "Summary":  {
+                    "SuccessRate":  33.33,
+                    "Errors":  2,
+                    "TotalTests":  6,
+                    "PassedTests":  2,
+                    "FailedTests":  4
+                },
+    "Environment":  "development",
+    "TestSuite":  "Complete Authentication Test Suite",
+    "Errors":  [
+                   "Server unavailable after 10 attempts",
+                   "Valid admin login failed"
+               ],
+    "StartTime":  "2025-06-06 23:05:13 UTC",
+    "EndTime":  "2025-06-06 23:06:37 UTC",
+    "Duration":  "00:01:23.7129778",
+    "ServerUrl":  "http://localhost:3000"
+}

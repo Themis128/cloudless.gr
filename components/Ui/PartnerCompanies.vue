@@ -1,4 +1,5 @@
-<template>  <div class="partner-companies-page">
+<template>
+  <div class="partner-companies-page">
     <div class="partner-companies-card">
       <h3>Our Partners</h3>
       <ul>

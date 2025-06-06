@@ -1,0 +1,43 @@
+2025-06-06 22:34:52 [INFO] 🔸 TEST: Server Availability
+2025-06-06 22:35:50 [INFO] 🔸 TEST: Server Availability
+2025-06-06 22:35:54 [PASS] ✅ Server is available (HTTP 200)
+2025-06-06 22:35:54 [INFO] 🔸 TEST: Admin Login with Valid Credentials
+2025-06-06 22:35:55 [FAIL] ❌ Admin login failed: API returned success=false
+2025-06-06 22:35:55 [INFO] 🔸 TEST: Admin Login with Invalid Credentials
+2025-06-06 22:35:55 [PASS] ✅ Invalid login correctly rejected
+2025-06-06 22:35:55 [INFO] 🔸 TEST: Admin Dashboard Access
+2025-06-06 22:35:55 [WARN] ⚠️  Skipped - No session available
+2025-06-06 22:35:55 [INFO] 🔸 TEST: Admin Logout
+2025-06-06 22:35:55 [WARN] ⚠️  Skipped - No session available
+2025-06-06 22:35:55 [INFO] 📊 TEST SUMMARY:
+2025-06-06 22:35:55 [WARN] RESULT: 2 / 10 tests passed
+2025-06-06 22:35:55 [INFO] 🚨 ERRORS:
+2025-06-06 22:35:55 [FAIL] • Valid login failed
+2025-06-06 22:41:20 [INFO] 🔸 TEST: Server Availability
+2025-06-06 22:41:22 [PASS] ✅ Server is available (HTTP 200)
+2025-06-06 22:41:22 [INFO] 🔸 TEST: Admin Login with Valid Credentials
+2025-06-06 22:41:22 [FAIL] ❌ Admin login failed: API returned success=false
+2025-06-06 22:41:22 [INFO] 🔸 TEST: Admin Login with Invalid Credentials
+2025-06-06 22:41:22 [PASS] ✅ Invalid login correctly rejected
+2025-06-06 22:41:22 [INFO] 🔸 TEST: Admin Dashboard Access
+2025-06-06 22:41:22 [WARN] ⚠️  Skipped - No session available
+2025-06-06 22:41:22 [INFO] 🔸 TEST: Admin Logout
+2025-06-06 22:41:22 [WARN] ⚠️  Skipped - No session available
+2025-06-06 22:41:22 [INFO] 📊 TEST SUMMARY:
+2025-06-06 22:41:22 [WARN] RESULT: 2 / 10 tests passed
+2025-06-06 22:41:22 [INFO] 🚨 ERRORS:
+2025-06-06 22:41:22 [FAIL] • Valid login failed
+2025-06-06 22:44:15 [INFO] 🔸 TEST: Server Availability
+2025-06-06 22:44:16 [PASS] ✅ Server is available (HTTP 200)
+2025-06-06 22:44:16 [INFO] 🔸 TEST: Admin Login with Valid Credentials
+2025-06-06 22:44:16 [FAIL] ❌ Admin login failed: API returned success=false
+2025-06-06 22:44:16 [INFO] 🔸 TEST: Admin Login with Invalid Credentials
+2025-06-06 22:44:16 [PASS] ✅ Invalid login correctly rejected
+2025-06-06 22:44:16 [INFO] 🔸 TEST: Admin Dashboard Access
+2025-06-06 22:44:16 [WARN] ⚠️  Skipped - No session available
+2025-06-06 22:44:16 [INFO] 🔸 TEST: Admin Logout
+2025-06-06 22:44:16 [WARN] ⚠️  Skipped - No session available
+2025-06-06 22:44:16 [INFO] 📊 TEST SUMMARY:
+2025-06-06 22:44:16 [WARN] RESULT: 2 / 10 tests passed
+2025-06-06 22:44:16 [INFO] 🚨 ERRORS:
+2025-06-06 22:44:16 [FAIL] • Valid login failed

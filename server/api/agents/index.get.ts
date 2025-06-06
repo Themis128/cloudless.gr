@@ -1,7 +1,11 @@
 import { H3Event } from 'h3';
 import type { AgentResponse } from './types';
 
-export default defineEventHandler(async (_event: H3Event): Promise<AgentResponse[]> => {
+export default defineEventHandler(async (event: H3Event): Promise<AgentResponse[]> => {
+  // For future use when implementing database queries
+  console.log('GET /api/agents - Request received at:', new Date().toISOString());
+  console.log('Request method:', getMethod(event));
+  
   // TODO: Implement agent listing from database
   const agents: AgentResponse[] = [
     {

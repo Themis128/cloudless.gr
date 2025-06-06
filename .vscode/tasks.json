@@ -497,14 +497,129 @@
         "Bypass",
         "-File",
         "setup-dev-environment.ps1"
-      ],
-      "group": "build",
+      ],      "group": "build",
       "presentation": {
         "reveal": "always",
         "panel": "new",
         "clear": true
       },
       "problemMatcher": ["$msCompile", "$eslint-stylish", "$python"]
+    },
+    {
+      "label": "Test: Admin Auth (Quick)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "test-admin-auth-quick.ps1"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Admin Auth (Complete)",      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "test-admin-auth-complete.ps1"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Middleware Protection",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "test-middleware-protection.ps1"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: JWT Validation",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "test-jwt-validation.ps1"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Complete Auth Suite",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "test-auth-complete-suite.ps1"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Complete Auth Suite (CI Mode)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "test-auth-complete-suite.ps1",
+        "-GenerateReport",
+        "-ReportPath",
+        "ci-auth-report.json"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": []
     }
   ]
 }

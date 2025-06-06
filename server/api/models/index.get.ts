@@ -8,7 +8,11 @@ interface ModelInfo {
   capabilities: string[];
 }
 
-export default defineEventHandler(async (_event: H3Event): Promise<ModelInfo[]> => {
+export default defineEventHandler(async (event: H3Event): Promise<ModelInfo[]> => {
+  // Log the models request
+  console.log('GET /api/models - Request received at:', new Date().toISOString());
+  console.log('Request headers:', getHeaders(event));
+  
   // TODO: Implement dynamic model listing from providers
   const models: ModelInfo[] = [
     {

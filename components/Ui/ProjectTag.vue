@@ -1,4 +1,5 @@
-<template>  <span class="project-tag">
+<template>
+  <span class="project-tag">
     {{ props.tag }}
   </span>
 </template>

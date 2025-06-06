@@ -247,7 +247,7 @@ import { useToast } from '~/composables/useToast'
 
 // Define page meta
 definePageMeta({
-  middleware: 'auth-required',
+  middleware: '06-auth-required',
   layout: 'default'
 })
 

@@ -22,13 +22,17 @@ export default defineEventHandler(async (event) => {
   const ext = getQuery(event).ext?.toString() || 'vue';
   const cwd = process.cwd();
   let files: string[] = [];
-  for (const dir of allowedDirs) {
-    try {
+  for (const dir of allowedDirs) {    try {
       const absDir = join(cwd, dir);
       const found = await walk(absDir, ext, cwd);
       files = files.concat(found);
-    } catch (_e) {
-      // ignore missing dirs
+    } catch (error) {
+      // Log and ignore missing directories
+      if (error instanceof Error) {
+        console.error(`Directory not found: ${dir}`, error.message);
+      } else {
+        console.error(`Directory not found: ${dir}`, error);
+      }
     }
   }
   return { files };

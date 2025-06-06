@@ -14,7 +14,7 @@ interface AuthSession {
   permissions?: string[]
 }
 
-export const useAuth = () => {
+export const useAuthUnified = () => {
   // Reactive session state
   const session = ref<AuthSession | null>(null)
   const loading = ref(false)
@@ -56,6 +56,18 @@ export const useAuth = () => {
   }
 
   // Unified login function (detects admin vs user based on credentials)
+  interface LoginResponse {
+    success: boolean
+    message?: string
+    user?: {
+      id: string
+      email: string
+      role: string
+    }
+    token?: string
+    redirect?: string
+  }
+
   const login = async (email: string, password: string, rememberMe = false) => {
     loading.value = true
     error.value = null
@@ -65,7 +77,7 @@ export const useAuth = () => {
       const isAdminEmail = email.includes('admin') || email.endsWith('@cloudless.gr')
       const endpoint = isAdminEmail ? '/api/auth/admin-login' : '/api/auth/user-login'
 
-      const response = await $fetch(endpoint, {
+      const response = await $fetch<LoginResponse>(endpoint, {
         method: 'POST',
         body: { email, password, rememberMe }
       })

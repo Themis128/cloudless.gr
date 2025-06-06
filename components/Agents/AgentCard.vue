@@ -1,4 +1,5 @@
-<template>  <v-card class="agent-card" :loading="props.loading">
+<template>
+  <v-card class="agent-card" :loading="props.loading">
     <v-card-title class="d-flex align-center">
       {{ props.agent.name }}
       <v-chip :color="props.agent.status === 'active' ? 'success' : 'error'" class="ml-2" size="small">

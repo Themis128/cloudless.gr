@@ -3,6 +3,7 @@
 export default defineEventHandler(async (event) => {
   try {
     // const supabase = await serverSupabaseClient(event); // Temporarily disabled
+    console.log('GET /api/projects - Request received from:', getClientIP(event));
 
     // Mock projects data for now
     const projects = [

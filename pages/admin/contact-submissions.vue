@@ -135,7 +135,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-  middleware: 'admin-required',
+  middleware: '04-admin-required',
   layout: 'admin',
 });
 

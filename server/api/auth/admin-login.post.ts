@@ -25,13 +25,19 @@ export default defineEventHandler(async (event) => {
         success: false,
         message: 'Email and password are required'
       }
-    }
-
-    // Check admin credentials
+    }    // Check admin credentials
     const isValidEmail = email === ADMIN_EMAIL
-    const isValidPassword = await bcrypt.compare(password, await bcrypt.hash(ADMIN_PASSWORD, 10)) || password === ADMIN_PASSWORD
+    const isValidPassword = password === ADMIN_PASSWORD
+
+    console.log('Admin login attempt:', {
+      providedEmail: email,
+      expectedEmail: ADMIN_EMAIL,
+      emailMatch: isValidEmail,
+      passwordMatch: isValidPassword
+    })
 
     if (!isValidEmail || !isValidPassword) {
+      console.log('Invalid admin credentials provided')
       return {
         success: false,
         message: 'Invalid credentials'

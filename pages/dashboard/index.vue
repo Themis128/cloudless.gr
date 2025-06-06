@@ -7,7 +7,7 @@ import { onMounted, computed } from '#imports';
 
 // Protect this page with auth middleware
 definePageMeta({
-  middleware: 'auth-required',
+  middleware: '06-auth-required',
   layout: 'default'
 });
 

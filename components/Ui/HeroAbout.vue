@@ -1,4 +1,5 @@
-<template>  <div class="hero-about-page">
+<template>
+  <div class="hero-about-page">
     <div class="hero-about-card">
       <h2>{{ props.title }}</h2>
       <p>{{ props.description }}</p>

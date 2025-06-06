@@ -1,5 +1,9 @@
 // Test endpoint for admin login functionality
-export default defineEventHandler(async (_event) => {
+export default defineEventHandler(async (event) => {
+  // Log test endpoint access
+  console.log('Admin login test endpoint accessed at:', new Date().toISOString());
+  console.log('Request URL:', getRequestURL(event));
+  
   if (process.env.NODE_ENV === 'production') {
     throw createError({
       statusCode: 404,
