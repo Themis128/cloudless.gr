@@ -23,7 +23,7 @@
 // Auto-redirect to admin dashboard
 definePageMeta({
   layout: 'admin',
-  middleware: '04-admin-required'
+  requiresAdmin: true
 })
 
 // Immediately redirect to dashboard

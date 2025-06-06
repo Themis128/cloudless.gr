@@ -1,46 +1,47 @@
-&lt;template>
-  &lt;div class="workflow-canvas" ref="canvasRef">
-    &lt;vue-flow
+<template>
+  <div class="workflow-canvas" ref="canvasRef">
+    <vue-flow
       v-model="elements"
       :default-viewport="{ x: 0, y: 0, zoom: 1 }"
       @nodesDragged="onNodesDragged"
       @connect="onConnect"
       @paneClick="onPaneClick"
     >
-      &lt;template #node-agent="nodeProps">
-        &lt;AgentNode
+      <template #node-agent="nodeProps">
+        <AgentNode
           :agent="nodeProps.data.agent"
           :is-selected="selectedNode?.id === nodeProps.id"
           :input-ports="nodeProps.data.inputPorts"
           :output-ports="nodeProps.data.outputPorts"
         />
-      &lt;/template>
+      </template>      <Panel position="top-right">
+        <v-btn-group>
+          <v-btn icon="mdi-plus" @click="zoomIn">
+            <v-tooltip activator="parent" location="top">Zoom In</v-tooltip>
+          </v-btn>
+          <v-btn icon="mdi-minus" @click="zoomOut">
+            <v-tooltip activator="parent" location="top">Zoom Out</v-tooltip>
+          </v-btn>
+          <v-btn icon="mdi-fit-to-screen" @click="fitView">
+            <v-tooltip activator="parent" location="top">Fit View</v-tooltip>
+          </v-btn>
+        </v-btn-group>
+      </Panel>      <Controls />
+      <Background variant="dots" gap="24" size="1" /></vue-flow>
+  </div>
+</template>
 
-      &lt;panel position="top-right">
-        &lt;v-btn-group>
-          &lt;v-btn icon="mdi-plus" @click="zoomIn">
-            &lt;v-tooltip activator="parent" location="top">Zoom In&lt;/v-tooltip>
-          &lt;/v-btn>
-          &lt;v-btn icon="mdi-minus" @click="zoomOut">
-            &lt;v-tooltip activator="parent" location="top">Zoom Out&lt;/v-tooltip>
-          &lt;/v-btn>
-          &lt;v-btn icon="mdi-fit-to-screen" @click="fitView">
-            &lt;v-tooltip activator="parent" location="top">Fit View&lt;/v-tooltip>
-          &lt;/v-btn>
-        &lt;/v-btn-group>
-      &lt;/panel>
-
-      &lt;controls />
-      &lt;background variant="dots" gap="24" size="1" />
-    &lt;/vue-flow>
-  &lt;/div>
-&lt;/template>
-
-&lt;script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { VueFlow, Panel, Controls, Background, useVueFlow } from '@vue-flow/core'
+<script setup lang="ts">
+import { ref, onMounted } from '#imports'
+import { VueFlow, useVueFlow, Panel } from '@vue-flow/core'
+import { Controls } from '@vue-flow/controls'
+import { Background } from '@vue-flow/background'
 import type { Node, Edge, Connection } from '@vue-flow/core'
 import type { Agent } from '~/types/agents'
+
+// Import styles for controls and background
+import '@vue-flow/core/dist/style.css'
+import '@vue-flow/controls/dist/style.css'
 
 const props = defineProps<{
   agents: Agent[]
@@ -59,7 +60,7 @@ const { zoomIn, zoomOut, fitView } = useVueFlow()
 
 onMounted(() => {
   // Initialize nodes from agents
-  elements.value = props.agents.map((agent, index) => ({
+  elements.value = props.agents.map((agent: Agent, index: number) => ({
     id: agent.id,
     type: 'agent',
     position: { x: index * 250, y: 100 },
@@ -76,7 +77,7 @@ onMounted(() => {
 })
 
 const onNodesDragged = (nodes: Node[]) => {
-  emit('update:workflow', nodes, elements.value.filter(el => 'source' in el) as Edge[])
+  emit('update:workflow', nodes, elements.value.filter((el: Node | Edge) => 'source' in el) as Edge[])
 }
 
 const onConnect = (connection: Connection) => {
@@ -89,8 +90,8 @@ const onConnect = (connection: Connection) => {
   }
   elements.value = [...elements.value, newEdge]
   emit('update:workflow',
-    elements.value.filter(el => !('source' in el)) as Node[],
-    elements.value.filter(el => 'source' in el) as Edge[]
+    elements.value.filter((el: Node | Edge) => !('source' in el)) as Node[],
+    elements.value.filter((el: Node | Edge) => 'source' in el) as Edge[]
   )
 }
 
@@ -103,9 +104,9 @@ const onNodeClick = (event: MouseEvent, node: Node) => {
   selectedNode.value = node
   emit('nodeSelect', node.id)
 }
-&lt;/script>
+</script>
 
-&lt;style>
+<style>
 .workflow-canvas {
   width: 100%;
   height: 100%;
@@ -115,4 +116,4 @@ const onNodeClick = (event: MouseEvent, node: Node) => {
 .vue-flow {
   background: transparent;
 }
-&lt;/style>
+</style>

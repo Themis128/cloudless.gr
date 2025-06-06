@@ -2,6 +2,11 @@ import { H3Event } from 'h3';
 import jwt from 'jsonwebtoken';
 
 /**
+ * Server-side authentication utilities
+ * These functions use Node.js libraries and should only run on the server
+ */
+
+/**
  * Generate a JWT token for the given user ID and email
  * @param userId The user's ID
  * @param email The user's email
@@ -37,7 +42,8 @@ export const verifyToken = (token: string): any => {
   }
 
   try {
-    return jwt.verify(token, secret);  } catch (error) {
+    return jwt.verify(token, secret);
+  } catch (error) {
     console.error('JWT verification error:', error);
     return null;
   }
@@ -65,27 +71,6 @@ export const getAuthUser = (event: H3Event): any | null => {
  */
 export const isAuthenticated = (event: H3Event): boolean => {
   return getAuthUser(event) !== null;
-};
-
-/**
- * Validate email format
- * @param email The email to validate
- * @returns True if valid, false otherwise
- */
-export const validateEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
-/**
- * Validate password strength
- * @param password The password to validate
- * @returns True if valid, false otherwise
- */
-export const validatePassword = (password: string): boolean => {
-  // Require at least 8 characters with uppercase, lowercase, and numbers
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/;
-  return passwordRegex.test(password);
 };
 
 // Helper function to get request header

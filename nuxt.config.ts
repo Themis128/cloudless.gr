@@ -1,10 +1,51 @@
 import { defineNuxtConfig } from 'nuxt/config'
+import { fileURLToPath } from 'node:url'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineNuxtConfig({
   devServer: {
     port: 3000
   },
+
+  // Windows path handling
+  experimental: {
+    scanPageMeta: true,
+    typedPages: false
+  },
+  components: [
+    {
+      path: '~/components',
+      pathPrefix: false,
+    },
+    {
+      path: '~/components/dashboard',
+      prefix: 'Dashboard',
+    },
+    {
+      path: '~/components/builder',
+      prefix: 'Builder',
+    },
+    {
+      path: '~/components/Agents',
+      prefix: 'Agent',
+    },
+    {
+      path: '~/components/Admin',
+      prefix: 'Admin',
+    },
+    {
+      path: '~/components/Layout',
+      prefix: 'Layout',
+    },
+    {
+      path: '~/components/Ui',
+      prefix: 'Ui',
+    },
+    {
+      path: '~/components/demo',
+      prefix: 'Demo',
+    }
+  ],
   
   app: {
     head: {
@@ -73,12 +114,11 @@ export default defineNuxtConfig({
       }
     }
   },
-
   css: [
     '@mdi/font/css/materialdesignicons.css',
     'vuetify/styles',
-    '@/assets/css/main.css',
-    '@/assets/css/mobile-optimized.css',
+    '~/assets/css/main.css',
+    '~/assets/css/mobile-optimized.css',
   ],
 
   nitro: {
@@ -94,50 +134,67 @@ export default defineNuxtConfig({
     minify: true,
     compressPublicAssets: true,
   },
-
   vite: {
-    plugins: [tsconfigPaths()],
+    plugins: [
+      tsconfigPaths({
+        loose: true,
+        root: process.cwd(),
+        projects: ['./tsconfig.json']
+      })
+    ],
     server: {
       fs: {
         strict: false,
       },
+      watch: {
+        usePolling: process.platform === 'win32'
+      }
     },
     ssr: {
       noExternal: ['vuetify'],
+    },    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./', import.meta.url)),
+        '~': fileURLToPath(new URL('./', import.meta.url)),
+        '~~': fileURLToPath(new URL('./', import.meta.url)),
+        '@@': fileURLToPath(new URL('./', import.meta.url))
+      }
     },
     build: {
       chunkSizeWarningLimit: 1500,
-      rollupOptions: {
-        output: {
+      rollupOptions: {        output: {
           manualChunks: (id: string) => {
-            if (id.includes('node_modules')) {
-              if (id.includes('vue') && !id.includes('vuetify')) return 'vendor-vue-core'
-              if (id.includes('vuetify')) return 'vendor-vuetify'
-              if (id.includes('@supabase/')) return 'vendor-supabase'
-              if (id.includes('@vueuse/')) return 'vendor-vueuse'
-              if (id.includes('three') || id.includes('vanta')) return 'vendor-3d'
-              if (id.includes('@mdi/') && id.includes('.js')) return 'vendor-icons'
-              if (id.includes('@nuxt/') || id.includes('nuxt')) return 'vendor-nuxt'
-              if (id.includes('pinia') || id.includes('jsonwebtoken')) return 'vendor-misc'
+            // Normalize the path to use forward slashes
+            const normalizedId = id.replace(/\\/g, '/');
+            
+            if (normalizedId.includes('node_modules')) {
+              if (normalizedId.includes('vue') && !normalizedId.includes('vuetify')) return 'vendor-vue-core'
+              if (normalizedId.includes('vuetify')) return 'vendor-vuetify'
+              if (normalizedId.includes('@supabase/')) return 'vendor-supabase'
+              if (normalizedId.includes('@vueuse/')) return 'vendor-vueuse'
+              if (normalizedId.includes('three') || normalizedId.includes('vanta')) return 'vendor-3d'
+              if (normalizedId.includes('@mdi/') && normalizedId.includes('.js')) return 'vendor-icons'
+              if (normalizedId.includes('@nuxt/') || normalizedId.includes('nuxt')) return 'vendor-nuxt'
+              if (normalizedId.includes('pinia') || normalizedId.includes('jsonwebtoken')) return 'vendor-misc'
               return 'vendor-other'
             }
 
-            if (id.includes('/components/')) {
-              if (id.includes('/Layout/')) return 'app-components-layout'
-              if (id.includes('/Admin/')) return 'app-components-admin'
+            if (normalizedId.includes('/components/')) {
+              if (normalizedId.includes('/Layout/')) return 'app-components-layout'
+              if (normalizedId.includes('/Admin/')) return 'app-components-admin'
               return 'app-components-common'
             }
 
-            if (id.includes('/pages/')) {
-              if (id.includes('/auth/')) return 'app-pages-auth'
-              if (id.includes('/dashboard/')) return 'app-pages-dashboard'
-              if (id.includes('/admin/')) return 'app-pages-admin'
+            if (normalizedId.includes('/pages/')) {
+              if (normalizedId.includes('/auth/')) return 'app-pages-auth'
+              if (normalizedId.includes('/dashboard/')) return 'app-pages-dashboard'
+              if (normalizedId.includes('/admin/')) return 'app-pages-admin'
               return 'app-pages-common'
             }
 
-            if (id.includes('/composables/')) return 'app-composables'
-            if (id.includes('/middleware/')) return 'app-middleware'
-            if (id.includes('/server/')) return 'app-server'
+            if (normalizedId.includes('/composables/')) return 'app-composables'
+            if (normalizedId.includes('/middleware/')) return 'app-middleware'
+            if (normalizedId.includes('/server/')) return 'app-server'
           },
         },
       },

@@ -1,5 +1,5 @@
 import { defineEventHandler, readBody } from 'h3';
-import { generateToken } from '../../../utils/auth';
+import { generateToken } from '../../utils/auth-server';
 import { getSupabaseServerClient } from '../../../utils/supabase';
 
 export default defineEventHandler(async (event) => {

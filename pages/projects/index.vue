@@ -16,6 +16,11 @@
 </template>
 
 <script setup lang="ts">
-  // Future composables or logic here
-  // const { projects } = useProjects()
+// Projects require authentication
+definePageMeta({
+  // No explicit middleware needed - auth.global.ts handles authentication automatically
+})
+
+// Future composables or logic here
+// const { projects } = useProjects()
 </script>

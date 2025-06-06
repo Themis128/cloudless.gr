@@ -245,9 +245,9 @@
 import { ref, onMounted } from '#imports'
 import { useToast } from '~/composables/useToast'
 
-// Define page meta
+// Define page meta - deployment features require Business plan
 definePageMeta({
-  middleware: '06-auth-required',
+  requiresBusiness: true,
   layout: 'default'
 })
 

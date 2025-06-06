@@ -24,11 +24,16 @@
 </template>
 
 <script setup lang="ts">
-  import DashboardStats from '~/components/dashboard/DashboardStats.vue';
+// ✅ Public page - accessible without authentication
+definePageMeta({
+  public: true
+})
+
+import DashboardStats from '~/components/dashboard/DashboardStats.vue';
 import RecentActivity from '~/components/dashboard/RecentActivity.vue';
 import { useAuth } from '~/composables/useAuth';
 
-  const { user } = useAuth();
+const { user } = useAuth();
 </script>
 
 <style scoped>

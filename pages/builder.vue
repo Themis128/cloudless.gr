@@ -9,10 +9,9 @@
           </v-card-text>
         </v-card>
       </v-col>
-    </v-row>
-    <v-row>
+    </v-row>    <v-row>
       <v-col cols="12">
-        <AgentForm />
+        <AgentsAgentForm />
       </v-col>
     </v-row>
     <!-- Optional: Toolbar for tools, save/load buttons -->
@@ -28,6 +27,10 @@
 </template>
 
 <script setup lang="ts">
-  import AgentForm from '~/components/builder/AgentForm.vue';
-  // Future: useProjects, useBuilder composables
+// Require Pro plan for advanced builder features
+definePageMeta({
+  requiresPro: true
+})
+
+// Future: useProjects, useBuilder composables
 </script>

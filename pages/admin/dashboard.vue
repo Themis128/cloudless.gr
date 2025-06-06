@@ -179,7 +179,7 @@ const { isAdmin, checkSession } = useAuth()
 // Page metadata for admin route protection
 definePageMeta({
   layout: 'admin',
-  middleware: '04-admin-required'
+  requiresAdmin: true
 })
 
 const { $fetch } = useNuxtApp()

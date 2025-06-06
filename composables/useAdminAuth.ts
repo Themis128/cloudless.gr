@@ -33,9 +33,7 @@ export const useAdminAuth = () => {
     }
 
     loading.value = true;
-    error.value = null;
-
-    try {
+    error.value = null;    try {
       const response = await $fetch<AdminAuthResponse>('/api/auth/admin-login', {
         method: 'POST',
         body: {
@@ -61,10 +59,23 @@ export const useAdminAuth = () => {
         return { success: true, error: null };
       }
 
-      throw new Error(response.message || 'Admin login failed');
+      // Handle case where API returns success:true but no user data
+      error.value = response.message || 'Invalid response from server';
+      return { success: false, error: error.value };
     } catch (err: any) {
       console.error('Admin login error:', err);
-      error.value = err.message || 'Admin login failed';
+      
+      // Handle different types of errors more gracefully
+      if (err.statusCode === 401) {
+        error.value = 'Invalid credentials';
+      } else if (err.statusCode === 400) {
+        error.value = 'Invalid request';
+      } else if (err.statusCode >= 500) {
+        error.value = 'Server error. Please try again later.';
+      } else {
+        error.value = err.message || 'Admin login failed';
+      }
+      
       return { success: false, error: error.value };
     } finally {
       loading.value = false;

@@ -8,5 +8,10 @@
 </template>
 
 <script setup lang="ts">
-  // Add workflows logic here
+// Require Pro plan for advanced workflow features
+definePageMeta({
+  requiresPro: true
+})
+
+// Add workflows logic here
 </script>

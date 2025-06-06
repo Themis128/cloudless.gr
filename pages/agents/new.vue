@@ -8,3 +8,10 @@
 <template>
   <div />
 </template>
+
+<script setup lang="ts">
+// Creating new agents requires Pro plan
+definePageMeta({
+  requiresPro: true
+})
+</script>

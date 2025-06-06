@@ -31,12 +31,11 @@
           <span v-else class="text-h6">Cloudless</span>
         </NuxtLink>
       </v-toolbar-title>
-      <v-spacer />
-      <v-btn icon @click="toggleBackground" :title="isEnabled ? 'Hide Clouds' : 'Show Clouds'">
+      <v-spacer />      <v-btn icon @click="toggleBackground" :title="isEnabled ? 'Hide Clouds' : 'Show Clouds'">
         <v-icon>{{ isEnabled ? 'mdi-weather-night' : 'mdi-weather-cloudy' }}</v-icon>
       </v-btn>
-      <LargeNav v-if="isDesktop" />
-      <SmallNav v-else />
+      <LayoutNavigationLargeNav v-if="isDesktop" />
+      <LayoutNavigationSmallNav v-else />
       <slot name="header" />
     </v-app-bar>
 

@@ -76,13 +76,13 @@
 <script setup lang="ts">
 definePageMeta({
   layout: 'auth',
-  auth: false
+  public: true  // Admin login page should be accessible without auth
 })
 
 import { computed, ref, useRouter } from '#imports'
 import { useDisplay } from 'vuetify'
 import { useAdminAuth } from '~/composables/useAdminAuth'
-import { validateEmail } from '~/utils/auth'
+import { validateEmail } from '~/utils/auth-client'
 
 const router = useRouter()
 const { mobile } = useDisplay()
@@ -113,19 +113,34 @@ const handleLogin = async () => {
   error.value = ''
   loading.value = true
 
+  // Add timeout to prevent infinite loading
+  const timeoutId = setTimeout(() => {
+    if (loading.value) {
+      loading.value = false
+      error.value = 'Login request timed out. Please try again.'
+    }
+  }, 30000) // 30 second timeout
+
   try {
     const result = await adminSignIn(form.value.email, form.value.password)
 
+    // Clear timeout on successful response
+    clearTimeout(timeoutId)
+
     if (!result.success) {
-      error.value = result.error
+      error.value = result.error || 'Login failed. Please check your credentials.'
       return
     }
 
+    // Only navigate if login was successful
     await router.push('/admin/dashboard')
   } catch (err) {
+    // Clear timeout on error
+    clearTimeout(timeoutId)
     error.value = 'Failed to log in. Please try again.'
     console.error('Admin login error:', err)
   } finally {
+    // Ensure loading state is always reset
     loading.value = false
   }
 }

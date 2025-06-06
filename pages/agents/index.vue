@@ -8,3 +8,10 @@
 <template>
   <div />
 </template>
+
+<script setup lang="ts">
+// Agents management requires authentication
+definePageMeta({
+  // No explicit middleware needed - auth.global.ts handles authentication automatically
+})
+</script>

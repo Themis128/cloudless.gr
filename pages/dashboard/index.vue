@@ -7,19 +7,23 @@ import { onMounted, computed } from '#imports';
 
 // Protect this page with auth middleware
 definePageMeta({
-  middleware: '06-auth-required',
   layout: 'default'
+  // No need to specify middleware - auth.global.ts handles authentication automatically
 });
 
 const { user } = useAuth();
-const { stats, fetchStats, loading } = usePlatformStats();
+const { stats, fetchStats, loading, error } = usePlatformStats();
 
 // Computed properties for better reactivity
 const userDisplayName = computed(() => user.value?.name || user.value?.email || 'Guest');
 const isAdmin = computed(() => user.value?.role === 'admin');
 
-onMounted(() => {
-  fetchStats();
+onMounted(async () => {
+  try {
+    await fetchStats();
+  } catch (err) {
+    console.error('Failed to fetch dashboard stats:', err);
+  }
 });
 </script>
 
@@ -45,11 +49,9 @@ onMounted(() => {
             </div>
           </v-card-text>
         </v-card>
-      </v-col>
-
-      <!-- Quick Stats -->
+      </v-col>      <!-- Quick Stats -->
       <v-col cols="12" md="4">
-        <DashboardStats :stats="stats" :loading="loading" />
+        <DashboardStats :stats="stats" :loading="loading" :error="error" />
       </v-col>
 
       <!-- Recent Activity -->

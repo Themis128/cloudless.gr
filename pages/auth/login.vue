@@ -187,7 +187,7 @@
 <script setup lang="ts">
 definePageMeta({
   layout: 'auth',
-  auth: false
+  public: true  // Login page should be accessible to everyone
 })
 
 const supabase = useSupabaseClient()

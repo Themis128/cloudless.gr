@@ -83,14 +83,14 @@
 <script setup lang="ts">
 definePageMeta({
   layout: 'auth',
-  auth: false
+  public: true  // Signup page should be accessible to everyone
 })
 
 import { computed, ref } from '#imports'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useSupabaseClient } from '#imports'
-import { validateEmail } from '~/utils/auth'
+import { validateEmail } from '~/utils/auth-client'
 
 const router = useRouter()
 const { mobile } = useDisplay()
