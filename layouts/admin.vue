@@ -1,6 +1,5 @@
-<template>
-  <v-app>
-    <Layout-VantaInitializer />
+<template>  <v-app>
+    <VantaClouds2Background />
 
     <v-app-bar
       color="primary"

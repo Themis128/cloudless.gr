@@ -105,8 +105,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useRoute } from 'vue-router';
+// In Nuxt 3 with <script setup>, ref and computed are auto-imported
+// No need to import them manually
 
 interface Project {
   id: string;

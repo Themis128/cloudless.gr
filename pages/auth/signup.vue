@@ -142,8 +142,11 @@ const handleSignup = async () => {
     if (signupError) {
       error.value = signupError.message
     } else {
-      successMessage.value = 'Signup successful! Check your email to confirm your account.'
-      setTimeout(() => router.push('/auth/login'), 2000)
+      successMessage.value = 'Account created successfully! Please check your email and click the confirmation link to activate your account.'
+      // Clear the form
+      form.value.email = ''
+      form.value.password = ''
+      // Don't redirect immediately - let user see the message
     }
   } catch (err) {
     error.value = 'An unexpected error occurred'

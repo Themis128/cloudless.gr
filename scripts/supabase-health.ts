@@ -6,15 +6,14 @@ config()
 
 async function checkSupabaseHealth() {
   console.log('🔍 Starting Supabase health check...\n')
-
   const url = process.env.SUPABASE_URL
-  const key = process.env.SUPABASE_KEY
+  const key = process.env.SUPABASE_ANON_KEY
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!url || !key) {
     console.error('❌ Missing required Supabase configuration!')
     if (!url) console.error('Missing SUPABASE_URL')
-    if (!key) console.error('Missing SUPABASE_KEY')
+    if (!key) console.error('Missing SUPABASE_ANON_KEY')
     process.exit(1)
   }
 

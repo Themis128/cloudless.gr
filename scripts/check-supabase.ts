@@ -10,13 +10,13 @@ async function checkSupabaseSetup() {
 
   // Check environment variables
   const url = process.env.SUPABASE_URL
-  const key = process.env.SUPABASE_KEY
+  const key = process.env.SUPABASE_ANON_KEY
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!url || !key) {
     console.error('❌ Missing required environment variables:')
     if (!url) console.error('   - SUPABASE_URL')
-    if (!key) console.error('   - SUPABASE_KEY')
+    if (!key) console.error('   - SUPABASE_ANON_KEY')
     process.exit(1)
   }
 

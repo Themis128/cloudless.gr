@@ -6,7 +6,7 @@
   - Security: Show/hide stats based on user role/permissions
 -->
 <template>
-  <v-card>
+  <v-card class="glassmorphism-card" elevation="0">
     <v-card-title>Platform Stats</v-card-title>
     <v-card-text>
       <div v-if="loading" class="text-center pa-4">
@@ -69,3 +69,19 @@ interface Props {
 
 defineProps<Props>();
 </script>
+
+<style scoped>
+.glassmorphism-card {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+}
+
+/* Ensure text is readable against the glassmorphism background */
+.v-card-title,
+.v-card-text {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+</style>

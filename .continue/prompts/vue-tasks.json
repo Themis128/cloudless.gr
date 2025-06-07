@@ -1,0 +1,492 @@
+{
+  "description": "Vue.js/Nuxt.js development tasks and workflows for the Cloudless.gr platform",
+  "version": "2.0.0",
+  "lastUpdated": "2025-06-07",
+  "tasks": [
+    {
+      "name": "fix-auth-flow",
+      "description": "Fix authentication and email confirmation flow",
+      "type": "maintenance",
+      "steps": [
+        "Check Supabase configuration",
+        "Update auth pages with better error handling", 
+        "Test email confirmation callback",
+        "Verify middleware protection works"
+      ],
+      "files": [
+        "pages/auth/login.vue",
+        "pages/auth/signup.vue", 
+        "pages/auth/callback.vue",
+        "middleware/auth.global.ts"
+      ],
+      "dependencies": ["db-health", "environment-check"]
+    },
+    {
+      "name": "migrate-to-vuetify",
+      "description": "Migrate all components and pages to use Vuetify 3",
+      "type": "maintenance",
+      "steps": [
+        "Replace custom HTML forms with v-form components",
+        "Update buttons to use v-btn",
+        "Convert tables to v-data-table",
+        "Replace modals with v-dialog",
+        "Update layouts to use Vuetify layout system"
+      ],
+      "files": [
+        "layouts/default.vue",
+        "layouts/admin.vue",
+        "pages/**/*.vue",
+        "components/**/*.vue"
+      ]
+    },
+    {
+      "name": "setup-vanta-background",
+      "description": "Add Vanta.js Clouds2 background to layouts",
+      "type": "setup",
+      "steps": [
+        "Create VantaClouds2Background component",
+        "Update default layout to use Vanta background",
+        "Update admin layout to use Vanta background",
+        "Configure proper z-index for overlays"
+      ],
+      "files": [
+        "components/VantaClouds2Background.vue",
+        "layouts/default.vue",
+        "layouts/admin.vue"
+      ]
+    },
+    {
+      "name": "fix-prisma-setup",
+      "description": "Fix and optimize Prisma client configuration",
+      "steps": [
+        "Update prisma.ts with better error handling",
+        "Add graceful shutdown handling",
+        "Configure proper logging",
+        "Add connection lifecycle management"
+      ],
+      "files": [
+        "server/utils/prisma.ts",
+        "prisma/schema.prisma"
+      ]
+    },
+    {
+      "name": "run-development-server",
+      "description": "Start the development server with hot reload",
+      "command": "npm run dev",
+      "type": "background"
+    },
+    {
+      "name": "run-build",
+      "description": "Build the application for production",
+      "command": "npm run build",
+      "type": "build"
+    },
+    {
+      "name": "run-tests",
+      "description": "Run all test suites",
+      "command": "npm run test:suite",
+      "type": "test"
+    },
+    {
+      "name": "run-auth-tests",
+      "description": "Run authentication tests",
+      "command": "npm run test:auth",
+      "type": "test"
+    },
+    {
+      "name": "run-middleware-tests",
+      "description": "Run middleware protection tests",
+      "command": "powershell -ExecutionPolicy Bypass -File test-middleware-protection.ps1",
+      "type": "test"
+    },
+    {
+      "name": "run-type-check",
+      "description": "Check TypeScript types across the project",
+      "command": "npx vue-tsc --noEmit",
+      "type": "validation"
+    },
+    {
+      "name": "run-lint",
+      "description": "Lint code with ESLint",
+      "command": "npm run lint",
+      "type": "validation"
+    },
+    {
+      "name": "run-format",
+      "description": "Format code with Prettier",
+      "command": "npm run format",
+      "type": "formatting"
+    },
+    {
+      "name": "docker-start-dev",
+      "description": "Start development environment with Docker",
+      "command": "npm run docker:dev",
+      "type": "docker"
+    },
+    {
+      "name": "docker-stop",
+      "description": "Stop all Docker containers",
+      "command": "npm run docker:stop",
+      "type": "docker"
+    },
+    {
+      "name": "health-check",
+      "description": "Run comprehensive health check",
+      "command": "npm run health",
+      "type": "validation"
+    },
+    {
+      "name": "auto-fix",
+      "description": "Automatically fix common issues",
+      "command": "npm run auto-fix",
+      "type": "maintenance"
+    },
+    {
+      "name": "setup-python-env",
+      "description": "Set up Python virtual environment",
+      "command": "powershell -ExecutionPolicy Bypass -File setup-dev-environment.ps1",
+      "type": "setup"
+    },    {
+      "name": "validate-environment",
+      "description": "Validate complete development environment",
+      "command": "powershell -ExecutionPolicy Bypass -File test-environment.ps1",
+      "type": "validation"
+    },
+    {
+      "name": "security-audit",
+      "description": "Run comprehensive security audit",
+      "commands": [
+        "npm audit --audit-level high",
+        "npx eslint --ext .js,.ts,.vue . --config .eslintrc-security",
+        "node scripts/security-check.js"
+      ],
+      "type": "validation",
+      "timeout": 300,
+      "healthCheck": "node -e \"console.log('Security audit completed')\"",
+      "platforms": ["windows", "linux", "darwin"]
+    },
+    {
+      "name": "performance-audit",
+      "description": "Analyze application performance",
+      "commands": [
+        "npm run build:analyze",
+        "node scripts/performance-check.js",
+        "npx lighthouse http://localhost:3000 --output=json --output-path=./reports/lighthouse.json"
+      ],
+      "type": "monitoring",
+      "dependencies": ["run-development-server"],
+      "timeout": 600,
+      "environment": {
+        "NODE_ENV": "production"
+      }
+    },
+    {
+      "name": "ai-code-analysis",
+      "description": "AI-powered code analysis and suggestions",
+      "command": "node scripts/ai-analysis.js",
+      "type": "ai",
+      "timeout": 300,
+      "environment": {
+        "AI_MODEL": "gpt-4",
+        "ANALYSIS_DEPTH": "comprehensive"
+      }
+    },
+    {
+      "name": "ai-generate-tests",
+      "description": "Generate test cases using AI",
+      "command": "node scripts/ai-test-generator.js",
+      "type": "ai",
+      "timeout": 600,
+      "dependencies": ["ai-code-analysis"]
+    },
+    {
+      "name": "database-migrate",
+      "description": "Run database migrations",
+      "command": "npx prisma migrate deploy",
+      "type": "database",
+      "healthCheck": "npx prisma db seed --preview-feature",
+      "retries": 3
+    },
+    {
+      "name": "database-backup",
+      "description": "Create database backup",
+      "command": "node scripts/db-backup.js",
+      "type": "database",
+      "timeout": 1800,
+      "environment": {
+        "BACKUP_PATH": "./backups",
+        "TIMESTAMP": "true"
+      }
+    },
+    {
+      "name": "git-sync",
+      "description": "Sync with remote repository",
+      "commands": [
+        "git fetch origin",
+        "git status --porcelain",
+        "git pull origin main"
+      ],
+      "type": "git",
+      "healthCheck": "git status"
+    },
+    {
+      "name": "git-commit-auto",
+      "description": "Auto-commit with AI-generated message",
+      "commands": [
+        "git add .",
+        "node scripts/ai-commit-message.js",
+        "git commit -F .commit-message"
+      ],
+      "type": "git",
+      "dependencies": ["run-lint", "run-type-check"]
+    },
+    {
+      "name": "monitor-performance",
+      "description": "Real-time performance monitoring",
+      "command": "node scripts/performance-monitor.js",
+      "type": "monitoring",
+      "background": true,
+      "healthCheck": "curl -f http://localhost:3001/health || exit 1"
+    },
+    {
+      "name": "monitor-logs",
+      "description": "Monitor application logs",
+      "command": "npx pm2 logs --lines 100",
+      "type": "monitoring",
+      "background": true,
+      "platforms": ["linux", "darwin"]
+    },
+    {
+      "name": "clean-cache",
+      "description": "Clean all caches and temporary files",
+      "commands": [
+        "rm -rf .nuxt",
+        "rm -rf node_modules/.cache",
+        "rm -rf dist",
+        "npm cache clean --force"
+      ],
+      "type": "maintenance",
+      "shell": "bash",
+      "platforms": ["linux", "darwin"]
+    },
+    {
+      "name": "clean-cache-windows",
+      "description": "Clean all caches and temporary files (Windows)",
+      "commands": [
+        "Remove-Item -Recurse -Force .nuxt -ErrorAction SilentlyContinue",
+        "Remove-Item -Recurse -Force node_modules\\.cache -ErrorAction SilentlyContinue",
+        "Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue",
+        "npm cache clean --force"
+      ],
+      "type": "maintenance",
+      "shell": "powershell",
+      "platforms": ["windows"]
+    },
+    {
+      "name": "optimize-images",
+      "description": "Optimize images for web",
+      "command": "node scripts/image-optimizer.js",
+      "type": "maintenance",
+      "timeout": 600
+    },
+    {
+      "name": "generate-docs",
+      "description": "Generate project documentation",
+      "commands": [
+        "npx typedoc --out docs src",
+        "node scripts/generate-api-docs.js"
+      ],
+      "type": "maintenance",
+      "timeout": 300
+    },
+    {
+      "name": "e2e-tests",
+      "description": "Run end-to-end tests",
+      "command": "npx playwright test",
+      "type": "test",
+      "dependencies": ["run-development-server"],
+      "timeout": 1200,
+      "retries": 2
+    },
+    {
+      "name": "visual-regression-tests",
+      "description": "Run visual regression tests",
+      "command": "npx percy exec -- npx playwright test",
+      "type": "test",
+      "dependencies": ["run-development-server"],
+      "timeout": 1800,
+      "environment": {
+        "PERCY_TOKEN": "${PERCY_TOKEN}"
+      }
+    },
+    {
+      "name": "load-tests",
+      "description": "Run load testing",
+      "command": "node scripts/load-test.js",
+      "type": "test",
+      "dependencies": ["run-development-server"],
+      "timeout": 900,
+      "environment": {
+        "TARGET_URL": "http://localhost:3000",
+        "CONCURRENT_USERS": "50",
+        "DURATION": "5m"
+      }
+    }
+  ],  "workflows": [
+    {
+      "name": "complete-setup",
+      "description": "Complete development environment setup",
+      "tasks": [
+        "setup-python-env",
+        "run-development-server",
+        "validate-environment"
+      ],
+      "parallel": false,
+      "continueOnError": false
+    },
+    {
+      "name": "fix-authentication",
+      "description": "Complete authentication system fix",
+      "tasks": [
+        "fix-auth-flow",
+        "run-auth-tests",
+        "run-middleware-tests"
+      ],
+      "parallel": false,
+      "continueOnError": false
+    },
+    {
+      "name": "quality-check",
+      "description": "Run full quality assurance checks",
+      "tasks": [
+        "run-type-check",
+        "run-lint",
+        "run-tests",
+        "health-check"
+      ],
+      "parallel": true,
+      "continueOnError": false,
+      "timeout": 1800
+    },
+    {
+      "name": "deploy-ready",
+      "description": "Prepare application for deployment",
+      "tasks": [
+        "run-format",
+        "run-lint",
+        "run-type-check",
+        "run-tests",
+        "run-build"
+      ],
+      "parallel": false,
+      "continueOnError": false,
+      "timeout": 2400
+    },
+    {
+      "name": "security-complete",
+      "description": "Comprehensive security assessment",
+      "tasks": [
+        "security-audit",
+        "run-tests",
+        "e2e-tests"
+      ],
+      "parallel": false,
+      "continueOnError": false,
+      "timeout": 1800
+    },
+    {
+      "name": "performance-analysis",
+      "description": "Complete performance analysis and optimization",
+      "tasks": [
+        "performance-audit",
+        "load-tests",
+        "monitor-performance"
+      ],
+      "parallel": false,
+      "continueOnError": true,
+      "timeout": 3600
+    },
+    {
+      "name": "ai-enhanced-development",
+      "description": "AI-powered development workflow",
+      "tasks": [
+        "ai-code-analysis",
+        "ai-generate-tests",
+        "git-commit-auto"
+      ],
+      "parallel": false,
+      "continueOnError": true,
+      "timeout": 1200
+    },
+    {
+      "name": "database-maintenance",
+      "description": "Database maintenance and backup",
+      "tasks": [
+        "database-migrate",
+        "database-backup",
+        "health-check"
+      ],
+      "parallel": false,
+      "continueOnError": false,
+      "timeout": 2400
+    },
+    {
+      "name": "full-test-suite",
+      "description": "Complete testing workflow",
+      "tasks": [
+        "run-tests",
+        "run-auth-tests",
+        "e2e-tests",
+        "visual-regression-tests"
+      ],
+      "parallel": true,
+      "continueOnError": false,
+      "timeout": 3600
+    },
+    {
+      "name": "maintenance-complete",
+      "description": "Complete maintenance workflow",
+      "tasks": [
+        "clean-cache",
+        "optimize-images",
+        "generate-docs",
+        "git-sync"
+      ],
+      "parallel": true,
+      "continueOnError": true,
+      "timeout": 1800
+    },
+    {
+      "name": "ci-cd-pipeline",
+      "description": "Continuous integration and deployment pipeline",
+      "tasks": [
+        "git-sync",
+        "quality-check",
+        "security-audit",
+        "full-test-suite",
+        "run-build"
+      ],
+      "parallel": false,
+      "continueOnError": false,
+      "timeout": 4800
+    }
+  ],
+  "taskCategories": {
+    "development": ["run-development-server", "run-build", "setup-python-env"],
+    "testing": ["run-tests", "run-auth-tests", "e2e-tests", "visual-regression-tests", "load-tests"],
+    "quality": ["run-lint", "run-format", "run-type-check", "security-audit"],
+    "maintenance": ["clean-cache", "clean-cache-windows", "optimize-images", "auto-fix"],
+    "database": ["database-migrate", "database-backup", "health-check"],
+    "docker": ["docker-start-dev", "docker-stop"],
+    "ai": ["ai-code-analysis", "ai-generate-tests", "git-commit-auto"],
+    "monitoring": ["monitor-performance", "monitor-logs", "performance-audit"],
+    "git": ["git-sync", "git-commit-auto"],
+    "documentation": ["generate-docs"]
+  },
+  "defaultTasks": {
+    "onStartup": ["validate-environment", "run-development-server"],
+    "beforeDeploy": ["deploy-ready"],
+    "dailyMaintenance": ["maintenance-complete"],
+    "securityCheck": ["security-complete"]
+  }
+}

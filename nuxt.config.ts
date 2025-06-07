@@ -74,24 +74,27 @@ export default defineNuxtConfig({
     '@nuxt/content',
     '@pinia/nuxt',
     '@nuxtjs/supabase'
-  ],
-  supabase: {
+  ],  supabase: {
     redirectOptions: {
-      login: '/auth/callback',
-      callback: '/dashboard',
+      login: '/auth/login',
+      callback: '/auth/callback',
       exclude: [
         '/auth/login',
         '/auth/signup',
+        '/auth/callback',
         '/',
         '/about',
         '/contact'
-      ]
-    },
-    url: process.env.SUPABASE_URL,    key: process.env.SUPABASE_KEY,
+      ]    },
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_ANON_KEY,
     cookieOptions: {
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax'
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 7 days
     }
+    // Note: clientOptions is not supported in @nuxtjs/supabase
+    // Auth configuration should be handled in the client
   },
   runtimeConfig: {
     // Private keys
@@ -106,11 +109,10 @@ export default defineNuxtConfig({
       accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
       secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
     },
-    
-    public: {
+      public: {
       supabase: {
         url: process.env.SUPABASE_URL,
-        key: process.env.SUPABASE_KEY
+        key: process.env.SUPABASE_ANON_KEY
       }
     }
   },

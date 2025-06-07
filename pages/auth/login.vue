@@ -102,9 +102,7 @@
               >
                 Back to Password Login
               </v-btn>
-            </v-form>
-
-            <!-- Social Auth -->
+            </v-form>            <!-- Social Auth -->
             <v-divider class="my-6" />
             
             <div class="text-center mb-4">
@@ -119,6 +117,7 @@
                 size="large"
                 prepend-icon="mdi-google"
                 :loading="socialLoading === 'google'"
+                :disabled="socialLoading !== ''"
               >
                 Continue with Google
               </v-btn>
@@ -130,12 +129,19 @@
                 size="large"
                 prepend-icon="mdi-github"
                 :loading="socialLoading === 'github'"
+                :disabled="socialLoading !== ''"
               >
                 Continue with GitHub
               </v-btn>
             </div>
 
-            <!-- Error Display -->
+            <!-- OAuth Help Text -->
+            <div v-if="socialLoading" class="text-center mt-3">
+              <p class="text-caption text-medium-emphasis">
+                <v-icon size="small" class="mr-1">mdi-information-outline</v-icon>
+                If a popup doesn't appear, please check your browser's popup blocker settings.
+              </p>
+            </div><!-- Error Display -->
             <v-alert
               v-if="error"
               type="error"
@@ -144,6 +150,59 @@
               @click:close="error = ''"
             >
               {{ error }}
+              
+              <!-- Show resend confirmation option for unconfirmed emails or expired OTP -->
+              <div v-if="(error.includes('confirm') || error.includes('expired') || error.includes('invalid') || error.includes('link')) && email" class="mt-3">
+                <v-btn
+                  variant="text"
+                  size="small"
+                  color="error"
+                  @click="resendConfirmation"
+                  :loading="resendLoading"
+                  prepend-icon="mdi-email-send"
+                >
+                  Resend Confirmation Email
+                </v-btn>
+              </div>
+              
+              <!-- Show resend option for expired OTP even without email entered -->
+              <div v-else-if="(error.includes('expired') || error.includes('invalid') || error.includes('link')) && !email" class="mt-3">
+                <p class="text-caption mb-2 text-white">Please enter your email address first:</p>
+                <v-text-field
+                  v-model="email"
+                  label="Email"
+                  type="email"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  class="mb-2"
+                  bg-color="rgba(255, 255, 255, 0.9)"
+                />
+                <v-btn
+                  variant="text"
+                  size="small"
+                  color="error"
+                  @click="resendConfirmation"
+                  :loading="resendLoading"
+                  prepend-icon="mdi-email-send"
+                  :disabled="!email"
+                >
+                  Resend Confirmation Email
+                </v-btn>
+              </div>
+              
+              <!-- Show additional help for persistent issues -->
+              <div v-if="error.includes('contact support')" class="mt-3">
+                <v-btn
+                  variant="text"
+                  size="small"
+                  color="error"
+                  href="/contact"
+                  prepend-icon="mdi-help-circle"
+                >
+                  Contact Support
+                </v-btn>
+              </div>
             </v-alert>
 
             <!-- Success Message -->
@@ -193,6 +252,7 @@ definePageMeta({
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const router = useRouter()
+const route = useRoute()
 
 // Reactive state
 const email = ref('')
@@ -205,11 +265,51 @@ const successMessage = ref('')
 const isLoading = ref(false)
 const socialLoading = ref('')
 const showMagicLink = ref(false)
+const resendLoading = ref(false)
 
 // Redirect if already logged in
 watchEffect(() => {
   if (user.value) {
     router.push('/dashboard')
+  }
+})
+
+// Check for URL errors on page load
+onMounted(() => {
+  const urlError = route.query.error as string
+  const errorCode = route.query.error_code as string
+  const errorDescription = route.query.error_description as string
+  const authError = route.query.auth_error as string
+  
+  // Try to extract email from URL parameters if available
+  const urlEmail = route.query.email as string
+  if (urlEmail && !email.value) {
+    email.value = urlEmail
+  }
+
+  if (urlError || authError) {
+    if (errorCode === 'otp_expired' || authError === 'otp_expired' || errorDescription?.includes('expired')) {
+      error.value = 'Your email confirmation link has expired. Please request a new one below.'
+      // If we have an email, pre-fill it to make resending easier
+      if (urlEmail && !email.value) {
+        email.value = urlEmail
+      }
+    } else if (errorCode === 'otp_invalid' || errorDescription?.includes('invalid')) {
+      error.value = 'The confirmation link is invalid or has already been used. Please request a new one if needed.'
+    } else if (errorCode === 'access_denied') {
+      error.value = 'Access denied. Please try signing in again.'
+    } else if (errorDescription) {
+      error.value = decodeURIComponent(errorDescription).replace(/\+/g, ' ')
+    } else {
+      error.value = 'Authentication failed. Please try again.'
+    }
+    
+    // Clean up URL without these error parameters but preserve email if present
+    const cleanQuery: Record<string, string> = {}
+    if (urlEmail) {
+      cleanQuery.email = urlEmail
+    }
+    router.replace({ path: '/auth/login', query: Object.keys(cleanQuery).length > 0 ? cleanQuery : undefined })
   }
 })
 
@@ -223,15 +323,26 @@ const handleEmailLogin = async () => {
 
   isLoading.value = true
   error.value = ''
-
-  try {
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+  try {    const { error: signInError } = await supabase.auth.signInWithPassword({
       email: email.value,
       password: password.value,
     })
 
     if (signInError) {
-      error.value = signInError.message
+      console.log('Sign in error:', signInError)
+      
+      // Handle specific error cases
+      if (signInError.message.includes('Invalid login credentials')) {
+        error.value = 'Invalid email or password. If you just signed up, please check your email and confirm your account first.'
+      } else if (signInError.message.includes('Email not confirmed') || signInError.message.includes('confirm')) {
+        error.value = 'Please check your email and click the confirmation link before signing in.'
+      } else if (signInError.message.includes('signup') || signInError.message.includes('registration')) {
+        error.value = 'There was an issue with your account setup. Please try resending the confirmation email.'
+      } else if (signInError.message.includes('rate limit')) {
+        error.value = 'Too many login attempts. Please wait a moment before trying again.'
+      } else {
+        error.value = signInError.message
+      }
     } else {
       // Success - user will be automatically redirected by watchEffect
       successMessage.value = 'Successfully signed in!'
@@ -251,31 +362,65 @@ const handleMagicLink = async () => {
     return
   }
 
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(magicEmail.value)) {
+    emailError.value = 'Please enter a valid email address'
+    return
+  }
+
   isLoading.value = true
   error.value = ''
+  successMessage.value = ''
 
   try {
     const { error: magicError } = await supabase.auth.signInWithOtp({
       email: magicEmail.value,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?type=magiclink`,
         shouldCreateUser: true,
         data: {
           email: magicEmail.value,
-          provider: 'magic_link'
+          provider: 'magic_link',
+          created_at: new Date().toISOString()
         }
       }
     })
 
     if (magicError) {
-      error.value = magicError.message
+      console.error('Magic link error:', magicError)
+      
+      // Handle specific error cases
+      if (magicError.message.includes('rate limit') || magicError.message.includes('too many')) {
+        error.value = 'Too many requests. Please wait a moment before requesting another magic link.'
+      } else if (magicError.message.includes('invalid email') || magicError.message.includes('email')) {
+        error.value = 'Please enter a valid email address.'
+      } else if (magicError.message.includes('signup disabled') || magicError.message.includes('not enabled')) {
+        error.value = 'Magic link signup is currently disabled. Please try password login or contact support.'
+      } else {
+        error.value = `Failed to send magic link: ${magicError.message}`
+      }
     } else {
-      successMessage.value = 'Magic link sent! Check your email.'
+      successMessage.value = `Magic link sent to ${magicEmail.value}! Check your email and spam folder. The link will expire in 1 hour.`
       showMagicLink.value = false
+      
+      // Auto-clear success message after 10 seconds
+      setTimeout(() => {
+        successMessage.value = ''
+      }, 10000)
+      
+      console.log('✅ Magic link sent successfully to:', magicEmail.value)
     }
-  } catch (err) {
-    error.value = 'Failed to send magic link'
+  } catch (err: any) {
     console.error('Magic link error:', err)
+    
+    if (err.name === 'NetworkError' || err.message.includes('fetch')) {
+      error.value = 'Network error. Please check your internet connection and try again.'
+    } else if (err.message.includes('timeout')) {
+      error.value = 'Request timed out. Please try again in a moment.'
+    } else {
+      error.value = 'Failed to send magic link. Please try again or use password login.'
+    }
   } finally {
     isLoading.value = false
   }
@@ -285,21 +430,50 @@ const handleMagicLink = async () => {
 const handleGoogleLogin = async () => {
   socialLoading.value = 'google'
   error.value = ''
+  successMessage.value = ''
 
   try {
     const { error: googleError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+        redirectTo: `${window.location.origin}/auth/callback?type=oauth&provider=google`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent'
+        },
+        scopes: 'email profile'
       }
     })
 
     if (googleError) {
-      error.value = googleError.message
+      console.error('Google login error:', googleError)
+      
+      // Handle specific Google OAuth errors
+      if (googleError.message.includes('popup') || googleError.message.includes('blocked')) {
+        error.value = 'Popup was blocked. Please allow popups for this site and try again.'
+      } else if (googleError.message.includes('network') || googleError.message.includes('offline')) {
+        error.value = 'Network error. Please check your internet connection and try again.'
+      } else if (googleError.message.includes('not enabled') || googleError.message.includes('disabled')) {
+        error.value = 'Google sign-in is currently disabled. Please try password login or contact support.'
+      } else if (googleError.message.includes('unauthorized') || googleError.message.includes('permission')) {
+        error.value = 'Google sign-in access is restricted. Please contact support.'
+      } else {
+        error.value = `Google sign-in failed: ${googleError.message}`
+      }
+    } else {
+      // OAuth redirect will happen automatically
+      console.log('✅ Google OAuth initiated successfully')
     }
-  } catch (err) {
-    error.value = 'Failed to sign in with Google'
+  } catch (err: any) {
     console.error('Google login error:', err)
+    
+    if (err.name === 'NetworkError' || err.message.includes('fetch')) {
+      error.value = 'Network error. Please check your internet connection and try again.'
+    } else if (err.message.includes('timeout')) {
+      error.value = 'Request timed out. Please try again in a moment.'
+    } else {
+      error.value = 'Failed to sign in with Google. Please try password login or contact support.'
+    }
   } finally {
     socialLoading.value = ''
   }
@@ -309,23 +483,123 @@ const handleGoogleLogin = async () => {
 const handleGitHubLogin = async () => {
   socialLoading.value = 'github'
   error.value = ''
+  successMessage.value = ''
 
   try {
     const { error: githubError } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+        redirectTo: `${window.location.origin}/auth/callback?type=oauth&provider=github`,
+        scopes: 'read:user user:email'
       }
     })
 
     if (githubError) {
-      error.value = githubError.message
+      console.error('GitHub login error:', githubError)
+      
+      // Handle specific GitHub OAuth errors
+      if (githubError.message.includes('popup') || githubError.message.includes('blocked')) {
+        error.value = 'Popup was blocked. Please allow popups for this site and try again.'
+      } else if (githubError.message.includes('network') || githubError.message.includes('offline')) {
+        error.value = 'Network error. Please check your internet connection and try again.'
+      } else if (githubError.message.includes('not enabled') || githubError.message.includes('disabled')) {
+        error.value = 'GitHub sign-in is currently disabled. Please try password login or contact support.'
+      } else if (githubError.message.includes('unauthorized') || githubError.message.includes('permission')) {
+        error.value = 'GitHub sign-in access is restricted. Please contact support.'
+      } else {
+        error.value = `GitHub sign-in failed: ${githubError.message}`
+      }
+    } else {
+      // OAuth redirect will happen automatically
+      console.log('✅ GitHub OAuth initiated successfully')
     }
-  } catch (err) {
-    error.value = 'Failed to sign in with GitHub'
+  } catch (err: any) {
     console.error('GitHub login error:', err)
+    
+    if (err.name === 'NetworkError' || err.message.includes('fetch')) {
+      error.value = 'Network error. Please check your internet connection and try again.'
+    } else if (err.message.includes('timeout')) {
+      error.value = 'Request timed out. Please try again in a moment.'
+    } else {
+      error.value = 'Failed to sign in with GitHub. Please try password login or contact support.'
+    }
   } finally {
     socialLoading.value = ''
+  }
+}
+
+// Resend email confirmation with enhanced OTP handling
+const resendConfirmation = async () => {
+  if (!email.value) {
+    error.value = 'Please enter your email address first'
+    return
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.value)) {
+    error.value = 'Please enter a valid email address'
+    return
+  }
+
+  resendLoading.value = true
+  error.value = ''
+  successMessage.value = ''
+
+  try {
+    // First, try to resend the signup confirmation
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.value,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`
+      }
+    })
+
+    if (resendError) {
+      console.log('Resend error:', resendError)
+      
+      // Handle specific resend errors
+      if (resendError.message.includes('rate limit') || resendError.message.includes('too many')) {
+        error.value = 'Please wait a moment before requesting another confirmation email. Try again in 1-2 minutes.'
+      } else if (resendError.message.includes('already confirmed') || resendError.message.includes('email already confirmed')) {
+        error.value = 'Your email is already confirmed. You can sign in normally with your password.'
+        // Clear the OTP expired error since account is confirmed
+        successMessage.value = 'Your account is already confirmed! Please try signing in.'
+      } else if (resendError.message.includes('User not found') || resendError.message.includes('No user found')) {
+        // If user doesn't exist, suggest they sign up first
+        error.value = 'No account found with this email. Please sign up first or check if you\'re using the correct email address.'
+      } else if (resendError.message.includes('signup disabled') || resendError.message.includes('not enabled')) {
+        error.value = 'Email signup is currently disabled. Please contact support or try an alternative sign-in method.'
+      } else {
+        // For other errors, show the original message but add helpful context
+        error.value = `${resendError.message}. If this persists, please contact support.`
+      }
+    } else {
+      // Success case
+      successMessage.value = 'Confirmation email resent successfully! Please check your inbox and spam folder. The new link will expire in 24 hours.'
+      error.value = ''
+      
+      // Auto-clear success message after 10 seconds
+      setTimeout(() => {
+        successMessage.value = ''
+      }, 10000)
+      
+      console.log('✅ Confirmation email resent successfully')
+    }
+  } catch (err: any) {
+    console.error('Resend confirmation error:', err)
+    
+    // Handle network or unexpected errors
+    if (err.name === 'NetworkError' || err.message.includes('fetch')) {
+      error.value = 'Network error. Please check your internet connection and try again.'
+    } else if (err.message.includes('timeout')) {
+      error.value = 'Request timed out. Please try again in a moment.'
+    } else {
+      error.value = 'Failed to resend confirmation email. Please try again or contact support if the issue persists.'
+    }
+  } finally {
+    resendLoading.value = false
   }
 }
 </script>
