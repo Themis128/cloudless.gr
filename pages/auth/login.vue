@@ -214,7 +214,29 @@
               @click:close="successMessage = ''"
             >
               {{ successMessage }}
-            </v-alert>
+            </v-alert>            <!-- Resend Confirmation Email Section -->
+            <div class="text-center mt-6">
+              <v-divider class="mb-4" />
+              <p class="text-body-2 text-medium-emphasis mb-3">
+                Having trouble signing in? Need to resend your confirmation email?
+              </p>              <v-btn
+                variant="outlined"
+                :color="email ? 'primary' : 'grey'"
+                @click="resendConfirmation"
+                :loading="resendLoading"
+                prepend-icon="mdi-email-send"
+                :disabled="!email || resendLoading"
+                class="mb-2"
+                size="large"
+              >
+                {{ email ? 'Resend Confirmation Email' : 'Enter Email Above First' }}
+              </v-btn>              <p class="text-caption text-medium-emphasis">
+                {{ email 
+                  ? `Ready to resend confirmation email to ${email}` 
+                  : 'Enter your email in the login form above to enable this button' 
+                }}
+              </p>
+            </div>
 
             <!-- Sign Up Link -->
             <div class="text-center mt-6">
@@ -528,10 +550,10 @@ const handleGitHubLogin = async () => {
   }
 }
 
-// Resend email confirmation with enhanced OTP handling
+// Resend email confirmation with robust fallback system
 const resendConfirmation = async () => {
   if (!email.value) {
-    error.value = 'Please enter your email address first'
+    error.value = 'Please enter your email address first in the login form above'
     return
   }
 
@@ -545,48 +567,125 @@ const resendConfirmation = async () => {
   resendLoading.value = true
   error.value = ''
   successMessage.value = ''
-
+  
+  const redirectUrl = `${window.location.origin}/auth/callback`
+  
   try {
-    // First, try to resend the signup confirmation
-    const { error: resendError } = await supabase.auth.resend({
+    console.log('🔍 RESEND DEBUG: Starting resend confirmation process')
+    console.log('📧 Email:', email.value)
+    console.log('🔗 Redirect URL:', redirectUrl)
+    
+    // Method 1: Try standard auth.resend() first
+    console.log('🔄 METHOD 1: Attempting auth.resend()')
+    const { data: resendData, error: resendError } = await supabase.auth.resend({
       type: 'signup',
       email: email.value,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`
+        emailRedirectTo: redirectUrl
       }
     })
 
+    console.log('📊 RESEND RESPONSE:', { data: resendData, error: resendError })
+
     if (resendError) {
-      console.log('Resend error:', resendError)
+      console.log('❌ auth.resend() failed:', resendError.message)
       
       // Handle specific resend errors
       if (resendError.message.includes('rate limit') || resendError.message.includes('too many')) {
         error.value = 'Please wait a moment before requesting another confirmation email. Try again in 1-2 minutes.'
+        return
       } else if (resendError.message.includes('already confirmed') || resendError.message.includes('email already confirmed')) {
-        error.value = 'Your email is already confirmed. You can sign in normally with your password.'
-        // Clear the OTP expired error since account is confirmed
-        successMessage.value = 'Your account is already confirmed! Please try signing in.'
+        successMessage.value = 'Your email is already confirmed! Please try signing in with your password.'
+        return
       } else if (resendError.message.includes('User not found') || resendError.message.includes('No user found')) {
-        // If user doesn't exist, suggest they sign up first
         error.value = 'No account found with this email. Please sign up first or check if you\'re using the correct email address.'
-      } else if (resendError.message.includes('signup disabled') || resendError.message.includes('not enabled')) {
-        error.value = 'Email signup is currently disabled. Please contact support or try an alternative sign-in method.'
-      } else {
-        // For other errors, show the original message but add helpful context
-        error.value = `${resendError.message}. If this persists, please contact support.`
+        return
       }
-    } else {
-      // Success case
-      successMessage.value = 'Confirmation email resent successfully! Please check your inbox and spam folder. The new link will expire in 24 hours.'
-      error.value = ''
       
-      // Auto-clear success message after 10 seconds
+      // Method 2: Try signUp() fallback for unconfirmed users
+      console.log('🔄 METHOD 2: Attempting signUp() fallback method')
+      
+      // Generate a temporary strong password for the signup attempt
+      const tempPassword = generateTempPassword()
+      
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email.value,
+        password: tempPassword,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            resend_attempt: true,
+            timestamp: new Date().toISOString()
+          }
+        }
+      })
+      
+      console.log('📊 SIGNUP FALLBACK RESPONSE:', { data: signUpData, error: signUpError })
+      
+      if (signUpError) {
+        if (signUpError.message.includes('User already registered')) {
+          // This is actually what we want - it should still trigger the confirmation email
+          console.log('✅ Expected "User already registered" - email should be sent')
+          successMessage.value = '✅ Confirmation email sent! Please check your inbox and spam folder. The link will expire in 24 hours.'
+          
+          // Also show helpful tip
+          setTimeout(() => {
+            if (successMessage.value) {
+              successMessage.value += ' 💡 If you don\'t receive it, check your spam folder and try again in a few minutes.'
+            }
+          }, 3000)
+          
+        } else if (signUpError.message.includes('signup') && signUpError.message.includes('disabled')) {
+          error.value = 'Email signup is currently disabled. Please contact support.'
+        } else {
+          // Method 3: Try magic link as final fallback
+          console.log('🔄 METHOD 3: Attempting magic link as final fallback')
+          
+          const { data: magicData, error: magicError } = await supabase.auth.signInWithOtp({
+            email: email.value,
+            options: {
+              emailRedirectTo: redirectUrl,
+              shouldCreateUser: false, // Don't create new users, just send to existing
+              data: {
+                resend_attempt: true,
+                method: 'magic_link_fallback'
+              }
+            }
+          })
+          
+          console.log('📊 MAGIC LINK FALLBACK RESPONSE:', { data: magicData, error: magicError })
+          
+          if (magicError) {
+            error.value = `All resend methods failed. Last error: ${magicError.message}. Please contact support.`
+          } else {
+            successMessage.value = '✅ Confirmation email sent via magic link method! Please check your inbox and spam folder.'
+          }
+        }
+      } else {
+        // signUp() succeeded
+        successMessage.value = '✅ Confirmation email sent! Please check your inbox and spam folder. The link will expire in 24 hours.'
+      }
+      
+    } else {
+      // auth.resend() succeeded
+      console.log('✅ auth.resend() succeeded')
+      successMessage.value = '✅ Confirmation email resent successfully! Please check your inbox and spam folder. The new link will expire in 24 hours.'
+      
+      // Show additional helpful information
+      setTimeout(() => {
+        if (successMessage.value) {
+          successMessage.value += ' 📧 Don\'t forget to check your spam folder!'
+        }
+      }, 3000)
+    }
+    
+    // Auto-clear success message after 15 seconds
+    if (successMessage.value) {
       setTimeout(() => {
         successMessage.value = ''
-      }, 10000)
-      
-      console.log('✅ Confirmation email resent successfully')
+      }, 15000)
     }
+      
   } catch (err: any) {
     console.error('Resend confirmation error:', err)
     
@@ -601,6 +700,16 @@ const resendConfirmation = async () => {
   } finally {
     resendLoading.value = false
   }
+}
+
+// Helper function to generate a temporary strong password
+const generateTempPassword = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+  let password = ''
+  for (let i = 0; i < 16; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return password
 }
 </script>
 

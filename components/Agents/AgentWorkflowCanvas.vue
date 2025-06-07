@@ -100,7 +100,7 @@ const onPaneClick = () => {
   emit('nodeSelect', null)
 }
 
-const onNodeClick = (event: MouseEvent, node: Node) => {
+const _onNodeClick = (event: MouseEvent, node: Node) => {
   selectedNode.value = node
   emit('nodeSelect', node.id)
 }

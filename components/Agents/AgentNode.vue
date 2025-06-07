@@ -35,7 +35,7 @@
 <script setup lang="ts">
 import type { Agent } from '~/types/agents'
 
-const props = defineProps<{
+const _props = defineProps<{
   agent: Agent
   isSelected?: boolean
   inputPorts?: Array<{ id: string; name: string }>
