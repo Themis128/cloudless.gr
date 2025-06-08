@@ -1,21 +1,21 @@
 <template>
   <v-app>
     <!-- The VantaClouds2Background will be rendered behind all content -->
-    <VantaClouds2Background v-if="isEnabled" />
-
-    <!-- Only show nav if not on /auth/login -->
-    <template v-if="$route.path !== '/auth/login'">
-      <v-navigation-drawer app permanent>
-        <v-list nav>
-          <v-list-item to="/" prepend-icon="mdi-view-dashboard" title="Dashboard" />
-          <v-list-item to="/builder" prepend-icon="mdi-cube-outline" title="Builder" />
-          <v-list-item to="/workflows" prepend-icon="mdi-graph-outline" title="Workflows" />
-          <v-list-item to="/projects" prepend-icon="mdi-folder" title="Projects" />
-          <v-list-item to="/logs" prepend-icon="mdi-file-document-outline" title="Logs" />
-          <v-list-item to="/docs" prepend-icon="mdi-book-open-page-variant-outline" title="Docs" />
-        </v-list>
-      </v-navigation-drawer>
-    </template>
+    <VantaClouds2Background v-if="isEnabled" />    <!-- Navigation Drawer -->
+    <v-navigation-drawer app permanent>
+      <v-list nav>
+        <v-list-item to="/" prepend-icon="mdi-view-dashboard" title="Dashboard" />
+        <v-list-item to="/builder" prepend-icon="mdi-cube-outline" title="Builder" />
+        <v-list-item to="/workflows" prepend-icon="mdi-graph-outline" title="Workflows" />
+        <v-list-item to="/projects" prepend-icon="mdi-folder" title="Projects" />
+        <v-list-item to="/logs" prepend-icon="mdi-file-document-outline" title="Logs" />
+        <v-list-item to="/docs" prepend-icon="mdi-book-open-page-variant-outline" title="Docs" />
+        <v-divider class="my-2" />
+        <v-list-item to="/about" prepend-icon="mdi-information" title="About" />
+        <v-list-item to="/contact" prepend-icon="mdi-email" title="Contact" />
+        <v-list-item to="/faq" prepend-icon="mdi-help-circle" title="FAQ" />
+      </v-list>
+    </v-navigation-drawer>
 
     <v-app-bar
       color="primary"
@@ -48,10 +48,8 @@
       >
         <slot />
       </v-container>
-    </v-main>
-
-    <v-footer app class="footer-transparent responsive-footer">
-      <Footer />
+    </v-main>    <v-footer app class="footer-transparent responsive-footer">
+      <LayoutFooter />
     </v-footer>
   </v-app>
 </template>

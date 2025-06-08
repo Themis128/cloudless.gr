@@ -1,4 +1,4 @@
-// Nuxt Content configuration
+// Basic content configuration
 export default {
-  // Basic content configuration
+  // Content configuration handled in nuxt.config.ts
 }

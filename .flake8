@@ -1,4 +1,0 @@
-[flake8]
-max-line-length = 100
-exclude = .git,__pycache__,.venv,venv,shared_venv,node_modules,.nuxt,.output,dist
-ignore = E203,W503

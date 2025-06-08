@@ -1,209 +1,53 @@
-import { defineNuxtConfig } from 'nuxt/config'
-import { fileURLToPath } from 'node:url'
-import tsconfigPaths from 'vite-tsconfig-paths'
-
+// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  devServer: {
-    port: 3000
-  },
-
-  // Windows path handling
-  experimental: {
-    scanPageMeta: true,
-    typedPages: false
-  },
-  components: [
-    {
-      path: '~/components',
-      pathPrefix: false,
-    },
-    {
-      path: '~/components/dashboard',
-      prefix: 'Dashboard',
-    },
-    {
-      path: '~/components/builder',
-      prefix: 'Builder',
-    },
-    {
-      path: '~/components/Agents',
-      prefix: 'Agent',
-    },
-    {
-      path: '~/components/Admin',
-      prefix: 'Admin',
-    },
-    {
-      path: '~/components/Layout',
-      prefix: 'Layout',
-    },
-    {
-      path: '~/components/Ui',
-      prefix: 'Ui',
-    },
-    {
-      path: '~/components/demo',
-      prefix: 'Demo',
-    }
-  ],
-  
-  app: {
-    head: {
-      viewport: 'width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes',
-      meta: [
-        { name: 'mobile-web-app-capable', content: 'yes' },
-        { name: 'apple-mobile-web-app-capable', content: 'yes' },
-        { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
-        { name: 'format-detection', content: 'telephone=no' },
-        { name: 'msapplication-tap-highlight', content: 'no' },
-        { name: 'theme-color', content: '#1976d2' },
-        { name: 'apple-mobile-web-app-title', content: 'Cloudless' },
-      ],
-      link: [
-        {
-          rel: 'preload',
-          href: 'https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap',
-          as: 'style',
-        },
-      ],
-    },
-  },  modules: [
+  compatibilityDate: '2025-06-08',
+    modules: [
     '@nuxtjs/color-mode',
     '@vueuse/nuxt',
     '@nuxt/image-edge',
     '@nuxt/content',
     '@pinia/nuxt',
-    '@nuxtjs/supabase'
-  ],  supabase: {
-    redirectOptions: {
-      login: '/auth/login',
-      callback: '/auth/callback',
-      exclude: [
-        '/auth/login',
-        '/auth/signup',
-        '/auth/callback',
-        '/',
-        '/about',
-        '/contact'
-      ]    },
-    url: process.env.SUPABASE_URL,
-    key: process.env.SUPABASE_ANON_KEY,
-    cookieOptions: {
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
-    }
-    // Note: clientOptions is not supported in @nuxtjs/supabase
-    // Auth configuration should be handled in the client
+    'nuxt-llms',
+    '@nuxtjs/supabase', // ✅ Supabase module
+  ],
+
+  experimental: {
+    headNext: true,
   },
-  runtimeConfig: {
-    // Private keys
-    supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    jwtSecret: process.env.JWT_SECRET || 'default-secret',
-    
-    // MinIO configuration
-    minio: {
-      endpoint: process.env.MINIO_ENDPOINT || 'localhost',
-      port: parseInt(process.env.MINIO_PORT || '9000'),
-      useSSL: process.env.MINIO_USE_SSL === 'true',
-      accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-      secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
-    },
-      public: {
-      supabase: {
-        url: process.env.SUPABASE_URL,
-        key: process.env.SUPABASE_ANON_KEY
-      }
-    }
-  },
+
+  devtools: {
+    enabled: true,
+    timeline: {
+      enabled: true,
+    },  },
+
+  // CSS files to be included globally
   css: [
     '@mdi/font/css/materialdesignicons.css',
     'vuetify/styles',
-    '~/assets/css/main.css',
-    '~/assets/css/mobile-optimized.css',
+    '@/assets/css/main.css'
   ],
-
-  nitro: {
-    prerender: {
-      routes: ['/login'],
-    },
-    rollupConfig: {
-      external: ['fsevents', 'sharp'],
-    },
-    experimental: {
-      wasm: true,
-    },
-    minify: true,
-    compressPublicAssets: true,
+  // Supabase configuration
+  supabase: {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_ANON_KEY,
+    redirectOptions: {
+      login: '/auth/login',
+      callback: '/auth/callback',
+      exclude: ['/']
+    }
   },
+
+  // Ensure static assets are properly served
   vite: {
-    plugins: [
-      tsconfigPaths({
-        loose: true,
-        root: process.cwd(),
-        projects: ['./tsconfig.json']
-      })
-    ],
     server: {
       fs: {
         strict: false,
       },
-      watch: {
-        usePolling: process.platform === 'win32'
-      }
     },
+    // Vuetify CSS file transpilation fix
     ssr: {
       noExternal: ['vuetify'],
-    },    resolve: {
-      alias: {
-        '@': fileURLToPath(new URL('./', import.meta.url)),
-        '~': fileURLToPath(new URL('./', import.meta.url)),
-        '~~': fileURLToPath(new URL('./', import.meta.url)),
-        '@@': fileURLToPath(new URL('./', import.meta.url))
-      }
-    },
-    build: {
-      chunkSizeWarningLimit: 1500,
-      rollupOptions: {        output: {
-          manualChunks: (id: string) => {
-            // Normalize the path to use forward slashes
-            const normalizedId = id.replace(/\\/g, '/');
-            
-            if (normalizedId.includes('node_modules')) {
-              if (normalizedId.includes('vue') && !normalizedId.includes('vuetify')) return 'vendor-vue-core'
-              if (normalizedId.includes('vuetify')) return 'vendor-vuetify'
-              if (normalizedId.includes('@supabase/')) return 'vendor-supabase'
-              if (normalizedId.includes('@vueuse/')) return 'vendor-vueuse'
-              if (normalizedId.includes('three') || normalizedId.includes('vanta')) return 'vendor-3d'
-              if (normalizedId.includes('@mdi/') && normalizedId.includes('.js')) return 'vendor-icons'
-              if (normalizedId.includes('@nuxt/') || normalizedId.includes('nuxt')) return 'vendor-nuxt'
-              if (normalizedId.includes('pinia') || normalizedId.includes('jsonwebtoken')) return 'vendor-misc'
-              return 'vendor-other'
-            }
-
-            if (normalizedId.includes('/components/')) {
-              if (normalizedId.includes('/Layout/')) return 'app-components-layout'
-              if (normalizedId.includes('/Admin/')) return 'app-components-admin'
-              return 'app-components-common'
-            }
-
-            if (normalizedId.includes('/pages/')) {
-              if (normalizedId.includes('/auth/')) return 'app-pages-auth'
-              if (normalizedId.includes('/dashboard/')) return 'app-pages-dashboard'
-              if (normalizedId.includes('/admin/')) return 'app-pages-admin'
-              return 'app-pages-common'
-            }
-
-            if (normalizedId.includes('/composables/')) return 'app-composables'
-            if (normalizedId.includes('/middleware/')) return 'app-middleware'
-            if (normalizedId.includes('/server/')) return 'app-server'
-          },
-        },
-      },
-    },
-    optimizeDeps: {
-      include: ['vue', 'vue-router', '@vueuse/core', '@supabase/supabase-js'],
-      exclude: ['three', 'vanta'],
     },
   },
 
@@ -211,23 +55,53 @@ export default defineNuxtConfig({
     transpile: ['vuetify'],
   },
 
-  postcss: {
-    plugins: {
-      autoprefixer: {},
+  app: {
+    head: {
+      title: 'Cloudless App',
+      meta: [
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'description', content: 'A modern app built with Nuxt 3.' },
+      ],
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap',
+        },
+      ],
     },
   },
 
-  devtools: {
-    enabled: true,
-    timeline: {
-      enabled: true,
+  content: {
+    // @ts-ignore: enable content debug panel
+    debug: true,
+    documentDriven: true,
+    highlight: {
+      theme: 'github-dark',
     },
   },
 
-  test: true,
-
-  routeRules: {
-    '/': { redirect: '/auth/login' },
-    '/login': { redirect: '/auth/login' },
+  nitro: {
+    compatibilityDate: '2025-05-13',
+    prerender: {
+      routes: ['/', '/about', '/contact'],
+    },
   },
-})
+
+  llms: {
+    domain: 'http://localhost:3000',
+  },
+
+  // Runtime configuration for server-side environment variables
+  runtimeConfig: {
+    // Private keys (only available on server-side)
+    jwtSecret: process.env.JWT_SECRET,
+    adminEmail: process.env.ADMIN_EMAIL,
+    adminPassword: process.env.ADMIN_PASSWORD,
+    
+    // Public keys (exposed to client-side)
+    public: {
+      // Public configuration here
+    }
+  },
+});
