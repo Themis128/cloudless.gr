@@ -1,5 +1,6 @@
-<template>  <v-app>
-    <VantaClouds2Background />
+<template>
+  <v-app>
+    <VantaClouds2Background v-if="isEnabled" />
 
     <v-app-bar
       color="primary"
@@ -17,6 +18,11 @@
       </v-toolbar-title>
 
       <v-spacer />
+
+      <!-- Vanta Background Toggle -->
+      <v-btn icon @click="toggleBackground" :title="isEnabled ? 'Hide Clouds' : 'Show Clouds'" class="mr-2">
+        <v-icon>{{ isEnabled ? 'mdi-weather-night' : 'mdi-weather-cloudy' }}</v-icon>
+      </v-btn>
 
       <!-- Navigation Menu -->
       <template v-if="!mobile">
@@ -142,6 +148,7 @@
 <script setup lang="ts">
 import { ref, useRoute, useRouter } from '#imports';
 import { useDisplay } from 'vuetify';
+import { useVantaBackground } from '@/composables/useVantaBackground';
 
 const { mobile } = useDisplay();
 const router = useRouter();
@@ -149,6 +156,9 @@ const route = useRoute();
 
 // Mobile drawer state
 const drawer = ref(false);
+
+// Use Vanta background toggle functionality
+const { isEnabled, toggleBackground } = useVantaBackground();
 
 // Handle logout
 const handleLogout = async () => {

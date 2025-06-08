@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <!-- The VantaClouds2Background will be rendered behind all content -->
-    <VantaClouds2Background />
+    <VantaClouds2Background v-if="isEnabled" />
 
     <!-- Only show nav if not on /auth/login -->
     <template v-if="$route.path !== '/auth/login'">
@@ -31,7 +31,9 @@
           <span v-else class="text-h6">Cloudless</span>
         </NuxtLink>
       </v-toolbar-title>
-      <v-spacer />      <v-btn icon @click="toggleBackground" :title="isEnabled ? 'Hide Clouds' : 'Show Clouds'">
+      <v-spacer />
+      
+      <v-btn icon @click="toggleBackground" :title="isEnabled ? 'Hide Clouds' : 'Show Clouds'">
         <v-icon>{{ isEnabled ? 'mdi-weather-night' : 'mdi-weather-cloudy' }}</v-icon>
       </v-btn>
       <LayoutNavigationLargeNav v-if="isDesktop" />
@@ -58,10 +60,14 @@
 // Script setup imports
 import { computed } from '#imports';
 import { useDisplay } from 'vuetify';
+import { useVantaBackground } from '@/composables/useVantaBackground';
 
 // Use Vuetify's built-in responsive utilities
 const { mobile, mdAndUp } = useDisplay();
 const isDesktop = computed(() => mdAndUp.value);
+
+// Use Vanta background toggle functionality
+const { isEnabled, toggleBackground } = useVantaBackground();
 </script>
 
 <style scoped>

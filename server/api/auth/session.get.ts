@@ -1,81 +1,58 @@
-// server/api/auth/session.get.ts - Unified session validation endpoint
-import jwt from 'jsonwebtoken'
-import { sessionCache } from '~/middleware/utils/session-cache'
+// server/api/auth/session.get.ts
 
-interface SessionResponse {
-  authenticated: boolean
-  user?: {
-    id: string
-    email: string
-    name?: string
-    role: string
+import { createClient } from '@supabase/supabase-js'
+import { getCookie, H3Event } from 'h3'
+
+export default defineEventHandler(async (event: H3Event) => {
+  const config = useRuntimeConfig()
+  const supabaseUrl = config.public.supabase.url
+  const anonKey = config.public.supabase.key // This matches nuxt.config.ts
+
+  if (!supabaseUrl || !anonKey) {
+    return {
+      authenticated: false,
+      error: 'Supabase configuration missing',
+    }
   }
-  role?: string
-  permissions?: string[]
-}
 
-export default defineEventHandler(async (event): Promise<SessionResponse> => {
-  try {
-    // Check both admin and user tokens
-    const adminToken = getCookie(event, 'admin-token')
-    const userToken = getCookie(event, 'auth-token')
-    
-    const token = adminToken || userToken
-    
-    if (!token) {
-      return { authenticated: false }
+  // Read cookies from the request
+  const accessToken = getCookie(event, 'sb-access-token')
+  const refreshToken = getCookie(event, 'sb-refresh-token')
+
+  if (!accessToken || !refreshToken) {
+    return {
+      authenticated: false,
+      error: 'Missing auth cookies',
     }
+  }
 
-    // Check cache first for performance
-    const cachedSession = sessionCache.get(token)
-    if (cachedSession) {
-      return cachedSession
+  // Create a temporary Supabase client with the token
+  const supabase = createClient(supabaseUrl, anonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
     }
+  })
 
-    // Verify JWT token
-    const JWT_SECRET = process.env.NUXT_JWT_SECRET
-    if (!JWT_SECRET) {
-      throw new Error('JWT secret not configured')
+  const { data, error } = await supabase.auth.getUser()
+
+  if (error || !data?.user) {
+    return {
+      authenticated: false,
+      error: error?.message || 'Session invalid or expired',
     }
+  }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as any
-    
-    // Validate token structure
-    if (!decoded || !decoded.user || !decoded.exp) {
-      deleteCookie(event, adminToken ? 'admin-token' : 'auth-token')
-      return { authenticated: false }
-    }
-
-    // Check if token is expired
-    if (Date.now() / 1000 > decoded.exp) {
-      deleteCookie(event, adminToken ? 'admin-token' : 'auth-token')
-      return { authenticated: false }
-    }
-
-    const sessionData: SessionResponse = {
-      authenticated: true,
-      user: {
-        id: decoded.user.id,
-        email: decoded.user.email,
-        name: decoded.user.name,
-        role: decoded.user.role
-      },
-      role: decoded.user.role,
-      permissions: decoded.user.permissions || []
-    }
-
-    // Cache the session for 5 minutes
-    sessionCache.set(token, sessionData, 5 * 60 * 1000)
-
-    return sessionData
-
-  } catch (error) {
-    console.error('Session validation error:', error)
-    
-    // Clean up invalid tokens
-    deleteCookie(event, 'admin-token')
-    deleteCookie(event, 'auth-token')
-    
-    return { authenticated: false }
+  return {
+    authenticated: true,
+    user: {
+      id: data.user.id,
+      email: data.user.email,
+      role: 'user', // Default role, can be enhanced based on user metadata
+    },
+    role: 'user',
+    permissions: ['read:profile', 'update:profile'],
+    sessionCheckedAt: new Date().toISOString(),
   }
 })

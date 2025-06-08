@@ -103,19 +103,35 @@ onMounted(async () => {
     // Enhanced session detection - check multiple sources
     console.log('🔍 Checking for existing session...')
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-    console.log('📊 Session check result:', { data: sessionData, error: sessionError })
-
-    // Method 1: If we already have a valid session, use it
+    console.log('📊 Session check result:', { data: sessionData, error: sessionError })    // Method 1: If we already have a valid session, use it
     if (sessionData?.session && !sessionError) {
       console.log('✅ Found existing valid session')
-      success.value = true
-      errorMessage.value = 'Authentication successful! Welcome to Cloudless.'
       
-      setTimeout(() => {
-        const redirectTo = route.query.redirectTo as string || '/dashboard'
-        router.push(redirectTo)
-      }, 1500)
-      return
+      try {        // Create JWT bridge for existing session
+        const bridgeResponse = await $fetch('/api/auth/supabase-login', {
+          method: 'POST',
+          body: {
+            access_token: sessionData.session.access_token,
+            refresh_token: sessionData.session.refresh_token,
+          }
+        }) as { success: boolean; message: string; user: any }
+
+        if (bridgeResponse.success) {
+          success.value = true
+          errorMessage.value = 'Authentication successful! Welcome to Cloudless.'
+          
+          setTimeout(() => {
+            const redirectTo = route.query.redirectTo as string || '/dashboard'
+            router.push(redirectTo)
+          }, 1500)
+          return
+        } else {
+          throw new Error('Failed to create authentication bridge')
+        }
+      } catch (bridgeError: any) {
+        console.error('Bridge API error:', bridgeError)
+        throw new Error('Failed to complete authentication setup')
+      }
     }
 
     // Method 2: Check for auth tokens in URL hash (Supabase implicit flow)
@@ -126,17 +142,34 @@ onMounted(async () => {
       // Let Supabase automatically handle the hash
       const { data: hashData, error: hashError } = await supabase.auth.getSession()
       console.log('📊 Hash processing result:', { data: hashData, error: hashError })
-      
-      if (hashData?.session && !hashError) {
+        if (hashData?.session && !hashError) {
         console.log('✅ Successfully processed auth tokens from hash')
-        success.value = true
-        errorMessage.value = 'Email confirmation successful! Welcome to Cloudless.'
         
-        setTimeout(() => {
-          const redirectTo = route.query.redirectTo as string || '/dashboard'
-          router.push(redirectTo)
-        }, 1500)
-        return
+        try {          // Create JWT bridge for hash session
+          const bridgeResponse = await $fetch('/api/auth/supabase-login', {
+            method: 'POST',
+            body: {
+              access_token: hashData.session.access_token,
+              refresh_token: hashData.session.refresh_token,
+            }
+          }) as { success: boolean; message: string; user: any }
+
+          if (bridgeResponse.success) {
+            success.value = true
+            errorMessage.value = 'Email confirmation successful! Welcome to Cloudless.'
+            
+            setTimeout(() => {
+              const redirectTo = route.query.redirectTo as string || '/dashboard'
+              router.push(redirectTo)
+            }, 1500)
+            return
+          } else {
+            throw new Error('Failed to create authentication bridge')
+          }
+        } catch (bridgeError: any) {
+          console.error('Bridge API error:', bridgeError)
+          throw new Error('Failed to complete authentication setup')
+        }
       }
     }
 
@@ -154,30 +187,65 @@ onMounted(async () => {
       }
 
       console.log('✅ Manual session setting successful')
-      success.value = true
-      errorMessage.value = 'Authentication successful! Welcome to Cloudless.'
       
-      setTimeout(() => {
-        const redirectTo = route.query.redirectTo as string || '/dashboard'
-        router.push(redirectTo)
-      }, 1500)
-      return
+      try {        // Create JWT bridge for manual session
+        const bridgeResponse = await $fetch('/api/auth/supabase-login', {
+          method: 'POST',
+          body: {
+            access_token: access_token as string,
+            refresh_token: refresh_token as string,
+          }
+        }) as { success: boolean; message: string; user: any }
+
+        if (bridgeResponse.success) {
+          success.value = true
+          errorMessage.value = 'Authentication successful! Welcome to Cloudless.'
+          
+          setTimeout(() => {
+            const redirectTo = route.query.redirectTo as string || '/dashboard'
+            router.push(redirectTo)
+          }, 1500)
+          return
+        } else {
+          throw new Error('Failed to create authentication bridge')
+        }
+      } catch (bridgeError: any) {
+        console.error('Bridge API error:', bridgeError)
+        throw new Error('Failed to complete authentication setup')
+      }
     }    // Method 4: Handle specific auth types with fallbacks
     if (type === 'signup') {
       console.log('🔍 Processing signup confirmation callback')
       // Email confirmation callback - try multiple methods
-      
-      // Try session again after potential hash processing
+        // Try session again after potential hash processing
       const { data: retryData, error: retryError } = await supabase.auth.getSession()
       if (retryData?.session && !retryError) {
         console.log('✅ Signup confirmation successful via session retry')
-        success.value = true
-        errorMessage.value = 'Email confirmed successfully! Welcome to Cloudless.'
         
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 2000)
-        return
+        try {          // Create JWT bridge for signup session
+          const bridgeResponse = await $fetch('/api/auth/supabase-login', {
+            method: 'POST',
+            body: {
+              access_token: retryData.session.access_token,
+              refresh_token: retryData.session.refresh_token,
+            }
+          }) as { success: boolean; message: string; user: any }
+
+          if (bridgeResponse.success) {
+            success.value = true
+            errorMessage.value = 'Email confirmed successfully! Welcome to Cloudless.'
+            
+            setTimeout(() => {
+              router.push('/dashboard')
+            }, 2000)
+            return
+          } else {
+            throw new Error('Failed to create authentication bridge')
+          }
+        } catch (bridgeError: any) {
+          console.error('Bridge API error:', bridgeError)
+          throw new Error('Failed to complete authentication setup')
+        }
       }
     } else if (type === 'recovery') {
       console.log('🔍 Processing recovery callback')
@@ -202,17 +270,34 @@ onMounted(async () => {
       console.log('🔍 Processing magic link callback')
       // Magic link callback - session should already be established
       const { data: magicData, error: magicError } = await supabase.auth.getSession()
-      
-      if (magicData?.session && !magicError) {
+        if (magicData?.session && !magicError) {
         console.log('✅ Magic link authentication successful')
-        success.value = true
-        errorMessage.value = 'Magic link authentication successful! Welcome to Cloudless.'
         
-        setTimeout(() => {
-          const redirectTo = route.query.redirectTo as string || '/dashboard'
-          router.push(redirectTo)
-        }, 1500)
-        return
+        try {          // Create JWT bridge for magic link session
+          const bridgeResponse = await $fetch('/api/auth/supabase-login', {
+            method: 'POST',
+            body: {
+              access_token: magicData.session.access_token,
+              refresh_token: magicData.session.refresh_token,
+            }
+          }) as { success: boolean; message: string; user: any }
+
+          if (bridgeResponse.success) {
+            success.value = true
+            errorMessage.value = 'Magic link authentication successful! Welcome to Cloudless.'
+            
+            setTimeout(() => {
+              const redirectTo = route.query.redirectTo as string || '/dashboard'
+              router.push(redirectTo)
+            }, 1500)
+            return
+          } else {
+            throw new Error('Failed to create authentication bridge')
+          }
+        } catch (bridgeError: any) {
+          console.error('Bridge API error:', bridgeError)
+          throw new Error('Failed to complete authentication setup')
+        }
       }
     } else if (type === 'oauth' && provider) {
       console.log(`🔍 Processing ${provider} OAuth callback`)
@@ -222,17 +307,32 @@ onMounted(async () => {
       
       if (authError) {
         throw authError
-      }
+      }      if (data.session) {
+        try {          // Create JWT bridge for OAuth session
+          const bridgeResponse = await $fetch('/api/auth/supabase-login', {
+            method: 'POST',
+            body: {
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token,
+            }
+          }) as { success: boolean; message: string; user: any }
 
-      if (data.session) {
-        success.value = true
-        errorMessage.value = `Successfully signed in with ${provider}! Welcome to Cloudless.`
-        
-        setTimeout(() => {
-          const redirectTo = route.query.redirectTo as string || '/dashboard'
-          router.push(redirectTo)
-        }, 1500)
-        return
+          if (bridgeResponse.success) {
+            success.value = true
+            errorMessage.value = `Successfully signed in with ${provider}! Welcome to Cloudless.`
+            
+            setTimeout(() => {
+              const redirectTo = route.query.redirectTo as string || '/dashboard'
+              router.push(redirectTo)
+            }, 1500)
+            return
+          } else {
+            throw new Error('Failed to create authentication bridge')
+          }
+        } catch (bridgeError: any) {
+          console.error('Bridge API error:', bridgeError)
+          throw new Error('Failed to complete authentication setup')
+        }
       } else {
         throw new Error(`No session found after ${provider} authentication`)
       }
@@ -244,17 +344,34 @@ onMounted(async () => {
     
     const { data: finalData, error: finalError } = await supabase.auth.getSession()
     console.log('📊 Final session check:', { data: finalData, error: finalError })
-    
-    if (finalData?.session && !finalError) {
+      if (finalData?.session && !finalError) {
       console.log('✅ Session found in final check!')
-      success.value = true
-      errorMessage.value = 'Authentication successful! Welcome to Cloudless.'
       
-      setTimeout(() => {
-        const redirectTo = route.query.redirectTo as string || '/dashboard'
-        router.push(redirectTo)
-      }, 1500)
-      return
+      try {        // Create JWT bridge for final session
+        const bridgeResponse = await $fetch('/api/auth/supabase-login', {
+          method: 'POST',
+          body: {
+            access_token: finalData.session.access_token,
+            refresh_token: finalData.session.refresh_token,
+          }
+        }) as { success: boolean; message: string; user: any }
+
+        if (bridgeResponse.success) {
+          success.value = true
+          errorMessage.value = 'Authentication successful! Welcome to Cloudless.'
+          
+          setTimeout(() => {
+            const redirectTo = route.query.redirectTo as string || '/dashboard'
+            router.push(redirectTo)
+          }, 1500)
+          return
+        } else {
+          throw new Error('Failed to create authentication bridge')
+        }
+      } catch (bridgeError: any) {
+        console.error('Bridge API error:', bridgeError)
+        throw new Error('Failed to complete authentication setup')
+      }
     }
 
     // If we get here, authentication truly failed

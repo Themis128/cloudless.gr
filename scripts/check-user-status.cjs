@@ -42,11 +42,10 @@ async function checkUserConfirmationStatus() {
     console.log(`   Created: ${user.created_at}`);
     console.log(`   Updated: ${user.updated_at}`);
     console.log(`   Confirmed: ${user.email_confirmed_at ? '✅ YES' : '❌ NO'}`);
-    
-    if (user.email_confirmed_at) {
+      if (user.email_confirmed_at) {
       console.log(`   Confirmed At: ${user.email_confirmed_at}`);
     } else {
-      console.log('   Confirmation Sent: ${user.confirmation_sent_at || 'Unknown'}');
+      console.log(`   Confirmation Sent: ${user.confirmation_sent_at || 'Unknown'}`);
     }
     
     console.log(`   Last Sign In: ${user.last_sign_in_at || 'Never'}`);

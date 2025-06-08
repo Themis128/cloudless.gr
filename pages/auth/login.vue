@@ -219,7 +219,9 @@
               <v-divider class="mb-4" />
               <p class="text-body-2 text-medium-emphasis mb-3">
                 Having trouble signing in? Need to resend your confirmation email?
-              </p>              <v-btn
+              </p>
+
+              <v-btn
                 variant="outlined"
                 :color="email ? 'primary' : 'grey'"
                 @click="resendConfirmation"
@@ -228,14 +230,50 @@
                 :disabled="!email || resendLoading"
                 class="mb-2"
                 size="large"
+                block
               >
-                {{ email ? 'Resend Confirmation Email' : 'Enter Email Above First' }}
-              </v-btn>              <p class="text-caption text-medium-emphasis">
+                <template v-if="resendLoading">
+                  <span>Sending email...</span>
+                </template>
+                <template v-else>
+                  {{ email ? 'Resend Confirmation Email' : 'Enter Email Above First' }}
+                </template>
+              </v-btn>
+
+              <!-- Loading progress indicator -->
+              <div v-if="resendLoading" class="mt-2">
+                <v-progress-linear
+                  indeterminate
+                  color="primary"
+                  height="2"
+                  class="mb-2"
+                />
+                <p class="text-caption text-medium-emphasis">
+                  This may take up to 30 seconds. Please wait...
+                </p>
+              </div>
+
+              <p v-else class="text-caption text-medium-emphasis">
                 {{ email 
                   ? `Ready to resend confirmation email to ${email}` 
                   : 'Enter your email in the login form above to enable this button' 
                 }}
               </p>
+
+              <!-- Server status hint -->
+              <v-alert
+                v-if="resendLoading"
+                type="info"
+                variant="tonal"
+                density="compact"
+                class="mt-2"
+                icon="mdi-information"
+              >
+                <div class="text-caption">
+                  <strong>Note:</strong> If the button appears stuck, the server may be experiencing delays. 
+                  We'll automatically timeout after 30 seconds.
+                </div>
+              </v-alert>
             </div>
 
             <!-- Sign Up Link -->
@@ -289,10 +327,17 @@ const socialLoading = ref('')
 const showMagicLink = ref(false)
 const resendLoading = ref(false)
 
-// Redirect if already logged in
-watchEffect(() => {
-  if (user.value) {
-    router.push('/dashboard')
+// Redirect if already logged in (check JWT-based auth)
+watchEffect(async () => {
+  if (process.client) {
+    try {
+      const session = await $fetch('/api/auth/session')
+      if (session?.authenticated) {
+        router.push('/dashboard')
+      }
+    } catch (error) {
+      // Ignore errors - user is not authenticated
+    }
   }
 })
 
@@ -342,36 +387,42 @@ const handleEmailLogin = async () => {
     if (!password.value) passwordError.value = 'Password is required'
     return
   }
-
+  
   isLoading.value = true
   error.value = ''
-  try {    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.value,
-      password: password.value,
+  successMessage.value = ''
+  
+  try {
+    const response = await $fetch('/api/auth/supabase-login', {
+      method: 'POST',
+      body: {
+        email: email.value,
+        password: password.value,
+      }
     })
 
-    if (signInError) {
-      console.log('Sign in error:', signInError)
-      
-      // Handle specific error cases
-      if (signInError.message.includes('Invalid login credentials')) {
-        error.value = 'Invalid email or password. If you just signed up, please check your email and confirm your account first.'
-      } else if (signInError.message.includes('Email not confirmed') || signInError.message.includes('confirm')) {
-        error.value = 'Please check your email and click the confirmation link before signing in.'
-      } else if (signInError.message.includes('signup') || signInError.message.includes('registration')) {
-        error.value = 'There was an issue with your account setup. Please try resending the confirmation email.'
-      } else if (signInError.message.includes('rate limit')) {
-        error.value = 'Too many login attempts. Please wait a moment before trying again.'
-      } else {
-        error.value = signInError.message
-      }
-    } else {
-      // Success - user will be automatically redirected by watchEffect
+    if (response.success) {
       successMessage.value = 'Successfully signed in!'
+      
+      // Small delay to show success message, then redirect
+      setTimeout(() => {
+        const redirectTo = route.query.redirect as string || '/dashboard'
+        router.push(redirectTo)
+      }, 1000)
+    } else {
+      error.value = response.message || 'Authentication failed. Please try again.'
     }
-  } catch (err) {
-    error.value = 'An unexpected error occurred'
+  } catch (err: any) {
     console.error('Login error:', err)
+    
+    // Handle API errors
+    if (err.data?.message) {
+      error.value = err.data.message
+    } else if (err.message) {
+      error.value = err.message
+    } else {
+      error.value = 'An unexpected error occurred. Please try again.'
+    }
   } finally {
     isLoading.value = false
   }
@@ -550,7 +601,7 @@ const handleGitHubLogin = async () => {
   }
 }
 
-// Resend email confirmation with robust fallback system
+// Resend email confirmation with robust fallback system and timeout handling
 const resendConfirmation = async () => {
   if (!email.value) {
     error.value = 'Please enter your email address first in the login form above'
@@ -570,20 +621,37 @@ const resendConfirmation = async () => {
   
   const redirectUrl = `${window.location.origin}/auth/callback`
   
+  // Create AbortController for timeout handling
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => {
+    controller.abort()
+  }, 30000) // 30 second timeout
+  
   try {
     console.log('🔍 RESEND DEBUG: Starting resend confirmation process')
     console.log('📧 Email:', email.value)
     console.log('🔗 Redirect URL:', redirectUrl)
     
-    // Method 1: Try standard auth.resend() first
-    console.log('🔄 METHOD 1: Attempting auth.resend()')
-    const { data: resendData, error: resendError } = await supabase.auth.resend({
+    // Method 1: Try standard auth.resend() first with timeout
+    console.log('🔄 METHOD 1: Attempting auth.resend() with timeout protection')
+    
+    const resendPromise = supabase.auth.resend({
       type: 'signup',
       email: email.value,
       options: {
         emailRedirectTo: redirectUrl
       }
     })
+
+    // Race between the API call and timeout
+    const { data: resendData, error: resendError } = await Promise.race([
+      resendPromise,
+      new Promise((_, reject) => {
+        controller.signal.addEventListener('abort', () => {
+          reject(new Error('Request timed out - server may be unresponsive'))
+        })
+      })
+    ]) as any
 
     console.log('📊 RESEND RESPONSE:', { data: resendData, error: resendError })
 
@@ -602,13 +670,13 @@ const resendConfirmation = async () => {
         return
       }
       
-      // Method 2: Try signUp() fallback for unconfirmed users
-      console.log('🔄 METHOD 2: Attempting signUp() fallback method')
+      // Method 2: Try signUp() fallback for unconfirmed users with timeout
+      console.log('🔄 METHOD 2: Attempting signUp() fallback method with timeout protection')
       
       // Generate a temporary strong password for the signup attempt
       const tempPassword = generateTempPassword()
       
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      const signupPromise = supabase.auth.signUp({
         email: email.value,
         password: tempPassword,
         options: {
@@ -619,6 +687,13 @@ const resendConfirmation = async () => {
           }
         }
       })
+
+      const { data: signUpData, error: signUpError } = await Promise.race([
+        signupPromise,
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Signup request timed out')), 20000)
+        })
+      ]) as any
       
       console.log('📊 SIGNUP FALLBACK RESPONSE:', { data: signUpData, error: signUpError })
       
@@ -636,29 +711,64 @@ const resendConfirmation = async () => {
           }, 3000)
           
         } else if (signUpError.message.includes('signup') && signUpError.message.includes('disabled')) {
-          error.value = 'Email signup is currently disabled. Please contact support.'
-        } else {
-          // Method 3: Try magic link as final fallback
-          console.log('🔄 METHOD 3: Attempting magic link as final fallback')
+          error.value = 'Email signup is currently disabled. Please contact support.'        } else {
+          // Method 3: Try server-side API endpoint as fallback
+          console.log('🔄 METHOD 3: Attempting server-side resend API as fallback')
           
-          const { data: magicData, error: magicError } = await supabase.auth.signInWithOtp({
-            email: email.value,
-            options: {
-              emailRedirectTo: redirectUrl,
-              shouldCreateUser: false, // Don't create new users, just send to existing
-              data: {
-                resend_attempt: true,
-                method: 'magic_link_fallback'
-              }
+          try {
+            const serverResponse = await $fetch('/api/auth/resend-confirmation', {
+              method: 'POST',
+              body: {
+                email: email.value,
+                redirectUrl: redirectUrl
+              },
+              timeout: 20000 // 20 second timeout
+            })
+
+            console.log('📊 SERVER API RESPONSE:', serverResponse)
+            
+            if (serverResponse.success) {
+              successMessage.value = `✅ ${serverResponse.message} Please check your inbox and spam folder.`
+            } else {
+              throw new Error(serverResponse.message || 'Server API failed')
             }
-          })
-          
-          console.log('📊 MAGIC LINK FALLBACK RESPONSE:', { data: magicData, error: magicError })
-          
-          if (magicError) {
-            error.value = `All resend methods failed. Last error: ${magicError.message}. Please contact support.`
-          } else {
-            successMessage.value = '✅ Confirmation email sent via magic link method! Please check your inbox and spam folder.'
+            
+          } catch (serverError: any) {
+            console.log('❌ Server API failed, trying magic link as final fallback')
+            
+            // Method 4: Try magic link as final fallback with timeout
+            console.log('🔄 METHOD 4: Attempting magic link as final fallback with timeout protection')
+            
+            const magicPromise = supabase.auth.signInWithOtp({
+              email: email.value,
+              options: {
+                emailRedirectTo: redirectUrl,
+                shouldCreateUser: false, // Don't create new users, just send to existing
+                data: {
+                  resend_attempt: true,
+                  method: 'magic_link_fallback'
+                }
+              }
+            })
+
+            const { data: magicData, error: magicError } = await Promise.race([
+              magicPromise,
+              new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Magic link request timed out')), 15000)
+              })
+            ]) as any
+            
+            console.log('📊 MAGIC LINK FALLBACK RESPONSE:', { data: magicData, error: magicError })
+            
+            if (magicError) {
+              if (magicError.message.includes('timed out')) {
+                error.value = 'All methods timed out. The server appears to be unresponsive. Please try again in a few minutes or contact support.'
+              } else {
+                error.value = `All resend methods failed. Last error: ${magicError.message}. Please contact support.`
+              }
+            } else {
+              successMessage.value = '✅ Confirmation email sent via magic link method! Please check your inbox and spam folder.'
+            }
           }
         }
       } else {
@@ -692,12 +802,17 @@ const resendConfirmation = async () => {
     // Handle network or unexpected errors
     if (err.name === 'NetworkError' || err.message.includes('fetch')) {
       error.value = 'Network error. Please check your internet connection and try again.'
-    } else if (err.message.includes('timeout')) {
-      error.value = 'Request timed out. Please try again in a moment.'
+    } else if (err.message.includes('timeout') || err.message.includes('timed out')) {
+      error.value = 'Server is taking too long to respond. This may be temporary. Please try again in a few minutes.'
+    } else if (err.name === 'AbortError' || err.message.includes('aborted')) {
+      error.value = 'Request was cancelled due to timeout. The server may be unresponsive. Please try again later.'
+    } else if (err.message.includes('server may be unresponsive')) {
+      error.value = 'Server is currently unresponsive. Please wait a few minutes and try again, or contact support if the issue persists.'
     } else {
       error.value = 'Failed to resend confirmation email. Please try again or contact support if the issue persists.'
     }
   } finally {
+    clearTimeout(timeoutId)
     resendLoading.value = false
   }
 }
