@@ -1,20 +1,10 @@
 <template>
-  <v-container :class="['contact-container', mobile ? 'pa-2' : 'pa-4']">
+  <v-container class="contact-container pa-4">
     <v-row justify="center">
       <v-col cols="12" md="8" lg="6">
-        <v-card
-          :class="['elevation-3 responsive-contact-card', mobile ? 'pa-3' : 'pa-5']"
-          rounded="lg"
-        >
-          <v-card-title
-            :class="['text-center', mobile ? 'text-h5 px-2' : 'text-h4']"
-            id="contact-form-heading"
-          >
-            Contact Us
-          </v-card-title>
-          <v-card-subtitle :class="['text-center', mobile ? 'pb-3 text-body-2 px-2' : 'pb-4']">
-            Have a question or want to work with us? Get in touch!
-          </v-card-subtitle>
+        <v-card class="pa-5 elevation-3">
+          <v-card-title class="text-h4 text-center" id="contact-form-heading">Contact Us</v-card-title>
+          <v-card-subtitle class="text-center pb-4">Have a question or want to work with us? Get in touch!</v-card-subtitle>
 
           <!-- Success Message after submission -->
           <v-alert
@@ -25,24 +15,11 @@
             prominent
             border="start"
             closable
-            :class="mobile ? 'ma-2' : 'ma-0'"
           >
-            <v-alert-title :class="mobile ? 'text-h6' : ''">
-              Thank you for contacting us!
-            </v-alert-title>
-            <p :class="mobile ? 'text-body-2' : ''">
-              We've received your message and will get back to you as soon as possible.
-            </p>
+            <v-alert-title>Thank you for contacting us!</v-alert-title>
+            <p>We've received your message and will get back to you as soon as possible.</p>
             <template v-slot:append>
-              <v-btn
-                color="success"
-                variant="tonal"
-                @click="resetForm"
-                :size="mobile ? 'small' : 'default'"
-                :class="mobile ? 'text-caption' : ''"
-              >
-                <span :class="{ 'd-none d-sm-inline': mobile }">Send Another </span>Message
-              </v-btn>
+              <v-btn color="success" variant="tonal" @click="resetForm">Send Another Message</v-btn>
             </template>
           </v-alert>
 
@@ -53,7 +30,6 @@
             aria-labelledby="contact-form-heading"
             v-model="isFormValid"
             validate-on="blur"
-            :class="mobile ? 'px-2' : ''"
           >
             <!-- Full Name Field -->
             <v-text-field
@@ -68,8 +44,7 @@
               autocomplete="name"
               variant="outlined"
               prepend-inner-icon="mdi-account"
-              :class="mobile ? 'mb-2' : 'mb-3'"
-              :density="mobile ? 'compact' : 'default'"
+              class="mb-3"
             ></v-text-field>
 
             <!-- Email Field -->
@@ -105,18 +80,9 @@
             ></v-text-field>
 
             <!-- Honeypot field - hidden from users but bots will fill it out -->
-            <div
-              class="honeypot-field"
-              aria-hidden="true"
-              style="opacity: 0; position: absolute; top: -9999px; left: -9999px"
-            >
+            <div class="honeypot-field" aria-hidden="true" style="opacity: 0; position: absolute; top: -9999px; left: -9999px;">
               <label for="website">Website</label>
-              <v-text-field
-                id="website"
-                name="website"
-                v-model="honeypotField"
-                tabindex="-1"
-              ></v-text-field>
+              <v-text-field id="website" name="website" v-model="honeypotField" tabindex="-1"></v-text-field>
             </div>
 
             <!-- Message Field -->
@@ -132,11 +98,16 @@
               rows="5"
               variant="outlined"
               prepend-inner-icon="mdi-comment-text"
-              class="mb-3"
-            ></v-textarea>
+              class="mb-3"            ></v-textarea>
 
             <!-- Error Alert -->
-            <v-alert v-if="submitError" type="error" variant="tonal" class="mb-4" role="alert">
+            <v-alert
+              v-if="submitError"
+              type="error"
+              variant="tonal"
+              class="mb-4"
+              role="alert"
+            >
               {{ submitError }}
               <template v-if="submitError.includes('session')" v-slot:append>
                 <v-btn
@@ -170,8 +141,7 @@
             >
               Note: You have {{ rateLimitInfo.value.remaining }} submission{{
                 rateLimitInfo.value.remaining === 1 ? '' : 's'
-              }}
-              remaining. Please wait before making additional requests.
+              }} remaining. Please wait before making additional requests.
             </v-alert>
 
             <!-- Form Status -->
@@ -220,20 +190,17 @@
       </v-col>
     </v-row>
   </v-container>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { useDisplay } from 'vuetify';
 import { useContactUs } from '~/composables/useContactUs';
-
-// Get display breakpoint information using Vuetify 3 composable
-const { mobile } = useDisplay();
 
 // Honeypot field for spam prevention
 const honeypotField = ref('');
 const formIsSaving = ref(false);
-const isFormValid = ref(false);
 let autoSaveTimeout;
 
 // Use our contact form composable

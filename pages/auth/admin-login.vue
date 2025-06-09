@@ -79,14 +79,15 @@ definePageMeta({
   public: true  // Admin login page should be accessible without auth
 })
 
-import { computed, ref, useRouter } from '#imports'
+import { computed, ref } from '#imports'
 import { useDisplay } from 'vuetify'
 import { useAdminAuth } from '~/composables/useAdminAuth'
+import { useAuthRedirect } from '~/composables/useAuthRedirect'
 import { validateEmail } from '~/utils/auth-client'
 
-const router = useRouter()
 const { mobile } = useDisplay()
 const { adminSignIn } = useAdminAuth()
+const { redirectAfterLogin } = useAuthRedirect()
 
 const form = ref({
   email: '',
@@ -121,19 +122,18 @@ const handleLogin = async () => {
     }
   }, 30000) // 30 second timeout
 
-  try {
-    const result = await adminSignIn(form.value.email, form.value.password)
+  try {    const result = await adminSignIn(form.value.email, form.value.password)
 
     // Clear timeout on successful response
     clearTimeout(timeoutId)
-
+    
     if (!result.success) {
       error.value = result.error || 'Login failed. Please check your credentials.'
       return
     }
 
-    // Only navigate if login was successful
-    await router.push('/admin/dashboard')
+    // Use secure redirect after successful admin login
+    await redirectAfterLogin('admin')
   } catch (err) {
     // Clear timeout on error
     clearTimeout(timeoutId)

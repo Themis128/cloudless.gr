@@ -95,16 +95,13 @@
     ],
     "description": "Vue 3 reactive form with validation",
   },
-  "Supabase API Route": {
-    "prefix": "supabaseapi",
+  "Prisma API Route": {
+    "prefix": "prismaapi",
     "body": [
-      "import { createClient } from '@supabase/supabase-js';",
+      "import { PrismaClient } from '@prisma/client';",
       "import { defineEventHandler, readBody } from 'h3';",
       "",
-      "const supabase = createClient(",
-      "  process.env.SUPABASE_URL!,",
-      "  process.env.SUPABASE_ANON_KEY!",
-      ");",
+      "const prisma = new PrismaClient();",
       "",
       "export default defineEventHandler(async (event) => {",
       "  try {",
@@ -117,7 +114,7 @@
       "  }",
       "});",
     ],
-    "description": "Nuxt 3 API route with Supabase",
+    "description": "Nuxt 3 API route with Prisma",
   },
   "Vue 3 Watch Effect": {
     "prefix": "watcheffect",

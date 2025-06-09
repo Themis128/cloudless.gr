@@ -4,6 +4,7 @@
  */
 
 import type { Provider } from '@supabase/supabase-js'
+import { getMagicLinkCallbackUrl, getOAuthCallbackUrl } from '~/utils/secureRedirect'
 
 export interface AuthError {
   message: string
@@ -35,9 +36,8 @@ export const useEnhancedAuth = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     return emailRegex.test(email)
   }
-
   // Enhanced magic link authentication
-  const sendMagicLink = async (email: string): Promise<{ success: boolean; error?: AuthError }> => {
+  const sendMagicLink = async (email: string, redirectParam?: string): Promise<{ success: boolean; error?: AuthError }> => {
     if (!email) {
       return {
         success: false,
@@ -60,7 +60,7 @@ export const useEnhancedAuth = () => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?type=magiclink`,
+          emailRedirectTo: getMagicLinkCallbackUrl(redirectParam),
           shouldCreateUser: true,
           data: {
             email,
@@ -110,9 +110,8 @@ export const useEnhancedAuth = () => {
       authState.value.isLoading = false
     }
   }
-
   // Enhanced OAuth authentication
-  const signInWithOAuth = async (provider: Provider): Promise<{ success: boolean; error?: AuthError }> => {
+  const signInWithOAuth = async (provider: Provider, redirectParam?: string): Promise<{ success: boolean; error?: AuthError }> => {
     authState.value.socialLoading = provider
     authState.value.error = null
     authState.value.success = null
@@ -121,7 +120,7 @@ export const useEnhancedAuth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?type=oauth&provider=${provider}`,
+          redirectTo: getOAuthCallbackUrl(redirectParam, provider),
           queryParams: provider === 'google' ? {
             access_type: 'offline',
             prompt: 'consent'

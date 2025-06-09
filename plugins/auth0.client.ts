@@ -1,5 +1,5 @@
 import { createAuth0, type Auth0Plugin } from '@auth0/auth0-vue';
-import type { PublicRuntimeConfig } from '~/types/nuxt';
+import type { NuxtApp } from 'nuxt/app';
 
 type Auth0PluginReturn = {
   provide: {
@@ -7,12 +7,17 @@ type Auth0PluginReturn = {
   };
 };
 
-export default defineNuxtPlugin((): Auth0PluginReturn => {
-  const config = useRuntimeConfig();
+interface _Auth0Config {
+  domain?: string;
+  clientId?: string;
+  audience?: string;
+}
 
-  // Provide a fallback empty object for type safety
-  const auth0Config = (config.public.auth0 ?? {}) as Partial<PublicRuntimeConfig['auth0']>;
+export default defineNuxtPlugin((_nuxtApp: NuxtApp): Auth0PluginReturn => {
+  // Get Auth0 configuration from runtime config
+  const { auth0: auth0Config = {} as _Auth0Config } = useRuntimeConfig().public;
 
+  // Log initialization in development
   if (process.dev) {
     console.log('🔐 Auth0 Plugin: Initializing...');
     console.log('📍 Runtime Config:', {
@@ -23,7 +28,7 @@ export default defineNuxtPlugin((): Auth0PluginReturn => {
   }
 
   // Check if Auth0 is properly configured
-  const isAuth0Configured = !!auth0Config.domain && !!auth0Config.clientId;
+  const isAuth0Configured = Boolean(auth0Config.domain) && Boolean(auth0Config.clientId);
 
   if (!isAuth0Configured) {
     // In development, provide helpful warnings
@@ -44,12 +49,12 @@ export default defineNuxtPlugin((): Auth0PluginReturn => {
   }
 
   try {
-    // Create Auth0 client
+    // Create Auth0 client with proper error handling for optional fields
     const auth0 = createAuth0({
-      domain: auth0Config.domain!,
-      clientId: auth0Config.clientId!,
+      domain: auth0Config.domain || '',
+      clientId: auth0Config.clientId || '',
       authorizationParams: {
-        redirect_uri: window.location.origin,
+        redirect_uri: process.client ? window.location.origin + '/auth/callback' : '',
         ...(auth0Config.audience ? { audience: auth0Config.audience } : {}),
       },
     });

@@ -8,16 +8,27 @@
             <v-card-text class="pa-8">
               <div class="d-flex align-center">
                 <v-avatar size="80" color="primary" class="mr-6">
-                  <v-img v-if="user?.avatar" :src="user.avatar" :alt="user.name" />
+                  <v-img
+                    v-if="userProfile?.avatar_url"
+                    :src="userProfile.avatar_url"
+                    :alt="userProfile.full_name"
+                  />
                   <span v-else class="text-h4 text-white">
-                    {{ user?.name?.charAt(0) || user?.email?.charAt(0) || 'U' }}
+                    {{
+                      userProfile?.full_name?.[0] ||
+                      userProfile?.username?.[0] ||
+                      user?.email?.[0] ||
+                      'U'
+                    }}
                   </span>
                 </v-avatar>
                 <div class="flex-grow-1">
-                  <h1 class="text-h3 font-weight-bold mb-2">{{ user?.name || 'User Profile' }}</h1>
+                  <h1 class="text-h3 font-weight-bold mb-2">
+                    {{ userProfile?.full_name || userProfile?.username || 'User Profile' }}
+                  </h1>
                   <p class="text-h6 text-medium-emphasis mb-2">{{ user?.email }}</p>
-                  <v-chip :color="getRoleColor(user?.role)" size="small" variant="tonal">
-                    {{ user?.role || 'User' }}
+                  <v-chip :color="getRoleColor(userProfile?.role)" size="small" variant="tonal">
+                    {{ userProfile?.role || 'User' }}
                   </v-chip>
                 </div>
                 <v-btn
@@ -99,14 +110,9 @@
                 >
                   Save Changes
                 </v-btn>
-                <v-btn
-                  variant="outlined"
-                  @click="editMode = false"
-                >
-                  Cancel
-                </v-btn>
+                <v-btn variant="outlined" @click="editMode = false"> Cancel </v-btn>
               </v-form>
-              
+
               <div v-else>
                 <v-row>
                   <v-col cols="12" md="6">
@@ -297,139 +303,189 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({
-  title: 'Profile',
-  middleware: 'auth'
-})
+  definePageMeta({
+    layout: 'default',
+    middleware: ['auth'],
+  });
 
-const { user } = useAuth()
-const editMode = ref(false)
-const saving = ref(false)
-const showSuccess = ref(false)
-const showError = ref(false)
-const successMessage = ref('')
-const errorMessage = ref('')
+  useHead({
+    title: 'Profile Settings - Cloudless',
+  });
 
-const profileForm = ref({
-  firstName: '',
-  lastName: '',
-  email: '',
-  phone: '',
-  bio: ''
-})
+  import { onMounted, ref, watch } from '#imports';
+  const { user, userProfile, loading: saving, error: errorMessage } = useSupabaseAuth();
+  const client = useSupabaseClient();
+  const router = useRouter();
 
-const stats = ref({
-  projectsCreated: 12,
-  workflowsRun: 247,
-  daysActive: 45
-})
+  const editMode = ref(false);
+  const showSuccess = ref(false);
+  const showError = ref(false);
+  const successMessage = ref('');
 
-const activities = ref([
-  {
-    id: 1,
-    title: 'Created new project',
-    description: 'E-commerce Platform project was created',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    icon: 'mdi-folder-plus',
-    color: 'primary'
-  },
-  {
-    id: 2,
-    title: 'Workflow executed',
-    description: 'Data Processing workflow completed successfully',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    icon: 'mdi-play-circle',
-    color: 'success'
-  },
-  {
-    id: 3,
-    title: 'Profile updated',
-    description: 'Personal information was modified',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    icon: 'mdi-account-edit',
-    color: 'info'
+  const profileForm = ref({
+    username: '',
+    full_name: '',
+    metadata: {} as Record<string, any>,
+  });
+
+  const stats = ref({
+    projectsCreated: 12,
+    workflowsRun: 247,
+    daysActive: 45,
+  });
+
+  const activities = ref([
+    {
+      id: 1,
+      title: 'Created new project',
+      description: 'E-commerce Platform project was created',
+      timestamp: new Date(Date.now() - 1000 * 60 * 30),
+      icon: 'mdi-folder-plus',
+      color: 'primary',
+    },
+    {
+      id: 2,
+      title: 'Workflow executed',
+      description: 'Data Processing workflow completed successfully',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+      icon: 'mdi-play-circle',
+      color: 'success',
+    },
+    {
+      id: 3,
+      title: 'Profile updated',
+      description: 'Personal information was modified',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+      icon: 'mdi-account-edit',
+      color: 'info',
+    },
+  ]);
+
+  // Type guard for user object
+  function isUser(
+    u: any
+  ): u is {
+    firstName?: string;
+    lastName?: string;
+    email: string;
+    phone?: string;
+    bio?: string;
+    name?: string;
+    avatar?: string;
+    role?: string;
+    twoFactorEnabled?: boolean;
+  } {
+    return u && typeof u === 'object' && typeof u.email === 'string';
   }
-])
 
-// Initialize form with user data
-watch(user, (newUser) => {
-  if (newUser) {
-    profileForm.value = {
-      firstName: newUser.firstName || '',
-      lastName: newUser.lastName || '',
-      email: newUser.email || '',
-      phone: newUser.phone || '',
-      bio: newUser.bio || ''
+  // Ensure user is loaded and redirect if not authenticated
+  onMounted(() => {
+    if (!loggedIn.value || !isUser(user.value)) {
+      router.push('/auth/login?redirect=/profile');
     }
-  }
-}, { immediate: true })
+  });
 
-const getRoleColor = (role?: string) => {
-  switch (role) {
-    case 'admin': return 'error'
-    case 'manager': return 'warning'
-    case 'developer': return 'primary'
-    default: return 'success'
-  }
-}
+  // Initialize form with user data
+  watch(
+    user,
+    (newUser: any) => {
+      if (isUser(newUser)) {
+        profileForm.value = {
+          firstName: newUser.firstName || '',
+          lastName: newUser.lastName || '',
+          email: newUser.email || '',
+          phone: newUser.phone || '',
+          bio: newUser.bio || '',
+        };
+      }
+    },
+    { immediate: true }
+  );
 
-const formatDate = (date: Date) => {
-  return new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
-    .format(Math.ceil((date.getTime() - Date.now()) / (1000 * 60)), 'minute')
-}
+  const getRoleColor = (role?: string) => {
+    switch (role) {
+      case 'admin':
+        return 'error';
+      case 'manager':
+        return 'warning';
+      case 'developer':
+        return 'primary';
+      default:
+        return 'success';
+    }
+  };
 
-const saveProfile = async () => {
-  saving.value = true
-  try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    successMessage.value = 'Profile updated successfully!'
-    showSuccess.value = true
-    editMode.value = false
-  } catch (error) {
-    errorMessage.value = 'Failed to update profile. Please try again.'
-    showError.value = true
-  } finally {
-    saving.value = false
-  }
-}
+  const formatDate = (date: Date) => {
+    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
+      Math.ceil((date.getTime() - Date.now()) / (1000 * 60)),
+      'minute'
+    );
+  };
 
-const changePassword = () => {
-  navigateTo('/settings/password')
-}
+  const saveProfile = async () => {
+    if (!userProfile.value?.user_id) return;
 
-const manageTwoFactor = () => {
-  navigateTo('/settings/security')
-}
+    saving.value = true;
+    try {
+      const { error: err } = await client
+        .from('user_profiles')
+        .update({
+          username: profileForm.value.username,
+          full_name: profileForm.value.full_name,
+          metadata: profileForm.value.metadata,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userProfile.value.user_id);
 
-const viewSessions = () => {
-  navigateTo('/settings/sessions')
-}
+      if (err) throw err;
 
-const downloadData = async () => {
-  // Simulate data download
-  successMessage.value = 'Data export initiated. You will receive an email when ready.'
-  showSuccess.value = true
-}
+      successMessage.value = 'Profile updated successfully!';
+      showSuccess.value = true;
+      editMode.value = false;
 
-const exportSettings = async () => {
-  // Simulate settings export
-  successMessage.value = 'Settings exported successfully!'
-  showSuccess.value = true
-}
+      // Refresh user profile
+      await fetchUserProfile();
+    } catch (err: any) {
+      errorMessage.value = err.message;
+      showError.value = true;
+    } finally {
+      saving.value = false;
+    }
+  };
 
-const deleteAccount = () => {
-  navigateTo('/settings/delete-account')
-}
+  const changePassword = () => {
+    router.push('/settings/password');
+  };
+
+  const manageTwoFactor = () => {
+    router.push('/settings/security');
+  };
+
+  const viewSessions = () => {
+    router.push('/settings/sessions');
+  };
+
+  const downloadData = async () => {
+    successMessage.value = 'Data export initiated. You will receive an email when ready.';
+    showSuccess.value = true;
+  };
+
+  const exportSettings = async () => {
+    successMessage.value = 'Settings exported successfully!';
+    showSuccess.value = true;
+  };
+
+  const deleteAccount = () => {
+    router.push('/settings/delete-account');
+  };
 </script>
 
 <style scoped>
-.d-grid {
-  display: grid;
-}
+  .d-grid {
+    display: grid;
+  }
 
-.gap-3 {
-  gap: 12px;
-}
+  .gap-3 {
+    gap: 12px;
+  }
 </style>

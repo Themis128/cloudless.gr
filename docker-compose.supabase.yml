@@ -1,0 +1,75 @@
+version: '3.8'
+services:
+  db:
+    image: supabase/postgres:14
+    container_name: cloudlessgr-supabase-db
+    ports:
+      - '54322:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth:
+    image: supabase/gotrue:v2.132.3
+    container_name: cloudlessgr-supabase-auth
+    depends_on:
+      - db
+    environment:
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:-vxGfRt6HyUjMkL3NmP9QwSz4Cx5VbWaY8dK7FpE2}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_SITE_URL: http://localhost:3000
+      GOTRUE_SMTP_HOST: smtp.gmail.com
+      GOTRUE_SMTP_PORT: 587
+      GOTRUE_SMTP_USER: ${SMTP_USER}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS}
+      GOTRUE_SMTP_SENDER_NAME: Cloudless.gr
+      GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED: true
+      GOTRUE_MAILER_SECURE_PASSWORD_CHANGE_ENABLED: true
+      GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED: true
+      GOTRUE_SECURITY_PASSWORD_HASH_COST: 12
+      DATABASE_URL: postgres://postgres:postgres@db:5432/postgres?sslmode=disable
+    ports:
+      - '9999:9999'
+
+  rest:
+    image: postgrest/postgrest:v12.0.1
+    container_name: cloudlessgr-supabase-rest
+    depends_on:
+      - db
+    environment:
+      PGRST_DB_URI: postgres://postgres:postgres@db:5432/postgres
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:-vxGfRt6HyUjMkL3NmP9QwSz4Cx5VbWaY8dK7FpE2}
+    ports:
+      - '3001:3000'
+
+  realtime:
+    image: supabase/realtime:v2.25.18
+    container_name: cloudlessgr-supabase-realtime
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: postgres
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET:-vxGfRt6HyUjMkL3NmP9QwSz4Cx5VbWaY8dK7FpE2}
+    ports:
+      - '4000:4000'
+
+volumes:
+  db-data:

@@ -1,7 +1,7 @@
 <template>
-  <div class="position-relative">
+  <v-app>
     <!-- Vanta.js Clouds2 Background -->
-    <VantaClouds2Background v-if="showVanta" />
+    <VantaClouds2Background />
 
     <!-- Vuetify Navigation -->
     <Layout-Navigation-VuetifyNav />
@@ -13,7 +13,7 @@
     </v-main>
 
     <!-- Footer -->
-    <v-footer app class="footer-transparent">
+    <v-footer app>
       <v-container>
         <v-row justify="center" align="center">
           <v-col cols="12" class="text-center">
@@ -24,16 +24,11 @@
         </v-row>
       </v-container>
     </v-footer>
-  </div>
+  </v-app>
 </template>
 
-<script setup lang="ts">
-// Vuetify layout
-import { ref } from '#imports';
-import VantaClouds2Background from '@/components/VantaClouds2Background.vue';
-
-// Enable vanta background
-const showVanta = ref(true);
+<script setup>
+  // Vuetify layout
 </script>
 
 <style scoped>
@@ -42,9 +37,13 @@ const showVanta = ref(true);
     z-index: 1;
   }
 
-  .footer-transparent {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
+  :deep(.v-main) {
+    background: transparent !important;
+  }
+
+  :deep(.v-footer) {
+    background: transparent !important;
+    backdrop-filter: blur(5px);
+    border: none !important;
   }
 </style>

@@ -1,51 +1,108 @@
 {
-  "models": [
-    {
-      "name": "phind",
-      "title": "Phind CodeLlama 34B",
+  "models": {
+    "phind": {
       "provider": "ollama",
       "model": "phind-codellama:34b",
-      "tools": true
+      "tools": true,
+      "contextLength": 16384,
+      "completionOptions": {
+        "temperature": 0.1,
+        "topP": 0.95,
+        "presencePenalty": 0.1,
+        "frequencyPenalty": 0.1
+      }
     },
-    {
-      "name": "codellama",
-      "title": "CodeLlama",
+    "codellama": {
       "provider": "ollama",
       "model": "codellama:latest",
-      "tools": true
+      "tools": true,
+      "contextLength": 16384,
+      "completionOptions": {
+        "temperature": 0.2,
+        "topP": 0.95
+      }
     },
-    {
-      "name": "llama3_8b",
-      "title": "Llama 3.1 8B",
+    "llama3_8b": {
       "provider": "ollama",
-      "model": "llama3.1:8b",
-      "tools": false
+      "model": "llama3:8b",
+      "tools": false,
+      "contextLength": 8192
     },
-    {
-      "name": "qwenCoder",
-      "title": "Qwen2.5 Coder 1.5B",
+    "qwen_coder": {
       "provider": "ollama",
       "model": "qwen2.5-coder:1.5b-base",
-      "tools": false
+      "tools": false,
+      "contextLength": 4096
     },
-    {
-      "name": "llama3_latest",
-      "title": "Llama 3 Latest",
+    "llama3": {
       "provider": "ollama",
-      "model": "llama3:latest",
-      "tools": false
+      "model": "llama3",
+      "tools": false,
+      "contextLength": 8192
     }
-  ],
+  },
   "defaultModel": "phind",
   "toolPolicies": {
     "editFile": "always",
     "readFile": "always",
-    "runCommand": "ask"
+    "runCommand": "ask",
+    "terminal": "always",
+    "fileSystem": "always"
   },
   "promptsPath": ".continue/prompts/vue-tasks.json",
   "features": {
     "agentMode": true,
-    "tools": true
+    "tools": true,
+    "terminalIntegration": true,
+    "contextProviders": ["diff", "terminal", "folder", "codebase", "file"],
+    "experimentalFeatures": {
+      "terminalChat": true,
+      "workspaceDocuments": true,
+      "codeActions": true
+    }
   },
-  "projectType": "nuxt-vuetify"
+  "projectType": "nuxt-vuetify",
+  "contextProviders": [
+    {
+      "name": "terminal",
+      "params": {
+        "shellIntegration": true,
+        "commandHistory": true
+      }
+    },
+    {
+      "name": "folder",
+      "params": {
+        "nResults": 20
+      }
+    },
+    {
+      "name": "codebase",
+      "params": {
+        "nResults": 25
+      }
+    }
+  ],
+  "slashCommands": [
+    {
+      "name": "test",
+      "description": "Write unit tests for the current file"
+    },
+    {
+      "name": "fix",
+      "description": "Fix issues in the current file"
+    },
+    {
+      "name": "optimize",
+      "description": "Optimize the current code for performance"
+    },
+    {
+      "name": "refactor",
+      "description": "Refactor the current code"
+    },
+    {
+      "name": "docs",
+      "description": "Generate documentation for the current code"
+    }
+  ]
 }

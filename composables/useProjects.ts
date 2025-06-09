@@ -1,187 +1,137 @@
 // composable to fetch and manage project data
-import { computed, onMounted, readonly, ref, useFetch } from '#imports';
-import type {
-    Project,
-    ProjectCategory,
-    ProjectFilter,
-    ProjectStatus,
-    UseProjectsComposable,
-} from '~/types/projects';
+import { computed, ref } from 'vue';
+import type { Project, ProjectCategory, ProjectFilter, ProjectStatus } from '~/types/projects';
 
-export function useProjects(): UseProjectsComposable {
+export function useProjects() {
   const projects = ref<Project[]>([]);
-  const isLoading = ref<boolean>(false);
+  const isLoading = ref(false);
   const error = ref<string | null>(null);
-  const lastFetch = ref<number>(0);
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  const featuredProjects = computed(() =>
-    projects.value.filter((project: Project) => project.featured)
-  );
+  const featuredProjects = computed(() => {
+    return projects.value.filter((project) => project.featured);
+  });
 
-  const clearError = () => {
-    error.value = null;
-  };
+  const recentProjects = computed(() => {
+    return [...projects.value]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 4);
+  });
 
-  const fetchProjects = async (filter?: ProjectFilter): Promise<void> => {
-    // Return cached data if it's fresh enough
-    if (!filter && Date.now() - lastFetch.value < CACHE_DURATION) {
-      return;
-    }
-
+  async function fetchProjects(filter?: ProjectFilter): Promise<void> {
     isLoading.value = true;
-    clearError();
+    error.value = null;
 
     try {
-      const { data, error: fetchError } = await useFetch<Project[]>('/api/projects', {
+      // In a real application, this would call your API
+      // For now, we'll simulate an API call with a timeout
+      const { data } = await useFetch('/api/projects', {
         query: filter,
       });
 
-      if (fetchError.value) {
-        throw new Error(fetchError.value.message);
+      if (data.value) {
+        projects.value = data.value as Project[];
       }
-
-      if (!data.value) {
-        throw new Error('No data received from server');
-      }
-
-      projects.value = data.value;
-      lastFetch.value = Date.now();
     } catch (err) {
       console.error('Error fetching projects:', err);
-      error.value =
-        err instanceof Error ? err.message : 'Failed to load projects. Please try again.';
+      error.value = 'Failed to load projects. Please try again.';
     } finally {
       isLoading.value = false;
     }
-  };
+  }
 
-  const fetchProjectBySlug = async (slug: string): Promise<Project | null> => {
-    if (!slug) {
-      error.value = 'Project slug is required';
-      return null;
-    }
-
+  async function fetchProjectBySlug(slug: string): Promise<Project | null> {
     isLoading.value = true;
-    clearError();
+    error.value = null;
 
     try {
-      const { data, error: fetchError } = await useFetch<Project>(`/api/projects/${slug}`);
-
-      if (fetchError.value) {
-        throw new Error(fetchError.value.message);
-      }
-
-      if (!data.value) {
-        throw new Error(`Project with slug "${slug}" not found`);
-      }
-
-      return data.value;
+      const { data } = await useFetch(`/api/projects/${slug}`);
+      return data.value as Project;
     } catch (err) {
       console.error(`Error fetching project with slug ${slug}:`, err);
-      error.value =
-        err instanceof Error ? err.message : 'Failed to load project details. Please try again.';
+      error.value = 'Failed to load project details. Please try again.';
       return null;
     } finally {
       isLoading.value = false;
     }
-  };
+  }
 
-  const toggleFavorite = async (id: number): Promise<void> => {
-    if (!id) {
-      error.value = 'Project ID is required';
-      return;
-    }
-
-    const project = projects.value.find((p: Project) => p.id === id);
-    if (!project) {
-      error.value = 'Project not found';
-      return;
-    }
-
-    const originalState = project.isFavorite;
-
+  async function toggleFavorite(id: number): Promise<void> {
     try {
-      // Optimistic update
+      // Find the project in our local state
+      const project = projects.value.find((p) => p.id === id);
+      if (!project) return;
+
+      // Toggle favorite status locally first for immediate feedback
       project.isFavorite = !project.isFavorite;
 
-      const { error: fetchError } = await useFetch(`/api/projects/${id}/favorite`, {
+      // Update on the server
+      await useFetch(`/api/projects/${id}/favorite`, {
         method: 'POST',
         body: { isFavorite: project.isFavorite },
       });
-
-      if (fetchError.value) {
-        throw new Error(fetchError.value.message);
-      }
     } catch (err) {
-      // Revert on failure
-      project.isFavorite = originalState;
-      error.value =
-        err instanceof Error ? err.message : 'Failed to update favorite status. Please try again.';
+      console.error('Error toggling favorite status:', err);
+      error.value = 'Failed to update favorite status. Please try again.';
+
+      // Revert the local change if the server update failed
+      const project = projects.value.find((p) => p.id === id);
+      if (project) {
+        project.isFavorite = !project.isFavorite;
+      }
     }
-  };
+  }
 
-  const getRelatedProjects = (project: Project): Project[] => {
-    if (!project) return [];
-
-    if (project.relatedProjects?.length) {
+  function getRelatedProjects(project: Project): Project[] {
+    if (!project.relatedProjects?.length) {
+      // If no related projects specified, find projects with similar tags or category
       return projects.value
-        .filter((p: Project) => project.relatedProjects?.includes(p.id))
+        .filter(
+          (p) =>
+            p.id !== project.id &&
+            (p.category === project.category ||
+              p.tech_tags.some((tag) =>
+                project.tech_tags.map((t) => t.tag_name).includes(tag.tag_name)
+              ))
+        )
         .slice(0, 3);
     }
 
-    // Find projects with similar tags or category
-    return projects.value
-      .filter(
-        (p: Project) =>
-          p.id !== project.id &&
-          (p.category === project.category ||
-            p.tech_tags.some((tag) =>
-              project.tech_tags.map((t) => t.tag_name).includes(tag.tag_name)
-            ))
-      )
-      .slice(0, 3);
-  };
+    // Return projects based on the relatedProjects IDs
+    return projects.value.filter((p) => project.relatedProjects?.includes(p.id)).slice(0, 3);
+  }
 
-  const filterByCategory = (category: ProjectCategory): Project[] => {
-    if (!category) return projects.value;
-    return projects.value.filter((project: Project) => project.category === category);
-  };
+  function filterByCategory(category: ProjectCategory): Project[] {
+    return projects.value.filter((project) => project.category === category);
+  }
 
-  const filterByStatus = (status: ProjectStatus): Project[] => {
-    if (!status) return projects.value;
-    return projects.value.filter((project: Project) => project.status === status);
-  };
+  function filterByStatus(status: ProjectStatus): Project[] {
+    return projects.value.filter((project) => project.status === status);
+  }
 
-  const searchProjects = (query: string): Project[] => {
-    if (!query) return projects.value;
-
+  function searchProjects(query: string): Project[] {
     const searchTerm = query.toLowerCase().trim();
     if (!searchTerm) return projects.value;
 
     return projects.value.filter(
-      (project: Project) =>
+      (project) =>
         project.project_name.toLowerCase().includes(searchTerm) ||
         project.description.toLowerCase().includes(searchTerm) ||
         project.overview.toLowerCase().includes(searchTerm) ||
         project.tech_tags.some((tag) => tag.tag_name.toLowerCase().includes(searchTerm))
     );
-  };
+  }
 
-  // Initialize projects on mount
-  onMounted(async () => {
-    try {
-      await fetchProjects();
-    } catch (err) {
-      console.error('Failed to load initial projects:', err);
-    }
+  // Fetch projects on initialization
+  onMounted(() => {
+    fetchProjects();
   });
 
   return {
-    projects: readonly(projects),
+    projects,
     featuredProjects,
-    isLoading: readonly(isLoading),
-    error: readonly(error),
+    recentProjects,
+    isLoading,
+    error,
     fetchProjects,
     fetchProjectBySlug,
     toggleFavorite,
@@ -189,6 +139,5 @@ export function useProjects(): UseProjectsComposable {
     filterByCategory,
     filterByStatus,
     searchProjects,
-    clearError,
   };
 }

@@ -159,13 +159,15 @@ onMounted(async () => {
   try {
     // Try to get session from the API
     const session = await $fetch('/api/auth/session').catch(() => null)
-    
-    if (session?.user?.name) {
+    // Type guard for session with user
+    function isSessionWithUser(obj: any): obj is { user: { name: string; role?: string } } {
+      return obj && typeof obj === 'object' && obj.user && typeof obj.user.name === 'string'
+    }
+    if (isSessionWithUser(session)) {
       userName.value = session.user.name
       accessLevel.value = session.user.role?.toUpperCase() || 'USER'
     }
-  } catch (error) {
-    console.log('No auth session available')
+  } catch {
     // Keep default values
   }
 })

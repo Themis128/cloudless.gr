@@ -1,36 +1,15 @@
 <template>
-  <v-container fluid class="tech-stack-page d-flex align-center justify-center pa-8">
-    <v-card
-      elevation="4"
-      rounded="xl"
-      class="tech-stack-card text-center"
-      max-width="400"
-      :color="cardColor"
-      hover
-    >
-      <v-card-text class="pa-8">
-        <v-card-title class="text-h5 font-weight-bold text-primary mb-6 pa-0">
-          Our Tech Stack
-        </v-card-title>
-
-        <v-list class="tech-list bg-transparent">
-          <v-list-item v-for="tech in techStack" :key="tech" class="tech-item px-0">
-            <v-list-item-title class="text-body-1 text-medium-emphasis text-center">
-              <v-chip color="primary" variant="tonal" size="default" class="ma-1">
-                {{ tech }}
-              </v-chip>
-            </v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-card-text>
-    </v-card>
-  </v-container>
+  <div class="tech-stack-page">
+    <div class="tech-stack-card">
+      <h3>Our Tech Stack</h3>
+      <ul>
+        <li v-for="tech in techStack" :key="tech">{{ tech }}</li>
+      </ul>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from '#imports';
-import { useTheme } from 'vuetify';
-
 interface TechStackProps {
   techStack: string[];
 }
@@ -38,33 +17,54 @@ interface TechStackProps {
 withDefaults(defineProps<TechStackProps>(), {
   techStack: () => [],
 });
-
-const theme = useTheme();
-
-const cardColor = computed(() => {
-  return theme.global.current.value.dark ? 'surface-variant' : 'rgba(255, 255, 255, 0.95)';
-});
 </script>
 
 <style scoped>
 .tech-stack-page {
   min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg, #f8fafc);
+  padding: 2rem;
 }
 
 .tech-stack-card {
-  transition: transform 0.2s ease-in-out;
+  background: var(--color-card, #fff);
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.07);
+  padding: 2.5rem 2rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  transition: box-shadow 0.2s;
 }
 
+.tech-stack-card:focus-within,
 .tech-stack-card:hover {
-  transform: translateY(-4px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12);
 }
 
-.tech-list {
-  min-height: auto;
+h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--color-primary, #222);
 }
 
-.tech-item {
-  min-height: auto;
-  padding: 2px 0;
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  font-size: 1.1rem;
+  color: var(--color-text, #555);
+  margin-bottom: 0.5rem;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary, #2563eb);
+  outline-offset: 2px;
 }
 </style>

@@ -27,7 +27,7 @@ This directory contains VS Code settings and configuration files to enhance deve
 - Common development tasks as VS Code tasks
 - Build, dev, and preview tasks for Nuxt
 - Testing tasks
-- Database tasks (Supabase)
+- Prisma database tasks
 - Utility tasks (cleaning cache, updating dependencies)
 
 ### extensions.json

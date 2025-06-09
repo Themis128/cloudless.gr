@@ -23,15 +23,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { navigateTo, useRoute } from '#app'
+import { ref } from '#imports'
+import { useUserSession } from '~/composables/useUserSession'
+import { usePostLoginRedirect } from '~/composables/usePostLoginRedirect'
 
 const email = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
-const route = useRoute()
+const { user } = useUserSession()
+const { redirect } = usePostLoginRedirect()
 
 async function login() {
   loading.value = true
@@ -46,9 +48,14 @@ async function login() {
       }
     })
 
-    if (response.authenticated) {
-      // ✅ Redirect to intended destination or fallback to dashboard
-      await navigateTo(route.query.redirect?.toString() || '/dashboard')
+    // Type guard for response
+    function isAuthResponse(obj: any): obj is { authenticated?: boolean; user?: { role?: string } } {
+      return obj && typeof obj === 'object'
+    }
+
+    if (isAuthResponse(response) && response.authenticated) {
+      user.value = response.user
+      await redirect()
     } else {
       error.value = 'Login failed. Please check your credentials.'
     }
@@ -58,6 +65,13 @@ async function login() {
     loading.value = false
   }
 }
+
+// Add page meta for public access and SSR best practice
+// composables/usePostLoginRedirect.ts already handles SSR-safe redirects
+definePageMeta({
+  public: true,
+  layout: 'auth',
+})
 </script>
 
 <style scoped>

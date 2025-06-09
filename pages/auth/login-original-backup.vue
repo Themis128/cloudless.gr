@@ -152,36 +152,19 @@ async function login() {
       credentials: 'include' // CRITICAL: Ensures cookies are sent/received
     })
 
-    const responseTime = Date.now() - startTime
-    console.log(`✅ [Client] Login response (${responseTime}ms):`, response)
-    console.log('🔍 [Client] Response type:', typeof response)
-    console.log('🔍 [Client] Response keys:', Object.keys(response || {}))
-    console.log('🔍 [Client] Response.authenticated:', response.authenticated)
-    console.log('🔍 [Client] Response.success:', response.success)
-    console.log('🔍 [Client] Response.user:', response.user ? 'User object present' : 'No user object')
+    // Type guard for response
+    function isAuthResponse(obj: any): obj is { authenticated?: boolean; success?: boolean; user?: { role?: string }; message?: string } {
+      return obj && typeof obj === 'object'
+    }
 
-    if (response && response.authenticated === true) {
+    if (isAuthResponse(response) && response.authenticated === true) {
       const redirectTo = route.query.redirect?.toString() || '/dashboard'
-      console.log('🎯 [Client] Login successful! Redirecting to:', redirectTo)
-      console.log('🔄 [Client] About to call navigateTo...')
-      console.log('⏰ [Client] Pre-redirect timestamp:', new Date().toISOString())
-        // Show success state briefly before redirect
       success.value = true
-      
-      console.log('🚀 [Client] Executing redirect...')
-      console.log('🔧 [Client] Using window.location.href for reliable redirect...')
-      
-      // Use direct window.location.href to bypass any Nuxt navigation issues
       setTimeout(() => {
-        console.log('🎯 [Client] Redirecting now to:', redirectTo)
         window.location.href = redirectTo
-      }, 1000) // Give user time to see success message
-      
-      console.log('⏰ [Client] Post-redirect timestamp:', new Date().toISOString())
+      }, 1000)
     } else {
-      console.log('❌ [Client] Authentication failed - response.authenticated is false or missing')
-      console.log('🔍 [Client] Full response object:', JSON.stringify(response, null, 2))
-      error.value = response?.message || 'Login failed. Please check your credentials.'
+      error.value = isAuthResponse(response) && response.message ? response.message : 'Login failed. Please check your credentials.'
     }
   } catch (err: any) {
     const errorTime = Date.now() - startTime

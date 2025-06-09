@@ -1,99 +1,101 @@
-import { H3Event, setCookie } from 'h3';
-import jwt from 'jsonwebtoken';
+// API endpoint for admin authentication
+import crypto from 'crypto';
+import { createError, defineEventHandler, readBody, setCookie } from 'h3';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
-const JWT_EXPIRY = '24h'; // 24 hours
+// Load environment variables
+const JWT_SECRET = process.env.NUXT_JWT_SECRET || 'your-secret-key-change-this-in-production';
+const JWT_EXPIRES_IN = process.env.NUXT_JWT_EXPIRES_IN || '7d'; // 7 days
+const COOKIE_NAME = process.env.NUXT_AUTH_COOKIE_NAME || 'auth_token';
 
-export default defineEventHandler(async (event: H3Event) => {
-  if (event.node.req.method !== 'POST') {
-    throw createError({
+// Function to hash passwords
+function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+// Function to generate JWT token
+function generateToken(user: any): string {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { password, ...userWithoutPassword } = user;
+  return jwt.sign(
+    userWithoutPassword,
+    JWT_SECRET as string,
+    {
+      expiresIn: JWT_EXPIRES_IN as string | number,
+    } as SignOptions
+  );
+}
+
+// Admin credentials (in real production, this would be in a database)
+// In this example, we're using the credentials mentioned in README: admin/cloudless2025
+const adminUser = {
+  id: 'admin-1',
+  email: 'admin@cloudless.gr',
+  username: 'admin',
+  password: hashPassword('cloudless2025'), // Store hashed password
+  name: 'Admin User',
+  createdAt: '2025-01-01T00:00:00Z',
+  role: 'admin',
+};
+
+export default defineEventHandler(async (event) => {
+  // Only accept POST requests
+  const method = event.node.req.method;
+  if (method !== 'POST') {
+    return createError({
       statusCode: 405,
-      statusMessage: 'Method not allowed',
+      message: 'Method not allowed',
     });
   }
 
   try {
     const body = await readBody(event);
-    const email = body.email?.toLowerCase();
-    const password = body.password;
+    const { username, password } = body;
 
-    if (!email || !password) {
-      throw createError({
+    if (!username || !password) {
+      return createError({
         statusCode: 400,
-        statusMessage: 'Email and password are required',
+        message: 'Username and password are required',
       });
     }
 
-    // Get admin credentials from environment
-    const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'admin@cloudless.gr').toLowerCase();
-    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'cloudless2025';
+    // For admin login, check both username or email
+    const isUsernameMatch = adminUser.username === username;
+    const isEmailMatch = adminUser.email === username;
+    const isPasswordMatch = adminUser.password === hashPassword(password);
 
-    console.log('Admin login attempt:', { email, expectedEmail: ADMIN_EMAIL });
+    // Check if credentials match admin user
+    if ((isUsernameMatch || isEmailMatch) && isPasswordMatch) {
+      // Generate JWT token with admin role
+      const token = generateToken(adminUser);
 
-    // Authentication check
-    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-      console.error('Authentication failed: Invalid credentials');
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid credentials',
+      // Set HTTP-only cookie with the token
+      setCookie(event, COOKIE_NAME, token, {
+        httpOnly: true,
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
+        sameSite: 'strict',
       });
-    }    // Create user payload
-    const payload = {
-      id: 'dev-admin',
-      email: email,
-      role: 'admin'
-    };
 
-    console.log('Creating JWT with payload:', payload);
-    console.log('JWT_SECRET length:', JWT_SECRET.length);
-
-    // Generate JWT token
-    let token;
-    try {
-      token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      console.log('JWT token generated successfully, length:', token.length);
-    } catch (jwtError) {
-      console.error('JWT generation error:', jwtError);
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Token generation failed',
-      });
+      // Return user without password
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...userWithoutPassword } = adminUser;
+      return {
+        user: userWithoutPassword,
+        token, // Also return the token for client-side storage if needed
+      };
     }
-    
-    // Calculate expiration timestamp (24 hours from now)
-    const expiresAt = Math.floor(Date.now() / 1000) + (24 * 60 * 60); // Unix timestamp
 
-    console.log('Token generated successfully:', { 
-      tokenLength: token.length, 
-      expiresAt,
-      expiresAtDate: new Date(expiresAt * 1000).toISOString()
+    return createError({
+      statusCode: 401,
+      message: 'Invalid admin credentials',
     });
-
-    // Set secure cookie
-    setCookie(event, 'admin_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 24 * 60 * 60 // 24 hours in seconds
-    });
-
-    const response = {
-      success: true,
-      message: 'Admin login successful',
-      user: payload,
-      token: token,
-      expiresAt: expiresAt
-    };
-
-    console.log('Admin login response:', response);
-    return response;
-
   } catch (error) {
     console.error('Admin login error:', error);
-    throw createError({
-      statusCode: (error as any).statusCode || 500,
-      statusMessage: (error as any).statusMessage || 'Internal server error',
+    return createError({
+      statusCode: 500,
+      message: 'Internal server error',
     });
   }
 });

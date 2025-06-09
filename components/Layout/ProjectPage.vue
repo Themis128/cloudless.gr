@@ -85,12 +85,13 @@
 
         <v-card>
           <v-card-title>Related Projects</v-card-title>
-          <v-list>            <v-list-item
+          <v-list>
+            <v-list-item
               v-for="relatedProject in relatedProjects"
               :key="relatedProject.id"
               :to="`/projects/${relatedProject.slug}`"
             >
-              <template v-slot:[`prepend`]>
+              <template v-slot:prepend>
                 <v-avatar size="40" class="mr-2">
                   <v-img :src="relatedProject.image" cover></v-img>
                 </v-avatar>
@@ -104,47 +105,16 @@
   </v-container>
 </template>
 
-<script setup lang="ts">
-// In Nuxt 3 with <script setup>, ref and computed are auto-imported
-// No need to import them manually
-
-interface Project {
-  id: string;
-  slug: string;
-  title: string;
-  description: string;
-  fullDescription: string;
-  image: string;
-  client: string;
-  date: string;
-  category: string;
-  technologies: string[];
-  liveUrl?: string;
-  githubUrl?: string;
-}
-
-interface RelatedProject {
-  id: string;
-  slug: string;
-  title: string;
-  image: string;
-}
-
-interface Breadcrumb {
-  title: string;
-  disabled: boolean;
-  to?: string;
-}
+<script setup>
+import { computed, ref } from 'vue';
+import { useRoute } from 'vue-router';
 
 const route = useRoute();
 
-// Get project slug from route params
-const projectSlug = computed(() => String(route.params.slug || ''));
-
-// Example project data (in a real app, this would be fetched based on the slug)
-const project = ref<Project>({
+// Example project data
+const project = ref({
   id: '1',
-  slug: projectSlug.value || 'e-commerce-platform',
+  slug: 'e-commerce-platform',
   title: 'E-Commerce Platform',
   description:
     'A complete solution for online retail with payment processing and inventory management.',
@@ -160,7 +130,7 @@ const project = ref<Project>({
 });
 
 // Breadcrumbs for navigation
-const breadcrumbs = computed<Breadcrumb[]>(() => [
+const breadcrumbs = computed(() => [
   {
     title: 'Home',
     disabled: false,
@@ -178,7 +148,7 @@ const breadcrumbs = computed<Breadcrumb[]>(() => [
 ]);
 
 // Related projects
-const relatedProjects: RelatedProject[] = [
+const relatedProjects = [
   {
     id: '2',
     slug: 'healthcare-dashboard',

@@ -1,204 +1,263 @@
 <template>
-  <div class="position-relative">
-    <v-container fluid :class="containerClasses">
-      <v-row justify="center" align="center" class="min-h-screen">
-        <v-col cols="12" sm="10" md="8" lg="6" xl="4">
-          <v-card elevation="3" rounded="lg" :class="cardClasses" :color="cardColor">
-            <v-card-title :class="titleClasses">Sign Up</v-card-title>
+  <v-container fluid class="fill-height bg-surface">
+    <v-row justify="center" align="center">
+      <v-col cols="12" sm="8" md="6" lg="4">
+        <v-card class="pa-4 elevation-8">
+          <v-card-title class="text-center text-h4 font-weight-bold pt-8 pb-4">
+            Create your Account
+          </v-card-title>
+          <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4">
+            {{ error }}
+          </v-alert>
+
+          <v-form @submit.prevent="handleSignup" v-model="formValid">
             <v-card-text>
-              <p :class="descriptionClasses">Create your account to get started.</p>
+              <v-text-field
+                v-model="fullName"
+                label="Full Name"
+                type="text"
+                required
+                :rules="nameRules"
+                prepend-inner-icon="mdi-account"
+                variant="outlined"
+                placeholder="Enter your full name"
+                autocomplete="name"
+                class="mb-2"
+              ></v-text-field>
 
-              <form @submit.prevent="handleSignup" class="login-form">
-                <v-text-field
-                  v-model="form.email"
-                  label="Email"
-                  type="email"
-                  :rules="[rules.required, rules.email]"
-                  required
-                  variant="outlined"
-                  :disabled="loading"
-                />
+              <v-text-field
+                v-model="email"
+                label="Email"
+                type="email"
+                required
+                :rules="emailRules"
+                prepend-inner-icon="mdi-email"
+                variant="outlined"
+                placeholder="Enter your email"
+                autocomplete="email"
+                class="mb-2"
+              ></v-text-field>
 
-                <v-text-field
-                  v-model="form.password"
-                  label="Password"
-                  :rules="[rules.required]"
-                  required
-                  variant="outlined"
-                  :disabled="loading"
-                  :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-                  @click:append-inner="showPassword = !showPassword"
-                  :type="showPassword ? 'text' : 'password'"
-                />
+              <v-text-field
+                v-model="password"
+                label="Password"
+                required
+                :rules="passwordRules"
+                prepend-inner-icon="mdi-lock"
+                variant="outlined"
+                placeholder="Enter your password (min 6 characters)"
+                autocomplete="new-password"
+                class="mb-4"
+                :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                @click:append-inner="showPassword = !showPassword"
+                :type="showPassword ? 'text' : 'password'"
+              ></v-text-field>
 
-                <div class="d-flex flex-column gap-4 mt-6">
-                  <v-alert
-                    v-if="error"
-                    type="error"
-                    variant="tonal"
-                    :text="error"
-                    class="mb-4"
-                  />
-                  <v-alert
-                    v-if="successMessage"
-                    type="success"
-                    variant="tonal"
-                    :text="successMessage"
-                    class="mb-4"
-                  />
-
-                  <v-btn
-                    type="submit"
-                    color="primary"
-                    :loading="loading"
-                    block
-                    :size="buttonSize"
-                  >
-                    Sign Up
-                  </v-btn>
-
-                  <v-divider class="my-4"></v-divider>
-
-                  <p class="text-center text-body-2">
-                    Already have an account?
+              <v-checkbox v-model="agreeToTerms" color="primary" hide-details class="mb-4">
+                <template #label>
+                  <span class="text-body-2">
+                    I agree to the
                     <v-btn
                       variant="text"
+                      color="primary"
                       size="small"
-                      class="font-weight-medium px-2"
-                      to="/auth/login"
+                      to="/terms"
+                      class="pa-0 text-decoration-underline"
                     >
-                      Sign In
+                      Terms of Service
                     </v-btn>
-                  </p>
-                </div>
-              </form>
+                  </span>
+                </template>
+              </v-checkbox>
             </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
-  </div>
+
+            <v-card-actions class="px-4 pb-4">
+              <v-btn
+                type="submit"
+                color="primary"
+                size="large"
+                block
+                :loading="loading"
+                :disabled="loading || !agreeToTerms || !formValid"
+              >
+                {{ loading ? 'Creating account...' : 'Create Account' }}
+              </v-btn>
+            </v-card-actions>
+          </v-form>
+
+          <v-divider class="mb-4"></v-divider>
+
+          <div class="text-center pb-4">
+            <span class="text-body-2">Already have an account?</span>
+            <v-btn variant="text" color="primary" to="/auth/login" class="ml-1"> Log in </v-btn>
+          </div>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup lang="ts">
-definePageMeta({
-  layout: 'auth',
-  public: true  // Signup page should be accessible to everyone
-})
+  import { ref } from 'vue';
+  const { signUp, loading, error } = useSupabaseAuth();
 
-import { computed, ref } from '#imports'
-import { useRouter } from 'vue-router'
-import { useDisplay } from 'vuetify'
-import { useSupabaseClient } from '#imports'
-import { validateEmail } from '~/utils/auth-client'
+  const formValid = ref(false);
+  const email = ref('');
+  const password = ref('');
+  const fullName = ref('');
+  const showPassword = ref(false);
+  const agreeToTerms = ref(false);
 
-const router = useRouter()
-const { mobile } = useDisplay()
-const supabase = useSupabaseClient()
+  const nameRules = [
+    (v: string) => !!v || 'Full name is required',
+    (v: string) => v.length >= 2 || 'Name must be at least 2 characters',
+  ];
 
-const form = ref({
-  email: '',
-  password: ''
-})
+  const emailRules = [
+    (v: string) => !!v || 'Email is required',
+    (v: string) => /.+@.+\..+/.test(v) || 'E-mail must be valid',
+  ];
 
-const showPassword = ref(false)
-const loading = ref(false)
-const error = ref('')
-const successMessage = ref('')
+  const passwordRules = [
+    (v: string) => !!v || 'Password is required',
+    (v: string) => v.length >= 8 || 'Password must be at least 8 characters',
+    (v: string) => /[A-Z]/.test(v) || 'Password must contain at least one uppercase letter',
+    (v: string) => /[0-9]/.test(v) || 'Password must contain at least one number',
+  ];
 
-const rules = {
-  required: (v: string) => !!v || 'This field is required',
-  email: (v: string) => validateEmail(v) || 'Invalid email address'
-}
+  const handleSignup = async () => {
+    if (!formValid.value || !agreeToTerms.value) return;
 
-const containerClasses = computed(() => ['index-container', mobile ? 'px-4 py-4' : 'px-6 py-8'])
-const cardClasses = computed(() => ['text-center login-card backdrop-blur', mobile ? 'pa-6' : 'pa-8'])
-const titleClasses = computed(() => ['font-weight-bold text-primary mb-4', mobile ? 'text-h4' : 'text-h3'])
-const descriptionClasses = computed(() => ['text-medium-emphasis', mobile ? 'text-body-2 mb-6' : 'text-body-1 mb-8'])
-const buttonSize = computed(() => (mobile ? 'large' : 'x-large'))
-const cardColor = computed(() => 'rgb(255, 255, 255, 0.85)')
+    await signUp(email.value, password.value, {
+      full_name: fullName.value,
+    });
 
-const handleSignup = async () => {
-  error.value = ''
-  successMessage.value = ''
-  loading.value = true
-
-  if (!form.value.email) {
-    error.value = 'Email is required'
-    loading.value = false
-    return
-  }
-  if (!form.value.password) {
-    error.value = 'Password is required'
-    loading.value = false
-    return
-  }
-
-  try {
-    const { error: signupError } = await supabase.auth.signUp({
-      email: form.value.email,
-      password: form.value.password
-    })
-    if (signupError) {
-      error.value = signupError.message
-    } else {
-      successMessage.value = 'Account created successfully! Please check your email and click the confirmation link to activate your account.'
-      // Clear the form
-      form.value.email = ''
-      form.value.password = ''
-      // Don't redirect immediately - let user see the message
+    if (!error.value) {
+      // Show success message and redirect to login
+      await navigateTo('/auth/login?message=verification-email-sent');
     }
-  } catch (err) {
-    error.value = 'An unexpected error occurred'
-    console.error('Signup error:', err)
-  } finally {
-    loading.value = false
-  }
-}
+  };
+  // Set page meta
+  definePageMeta({
+    layout: 'default',
+    public: true,
+  });
+
+  // Set page title
+  useHead({
+    title: 'Sign Up - Cloudless',
+  });
 </script>
 
 <style scoped>
-.position-relative {
-  position: relative;
-  width: 100%;
-  min-height: 100vh;
-  overflow: hidden;
-}
+  .auth-container {
+    min-height: 90vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+  }
 
-.index-container {
-  background: transparent;
-  z-index: 1;
-  position: relative;
-}
+  .auth-card {
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    width: 100%;
+    max-width: 400px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
 
-.min-h-screen {
-  min-height: 90vh;
-}
+  h1 {
+    color: #1e40af;
+    font-size: 1.8rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+  }
 
-.login-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
+  .error-message {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: rgb(185, 28, 28);
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    text-align: center;
+  }
 
-.backdrop-blur {
-  position: relative;
-  overflow: hidden;
-}
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
 
-.backdrop-blur::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  z-index: -1;
-}
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 
-.login-form {
-  max-width: 100%;
-}
+  label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #334155;
+  }
+
+  input {
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    border: 1px solid #cbd5e1;
+    background-color: white;
+    font-size: 1rem;
+    width: 100%;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+  }
+
+  input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  }
+
+  .auth-button {
+    background-color: #1e40af;
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 0.75rem;
+  }
+
+  .auth-button:hover {
+    background-color: #1e3a8a;
+  }
+
+  .auth-button:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+  }
+
+  .auth-links {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: #64748b;
+  }
+
+  .auth-links a {
+    color: #2563eb;
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .auth-links a:hover {
+    text-decoration: underline;
+  }
 </style>

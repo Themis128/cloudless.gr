@@ -1,4 +1,4 @@
-import { defineEventHandler, getMethod, readBody, createError } from 'h3';
+import { defineEventHandler, getMethod, readBody, createError, getHeader } from 'h3';
 import type { ContactFormData, ContactSubmissionInsert } from '~/types/database';
 import { getClientIP } from '../utils/helpers';
 import { getSupabaseServerClient } from '../../utils/supabase';
@@ -86,12 +86,17 @@ export default defineEventHandler(async (_event) => {
     }
 
     // Log successful submission
-    console.log(`Contact submission received from ${contactData.email} (ID: ${data.id})`);
+    console.log(`Contact submission received from ${contactData.email} (ID: ${data?.id})`);
+
+    // Type guard for data
+    function isContactInsertResult(obj: any): obj is { id: string } {
+      return obj && typeof obj === 'object' && typeof obj.id === 'string';
+    }
 
     return {
       success: true,
       message: 'Contact form submitted successfully',
-      submissionId: data.id,
+      submissionId: isContactInsertResult(data) ? data.id : undefined,
     };
   } catch (error: any) {
     console.error('Contact form submission error:', error);

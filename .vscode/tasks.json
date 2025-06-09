@@ -1,625 +1,121 @@
 {
   "version": "2.0.0",
   "tasks": [
-    // === Core Development Tasks ===
     {
-      "label": "dev",
-      "type": "npm",
-      "script": "dev",
-      "problemMatcher": ["$vue-tsc", "$eslint-stylish"],
+      "label": "Dev Server",
+      "type": "shell",
+      "command": "npx nuxt dev",
+      "problemMatcher": [],
       "group": {
         "kind": "build",
         "isDefault": true
       },
       "presentation": {
-        "echo": true,
         "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      },
-      "isBackground": true,
-      "runOptions": {
-        "instanceLimit": 1
+        "panel": "new"
       }
     },
     {
-      "label": "build",
-      "type": "npm",
-      "script": "build",
-      "problemMatcher": ["$vue-tsc", "$eslint-stylish"],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared"
-      }
-    },
-    {
-      "label": "preview",
-      "type": "npm",
-      "script": "preview",
+      "label": "Build",
+      "type": "shell",
+      "command": "npx nuxt build",
       "problemMatcher": [],
       "group": "build",
-      "dependsOn": "build"
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
     },
     {
-      "label": "lint",
-      "type": "npm",
-      "script": "lint",
+      "label": "Generate Static",
+      "type": "shell",
+      "command": "npx nuxt generate",
+      "problemMatcher": [],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Preview",
+      "type": "shell",
+      "command": "npx nuxt preview",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Lint",
+      "type": "shell",
+      "command": "npm run lint",
       "problemMatcher": ["$eslint-stylish"],
-      "group": "test"
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
     },
     {
-      "label": "type-check",
+      "label": "Test",
       "type": "shell",
-      "command": "npx vue-tsc --noEmit",
-      "problemMatcher": ["$tsc"],
-      "group": "test"
-    },
-    {
-      "label": "format",
-      "type": "npm",
-      "script": "format",
+      "command": "npm run test",
       "problemMatcher": [],
-      "group": "build"
-    },
-
-    // === Docker Development Tasks ===
-    {
-      "label": "Docker: Initialize Environment",
-      "type": "npm",
-      "script": "docker:init",
-      "group": "build",
       "presentation": {
-        "echo": true,
         "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Docker: Start Development",
-      "type": "npm",
-      "script": "docker:dev",
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true
-      },
-      "isBackground": true,
-      "problemMatcher": [
-        {
-          "pattern": [
-            {
-              "regexp": ".*",
-              "file": 1,
-              "location": 2,
-              "message": 3
-            }
-          ],
-          "background": {
-            "activeOnStart": true,
-            "beginsPattern": "^.*Starting.*",
-            "endsPattern": "^.*ready.*|^.*listening.*"
-          }
-        }
-      ]
-    },
-    {
-      "label": "Docker: Start Development (Detached)",
-      "type": "npm",
-      "script": "docker:dev:detached",
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "silent",
-        "focus": false,
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Docker: Start Production",
-      "type": "npm",
-      "script": "docker:prod",
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared"
-      },
-      "isBackground": true,
-      "problemMatcher": []
-    },
-    {
-      "label": "Docker: Stop All Containers",
-      "type": "npm",
-      "script": "docker:stop",
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Docker: Clean All Data",
-      "type": "npm",
-      "script": "docker:clean",
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Docker: View Logs",
-      "type": "npm",
-      "script": "docker:logs",
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "isBackground": true,
-      "problemMatcher": []
-    },
-    {
-      "label": "Docker: Open Shell",
-      "type": "npm",
-      "script": "docker:shell",
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
         "panel": "new"
-      },
-      "problemMatcher": []
+      }
     },
     {
-      "label": "Docker: Check Status",
-      "type": "npm",
-      "script": "docker:status",
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-
-    // === Testing Tasks ===
-    {
-      "label": "Test: All Tests",
-      "type": "npm",
-      "script": "test:suite",
-      "group": "test",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "problemMatcher": ["$vitest"]
-    },
-    {
-      "label": "Test: Unit Tests",
-      "type": "npm",
-      "script": "test:unit",
-      "group": "test",
-      "problemMatcher": ["$vitest"]
-    },
-    {
-      "label": "Test: Coverage",
-      "type": "npm",
-      "script": "test:coverage",
-      "group": "test",
-      "problemMatcher": ["$vitest"]
-    },
-    {
-      "label": "Test: Python Platform",
-      "type": "npm",
-      "script": "test:platform",
-      "group": "test",
-      "problemMatcher": []
-    },
-
-    // === Quality Assurance Tasks ===
-    {
-      "label": "QA: Full Quality Check",
-      "type": "npm",
-      "script": "fix-all",
-      "group": "test",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "problemMatcher": ["$eslint-stylish", "$tsc"]
-    },
-    {
-      "label": "QA: Auto Fix All Issues",
-      "type": "npm",
-      "script": "auto-fix",
-      "group": "test",
-      "problemMatcher": ["$eslint-stylish"]
-    },
-    {
-      "label": "QA: Health Check",
-      "type": "npm",
-      "script": "health",
-      "group": "test",
-      "problemMatcher": []
-    },
-
-    // === Utility Tasks ===
-    {
-      "label": "Utility: Clean Project",
-      "type": "npm",
-      "script": "clean",
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Utility: Reinstall Dependencies",
-      "type": "npm",
-      "script": "reinstall",
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-
-    // === Git Workflow Tasks ===
-    {
-      "label": "Git: Check Status",
-      "type": "npm",
-      "script": "git:check",
-      "group": "build",
-      "problemMatcher": []
-    },
-    {
-      "label": "Git: Commit Changes",
-      "type": "npm",
-      "script": "git:commit",
-      "group": "build",
-      "problemMatcher": []
-    },
-    {
-      "label": "Git: Sync Repository",
-      "type": "npm",
-      "script": "git:sync",
-      "group": "build",
-      "problemMatcher": []
-    },
-
-    // === Python Environment Tasks ===
-    {
-      "label": "Python: Setup Shared Environment",
+      "label": "Cypress Open",
       "type": "shell",
-      "command": "py",
-      "args": ["-m", "pip", "install", "--upgrade", "pip", "&&", "py", "setup_shared_venv.py"],
-      "windows": {
-        "command": "powershell",
-        "args": [
-          "-Command",
-          "if (Get-Command py -ErrorAction SilentlyContinue) { py setup_shared_venv.py } else { Write-Host 'Python not found. Please install Python from python.org or Microsoft Store' -ForegroundColor Red }"
-        ]
-      },
-      "linux": {
-        "command": "bash",
-        "args": ["-c", "python3 setup_shared_venv.py"]
-      },
-      "osx": {
-        "command": "bash",
-        "args": ["-c", "python3 setup_shared_venv.py"]
-      },
-      "group": "build",
+      "command": "npx cypress open",
+      "problemMatcher": [],
       "presentation": {
-        "echo": true,
         "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Python: Activate Virtual Environment",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-Command",
-        "if (Test-Path '.\\shared_venv\\Scripts\\Activate.ps1') { .\\shared_venv\\Scripts\\Activate.ps1 } else { Write-Host 'Virtual environment not found. Run Python: Setup Shared Environment first.' -ForegroundColor Yellow }"
-      ],
-      "windows": {
-        "command": "powershell",
-        "args": [
-          "-Command",
-          "if (Test-Path '.\\shared_venv\\Scripts\\Activate.ps1') { .\\shared_venv\\Scripts\\Activate.ps1 } else { Write-Host 'Virtual environment not found. Run Python: Setup Shared Environment first.' -ForegroundColor Yellow }"
-        ]
-      },
-      "linux": {
-        "command": "bash",
-        "args": [
-          "-c",
-          "if [ -f ./shared_venv/bin/activate ]; then source ./shared_venv/bin/activate; else echo 'Virtual environment not found. Run Python: Setup Shared Environment first.'; fi"
-        ]
-      },
-      "osx": {
-        "command": "bash",
-        "args": [
-          "-c",
-          "if [ -f ./shared_venv/bin/activate ]; then source ./shared_venv/bin/activate; else echo 'Virtual environment not found. Run Python: Setup Shared Environment first.'; fi"
-        ]
-      },
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
         "panel": "new"
-      },
-      "problemMatcher": []
+      }
     },
     {
-      "label": "Python: Install Python (Windows)",
+      "label": "Prisma Generate",
       "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-Command",
-        "Start-Process 'https://www.python.org/downloads/windows/' ; Write-Host 'Opening Python download page. Please install Python 3.9+ and restart VS Code.' -ForegroundColor Green"
-      ],
-      "windows": {
-        "command": "powershell",
-        "args": [
-          "-Command",
-          "Start-Process 'https://www.python.org/downloads/windows/' ; Write-Host 'Opening Python download page. Please install Python 3.9+ and restart VS Code.' -ForegroundColor Green"
-        ]
-      },
-      "group": "build",
+      "command": "npx prisma generate",
+      "problemMatcher": [],
       "presentation": {
-        "echo": true,
         "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "problemMatcher": []
+        "panel": "new"
+      }
     },
     {
-      "label": "Python: Install Requirements",
+      "label": "Prisma Studio",
       "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-Command",
-        "if (Test-Path '.\\shared_venv\\Scripts\\python.exe') { .\\shared_venv\\Scripts\\python.exe -m pip install -r requirements.txt } else { Write-Host 'Virtual environment not found. Run Python: Setup Shared Environment first.' -ForegroundColor Yellow }"
-      ],
-      "windows": {
-        "command": "powershell",
-        "args": [
-          "-Command",
-          "if (Test-Path '.\\shared_venv\\Scripts\\python.exe') { .\\shared_venv\\Scripts\\python.exe -m pip install -r requirements.txt } else { Write-Host 'Virtual environment not found. Run Python: Setup Shared Environment first.' -ForegroundColor Yellow }"
-        ]
-      },
-      "linux": {
-        "command": "bash",
-        "args": [
-          "-c",
-          "if [ -f ./shared_venv/bin/python ]; then ./shared_venv/bin/python -m pip install -r requirements.txt; else echo 'Virtual environment not found. Run Python: Setup Shared Environment first.'; fi"
-        ]
-      },
-      "osx": {
-        "command": "bash",
-        "args": [
-          "-c",
-          "if [ -f ./shared_venv/bin/python ]; then ./shared_venv/bin/python -m pip install -r requirements.txt; else echo 'Virtual environment not found. Run Python: Setup Shared Environment first.'; fi"
-        ]
-      },
-      "group": "build",
+      "command": "npx prisma studio",
+      "problemMatcher": [],
       "presentation": {
-        "echo": true,
         "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "problemMatcher": []
+        "panel": "new"
+      }
     },
     {
-      "label": "Python: Complete Environment Setup",
+      "label": "Clean Cache",
       "type": "shell",
-      "command": "powershell",
-      "args": ["-ExecutionPolicy", "Bypass", "-File", "complete-python-setup.ps1"],
-      "windows": {
-        "command": "powershell",
-        "args": ["-ExecutionPolicy", "Bypass", "-File", "complete-python-setup.ps1"]
-      },
-      "group": "build",
+      "command": "npx nuxt cleanup",
+      "problemMatcher": [],
       "presentation": {
-        "echo": true,
         "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "problemMatcher": []
+        "panel": "new"
+      }
     },
     {
-      "label": "Environment: Validate Complete Setup",
+      "label": "Update Dependencies",
       "type": "shell",
-      "command": "powershell",
-      "args": ["-ExecutionPolicy", "Bypass", "-File", "test-environment.ps1"],
-      "windows": {
-        "command": "powershell",
-        "args": ["-ExecutionPolicy", "Bypass", "-File", "test-environment.ps1"]
-      },
-      "group": "test",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Python: Setup Development Environment",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "setup-dev-environment.ps1"
-      ],      "group": "build",
+      "command": "npm update",
+      "problemMatcher": [],
       "presentation": {
         "reveal": "always",
-        "panel": "new",
-        "clear": true
-      },
-      "problemMatcher": ["$msCompile", "$eslint-stylish", "$python"]
-    },
-    {
-      "label": "Test: Admin Auth (Quick)",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "test-admin-auth-quick.ps1"
-      ],
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "new",
-        "clear": true,
-        "focus": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Test: Admin Auth (Complete)",      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "test-admin-auth-complete.ps1"
-      ],
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "new",
-        "clear": true,
-        "focus": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Test: Middleware Protection",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "test-middleware-protection.ps1"
-      ],
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "new",
-        "clear": true,
-        "focus": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Test: JWT Validation",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "test-jwt-validation.ps1"
-      ],
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "new",
-        "clear": true,
-        "focus": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Test: Complete Auth Suite",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "test-auth-complete-suite.ps1"
-      ],
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "new",
-        "clear": true,
-        "focus": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Test: Complete Auth Suite (CI Mode)",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "test-auth-complete-suite.ps1",
-        "-GenerateReport",
-        "-ReportPath",
-        "ci-auth-report.json"
-      ],
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "new",
-        "clear": true,
-        "focus": true
-      },
-      "problemMatcher": []
+        "panel": "new"
+      }
     }
   ]
 }

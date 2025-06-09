@@ -1,4 +1,4 @@
-import { computed, readonly, ref } from '#imports';
+import { computed, readonly, ref } from 'vue';
 import type { ContactFormData } from '~/types/contact';
 
 export const useContactUs = () => {
@@ -20,14 +20,6 @@ export const useContactUs = () => {
   const isSuccess = ref(false);
   const error = ref('');
   const submissionId = ref('');
-  const isRefreshingToken = ref(false);
-
-  // Mock rate limit info for compatibility
-  const rateLimitInfo = ref({
-    remaining: 10,
-    exceeded: false,
-    resetTime: null,
-  });
 
   const isValid = computed(() => {
     return (
@@ -90,16 +82,21 @@ export const useContactUs = () => {
     }
 
     try {
-      const response = (await $fetch('/api/contact-submissions', {
+      const { data } = await $fetch('/api/contact', {
         method: 'POST',
         body: form.value,
-      })) as any;
+      });
 
-      if (response) {
+      if (data) {
         isSuccess.value = true;
-        submissionId.value = response.id || 'N/A';
+        submissionId.value = data.id || 'N/A';
         // Reset form
-        resetForm();
+        form.value = {
+          name: '',
+          email: '',
+          subject: '',
+          message: '',
+        };
       }
     } catch (err: any) {
       error.value = err.data?.message || 'Failed to send message. Please try again.';
@@ -108,46 +105,18 @@ export const useContactUs = () => {
     }
   };
 
-  const resetForm = () => {
-    form.value = {
-      name: '',
-      email: '',
-      subject: '',
-      message: '',
-    };
-    errors.value = {
-      name: [],
-      email: [],
-      subject: [],
-      message: [],
-    };
-    isSuccess.value = false;
-    error.value = '';
-  };
-
-  const refreshCsrfToken = async () => {
-    isRefreshingToken.value = true;
-    // Mock CSRF token refresh
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    isRefreshingToken.value = false;
-  };
-
   return {
-    form,
+    form: readonly(form),
     errors: readonly(errors),
     isSubmitting: readonly(isSubmitting),
     isSuccess: readonly(isSuccess),
     error: readonly(error),
     submissionId: readonly(submissionId),
-    rateLimitInfo: readonly(rateLimitInfo),
-    isRefreshingToken: readonly(isRefreshingToken),
     isValid,
     validateName,
     validateEmail,
     validateSubject,
     validateMessage,
     submitForm,
-    resetForm,
-    refreshCsrfToken,
   };
 };

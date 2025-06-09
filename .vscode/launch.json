@@ -1,183 +1,54 @@
 {
   "version": "0.2.0",
   "configurations": [
-    // === Local Development Debugging ===
     {
-      "name": "🚀 Nuxt 3 Dev Server",
-      "type": "pwa-node",
+      "type": "chrome",
       "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 9229,
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"],
-      "env": {
-        "NODE_ENV": "development",
-        "DEBUG": "nuxt:*"
-      },
-      "sourceMaps": true,
-      "smartStep": true,
-      "stopOnEntry": false
-    },
-    {
-      "name": "🏗️ Nuxt 3 Preview (Production)",
-      "type": "pwa-node",
-      "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "preview"],
-      "port": 9229,
-      "preLaunchTask": "npm: build",
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"],
-      "env": {
-        "NODE_ENV": "production"
+      "name": "client: chrome",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}",
+      "sourceMapPathOverrides": {
+        "webpack:///src/*": "${webRoot}/*"
       }
     },
-
-    // === Docker Container Debugging ===
     {
-      "name": "🐳 Debug Docker Dev Container",
-      "type": "pwa-node",
-      "request": "attach",
-      "port": 9229,
-      "address": "localhost",
-      "localRoot": "${workspaceFolder}",
-      "remoteRoot": "/app",
-      "skipFiles": ["<node_internals>/**"],
-      "sourceMaps": true,
-      "trace": true,
-      "preLaunchTask": "Docker: Start Development",
-      "postDebugTask": "Docker: Stop All Containers"
-    },
-    {
-      "name": "🔧 Attach to Docker Container",
-      "type": "pwa-node",
-      "request": "attach",
-      "port": 9229,
-      "address": "localhost",
-      "localRoot": "${workspaceFolder}",
-      "remoteRoot": "/app",
-      "skipFiles": ["<node_internals>/**"],
-      "sourceMaps": true,
-      "restart": true
-    },
-
-    // === Server-Side Debugging ===
-    {
-      "name": "🌐 Debug Nitro Server",
-      "type": "pwa-node",
+      "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/.output/server/index.mjs",
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"],
-      "env": {
-        "NODE_ENV": "production",
-        "NITRO_PORT": "3000"
+      "name": "server: nuxt",
+      "args": ["dev"],
+      "osx": {
+        "program": "${workspaceFolder}/node_modules/.bin/nuxt"
       },
-      "preLaunchTask": "build"
-    },
-    {
-      "name": "🔍 Debug API Routes",
-      "type": "pwa-node",
-      "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 9229,
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"],
-      "env": {
-        "NODE_ENV": "development",
-        "DEBUG": "nitro:*,h3:*"
+      "linux": {
+        "program": "${workspaceFolder}/node_modules/.bin/nuxt"
       },
-      "sourceMaps": true,
-      "breakOnLoad": false
+      "windows": {
+        "program": "${workspaceFolder}/node_modules/nuxt/bin/nuxt.js"
+      }
     },
-
-    // === Testing Debugging ===
     {
-      "name": "🧪 Debug Vitest Tests",
-      "type": "pwa-node",
+      "type": "node",
       "request": "launch",
-      "cwd": "${workspaceFolder}",
+      "name": "Debug API",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/node_modules/nuxt/bin/nuxt.js",
+      "args": ["dev"],
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Tests",
+      "skipFiles": ["<node_internals>/**"],
       "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
-      "args": ["run", "--threads", "false"],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"],
-      "env": {
-        "NODE_ENV": "test"
-      }
-    },
-    {
-      "name": "🐍 Debug Python Tests",
-      "type": "python",
-      "request": "launch",
-      "program": "${workspaceFolder}/tests/test_platform.py",
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      },
-      "python": "${workspaceFolder}/shared_venv/Scripts/python.exe",
-      "justMyCode": false,
-      "redirectOutput": true
-    },
-    {
-      "name": "🐍 Debug Python Setup Script",
-      "type": "python",
-      "request": "launch",
-      "program": "${workspaceFolder}/setup_shared_venv.py",
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      },
-      "python": "py",
-      "justMyCode": false,
-      "redirectOutput": true
-    },
-
-    // === Chrome Browser Debugging ===
-    {
-      "name": "🌐 Debug Chrome Browser",
-      "type": "pwa-chrome",
-      "request": "launch",
-      "url": "http://localhost:3000",
-      "webRoot": "${workspaceFolder}",
-      "sourceMaps": true,
-      "userDataDir": false,
-      "runtimeArgs": ["--disable-web-security", "--disable-features=VizDisplayCompositor"],
-      "preLaunchTask": "dev"
-    },
-    {
-      "name": "🐳 Debug Docker in Chrome",
-      "type": "pwa-chrome",
-      "request": "launch",
-      "url": "http://localhost:3000",
-      "webRoot": "${workspaceFolder}",
-      "sourceMaps": true,
-      "userDataDir": false,
-      "preLaunchTask": "Docker: Start Development"
+      "args": ["run", "${relativeFile}"],
+      "console": "integratedTerminal"
     }
   ],
   "compounds": [
     {
-      "name": "🚀 Full Stack Debug (Local)",
-      "configurations": ["🚀 Nuxt 3 Dev Server", "🌐 Debug Chrome Browser"],
-      "stopAll": true
-    },
-    {
-      "name": "🐳 Full Stack Debug (Docker)",
-      "configurations": ["🐳 Debug Docker Dev Container", "🐳 Debug Docker in Chrome"],
-      "stopAll": true
+      "name": "fullstack: nuxt",
+      "configurations": ["server: nuxt", "client: chrome"]
     }
   ]
 }

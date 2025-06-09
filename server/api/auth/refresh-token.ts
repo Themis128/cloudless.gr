@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 // Load environment variables
 const JWT_SECRET = process.env.NUXT_JWT_SECRET || 'your-secret-key-change-this-in-production';
 const JWT_EXPIRES_IN = process.env.NUXT_JWT_EXPIRES_IN || '7d'; // 7 days
+type StringOrNumber = string | number;
 const COOKIE_NAME = process.env.NUXT_AUTH_COOKIE_NAME || 'auth_token';
 
 // Define user interface for better type checking
@@ -21,8 +22,8 @@ interface UserPayload {
 // Function to validate JWT token
 function validateToken(token: string): UserPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as UserPayload;  } catch (error) {
-    console.error('Token validation error:', error)
+    return jwt.verify(token, JWT_SECRET) as UserPayload;
+  } catch (error) {
     return null;
   }
 }

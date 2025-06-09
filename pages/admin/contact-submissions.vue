@@ -1,132 +1,120 @@
 <template>
-  <v-container class="py-6">
-    <v-row>
-      <v-col cols="12">
-        <v-card>
-          <v-card-title class="text-h4 pa-6">
-            <v-icon icon="mdi-email-multiple" class="me-3"></v-icon>
-            Contact Submissions
-          </v-card-title>
-
-          <v-card-text>
-            <!-- Filters and Actions -->
-            <v-row class="mb-4">
-              <v-col cols="12" md="4">
-                <v-select
-                  v-model="statusFilter"
-                  :items="statusOptions"
-                  label="Filter by Status"
-                  variant="outlined"
-                  density="comfortable"
-                  @update:model-value="loadSubmissions"
-                />
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="searchQuery"
-                  label="Search submissions..."
-                  variant="outlined"
-                  density="comfortable"
-                  prepend-inner-icon="mdi-magnify"
-                  clearable
-                  @update:model-value="debouncedSearch"
-                />
-              </v-col>
-
-              <v-col cols="12" md="4" class="d-flex align-center">
-                <v-btn
-                  color="primary"
-                  variant="outlined"
-                  @click="loadSubmissions"
-                  :loading="loading"
-                >
-                  <v-icon icon="mdi-refresh" class="me-2"></v-icon>
-                  Refresh
-                </v-btn>
-              </v-col>
-            </v-row>
-
-            <!-- Data Table -->
-            <v-data-table
-              v-model:items-per-page="itemsPerPage"
-              v-model:page="page"
-              :headers="headers"
-              :items="submissions"
-              :loading="loading"
-              :server-items-length="totalSubmissions"
-              class="elevation-1"
-              @update:options="loadSubmissions"
-            >              <template v-slot:[`item.status`]="{ item }">
-                <v-chip :color="getStatusColor(item.status)" size="small">
-                  {{ item.status }}
-                </v-chip>
-              </template>
-
-              <template v-slot:[`item.createdAt`]="{ item }">
-                {{ formatDate(item.createdAt) }}
-              </template>
-
-              <template v-slot:[`item.actions`]="{ item }">
-                <v-btn icon="mdi-eye" variant="text" size="small" @click="viewSubmission(item)" />
-                <v-btn icon="mdi-pencil" variant="text" size="small" @click="editSubmission(item)" />
-                <v-btn icon="mdi-delete" variant="text" size="small" color="error" @click="deleteSubmission(item)" />
-              </template>
-            </v-data-table>
-          </v-card-text>
-        </v-card>
+  <v-container fluid>
+    <v-row class="mb-4" align="center">
+      <v-col cols="12" md="6">
+        <v-select
+          v-model="statusFilter"
+          :items="statusOptions"
+          label="Filter by Status"
+          @change="fetchSubmissions"
+          variant="outlined"
+          class="mb-4"
+        />
       </v-col>
     </v-row>
+    <v-row v-if="loading" justify="center">
+      <v-col cols="12" class="text-center">
+        <v-progress-circular indeterminate color="primary" />
+        <div>Loading submissions...</div>
+      </v-col>
+    </v-row>
+    <v-row v-else-if="submissions.length === 0" justify="center">
+      <v-col cols="12" class="text-center">
+        <v-alert type="info" variant="tonal">No submissions found.</v-alert>
+      </v-col>
+    </v-row>
+    <v-row v-else>
+      <v-col cols="12">
+        <v-data-table
+          :headers="headers"
+          :items="submissions"
+          :loading="loading"
+          class="elevation-1"
+          item-value="id"
+        >
+          <template #[`item.status`]="{ item }">
+            <v-chip :color="statusColor(item.status)" size="small">{{ item.status }}</v-chip>
+          </template>
+          <template #[`item.actions`]="{ item }">
+            <v-btn icon size="small" @click="openDetails(item)">
+              <v-icon>mdi-eye</v-icon>
+            </v-btn>
+            <v-btn icon size="small" @click="confirmDelete(item.id)">
+              <v-icon color="red">mdi-delete</v-icon>
+            </v-btn>
+          </template>
+          <template #[`item.createdAt`]="{ item }">
+            {{ formatDate(item.createdAt) }}
+          </template>
+        </v-data-table>
 
-    <!-- View Dialog -->
-    <v-dialog v-model="viewDialog" max-width="800px">
-      <v-card v-if="selectedSubmission">
-        <v-card-title class="text-h5">Contact Submission Details</v-card-title>
-        <v-card-text>
-          <v-row>
-            <v-col cols="12" md="6">
-              <v-text-field label="Name" :model-value="selectedSubmission.name" readonly variant="outlined" />
-            </v-col>
-            <v-col cols="12" md="6">
-              <v-text-field label="Email" :model-value="selectedSubmission.email" readonly variant="outlined" />
-            </v-col>
-            <v-col cols="12">
-              <v-text-field label="Subject" :model-value="selectedSubmission.subject" readonly variant="outlined" />
-            </v-col>
-            <v-col cols="12">
-              <v-textarea label="Message" :model-value="selectedSubmission.message" readonly variant="outlined" rows="6" />
-            </v-col>
-            <v-col cols="12" md="6">
-              <v-select v-model="selectedSubmission.status" :items="statusOptions" label="Status" variant="outlined" />
-            </v-col>
-            <v-col cols="12" md="6">
-              <v-text-field label="Created At" :model-value="formatDate(selectedSubmission.createdAt)" readonly variant="outlined" />
-            </v-col>
-            <v-col cols="12">
-              <v-textarea v-model="selectedSubmission.notes" label="Admin Notes" variant="outlined" rows="3" placeholder="Add internal notes about this submission..." />
-            </v-col>
-          </v-row>
+        <!-- Pagination -->
+        <v-pagination
+          v-if="totalPages > 1"
+          v-model="currentPage"
+          :length="totalPages"
+          @update:model-value="changePage"
+          class="mt-4"
+        />
+      </v-col>
+    </v-row>
+    <v-dialog v-model="detailsDialog" max-width="600">
+      <v-card>
+        <v-card-title>Submission Details</v-card-title>
+        <v-card-text v-if="selectedSubmission">
+          <div>
+            <strong>From:</strong> {{ selectedSubmission.name }} ({{ selectedSubmission.email }})
+          </div>
+          <div><strong>Subject:</strong> {{ selectedSubmission.subject }}</div>
+          <div><strong>Message:</strong></div>
+          <div class="mb-2">{{ selectedSubmission.message }}</div>
+          <div v-if="selectedSubmission.metadata">
+            <div v-if="parsedMetadata(selectedSubmission.metadata).ip">
+              <strong>IP:</strong> {{ parsedMetadata(selectedSubmission.metadata).ip }}
+            </div>
+            <div v-if="parsedMetadata(selectedSubmission.metadata).userAgent">
+              <strong>Browser:</strong> {{ parsedMetadata(selectedSubmission.metadata).userAgent }}
+            </div>
+            <div v-if="parsedMetadata(selectedSubmission.metadata).referrer">
+              <strong>Referrer:</strong> {{ parsedMetadata(selectedSubmission.metadata).referrer }}
+            </div>
+            <div v-if="parsedMetadata(selectedSubmission.metadata).submissionTime">
+              <strong>Exact Time:</strong>
+              {{ formatExactTime(parsedMetadata(selectedSubmission.metadata).submissionTime) }}
+            </div>
+          </div>
+          <v-textarea
+            v-model="notesMap[selectedSubmission.id]"
+            label="Notes"
+            placeholder="Add notes here..."
+            @blur="updateNotes(selectedSubmission.id)"
+            rows="2"
+            variant="outlined"
+            class="mt-2"
+          />
+
+          <!-- Status Update -->
+          <v-select
+            :model-value="selectedSubmission.status"
+            :items="statusOptions.slice(1)"
+            label="Update Status"
+            @update:model-value="(value) => updateStatus(selectedSubmission.id, value)"
+            variant="outlined"
+            class="mt-2"
+          />
         </v-card-text>
-
         <v-card-actions>
-          <v-spacer />
-          <v-btn color="grey-darken-1" variant="text" @click="viewDialog = false">Cancel</v-btn>
-          <v-btn color="primary" variant="text" @click="updateSubmission" :loading="updating">Update</v-btn>
+          <v-btn color="primary" @click="detailsDialog = false">Close</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
-    <!-- Delete Confirmation Dialog -->
-    <v-dialog v-model="deleteDialog" max-width="500px">
+    <v-dialog v-model="deleteDialog" max-width="400">
       <v-card>
-        <v-card-title class="text-h5">Confirm Delete</v-card-title>
-        <v-card-text>
-          Are you sure you want to delete this contact submission? This action cannot be undone.
-        </v-card-text>
+        <v-card-title>Confirm Delete</v-card-title>
+        <v-card-text>Are you sure you want to delete this submission?</v-card-text>
         <v-card-actions>
-          <v-spacer />
-          <v-btn color="grey-darken-1" variant="text" @click="deleteDialog = false">Cancel</v-btn>
-          <v-btn color="error" variant="text" @click="confirmDelete" :loading="deleting">Delete</v-btn>
+          <v-btn color="grey" variant="text" @click="deleteDialog = false">Cancel</v-btn>
+          <v-btn color="red" variant="tonal" @click="deleteSubmission">Delete</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -134,160 +122,242 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({
-  requiresAdmin: true,
-  layout: 'admin',
-});
+  import { ref } from 'vue';
 
-const { $fetch } = useNuxtApp();
+  const submissions = ref<any[]>([]);
+  const loading = ref<boolean>(true);
+  const currentPage = ref<number>(1);
+  const totalPages = ref<number>(1);
+  const totalSubmissions = ref<number>(0);
+  const statusFilter = ref<string>('');
+  const notesMap = ref<Record<string, string>>({});
 
-const loading = ref(false);
-const updating = ref(false);
-const deleting = ref(false);
+  // Dialogs
+  const detailsDialog = ref(false);
+  const deleteDialog = ref(false);
+  const selectedSubmission = ref<any>(null);
+  let deleteId: string | null = null;
 
-const submissions = ref([]);
-const totalSubmissions = ref(0);
-const page = ref(1);
-const itemsPerPage = ref(10);
+  // Status options for the filter
+  const statusOptions = [
+    { title: 'All Statuses', value: '' },
+    { title: 'New', value: 'new' },
+    { title: 'Read', value: 'read' },
+    { title: 'Replied', value: 'replied' },
+    { title: 'Archived', value: 'archived' },
+  ];
 
-const statusFilter = ref('all');
-const searchQuery = ref('');
+  // Table headers for the data table
+  const headers = [
+    { title: 'Subject', key: 'subject' },
+    { title: 'From', key: 'name' },
+    { title: 'Email', key: 'email' },
+    { title: 'Status', key: 'status' },
+    { title: 'Date', key: 'createdAt' },
+    { title: 'Actions', key: 'actions', sortable: false },
+  ];
 
-const viewDialog = ref(false);
-const deleteDialog = ref(false);
-const selectedSubmission = ref<any>(null);
-const submissionToDelete = ref<any>(null);
-
-const statusOptions = [
-  { title: 'All Statuses', value: 'all' },
-  { title: 'New', value: 'new' },
-  { title: 'Read', value: 'read' },
-  { title: 'Replied', value: 'replied' },
-  { title: 'Archived', value: 'archived' },
-];
-
-const headers = [
-  { title: 'Name', key: 'name', sortable: true },
-  { title: 'Email', key: 'email', sortable: true },
-  { title: 'Subject', key: 'subject', sortable: true },
-  { title: 'Status', key: 'status', sortable: true },
-  { title: 'Created', key: 'createdAt', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false },
-];
-
-const formatDate = (date: string) =>
-  new Date(date).toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-const getStatusColor = (status: string) => {
-  switch (status.toLowerCase()) {
-    case 'new':
-      return 'primary';
-    case 'read':
-      return 'info';
-    case 'replied':
-      return 'success';
-    case 'archived':
-      return 'grey';
-    default:
-      return 'primary';
-  }
-};
-
-const loadSubmissions = async () => {
-  loading.value = true;
-  try {
-    const params = new URLSearchParams({
-      page: page.value.toString(),
-      limit: itemsPerPage.value.toString(),
-    });
-
-    if (statusFilter.value !== 'all') {
-      params.append('status', statusFilter.value);
+  // Function to parse metadata JSON string
+  const parsedMetadata = (metadataString: string): any => {
+    if (!metadataString) return {};
+    try {
+      return JSON.parse(metadataString);
+    } catch {
+      console.error('Error parsing metadata');
+      return {};
     }
+  };
 
-    if (searchQuery.value) {
-      params.append('search', searchQuery.value);
-    }    const response = await ($fetch as any)(`/api/contact-submissions?${params}`);
-    submissions.value = response.submissions || [];
-    totalSubmissions.value = response.total || 0;
-  } catch (err) {
-    console.error('Error loading submissions:', err);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const viewSubmission = (submission: any) => {
-  selectedSubmission.value = { ...submission };
-  viewDialog.value = true;
-
-  if (submission.status === 'new') {
-    selectedSubmission.value.status = 'read';
-  }
-};
-
-const editSubmission = (submission: any) => viewSubmission(submission);
-
-const deleteSubmission = (submission: any) => {
-  submissionToDelete.value = submission;
-  deleteDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  if (!submissionToDelete.value) return;
-  deleting.value = true;
-  try {    await ($fetch as any)(`/api/contact-submissions/${submissionToDelete.value.id}`, {
-      method: 'DELETE',
-    });
-    submissions.value = submissions.value.filter(
-      (s: any) => s.id !== submissionToDelete.value.id
-    );
-    totalSubmissions.value--;
-    deleteDialog.value = false;
-    submissionToDelete.value = null;
-  } catch (err) {
-    console.error('Error deleting submission:', err);
-  } finally {
-    deleting.value = false;
-  }
-};
-
-const updateSubmission = async () => {
-  if (!selectedSubmission.value) return;
-  updating.value = true;
-  try {    await ($fetch as any)(`/api/contact-submissions/${selectedSubmission.value.id}`, {
-      method: 'PUT',
-      body: {
-        status: selectedSubmission.value.status,
-        notes: selectedSubmission.value.notes,
-      },
-    });
-    const index = submissions.value.findIndex(
-      (s: any) => s.id === selectedSubmission.value.id
-    );
-    if (index !== -1) {
-      submissions.value[index] = { ...selectedSubmission.value };
+  // Function to format exact submission time
+  const formatExactTime = (timeString: string): string => {
+    if (!timeString) return '';
+    try {
+      const date = new Date(timeString);
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZoneName: 'short',
+      });
+    } catch {
+      return timeString;
     }
-    viewDialog.value = false;
-  } catch (err) {
-    console.error('Error updating submission:', err);
-  } finally {
-    updating.value = false;
-  }
-};
+  };
 
-const debouncedSearch = useDebounceFn(() => {
-  page.value = 1;
-  loadSubmissions();
-}, 500);
+  // Get auth token - in a real app, this would be from a proper auth system
+  const getAuthToken = (): string => {
+    if (process.client) {
+      return localStorage.getItem('admin_authenticated') === 'true' ? 'admin-token' : '';
+    }
+    return '';
+  };
 
-onMounted(() => {
-  loadSubmissions();
-});
+  // Fetch submissions from the API
+  const fetchSubmissions = async (): Promise<void> => {
+    loading.value = true;
+    try {
+      const response = await fetch(
+        `/api/contact-submissions?page=${currentPage.value}&limit=10${
+          statusFilter.value ? `&status=${statusFilter.value}` : ''
+        }`,
+        {
+          headers: {
+            Authorization: `Bearer ${getAuthToken()}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch submissions');
+      }
+
+      const data = await response.json();
+      submissions.value = data.submissions;
+      totalPages.value = data.pagination.pages;
+      totalSubmissions.value = data.pagination.total;
+
+      // Initialize notes map
+      submissions.value.forEach((submission) => {
+        if (submission.notes && !notesMap.value[submission.id]) {
+          notesMap.value[submission.id] = submission.notes;
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  // Update submission status
+  const updateStatus = async (id: string, status: string): Promise<void> => {
+    try {
+      const response = await fetch(`/api/contact-submissions/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update submission status');
+      }
+
+      // Update local state
+      const index = submissions.value.findIndex((s) => s.id === id);
+      if (index !== -1) {
+        submissions.value[index].status = status as 'new' | 'read' | 'replied' | 'archived';
+      }
+    } catch (error) {
+      console.error('Error updating submission status:', error);
+    }
+  };
+
+  // Update submission notes
+  const updateNotes = async (id: string): Promise<void> => {
+    const notes = notesMap.value[id];
+
+    try {
+      const response = await fetch(`/api/contact-submissions/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({ notes }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update submission notes');
+      }
+
+      // Update was successful
+      console.log('Notes updated successfully');
+    } catch (error) {
+      console.error('Error updating submission notes:', error);
+    }
+  };
+
+  // Delete submission
+  const confirmDelete = async (id: string): Promise<void> => {
+    deleteId = id;
+    deleteDialog.value = true;
+  };
+
+  const deleteSubmission = async (): Promise<void> => {
+    if (!deleteId) return;
+
+    try {
+      const response = await fetch(`/api/contact-submissions/${deleteId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete submission');
+      }
+
+      // Remove from local state
+      submissions.value = submissions.value.filter((s) => s.id !== deleteId);
+    } catch (error) {
+      console.error('Error deleting submission:', error);
+    } finally {
+      deleteDialog.value = false;
+    }
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  };
+
+  // Change page
+  const changePage = (page: number): void => {
+    currentPage.value = page;
+    fetchSubmissions();
+  };
+
+  // Open details dialog
+  const openDetails = (item: any): void => {
+    selectedSubmission.value = item;
+    detailsDialog.value = true;
+  };
+
+  // Get status color for chips
+  const statusColor = (status: string): string => {
+    switch (status) {
+      case 'new':
+        return 'blue';
+      case 'read':
+        return 'grey';
+      case 'replied':
+        return 'green';
+      case 'archived':
+        return 'orange';
+      default:
+        return 'grey';
+    }
+  };
+
+  // Initial data fetch
+  fetchSubmissions();
 </script>
+
+<style scoped>
+  /* All custom styles for forms, tables, and buttons removed; rely on Vuetify */
+</style>

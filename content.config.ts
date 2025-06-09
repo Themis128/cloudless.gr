@@ -1,4 +1,9 @@
-// Basic content configuration
+// Simple content configuration
 export default {
-  // Content configuration handled in nuxt.config.ts
-}
+  highlight: {
+    theme: 'github-light',
+  },
+  markdown: {
+    anchorLinks: false,
+  },
+};

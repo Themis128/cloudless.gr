@@ -1,5 +1,5 @@
 // Project-related types for the application
-import type { Ref } from '#imports';
+import type { Ref } from 'vue';
 
 export interface Project {
   id: number;
@@ -82,15 +82,11 @@ export interface ProjectsState {
 
 export interface UseProjectsComposable {
   projects: Ref<Project[]>;
-  featuredProjects: ComputedRef<Project[]>;
+  featuredProjects: Ref<Project[]>;
   isLoading: Ref<boolean>;
   error: Ref<string | null>;
   fetchProjects: (filter?: ProjectFilter) => Promise<void>;
   fetchProjectBySlug: (slug: string) => Promise<Project | null>;
   toggleFavorite: (id: number) => Promise<void>;
   getRelatedProjects: (project: Project) => Project[];
-  filterByCategory: (category: ProjectCategory) => Project[];
-  filterByStatus: (status: ProjectStatus) => Project[];
-  searchProjects: (query: string) => Project[];
-  clearError: () => void;
 }

@@ -117,5 +117,49 @@
     "command": "workbench.action.tasks.runTask",
     "args": "🚀 Dev Server with Auto-Fix",
     "when": "editorTextFocus"
+  },
+  {
+    "key": "ctrl+shift+alt+a",
+    "command": "github.copilot.chat.newChat",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "ctrl+shift+alt+c",
+    "command": "github.copilot.terminal.suggestCommand",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+shift+alt+e",
+    "command": "github.copilot.terminal.executeCommand",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+shift+alt+f",
+    "command": "github.copilot.generate",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "ctrl+shift+alt+r",
+    "command": "continue.continueGUIView.focus"
+  },
+  {
+    "key": "ctrl+shift+alt+t",
+    "command": "workbench.action.terminal.new",
+    "args": {
+      "profileName": "AI Agent Terminal"
+    }
+  },
+  {
+    "key": "ctrl+alt+space",
+    "command": "editor.action.inlineSuggest.trigger",
+    "when": "editorTextFocus && !editorReadonly"
+  },
+  {
+    "key": "ctrl+shift+alt+i",
+    "command": "github.copilot.interactiveEditor.explain"
+  },
+  {
+    "key": "ctrl+shift+alt+o",
+    "command": "github.copilot.interactiveEditor.generate"
   }
 ]
