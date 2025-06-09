@@ -22,9 +22,8 @@
 </template>
 
 <script setup lang="ts">
-  import { computed } from 'vue';
-
-  const currentYear = computed(() => new Date().getFullYear());
+  // If using Vue 2, remove computed and use a plain variable
+  const currentYear = new Date().getFullYear();
 </script>
 
 <style scoped>

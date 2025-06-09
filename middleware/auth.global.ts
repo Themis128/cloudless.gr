@@ -14,12 +14,9 @@
  * 4. Check admin role requirements
  */
 
-interface UserProfile {
-  role: string;
-  subscription_plan: string;
-  email_verified: boolean;
-  permissions: string[];
-}
+import type { Database } from '~/utils/supabase';
+
+type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 
 interface RouteMetaWithAuth {
   requiresRole?: string | string[];
@@ -29,9 +26,7 @@ interface RouteMetaWithAuth {
 export default defineNuxtRouteMiddleware(async (to, _from) => {
   // Skip middleware on server-side rendering for performance
   if (process.server) return;
-
-  const nuxtApp = useNuxtApp();
-  const client = useSupabaseClient();
+  const client = useSupabaseClient<Database>();
   const user = useSupabaseUser();
 
   // 1️⃣ Allow access to auth-related and public routes
@@ -76,15 +71,19 @@ export default defineNuxtRouteMiddleware(async (to, _from) => {
 
     // 4️⃣ Get user role and profile for protected routes
     if (!authRoutes.includes(to.path) && !publicRoutes.includes(to.path)) {
-      const { data: profile } = await client
-        .from('user_profiles')
-        .select('role, subscription_plan, email_verified, permissions')
-        .eq('user_id', user.value.id)
-        .single();
+      // Check user profile and permissions
+      const {
+        data: { user: profile },
+      } = await client.from('user_profiles').select('*').eq('user_id', user.value?.id).single();
+
+      if (!profile) {
+        console.error('User profile not found');
+        return navigateTo('/auth/login');
+      }
 
       const userRole = profile?.role || 'user';
       const userPlan = profile?.subscription_plan || 'free';
-      const userPermissions = (profile as UserProfile)?.permissions || [];
+      const userPermissions = profile.permissions || [];
 
       // Role-based access control
       if (to.path.startsWith('/admin') && userRole !== 'admin') {

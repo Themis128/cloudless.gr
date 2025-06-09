@@ -1,53 +1,95 @@
 <template>
-  <v-container fluid class="fill-height bg-surface">
-    <v-row justify="center" align="center">
-      <v-col cols="12" sm="8" md="6" lg="4">
-        <v-card class="pa-4 elevation-8">
-          <v-card-title class="text-center text-h4 font-weight-bold pt-8 pb-4">
-            Email Verification Required
-          </v-card-title>
+  <v-row justify="center" align="center" class="fill-height">
+    <v-col cols="12" sm="8" md="6" lg="4">
+      <v-card class="pa-8 elevation-12 auth-card" rounded="xl">
+        <!-- Logo and Title -->
+        <div class="text-center mb-6">
+          <v-img src="/logo.png" alt="Cloudless Logo" width="72" height="72" class="mx-auto mb-6" />
+          <h1 class="text-h4 font-weight-bold text-primary mb-2">Verify Your Email</h1>
+          <p class="text-body-1 text-medium-emphasis">
+            Please verify your email address to continue
+          </p>
+        </div>
 
-          <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4">
+        <!-- Error Alert -->
+        <v-slide-y-transition>
+          <v-alert
+            v-if="error"
+            type="error"
+            variant="tonal"
+            closable
+            class="mb-6"
+            border="start"
+            elevation="2"
+          >
             {{ error }}
           </v-alert>
+        </v-slide-y-transition>
 
-          <v-alert v-if="successMessage" type="success" variant="tonal" class="mb-4">
+        <!-- Success Alert -->
+        <v-slide-y-transition>
+          <v-alert
+            v-if="successMessage"
+            type="success"
+            variant="tonal"
+            class="mb-6"
+            border="start"
+            elevation="2"
+          >
             {{ successMessage }}
           </v-alert>
+        </v-slide-y-transition>
 
-          <v-card-text>
-            <p class="text-body-1 mb-4 text-center">
-              Please verify your email address to access this section. Check your inbox for a
-              verification link.
-            </p>
+        <!-- Info Alert -->
+        <v-slide-y-transition>
+          <v-alert
+            v-if="!isVerified"
+            type="info"
+            variant="tonal"
+            class="mb-6"
+            border="start"
+            elevation="2"
+          >
+            <strong>Verification email sent to:</strong><br />
+            {{ userEmail }}
+          </v-alert>
+        </v-slide-y-transition>
 
-            <v-alert v-if="!isVerified" type="info" variant="tonal" class="mb-4">
-              A verification email has been sent to {{ userEmail }}. Click the link in the email to
-              verify your account.
-            </v-alert>
+        <div class="text-center mb-8">
+          <p class="text-body-1 text-medium-emphasis mb-6">
+            Can't find the email? Check your spam folder or request a new verification link.
+          </p>
 
-            <div v-if="!isVerified" class="text-center">
-              <v-btn
-                color="primary"
-                :loading="loading"
-                :disabled="loading"
-                @click="handleResendVerification"
-                class="mb-4"
-              >
-                Resend Verification Email
-              </v-btn>
-            </div>
-          </v-card-text>
+          <v-btn
+            v-if="!isVerified"
+            color="primary"
+            size="x-large"
+            :loading="loading"
+            :disabled="loading"
+            @click="handleResendVerification"
+            class="mb-4 py-6"
+            block
+            elevation="2"
+          >
+            <v-icon start icon="mdi-email-check" class="mr-2" />
+            {{ loading ? 'Sending...' : 'Resend Verification Email' }}
+          </v-btn>
 
-          <v-divider class="mb-4"></v-divider>
-
-          <div class="text-center pb-4">
-            <v-btn variant="text" color="primary" @click="handleSignOut"> Sign Out </v-btn>
-          </div>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+          <v-btn
+            variant="outlined"
+            color="primary"
+            @click="handleSignOut"
+            class="mt-4"
+            block
+            elevation="0"
+          >
+            <v-icon start icon="mdi-logout" class="mr-2" />
+            Sign Out
+          </v-btn>
+        </div>
+      </v-card>
+    </v-col>
+  </v-row>
 </template>
 
 <script setup lang="ts">
@@ -55,16 +97,22 @@
   import { useRouter } from 'vue-router';
   import { useSupabaseAuth } from '~/composables/useSupabaseAuth';
 
-  const { user, isVerified, resendEmailVerification, signOut } = useSupabaseAuth();
+  const {
+    user,
+    isVerified,
+    sendVerificationEmail: resendEmailVerification,
+    signOut,
+  } = useSupabaseAuth();
+
   const router = useRouter();
-  const error = ref('');
-  const successMessage = ref('');
-  const loading = ref(false);
+  const error = ref<string>('');
+  const successMessage = ref<string>('');
+  const loading = ref<boolean>(false);
 
   // Redirect if already verified
   watch(
     () => isVerified.value,
-    (newValue) => {
+    (newValue: boolean) => {
       if (newValue === true) {
         const redirectTo = '/dashboard';
         router.push(redirectTo);
@@ -81,12 +129,8 @@
     successMessage.value = '';
 
     try {
-      const result = await resendEmailVerification(userEmail.value);
-      if (result) {
-        successMessage.value = 'Verification email has been resent. Please check your inbox.';
-      } else {
-        error.value = 'Failed to resend verification email. Please try again.';
-      }
+      await resendEmailVerification(userEmail.value);
+      successMessage.value = 'Verification email has been resent. Please check your inbox.';
     } catch (err: any) {
       error.value = err.message || 'An error occurred. Please try again.';
     } finally {
@@ -98,10 +142,74 @@
     await signOut();
     router.push('/auth/login');
   };
+
+  // Set page meta
+  definePageMeta({
+    layout: 'auth',
+    public: true,
+  });
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+  .auth-card {
+    --field-bg-opacity: 0.1;
+    --field-border-opacity: 0.6;
+    --hover-opacity: 0.8;
+
+    backdrop-filter: none;
+    background: transparent !important;
+    border: none;
+    box-shadow: none;
+
+    // Style text elements
+    h1,
+    p,
+    .text-medium-emphasis {
+      color: rgb(var(--v-theme-primary-rgb)) !important;
+    }
+
+    // Style buttons
+    :deep(.v-btn) {
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      background: transparent !important;
+      border: 1px solid rgba(var(--v-theme-primary-rgb), 0.5);
+
+      &:not(.v-btn--disabled) {
+        &:hover {
+          transform: translateY(-1px);
+          border-color: rgb(var(--v-theme-primary-rgb));
+          background: rgba(var(--v-theme-surface-rgb), 0.1) !important;
+          box-shadow: 0 4px 12px rgba(var(--v-theme-primary-rgb), 0.2);
+        }
+      }
+    }
+
+    // Style alerts
+    .v-alert {
+      border-radius: 12px;
+      background: rgba(var(--v-theme-surface-rgb), 0.1) !important;
+      border: 1px solid currentColor;
+
+      :deep(.v-alert-title),
+      :deep(.v-alert__content) {
+        color: currentColor !important;
+      }
+    }
+  }
+
   .fill-height {
     min-height: 100vh;
+  }
+
+  // Custom transitions
+  .v-enter-active,
+  .v-leave-active {
+    transition: opacity 0.3s ease;
+  }
+
+  .v-enter-from,
+  .v-leave-to {
+    opacity: 0;
   }
 </style>

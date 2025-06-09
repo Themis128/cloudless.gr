@@ -1,6 +1,7 @@
 // composables/useSupabaseStorage.ts
-import { computed, onMounted, readonly, ref } from '#imports';
+import { computed, onMounted, readonly, ref, useSupabaseClient } from '#imports';
 import type { FileOptions } from '@supabase/storage-js';
+import type { Database } from '~/utils/supabase';
 
 export type FileType = 'image' | 'video' | 'document' | 'audio' | 'other';
 export type UploadStatus = 'pending' | 'uploading' | 'completed' | 'failed' | 'cancelled';
@@ -103,7 +104,7 @@ const FILE_TYPE_PATTERNS: Record<FileType, string[]> = {
 };
 
 export const useSupabaseStorage = () => {
-  const client = useSupabaseClient();
+  const client = useSupabaseClient<Database>();
   const uploadQueue = ref<QueuedUpload[]>([]);
   const activeUploads = ref<QueuedUpload[]>([]);
   const error = ref<string | null>(null);
@@ -184,18 +185,18 @@ export const useSupabaseStorage = () => {
   const processUploadQueue = async () => {
     if (activeUploads.value.length >= 3) return; // Max concurrent uploads
 
-    const nextUpload = uploadQueue.value.find(u => u.status === 'pending');
+    const nextUpload = uploadQueue.value.find((u: QueuedUpload) => u.status === 'pending');
     if (!nextUpload) return;
 
     // Move to active uploads
-    uploadQueue.value = uploadQueue.value.filter(u => u.id !== nextUpload.id);
+    uploadQueue.value = uploadQueue.value.filter((u: QueuedUpload) => u.id !== nextUpload.id);
     activeUploads.value.push(nextUpload);
 
     try {
       await uploadWithRetry(nextUpload);
     } finally {
       // Remove from active uploads
-      activeUploads.value = activeUploads.value.filter(u => u.id !== nextUpload.id);
+      activeUploads.value = activeUploads.value.filter((u: QueuedUpload) => u.id !== nextUpload.id);
       // Process next in queue
       processUploadQueue();
     }
@@ -583,13 +584,13 @@ export const useSupabaseStorage = () => {
   };
 
   const cancelUpload = (uploadId: string): boolean => {
-    const queuedIndex = uploadQueue.value.findIndex(u => u.id === uploadId);
+    const queuedIndex = uploadQueue.value.findIndex((u: QueuedUpload) => u.id === uploadId);
     if (queuedIndex > -1) {
       uploadQueue.value.splice(queuedIndex, 1);
       return true;
     }
 
-    const activeUpload = activeUploads.value.find(u => u.id === uploadId);
+    const activeUpload = activeUploads.value.find((u: QueuedUpload) => u.id === uploadId);
     if (activeUpload) {
       activeUpload.status = 'cancelled';
       return true;
@@ -614,27 +615,27 @@ export const useSupabaseStorage = () => {
     error.value = null;
   };
 
-  const checkStorageQuota = async () => {
+  const checkQuota = async () => {
     try {
-      const { data, error: quotaError } = await client
-        .from('storage_quota')
-        .select('quota_bytes, used_bytes')
-        .single();
+      const { data, error } = await client.rpc('get_storage_quota');
 
-      if (quotaError) throw quotaError;
+      if (error) {
+        console.error('Failed to fetch storage quota:', error);
+        return;
+      }
 
       if (data) {
         storageQuota.value = data.quota_bytes;
         usedStorage.value = data.used_bytes;
       }
-    } catch (err) {
-      console.error('Failed to fetch storage quota:', err);
+    } catch (error) {
+      console.error('Error checking storage quota:', error);
     }
   };
 
   // Initialize
   onMounted(() => {
-    checkStorageQuota();
+    checkQuota();
   });
 
   return {
@@ -666,6 +667,13 @@ export const useSupabaseStorage = () => {
     // Utility Methods
     validateFile,
     getFileType,
-    checkStorageQuota,
+    checkQuota,
   };
 };
+
+export interface StorageQuotaResponse {
+  quota_bytes: number;
+  used_bytes: number;
+  available_bytes: number;
+  percent_used: number;
+}

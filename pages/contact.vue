@@ -190,7 +190,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue';
+  import { ref } from '#imports';
   import { useContactUs } from '~/composables/useContactUs';
 
   // Use the contact form composable

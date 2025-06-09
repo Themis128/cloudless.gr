@@ -1,5 +1,5 @@
 import { computed, readonly, ref } from 'vue';
-import type { ContactFormData } from '~/types/contact';
+import { contactFormSchema, type ContactFormData } from '~/types/validation';
 
 export const useContactUs = () => {
   const form = ref<ContactFormData>({
@@ -33,50 +33,49 @@ export const useContactUs = () => {
       errors.value.message.length === 0
     );
   });
-
   const validateName = () => {
     errors.value.name = [];
-    if (!form.value.name.trim()) {
-      errors.value.name.push('Name is required');
+    const result = contactFormSchema.shape.name.safeParse(form.value.name);
+    if (!result.success) {
+      errors.value.name = result.error.errors.map(err => err.message);
     }
   };
 
   const validateEmail = () => {
     errors.value.email = [];
-    if (!form.value.email.trim()) {
-      errors.value.email.push('Email is required');
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
-      errors.value.email.push('Please enter a valid email address');
+    const result = contactFormSchema.shape.email.safeParse(form.value.email);
+    if (!result.success) {
+      errors.value.email = result.error.errors.map(err => err.message);
     }
   };
 
   const validateSubject = () => {
     errors.value.subject = [];
-    if (!form.value.subject.trim()) {
-      errors.value.subject.push('Subject is required');
+    const result = contactFormSchema.shape.subject.safeParse(form.value.subject);
+    if (!result.success) {
+      errors.value.subject = result.error.errors.map(err => err.message);
     }
   };
 
   const validateMessage = () => {
     errors.value.message = [];
-    if (!form.value.message.trim()) {
-      errors.value.message.push('Message is required');
-    } else if (form.value.message.trim().length < 10) {
-      errors.value.message.push('Message must be at least 10 characters long');
+    const result = contactFormSchema.shape.message.safeParse(form.value.message);
+    if (!result.success) {
+      errors.value.message = result.error.errors.map(err => err.message);
     }
   };
-
   const submitForm = async () => {
     isSubmitting.value = true;
     error.value = '';
 
     // Validate all fields
-    validateName();
-    validateEmail();
-    validateSubject();
-    validateMessage();
-
-    if (!isValid.value) {
+    const result = contactFormSchema.safeParse(form.value);
+    if (!result.success) {
+      // Update individual field errors
+      const fieldErrors = result.error.flatten().fieldErrors;
+      for (const [field, messages] of Object.entries(fieldErrors)) {
+        errors.value[field as keyof typeof errors.value] = messages || [];
+      }
       isSubmitting.value = false;
       return;
     }
