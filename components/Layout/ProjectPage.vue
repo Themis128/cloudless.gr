@@ -106,64 +106,64 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
-import { useRoute } from 'vue-router';
+  import { computed, ref } from 'vue';
 
-const route = useRoute();
+  // Get route info (currently unused but may be needed for future features)
+  // const _route = useRoute();
 
-// Example project data
-const project = ref({
-  id: '1',
-  slug: 'e-commerce-platform',
-  title: 'E-Commerce Platform',
-  description:
-    'A complete solution for online retail with payment processing and inventory management.',
-  fullDescription:
-    'This comprehensive e-commerce platform provides businesses with everything they need to sell products online. Features include inventory management, secure payment processing, customer accounts, order tracking, and a responsive design for mobile shoppers. Built with Vue.js, Nuxt, and integrated with multiple payment gateways.',
-  image: '/images/projects/project-1.jpg',
-  client: 'RetailTech Inc.',
-  date: 'January 2025',
-  category: 'Web Development',
-  technologies: ['Vue.js', 'Nuxt', 'Node.js', 'MongoDB', 'Stripe API'],
-  liveUrl: 'https://example.com',
-  githubUrl: 'https://github.com/example/project',
-});
+  // Example project data
+  const project = ref({
+    id: '1',
+    slug: 'e-commerce-platform',
+    title: 'E-Commerce Platform',
+    description:
+      'A complete solution for online retail with payment processing and inventory management.',
+    fullDescription:
+      'This comprehensive e-commerce platform provides businesses with everything they need to sell products online. Features include inventory management, secure payment processing, customer accounts, order tracking, and a responsive design for mobile shoppers. Built with Vue.js, Nuxt, and integrated with multiple payment gateways.',
+    image: '/images/projects/project-1.jpg',
+    client: 'RetailTech Inc.',
+    date: 'January 2025',
+    category: 'Web Development',
+    technologies: ['Vue.js', 'Nuxt', 'Node.js', 'MongoDB', 'Stripe API'],
+    liveUrl: 'https://example.com',
+    githubUrl: 'https://github.com/example/project',
+  });
 
-// Breadcrumbs for navigation
-const breadcrumbs = computed(() => [
-  {
-    title: 'Home',
-    disabled: false,
-    to: '/',
-  },
-  {
-    title: 'Projects',
-    disabled: false,
-    to: '/projects',
-  },
-  {
-    title: project.value.title,
-    disabled: true,
-  },
-]);
+  // Breadcrumbs for navigation
+  const breadcrumbs = computed(() => [
+    {
+      title: 'Home',
+      disabled: false,
+      to: '/',
+    },
+    {
+      title: 'Projects',
+      disabled: false,
+      to: '/projects',
+    },
+    {
+      title: project.value.title,
+      disabled: true,
+    },
+  ]);
 
-// Related projects
-const relatedProjects = [
-  {
-    id: '2',
-    slug: 'healthcare-dashboard',
-    title: 'Healthcare Dashboard',
-    image: '/images/projects/project-2.jpg',
-  },
-  {
-    id: '3',
-    slug: 'mobile-banking-app',
-    title: 'Mobile Banking App',
-    image: '/images/projects/project-3.jpg',
-  },
-];
+  // Related projects
+  const relatedProjects = [
+    {
+      id: '2',
+      slug: 'healthcare-dashboard',
+      title: 'Healthcare Dashboard',
+      image: '/images/projects/project-2.jpg',
+    },
+    {
+      id: '3',
+      slug: 'mobile-banking-app',
+      title: 'Mobile Banking App',
+      image: '/images/projects/project-3.jpg',
+    },
+  ];
 </script>
 
 <style scoped>
-/* Additional custom styling if needed */
+  /* Additional custom styling if needed */
 </style>

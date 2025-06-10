@@ -1,0 +1,26 @@
+# ESLint ignore patterns
+node_modules/
+dist/
+.nuxt/
+.output/
+coverage/
+*.d.ts
+
+# Supabase repository (external dependency)
+supabase-repo/
+
+# Test output
+test-results/
+
+# Docker files
+docker-compose/
+
+# Build artifacts
+*.min.js
+*.bundle.js
+
+# Prisma generated files
+prisma/generated/
+
+# Logs
+*.log

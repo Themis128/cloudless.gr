@@ -72,7 +72,7 @@
   const route = useRoute();
   const router = useRouter();
   const toast = useToast();
-  const { user } = useUserSession();
+  const { user: _user } = useUserSession();
 
   const showBackButton = computed(() => {
     const path = route.path;

@@ -1,5 +1,6 @@
 import { computed, readonly, ref } from 'vue';
-import { contactFormSchema, type ContactFormData } from '~/types/validation';
+import type { ContactFormData } from '~/types/validation';
+import { contactFormSchema } from '~/types/validation';
 
 export const useContactUs = () => {
   const form = ref<ContactFormData>({
@@ -7,6 +8,7 @@ export const useContactUs = () => {
     email: '',
     subject: '',
     message: '',
+    website: '', // Honeypot field
   });
 
   const errors = ref({
@@ -64,58 +66,79 @@ export const useContactUs = () => {
       errors.value.message = result.error.errors.map(err => err.message);
     }
   };
+  const resetForm = () => {
+    form.value = {
+      name: '',
+      email: '',
+      subject: '',
+      message: '',
+      website: '', // Reset honeypot
+    };
+    errors.value = {
+      name: [],
+      email: [],
+      subject: [],
+      message: [],
+    };
+    isSuccess.value = false;
+    error.value = '';
+    submissionId.value = '';
+  };
+
   const submitForm = async () => {
     isSubmitting.value = true;
     error.value = '';
 
-    // Validate all fields
-    const result = contactFormSchema.safeParse(form.value);
-    if (!result.success) {
-      // Update individual field errors
-      const fieldErrors = result.error.flatten().fieldErrors;
-      for (const [field, messages] of Object.entries(fieldErrors)) {
-        errors.value[field as keyof typeof errors.value] = messages || [];
-      }
-      isSubmitting.value = false;
-      return;
-    }
-
     try {
-      const { data } = await $fetch('/api/contact', {
+      // Validate all fields
+      const result = contactFormSchema.safeParse(form.value);
+      if (!result.success) {
+        // Update individual field errors
+        const fieldErrors = result.error.flatten().fieldErrors;
+        for (const [field, messages] of Object.entries(fieldErrors)) {
+          errors.value[field as keyof typeof errors.value] = messages || [];
+        }
+        throw new Error('Validation failed');
+      }
+
+      // Send the form data
+      const { data } = await useFetch('/api/contact', {
         method: 'POST',
         body: form.value,
       });
 
-      if (data) {
+      if (data.value) {
         isSuccess.value = true;
-        submissionId.value = data.id || 'N/A';
-        // Reset form
-        form.value = {
-          name: '',
-          email: '',
-          subject: '',
-          message: '',
-        };
+        submissionId.value = data.value.id || 'N/A';
+        resetForm();
+      } else {
+        throw new Error('No response data received');
       }
     } catch (err: any) {
+      console.error('Contact form submission error:', err);
       error.value = err.data?.message || 'Failed to send message. Please try again.';
     } finally {
       isSubmitting.value = false;
     }
   };
-
   return {
+    // Readonly refs for template usage
     form: readonly(form),
     errors: readonly(errors),
     isSubmitting: readonly(isSubmitting),
     isSuccess: readonly(isSuccess),
     error: readonly(error),
     submissionId: readonly(submissionId),
+
+    // Computed properties
     isValid,
+
+    // Methods
     validateName,
     validateEmail,
     validateSubject,
     validateMessage,
     submitForm,
+    resetForm,
   };
 };

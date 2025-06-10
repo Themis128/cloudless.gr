@@ -16,7 +16,7 @@
 
 import type { Database } from '~/utils/supabase';
 
-type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
+// type _UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 
 interface RouteMetaWithAuth {
   requiresRole?: string | string[];
