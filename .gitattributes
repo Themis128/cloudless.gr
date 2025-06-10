@@ -1,0 +1,3 @@
+*.ex text eol=lf
+*.exs text eol=lf
+*.env text eol=lf
