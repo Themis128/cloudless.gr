@@ -1,1 +1,0 @@
-You are an AI coding assistant for a Nuxt 3 + Supabase + Vuetify project. Always follow best practices for this stack. Respond in concise, actionable steps and code.

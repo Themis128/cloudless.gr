@@ -9,15 +9,8 @@
     </form>
 
     <!-- File List -->
-    <div
-      v-if="files.length > 0"
-      class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-    >
-      <div
-        v-for="file in files"
-        :key="file.name"
-        class="border p-4 rounded shadow-sm text-center"
-      >
+    <div v-if="files.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div v-for="file in files" :key="file.name" class="border p-4 rounded shadow-sm text-center">
         <div class="mb-2">
           <img
             v-if="isImage(file.name)"
@@ -28,12 +21,7 @@
           <div v-else class="text-sm text-gray-500">📄 {{ file.name }}</div>
         </div>
         <div class="text-sm break-words">{{ file.name }}</div>
-        <button
-          @click="deleteFile(file.name)"
-          class="text-red-500 text-xs mt-2"
-        >
-          🗑 Delete
-        </button>
+        <button @click="deleteFile(file.name)" class="text-red-500 text-xs mt-2">🗑 Delete</button>
       </div>
     </div>
 
@@ -42,61 +30,61 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { supabase } from '~/composables/useSupabase'
+import { ref, onMounted } from 'vue';
+import { supabase } from '~/composables/useSupabase';
 
-const fileInput = ref<HTMLInputElement | null>(null)
-const files = ref<any[]>([])
-const bucket = 'users'
+const fileInput = ref<HTMLInputElement | null>(null);
+const files = ref<any[]>([]);
+const bucket = 'users';
 
-const user = await supabase.auth.getUser().then((r) => r.data.user)
+const user = await supabase.auth.getUser().then((r) => r.data.user);
 
 if (!user) {
-  throw createError({ statusCode: 401, message: 'Not authenticated' })
+  throw createError({ statusCode: 401, message: 'Not authenticated' });
 }
 
-const folder = `${user.id}/`
+const folder = `${user.id}/`;
 
 const listFiles = async () => {
   const { data, error } = await supabase.storage.from(bucket).list(folder, {
     limit: 100,
     offset: 0,
     sortBy: { column: 'created_at', order: 'desc' },
-  })
-  if (error) console.error(error)
-  files.value = data || []
-}
+  });
+  if (error) console.error(error);
+  files.value = data || [];
+};
 
 const uploadFile = async () => {
-  if (!fileInput.value?.files?.[0]) return
-  const file = fileInput.value.files[0]
-  const filePath = `${folder}${file.name}`
+  if (!fileInput.value?.files?.[0]) return;
+  const file = fileInput.value.files[0];
+  const filePath = `${folder}${file.name}`;
 
   const { error } = await supabase.storage.from(bucket).upload(filePath, file, {
     upsert: true,
     cacheControl: '3600',
-  })
-  if (error) return alert('Upload failed: ' + error.message)
+  });
+  if (error) return alert('Upload failed: ' + error.message);
 
-  await listFiles()
-  fileInput.value.value = ''
-}
+  await listFiles();
+  fileInput.value.value = '';
+};
 
 const deleteFile = async (name: string) => {
-  const { error } = await supabase.storage.from(bucket).remove([`${folder}${name}`])
-  if (error) return alert('Delete failed: ' + error.message)
-  await listFiles()
-}
+  const { error } = await supabase.storage.from(bucket).remove([`${folder}${name}`]);
+  if (error) return alert('Delete failed: ' + error.message);
+  await listFiles();
+};
 
 const getFileUrl = (name: string) => {
-  return supabase.storage.from(bucket).getPublicUrl(`${folder}${name}`).data.publicUrl
-}
+  return supabase.storage.from(bucket).getPublicUrl(`${folder}${name}`).data.publicUrl;
+};
 
 const isImage = (name: string) => {
-  return name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)
-}
+  return name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i);
+};
 
-onMounted(listFiles)
+onMounted(listFiles);
 </script>
 
 <style scoped>

@@ -10,43 +10,41 @@
           :key="project.id"
           class="p-4 border border-gray-200 rounded"
         >
-          <strong>{{ project.name }}</strong><br />
+          <strong>{{ project.name }}</strong
+          ><br />
           <span class="text-gray-600">{{ project.description }}</span>
         </li>
       </ul>
     </div>
 
-    <div v-else class="mt-4 text-gray-500">
-      No projects found.
-    </div>
+    <div v-else class="mt-4 text-gray-500">No projects found.</div>
 
     <div class="mt-6">
-      <NuxtLink to="/projects" class="btn mr-4">➕ Manage Projects</NuxtLink>
-      <NuxtLink to="/storage" class="btn">🖼️ View File Storage</NuxtLink>
+      <!-- Removed links to Projects, Dashboard, Sitemap -->
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { supabase } from '~/composables/useSupabase'
+import { ref, onMounted } from 'vue';
+import { supabase } from '~/composables/useSupabase';
 
-const user = (await supabase.auth.getUser()).data.user
-const projects = ref<any[]>([])
+const user = (await supabase.auth.getUser()).data.user;
+const projects = ref<any[]>([]);
 
 const fetchProjects = async () => {
   const { data, error } = await supabase
     .from('projects')
     .select('*')
     // .eq('user_id', user?.id) // Uncomment if you add user_id to projects
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false });
 
   if (!error) {
-    projects.value = data ?? []
+    projects.value = data ?? [];
   }
-}
+};
 
-onMounted(fetchProjects)
+onMounted(fetchProjects);
 </script>
 
 <style scoped>
