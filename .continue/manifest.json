@@ -1,0 +1,7 @@
+{
+  "functions": ["functions.ts"],
+  "tools": ["tools/supabase.ts"],
+  "recipes": ["recipes/form-validation.ts"],
+  "systemPrompt": "system-prompt.txt",
+  "cliActions": "cli-actions.ts"
+}
