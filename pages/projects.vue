@@ -28,7 +28,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { supabase } from '~/composables/useSupabase';
+import { useSupabase } from '~/composables/useSupabase';
+const supabase = useSupabase();
 
 const projects = ref<any[]>([]);
 const newProject = ref({ name: '', description: '' });

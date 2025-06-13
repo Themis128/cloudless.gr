@@ -9,6 +9,14 @@ dist
 # Node dependencies
 node_modules
 
+# Cypress
+cypress/videos/
+cypress/screenshots/
+
+# Playwright
+playwright-report/
+test-results/
+
 # Logs
 logs
 *.log
@@ -17,8 +25,13 @@ logs
 .DS_Store
 .fleet
 .idea
+Thumbs.db
 
 # Local env files
 .env
 .env.*
 !.env.example
+
+# VS Code and Continue
+.vscode/
+.continue/

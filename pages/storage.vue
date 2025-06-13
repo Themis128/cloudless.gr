@@ -31,11 +31,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { supabase } from '~/composables/useSupabase';
+import { useSupabase } from '~/composables/useSupabase';
+const supabase = useSupabase();
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const files = ref<any[]>([]);
 const bucket = 'users';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILES = 20;
 
 const user = await supabase.auth.getUser().then((r) => r.data.user);
 
@@ -58,6 +62,19 @@ const listFiles = async () => {
 const uploadFile = async () => {
   if (!fileInput.value?.files?.[0]) return;
   const file = fileInput.value.files[0];
+
+  // Enforce file size limit
+  if (file.size > MAX_FILE_SIZE) {
+    alert('File too large. Max size is 10MB.');
+    return;
+  }
+
+  // Enforce max file count
+  if (files.value.length >= MAX_FILES) {
+    alert('Upload limit reached. Max 20 files allowed.');
+    return;
+  }
+
   const filePath = `${folder}${file.name}`;
 
   const { error } = await supabase.storage.from(bucket).upload(filePath, file, {

@@ -62,8 +62,9 @@
       </v-btn>
     </v-form>
 
-    <NuxtLink to="/auth/register" class="text-sm text-blue-700 block text-center mt-4">
-      Don’t have an account? Register
+    <NuxtLink to="/auth/register" class="register-link mt-4">
+      <v-icon left size="18" color="#a855f7">mdi-account-plus</v-icon>
+      <span>Don’t have an account? <span class="gradient-text">Register</span></span>
     </NuxtLink>
   </v-card>
 </template>
@@ -71,7 +72,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { navigateTo } from '#app'
-import { useSupabase } from '@/composables/useSupabase'
+import { useSupabase, setupUserStorage } from '@/composables/useSupabase'
 
 const email = ref('')
 const password = ref('')
@@ -84,7 +85,7 @@ const rules = {
 }
 
 async function handleLogin() {
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: email.value,
     password: password.value
   })
@@ -92,6 +93,14 @@ async function handleLogin() {
   if (error) {
     alert(error.message)
   } else {
+    try {
+      const userId = data.user?.id
+      if (userId) {
+        await setupUserStorage(supabase, userId)
+      }
+    } catch (e) {
+      alert('Storage setup failed: ' + (e as Error).message)
+    }
     navigateTo('/dashboard')
   }
 }
@@ -105,9 +114,55 @@ async function handleLogin() {
   box-shadow: 0 8px 32px rgba(31, 38, 135, 0.3);
 }
 .glass-input input {
-  color: white !important;
+  color: #fff !important;
+  text-shadow: 0 1px 6px rgba(30, 30, 60, 0.45), 0 0px 1px #000;
+  /* Fix tab/letter spacing and padding for better alignment */
+  letter-spacing: 0.02em;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  font-size: 1.08rem;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  background: rgba(255,255,255,0.10) !important; /* semi-transparent */
+  backdrop-filter: blur(2px);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(31,38,135,0.10);
+}
+.glass-input .v-field__overlay {
+  background: transparent !important;
 }
 .v-label {
-  color: rgba(255, 255, 255, 0.8);
+  color: #fff !important;
+  text-shadow: 0 1px 6px rgba(30, 30, 60, 0.45), 0 0px 1px #000;
+}
+::placeholder {
+  color: #f3f6fa !important;
+  text-shadow: 0 1px 6px rgba(30, 30, 60, 0.35);
+  opacity: 1;
+}
+.register-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #3b82f6;
+  gap: 0.4em;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.register-link:hover {
+  color: #a855f7;
+}
+.gradient-text {
+  background: linear-gradient(90deg, #3b82f6 30%, #a855f7 70%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  font-weight: 700;
+}
+.glass-card .v-card-title, .glass-card .v-card-subtitle, .glass-card .v-btn, .glass-card .v-list-item-title, .glass-card .v-list-item-subtitle {
+  color: #fff !important;
+  text-shadow: 0 1px 6px rgba(30, 30, 60, 0.45), 0 0px 1px #000;
 }
 </style>

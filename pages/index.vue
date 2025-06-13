@@ -19,23 +19,16 @@
             <v-col>
               <h1 class="text-h4 font-weight-bold mb-4 vanta-sky">Welcome to Cloudless GR</h1>
               <p class="vanta-white">This is the landing page of your Nuxt 3 + Vuetify 3 application with a Vanta animated background.</p>
-              <v-btn color="primary" class="mt-4" to="/admin">Go to Admin Panel</v-btn>
+              <v-btn class="mt-4 gradient-btn" to="/admin">
+                Go to Admin Panel
+              </v-btn>
+              <v-btn class="mt-4 ml-2 gradient-btn" to="/auth/login">
+                Go to User Login
+              </v-btn>
             </v-col>
           </v-row>
         </v-container>
       </VMain>
-
-      <!-- Footer -->
-      <client-only>
-        <Suspense>
-          <template #default>
-            <Footer :year="currentYear" />
-          </template>
-          <template #fallback>
-            <div class="footer-loading">Loading footer...</div>
-          </template>
-        </Suspense>
-      </client-only>
     </div>
   </VApp>
 </template>
@@ -44,8 +37,9 @@
 import { defineAsyncComponent } from 'vue'
 import VantaBackground from '@/components/Base/VantaBackground.vue'
 
-const Footer = defineAsyncComponent(() => import('@/components/Layout/Footer.vue'))
 const currentYear = new Date().getFullYear()
+
+definePageMeta({ layout: 'default' })
 </script>
 
 <style scoped>
@@ -75,13 +69,6 @@ const currentYear = new Date().getFullYear()
   padding: 2rem;
 }
 
-.footer-loading {
-  text-align: center;
-  font-size: 0.875rem;
-  color: #aaa;
-  padding: 0.75rem;
-}
-
 .vanta-sky {
   color: #5ca6ca;
   text-shadow:
@@ -102,6 +89,14 @@ const currentYear = new Date().getFullYear()
     2px 2px 4px #000a,
     0 2px 8px #5ca6ca88;
   font-size: 1.5rem;
+}
+
+.gradient-btn {
+  background: linear-gradient(90deg, #3b82f6 0%, #a855f7 100%) !important;
+  color: #fff !important;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px 0 rgba(80, 80, 160, 0.13);
 }
 </style>
 

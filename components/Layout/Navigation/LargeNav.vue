@@ -1,15 +1,19 @@
 <template>
   <nav class="hidden md:flex gap-4 items-center">
-    <NuxtLink to="/" class="nav-link">Home</NuxtLink>
-    <NuxtLink to="/about" class="nav-link">About</NuxtLink>
-    <NuxtLink to="/contact" class="nav-link">Contact</NuxtLink>
-    <NuxtLink to="/codegen" class="nav-link">Codegen</NuxtLink>
-    <NuxtLink to="/faq" class="nav-link">FAQ</NuxtLink>
+    <NuxtLink
+      v-for="link in links"
+      :key="link.path"
+      :to="link.path"
+      class="nav-link"
+    >
+      {{ link.name.charAt(0).toUpperCase() + link.name.slice(1) }}
+    </NuxtLink>
   </nav>
 </template>
 
 <script setup lang="ts">
-// No script needed for static nav
+import { useMainNavLinks } from '@/composables/useMainNavLinks'
+const { links } = useMainNavLinks()
 </script>
 
 <style scoped>

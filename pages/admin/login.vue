@@ -6,5 +6,6 @@
 
 <script setup>
 import AdminLogin from '@/components/auth/AdminLogin.vue'
+
+definePageMeta({ layout: 'admin' })
 </script>
-<!-- No navigation links to Projects, Dashboard, or Sitemap present in this file. -->

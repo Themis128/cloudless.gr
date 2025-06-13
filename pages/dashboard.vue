@@ -27,7 +27,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { supabase } from '~/composables/useSupabase';
+import { useSupabase } from '~/composables/useSupabase';
+const supabase = useSupabase();
 
 const user = (await supabase.auth.getUser()).data.user;
 const projects = ref<any[]>([]);
