@@ -2,8 +2,15 @@
   <v-container class="py-10">
     <v-row justify="space-between" align="center" class="mb-6">
       <v-col cols="12" md="8">
-        <h1 class="text-h5 font-weight-bold text-primary">👋 Welcome, {{ user?.first_name || '' }} {{ user?.last_name ||
-          '' }}<span v-if="!user?.first_name && !user?.last_name">{{ user?.email || 'guest' }}</span></h1>
+        <h1 class="text-h5 font-weight-bold text-primary">
+          👋 Welcome,
+          <span v-if="user && (user.first_name || user.last_name)">
+            {{ user.first_name }} {{ user.last_name }}
+          </span>
+          <span v-else>
+            {{ user?.email || 'guest' }}
+          </span>
+        </h1>
       </v-col>
       <!-- Theme toggle button removed; handled by layout -->
     </v-row>
@@ -32,40 +39,31 @@
 
 <script setup lang="ts">
 definePageMeta({ layout: 'user' })
-
-const supabase = useSupabase()
-const user = ref<any>(null)
+import { useUserStore } from '@/stores/userStore'
+import { ref, onMounted } from 'vue'
+const userStore = useUserStore()
+const user = ref<any>({})
 const projects = ref<any[]>([])
 
-const fetchUserProfile = async () => {
-  const { data: authData } = await supabase.auth.getUser()
-  const authUser = authData.user
-  if (authUser) {
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('first_name, last_name, email')
-      .eq('id', authUser.id)
-      .single()
-    user.value = {
-      ...authUser,
-      ...profile
-    }
+onMounted(async () => {
+  await userStore.fetchUserProfile()
+  user.value = {
+    first_name: userStore.user.first_name || '',
+    last_name: userStore.user.last_name || '',
+    email: userStore.user.email || ''
   }
-}
+  await fetchProjects()
+})
 
+const supabase = useSupabase ? useSupabase() : null
 const fetchProjects = async () => {
+  if (!supabase) return
   const { data, error } = await supabase
     .from('projects')
     .select('*')
     .order('created_at', { ascending: false })
-
   if (!error && data) {
     projects.value = data
   }
 }
-
-onMounted(async () => {
-  await fetchUserProfile()
-  await fetchProjects()
-})
 </script>

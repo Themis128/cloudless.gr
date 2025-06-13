@@ -18,21 +18,42 @@ z-index: 1001 !important;
         </v-navigation-drawer>
 
         <v-app-bar app flat color="transparent">
-            <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
             <v-toolbar-title class="text-primary">
                 Cloudless
-                <span v-if="userProfile && (userProfile.first_name || userProfile.last_name)"
-                    class="ml-2 text-body-2 text-grey-darken-2">
-                    — {{ userProfile.first_name }} {{ userProfile.last_name }}
-                </span>
-                <span v-else-if="userProfile && userProfile.email" class="ml-2 text-body-2 text-grey-darken-2">
-                    — {{ userProfile.email }}
-                </span>
             </v-toolbar-title>
             <v-spacer />
-            <v-btn icon>
-                <v-icon>mdi-account-circle</v-icon>
-            </v-btn>
+            <div v-if="user && user.full_name" class="mr-4 font-weight-medium">
+                {{ user.full_name }}
+            </div>
+            <div
+                class="floating-avatar-menu"
+                :style="avatarStyle"
+            >
+                <div
+                    class="avatar-drag-handle"
+                    @mousedown="startAvatarDrag"
+                    @touchstart="startAvatarDrag"
+                >
+                    <v-avatar size="48">
+                        <img :src="user.avatar_url || 'https://i.pravatar.cc/150?u=default'" alt="avatar" class="avatar-img" />
+                    </v-avatar>
+                </div>
+                <v-menu offset-y>
+                    <template #activator="{ props }">
+                        <v-btn icon v-bind="props" class="floating-avatar-btn" style="margin-top: -48px; margin-left: 0;">
+                            <span style="width:48px;height:48px;display:inline-block;"></span>
+                        </v-btn>
+                    </template>
+                    <v-list>
+                        <v-list-item @click="goToProfile">
+                            <v-list-item-title>Profile</v-list-item-title>
+                        </v-list-item>
+                        <v-list-item @click="logout">
+                            <v-list-item-title>Logout</v-list-item-title>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
+            </div>
         </v-app-bar>
 
         <!-- Fixed full-screen layered background (always at the bottom) -->
@@ -68,40 +89,83 @@ z-index: 1001 !important;
 </template>
 
 <script setup lang="ts">
-
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import AccessibilityMenu from '~/components/accessibility/AccessibilityMenu.vue'
 import { defineAsyncComponent } from 'vue'
 const Footer = defineAsyncComponent(() => import('@/components/Layout/Footer.vue'))
 
-import { useSupabase } from '@/composables/useSupabase'
-import { onMounted } from 'vue'
+import { useUserStore } from '@/stores/userStore'
+import { useRouter } from 'vue-router'
 
 const theme = useTheme()
 const currentTheme = theme.global.name
 const isLightBg = ref(false)
 const drawer = ref(false)
-const userProfile = ref<any>(null)
+const user = ref({ full_name: '', avatar_url: '', email: '' })
+let logout = () => {}
+let goToProfile = () => {}
 
-async function fetchUserProfile() {
-    const supabase = useSupabase()
-    const { data: authData } = await supabase.auth.getUser()
-    const authUser = authData.user
-    if (authUser) {
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('first_name, last_name, email')
-            .eq('id', authUser.id)
-            .single()
-        userProfile.value = {
-            ...authUser,
-            ...profile
-        }
-    }
+// Moveable floating avatar logic (like accessibility button)
+import { computed } from 'vue'
+const avatarX = ref(window.innerWidth - 100)
+const avatarY = ref(24)
+const avatarDragging = ref(false)
+const avatarOffset = ref({ x: 0, y: 0 })
+const avatarStyle = computed(() => `left: ${avatarX.value}px; top: ${avatarY.value}px;`)
+
+function startAvatarDrag(e: MouseEvent | TouchEvent) {
+  avatarDragging.value = true
+  let clientX, clientY
+  if (e.type === 'touchstart') {
+    const touch = (e as TouchEvent).touches[0]
+    clientX = touch.clientX
+    clientY = touch.clientY
+  } else {
+    clientX = (e as MouseEvent).clientX
+    clientY = (e as MouseEvent).clientY
+  }
+  avatarOffset.value = {
+    x: clientX - avatarX.value,
+    y: clientY - avatarY.value
+  }
+  document.addEventListener('mousemove', onAvatarDrag as EventListener)
+  document.addEventListener('mouseup', stopAvatarDrag)
+  document.addEventListener('touchmove', onAvatarDrag as EventListener)
+  document.addEventListener('touchend', stopAvatarDrag)
 }
 
-onMounted(fetchUserProfile)
+function onAvatarDrag(e: MouseEvent | TouchEvent) {
+  if (!avatarDragging.value) return
+  let clientX, clientY
+  if (e.type.startsWith('touch')) {
+    const touch = (e as TouchEvent).touches[0]
+    clientX = touch.clientX
+    clientY = touch.clientY
+  } else {
+    clientX = (e as MouseEvent).clientX
+    clientY = (e as MouseEvent).clientY
+  }
+  avatarX.value = Math.max(0, Math.min(window.innerWidth - 64, clientX - avatarOffset.value.x))
+  avatarY.value = Math.max(0, Math.min(window.innerHeight - 64, clientY - avatarOffset.value.y))
+}
+
+function stopAvatarDrag() {
+  avatarDragging.value = false
+  document.removeEventListener('mousemove', onAvatarDrag as EventListener)
+  document.removeEventListener('mouseup', stopAvatarDrag)
+  document.removeEventListener('touchmove', onAvatarDrag as EventListener)
+  document.removeEventListener('touchend', stopAvatarDrag)
+}
+
+onMounted(() => {
+  const userStore = useUserStore()
+  const router = useRouter()
+  user.value = userStore.user
+  logout = userStore.logout
+  goToProfile = () => router.push('/profile')
+  userStore.fetchUserProfile()
+})
 
 function toggleBg() {
     isLightBg.value = !isLightBg.value
@@ -202,3 +266,40 @@ function toggleBg() {
     z-index: 10;
 }
 </style>
+/* Make the avatar-drag-handle float above the menu button and be draggable */
+.avatar-drag-handle {
+  cursor: grab;
+  z-index: 2100;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: transparent;
+  user-select: none;
+}
+/* Ensure avatar image is perfectly circular and fits the avatar size */
+.avatar-img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+/* Floating avatar button styles */
+.floating-avatar-menu {
+  position: fixed;
+  top: 1.5rem;
+  right: 2.5rem;
+  z-index: 2000;
+}
+.floating-avatar-btn {
+  background: rgba(255,255,255,0.12) !important;
+  box-shadow: 0 2px 12px rgba(30,30,60,0.18);
+  border-radius: 50%;
+  transition: box-shadow 0.2s;
+}
+.floating-avatar-btn:hover {
+  box-shadow: 0 4px 24px rgba(168,85,247,0.18);
+}

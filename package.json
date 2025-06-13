@@ -16,8 +16,9 @@
         "@fortawesome/vue-fontawesome": "^3.0.8",
         "@heroicons/vue": "^2.2.0",
         "@nuxt/devtools": "latest",
-        "@supabase/supabase-js": "^2.39.7",
+        "@supabase/supabase-js": "^2.50.0",
         "nuxt": "^3.11.2",
+        "pinia": "^3.0.3",
         "three": "^0.177.0",
         "vanta": "^0.5.24",
         "vuetify": "^3.6.7"
