@@ -13,6 +13,11 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'on-first-retry',
   },
+  reporter: [
+    ['list'],
+    ['html', { outputFolder: 'playwright/results/html', open: 'never' }],
+    ['junit', { outputFile: 'playwright/results/results.xml' }]
+  ],
   projects: [
     {
       name: 'chromium',

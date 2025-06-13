@@ -1,64 +1,71 @@
 <template>
-  <div class="p-6">
-    <h1 class="text-2xl font-bold mb-4">👋 Welcome, {{ user?.email }}</h1>
+  <v-container class="py-10">
+    <v-row justify="space-between" align="center" class="mb-6">
+      <v-col cols="12" md="8">
+        <h1 class="text-h5 font-weight-bold text-primary">👋 Welcome, {{ user?.first_name || '' }} {{ user?.last_name ||
+          '' }}<span v-if="!user?.first_name && !user?.last_name">{{ user?.email || 'guest' }}</span></h1>
+      </v-col>
+      <!-- Theme toggle button removed; handled by layout -->
+    </v-row>
 
     <div v-if="projects.length">
-      <h2 class="text-xl font-semibold mb-2">📁 Your Projects</h2>
-      <ul class="space-y-2">
-        <li
-          v-for="project in projects"
-          :key="project.id"
-          class="p-4 border border-gray-200 rounded"
-        >
-          <strong>{{ project.name }}</strong
-          ><br />
-          <span class="text-gray-600">{{ project.description }}</span>
-        </li>
-      </ul>
+      <v-row dense>
+        <v-col v-for="project in projects" :key="project.id" cols="12" md="6" lg="4">
+          <v-card class="pa-4" elevation="4" color="surface">
+            <v-card-title class="text-primary font-weight-medium">
+              {{ project.name }}
+            </v-card-title>
+            <v-card-text class="text-secondary">
+              {{ project.description || 'No description.' }}
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
     </div>
 
-    <div v-else class="mt-4 text-gray-500">No projects found.</div>
-
-    <div class="mt-6">
-      <!-- Removed links to Projects, Dashboard, Sitemap -->
+    <div v-else class="text-center mt-10">
+      <v-icon size="40" color="grey lighten-1">mdi-folder-open</v-icon>
+      <p class="text-grey-lighten-1 mt-2">No projects found.</p>
     </div>
-  </div>
+  </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useSupabase } from '~/composables/useSupabase';
-const supabase = useSupabase();
+definePageMeta({ layout: 'user' })
 
-const user = (await supabase.auth.getUser()).data.user;
-const projects = ref<any[]>([]);
+const supabase = useSupabase()
+const user = ref<any>(null)
+const projects = ref<any[]>([])
+
+const fetchUserProfile = async () => {
+  const { data: authData } = await supabase.auth.getUser()
+  const authUser = authData.user
+  if (authUser) {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('id', authUser.id)
+      .single()
+    user.value = {
+      ...authUser,
+      ...profile
+    }
+  }
+}
 
 const fetchProjects = async () => {
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    // .eq('user_id', user?.id) // Uncomment if you add user_id to projects
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
 
-  if (!error) {
-    projects.value = data ?? [];
+  if (!error && data) {
+    projects.value = data
   }
-};
+}
 
-onMounted(fetchProjects);
+onMounted(async () => {
+  await fetchUserProfile()
+  await fetchProjects()
+})
 </script>
-
-<style scoped>
-.btn {
-  display: inline-block;
-  background-color: #2563eb; /* blue-600 */
-  color: #fff;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  transition: background 0.2s;
-  text-decoration: none;
-}
-.btn:hover {
-  background-color: #1d4ed8; /* blue-700 */
-}
-</style>

@@ -15,17 +15,7 @@
         <v-container class="text-center">
           <v-row>
             <v-col>
-              <v-card>
-                <v-card-title class="vanta-sky">Contact Us</v-card-title>
-                <v-card-text>
-                  <v-form>
-                    <v-text-field label="Your Name" required />
-                    <v-text-field label="Email" type="email" required />
-                    <v-textarea label="Message" rows="4" required />
-                    <v-btn color="primary" class="mt-4">Send Message</v-btn>
-                  </v-form>
-                </v-card-text>
-              </v-card>
+                <ContactUs />
             </v-col>
           </v-row>
         </v-container>

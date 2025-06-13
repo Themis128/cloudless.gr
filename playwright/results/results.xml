@@ -1,0 +1,26 @@
+<testsuites id="" name="" tests="6" failures="0" skipped="0" errors="0" time="10.885656999999998">
+<testsuite name="admin-login.spec.ts" timestamp="2025-06-13T12:36:34.898Z" hostname="chromium" tests="1" failures="0" skipped="0" time="2.53" errors="0">
+<testcase name="Admin Login › should display the admin login form" classname="admin-login.spec.ts" time="2.53">
+</testcase>
+</testsuite>
+<testsuite name="home.spec.ts" timestamp="2025-06-13T12:36:34.898Z" hostname="chromium" tests="1" failures="0" skipped="0" time="2.222" errors="0">
+<testcase name="Home Page › should display the welcome message" classname="home.spec.ts" time="2.222">
+</testcase>
+</testsuite>
+<testsuite name="admin-login.spec.ts" timestamp="2025-06-13T12:36:34.898Z" hostname="firefox" tests="1" failures="0" skipped="0" time="6.947" errors="0">
+<testcase name="Admin Login › should display the admin login form" classname="admin-login.spec.ts" time="6.947">
+</testcase>
+</testsuite>
+<testsuite name="home.spec.ts" timestamp="2025-06-13T12:36:34.898Z" hostname="firefox" tests="1" failures="0" skipped="0" time="7.595" errors="0">
+<testcase name="Home Page › should display the welcome message" classname="home.spec.ts" time="7.595">
+</testcase>
+</testsuite>
+<testsuite name="admin-login.spec.ts" timestamp="2025-06-13T12:36:34.898Z" hostname="webkit" tests="1" failures="0" skipped="0" time="3.863" errors="0">
+<testcase name="Admin Login › should display the admin login form" classname="admin-login.spec.ts" time="3.863">
+</testcase>
+</testsuite>
+<testsuite name="home.spec.ts" timestamp="2025-06-13T12:36:34.898Z" hostname="webkit" tests="1" failures="0" skipped="0" time="2.978" errors="0">
+<testcase name="Home Page › should display the welcome message" classname="home.spec.ts" time="2.978">
+</testcase>
+</testsuite>
+</testsuites>

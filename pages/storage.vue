@@ -1,118 +1,244 @@
 <template>
-  <div class="p-6">
-    <h1 class="text-2xl font-bold mb-4">📦 My Files</h1>
+  <v-container fluid class="pa-6">
+    <v-row>
+      <v-col cols="12">
+        <v-sheet class="pa-4">
+          <h1 class="text-h4">
+            📦 Welcome,
+            {{ displayName }}
+          </h1>
+        </v-sheet>
+      </v-col>
 
-    <!-- Upload Form -->
-    <form @submit.prevent="uploadFile" class="flex gap-2 items-center mb-6">
-      <input type="file" ref="fileInput" required />
-      <button type="submit" class="btn">Upload</button>
-    </form>
+      <v-col cols="12">
+        <v-form @submit.prevent="uploadFile" class="d-flex flex-column align-start gap-2">
+          <v-file-input
+            v-model="selectedFile"
+            ref="fileInput"
+            density="comfortable"
+            hide-details
+            required
+            class="mb-2"
+          ></v-file-input>
+          <v-btn color="primary" type="submit" size="large" elevation="4" class="upload-btn" rounded block>
+            <v-icon start>mdi-cloud-upload</v-icon>
+            Upload
+          </v-btn>
+        </v-form>
+      </v-col>
 
-    <!-- File List -->
-    <div v-if="files.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      <div v-for="file in files" :key="file.name" class="border p-4 rounded shadow-sm text-center">
-        <div class="mb-2">
-          <img
-            v-if="isImage(file.name)"
-            :src="getFileUrl(file.name)"
-            alt="Preview"
-            class="w-full h-32 object-cover rounded"
-          />
-          <div v-else class="text-sm text-gray-500">📄 {{ file.name }}</div>
-        </div>
-        <div class="text-sm break-words">{{ file.name }}</div>
-        <button @click="deleteFile(file.name)" class="text-red-500 text-xs mt-2">🗑 Delete</button>
-      </div>
-    </div>
+      <v-col cols="12" v-if="uploading" class="d-flex align-center">
+        <v-progress-circular indeterminate color="primary" class="me-2"></v-progress-circular>
+        <span>Uploading...</span>
+      </v-col>
 
-    <div v-else class="text-gray-500">No files found.</div>
-  </div>
+      <v-col cols="12" v-if="successMessage">
+        <v-alert type="success">{{ successMessage }}</v-alert>
+      </v-col>
+
+      <v-col 
+        v-if="files.length"
+        cols="12"
+        md="4"
+        lg="3"
+        v-for="file in files"
+        :key="file.name"
+      >
+        <v-card>
+          <v-img v-if="isImage(file.name)" :src="fileUrls[file.name]" height="200px"></v-img>
+          <v-card-text v-else class="text-center text--on-surface">
+            📄 {{ file.name }}
+          </v-card-text>
+          <v-card-actions class="justify-space-between">
+            <span class="text--on-surface ellipsis">{{ file.name }}</span>
+            <v-btn icon @click="deleteFile(file.name)">
+              <v-icon color="error">mdi-delete</v-icon>
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" v-else>
+        <v-alert type="info">No files found.</v-alert>
+      </v-col>
+
+      <v-col cols="12" v-if="files.length">
+        <v-table>
+          <thead>
+            <tr>
+              <th>File Name</th>
+              <th>Size</th>
+              <th>Last Modified</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="file in files" :key="file.name">
+              <td>{{ file.name }}</td>
+              <td>{{ formatSize(file.metadata?.size) }}</td>
+              <td>{{ formatDate(file.updated_at || file.created_at) }}</td>
+              <td>
+                <v-btn variant="text" :href="fileUrls[file.name]" target="_blank">View</v-btn>
+                <v-btn icon @click="deleteFile(file.name)">
+                  <v-icon color="error">mdi-delete</v-icon>
+                </v-btn>
+              </td>
+            </tr>
+          </tbody>
+        </v-table>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useSupabase } from '~/composables/useSupabase';
+import { definePageMeta } from '#imports';
+
+definePageMeta({ layout: 'user' });
+
 const supabase = useSupabase();
 
-const fileInput = ref<HTMLInputElement | null>(null);
+const fileInput = ref<any>(null);
+const selectedFile = ref<File | null>(null);
 const files = ref<any[]>([]);
+const fileUrls = ref<Record<string, string>>({});
 const bucket = 'users';
-
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_FILES = 20;
 
-const user = await supabase.auth.getUser().then((r) => r.data.user);
+const userProfile = ref<any>(null);
+const folder = ref('');
 
-if (!user) {
-  throw createError({ statusCode: 401, message: 'Not authenticated' });
-}
+const uploading = ref(false);
+const successMessage = ref('');
 
-const folder = `${user.id}/`;
+const displayName = computed(() => {
+  if (userProfile.value?.first_name && userProfile.value?.last_name) {
+    return `${userProfile.value.first_name} ${userProfile.value.last_name}`;
+  }
+  return userProfile.value?.email || 'guest';
+});
+
+const fetchUserProfile = async () => {
+  const { data: authData } = await supabase.auth.getUser();
+  const authUser = authData.user;
+  if (!authUser) {
+    throw createError({ statusCode: 401, message: 'Not authenticated' });
+  }
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('first_name, last_name, email')
+    .eq('id', authUser.id)
+    .single();
+  userProfile.value = {
+    ...authUser,
+    ...profile
+  };
+  folder.value = `${authUser.id}/`;
+};
 
 const listFiles = async () => {
-  const { data, error } = await supabase.storage.from(bucket).list(folder, {
+  if (!folder.value) return;
+  const { data, error } = await supabase.storage.from(bucket).list(folder.value, {
     limit: 100,
     offset: 0,
     sortBy: { column: 'created_at', order: 'desc' },
   });
   if (error) console.error(error);
   files.value = data || [];
+  fileUrls.value = {};
+  for (const file of files.value) {
+    fileUrls.value[file.name] = await getFileUrl(file.name);
+  }
 };
 
 const uploadFile = async () => {
-  if (!fileInput.value?.files?.[0]) return;
-  const file = fileInput.value.files[0];
+  if (!selectedFile.value) return;
+  let file = selectedFile.value;
+  const safeName = file.name
+    .replace(/\s+/g, '_')
+    .replace(/[^a-zA-Z0-9._-]/g, '');
+  if (safeName !== file.name) {
+    file = new File([file], safeName, { type: file.type });
+  }
 
-  // Enforce file size limit
   if (file.size > MAX_FILE_SIZE) {
     alert('File too large. Max size is 10MB.');
     return;
   }
 
-  // Enforce max file count
   if (files.value.length >= MAX_FILES) {
     alert('Upload limit reached. Max 20 files allowed.');
     return;
   }
 
-  const filePath = `${folder}${file.name}`;
+  const filePath = `${folder.value}${file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '')}`;
+  uploading.value = true;
+  successMessage.value = '';
 
-  const { error } = await supabase.storage.from(bucket).upload(filePath, file, {
-    upsert: true,
-    cacheControl: '3600',
-  });
-  if (error) return alert('Upload failed: ' + error.message);
-
-  await listFiles();
-  fileInput.value.value = '';
+  try {
+    const { error } = await supabase.storage.from(bucket).upload(filePath, file, {
+      upsert: true,
+      cacheControl: '3600',
+    });
+    if (error) {
+      uploading.value = false;
+      return alert('Upload failed: ' + error.message);
+    }
+    await listFiles();
+    if (fileInput.value) fileInput.value.reset();
+    selectedFile.value = null;
+    successMessage.value = 'Upload successful!';
+    setTimeout(() => successMessage.value = '', 2500);
+  } catch (e) {
+    alert('Upload failed: ' + (e as Error).message);
+  } finally {
+    uploading.value = false;
+  }
 };
 
 const deleteFile = async (name: string) => {
-  const { error } = await supabase.storage.from(bucket).remove([`${folder}${name}`]);
+  const { error } = await supabase.storage.from(bucket).remove([`${folder.value}${name}`]);
   if (error) return alert('Delete failed: ' + error.message);
   await listFiles();
 };
 
-const getFileUrl = (name: string) => {
-  return supabase.storage.from(bucket).getPublicUrl(`${folder}${name}`).data.publicUrl;
+const getFileUrl = async (name: string) => {
+  const filePath = `${folder.value}${name}`;
+  const publicUrl = supabase.storage.from(bucket).getPublicUrl(filePath).data.publicUrl;
+  if (publicUrl && !publicUrl.includes('404')) return publicUrl;
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(filePath, 60 * 60);
+  if (data?.signedUrl) return data.signedUrl;
+  return '';
 };
 
 const isImage = (name: string) => {
   return name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i);
 };
 
-onMounted(listFiles);
-</script>
+function formatSize(size: number | undefined) {
+  if (!size) return '-';
+  if (size < 1024) return size + ' B';
+  if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB';
+  return (size / (1024 * 1024)).toFixed(2) + ' MB';
+}
 
-<style scoped>
-.btn {
-  background-color: #2563eb; /* bg-blue-600 */
-  color: #fff; /* text-white */
-  padding: 0.25rem 1rem; /* px-4 py-1 */
-  border-radius: 0.375rem; /* rounded */
-  transition: background-color 0.2s;
+function formatDate(dateStr: string | undefined) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  return d.toLocaleString();
 }
-.btn:hover {
-  background-color: #1d4ed8; /* hover:bg-blue-700 */
-}
-</style>
+
+onMounted(async () => {
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData.user) {
+    // Not authenticated, redirect to login
+    window.location.href = '/auth/login';
+    return;
+  }
+  await fetchUserProfile();
+  await listFiles();
+});
+</script>
