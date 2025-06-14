@@ -1,17 +1,16 @@
 <template>
-  <h2 class="admin-title text-center mt-8 mb-4">Cloudless Admin</h2>
-  <v-container fluid fill-height class="d-flex justify-center align-center flex-column">
-    <AdminLogin />
-    <v-btn color="primary" class="mt-6" to="/auth/login" size="large" variant="outlined">
-      <v-icon left>mdi-account</v-icon>
-      User Login
-    </v-btn>
+  <v-container class="py-12">
+    <h2 class="admin-title text-center mb-8">Cloudless Admin Dashboard</h2>
+    <v-card class="admin-glass-card pa-8 mx-auto" max-width="600">
+      <div class="text-h6 mb-4">Welcome, Admin!</div>
+      <div class="mb-2">You are now logged in with admin privileges.</div>
+      <v-divider class="my-4" />
+      <div class="text-grey">This is your secure admin dashboard. Add admin features here.</div>
+    </v-card>
   </v-container>
 </template>
 
 <script setup>
-import AdminLogin from '@/components/auth/AdminLogin.vue'
-
 definePageMeta({ layout: 'admin' })
 </script>
 
@@ -24,7 +23,13 @@ definePageMeta({ layout: 'admin' })
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-fill-color: transparent;
   text-shadow: 0 2px 16px rgba(80,80,160,0.13);
+}
+.admin-glass-card {
+  background: rgba(255,255,255,0.10);
+  backdrop-filter: blur(14px);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(31,38,135,0.18);
+  border: 1.5px solid rgba(168,85,247,0.10);
 }
 </style>

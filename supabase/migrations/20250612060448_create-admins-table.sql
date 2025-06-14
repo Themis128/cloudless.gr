@@ -6,14 +6,4 @@ create table if not exists public.admins (
   created_at timestamptz default now()
 );
 
--- Enable RLS
-alter table public.admins enable row level security;
-
--- Allow logged-in users to read their own record
-create policy "Admins can read their own record"
-on public.admins
-for select
-to authenticated
-using (
-  auth.uid() = id
-);
+-- RLS and security policies removed for open access

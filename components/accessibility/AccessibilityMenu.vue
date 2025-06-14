@@ -79,7 +79,10 @@ const btnY = ref(32) // default to top left if not set
 const dragging = ref(false)
 const offset = ref({ x: 0, y: 0 })
 
-const btnStyle = computed(() => `left: ${btnX.value}px; top: ${btnY.value}px;`)
+const btnStyle = computed(() => ({
+  left: btnX.value + 'px',
+  top: btnY.value + 'px'
+}))
 
 function startDrag(e: MouseEvent | TouchEvent) {
     dragging.value = true

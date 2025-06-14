@@ -4,8 +4,7 @@
 
     <ul class="mb-6">
       <li v-for="project in projects" :key="project.id">
-        <strong>{{ project.name }}</strong
-        >: {{ project.description }}
+        <strong>{{ project.name }}</strong>: {{ project.description }}
       </li>
     </ul>
 

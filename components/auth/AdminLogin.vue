@@ -6,6 +6,9 @@
     </v-card-title>
     <v-divider class="mb-6" />
     <v-form @submit.prevent="handleAdminLogin" validate-on="submit lazy">
+      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
+        {{ errorMsg }}
+      </v-alert>
       <v-text-field
         v-model="email"
         label="Admin Email"
@@ -16,6 +19,7 @@
         color="primary"
         class="elegant-input mb-4"
         :rules="[rules.required, rules.email]"
+        :disabled="loading"
       />
       <v-text-field
         v-model="password"
@@ -29,8 +33,9 @@
         color="primary"
         class="elegant-input mb-2"
         :rules="[rules.required]"
+        :disabled="loading"
       />
-      <v-btn type="submit" block color="primary" class="mt-4 gradient-btn" size="large">
+      <v-btn type="submit" block color="primary" class="mt-4 gradient-btn" size="large" :loading="loading" :disabled="loading">
         <v-icon left>mdi-login</v-icon>
         Login as Admin
       </v-btn>
@@ -46,6 +51,8 @@ import { navigateTo } from '#app'
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const loading = ref(false)
+const errorMsg = ref('')
 const supabase = useSupabase()
 
 const rules = {
@@ -54,24 +61,34 @@ const rules = {
 }
 
 async function handleAdminLogin() {
-  // Query the admins table for the email
-  const { data, error } = await supabase
-    .from('admins')
-    .select('*')
-    .eq('email', email.value)
-    .single()
-
-  if (error || !data) {
-    alert('Admin not found or error: ' + (error?.message || ''))
+  errorMsg.value = ''
+  loading.value = true
+  // 1. Try to sign in with Supabase Auth
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  })
+  if (authError || !authData.user) {
+    errorMsg.value = authError?.message || 'Invalid credentials.'
+    loading.value = false
     return
   }
-
-  // For demo: compare plaintext password (in production, use hashing!)
-  if (data.password === password.value) {
-    navigateTo('/admin')
-  } else {
-    alert('Invalid password')
+  // 2. Check if the email is in the admins table
+  const { data: adminData, error: adminError } = await supabase
+    .from('admins')
+    .select('email')
+    .eq('email', email.value)
+    .single()
+  if (adminError || !adminData) {
+    errorMsg.value = 'You are not authorized as an admin.'
+    loading.value = false
+    // Optionally sign out immediately
+    await supabase.auth.signOut()
+    return
   }
+  // 3. Success: redirect to admin dashboard
+  await navigateTo('/admin/')
+  loading.value = false
 }
 </script>
 
@@ -89,7 +106,6 @@ async function handleAdminLogin() {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-fill-color: transparent;
   display: flex;
   align-items: center;
   justify-content: center;

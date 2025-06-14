@@ -1,23 +1,18 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { useRuntimeConfig } from '#imports'
 
-// Singleton pattern for Supabase client
-let supabaseClient: SupabaseClient | null = null;
-export const useSupabase = (isAdmin = false) => {
-  const config = useRuntimeConfig();
-  const url = config.public.SUPABASE_URL as string;
-  const anon = config.public.SUPABASE_ANON_KEY as string;
-  // Only use service_role on server side
-  let key = anon;
-  if (isAdmin && process.server) {
-    const serviceRole = (config as any).SUPABASE_SERVICE_ROLE_KEY as string;
-    if (serviceRole) key = serviceRole;
+// Server-safe composable: uses injected $supabase on client, creates client on server
+export const useSupabase = (): SupabaseClient => {
+  if (process.client) {
+    // @ts-ignore: Nuxt auto-injects $supabase
+    return useNuxtApp().$supabase
+  } else {
+    const config = useRuntimeConfig()
+    return createClient(
+      config.public.SUPABASE_URL,
+      config.public.SUPABASE_ANON_KEY
+    )
   }
-  if (!supabaseClient) {
-    supabaseClient = createClient(url, key);
-  }
-  return supabaseClient;
-};
+}
 
 // Creates a user-specific folder in the given bucket if it doesn't exist
 export async function setupUserStorage(

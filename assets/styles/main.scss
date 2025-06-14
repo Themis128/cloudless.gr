@@ -1,0 +1,19 @@
+body {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  background: #f7f8fa;
+  color: #222;
+}
+
+.dark body {
+  background: #181a1b;
+  color: #f7f8fa;
+}
+
+.v-application .v-btn {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.v-application .v-app-bar {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}

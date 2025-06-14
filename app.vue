@@ -2,7 +2,7 @@
   <VApp>
     <NuxtLayout>
       <VMain>
-        <NuxtPage />
+        <NuxtPage :transition="pageTransition" />
       </VMain>
     </NuxtLayout>
   </VApp>
@@ -17,6 +17,11 @@ useHead({
     lang: 'en'
   }
 })
+
+const pageTransition = {
+  name: 'fade-page',
+  mode: 'out-in',
+}
 </script>
 
 <style>
@@ -70,3 +75,10 @@ html {
   font-family: 'Inter', sans-serif;
 }
 </style>
+/* Global page transition for smooth navigation */
+.fade-page-enter-active, .fade-page-leave-active {
+  transition: opacity 0.35s cubic-bezier(.4,1.7,.6,.95);
+}
+.fade-page-enter-from, .fade-page-leave-to {
+  opacity: 0;
+}

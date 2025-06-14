@@ -10,8 +10,8 @@ z-index: 1001 !important;
         <v-navigation-drawer v-model="drawer" app temporary class="bg-dark">
             <v-list>
                 <v-list-item title="Dashboard" prepend-icon="mdi-view-dashboard" to="/dashboard" />
-                <v-list-item title="Projects" prepend-icon="mdi-folder" to="/projects" />
-                <v-list-item title="Settings" prepend-icon="mdi-cog" to="/settings" />
+                <v-list-item title="Projects" prepend-icon="mdi-folder" to="/projects/" />
+                <v-list-item title="Settings" prepend-icon="mdi-cog" to="/settings/" />
                 <v-divider />
                 <v-list-item title="Logout" prepend-icon="mdi-logout" />
             </v-list>
@@ -22,8 +22,8 @@ z-index: 1001 !important;
                 Cloudless
             </v-toolbar-title>
             <v-spacer />
-            <div v-if="user && user.full_name" class="mr-4 font-weight-medium">
-                {{ user.full_name }}
+            <div v-if="user && (user.first_name || user.last_name)" class="mr-4 font-weight-medium">
+                {{ user.first_name }} {{ user.last_name }}
             </div>
             <div
                 class="floating-avatar-menu"
@@ -91,18 +91,18 @@ z-index: 1001 !important;
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
-import AccessibilityMenu from '~/components/accessibility/AccessibilityMenu.vue'
+import AccessibilityMenu from '../components/accessibility/AccessibilityMenu.vue'
 import { defineAsyncComponent } from 'vue'
-const Footer = defineAsyncComponent(() => import('@/components/Layout/Footer.vue'))
+const Footer = defineAsyncComponent(() => import('../components/Layout/Footer.vue'))
 
-import { useUserStore } from '@/stores/userStore'
-import { useRouter } from 'vue-router'
+// import { useUserStore } from '@/stores/userStore' // File missing
+// import { useRouter } from 'vue-router'
 
 const theme = useTheme()
 const currentTheme = theme.global.name
 const isLightBg = ref(false)
 const drawer = ref(false)
-const user = ref({ full_name: '', avatar_url: '', email: '' })
+const user = ref({ first_name: '', last_name: '', avatar_url: '', email: '' })
 let logout = () => {}
 let goToProfile = () => {}
 
@@ -112,7 +112,10 @@ const avatarX = ref(window.innerWidth - 100)
 const avatarY = ref(24)
 const avatarDragging = ref(false)
 const avatarOffset = ref({ x: 0, y: 0 })
-const avatarStyle = computed(() => `left: ${avatarX.value}px; top: ${avatarY.value}px;`)
+const avatarStyle = computed(() => ({
+  left: avatarX.value + 'px',
+  top: avatarY.value + 'px'
+}))
 
 function startAvatarDrag(e: MouseEvent | TouchEvent) {
   avatarDragging.value = true
@@ -158,14 +161,17 @@ function stopAvatarDrag() {
   document.removeEventListener('touchend', stopAvatarDrag)
 }
 
-onMounted(() => {
-  const userStore = useUserStore()
-  const router = useRouter()
-  user.value = userStore.user
-  logout = userStore.logout
-  goToProfile = () => router.push('/profile')
-  userStore.fetchUserProfile()
-})
+
+// onMounted(() => {
+//   const userStore = useUserStore()
+//   const router = useRouter()
+//   user.value = userStore.user
+//   logout = userStore.logout
+//   goToProfile = () => router.push('/profile')
+//   userStore.fetchUserProfile().then(() => {
+//     user.value = userStore.user
+//   })
+// })
 
 function toggleBg() {
     isLightBg.value = !isLightBg.value

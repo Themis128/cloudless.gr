@@ -3,6 +3,9 @@
     <v-card-title class="text-h5 text-white text-center">Login</v-card-title>
 
     <v-form @submit.prevent="handleLogin" validate-on="submit lazy">
+      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
+        {{ errorMsg }}
+      </v-alert>
       <v-text-field
         v-model="email"
         label="Email"
@@ -13,6 +16,7 @@
         color="blue"
         class="glass-input mb-4"
         :rules="[rules.required, rules.email]"
+        :disabled="loading"
       />
 
       <v-text-field
@@ -27,16 +31,19 @@
         color="blue"
         class="glass-input"
         :rules="[rules.required]"
+        :disabled="loading"
       />
 
-      <v-btn type="submit" block color="blue" class="mt-4">Login</v-btn>
+      <v-btn type="submit" block color="blue" class="mt-4" :loading="loading" :disabled="loading">Login</v-btn>
 
       <v-btn
         variant="outlined"
         block
         color="blue"
         class="mt-2"
-        @click="navigateTo('/admin')"
+        to="/auth/admin-login"
+        tag="router-link"
+        :disabled="loading"
       >
         Login as Admin
       </v-btn>
@@ -47,6 +54,7 @@
         color="white"
         class="mt-4"
         @click="navigateTo('/auth/reset')"
+        :disabled="loading"
       >
         Forgot Password?
       </v-btn>
@@ -57,6 +65,7 @@
         color="white"
         class="mt-1"
         @click="navigateTo('/auth/register')"
+        :disabled="loading"
       >
         Register
       </v-btn>
@@ -74,9 +83,12 @@ import { ref } from 'vue'
 import { navigateTo } from '#app'
 import { useSupabase, setupUserStorage } from '@/composables/useSupabase'
 
+
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const loading = ref(false)
+const errorMsg = ref('')
 const supabase = useSupabase()
 
 const rules = {
@@ -85,23 +97,32 @@ const rules = {
 }
 
 async function handleLogin() {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email.value,
-    password: password.value
-  })
-
-  if (error) {
-    alert(error.message)
-  } else {
+  errorMsg.value = ''
+  loading.value = true
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.value,
+      password: password.value
+    })
+    if (error) {
+      errorMsg.value = error.message
+      password.value = ''
+      return
+    }
     try {
       const userId = data.user?.id
       if (userId) {
         await setupUserStorage(supabase, userId)
       }
     } catch (e) {
-      alert('Storage setup failed: ' + (e as Error).message)
+      errorMsg.value = 'Storage setup failed: ' + (e as Error).message
+      return
     }
-    navigateTo('/dashboard')
+    await navigateTo('/dashboard')
+  } catch (e) {
+    errorMsg.value = (e as Error).message || 'Login failed.'
+  } finally {
+    loading.value = false
   }
 }
 </script>
