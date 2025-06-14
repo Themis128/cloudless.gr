@@ -10,8 +10,12 @@
         <v-text-field v-model="email" label="Email" placeholder="you@example.com" prepend-icon="mdi-email-outline"
           clearable color="blue" class="glass-input mb-4" :rules="[rules.required, rules.email]" :tabindex="3" />
         <v-text-field v-model="password" :type="showPassword ? 'text' : 'password'" label="Password"
-          prepend-icon="mdi-lock-outline" :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-          @click:append="showPassword = !showPassword" clearable color="blue" class="glass-input mb-4"
+          prepend-icon="mdi-lock-outline"
+          :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+          @click:append="showPassword = !showPassword"
+          @keydown:append.enter="showPassword = !showPassword"
+          append-inner-icon=""
+          clearable color="blue" class="glass-input mb-4"
           :rules="[rules.required, rules.minLength]" :tabindex="4" />
         <v-btn type="submit" block color="blue" class="mt-4">Register</v-btn>
       </v-form>
@@ -48,6 +52,8 @@ async function handleRegister() {
   })
   if (error) {
     alert(error.message)
+    password.value = '' // clear only password
+    return
   } else {
     try {
       const userId = data.user?.id

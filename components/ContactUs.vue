@@ -1,42 +1,43 @@
 <template>
-  <div class="contactus-flip-container" :class="{ flipped: isFlipped }">
-    <div class="contactus-flipper">
-      <!-- Front Side -->
-      <v-card class="contactus-card mx-auto contactus-front" max-width="340" elevation="6">
-        <v-card-title class="vanta-sky text-center">Contact Us</v-card-title>
-        <v-card-text>
-          <v-form @submit.prevent="handleSubmit">
-            <v-text-field v-model="name" label="Your Name" required density="compact" hide-details class="mb-2" />
-            <v-text-field v-model="email" label="Email" type="email" required density="compact" hide-details class="mb-2" />
-            <v-textarea v-model="message" label="Message" rows="3" auto-grow required density="compact" hide-details class="mb-2" />
-            <v-btn color="primary" size="small" block class="mt-2" type="submit" :loading="submitting" :disabled="submitting">Send Message</v-btn>
-            <v-alert v-if="errorMsg" type="error" class="mt-2">{{ errorMsg }}</v-alert>
-          </v-form>
-        </v-card-text>
-      </v-card>
-      <!-- Back Side -->
-      <v-card class="contactus-card mx-auto contactus-back" max-width="340" elevation="6">
-        <v-card-title class="vanta-sky text-center">Thank You!</v-card-title>
-        <v-card-text class="text-center">
-          <div class="mb-2">Your message has been sent.<br>We’ll get back to you soon.</div>
-          <div class="about-social mb-2">
-            <v-btn
-              v-for="item in socialWithIcons"
-              :key="item.name"
-              icon
-              :href="item.url"
-              target="_blank"
-              :aria-label="item.aria"
-              class="mx-1"
-              size="small"
-              variant="text"
-            >
-              <FontAwesomeIcon :icon="item.iconObj" class="fa-social" :style="`color:${item.color}`" />
-            </v-btn>
-          </div>
-          <v-btn color="primary" size="small" variant="text" @click="isFlipped = false">Back</v-btn>
-        </v-card-text>
-      </v-card>
+  <div class="contact-flip-card">
+    <div :class="['flip-card-inner', { flipped: isFlipped }]">
+      <!-- Front Side: Contact Form -->
+      <div class="flip-card-front">
+        <v-card elevation="4" class="pa-4">
+          <v-card-title>Contact Us</v-card-title>
+          <v-card-text>
+            <v-form ref="form" @submit.prevent="handleSubmit" v-model="formValid">
+              <v-text-field v-model="name" label="Name" required :rules="[v => !!v || 'Name is required']" />
+              <v-text-field v-model="email" label="Email" required type="email" :rules="[v => !!v || 'Email is required']" />
+              <v-textarea v-model="message" label="Message" required :rules="[v => !!v || 'Message is required']" />
+              <div aria-live="assertive">
+                <v-alert v-if="errorMsg" type="error" class="mt-2">{{ errorMsg }}</v-alert>
+                <v-alert v-if="successMsg" type="success" class="mt-2">{{ successMsg }}</v-alert>
+              </div>
+              <v-btn type="submit" color="primary" :disabled="submitting || !formValid" :loading="submitting">
+                Send Message
+              </v-btn>
+            </v-form>
+          </v-card-text>
+        </v-card>
+      </div>
+      <!-- Back Side: Thank You / Socials -->
+      <div class="flip-card-back">
+        <v-card elevation="4" class="pa-4 text-center">
+          <v-card-title>Thank You!</v-card-title>
+          <v-card-text>
+            <div>We'll get back to you soon.</div>
+            <div class="mt-4">
+              <span v-for="item in socialWithIcons" :key="item.name" class="mx-2">
+                <a :href="item.url" target="_blank" rel="noopener noreferrer" :aria-label="item.aria || item.name">
+                  <FontAwesomeIcon :icon="item.iconObj" :style="`color:${item.color};font-size:1.5rem;`" />
+                </a>
+              </span>
+            </div>
+            <v-btn aria-label="Go back to contact form" color="primary" size="small" variant="text" @click="isFlipped = false">Back</v-btn>
+          </v-card-text>
+        </v-card>
+      </div>
     </div>
   </div>
 </template>
@@ -51,9 +52,12 @@ import { useSupabase } from '@/composables/useSupabase'
 const name = ref('')
 const email = ref('')
 const message = ref('')
-const isFlipped = ref(false)
-const submitting = ref(false)
 const errorMsg = ref('')
+const successMsg = ref('')
+const submitting = ref(false)
+const isFlipped = ref(false)
+const form = ref()
+const formValid = ref(true)
 
 const contact = useContactInfo()
 const iconMap = { faTwitter, faGithub, faLinkedin }
@@ -65,75 +69,75 @@ const socialWithIcons = computed(() => contact.social.map(item => ({
 const supabase = useSupabase()
 
 async function handleSubmit() {
-  submitting.value = true
   errorMsg.value = ''
-  const { data, error, status } = await supabase
-    .from('contact_messages')
-    .insert({
-      name: name.value,
-      email: email.value,
-      message: message.value
-    });
-  console.log('Supabase Insert Debug:', {
+  successMsg.value = ''
+  submitting.value = true
+  // Validate form
+  const valid = await form.value?.validate?.()
+  if (!valid) {
+    submitting.value = false
+    return
+  }
+  if (!name.value || !email.value || !message.value) {
+    errorMsg.value = 'Please fill out all fields.'
+    submitting.value = false
+    return
+  }
+  // Insert into Supabase
+  const { error } = await supabase.from('contact_messages').insert({
     name: name.value,
     email: email.value,
     message: message.value,
-    status,
-    data,
-    error,
-  });
-  submitting.value = false
+    created_at: new Date().toISOString()
+  })
   if (error) {
-    errorMsg.value = 'Insert failed — check console for full error.';
-    // eslint-disable-next-line no-console
-    console.error('RAW ERROR:', error);
-    return;
+    errorMsg.value = 'Failed to send message. Please try again.'
+    submitting.value = false
+    return
   }
-  isFlipped.value = true
+  successMsg.value = 'Message sent!'
   name.value = ''
   email.value = ''
   message.value = ''
+  submitting.value = false
+  setTimeout(() => {
+    isFlipped.value = true
+    successMsg.value = ''
+  }, 1000)
 }
 </script>
 
 <style scoped>
-.contactus-flip-container {
-  perspective: 900px;
-  width: 340px;
+.contact-flip-card {
+  perspective: 1000px;
+  width: 100%;
+  max-width: 400px;
   margin: 0 auto;
 }
-.contactus-flipper {
+.flip-card-inner {
   position: relative;
   width: 100%;
   height: 100%;
-  transition: transform 0.6s cubic-bezier(.4,2,.6,1);
+  transition: transform 0.8s ease;
   transform-style: preserve-3d;
 }
-.flipped .contactus-flipper {
+.flipped .flip-card-inner {
   transform: rotateY(180deg);
 }
-.contactus-card {
-  border-radius: 18px;
-  padding: 0.5rem 0.5rem 1rem 0.5rem;
-  box-shadow: 0 2px 12px 0 rgba(31, 38, 135, 0.10);
-  min-height: 320px;
+.flip-card-front,
+.flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
   backface-visibility: hidden;
+  border-radius: 10px;
+  overflow: hidden;
 }
-.contactus-front {
-  position: absolute;
-  width: 100%;
-  top: 0;
-  left: 0;
+.flip-card-front {
   z-index: 2;
-  background: #fff;
 }
-.contactus-back {
-  position: absolute;
-  width: 100%;
-  top: 0;
-  left: 0;
+.flip-card-back {
   transform: rotateY(180deg);
-  background: #fff;
 }
 .vanta-sky {
   color: #5ca6ca;

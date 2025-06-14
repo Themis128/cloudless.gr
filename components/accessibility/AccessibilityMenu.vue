@@ -2,12 +2,13 @@
     <div>
         <div class="accessibility-btn" :style="btnStyle" @mousedown="startDrag" @touchstart="startDrag"
             :aria-label="menu ? 'Close accessibility menu' : 'Open accessibility menu'" tabindex="0"
+            role="button"
             @keydown.enter="menu = !menu" @keydown.space.prevent="menu = !menu">
             <v-btn icon color="primary" elevation="3" @click.stop="menu = !menu">
                 <UserIcon class="w-8 h-8" aria-label="Accessibility menu" />
             </v-btn>
         </div>
-        <v-menu v-model="menu" :close-on-content-click="false" offset-y>
+        <v-menu v-model="menu" :close-on-content-click="false" offset-y activator="parent" attach="body" eager>
             <v-card class="pa-4" min-width="260">
                 <v-card-title class="text-h6">Accessibility</v-card-title>
                 <v-divider class="my-2" />
@@ -142,33 +143,55 @@ onMounted(() => {
         btnX.value = parseInt(savedX)
         btnY.value = parseInt(savedY)
     }
+    // Restore persisted accessibility settings
+    const savedFont = localStorage.getItem('fontSize')
+    if (savedFont) {
+      fontSize.value = parseInt(savedFont)
+      document.documentElement.style.fontSize = fontSize.value + '%'
+    }
+    const savedContrast = localStorage.getItem('highContrast')
+    if (savedContrast) {
+      highContrast.value = savedContrast === 'true'
+      toggleContrast()
+    }
+    const savedPause = localStorage.getItem('pauseAnimations')
+    if (savedPause) {
+      pauseAnimations.value = savedPause === 'true'
+      togglePauseAnimations()
+    }
 })
 
 function increaseFont() {
     fontSize.value = Math.min(fontSize.value + 10, 200)
     document.documentElement.style.fontSize = fontSize.value + '%'
+    localStorage.setItem('fontSize', fontSize.value.toString())
 }
 function decreaseFont() {
     fontSize.value = Math.max(fontSize.value - 10, 70)
     document.documentElement.style.fontSize = fontSize.value + '%'
+    localStorage.setItem('fontSize', fontSize.value.toString())
 }
 function resetFont() {
     fontSize.value = 100
     document.documentElement.style.fontSize = '100%'
+    localStorage.setItem('fontSize', '100')
 }
 function toggleContrast() {
     document.body.classList.toggle('high-contrast', highContrast.value)
+    localStorage.setItem('highContrast', highContrast.value.toString())
 }
 function toggleUnderlineLinks() {
     document.body.classList.toggle('underline-links', underlineLinks.value)
 }
 function togglePauseAnimations() {
     document.body.classList.toggle('pause-animations', pauseAnimations.value)
+    localStorage.setItem('pauseAnimations', pauseAnimations.value.toString())
 }
 function skipToContent() {
     const main = document.querySelector('main, [role=main]')
     if (main) {
-        (main as HTMLElement).focus()
+        main.setAttribute('tabindex', '-1')
+        ;(main as HTMLElement).focus()
     }
 }
 watch(highContrast, toggleContrast)

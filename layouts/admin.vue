@@ -12,8 +12,9 @@
     <div class="admin-layout">
       <div class="theme-toggle-btn">
         <v-btn icon elevation="2" :title="isLightBg ? 'Switch to Dark Background' : 'Switch to Light Background'"
+          :aria-label="isLightBg ? 'Switch to dark background' : 'Switch to light background'"
           @click="toggleBg">
-          <v-icon>{{ isLightBg ? 'mdi-white-balance-sunny' : 'mdi-weather-night' }}</v-icon>
+          <v-icon>{{ iconName }}</v-icon>
         </v-btn>
       </div>
       <VMain class="main-content">
@@ -37,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useTheme } from 'vuetify'
 import { defineAsyncComponent } from 'vue'
 const Footer = defineAsyncComponent(() => import('@/components/Layout/Footer.vue'))
@@ -45,7 +46,13 @@ const AccessibilityMenu = defineAsyncComponent(() => import('@/components/access
 const currentYear = new Date().getFullYear()
 const theme = useTheme()
 const currentTheme = theme.global.name
-const isLightBg = ref(false)
+const props = defineProps<{ initialLight?: boolean }>()
+
+const isLightBg = ref(props.initialLight ?? false)
+const iconName = computed(() =>
+  isLightBg.value ? 'mdi-white-balance-sunny' : 'mdi-weather-night'
+)
+
 function toggleBg() {
   isLightBg.value = !isLightBg.value
 }

@@ -1,16 +1,25 @@
 import { onMounted, onBeforeUnmount, ref } from 'vue';
 
-export function useVantaClouds2(targetId = 'vanta-bg') {
+const loadedScripts = new Set<string>();
+
+export function useVantaClouds2() {
   const vantaRef = ref<HTMLElement | null>(null);
   let vantaEffect: any = null;
 
   const loadScript = (src: string) =>
     new Promise<void>((resolve, reject) => {
-      if (document.querySelector(`script[src="${src}"]`)) return resolve();
+      if (loadedScripts.has(src)) return resolve();
+      if (document.querySelector(`script[src="${src}"]`)) {
+        loadedScripts.add(src);
+        return resolve();
+      }
       const script = document.createElement('script');
       script.src = src;
       script.async = true;
-      script.onload = () => resolve();
+      script.onload = () => {
+        loadedScripts.add(src);
+        resolve();
+      };
       script.onerror = () => reject(new Error(`Failed to load: ${src}`));
       document.body.appendChild(script);
     });
@@ -25,7 +34,7 @@ export function useVantaClouds2(targetId = 'vanta-bg') {
       if (window.VANTA?.CLOUDS2) {
         // @ts-ignore
         vantaEffect = window.VANTA.CLOUDS2({
-          el: `#${targetId}`,
+          el: vantaRef.value,
           mouseControls: true,
           touchControls: true,
           gyroControls: false,

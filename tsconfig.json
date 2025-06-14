@@ -1,8 +1,10 @@
 {
   // https://nuxt.com/docs/guide/concepts/typescript
   "extends": "./.nuxt/tsconfig.json",
-  "exclude": ["pages/admin/", "layouts/admin.vue"],
   "compilerOptions": {
-    "types": ["@playwright/test"]
-  }
+    "types": [
+      "@playwright/test"
+    ]
+  },
+  "exclude": []
 }

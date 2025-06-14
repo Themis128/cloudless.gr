@@ -10,8 +10,9 @@ const EXCLUDED_ROUTES = [
 export function useMainNavLinks() {
     const router = useRouter()
     // Only include top-level, non-admin/auth, non-dynamic routes
-    const links = computed(() =>
-        router.getRoutes()
+    const links = computed(() => {
+        if (!process.client) return [] // SSR-safe
+        return router.getRoutes()
             .filter(r =>
                 r.path &&
                 !EXCLUDED_ROUTES.includes(r.path) &&
@@ -22,6 +23,6 @@ export function useMainNavLinks() {
                 name: r.name || r.path.replace('/', '') || 'Home',
                 path: r.path
             }))
-    )
+    })
     return { links }
 }

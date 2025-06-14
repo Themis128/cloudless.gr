@@ -1,20 +1,25 @@
 <template>
-  <client-only>
-    <Suspense>
-      <template #default>
-        <VantaBackground />
-      </template>
-      <template #fallback>
-        <div class="fallback-bg" />
-      </template>
-    </Suspense>
-  </client-only>
-  <div class="login-center-wrapper">
-    <LoginForm />
+  <div class="login-page">
+    <div class="fallback-bg" aria-hidden="true" />
+    <client-only>
+      <Suspense>
+        <template #default>
+          <LoginForm />
+        </template>
+        <template #fallback>
+          <div class="text-center py-10 text-white">Loading login form…</div>
+        </template>
+      </Suspense>
+      <Suspense>
+        <template #default>
+          <VantaBackground />
+        </template>
+      </Suspense>
+    </client-only>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import LoginForm from '@/components/auth/LoginForm.vue'
 import VantaBackground from '@/components/Base/VantaBackground.vue'
 definePageMeta({ layout: 'auth' })

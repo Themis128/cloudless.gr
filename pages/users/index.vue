@@ -1,7 +1,19 @@
 <template>
   <v-container class="py-10">
     <h1 class="text-h5 font-weight-bold mb-6">All Users</h1>
-    <v-table>
+
+    <v-alert v-if="error" type="error" class="mb-4">
+      {{ error }}
+    </v-alert>
+
+    <v-progress-circular
+      v-if="loading"
+      indeterminate
+      color="primary"
+      class="d-block mx-auto my-6"
+    />
+
+    <v-table v-else>
       <thead>
         <tr>
           <th>First Name</th>
@@ -23,6 +35,10 @@
         </tr>
       </tbody>
     </v-table>
+
+    <div v-if="!loading && users.length === 0" class="text-center text-grey mt-6">
+      No users found.
+    </div>
   </v-container>
 </template>
 
@@ -38,13 +54,18 @@ onMounted(async () => {
   const supabase = useSupabase()
   loading.value = true
   error.value = null
-  const { data, error: fetchError } = await supabase.from('profiles').select('id, first_name, last_name, email')
+
+  const { data, error: fetchError } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name, email')
+
   if (fetchError) {
     error.value = fetchError.message
     users.value = []
   } else {
     users.value = data || []
   }
+
   loading.value = false
 })
 </script>

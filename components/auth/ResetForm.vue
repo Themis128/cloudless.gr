@@ -2,6 +2,12 @@
   <v-card class="glass-card pa-6" width="400" elevation="10">
     <v-card-title class="text-h5 text-white text-center">Reset Password</v-card-title>
     <v-form @submit.prevent="handleReset">
+      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
+        {{ errorMsg }}
+      </v-alert>
+      <v-alert v-if="successMsg" type="success" class="mb-4" border="start" prominent>
+        {{ successMsg }}
+      </v-alert>
       <v-text-field
         v-model="email"
         label="Email"
@@ -13,7 +19,7 @@
         class="glass-input mb-4"
         :rules="[rules.required, rules.email]"
       />
-      <v-btn type="submit" block color="blue" class="mt-4">Send Reset Link</v-btn>
+      <v-btn type="submit" block color="blue" class="mt-4" :loading="loading" :disabled="loading">Send Reset Link</v-btn>
     </v-form>
     <NuxtLink to="/auth/login" class="login-link mt-4">
       <v-icon left size="18" color="#3b82f6">mdi-login</v-icon>
@@ -26,6 +32,9 @@
 import { ref } from 'vue'
 import { useSupabase } from '@/composables/useSupabase'
 
+const errorMsg = ref('')
+const successMsg = ref('')
+const loading = ref(false)
 const email = ref('')
 const supabase = useSupabase()
 
@@ -35,9 +44,16 @@ const rules = {
 }
 
 async function handleReset() {
+  errorMsg.value = ''
+  successMsg.value = ''
+  loading.value = true
   const { error } = await supabase.auth.resetPasswordForEmail(email.value)
-  if (error) alert(error.message)
-  else alert('Check your inbox for reset instructions')
+  if (error) {
+    errorMsg.value = error.message
+  } else {
+    successMsg.value = 'Check your inbox for reset instructions.'
+  }
+  loading.value = false
 }
 </script>
 

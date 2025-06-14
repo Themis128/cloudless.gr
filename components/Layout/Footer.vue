@@ -1,6 +1,6 @@
 <template>
-  <footer :class="['footer', 'w-full', 'text-center', 'py-2', 'text-sm', 'bg-transparent', isDark ? 'footer-dark' : 'footer-light']">
-    © {{ year }} <b>Cloudless.gr</b> — All rights reserved.
+  <footer role="contentinfo" :class="['footer', 'w-full', 'text-center', 'py-2', 'text-sm', 'bg-transparent', isDark ? 'footer-dark' : 'footer-light']">
+    © {{ displayYear }} <b>Cloudless.gr</b> — All rights reserved.
     <span class="footer-social">
       <v-btn
         v-for="item in socialWithIcons"
@@ -8,7 +8,8 @@
         icon
         :href="item.url"
         target="_blank"
-        :aria-label="item.aria"
+        rel="noopener noreferrer"
+        :aria-label="item.aria || item.name"
         class="mx-1"
         size="small"
         variant="text"
@@ -24,7 +25,14 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faTwitter, faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 import { useContactInfo } from '@/composables/useContactInfo'
 import { computed } from 'vue'
-const props = defineProps({ year: { type: Number, required: true }, isDark: { type: Boolean, default: false } });
+
+const now = new Date().getFullYear()
+const props = withDefaults(defineProps<{ year?: number; isDark?: boolean }>(), {
+  year: undefined,
+  isDark: false,
+})
+const displayYear = computed(() => props.year ?? now)
+const isDark = props.isDark
 const contact = useContactInfo()
 const iconMap = { faTwitter, faGithub, faLinkedin }
 const socialWithIcons = computed(() => contact.social.map(item => ({
@@ -52,6 +60,10 @@ const socialWithIcons = computed(() => contact.social.map(item => ({
   width: 20px;
   height: 20px;
   vertical-align: middle;
+  transition: transform 0.2s ease;
+}
+.v-btn:hover .fa-social {
+  transform: scale(1.1);
 }
 .footer-dark {
   color: #fff;

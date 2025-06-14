@@ -18,10 +18,10 @@ export function useStorage() {
         return data || []
     }
 
-    async function uploadFile(bucket: string, path: string, file: File) {
+    async function uploadFile(bucket: string, path: string, file: File, upsert = false) {
         loading.value = true
         error.value = null
-        const { error: uploadError } = await supabase.storage.from(bucket).upload(path, file)
+        const { error: uploadError } = await supabase.storage.from(bucket).upload(path, file, { upsert })
         loading.value = false
         if (uploadError) {
             error.value = uploadError.message
@@ -30,9 +30,28 @@ export function useStorage() {
         return true
     }
 
-    async function getPublicUrl(bucket: string, path: string) {
-        return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl
+    async function removeFile(bucket: string, path: string) {
+        loading.value = true
+        error.value = null
+        const { error: removeError } = await supabase.storage.from(bucket).remove([path])
+        loading.value = false
+        if (removeError) {
+            error.value = removeError.message
+            return false
+        }
+        return true
     }
 
-    return { listFiles, uploadFile, getPublicUrl, loading, error }
+    async function getPublicUrl(bucket: string, path: string) {
+        try {
+            const { data } = supabase.storage.from(bucket).getPublicUrl(path)
+            return data.publicUrl
+        } catch (err) {
+            console.error('[getPublicUrl error]', err)
+            error.value = (err as Error).message
+            return null
+        }
+    }
+
+    return { listFiles, uploadFile, removeFile, getPublicUrl, loading, error }
 }

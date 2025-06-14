@@ -2,21 +2,47 @@
   <v-app-bar app color="primary" dark>
     <v-toolbar-title>Cloudless</v-toolbar-title>
     <v-spacer />
-    <NuxtLink to="/dashboard">
-      <v-btn text>Dashboard</v-btn>
-    </NuxtLink>
-    <NuxtLink to="/projects">
-      <v-btn text>Projects</v-btn>
-    </NuxtLink>
-    <NuxtLink to="/settings">
-      <v-btn text>Settings</v-btn>
-    </NuxtLink>
-    <NuxtLink to="/auth/login">
-      <v-btn text>Login</v-btn>
-    </NuxtLink>
+
+    <template v-for="link in navLinks" :key="link.path">
+      <NuxtLink :to="link.path" custom>
+        <template #default="{ navigate, href, isExactActive }">
+          <v-btn
+            :href="href"
+            @click.prevent="navigate"
+            :class="{ 'v-btn--active': isExactActive }"
+            text
+          >
+            {{ link.name }}
+          </v-btn>
+        </template>
+      </NuxtLink>
+    </template>
+
+    <v-btn text @click="logout">Logout</v-btn>
   </v-app-bar>
 </template>
 
-<script setup>
-// Add any needed logic here
+<script setup lang="ts">
+import { useSupabase } from '@/composables/useSupabase'
+import { navigateTo } from '#app'
+
+const supabase = useSupabase()
+
+const navLinks = [
+  { name: 'Dashboard', path: '/dashboard' },
+  { name: 'Projects', path: '/projects' },
+  { name: 'Settings', path: '/settings' },
+]
+
+async function logout() {
+  await supabase.auth.signOut()
+  navigateTo('/auth/login')
+}
 </script>
+
+<style scoped>
+.v-btn--active {
+  background-color: rgba(255, 255, 255, 0.2);
+  font-weight: bold;
+}
+</style>

@@ -1,11 +1,15 @@
 <template>
   <v-container class="pa-8">
     <v-row>
-      <v-col cols="12">
+      <v-col cols="12" md="8" class="mx-auto">
         <v-card>
-          <v-card-title>Settings</v-card-title>
+          <v-card-title class="text-h5 font-weight-bold">Settings</v-card-title>
           <v-card-text>
-            <p>This is a placeholder for your settings page.</p>
+            <v-form>
+              <v-switch label="Enable Dark Mode" v-model="darkMode" />
+              <v-text-field label="Display Name" v-model="displayName" />
+              <v-btn color="primary" class="mt-4">Save</v-btn>
+            </v-form>
           </v-card-text>
         </v-card>
       </v-col>
@@ -14,6 +18,9 @@
 </template>
 
 <script setup lang="ts">
-import { definePageMeta } from '#imports';
-definePageMeta({ layout: 'user' });
+definePageMeta({ layout: 'user' })
+import { ref } from 'vue'
+
+const darkMode = ref(false)
+const displayName = ref('')
 </script>

@@ -6,12 +6,19 @@ z-index: 1002 !important;
 z-index: 1001 !important;
 }
 <template>
+  <div class="user-layout">
     <v-app :theme="currentTheme">
-        <v-navigation-drawer v-model="drawer" app temporary class="bg-dark">
+        <v-navigation-drawer v-model="drawer" app temporary class="bg-dark" role="navigation">
             <v-list>
-                <v-list-item title="Dashboard" prepend-icon="mdi-view-dashboard" to="/dashboard" />
-                <v-list-item title="Projects" prepend-icon="mdi-folder" to="/projects/" />
-                <v-list-item title="Settings" prepend-icon="mdi-cog" to="/settings/" />
+                <NuxtLink v-for="item in navItems" :key="item.to" :to="item.to" custom v-slot="{ navigate, href, isActive }">
+                  <v-list-item
+                    :title="item.title"
+                    :prepend-icon="item.icon"
+                    :href="href"
+                    :active="isActive"
+                    @click="() => navigate()"
+                  />
+                </NuxtLink>
                 <v-divider />
                 <v-list-item title="Logout" prepend-icon="mdi-logout" />
             </v-list>
@@ -40,7 +47,13 @@ z-index: 1001 !important;
                 </div>
                 <v-menu offset-y>
                     <template #activator="{ props }">
-                        <v-btn icon v-bind="props" class="floating-avatar-btn" style="margin-top: -48px; margin-left: 0;">
+                        <v-btn
+                          icon
+                          aria-label="Open user menu"
+                          v-bind="props"
+                          class="floating-avatar-btn"
+                          style="margin-top: -48px; margin-left: 0;"
+                        >
                             <span style="width:48px;height:48px;display:inline-block;"></span>
                         </v-btn>
                     </template>
@@ -86,28 +99,40 @@ z-index: 1001 !important;
         <!-- AccessibilityMenu always on top -->
         <AccessibilityMenu />
     </v-app>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useTheme } from 'vuetify'
 import AccessibilityMenu from '../components/accessibility/AccessibilityMenu.vue'
 import { defineAsyncComponent } from 'vue'
+import { useSupabase } from '@/composables/useSupabase'
+
 const Footer = defineAsyncComponent(() => import('../components/Layout/Footer.vue'))
-
-// import { useUserStore } from '@/stores/userStore' // File missing
-// import { useRouter } from 'vue-router'
-
 const theme = useTheme()
 const currentTheme = theme.global.name
 const isLightBg = ref(false)
 const drawer = ref(false)
-const user = ref({ first_name: '', last_name: '', avatar_url: '', email: '' })
-let logout = () => {}
-let goToProfile = () => {}
 
-// Moveable floating avatar logic (like accessibility button)
-import { computed } from 'vue'
+interface User {
+  first_name: string
+  last_name: string
+  avatar_url: string
+  email: string
+}
+const user = ref<User>({ first_name: '', last_name: '', avatar_url: '', email: '' })
+
+const navItems = [
+  { to: '/dashboard', title: 'Dashboard', icon: 'mdi-view-dashboard' },
+  { to: '/projects', title: 'Projects', icon: 'mdi-folder' },
+  { to: '/settings', title: 'Settings', icon: 'mdi-cog' }
+]
+
+const supabase = useSupabase()
+const router = useRouter()
+
 const avatarX = ref(window.innerWidth - 100)
 const avatarY = ref(24)
 const avatarDragging = ref(false)
@@ -118,6 +143,7 @@ const avatarStyle = computed(() => ({
 }))
 
 function startAvatarDrag(e: MouseEvent | TouchEvent) {
+  e.preventDefault()
   avatarDragging.value = true
   let clientX, clientY
   if (e.type === 'touchstart') {
@@ -161,20 +187,30 @@ function stopAvatarDrag() {
   document.removeEventListener('touchend', stopAvatarDrag)
 }
 
+function handleNav(navigate: () => void) {
+  return (e: MouseEvent) => {
+    e.preventDefault()
+    navigate()
+    drawer.value = false
+  }
+}
 
-// onMounted(() => {
-//   const userStore = useUserStore()
-//   const router = useRouter()
-//   user.value = userStore.user
-//   logout = userStore.logout
-//   goToProfile = () => router.push('/profile')
-//   userStore.fetchUserProfile().then(() => {
-//     user.value = userStore.user
-//   })
-// })
+async function logout() {
+  await supabase.auth.signOut()
+  router.push('/auth/login')
+}
 
+function goToProfile() {
+  router.push('/profile')
+}
+
+onMounted(() => {
+  const stored = process.client ? localStorage.getItem('isLightBg') : null
+  if (stored) isLightBg.value = stored === 'true'
+})
 function toggleBg() {
-    isLightBg.value = !isLightBg.value
+  isLightBg.value = !isLightBg.value
+  if (process.client) localStorage.setItem('isLightBg', String(isLightBg.value))
 }
 </script>
 
@@ -271,7 +307,7 @@ function toggleBg() {
     right: 2rem;
     z-index: 10;
 }
-</style>
+
 /* Make the avatar-drag-handle float above the menu button and be draggable */
 .avatar-drag-handle {
   cursor: grab;
@@ -309,3 +345,4 @@ function toggleBg() {
 .floating-avatar-btn:hover {
   box-shadow: 0 4px 24px rgba(168,85,247,0.18);
 }
+</style>

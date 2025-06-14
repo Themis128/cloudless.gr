@@ -12,6 +12,7 @@
       <v-text-field
         v-model="email"
         label="Admin Email"
+        aria-label="Admin email"
         placeholder="admin@example.com"
         prepend-icon="mdi-email-outline"
         clearable
@@ -25,6 +26,7 @@
         v-model="password"
         :type="showPassword ? 'text' : 'password'"
         label="Password"
+        aria-label="Admin password"
         prepend-icon="mdi-lock-outline"
         :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
         @click:append="showPassword = !showPassword"

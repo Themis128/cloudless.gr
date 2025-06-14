@@ -1,21 +1,29 @@
 <template>
-  <v-container class="py-10">
-    <h1 class="text-h5 font-weight-bold mb-6">My Storage</h1>
-    <v-file-input label="Upload file" @change="handleUpload" :loading="loading" />
+  <v-container class="py-6">
+    <h1 class="text-h5 font-weight-bold mb-4">My Storage</h1>
+    <v-form @submit.prevent>
+      <v-file-input
+        label="Upload File"
+        @change="handleUpload"
+        prepend-icon="mdi-upload"
+        show-size
+        :loading="loading"
+      />
+    </v-form>
     <v-alert v-if="error" type="error" class="my-4">{{ error }}</v-alert>
-    <v-table v-if="files.length">
+    <v-table class="mt-6" v-if="files.length">
       <thead>
         <tr>
           <th>File Name</th>
-          <th>Link</th>
+          <th>URL</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="file in files" :key="file.name">
           <td>{{ file.name }}</td>
           <td>
-            <a v-if="file.url" :href="file.url" target="_blank">View</a>
-            <span v-else>Loading...</span>
+            <a v-if="file.url" :href="file.url" target="_blank" rel="noopener" :aria-label="`Open file ${file.name}`">View</a>
+            <v-progress-circular v-else indeterminate size="20" />
           </td>
         </tr>
       </tbody>
@@ -28,6 +36,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useStorage } from '~/composables/useStorage'
 import { useUserStore } from '~/stores/userStore'
+definePageMeta({ layout: 'user' })
 
 const { listFiles, uploadFile, getPublicUrl, loading, error } = useStorage()
 const files = ref<any[]>([])

@@ -1,57 +1,59 @@
 <template>
-  <div class="p-6">
-    <h1 class="text-2xl font-bold mb-4">Projects</h1>
+  <v-container class="py-6">
+    <h1 class="text-h5 font-weight-bold mb-4">Projects</h1>
 
-    <ul class="mb-6">
-      <li v-for="project in projects" :key="project.id">
-        <strong>{{ project.name }}</strong>: {{ project.description }}
-      </li>
-    </ul>
+    <v-list class="mb-6">
+      <v-list-item
+        v-for="project in projects"
+        :key="project.id"
+        :title="project.name"
+        :subtitle="project.description"
+      />
+    </v-list>
 
-    <form @submit.prevent="addProject" class="space-y-2">
-      <input
-        v-model="newProject.name"
-        placeholder="Name"
-        class="border px-2 py-1 w-full"
-        required
-      />
-      <input
-        v-model="newProject.description"
-        placeholder="Description"
-        class="border px-2 py-1 w-full"
-      />
-      <button type="submit" class="bg-blue-600 text-white px-4 py-1">Add Project</button>
-    </form>
-  </div>
+    <v-form @submit.prevent="addProject" v-model="formValid">
+      <v-text-field v-model="newProject.name" label="Name" required />
+      <v-textarea v-model="newProject.description" label="Description" />
+      <v-btn type="submit" color="primary" :disabled="!formValid">Add Project</v-btn>
+    </v-form>
+  </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useSupabase } from '~/composables/useSupabase';
-const supabase = useSupabase();
+import { ref, onMounted } from 'vue'
+import { useSupabase } from '~/composables/useSupabase'
 
-const projects = ref<any[]>([]);
-const newProject = ref({ name: '', description: '' });
+interface Project {
+  id: number
+  name: string
+  description: string
+  created_at?: string
+}
+
+const supabase = useSupabase()
+const projects = ref<Project[]>([])
+const newProject = ref<Omit<Project, 'id'>>({ name: '', description: '' })
+const formValid = ref(true)
 
 const fetchProjects = async () => {
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
 
-  if (data) projects.value = data;
-};
+  if (data) projects.value = data
+  else console.error(error)
+}
 
 const addProject = async () => {
-  if (!newProject.value.name) return;
+  if (!newProject.value.name.trim()) return
 
-  const { error } = await supabase.from('projects').insert([newProject.value]);
+  const { error } = await supabase.from('projects').insert([newProject.value])
+  if (error) return console.error(error)
 
-  if (!error) {
-    newProject.value = { name: '', description: '' };
-    await fetchProjects();
-  }
-};
+  newProject.value = { name: '', description: '' }
+  await fetchProjects()
+}
 
-onMounted(fetchProjects);
+onMounted(fetchProjects)
 </script>

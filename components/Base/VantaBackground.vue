@@ -1,10 +1,11 @@
 <template>
-  <div class="vanta-bg"></div>
+  <div id="vanta-bg" class="vanta-bg" ref="vantaRef"></div>
 </template>
 
 <script setup lang="ts">
-// Animation removed for troubleshooting
-console.debug('[VantaBackground] Static background loaded (no animation)')
+import { useVantaClouds2 } from '@/composables/useVantaClouds2'
+
+const { vantaRef } = useVantaClouds2()
 </script>
 
 <style scoped>

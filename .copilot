@@ -1,0 +1,25 @@
+{
+    "suggestionLanguage": "en",
+    "enableCompletions": true,
+    "enableCopilot": true,
+    "inlineSuggest.enable": true,
+    "advanced": {
+        "enableTabCompletion": true,
+        "enableAutoCompletions": true
+    },
+    "fileTypes": [
+        ".js",
+        ".ts",
+        ".vue",
+        ".json",
+        ".md"
+    ],
+    "exclude": [
+        "node_modules/",
+        ".nuxt/",
+        ".output/",
+        ".git/",
+        "dist/",
+        "build/"
+    ]
+}

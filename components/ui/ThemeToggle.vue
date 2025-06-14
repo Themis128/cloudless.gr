@@ -1,14 +1,33 @@
 <template>
-  <v-btn icon @click="toggleTheme">
+  <v-btn
+    icon
+    @click="toggleTheme"
+    :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+    :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+  >
     <v-icon>{{ isDark ? 'mdi-weather-night' : 'mdi-white-balance-sunny' }}</v-icon>
   </v-btn>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-const isDark = ref(false)
+import { computed, onMounted } from 'vue'
+import { useTheme } from 'vuetify'
+
+const theme = useTheme()
+const isDark = computed(() => theme.global.name.value === 'dark')
+
 function toggleTheme() {
-  isDark.value = !isDark.value
-  document.documentElement.classList.toggle('dark', isDark.value)
+  const newTheme = isDark.value ? 'light' : 'dark'
+  theme.global.name.value = newTheme
+  if (process.client) {
+    localStorage.setItem('theme', newTheme)
+  }
 }
+
+onMounted(() => {
+  if (process.client) {
+    const saved = localStorage.getItem('theme')
+    if (saved) theme.global.name.value = saved
+  }
+})
 </script>
