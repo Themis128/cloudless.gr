@@ -32,12 +32,20 @@ onMounted(() => {
       !r.path.includes(':') &&
       r.path.split('/').length <= 2
     )
-    .map(r => ({
-      name: r.name
-        ? String(r.name)
-        : (r.path === '/' ? 'Home' : r.path.replace('/', '')),
-      path: r.path
-    }))
+    .map(r => {
+      let displayName;
+      if (r.name) {
+        displayName = String(r.name);
+      } else if (r.path === '/') {
+        displayName = 'Home';
+      } else {
+        displayName = r.path.replace('/', '');
+      }
+      return {
+        name: displayName,
+        path: r.path
+      };
+    })
 })
 
 function capitalize(name: string) {

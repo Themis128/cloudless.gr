@@ -4,40 +4,34 @@ import { useNuxtApp } from '#app'
 
 export const useUserStore = defineStore('user', () => {
     const user = ref({
-        first_name: '',
-        last_name: '',
-        avatar_url: '',
-        email: ''
+        full_name: '',
+        avatar_url: ''
     })
 
     const fetchUserProfile = async () => {
-        if (!process.client) return // prevent SSR error
+        if (typeof window === 'undefined') return // prevent SSR error
         const { $supabase } = useNuxtApp()
-        const { data: authData, error: authError } = await $supabase.auth.getUser()
+        const { data: authData } = await $supabase.auth.getUser()
         const authUser = authData?.user
         if (!authUser) {
-            user.value = { first_name: '', last_name: '', avatar_url: '', email: '' }
+            user.value = { full_name: '', avatar_url: '' }
             return
         }
         const { data, error } = await $supabase
-            .from('profiles')
-            .select('first_name, last_name, avatar_url, email')
+            .from('user-info')
+            .select('full_name, avatar_url')
             .eq('id', authUser.id)
             .single()
         if (error || !data) {
-            console.error('Failed to fetch profile:', error)
+            console.error('Failed to fetch user-info:', error)
             user.value = {
-                first_name: '',
-                last_name: '',
-                avatar_url: '',
-                email: authUser.email || ''
+                full_name: '',
+                avatar_url: ''
             }
         } else {
             user.value = {
-                first_name: data.first_name || '',
-                last_name: data.last_name || '',
-                avatar_url: data.avatar_url || '',
-                email: data.email || authUser.email || ''
+                full_name: data.full_name ?? '',
+                avatar_url: data.avatar_url ?? ''
             }
         }
     }
@@ -49,7 +43,7 @@ export const useUserStore = defineStore('user', () => {
         } catch (e) {
             console.error('Logout error:', e)
         }
-        user.value = { first_name: '', last_name: '', avatar_url: '', email: '' }
+        user.value = { full_name: '', avatar_url: '' }
     }
 
     return { user, fetchUserProfile, logout }

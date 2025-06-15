@@ -32,12 +32,20 @@ onMounted(() => {
       !r.path.includes(':') &&
       r.path.split('/').length <= 2
     )
-    .map(r => ({
-      name: r.name
-        ? String(r.name)
-        : (r.path === '/' ? 'Home' : r.path.replace('/', '')),
-      path: r.path
-    }))
+    .map(r => {
+      let name = '';
+      if (r.name) {
+        name = String(r.name);
+      } else if (r.path === '/') {
+        name = 'Home';
+      } else {
+        name = r.path.replace('/', '');
+      }
+      return {
+        name,
+        path: r.path
+      };
+    })
 })
 </script>
 

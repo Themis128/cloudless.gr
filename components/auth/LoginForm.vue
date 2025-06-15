@@ -118,7 +118,21 @@ async function handleLogin() {
       errorMsg.value = 'Storage setup failed: ' + (e as Error).message
       return
     }
-    await navigateTo('/dashboard')
+    // Ensure session is set before redirecting
+    let sessionReady = false
+    for (let i = 0; i < 10; i++) {
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (sessionData?.session) {
+        sessionReady = true
+        break
+      }
+      await new Promise(res => setTimeout(res, 100))
+    }
+    if (sessionReady) {
+      await navigateTo('/auth/users-nav')
+    } else {
+      errorMsg.value = 'Login session could not be established. Please try again.'
+    }
   } catch (e) {
     errorMsg.value = (e as Error).message || 'Login failed.'
   } finally {

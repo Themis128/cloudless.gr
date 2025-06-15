@@ -11,7 +11,7 @@ export function useMainNavLinks() {
     const router = useRouter()
     // Only include top-level, non-admin/auth, non-dynamic routes
     const links = computed(() => {
-        if (!process.client) return [] // SSR-safe
+        if (import.meta.server) return [] // SSR-safe
         return router.getRoutes()
             .filter(r =>
                 r.path &&
@@ -20,7 +20,7 @@ export function useMainNavLinks() {
                 r.path.split('/').length <= 2 // Only top-level
             )
             .map(r => ({
-                name: r.name || r.path.replace('/', '') || 'Home',
+                name: r.name ?? r.path.replace('/', '') ?? 'Home',
                 path: r.path
             }))
     })

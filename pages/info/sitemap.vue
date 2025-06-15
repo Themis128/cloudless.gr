@@ -1,18 +1,17 @@
 <template>
   <v-container class="py-10">
     <h1 class="text-h5 font-weight-bold mb-6">Sitemap</h1>
-    <v-list two-line>
-      <NuxtLink
+
+    <v-list nav dense>
+      <v-list-item
         v-for="item in sitemapItems"
         :key="item.link"
         :to="item.link"
-        custom
-        v-slot="{ navigate, href }"
+        link
+        rounded
       >
-        <v-list-item :href="href" @click="() => navigate()">
-          <v-list-item-title>{{ item.name }}</v-list-item-title>
-        </v-list-item>
-      </NuxtLink>
+        <v-list-item-title>{{ item.name }}</v-list-item-title>
+      </v-list-item>
     </v-list>
   </v-container>
 </template>
@@ -36,5 +35,6 @@ const sitemapItems: SitemapItem[] = [
 <style scoped>
 h1 {
   font-size: 1.8rem;
+  color: white;
 }
 </style>

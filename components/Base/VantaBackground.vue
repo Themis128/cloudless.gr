@@ -3,9 +3,14 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useVantaClouds2 } from '@/composables/useVantaClouds2'
 
-const { vantaRef } = useVantaClouds2()
+const vantaRef = ref<HTMLElement | null>(null)
+
+onMounted(() => {
+  useVantaClouds2(vantaRef.value)
+})
 </script>
 
 <style scoped>

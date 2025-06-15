@@ -1,71 +1,91 @@
 <template>
   <v-container class="py-10">
-    <h1 class="text-h5 font-weight-bold mb-6">All Users</h1>
+    <v-row justify="space-between" align="center" class="mb-6">
+      <v-col cols="12" md="8">
+        <h1 class="text-h5 font-weight-bold text-primary">
+          👋 Welcome,
+          <span v-if="user && (user.first_name || user.last_name)">
+            {{ user.first_name }} {{ user.last_name }}
+          </span>
+          <span v-else>
+            {{ user?.email || 'guest' }}
+          </span>
+        </h1>
+      </v-col>
+    </v-row>
 
-    <v-alert v-if="error" type="error" class="mb-4">
-      {{ error }}
-    </v-alert>
+    <div v-if="projects.length">
+      <v-row dense>
+        <v-col v-for="project in projects" :key="project.id" cols="12" md="6" lg="4">
+          <v-card class="pa-4" elevation="4" color="surface">
+            <v-card-title class="text-primary font-weight-medium">
+              {{ project.name }}
+            </v-card-title>
+            <v-card-text class="text-secondary">
+              {{ project.description || 'No description.' }}
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+    </div>
 
-    <v-progress-circular
-      v-if="loading"
-      indeterminate
-      color="primary"
-      class="d-block mx-auto my-6"
-    />
-
-    <v-table v-else>
-      <thead>
-        <tr>
-          <th>First Name</th>
-          <th>Last Name</th>
-          <th>Email</th>
-          <th>Profile</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="user in users" :key="user.id">
-          <td>{{ user.first_name }}</td>
-          <td>{{ user.last_name }}</td>
-          <td>{{ user.email }}</td>
-          <td>
-            <NuxtLink :to="`/users/${user.id}`">
-              <v-btn size="small" color="primary" variant="outlined">View</v-btn>
-            </NuxtLink>
-          </td>
-        </tr>
-      </tbody>
-    </v-table>
-
-    <div v-if="!loading && users.length === 0" class="text-center text-grey mt-6">
-      No users found.
+    <div v-else class="text-center mt-10">
+      <v-icon size="40" color="grey lighten-1">mdi-folder-open</v-icon>
+      <p class="text-grey-lighten-1 mt-2">No projects found.</p>
     </div>
   </v-container>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useUserStore } from '@/stores/userStore'
 import { useSupabase } from '@/composables/useSupabase'
 
-const users = ref<any[]>([])
-const loading = ref(true)
-const error = ref<string | null>(null)
+// Define page meta
+definePageMeta({ layout: 'user' })
 
+// Define reactive variables with typing
+const user = ref<{ first_name: string; last_name: string; email: string }>({
+  first_name: '',
+  last_name: '',
+  email: ''
+})
+const projects = ref<Array<{ id: number; name: string; description: string }>>([])
+
+// Fetch user data and projects on mount
 onMounted(async () => {
-  const supabase = useSupabase()
-  loading.value = true
-  error.value = null
+  const userStore = useUserStore()
+  await userStore.fetchUserProfile()
 
-  const { data, error: fetchError } = await supabase
-    .from('profiles')
-    .select('id, first_name, last_name, email')
-
-  if (fetchError) {
-    error.value = fetchError.message
-    users.value = []
-  } else {
-    users.value = data || []
+  // Update user details from store
+  user.value = {
+    first_name: userStore.user.first_name || '',
+    last_name: userStore.user.last_name || '',
+    email: userStore.user.email || ''
   }
 
-  loading.value = false
+  // Fetch user projects
+  await fetchProjects()
 })
+
+// Function to fetch projects
+const fetchProjects = async () => {
+  try {
+    const supabase = useSupabase()
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    projects.value = data || []
+  } catch (err) {
+    console.error('Error fetching projects:', err)
+    // Handle error appropriately, e.g., show a notification
+  }
+}
 </script>
+
+<style scoped>
+/* Optional: Add more styling for the card layout */
+</style>

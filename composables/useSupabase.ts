@@ -2,9 +2,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 // Server-safe composable: uses injected $supabase on client, creates client on server
 export const useSupabase = (): SupabaseClient => {
-  if (process.client) {
+  if (import.meta.client) {
     const nuxtApp = useNuxtApp()
-    return nuxtApp.$supabase as SupabaseClient
+    return nuxtApp.$supabase
   }
   const config = useRuntimeConfig()
   return createClient(
@@ -23,7 +23,7 @@ export async function setupUserStorage(
   const initBlob = new Blob(['init'], { type: 'text/plain' })
 
   // Optional: create bucket only if you’re sure this is a new project
-  if (process.server) {
+  if (import.meta.server) {
     const { error: bucketError } = await supabase.storage.createBucket(bucket, { public: false })
     if (bucketError && !bucketError.message.includes('already exists')) {
       console.error('[setupUserStorage] bucketError:', bucketError)
