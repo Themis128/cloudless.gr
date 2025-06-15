@@ -75,13 +75,13 @@ async function handleAdminLogin() {
     loading.value = false
     return
   }
-  // 2. Check if the email is in the admins table
-  const { data: adminData, error: adminError } = await supabase
-    .from('admins')
-    .select('email')
-    .eq('email', email.value)
+  // 2. Check if the user has admin role in profiles
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', authData.user.id)
     .single()
-  if (adminError || !adminData) {
+  if (profileError || !profile || profile.role !== 'admin') {
     errorMsg.value = 'You are not authorized as an admin.'
     loading.value = false
     // Optionally sign out immediately

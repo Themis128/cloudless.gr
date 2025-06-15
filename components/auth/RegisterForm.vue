@@ -53,7 +53,6 @@ async function handleRegister() {
   if (error) {
     alert(error.message)
     password.value = '' // clear only password
-    return
   } else {
     try {
       const userId = data.user?.id

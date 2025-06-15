@@ -9,7 +9,7 @@ export default defineNuxtConfig({
   build: {
     transpile: ['vuetify'],
   },
-  modules: [],
+  modules: ['@nuxtjs/supabase'],
   vite: {
     define: {
       'process.env.DEBUG': false,
