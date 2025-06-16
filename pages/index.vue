@@ -22,11 +22,9 @@
         aria-label="Start using Cloudless"
       >
         Try It Free
-      </v-btn>
-
-      <!-- Learn More button, routes to /info/index.vue -->
+      </v-btn>      <!-- Learn More button, routes to /info/index.vue -->
       <v-btn
-        to="/info"
+        @click="goToInfo"
         variant="outlined"
         color="white"
         size="large"
@@ -41,6 +39,11 @@
 
 <script setup lang="ts">
 definePageMeta({ layout: 'default' })
+
+const goToInfo = () => {
+  console.log('Navigating to /info')
+  navigateTo('/info')
+}
 </script>
 
 <style scoped>

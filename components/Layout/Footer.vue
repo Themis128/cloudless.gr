@@ -14,7 +14,7 @@
         size="small"
         variant="text"
       >
-        <FontAwesomeIcon :icon="item.iconObj" class="fa-social" :style="`color:${item.color}`" />
+        <FontAwesomeIcon :icon="item.iconObj" class="fa-social" :style="{ color: item.color || '#333' }" />
       </v-btn>
     </span>
   </footer>
@@ -35,10 +35,13 @@ const displayYear = computed(() => props.year ?? now)
 const isDark = props.isDark
 const contact = useContactInfo()
 const iconMap = { faTwitter, faGithub, faLinkedin }
-const socialWithIcons = computed(() => contact.social.map(item => ({
-  ...item,
-  iconObj: iconMap[item.icon as keyof typeof iconMap]
-})))
+const socialWithIcons = computed(() => contact.social
+  .filter(item => iconMap[item.icon as keyof typeof iconMap]) // Only include items with valid icons
+  .map(item => ({
+    ...item,
+    iconObj: iconMap[item.icon as keyof typeof iconMap]
+  }))
+)
 </script>
 
 <style scoped>

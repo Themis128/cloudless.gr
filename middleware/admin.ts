@@ -1,29 +1,30 @@
-import { useSupabase } from "@/composables/useSupabase";
+import { useSupabaseAuth } from "@/composables/useSupabaseAuth";
 
 export default defineNuxtRouteMiddleware(async (to) => {
+  // Skip middleware for admin login page
   if (to.path === "/auth/admin-login") return;
 
-  const supabase = useSupabase();
+  const { isAuthenticated, isAdmin } = useSupabaseAuth();
+  
+  try {
+    // Check if user is authenticated
+    const authenticated = await isAuthenticated();
+    if (!authenticated) {
+      console.warn("[ADMIN] User not authenticated");
+      return navigateTo("/auth/admin-login?error=login_required");
+    }
 
-  // Check session
-  const { data: sessionData, error: sessionError } = await supabase.auth
-    .getSession();
-  const userId = sessionData.session?.user?.id;
+    // Check if user has admin role
+    const hasAdminRole = await isAdmin();
+    if (!hasAdminRole) {
+      console.warn("[ADMIN] User is not admin");
+      return navigateTo("/auth/admin-login?error=unauthorized");
+    }
 
-  if (sessionError || !userId) {
-    console.warn("No valid session or user ID found", sessionError);
-    return navigateTo("/auth/admin-login");
-  }
-
-  // Check if user has admin role in profiles
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .single();
-
-  if (profileError || !profile || profile.role !== "admin") {
-    console.warn("User is not admin or DB error", profileError);
-    return navigateTo("/auth/admin-login");
+    // Admin access granted
+    console.log("[ADMIN] Admin access granted");
+  } catch (error) {
+    console.error("[ADMIN] Middleware error:", error);
+    return navigateTo("/auth/admin-login?error=system_error");
   }
 });

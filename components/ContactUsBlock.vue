@@ -10,7 +10,7 @@
         :aria-label="item.aria"
         class="mx-1"
       >
-        <FontAwesomeIcon :icon="item.iconObj" class="fa-social" :style="`color:${item.color}`" />
+        <FontAwesomeIcon :icon="item.iconObj" class="fa-social" :style="{ color: item.color || '#333' }" />
       </v-btn>
     </div>
   </div>

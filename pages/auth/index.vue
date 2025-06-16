@@ -1,20 +1,7 @@
 <template>
-  <v-container class="pa-12" fluid>
-    <v-row justify="center">
-      <v-col cols="12" sm="8" md="6" lg="4">
-        <v-card class="glass-card" elevation="8">
-          <v-card-title class="text-h5 font-weight-bold text-center white--text">
-            Login to Cloudless
-          </v-card-title>
-
-          <v-card-text class="d-flex flex-column align-center justify-center" style="min-height: 420px;">
-            <LoginForm /> <!-- LoginForm Component -->
-            <!-- Register and error handling are now handled by LoginForm -->
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+  <div class="auth-container">
+    <LoginForm /> <!-- LoginForm Component -->
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -22,6 +9,14 @@ import LoginForm from '~/components/auth/LoginForm.vue'
 </script>
 
 <style scoped>
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
 .glass-card {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 16px;

@@ -1,4 +1,3 @@
-import { useSupabase } from '~/composables/useSupabase'
 import { withoutTrailingSlash } from 'ufo'
 
 // Define public routes that do **not** require authentication
@@ -13,8 +12,12 @@ const publicRoutes = [
   '/auth',
   '/auth/register',
   '/auth/reset',
-  '/auth/admin-login'
+  '/auth/admin-login',
+  '/auth/users-nav',
 ]
+
+// Admin routes that require admin role
+const adminRoutes = ['/admin']
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const normalizedPath = withoutTrailingSlash(to.path || '/')
@@ -24,13 +27,37 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return // Public access allowed
   }
 
-  // Otherwise, check if the user is authenticated
-  const supabase = useSupabase()
-  const { data, error } = await supabase.auth.getSession()
+  // Check if this is an admin route
+  const isAdminRoute = adminRoutes.some(route => normalizedPath.startsWith(route))
 
-  // Handle case where there's no session or there's an error
-  if (error || !data.session?.user) {
-    // Save the intended route in the redirect query param
-    return navigateTo(`/auth/login?redirect=${encodeURIComponent(to.fullPath)}`)
+  // Check authentication status
+  try {
+    const supabase = useSupabaseClient()
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    
+    // Handle case where there's no session or there's an error
+    if (sessionError || !sessionData.session?.user) {
+      // Redirect to appropriate auth page based on route type
+      const redirectUrl = isAdminRoute ? '/auth/admin-login' : `/auth?redirect=${encodeURIComponent(to.fullPath)}`
+      return navigateTo(redirectUrl)
+    }    // If this is an admin route, verify admin role
+    if (isAdminRoute) {
+      const userId = sessionData.session.user.id
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single()
+
+      if (profileError || !profile || (profile as any).role !== 'admin') {
+        console.warn('[AUTH] Admin access denied:', profileError || 'User is not admin')
+        return navigateTo('/auth/admin-login?error=unauthorized')
+      }
+    }
+
+  } catch (err) {
+    console.error(`[AUTH] Error during session check:`, err)
+    const redirectUrl = isAdminRoute ? '/auth/admin-login' : `/auth?redirect=${encodeURIComponent(to.fullPath)}`
+    return navigateTo(redirectUrl)
   }
 })

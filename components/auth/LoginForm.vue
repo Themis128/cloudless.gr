@@ -46,9 +46,7 @@
         :disabled="loading"
       >
         Login as Admin
-      </v-btn>
-
-      <v-btn
+      </v-btn>      <v-btn
         variant="text"
         block
         color="white"
@@ -57,17 +55,6 @@
         :disabled="loading"
       >
         Forgot Password?
-      </v-btn>
-
-      <v-btn
-        variant="text"
-        block
-        color="white"
-        class="mt-1"
-        @click="navigateTo('/auth/register')"
-        :disabled="loading"
-      >
-        Register
       </v-btn>
     </v-form>
 
@@ -83,7 +70,7 @@ import { ref } from 'vue'
 import { navigateTo } from '#app'
 import { useSupabase, setupUserStorage } from '@/composables/useSupabase'
 
-
+const route = useRoute()
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -99,25 +86,28 @@ const rules = {
 async function handleLogin() {
   errorMsg.value = ''
   loading.value = true
+  
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.value,
-      password: password.value
-    })
-    if (error) {
-      errorMsg.value = error.message
-      password.value = ''
-      return
+    const { signIn } = useSupabaseAuth()
+    
+    // Use the enhanced signIn method (non-admin)
+    const data = await signIn(email.value, password.value, false)
+    
+    if (!data.user) {
+      throw new Error('Login failed - no user data received')
     }
+    
+    // Setup user storage
     try {
-      const userId = data.user?.id
+      const userId = data.user.id
       if (userId) {
         await setupUserStorage(supabase, userId)
       }
     } catch (e) {
-      errorMsg.value = 'Storage setup failed: ' + (e as Error).message
-      return
+      console.warn('Storage setup failed:', e)
+      // Don't fail login for storage setup issues
     }
+    
     // Ensure session is set before redirecting
     let sessionReady = false
     for (let i = 0; i < 10; i++) {
@@ -128,13 +118,23 @@ async function handleLogin() {
       }
       await new Promise(res => setTimeout(res, 100))
     }
+    
     if (sessionReady) {
-      await navigateTo('/auth/users-nav')
+      // Check if there's a redirect parameter
+      const redirectTo = route.query.redirect as string
+      if (redirectTo && redirectTo !== '/auth' && redirectTo !== '/auth/login') {
+        await navigateTo(redirectTo)
+      } else {
+        await navigateTo('/users/index')
+      }
     } else {
       errorMsg.value = 'Login session could not be established. Please try again.'
     }
-  } catch (e) {
-    errorMsg.value = (e as Error).message || 'Login failed.'
+    
+  } catch (e: any) {
+    console.error('[LOGIN] Error:', e)
+    errorMsg.value = e.message || 'Login failed. Please check your credentials.'
+    password.value = '' // Clear password on error
   } finally {
     loading.value = false
   }

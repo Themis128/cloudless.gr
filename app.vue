@@ -74,7 +74,7 @@ html {
 .v-application {
   font-family: 'Inter', sans-serif;
 }
-</style>
+
 /* Global page transition for smooth navigation */
 .fade-page-enter-active, .fade-page-leave-active {
   transition: opacity 0.35s cubic-bezier(.4,1.7,.6,.95);
@@ -82,3 +82,4 @@ html {
 .fade-page-enter-from, .fade-page-leave-to {
   opacity: 0;
 }
+</style>

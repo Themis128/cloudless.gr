@@ -4,6 +4,55 @@ const loadedScripts = new Set<string>();
 
 export function useVantaClouds2(element: HTMLElement | null) {
   let vantaEffect: any = null;
+  // Get responsive parameters based on screen size
+  const getResponsiveConfig = () => {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    // Mobile configuration
+    if (width <= 768) {
+      return {
+        minHeight: height + 100, // Extend beyond viewport
+        minWidth: width + 100,   // Extend beyond viewport
+        scale: 1.2,              // Increased scale for better coverage
+        speed: 0.7,
+        mouseControls: false,
+        touchControls: true
+      };
+    }
+    // Tablet configuration
+    else if (width <= 1024) {
+      return {
+        minHeight: height + 200, // Extend beyond viewport
+        minWidth: width + 200,   // Extend beyond viewport
+        scale: 1.3,              // Increased scale for better coverage
+        speed: 0.8,
+        mouseControls: true,
+        touchControls: true
+      };
+    }
+    // Desktop configuration
+    else {
+      return {
+        minHeight: height + 300, // Extend beyond viewport
+        minWidth: width + 300,   // Extend beyond viewport
+        scale: 1.5,              // Increased scale for full coverage
+        speed: 1.0,
+        mouseControls: true,
+        touchControls: true
+      };
+    }
+  };
+
+  // Handle window resize
+  const handleResize = () => {
+    if (vantaEffect) {
+      const config = getResponsiveConfig();
+      vantaEffect.resize();
+      // Update configuration on resize
+      Object.assign(vantaEffect.options, config);
+    }
+  };
 
   const loadScript = (src: string) =>
     new Promise<void>((resolve, reject) => {
@@ -25,35 +74,51 @@ export function useVantaClouds2(element: HTMLElement | null) {
       };
       document.body.appendChild(script);
     });
-
   const initVanta = async () => {
     if (!element) {
       console.warn('[VantaClouds2] No element provided for Vanta effect.');
       return;
-    }
+    }    // Ensure element covers the full viewport including top
+    element.style.position = 'fixed';
+    element.style.top = '-300px';
+    element.style.left = '-100px';
+    element.style.width = 'calc(100vw + 200px)';
+    element.style.height = 'calc(100vh + 400px)';
+    element.style.zIndex = '0';
+    
     try {
       await loadScript('/three.r134.min.js');
-      await loadScript('/vanta.clouds2.min.js');
-      // @ts-ignore
+      await loadScript('/vanta.clouds2.min.js');      // @ts-ignore
       if (window.VANTA?.CLOUDS2) {
         console.log('[VantaClouds2] Initializing VANTA.CLOUDS2...');
-        // @ts-ignore
+        const config = getResponsiveConfig();        // @ts-ignore
         vantaEffect = window.VANTA.CLOUDS2({
           el: element,
-          mouseControls: true,
-          touchControls: true,
+          mouseControls: config.mouseControls,
+          touchControls: config.touchControls,
           gyroControls: false,
-          minHeight: 200,
-          minWidth: 200,
-          scale: 1.0,
+          minHeight: config.minHeight,
+          minWidth: config.minWidth,
+          scale: config.scale,
+          scaleMobile: 1.2, // Ensure mobile has good coverage
           texturePath: '/gallery/noise.png',
-          backgroundColor: 0x0,
-          skyColor: 0x5ca6ca,
-          cloudColor: 0x334d80,
+          backgroundColor: 0x16213e, // Darker blue-gray
+          skyColor: 0x4a90e2,        // Brighter sky blue
+          cloudColor: 0x2c5282,      // Darker cloud blue
           lightColor: 0xffffff,
-          speed: 1,
+          speed: config.speed,
+          size: 1.5,                 // Larger cloud size
+          density: 0.8,              // Higher density for better coverage
+          cloudShadow: true,         // Add cloud shadows for depth
+          skyOpacity: 0.7,           // Adjust sky opacity
+          cloudOpacity: 0.9,         // Increase cloud opacity
+          yOffset: -0.3,             // Move clouds up (negative value moves up)
+          xOffset: 0,                // Keep horizontal position centered
         });
         console.log('[VantaClouds2] VANTA.CLOUDS2 initialized:', vantaEffect);
+        
+        // Add resize event listener for responsive behavior
+        window.addEventListener('resize', handleResize);
       } else {
         console.error('[VantaClouds2] VANTA.CLOUDS2 is not available on window.VANTA');
       }
@@ -61,7 +126,6 @@ export function useVantaClouds2(element: HTMLElement | null) {
       console.error('❌ Failed to load Vanta CLOUDS2:', error);
     }
   };
-
   if (typeof window !== 'undefined') {
     setTimeout(initVanta, 0);
     window.addEventListener('beforeunload', () => {
@@ -69,6 +133,17 @@ export function useVantaClouds2(element: HTMLElement | null) {
         vantaEffect.destroy();
         vantaEffect = null;
       }
+      // Remove resize event listener
+      window.removeEventListener('resize', handleResize);
     });
   }
+
+  // Return cleanup function for component unmount
+  return () => {
+    if (vantaEffect) {
+      vantaEffect.destroy();
+      vantaEffect = null;
+    }
+    window.removeEventListener('resize', handleResize);
+  };
 }

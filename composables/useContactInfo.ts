@@ -1,4 +1,5 @@
 // composables/useContactInfo.ts
+import { faTwitter, faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 
 export function useContactInfo() {
     return {
@@ -11,6 +12,7 @@ export function useContactInfo() {
                 name: 'Twitter',
                 url: 'https://twitter.com/cloudlessgr',
                 icon: 'faTwitter',
+                iconObj: faTwitter,
                 color: '#1da1f2',
                 aria: 'Twitter',
             },
@@ -18,6 +20,7 @@ export function useContactInfo() {
                 name: 'GitHub',
                 url: 'https://github.com/cloudlessgr',
                 icon: 'faGithub',
+                iconObj: faGithub,
                 color: '#333',
                 aria: 'GitHub',
             },
@@ -25,6 +28,7 @@ export function useContactInfo() {
                 name: 'LinkedIn',
                 url: 'https://linkedin.com/company/cloudlessgr',
                 icon: 'faLinkedin',
+                iconObj: faLinkedin,
                 color: '#0077b5',
                 aria: 'LinkedIn',
             },

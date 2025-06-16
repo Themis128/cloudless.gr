@@ -92,14 +92,35 @@ const navItems = [
 const supabase = useSupabase()
 const router = useRouter()
 
-const avatarX = ref(window.innerWidth - 100)
+const avatarX = ref(0)
 const avatarY = ref(24)
 const avatarDragging = ref(false)
 const avatarOffset = ref({ x: 0, y: 0 })
-const avatarStyle = computed(() => ({
-  left: avatarX.value + 'px',
-  top: avatarY.value + 'px'
-}))
+
+// Initialize avatar position safely
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    avatarX.value = window.innerWidth - 100
+  }
+})
+const avatarStyle = computed(() => {
+  if (typeof window === 'undefined') {
+    return {
+      left: '0px',
+      top: '24px',
+      position: 'fixed' as const,
+      zIndex: 1000
+    }
+  }
+  const x = Math.max(0, Math.min(window.innerWidth - 64, avatarX.value || 0))
+  const y = Math.max(0, Math.min(window.innerHeight - 64, avatarY.value || 24))
+  return {
+    left: `${x}px`,
+    top: `${y}px`,
+    position: 'fixed' as const,
+    zIndex: 1000
+  }
+})
 
 function startAvatarDrag(e: MouseEvent | TouchEvent) {
   e.preventDefault()
@@ -148,7 +169,7 @@ function stopAvatarDrag() {
 
 async function logout() {
   await supabase.auth.signOut()
-  router.push('/auth/login')
+  router.push('/auth')
 }
 
 function goToProfile() {

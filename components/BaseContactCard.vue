@@ -31,7 +31,7 @@
               <slot name="socials">
                 <span v-for="item in typedSocialLinks" :key="item.name" class="mx-2">
                   <a :href="item.url" target="_blank" rel="noopener noreferrer" :aria-label="item.aria || item.name">
-                    <FontAwesomeIcon :icon="item.iconObj" :style="`color:${item.color};font-size:1.5rem;`" />
+                    <FontAwesomeIcon :icon="item.iconObj" :style="{ color: item.color || '#333', fontSize: '1.5rem' }" />
                   </a>
                 </span>
               </slot>

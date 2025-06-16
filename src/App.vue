@@ -1,8 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { supabase } from '../utils/supabase'
+import { useSupabaseClient } from '#imports'
 
 const todos = ref([])
+const supabase = useSupabaseClient()
 
 async function getTodos() {
   const { data } = await supabase.from('todos').select()

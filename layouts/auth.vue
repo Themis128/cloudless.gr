@@ -46,13 +46,16 @@ const AccessibilityMenu = defineAsyncComponent(() => import('@/components/access
 
 <style scoped>
 .fallback-bg {
-  height: 100vh;
-  width: 100vw;
-  background-color: #7ec0ee;
   position: fixed;
-  top: 0;
-  left: 0;
+  top: -300px;   /* Match VantaBackground positioning */
+  left: -100px;
+  right: -100px;
+  bottom: -100px;
+  width: calc(100vw + 200px);
+  height: calc(100vh + 400px);
+  background: linear-gradient(135deg, #16213e 0%, #1a365d 25%, #2d3748 50%, #1a202c 75%, #16213e 100%);
   z-index: 0;
+  transform: scale(1.3) translateY(-60px); /* Match VantaBackground transform */
 }
 
 .vanta-bg {

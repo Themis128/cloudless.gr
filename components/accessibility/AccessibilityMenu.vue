@@ -1,13 +1,15 @@
 <template>
     <div>
-        <div class="accessibility-btn" :style="btnStyle" @mousedown="startDrag" @touchstart="startDrag"
-            :aria-label="menu ? 'Close accessibility menu' : 'Open accessibility menu'" tabindex="0"
-            role="button"
-            @keydown.enter="menu = !menu" @keydown.space.prevent="menu = !menu">
+        <button class="accessibility-btn" :style="btnStyle" @mousedown="startDrag" @touchstart="startDrag"
+            :aria-label="menu ? 'Close accessibility menu' : 'Open accessibility menu'"
+            @keydown.enter="menu = !menu" @keydown.space.prevent="menu = !menu"
+            @keydown="(e) => { if (e.key === 'Enter' || e.key === ' ') { menu = !menu; e.preventDefault(); } }"
+            type="button"
+        >
             <v-btn icon color="primary" elevation="3" @click.stop="menu = !menu">
-                <UserIcon class="w-8 h-8" aria-label="Accessibility menu" />
+                <v-icon>mdi-account-settings</v-icon>
             </v-btn>
-        </div>
+        </button>
         <v-menu v-model="menu" :close-on-content-click="false" offset-y activator="parent" attach="body" eager>
             <v-card class="pa-4" min-width="260">
                 <v-card-title class="text-h6">Accessibility</v-card-title>
@@ -57,7 +59,6 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
-import { UserIcon } from '@heroicons/vue/24/outline'
 import { useTheme } from 'vuetify'
 
 const menu = ref(false)
@@ -80,10 +81,25 @@ const btnY = ref(32) // default to top left if not set
 const dragging = ref(false)
 const offset = ref({ x: 0, y: 0 })
 
-const btnStyle = computed(() => ({
-  left: btnX.value + 'px',
-  top: btnY.value + 'px'
-}))
+const btnStyle = computed(() => {
+  if (typeof window === 'undefined') {
+    // SSR fallback
+    return {
+      left: '32px',
+      top: '32px',
+      position: 'fixed' as const,
+      zIndex: 9999
+    }
+  }
+  const x = Math.max(0, Math.min(window.innerWidth - 64, btnX.value || 32))
+  const y = Math.max(0, Math.min(window.innerHeight - 64, btnY.value || 32))
+  return {
+    left: `${x}px`,
+    top: `${y}px`,
+    position: 'fixed' as const,
+    zIndex: 9999
+  }
+})
 
 function startDrag(e: MouseEvent | TouchEvent) {
     dragging.value = true
@@ -107,18 +123,21 @@ function startDrag(e: MouseEvent | TouchEvent) {
 }
 
 function onDrag(e: MouseEvent | TouchEvent) {
-    if (!dragging.value) return
+    if (!dragging.value || typeof window === 'undefined') return
     let clientX, clientY
     if (e.type.startsWith('touch')) {
         const touch = (e as TouchEvent).touches[0]
+        if (!touch) return
         clientX = touch.clientX
         clientY = touch.clientY
     } else {
         clientX = (e as MouseEvent).clientX
         clientY = (e as MouseEvent).clientY
     }
-    btnX.value = Math.max(0, Math.min(window.innerWidth - 64, clientX - offset.value.x))
-    btnY.value = Math.max(0, Math.min(window.innerHeight - 64, clientY - offset.value.y))
+    const newX = clientX - offset.value.x
+    const newY = clientY - offset.value.y
+    btnX.value = Math.max(0, Math.min(window.innerWidth - 64, newX))
+    btnY.value = Math.max(0, Math.min(window.innerHeight - 64, newY))
 }
 
 function stopDrag() {
@@ -132,7 +151,10 @@ function stopDrag() {
 }
 
 onMounted(() => {
-    // Only access window on client
+    // Only access window and localStorage on client
+    if (typeof window === 'undefined') return
+    
+    // Set default position if not saved
     if (!localStorage.getItem('accessibilityBtnX') || !localStorage.getItem('accessibilityBtnY')) {
         btnX.value = 32
         btnY.value = window.innerHeight - 120
