@@ -380,9 +380,7 @@ const pageTitle = '$componentName'
     } catch {
         $validationErrors += "Kong gateway not responding on port 8000 - check if Supabase containers are running"
         Write-Host "  ⚠️  Kong gateway not responding - run docker-compose up -d" -ForegroundColor Yellow
-    }
-
-    try {
+    }    try {
         Write-Host "  🔍 Testing auth service connectivity..." -ForegroundColor Gray
         $response = Invoke-WebRequest -Uri "http://127.0.0.1:8000/auth/v1/health" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
         if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 400) {
@@ -391,6 +389,17 @@ const pageTitle = '$componentName'
     } catch {
         $validationErrors += "Auth service not accessible through Kong - check auth container status"
         Write-Host "  ⚠️  Auth service not accessible - check container logs" -ForegroundColor Yellow
+    }
+
+    try {
+        Write-Host "  🔍 Testing Studio accessibility..." -ForegroundColor Gray
+        $response = Invoke-WebRequest -Uri "http://127.0.0.1:54323" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+        if ($response.StatusCode -eq 200) {
+            Write-Host "  ✅ Supabase Studio is accessible on port 54323" -ForegroundColor Green
+        }
+    } catch {
+        $validationErrors += "Supabase Studio not accessible on port 54323 - check if studio container is running"
+        Write-Host "  ⚠️  Studio not accessible - check container status" -ForegroundColor Yellow
     }
 
     # 8. Summary
@@ -777,11 +786,10 @@ Write-Host ""    # Change to docker directory
         Write-Host "  ⚠️  No Supabase containers detected running" -ForegroundColor Yellow
     }
     
-    Write-Host ""
-    Write-Host "🌐 Access Points:" -ForegroundColor Cyan
+    Write-Host ""    Write-Host "🌐 Access Points:" -ForegroundColor Cyan
     Write-Host "  • Supabase Studio: http://localhost:54323" -ForegroundColor White
     Write-Host "  • API Endpoint: http://localhost:8000" -ForegroundColor White
-    Write-Host "  • Database: localhost:54322" -ForegroundColor White
+    Write-Host "  • Database: localhost:5432" -ForegroundColor White
     Write-Host "  • Email Testing: http://localhost:54324" -ForegroundColor White
     
     if (-not $SkipSeed) {

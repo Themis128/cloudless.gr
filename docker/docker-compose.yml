@@ -8,7 +8,6 @@
 name: supabase
 
 services:
-
   studio:
     container_name: supabase-studio
     image: supabase/studio:2025.06.02-sha-8f2993d
@@ -24,6 +23,8 @@ services:
       timeout: 10s
       interval: 5s
       retries: 3
+    ports:
+      - ${STUDIO_PORT:-54323}:3000
     depends_on:
       analytics:
         condition: service_healthy

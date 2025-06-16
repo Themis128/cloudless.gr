@@ -107,14 +107,13 @@ if [ $? -eq 0 ]; then
     fi
     cd docker
   fi
-  
-  echo ""
+    echo ""
   echo "🎉 Reset and setup complete!"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "🌐 Access Points:"
   echo "  • Supabase Studio: http://localhost:54323"
-  echo "  • API Endpoint: http://localhost:8000"
-  echo "  • Database: localhost:54322"
+  echo "  • API Endpoint: http://localhost:8000"  
+  echo "  • Database: localhost:5432"
   
   if [ "$SEED_AFTER_RESET" = true ]; then
     echo ""
