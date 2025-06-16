@@ -33,6 +33,5 @@ Thumbs.db
 !.env.example
 
 # VS Code and Continue
-.vscode/
-.continue/
+
 supabase/

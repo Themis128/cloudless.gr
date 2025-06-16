@@ -1,78 +1,260 @@
-# Nuxt Minimal Starter
+# CloudlessGR - Nuxt/Supabase Development Environment
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+A modern full-stack development environment using Nuxt.js and Supabase with Docker containerization.
 
-## Setup
+## 🚀 Quick Start
 
-Make sure to install dependencies:
+### Prerequisites
+- Docker and Docker Compose
+- Node.js 18+ and NPM
+- PowerShell 7+ (for Windows)
 
+### One-Command Setup
 ```bash
-# npm
+# Complete environment setup
+.\scripts\01-setup-environment.ps1
+.\scripts\02-reset-and-seed.ps1
+node scripts\05-verify-setup.js
+```
+
+## 📋 Development Setup
+
+### 1. Environment Setup
+```bash
+# Setup and validate environment
+.\scripts\01-setup-environment.ps1
+
+# OR manually install dependencies
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
+### 2. Database Setup
 ```bash
-# npm
+# Reset and seed database with test data
+.\scripts\02-reset-and-seed.ps1
+
+# OR step by step:
+.\scripts\03-create-database-tables.js
+.\scripts\04-setup-user-accounts.js
+.\scripts\07-seed-database.js
+```
+
+### 3. Verification
+```bash
+# Verify everything is working
+node scripts\05-verify-setup.js
+```
+
+## 🌐 Access Points
+
+After setup, access your services at:
+
+- **Nuxt Application**: http://localhost:3000
+- **Supabase Studio**: http://localhost:54323
+- **Supabase API**: http://localhost:54321
+- **PostgreSQL**: localhost:54322
+
+## 📚 Scripts Reference
+
+### Core Setup (Run in Order)
+- `01-setup-environment.ps1` - Environment preparation
+- `02-reset-and-seed.ps1` - Complete reset and seeding
+- `03-create-database-tables.js` - Database table creation
+- `04-setup-user-accounts.js` - User account setup
+- `05-verify-setup.js` - Setup verification
+
+### Database Management
+- `06-check-database.js` - Database health check
+- `07-seed-database.js` - Database seeding
+
+### User Management
+- `10-manage-users.js` - User operations
+
+### Testing & Development
+- `11-test-authentication.js` - Auth system testing
+- `12-test-connectivity.ps1` - Service connectivity
+- `13-show-access-points.js` - Display endpoints
+
+### Utilities
+- `16-generate-secrets.js` - Generate JWT secrets
+- `18-emergency-restore.ps1` - Emergency recovery
+- `19-fix-line-endings.ps1` - Fix file encoding
+- `20-cleanup-temp-files.ps1` - Cleanup temp files
+
+See [SCRIPTS_REFERENCE.md](scripts/SCRIPTS_REFERENCE.md) for complete documentation.
+
+## 🛠️ Development
+
+### Start Development Server
+```bash
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
-
-Build the application for production:
-
+### Build for Production
 ```bash
-# npm
 npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
 ```
 
-Locally preview production build:
+## 🧪 Testing
 
+### Authentication Testing
 ```bash
-# npm
-npm run preview
+# Test authentication system
+node scripts\11-test-authentication.js
 
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
+# Test specific user
+node scripts\11-test-authentication.js --user admin@cloudless.gr
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+### Connectivity Testing
+```bash
+# Test all services
+.\scripts\12-test-connectivity.ps1
+
+# Quick essential tests
+.\scripts\12-test-connectivity.ps1 -Quick
+```
+
+### Database Testing
+```bash
+# Check database health
+node scripts\06-check-database.js
+
+# Test with verbose output
+node scripts\06-check-database.js --verbose
+```
+
+## 🔧 Maintenance
+
+### Generate New Secrets
+```bash
+# Generate JWT and API secrets
+node scripts\16-generate-secrets.js --update-env
+```
+
+### Fix Common Issues
+```bash
+# Fix line ending problems
+.\scripts\19-fix-line-endings.ps1
+
+# Emergency recovery
+.\scripts\18-emergency-restore.ps1
+```
+
+### Cleanup
+```bash
+# Clean temporary files
+.\scripts\20-cleanup-temp-files.ps1
+
+# Deep cleanup including Docker
+.\scripts\20-cleanup-temp-files.ps1 -Deep
+```
+
+## 🐳 Docker Management
+
+### Start Services
+```bash
+cd docker
+docker-compose up -d
+```
+
+### Stop Services
+```bash
+cd docker
+docker-compose down
+```
+
+### View Logs
+```bash
+cd docker
+docker-compose logs -f
+```
+
+### Reset Everything
+```bash
+.\scripts\02-reset-and-seed.ps1
+```
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+**Services not starting?**
+```bash
+.\scripts\12-test-connectivity.ps1
+docker-compose ps
+```
+
+**Database connection issues?**
+```bash
+node scripts\06-check-database.js
+.\scripts\02-reset-and-seed.ps1
+```
+
+**Authentication not working?**
+```bash
+node scripts\11-test-authentication.js
+node scripts\04-setup-user-accounts.js --admin
+```
+
+**Environment problems?**
+```bash
+.\scripts\01-setup-environment.ps1 -CheckOnly
+.\scripts\19-fix-line-endings.ps1
+```
+
+### Emergency Recovery
+If everything breaks:
+```bash
+.\scripts\18-emergency-restore.ps1 -BackupFirst
+node scripts\05-verify-setup.js
+```
+
+## 📁 Project Structure
+
+```
+├── scripts/                 # Numbered setup and utility scripts
+│   ├── 01-setup-environment.ps1
+│   ├── 02-reset-and-seed.ps1
+│   ├── 05-verify-setup.js
+│   └── SCRIPTS_REFERENCE.md
+├── docker/                  # Docker configuration
+│   ├── docker-compose.yml
+│   └── .env
+├── components/              # Vue components
+├── composables/             # Vue composables
+├── layouts/                 # Nuxt layouts
+├── pages/                   # Nuxt pages
+├── middleware/              # Nuxt middleware
+├── stores/                  # Pinia stores
+└── types/                   # TypeScript types
+```
+
+## 🎯 Default User Accounts
+
+After running the setup scripts, these test accounts are available:
+
+- **Admin**: admin@cloudless.gr / Admin123456!
+- **Demo User**: demo@cloudless.gr / Demo123456!
+- **Test User**: test@example.com / Test123456!
+
+## 📖 Documentation
+
+- [Scripts Reference](scripts/SCRIPTS_REFERENCE.md) - Complete scripts documentation
+- [Nuxt Documentation](https://nuxt.com/docs)
+- [Supabase Documentation](https://supabase.com/docs)
+- [Docker Documentation](https://docs.docker.com/)
+
+## 🤝 Contributing
+
+1. Run setup scripts to prepare environment
+2. Make your changes
+3. Test with verification scripts
+4. Submit pull request
+
+## 📄 License
+
+MIT License - see LICENSE file for details.
 
 ## Supabase Setup
 

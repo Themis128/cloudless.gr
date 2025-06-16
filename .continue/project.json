@@ -1,0 +1,18 @@
+{
+  "projectName": "cloudless.gr",
+  "language": "typescript",
+  "framework": "nuxt3",
+  "testFrameworks": ["cypress", "playwright"],
+  "devServerCommand": "npm run dev",
+  "devServerPort": 3000,
+  "adminPath": "/admin",
+  "authPath": "/auth/login",
+  "spelling": {
+    "languages": ["en", "el"],
+    "customWords": ["Cloudless", "Supabase", "Vuetify", "Vanta", "LLM", "playwright", "cy", "admin", "auth", "vite"]
+  },
+  "e2e": {
+    "cypressConfig": "cypress.config.json",
+    "playwrightConfig": "playwright.config.ts"
+  }
+}
