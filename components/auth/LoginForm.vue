@@ -1,6 +1,11 @@
 <template>
   <v-card class="glass-card pa-6" width="400" elevation="10">
-    <v-card-title class="text-h5 text-white text-center">Login</v-card-title>
+    <v-card-title class="t  console.log('Login form submitted!')
+  console.log('Email:', email.value)
+  console.log('Email length:', email.value.length)
+  console.log('Email char codes:', Array.from(email.value).map(c => c.charCodeAt(0)))
+  console.log('Password length:', password.value.length)
+  console.log('Password char codes:', Array.from(password.value).map(c => c.charCodeAt(0))) text-white text-center">Login</v-card-title>
 
     <v-form validate-on="submit lazy" @submit.prevent="handleLogin">
       <v-alert
@@ -81,9 +86,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { navigateTo } from '#app'
-import { useSupabase, setupUserStorage } from '@/composables/useSupabase'
+import { useSupabase } from '@/composables/useSupabase'
 
-const route = useRoute()
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -99,54 +103,40 @@ const rules = {
 async function handleLogin() {
   errorMsg.value = ''
   loading.value = true
+    console.log('🚀 Login form submitted!')
+  console.log('📧 Email:', email.value)
+  console.log('� Email length:', email.value.length)
+  console.log('📧 Email char codes:', Array.from(email.value).map(c => c.charCodeAt(0)))
+  console.log('�🔐 Password length:', password.value.length)
+  console.log('🔐 Password char codes:', Array.from(password.value).map(c => c.charCodeAt(0)))
   
   try {
-    const { signIn } = useSupabaseAuth()
+    // Use direct Supabase client instead of the complex auth composable
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.value,
+      password: password.value
+    })
     
-    // Use the enhanced signIn method (non-admin)
-    const data = await signIn(email.value, password.value, false)
+    console.log('📊 Direct Supabase login response:', { data, error })
+    
+    if (error) {
+      console.log('❌ Login error:', error)
+      throw error
+    }
     
     if (!data.user) {
       throw new Error('Login failed - no user data received')
     }
+      console.log('✅ User authenticated:', data.user.email)
     
-    // Setup user storage
-    try {
-      const userId = data.user.id
-      if (userId) {
-        await setupUserStorage(supabase, userId)
-      }
-    } catch (e) {
-      console.warn('Storage setup failed:', e)
-      // Don't fail login for storage setup issues
-    }
+    // Redirect to users/index after successful login
+    console.log('Redirecting to /users/index...')
+    await navigateTo('/users/index')
     
-    // Ensure session is set before redirecting
-    let sessionReady = false
-    for (let i = 0; i < 10; i++) {
-      const { data: sessionData } = await supabase.auth.getSession()
-      if (sessionData?.session) {
-        sessionReady = true
-        break
-      }
-      await new Promise(res => setTimeout(res, 100))
-    }
-    
-    if (sessionReady) {
-      // Check if there's a redirect parameter
-      const redirectTo = route.query.redirect as string
-      if (redirectTo && redirectTo !== '/auth' && redirectTo !== '/auth/login') {
-        await navigateTo(redirectTo)
-      } else {
-        await navigateTo('/users/index')
-      }
-    } else {
-      errorMsg.value = 'Login session could not be established. Please try again.'
-    }
-    
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('[LOGIN] Error:', e)
-    errorMsg.value = e.message || 'Login failed. Please check your credentials.'
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred'
+    errorMsg.value = errorMessage || 'Login failed. Please check your credentials.'
     password.value = '' // Clear password on error
   } finally {
     loading.value = false

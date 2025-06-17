@@ -5,7 +5,7 @@
 
 export const useAuthRequired = async () => {
   // Only run on client side
-  if (process.server) return
+  if (import.meta.server) return
   
   const supabase = useSupabaseClient()
   const route = useRoute()
@@ -31,7 +31,7 @@ export const useAuthRequired = async () => {
 
 export const useAdminRequired = async () => {
   // Only run on client side
-  if (process.server) return
+  if (import.meta.server) return
   
   const supabase = useSupabaseClient()
   
@@ -44,13 +44,14 @@ export const useAdminRequired = async () => {
     }
     
     // Check admin role
+    type Profile = { role: string }
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', session.user.id)
-      .single()
+      .single<Profile>()
       
-    if (profileError || !profile || (profile as any).role !== 'admin') {
+    if (profileError || !profile || profile.role !== 'admin') {
       await navigateTo('/auth/admin-login?error=unauthorized')
       return
     }

@@ -51,8 +51,7 @@
                 </div>
               </v-card-text>
             </v-card>
-          </v-col>
-        </v-row>
+          </v-col>        </v-row>
         
         <!-- Model Comparison Table -->
         <v-row class="mt-4">
@@ -63,14 +62,15 @@
               :loading="loading"
               class="elevation-1"
               density="compact"
-            >              <template #[`item.model_name`]="{ item }">
-                             <div class="d-flex align-center">
-                               <v-avatar :color="getModelColor(item.id)" size="24" class="me-2">
-                                 <span class="text-caption">{{ item.model_name.charAt(0).toUpperCase() }}</span>
-                               </v-avatar>
-                               {{ item.model_name }}
-                             </div>
-                           </template>
+            >
+              <template #[`item.model_name`]="{ item }">
+                <div class="d-flex align-center">
+                  <v-avatar :color="getModelColor(item.id)" size="24" class="me-2">
+                    <span class="text-caption">{{ item.model_name.charAt(0).toUpperCase() }}</span>
+                  </v-avatar>
+                  {{ item.model_name }}
+                </div>
+              </template>
               
               <template #[`item.created_at`]="{ item }">
                 {{ formatDate(item.created_at) }}
@@ -78,7 +78,7 @@
               
               <template #[`item.accuracy`]="{ item }">
                 <div class="d-flex align-center">
-                  <div class="me-2">{{ (item.metrics?.accuracy * 100)?.toFixed(2) ?? 'N/A' }}%</div>
+                  <div class="me-2">{{ item.metrics?.accuracy != null ? (item.metrics.accuracy * 100).toFixed(2) : 'N/A' }}%</div>
                   <v-progress-linear
                     :model-value="(item.metrics?.accuracy ?? 0) * 100"
                     height="4"
@@ -101,7 +101,7 @@
               
               <template #[`item.val_accuracy`]="{ item }">
                 <div class="d-flex align-center">
-                  <div class="me-2">{{ (item.metrics?.val_accuracy * 100)?.toFixed(2) ?? 'N/A' }}%</div>
+                  <div class="me-2">{{ item.metrics?.val_accuracy != null ? (item.metrics.val_accuracy * 100).toFixed(2) : 'N/A' }}%</div>
                   <v-progress-linear
                     :model-value="(item.metrics?.val_accuracy ?? 0) * 100"
                     height="4"
@@ -246,13 +246,13 @@ const chartTypes = [
 ]
 
 const tableHeaders = [
-  { title: 'Model', key: 'model_name', sortable: true },
-  { title: 'Accuracy', key: 'accuracy', align: 'center' },
-  { title: 'Loss', key: 'loss', align: 'center' },
-  { title: 'Val Accuracy', key: 'val_accuracy', align: 'center' },
-  { title: 'Val Loss', key: 'val_loss', align: 'center' },
-  { title: 'Created', key: 'created_at', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'center' }
+  { title: 'Model', value: 'model_name', sortable: true, align: 'start' } as const,
+  { title: 'Accuracy', value: 'accuracy', sortable: false, align: 'center' } as const,
+  { title: 'Loss', value: 'loss', sortable: false, align: 'center' } as const,
+  { title: 'Val Accuracy', value: 'val_accuracy', sortable: false, align: 'center' } as const,
+  { title: 'Val Loss', value: 'val_loss', sortable: false, align: 'center' } as const,
+  { title: 'Created', value: 'created_at', sortable: true, align: 'center' } as const,
+  { title: 'Actions', value: 'actions', sortable: false, align: 'center' } as const
 ]
 
 const bestAccuracy = computed(() => {

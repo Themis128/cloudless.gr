@@ -21,7 +21,7 @@ const adminRoutes = ['/admin']
 
 export default defineNuxtRouteMiddleware(async (to) => {
   // Skip middleware on server side in SPA mode
-  if (process.server) return
+  if (import.meta.server) return
   
   const normalizedPath = withoutTrailingSlash(to.path || '/')
   
@@ -65,9 +65,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
         .from('profiles')
         .select('role')
         .eq('id', userId)
-        .single()
+        .single<{ role: string }>()
 
-      if (profileError || !profile || (profile as any).role !== 'admin') {
+      if (profileError || !profile || profile.role !== 'admin') {
         console.warn('[AUTH] Admin access denied:', profileError || 'User is not admin')
         return navigateTo('/auth/admin-login?error=unauthorized')
       }

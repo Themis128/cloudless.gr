@@ -17,12 +17,12 @@
       </v-btn>
       
       <h2>Test 3: v-btn with @click</h2>
-      <v-btn @click="goToAuth" color="success" size="large">
+      <v-btn color="success" size="large" @click="goToAuth">
         @click to Auth
       </v-btn>
       
       <h2>Test 4: Regular button</h2>
-      <button @click="goToAuth" style="padding: 12px 24px; font-size: 16px;">
+      <button style="padding: 12px 24px; font-size: 16px;" @click="goToAuth">
         Regular Button to Auth
       </button>
       

@@ -58,7 +58,7 @@
                     rel="noopener noreferrer"
                     :aria-label="item.aria || item.name"
                   >
-                    <FontAwesomeIcon :icon="item.iconObj" :style="{ color: item.color || '#333', fontSize: '1.5rem' }" />
+                    <FontAwesomeIcon :icon="item.iconObj || ''" :style="{ color: item.color || '#333', fontSize: '1.5rem' }" />
                   </a>
                 </span>
               </slot>
@@ -86,7 +86,7 @@ import { computed, ref, onMounted, nextTick } from 'vue'
 interface ContactSocialLink {
   name: string;
   url: string;
-  iconObj?: any;
+  iconObj?: string | [string, string];
   color?: string;
   aria?: string;
 }
@@ -146,8 +146,12 @@ async function onSubmitInternal() {
       isFlipped.value = true
       successMsg.value = ''
     }, 1000)
-  } catch (e: any) {
-    errorMsg.value = e?.message || 'Failed to send message. Please try again.'
+  } catch (e: unknown) {
+    if (e && typeof e === 'object' && 'message' in e) {
+      errorMsg.value = (e as { message?: string }).message || 'Failed to send message. Please try again.'
+    } else {
+      errorMsg.value = 'Failed to send message. Please try again.'
+    }
   } finally {
     submitting.value = false
   }

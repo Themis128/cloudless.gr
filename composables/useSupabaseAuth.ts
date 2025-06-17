@@ -4,26 +4,35 @@
 export const useSupabaseAuth = () => {
   const supabase = useSupabaseClient()
   const user = useSupabaseUser()
-
   // Sign in with email and password
   const signIn = async (email: string, password: string, requireAdminRole = false) => {
     try {
+      console.log('🔐 signIn called with:', { email, requireAdminRole })
+      
       const { data, error } = await supabase.auth.signInWithPassword({ 
         email, 
         password 
       })
       
-      if (error) throw error
+      console.log('📊 Supabase signInWithPassword response:', { data, error })
+      
+      if (error) {
+        console.log('❌ SignIn error:', error)
+        throw error
+      }
 
       // If admin role is required, check the user's role
       if (requireAdminRole && data.user) {
+        console.log('🔍 Checking admin role...')
         const role = await getUserRole()
+        console.log('👤 User role:', role)
         if (role !== 'admin') {
           await signOut()
           throw new Error('Admin access required')
         }
       }
 
+      console.log('✅ SignIn successful')
       return data
     } catch (err) {
       console.error('[signIn error]', err)
@@ -131,14 +140,13 @@ export const useSupabaseAuth = () => {
       return null
     }
   }
-
   // Get user role from profiles table
   const getUserRole = async () => {
     try {
       if (!user.value) return null
 
       const { data: profile, error } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('role')
         .eq('id', user.value.id)
         .single()

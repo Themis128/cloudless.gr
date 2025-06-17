@@ -3,6 +3,8 @@
  * This runs on each protected page to ensure auth before rendering
  */
 
+import type { User } from '@supabase/supabase-js'
+
 export const usePageAuth = (options: { 
   requireAuth?: boolean,
   requireAdmin?: boolean,
@@ -18,7 +20,7 @@ export const usePageAuth = (options: {
   
   const isAuthenticated = ref(false)
   const isAdmin = ref(false)
-  const user = ref<any>(null)
+  const user = ref<User | null>(null)
   const loading = ref(true)
   const error = ref('')
 
@@ -47,13 +49,14 @@ export const usePageAuth = (options: {
       
       // Check admin role if required
       if (requireAdmin) {
+        interface Profile { role: string }
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', session.user.id)
-          .single()
+          .single<Profile>()
           
-        if (profileError || !profile || !(profile as any)?.role || (profile as any).role !== 'admin') {
+        if (profileError || profile?.role !== 'admin') {
           console.warn('[PAGE_AUTH] Admin access denied')
           isAdmin.value = false
           if (requireAdmin) return false

@@ -1,6 +1,16 @@
 ﻿// nuxt.config.ts
 import { defineNuxtConfig } from "nuxt/config";
 
+// Type assertion for process global in Nuxt config
+declare const process: {
+  env: {
+    [key: string]: string | undefined;
+    NODE_ENV?: string;
+    SUPABASE_URL?: string;
+    SUPABASE_ANON_KEY?: string;
+  };
+};
+
 export default defineNuxtConfig({
   ssr: false, // Optional: Use SSR if you need it
   compatibilityDate: "2025-05-15",
@@ -15,18 +25,19 @@ export default defineNuxtConfig({
   },
   modules: ["@nuxtjs/supabase", "@pinia/nuxt"],
   supabase: {
-    url: "http://127.0.0.1:8000",
-    key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzUwMDIxMjAwLCJleHAiOjE5MDc3ODc2MDB9.t_fNs-0FseUffAlk14mKEhQEr_PF3-IlHQ0z4VK3fxQ",
+    url: process.env.SUPABASE_URL ?? "http://127.0.0.1:54321",
+    key: process.env.SUPABASE_ANON_KEY ?? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
     redirectOptions: {
       login: '/auth',
-      callback: '/',
+      callback: '/auth/callback',
       exclude: ['/', '/info', '/info/*', '/auth', '/auth/*']
     }
   },
   runtimeConfig: {
     public: {
-      supabaseUrl: "http://127.0.0.1:8000",
-      supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzUwMDIxMjAwLCJleHAiOjE5MDc3ODc2MDB9.t_fNs-0FseUffAlk14mKEhQEr_PF3-IlHQ0z4VK3fxQ",
+      supabaseUrl: process.env.SUPABASE_URL ?? "http://127.0.0.1:54321",
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
+      devMode: process.env.NODE_ENV === 'development',
     },
   },
   vite: {

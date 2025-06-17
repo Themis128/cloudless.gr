@@ -3,7 +3,36 @@
 const _loadedScripts = new Set<string>();
 
 export function useVantaClouds2(element: HTMLElement | null) {
-  let vantaEffect: any = null;
+  interface VantaClouds2Options {
+    mouseControls: boolean;
+    touchControls: boolean;
+    gyroControls: boolean;
+    minHeight: number;
+    minWidth: number;
+    scale: number;
+    scaleMobile: number;
+    texturePath: string;
+    backgroundColor: number;
+    skyColor: number;
+    cloudColor: number;
+    shadowColor: number;
+    lightColor: number;
+    speed: number;
+    size: number;
+    density: number;
+    cloudShadow: boolean;
+    shadowIntensity: number;
+    shadowBlur: number;
+    skyOpacity: number;
+    cloudOpacity: number;
+    yOffset: number;
+    xOffset: number;
+    contrast: number;
+    brightness: number;
+    [key: string]: unknown; // For any additional dynamic options
+  }
+
+  let vantaEffect: { destroy: () => void; resize: () => void; options: VantaClouds2Options } | null = null;
   // Get responsive parameters based on screen size
   const getResponsiveConfig = () => {
     const width = window.innerWidth;

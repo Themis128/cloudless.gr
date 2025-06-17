@@ -1,14 +1,20 @@
-{
+﻿{
   "name": "cloudless.gr",
   "version": "1.0.0",
   "description": "my platform",
-  "type": "module",
-  "scripts": {
+  "type": "module",  "scripts": {
     "dev": "nuxt dev",
     "build": "nuxt build",
     "start": "nuxt start",
     "lint": "eslint . --ext .js,.ts,.vue",
-    "cypress:report": "npx mochawesome-merge cypress/results/html/*.json | npx mochawesome-report-generator --reportDir cypress/results/html/merged"
+    "cypress:report": "npx mochawesome-merge cypress/results/html/*.json | npx mochawesome-report-generator --reportDir cypress/results/html/merged",
+    "db:check": "pwsh -File scripts/check-diff.ps1",
+    "db:sync": "pwsh -File scripts/sync-to-cloud.ps1",
+    "db:migrate": "pwsh -File scripts/create-migration.ps1",
+    "db:status": "supabase migration list",    "db:reset-local": "supabase db reset --local",
+    "db:reset-cloud": "supabase db reset --linked",
+    "env:local": "pwsh -File scripts/switch-env.ps1 local",
+    "env:cloud": "pwsh -File scripts/switch-env.ps1 cloud"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",

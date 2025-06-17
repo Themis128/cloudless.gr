@@ -98,7 +98,9 @@ const socialWithIcons = computed(() => contact.social.map(item => ({
   iconObj: iconMap[item.icon as keyof typeof iconMap]
 })))
 
-const supabase = useSupabase()
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+const supabase = useSupabase() as SupabaseClient
 
 async function handleSubmit() {
   errorMsg.value = ''
@@ -116,12 +118,14 @@ async function handleSubmit() {
     return
   }
   // Insert into Supabase
-  const { error } = await supabase.from('contact_messages').insert({
-    name: name.value,
-    email: email.value,
-    message: message.value,
-    created_at: new Date().toISOString()
-  })
+  const { error } = await supabase
+    .from('contact_messages')
+    .insert([{
+      name: name.value,
+      email: email.value,
+      message: message.value,
+      created_at: new Date().toISOString()
+    }])
   if (error) {
     errorMsg.value = 'Failed to send message. Please try again.'
     submitting.value = false

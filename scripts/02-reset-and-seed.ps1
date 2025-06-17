@@ -31,11 +31,11 @@ param(
 # Function to fix line endings - prevents parsing errors
 function Repair-AllLineEndings {
     param([string]$BaseDirectory = ".")
-    
+
     Write-Host ""
     Write-Host "🔧 COMPREHENSIVE LINE ENDING FIXES..." -ForegroundColor Yellow
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
-    
+
     function Repair-FileLineEndings {
         param([string]$FilePath, [string]$FileType = "")
         if (Test-Path $FilePath) {
@@ -56,7 +56,7 @@ function Repair-AllLineEndings {
             }
         }
     }
-    
+
     # Fix critical files
     $criticalFiles = @(
         "docker/supabase/config.toml",
@@ -66,21 +66,21 @@ function Repair-AllLineEndings {
         "nuxt.config.ts",
         "package.json"
     )
-    
+
     foreach ($file in $criticalFiles) {
         Repair-FileLineEndings $file "Critical"
     }
-    
+
     # Fix SQL files
     Get-ChildItem -Path "." -Recurse -Include "*.sql" | ForEach-Object {
         Repair-FileLineEndings $_.FullName "SQL"
     }
-    
+
     # Fix config files
     Get-ChildItem -Path "." -Recurse -Include "*.toml", "*.yaml", "*.yml" | ForEach-Object {
         Repair-FileLineEndings $_.FullName "Config"
     }
-    
+
     Write-Host "✅ Line ending repairs completed" -ForegroundColor Green
 }
 
@@ -89,7 +89,7 @@ function Test-Environment {
     Write-Host ""
     Write-Host "🔍 ENVIRONMENT VALIDATION..." -ForegroundColor Cyan
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
-    
+
     # Check Docker
     try {
         $dockerVersion = docker --version
@@ -99,7 +99,7 @@ function Test-Environment {
         Write-Host "  ❌ Docker not available or not running" -ForegroundColor Red
         throw "Docker is required but not available"
     }
-    
+
     # Check docker-compose
     try {
         $composeVersion = docker-compose --version
@@ -109,7 +109,7 @@ function Test-Environment {
         Write-Host "  ❌ Docker Compose not available" -ForegroundColor Red
         throw "Docker Compose is required but not available"
     }
-    
+
     # Check required directories
     $requiredDirs = @("docker", "docker/supabase")
     foreach ($dir in $requiredDirs) {
@@ -120,13 +120,13 @@ function Test-Environment {
             throw "Required directory missing: $dir"
         }
     }
-    
+
     # Check critical files
     $criticalFiles = @(
         "docker/docker-compose.yml",
         "docker/.env"
     )
-    
+
     foreach ($file in $criticalFiles) {
         if (Test-Path $file) {
             Write-Host "  ✓ File exists: $file" -ForegroundColor Green
@@ -142,7 +142,7 @@ function Test-SupabaseAnalyticsIssue {
     Write-Host ""
     Write-Host "🔍 CHECKING FOR COMMON ISSUES..." -ForegroundColor Yellow
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
-    
+
     # Check if supabase_admin password configuration exists
     $rolesFile = "docker/volumes/db/roles.sql"
     if (Test-Path $rolesFile) {
@@ -158,7 +158,7 @@ function Test-SupabaseAnalyticsIssue {
     } else {
         Write-Host "⚠️  roles.sql file not found - will be created during setup" -ForegroundColor Yellow
     }
-    
+
     # Check for running analytics container with errors
     try {
         $analyticsContainer = docker ps --filter "name=supabase-analytics" --format "{{.Names}}" 2>$null
@@ -174,6 +174,71 @@ function Test-SupabaseAnalyticsIssue {
     catch {
         # Container not running, which is expected during reset
     }
+}
+
+# Function to fix BOM issues in configuration files
+function Repair-ConfigurationFiles {
+    Write-Host ""
+    Write-Host "🔧 FIXING CONFIGURATION FILE ENCODING ISSUES..." -ForegroundColor Yellow
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+      # Fix BOM issues in Supabase config.toml
+    $configFile = "supabase\config.toml"
+    if (Test-Path $configFile) {
+        try {
+            # Read content and re-save without BOM
+            $content = Get-Content -Path $configFile -Raw -Encoding UTF8
+            if ($content) {
+                # Remove BOM if present and save as UTF8 without BOM
+                $utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $false
+                [System.IO.File]::WriteAllText((Resolve-Path $configFile).Path, $content, $utf8NoBomEncoding)
+                Write-Host "  ✓ Fixed BOM issue in: $configFile" -ForegroundColor Green
+            }
+        }
+        catch {
+            Write-Host "  ⚠️  Warning: Could not fix BOM in $configFile - $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
+
+    # Fix BOM issues in all migration files
+    $migrationFiles = Get-ChildItem -Path "supabase\migrations" -Filter "*.sql" -ErrorAction SilentlyContinue
+    foreach ($file in $migrationFiles) {
+        try {
+            $content = Get-Content -Path $file.FullName -Raw -Encoding UTF8
+            if ($content) {
+                $utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $false
+                [System.IO.File]::WriteAllText($file.FullName, $content, $utf8NoBomEncoding)
+                Write-Host "  ✓ Fixed BOM in migration: $($file.Name)" -ForegroundColor Green
+            }
+        }
+        catch {
+            Write-Host "  ⚠️  Warning: Could not fix BOM in $($file.Name) - $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
+
+    # Fix other critical configuration files
+    $configFiles = @(
+        "package.json",
+        "nuxt.config.ts",
+        "tsconfig.json"
+    )
+
+    foreach ($file in $configFiles) {
+        if (Test-Path $file) {
+            try {
+                $content = Get-Content -Path $file -Raw -Encoding UTF8
+                if ($content) {
+                    $utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $false
+                    [System.IO.File]::WriteAllText((Resolve-Path $file).Path, $content, $utf8NoBomEncoding)
+                    Write-Host "  ✓ Fixed encoding in: $file" -ForegroundColor Green
+                }
+            }
+            catch {
+                Write-Host "  ⚠️  Warning: Could not fix encoding in $file - $($_.Exception.Message)" -ForegroundColor Yellow
+            }
+        }
+    }
+
+    Write-Host "✅ Configuration file encoding fixes completed" -ForegroundColor Green
 }
 
 # Main execution
@@ -223,35 +288,37 @@ $startTime = Get-Date
 try {
     # Validate environment first
     Test-Environment
-    
+
     # Check for common issues
     Test-SupabaseAnalyticsIssue
-    
-    # Fix line endings unless skipped
+      # Fix line endings unless skipped
     if (-not $Quick) {
         Repair-AllLineEndings
     }
-    
+
+    # Fix configuration file encoding issues
+    Repair-ConfigurationFiles
+
     # Change to docker directory
     Set-Location "docker"
     Write-Host ""
     Write-Host "📍 Working in: $(Get-Location)" -ForegroundColor Cyan
-    
+
     # PHASE 1: CLEANUP
     if (-not $NoCleanup) {
         Write-Host ""
         Write-Host "🧹 CLEANUP PHASE..." -ForegroundColor Yellow
         Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
-        
+
         # Stop all containers
         Write-Host "  🛑 Stopping containers..." -ForegroundColor Cyan
         docker-compose down --remove-orphans 2>&1 | Out-Host
-        
+
         # Remove volumes unless quick mode
         if (-not $Quick) {
             Write-Host "  🗑️  Removing volumes..." -ForegroundColor Cyan
             docker-compose down -v 2>&1 | Out-Host
-            
+
             # Clean up any remaining volumes
             try {
                 $volumes = docker volume ls -q | Where-Object { $_ -match "supabase|postgres|docker" }
@@ -265,34 +332,34 @@ try {
             }
         }
     }
-    
+
     # PHASE 2: STARTUP
     Write-Host ""
     Write-Host "🚀 STARTUP PHASE..." -ForegroundColor Green
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
-    
+
     # Start services
     $composeFile = if ($DevMode) { "docker-compose.dev.yml" } else { "docker-compose.yml" }
     Write-Host "  🔄 Starting services with $composeFile..." -ForegroundColor Cyan
     docker-compose -f $composeFile up -d 2>&1 | Out-Host
-    
+
     # Wait for services
     Write-Host "  ⏳ Waiting for services to be ready..." -ForegroundColor Cyan
     Start-Sleep -Seconds 10
-    
+
     # Check service status
     Write-Host "  📊 Service status:" -ForegroundColor Cyan
     docker-compose ps 2>&1 | Out-Host
-    
+
     # PHASE 3: SEEDING
     if (-not $SkipSeed) {
         Write-Host ""
         Write-Host "🌱 SEEDING PHASE..." -ForegroundColor Green
         Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
-        
+
         # Wait a bit more for database to be fully ready
         Start-Sleep -Seconds 5
-        
+
         # Run seeding script if it exists
         if (Test-Path "../scripts/seed-database.js") {
             Write-Host "  🌱 Running database seeding..." -ForegroundColor Cyan
@@ -303,11 +370,11 @@ try {
             Write-Host "  ⚠️  Seeding script not found, skipping..." -ForegroundColor Yellow
         }
     }
-    
+
     # PHASE 4: COMPLETION
     $endTime = Get-Date
     $duration = $endTime - $startTime
-    
+
     Write-Host ""
     Write-Host "🎉 RESET COMPLETED SUCCESSFULLY!" -ForegroundColor Green
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
@@ -322,7 +389,7 @@ try {
     Write-Host "  1. Check service status: docker-compose ps" -ForegroundColor White
     Write-Host "  2. View logs: docker-compose logs -f" -ForegroundColor White
     Write-Host "  3. Run tests: .\scripts\11-test-authentication.js" -ForegroundColor White
-    
+
 }
 catch {
     Write-Host ""

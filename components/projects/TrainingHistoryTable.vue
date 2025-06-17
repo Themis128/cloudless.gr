@@ -139,19 +139,27 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+interface TrainingMetrics {
+  loss?: number
+  accuracy?: number
+  val_loss?: number
+  val_accuracy?: number
+  [key: string]: number | undefined
+}
+
 interface TrainingSession {
   id: string
   project_id: string
   status: string
-  config?: Record<string, any>
-  metrics?: Record<string, any>
+  config?: Record<string, unknown>
+  metrics?: TrainingMetrics
   log_url?: string
   created_at: string
   updated_at: string
   completed_at?: string
 }
 
-const props = defineProps<{
+const _props = defineProps<{
   sessions: TrainingSession[]
   loading?: boolean
 }>()
@@ -164,12 +172,18 @@ const emit = defineEmits<{
 const deleteDialog = ref(false)
 const sessionToDelete = ref<TrainingSession | null>(null)
 
-const headers = [
-  { title: 'ID', key: 'id', sortable: true },
-  { title: 'Status', key: 'status', align: 'center' },
-  { title: 'Started', key: 'created_at', sortable: true },
-  { title: 'Duration', key: 'duration' },
-  { title: 'Metrics', key: 'metrics' },
+const headers: Array<{
+  title: string
+  key: string
+  sortable?: boolean
+  align?: 'start' | 'center' | 'end'
+  value?: string
+}> = [
+  { title: 'ID', key: 'id', sortable: true, align: 'start' },
+  { title: 'Status', key: 'status', sortable: false, align: 'center' },
+  { title: 'Started', key: 'created_at', sortable: true, align: 'start' },
+  { title: 'Duration', key: 'duration', sortable: false, align: 'start' },
+  { title: 'Metrics', key: 'metrics', sortable: false, align: 'start' },
   { title: 'Actions', key: 'actions', sortable: false, align: 'center' }
 ]
 
