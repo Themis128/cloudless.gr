@@ -2,22 +2,59 @@
   <div class="register-outer">
     <v-card class="glass-card pa-6" elevation="12">
       <v-card-title class="text-h5 text-white text-center pb-2">Register</v-card-title>
-      <v-form @submit.prevent="handleRegister" validate-on="submit lazy">
-        <v-text-field v-model="firstName" label="First Name" prepend-icon="mdi-account" clearable color="blue"
-          class="glass-input mb-4" :rules="[rules.required]" :tabindex="1" />
-        <v-text-field v-model="lastName" label="Last Name" prepend-icon="mdi-account" clearable color="blue"
-          class="glass-input mb-4" :rules="[rules.required]" :tabindex="2" />
-        <v-text-field v-model="email" label="Email" placeholder="you@example.com" prepend-icon="mdi-email-outline"
-          clearable color="blue" class="glass-input mb-4" :rules="[rules.required, rules.email]" :tabindex="3" />
-        <v-text-field v-model="password" :type="showPassword ? 'text' : 'password'" label="Password"
+      <v-form validate-on="submit lazy" @submit.prevent="handleRegister">
+        <v-text-field
+          v-model="firstName"
+          label="First Name"
+          prepend-icon="mdi-account"
+          clearable
+          color="blue"
+          class="glass-input mb-4"
+          :rules="[rules.required]"
+          :tabindex="1"
+        />
+        <v-text-field
+          v-model="lastName"
+          label="Last Name"
+          prepend-icon="mdi-account"
+          clearable
+          color="blue"
+          class="glass-input mb-4"
+          :rules="[rules.required]"
+          :tabindex="2"
+        />
+        <v-text-field
+          v-model="email"
+          label="Email"
+          placeholder="you@example.com"
+          prepend-icon="mdi-email-outline"
+          clearable
+          color="blue"
+          class="glass-input mb-4"
+          :rules="[rules.required, rules.email]"
+          :tabindex="3"
+        />
+        <v-text-field
+          v-model="password"
+          :type="showPassword ? 'text' : 'password'"
+          label="Password"
           prepend-icon="mdi-lock-outline"
           :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+          append-inner-icon=""
+          clearable
+          color="blue"
+          class="glass-input mb-4"
+          :rules="[rules.required, rules.minLength]"
+          :tabindex="4"
           @click:append="showPassword = !showPassword"
           @keydown:append.enter="showPassword = !showPassword"
-          append-inner-icon=""
-          clearable color="blue" class="glass-input mb-4"
-          :rules="[rules.required, rules.minLength]" :tabindex="4" />
-        <v-btn type="submit" block color="blue" class="mt-4">Register</v-btn>
+        />
+        <v-btn
+          type="submit"
+          block
+          color="blue"
+          class="mt-4"
+        >Register</v-btn>
       </v-form>
       <NuxtLink to="/auth/login" class="login-link mt-4">
         <v-icon left size="18" color="#3b82f6">mdi-login</v-icon>

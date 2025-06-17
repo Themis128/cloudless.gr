@@ -49,8 +49,8 @@
         <v-spacer />
         <v-btn
           variant="text"
-          @click="cancel"
           :disabled="loading"
+          @click="cancel"
         >
           Cancel
         </v-btn>

@@ -64,9 +64,9 @@
                   color="primary"
                   size="large"
                   prepend-icon="mdi-rocket-launch"
-                  @click="deployModel"
                   :disabled="!canDeploy"
                   :loading="deploying"
+                  @click="deployModel"
                 >
                   Deploy Model
                 </v-btn>
@@ -78,8 +78,8 @@
                   variant="outlined"
                   prepend-icon="mdi-stop-circle"
                   class="mt-2"
-                  @click="stopDeployment"
                   :loading="stopping"
+                  @click="stopDeployment"
                 >
                   Stop Deployment
                 </v-btn>
@@ -102,8 +102,8 @@
                   <v-btn
                     variant="outlined"
                     prepend-icon="mdi-refresh"
-                    @click="refreshDeployments"
                     :loading="refreshing"
+                    @click="refreshDeployments"
                   >
                     Refresh
                   </v-btn>
@@ -179,7 +179,7 @@
             <v-card-text>
               <performance-monitoring-chart
                 :metrics="performanceMetrics"
-                :timeRange="monitoringTimeRange"
+                :time-range="monitoringTimeRange"
                 :loading="metricsLoading"
                 @time-range-change="updateMonitoringTimeRange"
               />

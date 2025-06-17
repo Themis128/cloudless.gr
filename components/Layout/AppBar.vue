@@ -8,9 +8,9 @@
         <template #default="{ navigate, href, isExactActive }">
           <v-btn
             :href="href"
-            @click.prevent="navigate"
             :class="{ 'v-btn--active': isExactActive }"
             text
+            @click.prevent="navigate"
           >
             {{ link.name }}
           </v-btn>

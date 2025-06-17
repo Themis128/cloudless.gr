@@ -2,10 +2,22 @@
   <v-card class="glass-card pa-6" width="400" elevation="10">
     <v-card-title class="text-h5 text-white text-center">Reset Password</v-card-title>
     <v-form @submit.prevent="handleReset">
-      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
+      <v-alert
+        v-if="errorMsg"
+        type="error"
+        class="mb-4"
+        border="start"
+        prominent
+      >
         {{ errorMsg }}
       </v-alert>
-      <v-alert v-if="successMsg" type="success" class="mb-4" border="start" prominent>
+      <v-alert
+        v-if="successMsg"
+        type="success"
+        class="mb-4"
+        border="start"
+        prominent
+      >
         {{ successMsg }}
       </v-alert>
       <v-text-field
@@ -19,7 +31,14 @@
         class="glass-input mb-4"
         :rules="[rules.required, rules.email]"
       />
-      <v-btn type="submit" block color="blue" class="mt-4" :loading="loading" :disabled="loading">Send Reset Link</v-btn>
+      <v-btn
+        type="submit"
+        block
+        color="blue"
+        class="mt-4"
+        :loading="loading"
+        :disabled="loading"
+      >Send Reset Link</v-btn>
     </v-form>
     <NuxtLink to="/auth/login" class="login-link mt-4">
       <v-icon left size="18" color="#3b82f6">mdi-login</v-icon>

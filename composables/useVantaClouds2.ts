@@ -1,6 +1,6 @@
 // No imports needed
 
-const loadedScripts = new Set<string>();
+const _loadedScripts = new Set<string>();
 
 export function useVantaClouds2(element: HTMLElement | null) {
   let vantaEffect: any = null;
@@ -88,10 +88,11 @@ export function useVantaClouds2(element: HTMLElement | null) {
     
     try {
       await loadScript('/three.r134.min.js');
-      await loadScript('/vanta.clouds2.min.js');      // @ts-ignore
+      await loadScript('/vanta.clouds2.min.js');      // @ts-ignore - VANTA is a global library loaded via script tag
       if (window.VANTA?.CLOUDS2) {
         console.log('[VantaClouds2] Initializing VANTA.CLOUDS2...');
-        const config = getResponsiveConfig();        // @ts-ignore
+        const config = getResponsiveConfig();        
+        // @ts-ignore - VANTA.CLOUDS2 is dynamically loaded and not typed
         vantaEffect = window.VANTA.CLOUDS2({
           el: element,
           mouseControls: config.mouseControls,

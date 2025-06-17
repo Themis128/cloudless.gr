@@ -49,10 +49,10 @@
             </v-card-title>
             <v-divider />
             <v-card-text>              <TrainingConfigForm 
-                :project-id="route.params.id as string"
-                :loading="configLoading"
-                @submit="updateTrainingConfig"
-              />
+              :project-id="route.params.id as string"
+              :loading="configLoading"
+              @submit="updateTrainingConfig"
+            />
             </v-card-text>
           </v-card>
         </v-col>
@@ -72,9 +72,9 @@
                     v-if="!trainingSession?.isActive"
                     color="primary"
                     prepend-icon="mdi-play"
-                    @click="startTraining"
                     :disabled="!canStartTraining"
                     :loading="startingTraining"
+                    @click="startTraining"
                   >
                     Start Training
                   </v-btn>
@@ -82,20 +82,20 @@
                     v-else
                     color="error"
                     prepend-icon="mdi-stop"
-                    @click="stopTraining"
                     :loading="stoppingTraining"
+                    @click="stopTraining"
                   >
                     Stop Training
                   </v-btn>
                 </v-card-title>
                 <v-divider />
                 <v-card-text>                  <TrainingProgress
-                    :session="trainingSession"
-                    :metrics="trainingMetrics"
-                    :project-id="route.params.id as string"
-                    @stop="stopTraining"
-                    @refresh="() => {}"
-                  />
+                  :session="trainingSession"
+                  :metrics="trainingMetrics"
+                  :project-id="route.params.id as string"
+                  @stop="stopTraining"
+                  @refresh="() => {}"
+                />
                 </v-card-text>
               </v-card>
             </v-col>
@@ -109,11 +109,11 @@
                 </v-card-title>
                 <v-divider />
                 <v-card-text>                  <TrainingHistoryTable
-                    :sessions="trainingHistory"
-                    :loading="historyLoading"
-                    @view-session="viewTrainingSession"
-                    @delete-session="deleteTrainingSession"
-                  />
+                  :sessions="trainingHistory"
+                  :loading="historyLoading"
+                  @view-session="viewTrainingSession"
+                  @delete-session="deleteTrainingSession"
+                />
                 </v-card-text>
               </v-card>
             </v-col>
@@ -131,13 +131,13 @@
             </v-card-title>
             <v-divider />
             <v-card-text>              <ModelComparisonChart
-                :models="trainedModels"
-                :metrics="comparisonMetrics"
-                :loading="modelsLoading"
-                @view-model="(model) => console.log('View model:', model)"
-                @download-model="(model) => console.log('Download model:', model)"
-                @deploy-model="(model) => navigateTo(`/projects/${route.params.id}/deploy`)"
-              />
+              :models="trainedModels"
+              :metrics="comparisonMetrics"
+              :loading="modelsLoading"
+              @view-model="(model) => console.log('View model:', model)"
+              @download-model="(model) => console.log('Download model:', model)"
+              @deploy-model="(model) => navigateTo(`/projects/${route.params.id}/deploy`)"
+            />
             </v-card-text>
           </v-card>
         </v-col>

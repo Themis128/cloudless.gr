@@ -1,6 +1,6 @@
 import { useSupabaseAuth } from "@/composables/useSupabaseAuth";
 
-export default defineNuxtRouteMiddleware(async (to, from) => {
+export default defineNuxtRouteMiddleware(async (to, _from) => {
   const { getUser } = useSupabaseAuth();
   
   try {

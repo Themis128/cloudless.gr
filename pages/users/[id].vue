@@ -8,5 +8,10 @@
 
 <script setup>
 // [id] page component
-const pageTitle = '[id]'
+const _pageTitle = '[id]'
+
+definePageMeta({
+  layout: 'user',
+  middleware: 'auth'
+})
 </script>

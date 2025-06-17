@@ -4,14 +4,14 @@
     <v-form @submit.prevent>
       <v-file-input
         label="Upload File"
-        @change="handleUpload"
         prepend-icon="mdi-upload"
         show-size
         :loading="loading"
+        @change="handleUpload"
       />
     </v-form>
     <v-alert v-if="error" type="error" class="my-4">{{ error }}</v-alert>
-    <v-table class="mt-6" v-if="files.length">
+    <v-table v-if="files.length" class="mt-6">
       <thead>
         <tr>
           <th>File Name</th>
@@ -22,7 +22,13 @@
         <tr v-for="file in files" :key="file.name">
           <td>{{ file.name }}</td>
           <td>
-            <a v-if="file.url" :href="file.url" target="_blank" rel="noopener" :aria-label="`Open file ${file.name}`">View</a>
+            <a
+              v-if="file.url"
+              :href="file.url"
+              target="_blank"
+              rel="noopener"
+              :aria-label="`Open file ${file.name}`"
+            >View</a>
             <v-progress-circular v-else indeterminate size="20" />
           </td>
         </tr>

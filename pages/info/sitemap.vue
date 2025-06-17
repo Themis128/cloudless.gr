@@ -3,9 +3,9 @@
     <v-row justify="center">
       <v-col cols="12" lg="10">
         <v-card class="glass-card pa-6" elevation="0">          <v-card-title class="text-h4 font-weight-bold white--text mb-4">
-            Site Map
-          </v-card-title>
-            <v-card-text>
+                                                                  Site Map
+                                                                </v-card-title>
+          <v-card-text>
             <p class="intro-text mb-6">
               Navigate through the complete structure of Cloudless. Click on any item to visit that page.
             </p>
@@ -41,7 +41,7 @@
               :allow-add="false"
               :show-header="true"
               :flat="false"
-              @nodeSelect="onNodeSelect"
+              @node-select="onNodeSelect"
             />
           </v-card-text>
         </v-card>

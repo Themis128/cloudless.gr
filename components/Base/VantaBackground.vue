@@ -1,5 +1,5 @@
 <template>
-  <div id="vanta-bg" class="vanta-bg" ref="vantaRef"></div>
+  <div id="vanta-bg" ref="vantaRef" class="vanta-bg" />
 </template>
 
 <script setup lang="ts">

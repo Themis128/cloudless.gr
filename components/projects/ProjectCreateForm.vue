@@ -155,8 +155,8 @@
       <v-btn
         variant="text"
         size="large"
-        @click="$emit('cancel')"
         :disabled="loading"
+        @click="$emit('cancel')"
       >
         Cancel
       </v-btn>

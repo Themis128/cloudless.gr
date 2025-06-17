@@ -3,7 +3,7 @@
     <v-card class="pa-6" elevation="8" max-width="420">
       <slot name="logo" />
       <v-card-title class="text-h5 font-weight-bold mb-4">{{ title }}</v-card-title>
-      <v-form @submit.prevent="handleLogin" ref="formRef" v-model="valid">
+      <v-form ref="formRef" v-model="valid" @submit.prevent="handleLogin">
         <v-text-field
           v-model="email"
           label="Email"
@@ -26,11 +26,22 @@
           class="mb-4"
         />
         <slot name="actions-above" />
-        <v-btn type="submit" color="primary" block :loading="loading" :disabled="!valid || loading">
+        <v-btn
+          type="submit"
+          color="primary"
+          block
+          :loading="loading"
+          :disabled="!valid || loading"
+        >
           {{ buttonText }}
         </v-btn>
         <slot name="actions-below" />
-        <v-alert v-if="error" type="error" class="mt-3" aria-live="assertive">{{ error }}</v-alert>
+        <v-alert
+          v-if="error"
+          type="error"
+          class="mt-3"
+          aria-live="assertive"
+        >{{ error }}</v-alert>
       </v-form>
       <slot name="footer" />
     </v-card>
@@ -46,7 +57,7 @@ const props = defineProps({
   buttonText: { type: String, default: 'Sign In' },
   redirect: { type: String, default: '/dashboard' },
   onLogin: { type: Function, required: true }, // (email, password) => Promise<{ error?: string }>
-  sessionCheck: { type: Function }, // optional async function to check session
+  sessionCheck: { type: Function, default: null }, // optional async function to check session
 })
 
 const email = ref('')

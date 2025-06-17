@@ -2,7 +2,7 @@
   <v-container class="d-flex align-center justify-center" style="min-height: 100vh;">
     <v-card class="pa-6" elevation="8" max-width="420">
       <v-card-title class="text-h5 font-weight-bold mb-4">Login</v-card-title>
-      <v-form @submit.prevent="handleLogin" ref="formRef" v-model="valid">
+      <v-form ref="formRef" v-model="valid" @submit.prevent="handleLogin">
         <v-text-field
           v-model="email"
           label="Email"
@@ -33,14 +33,19 @@
         >
           Login
         </v-btn>
-        <v-alert v-if="error" type="error" class="mt-3" aria-live="assertive">
+        <v-alert
+          v-if="error"
+          type="error"
+          class="mt-3"
+          aria-live="assertive"
+        >
           {{ error }}
         </v-alert>
         <v-row justify="space-between" class="mt-4">
-          <v-btn variant="text" @click="() => navigateTo('/auth/register')" aria-label="Go to the registration page">
+          <v-btn variant="text" aria-label="Go to the registration page" @click="() => navigateTo('/auth/register')">
             Register
           </v-btn>
-          <v-btn variant="text" @click="() => navigateTo('/auth/reset')" aria-label="Go to the forgot password page">
+          <v-btn variant="text" aria-label="Go to the forgot password page" @click="() => navigateTo('/auth/reset')">
             Forgot Password?
           </v-btn>
         </v-row>

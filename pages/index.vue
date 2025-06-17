@@ -1,45 +1,50 @@
 <template>  <v-container
-    fluid
-    class="fill-height d-flex flex-column justify-center align-center text-center hero-content"
-  >
-    <h1 class="text-h3 text-md-h1 font-weight-bold mb-4">
-      Cloudless: Power Without the Code
-    </h1>
+  fluid
+  class="fill-height d-flex flex-column justify-center align-center text-center hero-content"
+>
+  <h1 class="text-h3 text-md-h1 font-weight-bold mb-4">
+    Cloudless: Power Without the Code
+  </h1>
 
-    <p class="text-subtitle-1 text-md-h5 mb-6 mx-auto" style="max-width: 600px;">
-      Run powerful analytics and cloud workflows with clicks, not code.
-      Built for creators, not engineers.
-    </p>    <div class="d-flex flex-wrap justify-center">
-      <!-- Try It Free button, routes to /auth (auth/index.vue) -->
+  <p class="text-subtitle-1 text-md-h5 mb-6 mx-auto" style="max-width: 600px;">
+    Run powerful analytics and cloud workflows with clicks, not code.
+    Built for creators, not engineers.
+  </p>    <div class="d-flex flex-wrap justify-center">    <!-- Try It Free button, routes to /auth (auth/index.vue) -->
+    <NuxtLink to="/auth" class="text-decoration-none">
       <v-btn
-        to="/auth"
         color="primary"
         size="large"
         class="ma-2 px-6 py-3"
         aria-label="Start using Cloudless"
       >
         Try It Free
-      </v-btn><!-- Learn More button, routes to /info/index.vue -->
-      <v-btn
-        @click="goToInfo"
-        variant="outlined"
-        color="white"
-        size="large"
-        class="ma-2 px-6 py-3"
-        aria-label="Learn more about Cloudless"
-      >        Learn More
       </v-btn>
-    </div>
+    </NuxtLink><!-- Learn More button, routes to /info/index.vue -->
+    <v-btn
+      variant="outlined"
+      color="white"
+      size="large"
+      class="ma-2 px-6 py-3"
+      aria-label="Learn more about Cloudless"
+      @click="goToInfo"
+    >        Learn More
+    </v-btn>
+  </div>
 
-    <!-- Simple Tree Demo Section -->
-    <div class="mt-8 tree-demo-section">
-      <SimpleTree />
-    </div>
-  </v-container>
+  <!-- Simple Tree Demo Section -->
+  <div class="mt-8 tree-demo-section">
+    <SimpleTree />
+  </div>
+</v-container>
 </template>
 
 <script setup lang="ts">
 definePageMeta({ layout: 'default' })
+
+const _goToAuth = () => {
+  console.log('Navigating to /auth')
+  navigateTo('/auth')
+}
 
 const goToInfo = () => {
   console.log('Navigating to /info')

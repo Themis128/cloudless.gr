@@ -6,15 +6,36 @@
         <v-card elevation="4" class="pa-4">
           <v-card-title>Contact Us</v-card-title>
           <v-card-text>
-            <v-form ref="form" @submit.prevent="handleSubmit" v-model="formValid">
-              <v-text-field v-model="name" label="Name" required :rules="[v => !!v || 'Name is required']" />
-              <v-text-field v-model="email" label="Email" required type="email" :rules="[v => !!v || 'Email is required']" />
-              <v-textarea v-model="message" label="Message" required :rules="[v => !!v || 'Message is required']" />
+            <v-form ref="form" v-model="formValid" @submit.prevent="handleSubmit">
+              <v-text-field
+                v-model="name"
+                label="Name"
+                required
+                :rules="[v => !!v || 'Name is required']"
+              />
+              <v-text-field
+                v-model="email"
+                label="Email"
+                required
+                type="email"
+                :rules="[v => !!v || 'Email is required']"
+              />
+              <v-textarea
+                v-model="message"
+                label="Message"
+                required
+                :rules="[v => !!v || 'Message is required']"
+              />
               <div aria-live="assertive">
                 <v-alert v-if="errorMsg" type="error" class="mt-2">{{ errorMsg }}</v-alert>
                 <v-alert v-if="successMsg" type="success" class="mt-2">{{ successMsg }}</v-alert>
               </div>
-              <v-btn type="submit" color="primary" :disabled="submitting || !formValid" :loading="submitting">
+              <v-btn
+                type="submit"
+                color="primary"
+                :disabled="submitting || !formValid"
+                :loading="submitting"
+              >
                 Send Message
               </v-btn>
             </v-form>
@@ -29,12 +50,23 @@
             <div>We'll get back to you soon.</div>
             <div class="mt-4">
               <span v-for="item in socialWithIcons" :key="item.name" class="mx-2">
-                <a :href="item.url" target="_blank" rel="noopener noreferrer" :aria-label="item.aria || item.name">
+                <a
+                  :href="item.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  :aria-label="item.aria || item.name"
+                >
                   <FontAwesomeIcon :icon="item.iconObj" :style="{ color: item.color || '#333', fontSize: '1.5rem' }" />
                 </a>
               </span>
             </div>
-            <v-btn aria-label="Go back to contact form" color="primary" size="small" variant="text" @click="isFlipped = false">Back</v-btn>
+            <v-btn
+              aria-label="Go back to contact form"
+              color="primary"
+              size="small"
+              variant="text"
+              @click="isFlipped = false"
+            >Back</v-btn>
           </v-card-text>
         </v-card>
       </div>

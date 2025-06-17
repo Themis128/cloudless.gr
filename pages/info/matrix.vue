@@ -3,15 +3,20 @@
     <v-row justify="center">
       <v-col cols="12">
         <h1 class="text-h5 font-weight-bold mb-6 text-white">Admins & Users Matrix</h1>
-        <v-progress-linear indeterminate v-if="loading" color="primary" />
+        <v-progress-linear v-if="loading" indeterminate color="primary" />
 
-        <v-row v-else dense class="matrix-content" align="stretch">
+        <v-row
+          v-else
+          dense
+          class="matrix-content"
+          align="stretch"
+        >
           <v-col cols="12" md="6">
             <v-card class="glass-modern-card">
               <v-card-title class="text-white font-weight-bold">Admins</v-card-title>
               <v-divider class="mb-2" />
               <v-card-text>
-                <v-table dense v-if="adminColumns.length">
+                <v-table v-if="adminColumns.length" dense>
                   <thead>
                     <tr>
                       <th v-for="col in adminColumns" :key="col" scope="col">{{ col }}</th>
@@ -33,7 +38,7 @@
               <v-card-title class="text-white font-weight-bold">Users</v-card-title>
               <v-divider class="mb-2" />
               <v-card-text>
-                <v-table dense v-if="userColumns.length">
+                <v-table v-if="userColumns.length" dense>
                   <thead>
                     <tr>
                       <th v-for="col in userColumns" :key="col" scope="col">{{ col }}</th>

@@ -11,9 +11,13 @@
 
     <div class="admin-layout">
       <div class="theme-toggle-btn">
-        <v-btn icon elevation="2" :title="isLightBg ? 'Switch to Dark Background' : 'Switch to Light Background'"
+        <v-btn
+          icon
+          elevation="2"
+          :title="isLightBg ? 'Switch to Dark Background' : 'Switch to Light Background'"
           :aria-label="isLightBg ? 'Switch to dark background' : 'Switch to light background'"
-          @click="toggleBg">
+          @click="toggleBg"
+        >
           <v-icon>{{ iconName }}</v-icon>
         </v-btn>
       </div>

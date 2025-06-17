@@ -78,23 +78,23 @@
 
     <!-- Tree Container -->
     <div class="tree-container" :class="{ compact: viewMode === 'compact' }">      <div v-if="filteredTreeData.length === 0" class="empty-state">
-        <v-avatar size="80" color="grey-lighten-4">
-          <v-icon icon="mdi-folder-search-outline" size="40" color="grey-lighten-1" />
-        </v-avatar>
-        <h4 class="text-h6 text-grey-darken-1 mt-4 mb-2">No items found</h4>
-        <p class="text-body-2 text-grey-darken-1 mb-4">
-          {{ searchQuery ? 'Try adjusting your search terms' : 'Add some nodes to get started' }}
-        </p>
-        <v-btn
-          v-if="!searchQuery"
-          variant="tonal"
-          color="primary"
-          prepend-icon="mdi-plus"
-          @click="addNewRootNode"
-        >
-          Add First Node
-        </v-btn>
-      </div>
+                                                                                     <v-avatar size="80" color="grey-lighten-4">
+                                                                                       <v-icon icon="mdi-folder-search-outline" size="40" color="grey-lighten-1" />
+                                                                                     </v-avatar>
+                                                                                     <h4 class="text-h6 text-grey-darken-1 mt-4 mb-2">No items found</h4>
+                                                                                     <p class="text-body-2 text-grey-darken-1 mb-4">
+                                                                                       {{ searchQuery ? 'Try adjusting your search terms' : 'Add some nodes to get started' }}
+                                                                                     </p>
+                                                                                     <v-btn
+                                                                                       v-if="!searchQuery"
+                                                                                       variant="tonal"
+                                                                                       color="primary"
+                                                                                       prepend-icon="mdi-plus"
+                                                                                       @click="addNewRootNode"
+                                                                                     >
+                                                                                       Add First Node
+                                                                                     </v-btn>
+                                                                                   </div>
       
       <TreeNodeSimple 
         v-for="node in filteredTreeData" 
@@ -109,7 +109,7 @@
         @node-delete="handleNodeDelete"
       />
     </div>
-      <!-- Enhanced Selection Info -->
+    <!-- Enhanced Selection Info -->
     <div v-if="selectedNode" class="selection-info">
       <div class="selection-content">
         <div class="selection-main">

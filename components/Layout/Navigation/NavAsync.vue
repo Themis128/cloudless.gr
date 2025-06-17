@@ -16,7 +16,7 @@ const isDesktop = computed(() => breakpoints.greaterOrEqual('md'))
         <component :is="isDesktop ? LargeNav : SmallNav" />
       </template>
       <template #fallback>
-        <div style="height: 48px;"></div>
+        <div style="height: 48px;" />
       </template>
     </Suspense>
   </client-only>

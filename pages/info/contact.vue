@@ -9,11 +9,32 @@
               Have questions or need support? Reach out to the Cloudless GR team using the form below or email us at <a href="mailto:support@cloudless.gr">support@cloudless.gr</a>.
             </p>
             <v-form ref="form" v-model="formValid" @submit.prevent="onSubmit">
-              <v-text-field label="Your Name" v-model="name" required class="mb-3" />
-              <v-text-field label="Your Email" v-model="email" type="email" required class="mb-3" />
-              <v-textarea label="Message" v-model="message" required class="mb-4" />
+              <v-text-field
+                v-model="name"
+                label="Your Name"
+                required
+                class="mb-3"
+              />
+              <v-text-field
+                v-model="email"
+                label="Your Email"
+                type="email"
+                required
+                class="mb-3"
+              />
+              <v-textarea
+                v-model="message"
+                label="Message"
+                required
+                class="mb-4"
+              />
               <v-btn color="primary" type="submit" :loading="submitting">Send Message</v-btn>
-              <v-btn text type="button" class="ml-2" @click="reset">Reset</v-btn>
+              <v-btn
+                text
+                type="button"
+                class="ml-2"
+                @click="reset"
+              >Reset</v-btn>
               <div v-if="errorMsg" class="text-error mt-2">{{ errorMsg }}</div>
             </v-form>
             <v-dialog v-model="showSuccess" max-width="400">

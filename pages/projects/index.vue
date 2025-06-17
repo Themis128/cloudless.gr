@@ -5,8 +5,8 @@
       <v-btn 
         color="primary" 
         size="large"
-        @click="showCreateDialog = true"
         prepend-icon="mdi-plus"
+        @click="showCreateDialog = true"
       >
         New Project
       </v-btn>
@@ -14,7 +14,7 @@
 
     <!-- Loading state -->
     <div v-if="loading" class="text-center py-8">
-      <v-progress-circular indeterminate size="64"></v-progress-circular>
+      <v-progress-circular indeterminate size="64" />
       <div class="mt-4 text-body-1">Loading projects...</div>
     </div>
 
@@ -71,7 +71,7 @@
               >
                 Edit
               </v-btn>
-              <v-spacer></v-spacer>
+              <v-spacer />
               <v-btn
                 variant="text"
                 size="small"

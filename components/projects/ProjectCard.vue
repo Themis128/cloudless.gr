@@ -31,8 +31,8 @@
             size="small"
             variant="text"
             v-bind="props"
-            @click.stop
             class="card-menu-btn"
+            @click.stop
           />
         </template>
         

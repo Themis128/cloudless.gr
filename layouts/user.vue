@@ -3,9 +3,20 @@
     <v-app :theme="currentTheme">
       <!-- Navigation Drawer -->
       <nav>
-        <v-navigation-drawer v-model="drawer" app temporary class="bg-dark">
+        <v-navigation-drawer
+          v-model="drawer"
+          app
+          temporary
+          class="bg-dark"
+        >
           <v-list>
-            <NuxtLink v-for="item in navItems" :key="item.to" :to="item.to" custom v-slot="{ navigate, href, isActive }">
+            <NuxtLink
+              v-for="item in navItems"
+              :key="item.to"
+              v-slot="{ navigate, href, isActive }"
+              :to="item.to"
+              custom
+            >
               <v-list-item
                 :title="item.title"
                 :prepend-icon="item.icon"
@@ -15,7 +26,7 @@
               />
             </NuxtLink>
             <v-divider />
-            <v-list-item @click="logout" title="Logout" prepend-icon="mdi-logout" />
+            <v-list-item title="Logout" prepend-icon="mdi-logout" @click="logout" />
           </v-list>
         </v-navigation-drawer>
       </nav>
@@ -38,13 +49,18 @@
       </v-app-bar>
 
       <!-- Background Layer (fixed and non-interactive) -->
-      <div class="bg-layer" :class="isLightBg ? 'bg-layer-light' : ''"></div>
+      <div class="bg-layer" :class="isLightBg ? 'bg-layer-light' : ''" />
 
       <!-- Main Content (Scrolls above the background) -->
       <v-main class="main-content">
         <v-container class="d-flex flex-column fill-height">
           <div class="theme-toggle-btn">
-            <v-btn icon elevation="2" :title="isLightBg ? 'Switch to Dark Background' : 'Switch to Light Background'" @click="toggleBg">
+            <v-btn
+              icon
+              elevation="2"
+              :title="isLightBg ? 'Switch to Dark Background' : 'Switch to Light Background'"
+              @click="toggleBg"
+            >
               <v-icon>{{ isLightBg ? 'mdi-white-balance-sunny' : 'mdi-weather-night' }}</v-icon>
             </v-btn>
           </div>
@@ -52,7 +68,7 @@
           <v-spacer />
           <Suspense>
             <template #default>
-              <Footer :year="new Date().getFullYear()" :isDark="!isLightBg" />
+              <Footer :year="new Date().getFullYear()" :is-dark="!isLightBg" />
             </template>
             <template #fallback>
               <div class="text-sm text-gray-400 text-center py-2">Loading footer...</div>
@@ -172,7 +188,7 @@ async function logout() {
   router.push('/auth')
 }
 
-function goToProfile() {
+function _goToProfile() {
   router.push('/profile')
 }
 

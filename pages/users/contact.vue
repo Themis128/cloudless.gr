@@ -15,7 +15,7 @@
         <v-container class="text-center">
           <v-row>
             <v-col>
-                <ContactUs />
+              <ContactUs />
             </v-col>
           </v-row>
         </v-container>

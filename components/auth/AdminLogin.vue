@@ -7,12 +7,24 @@
     <v-divider class="mb-6" />
     
     <!-- Display error messages from URL params -->
-    <v-alert v-if="urlError" type="error" class="mb-4" border="start" prominent>
+    <v-alert
+      v-if="urlError"
+      type="error"
+      class="mb-4"
+      border="start"
+      prominent
+    >
       {{ getErrorMessage(urlError) }}
     </v-alert>
     
-    <v-form @submit.prevent="handleAdminLogin" validate-on="submit lazy">
-      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
+    <v-form validate-on="submit lazy" @submit.prevent="handleAdminLogin">
+      <v-alert
+        v-if="errorMsg"
+        type="error"
+        class="mb-4"
+        border="start"
+        prominent
+      >
         {{ errorMsg }}
       </v-alert>
       <v-text-field
@@ -35,15 +47,23 @@
         aria-label="Admin password"
         prepend-icon="mdi-lock-outline"
         :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-        @click:append="showPassword = !showPassword"
         clearable
         variant="solo-inverted"
         color="primary"
         class="elegant-input mb-2"
         :rules="[rules.required]"
         :disabled="loading"
+        @click:append="showPassword = !showPassword"
       />
-      <v-btn type="submit" block color="primary" class="mt-4 gradient-btn" size="large" :loading="loading" :disabled="loading">
+      <v-btn
+        type="submit"
+        block
+        color="primary"
+        class="mt-4 gradient-btn"
+        size="large"
+        :loading="loading"
+        :disabled="loading"
+      >
         <v-icon left>mdi-login</v-icon>
         Login as Admin
       </v-btn>

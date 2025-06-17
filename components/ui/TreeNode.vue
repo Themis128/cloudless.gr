@@ -19,7 +19,7 @@
         class="expand-btn me-1"
         @click.stop="toggleExpand"
       />
-      <div v-else class="expand-spacer"></div>
+      <div v-else class="expand-spacer" />
 
       <!-- Node Icon -->
       <v-icon
@@ -58,19 +58,19 @@
     </div>
 
     <!-- Children -->
-    <div v-if="hasChildren && node.opened" class="children-container">
-      <TreeNode
-        v-for="child in node.children"
-        :key="child.id"
-        :node="child"
-        :level="level + 1"
-        :selectable="selectable"
-        :multi-select="multiSelect"
-        :selected-nodes="selectedNodes"
-        @node-click="$emit('node-click', $event)"
-        @node-expand="$emit('node-expand', $event)"
-        @node-collapse="$emit('node-collapse', $event)"
-      />
+    <div v-if="hasChildren && node.opened" class="children-container">      <TreeNode
+      v-for="child in node.children"
+      :key="child.id"
+      :node="child"
+      :level="level + 1"
+      :selectable="selectable"
+      :multi-select="multiSelect"
+      :selected-nodes="selectedNodes"
+      @node-click="$emit('node-click', $event)"
+      @node-expand="$emit('node-expand', $event)"
+      @node-collapse="$emit('node-collapse', $event)"
+      @toggle-node="handleToggleNode"
+    />
     </div>
 
     <!-- Context Menu -->
@@ -124,6 +124,7 @@ const emit = defineEmits<{
   'node-click': [node: TreeNode]
   'node-expand': [node: TreeNode]
   'node-collapse': [node: TreeNode]
+  'toggle-node': [node: TreeNode]
 }>()
 
 const contextMenu = ref(false)
@@ -153,7 +154,9 @@ const handleClick = () => {
 
 const toggleExpand = () => {
   if (hasChildren.value) {
-    props.node.opened = !props.node.opened
+    // Emit toggle event instead of directly mutating the prop
+    emit('toggle-node', props.node)
+    
     if (props.node.opened) {
       emit('node-expand', props.node)
     } else {
@@ -186,6 +189,12 @@ const deleteNode = () => {
 const addChild = () => {
   console.log('Add child to:', props.node)
   contextMenu.value = false
+}
+
+const handleToggleNode = (node: TreeNode) => {
+  // Forward the toggle event to parent and handle the toggle
+  node.opened = !node.opened
+  emit('toggle-node', node)
 }
 </script>
 

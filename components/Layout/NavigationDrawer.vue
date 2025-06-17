@@ -1,19 +1,19 @@
 <template>
   <v-navigation-drawer
-    app
     v-model="drawer"
+    app
     temporary
     :width="280"
   >
     <v-list nav dense>
       <template v-for="item in filteredLinks" :key="item.to">
-        <NuxtLink :to="item.to" custom v-slot="{ navigate, isActive }">
+        <NuxtLink v-slot="{ navigate, isActive }" :to="item.to" custom>
           <v-list-item
             :title="item.title"
             :prepend-icon="item.icon"
-            @click="() => navigate()"
             :active="isActive"
             :class="{ 'active-link': isActive }"
+            @click="() => navigate()"
           />
         </NuxtLink>
       </template>

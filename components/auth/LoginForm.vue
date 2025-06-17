@@ -2,8 +2,14 @@
   <v-card class="glass-card pa-6" width="400" elevation="10">
     <v-card-title class="text-h5 text-white text-center">Login</v-card-title>
 
-    <v-form @submit.prevent="handleLogin" validate-on="submit lazy">
-      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
+    <v-form validate-on="submit lazy" @submit.prevent="handleLogin">
+      <v-alert
+        v-if="errorMsg"
+        type="error"
+        class="mb-4"
+        border="start"
+        prominent
+      >
         {{ errorMsg }}
       </v-alert>
       <v-text-field
@@ -25,16 +31,23 @@
         label="Password"
         prepend-icon="mdi-lock-outline"
         :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-        @click:append="showPassword = !showPassword"
         clearable
         variant="solo-inverted"
         color="blue"
         class="glass-input"
         :rules="[rules.required]"
         :disabled="loading"
+        @click:append="showPassword = !showPassword"
       />
 
-      <v-btn type="submit" block color="blue" class="mt-4" :loading="loading" :disabled="loading">Login</v-btn>
+      <v-btn
+        type="submit"
+        block
+        color="blue"
+        class="mt-4"
+        :loading="loading"
+        :disabled="loading"
+      >Login</v-btn>
 
       <v-btn
         variant="outlined"
@@ -51,8 +64,8 @@
         block
         color="white"
         class="mt-4"
-        @click="navigateTo('/auth/reset')"
         :disabled="loading"
+        @click="navigateTo('/auth/reset')"
       >
         Forgot Password?
       </v-btn>

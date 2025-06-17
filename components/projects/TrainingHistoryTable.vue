@@ -13,27 +13,26 @@
         class="elevation-1"
         :items-per-page="10"
         show-expand
-      >
-        <template #item.status="{ item }">
-          <v-chip 
-            :color="getStatusColor(item.status)" 
-            size="small"
-            variant="flat"
-          >
-            <v-icon start size="small">{{ getStatusIcon(item.status) }}</v-icon>
-            {{ item.status.toUpperCase() }}
-          </v-chip>
-        </template>
+      >        <template #[`item.status`]="{ item }">
+                 <v-chip 
+                   :color="getStatusColor(item.status)" 
+                   size="small"
+                   variant="flat"
+                 >
+                   <v-icon start size="small">{{ getStatusIcon(item.status) }}</v-icon>
+                   {{ item.status.toUpperCase() }}
+                 </v-chip>
+               </template>
         
-        <template #item.created_at="{ item }">
+        <template #[`item.created_at`]="{ item }">
           {{ formatDate(item.created_at) }}
         </template>
         
-        <template #item.duration="{ item }">
+        <template #[`item.duration`]="{ item }">
           {{ calculateDuration(item) }}
         </template>
         
-        <template #item.metrics="{ item }">
+        <template #[`item.metrics`]="{ item }">
           <div v-if="item.metrics">
             <div class="text-caption">
               Loss: {{ item.metrics.loss?.toFixed(4) ?? 'N/A' }}
@@ -45,7 +44,7 @@
           <span v-else class="text-medium-emphasis">N/A</span>
         </template>
         
-        <template #item.actions="{ item }">
+        <template #[`item.actions`]="{ item }">
           <v-btn
             icon="mdi-eye"
             size="small"

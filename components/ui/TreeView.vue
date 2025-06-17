@@ -29,7 +29,7 @@
       :class="{ 'pa-4': !flat }"
       :variant="flat ? 'flat' : 'outlined'"
     >
-        <div class="custom-tree">
+      <div class="custom-tree">
         <!-- Simple hierarchical tree that actually works -->
         <div v-for="node in treeData" :key="node.id" class="tree-node-simple">          <!-- Root level node -->
           <div 
@@ -46,15 +46,20 @@
               style="color: #ffffff;"
               @click.stop="toggleNode(node)"
             />
-            <div v-else style="width: 28px;"></div>
+            <div v-else style="width: 28px;" />
             
-            <v-icon :icon="node.icon || 'mdi-file'" size="small" class="me-2" style="color: #e0e0e0;" />
+            <v-icon
+              :icon="node.icon || 'mdi-file'"
+              size="small"
+              class="me-2"
+              style="color: #e0e0e0;"
+            />
             <span style="font-weight: 500;">{{ node.text }}</span>
             <span v-if="node.children && node.children.length > 0" class="ms-2" style="font-size: 11px; opacity: 0.8; color: #cccccc;">
               ({{ node.children.length }})
             </span>
           </div>
-            <!-- Children (when expanded) -->
+          <!-- Children (when expanded) -->
           <div v-if="node.children && node.children.length > 0 && node.expanded" class="children-container" style="margin-left: 20px;">
             <div 
               v-for="child in node.children" 
@@ -63,7 +68,12 @@
               style="color: #f5f5f5; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; align-items: center; font-weight: 400;"
               @click="handleNodeClick(child)"
             >
-              <v-icon :icon="child.icon || 'mdi-file'" size="small" class="me-2" style="color: #d0d0d0;" />
+              <v-icon
+                :icon="child.icon || 'mdi-file'"
+                size="small"
+                class="me-2"
+                style="color: #d0d0d0;"
+              />
               <span style="font-size: 0.9em; font-weight: 400;">{{ child.text }}</span>
             </div>
           </div>

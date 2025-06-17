@@ -18,8 +18,8 @@
       @click="handleClick"
     >
       <!-- Connection Lines -->
-      <div v-if="level > 0" class="connection-line"></div>
-        <!-- Expand/Collapse Icon -->
+      <div v-if="level > 0" class="connection-line" />
+      <!-- Expand/Collapse Icon -->
       <div class="expand-container">
         <v-btn
           v-if="hasChildren"
@@ -43,8 +43,8 @@
         </div>
       </div>      <!-- Node Icon with Enhanced Visual Indicators -->
       <div class="node-icon-container" :class="{ 'selected': isSelected }">
-        <div class="icon-backdrop"></div>
-        <div class="icon-glow" :style="{ '--glow-color': getGlowColor }"></div>
+        <div class="icon-backdrop" />
+        <div class="icon-glow" :style="{ '--glow-color': getGlowColor }" />
         <v-avatar
           :size="hasChildren ? 24 : 20"
           :color="isSelected ? 'primary' : 'transparent'"
@@ -76,11 +76,14 @@
 
       <!-- Node Text with Enhanced Typography -->
       <div class="node-content">
-        <span class="node-text" :class="{ 
-          'text-primary font-weight-medium': isSelected,
-          'folder-text': hasChildren,
-          'file-text': !hasChildren
-        }">
+        <span
+          class="node-text"
+          :class="{ 
+            'text-primary font-weight-medium': isSelected,
+            'folder-text': hasChildren,
+            'file-text': !hasChildren
+          }"
+        >
           {{ node.text }}
         </span>
         

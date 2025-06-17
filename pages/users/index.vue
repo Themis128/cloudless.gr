@@ -16,7 +16,13 @@
 
     <div v-if="projects.length">
       <v-row dense>
-        <v-col v-for="project in projects" :key="project.id" cols="12" md="6" lg="4">
+        <v-col
+          v-for="project in projects"
+          :key="project.id"
+          cols="12"
+          md="6"
+          lg="4"
+        >
           <v-card class="pa-4" elevation="4" color="surface">
             <v-card-title class="text-primary font-weight-medium">
               {{ project.name }}
@@ -43,6 +49,9 @@ import { useSupabase } from '@/composables/useSupabase'
 
 // Define page meta
 definePageMeta({ layout: 'user' })
+
+// Require authentication for this page
+await useAuthRequired()
 
 // Define reactive variables with typing
 const user = ref<{ first_name: string; last_name: string; email: string }>({

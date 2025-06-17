@@ -39,16 +39,16 @@
           <v-btn-group variant="outlined" divided>
             <v-btn
               prepend-icon="mdi-content-save"
-              @click="savePipeline"
               :loading="saving"
+              @click="savePipeline"
             >
               Save
             </v-btn>
             <v-btn
               prepend-icon="mdi-play"
               color="success"
-              @click="runPipeline"
               :disabled="!canRun"
+              @click="runPipeline"
             >
               Run
             </v-btn>

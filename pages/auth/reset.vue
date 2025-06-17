@@ -1,5 +1,11 @@
 <template>
-  <v-container fluid fill-height class="d-flex justify-center align-center" role="main" aria-label="Password Reset Page">
+  <v-container
+    fluid
+    fill-height
+    class="d-flex justify-center align-center"
+    role="main"
+    aria-label="Password Reset Page"
+  >
     <ResetForm />
   </v-container>
 </template>

@@ -1,60 +1,101 @@
 <template>
-    <div>
-        <button class="accessibility-btn" :style="btnStyle" @mousedown="startDrag" @touchstart="startDrag"
-            :aria-label="menu ? 'Close accessibility menu' : 'Open accessibility menu'"
-            @keydown.enter="menu = !menu" @keydown.space.prevent="menu = !menu"
-            @keydown="(e) => { if (e.key === 'Enter' || e.key === ' ') { menu = !menu; e.preventDefault(); } }"
-            type="button"
-        >
-            <v-btn icon color="primary" elevation="3" @click.stop="menu = !menu">
-                <v-icon>mdi-account-settings</v-icon>
+  <div>
+    <button
+      class="accessibility-btn"
+      :style="btnStyle"
+      :aria-label="menu ? 'Close accessibility menu' : 'Open accessibility menu'"
+      type="button"
+      @mousedown="startDrag"
+      @touchstart="startDrag"
+      @keydown.enter="menu = !menu"
+      @keydown.space.prevent="menu = !menu"
+      @keydown="(e) => { if (e.key === 'Enter' || e.key === ' ') { menu = !menu; e.preventDefault(); } }"
+    >
+      <v-btn
+        icon
+        color="primary"
+        elevation="3"
+        @click.stop="menu = !menu"
+      >
+        <v-icon>mdi-account-settings</v-icon>
+      </v-btn>
+    </button>
+    <v-menu
+      v-model="menu"
+      :close-on-content-click="false"
+      offset-y
+      activator="parent"
+      attach="body"
+      eager
+    >
+      <v-card class="pa-4" min-width="260">
+        <v-card-title class="text-h6">Accessibility</v-card-title>
+        <v-divider class="my-2" />
+        <v-list density="compact">
+          <v-list-item>
+            <v-list-item-title>Font Size</v-list-item-title>
+            <v-btn
+              icon
+              :aria-label="'Decrease font size'"
+              size="small"
+              @click="decreaseFont"
+            ><v-icon>mdi-minus</v-icon></v-btn>
+            <v-btn
+              icon
+              :aria-label="'Reset font size'"
+              size="small"
+              @click="resetFont"
+            ><v-icon>mdi-format-font</v-icon></v-btn>
+            <v-btn
+              icon
+              :aria-label="'Increase font size'"
+              size="small"
+              @click="increaseFont"
+            ><v-icon>mdi-plus</v-icon></v-btn>
+          </v-list-item>
+          <v-list-item>
+            <v-list-item-title>High Contrast</v-list-item-title>
+            <v-switch
+              v-model="highContrast"
+              :aria-label="'Toggle high contrast mode'"
+              @change="toggleContrast"
+            />
+          </v-list-item>
+          <v-list-item>
+            <v-list-item-title>Underline Links</v-list-item-title>
+            <v-switch
+              v-model="underlineLinks"
+              :aria-label="'Toggle underline links'"
+              @change="toggleUnderlineLinks"
+            />
+          </v-list-item>
+          <v-list-item>
+            <v-list-item-title>Pause Animations</v-list-item-title>
+            <v-switch
+              v-model="pauseAnimations"
+              :aria-label="'Pause background animations'"
+              @change="togglePauseAnimations"
+            />
+          </v-list-item>
+          <v-list-item>
+            <v-list-item-title>Skip to Content</v-list-item-title>
+            <v-btn size="small" color="secondary" @click="skipToContent">Go</v-btn>
+          </v-list-item>
+          <v-list-item>
+            <v-list-item-title>Theme</v-list-item-title>
+            <v-btn
+              icon
+              elevation="2"
+              :title="isLightBg ? 'Switch to Dark Background' : 'Switch to Light Background'"
+              @click="toggleBg"
+            >
+              <v-icon>{{ isLightBg ? 'mdi-white-balance-sunny' : 'mdi-weather-night' }}</v-icon>
             </v-btn>
-        </button>
-        <v-menu v-model="menu" :close-on-content-click="false" offset-y activator="parent" attach="body" eager>
-            <v-card class="pa-4" min-width="260">
-                <v-card-title class="text-h6">Accessibility</v-card-title>
-                <v-divider class="my-2" />
-                <v-list density="compact">
-                    <v-list-item>
-                        <v-list-item-title>Font Size</v-list-item-title>
-                        <v-btn icon @click="decreaseFont" :aria-label="'Decrease font size'"
-                            size="small"><v-icon>mdi-minus</v-icon></v-btn>
-                        <v-btn icon @click="resetFont" :aria-label="'Reset font size'"
-                            size="small"><v-icon>mdi-format-font</v-icon></v-btn>
-                        <v-btn icon @click="increaseFont" :aria-label="'Increase font size'"
-                            size="small"><v-icon>mdi-plus</v-icon></v-btn>
-                    </v-list-item>
-                    <v-list-item>
-                        <v-list-item-title>High Contrast</v-list-item-title>
-                        <v-switch v-model="highContrast" @change="toggleContrast"
-                            :aria-label="'Toggle high contrast mode'" />
-                    </v-list-item>
-                    <v-list-item>
-                        <v-list-item-title>Underline Links</v-list-item-title>
-                        <v-switch v-model="underlineLinks" @change="toggleUnderlineLinks"
-                            :aria-label="'Toggle underline links'" />
-                    </v-list-item>
-                    <v-list-item>
-                        <v-list-item-title>Pause Animations</v-list-item-title>
-                        <v-switch v-model="pauseAnimations" @change="togglePauseAnimations"
-                            :aria-label="'Pause background animations'" />
-                    </v-list-item>
-                    <v-list-item>
-                        <v-list-item-title>Skip to Content</v-list-item-title>
-                        <v-btn @click="skipToContent" size="small" color="secondary">Go</v-btn>
-                    </v-list-item>
-                    <v-list-item>
-                        <v-list-item-title>Theme</v-list-item-title>
-                        <v-btn icon elevation="2"
-                            :title="isLightBg ? 'Switch to Dark Background' : 'Switch to Light Background'"
-                            @click="toggleBg">
-                            <v-icon>{{ isLightBg ? 'mdi-white-balance-sunny' : 'mdi-weather-night' }}</v-icon>
-                        </v-btn>
-                    </v-list-item>
-                </v-list>
-            </v-card>
-        </v-menu>
-    </div>
+          </v-list-item>
+        </v-list>
+      </v-card>
+    </v-menu>
+  </div>
 </template>
 
 <script setup lang="ts">

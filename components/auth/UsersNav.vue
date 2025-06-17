@@ -1,6 +1,12 @@
 <template>
   <nav class="users-nav">
-    <NuxtLink v-for="item in navItems" :key="item.to" :to="item.to" class="nav-link" active-class="active-link">
+    <NuxtLink
+      v-for="item in navItems"
+      :key="item.to"
+      :to="item.to"
+      class="nav-link"
+      active-class="active-link"
+    >
       <v-icon left size="18">{{ item.icon }}</v-icon>
       <span>{{ item.title }}</span>
     </NuxtLink>

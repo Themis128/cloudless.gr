@@ -10,15 +10,15 @@
       <v-list-item
         v-for="item in menuItems"
         :key="item.to"
-        @click="navigate(item.to)"
         link
+        @click="navigate(item.to)"
       >
         <v-list-item-title>{{ item.title }}</v-list-item-title>
       </v-list-item>
 
       <v-divider />
 
-      <v-list-item @click="logout" link>
+      <v-list-item link @click="logout">
         <v-list-item-title class="text-error">Logout</v-list-item-title>
       </v-list-item>
     </v-list>

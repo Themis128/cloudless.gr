@@ -63,21 +63,20 @@
               :loading="loading"
               class="elevation-1"
               density="compact"
-            >
-              <template #item.model_name="{ item }">
-                <div class="d-flex align-center">
-                  <v-avatar :color="getModelColor(item.id)" size="24" class="me-2">
-                    <span class="text-caption">{{ item.model_name.charAt(0).toUpperCase() }}</span>
-                  </v-avatar>
-                  {{ item.model_name }}
-                </div>
-              </template>
+            >              <template #[`item.model_name`]="{ item }">
+                             <div class="d-flex align-center">
+                               <v-avatar :color="getModelColor(item.id)" size="24" class="me-2">
+                                 <span class="text-caption">{{ item.model_name.charAt(0).toUpperCase() }}</span>
+                               </v-avatar>
+                               {{ item.model_name }}
+                             </div>
+                           </template>
               
-              <template #item.created_at="{ item }">
+              <template #[`item.created_at`]="{ item }">
                 {{ formatDate(item.created_at) }}
               </template>
               
-              <template #item.accuracy="{ item }">
+              <template #[`item.accuracy`]="{ item }">
                 <div class="d-flex align-center">
                   <div class="me-2">{{ (item.metrics?.accuracy * 100)?.toFixed(2) ?? 'N/A' }}%</div>
                   <v-progress-linear
@@ -90,7 +89,7 @@
                 </div>
               </template>
               
-              <template #item.loss="{ item }">
+              <template #[`item.loss`]="{ item }">
                 <v-chip
                   :color="getLossColor(item.metrics?.loss ?? 0)"
                   size="small"
@@ -100,7 +99,7 @@
                 </v-chip>
               </template>
               
-              <template #item.val_accuracy="{ item }">
+              <template #[`item.val_accuracy`]="{ item }">
                 <div class="d-flex align-center">
                   <div class="me-2">{{ (item.metrics?.val_accuracy * 100)?.toFixed(2) ?? 'N/A' }}%</div>
                   <v-progress-linear
@@ -113,7 +112,7 @@
                 </div>
               </template>
               
-              <template #item.val_loss="{ item }">
+              <template #[`item.val_loss`]="{ item }">
                 <v-chip
                   :color="getLossColor(item.metrics?.val_loss ?? 0)"
                   size="small"
@@ -123,7 +122,7 @@
                 </v-chip>
               </template>
               
-              <template #item.actions="{ item }">
+              <template #[`item.actions`]="{ item }">
                 <v-btn
                   icon="mdi-eye"
                   size="small"

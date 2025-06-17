@@ -6,7 +6,7 @@
           <v-card-title class="text-h5 font-weight-bold mb-4">User Profile</v-card-title>
           <v-card-text>
             <v-avatar size="96" class="mb-4">
-              <img :src="user.avatar_url || 'https://i.pravatar.cc/150?u=default'" :alt="userDisplayName + ' avatar'" />
+              <img :src="user.avatar_url || 'https://i.pravatar.cc/150?u=default'" :alt="userDisplayName + ' avatar'">
             </v-avatar>
             <div class="mb-2 text-h6">{{ userDisplayName }}</div>
             <div class="mb-2 text-grey font-mono">{{ user.email }}</div>

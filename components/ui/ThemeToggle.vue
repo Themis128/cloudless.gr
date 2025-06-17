@@ -1,9 +1,9 @@
 <template>
   <v-btn
     icon
-    @click="toggleTheme"
     :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
     :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+    @click="toggleTheme"
   >
     <v-icon>{{ isDark ? 'mdi-weather-night' : 'mdi-white-balance-sunny' }}</v-icon>
   </v-btn>
