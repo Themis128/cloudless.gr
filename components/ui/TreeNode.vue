@@ -203,20 +203,23 @@ const addChild = () => {
   transition: all 0.2s ease;
   min-height: 32px;
   user-select: none;
+  color: white; /* Ensure text is visible on dark backgrounds */
 }
 
 .tree-node:hover {
-  background-color: rgba(var(--v-theme-surface-variant), 0.5);
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .tree-node.selected {
-  background-color: rgba(var(--v-theme-primary), 0.1);
+  background-color: rgba(66, 165, 245, 0.2);
+  border-left: 3px solid #42a5f5;
 }
 
 .expand-btn {
   min-width: 20px !important;
   width: 20px;
   height: 20px;
+  color: white !important;
 }
 
 .expand-spacer {
@@ -226,6 +229,7 @@ const addChild = () => {
 
 .node-icon {
   flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.7) !important;
 }
 
 .node-text {
@@ -235,6 +239,12 @@ const addChild = () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: white !important; /* Force white text */
+}
+
+.tree-node.selected .node-text {
+  color: #42a5f5 !important;
+  font-weight: 600;
 }
 
 .node-actions {

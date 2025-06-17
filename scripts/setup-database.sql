@@ -1,4 +1,4 @@
--- Database setup for authentication system
+﻿-- Database setup for authentication system
 -- Run this in your Supabase SQL editor
 
 -- Create profiles table

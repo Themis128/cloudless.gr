@@ -48,11 +48,10 @@
               Training Configuration
             </v-card-title>
             <v-divider />
-            <v-card-text>
-              <training-config-form 
-                v-model="trainingConfig"
+            <v-card-text>              <TrainingConfigForm 
+                :project-id="route.params.id as string"
                 :loading="configLoading"
-                @update="updateTrainingConfig"
+                @submit="updateTrainingConfig"
               />
             </v-card-text>
           </v-card>
@@ -90,11 +89,12 @@
                   </v-btn>
                 </v-card-title>
                 <v-divider />
-                <v-card-text>
-                  <training-progress
+                <v-card-text>                  <TrainingProgress
                     :session="trainingSession"
                     :metrics="trainingMetrics"
+                    :project-id="route.params.id as string"
                     @stop="stopTraining"
+                    @refresh="() => {}"
                   />
                 </v-card-text>
               </v-card>
@@ -108,8 +108,7 @@
                   Training History
                 </v-card-title>
                 <v-divider />
-                <v-card-text>
-                  <training-history-table
+                <v-card-text>                  <TrainingHistoryTable
                     :sessions="trainingHistory"
                     :loading="historyLoading"
                     @view-session="viewTrainingSession"
@@ -131,11 +130,13 @@
               Model Comparison
             </v-card-title>
             <v-divider />
-            <v-card-text>
-              <model-comparison-chart
+            <v-card-text>              <ModelComparisonChart
                 :models="trainedModels"
                 :metrics="comparisonMetrics"
                 :loading="modelsLoading"
+                @view-model="(model) => console.log('View model:', model)"
+                @download-model="(model) => console.log('Download model:', model)"
+                @deploy-model="(model) => navigateTo(`/projects/${route.params.id}/deploy`)"
               />
             </v-card-text>
           </v-card>

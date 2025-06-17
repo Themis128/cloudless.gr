@@ -1,4 +1,4 @@
--- Enhanced profiles table structure
+﻿-- Enhanced profiles table structure
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     email TEXT NOT NULL,

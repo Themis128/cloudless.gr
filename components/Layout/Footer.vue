@@ -1,6 +1,11 @@
 <template>
-  <footer role="contentinfo" :class="['footer', 'w-full', 'text-center', 'py-2', 'text-sm', 'bg-transparent', isDark ? 'footer-dark' : 'footer-light']">
-    © {{ displayYear }} <b>Cloudless.gr</b> — All rights reserved.
+  <footer 
+    role="contentinfo" 
+    itemscope 
+    itemtype="https://schema.org/WPFooter"
+    :class="['footer', 'w-full', 'text-center', 'py-2', 'text-sm', 'bg-transparent', props.isDark ? 'footer-dark' : 'footer-light']"
+  >
+    © {{ displayYear }} <b>Cloudless</b> — All rights reserved.
     <span class="footer-social">
       <v-btn
         v-for="item in socialWithIcons"
@@ -23,24 +28,45 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faTwitter, faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
+import { faUserCircle } from '@fortawesome/free-solid-svg-icons'
 import { useContactInfo } from '@/composables/useContactInfo'
 import { computed } from 'vue'
 
+// Define props with better typing and optional social override
+interface ContactItem {
+  name: string
+  url: string
+  icon: string
+  aria?: string
+  color?: string
+}
+
 const now = new Date().getFullYear()
-const props = withDefaults(defineProps<{ year?: number; isDark?: boolean }>(), {
+const props = withDefaults(defineProps<{ 
+  year?: number
+  isDark?: boolean
+  social?: ContactItem[]
+}>(), {
   year: undefined,
   isDark: false,
+  social: undefined
 })
+
 const displayYear = computed(() => props.year ?? now)
-const isDark = props.isDark
+
+// Use prop social or fallback to composable
 const contact = useContactInfo()
-const iconMap = { faTwitter, faGithub, faLinkedin }
-const socialWithIcons = computed(() => contact.social
-  .filter(item => iconMap[item.icon as keyof typeof iconMap]) // Only include items with valid icons
-  .map(item => ({
-    ...item,
-    iconObj: iconMap[item.icon as keyof typeof iconMap]
-  }))
+const sourceSocial = computed(() => props.social ?? contact.social)
+
+const iconMap = { faTwitter, faGithub, faLinkedin, faUserCircle }
+
+const socialWithIcons = computed(() => 
+  sourceSocial.value
+    .filter(item => iconMap[item.icon as keyof typeof iconMap]) // Only include items with valid icons
+    .map(item => ({
+      ...item,
+      iconObj: iconMap[item.icon as keyof typeof iconMap] ?? faUserCircle // Fallback icon
+    }))
 )
 </script>
 
@@ -58,6 +84,11 @@ const socialWithIcons = computed(() => contact.social
 }
 .footer-social {
   margin-left: 0.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 .fa-social {
   width: 20px;
@@ -79,6 +110,13 @@ const socialWithIcons = computed(() => contact.social
     font-size: 0.85rem;
     padding-top: 0.15rem;
     padding-bottom: 0.15rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .footer-social {
+    margin-left: 0;
+    margin-top: 0.25rem;
   }
 }
 </style>

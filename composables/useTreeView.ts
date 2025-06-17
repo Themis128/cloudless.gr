@@ -6,6 +6,7 @@ export interface TreeNode {
   selected?: boolean
   disabled?: boolean
   icon?: string
+  link?: string
   [key: string]: any
 }
 

@@ -1,139 +1,73 @@
-/**
- * Composable for creating new projects
- */
 import { ref } from 'vue'
-import type { CreateProjectData, Project } from '~/types/project'
 
 export const useCreateProject = () => {
-  const loading = ref(false)
-  const error = ref<Error | null>(null)
-
-  // Supabase client
-  const supabase = useSupabaseClient()
+  const supabase = useSupabaseClient<any>()
   const user = useSupabaseUser()
+  
+  const loading = ref(false)
+  const error = ref<string | null>(null)
 
-  // Create a new project
-  const createProject = async (projectData: CreateProjectData): Promise<Project> => {
-    if (!user.value) {
-      throw new Error('User not authenticated')
-    }
-
+  const createProject = async (projectData: {
+    name: string
+    description?: string
+    type: 'cv' | 'nlp' | 'regression' | 'recommendation' | 'time-series' | 'custom'
+    framework?: string
+    config?: Record<string, any>
+  }) => {
     try {
       loading.value = true
       error.value = null
 
-      // Create project record
-      const { data: project, error: projectError } = await supabase
+      if (!user.value) {
+        throw new Error('User must be authenticated to create projects')
+      }      // Prepare the project data
+      const projectPayload = {
+        name: projectData.name,
+        description: projectData.description ?? null,
+        type: projectData.type,
+        framework: projectData.framework ?? null,
+        config: projectData.config || {},
+        owner_id: user.value.id
+      }      // Insert project into the database
+      const { data, error: insertError } = await supabase
         .from('projects')
-        .insert({
-          name: projectData.name,
-          description: projectData.description,
-          type: projectData.type,
-          status: 'draft',
-          owner_id: user.value.id
-        })
+        .insert([projectPayload] as any)
         .select()
         .single()
 
-      if (projectError) {
-        throw projectError
+      if (insertError) {
+        throw new Error(`Failed to create project: ${insertError.message}`)
       }
 
-      // Create initial pipeline if template config provided
-      if (projectData.config) {
-        const { error: pipelineError } = await supabase
-          .from('pipelines')
-          .insert({
-            project_id: project.id,
-            owner_id: user.value.id,
-            config: projectData.config
-          })
+      // Also create a profile record if it doesn't exist
+      try {        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert([{
+            id: user.value.id,
+            role: 'user',
+            updated_at: new Date().toISOString()
+          }] as any)
 
-        if (pipelineError) {
-          console.warn('Failed to create initial pipeline:', pipelineError)
-          // Don't throw here - project was created successfully
+        if (profileError) {
+          console.warn('Could not create/update profile:', profileError.message)
         }
+      } catch (profileErr) {
+        console.warn('Profile creation failed:', profileErr)
       }
 
-      return project
+      return data
     } catch (err) {
-      error.value = err as Error
-      console.error('Failed to create project:', err)
-      throw err
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+      error.value = errorMessage
+      throw new Error(errorMessage)
     } finally {
       loading.value = false
     }
   }
 
-  // Create project from template
-  const createFromTemplate = async (templateId: string, projectName: string): Promise<Project> => {
-    // This would fetch template configuration from your templates system
-    // For now, we'll use a basic implementation
-    const templateConfigs = {
-      'image-classification': {
-        type: 'cv' as const,
-        config: {
-          nodes: [
-            {
-              id: 'data-loader-1',
-              type: 'data-loader' as const,
-              position: { x: 100, y: 100 },
-              config: { format: 'image', batch_size: 32 }
-            },
-            {
-              id: 'model-1',
-              type: 'model' as const,
-              position: { x: 300, y: 100 },
-              config: { architecture: 'resnet50', pretrained: true }
-            },
-            {
-              id: 'training-1',
-              type: 'training' as const,
-              position: { x: 500, y: 100 },
-              config: { epochs: 50, learning_rate: 0.001 }
-            }
-          ],
-          connections: []
-        }
-      },
-      'text-classification': {
-        type: 'nlp' as const,
-        config: {
-          nodes: [
-            {
-              id: 'data-loader-1',
-              type: 'data-loader' as const,
-              position: { x: 100, y: 100 },
-              config: { format: 'text' }
-            },
-            {
-              id: 'model-1',
-              type: 'model' as const,
-              position: { x: 300, y: 100 },
-              config: { architecture: 'bert-base-uncased' }
-            }
-          ],
-          connections: []
-        }
-      }
-    }
-
-    const template = templateConfigs[templateId as keyof typeof templateConfigs]
-    if (!template) {
-      throw new Error(`Template ${templateId} not found`)
-    }
-
-    return createProject({
-      name: projectName,
-      type: template.type,
-      config: template.config
-    })
-  }
-
   return {
-    loading: readonly(loading),
-    error: readonly(error),
     createProject,
-    createFromTemplate
+    loading: readonly(loading),
+    error: readonly(error)
   }
 }

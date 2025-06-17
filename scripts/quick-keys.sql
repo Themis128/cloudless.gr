@@ -1,4 +1,4 @@
--- Essential Keys Retrieval Script
+﻿-- Essential Keys Retrieval Script
 -- Run this in Supabase SQL Editor for quick key extraction
 
 -- 1. GET JWT SECRET (Most Important)

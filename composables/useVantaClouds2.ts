@@ -101,19 +101,20 @@ export function useVantaClouds2(element: HTMLElement | null) {
           minWidth: config.minWidth,
           scale: config.scale,
           scaleMobile: 1.2, // Ensure mobile has good coverage
-          texturePath: '/gallery/noise.png',
-          backgroundColor: 0x16213e, // Darker blue-gray
-          skyColor: 0x4a90e2,        // Brighter sky blue
-          cloudColor: 0x2c5282,      // Darker cloud blue
-          lightColor: 0xffffff,
-          speed: config.speed,
-          size: 1.5,                 // Larger cloud size
-          density: 0.8,              // Higher density for better coverage
-          cloudShadow: true,         // Add cloud shadows for depth
-          skyOpacity: 0.7,           // Adjust sky opacity
-          cloudOpacity: 0.9,         // Increase cloud opacity
-          yOffset: -0.3,             // Move clouds up (negative value moves up)
-          xOffset: 0,                // Keep horizontal position centered
+          texturePath: '/gallery/noise.png',          backgroundColor: 0x87ceeb, // Light sky blue background
+          skyColor: 0x4a90e2,        // Bright blue sky
+          cloudColor: 0xf0f8ff,      // Light white/blue clouds
+          shadowColor: 0x0d1117,     // Much darker shadows between clouds (almost black)
+          lightColor: 0xffffff,      // Bright white light
+          speed: config.speed,          size: 1.2,                 // Smaller/thinner clouds
+          density: 0.6,              // Lower density for thinner cloud coverage
+          cloudShadow: true,         // Enable cloud shadows          shadowIntensity: 1.2,      // Maximum shadow intensity for very dark shadows
+          shadowBlur: 2,             // Sharp shadow edges for maximum definition
+          skyOpacity: 0.85,          // Slightly lower to let shadows show through more
+          cloudOpacity: 0.7,         // Lower opacity for thinner, more transparent clouds
+          yOffset: 0.2,              // Move clouds down to middle (positive value moves down)
+          xOffset: 0,                // Keep horizontal position centered          contrast: 1.6,             // Even higher contrast for more defined shadows
+          brightness: 0.9,           // Slightly lower brightness to enhance shadow visibility
         });
         console.log('[VantaClouds2] VANTA.CLOUDS2 initialized:', vantaEffect);
         

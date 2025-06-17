@@ -85,7 +85,7 @@ function Repair-AllLineEndings {
 }
 
 # Function to validate and fix environment
-function Validate-Environment {
+function Test-Environment {
     Write-Host ""
     Write-Host "🔍 ENVIRONMENT VALIDATION..." -ForegroundColor Cyan
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
@@ -134,8 +134,46 @@ function Validate-Environment {
             Write-Host "  ⚠️  Missing file: $file" -ForegroundColor Yellow
         }
     }
+      Write-Host "✅ Environment validation completed" -ForegroundColor Green
+}
+
+# Function to check for common Supabase Analytics issue
+function Test-SupabaseAnalyticsIssue {
+    Write-Host ""
+    Write-Host "🔍 CHECKING FOR COMMON ISSUES..." -ForegroundColor Yellow
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
     
-    Write-Host "✅ Environment validation completed" -ForegroundColor Green
+    # Check if supabase_admin password configuration exists
+    $rolesFile = "docker/volumes/db/roles.sql"
+    if (Test-Path $rolesFile) {
+        $rolesContent = Get-Content $rolesFile -Raw
+        if ($rolesContent -notmatch "ALTER USER supabase_admin WITH PASSWORD") {
+            Write-Host "⚠️  DETECTED COMMON ISSUE: Missing supabase_admin password configuration" -ForegroundColor Yellow
+            Write-Host "   This can cause analytics service authentication failures." -ForegroundColor Yellow
+            Write-Host "   Run .\scripts\21-fix-supabase-analytics.ps1 to fix this specific issue." -ForegroundColor Cyan
+            Write-Host ""
+        } else {
+            Write-Host "✓ supabase_admin password configuration is present" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "⚠️  roles.sql file not found - will be created during setup" -ForegroundColor Yellow
+    }
+    
+    # Check for running analytics container with errors
+    try {
+        $analyticsContainer = docker ps --filter "name=supabase-analytics" --format "{{.Names}}" 2>$null
+        if ($analyticsContainer) {
+            $analyticsLogs = docker logs supabase-analytics --tail 10 2>$null
+            if ($analyticsLogs -match "password authentication failed for user.*supabase_admin") {
+                Write-Host "❌ ACTIVE ISSUE: Analytics service has password authentication errors" -ForegroundColor Red
+                Write-Host "   Run .\scripts\21-fix-supabase-analytics.ps1 to fix this issue." -ForegroundColor Cyan
+                Write-Host ""
+            }
+        }
+    }
+    catch {
+        # Container not running, which is expected during reset
+    }
 }
 
 # Main execution
@@ -150,7 +188,7 @@ if ($FixLineEndings) {
 }
 
 if ($ValidateOnly) {
-    Validate-Environment
+    Test-Environment
     Repair-AllLineEndings
     Write-Host "🎉 Environment validation completed!" -ForegroundColor Green
     exit 0
@@ -184,7 +222,10 @@ $startTime = Get-Date
 
 try {
     # Validate environment first
-    Validate-Environment
+    Test-Environment
+    
+    # Check for common issues
+    Test-SupabaseAnalyticsIssue
     
     # Fix line endings unless skipped
     if (-not $Quick) {

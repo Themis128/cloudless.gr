@@ -9,19 +9,17 @@
     <p class="text-subtitle-1 text-md-h5 mb-6 mx-auto" style="max-width: 600px;">
       Run powerful analytics and cloud workflows with clicks, not code.
       Built for creators, not engineers.
-    </p>
-
-    <div class="d-flex flex-wrap justify-center">
+    </p>    <div class="d-flex flex-wrap justify-center">
       <!-- Try It Free button, routes to /auth (auth/index.vue) -->
       <v-btn
-        to="/auth" 
+        to="/auth"
         color="primary"
         size="large"
         class="ma-2 px-6 py-3"
         aria-label="Start using Cloudless"
       >
         Try It Free
-      </v-btn>      <!-- Learn More button, routes to /info/index.vue -->
+      </v-btn><!-- Learn More button, routes to /info/index.vue -->
       <v-btn
         @click="goToInfo"
         variant="outlined"
@@ -29,20 +27,7 @@
         size="large"
         class="ma-2 px-6 py-3"
         aria-label="Learn more about Cloudless"
-      >
-        Learn More
-      </v-btn>
-      
-      <!-- Tree View Demo button -->
-      <v-btn
-        to="/tree-demo"
-        variant="outlined"
-        color="primary"
-        size="large"
-        class="ma-2 px-6 py-3"
-        aria-label="View Tree Demo"
-      >
-        Tree View Demo
+      >        Learn More
       </v-btn>
     </div>
 

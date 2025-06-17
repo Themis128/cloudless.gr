@@ -1,4 +1,4 @@
--- SQL Script to Retrieve All Needed Keys and Information
+﻿-- SQL Script to Retrieve All Needed Keys and Information
 -- Run this in your Supabase SQL Editor or PostgreSQL client
 
 -- ==========================================

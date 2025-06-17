@@ -1,4 +1,4 @@
--- Supabase Seeding File for User Management
+﻿-- Supabase Seeding File for User Management
 -- This file is automatically run when Supabase starts up
 -- Place this in: docker/dev/seed.sql (and reference it in docker-compose.dev.yml)
 

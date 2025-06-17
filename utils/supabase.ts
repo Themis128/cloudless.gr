@@ -1,1 +1,0 @@
-const supabase = useSupabaseClient();

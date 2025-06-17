@@ -24,26 +24,50 @@
           @click="refreshTree"
         />
       </v-card-title>
-    </v-card>
-
-    <v-card
+    </v-card>    <v-card
       class="tree-card"
       :class="{ 'pa-4': !flat }"
       :variant="flat ? 'flat' : 'outlined'"
     >
-      <div class="custom-tree">
-        <TreeNode 
-          v-for="node in treeData" 
-          :key="node.id"
-          :node="node"
-          :level="0"
-          :selectable="selectable"
-          :multi-select="multiSelect"
-          :selected-nodes="selectedNodeIds"
-          @node-click="handleNodeClick"
-          @node-expand="handleNodeExpand"
-          @node-collapse="handleNodeCollapse"
-        />
+        <div class="custom-tree">
+        <!-- Simple hierarchical tree that actually works -->
+        <div v-for="node in treeData" :key="node.id" class="tree-node-simple">          <!-- Root level node -->
+          <div 
+            class="node-item" 
+            style="color: #ffffff; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; display: flex; align-items: center; font-weight: 500;"
+            @click="handleNodeClick(node)"
+          >
+            <v-btn
+              v-if="node.children && node.children.length > 0"
+              :icon="node.expanded ? 'mdi-chevron-down' : 'mdi-chevron-right'"
+              size="x-small"
+              variant="text"
+              class="me-1"
+              style="color: #ffffff;"
+              @click.stop="toggleNode(node)"
+            />
+            <div v-else style="width: 28px;"></div>
+            
+            <v-icon :icon="node.icon || 'mdi-file'" size="small" class="me-2" style="color: #e0e0e0;" />
+            <span style="font-weight: 500;">{{ node.text }}</span>
+            <span v-if="node.children && node.children.length > 0" class="ms-2" style="font-size: 11px; opacity: 0.8; color: #cccccc;">
+              ({{ node.children.length }})
+            </span>
+          </div>
+            <!-- Children (when expanded) -->
+          <div v-if="node.children && node.children.length > 0 && node.expanded" class="children-container" style="margin-left: 20px;">
+            <div 
+              v-for="child in node.children" 
+              :key="child.id"
+              class="node-item child-item"
+              style="color: #f5f5f5; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; align-items: center; font-weight: 400;"
+              @click="handleNodeClick(child)"
+            >
+              <v-icon :icon="child.icon || 'mdi-file'" size="small" class="me-2" style="color: #d0d0d0;" />
+              <span style="font-size: 0.9em; font-weight: 400;">{{ child.text }}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </v-card>
 
@@ -171,6 +195,16 @@ const refreshTree = () => {
   emit('refresh')
 }
 
+// Toggle node expansion
+const toggleNode = (node: TreeNode) => {
+  node.expanded = !node.expanded
+  if (node.expanded) {
+    emit('nodeExpand', node)
+  } else {
+    emit('nodeCollapse', node)
+  }
+}
+
 const handleNodeClick = (node: TreeNode) => {
   if (props.selectable) {
     onNodeSelect(node)
@@ -192,13 +226,44 @@ const handleNodeCollapse = (node: TreeNode) => {
 <style scoped>
 .tree-view-container {
   width: 100%;
+  color: white;
 }
 
 .tree-card {
   min-height: 200px;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .custom-tree {
   font-family: inherit;
+  color: white;
+  padding: 8px;
+}
+
+/* Ensure all text in the tree is visible */
+:deep(.tree-node) {
+  color: white !important;
+}
+
+:deep(.tree-node-wrapper) {
+  color: white !important;
+}
+
+:deep(.v-card-title) {
+  color: white !important;
+}
+
+/* Simple tree styling */
+.tree-node-simple .node-item:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 4px;
+  color: #ffffff !important;
+}
+
+.tree-node-simple .child-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 4px;
+  color: #ffffff !important;
 }
 </style>

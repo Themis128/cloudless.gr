@@ -1,4 +1,4 @@
-\set pguser `echo "$POSTGRES_USER"`
+﻿\set pguser `echo "$POSTGRES_USER"`
 
 \c _supabase
 create schema if not exists _analytics;

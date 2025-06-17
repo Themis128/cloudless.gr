@@ -86,8 +86,83 @@ function Test-PortConnectivity {
         }
     }
     catch {
+        return $false    }
+}
+
+# Test for specific Supabase Analytics issues
+function Test-SupabaseAnalyticsHealth {
+    Write-Host ""
+    Write-Host "🔍 CHECKING SUPABASE ANALYTICS HEALTH..."
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    $analyticsHealthy = $true
+    
+    # Check if analytics container is running
+    try {
+        $analyticsContainer = docker ps --filter "name=supabase-analytics" --format "{{.Names}}" 2>$null
+        if (-not $analyticsContainer) {
+            Write-Host "  ❌ Analytics container not running" -ForegroundColor Red
+            return $false
+        }
+        
+        Write-Host "  ✅ Analytics container is running" -ForegroundColor Green
+        
+        # Check container health status
+        $healthStatus = docker inspect supabase-analytics --format="{{.State.Health.Status}}" 2>$null
+        if ($healthStatus -eq "healthy") {
+            Write-Host "  ✅ Analytics container is healthy" -ForegroundColor Green
+        } else {
+            Write-Host "  ⚠️  Analytics container health: $healthStatus" -ForegroundColor Yellow
+            $analyticsHealthy = $false
+        }
+        
+        # Check for password authentication errors
+        $recentLogs = docker logs supabase-analytics --tail 20 2>$null
+        if ($recentLogs -match "password authentication failed for user.*supabase_admin") {
+            Write-Host "  ❌ CRITICAL: Password authentication errors detected!" -ForegroundColor Red
+            Write-Host "     This is a known issue with missing supabase_admin password configuration." -ForegroundColor Yellow
+            Write-Host "     🔧 FIX: Run .\scripts\21-fix-supabase-analytics.ps1" -ForegroundColor Cyan
+            $analyticsHealthy = $false
+        } else {
+            Write-Host "  ✅ No password authentication errors found" -ForegroundColor Green
+        }
+        
+        # Check if analytics logs show normal operation
+        if ($recentLogs -match "All logs logged!|Logs last second!") {
+            Write-Host "  ✅ Analytics service is logging normally" -ForegroundColor Green
+        } else {
+            Write-Host "  ⚠️  Analytics service may not be functioning normally" -ForegroundColor Yellow
+            if ($Verbose) {
+                Write-Host "     Recent logs:" -ForegroundColor Gray
+                $recentLogs | Select-Object -Last 5 | ForEach-Object {
+                    Write-Host "     $_" -ForegroundColor Gray
+                }
+            }
+        }
+        
+        # Test database connection for supabase_admin user
+        try {
+            $connectionTest = docker exec supabase-db psql -U supabase_admin -d _supabase -c "SELECT 1;" 2>$null
+            if ($connectionTest -match "1") {
+                Write-Host "  ✅ supabase_admin database connection working" -ForegroundColor Green
+            } else {
+                Write-Host "  ❌ supabase_admin database connection failed" -ForegroundColor Red
+                Write-Host "     🔧 FIX: Run .\scripts\21-fix-supabase-analytics.ps1" -ForegroundColor Cyan
+                $analyticsHealthy = $false
+            }
+        }
+        catch {
+            Write-Host "  ❌ Could not test supabase_admin database connection" -ForegroundColor Red
+            $analyticsHealthy = $false
+        }
+        
+    }
+    catch {
+        Write-Host "  ❌ Error checking analytics container: $($_.Exception.Message)" -ForegroundColor Red
         return $false
     }
+    
+    return $analyticsHealthy
 }
 
 # Check Docker containers
@@ -299,6 +374,12 @@ try {
     $portsOk = Test-PortAvailability
     $servicesOk = Test-SupabaseServices
     $databaseOk = Test-DatabaseConnectivity
+    
+    # Run analytics health check if not in quick mode
+    $analyticsOk = $true
+    if (-not $Quick) {
+        $analyticsOk = Test-SupabaseAnalyticsHealth
+    }
     
     # Generate report
     $overallHealth = Show-ConnectivityReport -DockerOk $dockerOk -PortsOk $portsOk -ServicesOk $servicesOk -DatabaseOk $databaseOk

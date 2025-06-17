@@ -1,22 +1,16 @@
 import { ref, onMounted } from 'vue'
-import { useSupabase } from '@/composables/useSupabase'
 
 const user_profile = ref<any>(null)
 
 export function useUserProfile() {
-    const supabase = useSupabase()
+    const { userProfile } = useSupabaseDB()
 
     async function loadProfile() {
-        const { data: user } = await supabase.auth.getUser()
-        if (!user.user) return
-
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.user.id)
-            .single()
-
-        if (!error) user_profile.value = data
+        try {
+            user_profile.value = await userProfile.get()
+        } catch (error) {
+            console.error('Failed to load user profile:', error)
+        }
     }
 
     onMounted(loadProfile)

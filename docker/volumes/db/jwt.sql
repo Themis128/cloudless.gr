@@ -1,4 +1,4 @@
--- Set custom JWT configuration for Supabase
+﻿-- Set custom JWT configuration for Supabase
 \set jwt_secret 'eOvlpJPRGfQkptMLRFSfCPerPR5MkrekkpIuLqXd'
 \set jwt_exp `echo "${JWT_EXP:-3600}"`
 

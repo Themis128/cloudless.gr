@@ -178,6 +178,23 @@ export const useIcons = () => {
     }
   }
 
+  // Project-specific helper functions
+  const getProjectIcon = (type: string): string => {
+    return getIcon('project', type)
+  }
+
+  const getProjectColor = (type: string): string => {
+    return getIconColor(type)
+  }
+
+  const getStatusIcon = (status: string): string => {
+    return getIcon('status', status)
+  }
+
+  const getStatusColor = (status: string): string => {
+    return getIconColor('', status)
+  }
+
   return {
     projectTypeIcons,
     statusIcons,
@@ -186,6 +203,10 @@ export const useIcons = () => {
     getIcon,
     getIconColor,
     createIconProps,
+    getProjectIcon,
+    getProjectColor,
+    getStatusIcon,
+    getStatusColor,
   }
 }
 
