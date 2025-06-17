@@ -1,5 +1,4 @@
-<template>
-  <v-container
+<template>  <v-container
     fluid
     class="fill-height d-flex flex-column justify-center align-center text-center hero-content"
   >
@@ -33,6 +32,23 @@
       >
         Learn More
       </v-btn>
+      
+      <!-- Tree View Demo button -->
+      <v-btn
+        to="/tree-demo"
+        variant="outlined"
+        color="primary"
+        size="large"
+        class="ma-2 px-6 py-3"
+        aria-label="View Tree Demo"
+      >
+        Tree View Demo
+      </v-btn>
+    </div>
+
+    <!-- Simple Tree Demo Section -->
+    <div class="mt-8 tree-demo-section">
+      <SimpleTree />
     </div>
   </v-container>
 </template>
@@ -62,5 +78,25 @@ const goToInfo = () => {
 .v-btn:hover {
   transform: scale(1.05);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.tree-demo-section {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 100%;
+}
+
+.tree-demo-section :deep(.simple-tree h3) {
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.tree-demo-section :deep(.tree-container) {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 </style>

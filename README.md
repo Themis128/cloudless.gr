@@ -1,8 +1,29 @@
 # CloudlessGR - Nuxt/Supabase Development Environment
 
+![Nuxt](https://img.shields.io/badge/nuxt-3.17.5-00DC82?style=flat-square&logo=nuxt.js)
+![Supabase](https://img.shields.io/badge/supabase-backend-3ECF8E?style=flat-square&logo=supabase)
+![TypeScript](https://img.shields.io/badge/typescript-5.0+-3178C6?style=flat-square&logo=typescript)
+![Docker](https://img.shields.io/badge/docker-containerized-2496ED?style=flat-square&logo=docker)
+![PostgreSQL](https://img.shields.io/badge/postgresql-15-336791?style=flat-square&logo=postgresql)
+![Vue](https://img.shields.io/badge/vue-3-4FC08D?style=flat-square&logo=vue.js)
+![Vuetify](https://img.shields.io/badge/vuetify-3.8+-1867C0?style=flat-square&logo=vuetify)
+![License](https://img.shields.io/badge/license-MIT-brightgreen?style=flat-square)
+![Development](https://img.shields.io/badge/status-active-brightgreen?style=flat-square)
+
 A modern full-stack development environment using Nuxt.js and Supabase with Docker containerization.
 
-## 🚀 Quick Start
+## � Documentation
+
+**📖 [Complete Documentation](./documentation/README.md)** - Comprehensive service-based documentation
+
+### Quick Access Documentation
+- 🔐 [Authentication & Authorization](./documentation/services/authentication.md)
+- 👥 [User Management](./documentation/services/user-management.md)
+- 🗄️ [Database Service](./documentation/services/database.md)
+- 🛠️ [Development & Scripts](./documentation/services/development-scripts.md)
+- 🏗️ [Infrastructure & Docker](./documentation/services/infrastructure.md)
+
+## �🚀 Quick Start
 
 ### Prerequisites
 - Docker and Docker Compose
@@ -81,7 +102,18 @@ After setup, access your services at:
 - `19-fix-line-endings.ps1` - Fix file encoding
 - `20-cleanup-temp-files.ps1` - Cleanup temp files
 
-See [SCRIPTS_REFERENCE.md](scripts/SCRIPTS_REFERENCE.md) for complete documentation.
+📖 **See [Development Scripts Documentation](./documentation/services/development-scripts.md) for complete script reference.**
+
+## 📚 Documentation Structure
+
+The documentation has been reorganized into service-based sections for better navigation:
+
+- **Service Documentation**: Focused documentation for each major service
+- **Quick Start Guides**: Fast setup procedures for common tasks
+- **Troubleshooting**: Comprehensive issue resolution guides
+- **API Reference**: Technical specifications and examples
+
+All original documentation files have been preserved in `documentation/archive/` while new consolidated documentation is available in `documentation/services/`.
 
 ## 🛠️ Development
 
@@ -217,7 +249,11 @@ node scripts\05-verify-setup.js
 │   ├── 01-setup-environment.ps1
 │   ├── 02-reset-and-seed.ps1
 │   ├── 05-verify-setup.js
-│   └── SCRIPTS_REFERENCE.md
+│   └── [Numbered scripts 01-20]
+├── documentation/           # Comprehensive documentation
+│   ├── README.md           # Documentation index
+│   ├── services/           # Service-based documentation
+│   └── archive/            # Original documentation files
 ├── docker/                  # Docker configuration
 │   ├── docker-compose.yml
 │   └── .env
@@ -238,12 +274,12 @@ After running the setup scripts, these test accounts are available:
 - **Demo User**: demo@cloudless.gr / Demo123456!
 - **Test User**: test@example.com / Test123456!
 
-## 📖 Documentation
+## 📖 Additional Resources
 
-- [Scripts Reference](scripts/SCRIPTS_REFERENCE.md) - Complete scripts documentation
-- [Nuxt Documentation](https://nuxt.com/docs)
-- [Supabase Documentation](https://supabase.com/docs)
-- [Docker Documentation](https://docs.docker.com/)
+- **[📚 Complete Documentation](./documentation/README.md)** - Service-based comprehensive docs
+- [Nuxt Documentation](https://nuxt.com/docs) - Nuxt.js framework
+- [Supabase Documentation](https://supabase.com/docs) - Backend as a service
+- [Docker Documentation](https://docs.docker.com/) - Containerization platform
 
 ## 🤝 Contributing
 
