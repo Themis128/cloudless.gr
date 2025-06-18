@@ -5,7 +5,7 @@
       Admin Login
     </v-card-title>
     <v-divider class="mb-6" />
-    
+
     <!-- Display error messages from URL params -->
     <v-alert
       v-if="urlError"
@@ -16,7 +16,7 @@
     >
       {{ getErrorMessage(urlError) }}
     </v-alert>
-    
+
     <v-form validate-on="submit lazy" @submit.prevent="handleAdminLogin">
       <v-alert
         v-if="errorMsg"
@@ -67,7 +67,7 @@
         <v-icon left>mdi-login</v-icon>
         Login as Admin
       </v-btn>
-      
+
       <v-btn
         variant="text"
         block
@@ -96,7 +96,7 @@ const loading = ref(false)
 const errorMsg = ref('')
 const urlError = ref('')
 
-const { signIn } = useSupabaseAuth()
+useSupabaseAuth()
 
 const rules = {
   required: (v: string) => !!v || 'Required',
@@ -123,16 +123,109 @@ async function handleAdminLogin() {
   errorMsg.value = ''
   urlError.value = ''
   loading.value = true
-  
+
   try {
-    // Use the enhanced signIn method with admin role requirement
-    await signIn(email.value, password.value, true)
-    
-    // Success: redirect to admin dashboard
+    // Check if account is locked before attempting login
+    const supabase = useSupabaseClient()
+
+    const { data: lockCheck } = await supabase
+      .from('profiles')
+      .select('locked_until, failed_login_attempts, role, is_active')
+      .eq('email', email.value)
+      .single()
+
+    if (lockCheck?.locked_until) {
+      const lockTime = new Date(lockCheck.locked_until)
+      const now = new Date()
+
+      if (lockTime > now) {
+        throw new Error('Admin account is temporarily locked due to multiple failed login attempts. Please try again later.')
+      }
+    }
+
+    // Check if user exists and has admin role
+    if (lockCheck && lockCheck.role !== 'admin') {
+      throw new Error('Access denied. Admin privileges required.')
+    }
+
+    if (lockCheck && !lockCheck.is_active) {
+      throw new Error('Admin account is deactivated. Please contact system administrator.')
+    }
+
+    // Attempt login with Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.value,
+      password: password.value
+    })
+
+    console.log('📊 Admin login response:', { data, error })
+
+    if (error) {
+      console.log('❌ Admin login error:', error)
+
+      // Increment failed login attempts
+      const currentAttempts = lockCheck?.failed_login_attempts || 0
+      const newAttempts = currentAttempts + 1
+      const maxAttempts = 3 // Stricter for admin accounts
+
+      const updateData = {
+        failed_login_attempts: newAttempts,
+        updated_at: new Date().toISOString(),
+        ...(newAttempts >= maxAttempts && {
+          locked_until: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 minutes for admin
+        })
+      }
+
+      // Update profile with failed attempt
+      await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('email', email.value)
+
+      throw error
+    }
+
+    if (!data.user) {
+      throw new Error('Admin login failed - no user data received')
+    }
+
+    console.log('✅ Admin authenticated:', data.user.email)
+
+    // Reset failed login attempts on successful login
+    await supabase
+      .from('profiles')
+      .update({
+        failed_login_attempts: 0,
+        locked_until: null,
+        last_login: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('email', email.value)
+
+    // Double-check admin role after login
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, is_active')
+      .eq('id', data.user.id)
+      .single()
+
+    if (!profile || profile.role !== 'admin') {
+      await supabase.auth.signOut()
+      throw new Error('Admin access denied. Invalid role.')
+    }
+
+    if (!profile.is_active) {
+      await supabase.auth.signOut()
+      throw new Error('Admin account is deactivated.')
+    }
+
+    console.log('Redirecting to admin dashboard...')
     await navigateTo('/admin/')
-  } catch (error: any) {
-    console.error('[ADMIN LOGIN] Error:', error)
-    errorMsg.value = error.message || 'Admin login failed. Please check your credentials.'
+
+  } catch (e: unknown) {
+    console.error('[ADMIN LOGIN] Error:', e)
+    const errorMessage = e instanceof Error ? e.message : 'Admin login failed'
+    errorMsg.value = errorMessage
     password.value = '' // Clear password on error
   } finally {
     loading.value = false

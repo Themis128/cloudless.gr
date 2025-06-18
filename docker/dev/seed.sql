@@ -22,20 +22,32 @@ CREATE TABLE public.profiles (
     bio TEXT,
     role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin', 'moderator')),
     is_active BOOLEAN DEFAULT true,
+    email_verified BOOLEAN DEFAULT false,
+    failed_login_attempts INTEGER DEFAULT 0,
+    locked_until TIMESTAMP WITH TIME ZONE,
+    last_login TIMESTAMP WITH TIME ZONE,
+    reset_token TEXT,
+    reset_token_expires TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
+
     PRIMARY KEY (id),
     UNIQUE(username),
     UNIQUE(email),
     CONSTRAINT username_length CHECK (char_length(username) >= 3),
-    CONSTRAINT role_valid CHECK (role IN ('user', 'admin', 'moderator'))
+    CONSTRAINT role_valid CHECK (role IN ('user', 'admin', 'moderator')),
+    CONSTRAINT check_failed_login_attempts_positive CHECK (failed_login_attempts >= 0)
 );
 
 -- Add indexes for better performance
 CREATE INDEX idx_profiles_email ON public.profiles(email);
 CREATE INDEX idx_profiles_role ON public.profiles(role);
 CREATE INDEX idx_profiles_username ON public.profiles(username);
+CREATE INDEX idx_profiles_active ON public.profiles(is_active);
+CREATE INDEX idx_profiles_email_verified ON public.profiles(email_verified);
+CREATE INDEX idx_profiles_failed_login_attempts ON public.profiles(failed_login_attempts);
+CREATE INDEX idx_profiles_locked_until ON public.profiles(locked_until);
+CREATE INDEX idx_profiles_reset_token ON public.profiles(reset_token);
 CREATE INDEX idx_profiles_active ON public.profiles(is_active);
 
 -- =============================================================================
@@ -46,18 +58,18 @@ CREATE INDEX idx_profiles_active ON public.profiles(is_active);
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Allow users to view their own profile
-CREATE POLICY "Users can view own profile" 
-    ON public.profiles FOR SELECT 
+CREATE POLICY "Users can view own profile"
+    ON public.profiles FOR SELECT
     USING (auth.uid() = id);
 
 -- Allow users to insert their own profile
-CREATE POLICY "Users can insert own profile" 
-    ON public.profiles FOR INSERT 
+CREATE POLICY "Users can insert own profile"
+    ON public.profiles FOR INSERT
     WITH CHECK (auth.uid() = id);
 
 -- Allow users to update their own profile (but not change role unless admin)
-CREATE POLICY "Users can update own profile" 
-    ON public.profiles FOR UPDATE 
+CREATE POLICY "Users can update own profile"
+    ON public.profiles FOR UPDATE
     USING (auth.uid() = id)
     WITH CHECK (
         auth.uid() = id AND (
@@ -69,22 +81,22 @@ CREATE POLICY "Users can update own profile"
     );
 
 -- Allow admins to view all profiles
-CREATE POLICY "Admins can view all profiles" 
-    ON public.profiles FOR SELECT 
+CREATE POLICY "Admins can view all profiles"
+    ON public.profiles FOR SELECT
     USING (
         (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
     );
 
 -- Allow admins to update all profiles
-CREATE POLICY "Admins can update all profiles" 
-    ON public.profiles FOR UPDATE 
+CREATE POLICY "Admins can update all profiles"
+    ON public.profiles FOR UPDATE
     USING (
         (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
     );
 
 -- Allow admins to delete profiles
-CREATE POLICY "Admins can delete profiles" 
-    ON public.profiles FOR DELETE 
+CREATE POLICY "Admins can delete profiles"
+    ON public.profiles FOR DELETE
     USING (
         (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
     );
@@ -152,9 +164,9 @@ DECLARE
 BEGIN
     -- Clear existing profiles first
     DELETE FROM public.profiles;
-    
+
     -- Insert seed profiles directly (normally these would be created via the trigger)
-    
+
     -- 1. Themistoklis Baltzakis - Main Admin
     INSERT INTO public.profiles (
         id, email, first_name, last_name, full_name, username, role, is_active, created_at, updated_at
@@ -162,7 +174,7 @@ BEGIN
         themis_id,
         'baltzakis.themis@gmail.com',
         'Themistoklis',
-        'Baltzakis', 
+        'Baltzakis',
         'Themistoklis Baltzakis',
         'themis',
         'admin',
@@ -177,7 +189,7 @@ BEGIN
         username = EXCLUDED.username,
         role = EXCLUDED.role,
         updated_at = NOW();
-    
+
     -- 2. John Doe - Admin
     INSERT INTO public.profiles (
         id, email, first_name, last_name, full_name, username, role, is_active, created_at, updated_at
@@ -193,7 +205,7 @@ BEGIN
         NOW() - INTERVAL '7 days',
         NOW() - INTERVAL '7 days'
     );
-    
+
     -- 3. Jane Smith - Moderator
     INSERT INTO public.profiles (
         id, email, first_name, last_name, full_name, username, role, is_active, created_at, updated_at
@@ -209,7 +221,7 @@ BEGIN
         NOW() - INTERVAL '5 days',
         NOW() - INTERVAL '5 days'
     );
-    
+
     -- 4. Bob Wilson - Regular User
     INSERT INTO public.profiles (
         id, email, first_name, last_name, full_name, username, role, is_active, created_at, updated_at
@@ -225,7 +237,7 @@ BEGIN
         NOW() - INTERVAL '3 days',
         NOW() - INTERVAL '3 days'
     );
-    
+
     -- 5. Alice Johnson - Regular User
     INSERT INTO public.profiles (
         id, email, first_name, last_name, full_name, username, role, is_active, created_at, updated_at
@@ -241,12 +253,12 @@ BEGIN
         NOW() - INTERVAL '1 day',
         NOW() - INTERVAL '1 day'
     );
-    
+
     RAISE NOTICE 'Seed users created successfully!';
     RAISE NOTICE 'Admins: Themistoklis Baltzakis, John Doe';
     RAISE NOTICE 'Moderators: Jane Smith';
     RAISE NOTICE 'Users: Bob Wilson, Alice Johnson';
-    
+
 END;
 $$ LANGUAGE plpgsql;
 
@@ -261,45 +273,45 @@ SELECT seed_users();
 -- =============================================================================
 
 -- Create storage buckets
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('avatars', 'avatars', true) 
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('documents', 'documents', false) 
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('documents', 'documents', false)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies for avatars
-CREATE POLICY "Avatar images are publicly accessible" 
-    ON storage.objects FOR SELECT 
+CREATE POLICY "Avatar images are publicly accessible"
+    ON storage.objects FOR SELECT
     USING (bucket_id = 'avatars');
 
-CREATE POLICY "Users can upload their own avatar" 
-    ON storage.objects FOR INSERT 
+CREATE POLICY "Users can upload their own avatar"
+    ON storage.objects FOR INSERT
     WITH CHECK (
-        bucket_id = 'avatars' AND 
+        bucket_id = 'avatars' AND
         auth.uid()::text = (storage.foldername(name))[1]
     );
 
-CREATE POLICY "Users can update their own avatar" 
-    ON storage.objects FOR UPDATE 
+CREATE POLICY "Users can update their own avatar"
+    ON storage.objects FOR UPDATE
     WITH CHECK (
-        bucket_id = 'avatars' AND 
+        bucket_id = 'avatars' AND
         auth.uid()::text = (storage.foldername(name))[1]
     );
 
-CREATE POLICY "Users can delete their own avatar" 
-    ON storage.objects FOR DELETE 
+CREATE POLICY "Users can delete their own avatar"
+    ON storage.objects FOR DELETE
     USING (
-        bucket_id = 'avatars' AND 
+        bucket_id = 'avatars' AND
         auth.uid()::text = (storage.foldername(name))[1]
     );
 
 -- Storage policies for documents (admin only)
-CREATE POLICY "Only admins can access documents" 
-    ON storage.objects FOR ALL 
+CREATE POLICY "Only admins can access documents"
+    ON storage.objects FOR ALL
     USING (
-        bucket_id = 'documents' AND 
+        bucket_id = 'documents' AND
         (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
     );
 
@@ -321,7 +333,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
 -- =============================================================================
 
 -- Show all seeded users
-SELECT 
+SELECT
     '=== SEEDED USERS ===' as info,
     email,
     full_name,
@@ -329,28 +341,28 @@ SELECT
     role,
     is_active,
     created_at
-FROM public.profiles 
-ORDER BY 
-    CASE role 
-        WHEN 'admin' THEN 1 
-        WHEN 'moderator' THEN 2 
-        ELSE 3 
+FROM public.profiles
+ORDER BY
+    CASE role
+        WHEN 'admin' THEN 1
+        WHEN 'moderator' THEN 2
+        ELSE 3
     END,
     created_at;
 
 -- Show user counts by role
-SELECT 
+SELECT
     '=== USER STATISTICS ===' as info,
     role,
     COUNT(*) as count,
     COUNT(*) FILTER (WHERE is_active = true) as active_count
-FROM public.profiles 
+FROM public.profiles
 GROUP BY role
-ORDER BY 
-    CASE role 
-        WHEN 'admin' THEN 1 
-        WHEN 'moderator' THEN 2 
-        ELSE 3 
+ORDER BY
+    CASE role
+        WHEN 'admin' THEN 1
+        WHEN 'moderator' THEN 2
+        ELSE 3
     END;
 
 -- =============================================================================
@@ -372,7 +384,7 @@ USAGE INSTRUCTIONS:
 SEEDED USERS:
 - baltzakis.themis@gmail.com (admin) - Your main account
 - john.doe@example.com (admin) - Test admin
-- jane.smith@example.com (moderator) - Test moderator  
+- jane.smith@example.com (moderator) - Test moderator
 - bob.wilson@example.com (user) - Test user
 - alice.johnson@example.com (user) - Test user
 

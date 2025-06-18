@@ -1,86 +1,80 @@
-<template>
-  <v-card class="glass-card pa-6" width="400" elevation="10">
-    <v-card-title class="t  console.log('Login form submitted!')
-  console.log('Email:', email.value)
-  console.log('Email length:', email.value.length)
-  console.log('Email char codes:', Array.from(email.value).map(c => c.charCodeAt(0)))
-  console.log('Password length:', password.value.length)
-  console.log('Password char codes:', Array.from(password.value).map(c => c.charCodeAt(0))) text-white text-center">Login</v-card-title>
+<template>  <v-card class="glass-card pa-6" width="400" elevation="10">
+  <v-card-title class="text-white text-center">Login</v-card-title>
 
-    <v-form validate-on="submit lazy" @submit.prevent="handleLogin">
-      <v-alert
-        v-if="errorMsg"
-        type="error"
-        class="mb-4"
-        border="start"
-        prominent
-      >
-        {{ errorMsg }}
-      </v-alert>
-      <v-text-field
-        v-model="email"
-        label="Email"
-        placeholder="you@example.com"
-        prepend-icon="mdi-email-outline"
-        clearable
-        variant="solo-inverted"
-        color="blue"
-        class="glass-input mb-4"
-        :rules="[rules.required, rules.email]"
-        :disabled="loading"
-      />
+  <v-form validate-on="submit lazy" @submit.prevent="handleLogin">
+    <v-alert
+      v-if="errorMsg"
+      type="error"
+      class="mb-4"
+      border="start"
+      prominent
+    >
+      {{ errorMsg }}
+    </v-alert>
+    <v-text-field
+      v-model="email"
+      label="Email"
+      placeholder="you@example.com"
+      prepend-icon="mdi-email-outline"
+      clearable
+      variant="solo-inverted"
+      color="blue"
+      class="glass-input mb-4"
+      :rules="[rules.required, rules.email]"
+      :disabled="loading"
+    />
 
-      <v-text-field
-        v-model="password"
-        :type="showPassword ? 'text' : 'password'"
-        label="Password"
-        prepend-icon="mdi-lock-outline"
-        :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-        clearable
-        variant="solo-inverted"
-        color="blue"
-        class="glass-input"
-        :rules="[rules.required]"
-        :disabled="loading"
-        @click:append="showPassword = !showPassword"
-      />
+    <v-text-field
+      v-model="password"
+      :type="showPassword ? 'text' : 'password'"
+      label="Password"
+      prepend-icon="mdi-lock-outline"
+      :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+      clearable
+      variant="solo-inverted"
+      color="blue"
+      class="glass-input"
+      :rules="[rules.required]"
+      :disabled="loading"
+      @click:append="showPassword = !showPassword"
+    />
 
-      <v-btn
-        type="submit"
-        block
-        color="blue"
-        class="mt-4"
-        :loading="loading"
-        :disabled="loading"
-      >Login</v-btn>
+    <v-btn
+      type="submit"
+      block
+      color="blue"
+      class="mt-4"
+      :loading="loading"
+      :disabled="loading"
+    >Login</v-btn>
 
-      <v-btn
-        variant="outlined"
-        block
-        color="blue"
-        class="mt-2"
-        to="/auth/admin-login"
-        tag="router-link"
-        :disabled="loading"
-      >
-        Login as Admin
-      </v-btn>      <v-btn
-        variant="text"
-        block
-        color="white"
-        class="mt-4"
-        :disabled="loading"
-        @click="navigateTo('/auth/reset')"
-      >
-        Forgot Password?
-      </v-btn>
-    </v-form>
+    <v-btn
+      variant="outlined"
+      block
+      color="blue"
+      class="mt-2"
+      to="/auth/admin-login"
+      tag="router-link"
+      :disabled="loading"
+    >
+      Login as Admin
+    </v-btn>      <v-btn
+      variant="text"
+      block
+      color="white"
+      class="mt-4"
+      :disabled="loading"
+      @click="navigateTo('/auth/reset')"
+    >
+      Forgot Password?
+    </v-btn>
+  </v-form>
 
-    <NuxtLink to="/auth/register" class="register-link mt-4">
-      <v-icon left size="18" color="#a855f7">mdi-account-plus</v-icon>
-      <span>Don’t have an account? <span class="gradient-text">Register</span></span>
-    </NuxtLink>
-  </v-card>
+  <NuxtLink to="/auth/register" class="register-link mt-4">
+    <v-icon left size="18" color="#a855f7">mdi-account-plus</v-icon>
+    <span>Don’t have an account? <span class="gradient-text">Register</span></span>
+  </NuxtLink>
+</v-card>
 </template>
 
 <script setup lang="ts">
@@ -103,36 +97,94 @@ const rules = {
 async function handleLogin() {
   errorMsg.value = ''
   loading.value = true
-    console.log('🚀 Login form submitted!')
-  console.log('📧 Email:', email.value)
-  console.log('� Email length:', email.value.length)
-  console.log('📧 Email char codes:', Array.from(email.value).map(c => c.charCodeAt(0)))
-  console.log('�🔐 Password length:', password.value.length)
-  console.log('🔐 Password char codes:', Array.from(password.value).map(c => c.charCodeAt(0)))
-  
+
   try {
-    // Use direct Supabase client instead of the complex auth composable
+    // Check if account is locked before attempting login
+    const { data: lockCheck } = await supabase
+      .from('profiles')
+      .select('locked_until, failed_login_attempts')
+      .eq('email', email.value)
+      .single()
+
+    if (lockCheck?.locked_until) {
+      const lockTime = new Date(lockCheck.locked_until)
+      const now = new Date()
+
+      if (lockTime > now) {
+        throw new Error('Account is temporarily locked due to multiple failed login attempts. Please try again later.')
+      }
+    }
+
+    // Attempt login with Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.value,
       password: password.value
     })
-    
-    console.log('📊 Direct Supabase login response:', { data, error })
-    
+
+    console.log('📊 Login response:', { data, error })
+
     if (error) {
       console.log('❌ Login error:', error)
+        // Increment failed login attempts
+      const currentAttempts = lockCheck?.failed_login_attempts || 0
+      const newAttempts = currentAttempts + 1
+      const maxAttempts = 5
+
+      const updateData = {
+        failed_login_attempts: newAttempts,
+        updated_at: new Date().toISOString(),
+        ...(newAttempts >= maxAttempts && {
+          locked_until: new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes
+        })
+      }
+
+      // Update profile with failed attempt
+      await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('email', email.value)
+
       throw error
     }
-    
+
     if (!data.user) {
       throw new Error('Login failed - no user data received')
     }
-      console.log('✅ User authenticated:', data.user.email)
-    
-    // Redirect to users/index after successful login
-    console.log('Redirecting to /users/index...')
-    await navigateTo('/users/index')
-    
+
+    console.log('✅ User authenticated:', data.user.email)
+
+    // Reset failed login attempts on successful login
+    await supabase
+      .from('profiles')
+      .update({
+        failed_login_attempts: 0,
+        locked_until: null,
+        last_login: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('email', email.value)
+
+    // Get user profile to check role and status
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, is_active, email_verified')
+      .eq('id', data.user.id)
+      .single()
+
+    if (profile && !profile.is_active) {
+      await supabase.auth.signOut()
+      throw new Error('Account is deactivated. Please contact support.')
+    }
+
+    // Redirect based on role
+    if (profile?.role === 'admin') {
+      console.log('Redirecting to admin dashboard...')
+      await navigateTo('/admin')
+    } else {
+      console.log('Redirecting to user dashboard...')
+      await navigateTo('/users/index')
+    }
+
   } catch (e: unknown) {
     console.error('[LOGIN] Error:', e)
     const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred'

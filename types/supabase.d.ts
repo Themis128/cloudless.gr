@@ -14,6 +14,79 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string
+          email: string
+          first_name: string | null
+          last_name: string | null
+          full_name: string | null
+          username: string | null
+          avatar_url: string | null
+          website: string | null
+          bio: string | null
+          role: 'user' | 'admin' | 'moderator'
+          is_active: boolean
+          email_verified: boolean
+          failed_login_attempts: number
+          locked_until: string | null
+          last_login: string | null
+          reset_token: string | null
+          reset_token_expires: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          email: string
+          first_name?: string | null
+          last_name?: string | null
+          full_name?: string | null
+          username?: string | null
+          avatar_url?: string | null
+          website?: string | null
+          bio?: string | null
+          role?: 'user' | 'admin' | 'moderator'
+          is_active?: boolean
+          email_verified?: boolean
+          failed_login_attempts?: number
+          locked_until?: string | null
+          last_login?: string | null
+          reset_token?: string | null
+          reset_token_expires?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          first_name?: string | null
+          last_name?: string | null
+          full_name?: string | null
+          username?: string | null
+          avatar_url?: string | null
+          website?: string | null
+          bio?: string | null
+          role?: 'user' | 'admin' | 'moderator'
+          is_active?: boolean
+          email_verified?: boolean
+          failed_login_attempts?: number
+          locked_until?: string | null
+          last_login?: string | null
+          reset_token?: string | null
+          reset_token_expires?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       user_profiles: {
         Row: {
           id: string
@@ -485,6 +558,7 @@ export type TablesInsert<T extends keyof Database['public']['Tables']> = Databas
 export type TablesUpdate<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update']
 
 // Specific table types
+export type Profile = Tables<'profiles'>
 export type UserProfile = Tables<'user_profiles'>
 export type Project = Tables<'projects'>
 export type Pipeline = Tables<'pipelines'>
@@ -495,6 +569,7 @@ export type Dataset = Tables<'datasets'>
 export type Experiment = Tables<'experiments'>
 
 // Insert types
+export type ProfileInsert = TablesInsert<'profiles'>
 export type UserProfileInsert = TablesInsert<'user_profiles'>
 export type ProjectInsert = TablesInsert<'projects'>
 export type PipelineInsert = TablesInsert<'pipelines'>
@@ -505,6 +580,7 @@ export type DatasetInsert = TablesInsert<'datasets'>
 export type ExperimentInsert = TablesInsert<'experiments'>
 
 // Update types
+export type ProfileUpdate = TablesUpdate<'profiles'>
 export type UserProfileUpdate = TablesUpdate<'user_profiles'>
 export type ProjectUpdate = TablesUpdate<'projects'>
 export type PipelineUpdate = TablesUpdate<'pipelines'>

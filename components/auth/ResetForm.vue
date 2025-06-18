@@ -66,13 +66,55 @@ async function handleReset() {
   errorMsg.value = ''
   successMsg.value = ''
   loading.value = true
-  const { error } = await supabase.auth.resetPasswordForEmail(email.value)
-  if (error) {
-    errorMsg.value = error.message
-  } else {
-    successMsg.value = 'Check your inbox for reset instructions.'
+
+  try {
+    // First check if user exists in our profiles table
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('email, is_active')
+      .eq('email', email.value)
+      .single()
+
+    if (!userProfile) {
+      throw new Error('No account found with this email address.')
+    }
+
+    if (!userProfile.is_active) {
+      throw new Error('Account is deactivated. Please contact support.')
+    }
+
+    // Generate secure reset token and save to database
+    const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour
+
+    await supabase
+      .from('profiles')
+      .update({
+        reset_token: resetToken,
+        reset_token_expires: expiresAt,
+        updated_at: new Date().toISOString()
+      })
+      .eq('email', email.value)
+
+    // Send password reset email through Supabase Auth
+    const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
+      redirectTo: `${window.location.origin}/auth/reset-password?token=${resetToken}`
+    })
+
+    if (error) {
+      throw error
+    }
+
+    successMsg.value = 'Password reset link sent! Check your email for instructions. The link will expire in 1 hour.'
+    email.value = '' // Clear the email field
+
+  } catch (err) {
+    console.error('Password reset error:', err)
+    const errorMessage = err instanceof Error ? err.message : 'Password reset failed'
+    errorMsg.value = errorMessage
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 }
 </script>
 

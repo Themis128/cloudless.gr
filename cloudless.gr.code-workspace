@@ -1,0 +1,58 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "typescript.tsserver.log": "verbose",
+        "typescript.tsserver.maxTsServerMemory": 4096,
+        "typescript.validate.enable": true,
+        "typescript.reportStyleChecksAsWarnings": true,
+        "typescript.preferences.importModuleSpecifier": "relative",
+        "typescript.suggest.autoImports": true,
+        "typescript.updateImportsOnFileMove.enabled": "always",
+        "eslint.validate": [
+            "javascript",
+            "typescript",
+            "vue"
+        ],
+        "eslint.format.enable": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll.eslint": "explicit",
+            "source.organizeImports": "explicit"
+        },
+        "files.associations": {
+            "*.vue": "vue",
+            "*.ts": "typescript"
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "vue.volar",
+            "vue.vscode-typescript-vue-plugin",
+            "esbenp.prettier-vscode",
+            "dbaeumer.vscode-eslint",
+            "ms-vscode.vscode-typescript-next",
+            "supabase.supabase-vscode"
+        ]
+    },
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "TypeScript Check",
+                "type": "shell",
+                "command": "npx tsc --noEmit",
+                "group": "build",
+                "problemMatcher": ["$tsc"]
+            },
+            {
+                "label": "ESLint Fix",
+                "type": "shell",
+                "command": "npm run lint:fix",
+                "group": "build"
+            }
+        ]
+    }
+}
