@@ -2,7 +2,7 @@
  * Enhanced Supabase composable with typed operations and error handling
  * Organized with namespaced operations for better IDE support and clarity
  */
-import type { 
+import type {
   Database,
   Project,
   TrainingSession,
@@ -21,45 +21,25 @@ export function useSupabaseDB() {
   }
 
   // Projects operations
-  const projects = {
-    // Get all projects for current user
+  const projects = {    // Get all projects for current user
     async getAll() {
       if (!user.value) throw new Error('User not authenticated')
-      
+
       const { data, error } = await supabase
         .from('projects')
-        .select(`
-          *,
-          pipelines(id, name, config, is_active),
-          training_sessions(id, name, status, created_at),
-          model_versions(id, name, version_tag, is_deployed)
-        `)
+        .select('*')
         .eq('owner_id', user.value.id)
         .order('updated_at', { ascending: false })
 
       if (error) handleError(error, 'projects.getAll')
       return data || []
-    },
-
-    // Get single project by ID
+    },    // Get single project by ID
     async getById(id: string) {
       if (!user.value) throw new Error('User not authenticated')
-      
+
       const { data, error } = await supabase
         .from('projects')
-        .select(`
-          *,
-          pipelines(id, name, config, is_active, created_at),
-          training_sessions(
-            id, name, status, metrics, created_at, started_at, completed_at
-          ),
-          model_versions(
-            id, name, version_tag, is_deployed, metrics, created_at
-          ),
-          deployments(
-            id, name, environment, status, endpoint_url, created_at
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .single()
 
@@ -70,7 +50,7 @@ export function useSupabaseDB() {
     // Create new project
     async create(projectData: Omit<Project, 'id' | 'created_at' | 'updated_at'>) {
       if (!user.value) throw new Error('User not authenticated')
-      
+
       const { data, error } = await supabase
         .from('projects')
         .insert([{
@@ -87,7 +67,7 @@ export function useSupabaseDB() {
     // Update project
     async update(id: string, updates: Partial<Project>) {
       if (!user.value) throw new Error('User not authenticated')
-      
+
       const { data, error } = await supabase
         .from('projects')
         .update(updates)
@@ -103,7 +83,7 @@ export function useSupabaseDB() {
     // Delete project
     async delete(id: string) {
       if (!user.value) throw new Error('User not authenticated')
-      
+
       const { error } = await supabase
         .from('projects')
         .delete()
@@ -119,7 +99,7 @@ export function useSupabaseDB() {
     // Get training sessions for a project
     async getByProject(projectId: string) {
       if (!user.value) throw new Error('User not authenticated')
-      
+
       const { data, error } = await supabase
         .from('training_sessions')
         .select('*')
@@ -138,7 +118,7 @@ export function useSupabaseDB() {
       pipeline_id?: string
     }) {
       if (!user.value) throw new Error('User not authenticated')
-      
+
       const { data, error } = await supabase
         .from('training_sessions')
         .insert([{
@@ -282,7 +262,8 @@ export function useSupabaseDB() {
         .order('created_at', { ascending: false })
 
       if (error) handleError(error, 'modelVersions.getByProject')
-      return data || []    },
+      return data || []
+    },
 
     // Create model version
     async create(versionData: {
@@ -296,7 +277,7 @@ export function useSupabaseDB() {
       metrics?: Record<string, any>
     }) {
       if (!user.value) throw new Error('User not authenticated')
-      
+
       const { data, error } = await supabase
         .from('model_versions')
         .insert([{
@@ -357,7 +338,7 @@ export function useSupabaseDB() {
       config: Record<string, any>
     }) {
       if (!user.value) throw new Error('User not authenticated')
-      
+
       const { data, error } = await supabase
         .from('deployments')
         .insert([{
@@ -382,7 +363,8 @@ export function useSupabaseDB() {
         .single()
 
       if (error) handleError(error, 'deployments.update')
-      return data    },
+      return data
+    },
 
     // Deploy (start deployment)
     async deploy(id: string, endpointUrl?: string) {
@@ -434,7 +416,7 @@ export function useSupabaseDB() {
     // Get current user profile
     async get() {
       if (!user.value) throw new Error('User not authenticated')
-      
+
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -452,7 +434,7 @@ export function useSupabaseDB() {
       preferences?: Record<string, any>
     }) {
       if (!user.value) throw new Error('User not authenticated')
-      
+
       const { data, error } = await supabase
         .from('user_profiles')
         .update(updates)
@@ -461,7 +443,8 @@ export function useSupabaseDB() {
         .single()
 
       if (error) handleError(error, 'userProfile.update')
-      return data    },
+      return data
+    },
 
     // Create user profile (usually called automatically via trigger)
     async create(profileData: {
@@ -511,7 +494,7 @@ export function useSupabaseDB() {
             filter: `project_id=eq.${projectId}`
           },
           callback
-        )        .subscribe()
+        ).subscribe()
     },
 
     // Subscribe to training session changes

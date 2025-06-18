@@ -25,11 +25,16 @@
       <template #fallback>
         <div class="text-sm text-gray-400 text-center py-2">Loading footer...</div>
       </template>
-    </Suspense>
-
-    <Suspense>
+    </Suspense>    <Suspense>
       <template #default>
         <AccessibilityMenu />
+      </template>
+    </Suspense>
+
+    <!-- Floating Navigation Button -->
+    <Suspense>
+      <template #default>
+        <FloatingNavButton />
       </template>
     </Suspense>
   </div>
@@ -42,6 +47,7 @@ import VantaBackground from '@/components/Base/VantaBackground.vue'
 const Footer = defineAsyncComponent(() => import('@/components/Layout/Footer.vue'))
 const LargeNav = defineAsyncComponent(() => import('@/components/Layout/Navigation/LargeNav.vue'))
 const AccessibilityMenu = defineAsyncComponent(() => import('@/components/accessibility/AccessibilityMenu.vue'))
+const FloatingNavButton = defineAsyncComponent(() => import('@/components/ui/FloatingNavButton.vue'))
 </script>
 
 <style scoped>
