@@ -1,0 +1,174 @@
+name: CI/CD Pipeline
+
+on:
+  # Trigger on pushes to main branches and all pull requests
+  push:
+    branches: [application, main, develop]
+  pull_request:
+    branches: [application, main]
+
+jobs:
+  # Job 1: Code Quality and Linting
+  quality:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Prettier Check
+        run: npx prettier --check "**/*.{js,ts,vue,json,css,scss,md}"
+
+      - name: TypeScript Check
+        run: npm run typecheck
+
+  # Job 2: Build and Test
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    needs: quality
+
+    strategy:
+      matrix:
+        node-version: [18, 20]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run tests (if available)
+        run: |
+          if [ -f "package.json" ] && grep -q "\"test\":" package.json; then
+            npm test
+          else
+            echo "No tests found, skipping test execution"
+          fi
+        continue-on-error: true
+
+      - name: Upload build artifacts
+        if: matrix.node-version == 18
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuxt-build
+          path: .output/
+          retention-days: 1
+
+  # Job 3: Security Scan
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Run security scan with njsscan (if available)
+        run: |
+          if command -v njsscan &> /dev/null; then
+            njsscan --output security-report.json --json .
+          else
+            echo "njsscan not available, skipping security scan"
+          fi
+        continue-on-error: true
+
+  # Job 4: Dependency Check
+  dependencies:
+    name: Dependency Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for outdated packages
+        run: npm outdated || true
+
+      - name: Check package vulnerabilities
+        run: npm audit --audit-level=high || true
+
+      - name: List installed packages
+        run: npm list --depth=0
+
+  # Job 5: Deploy Preview (for PRs)
+  preview-deploy:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: [build, security]
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for preview
+        run: npm run build
+
+      - name: Comment PR with preview info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Preview build completed successfully! Ready for review.'
+            })

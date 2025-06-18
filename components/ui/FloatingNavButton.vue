@@ -23,7 +23,12 @@
 
     <!-- Navigation Menu -->
     <v-scale-transition>
-      <v-card v-if="isMenuOpen" class="nav-menu" elevation="12" rounded="lg">
+      <v-card
+        v-if="isMenuOpen"
+        class="nav-menu"
+        elevation="12"
+        rounded="lg"
+      >
         <v-card-title class="pb-2">
           <v-icon class="mr-2">mdi-navigation</v-icon>
           Quick Navigation
