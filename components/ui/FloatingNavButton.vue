@@ -1,5 +1,6 @@
 <template>
   <div
+    v-if="!isPublicRoute"
     ref="floatingButton"
     class="floating-nav-button"
     :style="{ left: position.x + 'px', top: position.y + 'px' }"
@@ -161,7 +162,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { withoutTrailingSlash } from 'ufo';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+
+// Define public routes that do not require authentication
+const publicRoutes = [
+  '/',
+  '/info',
+  '/info/matrix',
+  '/info/about',
+  '/info/contact',
+  '/info/faq',
+  '/info/sitemap',
+  '/auth',
+  '/auth/register',
+  '/auth/reset',
+  '/auth/admin-login',
+  '/auth/users-nav',
+];
 
 interface NavPage {
   title: string;
@@ -180,6 +198,12 @@ const { position, updatePosition } = useFloatingNavPosition();
 // Get current route for highlighting active page
 const route = useRoute();
 const currentPath = computed(() => route.path);
+
+// Check if current route is public (floating nav should not show on public pages)
+const isPublicRoute = computed(() => {
+  const normalizedPath = withoutTrailingSlash(currentPath.value || '/');
+  return publicRoutes.includes(normalizedPath);
+});
 
 // Navigation pages organized by category
 const mainPages: NavPage[] = [
