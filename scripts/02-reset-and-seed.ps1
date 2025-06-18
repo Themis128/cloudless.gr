@@ -10,8 +10,9 @@
 #   • Multiple execution modes for different scenarios
 #
 # Usage Examples:
-#   .\scripts\02-reset-and-seed.ps1                    # Full reset with seeding
+#   .\scripts\02-reset-and-seed.ps1                    # Full reset with seeding and pgAdmin
 #   .\scripts\02-reset-and-seed.ps1 -SkipSeed         # Reset without seeding
+#   .\scripts\02-reset-and-seed.ps1 -SkipPgAdmin      # Reset without pgAdmin setup
 #   .\scripts\02-reset-and-seed.ps1 -DevMode          # Development mode
 #   .\scripts\02-reset-and-seed.ps1 -Quick            # Super quick mode (minimal cleanup)
 #   .\scripts\02-reset-and-seed.ps1 -Force            # Skip all prompts
@@ -25,7 +26,8 @@ param(
     [switch]$Force,
     [switch]$NoCleanup,
     [switch]$FixLineEndings,
-    [switch]$ValidateOnly
+    [switch]$ValidateOnly,
+    [switch]$SkipPgAdmin
 )
 
 # Function to fix line endings - prevents parsing errors
@@ -115,7 +117,8 @@ function Test-Environment {
     foreach ($dir in $requiredDirs) {
         if (Test-Path $dir) {
             Write-Host "  ✓ Directory exists: $dir" -ForegroundColor Green
-        } else {
+        }
+        else {
             Write-Host "  ❌ Missing directory: $dir" -ForegroundColor Red
             throw "Required directory missing: $dir"
         }
@@ -130,11 +133,12 @@ function Test-Environment {
     foreach ($file in $criticalFiles) {
         if (Test-Path $file) {
             Write-Host "  ✓ File exists: $file" -ForegroundColor Green
-        } else {
+        }
+        else {
             Write-Host "  ⚠️  Missing file: $file" -ForegroundColor Yellow
         }
     }
-      Write-Host "✅ Environment validation completed" -ForegroundColor Green
+    Write-Host "✅ Environment validation completed" -ForegroundColor Green
 }
 
 # Function to check for common Supabase Analytics issue
@@ -152,10 +156,12 @@ function Test-SupabaseAnalyticsIssue {
             Write-Host "   This can cause analytics service authentication failures." -ForegroundColor Yellow
             Write-Host "   Run .\scripts\21-fix-supabase-analytics.ps1 to fix this specific issue." -ForegroundColor Cyan
             Write-Host ""
-        } else {
+        }
+        else {
             Write-Host "✓ supabase_admin password configuration is present" -ForegroundColor Green
         }
-    } else {
+    }
+    else {
         Write-Host "⚠️  roles.sql file not found - will be created during setup" -ForegroundColor Yellow
     }
 
@@ -181,7 +187,7 @@ function Repair-ConfigurationFiles {
     Write-Host ""
     Write-Host "🔧 FIXING CONFIGURATION FILE ENCODING ISSUES..." -ForegroundColor Yellow
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
-      # Fix BOM issues in Supabase config.toml
+    # Fix BOM issues in Supabase config.toml
     $configFile = "supabase\config.toml"
     if (Test-Path $configFile) {
         try {
@@ -241,6 +247,419 @@ function Repair-ConfigurationFiles {
     Write-Host "✅ Configuration file encoding fixes completed" -ForegroundColor Green
 }
 
+# Function to setup pgAdmin with pre-configured servers
+function Initialize-PgAdmin {
+    Write-Host ""
+    Write-Host "🔧 SETTING UP PGADMIN..." -ForegroundColor Yellow
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+
+    # Ensure pgAdmin configuration directories exist
+    $pgAdminConfigDir = "pgadmin-config"
+    $pgAdminSqlDir = "$pgAdminConfigDir/sql-scripts"
+
+    if (-not (Test-Path $pgAdminConfigDir)) {
+        New-Item -ItemType Directory -Path $pgAdminConfigDir -Force | Out-Null
+        Write-Host "  📁 Created pgAdmin config directory" -ForegroundColor Gray
+    }
+
+    if (-not (Test-Path $pgAdminSqlDir)) {
+        New-Item -ItemType Directory -Path $pgAdminSqlDir -Force | Out-Null
+        Write-Host "  📁 Created SQL scripts directory" -ForegroundColor Gray
+    }
+
+    # Create servers.json configuration
+    $serversConfig = @{
+        Servers = @{
+            "1" = @{
+                Name                 = "Local Supabase"
+                Group                = "Supabase"
+                Host                 = "supabase-db"
+                Port                 = 5432
+                MaintenanceDB        = "postgres"
+                Username             = "postgres"
+                PassFile             = "/pgpass"
+                SSLMode              = "prefer"
+                SSLCert              = "<STORAGE_DIR>/.postgresql/postgresql.crt"
+                SSLKey               = "<STORAGE_DIR>/.postgresql/postgresql.key"
+                SSLRootCert          = "<STORAGE_DIR>/.postgresql/root.crt"
+                SSLCrl               = "<STORAGE_DIR>/.postgresql/root.crl"
+                SSLCompression       = 0
+                Timeout              = 10
+                UseSSHTunnel         = 0
+                TunnelHost           = ""
+                TunnelPort           = 22
+                TunnelUsername       = ""
+                TunnelAuthentication = 0
+                BGColor              = "#1a472a"
+                FGColor              = "#ffffff"
+                Service              = ""
+                Comment              = "Local Supabase Development Database"
+            }
+            "2" = @{
+                Name                 = "Cloud Supabase"
+                Group                = "Supabase"
+                Host                 = "db.oflctqligzouzshimuqh.supabase.co"
+                Port                 = 5432
+                MaintenanceDB        = "postgres"
+                Username             = "postgres"
+                PassFile             = "/pgpass"
+                SSLMode              = "require"
+                SSLCert              = "<STORAGE_DIR>/.postgresql/postgresql.crt"
+                SSLKey               = "<STORAGE_DIR>/.postgresql/postgresql.key"
+                SSLRootCert          = "<STORAGE_DIR>/.postgresql/root.crt"
+                SSLCrl               = "<STORAGE_DIR>/.postgresql/root.crl"
+                SSLCompression       = 0
+                Timeout              = 10
+                UseSSHTunnel         = 0
+                TunnelHost           = ""
+                TunnelPort           = 22
+                TunnelUsername       = ""
+                TunnelAuthentication = 0
+                BGColor              = "#8b1538"
+                FGColor              = "#ffffff"
+                Service              = ""
+                Comment              = "Cloud Supabase Production Database"
+            }
+        }
+    }
+
+    $serversJson = $serversConfig | ConvertTo-Json -Depth 10
+    $serversJsonPath = "$pgAdminConfigDir/servers.json"
+    Set-Content -Path $serversJsonPath -Value $serversJson -Encoding UTF8
+    Write-Host "  ✓ Created servers.json configuration" -ForegroundColor Green
+
+    # Create pgpass file for passwordless connections
+    $pgpassContent = @"
+# Local Supabase
+supabase-db:5432:*:postgres:postgres
+localhost:54322:*:postgres:postgres
+
+# Cloud Supabase (replace with your actual password)
+db.oflctqligzouzshimuqh.supabase.co:5432:*:postgres:your-cloud-password-here
+"@
+
+    $pgpassPath = "$pgAdminConfigDir/pgpass"
+    Set-Content -Path $pgpassPath -Value $pgpassContent -Encoding UTF8
+    Write-Host "  ✓ Created pgpass file" -ForegroundColor Green    # Create helpful SQL scripts
+    New-PgAdminSqlScripts $pgAdminSqlDir
+
+    # Create docker-compose.admin.yml if it doesn't exist
+    if (-not (Test-Path "docker-compose.admin.yml")) {
+        New-PgAdminDockerCompose
+    }
+
+    Write-Host "  ✅ pgAdmin configuration completed" -ForegroundColor Green
+}
+
+# Function to create useful SQL scripts
+function New-PgAdminSqlScripts {
+    param([string]$ScriptsDir)
+
+    # Database overview script
+    $databaseOverviewSql = @"
+-- Database Overview and Health Check
+-- Run this to get a complete overview of your database structure and health
+
+-- 1. Database Information
+SELECT
+    'Database Info' as section,
+    current_database() as database_name,
+    current_user as current_user,
+    version() as postgresql_version;
+
+-- 2. Schema Overview
+SELECT
+    'Schemas' as section,
+    schemaname as schema_name,
+    count(*) as table_count
+FROM pg_tables
+WHERE schemaname NOT IN ('information_schema', 'pg_catalog')
+GROUP BY schemaname
+ORDER BY schemaname;
+
+-- 3. Table Overview (Public Schema)
+SELECT
+    'Public Tables' as section,
+    tablename as table_name,
+    obj_description(c.oid) as table_comment,
+    (SELECT count(*) FROM information_schema.columns WHERE table_name = t.tablename AND table_schema = 'public') as column_count
+FROM pg_tables t
+JOIN pg_class c ON c.relname = t.tablename
+WHERE t.schemaname = 'public'
+ORDER BY t.tablename;
+
+-- 4. Auth Schema Tables
+SELECT
+    'Auth Tables' as section,
+    tablename as table_name,
+    (SELECT count(*) FROM information_schema.columns WHERE table_name = t.tablename AND table_schema = 'auth') as column_count
+FROM pg_tables t
+WHERE t.schemaname = 'auth'
+ORDER BY t.tablename;
+
+-- 5. Row Counts for All Tables
+SELECT
+    'Row Counts' as section,
+    schemaname,
+    tablename,
+    (xpath('/row/cnt/text()', xml_count))[1]::text::int as row_count
+FROM (
+    SELECT
+        schemaname,
+        tablename,
+        query_to_xml(format('select count(*) as cnt from %I.%I', schemaname, tablename), false, true, '') as xml_count
+    FROM pg_tables
+    WHERE schemaname IN ('public', 'auth')
+) t
+ORDER BY schemaname, tablename;
+"@
+
+    Set-Content -Path "$ScriptsDir/database-overview.sql" -Value $databaseOverviewSql -Encoding UTF8
+    Write-Host "    ✓ Created database-overview.sql" -ForegroundColor Gray
+
+    # Schema comparison script
+    $schemaComparisonSql = @"
+-- Schema Comparison Between Local and Cloud
+-- Use this to compare table structures between environments
+
+-- 1. Tables that exist in public schema
+SELECT
+    'Table Existence' as check_type,
+    table_name,
+    CASE
+        WHEN table_schema = 'public' THEN 'EXISTS'
+        ELSE 'MISSING'
+    END as status
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY table_name;
+
+-- 2. Column comparison for key tables
+SELECT
+    'Column Details' as check_type,
+    table_name,
+    column_name,
+    data_type,
+    is_nullable,
+    column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name IN ('profiles', 'userinfo', 'projects', 'user_profiles')
+ORDER BY table_name, ordinal_position;
+
+-- 3. Constraint information
+SELECT
+    'Constraints' as check_type,
+    tc.table_name,
+    tc.constraint_name,
+    tc.constraint_type,
+    kcu.column_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+    ON tc.constraint_name = kcu.constraint_name
+WHERE tc.table_schema = 'public'
+ORDER BY tc.table_name, tc.constraint_type;
+"@
+
+    Set-Content -Path "$ScriptsDir/schema-comparison.sql" -Value $schemaComparisonSql -Encoding UTF8
+    Write-Host "    ✓ Created schema-comparison.sql" -ForegroundColor Gray
+
+    # Data verification script
+    $dataVerificationSql = @"
+-- Data Verification and Sync Status
+-- Use this to verify data consistency after syncing
+
+-- 1. Quick row count comparison
+SELECT
+    'Row Counts' as check_type,
+    'profiles' as table_name,
+    count(*) as local_count
+FROM public.profiles
+UNION ALL
+SELECT
+    'Row Counts' as check_type,
+    'userinfo' as table_name,
+    count(*) as local_count
+FROM public.userinfo
+UNION ALL
+SELECT
+    'Row Counts' as check_type,
+    'projects' as table_name,
+    count(*) as local_count
+FROM public.projects
+UNION ALL
+SELECT
+    'Row Counts' as check_type,
+    'auth.users' as table_name,
+    count(*) as local_count
+FROM auth.users;
+
+-- 2. Sample data from key tables
+SELECT 'Sample Profiles' as check_type, id, email, role, created_at
+FROM public.profiles
+ORDER BY created_at DESC
+LIMIT 5;
+
+SELECT 'Sample Auth Users' as check_type, id, email, created_at, email_confirmed_at
+FROM auth.users
+ORDER BY created_at DESC
+LIMIT 5;
+
+-- 3. Data integrity checks
+SELECT
+    'Data Integrity' as check_type,
+    'Orphaned Profiles' as issue_type,
+    count(*) as issue_count
+FROM public.profiles p
+LEFT JOIN auth.users u ON p.user_id = u.id
+WHERE u.id IS NULL;
+
+-- 4. Recent activity
+SELECT
+    'Recent Activity' as check_type,
+    'Last 24h Profiles' as activity_type,
+    count(*) as count
+FROM public.profiles
+WHERE created_at > NOW() - INTERVAL '24 hours'
+UNION ALL
+SELECT
+    'Recent Activity' as check_type,
+    'Last 24h Auth Users' as activity_type,
+    count(*) as count
+FROM auth.users
+WHERE created_at > NOW() - INTERVAL '24 hours';
+"@
+
+    Set-Content -Path "$ScriptsDir/data-verification.sql" -Value $dataVerificationSql -Encoding UTF8
+    Write-Host "    ✓ Created data-verification.sql" -ForegroundColor Gray
+}
+
+# Function to create pgAdmin docker compose configuration
+function New-PgAdminDockerCompose {
+    $dockerComposeAdmin = @"
+version: '3.8'
+
+services:
+  # pgAdmin - Web-based PostgreSQL administration
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: supabase-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@cloudless.gr
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGADMIN_LISTEN_ADDRESS: '0.0.0.0'
+      PGADMIN_LISTEN_PORT: 80
+      PGADMIN_SERVER_JSON_FILE: '/pgadmin4/servers.json'
+    ports:
+      - '8080:80'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./db-backups:/backups
+      - ./pgadmin-config/servers.json:/pgadmin4/servers.json:ro
+      - ./pgadmin-config/pgpass:/pgpass:ro
+      - ./pgadmin-config/sql-scripts:/sql-scripts:ro
+    networks:
+      - supabase_default
+    restart: unless-stopped
+    depends_on:
+      - db-sync
+
+  # Optional: Database synchronization service
+  db-sync:
+    image: postgres:15
+    container_name: supabase-sync-service
+    environment:
+      PGPASSWORD: postgres
+    volumes:
+      - ./sync-scripts:/scripts
+      - ./db-backups:/backups
+      - ./logs:/logs
+    networks:
+      - supabase_default
+    restart: unless-stopped
+    command: ["tail", "-f", "/dev/null"]  # Keep container running
+
+volumes:
+  pgadmin_data:
+    driver: local
+
+networks:
+  supabase_default:
+    external: true
+"@
+
+    Set-Content -Path "docker-compose.admin.yml" -Value $dockerComposeAdmin -Encoding UTF8
+    Write-Host "  ✓ Created docker-compose.admin.yml" -ForegroundColor Green
+}
+
+# Function to start pgAdmin services
+function Start-PgAdminServices {
+    Write-Host ""
+    Write-Host "🚀 STARTING PGADMIN SERVICES..." -ForegroundColor Green
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+
+    # Ensure required directories exist
+    $requiredDirs = @("db-backups", "logs", "sync-scripts")
+    foreach ($dir in $requiredDirs) {
+        if (-not (Test-Path $dir)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            Write-Host "  📁 Created $dir directory" -ForegroundColor Gray
+        }
+    }
+
+    # Start pgAdmin services
+    Write-Host "  🔄 Starting pgAdmin container..." -ForegroundColor Cyan
+    docker-compose -f docker-compose.admin.yml up -d 2>&1 | Out-Host
+
+    # Wait for pgAdmin to be ready
+    Write-Host "  ⏳ Waiting for pgAdmin to start..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 8
+
+    # Load server configurations
+    try {
+        Write-Host "  🔧 Loading server configurations..." -ForegroundColor Cyan
+
+        # Create admin user if it doesn't exist
+        $userCheck = docker exec supabase-pgadmin /venv/bin/python /pgadmin4/setup.py get-users 2>$null | Select-String "admin@cloudless.gr"
+        if (-not $userCheck) {
+            Write-Host "    👤 Creating admin user..." -ForegroundColor Gray
+            docker exec supabase-pgadmin /venv/bin/python /pgadmin4/setup.py add-user admin@cloudless.gr admin123 --admin 2>$null | Out-Null
+        }
+
+        # Load servers for admin user
+        $loadResult = docker exec supabase-pgadmin /venv/bin/python /pgadmin4/setup.py load-servers /pgadmin4/servers.json --user admin@cloudless.gr 2>$null
+
+        if ($loadResult -match "Added.*Server") {
+            Write-Host "    ✅ Server configurations loaded successfully" -ForegroundColor Green
+        }
+        else {
+            Write-Host "    ℹ️  Server configurations already loaded" -ForegroundColor Cyan
+        }
+    }
+    catch {
+        Write-Host "    ⚠️  Could not auto-load servers: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "    💡 You can load them manually from pgAdmin interface" -ForegroundColor Gray
+    }
+
+    Write-Host "  ✅ pgAdmin setup completed" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "  🌐 pgAdmin Access:" -ForegroundColor Cyan
+    Write-Host "    • URL: http://localhost:8080" -ForegroundColor White
+    Write-Host "    • Email: admin@cloudless.gr" -ForegroundColor White
+    Write-Host "    • Password: admin123" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  📁 Pre-configured servers:" -ForegroundColor Yellow
+    Write-Host "    • Local Supabase (Green theme)" -ForegroundColor Green
+    Write-Host "    • Cloud Supabase (Red theme)" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "  📝 SQL Scripts available in /sql-scripts:" -ForegroundColor Yellow
+    Write-Host "    • database-overview.sql - Complete DB health check" -ForegroundColor Gray
+    Write-Host "    • schema-comparison.sql - Compare schemas" -ForegroundColor Gray
+    Write-Host "    • data-verification.sql - Verify sync status" -ForegroundColor Gray
+}
+
 # Main execution
 Write-Host "🚀 COMPLETE SUPABASE RESET AND SEEDING SCRIPT" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
@@ -271,6 +690,7 @@ Write-Host "  • Development Mode: $($DevMode -eq $true)" -ForegroundColor Whit
 Write-Host "  • Quick Mode: $($Quick -eq $true)" -ForegroundColor White
 Write-Host "  • No Cleanup: $($NoCleanup -eq $true)" -ForegroundColor White
 Write-Host "  • Force Mode: $($Force -eq $true)" -ForegroundColor White
+Write-Host "  • Skip pgAdmin: $($SkipPgAdmin -eq $true)" -ForegroundColor White
 
 if (-not $Force) {
     Write-Host ""
@@ -291,7 +711,7 @@ try {
 
     # Check for common issues
     Test-SupabaseAnalyticsIssue
-      # Fix line endings unless skipped
+    # Fix line endings unless skipped
     if (-not $Quick) {
         Repair-AllLineEndings
     }
@@ -345,11 +765,20 @@ try {
 
     # Wait for services
     Write-Host "  ⏳ Waiting for services to be ready..." -ForegroundColor Cyan
-    Start-Sleep -Seconds 10
-
-    # Check service status
+    Start-Sleep -Seconds 10    # Check service status
     Write-Host "  📊 Service status:" -ForegroundColor Cyan
-    docker-compose ps 2>&1 | Out-Host
+    docker-compose ps 2>&1 | Out-Host    # PHASE 2.5: PGADMIN SETUP
+    if (-not $SkipPgAdmin) {
+        Write-Host ""
+        Write-Host "🔧 PGADMIN SETUP PHASE..." -ForegroundColor Cyan
+        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+
+        # Move back to root directory for pgAdmin setup
+        Set-Location ".."
+        Initialize-PgAdmin
+        Start-PgAdminServices
+        Set-Location "docker"
+    }
 
     # PHASE 3: SEEDING
     if (-not $SkipSeed) {
@@ -366,7 +795,8 @@ try {
             Set-Location ".."
             node scripts/seed-database.js 2>&1 | Out-Host
             Set-Location "docker"
-        } else {
+        }
+        else {
             Write-Host "  ⚠️  Seeding script not found, skipping..." -ForegroundColor Yellow
         }
     }
@@ -378,17 +808,23 @@ try {
     Write-Host ""
     Write-Host "🎉 RESET COMPLETED SUCCESSFULLY!" -ForegroundColor Green
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
-    Write-Host "⏱️  Total time: $($duration.Minutes)m $($duration.Seconds)s" -ForegroundColor Cyan
-    Write-Host ""
+    Write-Host "⏱️  Total time: $($duration.Minutes)m $($duration.Seconds)s" -ForegroundColor Cyan    Write-Host ""
     Write-Host "🌐 Access Points:" -ForegroundColor Cyan
     Write-Host "  • Supabase Studio: http://localhost:54323" -ForegroundColor White
     Write-Host "  • Database: localhost:54322" -ForegroundColor White
     Write-Host "  • API: http://localhost:54321" -ForegroundColor White
+    if (-not $SkipPgAdmin) {
+        Write-Host "  • pgAdmin: http://localhost:8080 (admin@cloudless.gr / admin123)" -ForegroundColor White
+    }
     Write-Host ""
     Write-Host "📋 Next steps:" -ForegroundColor Cyan
     Write-Host "  1. Check service status: docker-compose ps" -ForegroundColor White
     Write-Host "  2. View logs: docker-compose logs -f" -ForegroundColor White
     Write-Host "  3. Run tests: .\scripts\11-test-authentication.js" -ForegroundColor White
+    if (-not $SkipPgAdmin) {
+        Write-Host "  4. Access pgAdmin for database management and SQL scripts" -ForegroundColor White
+        Write-Host "  5. Use sync scripts to sync cloud data: .\sync-comprehensive.ps1" -ForegroundColor White
+    }
 
 }
 catch {

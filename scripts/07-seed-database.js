@@ -26,12 +26,15 @@ const usersOnly = args.includes('--users-only');
 const adminOnly = args.includes('--admin-only');
 const clearFirst = args.includes('--clear-first');
 
-const supabaseUrl = process.env.SUPABASE_URL || 'http://localhost:54321';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || 'http://127.0.0.1:8000';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZn7aIQlFSXfRCVAUl9k6PeNmCkaDTKHTH98';
 
 if (!supabaseUrl || !supabaseServiceKey) {
     console.error('❌ Missing Supabase environment variables');
     console.log('Please ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in your .env file');
+    console.log('Using defaults for local development:');
+    console.log('  SUPABASE_URL=http://127.0.0.1:8000');
+    console.log('  SUPABASE_SERVICE_ROLE_KEY=<local_service_key>');
     process.exit(1);
 }
 
@@ -97,24 +100,24 @@ const seedUsers = [
 async function clearExistingData() {
     console.log('🧹 CLEARING EXISTING DATA...');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
+
     try {
         // Get all existing users
         console.log('  🔍 Finding existing users...');
         const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
-        
+
         if (listError) {
             console.log('  ⚠️  Warning: Could not list users:', listError.message);
             return;
         }
-        
+
         if (existingUsers.users.length === 0) {
             console.log('  ✅ No existing users to clear');
             return;
         }
-        
+
         console.log(`  🗑️  Removing ${existingUsers.users.length} existing user(s)...`);
-        
+
         // Delete users (this will cascade to profiles and user-info)
         for (const user of existingUsers.users) {
             try {
@@ -128,12 +131,12 @@ async function clearExistingData() {
                 console.log(`    ⚠️  Warning: Error deleting user ${user.email}: ${error.message}`);
             }
         }
-        
+
         // Small delay to allow cleanup to complete
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
         console.log('  ✅ Data clearing completed');
-        
+
     } catch (error) {
         console.log('  ⚠️  Warning: Data clearing had issues:', error.message);
     }
@@ -141,7 +144,7 @@ async function clearExistingData() {
 
 async function createSeedUser(userData) {
     console.log(`\\n  🔧 Creating user: ${userData.email}`);
-    
+
     try {
         // Create user in auth.users
         const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -153,7 +156,7 @@ async function createSeedUser(userData) {
                 username: userData.username
             }
         });
-        
+
         if (authError) {
             if (authError.message.includes('already registered')) {
                 console.log(`    ⚠️  User already exists: ${userData.email}`);
@@ -162,10 +165,10 @@ async function createSeedUser(userData) {
                 throw authError;
             }
         }
-        
+
         const userId = authData.user.id;
         console.log(`    ✅ Auth user created with ID: ${userId}`);
-        
+
         // Create profile record
         const { error: profileError } = await supabase
             .from('profiles')
@@ -173,13 +176,13 @@ async function createSeedUser(userData) {
                 id: userId,
                 role: userData.role
             });
-        
+
         if (profileError) {
             console.log(`    ⚠️  Profile creation warning: ${profileError.message}`);
         } else {
             console.log(`    ✅ Profile created with role: ${userData.role}`);
         }
-        
+
         // Create user-info record
         const { error: userInfoError } = await supabase
             .from('user-info')
@@ -191,15 +194,15 @@ async function createSeedUser(userData) {
                 website: userData.website,
                 location: userData.location
             });
-        
+
         if (userInfoError) {
             console.log(`    ⚠️  User info creation warning: ${userInfoError.message}`);
         } else {
             console.log(`    ✅ User info created`);
         }
-        
+
         return { success: true, userId, email: userData.email, role: userData.role };
-        
+
     } catch (error) {
         console.log(`    ❌ Failed to create ${userData.email}: ${error.message}`);
         return { success: false, email: userData.email, error: error.message };
@@ -211,15 +214,15 @@ async function updateExistingUser(userData) {
         // Get existing user
         const { data: existingUsers, error: getUserError } = await supabase.auth.admin.listUsers();
         if (getUserError) throw getUserError;
-        
+
         const existingUser = existingUsers.users.find(u => u.email === userData.email);
         if (!existingUser) {
             throw new Error('User not found after creation attempt');
         }
-        
+
         const userId = existingUser.id;
         console.log(`    🔄 Updating existing user: ${userId}`);
-        
+
         // Update or create profile
         const { error: profileError } = await supabase
             .from('profiles')
@@ -228,13 +231,13 @@ async function updateExistingUser(userData) {
                 role: userData.role,
                 updated_at: new Date().toISOString()
             });
-        
+
         if (profileError) {
             console.log(`    ⚠️  Profile update warning: ${profileError.message}`);
         } else {
             console.log(`    ✅ Profile updated with role: ${userData.role}`);
         }
-        
+
         // Update or create user-info
         const { error: userInfoError } = await supabase
             .from('user-info')
@@ -247,15 +250,15 @@ async function updateExistingUser(userData) {
                 location: userData.location,
                 updated_at: new Date().toISOString()
             });
-        
+
         if (userInfoError) {
             console.log(`    ⚠️  User info update warning: ${userInfoError.message}`);
         } else {
             console.log(`    ✅ User info updated`);
         }
-        
+
         return { success: true, userId, email: userData.email, role: userData.role, updated: true };
-        
+
     } catch (error) {
         console.log(`    ❌ Failed to update ${userData.email}: ${error.message}`);
         return { success: false, email: userData.email, error: error.message };
@@ -265,9 +268,9 @@ async function updateExistingUser(userData) {
 async function seedUsers() {
     console.log('👥 SEEDING USERS...');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
+
     let usersToSeed = seedUsers;
-    
+
     // Filter users based on command line options
     if (adminOnly) {
         usersToSeed = seedUsers.filter(user => user.role === 'admin');
@@ -278,73 +281,73 @@ async function seedUsers() {
     } else {
         console.log('  📋 Mode: All users');
     }
-    
+
     console.log(`  📊 Creating ${usersToSeed.length} user(s)...`);
-    
+
     const results = [];
-    
+
     for (const userData of usersToSeed) {
         const result = await createSeedUser(userData);
         results.push(result);
-        
+
         // Small delay between user creations
         await new Promise(resolve => setTimeout(resolve, 500));
     }
-    
+
     return results;
 }
 
 async function verifySeededData() {
     console.log('\\n🔍 VERIFYING SEEDED DATA...');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
+
     try {
         // Check users
         const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
         if (usersError) throw usersError;
-        
+
         console.log(`  👥 Auth users: ${users.users.length}`);
-        
+
         // Check profiles
         const { data: profiles, error: profilesError } = await supabase
             .from('profiles')
             .select('*');
-        
+
         if (profilesError) {
             console.log(`  ⚠️  Profiles check warning: ${profilesError.message}`);
         } else {
             console.log(`  📋 Profiles: ${profiles.length}`);
-            
+
             const adminCount = profiles.filter(p => p.role === 'admin').length;
             const userCount = profiles.filter(p => p.role === 'user').length;
             console.log(`    • Admin users: ${adminCount}`);
             console.log(`    • Regular users: ${userCount}`);
         }
-        
+
         // Check user-info
         const { data: userInfo, error: userInfoError } = await supabase
             .from('user-info')
             .select('*');
-        
+
         if (userInfoError) {
             console.log(`  ⚠️  User info check warning: ${userInfoError.message}`);
         } else {
             console.log(`  📝 User info records: ${userInfo.length}`);
         }
-        
+
         // Test authentication with first user
         if (users.users.length > 0) {
             console.log('\\n  🧪 Testing authentication with seeded user...');
             const testUser = seedUsers.find(u => u.email === users.users[0].email);
-            
+
             if (testUser) {
                 const testClient = createClient(supabaseUrl, process.env.SUPABASE_ANON_KEY);
-                
+
                 const { data, error } = await testClient.auth.signInWithPassword({
                     email: testUser.email,
                     password: testUser.password
                 });
-                
+
                 if (error) {
                     console.log(`    ⚠️  Authentication test failed: ${error.message}`);
                 } else {
@@ -353,9 +356,9 @@ async function verifySeededData() {
                 }
             }
         }
-        
+
         return true;
-        
+
     } catch (error) {
         console.log(`  ❌ Verification failed: ${error.message}`);
         return false;
@@ -366,12 +369,12 @@ async function verifySeededData() {
 async function main() {
     console.log('🌱 DATABASE SEEDING SCRIPT');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
+
     const modeDesc = adminOnly ? 'ADMIN ONLY' : usersOnly ? 'USERS ONLY' : 'ALL USERS';
     console.log(`Mode: ${modeDesc}${clearFirst ? ' (CLEAR FIRST)' : ''}`);
-    
+
     const startTime = Date.now();
-    
+
     try {
         // Test database connectivity
         console.log('🔗 Testing database connectivity...');
@@ -379,39 +382,39 @@ async function main() {
             .from('profiles')
             .select('count', { count: 'exact' })
             .limit(0);
-        
+
         if (connectError && !connectError.message.includes('does not exist')) {
             throw new Error(`Database connectivity failed: ${connectError.message}`);
         }
         console.log('  ✅ Database connectivity OK');
-        
+
         // Clear existing data if requested
         if (clearFirst) {
             await clearExistingData();
         }
-        
+
         // Seed users
         const results = await seedUsers();
-        
+
         // Verify seeded data
         const verificationOk = await verifySeededData();
-        
+
         // Summary
         const endTime = Date.now();
         const duration = Math.round((endTime - startTime) / 1000);
-        
+
         console.log('\\n📊 SEEDING SUMMARY');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        
+
         const successful = results.filter(r => r.success).length;
         const failed = results.filter(r => !r.success).length;
         const updated = results.filter(r => r.updated).length;
-        
+
         console.log(`⏱️  Completed in ${duration} seconds`);
         console.log(`✅ Successfully created: ${successful} users`);
         if (updated > 0) console.log(`🔄 Updated existing: ${updated} users`);
         if (failed > 0) console.log(`❌ Failed: ${failed} users`);
-        
+
         // Show created accounts
         if (successful > 0) {
             console.log('\\n👥 Created accounts:');
@@ -419,7 +422,7 @@ async function main() {
                 console.log(`  • ${result.email} (${result.role})`);
             }
         }
-        
+
         if (verificationOk && successful > 0) {
             console.log('\\n🎉 Database seeding completed successfully!');
             console.log('\\n📋 Next steps:');
@@ -431,7 +434,7 @@ async function main() {
             console.log('\\n⚠️  Seeding completed with issues');
             process.exit(1);
         }
-        
+
     } catch (error) {
         console.log('\\n❌ SEEDING FAILED:', error.message);
         console.log('\\n💡 Troubleshooting:');

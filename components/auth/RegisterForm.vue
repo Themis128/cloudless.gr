@@ -83,6 +83,7 @@
         color="blue"
         class="text-white mb-2"
         :disabled="isSubmitting"
+        :rules="[rules.agreeTerms]"
       >
         <template #label>
           <span class="text-white">
@@ -186,6 +187,9 @@ const rules = {
     if (!v) return 'Please confirm your password'
     if (v !== password.value) return 'Passwords do not match'
     return true
+  },
+  agreeTerms: (v: boolean) => {
+    return v === true || 'You must agree to the Terms of Service and Privacy Policy'
   }
 }
 
@@ -196,17 +200,45 @@ async function handleRegister() {
   isSubmitting.value = true
 
   try {
-    // Validate form
-    if (form.value) {
-      const formElement = form.value as { validate: () => Promise<{ valid: boolean }> }
-      const { valid } = await formElement.validate()
-      if (!valid) {
-        throw new Error('Please fix the form errors before submitting')
-      }
-    }
+    console.log('🔍 Starting registration process...')
+    console.log('Form data:', {
+      fullName: fullName.value,
+      email: email.value,
+      passwordLength: password.value?.length || 0,
+      confirmPasswordLength: confirmPassword.value?.length || 0,
+      agreeTerms: agreeTerms.value
+    })
 
+    // Check basic field requirements first
+    if (!fullName.value?.trim()) {
+      throw new Error('Full name is required')
+    }
+    if (!email.value?.trim()) {
+      throw new Error('Email is required')
+    }
+    if (!password.value) {
+      throw new Error('Password is required')
+    }
+    if (!confirmPassword.value) {
+      throw new Error('Password confirmation is required')
+    }
+    if (password.value !== confirmPassword.value) {
+      throw new Error('Passwords do not match')
+    }
     if (!agreeTerms.value) {
       throw new Error('Please agree to the Terms of Service and Privacy Policy')
+    }
+
+    // Validate form with Vuetify
+    if (form.value) {
+      const formElement = form.value as { validate: () => Promise<{ valid: boolean }> }
+      console.log('🔍 Validating form with Vuetify...')
+      const { valid } = await formElement.validate()
+      console.log('Form validation result:', valid)
+
+      if (!valid) {
+        throw new Error('Please fix the form validation errors and try again')
+      }
     }
 
     // Use the robust auth composable for registration
