@@ -19,16 +19,6 @@ playwright-report/
 test-results/
 playwright/results/
 
-# Jenkins & CI/CD
-jenkins-reports/
-jenkins-cli.jar
-app.pid
-build-summary.txt
-*.xml
-eslint-results.xml
-npm-audit-results.json
-dependency-check-report/
-
 # Testing outputs
 junit.xml
 coverage/
@@ -55,6 +45,39 @@ pgladmin-config/
 pgadmin-config/
 *.sql.backup
 *.dump
+
+# Docker & Containers
+docker/volumes/
+docker/data/
+docker/logs/
+docker-volumes/
+.docker/
+*.dockerignore.bak
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.dev.yml
+
+# Docker Volumes & Persistent Data
+**/volumes/
+**/data/
+postgres-data/
+mongodb-data/
+redis-data/
+elasticsearch-data/
+mysql-data/
+pgdata/
+pg_data/
+mysql_data/
+redis_data/
+mongo_data/
+
+# Docker Build Context
+.dockerignore
+Dockerfile.local
+Dockerfile.dev
+Dockerfile.backup
+docker-build/
+.docker-build/
 
 # Environment & Configuration
 .env
