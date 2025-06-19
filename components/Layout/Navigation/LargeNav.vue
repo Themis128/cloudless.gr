@@ -1,32 +1,13 @@
 <template>
+  <!-- Navigation links removed per user request -->
   <nav class="hidden md:flex gap-4 items-center">
-    <NuxtLink
-      v-for="link in links"
-      :key="link.path"
-      :to="link.path"
-      class="nav-link"
-      :class="{ active: isActive(link.path) }"
-    >
-      {{ capitalize(String(link.name)) }}
-    </NuxtLink>
+    <!-- All nav-links have been removed -->
   </nav>
 </template>
 
 <script setup lang="ts">
-import { useMainNavLinks } from '@/composables/useMainNavLinks'
-import { useRoute } from 'vue-router'
-
-const { links } = useMainNavLinks()
-const route = useRoute()
-
-function capitalize(name: string) {
-  return name.charAt(0).toUpperCase() + name.slice(1)
-}
-
-function isActive(path: string) {
-  // Highlight if current route path starts with link path (for nested routes)
-  return route.path === path || route.path.startsWith(path + '/')
-}
+// Navigation links removed per user request
+// No logic needed since nav-links are not displayed
 </script>
 
 <style scoped>
@@ -35,7 +16,9 @@ function isActive(path: string) {
   border-radius: 0.375rem;
   color: #374151;
   font-weight: 500;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
   text-decoration: none;
   outline: none;
 }

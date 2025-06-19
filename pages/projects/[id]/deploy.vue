@@ -50,11 +50,11 @@
             </v-card-title>
             <v-divider />
             <v-card-text>
-              <deployment-config-form
-                v-model="deploymentConfig"
+              <DeploymentConfigForm
+                :project-id="route.params.id as string"
                 :loading="configLoading"
                 :environments="availableEnvironments"
-                @update="updateDeploymentConfig"
+                @submit="updateDeploymentConfig as any"
               />
 
               <v-divider class="my-4" />
@@ -111,14 +111,14 @@
                 </v-card-title>
                 <v-divider />
                 <v-card-text>
-                  <deployment-status-list
-                    :deployments="activeDeployments"
+                  <DeploymentStatusList
+                    :deployments="activeDeployments as any"
                     :loading="deploymentsLoading"
-                    @view-logs="viewDeploymentLogs"
-                    @view-metrics="viewDeploymentMetrics"
-                    @scale="scaleDeployment"
-                    @rollback="rollbackDeployment"
-                    @delete="deleteDeployment"
+                    @view-logs="viewDeploymentLogs as any"
+                    @view-metrics="viewDeploymentMetrics as any"
+                    @scale="scaleDeployment as any"
+                    @rollback="rollbackDeployment as any"
+                    @delete="deleteDeployment as any"
                   />
                 </v-card-text>
               </v-card>
@@ -133,7 +133,7 @@
                 </v-card-title>
                 <v-divider />
                 <v-card-text>
-                  <api-endpoints-list
+                  <ApiEndpointsList
                     :endpoints="apiEndpoints"
                     :loading="endpointsLoading"
                     @test-endpoint="testApiEndpoint"
@@ -158,7 +158,7 @@
             </v-card-title>
             <v-divider />
             <v-card-text>
-              <deployment-history-table
+              <DeploymentHistoryTable
                 :deployments="deploymentHistory"
                 :loading="historyLoading"
                 @view-deployment="viewDeploymentDetails"
@@ -178,7 +178,7 @@
             </v-card-title>
             <v-divider />
             <v-card-text>
-              <performance-monitoring-chart
+              <PerformanceMonitoringChart
                 :metrics="performanceMetrics"
                 :time-range="monitoringTimeRange"
                 :loading="metricsLoading"
@@ -193,6 +193,11 @@
 </template>
 
 <script setup lang="ts">
+import ApiEndpointsList from '@/components/projects/ApiEndpointsList.vue';
+import DeploymentConfigForm from '@/components/projects/DeploymentConfigForm.vue';
+import DeploymentHistoryTable from '@/components/projects/DeploymentHistoryTable.vue';
+import DeploymentStatusList from '@/components/projects/DeploymentStatusList.vue';
+import PerformanceMonitoringChart from '@/components/projects/PerformanceMonitoringChart.vue';
 import type {
   ApiEndpoint,
   Deployment,
@@ -204,7 +209,7 @@ import type {
 // Page meta
 definePageMeta({
   middleware: 'auth',
-  layout: 'default',
+  layout: 'projects',
 });
 
 // Composables
@@ -270,7 +275,7 @@ const canDeploy = computed(() => {
 });
 
 // Methods
-const updateDeploymentConfig = async (config: DeploymentConfig) => {
+const updateDeploymentConfig = async (config: DeploymentConfig): Promise<any> => {
   try {
     configLoading.value = true;
 
@@ -339,9 +344,14 @@ const stopDeployment = async () => {
     activeDeployment.value.stoppedAt = new Date().toISOString();
 
     // Remove from active deployments
-    activeDeployments.value = activeDeployments.value.filter(
-      (d) => d.id !== activeDeployment.value?.id,
-    );
+    const activeDeploymentId = activeDeployment.value?.id;
+    const filteredDeployments = [];
+    for (const deployment of activeDeployments.value) {
+      if (deployment.id !== activeDeploymentId) {
+        filteredDeployments.push(deployment);
+      }
+    }
+    activeDeployments.value = filteredDeployments;
 
     activeDeployment.value = null;
   } catch (error) {
@@ -407,12 +417,12 @@ const generateApiEndpoints = (deployment: Deployment) => {
   ];
 };
 
-const viewDeploymentLogs = (deployment: Deployment) => {
+const viewDeploymentLogs = (deployment: Deployment): any => {
   console.log('Viewing logs for deployment:', deployment.id);
   // Navigate to logs view or open logs modal
 };
 
-const viewDeploymentMetrics = (deployment: Deployment) => {
+const viewDeploymentMetrics = (deployment: Deployment): any => {
   console.log('Viewing metrics for deployment:', deployment.id);
   // Navigate to metrics view or open metrics modal
 };
@@ -431,9 +441,7 @@ const scaleDeployment = async (deployment: Deployment, instanceCount: number) =>
 
 const rollbackDeployment = async (deployment: Deployment) => {
   try {
-    console.log('Rolling back deployment:', deployment.id);
     await new Promise((resolve) => setTimeout(resolve, 2000));
-
     // Implement rollback logic
   } catch (error) {
     console.error('Failed to rollback deployment:', error);
@@ -442,13 +450,21 @@ const rollbackDeployment = async (deployment: Deployment) => {
 
 const deleteDeployment = async (deployment: Deployment) => {
   try {
-    console.log('Deleting deployment:', deployment.id);
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // Remove from active deployments
-    activeDeployments.value = activeDeployments.value.filter((d) => d.id !== deployment.id);
+    const activeIndex = activeDeployments.value.findIndex((d: any) => d.id === deployment.id);
+    if (activeIndex !== -1) {
+      activeDeployments.value.splice(activeIndex, 1);
+    }
+
     // Remove associated API endpoints
-    apiEndpoints.value = apiEndpoints.value.filter((e) => e.deployment_id !== deployment.id);
+    const endpointIndex = apiEndpoints.value.findIndex(
+      (e: any) => e.deployment_id === deployment.id,
+    );
+    if (endpointIndex !== -1) {
+      apiEndpoints.value.splice(endpointIndex, 1);
+    }
   } catch (error) {
     console.error('Failed to delete deployment:', error);
   }
@@ -481,10 +497,12 @@ const rollbackToDeployment = async (deployment: Deployment) => {
 
 const deleteDeploymentFromHistory = async (deploymentId: string) => {
   try {
-    console.log('Deleting deployment from history:', deploymentId);
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    deploymentHistory.value = deploymentHistory.value.filter((d) => d.id !== deploymentId);
+    const index = deploymentHistory.value.findIndex((d: any) => d.id === deploymentId);
+    if (index !== -1) {
+      deploymentHistory.value.splice(index, 1);
+    }
   } catch (error) {
     console.error('Failed to delete deployment from history:', error);
   }

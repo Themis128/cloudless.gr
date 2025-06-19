@@ -5,5 +5,11 @@
     "module": "ESNext",
     "types": ["@playwright/test"]
   },
-  "exclude": ["docker/volumes/functions/**/*"]
+  "exclude": [
+    "docker/**/*",
+    "test-*.mjs",
+    "test-*.js",
+    "backup-*.ps1",
+    "pages/projects/[id]/train-clean.vue"
+  ]
 }

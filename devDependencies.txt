@@ -1,3 +1,0 @@
-# Cypress dependencies
-cypress
-@cypress/vite-dev-server

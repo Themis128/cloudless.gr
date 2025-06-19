@@ -24,12 +24,7 @@
 
     <!-- Navigation Menu -->
     <v-scale-transition>
-      <v-card
-        v-if="isMenuOpen"
-        class="nav-menu"
-        elevation="12"
-        rounded="lg"
-      >
+      <v-card v-if="isMenuOpen" class="nav-menu" elevation="12" rounded="lg">
         <v-card-title class="pb-2">
           <v-icon class="mr-2">mdi-navigation</v-icon>
           Quick Navigation
@@ -78,19 +73,13 @@
 
           <!-- Auth Pages -->
           <v-list-subheader>Account</v-list-subheader>
-          <v-list-item
-            v-for="page in authPages"
-            :key="page.path"
-            :to="page.path"
-            :class="{ 'v-list-item--active': isActivePage(page.path) }"
-            @click="closeMenu"
-          >
+
+          <!-- Logout Button -->
+          <v-list-item @click="handleLogout" class="logout-item">
             <template #prepend>
-              <v-icon :color="isActivePage(page.path) ? 'primary' : undefined">{{
-                page.icon
-              }}</v-icon>
+              <v-icon color="error">mdi-logout</v-icon>
             </template>
-            <v-list-item-title>{{ page.title }}</v-list-item-title>
+            <v-list-item-title class="text-error">Logout</v-list-item-title>
           </v-list-item>
 
           <v-divider class="my-2" />
@@ -99,44 +88,6 @@
           <v-list-subheader>User Dashboard</v-list-subheader>
           <v-list-item
             v-for="page in userPages"
-            :key="page.path"
-            :to="page.path"
-            :class="{ 'v-list-item--active': isActivePage(page.path) }"
-            @click="closeMenu"
-          >
-            <template #prepend>
-              <v-icon :color="isActivePage(page.path) ? 'primary' : undefined">{{
-                page.icon
-              }}</v-icon>
-            </template>
-            <v-list-item-title>{{ page.title }}</v-list-item-title>
-          </v-list-item>
-
-          <v-divider class="my-2" />
-
-          <!-- Admin Pages (Protected) -->
-          <v-list-subheader>Administration</v-list-subheader>
-          <v-list-item
-            v-for="page in adminPages"
-            :key="page.path"
-            :to="page.path"
-            :class="{ 'v-list-item--active': isActivePage(page.path) }"
-            @click="closeMenu"
-          >
-            <template #prepend>
-              <v-icon :color="isActivePage(page.path) ? 'primary' : undefined">{{
-                page.icon
-              }}</v-icon>
-            </template>
-            <v-list-item-title>{{ page.title }}</v-list-item-title>
-          </v-list-item>
-
-          <v-divider class="my-2" />
-
-          <!-- Info Pages -->
-          <v-list-subheader>Information</v-list-subheader>
-          <v-list-item
-            v-for="page in infoPages"
             :key="page.path"
             :to="page.path"
             :class="{ 'v-list-item--active': isActivePage(page.path) }"
@@ -164,6 +115,7 @@
 <script setup lang="ts">
 import { withoutTrailingSlash } from 'ufo';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { useFloatingNavPosition } from '~/composables/useFloatingNavPosition';
 
 // Define public routes that do not require authentication
 const publicRoutes = [
@@ -214,16 +166,9 @@ const mainPages: NavPage[] = [
 ];
 
 const projectPages: NavPage[] = [
-  { title: 'All Projects', path: '/projects', icon: 'mdi-format-list-bulleted' },
   { title: 'Create Project', path: '/projects/create', icon: 'mdi-plus-circle' },
   { title: 'Project Templates', path: '/projects/templates', icon: 'mdi-file-document-multiple' },
   { title: 'Shared Projects', path: '/projects/shared', icon: 'mdi-share-variant' },
-];
-
-const adminPages: NavPage[] = [
-  { title: 'Admin Dashboard', path: '/admin/dashboard', icon: 'mdi-shield-crown' },
-  { title: 'Admin Panel', path: '/admin', icon: 'mdi-security' },
-  { title: 'Admin Login', path: '/auth/admin-login', icon: 'mdi-shield-account' },
 ];
 
 const userPages: NavPage[] = [
@@ -238,20 +183,21 @@ const userPages: NavPage[] = [
   { title: 'User Permissions', path: '/users/permissions', icon: 'mdi-shield-account' },
 ];
 
-const authPages: NavPage[] = [
-  { title: 'Login', path: '/auth', icon: 'mdi-login' },
-  { title: 'Register', path: '/auth/register', icon: 'mdi-account-plus' },
-  { title: 'Reset Password', path: '/auth/reset', icon: 'mdi-lock-reset' },
-  { title: 'Auth Callback', path: '/auth/callback', icon: 'mdi-check-circle' },
-];
-
-const infoPages: NavPage[] = [
-  { title: 'About', path: '/info/about', icon: 'mdi-information' },
-  { title: 'Contact', path: '/info/contact', icon: 'mdi-email' },
-  { title: 'FAQ', path: '/info/faq', icon: 'mdi-help-circle' },
-  { title: 'Sitemap', path: '/info/sitemap', icon: 'mdi-sitemap' },
-  { title: 'Matrix', path: '/info/matrix', icon: 'mdi-matrix' },
-];
+// Logout function
+const handleLogout = async () => {
+  try {
+    closeMenu();
+    // Clear any local storage/session data
+    if (process.client) {
+      localStorage.clear();
+      sessionStorage.clear();
+    }
+    // Navigate to login page
+    await navigateTo('/auth');
+  } catch (error) {
+    console.error('Logout error:', error);
+  }
+};
 
 const handleButtonClick = (event: Event) => {
   console.log('🎯 BUTTON CLICKED!', event);
@@ -500,6 +446,30 @@ onUnmounted(() => {
 .theme--dark .nav-menu {
   background: rgba(33, 37, 41, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Logout item styling */
+.logout-item {
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.logout-item:hover {
+  background-color: rgba(244, 67, 54, 0.1) !important;
+}
+
+.logout-item .v-list-item-title {
+  font-weight: 500;
+}
+
+/* Dark theme logout styling */
+.theme--dark .logout-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.theme--dark .logout-item:hover {
+  background-color: rgba(244, 67, 54, 0.2) !important;
 }
 
 /* Responsive adjustments */

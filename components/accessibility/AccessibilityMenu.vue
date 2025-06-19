@@ -20,7 +20,7 @@
     >
       <v-btn
         icon
-        color="primary"
+        color="blue"
         elevation="6"
         size="large"
         class="accessibility-main-btn"
@@ -350,12 +350,7 @@
 
         <!-- Close Button -->
         <v-card-actions class="pa-4">
-          <v-btn
-            variant="text"
-            size="small"
-            prepend-icon="mdi-close"
-            @click="closeMenu"
-          >
+          <v-btn variant="text" size="small" prepend-icon="mdi-close" @click="closeMenu">
             Close Menu
           </v-btn>
           <v-spacer />
@@ -389,22 +384,30 @@
           <v-list density="compact">
             <v-list-item prepend-icon="mdi-keyboard">
               <v-list-item-title>Keyboard Navigation</v-list-item-title>
-              <v-list-item-subtitle>Use Tab, Enter, Space, and Arrow keys to navigate</v-list-item-subtitle>
+              <v-list-item-subtitle
+                >Use Tab, Enter, Space, and Arrow keys to navigate</v-list-item-subtitle
+              >
             </v-list-item>
             <v-list-item prepend-icon="mdi-account-voice">
               <v-list-item-title>Screen Reader Support</v-list-item-title>
-              <v-list-item-subtitle>Compatible with NVDA, JAWS, VoiceOver, and other assistive
-                technologies</v-list-item-subtitle>
+              <v-list-item-subtitle
+                >Compatible with NVDA, JAWS, VoiceOver, and other assistive
+                technologies</v-list-item-subtitle
+              >
             </v-list-item>
             <v-list-item prepend-icon="mdi-format-font">
               <v-list-item-title>Text Customization</v-list-item-title>
-              <v-list-item-subtitle>Adjust font size, contrast, and spacing for better
-                readability</v-list-item-subtitle>
+              <v-list-item-subtitle
+                >Adjust font size, contrast, and spacing for better
+                readability</v-list-item-subtitle
+              >
             </v-list-item>
             <v-list-item prepend-icon="mdi-motion-pause">
               <v-list-item-title>Motion Control</v-list-item-title>
-              <v-list-item-subtitle>Reduce or disable animations that may cause vestibular
-                disorders</v-list-item-subtitle>
+              <v-list-item-subtitle
+                >Reduce or disable animations that may cause vestibular
+                disorders</v-list-item-subtitle
+              >
             </v-list-item>
           </v-list>
 
@@ -958,7 +961,7 @@ watch(isDarkMode, toggleTheme);
 :deep(.v-card-title) {
   line-height: 1.2;
   font-weight: 600;
-/* (Merged into the earlier .accessibility-card block to avoid duplicate selector) */
+  /* (Merged into the earlier .accessibility-card block to avoid duplicate selector) */
 }
 
 .accessibility-card::before {

@@ -1,52 +1,13 @@
 <template>
+  <!-- Navigation links removed per user request -->
   <nav class="flex md:hidden gap-2 items-center">
-    <NuxtLink
-      v-for="link in links"
-      :key="link.path"
-      :to="link.path"
-      class="nav-link"
-      exact-active-class="active-link"
-      :aria-current="$route.path === link.path ? 'page' : undefined"
-    >
-      {{ link.name.charAt(0).toUpperCase() + link.name.slice(1) }}
-    </NuxtLink>
+    <!-- All nav-links have been removed -->
   </nav>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-
-const links = ref<{ name: string; path: string }[]>([])
-const EXCLUDED_ROUTES = [
-  '/admin', '/admin/login', '/admin/dashboard',
-  '/auth', '/auth/login', '/auth/register', '/auth/reset'
-]
-
-onMounted(() => {
-  const router = useRouter()
-  links.value = router.getRoutes()
-    .filter(r =>
-      r.path &&
-      !EXCLUDED_ROUTES.includes(r.path) &&
-      !r.path.includes(':') &&
-      r.path.split('/').length <= 2
-    )
-    .map(r => {
-      let name = '';
-      if (r.name) {
-        name = String(r.name);
-      } else if (r.path === '/') {
-        name = 'Home';
-      } else {
-        name = r.path.replace('/', '');
-      }
-      return {
-        name,
-        path: r.path
-      };
-    })
-})
+// Navigation links removed per user request
+// No logic needed since nav-links are not displayed
 </script>
 
 <style scoped>
@@ -60,7 +21,8 @@ onMounted(() => {
   text-decoration: none;
   outline: none;
 }
-.nav-link:hover, .nav-link:focus {
+.nav-link:hover,
+.nav-link:focus {
   background: #e0e7ff;
   color: #3730a3;
 }

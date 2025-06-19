@@ -17,7 +17,7 @@
         <v-avatar :color="getProjectColor(project.type)" size="40" class="me-3">
           <v-icon :icon="getProjectIcon(project.type)" color="white" />
         </v-avatar>
-        
+
         <div class="project-info">
           <h3 class="project-name">{{ project.name }}</h3>
           <p class="project-type">{{ getProjectTypeLabel(project.type) }}</p>
@@ -35,18 +35,10 @@
             @click.stop
           />
         </template>
-        
+
         <v-list density="compact">
-          <v-list-item
-            prepend-icon="mdi-eye"
-            title="View Project"
-            @click="$emit('click')"
-          />
-          <v-list-item
-            prepend-icon="mdi-pencil"
-            title="Edit Project"
-            @click="editProject"
-          />
+          <v-list-item prepend-icon="mdi-eye" title="View Project" @click="$emit('click')" />
+          <v-list-item prepend-icon="mdi-pencil" title="Edit Project" @click="editProject" />
           <v-list-item
             prepend-icon="mdi-content-duplicate"
             title="Duplicate"
@@ -89,15 +81,23 @@
           <v-icon icon="mdi-clock-outline" size="16" class="me-1" />
           <span class="text-caption">{{ formatDate(project.updated_at) }}</span>
         </div>
-        
+
         <div v-if="project.training_jobs?.length" class="stat-item">
           <v-icon icon="mdi-brain" size="16" class="me-1" />
-          <span class="text-caption">{{ project.training_jobs.length }} job{{ project.training_jobs.length !== 1 ? 's' : '' }}</span>
+          <span class="text-caption"
+            >{{ project.training_jobs.length }} job{{
+              project.training_jobs.length !== 1 ? 's' : ''
+            }}</span
+          >
         </div>
-        
+
         <div v-if="project.model_versions?.length" class="stat-item">
           <v-icon icon="mdi-package-variant" size="16" class="me-1" />
-          <span class="text-caption">{{ project.model_versions.length }} version{{ project.model_versions.length !== 1 ? 's' : '' }}</span>
+          <span class="text-caption"
+            >{{ project.model_versions.length }} version{{
+              project.model_versions.length !== 1 ? 's' : ''
+            }}</span
+          >
         </div>
       </div>
 
@@ -127,7 +127,7 @@
       >
         Start
       </v-btn>
-      
+
       <v-btn
         v-else-if="project.status === 'active'"
         color="info"
@@ -138,7 +138,7 @@
       >
         Training
       </v-btn>
-      
+
       <v-btn
         v-else-if="hasDeployedModel"
         color="success"
@@ -151,59 +151,53 @@
       </v-btn>
 
       <v-spacer />
-      
-      <v-btn
-        variant="text"
-        size="small"
-        @click.stop="$emit('click')"
-      >
-        View Details
-      </v-btn>
+
+      <v-btn variant="text" size="small" @click.stop="$emit('click')"> View Details </v-btn>
     </v-card-actions>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { Project } from '~/types/project'
-import { useIcons } from '~/composables/useIcons'
+import { computed } from 'vue';
+import { useIcons } from '~/composables/useIcons';
+import type { Project } from '~/types/project';
 
 // Props
 interface Props {
-  project: Project
-  loading?: boolean
+  project: Project;
+  loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  loading: false
-})
+  loading: false,
+});
 
 // Emits
 const emit = defineEmits<{
-  click: []
-  delete: []
-}>()
+  click: [];
+  delete: [];
+}>();
 
 // Composables
-const { getIcon, getIconColor } = useIcons()
+const { getIcon, getIconColor } = useIcons();
 
 // Computed
 const hasDeployedModel = computed(() => {
-  return props.project.model_versions?.some(version => version.deployed) || false
-})
+  return props.project.model_versions?.some((version) => version.deployed) || false;
+});
 
 // Methods
 const getProjectIcon = (type: string) => {
-  return getIcon('project', type)
-}
+  return getIcon('project', type);
+};
 
 const getProjectColor = (type: string) => {
-  return getIconColor(type)
-}
+  return getIconColor(type);
+};
 
 const getStatusIcon = (status: string) => {
-  return getIcon('status', status)
-}
+  return getIcon('status', status);
+};
 
 const getStatusColor = (status: string) => {
   const colorMap = {
@@ -214,10 +208,10 @@ const getStatusColor = (status: string) => {
     completed: 'success',
     error: 'error',
     archived: 'grey-darken-1',
-    paused: 'warning'
-  }
-  return colorMap[status as keyof typeof colorMap] || 'grey'
-}
+    paused: 'warning',
+  };
+  return colorMap[status as keyof typeof colorMap] || 'grey';
+};
 
 const getProjectTypeLabel = (type: string) => {
   const labels = {
@@ -228,45 +222,59 @@ const getProjectTypeLabel = (type: string) => {
     cv: 'Computer Vision',
     recommendation: 'Recommendation System',
     'time-series': 'Time Series Forecasting',
-    custom: 'Custom Pipeline'
-  }
-  return labels[type as keyof typeof labels] || type
-}
+    custom: 'Custom Pipeline',
+  };
+  return labels[type as keyof typeof labels] || type;
+};
 
 const formatDate = (dateString: string) => {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffTime = Math.abs(now.getTime() - date.getTime())
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  
-  if (diffDays === 1) return 'Yesterday'
-  if (diffDays < 7) return `${diffDays}d ago`
-  if (diffDays < 30) return `${Math.ceil(diffDays / 7)}w ago`
-  return date.toLocaleDateString()
-}
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.ceil(diffDays / 7)}w ago`;
+  return date.toLocaleDateString();
+};
+
+const safeStatusDisplay = (status: string) => {
+  const statusMap = {
+    draft: 'Draft',
+    active: 'Active',
+    training: 'Training',
+    deployed: 'Deployed',
+    completed: 'Completed',
+    error: 'Error',
+    archived: 'Archived',
+    paused: 'Paused',
+  };
+  return statusMap[status as keyof typeof statusMap] || status || 'Unknown';
+};
 
 const editProject = () => {
-  navigateTo(`/projects/${props.project.id}/config`)
-}
+  navigateTo(`/projects/${props.project.id}/config`);
+};
 
 const duplicateProject = () => {
-  console.log('Duplicate project:', props.project.name)
-}
+  console.log('Duplicate project:', props.project.name);
+};
 
 const startProject = () => {
-  navigateTo(`/projects/${props.project.id}`)
-}
+  navigateTo(`/projects/${props.project.id}`);
+};
 
 const viewTraining = () => {
-  navigateTo(`/projects/${props.project.id}/train`)
-}
+  navigateTo(`/projects/${props.project.id}/train`);
+};
 
 const openDeployment = () => {
-  const deployedVersion = props.project.model_versions?.find(v => v.deployed)
+  const deployedVersion = props.project.model_versions?.find((v) => v.deployed);
   if (deployedVersion?.endpoint_url) {
-    window.open(deployedVersion.endpoint_url, '_blank')
+    window.open(deployedVersion.endpoint_url, '_blank');
   }
-}
+};
 </script>
 
 <style scoped>
@@ -276,11 +284,43 @@ const openDeployment = () => {
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  /* Glassmorphism styling for starry background */
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .project-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* White text for card content on glassmorphism background */
+.project-card :deep(.v-card-title),
+.project-card :deep(.v-card-text),
+.project-card .project-name,
+.project-card .project-type,
+.project-card .project-description,
+.project-card .stat-item {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Slightly more transparent for secondary text */
+.project-card .project-type,
+.project-card .stat-item {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* Menu items need dark background for readability */
+.project-card :deep(.v-menu .v-list) {
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px);
+}
+
+.project-card :deep(.v-menu .v-list-item-title) {
+  color: rgba(0, 0, 0, 0.87) !important;
 }
 
 .project-card--loading {
@@ -351,6 +391,7 @@ const openDeployment = () => {
   margin-bottom: 16px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-height: 2.6em;
@@ -388,7 +429,7 @@ const openDeployment = () => {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .card-header,
   .card-content,
   .card-actions {

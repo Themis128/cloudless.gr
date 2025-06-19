@@ -239,7 +239,7 @@ import type { PipelineConfig, PipelineNode } from '~/types/project';
 
 // Meta
 definePageMeta({
-  layout: 'default',
+  layout: 'projects',
   title: 'Pipeline Builder',
   requiresAuth: true,
 });
@@ -598,9 +598,3 @@ onMounted(() => {
   }
 }
 </style>
-
-<script setup lang="ts">
-definePageMeta({
-  layout: 'projects',
-});
-</script>

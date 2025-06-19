@@ -1,11 +1,20 @@
 <template>
-  <footer 
-    role="contentinfo" 
-    itemscope 
+  <footer
+    role="contentinfo"
+    itemscope
     itemtype="https://schema.org/WPFooter"
-    :class="['footer', 'w-full', 'text-center', 'py-2', 'text-sm', 'bg-transparent', props.isDark ? 'footer-dark' : 'footer-light']"
+    :class="[
+      'footer',
+      'w-full',
+      'text-center',
+      'py-2',
+      'text-sm',
+      'bg-transparent',
+      props.isDark ? 'footer-dark' : 'footer-light',
+    ]"
   >
-    © {{ displayYear }} <b>Cloudless</b> — All rights reserved.
+    <span class="footer-left">© <b>Cloudless</b></span>
+    <span class="footer-center footer-rights">All rights reserved {{ displayYear }}</span>
     <span class="footer-social">
       <v-btn
         v-for="item in socialWithIcons"
@@ -19,55 +28,62 @@
         size="small"
         variant="text"
       >
-        <FontAwesomeIcon :icon="item.iconObj" class="fa-social" :style="{ color: item.color || '#333' }" />
+        <FontAwesomeIcon
+          :icon="item.iconObj"
+          class="fa-social"
+          :style="{ color: item.color || '#333' }"
+        />
       </v-btn>
     </span>
   </footer>
 </template>
 
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faTwitter, faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
-import { faUserCircle } from '@fortawesome/free-solid-svg-icons'
-import { useContactInfo } from '@/composables/useContactInfo'
-import { computed } from 'vue'
+import { useContactInfo } from '@/composables/useContactInfo';
+import { faGithub, faLinkedin, faTwitter } from '@fortawesome/free-brands-svg-icons';
+import { faUserCircle } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { computed } from 'vue';
 
 // Define props with better typing and optional social override
 interface ContactItem {
-  name: string
-  url: string
-  icon: string
-  aria?: string
-  color?: string
+  name: string;
+  url: string;
+  icon: string;
+  aria?: string;
+  color?: string;
 }
 
-const now = new Date().getFullYear()
-const props = withDefaults(defineProps<{ 
-  year?: number
-  isDark?: boolean
-  social?: ContactItem[]
-}>(), {
-  year: undefined,
-  isDark: false,
-  social: undefined
-})
+const now = new Date().getFullYear();
+const props = withDefaults(
+  defineProps<{
+    year?: number;
+    isDark?: boolean;
+    social?: ContactItem[];
+  }>(),
+  {
+    year: undefined,
+    isDark: false,
+    social: undefined,
+  },
+);
 
-const displayYear = computed(() => props.year ?? now)
+const displayYear = computed(() => props.year ?? now);
 
 // Use prop social or fallback to composable
-const contact = useContactInfo()
-const sourceSocial = computed(() => props.social ?? contact.social)
+const contact = useContactInfo();
+const sourceSocial = computed(() => props.social ?? contact.social);
 
-const iconMap = { faTwitter, faGithub, faLinkedin, faUserCircle }
+const iconMap = { faTwitter, faGithub, faLinkedin, faUserCircle };
 
-const socialWithIcons = computed(() => 
+const socialWithIcons = computed(() =>
   sourceSocial.value
-    .filter(item => iconMap[item.icon as keyof typeof iconMap]) // Only include items with valid icons
-    .map(item => ({
+    .filter((item) => iconMap[item.icon as keyof typeof iconMap]) // Only include items with valid icons
+    .map((item) => ({
       ...item,
-      iconObj: iconMap[item.icon as keyof typeof iconMap] ?? faUserCircle // Fallback icon
-    }))
-)
+      iconObj: iconMap[item.icon as keyof typeof iconMap] ?? faUserCircle, // Fallback icon
+    })),
+);
 </script>
 
 <style scoped>
@@ -81,11 +97,14 @@ const socialWithIcons = computed(() =>
   position: relative;
   width: 100%;
   box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 .footer-social {
-  margin-left: 0.5rem;
+  flex: 1;
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.25rem;
@@ -105,6 +124,21 @@ const socialWithIcons = computed(() =>
 .footer-light {
   color: #222;
 }
+.footer-rights {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  font-weight: 300;
+}
+
+.footer-left {
+  flex: 1;
+  text-align: left;
+}
+
+.footer-center {
+  flex: 1;
+  text-align: center;
+}
 @media (max-width: 640px) {
   .footer {
     font-size: 0.85rem;
@@ -113,7 +147,7 @@ const socialWithIcons = computed(() =>
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .footer-social {
     margin-left: 0;
     margin-top: 0.25rem;
