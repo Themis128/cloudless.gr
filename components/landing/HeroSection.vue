@@ -31,13 +31,20 @@
 
       <div class="d-flex flex-wrap justify-center">
         <!-- Try It Free button, routes to /auth (auth/index.vue) -->
-        <NuxtLink to="/auth" class="text-decoration-none">
+        <NuxtLink
+          to="/auth"
+          class="text-decoration-none"
+          data-cy="try-it-free-link"
+          data-testid="try-it-free-link"
+        >
           <v-btn
             color="primary"
             size="x-large"
             class="ma-2 px-8 py-4 primary-btn"
             aria-label="Start using Cloudless"
             prepend-icon="mdi-rocket-launch"
+            data-cy="try-it-free-button"
+            data-testid="try-it-free-button"
           >
             Try It Free
           </v-btn>
@@ -48,6 +55,8 @@
           color="white"
           size="x-large"
           class="ma-2 px-8 py-4 secondary-btn"
+          data-cy="learn-more-button"
+          data-testid="learn-more-button"
           aria-label="Learn more about Cloudless"
           prepend-icon="mdi-book-open"
           @click="goToInfo"

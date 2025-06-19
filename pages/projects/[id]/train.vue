@@ -28,7 +28,10 @@
               size="small"
               variant="tonal"
             >
-              {{ project.status.charAt(0).toUpperCase() + project.status.slice(1) }}
+              {{
+                (project.status || 'unknown').charAt(0).toUpperCase() +
+                (project.status || 'unknown').slice(1)
+              }}
             </v-chip>
           </div>
         </div>

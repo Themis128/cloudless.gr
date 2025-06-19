@@ -12,7 +12,7 @@
           Back to Projects
         </v-btn>
       </div>
-      
+
       <div class="header-content">
         <div class="project-info">
           <v-avatar :color="getProjectColor(project?.type)" size="48" class="me-4">
@@ -28,13 +28,12 @@
               :color="getStatusColor(project.status)"
               :prepend-icon="getStatusIcon(project.status)"
               size="small"
-              variant="tonal"
-            >
-              {{ project.status.charAt(0).toUpperCase() + project.status.slice(1) }}
+              variant="tonal"            >
+              {{ (project.status || 'unknown').charAt(0).toUpperCase() + (project.status || 'unknown').slice(1) }}
             </v-chip>
           </div>
         </div>
-        
+
         <div class="header-actions">
           <v-btn-group variant="outlined" divided>
             <v-btn
@@ -53,7 +52,7 @@
               Run
             </v-btn>
           </v-btn-group>
-          
+
           <v-menu>
             <template #activator="{ props }">
               <v-btn
@@ -62,7 +61,7 @@
                 v-bind="props"
               />
             </template>
-            
+
             <v-list>
               <v-list-item
                 prepend-icon="mdi-brain"
@@ -94,10 +93,24 @@
           </v-menu>
         </div>
       </div>
-    </div>
-
-    <!-- Pipeline Canvas -->
+    </div>    <!-- Pipeline Canvas -->
     <div class="pipeline-canvas-container">
+      <!-- Pipeline Toolbar -->
+      <FlowToolbar
+        :steps="pipelineSteps"
+        @add-step="addStep"
+        @clear-all="clearAllSteps"
+        @apply-template="applyTemplate"
+      />
+
+      <!-- Pipeline Flow Container -->
+      <FlowContainer
+        :steps="pipelineSteps"
+        @update:steps="pipelineSteps = $event"
+        @add-step="addStep"
+        @execute="executePipeline"
+      />
+    </div>
       <div class="canvas-toolbar">
         <div class="toolbar-left">
           <v-btn-toggle
@@ -110,9 +123,9 @@
             <v-btn value="pan" icon="mdi-hand-left" />
             <v-btn value="zoom" icon="mdi-magnify" />
           </v-btn-toggle>
-          
+
           <v-divider vertical class="mx-2" />
-          
+
           <v-btn
             prepend-icon="mdi-fit-to-page"
             variant="outlined"
@@ -121,7 +134,7 @@
           >
             Fit to View
           </v-btn>
-          
+
           <v-btn
             prepend-icon="mdi-refresh"
             variant="outlined"
@@ -131,7 +144,7 @@
             Reset
           </v-btn>
         </div>
-        
+
         <div class="toolbar-right">
           <div class="zoom-controls">
             <v-btn
@@ -150,7 +163,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Canvas Area -->
       <div class="canvas-wrapper">
         <CanvasBuilder
@@ -166,7 +179,7 @@
           @pipeline-change="handlePipelineChange"
           @zoom-change="zoomLevel = $event"
         />
-        
+
         <!-- Loading State -->
         <div v-else class="loading-state">
           <v-progress-circular indeterminate size="64" color="primary" />
@@ -188,13 +201,13 @@
         <v-toolbar>
           <v-toolbar-title>Node Library</v-toolbar-title>
         </v-toolbar>
-        
+
         <NodeLibrary
           @node-drag-start="handleNodeDragStart"
           @node-select="addNodeToCanvas"
         />
       </v-navigation-drawer>
-      
+
       <!-- Properties Panel -->
       <v-navigation-drawer
         v-model="showProperties"
@@ -206,14 +219,14 @@
         <v-toolbar>
           <v-toolbar-title>Properties</v-toolbar-title>
         </v-toolbar>
-        
+
         <NodeProperties
           v-if="selectedNode"
           :node="selectedNode"
           @update="handleNodeUpdate"
           @delete="handleNodeDelete"
         />
-        
+
         <div v-else class="no-selection">
           <v-icon icon="mdi-cursor-default" size="48" color="grey-lighten-1" />
           <p class="text-body-1 mt-4">Select a node to edit properties</p>
@@ -234,7 +247,7 @@
         <v-icon>mdi-plus</v-icon>
         <v-tooltip activator="parent" location="left">Add Node</v-tooltip>
       </v-btn>
-      
+
       <v-btn
         icon="mdi-tune"
         color="secondary"
@@ -255,7 +268,7 @@
           <v-icon icon="mdi-check-circle" color="success" class="me-2" />
           Pipeline Validation
         </v-card-title>
-        
+
         <v-card-text>
           <PipelineValidation
             :pipeline-config="pipelineConfig"
@@ -268,9 +281,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import type { Project, PipelineConfig, PipelineNode } from '~/types/project'
+import { computed, onMounted, ref } from 'vue'
+import FlowContainer from '~/components/builder/FlowContainer.vue'
+import FlowToolbar from '~/components/builder/FlowToolbar.vue'
 import { useIcons } from '~/composables/useIcons'
+import type { PipelineConfig, PipelineNode } from '~/types/project'
 
 // Meta
 definePageMeta({
@@ -298,8 +313,16 @@ const showValidation = ref(false)
 const pipelineConfig = ref<PipelineConfig>({
   nodes: [],
   connections: [],
-  metadata: {}
+  metadata: {},
+  global_config: {}
 })
+
+// Pipeline steps for the new builder
+const pipelineSteps = ref([
+  { component: 'DataInput', data: {} },
+  { component: 'DataValidation', data: {} },
+  { component: 'SmartProcessing', data: {} },
+])
 
 // Computed
 const canRun = computed(() => {
@@ -353,13 +376,13 @@ const handleNodeSelect = (node: PipelineNode) => {
 const handleNodeAdd = (nodeType: string, position: { x: number; y: number }) => {
   const newNode: PipelineNode = {
     id: `node-${Date.now()}`,
+    name: `${nodeType.charAt(0).toUpperCase() + nodeType.slice(1)} Step`,
     type: nodeType as any,
     position,
     config: {},
-    inputs: [],
-    outputs: []
+    inputs: []
   }
-  
+
   pipelineConfig.value.nodes.push(newNode)
 }
 
@@ -368,7 +391,7 @@ const handleNodeDelete = (nodeId: string) => {
   pipelineConfig.value.connections = pipelineConfig.value.connections.filter(
     c => c.source !== nodeId && c.target !== nodeId
   )
-  
+
   if (selectedNode.value?.id === nodeId) {
     selectedNode.value = null
   }
@@ -424,9 +447,27 @@ const exportPipeline = () => {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${project.value?.name || 'pipeline'}.json`
+  a.download = `pipeline-${projectId}.json`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+// New pipeline builder methods
+const addStep = (step: any) => {
+  pipelineSteps.value.push(step)
+}
+
+const clearAllSteps = () => {
+  pipelineSteps.value = []
+}
+
+const applyTemplate = (template: any[]) => {
+  pipelineSteps.value = [...template]
+}
+
+const executePipeline = () => {
+  console.log('Executing pipeline with steps:', pipelineSteps.value)
+  // Implementation for pipeline execution
 }
 
 const importPipeline = () => {
@@ -539,7 +580,7 @@ onMounted(() => {
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: 
+  background:
     radial-gradient(circle at 50% 50%, rgba(var(--v-theme-primary), 0.03) 0%, transparent 50%),
     linear-gradient(90deg, rgba(var(--v-theme-outline), 0.1) 1px, transparent 1px),
     linear-gradient(180deg, rgba(var(--v-theme-outline), 0.1) 1px, transparent 1px);
@@ -583,21 +624,21 @@ onMounted(() => {
   .page-header {
     padding: 12px 16px;
   }
-  
+
   .header-content {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .canvas-toolbar {
     padding: 8px 12px;
   }
-  
+
   .toolbar-left,
   .toolbar-right {
     gap: 8px;
   }
-  
+
   .floating-actions {
     bottom: 16px;
     right: 16px;

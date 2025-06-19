@@ -1,200 +1,208 @@
-<template>  <v-card class="glass-card pa-6" width="400" elevation="10">
-  <v-card-title class="text-white text-center">Login</v-card-title>
-  <v-form ref="form" validate-on="submit lazy" @submit.prevent="handleLogin">
-    <v-alert
-      v-if="errorMsg"
-      type="error"
-      class="mb-4"
-      border="start"
-      prominent
-    >
-      {{ errorMsg }}
-    </v-alert>
+<template>
+  <v-card
+    class="glass-card pa-6"
+    width="400"
+    elevation="10"
+    data-cy="login-form"
+    data-testid="login-form"
+  >
+    <v-card-title class="text-white text-center">Login</v-card-title>
+    <v-form ref="form" validate-on="submit lazy" @submit.prevent="handleLogin">
+      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
+        {{ errorMsg }}
+      </v-alert>
 
-    <v-alert
-      v-if="successMsg"
-      type="success"
-      class="mb-4"
-      border="start"
-      prominent
-    >
-      {{ successMsg }}
-    </v-alert>
-    <v-text-field
-      v-model="email"
-      label="Email"
-      placeholder="you@example.com"
-      prepend-icon="mdi-email-outline"
-      clearable
-      variant="solo-inverted"
-      color="blue"
-      class="glass-input mb-4"
-      :rules="[rules.required, rules.email]"
-      :disabled="loading"
-    />
+      <v-alert v-if="successMsg" type="success" class="mb-4" border="start" prominent>
+        {{ successMsg }}
+      </v-alert>
 
-    <v-text-field
-      v-model="password"
-      :type="showPassword ? 'text' : 'password'"
-      label="Password"
-      prepend-icon="mdi-lock-outline"
-      :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-      clearable
-      variant="solo-inverted"
-      color="blue"
-      class="glass-input"
-      :rules="[rules.required]"
-      :disabled="loading"
-      @click:append="showPassword = !showPassword"
-    />    <v-btn
-      type="submit"
-      block
-      color="blue"
-      class="mt-4"
-      :loading="loading"
-      :disabled="loading"
-    >
-      <v-icon left>mdi-login</v-icon>
-      Login
-    </v-btn>
+      <v-text-field
+        v-model="email"
+        label="Email"
+        placeholder="you@example.com"
+        prepend-icon="mdi-email-outline"
+        clearable
+        variant="solo-inverted"
+        color="blue"
+        class="glass-input mb-4"
+        :rules="[rules.required, rules.email]"
+        :disabled="loading"
+        data-cy="email-input"
+        data-testid="email-input"
+        type="email"
+      />
 
-    <v-btn
-      variant="outlined"
-      block
-      color="blue"
-      class="mt-2"
-      to="/auth/admin-login"
-      tag="router-link"
-      :disabled="loading"
-    >
-      Login as Admin
-    </v-btn>      <v-btn
-      variant="text"
-      block
-      color="white"
-      class="mt-4"
-      :disabled="loading"
-      @click="navigateTo('/auth/reset')"
-    >
-      Forgot Password?
-    </v-btn>
+      <v-text-field
+        v-model="password"
+        :type="showPassword ? 'text' : 'password'"
+        label="Password"
+        prepend-icon="mdi-lock-outline"
+        :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+        clearable
+        variant="solo-inverted"
+        color="blue"
+        class="glass-input"
+        :rules="[rules.required]"
+        :disabled="loading"
+        @click:append="showPassword = !showPassword"
+        data-cy="password-input"
+        data-testid="password-input"
+      />
 
-    <!-- Debug info (remove in production) -->
-    <div v-if="debugInfo" class="mt-2 text-caption text-white">
-      <div>Debug: {{ debugInfo }}</div>
-    </div>
-  </v-form>
+      <v-btn
+        type="submit"
+        block
+        color="blue"
+        class="mt-4"
+        :loading="loading"
+        :disabled="loading"
+        data-cy="login-button"
+        data-testid="login-button"
+      >
+        <v-icon left>mdi-login</v-icon> Login
+      </v-btn>
 
-  <NuxtLink to="/auth/register" class="register-link mt-4">
-    <v-icon left size="18" color="#a855f7">mdi-account-plus</v-icon>
-    <span>Don’t have an account? <span class="gradient-text">Register</span></span>
-  </NuxtLink>
-</v-card>
+      <v-btn
+        variant="outlined"
+        block
+        color="blue"
+        class="mt-2"
+        to="/auth/admin-login"
+        tag="router-link"
+        :disabled="loading"
+        data-cy="admin-login-button"
+        data-testid="admin-login-button"
+      >
+        Login as Admin
+      </v-btn>
+
+      <v-btn
+        variant="text"
+        block
+        color="white"
+        class="mt-4"
+        :disabled="loading"
+        @click="navigateTo('/auth/reset')"
+        data-cy="forgot-password-button"
+        data-testid="forgot-password-button"
+      >
+        Forgot Password?
+      </v-btn>
+
+      <!-- Debug info (remove in production) -->
+      <div v-if="debugInfo" class="mt-2 text-caption text-white">
+        <div>Debug: {{ debugInfo }}</div>
+      </div>
+    </v-form>
+
+    <NuxtLink to="/auth/register" class="register-link mt-4">
+      <v-icon left size="18" color="#a855f7">mdi-account-plus</v-icon>
+      <span>Don’t have an account? <span class="gradient-text">Register</span></span>
+    </NuxtLink>
+  </v-card>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { navigateTo } from '#app'
+import { ref } from 'vue';
+import { navigateTo } from '#app';
 
 // Use the robust auth composable instead of direct Supabase
-const { signIn } = useRobustAuth()
+const { signIn } = useRobustAuth();
 
 // Form data
-const form = ref(null)
-const email = ref('')
-const password = ref('')
-const showPassword = ref(false)
-const loading = ref(false)
-const errorMsg = ref('')
-const successMsg = ref('')
-const debugInfo = ref('')
+const form = ref(null);
+const email = ref('');
+const password = ref('');
+const showPassword = ref(false);
+const loading = ref(false);
+const errorMsg = ref('');
+const successMsg = ref('');
+const debugInfo = ref('');
 
 // Validation rules
 const rules = {
   required: (v: string) => !!v || 'This field is required',
   email: (v: string) => {
-    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return pattern.test(v) || 'Please enter a valid email address'
-  }
-}
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return pattern.test(v) || 'Please enter a valid email address';
+  },
+};
 
 async function handleLogin() {
-  errorMsg.value = ''
-  successMsg.value = ''
-  debugInfo.value = ''
-  loading.value = true
+  errorMsg.value = '';
+  successMsg.value = '';
+  debugInfo.value = '';
+  loading.value = true;
 
   try {
-    console.log('🔍 Starting login process...')
-    debugInfo.value = 'Validating form...'
+    console.log('🔍 Starting login process...');
+    debugInfo.value = 'Validating form...';
 
     // Validate form with Vuetify
     if (form.value) {
-      const formElement = form.value as { validate: () => Promise<{ valid: boolean }> }
-      const { valid } = await formElement.validate()
+      const formElement = form.value as { validate: () => Promise<{ valid: boolean }> };
+      const { valid } = await formElement.validate();
 
       if (!valid) {
-        throw new Error('Please fix the form validation errors')
+        throw new Error('Please fix the form validation errors');
       }
     }
 
     // Check basic field requirements
     if (!email.value?.trim()) {
-      throw new Error('Email is required')
+      throw new Error('Email is required');
     }
     if (!password.value) {
-      throw new Error('Password is required')
+      throw new Error('Password is required');
     }
 
-    console.log('🔑 Attempting login with:', email.value)
-    debugInfo.value = 'Authenticating...'    // Use the robust auth composable for login
-    const result = await signIn(email.value, password.value)
+    console.log('🔑 Attempting login with:', email.value);
+    debugInfo.value = 'Authenticating...'; // Use the robust auth composable for login
+    const result = await signIn(email.value, password.value);
 
     if (!result.success) {
-      throw new Error(result.error || 'Login failed')
+      throw new Error(result.error || 'Login failed');
     }
 
-    console.log('✅ Login successful:', result.user?.email)
-    successMsg.value = 'Login successful! Redirecting...'
-    debugInfo.value = 'Login successful, redirecting...'
+    console.log('✅ Login successful:', result.user?.email);
+    successMsg.value = 'Login successful! Redirecting...';
+    debugInfo.value = 'Login successful, redirecting...';
 
     // Clear form on success
-    email.value = ''
-    password.value = ''
+    email.value = '';
+    password.value = '';
 
     // Show success message briefly, then redirect
     setTimeout(async () => {
       try {
         // Check user role for redirection
         // Handle profile RLS policy issues gracefully
-        let targetRoute = '/users/index' // Default route
+        let targetRoute = '/users/index'; // Default route
 
         if (result.profile?.role === 'admin') {
-          console.log('🔄 Redirecting to admin dashboard...')
-          targetRoute = '/admin'
+          console.log('🔄 Redirecting to admin dashboard...');
+          targetRoute = '/admin';
         } else {
-          console.log('🔄 Redirecting to user dashboard...')
-          targetRoute = '/users/index'
+          console.log('🔄 Redirecting to user dashboard...');
         }
 
-        await navigateTo(targetRoute)
+        await navigateTo(targetRoute);
       } catch (redirectError) {
-        console.error('Redirect error:', redirectError)
+        console.error('Redirect error:', redirectError);
         // Fallback redirect
-        await navigateTo('/users/index')
+        await navigateTo('/users/index');
       }
-    }, 1500)
-
+    }, 1500);
   } catch (err) {
-    console.error('[LOGIN] Error:', err)
-    const errorMessage = err instanceof Error ? err.message : 'Login failed'
-    errorMsg.value = errorMessage
-    debugInfo.value = `Error: ${errorMessage}`
+    console.error('[LOGIN] Error:', err);
+    const errorMessage = err instanceof Error ? err.message : 'Login failed';
+    errorMsg.value = errorMessage;
+    debugInfo.value = `Error: ${errorMessage}`;
 
     // Clear password on error
-    password.value = ''
+    password.value = '';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 </script>
@@ -208,24 +216,28 @@ async function handleLogin() {
 }
 .glass-input input {
   color: #fff !important;
-  text-shadow: 0 1px 6px rgba(30, 30, 60, 0.45), 0 0px 1px #000;
+  text-shadow:
+    0 1px 6px rgba(30, 30, 60, 0.45),
+    0 0px 1px #000;
   /* Fix tab/letter spacing and padding for better alignment */
   letter-spacing: 0.02em;
   padding-left: 12px !important;
   padding-right: 12px !important;
   font-size: 1.08rem;
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-  background: rgba(255,255,255,0.10) !important; /* semi-transparent */
+  background: rgba(255, 255, 255, 0.1) !important; /* semi-transparent */
   backdrop-filter: blur(2px);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(31,38,135,0.10);
+  box-shadow: 0 2px 8px rgba(31, 38, 135, 0.1);
 }
 .glass-input .v-field__overlay {
   background: transparent !important;
 }
 .v-label {
   color: #fff !important;
-  text-shadow: 0 1px 6px rgba(30, 30, 60, 0.45), 0 0px 1px #000;
+  text-shadow:
+    0 1px 6px rgba(30, 30, 60, 0.45),
+    0 0px 1px #000;
 }
 ::placeholder {
   color: #f3f6fa !important;
@@ -253,8 +265,14 @@ async function handleLogin() {
   background-clip: text;
   font-weight: 700;
 }
-.glass-card .v-card-title, .glass-card .v-card-subtitle, .glass-card .v-btn, .glass-card .v-list-item-title, .glass-card .v-list-item-subtitle {
+.glass-card .v-card-title,
+.glass-card .v-card-subtitle,
+.glass-card .v-btn,
+.glass-card .v-list-item-title,
+.glass-card .v-list-item-subtitle {
   color: #fff !important;
-  text-shadow: 0 1px 6px rgba(30, 30, 60, 0.45), 0 0px 1px #000;
+  text-shadow:
+    0 1px 6px rgba(30, 30, 60, 0.45),
+    0 0px 1px #000;
 }
 </style>

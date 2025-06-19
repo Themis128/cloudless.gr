@@ -1,25 +1,19 @@
 <template>
-  <v-card class="glass-card pa-6" width="450" elevation="10">
+  <v-card
+    class="glass-card pa-6"
+    width="450"
+    elevation="10"
+    data-cy="register-form"
+    data-testid="register-form"
+  >
     <v-card-title class="text-h5 text-white text-center">Create Account</v-card-title>
 
     <v-form ref="form" validate-on="submit lazy" @submit.prevent="handleRegister">
-      <v-alert
-        v-if="errorMsg"
-        type="error"
-        class="mb-4"
-        border="start"
-        prominent
-      >
+      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
         {{ errorMsg }}
       </v-alert>
 
-      <v-alert
-        v-if="successMsg"
-        type="success"
-        class="mb-4"
-        border="start"
-        prominent
-      >
+      <v-alert v-if="successMsg" type="success" class="mb-4" border="start" prominent>
         {{ successMsg }}
       </v-alert>
 
@@ -33,6 +27,9 @@
         class="glass-input mb-4"
         :rules="[rules.required]"
         :disabled="isSubmitting"
+        data-cy="fullname-input"
+        data-testid="fullname-input"
+        type="text"
       />
 
       <v-text-field
@@ -46,6 +43,9 @@
         class="glass-input mb-4"
         :rules="[rules.required, rules.email]"
         :disabled="isSubmitting"
+        data-cy="email-input"
+        data-testid="email-input"
+        type="email"
       />
 
       <v-text-field
@@ -61,6 +61,8 @@
         :rules="[rules.required, rules.password]"
         :disabled="isSubmitting"
         @click:append="showPassword = !showPassword"
+        data-cy="password-input"
+        data-testid="password-input"
       />
 
       <v-text-field
@@ -76,6 +78,8 @@
         :rules="[rules.required, rules.confirmPassword]"
         :disabled="isSubmitting"
         @click:append="showConfirmPassword = !showConfirmPassword"
+        data-cy="confirm-password-input"
+        data-testid="confirm-password-input"
       />
 
       <v-checkbox
@@ -105,6 +109,8 @@
         size="large"
         elevation="2"
         @click="handleButtonClick"
+        data-cy="create-account-button"
+        data-testid="create-account-button"
       >
         <v-icon left>mdi-account-plus</v-icon>
         Create Account
@@ -128,27 +134,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { navigateTo } from '#app'
+import { ref, computed } from 'vue';
+import { navigateTo } from '#app';
 
 // Development mode check
-const isDevelopment = computed(() => process.env.NODE_ENV === 'development')
+const isDevelopment = computed(() => process.env.NODE_ENV === 'development');
 
 // Form data
-const fullName = ref('')
-const email = ref('')
-const password = ref('')
-const confirmPassword = ref('')
-const showPassword = ref(false)
-const showConfirmPassword = ref(false)
-const agreeTerms = ref(false)
-const isSubmitting = ref(false)
-const errorMsg = ref('')
-const successMsg = ref('')
-const form = ref(null)
+const fullName = ref('');
+const email = ref('');
+const password = ref('');
+const confirmPassword = ref('');
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
+const agreeTerms = ref(false);
+const isSubmitting = ref(false);
+const errorMsg = ref('');
+const successMsg = ref('');
+const form = ref(null);
 
 // Use the robust auth composable
-const { signUp } = useRobustAuth()
+const { signUp } = useRobustAuth();
 
 // Debug function for button clicks
 function handleButtonClick(event: Event) {
@@ -156,15 +162,15 @@ function handleButtonClick(event: Event) {
     isSubmitting: isSubmitting.value,
     agreeTerms: agreeTerms.value,
     disabled: isSubmitting.value || !agreeTerms.value,
-    event
-  })
+    event,
+  });
 
   if (!agreeTerms.value) {
-    errorMsg.value = 'Please agree to the Terms of Service and Privacy Policy to continue.'
+    errorMsg.value = 'Please agree to the Terms of Service and Privacy Policy to continue.';
   }
 
   if (isSubmitting.value) {
-    console.log('⏳ Already submitting, ignoring click')
+    console.log('⏳ Already submitting, ignoring click');
   }
 }
 
@@ -172,115 +178,115 @@ function handleButtonClick(event: Event) {
 const rules = {
   required: (v: string) => !!v || 'This field is required',
   email: (v: string) => {
-    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return pattern.test(v) || 'Please enter a valid email address'
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return pattern.test(v) || 'Please enter a valid email address';
   },
   password: (v: string) => {
-    if (!v) return 'Password is required'
-    if (v.length < 8) return 'Password must be at least 8 characters'
-    if (!/(?=.*[a-z])/.test(v)) return 'Password must contain at least one lowercase letter'
-    if (!/(?=.*[A-Z])/.test(v)) return 'Password must contain at least one uppercase letter'
-    if (!/(?=.*\d)/.test(v)) return 'Password must contain at least one number'
-    return true
+    if (!v) return 'Password is required';
+    if (v.length < 8) return 'Password must be at least 8 characters';
+    if (!/(?=.*[a-z])/.test(v)) return 'Password must contain at least one lowercase letter';
+    if (!/(?=.*[A-Z])/.test(v)) return 'Password must contain at least one uppercase letter';
+    if (!/(?=.*\d)/.test(v)) return 'Password must contain at least one number';
+    return true;
   },
   confirmPassword: (v: string) => {
-    if (!v) return 'Please confirm your password'
-    if (v !== password.value) return 'Passwords do not match'
-    return true
+    if (!v) return 'Please confirm your password';
+    if (v !== password.value) return 'Passwords do not match';
+    return true;
   },
   agreeTerms: (v: boolean) => {
-    return v === true || 'You must agree to the Terms of Service and Privacy Policy'
-  }
-}
+    return v === true || 'You must agree to the Terms of Service and Privacy Policy';
+  },
+};
 
 // Handle registration
 async function handleRegister() {
-  errorMsg.value = ''
-  successMsg.value = ''
-  isSubmitting.value = true
+  errorMsg.value = '';
+  successMsg.value = '';
+  isSubmitting.value = true;
 
   try {
-    console.log('🔍 Starting registration process...')
+    console.log('🔍 Starting registration process...');
     console.log('Form data:', {
       fullName: fullName.value,
       email: email.value,
       passwordLength: password.value?.length || 0,
       confirmPasswordLength: confirmPassword.value?.length || 0,
-      agreeTerms: agreeTerms.value
-    })
+      agreeTerms: agreeTerms.value,
+    });
 
     // Check basic field requirements first
     if (!fullName.value?.trim()) {
-      throw new Error('Full name is required')
+      throw new Error('Full name is required');
     }
     if (!email.value?.trim()) {
-      throw new Error('Email is required')
+      throw new Error('Email is required');
     }
     if (!password.value) {
-      throw new Error('Password is required')
+      throw new Error('Password is required');
     }
     if (!confirmPassword.value) {
-      throw new Error('Password confirmation is required')
+      throw new Error('Password confirmation is required');
     }
     if (password.value !== confirmPassword.value) {
-      throw new Error('Passwords do not match')
+      throw new Error('Passwords do not match');
     }
     if (!agreeTerms.value) {
-      throw new Error('Please agree to the Terms of Service and Privacy Policy')
+      throw new Error('Please agree to the Terms of Service and Privacy Policy');
     }
 
     // Validate form with Vuetify
     if (form.value) {
-      const formElement = form.value as { validate: () => Promise<{ valid: boolean }> }
-      console.log('🔍 Validating form with Vuetify...')
-      const { valid } = await formElement.validate()
-      console.log('Form validation result:', valid)
+      const formElement = form.value as { validate: () => Promise<{ valid: boolean }> };
+      console.log('🔍 Validating form with Vuetify...');
+      const { valid } = await formElement.validate();
+      console.log('Form validation result:', valid);
 
       if (!valid) {
-        throw new Error('Please fix the form validation errors and try again')
+        throw new Error('Please fix the form validation errors and try again');
       }
     }
 
     // Use the robust auth composable for registration
     const result = await signUp(email.value, password.value, {
-      full_name: fullName.value
-    })
+      full_name: fullName.value,
+    });
 
     if (!result.success) {
-      throw new Error(result.error || 'Registration failed')
+      throw new Error(result.error || 'Registration failed');
     }
 
-    console.log('✅ Registration successful:', result.user?.email)
+    console.log('✅ Registration successful:', result.user?.email);
 
     // Check if email verification is required
     if (result.requiresEmailVerification) {
-      successMsg.value = 'Registration successful! Please check your email to confirm your account before logging in.'
+      successMsg.value =
+        'Registration successful! Please check your email to confirm your account before logging in.';
     } else {
-      successMsg.value = 'Registration successful! You can now log in with your credentials.'
+      successMsg.value = 'Registration successful! You can now log in with your credentials.';
     }
 
     // Clear form
-    fullName.value = ''
-    email.value = ''
-    password.value = ''
-    confirmPassword.value = ''
-    agreeTerms.value = false
+    fullName.value = '';
+    email.value = '';
+    password.value = '';
+    confirmPassword.value = '';
+    agreeTerms.value = false;
 
     // Redirect to login page after a delay
     setTimeout(() => {
-      navigateTo('/auth')
-    }, 3000)
-
+      navigateTo('/auth');
+    }, 3000);
   } catch (err) {
-    console.error('[REGISTRATION] Error:', err)
-    const errorMessage = err instanceof Error ? err.message : 'Registration failed'
-    errorMsg.value = errorMessage
+    console.error('[REGISTRATION] Error:', err);
+    const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+    errorMsg.value = errorMessage;
 
     // Clear sensitive fields on error
-    password.value = ''
-    confirmPassword.value = ''
+    password.value = '';
+    confirmPassword.value = '';
   } finally {
-    isSubmitting.value = false
+    isSubmitting.value = false;
   }
 }
 </script>
@@ -296,16 +302,18 @@ async function handleRegister() {
 
 .glass-input input {
   color: #fff !important;
-  text-shadow: 0 1px 6px rgba(30, 30, 60, 0.45), 0 0px 1px #000;
+  text-shadow:
+    0 1px 6px rgba(30, 30, 60, 0.45),
+    0 0px 1px #000;
   letter-spacing: 0.02em;
   padding-left: 12px !important;
   padding-right: 12px !important;
   font-size: 1.08rem;
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-  background: rgba(255, 255, 255, 0.10) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(2px);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(31, 38, 135, 0.10);
+  box-shadow: 0 2px 8px rgba(31, 38, 135, 0.1);
 }
 
 .glass-input .v-field__overlay {
@@ -314,7 +322,9 @@ async function handleRegister() {
 
 .v-label {
   color: #fff !important;
-  text-shadow: 0 1px 6px rgba(30, 30, 60, 0.45), 0 0px 1px #000;
+  text-shadow:
+    0 1px 6px rgba(30, 30, 60, 0.45),
+    0 0px 1px #000;
 }
 
 ::placeholder {
@@ -329,7 +339,9 @@ async function handleRegister() {
 .glass-card .v-list-item-title,
 .glass-card .v-list-item-subtitle {
   color: #fff !important;
-  text-shadow: 0 1px 6px rgba(30, 30, 60, 0.45), 0 0px 1px #000;
+  text-shadow:
+    0 1px 6px rgba(30, 30, 60, 0.45),
+    0 0px 1px #000;
 }
 
 .text-blue-300 {
@@ -343,7 +355,9 @@ async function handleRegister() {
 }
 
 .v-btn {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .v-btn:hover {
@@ -362,7 +376,7 @@ async function handleRegister() {
 }
 
 .create-account-btn:not(.v-btn--disabled) {
-  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%) !important;
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%) !important;
   color: white !important;
   font-weight: 600 !important;
   letter-spacing: 0.5px;
@@ -370,7 +384,7 @@ async function handleRegister() {
 }
 
 .create-account-btn:not(.v-btn--disabled):hover {
-  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%) !important;
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%) !important;
   box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4) !important;
   transform: translateY(-2px);
 }
