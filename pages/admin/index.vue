@@ -1,5 +1,5 @@
 <template>
-  <v-container class="d-flex align-center justify-center" style="min-height: 100vh;">
+  <v-container class="d-flex align-center justify-center" style="min-height: 100vh">
     <v-card class="pa-6" elevation="8" max-width="420">
       <v-card-title class="text-h5 font-weight-bold mb-4">Login</v-card-title>
       <v-form ref="formRef" v-model="valid" @submit.prevent="handleLogin">
@@ -8,7 +8,10 @@
           label="Email"
           type="email"
           autocomplete="email"
-          :rules="[(v: string) => !!v || 'Email is required', (v: string) => /.+@.+\..+/.test(v) || 'E-mail must be valid']"
+          :rules="[
+            (v: string) => !!v || 'Email is required',
+            (v: string) => /.+@.+\..+/.test(v) || 'E-mail must be valid',
+          ]"
           required
           class="mb-3"
           aria-label="Enter your email address"
@@ -33,19 +36,22 @@
         >
           Login
         </v-btn>
-        <v-alert
-          v-if="error"
-          type="error"
-          class="mt-3"
-          aria-live="assertive"
-        >
+        <v-alert v-if="error" type="error" class="mt-3" aria-live="assertive">
           {{ error }}
         </v-alert>
         <v-row justify="space-between" class="mt-4">
-          <v-btn variant="text" aria-label="Go to the registration page" @click="() => navigateTo('/auth/register')">
+          <v-btn
+            variant="text"
+            aria-label="Go to the registration page"
+            @click="() => navigateTo('/auth/register')"
+          >
             Register
           </v-btn>
-          <v-btn variant="text" aria-label="Go to the forgot password page" @click="() => navigateTo('/auth/reset')">
+          <v-btn
+            variant="text"
+            aria-label="Go to the forgot password page"
+            @click="() => navigateTo('/auth/reset')"
+          >
             Forgot Password?
           </v-btn>
         </v-row>
@@ -55,41 +61,41 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'auth' })
+definePageMeta({ layout: 'auth' });
 
-import { ref } from 'vue'
-import { useNuxtApp, navigateTo } from 'nuxt/app'
+import { navigateTo, useNuxtApp } from 'nuxt/app';
+import { ref } from 'vue';
 
-const email = ref('')
-const password = ref('')
-const valid = ref(true)
-const loading = ref(false)
-const error = ref('')
-const formRef = ref()
+const email = ref('');
+const password = ref('');
+const valid = ref(true);
+const loading = ref(false);
+const error = ref('');
+const formRef = ref();
 
-const { $supabase } = useNuxtApp()
+const { $supabase } = useNuxtApp();
 
 async function handleLogin() {
-  error.value = ''
-  const isValid = await formRef.value?.validate()
-  if (!isValid) return
-
-  loading.value = true
-  const { data, error: loginError } = await $supabase.auth.signInWithPassword({
+  error.value = '';
+  const isValid = await formRef.value?.validate();
+  if (!isValid) return;
+  loading.value = true;
+  const supabase = useSupabaseClient();
+  const { data, error: loginError } = await supabase.auth.signInWithPassword({
     email: email.value,
     password: password.value,
-  })
+  });
 
-  loading.value = false
+  loading.value = false;
 
   if (loginError) {
     if (loginError.status === 400) {
-      error.value = 'Incorrect email or password.'
+      error.value = 'Incorrect email or password.';
     } else {
-      error.value = loginError.message || 'An error occurred. Please try again.'
+      error.value = loginError.message || 'An error occurred. Please try again.';
     }
   } else if (data?.session) {
-    await navigateTo('/dashboard')
+    await navigateTo('/dashboard');
   }
 }
 </script>
@@ -105,16 +111,16 @@ async function handleLogin() {
   text-align: center;
 }
 .admin-glass-card {
-  background: rgba(255,255,255,0.10);
-  box-shadow: 0 8px 32px 0 rgba(31,38,135,0.15);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
   border-radius: 1.5rem;
-  border: 1px solid rgba(255,255,255,0.18);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: background 0.3s;
 }
 :root.dark .admin-glass-card {
-  background: rgba(30,41,59,0.25);
-  border-color: rgba(255,255,255,0.10);
+  background: rgba(30, 41, 59, 0.25);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 </style>

@@ -17,7 +17,13 @@ export interface AnalyticsPipeline {
 export interface PipelineStep {
   id: string;
   pipeline_id: string;
-  step_type: 'DataInput' | 'DataValidation' | 'SmartProcessing' | 'MLAnalytics' | 'Visualization' | 'ReportGeneration';
+  step_type:
+    | 'DataInput'
+    | 'DataValidation'
+    | 'SmartProcessing'
+    | 'MLAnalytics'
+    | 'Visualization'
+    | 'ReportGeneration';
   name: string;
   description?: string;
   position: number;
@@ -80,7 +86,9 @@ export interface ValidationRule {
 
 // Insert/Update Types
 export type AnalyticsPipelineInsert = Omit<AnalyticsPipeline, 'id' | 'created_at' | 'updated_at'>;
-export type AnalyticsPipelineUpdate = Partial<Omit<AnalyticsPipeline, 'id' | 'created_at' | 'updated_at'>>;
+export type AnalyticsPipelineUpdate = Partial<
+  Omit<AnalyticsPipeline, 'id' | 'created_at' | 'updated_at'>
+>;
 
 export type PipelineStepInsert = Omit<PipelineStep, 'id' | 'created_at' | 'updated_at'>;
 export type PipelineStepUpdate = Partial<Omit<PipelineStep, 'id' | 'created_at' | 'updated_at'>>;
@@ -92,7 +100,9 @@ export type DataSourceInsert = Omit<DataSource, 'id' | 'created_at' | 'updated_a
 export type DataSourceUpdate = Partial<Omit<DataSource, 'id' | 'created_at' | 'updated_at'>>;
 
 export type ValidationRuleInsert = Omit<ValidationRule, 'id' | 'created_at' | 'updated_at'>;
-export type ValidationRuleUpdate = Partial<Omit<ValidationRule, 'id' | 'created_at' | 'updated_at'>>;
+export type ValidationRuleUpdate = Partial<
+  Omit<ValidationRule, 'id' | 'created_at' | 'updated_at'>
+>;
 
 // Combined types for frontend use
 export interface PipelineWithSteps extends AnalyticsPipeline {

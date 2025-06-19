@@ -36,6 +36,9 @@ export default defineNuxtConfig({
     },
   },
   runtimeConfig: {
+    // Private keys (only available on server-side)
+    ollamaHost: process.env.OLLAMA_HOST ?? 'http://localhost:11434',
+    ollamaModel: process.env.OLLAMA_MODEL ?? 'llama3.2:latest',
     public: {
       supabaseUrl: process.env.SUPABASE_URL ?? 'http://127.0.0.1:8000',
       supabaseAnonKey:

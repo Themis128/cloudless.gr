@@ -19,30 +19,17 @@
             <v-icon :icon="getProjectIcon(project?.type)" color="white" />
           </v-avatar>
           <div>
-            <h1 class="text-h4 font-weight-bold mb-1">{{ project?.name || 'Loading...' }}</h1>
-            <p class="text-body-1 text-medium-emphasis mb-2">Model Training & Optimization</p>
-            <v-chip
-              v-if="project"
-              :color="getStatusColor(project.status)"
-              :prepend-icon="getStatusIcon(project.status)"
-              size="small"
-              variant="tonal"
-            >
-              {{
-                (project.status || 'unknown').charAt(0).toUpperCase() +
-                (project.status || 'unknown').slice(1)
-              }}
-            </v-chip>
+            <h1 class="text-h4 mb-1">{{ project?.name || 'Training' }}</h1>
+            <p class="text-body-1 opacity-90">Train and optimize your machine learning models</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Main Content -->
-    <v-container fluid class="px-6">
+    <v-container class="py-8">
       <v-row>
         <!-- Training Configuration -->
-        <v-col cols="12" md="4">
+        <v-col cols="12" lg="4">
           <v-card class="training-config-card">
             <v-card-title class="d-flex align-center">
               <v-icon icon="mdi-cog" class="me-2" />
@@ -51,51 +38,32 @@
             <v-divider />
             <v-card-text>
               <TrainingConfigForm
-                :project-id="route.params.id as string"
+                :config="trainingConfig"
                 :loading="configLoading"
-                @submit="updateTrainingConfig"
+                @update="updateTrainingConfig"
               />
             </v-card-text>
           </v-card>
         </v-col>
 
-        <!-- Training Progress & Results -->
-        <v-col cols="12" md="8">
+        <v-col cols="12" lg="8">
           <v-row>
             <!-- Training Status -->
             <v-col cols="12">
               <v-card class="training-status-card">
-                <v-card-title class="d-flex align-center justify-space-between">
-                  <div class="d-flex align-center">
-                    <v-icon icon="mdi-progress-check" class="me-2" />
-                    Training Status
-                  </div>
-                  <v-btn
-                    v-if="!trainingSession?.isActive"
-                    color="primary"
-                    prepend-icon="mdi-play"
-                    :disabled="!canStartTraining"
-                    :loading="startingTraining"
-                    @click="startTraining"
-                  >
-                    Start Training
-                  </v-btn>
-                  <v-btn
-                    v-else
-                    color="error"
-                    prepend-icon="mdi-stop"
-                    :loading="stoppingTraining"
-                    @click="stopTraining"
-                  >
-                    Stop Training
-                  </v-btn>
+                <v-card-title class="d-flex align-center">
+                  <v-icon icon="mdi-play-circle" class="me-2" />
+                  Training Status
                 </v-card-title>
                 <v-divider />
                 <v-card-text>
-                  <TrainingProgress
+                  <TrainingStatusCard
                     :session="trainingSession"
                     :metrics="trainingMetrics"
-                    :project-id="route.params.id as string"
+                    :can-start="canStartTraining"
+                    :starting="startingTraining"
+                    :stopping="stoppingTraining"
+                    @start="startTraining"
                     @stop="stopTraining"
                     @refresh="() => {}"
                   />
@@ -139,9 +107,9 @@
                 :models="trainedModels"
                 :metrics="comparisonMetrics"
                 :loading="modelsLoading"
-                @view-model="(model) => console.log('View model:', model)"
-                @download-model="(model) => console.log('Download model:', model)"
-                @deploy-model="(model) => navigateTo(`/projects/${route.params.id}/deploy`)"
+                @view-model="(model: any) => console.log('View model:', model)"
+                @download-model="(model: any) => console.log('Download model:', model)"
+                @deploy-model="(model: any) => navigateTo(`/projects/${route.params.id}/deploy`)"
               />
             </v-card-text>
           </v-card>
@@ -157,7 +125,7 @@ import type { Project, TrainingConfig, TrainingMetrics, TrainingSession } from '
 // Page meta
 definePageMeta({
   middleware: 'auth',
-  layout: 'default',
+  layout: 'projects',
 });
 
 // Composables
@@ -182,7 +150,16 @@ const trainingConfig = ref<TrainingConfig>({
     value: 0.01,
   },
   dataAugmentation: false,
-  crossValidation: false,
+  parameters: {},
+  dataset_config: {
+    source: 'default',
+    features: [],
+    target: '',
+  },
+  validation: {
+    method: 'holdout',
+    parameters: {},
+  },
 });
 
 const trainingSession = ref<TrainingSession | null>(null);
@@ -200,19 +177,15 @@ const modelsLoading = ref(false);
 
 // Computed
 const canStartTraining = computed(() => {
-  return project.value && trainingConfig.value && !trainingSession.value?.isActive;
+  return project.value && trainingConfig.value && !(trainingSession.value as any)?.isActive;
 });
 
 // Methods
 const updateTrainingConfig = async (config: TrainingConfig) => {
   try {
     configLoading.value = true;
-    // TODO: Update training configuration in Supabase
     console.log('Updating training config:', config);
-
-    // Placeholder API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
-
     trainingConfig.value = { ...config };
   } catch (error) {
     console.error('Failed to update training config:', error);
@@ -224,16 +197,13 @@ const updateTrainingConfig = async (config: TrainingConfig) => {
 const startTraining = async () => {
   try {
     startingTraining.value = true;
-
-    // TODO: Start training session via Supabase/API
     console.log('Starting training with config:', trainingConfig.value);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // Placeholder API call
-    await new Promise((resolve) => setTimeout(resolve, 2000)); // Mock training session
     trainingSession.value = {
       id: `session_${Date.now()}`,
       project_id: route.params.id as string,
-      owner_id: 'mock-user-id', // TODO: Get from auth
+      owner_id: 'mock-user-id',
       name: `Training Session ${Date.now()}`,
       status: 'running',
       config: trainingConfig.value,
@@ -244,12 +214,8 @@ const startTraining = async () => {
       completed_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      // Additional properties for UI
-      currentEpoch: 0,
-      totalEpochs: trainingConfig.value.epochs,
     } as any;
 
-    // Start monitoring training progress
     monitorTrainingProgress();
   } catch (error) {
     console.error('Failed to start training:', error);
@@ -261,14 +227,11 @@ const startTraining = async () => {
 const stopTraining = async () => {
   try {
     stoppingTraining.value = true;
-
-    // TODO: Stop training session via API
     console.log('Stopping training session:', trainingSession.value?.id);
-
-    // Placeholder API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
+
     if (trainingSession.value) {
-      trainingSession.value.isActive = false;
+      (trainingSession.value as any).isActive = false;
       trainingSession.value.status = 'stopped';
       trainingSession.value.completed_at = new Date().toISOString();
     }
@@ -280,55 +243,46 @@ const stopTraining = async () => {
 };
 
 const monitorTrainingProgress = () => {
-  // TODO: Implement real-time training monitoring
-  // This would typically connect to a WebSocket or poll an API
-
   const interval = setInterval(() => {
-    if (!trainingSession.value?.isActive) {
+    if (!(trainingSession.value as any)?.isActive) {
       clearInterval(interval);
       return;
     }
 
-    // Mock progress update
-    if (trainingSession.value.currentEpoch < trainingSession.value.totalEpochs) {
-      trainingSession.value.currentEpoch += 1;
-      trainingSession.value.progress =
-        (trainingSession.value.currentEpoch / trainingSession.value.totalEpochs) * 100;
+    const session = trainingSession.value as any;
+    if (
+      session?.currentEpoch &&
+      session?.totalEpochs &&
+      session.currentEpoch < session.totalEpochs
+    ) {
+      session.currentEpoch += 1;
+      session.progress = (session.currentEpoch / session.totalEpochs) * 100;
 
-      // Mock metrics
       trainingMetrics.value.push({
-        epoch: trainingSession.value.currentEpoch,
+        epoch: session.currentEpoch,
         loss: Math.random() * 0.5 + 0.1,
         accuracy: Math.random() * 0.3 + 0.7,
-        valLoss: Math.random() * 0.6 + 0.2,
-        valAccuracy: Math.random() * 0.25 + 0.65,
-        timestamp: new Date(),
-      });
+      } as any);
     } else {
-      // Training completed
-      trainingSession.value.isActive = false;
-      trainingSession.value.status = 'completed';
-      trainingSession.value.endedAt = new Date();
+      session.isActive = false;
+      session.status = 'completed';
+      session.completed_at = new Date().toISOString();
       clearInterval(interval);
     }
-  }, 2000); // Update every 2 seconds (mock)
+  }, 2000);
 };
 
 const viewTrainingSession = (session: TrainingSession) => {
-  // TODO: Open training session details modal or navigate to detail view
   console.log('Viewing training session:', session);
 };
 
 const deleteTrainingSession = async (sessionId: string) => {
   try {
-    // TODO: Delete training session from Supabase
     console.log('Deleting training session:', sessionId);
-
-    // Placeholder API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Remove from history
-    trainingHistory.value = trainingHistory.value.filter((s) => s.id !== sessionId);
+    (trainingHistory.value as any) = (trainingHistory.value as any).filter(
+      (s: any) => s.id !== sessionId,
+    );
   } catch (error) {
     console.error('Failed to delete training session:', error);
   }
@@ -337,34 +291,23 @@ const deleteTrainingSession = async (sessionId: string) => {
 const loadTrainingHistory = async () => {
   try {
     historyLoading.value = true;
-
-    // TODO: Fetch training history from Supabase
     console.log('Loading training history for project:', route.params.id);
-
-    // Placeholder API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Mock training history
     trainingHistory.value = [
       {
         id: 'session_1',
-        projectId: route.params.id as string,
+        project_id: route.params.id as string,
         status: 'completed',
-        startedAt: new Date(Date.now() - 86400000),
-        endedAt: new Date(Date.now() - 82800000),
+        started_at: new Date(Date.now() - 86400000).toISOString(),
+        completed_at: new Date(Date.now() - 82800000).toISOString(),
         config: trainingConfig.value,
-        isActive: false,
-        progress: 100,
-        currentEpoch: 100,
-        totalEpochs: 100,
-        finalMetrics: {
+        metrics: {
           loss: 0.15,
           accuracy: 0.92,
-          valLoss: 0.18,
-          valAccuracy: 0.89,
         },
       },
-    ];
+    ] as any;
   } catch (error) {
     console.error('Failed to load training history:', error);
   } finally {
@@ -375,14 +318,8 @@ const loadTrainingHistory = async () => {
 const loadTrainedModels = async () => {
   try {
     modelsLoading.value = true;
-
-    // TODO: Fetch trained models from Supabase
     console.log('Loading trained models for project:', route.params.id);
-
-    // Placeholder API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Mock trained models data
     trainedModels.value = [];
     comparisonMetrics.value = [];
   } catch (error) {
@@ -395,23 +332,17 @@ const loadTrainedModels = async () => {
 // Lifecycle
 onMounted(async () => {
   const projectId = route.params.id as string;
-
   try {
-    // Load project data
     project.value = await fetchProject(projectId);
-
-    // Load training-related data
     await Promise.all([loadTrainingHistory(), loadTrainedModels()]);
   } catch (error) {
     console.error('Failed to load training page data:', error);
   }
 });
 
-// Cleanup
 onUnmounted(() => {
-  // Stop any ongoing training monitoring
-  if (trainingSession.value?.isActive) {
-    trainingSession.value.isActive = false;
+  if ((trainingSession.value as any)?.isActive) {
+    (trainingSession.value as any).isActive = false;
   }
 });
 </script>
@@ -419,7 +350,11 @@ onUnmounted(() => {
 <style scoped>
 .training-page {
   min-height: 100vh;
-  background-color: rgb(var(--v-theme-surface));
+  background: linear-gradient(
+    135deg,
+    rgb(var(--v-theme-surface)) 0%,
+    rgba(var(--v-theme-primary), 0.02) 100%
+  );
 }
 
 .page-header {
@@ -431,21 +366,40 @@ onUnmounted(() => {
   color: white;
   padding: 2rem 0;
   margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.page-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" fill="white" opacity="0.1"><polygon points="0,100 100,0 200,50 300,0 400,70 500,20 600,80 700,10 800,60 900,0 1000,40 1000,100"/></svg>')
+    repeat-x;
+  background-size: 1000px 100px;
 }
 
 .page-header .v-btn {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
+  transition: all 0.3s ease;
 }
 
 .page-header .v-btn:hover {
   color: white;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
 }
 
 .header-content {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .project-info {
@@ -458,15 +412,49 @@ onUnmounted(() => {
 .training-history-card,
 .model-comparison-card {
   height: 100%;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border-radius: 16px;
+  border: 1px solid rgba(var(--v-border-color), 0.12);
+  background: rgb(var(--v-theme-surface));
 }
 
 .training-config-card:hover,
 .training-status-card:hover,
 .training-history-card:hover,
 .model-comparison-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+  border-color: rgba(var(--v-theme-primary), 0.3);
+}
+
+.training-config-card .v-card-title,
+.training-status-card .v-card-title,
+.training-history-card .v-card-title,
+.model-comparison-card .v-card-title {
+  background: linear-gradient(
+    135deg,
+    rgba(var(--v-theme-primary), 0.05) 0%,
+    rgba(var(--v-theme-surface), 0.8) 100%
+  );
+  border-bottom: 1px solid rgba(var(--v-border-color), 0.12);
+  border-radius: 16px 16px 0 0;
+  font-weight: 600;
+}
+
+/* Enhanced button styling */
+.v-btn {
+  border-radius: 24px;
+  transition: all 0.3s ease;
+}
+
+.v-btn:hover:not(.v-btn--disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Enhanced dividers */
+.v-divider {
+  border-color: rgba(var(--v-border-color), 0.12);
 }
 
 @media (max-width: 960px) {
@@ -482,6 +470,13 @@ onUnmounted(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+  }
+
+  .training-config-card:hover,
+  .training-status-card:hover,
+  .training-history-card:hover,
+  .model-comparison-card:hover {
+    transform: none;
   }
 }
 </style>

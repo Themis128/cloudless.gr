@@ -11,8 +11,8 @@ export const usePipeline = (projectId: string) => {
       loading.value = true;
       error.value = null;
 
-      // TODO: Replace with actual API call
-      const response = (await $fetch(`/api/projects/${projectId}`)) as { data: Project };
+      // Fetch the project data from the API
+      const response = await $fetch<{ data: Project }>(`/api/projects/${projectId}`);
       project.value = response.data;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to fetch project';
@@ -26,14 +26,13 @@ export const usePipeline = (projectId: string) => {
     try {
       loading.value = true;
 
-      // TODO: Replace with actual API call
       await $fetch(`/api/projects/${projectId}/pipeline`, {
         method: 'PUT',
         body: { config },
       });
 
       if (project.value) {
-        project.value.config = { ...project.value.config, pipeline: config };
+        (project.value as any).config = { ...(project.value as any).config, pipeline: config };
       }
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to update pipeline';
@@ -46,26 +45,28 @@ export const usePipeline = (projectId: string) => {
   const addPipelineNode = (node: Omit<PipelineNode, 'id'>) => {
     const newNode: PipelineNode = {
       ...node,
-      id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `node_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
     };
 
     // Add to project config
-    if (project.value?.config?.pipeline?.nodes) {
-      project.value.config.pipeline.nodes.push(newNode);
+    if ((project.value as any)?.config?.pipeline?.nodes) {
+      (project.value as any).config.pipeline.nodes.push(newNode);
     }
 
     return newNode;
   };
 
   const removePipelineNode = (nodeId: string) => {
-    if (project.value?.config?.pipeline) {
+    if ((project.value as any)?.config?.pipeline) {
       // Remove node
-      project.value.config.pipeline.nodes = project.value.config.pipeline.nodes.filter(
-        (n: PipelineNode) => n.id !== nodeId,
-      );
+      (project.value as any).config.pipeline.nodes = (
+        project.value as any
+      ).config.pipeline.nodes.filter((n: PipelineNode) => n.id !== nodeId);
 
       // Remove connections involving this node
-      project.value.config.pipeline.connections = project.value.config.pipeline.connections.filter(
+      (project.value as any).config.pipeline.connections = (
+        project.value as any
+      ).config.pipeline.connections.filter(
         (c: PipelineConnection) => c.source !== nodeId && c.target !== nodeId,
       );
     }
@@ -74,11 +75,11 @@ export const usePipeline = (projectId: string) => {
   const addConnection = (connection: Omit<PipelineConnection, 'id'>) => {
     const newConnection: PipelineConnection = {
       ...connection,
-      id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `conn_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
     };
 
-    if (project.value?.config?.pipeline?.connections) {
-      project.value.config.pipeline.connections.push(newConnection);
+    if ((project.value as any)?.config?.pipeline?.connections) {
+      (project.value as any).config.pipeline.connections.push(newConnection);
     }
 
     return newConnection;

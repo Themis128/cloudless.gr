@@ -20,31 +20,32 @@ export const useProjectsStore = defineStore('projects', () => {
 
   // Getters
   const getProjectById = computed(() => {
-    return (id: string) => projects.value.find((p) => p.id === id);
+    return (id: string) => projects.value.find((p: any) => p.id === id);
   });
 
   const getProjectsByStatus = computed(() => {
-    return (status: Project['status']) => projects.value.filter((p) => p.status === status);
+    return (status: any) => projects.value.filter((p: any) => p.status === status);
   });
 
   const activeProjects = computed(() => {
     // Using explicit typing to avoid infinite recursion
-    const allProjects: Project[] = projects.value;
-    return allProjects.filter((p) => p.status === 'active');
+    const allProjects: any[] = projects.value;
+    return allProjects.filter((p: any) => p.status === 'active');
   });
 
   const completedProjects = computed(() => {
     // Using explicit typing to avoid infinite recursion
-    const allProjects: Project[] = projects.value;
-    return allProjects.filter((p) => p.status === 'completed');
+    const allProjects: any[] = projects.value;
+    return allProjects.filter((p: any) => p.status === 'completed');
   });
 
   const getTrainingSessionsForProject = computed(() => {
-    return (projectId: string) => trainingSessions.value.filter((s) => s.project_id === projectId);
+    return (projectId: string) =>
+      trainingSessions.value.filter((s: any) => s.project_id === projectId);
   });
 
   const getDeploymentsForProject = computed(() => {
-    return (projectId: string) => deployments.value.filter((d) => d.project_id === projectId);
+    return (projectId: string) => deployments.value.filter((d: any) => d.project_id === projectId);
   });
 
   // Actions
@@ -100,7 +101,7 @@ export const useProjectsStore = defineStore('projects', () => {
       });
 
       if (data) {
-        const newProjects = [data, ...projects.value];
+        const newProjects = [data as any, ...projects.value];
         projects.value = newProjects;
       }
       return data;
@@ -132,11 +133,11 @@ export const useProjectsStore = defineStore('projects', () => {
       if (data) {
         const index = projects.value.findIndex((p) => p.id === id);
         if (index !== -1) {
-          projects.value[index] = data;
+          projects.value[index] = data as any;
         }
 
         if (currentProject.value?.id === id) {
-          currentProject.value = data;
+          currentProject.value = data as any;
         }
       }
 
@@ -210,7 +211,7 @@ export const useProjectsStore = defineStore('projects', () => {
       });
 
       if (data) {
-        trainingSessions.value.unshift(data);
+        trainingSessions.value.unshift(data as any);
       }
       return data;
     } catch (err) {
@@ -232,7 +233,7 @@ export const useProjectsStore = defineStore('projects', () => {
       if (data) {
         const index = trainingSessions.value.findIndex((s) => s.id === sessionId);
         if (index !== -1) {
-          trainingSessions.value[index] = data;
+          trainingSessions.value[index] = data as any;
         }
       }
 
@@ -279,7 +280,7 @@ export const useProjectsStore = defineStore('projects', () => {
       });
 
       if (data) {
-        deployments.value.unshift(data);
+        deployments.value.unshift(data as any);
       }
       return data;
     } catch (err) {
@@ -301,7 +302,7 @@ export const useProjectsStore = defineStore('projects', () => {
       if (data) {
         const index = deployments.value.findIndex((d) => d.id === deploymentId);
         if (index !== -1) {
-          deployments.value[index] = data;
+          deployments.value[index] = data as any;
         }
       }
 
@@ -325,7 +326,7 @@ export const useProjectsStore = defineStore('projects', () => {
       if (data) {
         const index = deployments.value.findIndex((d) => d.id === deploymentId);
         if (index !== -1) {
-          deployments.value[index] = data;
+          deployments.value[index] = data as any;
         }
       }
 

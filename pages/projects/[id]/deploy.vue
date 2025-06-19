@@ -292,26 +292,30 @@ const deployModel = async () => {
 
     // Simulate model deployment
     console.log('Deploying model with config:', deploymentConfig.value);
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    // Create mock active deployment
+    await new Promise((resolve) => setTimeout(resolve, 3000)); // Create mock active deployment
     const newDeployment: Deployment = {
       id: `deployment_${Date.now()}`,
-      projectId: route.params.id as string,
-      environment: deploymentConfig.value.environment,
+      project_id: route.params.id as string,
+      model_version_id: null,
+      name: `Deployment ${Date.now()}`,
+      environment: deploymentConfig.value.environment || 'staging',
       status: 'running',
+      endpoint_url: `https://${deploymentConfig.value.environment}-${route.params.id}.example.com`,
+      config: deploymentConfig.value as any,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      // Additional UI properties
       version: `v${Date.now()}`,
+      projectId: route.params.id as string,
       createdAt: new Date(),
-      config: deploymentConfig.value,
       url: `https://${deploymentConfig.value.environment}-${route.params.id}.example.com`,
       healthStatus: 'healthy',
-    };
-
-    activeDeployments.value.push(newDeployment);
-    activeDeployment.value = newDeployment;
+    } as any;
+    activeDeployments.value.push(newDeployment as any);
+    activeDeployment.value = newDeployment as any;
 
     // Add to history
-    deploymentHistory.value.unshift(newDeployment);
+    (deploymentHistory.value as any).unshift(newDeployment);
 
     // Generate API endpoints
     generateApiEndpoints(newDeployment);
@@ -330,11 +334,9 @@ const stopDeployment = async () => {
 
     // Simulate stopping deployment
     console.log('Stopping deployment:', activeDeployment.value.id);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Update deployment status
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // Update deployment status
     activeDeployment.value.status = 'stopped';
-    activeDeployment.value.stoppedAt = new Date();
+    activeDeployment.value.stoppedAt = new Date().toISOString();
 
     // Remove from active deployments
     activeDeployments.value = activeDeployments.value.filter(
@@ -582,33 +584,56 @@ onMounted(async () => {
 <style scoped>
 .deployment-page {
   min-height: 100vh;
-  background-color: rgb(var(--v-theme-surface));
+  background: linear-gradient(
+    135deg,
+    rgb(var(--v-theme-surface)) 0%,
+    rgba(var(--v-theme-info), 0.02) 100%
+  );
 }
 
 .page-header {
   background: linear-gradient(
     135deg,
-    rgb(var(--v-theme-primary)) 0%,
-    rgb(var(--v-theme-secondary)) 100%
+    rgb(var(--v-theme-info)) 0%,
+    rgb(var(--v-theme-primary)) 100%
   );
   color: white;
   padding: 2rem 0;
   margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.page-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" fill="white" opacity="0.08"><circle cx="100" cy="50" r="20"/><circle cx="300" cy="30" r="15"/><circle cx="500" cy="60" r="25"/><circle cx="700" cy="20" r="10"/><circle cx="900" cy="40" r="18"/></svg>')
+    repeat-x;
+  background-size: 1000px 100px;
 }
 
 .page-header .v-btn {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
+  transition: all 0.3s ease;
 }
 
 .page-header .v-btn:hover {
   color: white;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
 }
 
 .header-content {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .project-info {
@@ -622,7 +647,11 @@ onMounted(async () => {
 .deployment-history-card,
 .monitoring-card {
   height: 100%;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border-radius: 16px;
+  border: 1px solid rgba(var(--v-border-color), 0.12);
+  background: rgb(var(--v-theme-surface));
+  overflow: hidden;
 }
 
 .deployment-config-card:hover,
@@ -630,12 +659,74 @@ onMounted(async () => {
 .api-endpoints-card:hover,
 .deployment-history-card:hover,
 .monitoring-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-8px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+  border-color: rgba(var(--v-theme-info), 0.3);
+}
+
+.deployment-config-card .v-card-title,
+.deployment-status-card .v-card-title,
+.api-endpoints-card .v-card-title,
+.deployment-history-card .v-card-title,
+.monitoring-card .v-card-title {
+  background: linear-gradient(
+    135deg,
+    rgba(var(--v-theme-info), 0.05) 0%,
+    rgba(var(--v-theme-surface), 0.8) 100%
+  );
+  border-bottom: 1px solid rgba(var(--v-border-color), 0.12);
+  font-weight: 600;
+  padding: 20px;
 }
 
 .deployment-actions {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+}
+
+.deployment-actions .v-btn {
+  border-radius: 28px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.5px;
+}
+
+.deployment-actions .v-btn:hover:not(.v-btn--disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* Status indicators */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.status-indicator.active {
+  background: rgba(var(--v-theme-success), 0.1);
+  color: rgb(var(--v-theme-success));
+  border: 1px solid rgba(var(--v-theme-success), 0.2);
+}
+
+.status-indicator.deploying {
+  background: rgba(var(--v-theme-warning), 0.1);
+  color: rgb(var(--v-theme-warning));
+  border: 1px solid rgba(var(--v-theme-warning), 0.2);
+}
+
+.status-indicator.stopped {
+  background: rgba(var(--v-theme-error), 0.1);
+  color: rgb(var(--v-theme-error));
+  border: 1px solid rgba(var(--v-theme-error), 0.2);
+}
+
+/* Enhanced dividers */
+.v-divider {
+  border-color: rgba(var(--v-border-color), 0.12);
 }
 
 @media (max-width: 960px) {
@@ -651,6 +742,14 @@ onMounted(async () => {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+  }
+
+  .deployment-config-card:hover,
+  .deployment-status-card:hover,
+  .api-endpoints-card:hover,
+  .deployment-history-card:hover,
+  .monitoring-card:hover {
+    transform: none;
   }
 }
 </style>

@@ -50,7 +50,7 @@ export async function updateProfile(
 
 // Safe status display for any nullable status
 export function isAdminUser(profile: Profile | null): boolean {
-  return profile?.role === 'admin' || profile?.is_admin === true;
+  return profile?.role === 'admin';
 }
 
 // Check if user is active

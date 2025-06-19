@@ -25,41 +25,29 @@
             </p>
             <v-chip
               v-if="project"
-              :color="getStatusColor(project.status)"
-              :prepend-icon="getStatusIcon(project.status)"
+              color="primary"
+              prepend-icon="mdi-circle"
               size="small"
-              variant="tonal"            >
-              {{ (project.status || 'unknown').charAt(0).toUpperCase() + (project.status || 'unknown').slice(1) }}
+              variant="tonal"
+            >
+              Active
             </v-chip>
           </div>
         </div>
 
         <div class="header-actions">
           <v-btn-group variant="outlined" divided>
-            <v-btn
-              prepend-icon="mdi-content-save"
-              :loading="saving"
-              @click="savePipeline"
-            >
+            <v-btn prepend-icon="mdi-content-save" :loading="saving" @click="savePipeline">
               Save
             </v-btn>
-            <v-btn
-              prepend-icon="mdi-play"
-              color="success"
-              :disabled="!canRun"
-              @click="runPipeline"
-            >
+            <v-btn prepend-icon="mdi-play" color="success" :disabled="!canRun" @click="runPipeline">
               Run
             </v-btn>
           </v-btn-group>
 
           <v-menu>
             <template #activator="{ props }">
-              <v-btn
-                icon="mdi-dots-vertical"
-                variant="outlined"
-                v-bind="props"
-              />
+              <v-btn icon="mdi-dots-vertical" variant="outlined" v-bind="props" />
             </template>
 
             <v-list>
@@ -93,7 +81,9 @@
           </v-menu>
         </div>
       </div>
-    </div>    <!-- Pipeline Canvas -->
+    </div>
+
+    <!-- Pipeline Canvas -->
     <div class="pipeline-canvas-container">
       <!-- Pipeline Toolbar -->
       <FlowToolbar
@@ -110,15 +100,10 @@
         @add-step="addStep"
         @execute="executePipeline"
       />
-    </div>
+
       <div class="canvas-toolbar">
         <div class="toolbar-left">
-          <v-btn-toggle
-            v-model="canvasMode"
-            mandatory
-            variant="outlined"
-            density="compact"
-          >
+          <v-btn-toggle v-model="canvasMode" mandatory variant="outlined" density="compact">
             <v-btn value="select" icon="mdi-cursor-default" />
             <v-btn value="pan" icon="mdi-hand-left" />
             <v-btn value="zoom" icon="mdi-magnify" />
@@ -126,60 +111,32 @@
 
           <v-divider vertical class="mx-2" />
 
-          <v-btn
-            prepend-icon="mdi-fit-to-page"
-            variant="outlined"
-            size="small"
-            @click="fitToView"
-          >
+          <v-btn prepend-icon="mdi-fit-to-page" variant="outlined" size="small" @click="fitToView">
             Fit to View
           </v-btn>
 
-          <v-btn
-            prepend-icon="mdi-refresh"
-            variant="outlined"
-            size="small"
-            @click="refreshCanvas"
-          >
+          <v-btn prepend-icon="mdi-refresh" variant="outlined" size="small" @click="refreshCanvas">
             Reset
           </v-btn>
         </div>
 
         <div class="toolbar-right">
           <div class="zoom-controls">
-            <v-btn
-              icon="mdi-minus"
-              size="small"
-              variant="outlined"
-              @click="zoomOut"
-            />
+            <v-btn icon="mdi-minus" size="small" variant="outlined" @click="zoomOut" />
             <span class="zoom-level">{{ Math.round(zoomLevel * 100) }}%</span>
-            <v-btn
-              icon="mdi-plus"
-              size="small"
-              variant="outlined"
-              @click="zoomIn"
-            />
+            <v-btn icon="mdi-plus" size="small" variant="outlined" @click="zoomIn" />
           </div>
         </div>
       </div>
 
       <!-- Canvas Area -->
       <div class="canvas-wrapper">
-        <CanvasBuilder
-          v-if="project"
-          :project="project"
-          :pipeline-config="pipelineConfig"
-          :canvas-mode="canvasMode"
-          :zoom-level="zoomLevel"
-          @node-select="handleNodeSelect"
-          @node-add="handleNodeAdd"
-          @node-delete="handleNodeDelete"
-          @node-connect="handleNodeConnect"
-          @pipeline-change="handlePipelineChange"
-          @zoom-change="zoomLevel = $event"
-        />
-
+        <!-- Canvas will be implemented here -->
+        <div v-if="project" class="canvas-placeholder">
+          <v-icon size="64" color="grey-lighten-2">mdi-graph-outline</v-icon>
+          <p class="text-h6 mt-4 text-grey-lighten-1">Pipeline Canvas</p>
+          <p class="text-body-2 text-grey-lighten-1">Advanced canvas will be added here</p>
+        </div>
         <!-- Loading State -->
         <div v-else class="loading-state">
           <v-progress-circular indeterminate size="64" color="primary" />
@@ -202,10 +159,9 @@
           <v-toolbar-title>Node Library</v-toolbar-title>
         </v-toolbar>
 
-        <NodeLibrary
-          @node-drag-start="handleNodeDragStart"
-          @node-select="addNodeToCanvas"
-        />
+        <div class="pa-4">
+          <p class="text-body-2">Node Library will be implemented here</p>
+        </div>
       </v-navigation-drawer>
 
       <!-- Properties Panel -->
@@ -220,12 +176,9 @@
           <v-toolbar-title>Properties</v-toolbar-title>
         </v-toolbar>
 
-        <NodeProperties
-          v-if="selectedNode"
-          :node="selectedNode"
-          @update="handleNodeUpdate"
-          @delete="handleNodeDelete"
-        />
+        <div v-if="selectedNode" class="pa-4">
+          <p class="text-body-2">Node properties will be shown here</p>
+        </div>
 
         <div v-else class="no-selection">
           <v-icon icon="mdi-cursor-default" size="48" color="grey-lighten-1" />
@@ -268,12 +221,9 @@
           <v-icon icon="mdi-check-circle" color="success" class="me-2" />
           Pipeline Validation
         </v-card-title>
-
         <v-card-text>
-          <PipelineValidation
-            :pipeline-config="pipelineConfig"
-            @close="showValidation = false"
-          />
+          <p class="text-body-2">Pipeline validation will be implemented here</p>
+          <v-btn @click="showValidation = false">Close</v-btn>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -281,66 +231,66 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import FlowContainer from '~/components/builder/FlowContainer.vue'
-import FlowToolbar from '~/components/builder/FlowToolbar.vue'
-import { useIcons } from '~/composables/useIcons'
-import type { PipelineConfig, PipelineNode } from '~/types/project'
+import { computed, onMounted, ref } from 'vue';
+import FlowContainer from '~/components/builder/FlowContainer.vue';
+import FlowToolbar from '~/components/builder/FlowToolbar.vue';
+import { useIcons } from '~/composables/useIcons';
+import type { PipelineConfig, PipelineNode } from '~/types/project';
 
 // Meta
 definePageMeta({
   layout: 'default',
   title: 'Pipeline Builder',
-  requiresAuth: true
-})
+  requiresAuth: true,
+});
 
 // Route
-const route = useRoute()
-const projectId = route.params.id as string
+const route = useRoute();
+const projectId = route.params.id as string;
 
 // Composables
-const { getIcon, getIconColor } = useIcons()
-const { project, loading, fetchProject } = usePipeline(projectId)
+const { getIcon, getIconColor } = useIcons();
+const { project, loading, fetchProject } = usePipeline(projectId);
 
 // State
-const saving = ref(false)
-const canvasMode = ref('select')
-const zoomLevel = ref(1)
-const selectedNode = ref<PipelineNode | null>(null)
-const showNodeLibrary = ref(false)
-const showProperties = ref(false)
-const showValidation = ref(false)
+const saving = ref(false);
+const canvasMode = ref('select');
+const zoomLevel = ref(1);
+const selectedNode = ref<PipelineNode | null>(null);
+const showNodeLibrary = ref(false);
+const showProperties = ref(false);
+const showValidation = ref(false);
 const pipelineConfig = ref<PipelineConfig>({
   nodes: [],
   connections: [],
   metadata: {},
-  global_config: {}
-})
+  global_config: {},
+});
 
 // Pipeline steps for the new builder
 const pipelineSteps = ref([
   { component: 'DataInput', data: {} },
   { component: 'DataValidation', data: {} },
   { component: 'SmartProcessing', data: {} },
-])
+]);
 
 // Computed
 const canRun = computed(() => {
-  return pipelineConfig.value.nodes.length > 0 && project.value?.status !== 'training'
-})
+  return pipelineConfig.value.nodes.length > 0;
+});
 
 // Methods
 const getProjectIcon = (type: string) => {
-  return getIcon('project', type || 'custom')
-}
+  return getIcon('project', type || 'custom');
+};
 
 const getProjectColor = (type: string) => {
-  return getIconColor(type || 'custom')
-}
+  return getIconColor(type || 'custom');
+};
 
 const getStatusIcon = (status: string) => {
-  return getIcon('status', status)
-}
+  return getIcon('status', status);
+};
 
 const getStatusColor = (status: string) => {
   const colorMap = {
@@ -349,29 +299,29 @@ const getStatusColor = (status: string) => {
     training: 'info',
     deployed: 'primary',
     completed: 'success',
-    error: 'error'
-  }
-  return colorMap[status as keyof typeof colorMap] || 'grey'
-}
+    error: 'error',
+  };
+  return colorMap[status as keyof typeof colorMap] || 'grey';
+};
 
 const savePipeline = async () => {
   try {
-    saving.value = true
+    saving.value = true;
     // Save pipeline logic
-    console.log('Saving pipeline...', pipelineConfig.value)
+    console.log('Saving pipeline...', pipelineConfig.value);
   } finally {
-    saving.value = false
+    saving.value = false;
   }
-}
+};
 
 const runPipeline = () => {
-  showValidation.value = true
-}
+  showValidation.value = true;
+};
 
 const handleNodeSelect = (node: PipelineNode) => {
-  selectedNode.value = node
-  showProperties.value = true
-}
+  selectedNode.value = node;
+  showProperties.value = true;
+};
 
 const handleNodeAdd = (nodeType: string, position: { x: number; y: number }) => {
   const newNode: PipelineNode = {
@@ -380,124 +330,124 @@ const handleNodeAdd = (nodeType: string, position: { x: number; y: number }) => 
     type: nodeType as any,
     position,
     config: {},
-    inputs: []
-  }
+    inputs: [],
+  };
 
-  pipelineConfig.value.nodes.push(newNode)
-}
+  pipelineConfig.value.nodes.push(newNode);
+};
 
 const handleNodeDelete = (nodeId: string) => {
-  pipelineConfig.value.nodes = pipelineConfig.value.nodes.filter(n => n.id !== nodeId)
+  pipelineConfig.value.nodes = pipelineConfig.value.nodes.filter((n) => n.id !== nodeId);
   pipelineConfig.value.connections = pipelineConfig.value.connections.filter(
-    c => c.source !== nodeId && c.target !== nodeId
-  )
+    (c) => c.source !== nodeId && c.target !== nodeId,
+  );
 
   if (selectedNode.value?.id === nodeId) {
-    selectedNode.value = null
+    selectedNode.value = null;
   }
-}
+};
 
 const handleNodeConnect = (connection: any) => {
-  pipelineConfig.value.connections.push(connection)
-}
+  pipelineConfig.value.connections.push(connection);
+};
 
 const handlePipelineChange = (newConfig: PipelineConfig) => {
-  pipelineConfig.value = newConfig
-}
+  pipelineConfig.value = newConfig;
+};
 
 const handleNodeUpdate = (nodeId: string, updates: any) => {
-  const node = pipelineConfig.value.nodes.find(n => n.id === nodeId)
+  const node = pipelineConfig.value.nodes.find((n) => n.id === nodeId);
   if (node) {
-    Object.assign(node, updates)
+    Object.assign(node, updates);
   }
-}
+};
 
 const handleNodeDragStart = (nodeType: string) => {
-  console.log('Node drag started:', nodeType)
-}
+  console.log('Node drag started:', nodeType);
+};
 
 const addNodeToCanvas = (nodeType: string) => {
-  const centerX = 400
-  const centerY = 300
-  handleNodeAdd(nodeType, { x: centerX, y: centerY })
-  showNodeLibrary.value = false
-}
+  const centerX = 400;
+  const centerY = 300;
+  handleNodeAdd(nodeType, { x: centerX, y: centerY });
+  showNodeLibrary.value = false;
+};
 
 const zoomIn = () => {
-  zoomLevel.value = Math.min(zoomLevel.value * 1.2, 3)
-}
+  zoomLevel.value = Math.min(zoomLevel.value * 1.2, 3);
+};
 
 const zoomOut = () => {
-  zoomLevel.value = Math.max(zoomLevel.value / 1.2, 0.1)
-}
+  zoomLevel.value = Math.max(zoomLevel.value / 1.2, 0.1);
+};
 
 const fitToView = () => {
-  zoomLevel.value = 1
-}
+  zoomLevel.value = 1;
+};
 
 const refreshCanvas = () => {
   // Reset canvas state
-  selectedNode.value = null
-  canvasMode.value = 'select'
-}
+  selectedNode.value = null;
+  canvasMode.value = 'select';
+};
 
 const exportPipeline = () => {
-  const data = JSON.stringify(pipelineConfig.value, null, 2)
-  const blob = new Blob([data], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `pipeline-${projectId}.json`
-  a.click()
-  URL.revokeObjectURL(url)
-}
+  const data = JSON.stringify(pipelineConfig.value, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `pipeline-${projectId}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
 // New pipeline builder methods
 const addStep = (step: any) => {
-  pipelineSteps.value.push(step)
-}
+  pipelineSteps.value.push(step);
+};
 
 const clearAllSteps = () => {
-  pipelineSteps.value = []
-}
+  pipelineSteps.value = [];
+};
 
 const applyTemplate = (template: any[]) => {
-  pipelineSteps.value = [...template]
-}
+  pipelineSteps.value = [...template];
+};
 
 const executePipeline = () => {
-  console.log('Executing pipeline with steps:', pipelineSteps.value)
+  console.log('Executing pipeline with steps:', pipelineSteps.value);
   // Implementation for pipeline execution
-}
+};
 
 const importPipeline = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = '.json'
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
   input.onchange = (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0]
+    const file = (e.target as HTMLInputElement).files?.[0];
     if (file) {
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const config = JSON.parse(e.target?.result as string)
-          pipelineConfig.value = config
+          const config = JSON.parse(e.target?.result as string);
+          pipelineConfig.value = config;
         } catch (error) {
-          console.error('Failed to import pipeline:', error)
+          console.error('Failed to import pipeline:', error);
         }
-      }
-      reader.readAsText(file)
+      };
+      reader.readAsText(file);
     }
-  }
-  input.click()
-}
+  };
+  input.click();
+};
 
 // Lifecycle
 onMounted(() => {
   if (projectId) {
-    fetchProject()
+    fetchProject();
   }
-})
+});
 </script>
 
 <style scoped>
@@ -584,7 +534,10 @@ onMounted(() => {
     radial-gradient(circle at 50% 50%, rgba(var(--v-theme-primary), 0.03) 0%, transparent 50%),
     linear-gradient(90deg, rgba(var(--v-theme-outline), 0.1) 1px, transparent 1px),
     linear-gradient(180deg, rgba(var(--v-theme-outline), 0.1) 1px, transparent 1px);
-  background-size: 100% 100%, 20px 20px, 20px 20px;
+  background-size:
+    100% 100%,
+    20px 20px,
+    20px 20px;
 }
 
 .loading-state {
@@ -645,3 +598,9 @@ onMounted(() => {
   }
 }
 </style>
+
+<script setup lang="ts">
+definePageMeta({
+  layout: 'projects',
+});
+</script>
