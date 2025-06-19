@@ -42,7 +42,7 @@
                   variant="tonal"
                   class="me-2"
                 >
-                  {{ project.status.charAt(0).toUpperCase() + project.status.slice(1) }}
+                  {{ safeStatusDisplay(project.status) }}
                 </v-chip>
                 
                 <div class="text-caption text-medium-emphasis">

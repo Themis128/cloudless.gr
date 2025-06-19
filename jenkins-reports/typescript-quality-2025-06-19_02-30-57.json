@@ -1,0 +1,24 @@
+{
+  "duplicateImports": [],
+  "warnings": [],
+  "buildNumber": "local",
+  "timestamp": "2025-06-19T02:30:57Z",
+  "typeErrors": [
+    {
+      "line": 154,
+      "message": "';' expected.\r",
+      "column": 19,
+      "code": "TS1005",
+      "file": "\r\n> cloudless.gr@1.0.0 typecheck\r\n> nuxt typecheck\r\n\r\ncomponents/auth/AdminLogin.vue",
+      "severity": "error"
+    }
+  ],
+  "summary": {
+    "errorCategories": {
+      "syntax-errors": 1
+    },
+    "totalDuplicates": 0,
+    "qualityScore": 98,
+    "totalErrors": 1
+  }
+}

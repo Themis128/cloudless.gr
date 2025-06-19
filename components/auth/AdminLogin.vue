@@ -7,24 +7,12 @@
     <v-divider class="mb-6" />
 
     <!-- Display error messages from URL params -->
-    <v-alert
-      v-if="urlError"
-      type="error"
-      class="mb-4"
-      border="start"
-      prominent
-    >
+    <v-alert v-if="urlError" type="error" class="mb-4" border="start" prominent>
       {{ getErrorMessage(urlError) }}
     </v-alert>
 
     <v-form validate-on="submit lazy" @submit.prevent="handleAdminLogin">
-      <v-alert
-        v-if="errorMsg"
-        type="error"
-        class="mb-4"
-        border="start"
-        prominent
-      >
+      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
         {{ errorMsg }}
       </v-alert>
       <v-text-field
@@ -68,14 +56,7 @@
         Login as Admin
       </v-btn>
 
-      <v-btn
-        variant="text"
-        block
-        color="primary"
-        class="mt-3"
-        to="/auth"
-        :disabled="loading"
-      >
+      <v-btn variant="text" block color="primary" class="mt-3" to="/auth" :disabled="loading">
         <v-icon left size="18">mdi-arrow-left</v-icon>
         Back to User Login
       </v-btn>
@@ -84,151 +65,160 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useSupabaseAuth } from '@/composables/useSupabaseAuth'
-import { navigateTo, useRoute } from '#app'
+import { navigateTo, useRoute } from '#app';
+import { useSupabaseAuth } from '@/composables/useSupabaseAuth';
+import { onMounted, ref } from 'vue';
+import type { Database } from '~/types/supabase-generated';
 
-const route = useRoute()
-const email = ref('')
-const password = ref('')
-const showPassword = ref(false)
-const loading = ref(false)
-const errorMsg = ref('')
-const urlError = ref('')
+const route = useRoute();
+const email = ref('');
+const password = ref('');
+const showPassword = ref(false);
+const loading = ref(false);
+const errorMsg = ref('');
+const urlError = ref('');
+const supabase = useSupabaseClient<Database>();
 
-useSupabaseAuth()
+useSupabaseAuth();
 
 const rules = {
   required: (v: string) => !!v || 'Required',
-  email: (v: string) => /.+@.+\..+/.test(v) || 'Invalid email'
-}
+  email: (v: string) => /.+@.+\..+/.test(v) || 'Invalid email',
+};
 
 const getErrorMessage = (error: string) => {
   const errorMessages: { [key: string]: string } = {
-    'unauthorized': 'You are not authorized to access the admin panel.',
-    'login_required': 'Please log in to access the admin panel.',
-    'system_error': 'A system error occurred. Please try again.',
-  }
-  return errorMessages[error] || 'An unknown error occurred.'
-}
+    unauthorized: 'You are not authorized to access the admin panel.',
+    login_required: 'Please log in to access the admin panel.',
+    system_error: 'A system error occurred. Please try again.',
+  };
+  return errorMessages[error] || 'An unknown error occurred.';
+};
 
 onMounted(() => {
   // Check for error parameter in URL
   if (route.query.error) {
-    urlError.value = route.query.error as string
+    urlError.value = route.query.error as string;
   }
-})
+});
 
 async function handleAdminLogin() {
-  errorMsg.value = ''
-  urlError.value = ''
-  loading.value = true
+  errorMsg.value = '';
+  urlError.value = '';
+  loading.value = true;
 
   try {
     // Check if account is locked before attempting login
-    const supabase = useSupabaseClient()
-
-    const { data: lockCheck } = await supabase
+    const supabase = useSupabaseClient();
+    const lockCheckResult = await supabase
       .from('profiles')
       .select('locked_until, failed_login_attempts, role, is_active')
       .eq('email', email.value)
-      .single()
+      .single();
+
+    const lockCheck = lockCheckResult.data as any;
 
     if (lockCheck?.locked_until) {
-      const lockTime = new Date(lockCheck.locked_until)
-      const now = new Date()
+      const lockTime = new Date(lockCheck.locked_until);
+      const now = new Date();
 
       if (lockTime > now) {
-        throw new Error('Admin account is temporarily locked due to multiple failed login attempts. Please try again later.')
+        throw new Error(
+          'Admin account is temporarily locked due to multiple failed login attempts. Please try again later.',
+        );
       }
     }
 
     // Check if user exists and has admin role
     if (lockCheck && lockCheck.role !== 'admin') {
-      throw new Error('Access denied. Admin privileges required.')
+      throw new Error('Access denied. Admin privileges required.');
     }
 
     if (lockCheck && !lockCheck.is_active) {
-      throw new Error('Admin account is deactivated. Please contact system administrator.')
+      throw new Error('Admin account is deactivated. Please contact system administrator.');
     }
 
     // Attempt login with Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.value,
-      password: password.value
-    })
+      password: password.value,
+    });
 
-    console.log('📊 Admin login response:', { data, error })
+    console.log('📊 Admin login response:', { data, error });
 
     if (error) {
-      console.log('❌ Admin login error:', error)
+      console.log('❌ Admin login error:', error);
 
       // Increment failed login attempts
-      const currentAttempts = lockCheck?.failed_login_attempts || 0
-      const newAttempts = currentAttempts + 1
-      const maxAttempts = 3 // Stricter for admin accounts
+      const currentAttempts = lockCheck?.failed_login_attempts || 0;
+      const newAttempts = currentAttempts + 1;
+      const maxAttempts = 3; // Stricter for admin accounts
 
       const updateData = {
         failed_login_attempts: newAttempts,
         updated_at: new Date().toISOString(),
         ...(newAttempts >= maxAttempts && {
-          locked_until: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 minutes for admin
-        })
-      }
-
-      // Update profile with failed attempt
-      await supabase
+          locked_until: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes for admin
+        }),
+      }; // Update profile with failed attempt - using type assertion for the update
+      const { error: updateError } = await (supabase as any)
         .from('profiles')
         .update(updateData)
-        .eq('email', email.value)
+        .eq('email', email.value);
 
-      throw error
+      if (updateError) {
+        console.warn('Failed to update login attempt:', updateError);
+      }
+
+      throw error;
     }
 
     if (!data.user) {
-      throw new Error('Admin login failed - no user data received')
+      throw new Error('Admin login failed - no user data received');
     }
 
-    console.log('✅ Admin authenticated:', data.user.email)
-
-    // Reset failed login attempts on successful login
-    await supabase
+    console.log('✅ Admin authenticated:', data.user.email); // Reset failed login attempts on successful login
+    const { error: resetError } = await (supabase as any)
       .from('profiles')
       .update({
         failed_login_attempts: 0,
         locked_until: null,
         last_login: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
-      .eq('email', email.value)
+      .eq('email', email.value);
+
+    if (resetError) {
+      console.warn('Failed to reset login attempts:', resetError);
+    }
 
     // Double-check admin role after login
-    const { data: profile } = await supabase
+    const profileResult = await supabase
       .from('profiles')
       .select('role, is_active')
       .eq('id', data.user.id)
-      .single()
+      .single();
+    const profile = profileResult.data as any;
 
     if (!profile || profile.role !== 'admin') {
-      await supabase.auth.signOut()
-      throw new Error('Admin access denied. Invalid role.')
+      await supabase.auth.signOut();
+      throw new Error('Admin access denied. Invalid role.');
     }
 
     if (!profile.is_active) {
-      await supabase.auth.signOut()
-      throw new Error('Admin account is deactivated.')
+      await supabase.auth.signOut();
+      throw new Error('Admin account is deactivated.');
     }
 
-    console.log('Redirecting to admin dashboard...')
-    await navigateTo('/admin/')
-
+    console.log('Redirecting to admin dashboard...');
+    await navigateTo('/admin/');
   } catch (e: unknown) {
-    console.error('[ADMIN LOGIN] Error:', e)
-    const errorMessage = e instanceof Error ? e.message : 'Admin login failed'
-    errorMsg.value = errorMessage
-    password.value = '' // Clear password on error
+    console.error('[ADMIN LOGIN] Error:', e);
+    const errorMessage = e instanceof Error ? e.message : 'Admin login failed';
+    errorMsg.value = errorMessage;
+    password.value = ''; // Clear password on error
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 </script>
@@ -237,7 +227,9 @@ async function handleAdminLogin() {
 .elegant-admin-card {
   background: rgba(30, 32, 48, 0.3); /* Reduced opacity from 0.95 to 0.3 */
   border-radius: 22px;
-  box-shadow: 0 12px 40px 0 rgba(40, 40, 80, 0.15), 0 1.5px 8px 0 rgba(80, 80, 160, 0.08);
+  box-shadow:
+    0 12px 40px 0 rgba(40, 40, 80, 0.15),
+    0 1.5px 8px 0 rgba(80, 80, 160, 0.08);
   backdrop-filter: blur(20px); /* Increased blur for better glass effect */
   -webkit-backdrop-filter: blur(20px);
   color: #f3f3f3;

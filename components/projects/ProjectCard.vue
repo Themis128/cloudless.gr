@@ -79,7 +79,7 @@
           variant="tonal"
           class="status-chip"
         >
-          {{ project.status.charAt(0).toUpperCase() + project.status.slice(1) }}
+          {{ safeStatusDisplay(project.status) }}
         </v-chip>
       </div>
 

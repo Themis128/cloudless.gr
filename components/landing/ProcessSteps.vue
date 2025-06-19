@@ -60,7 +60,13 @@
       </v-stepper>
 
       <!-- Mobile Version: Timeline -->
-      <v-timeline v-else density="compact" class="process-timeline" align="start" side="end">
+      <v-timeline
+        v-else
+        density="compact"
+        class="process-timeline"
+        align="start"
+        side="end"
+      >
         <v-timeline-item
           v-for="(step, index) in processSteps"
           :key="index"

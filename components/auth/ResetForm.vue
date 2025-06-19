@@ -2,22 +2,10 @@
   <v-card class="glass-card pa-6" width="400" elevation="10">
     <v-card-title class="text-h5 text-white text-center">Reset Password</v-card-title>
     <v-form @submit.prevent="handleReset">
-      <v-alert
-        v-if="errorMsg"
-        type="error"
-        class="mb-4"
-        border="start"
-        prominent
-      >
+      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
         {{ errorMsg }}
       </v-alert>
-      <v-alert
-        v-if="successMsg"
-        type="success"
-        class="mb-4"
-        border="start"
-        prominent
-      >
+      <v-alert v-if="successMsg" type="success" class="mb-4" border="start" prominent>
         {{ successMsg }}
       </v-alert>
       <v-text-field
@@ -31,14 +19,9 @@
         class="glass-input mb-4"
         :rules="[rules.required, rules.email]"
       />
-      <v-btn
-        type="submit"
-        block
-        color="blue"
-        class="mt-4"
-        :loading="loading"
-        :disabled="loading"
-      >Send Reset Link</v-btn>
+      <v-btn type="submit" block color="blue" class="mt-4" :loading="loading" :disabled="loading"
+        >Send Reset Link</v-btn
+      >
     </v-form>
     <NuxtLink to="/auth/login" class="login-link mt-4">
       <v-icon left size="18" color="#3b82f6">mdi-login</v-icon>
@@ -48,24 +31,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useSupabase } from '@/composables/useSupabase'
+import { useSupabase } from '@/composables/useSupabase';
+import { ref } from 'vue';
 
-const errorMsg = ref('')
-const successMsg = ref('')
-const loading = ref(false)
-const email = ref('')
-const supabase = useSupabase()
+const errorMsg = ref('');
+const successMsg = ref('');
+const loading = ref(false);
+const email = ref('');
+const supabase = useSupabase();
 
 const rules = {
   required: (v: string) => !!v || 'Required',
-  email: (v: string) => /.+@.+\..+/.test(v) || 'Invalid email'
-}
+  email: (v: string) => /.+@.+\..+/.test(v) || 'Invalid email',
+};
 
 async function handleReset() {
-  errorMsg.value = ''
-  successMsg.value = ''
-  loading.value = true
+  errorMsg.value = '';
+  successMsg.value = '';
+  loading.value = true;
 
   try {
     // First check if user exists in our profiles table
@@ -73,47 +56,46 @@ async function handleReset() {
       .from('profiles')
       .select('email, is_active')
       .eq('email', email.value)
-      .single()
+      .single();
 
     if (!userProfile) {
-      throw new Error('No account found with this email address.')
+      throw new Error('No account found with this email address.');
     }
 
-    if (!userProfile.is_active) {
-      throw new Error('Account is deactivated. Please contact support.')
-    }
+    if (!(userProfile as any).is_active) {
+      throw new Error('Account is deactivated. Please contact support.');
+    } // Generate secure reset token and save to database
+    const resetToken =
+      Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
 
-    // Generate secure reset token and save to database
-    const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour
-
-    await supabase
+    await (supabase as any)
       .from('profiles')
       .update({
         reset_token: resetToken,
         reset_token_expires: expiresAt,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
-      .eq('email', email.value)
+      .eq('email', email.value);
 
     // Send password reset email through Supabase Auth
     const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
-      redirectTo: `${window.location.origin}/auth/reset-password?token=${resetToken}`
-    })
+      redirectTo: `${window.location.origin}/auth/reset-password?token=${resetToken}`,
+    });
 
     if (error) {
-      throw error
+      throw error;
     }
 
-    successMsg.value = 'Password reset link sent! Check your email for instructions. The link will expire in 1 hour.'
-    email.value = '' // Clear the email field
-
+    successMsg.value =
+      'Password reset link sent! Check your email for instructions. The link will expire in 1 hour.';
+    email.value = ''; // Clear the email field
   } catch (err) {
-    console.error('Password reset error:', err)
-    const errorMessage = err instanceof Error ? err.message : 'Password reset failed'
-    errorMsg.value = errorMessage
+    console.error('Password reset error:', err);
+    const errorMessage = err instanceof Error ? err.message : 'Password reset failed';
+    errorMsg.value = errorMessage;
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 </script>
@@ -127,20 +109,24 @@ async function handleReset() {
 }
 .glass-input input {
   color: #fff !important;
-  text-shadow: 0 1px 6px rgba(30, 30, 60, 0.45), 0 0px 1px #000;
+  text-shadow:
+    0 1px 6px rgba(30, 30, 60, 0.45),
+    0 0px 1px #000;
   letter-spacing: 0.02em;
   padding-left: 12px !important;
   padding-right: 12px !important;
   font-size: 1.08rem;
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-  background: rgba(255,255,255,0.10) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(2px);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(31,38,135,0.10);
+  box-shadow: 0 2px 8px rgba(31, 38, 135, 0.1);
 }
 .v-label {
   color: #fff !important;
-  text-shadow: 0 1px 6px rgba(30, 30, 60, 0.45), 0 0px 1px #000;
+  text-shadow:
+    0 1px 6px rgba(30, 30, 60, 0.45),
+    0 0px 1px #000;
 }
 ::placeholder {
   color: #f3f6fa !important;

@@ -888,7 +888,10 @@ watch(isDarkMode, toggleTheme);
     0 4px 16px rgba(0, 0, 0, 0.08) !important;
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
 }
+
+/* Removed duplicate .accessibility-card:focus-within::before selector */
 
 .skip-link {
   position: absolute;
@@ -955,24 +958,7 @@ watch(isDarkMode, toggleTheme);
 :deep(.v-card-title) {
   line-height: 1.2;
   font-weight: 600;
-}
-
-/* Improve readability of subtitles */
-:deep(.v-list-item-subtitle) {
-  opacity: 0.8;
-  font-size: 0.875rem;
-  line-height: 1.3;
-}
-
-/* Button group styling */
-:deep(.v-chip) {
-  font-weight: 500;
-  font-size: 0.875rem;
-}
-
-/* Focus trap for menu */
-.accessibility-card {
-  position: relative;
+/* (Merged into the earlier .accessibility-card block to avoid duplicate selector) */
 }
 
 .accessibility-card::before {
@@ -1051,14 +1037,9 @@ html.reduce-motion .v-progress-linear .v-progress-linear__indeterminate .short {
 }
 
 /* Pause Autoplay */
-html.pause-autoplay video,
-html.pause-autoplay audio {
-  autoplay: false !important;
-}
+/* No CSS property for autoplay; control via JS if needed */
 
-html.pause-autoplay [autoplay] {
-  autoplay: false !important;
-}
+/* No CSS property for autoplay; control via JS if needed */
 
 /* Reading Guide */
 html.reading-guide p:hover,

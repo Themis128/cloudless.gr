@@ -13,7 +13,12 @@
     </client-only>
     <LargeNav class="header" />
 
-    <main id="main-content" role="main" class="page-content" tabindex="-1">
+    <main
+      id="main-content"
+      role="main"
+      class="page-content"
+      tabindex="-1"
+    >
       <NuxtPage />
     </main>
 

@@ -74,9 +74,17 @@ const props = defineProps<{
   modelValue: boolean
 }>()
 
+interface Project {
+  id: string
+  name: string
+  description: string
+  type: string
+  // Add other fields as needed
+}
+
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  'created': [project: any]
+  'created': [project: Project]
 }>()
 
 const projectsStore = useProjectsStore()
@@ -122,17 +130,21 @@ const createProject = async () => {
   try {
     loading.value = true
     error.value = ''
-    
+
     const project = await projectsStore.createProject({
       name: form.value.name,
       description: form.value.description,
       type: form.value.type
     })
 
-    emit('created', project)
+    emit('created', project as Project)
     resetForm()
-  } catch (err: any) {
-    error.value = err.message || 'Failed to create project'
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      error.value = err.message
+    } else {
+      error.value = 'Failed to create project'
+    }
   } finally {
     loading.value = false
   }

@@ -8,7 +8,12 @@
         </p>
       </div>
 
-      <v-tabs v-model="activeTab" class="features-tabs" center-active show-arrows>
+      <v-tabs
+        v-model="activeTab"
+        class="features-tabs"
+        center-active
+        show-arrows
+      >
         <v-tab
           v-for="(category, index) in featureCategories"
           :key="index"
@@ -27,7 +32,12 @@
           :value="index"
         >
           <v-row>
-            <v-col v-for="(feature, fIndex) in category.features" :key="fIndex" cols="12" md="4">
+            <v-col
+              v-for="(feature, fIndex) in category.features"
+              :key="fIndex"
+              cols="12"
+              md="4"
+            >
               <v-card class="feature-card h-100" elevation="4">
                 <v-card-title class="d-flex align-center">
                   <v-icon :color="feature.color" class="me-2">{{ feature.icon }}</v-icon>

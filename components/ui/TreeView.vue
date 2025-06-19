@@ -32,8 +32,8 @@
       <div class="custom-tree">
         <!-- Simple hierarchical tree that actually works -->
         <div v-for="node in treeData" :key="node.id" class="tree-node-simple">          <!-- Root level node -->
-          <div 
-            class="node-item" 
+          <div
+            class="node-item"
             style="color: #ffffff; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; display: flex; align-items: center; font-weight: 500;"
             @click="handleNodeClick(node)"
           >
@@ -47,7 +47,7 @@
               @click.stop="toggleNode(node)"
             />
             <div v-else style="width: 28px;" />
-            
+
             <v-icon
               :icon="node.icon || 'mdi-file'"
               size="small"
@@ -61,8 +61,8 @@
           </div>
           <!-- Children (when expanded) -->
           <div v-if="node.children && node.children.length > 0 && node.expanded" class="children-container" style="margin-left: 20px;">
-            <div 
-              v-for="child in node.children" 
+            <div
+              v-for="child in node.children"
               :key="child.id"
               class="node-item child-item"
               style="color: #f5f5f5; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; align-items: center; font-weight: 400;"
@@ -145,11 +145,10 @@ const emit = defineEmits<{
   refresh: []
 }>()
 
-const { sampleTreeData, selectedNodes, onNodeSelect, onNodeExpand, onNodeCollapse, addNode } = useTreeView()
+const { sampleTreeData, onNodeSelect, addNode } = useTreeView()
 
 // Use provided nodes or fallback to sample data
 const treeData = computed(() => props.nodes.length > 0 ? props.nodes : sampleTreeData.value)
-const selectedNodeIds = computed(() => selectedNodes.value)
 
 // Add node functionality
 const addDialog = ref(false)
@@ -167,7 +166,7 @@ const parentOptions = computed(() => {
     }
     return result
   }
-  
+
   return [
     { id: null, text: 'Root Level' },
     ...getAllNodes(treeData.value)
@@ -187,7 +186,7 @@ const confirmAddNode = () => {
       text: newNodeText.value.trim(),
       icon: 'file'
     }
-    
+
     if (newNodeParent.value) {
       addNode(newNodeParent.value, newNode)
       emit('nodeAdd', newNodeParent.value, newNodeText.value.trim())
@@ -196,7 +195,7 @@ const confirmAddNode = () => {
       sampleTreeData.value.push(newNode)
       emit('nodeAdd', 'root', newNodeText.value.trim())
     }
-    
+
     addDialog.value = false
   }
 }
@@ -222,15 +221,6 @@ const handleNodeClick = (node: TreeNode) => {
   }
 }
 
-const handleNodeExpand = (node: TreeNode) => {
-  onNodeExpand(node)
-  emit('nodeExpand', node)
-}
-
-const handleNodeCollapse = (node: TreeNode) => {
-  onNodeCollapse(node)
-  emit('nodeCollapse', node)
-}
 </script>
 
 <style scoped>

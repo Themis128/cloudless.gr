@@ -12,7 +12,7 @@
           Back to Pipeline
         </v-btn>
       </div>
-      
+
       <div class="header-content">
         <div class="project-info">
           <v-avatar :color="getProjectColor(project?.type)" size="48" class="me-4">
@@ -20,9 +20,7 @@
           </v-avatar>
           <div>
             <h1 class="text-h4 font-weight-bold mb-1">{{ project?.name || 'Loading...' }}</h1>
-            <p class="text-body-1 text-medium-emphasis mb-2">
-              Model Training & Optimization
-            </p>
+            <p class="text-body-1 text-medium-emphasis mb-2">Model Training & Optimization</p>
             <v-chip
               v-if="project"
               :color="getStatusColor(project.status)"
@@ -48,11 +46,12 @@
               Training Configuration
             </v-card-title>
             <v-divider />
-            <v-card-text>              <TrainingConfigForm 
-              :project-id="route.params.id as string"
-              :loading="configLoading"
-              @submit="updateTrainingConfig"
-            />
+            <v-card-text>
+              <TrainingConfigForm
+                :project-id="route.params.id as string"
+                :loading="configLoading"
+                @submit="updateTrainingConfig"
+              />
             </v-card-text>
           </v-card>
         </v-col>
@@ -89,13 +88,14 @@
                   </v-btn>
                 </v-card-title>
                 <v-divider />
-                <v-card-text>                  <TrainingProgress
-                  :session="trainingSession"
-                  :metrics="trainingMetrics"
-                  :project-id="route.params.id as string"
-                  @stop="stopTraining"
-                  @refresh="() => {}"
-                />
+                <v-card-text>
+                  <TrainingProgress
+                    :session="trainingSession"
+                    :metrics="trainingMetrics"
+                    :project-id="route.params.id as string"
+                    @stop="stopTraining"
+                    @refresh="() => {}"
+                  />
                 </v-card-text>
               </v-card>
             </v-col>
@@ -108,12 +108,13 @@
                   Training History
                 </v-card-title>
                 <v-divider />
-                <v-card-text>                  <TrainingHistoryTable
-                  :sessions="trainingHistory"
-                  :loading="historyLoading"
-                  @view-session="viewTrainingSession"
-                  @delete-session="deleteTrainingSession"
-                />
+                <v-card-text>
+                  <TrainingHistoryTable
+                    :sessions="trainingHistory"
+                    :loading="historyLoading"
+                    @view-session="viewTrainingSession"
+                    @delete-session="deleteTrainingSession"
+                  />
                 </v-card-text>
               </v-card>
             </v-col>
@@ -130,14 +131,15 @@
               Model Comparison
             </v-card-title>
             <v-divider />
-            <v-card-text>              <ModelComparisonChart
-              :models="trainedModels"
-              :metrics="comparisonMetrics"
-              :loading="modelsLoading"
-              @view-model="(model) => console.log('View model:', model)"
-              @download-model="(model) => console.log('Download model:', model)"
-              @deploy-model="(model) => navigateTo(`/projects/${route.params.id}/deploy`)"
-            />
+            <v-card-text>
+              <ModelComparisonChart
+                :models="trainedModels"
+                :metrics="comparisonMetrics"
+                :loading="modelsLoading"
+                @view-model="(model) => console.log('View model:', model)"
+                @download-model="(model) => console.log('Download model:', model)"
+                @deploy-model="(model) => navigateTo(`/projects/${route.params.id}/deploy`)"
+              />
             </v-card-text>
           </v-card>
         </v-col>
@@ -147,25 +149,25 @@
 </template>
 
 <script setup lang="ts">
-import type { Project, TrainingConfig, TrainingSession, TrainingMetrics } from '~/types/project'
+import type { Project, TrainingConfig, TrainingMetrics, TrainingSession } from '~/types/project';
 
 // Page meta
 definePageMeta({
   middleware: 'auth',
-  layout: 'default'
-})
+  layout: 'default',
+});
 
 // Composables
-const route = useRoute()
-const { getProjectIcon, getProjectColor, getStatusIcon, getStatusColor } = useIcons()
-const { fetchProject } = useFetchProjects()
+const route = useRoute();
+const { getProjectIcon, getProjectColor, getStatusIcon, getStatusColor } = useIcons();
+const { fetchProject } = useFetchProjects();
 
 // Reactive state
-const project = ref<Project | null>(null)
+const project = ref<Project | null>(null);
 const trainingConfig = ref<TrainingConfig>({
   algorithm: 'neural_network',
   epochs: 100,
-  batchSize: 32,
+  batch_size: 32,
   learningRate: 0.001,
   validationSplit: 0.2,
   earlyStoppingPatience: 10,
@@ -174,121 +176,122 @@ const trainingConfig = ref<TrainingConfig>({
   metrics: ['accuracy', 'loss'],
   regularization: {
     type: 'l2',
-    value: 0.01
+    value: 0.01,
   },
   dataAugmentation: false,
-  crossValidation: false
-})
+  crossValidation: false,
+});
 
-const trainingSession = ref<TrainingSession | null>(null)
-const trainingMetrics = ref<TrainingMetrics[]>([])
-const trainingHistory = ref<TrainingSession[]>([])
-const trainedModels = ref([])
-const comparisonMetrics = ref([])
+const trainingSession = ref<TrainingSession | null>(null);
+const trainingMetrics = ref<TrainingMetrics[]>([]);
+const trainingHistory = ref<TrainingSession[]>([]);
+const trainedModels = ref([]);
+const comparisonMetrics = ref([]);
 
 // Loading states
-const configLoading = ref(false)
-const startingTraining = ref(false)
-const stoppingTraining = ref(false)
-const historyLoading = ref(false)
-const modelsLoading = ref(false)
+const configLoading = ref(false);
+const startingTraining = ref(false);
+const stoppingTraining = ref(false);
+const historyLoading = ref(false);
+const modelsLoading = ref(false);
 
 // Computed
 const canStartTraining = computed(() => {
-  return project.value && 
-         trainingConfig.value &&
-         !trainingSession.value?.isActive
-})
+  return project.value && trainingConfig.value && !trainingSession.value?.isActive;
+});
 
 // Methods
 const updateTrainingConfig = async (config: TrainingConfig) => {
   try {
-    configLoading.value = true
+    configLoading.value = true;
     // TODO: Update training configuration in Supabase
-    console.log('Updating training config:', config)
-    
+    console.log('Updating training config:', config);
+
     // Placeholder API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    trainingConfig.value = { ...config }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    trainingConfig.value = { ...config };
   } catch (error) {
-    console.error('Failed to update training config:', error)
+    console.error('Failed to update training config:', error);
   } finally {
-    configLoading.value = false
+    configLoading.value = false;
   }
-}
+};
 
 const startTraining = async () => {
   try {
-    startingTraining.value = true
-    
+    startingTraining.value = true;
+
     // TODO: Start training session via Supabase/API
-    console.log('Starting training with config:', trainingConfig.value)
-    
+    console.log('Starting training with config:', trainingConfig.value);
+
     // Placeholder API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    // Mock training session
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // Mock training session
     trainingSession.value = {
       id: `session_${Date.now()}`,
-      projectId: route.params.id as string,
+      project_id: route.params.id as string,
+      owner_id: 'mock-user-id', // TODO: Get from auth
+      name: `Training Session ${Date.now()}`,
       status: 'running',
-      startedAt: new Date(),
       config: trainingConfig.value,
-      isActive: true,
       progress: 0,
+      metrics: {},
+      logs: null,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      // Additional properties for UI
       currentEpoch: 0,
-      totalEpochs: trainingConfig.value.epochs
-    }
-    
+      totalEpochs: trainingConfig.value.epochs,
+    } as any;
+
     // Start monitoring training progress
-    monitorTrainingProgress()
-    
+    monitorTrainingProgress();
   } catch (error) {
-    console.error('Failed to start training:', error)
+    console.error('Failed to start training:', error);
   } finally {
-    startingTraining.value = false
+    startingTraining.value = false;
   }
-}
+};
 
 const stopTraining = async () => {
   try {
-    stoppingTraining.value = true
-    
+    stoppingTraining.value = true;
+
     // TODO: Stop training session via API
-    console.log('Stopping training session:', trainingSession.value?.id)
-    
+    console.log('Stopping training session:', trainingSession.value?.id);
+
     // Placeholder API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     if (trainingSession.value) {
-      trainingSession.value.isActive = false
-      trainingSession.value.status = 'stopped'
-      trainingSession.value.endedAt = new Date()
+      trainingSession.value.isActive = false;
+      trainingSession.value.status = 'stopped';
+      trainingSession.value.completed_at = new Date().toISOString();
     }
-    
   } catch (error) {
-    console.error('Failed to stop training:', error)
+    console.error('Failed to stop training:', error);
   } finally {
-    stoppingTraining.value = false
+    stoppingTraining.value = false;
   }
-}
+};
 
 const monitorTrainingProgress = () => {
   // TODO: Implement real-time training monitoring
   // This would typically connect to a WebSocket or poll an API
-  
+
   const interval = setInterval(() => {
     if (!trainingSession.value?.isActive) {
-      clearInterval(interval)
-      return
+      clearInterval(interval);
+      return;
     }
-    
+
     // Mock progress update
     if (trainingSession.value.currentEpoch < trainingSession.value.totalEpochs) {
-      trainingSession.value.currentEpoch += 1
-      trainingSession.value.progress = (trainingSession.value.currentEpoch / trainingSession.value.totalEpochs) * 100
-      
+      trainingSession.value.currentEpoch += 1;
+      trainingSession.value.progress =
+        (trainingSession.value.currentEpoch / trainingSession.value.totalEpochs) * 100;
+
       // Mock metrics
       trainingMetrics.value.push({
         epoch: trainingSession.value.currentEpoch,
@@ -296,49 +299,48 @@ const monitorTrainingProgress = () => {
         accuracy: Math.random() * 0.3 + 0.7,
         valLoss: Math.random() * 0.6 + 0.2,
         valAccuracy: Math.random() * 0.25 + 0.65,
-        timestamp: new Date()
-      })
+        timestamp: new Date(),
+      });
     } else {
       // Training completed
-      trainingSession.value.isActive = false
-      trainingSession.value.status = 'completed'
-      trainingSession.value.endedAt = new Date()
-      clearInterval(interval)
+      trainingSession.value.isActive = false;
+      trainingSession.value.status = 'completed';
+      trainingSession.value.endedAt = new Date();
+      clearInterval(interval);
     }
-  }, 2000) // Update every 2 seconds (mock)
-}
+  }, 2000); // Update every 2 seconds (mock)
+};
 
 const viewTrainingSession = (session: TrainingSession) => {
   // TODO: Open training session details modal or navigate to detail view
-  console.log('Viewing training session:', session)
-}
+  console.log('Viewing training session:', session);
+};
 
 const deleteTrainingSession = async (sessionId: string) => {
   try {
     // TODO: Delete training session from Supabase
-    console.log('Deleting training session:', sessionId)
-    
+    console.log('Deleting training session:', sessionId);
+
     // Placeholder API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // Remove from history
-    trainingHistory.value = trainingHistory.value.filter(s => s.id !== sessionId)
-    
+    trainingHistory.value = trainingHistory.value.filter((s) => s.id !== sessionId);
   } catch (error) {
-    console.error('Failed to delete training session:', error)
+    console.error('Failed to delete training session:', error);
   }
-}
+};
 
 const loadTrainingHistory = async () => {
   try {
-    historyLoading.value = true
-    
+    historyLoading.value = true;
+
     // TODO: Fetch training history from Supabase
-    console.log('Loading training history for project:', route.params.id)
-    
+    console.log('Loading training history for project:', route.params.id);
+
     // Placeholder API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // Mock training history
     trainingHistory.value = [
       {
@@ -356,65 +358,59 @@ const loadTrainingHistory = async () => {
           loss: 0.15,
           accuracy: 0.92,
           valLoss: 0.18,
-          valAccuracy: 0.89
-        }
-      }
-    ]
-    
+          valAccuracy: 0.89,
+        },
+      },
+    ];
   } catch (error) {
-    console.error('Failed to load training history:', error)
+    console.error('Failed to load training history:', error);
   } finally {
-    historyLoading.value = false
+    historyLoading.value = false;
   }
-}
+};
 
 const loadTrainedModels = async () => {
   try {
-    modelsLoading.value = true
-    
+    modelsLoading.value = true;
+
     // TODO: Fetch trained models from Supabase
-    console.log('Loading trained models for project:', route.params.id)
-    
+    console.log('Loading trained models for project:', route.params.id);
+
     // Placeholder API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // Mock trained models data
-    trainedModels.value = []
-    comparisonMetrics.value = []
-    
+    trainedModels.value = [];
+    comparisonMetrics.value = [];
   } catch (error) {
-    console.error('Failed to load trained models:', error)
+    console.error('Failed to load trained models:', error);
   } finally {
-    modelsLoading.value = false
+    modelsLoading.value = false;
   }
-}
+};
 
 // Lifecycle
 onMounted(async () => {
-  const projectId = route.params.id as string
-  
+  const projectId = route.params.id as string;
+
   try {
     // Load project data
-    project.value = await fetchProject(projectId)
-    
+    project.value = await fetchProject(projectId);
+
     // Load training-related data
-    await Promise.all([
-      loadTrainingHistory(),
-      loadTrainedModels()
-    ])
-    
+    await Promise.all([loadTrainingHistory(), loadTrainedModels()]);
   } catch (error) {
-    console.error('Failed to load training page data:', error)
+    console.error('Failed to load training page data:', error);
   }
-})
+});
 
 // Cleanup
 onUnmounted(() => {
   // Stop any ongoing training monitoring
   if (trainingSession.value?.isActive) {
-    trainingSession.value.isActive = false
+    trainingSession.value.isActive = false;
   }
-})
+});
 </script>
 
 <style scoped>
@@ -424,7 +420,11 @@ onUnmounted(() => {
 }
 
 .page-header {
-  background: linear-gradient(135deg, rgb(var(--v-theme-primary)) 0%, rgb(var(--v-theme-secondary)) 100%);
+  background: linear-gradient(
+    135deg,
+    rgb(var(--v-theme-primary)) 0%,
+    rgb(var(--v-theme-secondary)) 100%
+  );
   color: white;
   padding: 2rem 0;
   margin-bottom: 2rem;
@@ -463,18 +463,18 @@ onUnmounted(() => {
 .training-history-card:hover,
 .model-comparison-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 @media (max-width: 960px) {
   .page-header {
     padding: 1rem 0;
   }
-  
+
   .header-content {
     padding: 0 1rem;
   }
-  
+
   .project-info {
     flex-direction: column;
     align-items: flex-start;
