@@ -1,5 +1,7 @@
 pipeline {
-    agent any    // Trigger configuration for 'application' branch
+    agent any
+
+    // Trigger configuration for 'application' branch
     triggers {
         // Poll SCM every 2 minutes for changes on application branch
         pollSCM('H/2 * * * *')
@@ -71,11 +73,9 @@ pipeline {
                     }
                 }
             }
-        }
-
-        stage('Code Quality & Static Analysis') {
+        }        stage('Code Quality & Static Analysis') {
             parallel {
-                stage('TypeScript Quality Gate') {                stage('TypeScript Quality Gate') {
+                stage('TypeScript Quality Gate') {
                     steps {
                         echo '🔍 Running TypeScript quality checks...'
                         script {
@@ -239,10 +239,9 @@ pipeline {
                     '''
                 }
             }
-        }
-
-        stage('End-to-End Testing') {
-            parallel {                stage('Cypress E2E Tests') {
+        }        stage('End-to-End Testing') {
+            parallel {
+                stage('Cypress E2E Tests') {
                     steps {
                         echo '🧪 Running Cypress end-to-end tests...'
                         script {

@@ -194,3 +194,5 @@ backup-*.ps1
 
 # Local development
 .fake
+docker/volumes/db/data/pg_wal/000000010000000000000002
+docker/volumes/db/data/pg_xact/0000
