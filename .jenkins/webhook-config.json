@@ -1,0 +1,31 @@
+{
+  "webhookConfig": {
+    "name": "cloudless-gr-webhook",
+    "description": "GitHub webhook for Cloudless.gr repository targeting application branch",
+    "triggers": [
+      {
+        "event": "push",
+        "branches": ["application"],
+        "skipCi": false
+      },
+      {
+        "event": "pull_request",
+        "branches": ["application"],
+        "actions": ["opened", "synchronize", "reopened"]
+      }
+    ],
+    "settings": {
+      "token": "cloudless-gr-webhook-token",
+      "secret": "your-webhook-secret-here",
+      "contentType": "application/json",
+      "insecureSSL": false
+    }
+  },
+  "jenkinsJob": {
+    "name": "cloudless-gr-e2e-pipeline",
+    "description": "End-to-end testing pipeline for Cloudless.gr",
+    "repository": "https://github.com/yourusername/cloudless.gr.git",
+    "branch": "*/application",
+    "scriptPath": "Jenkinsfile"
+  }
+}

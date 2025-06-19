@@ -1,6 +1,26 @@
 pipeline {
     agent any
 
+    // Trigger configuration for 'application' branch
+    triggers {
+        // Poll SCM every 2 minutes for changes on application branch
+        pollSCM('H/2 * * * *')
+
+        // Alternative: Use webhooks (preferred method)
+        // genericTrigger (
+        //     genericVariables: [
+        //         [key: 'ref', value: '$.ref']
+        //     ],
+        //     causeString: 'Triggered by GitHub webhook on application branch',
+        //     token: 'cloudless-gr-webhook-token',
+        //     printContributedVariables: true,
+        //     printPostContent: true,
+        //     silentResponse: false,
+        //     regexpFilterText: '$ref',
+        //     regexpFilterExpression: 'refs/heads/application'
+        // )
+    }
+
     environment {
         // Application Environment
         DEPLOY_TOKEN = credentials('MY_SECRET_TOKEN')
