@@ -1,5 +1,8 @@
 <script setup lang="ts">
+definePageMeta({ layout: 'projects' })
+
 import ProjectCreateForm from '@/components/projects/ProjectCreateForm.vue';
+import { useCreateProjectStore } from '@/stores/createProjectStore';
 import { useUserStore } from '@/stores/userStore';
 import { computed, ref } from 'vue';
 import type { CreateProjectData } from '~/types/project';
@@ -42,7 +45,8 @@ const userInitials = computed(() => {
   return 'U';
 });
 
-const { createProject } = useCreateProject();
+const createProjectStore = useCreateProjectStore();
+const createProject = createProjectStore.createProject;
 const loading = ref(false);
 
 const handleCreateProject = async (projectData: CreateProjectData) => {
@@ -94,7 +98,12 @@ const handleCreateProject = async (projectData: CreateProjectData) => {
         <v-avatar v-if="userStore.user.avatar_url" size="48" class="me-4">
           <v-img :src="userStore.user.avatar_url" :alt="userName" />
         </v-avatar>
-        <v-avatar v-else size="48" color="success" class="me-4">
+        <v-avatar
+          v-else
+          size="48"
+          color="success"
+          class="me-4"
+        >
           <span class="text-h6 font-weight-bold">{{ userInitials }}</span>
         </v-avatar>
         <div>

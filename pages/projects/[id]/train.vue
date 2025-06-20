@@ -120,21 +120,38 @@
 </template>
 
 <script setup lang="ts">
-import type { Project, TrainingConfig, TrainingMetrics, TrainingSession } from '~/types/project';
+definePageMeta({ layout: 'projects' })
 
-// Page meta
-definePageMeta({
-  middleware: 'auth',
-  layout: 'projects',
-});
+import { useProjectsStore } from '@/stores/projectsStore';
+import type { TrainingConfig, TrainingMetrics } from '~/types/project';
+import type { ComparisonMetric, TrainedModel } from '~/types/training';
 
-// Composables
+// Simplified UI type to avoid deep type instantiation issues
+interface TrainingSessionUI {
+  id: string;
+  project_id: string;
+  name: string;
+  status: string;
+  config: TrainingConfig;
+  progress?: number;
+  metrics?: TrainingMetrics;
+  logs?: string | null;
+  started_at?: string;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  isActive?: boolean;
+  currentEpoch?: number;
+  totalEpochs?: number;
+}
 const route = useRoute();
-const { getProjectIcon, getProjectColor, getStatusIcon, getStatusColor } = useIcons();
-const { fetchProject } = useFetchProjects();
+const { getProjectIcon, getProjectColor } = useIcons();
+const projectsStore = useProjectsStore();
+// const trainingStore = useTrainingStore();
+// Use trainingStore.sessions, trainingStore.fetchTrainingSessions, trainingStore.startTraining, etc.
 
 // Reactive state
-const project = ref<Project | null>(null);
+const project = computed(() => projectsStore.getProjectById(route.params.id as string));
 const trainingConfig = ref<TrainingConfig>({
   algorithm: 'neural_network',
   epochs: 100,
@@ -162,11 +179,11 @@ const trainingConfig = ref<TrainingConfig>({
   },
 });
 
-const trainingSession = ref<TrainingSession | null>(null);
+const trainingSession = ref<TrainingSessionUI | null>(null);
 const trainingMetrics = ref<TrainingMetrics[]>([]);
-const trainingHistory = ref<TrainingSession[]>([]);
-const trainedModels = ref([]);
-const comparisonMetrics = ref([]);
+const trainingHistory = ref<TrainingSessionUI[]>([]);
+const trainedModels = ref<TrainedModel[]>([]);
+const comparisonMetrics = ref<ComparisonMetric[]>([]);
 
 // Loading states
 const configLoading = ref(false);
@@ -177,7 +194,7 @@ const modelsLoading = ref(false);
 
 // Computed
 const canStartTraining = computed(() => {
-  return project.value && trainingConfig.value && !(trainingSession.value as any)?.isActive;
+  return project.value && trainingConfig.value && !(trainingSession.value?.isActive);
 });
 
 // Methods
@@ -203,7 +220,6 @@ const startTraining = async () => {
     trainingSession.value = {
       id: `session_${Date.now()}`,
       project_id: route.params.id as string,
-      owner_id: 'mock-user-id',
       name: `Training Session ${Date.now()}`,
       status: 'running',
       config: trainingConfig.value,
@@ -214,7 +230,10 @@ const startTraining = async () => {
       completed_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    } as any;
+      isActive: true,
+      currentEpoch: 0,
+      totalEpochs: trainingConfig.value.epochs,
+    };
 
     monitorTrainingProgress();
   } catch (error) {
@@ -231,7 +250,7 @@ const stopTraining = async () => {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     if (trainingSession.value) {
-      (trainingSession.value as any).isActive = false;
+      trainingSession.value.isActive = false;
       trainingSession.value.status = 'stopped';
       trainingSession.value.completed_at = new Date().toISOString();
     }
@@ -244,15 +263,15 @@ const stopTraining = async () => {
 
 const monitorTrainingProgress = () => {
   const interval = setInterval(() => {
-    if (!(trainingSession.value as any)?.isActive) {
+    if (!trainingSession.value?.isActive) {
       clearInterval(interval);
       return;
     }
 
-    const session = trainingSession.value as any;
+    const session = trainingSession.value;
     if (
-      session?.currentEpoch &&
-      session?.totalEpochs &&
+      typeof session?.currentEpoch === 'number' &&
+      typeof session?.totalEpochs === 'number' &&
       session.currentEpoch < session.totalEpochs
     ) {
       session.currentEpoch += 1;
@@ -262,17 +281,19 @@ const monitorTrainingProgress = () => {
         epoch: session.currentEpoch,
         loss: Math.random() * 0.5 + 0.1,
         accuracy: Math.random() * 0.3 + 0.7,
-      } as any);
+      });
     } else {
-      session.isActive = false;
-      session.status = 'completed';
-      session.completed_at = new Date().toISOString();
+      if (session) {
+        session.isActive = false;
+        session.status = 'completed';
+        session.completed_at = new Date().toISOString();
+      }
       clearInterval(interval);
     }
   }, 2000);
 };
 
-const viewTrainingSession = (session: TrainingSession) => {
+const viewTrainingSession = (session: TrainingSessionUI) => {
   console.log('Viewing training session:', session);
 };
 
@@ -280,9 +301,7 @@ const deleteTrainingSession = async (sessionId: string) => {
   try {
     console.log('Deleting training session:', sessionId);
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    (trainingHistory.value as any) = (trainingHistory.value as any).filter(
-      (s: any) => s.id !== sessionId,
-    );
+    trainingHistory.value = trainingHistory.value.filter((s) => s.id !== sessionId);
   } catch (error) {
     console.error('Failed to delete training session:', error);
   }
@@ -298,16 +317,24 @@ const loadTrainingHistory = async () => {
       {
         id: 'session_1',
         project_id: route.params.id as string,
+        name: 'Demo Training Session',
         status: 'completed',
-        started_at: new Date(Date.now() - 86400000).toISOString(),
-        completed_at: new Date(Date.now() - 82800000).toISOString(),
         config: trainingConfig.value,
+        progress: 100,
         metrics: {
           loss: 0.15,
           accuracy: 0.92,
         },
+        logs: null,
+        started_at: new Date(Date.now() - 86400000).toISOString(),
+        completed_at: new Date(Date.now() - 82800000).toISOString(),
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+        updated_at: new Date(Date.now() - 82800000).toISOString(),
+        isActive: false,
+        currentEpoch: 100,
+        totalEpochs: 100,
       },
-    ] as any;
+    ];
   } catch (error) {
     console.error('Failed to load training history:', error);
   } finally {
@@ -320,8 +347,21 @@ const loadTrainedModels = async () => {
     modelsLoading.value = true;
     console.log('Loading trained models for project:', route.params.id);
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    trainedModels.value = [];
-    comparisonMetrics.value = [];
+    // Mock data for demo
+    trainedModels.value = [
+      {
+        id: 'model_001',
+        name: 'CNN Classifier',
+        version: 'v1.0',
+        accuracy: 0.92,
+        loss: 0.18,
+        created_at: new Date().toISOString(),
+      },
+    ];
+    comparisonMetrics.value = [
+      { modelId: 'model_001', metric: 'accuracy', value: 0.92 },
+      { modelId: 'model_001', metric: 'loss', value: 0.18 },
+    ];
   } catch (error) {
     console.error('Failed to load trained models:', error);
   } finally {
@@ -330,10 +370,13 @@ const loadTrainedModels = async () => {
 };
 
 // Lifecycle
+
 onMounted(async () => {
   const projectId = route.params.id as string;
   try {
-    project.value = await fetchProject(projectId);
+    if (!projectsStore.getProjectById(projectId)) {
+      await projectsStore.fetchProject(projectId);
+    }
     await Promise.all([loadTrainingHistory(), loadTrainedModels()]);
   } catch (error) {
     console.error('Failed to load training page data:', error);
@@ -341,8 +384,8 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  if ((trainingSession.value as any)?.isActive) {
-    (trainingSession.value as any).isActive = false;
+  if (trainingSession.value?.isActive) {
+    trainingSession.value.isActive = false;
   }
 });
 </script>

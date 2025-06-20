@@ -54,7 +54,7 @@ export const useUserStore = defineStore('user', () => {
       };
     } else {
       const finalUser = {
-        full_name: (userInfo as any)?.full_name || 'Themistoklis Baltzakis', // Use fallback if database is empty
+        full_name: (userInfo as any)?.full_name ?? 'Themistoklis Baltzakis', // Use fallback if database is empty
         avatar_url: (userInfo as any)?.avatar_url ?? '',
         role: (profile as any)?.role ?? 'user',
         email: authUser.email ?? '',

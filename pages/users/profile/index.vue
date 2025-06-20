@@ -129,9 +129,18 @@
 </template>
 
 <script setup>
-const { user } = useSupabaseAuth()
-const { userProfile } = useUserProfile()
-const { projects } = useFetchProjects()
+
+import { useUserProfileStore } from '@/stores/userProfileStore'
+import { useFetchProjectsStore } from '@/stores/fetchProjectsStore'
+const user = useSupabaseAuth().user
+const userProfileStore = useUserProfileStore()
+const userProfile = computed(() => userProfileStore.userProfile)
+const fetchProjectsStore = useFetchProjectsStore()
+const projects = computed(() => fetchProjectsStore.projects)
+onMounted(() => {
+  userProfileStore.loadProfile()
+  fetchProjectsStore.fetchProjects()
+})
 
 // Computed
 const userDisplayName = computed(() => {

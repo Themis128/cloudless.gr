@@ -11,7 +11,12 @@
                 <v-avatar v-if="userStore.user.avatar_url" size="60" class="me-4">
                   <v-img :src="userStore.user.avatar_url" :alt="userName" />
                 </v-avatar>
-                <v-avatar v-else size="60" color="primary" class="me-4">
+                <v-avatar
+                  v-else
+                  size="60"
+                  color="primary"
+                  class="me-4"
+                >
                   <span class="text-h5 font-weight-bold">{{ userInitials }}</span>
                 </v-avatar>
                 <div>
@@ -150,7 +155,7 @@
           <v-card-title>{{ project.name }}</v-card-title>
           <v-card-text>
             <p>Status: {{ project.status }}</p>
-            <v-btn @click="handleStopTraining(project.id)" color="error" size="small">
+            <v-btn color="error" size="small" @click="handleStopTraining(project.id)">
               Stop Training
             </v-btn>
           </v-card-text>
@@ -178,7 +183,12 @@
       <v-card>
         <v-card-title class="d-flex align-center justify-space-between">
           <span>Create New Project</span>
-          <v-btn icon="mdi-close" variant="text" color="blue" @click="showCreateDialog = false" />
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            color="blue"
+            @click="showCreateDialog = false"
+          />
         </v-card-title>
         <v-card-text>
           <ProjectCreateForm @submit="handleCreateProject" @cancel="showCreateDialog = false" />
@@ -194,6 +204,7 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ middleware: 'auth', layout: 'projects' })
 import { useProjectsStore } from '@/stores/projectsStore';
 import { useUserStore } from '@/stores/userStore';
 import { computed, onMounted, ref } from 'vue';
@@ -204,10 +215,7 @@ import DeploymentStatusList from '@/components/projects/DeploymentStatusList.vue
 import ProjectCreateForm from '@/components/projects/ProjectCreateForm.vue';
 import ProjectList from '@/components/projects/ProjectList.vue';
 
-definePageMeta({
-  middleware: 'auth',
-  layout: 'projects',
-});
+
 
 // Stores
 const projectStore = useProjectsStore();

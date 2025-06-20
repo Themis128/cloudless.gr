@@ -139,8 +139,12 @@
 </template>
 
 <script setup>
-const { user } = useSupabaseAuth()
-const { userProfile, refreshProfile } = useUserProfile()
+
+import { useUserProfileStore } from '@/stores/userProfileStore'
+const user = useSupabaseAuth().user
+const userProfileStore = useUserProfileStore()
+const userProfile = computed(() => userProfileStore.userProfile)
+const refreshProfile = userProfileStore.loadProfile
 const supabase = useSupabaseClient()
 
 // Reactive data

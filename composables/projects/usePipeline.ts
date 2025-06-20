@@ -42,31 +42,37 @@ export const usePipeline = (projectId: string) => {
     }
   };
 
+
   const addPipelineNode = (node: Omit<PipelineNode, 'id'>) => {
     const newNode: PipelineNode = {
       ...node,
       id: `node_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
     };
-
-    // Add to project config
-    if ((project.value as any)?.config?.pipeline?.nodes) {
-      (project.value as any).config.pipeline.nodes.push(newNode);
+    if (
+      project.value &&
+      project.value.config &&
+      project.value.config.pipeline &&
+      Array.isArray(project.value.config.pipeline.nodes)
+    ) {
+      project.value.config.pipeline.nodes.push(newNode);
     }
-
     return newNode;
   };
 
   const removePipelineNode = (nodeId: string) => {
-    if ((project.value as any)?.config?.pipeline) {
+    if (
+      project.value &&
+      project.value.config &&
+      project.value.config.pipeline &&
+      Array.isArray(project.value.config.pipeline.nodes) &&
+      Array.isArray(project.value.config.pipeline.connections)
+    ) {
       // Remove node
-      (project.value as any).config.pipeline.nodes = (
-        project.value as any
-      ).config.pipeline.nodes.filter((n: PipelineNode) => n.id !== nodeId);
-
+      project.value.config.pipeline.nodes = project.value.config.pipeline.nodes.filter(
+        (n: PipelineNode) => n.id !== nodeId,
+      );
       // Remove connections involving this node
-      (project.value as any).config.pipeline.connections = (
-        project.value as any
-      ).config.pipeline.connections.filter(
+      project.value.config.pipeline.connections = project.value.config.pipeline.connections.filter(
         (c: PipelineConnection) => c.source !== nodeId && c.target !== nodeId,
       );
     }
@@ -77,11 +83,14 @@ export const usePipeline = (projectId: string) => {
       ...connection,
       id: `conn_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
     };
-
-    if ((project.value as any)?.config?.pipeline?.connections) {
-      (project.value as any).config.pipeline.connections.push(newConnection);
+    if (
+      project.value &&
+      project.value.config &&
+      project.value.config.pipeline &&
+      Array.isArray(project.value.config.pipeline.connections)
+    ) {
+      project.value.config.pipeline.connections.push(newConnection);
     }
-
     return newConnection;
   };
 

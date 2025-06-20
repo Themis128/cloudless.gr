@@ -1,598 +1,498 @@
 <template>
   <div class="deployment-page">
-    <!-- Page Header -->
-    <div class="page-header">
-      <div class="breadcrumb-nav">
-        <v-btn
-          variant="text"
-          prepend-icon="mdi-arrow-left"
-          class="mb-2"
-          @click="navigateTo(`/projects/${route.params.id}`)"
-        >
-          Back to Pipeline
-        </v-btn>
-      </div>
-
-      <div class="header-content">
-        <div class="project-info">
-          <v-avatar :color="getProjectColor(project?.type)" size="48" class="me-4">
-            <v-icon :icon="getProjectIcon(project?.type)" color="white" />
-          </v-avatar>
-          <div>
-            <h1 class="text-h4 font-weight-bold mb-1">{{ project?.name || 'Loading...' }}</h1>
-            <p class="text-body-1 text-medium-emphasis mb-2">Model Deployment & Management</p>
-            <v-chip
-              v-if="project"
-              :color="getStatusColor(project.status)"
-              :prepend-icon="getStatusIcon(project.status)"
-              size="small"
-              variant="tonal"
-            >
-              {{
-                (project.status || 'unknown').charAt(0).toUpperCase() +
-                (project.status || 'unknown').slice(1)
-              }}
-            </v-chip>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Main Content -->
-    <v-container fluid class="px-6">
-      <v-row>
-        <!-- Deployment Configuration -->
-        <v-col cols="12" md="4">
-          <v-card class="deployment-config-card">
-            <v-card-title class="d-flex align-center">
-              <v-icon icon="mdi-cog-outline" class="me-2" />
-              Deployment Configuration
-            </v-card-title>
-            <v-divider />
-            <v-card-text>
-              <DeploymentConfigForm
-                :project-id="route.params.id as string"
-                :loading="configLoading"
-                :environments="availableEnvironments"
-                @submit="updateDeploymentConfig as any"
-              />
-
-              <v-divider class="my-4" />
-
-              <div class="deployment-actions">
+    <v-container fluid class="pa-6">
+      <!-- Page Header -->
+      <div class="page-header mb-8">
+        <v-card class="header-card" elevation="2">
+          <v-card-text class="pa-6">
+            <div class="d-flex align-center justify-space-between mb-4">
+              <div>
                 <v-btn
-                  block
-                  color="primary"
-                  size="large"
-                  prepend-icon="mdi-rocket-launch"
-                  :disabled="!canDeploy"
-                  :loading="deploying"
-                  @click="deployModel"
+                  variant="text"
+                  prepend-icon="mdi-arrow-left"
+                  class="mb-3"
+                  @click="navigateTo(`/projects/${route.params.id}`)"
                 >
-                  Deploy Model
+                  Back to Project
                 </v-btn>
-
+                <h1 class="text-h3 font-weight-bold mb-2">Model Deployment</h1>
+                <p class="text-h6 text-medium-emphasis">Deploy and manage your trained models</p>
+              </div>
+              <div class="header-actions">
                 <v-btn
-                  v-if="activeDeployment"
-                  block
-                  color="error"
-                  variant="outlined"
-                  prepend-icon="mdi-stop-circle"
-                  class="mt-2"
-                  :loading="stopping"
-                  @click="stopDeployment"
+                  color="primary"
+                  prepend-icon="mdi-plus"
+                  :disabled="!hasTrainedModels"
+                  @click="showDeployDialog = true"
                 >
-                  Stop Deployment
+                  New Deployment
                 </v-btn>
               </div>
-            </v-card-text>
-          </v-card>
+            </div>
+          </v-card-text>
+        </v-card>
+      </div>
+
+      <!-- Deployment Stats -->
+      <div class="deployment-stats mb-8">
+        <v-row>
+          <v-col cols="12" md="3">
+            <v-card class="stat-card" elevation="2">
+              <v-card-text class="pa-4 text-center">
+                <v-icon
+                  icon="mdi-cloud-check"
+                  size="32"
+                  color="success"
+                  class="mb-2"
+                />
+                <div class="text-h6 font-weight-bold">{{ stats.activeDeployments }}</div>
+                <div class="text-caption text-medium-emphasis">Active Deployments</div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-card class="stat-card" elevation="2">
+              <v-card-text class="pa-4 text-center">
+                <v-icon
+                  icon="mdi-chart-line"
+                  size="32"
+                  color="info"
+                  class="mb-2"
+                />
+                <div class="text-h6 font-weight-bold">{{ stats.totalRequests }}</div>
+                <div class="text-caption text-medium-emphasis">Total Requests</div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-card class="stat-card" elevation="2">
+              <v-card-text class="pa-4 text-center">
+                <v-icon
+                  icon="mdi-speedometer"
+                  size="32"
+                  color="warning"
+                  class="mb-2"
+                />
+                <div class="text-h6 font-weight-bold">{{ stats.avgResponseTime }}ms</div>
+                <div class="text-caption text-medium-emphasis">Avg Response Time</div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-card class="stat-card" elevation="2">
+              <v-card-text class="pa-4 text-center">
+                <v-icon
+                  icon="mdi-check-circle"
+                  size="32"
+                  color="primary"
+                  class="mb-2"
+                />
+                <div class="text-h6 font-weight-bold">{{ stats.uptime }}%</div>
+                <div class="text-caption text-medium-emphasis">Uptime</div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </div>
+
+      <v-row>
+        <!-- Deployment List -->
+        <v-col cols="12" lg="8">
+          <div class="deployments-section">
+            <v-card class="deployments-card" elevation="2">
+              <v-card-title class="pa-6 pb-4">
+                <v-icon icon="mdi-cloud-upload" class="me-2" />
+                Deployments
+              </v-card-title>
+              <v-card-text class="pa-6 pt-0">
+                <DeploymentStatusList
+                  :deployments="activeDeployments as any"
+                  :loading="deploymentsLoading"
+                  @view-details="viewDeploymentDetails"
+                  @view-logs="viewDeploymentLogs"
+                  @start-deployment="restartDeployment"
+                  @stop-deployment="stopDeployment"
+                  @delete-deployment="deleteDeployment"
+                />
+              </v-card-text>
+            </v-card>
+          </div>
         </v-col>
 
-        <!-- Active Deployments -->
-        <v-col cols="12" md="8">
-          <v-row>
-            <!-- Deployment Status -->
-            <v-col cols="12">
-              <v-card class="deployment-status-card">
-                <v-card-title class="d-flex align-center justify-space-between">
-                  <div class="d-flex align-center">
-                    <v-icon icon="mdi-cloud-check" class="me-2" />
-                    Active Deployments
-                  </div>
-                  <v-btn
-                    variant="outlined"
-                    prepend-icon="mdi-refresh"
-                    :loading="refreshing"
-                    @click="refreshDeployments"
-                  >
-                    Refresh
-                  </v-btn>
-                </v-card-title>
-                <v-divider />
-                <v-card-text>
-                  <DeploymentStatusList
-                    :deployments="activeDeployments as any"
-                    :loading="deploymentsLoading"
-                    @view-logs="viewDeploymentLogs as any"
-                    @view-metrics="viewDeploymentMetrics as any"
-                    @scale="scaleDeployment as any"
-                    @rollback="rollbackDeployment as any"
-                    @delete="deleteDeployment as any"
-                  />
-                </v-card-text>
-              </v-card>
-            </v-col>
+        <!-- API Endpoints & Monitoring -->
+        <v-col cols="12" lg="4">
+          <div class="api-endpoints-section mb-6">
+            <v-card class="endpoints-card" elevation="2">
+              <v-card-title class="pa-6 pb-4">
+                <v-icon icon="mdi-api" class="me-2" />
+                API Endpoints
+              </v-card-title>
+              <v-card-text class="pa-6 pt-0">
+                <ApiEndpointsList
+                  :endpoints="apiEndpoints"
+                  :project-id="route.params.id as string"
+                  :loading="endpointsLoading"
+                  @test-endpoint="testEndpoint"
+                  @copy-endpoint="copyEndpointUrl"
+                  @generate-client="generateApiClient"
+                />
+              </v-card-text>
+            </v-card>
+          </div>
 
-            <!-- API Endpoints -->
-            <v-col cols="12">
-              <v-card class="api-endpoints-card">
-                <v-card-title class="d-flex align-center">
-                  <v-icon icon="mdi-api" class="me-2" />
-                  API Endpoints
-                </v-card-title>
-                <v-divider />
-                <v-card-text>
-                  <ApiEndpointsList
-                    :endpoints="apiEndpoints"
-                    :loading="endpointsLoading"
-                    @test-endpoint="testApiEndpoint"
-                    @copy-endpoint="copyEndpointUrl"
-                    @generate-client="generateApiClient"
-                  />
-                </v-card-text>
-              </v-card>
-            </v-col>
-          </v-row>
+          <div class="monitoring-section">
+            <v-card class="monitoring-card" elevation="2">
+              <v-card-title class="pa-6 pb-4">
+                <v-icon icon="mdi-monitor" class="me-2" />
+                Performance Monitoring
+              </v-card-title>
+              <v-card-text class="pa-6 pt-0">
+                <PerformanceMonitoringChart
+                  :metrics="performanceMetrics"
+                  :project-id="route.params.id as string"
+                  :time-range="monitoringTimeRange"
+                  :loading="metricsLoading"
+                  @time-range-change="updateMonitoringTimeRange"
+                />
+              </v-card-text>
+            </v-card>
+          </div>
         </v-col>
       </v-row>
 
-      <!-- Deployment History & Monitoring -->
-      <v-row class="mt-4">
-        <!-- Deployment History -->
-        <v-col cols="12" md="6">
-          <v-card class="deployment-history-card">
-            <v-card-title class="d-flex align-center">
-              <v-icon icon="mdi-history" class="me-2" />
-              Deployment History
-            </v-card-title>
-            <v-divider />
-            <v-card-text>
-              <DeploymentHistoryTable
-                :deployments="deploymentHistory"
-                :loading="historyLoading"
-                @view-deployment="viewDeploymentDetails"
-                @rollback-to="rollbackToDeployment"
-                @delete-deployment="deleteDeploymentFromHistory"
-              />
-            </v-card-text>
-          </v-card>
-        </v-col>
+      <!-- Deployment History -->
+      <div class="deployment-history mt-8">
+        <v-card class="history-card" elevation="2">
+          <v-card-title class="pa-6 pb-4">
+            <v-icon icon="mdi-history" class="me-2" />
+            Deployment History
+          </v-card-title>
+          <v-card-text class="pa-6 pt-0">
+            <DeploymentHistoryTable
+              :deployments="deploymentHistory"
+              :project-id="route.params.id as string"
+              :loading="historyLoading"
+              @view-deployment="viewDeploymentDetails"
+              @rollback="rollbackDeployment"
+              @rollback-to="rollbackToDeployment"
+              @delete-deployment="deleteDeploymentFromHistory"
+            />
+          </v-card-text>
+        </v-card>
+      </div>
 
-        <!-- Performance Monitoring -->
-        <v-col cols="12" md="6">
-          <v-card class="monitoring-card">
-            <v-card-title class="d-flex align-center">
-              <v-icon icon="mdi-chart-line" class="me-2" />
-              Performance Monitoring
-            </v-card-title>
-            <v-divider />
-            <v-card-text>
-              <PerformanceMonitoringChart
-                :metrics="performanceMetrics"
-                :time-range="monitoringTimeRange"
-                :loading="metricsLoading"
-                @time-range-change="updateMonitoringTimeRange"
-              />
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
+      <!-- New Deployment Dialog -->
+      <v-dialog v-model="showDeployDialog" max-width="800">
+        <v-card class="deploy-dialog">
+          <v-card-title class="pa-6 pb-4">
+            <v-icon icon="mdi-cloud-upload" class="me-2" />
+            Deploy New Model
+            <v-spacer />
+            <v-btn icon="mdi-close" variant="text" @click="showDeployDialog = false" />
+          </v-card-title>
+          <v-card-text class="pa-6 pt-0">
+            <DeploymentConfigForm
+              v-model="deploymentConfig"
+              :project-id="route.params.id as string"
+              :available-models="availableModels"
+              :loading="configLoading"
+              @deploy="deployModel"
+              @cancel="showDeployDialog = false"
+            />
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+
+      <!-- Deployment Details Dialog -->
+      <v-dialog v-model="showDetailsDialog" max-width="1000">
+        <v-card v-if="selectedDeployment" class="details-dialog">
+          <v-card-title class="pa-6 pb-4">
+            <v-icon icon="mdi-information" class="me-2" />
+            Deployment Details: {{ selectedDeployment.name }}
+            <v-spacer />
+            <v-btn icon="mdi-close" variant="text" @click="showDetailsDialog = false" />
+          </v-card-title>
+          <v-card-text class="pa-6 pt-0">
+            <v-tabs v-model="detailsTab">
+              <v-tab value="overview">Overview</v-tab>
+              <v-tab value="logs">Logs</v-tab>
+              <v-tab value="metrics">Metrics</v-tab>
+              <v-tab value="settings">Settings</v-tab>
+            </v-tabs>
+
+            <v-tabs-window v-model="detailsTab" class="mt-4">
+              <v-tabs-window-item value="overview">
+                <div class="deployment-overview">
+                  <v-row>
+                    <v-col cols="12" md="6">
+                      <div class="detail-section">
+                        <h4 class="text-h6 font-weight-bold mb-2">Configuration</h4>
+                        <v-list density="compact">
+                          <v-list-item>
+                            <v-list-item-title>Model Version</v-list-item-title>
+                            <v-list-item-subtitle>{{
+                              selectedDeployment.model_version_id || 'Latest'
+                            }}</v-list-item-subtitle>
+                          </v-list-item>
+                          <v-list-item>
+                            <v-list-item-title>Environment</v-list-item-title>
+                            <v-list-item-subtitle>{{
+                              selectedDeployment.environment
+                            }}</v-list-item-subtitle>
+                          </v-list-item>
+                          <v-list-item>
+                            <v-list-item-title>Instance Type</v-list-item-title>
+                            <v-list-item-subtitle>{{
+                              selectedDeployment.config?.instance_type || 'Not specified'
+                            }}</v-list-item-subtitle>
+                          </v-list-item>
+                        </v-list>
+                      </div>
+                    </v-col>
+                    <v-col cols="12" md="6">
+                      <div class="detail-section">
+                        <h4 class="text-h6 font-weight-bold mb-2">Status</h4>
+                        <v-chip :color="getStatusColor(selectedDeployment.status)" class="mb-2">
+                          {{ selectedDeployment.status }}
+                        </v-chip>
+                        <p class="text-body-2">
+                          Created: {{ formatDate(selectedDeployment.created_at) }}
+                        </p>
+                        <p class="text-body-2">
+                          Last Updated: {{ formatDate(selectedDeployment.updated_at) }}
+                        </p>
+                      </div>
+                    </v-col>
+                  </v-row>
+                </div>
+              </v-tabs-window-item>
+
+              <v-tabs-window-item value="logs">
+                <div class="deployment-logs">
+                  <v-code class="logs-content">{{ deploymentLogs }}</v-code>
+                </div>
+              </v-tabs-window-item>
+
+              <v-tabs-window-item value="metrics">
+                <div class="deployment-metrics">
+                  <PerformanceMonitoringChart
+                    :metrics="performanceMetrics"
+                    :project-id="route.params.id as string"
+                    :deployment-id="selectedDeployment.id"
+                    :time-range="monitoringTimeRange"
+                    :loading="metricsLoading"
+                    :detailed="true"
+                    @time-range-change="updateMonitoringTimeRange"
+                  />
+                </div>
+              </v-tabs-window-item>
+
+              <v-tabs-window-item value="settings">
+                <div class="deployment-settings">
+                  <v-form>
+                    <v-row>
+                      <v-col cols="12" md="6">
+                        <v-text-field
+                          v-model="selectedDeployment.name"
+                          label="Deployment Name"
+                          variant="outlined"
+                        />
+                      </v-col>
+                      <v-col cols="12" md="6">
+                        <v-select
+                          v-model="selectedDeployment.environment"
+                          :items="environments"
+                          label="Environment"
+                          variant="outlined"
+                        />
+                      </v-col>
+                    </v-row>
+                    <v-btn color="primary">Update Settings</v-btn>
+                  </v-form>
+                </div>
+              </v-tabs-window-item>
+            </v-tabs-window>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
     </v-container>
   </div>
 </template>
 
 <script setup lang="ts">
-import ApiEndpointsList from '@/components/projects/ApiEndpointsList.vue';
-import DeploymentConfigForm from '@/components/projects/DeploymentConfigForm.vue';
-import DeploymentHistoryTable from '@/components/projects/DeploymentHistoryTable.vue';
-import DeploymentStatusList from '@/components/projects/DeploymentStatusList.vue';
-import PerformanceMonitoringChart from '@/components/projects/PerformanceMonitoringChart.vue';
-import type {
-  ApiEndpoint,
-  Deployment,
-  DeploymentConfig,
-  PerformanceMetrics,
-  Project,
-} from '~/types/project';
+definePageMeta({ layout: 'projects' })
+import { useDeploymentStoreNew } from '~/stores/deploymentStoreNew';
+import type { Deployment } from '~/types/project';
 
-// Page meta
-definePageMeta({
-  middleware: 'auth',
-  layout: 'projects',
-});
-
-// Composables
+// Route and project data
 const route = useRoute();
-const { getProjectIcon, getProjectColor, getStatusIcon, getStatusColor } = useIcons();
-const { fetchProject } = useFetchProjects();
+const projectId = route.params.id as string;
 
-// Reactive state
-const project = ref<Project | null>(null);
-const deploymentConfig = ref<DeploymentConfig>({
-  environment: 'staging',
-  instance_type: 't3.medium',
-  autoScaling: {
-    enabled: true,
-    minInstances: 1,
-    maxInstances: 5,
-    targetCpuUtilization: 70,
-  },
-  healthCheck: {
-    enabled: true,
-    path: '/health',
-    intervalSeconds: 30,
-    timeoutSeconds: 10,
-    failureThreshold: 3,
-  },
-  resources: {
-    cpu: '500m',
-    memory: '1Gi',
-    storage: '10Gi',
-  },
+// Initialize stores
+const deploymentStore = useDeploymentStoreNew();
+
+// Set the current project in the store
+deploymentStore.setCurrentProject(projectId);
+
+// Reactive data from store
+const {
+  activeDeployments,
+  deploymentHistory,
+  apiEndpoints,
+  performanceMetrics,
+  loading: deploymentsLoading,
+  activeCount,
+} = storeToRefs(deploymentStore);
+
+// Local reactive data for UI state
+const project = ref(null);
+const showDeployDialog = ref(false);
+const showDetailsDialog = ref(false);
+const selectedDeployment = ref<Deployment | null>(null);
+const detailsTab = ref('overview');
+const refreshing = ref(false);
+const configLoading = ref(false);
+const endpointsLoading = ref(false);
+const historyLoading = ref(false);
+const metricsLoading = ref(false);
+const monitoringTimeRange = ref('24h');
+
+// Deployment configuration
+const deploymentConfig = ref({
+  name: '',
+  environment: 'production' as 'development' | 'staging' | 'production',
+  instanceType: 'standard-2',
+  instanceCount: 1,
+  autoScaling: false,
+  minInstances: 1,
+  maxInstances: 10,
+  targetCpuUtilization: 70,
+  healthCheckEnabled: true,
+  healthCheckPath: '/health',
   environmentVariables: {},
   secrets: {},
 });
 
-const activeDeployments = ref<Deployment[]>([]);
-const deploymentHistory = ref<Deployment[]>([]);
-const apiEndpoints = ref<ApiEndpoint[]>([]);
-const performanceMetrics = ref<PerformanceMetrics[]>([]);
-const availableEnvironments = ref(['development', 'staging', 'production']);
+// const availableEnvironments = ref(['development', 'staging', 'production']);
+const hasTrainedModels = ref(true);
+const availableModels = ref<string[]>([]);
+const deploymentLogs = ref('');
+const environments = ['development', 'staging', 'production'];
 
-// Loading states
-const configLoading = ref(false);
-const deploying = ref(false);
-const stopping = ref(false);
-const refreshing = ref(false);
-const deploymentsLoading = ref(false);
-const endpointsLoading = ref(false);
-const historyLoading = ref(false);
-const metricsLoading = ref(false);
+// Stats for dashboard
+const stats = ref({
+  activeDeployments: 0,
+  totalRequests: 0,
+  avgResponseTime: 0,
+  uptime: 99.9,
+});
 
-// Other state
-const activeDeployment = ref<Deployment | null>(null);
-const monitoringTimeRange = ref('24h');
-
-// Computed
+// Computed properties
 const canDeploy = computed(() => {
   return (
     project.value &&
     deploymentConfig.value &&
-    !deploying.value &&
+    !deploymentsLoading.value &&
     deploymentConfig.value.environment
   );
 });
 
-// Methods
-const updateDeploymentConfig = async (config: DeploymentConfig): Promise<any> => {
-  try {
-    configLoading.value = true;
+const activeDeployment = computed(() => {
+  return activeDeployments.value[0] || null;
+});
 
-    // Simulate API call to update deployment configuration
-    console.log('Updating deployment config:', config);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    deploymentConfig.value = { ...config };
-  } catch (error) {
-    console.error('Failed to update deployment config:', error);
-  } finally {
-    configLoading.value = false;
-  }
-};
-
+// Methods using the store
 const deployModel = async () => {
+  if (!canDeploy.value || !projectId) return;
+
   try {
-    deploying.value = true;
+    const config = {
+      instance_type: deploymentConfig.value.instanceType,
+      environment: deploymentConfig.value.environment,
+      autoScaling: deploymentConfig.value.autoScaling
+        ? {
+            enabled: deploymentConfig.value.autoScaling,
+            minInstances: deploymentConfig.value.minInstances,
+            maxInstances: deploymentConfig.value.maxInstances,
+            targetCpuUtilization: deploymentConfig.value.targetCpuUtilization,
+          }
+        : undefined,
+      healthCheck: deploymentConfig.value.healthCheckEnabled
+        ? {
+            enabled: true,
+            path: deploymentConfig.value.healthCheckPath,
+            intervalSeconds: 30,
+            timeoutSeconds: 5,
+            failureThreshold: 3,
+          }
+        : undefined,
+      environment_variables: deploymentConfig.value.environmentVariables,
+      secrets: deploymentConfig.value.secrets,
+    };
 
-    // Simulate model deployment
-    console.log('Deploying model with config:', deploymentConfig.value);
-    await new Promise((resolve) => setTimeout(resolve, 3000)); // Create mock active deployment
-    const newDeployment: Deployment = {
-      id: `deployment_${Date.now()}`,
-      project_id: route.params.id as string,
-      model_version_id: null,
-      name: `Deployment ${Date.now()}`,
-      environment: deploymentConfig.value.environment || 'staging',
-      status: 'running',
-      endpoint_url: `https://${deploymentConfig.value.environment}-${route.params.id}.example.com`,
-      config: deploymentConfig.value as any,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      // Additional UI properties
-      version: `v${Date.now()}`,
-      projectId: route.params.id as string,
-      createdAt: new Date(),
-      url: `https://${deploymentConfig.value.environment}-${route.params.id}.example.com`,
-      healthStatus: 'healthy',
-    } as any;
-    activeDeployments.value.push(newDeployment as any);
-    activeDeployment.value = newDeployment as any;
+    const result = await deploymentStore.createDeployment(
+      'dummy-model-version-id', // This should come from selected model
+      config,
+      deploymentConfig.value.name,
+    );
 
-    // Add to history
-    (deploymentHistory.value as any).unshift(newDeployment);
-
-    // Generate API endpoints
-    generateApiEndpoints(newDeployment);
+    if (result) {
+      showDeployDialog.value = false;
+      // Reset form
+      deploymentConfig.value.name = '';
+    }
   } catch (error) {
     console.error('Failed to deploy model:', error);
-  } finally {
-    deploying.value = false;
   }
 };
 
-const stopDeployment = async () => {
-  if (!activeDeployment.value) return;
+const stopDeployment = async (deployment?: Deployment) => {
+  const targetDeployment = deployment || activeDeployment.value;
+  if (!targetDeployment) return;
 
-  try {
-    stopping.value = true;
+  await deploymentStore.stopDeployment(targetDeployment.id);
+};
 
-    // Simulate stopping deployment
-    console.log('Stopping deployment:', activeDeployment.value.id);
-    await new Promise((resolve) => setTimeout(resolve, 2000)); // Update deployment status
-    activeDeployment.value.status = 'stopped';
-    activeDeployment.value.stoppedAt = new Date().toISOString();
+const restartDeployment = async (deployment: Deployment) => {
+  await deploymentStore.restartDeployment(deployment.id);
+};
 
-    // Remove from active deployments
-    const activeDeploymentId = activeDeployment.value?.id;
-    const filteredDeployments = [];
-    for (const deployment of activeDeployments.value) {
-      if (deployment.id !== activeDeploymentId) {
-        filteredDeployments.push(deployment);
-      }
-    }
-    activeDeployments.value = filteredDeployments;
 
-    activeDeployment.value = null;
-  } catch (error) {
-    console.error('Failed to stop deployment:', error);
-  } finally {
-    stopping.value = false;
-  }
+const deleteDeployment = async (deployment: Deployment) => {
+  await deploymentStore.deleteDeployment(deployment.id);
 };
 
 const refreshDeployments = async () => {
+  refreshing.value = true;
   try {
-    refreshing.value = true;
-
-    // Simulate refreshing deployment status
-    console.log('Refreshing deployments for project:', route.params.id);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Update deployment statuses (mock)
-    activeDeployments.value.forEach((deployment) => {
-      deployment.healthStatus = Math.random() > 0.1 ? 'healthy' : 'unhealthy';
-    });
-  } catch (error) {
-    console.error('Failed to refresh deployments:', error);
+    await deploymentStore.fetchDeployments(projectId);
+    // Update stats
+    stats.value.activeDeployments = activeCount.value;
   } finally {
     refreshing.value = false;
   }
 };
 
-const generateApiEndpoints = (deployment: Deployment) => {
-  const baseUrl = deployment.url;
 
-  apiEndpoints.value = [
-    {
-      id: `endpoint_${deployment.id}_predict`,
-      deployment_id: deployment.id,
-      method: 'POST',
-      path: '/predict',
-      url: `${baseUrl}/predict`,
-      description: 'Make predictions using the deployed model',
-      authenticated: true,
-      rateLimit: '1000/hour',
-    },
-    {
-      id: `endpoint_${deployment.id}_health`,
-      deployment_id: deployment.id,
-      method: 'GET',
-      path: '/health',
-      url: `${baseUrl}/health`,
-      description: 'Check deployment health status',
-      authenticated: false,
-      rateLimit: 'unlimited',
-    },
-    {
-      id: `endpoint_${deployment.id}_metrics`,
-      deployment_id: deployment.id,
-      method: 'GET',
-      path: '/metrics',
-      url: `${baseUrl}/metrics`,
-      description: 'Get deployment metrics and statistics',
-      authenticated: true,
-      rateLimit: '100/hour',
-    },
-  ];
-};
-
-const viewDeploymentLogs = (deployment: Deployment): any => {
-  console.log('Viewing logs for deployment:', deployment.id);
-  // Navigate to logs view or open logs modal
-};
-
-const viewDeploymentMetrics = (deployment: Deployment): any => {
-  console.log('Viewing metrics for deployment:', deployment.id);
-  // Navigate to metrics view or open metrics modal
-};
-
-const scaleDeployment = async (deployment: Deployment, instanceCount: number) => {
-  try {
-    console.log(`Scaling deployment ${deployment.id} to ${instanceCount} instances`);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Update deployment scaling
-    deployment.instanceCount = instanceCount;
-  } catch (error) {
-    console.error('Failed to scale deployment:', error);
-  }
-};
-
-const rollbackDeployment = async (deployment: Deployment) => {
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    // Implement rollback logic
-  } catch (error) {
-    console.error('Failed to rollback deployment:', error);
-  }
-};
-
-const deleteDeployment = async (deployment: Deployment) => {
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Remove from active deployments
-    const activeIndex = activeDeployments.value.findIndex((d: any) => d.id === deployment.id);
-    if (activeIndex !== -1) {
-      activeDeployments.value.splice(activeIndex, 1);
-    }
-
-    // Remove associated API endpoints
-    const endpointIndex = apiEndpoints.value.findIndex(
-      (e: any) => e.deployment_id === deployment.id,
-    );
-    if (endpointIndex !== -1) {
-      apiEndpoints.value.splice(endpointIndex, 1);
-    }
-  } catch (error) {
-    console.error('Failed to delete deployment:', error);
-  }
-};
-
-const testApiEndpoint = async (endpoint: ApiEndpoint) => {
-  console.log('Testing API endpoint:', endpoint.url);
-  // Open API testing interface or run test
-};
-
-const copyEndpointUrl = (endpoint: ApiEndpoint) => {
-  navigator.clipboard.writeText(endpoint.url);
-  console.log('Copied endpoint URL:', endpoint.url);
-};
-
-const generateApiClient = (endpoint: ApiEndpoint) => {
-  console.log('Generating API client for endpoint:', endpoint.url);
-  // Generate and download API client code
+const openDeploymentDetails = (deployment: Deployment) => {
+  selectedDeployment.value = deployment;
+  showDetailsDialog.value = true;
 };
 
 const viewDeploymentDetails = (deployment: Deployment) => {
-  console.log('Viewing deployment details:', deployment.id);
-  // Navigate to deployment detail view
+  openDeploymentDetails(deployment);
 };
 
-const rollbackToDeployment = async (deployment: Deployment) => {
-  console.log('Rolling back to deployment:', deployment.id);
-  // Implement rollback to specific deployment
+const viewDeploymentLogs = (deployment: Deployment) => {
+  // Implement log viewing
+  console.log('View logs for deployment:', deployment.id);
 };
 
-const deleteDeploymentFromHistory = async (deploymentId: string) => {
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    const index = deploymentHistory.value.findIndex((d: any) => d.id === deploymentId);
-    if (index !== -1) {
-      deploymentHistory.value.splice(index, 1);
-    }
-  } catch (error) {
-    console.error('Failed to delete deployment from history:', error);
-  }
-};
-
-const updateMonitoringTimeRange = (timeRange: string) => {
-  monitoringTimeRange.value = timeRange;
-  loadPerformanceMetrics();
-};
-
-const loadDeployments = async () => {
-  try {
-    deploymentsLoading.value = true;
-
-    // Simulate loading deployments
-    console.log('Loading deployments for project:', route.params.id);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Mock active deployments
-    activeDeployments.value = [];
-  } catch (error) {
-    console.error('Failed to load deployments:', error);
-  } finally {
-    deploymentsLoading.value = false;
-  }
-};
-
-const loadApiEndpoints = async () => {
-  try {
-    endpointsLoading.value = true;
-
-    // Simulate loading API endpoints
-    console.log('Loading API endpoints for project:', route.params.id);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    apiEndpoints.value = [];
-  } catch (error) {
-    console.error('Failed to load API endpoints:', error);
-  } finally {
-    endpointsLoading.value = false;
-  }
-};
-
-const loadDeploymentHistory = async () => {
-  try {
-    historyLoading.value = true;
-
-    // Simulate loading deployment history
-    console.log('Loading deployment history for project:', route.params.id);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    deploymentHistory.value = [];
-  } catch (error) {
-    console.error('Failed to load deployment history:', error);
-  } finally {
-    historyLoading.value = false;
-  }
-};
-
-const loadPerformanceMetrics = async () => {
-  try {
-    metricsLoading.value = true;
-
-    // Simulate loading performance metrics
-    console.log('Loading performance metrics for project:', route.params.id);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    performanceMetrics.value = [];
-  } catch (error) {
-    console.error('Failed to load performance metrics:', error);
-  } finally {
-    metricsLoading.value = false;
-  }
-};
-
-// Lifecycle
+// Initialize data
 onMounted(async () => {
-  const projectId = route.params.id as string;
-
   try {
-    // Load project data
-    project.value = await fetchProject(projectId);
-
-    // Load deployment-related data
-    await Promise.all([
-      loadDeployments(),
-      loadApiEndpoints(),
-      loadDeploymentHistory(),
-      loadPerformanceMetrics(),
-    ]);
+    await refreshDeployments();
   } catch (error) {
     console.error('Failed to load deployment page data:', error);
   }
@@ -663,7 +563,11 @@ onMounted(async () => {
 .deployment-status-card,
 .api-endpoints-card,
 .deployment-history-card,
-.monitoring-card {
+.monitoring-card,
+.stat-card,
+.deployments-card,
+.endpoints-card,
+.history-card {
   height: 100%;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   border-radius: 16px;
@@ -676,7 +580,11 @@ onMounted(async () => {
 .deployment-status-card:hover,
 .api-endpoints-card:hover,
 .deployment-history-card:hover,
-.monitoring-card:hover {
+.monitoring-card:hover,
+.stat-card:hover,
+.deployments-card:hover,
+.endpoints-card:hover,
+.history-card:hover {
   transform: translateY(-8px);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
   border-color: rgba(var(--v-theme-info), 0.3);
@@ -686,7 +594,11 @@ onMounted(async () => {
 .deployment-status-card .v-card-title,
 .api-endpoints-card .v-card-title,
 .deployment-history-card .v-card-title,
-.monitoring-card .v-card-title {
+.monitoring-card .v-card-title,
+.stat-card .v-card-title,
+.deployments-card .v-card-title,
+.endpoints-card .v-card-title,
+.history-card .v-card-title {
   background: linear-gradient(
     135deg,
     rgba(var(--v-theme-info), 0.05) 0%,
@@ -766,7 +678,11 @@ onMounted(async () => {
   .deployment-status-card:hover,
   .api-endpoints-card:hover,
   .deployment-history-card:hover,
-  .monitoring-card:hover {
+  .monitoring-card:hover,
+  .stat-card:hover,
+  .deployments-card:hover,
+  .endpoints-card:hover,
+  .history-card:hover {
     transform: none;
   }
 }

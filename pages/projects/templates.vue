@@ -208,27 +208,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { mockTemplates } from '~/data/templates';
+import type { ProjectTemplate } from '~/types/project';
 
 definePageMeta({
   middleware: 'auth',
   layout: 'projects',
   title: 'Project Templates',
 });
-
-interface ProjectTemplate {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  icon: string;
-  features: string[];
-  techStack: string[];
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  estimatedTime: string;
-  includes: string[];
-  pipelineImage?: string;
-  config: any;
-}
 
 const loading = ref(false);
 const templates = ref<ProjectTemplate[]>([]);
@@ -239,7 +225,7 @@ const loadTemplates = async () => {
   loading.value = true;
   try {
     await new Promise((resolve) => setTimeout(resolve, 500));
-    templates.value = mockTemplates;
+    templates.value = mockTemplates as ProjectTemplate[];
   } catch (e) {
     console.error(e);
   } finally {

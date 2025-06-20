@@ -40,7 +40,12 @@
             <v-btn prepend-icon="mdi-content-save" :loading="saving" @click="savePipeline">
               Save
             </v-btn>
-            <v-btn prepend-icon="mdi-play" color="success" :disabled="!canRun" @click="runPipeline">
+            <v-btn
+              prepend-icon="mdi-play"
+              color="success"
+              :disabled="!canRun"
+              @click="runPipeline"
+            >
               Run
             </v-btn>
           </v-btn-group>
@@ -103,7 +108,12 @@
 
       <div class="canvas-toolbar">
         <div class="toolbar-left">
-          <v-btn-toggle v-model="canvasMode" mandatory variant="outlined" density="compact">
+          <v-btn-toggle
+            v-model="canvasMode"
+            mandatory
+            variant="outlined"
+            density="compact"
+          >
             <v-btn value="select" icon="mdi-cursor-default" />
             <v-btn value="pan" icon="mdi-hand-left" />
             <v-btn value="zoom" icon="mdi-magnify" />
@@ -111,20 +121,40 @@
 
           <v-divider vertical class="mx-2" />
 
-          <v-btn prepend-icon="mdi-fit-to-page" variant="outlined" size="small" @click="fitToView">
+          <v-btn
+            prepend-icon="mdi-fit-to-page"
+            variant="outlined"
+            size="small"
+            @click="fitToView"
+          >
             Fit to View
           </v-btn>
 
-          <v-btn prepend-icon="mdi-refresh" variant="outlined" size="small" @click="refreshCanvas">
+          <v-btn
+            prepend-icon="mdi-refresh"
+            variant="outlined"
+            size="small"
+            @click="refreshCanvas"
+          >
             Reset
           </v-btn>
         </div>
 
         <div class="toolbar-right">
           <div class="zoom-controls">
-            <v-btn icon="mdi-minus" size="small" variant="outlined" @click="zoomOut" />
+            <v-btn
+              icon="mdi-minus"
+              size="small"
+              variant="outlined"
+              @click="zoomOut"
+            />
             <span class="zoom-level">{{ Math.round(zoomLevel * 100) }}%</span>
-            <v-btn icon="mdi-plus" size="small" variant="outlined" @click="zoomIn" />
+            <v-btn
+              icon="mdi-plus"
+              size="small"
+              variant="outlined"
+              @click="zoomIn"
+            />
           </div>
         </div>
       </div>
@@ -231,6 +261,8 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ layout: 'projects' })
+import { usePipelineStore } from '@/stores/pipelineStore';
 import { computed, onMounted, ref } from 'vue';
 import FlowContainer from '~/components/builder/FlowContainer.vue';
 import FlowToolbar from '~/components/builder/FlowToolbar.vue';
@@ -250,7 +282,11 @@ const projectId = route.params.id as string;
 
 // Composables
 const { getIcon, getIconColor } = useIcons();
-const { project, loading, fetchProject } = usePipeline(projectId);
+const pipelineStore = usePipelineStore();
+const project = computed(() => pipelineStore.project);
+const loading = computed(() => pipelineStore.loading);
+const fetchProject = () => pipelineStore.fetchProject(projectId);
+onMounted(fetchProject);
 
 // State
 const saving = ref(false);
