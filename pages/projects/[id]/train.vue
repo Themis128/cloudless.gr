@@ -120,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'projects' })
+definePageMeta({ layout: 'projects', middleware: 'auth' })
 
 import { useProjectsStore } from '@/stores/projectsStore';
 import type { TrainingConfig, TrainingMetrics } from '~/types/project';

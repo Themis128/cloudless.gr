@@ -61,12 +61,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+
+import { useSupabase } from '@/composables/useSupabase';
+import { onMounted, ref } from 'vue';
 
 definePageMeta({
   layout: 'default',
   title: 'Admin/User Matrix',
-  description: 'View all registered admins and users in tabular format.'
+  description: 'View all registered admins and users in tabular format.',
+  middleware: [
+    'auth',
+    async () => {
+        // Adjust this logic to match your actual user state management
+        const nuxtApp = useNuxtApp();
+        const user = (nuxtApp.$auth as any)?.user || (nuxtApp.$user as any)?.user || null;
+        if (!user || !user.is_admin) {
+          return navigateTo('/'); // Redirect non-admins to home or another page
+        }
+      // No need to call next()
+    },
+  ],
 })
 
 interface UserProfile {
@@ -86,19 +100,31 @@ const loading = ref(true)
 
 onMounted(async () => {
   loading.value = true
+  const supabase = useSupabase();
   try {
-    const res = await fetch('/api/admin-users')
-    const data = await res.json()
-    admins.value = data.admins || []
-    users.value = data.users || []
-    adminColumns.value = admins.value.length ? Object.keys(admins.value[0]) : []
-    userColumns.value = users.value.length ? Object.keys(users.value[0]) : []
+    // Fetch admins
+    const { data: adminData, error: adminError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('is_admin', true);
+    if (adminError) throw adminError;
+    admins.value = adminData || [];
+    adminColumns.value = admins.value.length ? Object.keys(admins.value[0]) : [];
+
+    // Fetch users (non-admins)
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('is_admin', false);
+    if (userError) throw userError;
+    users.value = userData || [];
+    userColumns.value = users.value.length ? Object.keys(users.value[0]) : [];
   } catch (err) {
-    console.error('Failed to fetch matrix:', err)
+    console.error('Failed to fetch matrix:', err);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-})
+});
 </script>
 
 <style scoped>

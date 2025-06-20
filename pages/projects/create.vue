@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'projects' })
+
 
 import ProjectCreateForm from '@/components/projects/ProjectCreateForm.vue';
 import { useCreateProjectStore } from '@/stores/createProjectStore';
@@ -11,6 +11,7 @@ definePageMeta({
   layout: 'projects',
   title: 'Create Project',
   requiresAuth: true,
+  middleware: 'auth',
 });
 
 // Stores

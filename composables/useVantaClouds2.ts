@@ -103,24 +103,26 @@ export function useVantaClouds2(element: HTMLElement | null) {
       };
       document.body.appendChild(script);
     });
-  const initVanta = async () => {
+  const initVanta = async (retryCount = 0) => {
     if (!element) {
       console.warn('[VantaClouds2] No element provided for Vanta effect.');
       return;
-    }    // Ensure element covers the full viewport including top
+    }
+    // Ensure element covers the full viewport including top
     element.style.position = 'fixed';
     element.style.top = '-300px';
     element.style.left = '-100px';
     element.style.width = 'calc(100vw + 200px)';
     element.style.height = 'calc(100vh + 400px)';
     element.style.zIndex = '0';
-    
+
     try {
       await loadScript('/three.r134.min.js');
-      await loadScript('/vanta.clouds2.min.js');      // @ts-ignore - VANTA is a global library loaded via script tag
-      if (window.VANTA?.CLOUDS2) {
+      await loadScript('/vanta.clouds2.min.js');
+      // Wait for VANTA to be available
+      if (window.VANTA && window.VANTA.CLOUDS2) {
         console.log('[VantaClouds2] Initializing VANTA.CLOUDS2...');
-        const config = getResponsiveConfig();        
+        const config = getResponsiveConfig();
         // @ts-ignore - VANTA.CLOUDS2 is dynamically loaded and not typed
         vantaEffect = window.VANTA.CLOUDS2({
           el: element,
@@ -131,34 +133,42 @@ export function useVantaClouds2(element: HTMLElement | null) {
           minWidth: config.minWidth,
           scale: config.scale,
           scaleMobile: 1.2, // Ensure mobile has good coverage
-          texturePath: '/gallery/noise.png',          backgroundColor: 0x87ceeb, // Light sky blue background
+          texturePath: '/gallery/noise.png',
+          backgroundColor: 0x87ceeb, // Light sky blue background
           skyColor: 0x4a90e2,        // Bright blue sky
           cloudColor: 0xf0f8ff,      // Light white/blue clouds
           shadowColor: 0x0d1117,     // Much darker shadows between clouds (almost black)
           lightColor: 0xffffff,      // Bright white light
-          speed: config.speed,          size: 1.2,                 // Smaller/thinner clouds
+          speed: config.speed,
+          size: 1.2,                 // Smaller/thinner clouds
           density: 0.6,              // Lower density for thinner cloud coverage
-          cloudShadow: true,         // Enable cloud shadows          shadowIntensity: 1.2,      // Maximum shadow intensity for very dark shadows
+          cloudShadow: true,         // Enable cloud shadows
+          shadowIntensity: 1.2,      // Maximum shadow intensity for very dark shadows
           shadowBlur: 2,             // Sharp shadow edges for maximum definition
           skyOpacity: 0.85,          // Slightly lower to let shadows show through more
           cloudOpacity: 0.7,         // Lower opacity for thinner, more transparent clouds
           yOffset: 0.2,              // Move clouds down to middle (positive value moves down)
-          xOffset: 0,                // Keep horizontal position centered          contrast: 1.6,             // Even higher contrast for more defined shadows
+          xOffset: 0,                // Keep horizontal position centered
+          contrast: 1.6,             // Even higher contrast for more defined shadows
           brightness: 0.9,           // Slightly lower brightness to enhance shadow visibility
         });
         console.log('[VantaClouds2] VANTA.CLOUDS2 initialized:', vantaEffect);
-        
         // Add resize event listener for responsive behavior
         window.addEventListener('resize', handleResize);
       } else {
-        console.error('[VantaClouds2] VANTA.CLOUDS2 is not available on window.VANTA');
+        if (retryCount < 2) {
+          // Retry after a short delay if VANTA is not ready
+          setTimeout(() => initVanta(retryCount + 1), 300);
+        } else {
+          console.error('[VantaClouds2] VANTA.CLOUDS2 is not available on window.VANTA after script load.');
+        }
       }
     } catch (error) {
       console.error('❌ Failed to load Vanta CLOUDS2:', error);
     }
   };
   if (typeof window !== 'undefined') {
-    setTimeout(initVanta, 0);
+    setTimeout(() => initVanta(0), 0);
     window.addEventListener('beforeunload', () => {
       if (vantaEffect) {
         vantaEffect.destroy();

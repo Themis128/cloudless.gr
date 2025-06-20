@@ -24,15 +24,17 @@
         target="_blank"
         rel="noopener noreferrer"
         :aria-label="item.aria || item.name"
-        class="mx-1"
+        class="mx-1 social-btn-full"
         size="small"
         variant="text"
       >
-        <FontAwesomeIcon
-          :icon="item.iconObj"
-          class="fa-social"
-          :style="{ color: item.color || '#333' }"
-        />
+        <span class="fa-social-wrapper">
+          <FontAwesomeIcon
+            :icon="item.iconObj"
+            class="fa-social"
+            :style="{ color: item.color || '#333' }"
+          />
+        </span>
       </v-btn>
     </span>
   </footer>
@@ -87,19 +89,21 @@ const socialWithIcons = computed(() =>
 </script>
 
 <style scoped>
+/* Half-size footer styles */
 .footer {
   font-family: inherit;
   background: transparent;
-  min-height: 32px;
-  line-height: 1.2;
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
+  min-height: 16px;
+  line-height: 1.1;
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
   position: relative;
   width: 100%;
   box-sizing: border-box;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 0.7rem;
 }
 .footer-social {
   flex: 1;
@@ -109,11 +113,28 @@ const socialWithIcons = computed(() =>
   flex-wrap: wrap;
   gap: 0.25rem;
 }
+.social-btn-full {
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  min-height: 22px !important;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fa-social-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .fa-social {
-  width: 20px;
-  height: 20px;
-  vertical-align: middle;
+  width: 16px !important;
+  height: 16px !important;
   transition: transform 0.2s ease;
+  display: block;
 }
 .v-btn:hover .fa-social {
   transform: scale(1.1);
@@ -125,7 +146,7 @@ const socialWithIcons = computed(() =>
   color: #222;
 }
 .footer-rights {
-  font-size: 0.75rem;
+  font-size: 0.375rem;
   opacity: 0.8;
   font-weight: 300;
 }
@@ -141,16 +162,16 @@ const socialWithIcons = computed(() =>
 }
 @media (max-width: 640px) {
   .footer {
-    font-size: 0.85rem;
-    padding-top: 0.15rem;
-    padding-bottom: 0.15rem;
+    font-size: 0.425rem;
+    padding-top: 0.075rem;
+    padding-bottom: 0.075rem;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.25rem;
   }
 
   .footer-social {
     margin-left: 0;
-    margin-top: 0.25rem;
+    margin-top: 0.125rem;
   }
 }
 </style>

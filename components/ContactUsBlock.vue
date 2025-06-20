@@ -1,25 +1,27 @@
 <template>
   <div>
-    <div class="about-social mb-4">
-      <v-btn
-        v-for="item in socialWithIcons"
-        :key="item.name"
-        icon
-        :href="item.url"
-        target="_blank"
-        :aria-label="item.aria"
-        class="mx-1"
-      >
-        <FontAwesomeIcon :icon="item.iconObj" class="fa-social" :style="{ color: item.color || '#333' }" />
-      </v-btn>
-    </div>
+    <v-card class="glassmorph pa-4 d-inline-flex align-center justify-center" elevation="4" style="border-radius: 18px;">
+      <div class="about-social mb-0">
+        <v-btn
+          v-for="item in socialWithIcons"
+          :key="item.name"
+          icon
+          :href="item.url"
+          target="_blank"
+          :aria-label="item.aria"
+          class="mx-1"
+        >
+          <FontAwesomeIcon :icon="item.iconObj" class="fa-social" :style="{ color: item.color || '#333' }" />
+        </v-btn>
+      </div>
+    </v-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useContactInfo } from '@/composables/useContactInfo'
+import { faGithub, faLinkedin, faTwitter } from '@fortawesome/free-brands-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faTwitter, faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 import { computed } from 'vue'
 
 const contact = useContactInfo()

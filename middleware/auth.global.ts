@@ -14,6 +14,13 @@ const publicRoutes = [
   '/auth/reset',
   '/auth/admin-login',
   '/auth/users-nav',
+  '/documentation',
+  '/documentation/api-reference',
+  '/documentation/faq',
+  '/documentation/getting-started',
+  '/documentation/roadmap',
+  '/documentation/troubleshooting',
+  '/documentation/user-guide',
 ]
 
 // Admin routes that require admin role

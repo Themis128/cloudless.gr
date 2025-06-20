@@ -25,7 +25,14 @@
         "files.associations": {
             "*.vue": "vue",
             "*.ts": "typescript"
-        }
+        },
+        "cSpell.words": [
+            "fontawesome",
+            "fortawesome",
+            "glassmorph",
+            "nuxt",
+            "Supabase"
+        ]
     },
     "extensions": {
         "recommendations": [

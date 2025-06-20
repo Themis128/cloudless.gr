@@ -29,7 +29,7 @@
           variant="outlined"
           prepend-icon="mdi-stop"
           :loading="stopping"
-          @click="$emit('stop-training', currentSession)"
+          @click="$emit('stopTraining', currentSession)"
         >
           Stop Training
         </v-btn>
@@ -39,7 +39,7 @@
           prepend-icon="mdi-play"
           :disabled="isTraining"
           :loading="starting"
-          @click="$emit('start-training')"
+          @click="$emit('startTraining')"
         >
           Start Training
         </v-btn>

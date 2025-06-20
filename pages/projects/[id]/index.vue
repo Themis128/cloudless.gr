@@ -261,7 +261,7 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'projects' })
+
 import { usePipelineStore } from '@/stores/pipelineStore';
 import { computed, onMounted, ref } from 'vue';
 import FlowContainer from '~/components/builder/FlowContainer.vue';
@@ -274,6 +274,7 @@ definePageMeta({
   layout: 'projects',
   title: 'Pipeline Builder',
   requiresAuth: true,
+  middleware: 'auth',
 });
 
 // Route

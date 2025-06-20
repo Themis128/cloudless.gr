@@ -1,541 +1,550 @@
+/* Accessibility button icon color override */
+.v-icon.accessibility-icon, .accessibility-btn .v-icon {
+  color: #2196f3 !important; /* Material blue */
+  z-index: 1000 !important;
+  position: relative;
+}
+/* About Intro Section (compact version) */
+.about-intro-section {
+  background: rgba(30, 41, 59, 0.82);
+  color: #fff;
+  margin-bottom: 2.5rem;
+  border-radius: 14px;
+  box-shadow: 0 4px 18px 0 rgba(31, 38, 135, 0.13);
+  border: 1.5px solid rgba(255, 255, 255, 0.13);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 1.2rem 0.8rem 1.1rem 0.8rem;
+  position: relative;
+  z-index: 20;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.about-intro-section--compact {
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.9rem 0.7rem 0.9rem 0.7rem;
+  border-radius: 10px;
+  max-width: 540px;
+}
+.about-intro-content {
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+}
+.about-intro-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.18), 0 1px 0 #222;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.2px;
+}
+.about-intro-title--compact {
+  font-size: 1.1rem;
+  margin-bottom: 0.3rem;
+}
+.about-intro-paragraph {
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.13), 0 1px 0 #222;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+.about-intro-paragraph--compact {
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+@media (max-width: 600px) {
+  .about-intro-section {
+    padding: 0.7rem 0.3rem 0.7rem 0.3rem;
+    border-radius: 8px;
+    max-width: 98vw;
+  }
+  .about-intro-section--compact {
+    padding: 0.5rem 0.2rem 0.5rem 0.2rem;
+    border-radius: 7px;
+    max-width: 99vw;
+  }
+  .about-intro-title {
+    font-size: 1rem;
+  }
+  .about-intro-title--compact {
+    font-size: 0.92rem;
+  }
+  .about-intro-paragraph {
+    font-size: 0.92rem;
+  }
+  .about-intro-paragraph--compact {
+    font-size: 0.88rem;
+    line-height: 1.35;
+  }
+}
 <template>
-  <v-container class="py-12">
-    <v-row justify="center">
-      <v-col cols="12" sm="10" md="8">
-        <v-card class="glass-card pa-6" elevation="3">
-          <v-card-title class="text-h5 font-weight-bold white--text">
-            About Cloudless
-          </v-card-title>
 
-          <v-card-text class="text-body-1">
-            <p>
-              <strong>Cloudless</strong> is a modular and developer-centric LLM agent platform
-              crafted using modern technologies like <strong>Nuxt 3</strong>,
-              <strong>Supabase</strong>, and <strong>Vuetify 3</strong>.
-            </p>
+  <!-- Hero Section -->
+  <section class="about-hero-section glass-hero mb-6">
+    <div class="about-hero-content">
+      <h1 class="about-hero-title">Welcome to Cloudless</h1>
+      <p class="about-hero-subtitle">
+        Accelerate your business with AI-driven insights, quantum-ready infrastructure, and secure, scalable solutions.<br>
+        <span class="about-hero-highlight">Empowering innovation for tomorrow's enterprises.</span>
+      </p>
+    </div>
+  </section>
 
-            <p>Our mission is to empower developers with tools that are:</p>
-
-            <v-list dense>
-              <v-list-item>
-                <v-list-item-icon><v-icon>mdi-check-circle</v-icon></v-list-item-icon>
-                <v-list-item-title>Modern</v-list-item-title>
-              </v-list-item>
-
-              <v-list-item>
-                <v-list-item-icon><v-icon>mdi-check-circle</v-icon></v-list-item-icon>
-                <v-list-item-title>Accessible</v-list-item-title>
-              </v-list-item>
-
-              <v-list-item>
-                <v-list-item-icon><v-icon>mdi-check-circle</v-icon></v-list-item-icon>
-                <v-list-item-title>Scalable</v-list-item-title>
-              </v-list-item>
-            </v-list>
-
-            <p>
-              Cloudless is designed with community collaboration in mind. It’s an open-source
-              initiative that encourages contributions from developers worldwide, aiming to provide
-              a solid, extensible foundation for rapidly building and deploying
-              <strong>LLM-driven applications</strong>.
-            </p>
-            <p>
-              Whether you're a beginner exploring AI or a seasoned engineer building cutting-edge
-              tools, Cloudless is here to accelerate your journey from concept to production.
-            </p>
-          </v-card-text>
-        </v-card>
+  <!-- Department-Specific Solutions (now directly under hero) -->
+  <div class="text-center mb-1 mt-2">
+    <h3 class="section-title">Department Solutions</h3>
+  </div>
+  <div class="departments-section mb-1">
+    <v-row>
+      <v-col
+        v-for="dept in departments"
+        :key="dept.name"
+        cols="12"
+        sm="6"
+        md="4"
+      >
+        <div class="department-card modern-card compact-card">
+          <div class="department-header">
+            <div class="department-icon">
+              <v-icon :color="dept.icon.color" size="20">{{ dept.icon.name }}</v-icon>
+            </div>
+            <div class="department-info">
+              <h6 class="department-name">{{ dept.name }}</h6>
+              <span class="department-tag">{{ dept.tag }}</span>
+            </div>
+          </div>
+          <div class="department-features">
+            <div
+              v-for="feature in dept.features"
+              :key="feature"
+              class="feature-item"
+            >
+              <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
+              <span>{{ feature }}</span>
+            </div>
+          </div>
+          <div class="department-impact">
+            <div class="impact-metric">
+              <span class="impact-value">{{ dept.impact.value }}</span>
+              <span class="impact-label">{{ dept.impact.label }}</span>
+            </div>
+            <v-chip :color="dept.impact.chip.color" variant="tonal" size="small">
+              {{ dept.impact.chip.text }}
+            </v-chip>
+          </div>
+        </div>
       </v-col>
     </v-row>
+  </div>
 
-    <!-- Why Choose Cloudless Section -->
-    <div class="why-choose-section mt-8">
-      <div class="section-header text-center mb-6">
-        <h3 class="section-title mb-3">Why Choose Cloudless?</h3>
-        <p class="section-subtitle">
-          Revolutionizing corporate data intelligence with cutting-edge AI and quantum-ready
-          infrastructure
-        </p>
-      </div>
+  <!-- Technology Stack Title (moved directly under cards) -->
+  <div class="text-center mb-2 mt-2">
+    <h3 class="section-title">Technology Stack</h3>
+    <h4 class="tech-title">Built on Cutting-Edge Technology</h4>
+    <p class="tech-subtitle">
+      Next-generation infrastructure powering tomorrow's enterprises
+    </p>
+  </div>
 
-      <v-row class="mb-6">
-        <v-col cols="12" md="6" lg="3">
-          <div class="benefit-card benefit-quantum">
-            <div class="benefit-icon-container">
-              <div class="benefit-icon-bg">
-                <v-icon color="primary" size="32">mdi-atom</v-icon>
-              </div>
-              <div class="benefit-pulse"></div>
-            </div>
-            <h5 class="benefit-title">Quantum-Ready Architecture</h5>
-            <p class="benefit-description">
-              Future-proof infrastructure built for quantum computing integration and exponential
-              data growth.
-            </p>
-            <div class="benefit-metrics">
-              <span class="benefit-metric-value">1000x</span>
-              <span class="benefit-metric-label">Faster Processing</span>
-            </div>
-          </div>
-        </v-col>
 
-        <v-col cols="12" md="6" lg="3">
-          <div class="benefit-card benefit-ai">
-            <div class="benefit-icon-container">
-              <div class="benefit-icon-bg">
-                <v-icon color="success" size="32">mdi-robot</v-icon>
-              </div>
-              <div class="benefit-pulse"></div>
-            </div>
-            <h5 class="benefit-title">AI-Native Platform</h5>
-            <p class="benefit-description">
-              GPT-4 powered analytics with autonomous decision-making and predictive intelligence.
-            </p>
-            <div class="benefit-metrics">
-              <span class="benefit-metric-value">95%</span>
-              <span class="benefit-metric-label">Accuracy Rate</span>
-            </div>
-          </div>
-        </v-col>
-
-        <v-col cols="12" md="6" lg="3">
-          <div class="benefit-card benefit-innovation">
-            <div class="benefit-icon-container">
-              <div class="benefit-icon-bg">
-                <v-icon color="warning" size="32">mdi-auto-fix</v-icon>
-              </div>
-              <div class="benefit-pulse"></div>
-            </div>
-            <h5 class="benefit-title">Zero-Code Innovation</h5>
-            <p class="benefit-description">
-              Revolutionary visual programming with natural language processing for instant
-              deployment.
-            </p>
-            <div class="benefit-metrics">
-              <span class="benefit-metric-value">10min</span>
-              <span class="benefit-metric-label">Setup Time</span>
-            </div>
-          </div>
-        </v-col>
-
-        <v-col cols="12" md="6" lg="3">
-          <div class="benefit-card benefit-security">
-            <div class="benefit-icon-container">
-              <div class="benefit-icon-bg">
-                <v-icon color="error" size="32">mdi-shield-check</v-icon>
-              </div>
-              <div class="benefit-pulse"></div>
-            </div>
-            <h5 class="benefit-title">Enterprise Security</h5>
-            <p class="benefit-description">
-              Military-grade encryption with blockchain validation and quantum-resistant protocols.
-            </p>
-            <div class="benefit-metrics">
-              <span class="benefit-metric-value">99.99%</span>
-              <span class="benefit-metric-label">Uptime SLA</span>
-            </div>
-          </div>
-        </v-col>
-      </v-row>
-
-      <!-- Department-Specific Solutions -->
-      <div class="departments-section">
-        <div class="text-center mb-5">
-          <h4 class="departments-title">Designed for Enterprise Departments</h4>
-          <p class="departments-subtitle">Tailored solutions for every corporate function</p>
+  <!-- Technology Stack (moved directly under cards) -->
+  <div class="tech-stack-section mt-2">
+    <div class="text-center">
+      <h3 class="section-title mb-2">Technology Categories</h3>
+    </div>
+    <div class="tech-categories">
+      <div class="tech-category">
+        <div class="category-header">
+          <v-icon color="primary" size="20" class="mr-2">mdi-brain</v-icon>
+          <span class="category-name">AI & Machine Learning</span>
         </div>
-
-        <v-row>
-          <v-col cols="12" md="6" lg="4">
-            <div class="department-card">
-              <div class="department-header">
-                <div class="department-icon">
-                  <v-icon color="primary" size="24">mdi-chart-line</v-icon>
-                </div>
-                <div class="department-info">
-                  <h6 class="department-name">Marketing Intelligence</h6>
-                  <span class="department-tag">Revenue Growth</span>
-                </div>
-              </div>
-              <div class="department-features">
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Real-time campaign optimization</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Predictive customer segmentation</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Attribution modeling</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Cross-channel analytics</span>
-                </div>
-              </div>
-              <div class="department-impact">
-                <div class="impact-metric">
-                  <span class="impact-value">+340%</span>
-                  <span class="impact-label">ROI Increase</span>
-                </div>
-                <v-chip color="primary" variant="tonal" size="small">+34% CTR</v-chip>
-              </div>
-            </div>
-          </v-col>
-
-          <v-col cols="12" md="6" lg="4">
-            <div class="department-card">
-              <div class="department-header">
-                <div class="department-icon">
-                  <v-icon color="success" size="24">mdi-target</v-icon>
-                </div>
-                <div class="department-info">
-                  <h6 class="department-name">Sales Operations</h6>
-                  <span class="department-tag">Pipeline Acceleration</span>
-                </div>
-              </div>
-              <div class="department-features">
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Lead scoring automation</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Opportunity prediction</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Territory optimization</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Performance analytics</span>
-                </div>
-              </div>
-              <div class="department-impact">
-                <div class="impact-metric">
-                  <span class="impact-value">+28%</span>
-                  <span class="impact-label">Conversion Rate</span>
-                </div>
-                <v-chip color="success" variant="tonal" size="small">45% Faster Close</v-chip>
-              </div>
-            </div>
-          </v-col>
-
-          <v-col cols="12" md="6" lg="4">
-            <div class="department-card">
-              <div class="department-header">
-                <div class="department-icon">
-                  <v-icon color="warning" size="24">mdi-currency-usd</v-icon>
-                </div>
-                <div class="department-info">
-                  <h6 class="department-name">Financial Planning</h6>
-                  <span class="department-tag">Risk Management</span>
-                </div>
-              </div>
-              <div class="department-features">
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Automated forecasting</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Fraud detection</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Compliance monitoring</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Budget optimization</span>
-                </div>
-              </div>
-              <div class="department-impact">
-                <div class="impact-metric">
-                  <span class="impact-value">92%</span>
-                  <span class="impact-label">Accuracy</span>
-                </div>
-                <v-chip color="warning" variant="tonal" size="small">67% Risk Reduction</v-chip>
-              </div>
-            </div>
-          </v-col>
-
-          <v-col cols="12" md="6" lg="4">
-            <div class="department-card">
-              <div class="department-header">
-                <div class="department-icon">
-                  <v-icon color="info" size="24">mdi-cogs</v-icon>
-                </div>
-                <div class="department-info">
-                  <h6 class="department-name">Operations Excellence</h6>
-                  <span class="department-tag">Efficiency Gains</span>
-                </div>
-              </div>
-              <div class="department-features">
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Supply chain optimization</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Predictive maintenance</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Quality assurance</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Resource allocation</span>
-                </div>
-              </div>
-              <div class="department-impact">
-                <div class="impact-metric">
-                  <span class="impact-value">-45%</span>
-                  <span class="impact-label">Operational Costs</span>
-                </div>
-                <v-chip color="info" variant="tonal" size="small">23% Productivity</v-chip>
-              </div>
-            </div>
-          </v-col>
-
-          <v-col cols="12" md="6" lg="4">
-            <div class="department-card">
-              <div class="department-header">
-                <div class="department-icon">
-                  <v-icon color="purple" size="24">mdi-account-group</v-icon>
-                </div>
-                <div class="department-info">
-                  <h6 class="department-name">Human Resources</h6>
-                  <span class="department-tag">Talent Intelligence</span>
-                </div>
-              </div>
-              <div class="department-features">
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Employee sentiment analysis</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Performance prediction</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Retention modeling</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Skills gap analysis</span>
-                </div>
-              </div>
-              <div class="department-impact">
-                <div class="impact-metric">
-                  <span class="impact-value">+156%</span>
-                  <span class="impact-label">Employee Satisfaction</span>
-                </div>
-                <v-chip color="purple" variant="tonal" size="small">78% Less Turnover</v-chip>
-              </div>
-            </div>
-          </v-col>
-
-          <v-col cols="12" md="6" lg="4">
-            <div class="department-card">
-              <div class="department-header">
-                <div class="department-icon">
-                  <v-icon color="pink" size="24">mdi-heart</v-icon>
-                </div>
-                <div class="department-info">
-                  <h6 class="department-name">Customer Success</h6>
-                  <span class="department-tag">Experience Optimization</span>
-                </div>
-              </div>
-              <div class="department-features">
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Churn prediction</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Sentiment tracking</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Journey optimization</span>
-                </div>
-                <div class="feature-item">
-                  <v-icon color="success" size="12" class="mr-2">mdi-check-circle</v-icon>
-                  <span>Personalization engine</span>
-                </div>
-              </div>
-              <div class="department-impact">
-                <div class="impact-metric">
-                  <span class="impact-value">+89%</span>
-                  <span class="impact-label">NPS Score</span>
-                </div>
-                <v-chip color="pink" variant="tonal" size="small">234% Retention</v-chip>
-              </div>
-            </div>
-          </v-col>
-        </v-row>
-      </div>
-
-      <!-- Technology Stack -->
-      <div class="tech-stack-section mt-8">
-        <div class="text-center mb-5">
-          <h4 class="tech-title">Built on Cutting-Edge Technology</h4>
-          <p class="tech-subtitle">
-            Next-generation infrastructure powering tomorrow's enterprises
-          </p>
-        </div>
-        <div class="tech-categories">
-          <div class="tech-category">
-            <div class="category-header">
-              <v-icon color="primary" size="20" class="mr-2">mdi-brain</v-icon>
-              <span class="category-name">AI & Machine Learning</span>
-            </div>
-            <div class="tech-items">
-              <v-chip color="primary" variant="flat" size="small" class="ma-1">
-                <v-icon size="12" class="mr-1">mdi-star</v-icon>
-                GPT-4 Turbo
-              </v-chip>
-              <v-chip color="primary" variant="flat" size="small" class="ma-1">
-                <v-icon size="12" class="mr-1">mdi-star</v-icon>
-                TensorFlow Quantum
-              </v-chip>
-              <v-chip variant="tonal" size="small" class="ma-1">PyTorch Lightning</v-chip>
-              <v-chip variant="tonal" size="small" class="ma-1">AutoML</v-chip>
-              <v-chip color="primary" variant="flat" size="small" class="ma-1">
-                <v-icon size="12" class="mr-1">mdi-star</v-icon>
-                Neural Architecture Search
-              </v-chip>
-            </div>
-          </div>
-
-          <div class="tech-category">
-            <div class="category-header">
-              <v-icon color="info" size="20" class="mr-2">mdi-cloud</v-icon>
-              <span class="category-name">Cloud Infrastructure</span>
-            </div>
-            <div class="tech-items">
-              <v-chip variant="tonal" size="small" class="ma-1">Kubernetes</v-chip>
-              <v-chip color="info" variant="flat" size="small" class="ma-1">
-                <v-icon size="12" class="mr-1">mdi-star</v-icon>
-                Serverless Edge
-              </v-chip>
-              <v-chip color="info" variant="flat" size="small" class="ma-1">
-                <v-icon size="12" class="mr-1">mdi-star</v-icon>
-                Multi-Cloud Mesh
-              </v-chip>
-              <v-chip variant="tonal" size="small" class="ma-1">CDN Network</v-chip>
-              <v-chip variant="tonal" size="small" class="ma-1">Auto-Scaling</v-chip>
-            </div>
-          </div>
-
-          <div class="tech-category">
-            <div class="category-header">
-              <v-icon color="success" size="20" class="mr-2">mdi-database</v-icon>
-              <span class="category-name">Data Processing</span>
-            </div>
-            <div class="tech-items">
-              <v-chip variant="tonal" size="small" class="ma-1">Apache Spark</v-chip>
-              <v-chip color="success" variant="flat" size="small" class="ma-1">
-                <v-icon size="12" class="mr-1">mdi-star</v-icon>
-                Stream Processing
-              </v-chip>
-              <v-chip variant="tonal" size="small" class="ma-1">Data Lake</v-chip>
-              <v-chip color="success" variant="flat" size="small" class="ma-1">
-                <v-icon size="12" class="mr-1">mdi-star</v-icon>
-                Real-time Analytics
-              </v-chip>
-              <v-chip variant="tonal" size="small" class="ma-1">ETL Pipelines</v-chip>
-            </div>
-          </div>
-
-          <div class="tech-category">
-            <div class="category-header">
-              <v-icon color="error" size="20" class="mr-2">mdi-shield</v-icon>
-              <span class="category-name">Security & Compliance</span>
-            </div>
-            <div class="tech-items">
-              <v-chip color="error" variant="flat" size="small" class="ma-1">
-                <v-icon size="12" class="mr-1">mdi-star</v-icon>
-                Zero Trust Architecture
-              </v-chip>
-              <v-chip color="error" variant="flat" size="small" class="ma-1">
-                <v-icon size="12" class="mr-1">mdi-star</v-icon>
-                Blockchain Validation
-              </v-chip>
-              <v-chip variant="tonal" size="small" class="ma-1">End-to-End Encryption</v-chip>
-              <v-chip variant="tonal" size="small" class="ma-1">GDPR Compliance</v-chip>
-              <v-chip variant="tonal" size="small" class="ma-1">SOC2 Type II</v-chip>
-            </div>
-          </div>
+        <div class="tech-items">
+          <v-chip
+            color="primary"
+            variant="flat"
+            size="small"
+            class="ma-1"
+          >
+            <v-icon size="12" class="mr-1">mdi-star</v-icon>
+            GPT-4 Turbo
+          </v-chip>
+          <v-chip
+            color="primary"
+            variant="flat"
+            size="small"
+            class="ma-1"
+          >
+            <v-icon size="12" class="mr-1">mdi-star</v-icon>
+            TensorFlow Quantum
+          </v-chip>
+          <v-chip variant="tonal" size="small" class="ma-1">PyTorch Lightning</v-chip>
+          <v-chip variant="tonal" size="small" class="ma-1">AutoML</v-chip>
+          <v-chip
+            color="primary"
+            variant="flat"
+            size="small"
+            class="ma-1"
+          >
+            <v-icon size="12" class="mr-1">mdi-star</v-icon>
+            Neural Architecture Search
+          </v-chip>
         </div>
       </div>
 
-      <!-- ROI & Business Impact -->
-      <div class="roi-section mt-8">
-        <div class="roi-container">
-          <div class="roi-header">
-            <h4 class="roi-title">Proven Business Impact</h4>
-            <p class="roi-subtitle">Real results from Fortune 500 implementations</p>
-          </div>
-          <v-row class="roi-metrics">
-            <v-col cols="6" md="3">
-              <div class="roi-metric">
-                <div class="roi-icon">
-                  <v-icon color="success" size="20">mdi-trending-up</v-icon>
-                </div>
-                <div class="roi-value">247%</div>
-                <div class="roi-label">Average ROI</div>
-                <div class="roi-timeframe">Within 6 months</div>
-              </div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="roi-metric">
-                <div class="roi-icon">
-                  <v-icon color="warning" size="20">mdi-currency-usd-off</v-icon>
-                </div>
-                <div class="roi-value">89%</div>
-                <div class="roi-label">Cost Reduction</div>
-                <div class="roi-timeframe">Year over year</div>
-              </div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="roi-metric">
-                <div class="roi-icon">
-                  <v-icon color="primary" size="20">mdi-rocket</v-icon>
-                </div>
-                <div class="roi-value">156%</div>
-                <div class="roi-label">Productivity Gain</div>
-                <div class="roi-timeframe">First quarter</div>
-              </div>
-            </v-col>
-            <v-col cols="6" md="3">
-              <div class="roi-metric">
-                <div class="roi-icon">
-                  <v-icon color="info" size="20">mdi-shield-check</v-icon>
-                </div>
-                <div class="roi-value">99.97%</div>
-                <div class="roi-label">Uptime Achieved</div>
-                <div class="roi-timeframe">Enterprise SLA</div>
-              </div>
-            </v-col>
-          </v-row>
+      <div class="tech-category">
+        <div class="category-header">
+          <v-icon color="info" size="20" class="mr-2">mdi-cloud</v-icon>
+          <span class="category-name">Cloud Infrastructure</span>
+        </div>
+        <div class="tech-items">
+          <v-chip variant="tonal" size="small" class="ma-1">Kubernetes</v-chip>
+          <v-chip
+            color="info"
+            variant="flat"
+            size="small"
+            class="ma-1"
+          >
+            <v-icon size="12" class="mr-1">mdi-star</v-icon>
+            Serverless Edge
+          </v-chip>
+          <v-chip
+            color="info"
+            variant="flat"
+            size="small"
+            class="ma-1"
+          >
+            <v-icon size="12" class="mr-1">mdi-star</v-icon>
+            Multi-Cloud Mesh
+          </v-chip>
+          <v-chip variant="tonal" size="small" class="ma-1">CDN Network</v-chip>
+          <v-chip variant="tonal" size="small" class="ma-1">Auto-Scaling</v-chip>
+        </div>
+      </div>
+
+      <div class="tech-category">
+        <div class="category-header">
+          <v-icon color="success" size="20" class="mr-2">mdi-database</v-icon>
+          <span class="category-name">Data Processing</span>
+        </div>
+        <div class="tech-items">
+          <v-chip variant="tonal" size="small" class="ma-1">Apache Spark</v-chip>
+          <v-chip
+            color="success"
+            variant="flat"
+            size="small"
+            class="ma-1"
+          >
+            <v-icon size="12" class="mr-1">mdi-star</v-icon>
+            Stream Processing
+          </v-chip>
+          <v-chip variant="tonal" size="small" class="ma-1">Data Lake</v-chip>
+          <v-chip
+            color="success"
+            variant="flat"
+            size="small"
+            class="ma-1"
+          >
+            <v-icon size="12" class="mr-1">mdi-star</v-icon>
+            Real-time Analytics
+          </v-chip>
+          <v-chip variant="tonal" size="small" class="ma-1">ETL Pipelines</v-chip>
+        </div>
+      </div>
+
+      <div class="tech-category">
+        <div class="category-header">
+          <v-icon color="error" size="20" class="mr-2">mdi-shield</v-icon>
+          <span class="category-name">Security & Compliance</span>
+        </div>
+        <div class="tech-items">
+          <v-chip
+            color="error"
+            variant="flat"
+            size="small"
+            class="ma-1"
+          >
+            <v-icon size="12" class="mr-1">mdi-star</v-icon>
+            Zero Trust Architecture
+          </v-chip>
+          <v-chip
+            color="error"
+            variant="flat"
+            size="small"
+            class="ma-1"
+          >
+            <v-icon size="12" class="mr-1">mdi-star</v-icon>
+            Blockchain Validation
+          </v-chip>
+          <v-chip variant="tonal" size="small" class="ma-1">End-to-End Encryption</v-chip>
+          <v-chip variant="tonal" size="small" class="ma-1">GDPR Compliance</v-chip>
+          <v-chip variant="tonal" size="small" class="ma-1">SOC2 Type II</v-chip>
         </div>
       </div>
     </div>
-  </v-container>
+  </div>
+
+  <!-- About Cloudless App & Company Intro (now after tech stack) -->
+  <div class="text-center mb-1 mt-2">
+    <h3 class="section-title">About the Platform</h3>
+  </div>
+  <div class="about-intro-section about-intro-section--compact mb-2">
+    <div class="about-intro-content">
+      <h2 class="about-intro-title about-intro-title--compact">About Cloudless</h2>
+      <p class="about-intro-paragraph about-intro-paragraph--compact">
+        Cloudless is a next-generation platform designed to empower organizations with advanced AI, quantum-ready infrastructure, and secure, scalable data solutions. Our application streamlines business operations across marketing, sales, and finance, providing real-time analytics, automation, and actionable insights. With a focus on innovation, security, and measurable business impact, Cloudless helps companies accelerate growth, optimize resources, and stay ahead in a rapidly evolving digital landscape. Whether you're a startup or an enterprise, our platform adapts to your needs, ensuring seamless integration and maximum ROI.
+      </p>
+    </div>
+  </div>
+
+
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'default' });
+definePageMeta({ layout: 'info' });
+
+const departments = [
+  {
+    icon: { color: 'primary', name: 'mdi-chart-line' },
+    name: 'Marketing Intelligence',
+    tag: 'Revenue Growth',
+    features: [
+      'Real-time campaign optimization',
+      'Predictive customer segmentation',
+      'Attribution modeling',
+      'Cross-channel analytics'
+    ],
+    impact: { value: '+340%', label: 'ROI Increase', chip: { color: 'primary', text: '+34% CTR' } }
+  },
+  {
+    icon: { color: 'success', name: 'mdi-target' },
+    name: 'Sales Operations',
+    tag: 'Pipeline Acceleration',
+    features: [
+      'Lead scoring automation',
+      'Opportunity prediction',
+      'Territory optimization',
+      'Performance analytics'
+    ],
+    impact: { value: '+28%', label: 'Conversion Rate', chip: { color: 'success', text: '45% Faster Close' } }
+  },
+  {
+    icon: { color: 'warning', name: 'mdi-currency-usd' },
+    name: 'Financial Planning',
+    tag: 'Risk Management',
+    features: [
+      'Automated forecasting',
+      'Fraud detection',
+      'Compliance monitoring'
+    ],
+    impact: { value: '67%', label: 'Risk Reduction', chip: { color: 'warning', text: '67% Risk Reduction' } }
+  }
+];
 </script>
 
 <style scoped>
+.about-hero-section {
+  width: 100%;
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 41, 59, 0.55);
+  border-radius: 0 0 32px 32px;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  position: relative;
+  z-index: 30;
+  margin-bottom: 2.5rem;
+  padding: 3.2rem 1.5rem 2.5rem 1.5rem;
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1.5px solid rgba(255,255,255,0.22);
+  overflow: hidden;
+}
+.glass-hero {
+  background: rgba(30, 41, 59, 0.55);
+  border-radius: 0 0 32px 32px;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  border: 1.5px solid rgba(255,255,255,0.22);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+}
+.about-hero-content {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+.about-hero-title {
+  font-size: 3rem;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 1.1rem;
+  letter-spacing: 0.5px;
+  text-shadow: 0 4px 18px rgba(0,0,0,0.18), 0 1px 0 #222;
+}
+.about-hero-subtitle {
+  font-size: 1.35rem;
+  color: #e0e7ef;
+  font-weight: 400;
+  line-height: 1.7;
+  margin-bottom: 0;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.13);
+}
+.about-hero-highlight {
+  display: block;
+  margin-top: 0.7rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #ffd700;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 8px rgba(60,60,120,0.13);
+}
+.about-hero-cta {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.85rem 2.2rem;
+  border-radius: 32px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.13);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.about-hero-cta:hover {
+  background: linear-gradient(90deg, #6366f1 0%, #38bdf8 100%);
+  box-shadow: 0 4px 18px rgba(99,102,241,0.18);
+}
+@media (max-width: 600px) {
+  .about-hero-section {
+    min-height: 120px;
+    padding: 1.2rem 0.5rem 1rem 0.5rem;
+    border-radius: 0 0 18px 18px;
+  }
+  .about-hero-title {
+    font-size: 1.6rem;
+  }
+  .about-hero-subtitle {
+    font-size: 1rem;
+  }
+  .about-hero-highlight {
+    font-size: 0.95rem;
+  }
+  .about-hero-cta {
+    font-size: 1rem;
+    padding: 0.7rem 1.2rem;
+  }
+  .about-intro-section {
+    padding: 1.2rem 0.5rem 1rem 0.5rem;
+    border-radius: 12px;
+  }
+  .about-intro-title {
+    font-size: 1.1rem;
+  }
+  .about-intro-paragraph {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .departments-section .v-row {
+    flex-direction: column !important;
+    gap: 1.2rem;
+  }
+.department-card.modern-card.compact-card {
+  padding: 0.9rem 0.6rem;
+  border-radius: 10px;
+  min-width: 0;
+  margin: 0 auto 1.2rem auto;
+  box-shadow: 0 2px 8px 0 rgba(31, 38, 135, 0.08);
+  max-width: 340px;
+}
+.department-header {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.department-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.department-tag {
+  font-size: 0.92rem;
+  color: #64748b;
+}
+.department-features {
+  margin: 0.5rem 0 0.3rem 0;
+  font-size: 0.95rem;
+}
+.feature-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.2rem;
+}
+.department-impact {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+.impact-metric {
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+  .department-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .department-name {
+    font-size: 1.1rem;
+  }
+  .department-tag {
+    font-size: 0.9rem;
+  }
+  .department-features {
+    font-size: 0.95rem;
+  }
+  .impact-metric {
+    font-size: 0.95rem;
+  }
+  .tech-stack-section {
+    padding: 0.5rem 0.2rem;
+  }
+  .tech-title {
+    font-size: 1.1rem;
+  }
+  .tech-subtitle {
+    font-size: 0.95rem;
+  }
+  .tech-categories {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 1.2rem;
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tech-category {
+    min-width: 240px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    padding: 1rem 0.7rem;
+    box-shadow: 0 2px 10px 0 rgba(31, 38, 135, 0.10);
+    margin-bottom: 0.5rem;
+  }
+  .category-header {
+    font-size: 1rem;
+  }
+  .tech-items {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+}
+.about-main-card {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  color: #222;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px 0 rgba(60, 60, 120, 0.08);
+}
+
 .glass-card {
   background: rgba(255, 255, 255, 0.08); /* Semi-transparent background */
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -546,6 +555,16 @@ definePageMeta({ layout: 'default' });
   color: white;
   position: relative;
   z-index: 10; /* Ensures the card appears above other elements */
+}
+
+.modern-about-card {
+  background: #fff !important;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px 0 rgba(60, 60, 120, 0.10), 0 1.5px 6px 0 rgba(102, 126, 234, 0.08);
+  color: #1e293b;
+  padding: 2.5rem 2rem;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .text-body-1 {
@@ -562,13 +581,14 @@ definePageMeta({ layout: 'default' });
   color: rgba(255, 255, 255, 0.9); /* Slightly lighter text for the items */
 }
 
-.v-list-item-subtitle {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.6); /* Subtle text color for descriptions */
-}
+
 
 .v-icon {
   opacity: 0.85;
+}
+/* Accessibility button icon color override (if present) */
+.v-icon.accessibility-icon, .accessibility-btn .v-icon {
+  color: #ffd700 !important;
 }
 
 .intro-text {
@@ -581,14 +601,29 @@ definePageMeta({ layout: 'default' });
 body {
   background: url('/path-to-your-background-image.jpg') no-repeat center center fixed;
   background-size: cover;
+  position: relative;
+  z-index: 0;
 }
 
 /* Why Choose Cloudless Section */
 .why-choose-section {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: rgba(255, 255, 255, 0.18);
   border-radius: 16px;
   padding: 2rem;
   margin: 2rem 0;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  /* Glassmorphism effect */
+}
+
+@media (max-width: 1024px) {
+  .why-choose-section {
+    padding: 1.2rem 0.5rem;
+  }
 }
 
 .section-header {
@@ -598,34 +633,48 @@ body {
 .section-title {
   font-size: 2.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  background: none;
+  color: #fff !important;
 }
 
 .section-subtitle {
   font-size: 1.1rem;
-  color: #64748b;
+  color: #fff !important;
   max-width: 600px;
   margin: 0 auto;
 }
 
 /* Benefit Cards */
 .benefit-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.18);
   border-radius: 16px;
-  padding: 1.5rem;
-  height: 100%;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  box-shadow: 0 2px 12px 0 rgba(60, 60, 120, 0.07);
+  color: #26324d;
+  margin-bottom: 1.5rem;
 }
 
 .benefit-card:hover {
   transform: translateY(-8px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.benefit-quantum {
+  border-left: 6px solid #1976d2;
+}
+
+.benefit-ai {
+  border-left: 6px solid #43a047;
+}
+
+.benefit-innovation {
+  border-left: 6px solid #ffa000;
+}
+
+.benefit-security {
+  border-left: 6px solid #e53935;
 }
 
 .benefit-icon-container {
@@ -722,11 +771,10 @@ body {
 }
 
 .department-card {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  height: 100%;
-  border: 1px solid #e2e8f0;
+  background: #fff !important;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px 0 rgba(60, 60, 120, 0.06);
+  color: #26324d;
   transition: all 0.3s ease;
 }
 
@@ -735,10 +783,26 @@ body {
   box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
 }
 
+.modern-card {
+  border: none;
+  background: #fff !important;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px 0 rgba(60, 60, 120, 0.10), 0 1.5px 6px 0 rgba(102, 126, 234, 0.08);
+  transition: box-shadow 0.3s, transform 0.3s;
+  padding: 2rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.modern-card:hover {
+  box-shadow: 0 16px 48px 0 rgba(102, 126, 234, 0.18), 0 4px 16px 0 rgba(60, 60, 120, 0.10);
+  transform: translateY(-6px) scale(1.03);
+}
+
 .department-header {
   display: flex;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .department-icon {
@@ -750,34 +814,37 @@ body {
   align-items: center;
   justify-content: center;
   margin-right: 1rem;
+  box-shadow: 0 2px 8px 0 rgba(102, 126, 234, 0.10);
 }
 
 .department-name {
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1.15rem;
+  font-weight: 700;
   color: #1e293b;
   margin: 0;
 }
 
 .department-tag {
-  font-size: 0.75rem;
-  color: #667eea;
-  background: #f0f4ff;
-  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  color: #fff;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  padding: 0.3rem 0.7rem;
   border-radius: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-top: 0.3rem;
+  display: inline-block;
 }
 
 .department-features {
-  margin-bottom: 1rem;
+  margin-bottom: 1.2rem;
 }
 
 .feature-item {
   display: flex;
   align-items: center;
   margin-bottom: 0.5rem;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   color: #64748b;
 }
 
@@ -795,23 +862,28 @@ body {
 }
 
 .impact-value {
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: #059669;
 }
 
 .impact-label {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: #64748b;
   text-transform: uppercase;
 }
 
 /* Technology Stack */
 .tech-stack-section {
-  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  background: rgba(30, 41, 59, 0.55); /* semi-transparent dark glass */
   border-radius: 16px;
   padding: 2rem;
   color: white;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  /* Glassmorphism effect */
 }
 
 .tech-title {
@@ -866,8 +938,20 @@ body {
 }
 
 .roi-container {
-  padding: 2rem;
+  background: rgba(255, 255, 255, 0.18); /* semi-transparent glass */
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  padding: 1.2rem 0.7rem;
   color: white;
+}
+
+@media (max-width: 768px) {
+  .roi-container {
+    padding: 0.6rem 0.2rem;
+  }
 }
 
 .roi-header {
@@ -941,6 +1025,49 @@ body {
 
   .roi-value {
     font-size: 2rem;
+  }
+
+  .tech-stack-section {
+    padding: 1rem 0.3rem;
+  }
+
+  .roi-container {
+    padding: 1rem 0.3rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .why-choose-section {
+    padding: 1.2rem 0.5rem;
+  }
+}
+@media (max-width: 768px) {
+  .why-choose-section {
+    padding: 0.5rem 0.2rem;
+    margin: 1rem 0;
+  }
+  .section-title {
+    font-size: 1.5rem;
+  }
+  .section-header {
+    margin-bottom: 1rem;
+  }
+  .benefit-card {
+    margin-bottom: 1.2rem;
+    padding: 1.2rem 0.8rem;
+  }
+  .benefit-title {
+    font-size: 1rem;
+  }
+  .benefit-description {
+    font-size: 0.95rem;
+  }
+  .benefit-metric-value {
+    font-size: 1.1rem;
+  }
+  .benefit-icon-container, .benefit-icon-bg {
+    width: 48px;
+    height: 48px;
   }
 }
 </style>

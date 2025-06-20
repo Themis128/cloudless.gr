@@ -17,17 +17,17 @@
       @keydown.enter="toggleMenu"
       @keydown.space.prevent="toggleMenu"
       @keydown.escape="closeMenu"
+      @dblclick="onButtonDblClick"
     >
-      <v-btn
-        icon
-        color="blue"
-        elevation="6"
-        size="large"
-        class="accessibility-main-btn"
-        @click.stop="toggleMenu"
+      <v-icon
+        class="accessibility-icon"
+        :size="32"
+        :color="menu ? 'primary' : 'blue'"
+        aria-hidden="true"
       >
-        <v-icon size="28">{{ menu ? 'mdi-close' : 'mdi-human-handsup' }}</v-icon>
-      </v-btn>
+        {{ menu ? 'mdi-close' : 'mdi-human-handsup' }}
+      </v-icon>
+      <span class="sr-only">{{ menu ? 'Close accessibility menu' : 'Open accessibility menu' }}</span>
     </button>
 
     <!-- Hidden description for screen readers -->
@@ -350,7 +350,12 @@
 
         <!-- Close Button -->
         <v-card-actions class="pa-4">
-          <v-btn variant="text" size="small" prepend-icon="mdi-close" @click="closeMenu">
+          <v-btn
+            variant="text"
+            size="small"
+            prepend-icon="mdi-close"
+            @click="closeMenu"
+          >
             Close Menu
           </v-btn>
           <v-spacer />
@@ -384,30 +389,22 @@
           <v-list density="compact">
             <v-list-item prepend-icon="mdi-keyboard">
               <v-list-item-title>Keyboard Navigation</v-list-item-title>
-              <v-list-item-subtitle
-                >Use Tab, Enter, Space, and Arrow keys to navigate</v-list-item-subtitle
-              >
+              <v-list-item-subtitle>Use Tab, Enter, Space, and Arrow keys to navigate</v-list-item-subtitle>
             </v-list-item>
             <v-list-item prepend-icon="mdi-account-voice">
               <v-list-item-title>Screen Reader Support</v-list-item-title>
-              <v-list-item-subtitle
-                >Compatible with NVDA, JAWS, VoiceOver, and other assistive
-                technologies</v-list-item-subtitle
-              >
+              <v-list-item-subtitle>Compatible with NVDA, JAWS, VoiceOver, and other assistive
+                technologies</v-list-item-subtitle>
             </v-list-item>
             <v-list-item prepend-icon="mdi-format-font">
               <v-list-item-title>Text Customization</v-list-item-title>
-              <v-list-item-subtitle
-                >Adjust font size, contrast, and spacing for better
-                readability</v-list-item-subtitle
-              >
+              <v-list-item-subtitle>Adjust font size, contrast, and spacing for better
+                readability</v-list-item-subtitle>
             </v-list-item>
             <v-list-item prepend-icon="mdi-motion-pause">
               <v-list-item-title>Motion Control</v-list-item-title>
-              <v-list-item-subtitle
-                >Reduce or disable animations that may cause vestibular
-                disorders</v-list-item-subtitle
-              >
+              <v-list-item-subtitle>Reduce or disable animations that may cause vestibular
+                disorders</v-list-item-subtitle>
             </v-list-item>
           </v-list>
 
@@ -665,6 +662,13 @@ const resetAllSettings = () => {
   announceToScreenReader('All accessibility settings reset to default');
 };
 
+// Double-click handler for accessibility button (left mouse only)
+function onButtonDblClick(event: MouseEvent) {
+  if (event.button === 0) {
+    toggleMenu();
+  }
+}
+
 // Drag functionality
 const startDrag = (e: MouseEvent | TouchEvent) => {
   if (menu.value) return; // Don't drag when menu is open
@@ -894,6 +898,40 @@ watch(isDarkMode, toggleTheme);
   position: relative;
 }
 
+/* Modern floating accessibility button styles */
+.accessibility-btn {
+  position: fixed;
+  left: 32px;
+  top: 32px;
+  z-index: 2147483647;
+  border: none;
+  outline: none;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.18);
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: box-shadow 0.2s, background 0.2s;
+  padding: 0;
+}
+.accessibility-btn:focus {
+  box-shadow: 0 0 0 3px #1976d2, 0 2px 12px 0 rgba(0,0,0,0.18);
+}
+.accessibility-btn:active {
+  box-shadow: 0 4px 20px 0 rgba(25, 118, 210, 0.25);
+}
+.accessibility-icon {
+  color: #1976d2 !important;
+  font-size: 32px !important;
+  transition: color 0.2s;
+}
+.accessibility-btn[aria-expanded="true"] .accessibility-icon {
+  color: #1565c0 !important;
+}
 /* Removed duplicate .accessibility-card:focus-within::before selector */
 
 .skip-link {
@@ -978,6 +1016,16 @@ watch(isDarkMode, toggleTheme);
 .accessibility-card:focus-within::before {
   opacity: 1;
 }
+
+/* Glassmorphism effect for v-card */
+.glassmorph {
+  background: rgba(255, 255, 255, 0.13) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 16px 64px 0 rgba(31, 38, 135, 0.28) !important;
+  backdrop-filter: blur(48px) saturate(300%) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(300%) !important;
+  border: 2px solid rgba(255, 255, 255, 0.28) !important;
+}
 </style>
 
 <!-- Global Accessibility Styles -->
@@ -1020,7 +1068,7 @@ html.large-cursor .v-btn,
 html.large-cursor a,
 html.large-cursor [role='button'] {
   cursor:
-    url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE2IDJMMTYgMTRMMjQgMTBMMTYgMTZMMjQgMjJMMTYgMThMMTYgMzBMMTAgMjJMMiAxNkwxMCAxMEwxNiAyWiIgZmlsbD0iYmx1ZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjwvc3ZnPg=='),
+    url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1zbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE2IDJMMTYgMTRMMjQgMTBMMTYgMTZMMjQgMjJMMTYgMThMMTYgMzBMMTAgMjJMMiAxNkwxMCAxMEwxNiAyWiIgZmlsbD0iYmx1ZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjwvc3ZnPg=='),
     pointer !important;
 }
 

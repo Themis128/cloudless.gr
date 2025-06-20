@@ -33,7 +33,7 @@
               <p class="text-body-2 mb-4">
                 Sign up for a free account to start building ML projects. No credit card required.
               </p>
-              <v-btn color="primary" variant="outlined" @click="navigateTo('/auth/signup')">
+              <v-btn color="primary" variant="outlined" @click="navigateTo('/auth')">
                 Sign Up Now
               </v-btn>
             </div>
@@ -91,9 +91,20 @@
           Key Features
         </h3>
         <v-row>
-          <v-col v-for="feature in keyFeatures" :key="feature.title" cols="12" md="6" lg="4">
+          <v-col
+            v-for="feature in keyFeatures"
+            :key="feature.title"
+            cols="12"
+            md="6"
+            lg="4"
+          >
             <div class="feature-item">
-              <v-icon :icon="feature.icon" color="primary" size="32" class="mb-3" />
+              <v-icon
+                :icon="feature.icon"
+                color="primary"
+                size="32"
+                class="mb-3"
+              />
               <h4 class="text-h6 font-weight-bold mb-2">{{ feature.title }}</h4>
               <p class="text-body-2 text-medium-emphasis">{{ feature.description }}</p>
             </div>
@@ -110,7 +121,12 @@
           Quick Actions
         </h3>
         <v-row>
-          <v-col v-for="action in quickActions" :key="action.title" cols="12" md="6">
+          <v-col
+            v-for="action in quickActions"
+            :key="action.title"
+            cols="12"
+            md="6"
+          >
             <v-card class="action-card h-100" elevation="1" @click="navigateTo(action.path)">
               <v-card-text class="pa-4">
                 <div class="d-flex align-center mb-3">

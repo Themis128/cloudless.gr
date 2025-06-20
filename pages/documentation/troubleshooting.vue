@@ -56,7 +56,13 @@
       <v-card-text class="pa-6">
         <h3 class="text-h5 font-weight-bold mb-4">Quick Actions</h3>
         <v-row>
-          <v-col v-for="action in quickActions" :key="action.title" cols="12" md="6" lg="3">
+          <v-col
+            v-for="action in quickActions"
+            :key="action.title"
+            cols="12"
+            md="6"
+            lg="3"
+          >
             <v-btn
               block
               :color="action.color"
@@ -184,7 +190,12 @@
           <v-col cols="12" md="4">
             <v-card class="support-option h-100" elevation="1">
               <v-card-text class="pa-4 text-center">
-                <v-icon icon="mdi-email" size="48" color="primary" class="mb-3" />
+                <v-icon
+                  icon="mdi-email"
+                  size="48"
+                  color="primary"
+                  class="mb-3"
+                />
                 <h4 class="text-h6 font-weight-bold mb-2">Email Support</h4>
                 <p class="text-body-2 mb-3">Get detailed help via email</p>
                 <v-btn color="primary" href="mailto:support@cloudless.gr"> Contact Support </v-btn>
@@ -195,7 +206,12 @@
           <v-col cols="12" md="4">
             <v-card class="support-option h-100" elevation="1">
               <v-card-text class="pa-4 text-center">
-                <v-icon icon="mdi-chat" size="48" color="primary" class="mb-3" />
+                <v-icon
+                  icon="mdi-chat"
+                  size="48"
+                  color="primary"
+                  class="mb-3"
+                />
                 <h4 class="text-h6 font-weight-bold mb-2">Live Chat</h4>
                 <p class="text-body-2 mb-3">Chat with our support team</p>
                 <v-btn color="primary" @click="openChat"> Start Chat </v-btn>
@@ -206,7 +222,12 @@
           <v-col cols="12" md="4">
             <v-card class="support-option h-100" elevation="1">
               <v-card-text class="pa-4 text-center">
-                <v-icon icon="mdi-forum" size="48" color="primary" class="mb-3" />
+                <v-icon
+                  icon="mdi-forum"
+                  size="48"
+                  color="primary"
+                  class="mb-3"
+                />
                 <h4 class="text-h6 font-weight-bold mb-2">Community Forum</h4>
                 <p class="text-body-2 mb-3">Get help from the community</p>
                 <v-btn color="primary" href="https://forum.cloudless.gr" target="_blank">

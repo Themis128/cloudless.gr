@@ -197,7 +197,13 @@
         </p>
 
         <v-row>
-          <v-col v-for="sdk in sdks" :key="sdk.name" cols="12" md="6" lg="4">
+          <v-col
+            v-for="sdk in sdks"
+            :key="sdk.name"
+            cols="12"
+            md="6"
+            lg="4"
+          >
             <v-card class="sdk-card h-100" elevation="1">
               <v-card-text class="pa-4">
                 <div class="d-flex align-center mb-3">

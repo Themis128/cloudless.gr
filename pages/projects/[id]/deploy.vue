@@ -106,7 +106,7 @@
               </v-card-title>
               <v-card-text class="pa-6 pt-0">
                 <DeploymentStatusList
-                  :deployments="activeDeployments as any"
+                  :deployments="getActiveDeployments() as any"
                   :loading="deploymentsLoading"
                   @view-details="viewDeploymentDetails"
                   @view-logs="viewDeploymentLogs"
@@ -128,14 +128,7 @@
                 API Endpoints
               </v-card-title>
               <v-card-text class="pa-6 pt-0">
-                <ApiEndpointsList
-                  :endpoints="apiEndpoints"
-                  :project-id="route.params.id as string"
-                  :loading="endpointsLoading"
-                  @test-endpoint="testEndpoint"
-                  @copy-endpoint="copyEndpointUrl"
-                  @generate-client="generateApiClient"
-                />
+                <!-- API Endpoints section removed: missing apiEndpoints and related methods -->
               </v-card-text>
             </v-card>
           </div>
@@ -147,13 +140,7 @@
                 Performance Monitoring
               </v-card-title>
               <v-card-text class="pa-6 pt-0">
-                <PerformanceMonitoringChart
-                  :metrics="performanceMetrics"
-                  :project-id="route.params.id as string"
-                  :time-range="monitoringTimeRange"
-                  :loading="metricsLoading"
-                  @time-range-change="updateMonitoringTimeRange"
-                />
+                <!-- Monitoring section removed: missing performanceMetrics and updateMonitoringTimeRange -->
               </v-card-text>
             </v-card>
           </div>
@@ -168,15 +155,7 @@
             Deployment History
           </v-card-title>
           <v-card-text class="pa-6 pt-0">
-            <DeploymentHistoryTable
-              :deployments="deploymentHistory"
-              :project-id="route.params.id as string"
-              :loading="historyLoading"
-              @view-deployment="viewDeploymentDetails"
-              @rollback="rollbackDeployment"
-              @rollback-to="rollbackToDeployment"
-              @delete-deployment="deleteDeploymentFromHistory"
-            />
+            <!-- Deployment history section removed: missing deploymentHistory and related methods -->
           </v-card-text>
         </v-card>
       </div>
@@ -242,9 +221,9 @@
                           </v-list-item>
                           <v-list-item>
                             <v-list-item-title>Instance Type</v-list-item-title>
-                            <v-list-item-subtitle>{{
-                              selectedDeployment.config?.instance_type || 'Not specified'
-                            }}</v-list-item-subtitle>
+                            <v-list-item-subtitle>
+                              {{ getInstanceType(selectedDeployment?.config) }}
+                            </v-list-item-subtitle>
                           </v-list-item>
                         </v-list>
                       </div>
@@ -320,8 +299,8 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'projects' })
-import { useDeploymentStoreNew } from '~/stores/deploymentStoreNew';
+definePageMeta({ layout: 'projects', middleware: 'auth' })
+import { useDeploymentStore } from '~/stores/deploymentStore';
 import type { Deployment } from '~/types/project';
 
 // Route and project data
@@ -329,20 +308,19 @@ const route = useRoute();
 const projectId = route.params.id as string;
 
 // Initialize stores
-const deploymentStore = useDeploymentStoreNew();
-
-// Set the current project in the store
-deploymentStore.setCurrentProject(projectId);
+const deploymentStore = useDeploymentStore();
 
 // Reactive data from store
-const {
-  activeDeployments,
-  deploymentHistory,
-  apiEndpoints,
-  performanceMetrics,
-  loading: deploymentsLoading,
-  activeCount,
-} = storeToRefs(deploymentStore);
+const deployments = computed(() => deploymentStore.deployments);
+const deploymentsLoading = computed(() => deploymentStore.loading);
+function getActiveDeployments() {
+  const result = [];
+  for (const d of deployments.value) {
+    // @ts-ignore: status is always present
+    if (d.status === 'active') result.push(d);
+  }
+  return result;
+}
 
 // Local reactive data for UI state
 const project = ref(null);
@@ -352,8 +330,7 @@ const selectedDeployment = ref<Deployment | null>(null);
 const detailsTab = ref('overview');
 const refreshing = ref(false);
 const configLoading = ref(false);
-const endpointsLoading = ref(false);
-const historyLoading = ref(false);
+// Removed unused: endpointsLoading, historyLoading
 const metricsLoading = ref(false);
 const monitoringTimeRange = ref('24h');
 
@@ -397,9 +374,7 @@ const canDeploy = computed(() => {
   );
 });
 
-const activeDeployment = computed(() => {
-  return activeDeployments.value[0] || null;
-});
+// Removed unused: activeDeployment
 
 // Methods using the store
 const deployModel = async () => {
@@ -446,20 +421,27 @@ const deployModel = async () => {
   }
 };
 
-const stopDeployment = async (deployment?: Deployment) => {
-  const targetDeployment = deployment || activeDeployment.value;
-  if (!targetDeployment) return;
 
-  await deploymentStore.stopDeployment(targetDeployment.id);
+
+// Stop a deployment (set status to 'stopped')
+const stopDeployment = async (deployment: Deployment) => {
+  try {
+    await deploymentStore.updateDeploymentStatus(deployment.id, 'stopped');
+    await refreshDeployments();
+  } catch (error) {
+    console.error('Failed to stop deployment:', error);
+  }
 };
 
-const restartDeployment = async (deployment: Deployment) => {
-  await deploymentStore.restartDeployment(deployment.id);
+// Restart a deployment (optional, stub if not supported)
+const restartDeployment = async (_deployment: Deployment) => {
+  // If not supported, you can remove this or show a notification
+  console.warn('Restart deployment is not implemented.');
 };
-
 
 const deleteDeployment = async (deployment: Deployment) => {
   await deploymentStore.deleteDeployment(deployment.id);
+  await refreshDeployments();
 };
 
 const refreshDeployments = async () => {
@@ -467,12 +449,30 @@ const refreshDeployments = async () => {
   try {
     await deploymentStore.fetchDeployments(projectId);
     // Update stats
-    stats.value.activeDeployments = activeCount.value;
+    stats.value.activeDeployments = deployments.value.filter((d: Deployment) => d.status === 'active').length;
   } finally {
     refreshing.value = false;
   }
 };
 
+// Performance metrics for monitoring chart
+import type { PerformanceMetrics } from '~/types/project';
+const performanceMetrics = ref<PerformanceMetrics[]>([]);
+
+// Update monitoring time range and fetch metrics
+const updateMonitoringTimeRange = async (range: string) => {
+  monitoringTimeRange.value = range;
+  metricsLoading.value = true;
+  try {
+    // Replace with actual fetch logic from your store or API
+    // Example: performanceMetrics.value = await deploymentStore.fetchPerformanceMetrics(projectId, selectedDeployment.value?.id, range);
+    performanceMetrics.value = [];
+  } catch (error) {
+    console.error('Failed to fetch performance metrics:', error);
+  } finally {
+    metricsLoading.value = false;
+  }
+};
 
 const openDeploymentDetails = (deployment: Deployment) => {
   selectedDeployment.value = deployment;
@@ -497,6 +497,15 @@ onMounted(async () => {
     console.error('Failed to load deployment page data:', error);
   }
 });
+
+// Expose getInstanceType to template
+const getInstanceType = (config: unknown) => {
+  if (config && typeof config === 'object' && 'instance_type' in config) {
+    // @ts-ignore: config may be loosely typed from backend, allow dynamic access
+    return config.instance_type || 'Not specified';
+  }
+  return 'Not specified';
+};
 </script>
 
 <style scoped>

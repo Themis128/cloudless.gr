@@ -1,326 +1,144 @@
 <template>
-  <v-container class="py-10">
-    <v-row justify="center">
-      <v-col cols="12" lg="10">
-        <v-card class="glass-card pa-6" elevation="0">          <v-card-title class="text-h4 font-weight-bold white--text mb-4">
-                                                                  Site Map
-                                                                </v-card-title>
-          <v-card-text>
-            <p class="intro-text mb-6">
-              Navigate through the complete structure of Cloudless. Click on any item to visit that page.
-            </p>
-            
-            <!-- Current location indicator -->
-            <v-alert
-              v-if="currentPath !== '/info/sitemap'"
-              type="info"
-              variant="tonal"
-              density="compact"
-              class="mb-4"
-              icon="mdi-map-marker"
-            >
-              <template #text>
-                <span class="text-caption">
-                  You are currently viewing: <strong>{{ currentPath }}</strong>
-                </span>
-              </template>
-            </v-alert>
-
-            <!-- Loading state -->
-            <v-skeleton-loader 
-              v-if="!sitemapTreeData.length" 
-              type="list-item@5" 
-              class="mb-4"
-            />            <!-- Tree View with enhanced accessibility -->
-            <UiTreeView
-              v-else
-              title="Cloudless Site Structure"
-              role="tree"
-              aria-label="Site Navigation Tree"
-              :nodes="sitemapTreeData"
-              :allow-add="false"
-              :show-header="true"
-              :flat="false"
-              @node-select="onNodeSelect"
-            />
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+  <section class="py-10">
+    <UiTreeView
+      v-if="newTreeData.length"
+      title="Cloudless New Site Structure"
+      role="tree"
+      aria-label="Site Navigation Tree (New)"
+      :nodes="newTreeData"
+      :allow-add="false"
+      :show-header="true"
+      :flat="false"
+      @node-select="onNodeSelect"
+    >
+      <template #node="{ node }">
+        <span :class="[ 'sitemap-section', node.id.startsWith('user') ? 'sitemap-purple' : node.id.startsWith('core') ? 'sitemap-blue' : '' ]">
+          {{ node.text }}
+          <span v-if="node.children && node.children.length" class="sitemap-blue-count"> ({{ node.children.length }})</span>
+        </span>
+      </template>
+    </UiTreeView>
+    <v-skeleton-loader v-else type="list-item@5" class="mb-4" />
+    <h1 class="text-h4 font-weight-bold white--text mb-4">Site Map (New)</h1>
+    <p class="intro-text mb-6">Explore the new Cloudless site structure. Click any item to visit that page.</p>
+  </section>
 </template>
 
 <script setup lang="ts">
+import { navigateTo } from '#app'
+import { ref } from 'vue'
+import UiTreeView from '~/components/ui/TreeView.vue'
 import type { TreeNode } from '~/composables/useTreeView'
 
-// Use defineAsyncComponent for better SSR performance
-// const UiTreeView = defineAsyncComponent(() => import('~/components/ui/TreeView.vue'))
-
-// Temporarily import directly to debug
-import UiTreeView from '~/components/ui/TreeView.vue'
-
-definePageMeta({
-  title: 'Site Map - Cloudless',
-  layout: 'default'
-})
-
-// SEO and meta improvements
-useHead({
-  title: 'Site Map - Cloudless',
-  meta: [
-    {
-      name: 'description',
-      content: 'Navigate through the complete structure of Cloudless GR. Interactive sitemap showing all available pages and sections.'
-    },
-    {
-      name: 'keywords',
-      content: 'sitemap, navigation, cloudless, site structure, pages'
-    },
-    {
-      property: 'og:title',
-      content: 'Site Map - Cloudless GR'
-    },
-    {
-      property: 'og:description',
-      content: 'Interactive sitemap for Cloudless GR platform'
-    }
-  ]
-})
-
-// Get current route for active highlighting
-const route = useRoute()
-const currentPath = computed(() => route.path)
-
-// Helper function to check if a node is active
-const isNodeActive = (node: TreeNode): boolean => {
-  return node.link === currentPath.value
-}
-
-// Helper function to recursively check if any child node is active
-const hasActiveChild = (node: TreeNode): boolean => {
-  if (isNodeActive(node)) return true
-  if (!node.children) return false
-  return node.children.some(child => hasActiveChild(child))
-}
-
-// Hierarchical sitemap data representing your actual site structure
-const sitemapTreeData = ref<TreeNode[]>([
+const newTreeData = ref<TreeNode[]>([
+  // Public
   {
-    id: 'home',
-    text: 'Home',
-    icon: 'mdi-home',
-    link: '/',
-    children: []
+    id: 'public',
+    text: 'Public Pages',
+    icon: 'mdi-earth',
+    children: [
+      { id: 'home', text: 'Home', icon: 'mdi-home', link: '/' },
+      { id: 'info', text: 'Info', icon: 'mdi-information', link: '/info' },
+      { id: 'info-matrix', text: 'Matrix', icon: 'mdi-chart-box-outline', link: '/info/matrix' },
+      { id: 'info-about', text: 'About', icon: 'mdi-information-outline', link: '/info/about' },
+      { id: 'info-contact', text: 'Contact', icon: 'mdi-email-outline', link: '/info/contact' },
+      { id: 'info-faq', text: 'FAQ', icon: 'mdi-help-circle-outline', link: '/info/faq' },
+      { id: 'info-sitemap', text: 'Sitemap', icon: 'mdi-sitemap-outline', link: '/info/sitemap' },
+      { id: 'test-navigation', text: 'Test Navigation', icon: 'mdi-compass', link: '/test-navigation' },
+    ]
   },
+  // Auth
   {
     id: 'auth',
     text: 'Authentication',
     icon: 'mdi-account-key',
     children: [
-      {
-        id: 'auth-login',
-        text: 'Login',
-        icon: 'mdi-login',
-        link: '/auth',
-        children: []
-      },
-      {
-        id: 'auth-register',
-        text: 'Register',
-        icon: 'mdi-account-plus',
-        link: '/auth/register',
-        children: []
-      },
-      {
-        id: 'auth-reset',
-        text: 'Password Reset',
-        icon: 'mdi-lock-reset',
-        link: '/auth/reset',
-        children: []
-      },
-      {
-        id: 'auth-admin',
-        text: 'Admin Login',
-        icon: 'mdi-shield-account',
-        link: '/auth/admin-login',
-        children: []
-      },
-      {
-        id: 'auth-users-nav',
-        text: 'User Navigation',
-        icon: 'mdi-navigation',
-        link: '/auth/users-nav',
-        children: []
-      }
+      { id: 'auth', text: 'Login', icon: 'mdi-login', link: '/auth' },
+      { id: 'auth-register', text: 'Register', icon: 'mdi-account-plus', link: '/auth/register' },
+      { id: 'auth-reset', text: 'Password Reset', icon: 'mdi-lock-reset', link: '/auth/reset' },
+      { id: 'auth-admin-login', text: 'Admin Login', icon: 'mdi-shield-account', link: '/auth/admin-login' },
+      { id: 'auth-users-nav', text: 'User Navigation', icon: 'mdi-navigation', link: '/auth/users-nav' },
+      { id: 'auth-callback', text: 'Auth Callback', icon: 'mdi-link', link: '/auth/callback' },
     ]
   },
+  // Documentation
   {
-    id: 'info',
-    text: 'Information Center',
-    icon: 'mdi-information',
-    link: '/info',
+    id: 'docs',
+    text: 'Documentation',
+    icon: 'mdi-book-open-page-variant',
     children: [
-      {
-        id: 'info-about',
-        text: 'About Us',
-        icon: 'mdi-information-outline',
-        link: '/info/about',
-        children: []
-      },
-      {
-        id: 'info-faq',
-        text: 'FAQ',
-        icon: 'mdi-help-circle-outline',
-        link: '/info/faq',
-        children: []
-      },
-      {
-        id: 'info-contact',
-        text: 'Contact',
-        icon: 'mdi-email-outline',
-        link: '/info/contact',
-        children: []
-      },
-      {
-        id: 'info-matrix',
-        text: 'Platform Matrix',
-        icon: 'mdi-chart-box-outline',
-        link: '/info/matrix',
-        children: []
-      },
-      {
-        id: 'info-sitemap',
-        text: 'Site Map',
-        icon: 'mdi-sitemap-outline',
-        link: '/info/sitemap',
-        children: []
-      }
+      { id: 'docs-index', text: 'Overview', icon: 'mdi-book-open', link: '/documentation' },
+      { id: 'docs-getting-started', text: 'Getting Started', icon: 'mdi-rocket-launch', link: '/documentation/getting-started' },
+      { id: 'docs-user-guide', text: 'User Guide', icon: 'mdi-account-school', link: '/documentation/user-guide' },
+      { id: 'docs-api-reference', text: 'API Reference', icon: 'mdi-api', link: '/documentation/api-reference' },
+      { id: 'docs-faq', text: 'FAQ', icon: 'mdi-help-circle-outline', link: '/documentation/faq' },
+      { id: 'docs-roadmap', text: 'Roadmap', icon: 'mdi-road-variant', link: '/documentation/roadmap' },
+      { id: 'docs-troubleshooting', text: 'Troubleshooting', icon: 'mdi-alert-circle-outline', link: '/documentation/troubleshooting' },
     ]
   },
-  {
-    id: 'projects',
-    text: 'Projects',
-    icon: 'mdi-folder-multiple',
-    children: [
-      {
-        id: 'projects-dashboard',
-        text: 'Project Dashboard',
-        icon: 'mdi-view-dashboard',
-        link: '/projects',
-        children: []
-      },
-      {
-        id: 'projects-create',
-        text: 'Create Project',
-        icon: 'mdi-plus-circle',
-        link: '/projects/create',
-        children: []
-      }
-    ]
-  },
-  {
-    id: 'admin',
-    text: 'Administration',
-    icon: 'mdi-shield-crown',
-    children: [
-      {
-        id: 'admin-dashboard',
-        text: 'Admin Dashboard',
-        icon: 'mdi-view-dashboard-variant',
-        link: '/admin',
-        children: []
-      },
-      {
-        id: 'admin-users',
-        text: 'User Management',
-        icon: 'mdi-account-group',
-        link: '/admin/users',
-        children: []
-      }
-    ]
-  },
+  // User (private)
   {
     id: 'user',
     text: 'User Area',
     icon: 'mdi-account',
     children: [
-      {        id: 'user-profile',
-        text: 'Profile',
-        icon: 'mdi-account-circle',
-        link: '/users/profile',
-        children: []
-      },
-      {
-        id: 'user-settings',
-        text: 'Settings',
-        icon: 'mdi-cog',
-        link: '/settings',
-        children: []
-      }
+      { id: 'user-index', text: 'User Dashboard', icon: 'mdi-view-dashboard', link: '/users/index' },
+      { id: 'user-contact', text: 'Contact', icon: 'mdi-email-outline', link: '/users/contact' },
+      { id: 'user-codegen', text: 'Codegen', icon: 'mdi-code-braces', link: '/users/codegen' },
+      { id: 'user-profile', text: 'Profile', icon: 'mdi-account-circle', link: '/users/profile/index' },
+      { id: 'user-profile-edit', text: 'Edit Profile', icon: 'mdi-account-edit', link: '/users/profile/edit' },
+      { id: 'user-activity', text: 'Activity', icon: 'mdi-run', link: '/users/activity/index' },
+      { id: 'user-notifications', text: 'Notifications', icon: 'mdi-bell', link: '/users/notifications/index' },
+      { id: 'user-account', text: 'Account', icon: 'mdi-account-cog', link: '/users/account/index' },
+      { id: 'user-account-security', text: 'Security', icon: 'mdi-shield-lock', link: '/users/account/security' },
+      { id: 'user-account-preferences', text: 'Preferences', icon: 'mdi-tune', link: '/users/account/preferences' },
+      { id: 'user-id', text: 'User Details', icon: 'mdi-account-details', link: '/users/[id]' },
     ]
-  }
+  },
+  // Projects (private)
+  {
+    id: 'projects',
+    text: 'Projects',
+    icon: 'mdi-folder-multiple',
+    children: [
+      { id: 'projects-index', text: 'All Projects', icon: 'mdi-format-list-bulleted', link: '/projects/index' },
+      { id: 'projects-create', text: 'Create Project', icon: 'mdi-plus-circle', link: '/projects/create' },
+      { id: 'projects-templates', text: 'Templates', icon: 'mdi-file-document-multiple', link: '/projects/templates' },
+      { id: 'projects-id-index', text: 'Project Details', icon: 'mdi-folder', link: '/projects/[id]/index' },
+      { id: 'projects-id-config', text: 'Project Config', icon: 'mdi-cog', link: '/projects/[id]/config' },
+      { id: 'projects-id-deploy', text: 'Project Deploy', icon: 'mdi-rocket', link: '/projects/[id]/deploy' },
+      { id: 'projects-id-train', text: 'Project Train', icon: 'mdi-robot', link: '/projects/[id]/train' },
+    ]
+  },
+  // Storage (private)
+  {
+    id: 'storage',
+    text: 'Storage',
+    icon: 'mdi-database',
+    children: [
+      { id: 'storage-index', text: 'Storage Home', icon: 'mdi-database', link: '/storage/index' },
+    ]
+  },
+  // Settings (private)
+  {
+    id: 'settings',
+    text: 'Settings',
+    icon: 'mdi-cog',
+    children: [
+      { id: 'settings-index', text: 'Settings', icon: 'mdi-cog', link: '/settings/index' },
+    ]
+  },
+  // (Admin Area removed)
 ])
 
 const onNodeSelect = (node: TreeNode) => {
-  console.log('Node selected in sitemap:', node)
-  
-  // Add analytics or tracking here if needed
-  if (process.client) {
-    // Track navigation event
-    console.log(`User navigating from ${currentPath.value} to ${node.link}`)
-  }
-  
   if (node.link) {
-    console.log(`Navigating to: ${node.link}`)
-    // Use router push for better navigation handling
     navigateTo(node.link)
-  } else {
-    console.log('Node has no link - likely a category node')
   }
 }
-
-// Enhanced debugging and development helpers
-onMounted(() => {
-  console.log('Sitemap tree data:', sitemapTreeData.value)
-  console.log('Tree data length:', sitemapTreeData.value.length)
-  console.log('Current path:', currentPath.value)
-  
-  // Find and log the active node
-  const findActiveNode = (nodes: TreeNode[]): TreeNode | null => {
-    for (const node of nodes) {
-      if (isNodeActive(node)) return node
-      if (node.children) {
-        const activeChild = findActiveNode(node.children)
-        if (activeChild) return activeChild
-      }
-    }
-    return null
-  }
-  
-  const activeNode = findActiveNode(sitemapTreeData.value)
-  if (activeNode) {
-    console.log('Active node found:', activeNode)
-  }
-})
 </script>
 
 <style scoped>
-.glass-card {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius: 12px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-  color: white;
-  transition: all 0.3s ease;
-}
-
-.glass-card:hover {
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 6px 40px rgba(0, 0, 0, 0.3);
-}
-
 .intro-text {
   font-size: 1.1rem;
   color: rgba(255, 255, 255, 0.95);
@@ -328,100 +146,26 @@ onMounted(() => {
   line-height: 1.6;
   font-weight: 400;
 }
-
-.v-card-title {
+.sitemap-blue {
+  color: #1565c0 !important;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #fff, 0 0 2px #fff;
+}
+.sitemap-blue-count {
+  color: #1565c0 !important;
   font-weight: 600;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-  color: #ffffff !important;
+  margin-left: 2px;
+  text-shadow: 0 1px 2px #fff, 0 0 2px #fff;
 }
-
-/* Enhanced tree node styling */
-:deep(.tree-node) {
-  transition: all 0.2s ease;
-  border-radius: 6px;
-  padding: 4px 8px;
-  margin: 2px 0;
-  color: white !important;
+.sitemap-purple {
+  color: #7c3aed !important;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #fff, 0 0 2px #fff;
 }
-
-:deep(.tree-node:hover) {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateX(2px);
-}
-
-:deep(.tree-node.active) {
-  background: rgba(66, 165, 245, 0.2);
-  border-left: 3px solid #42a5f5;
+.sitemap-purple-count {
+  color: #7c3aed !important;
   font-weight: 600;
-  color: #42a5f5 !important;
-}
-
-:deep(.tree-node .node-text) {
-  transition: color 0.2s ease;
-  color: white !important;
-}
-
-:deep(.tree-node:hover .node-text) {
-  color: rgba(255, 255, 255, 0.95) !important;
-}
-
-/* Vuetify tree view styling */
-:deep(.v-treeview) {
-  color: white !important;
-}
-
-:deep(.v-treeview-item__label) {
-  color: white !important;
-  font-weight: 500;
-}
-
-:deep(.v-treeview-item) {
-  color: white !important;
-}
-
-:deep(.v-treeview-node__root) {
-  background: rgba(255, 255, 255, 0.05);
-  color: white !important;
-  border-radius: 4px;
-  margin: 2px 0;
-  padding: 4px 8px;
-}
-
-:deep(.v-treeview-node__root:hover) {
-  background: rgba(255, 255, 255, 0.1);
-  cursor: pointer;
-}
-
-/* Skeleton loader styling */
-:deep(.v-skeleton-loader) {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-}
-
-/* Improved accessibility */
-:deep([role="tree"]) {
-  outline: none;
-}
-
-:deep([role="tree"]:focus-visible) {
-  outline: 2px solid #42a5f5;
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-/* Animation for tree expansion */
-:deep(.tree-node-children) {
-  transition: all 0.3s ease;
-}
-
-:deep(.tree-expand-enter-active),
-:deep(.tree-expand-leave-active) {
-  transition: all 0.3s ease;
-}
-
-:deep(.tree-expand-enter-from),
-:deep(.tree-expand-leave-to) {
-  opacity: 0;
-  transform: translateY(-10px);
+  margin-left: 2px;
+  text-shadow: 0 1px 2px #fff, 0 0 2px #fff;
 }
 </style>

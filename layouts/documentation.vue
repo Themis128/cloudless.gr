@@ -1,13 +1,29 @@
 <template>
   <v-app>
     <!-- App Bar -->
-    <v-app-bar color="transparent" elevation="0" class="glassmorphism-header" height="80" fixed>
+    <v-app-bar
+      color="transparent"
+      elevation="0"
+      class="glassmorphism-header"
+      height="80"
+      fixed
+    >
       <div class="app-bar-content d-flex align-center w-100 px-4">
         <!-- Logo and Brand -->
         <div class="brand-section d-flex align-center">
-          <v-btn icon="mdi-arrow-left" variant="text" class="me-2" @click="navigateTo('/')" />
+          <v-btn
+            icon="mdi-arrow-left"
+            variant="text"
+            class="me-2"
+            @click="navigateTo('/')"
+          />
           <NuxtLink to="/" class="brand-link d-flex align-center text-decoration-none">
-            <v-icon icon="mdi-cloud" size="32" color="primary" class="me-2" />
+            <v-icon
+              icon="mdi-cloud"
+              size="32"
+              color="primary"
+              class="me-2"
+            />
             <span class="text-h5 font-weight-bold text-white">Cloudless.gr</span>
           </NuxtLink>
           <v-divider vertical class="mx-4" />
@@ -230,7 +246,6 @@
         </div>
       </div>
     </v-main>
-
     <!-- Feedback Dialog -->
     <v-dialog v-model="feedbackDialog" max-width="500">
       <v-card class="glassmorphism-dialog">
@@ -247,7 +262,12 @@
             rows="4"
             variant="outlined"
           />
-          <v-rating v-model="feedbackRating" class="mt-4" color="warning" half-increments />
+          <v-rating
+            v-model="feedbackRating"
+            class="mt-4"
+            color="warning"
+            half-increments
+          />
           <div class="text-caption text-medium-emphasis mt-2">
             How would you rate this documentation?
           </div>
@@ -321,7 +341,7 @@ const breadcrumbs = computed(() => {
 
     crumbs.push({
       title,
-      href: isLast ? undefined : currentPath,
+      href: isLast ? '' : currentPath,
       disabled: isLast,
     });
   });
@@ -364,6 +384,7 @@ const submitFeedback = () => {
 };
 
 // Handle responsive drawer
+import { useDisplay } from 'vuetify';
 const { width } = useDisplay();
 watch(
   width,
@@ -430,10 +451,111 @@ watch(
   border-radius: 8px;
 }
 
+
+
 .documentation-main {
-  background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
-  color: white;
+  background: linear-gradient(135deg, #f8fafc 0%, #e5e7eb 40%, #d1d5db 100%);
+  color: #181818;
   min-height: 100vh;
+}
+
+.content-wrapper {
+  background: #f4f4f5;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+  padding: 32px;
+}
+
+.glassmorphism-header {
+  background: rgba(243,244,246,0.95) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.glassmorphism-sidebar {
+  background: rgba(229,231,235,0.97) !important;
+  backdrop-filter: blur(12px);
+  border-right: 1px solid #d1d5db;
+}
+
+.glassmorphism-breadcrumbs {
+  background: rgba(229,231,235,0.7);
+  color: #181818;
+}
+
+.nav-item {
+  background: #f3f4f6;
+  color: #181818;
+}
+.nav-item.router-link-active {
+  background: #e5e7eb !important;
+  color: #1976d2 !important;
+}
+
+.drawer-footer {
+  border-top: 1px solid #e5e7eb;
+}
+
+.feedback-card {
+  background: #f3f4f6 !important;
+  border: 1px solid #e5e7eb;
+}
+
+.breadcrumb-item {
+  color: #1976d2;
+}
+.breadcrumb-item:hover {
+  color: #1565c0;
+}
+
+.content-wrapper {
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+  padding: 32px;
+}
+
+.brand-link {
+  color: #181818 !important;
+}
+
+.glassmorphism-header {
+  background: rgba(255,255,255,0.85) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #e0e7ef;
+}
+
+.glassmorphism-sidebar {
+  background: rgba(255,255,255,0.95) !important;
+  backdrop-filter: blur(12px);
+  border-right: 1px solid #e0e7ef;
+}
+
+.glassmorphism-breadcrumbs {
+  background: rgba(232,237,243,0.7);
+  color: #181818;
+}
+
+.nav-item.router-link-active {
+  background: rgba(24, 24, 24, 0.07) !important;
+  color: #1976d2 !important;
+}
+
+.drawer-footer {
+  border-top: 1px solid #e0e7ef;
+}
+
+.feedback-card {
+  background: #f8fafc !important;
+  border: 1px solid #e0e7ef;
+}
+
+.breadcrumb-item {
+  color: #1976d2;
+}
+
+.breadcrumb-item:hover {
+  color: #1565c0;
 }
 
 .content-wrapper {

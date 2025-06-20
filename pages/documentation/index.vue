@@ -17,11 +17,21 @@
 
     <!-- Quick Links -->
     <v-row class="mb-8">
-      <v-col v-for="quickLink in quickLinks" :key="quickLink.title" cols="12" md="4">
+      <v-col
+        v-for="quickLink in quickLinks"
+        :key="quickLink.title"
+        cols="12"
+        md="4"
+      >
         <v-card class="quick-link-card h-100" elevation="2" @click="navigateTo(quickLink.path)">
           <v-card-text class="pa-6">
             <div class="d-flex align-center mb-4">
-              <v-icon :icon="quickLink.icon" size="32" color="primary" class="me-3" />
+              <v-icon
+                :icon="quickLink.icon"
+                size="32"
+                color="primary"
+                class="me-3"
+              />
               <h3 class="text-h6 font-weight-bold">{{ quickLink.title }}</h3>
             </div>
             <p class="text-body-2 text-medium-emphasis mb-3">
@@ -47,7 +57,13 @@
         </div>
 
         <v-row>
-          <v-col v-for="page in section.pages" :key="page.title" cols="12" md="6" lg="4">
+          <v-col
+            v-for="page in section.pages"
+            :key="page.title"
+            cols="12"
+            md="6"
+            lg="4"
+          >
             <v-card class="doc-page-card h-100" elevation="1" @click="navigateTo(page.path)">
               <v-card-text class="pa-5">
                 <div class="d-flex align-center mb-3">
@@ -71,7 +87,12 @@
                   >
                     {{ page.difficulty }}
                   </v-chip>
-                  <v-btn variant="text" size="small" color="primary" append-icon="mdi-arrow-right">
+                  <v-btn
+                    variant="text"
+                    size="small"
+                    color="primary"
+                    append-icon="mdi-arrow-right"
+                  >
                     Read
                   </v-btn>
                 </div>

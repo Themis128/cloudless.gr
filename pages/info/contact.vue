@@ -1,20 +1,43 @@
 <template>
   <v-container class="py-12">
     <v-row justify="center">
-      <v-col cols="12" md="8">
-        <v-card class="pa-6" elevation="4">
+      <v-col
+        cols="12"
+        md="5"
+        lg="4"
+        xl="3"
+      >
+        <v-card class="pa-4 glassmorph contact-card-sm" elevation="4">
           <v-card-title class="text-h5 font-weight-bold">Contact Us</v-card-title>
           <v-card-text>
-            <p class="mb-4">
-              Have questions or need support? Reach out to the Cloudless GR team using the form
-              below or email us at <a href="mailto:support@cloudless.gr">support@cloudless.gr</a>.
-            </p>
+
             <v-form ref="form" v-model="formValid" @submit.prevent="onSubmit">
-              <v-text-field v-model="name" label="Your Name" required class="mb-3" />
-              <v-text-field v-model="email" label="Your Email" type="email" required class="mb-3" />
-              <v-textarea v-model="message" label="Message" required class="mb-4" />
+              <v-text-field
+                v-model="name"
+                label="Your Name"
+                required
+                class="mb-3"
+              />
+              <v-text-field
+                v-model="email"
+                label="Your Email"
+                type="email"
+                required
+                class="mb-3"
+              />
+              <v-textarea
+                v-model="message"
+                label="Message"
+                required
+                class="mb-4"
+              />
               <v-btn color="primary" type="submit" :loading="submitting">Send Message</v-btn>
-              <v-btn text type="button" class="ml-2" @click="reset">Reset</v-btn>
+              <v-btn
+                text
+                type="button"
+                class="ml-2"
+                @click="reset"
+              >Reset</v-btn>
               <div v-if="errorMsg" class="text-error mt-2">{{ errorMsg }}</div>
             </v-form>
             <v-dialog v-model="showSuccess" max-width="400">
@@ -52,17 +75,20 @@ const { name, email, message, errorMsg, submitting, form, formValid, reset } = u
 const showSuccess = ref(false);
 const supabase = useSupabase();
 
+
 async function onSubmit() {
   submitting.value = true;
   errorMsg.value = '';
   try {
-    const { error } = await supabase.from('contact_messages').insert([
-      {
-        name: name.value,
-        email: email.value,
-        message: message.value,
-      },
-    ] as any);
+    const { error } = await supabase
+      .from('contact_messages')
+      .insert([
+        {
+          name: name.value,
+          email: email.value,
+          message: message.value,
+        },
+      ] as any);
     if (error) {
       errorMsg.value = 'Failed to send message. Please try again.';
     } else {
@@ -81,5 +107,12 @@ async function onSubmit() {
 <style scoped>
 p {
   font-size: 1.1rem;
+}
+</style>
+
+<style scoped>
+.contact-card-sm {
+  max-width: 380px;
+  margin: 0 auto;
 }
 </style>
