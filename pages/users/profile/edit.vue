@@ -41,24 +41,58 @@
               </div>
 
               <!-- Profile Form -->
+              <v-alert
+                type="info"
+                variant="outlined"
+                class="mb-4"
+                density="compact"
+              >
+                <v-icon icon="mdi-information" />
+                Note: We use a single "Full Name" field. Separate first/last name fields are not currently supported.
+              </v-alert>
+              
               <v-row>
                 <v-col cols="12" sm="6">
                   <v-text-field
-                    v-model="form.first_name"
-                    label="First Name"
+                    v-model="form.full_name"
+                    label="Full Name"
                     variant="outlined"
                     :rules="[rules.required]"
                     prepend-inner-icon="mdi-account"
+                    placeholder="Enter your full name"
                   />
                 </v-col>
                 <v-col cols="12" sm="6">
-                  <v-text-field
-                    v-model="form.last_name"
-                    label="Last Name"
+                  <v-select
+                    v-model="form.role"
+                    label="Role"
                     variant="outlined"
-                    :rules="[rules.required]"
-                    prepend-inner-icon="mdi-account"
-                  />
+                    :items="roleOptions"
+                    item-title="label"
+                    item-value="value"
+                    prepend-inner-icon="mdi-shield-account"
+                    :readonly="!isAdmin"
+                    :hint="!isAdmin ? 'Contact an administrator to change your role' : ''"
+                    :persistent-hint="!isAdmin"
+                  >
+                    <template #item="{ props, item }">
+                      <v-list-item v-bind="props">
+                        <template #prepend>
+                          <v-icon :icon="item.raw.icon" :color="item.raw.color" />
+                        </template>
+                      </v-list-item>
+                    </template>
+                    <template #selection="{ item }">
+                      <v-chip
+                        :color="item.raw.color"
+                        size="small"
+                        variant="flat"
+                      >
+                        <v-icon :icon="item.raw.icon" size="16" class="mr-1" />
+                        {{ item.raw.label }}
+                      </v-chip>
+                    </template>
+                  </v-select>
                 </v-col>
                 <v-col cols="12">
                   <v-text-field
@@ -157,12 +191,34 @@ const success = ref(null)
 
 // Form data
 const form = reactive({
-  first_name: '',
-  last_name: '',
+  full_name: '',
   email: '',
   bio: '',
-  avatar_url: ''
+  avatar_url: '',
+  role: 'user'
 })
+
+// Role options
+const roleOptions = [
+  {
+    value: 'user',
+    label: 'User',
+    icon: 'mdi-account',
+    color: 'primary'
+  },
+  {
+    value: 'moderator',
+    label: 'Moderator',
+    icon: 'mdi-shield-check',
+    color: 'warning'
+  },
+  {
+    value: 'admin',
+    label: 'Administrator',
+    icon: 'mdi-shield-crown',
+    color: 'error'
+  }
+]
 
 // Validation rules
 const rules = {
@@ -175,11 +231,14 @@ const rules = {
 }
 
 // Computed
+const isAdmin = computed(() => {
+  return userProfile.value?.role === 'admin'
+})
+
 const userDisplayName = computed(() => {
-  const firstName = form.first_name || userProfile.value?.first_name
-  const lastName = form.last_name || userProfile.value?.last_name
-  if (firstName || lastName) {
-    return `${firstName || ''} ${lastName || ''}`.trim()
+  const fullName = form.full_name || userProfile.value?.full_name
+  if (fullName) {
+    return fullName.trim()
   }
   return form.email || user.value?.email || 'User'
 })
@@ -187,10 +246,10 @@ const userDisplayName = computed(() => {
 // Methods
 const initializeForm = () => {
   if (userProfile.value) {
-    form.first_name = userProfile.value.first_name || ''
-    form.last_name = userProfile.value.last_name || ''
+    form.full_name = userProfile.value.full_name || ''
     form.bio = userProfile.value.bio || ''
     form.avatar_url = userProfile.value.avatar_url || ''
+    form.role = userProfile.value.role || 'user'
   }
   if (user.value) {
     form.email = user.value.email || ''
@@ -248,16 +307,22 @@ const updateProfile = async () => {
   success.value = null
 
   try {
+    const updateData = {
+      id: user.value.id,
+      full_name: form.full_name,
+      bio: form.bio,
+      avatar_url: form.avatar_url,
+      updated_at: new Date().toISOString()
+    }
+
+    // Only include role if user is admin (can edit roles)
+    if (isAdmin.value) {
+      updateData.role = form.role
+    }
+
     const { error: updateError } = await supabase
-      .from('user_profiles')
-      .upsert({
-        id: user.value.id,
-        first_name: form.first_name,
-        last_name: form.last_name,
-        bio: form.bio,
-        avatar_url: form.avatar_url,
-        updated_at: new Date().toISOString()
-      })
+      .from('profiles')
+      .upsert(updateData)
 
     if (updateError) throw updateError
 

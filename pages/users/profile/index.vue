@@ -34,14 +34,24 @@
             <v-row>
               <v-col cols="12" sm="6">
                 <v-card variant="outlined" class="pa-4">
-                  <div class="text-subtitle2 text-grey-darken-1 mb-1">First Name</div>
-                  <div class="text-h6">{{ userProfile?.first_name || 'Not set' }}</div>
+                  <div class="text-subtitle2 text-grey-darken-1 mb-1">Full Name</div>
+                  <div class="text-h6">{{ userProfile?.full_name || 'Not set' }}</div>
                 </v-card>
               </v-col>
               <v-col cols="12" sm="6">
                 <v-card variant="outlined" class="pa-4">
-                  <div class="text-subtitle2 text-grey-darken-1 mb-1">Last Name</div>
-                  <div class="text-h6">{{ userProfile?.last_name || 'Not set' }}</div>
+                  <div class="text-subtitle2 text-grey-darken-1 mb-1">Role</div>
+                  <div class="text-h6">
+                    <v-chip
+                      :color="getRoleColor(userProfile?.role)"
+                      size="small"
+                      variant="flat"
+                      class="text-capitalize"
+                    >
+                      <v-icon :icon="getRoleIcon(userProfile?.role)" size="16" class="mr-1" />
+                      {{ userProfile?.role || 'user' }}
+                    </v-chip>
+                  </div>
                 </v-card>
               </v-col>
               <v-col cols="12">
@@ -129,8 +139,8 @@
 </template>
 
 <script setup>
-import { useUserProfileStore } from '@/stores/userProfileStore'
 import { useFetchProjects } from '@/composables/useFetchProjects'
+import { useUserProfileStore } from '@/stores/userProfileStore'
 
 const user = useSupabaseAuth().user
 const userProfileStore = useUserProfileStore()
@@ -145,8 +155,8 @@ onMounted(() => {
 
 // Computed
 const userDisplayName = computed(() => {
-  if (userProfile.value?.first_name || userProfile.value?.last_name) {
-    return `${userProfile.value.first_name || ''} ${userProfile.value.last_name || ''}`.trim()
+  if (userProfile.value?.full_name) {
+    return userProfile.value.full_name.trim()
   }
   return userProfile.value?.email || user.value?.email || 'User'
 })
@@ -156,6 +166,30 @@ const projectsCount = computed(() => {
 })
 
 // Methods
+const getRoleColor = (role) => {
+  switch (role) {
+    case 'admin':
+      return 'error'
+    case 'moderator':
+      return 'warning'
+    case 'user':
+    default:
+      return 'primary'
+  }
+}
+
+const getRoleIcon = (role) => {
+  switch (role) {
+    case 'admin':
+      return 'mdi-shield-crown'
+    case 'moderator':
+      return 'mdi-shield-check'
+    case 'user':
+    default:
+      return 'mdi-account'
+  }
+}
+
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
   return new Date(dateString).toLocaleDateString('en-US', {

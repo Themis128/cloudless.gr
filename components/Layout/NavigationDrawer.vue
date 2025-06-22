@@ -1,5 +1,10 @@
 <template>
-  <v-navigation-drawer v-model="drawer" app temporary :width="280">
+  <v-navigation-drawer
+    v-model="drawer"
+    app
+    temporary
+    :width="280"
+  >
     <v-list nav dense>
       <template v-for="item in filteredLinks" :key="item.to">
         <NuxtLink v-slot="{ navigate, isActive }" :to="item.to" custom>

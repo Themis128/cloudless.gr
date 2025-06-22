@@ -53,7 +53,12 @@
                 <v-icon icon="mdi-lock" size="12" class="mr-1" />
                 Auth Required
               </v-chip>
-              <v-chip size="x-small" color="info" variant="outlined" class="mr-2">
+              <v-chip
+                size="x-small"
+                color="info"
+                variant="outlined"
+                class="mr-2"
+              >
                 {{ endpoint.rateLimit }}
               </v-chip>
             </div>

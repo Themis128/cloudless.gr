@@ -84,20 +84,16 @@
 
         <div v-if="project.training_jobs?.length" class="stat-item">
           <v-icon icon="mdi-brain" size="16" class="me-1" />
-          <span class="text-caption"
-            >{{ project.training_jobs.length }} job{{
-              project.training_jobs.length !== 1 ? 's' : ''
-            }}</span
-          >
+          <span class="text-caption">{{ project.training_jobs.length }} job{{
+            project.training_jobs.length !== 1 ? 's' : ''
+          }}</span>
         </div>
 
         <div v-if="project.model_versions?.length" class="stat-item">
           <v-icon icon="mdi-package-variant" size="16" class="me-1" />
-          <span class="text-caption"
-            >{{ project.model_versions.length }} version{{
-              project.model_versions.length !== 1 ? 's' : ''
-            }}</span
-          >
+          <span class="text-caption">{{ project.model_versions.length }} version{{
+            project.model_versions.length !== 1 ? 's' : ''
+          }}</span>
         </div>
       </div>
 

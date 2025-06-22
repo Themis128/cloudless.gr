@@ -1,11 +1,14 @@
 <template>
   <div class="auth-container">
-    <LoginForm />
+    <div class="auth-wrapper">
+      <LoginForm />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import LoginForm from '~/components/auth/LoginForm.vue'
+import LoginForm from '@/components/auth/LoginForm.vue';
+import { definePageMeta } from '#imports';
 
 definePageMeta({
   layout: 'auth'
@@ -18,7 +21,34 @@ definePageMeta({
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 20px;
+  padding: 16px;
+  width: 100%;
+}
+
+.auth-wrapper {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 12px;
+    align-items: flex-start;
+    padding-top: 5vh;
+  }
+  
+  .auth-wrapper {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .auth-container {
+    padding: 8px;
+    padding-top: 3vh;
+  }
 }
 
 .glass-card {

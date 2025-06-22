@@ -23,7 +23,7 @@
         no-data-text="No deployments found"
       >
         <!-- Status Column -->
-        <template #item.status="{ item }">
+        <template #[`item.status`]="{ item }">
           <v-chip
             :color="getStatusColor(item.status)"
             size="small"
@@ -36,7 +36,7 @@
         </template>
 
         <!-- Name Column -->
-        <template #item.name="{ item }">
+        <template #[`item.name`]="{ item }">
           <div class="deployment-name">
             <div class="font-weight-medium">{{ item.name }}</div>
             <div class="text-caption text-disabled">{{ item.version || 'v1.0.0' }}</div>
@@ -44,7 +44,7 @@
         </template>
 
         <!-- Environment Column -->
-        <template #item.environment="{ item }">
+        <template #[`item.environment`]="{ item }">
           <v-chip
             :color="getEnvironmentColor(item.environment || '')"
             size="small"
@@ -55,7 +55,7 @@
         </template>
 
         <!-- Created At Column -->
-        <template #item.created_at="{ item }">
+        <template #[`item.created_at`]="{ item }">
           <div class="date-info">
             <div>{{ formatDate(item.created_at) }}</div>
             <div class="text-caption text-disabled">{{ formatTime(item.created_at || '') }}</div>
@@ -63,19 +63,19 @@
         </template>
 
         <!-- Duration Column -->
-        <template #item.duration="{ item }">
+        <template #[`item.duration`]="{ item }">
           <div class="text-body-2">
             {{ calculateDuration(item) }}
           </div>
         </template>
 
         <!-- Actions Column -->
-        <template #item.actions="{ item }">
+        <template #[`item.actions`]="{ item }">
           <div class="action-buttons">
             <v-tooltip text="View Details" location="top">
-              <template #activator="{ props }">
+              <template #activator="{ props: tooltipProps }">
                 <v-btn
-                  v-bind="props"
+                  v-bind="tooltipProps"
                   icon="mdi-eye"
                   size="small"
                   variant="text"
@@ -86,9 +86,9 @@
             </v-tooltip>
 
             <v-tooltip text="Rollback to this version" location="top">
-              <template #activator="{ props }">
+              <template #activator="{ props: activatorProps }">
                 <v-btn
-                  v-bind="props"
+                  v-bind="activatorProps"
                   icon="mdi-restore"
                   size="small"
                   variant="text"
@@ -100,9 +100,9 @@
             </v-tooltip>
 
             <v-tooltip text="Download Logs" location="top">
-              <template #activator="{ props }">
+              <template #activator="{ props: activatorProps }">
                 <v-btn
-                  v-bind="props"
+                  v-bind="activatorProps"
                   icon="mdi-download"
                   size="small"
                   variant="text"
@@ -113,8 +113,13 @@
             </v-tooltip>
 
             <v-menu>
-              <template #activator="{ props }">
-                <v-btn v-bind="props" icon="mdi-dots-vertical" size="small" variant="text" />
+              <template #activator="{ props: activatorProps }">
+                <v-btn
+                  v-bind="activatorProps"
+                  icon="mdi-dots-vertical"
+                  size="small"
+                  variant="text"
+                />
               </template>
               <v-list>
                 <v-list-item @click="duplicateDeployment(item)">
@@ -130,7 +135,7 @@
                   <v-list-item-title>Export Config</v-list-item-title>
                 </v-list-item>
                 <v-divider />
-                <v-list-item @click="$emit('delete-deployment', item.id)" class="text-error">
+                <v-list-item class="text-error" @click="$emit('delete-deployment', item.id)">
                   <template #prepend>
                     <v-icon icon="mdi-delete" />
                   </template>
@@ -153,24 +158,24 @@ interface Props {
   loading?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const _props = withDefaults(defineProps<Props>(), {
   loading: false,
 });
 
-const emit = defineEmits<{
+const _emit = defineEmits<{
   'view-deployment': [deployment: Deployment];
   'rollback-to': [deployment: Deployment];
   'delete-deployment': [deploymentId: string];
 }>();
 
-const headers: any[] = [
+const headers = [
   { title: 'Status', key: 'status', sortable: true, width: '120px' },
   { title: 'Name', key: 'name', sortable: true },
   { title: 'Environment', key: 'environment', sortable: true, width: '140px' },
   { title: 'Created', key: 'created_at', sortable: true, width: '160px' },
   { title: 'Duration', key: 'duration', sortable: false, width: '120px' },
   { title: 'Actions', key: 'actions', sortable: false, width: '160px', align: 'center' },
-];
+] as const;
 
 const getStatusColor = (status: string) => {
   switch (status?.toLowerCase()) {

@@ -195,7 +195,12 @@
 
     <!-- Actions -->
     <div class="form-actions">
-      <v-btn variant="text" size="large" :disabled="loading" @click="$emit('cancel')">
+      <v-btn
+        variant="text"
+        size="large"
+        :disabled="loading"
+        @click="$emit('cancel')"
+      >
         Cancel
       </v-btn>
       <v-btn

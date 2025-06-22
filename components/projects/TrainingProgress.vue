@@ -117,7 +117,12 @@
                 <div class="log-container">
                   <pre class="logs">{{ logs }}</pre>
                 </div>
-                <v-btn variant="outlined" :href="session.log_url" target="_blank" class="mt-2">
+                <v-btn
+                  variant="outlined"
+                  :href="session.log_url"
+                  target="_blank"
+                  class="mt-2"
+                >
                   <v-icon start>mdi-open-in-new</v-icon>
                   View Full Logs
                 </v-btn>
@@ -130,7 +135,12 @@
 
     <v-card-actions v-if="session && session.status === 'running'">
       <v-spacer />
-      <v-btn color="error" variant="outlined" :loading="stopping" @click="handleStop">
+      <v-btn
+        color="error"
+        variant="outlined"
+        :loading="stopping"
+        @click="handleStop"
+      >
         <v-icon start>mdi-stop</v-icon>
         Stop Training
       </v-btn>

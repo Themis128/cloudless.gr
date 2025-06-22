@@ -8,11 +8,7 @@
           <v-col cols="12">
             <div class="welcome-section">
               <div class="d-flex align-center">
-                <v-avatar v-if="userStore.user.avatar_url" size="60" class="me-4">
-                  <v-img :src="userStore.user.avatar_url" :alt="userName" />
-                </v-avatar>
                 <v-avatar
-                  v-else
                   size="60"
                   color="primary"
                   class="me-4"
@@ -173,7 +169,7 @@
         <DeploymentStatusList
           :deployments="recentDeployments"
           @view-logs="handleViewLogs"
-          @restart-deployment="handleRestartDeployment"
+          @restart-deployment="_handleRestartDeployment"
         />
       </v-container>
     </div>
@@ -217,6 +213,30 @@ import ProjectList from '@/components/projects/ProjectList.vue';
 
 
 
+// Import types from the proper location
+import type { Project } from '~/types/supabase.d';
+
+// Component-specific deployment interface (matches the component's expectations)
+interface ComponentDeployment {
+  id: string;
+  deployment_name: string;
+  environment: string;
+  status: string;
+  instance_type: string;
+  cpu_limit: number;
+  memory_limit: number;
+  auto_scaling: boolean;
+  endpoint_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface _ProjectCreateData {
+  name: string;
+  description?: string;
+  type?: string;
+}
+
 // Stores
 const projectStore = useProjectsStore();
 const userStore = useUserStore();
@@ -228,7 +248,7 @@ const showCreateDialog = ref(false);
 
 // Computed properties
 const userName = computed(() => {
-  const fullName = userStore.user.full_name;
+  const fullName = userStore.profile?.full_name;
   if (fullName) {
     return fullName.split(' ')[0]; // First name only
   }
@@ -236,7 +256,7 @@ const userName = computed(() => {
 });
 
 const userInitials = computed(() => {
-  const fullName = userStore.user.full_name;
+  const fullName = userStore.profile?.full_name;
   if (fullName) {
     return fullName
       .split(' ')
@@ -245,7 +265,7 @@ const userInitials = computed(() => {
       .toUpperCase()
       .slice(0, 2);
   }
-  return userStore.user.email?.charAt(0).toUpperCase() || 'U';
+  return userStore.profile?.email?.charAt(0).toUpperCase() || 'U';
 });
 
 const personalizedWelcomeMessage = computed(() => {
@@ -262,7 +282,7 @@ const personalizedWelcomeMessage = computed(() => {
 });
 
 const personalizedSubtitle = computed(() => {
-  const userRole = userStore.user.role;
+  const userRole = userStore.profile?.role;
   if (userRole === 'admin') {
     return 'Manage and oversee all AI development projects and training pipelines';
   }
@@ -270,7 +290,7 @@ const personalizedSubtitle = computed(() => {
 });
 
 const personalizedEmptyMessage = computed(() => {
-  const userRole = userStore.user.role;
+  const userRole = userStore.profile?.role;
   if (userRole === 'admin') {
     return 'As an admin, you can create and manage AI projects for your team. Start by creating your first project to get everyone started with model training and deployment.';
   }
@@ -289,28 +309,28 @@ const personalizedStatsDescription = computed(() => {
 });
 
 const filteredProjects = computed(() => {
-  const projects = (projectStore as any).projects || [];
-  return [...projects];
+  const allProjects = projectStore.projects as Project[];
+  return [...(allProjects || [])];
 });
 
 const activeProjects = computed(() => {
-  const projects = (projectStore as any).projects || [];
-  return projects.filter((p: any) => p.status === 'active').length;
+  const allProjects = projectStore.projects as Project[];
+  return allProjects?.filter((p) => p.status === 'active').length || 0;
 });
 
 const trainingProjects = computed(() => {
-  const projects = (projectStore as any).projects || [];
-  return projects.filter((p: any) => p.status === 'training').length;
+  const allProjects = projectStore.projects as Project[];
+  return allProjects?.filter((p) => p.status === 'training').length || 0;
 });
 
 const deployedProjects = computed(() => {
-  const projects = (projectStore as any).projects || [];
-  return projects.filter((p: any) => p.status === 'deployed').length;
+  const allProjects = projectStore.projects as Project[];
+  return allProjects?.filter((p) => p.status === 'deployed').length || 0;
 });
 
 const trainingProjectsList = computed(() => {
-  const projects = (projectStore as any).projects || [];
-  return projects.filter((p: any) => p.status === 'training');
+  const allProjects = projectStore.projects as Project[];
+  return allProjects?.filter((p) => p.status === 'training') || [];
 });
 
 const hasActiveTraining = computed(() => trainingProjectsList.value.length > 0);
@@ -320,25 +340,21 @@ const loading = computed(() => projectStore.loading);
 
 const recentDeployments = computed(() => {
   // Mock deployment data - replace with actual data from your store
-  const projects = (projectStore as any).projects || [];
-  return projects
-    .filter((p: any) => p.status === 'deployed')
+  const allProjects = projectStore.projects as Project[];
+  return (allProjects || [])
+    .filter((p) => p.status === 'deployed')
     .slice(0, 5)
-    .map((project: any) => ({
+    .map((project): ComponentDeployment => ({
       id: project.id,
-      project_name: project.name,
       deployment_name: project.name,
+      environment: 'production',
       status: 'running',
-      url: `https://${project.name.toLowerCase().replace(/\s+/g, '-')}.cloudless.gr`,
-      deployed_at: new Date().toISOString(),
-      version: '1.0.0',
-      environment: 'production' as const,
       instance_type: 'standard',
       cpu_limit: 1000,
       memory_limit: 2048,
-      project_id: project.id,
-      created_at: new Date().toISOString(),
       auto_scaling: false,
+      endpoint_url: `https://${project.name.toLowerCase().replace(/\s+/g, '-')}.cloudless.gr`,
+      created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }));
 });
@@ -346,7 +362,7 @@ const recentDeployments = computed(() => {
 const hasDeployments = computed(() => recentDeployments.value.length > 0);
 
 // Methods
-const handleProjectClick = (project: any) => {
+const handleProjectClick = (project: Project) => {
   router.push(`/projects/${project.id}`);
 };
 
@@ -360,7 +376,11 @@ const handleProjectDelete = async (projectId: string) => {
   }
 };
 
-const handleCreateProject = async (projectData: any) => {
+const handleCreateProject = async (projectData: { 
+  name: string; 
+  description?: string; 
+  type: Project['type'];
+}) => {
   try {
     await projectStore.createProject(projectData);
     showCreateDialog.value = false;
@@ -371,7 +391,7 @@ const handleCreateProject = async (projectData: any) => {
   }
 };
 
-const handlePauseTraining = async (projectId: string) => {
+const _handlePauseTraining = async (_projectId: string) => {
   try {
     // This would need to find and stop the active training session
     // Show success message
@@ -381,7 +401,7 @@ const handlePauseTraining = async (projectId: string) => {
   }
 };
 
-const handleResumeTraining = async (projectId: string) => {
+const _handleResumeTraining = async (_projectId: string) => {
   try {
     // This would need to restart training - implement based on your requirements
     // Show success message
@@ -391,7 +411,7 @@ const handleResumeTraining = async (projectId: string) => {
   }
 };
 
-const handleStopTraining = async (projectId: string) => {
+const handleStopTraining = async (_projectId: string) => {
   try {
     // This would need to find and stop the active training session
     // Show success message
@@ -401,11 +421,11 @@ const handleStopTraining = async (projectId: string) => {
   }
 };
 
-const handleViewLogs = (deployment: any) => {
+const handleViewLogs = (deployment: ComponentDeployment) => {
   router.push(`/projects/deployments/${deployment.id}/logs`);
 };
 
-const handleRestartDeployment = async (deployment: any) => {
+const _handleRestartDeployment = async (_deployment: ComponentDeployment) => {
   try {
     // await deploymentStore.restartDeployment(deployment.id)
     // Show success message
@@ -421,8 +441,8 @@ onMounted(async () => {
   await userStore.fetchUserProfile();
 
   // Fetch projects if not already loaded
-  const projects = (projectStore as any).projects || [];
-  if (projects.length === 0) {
+  const allProjects = projectStore.projects as Project[];
+  if ((allProjects || []).length === 0) {
     await projectStore.fetchProjects();
   }
 });

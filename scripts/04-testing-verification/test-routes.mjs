@@ -41,12 +41,11 @@ async function testRoute(route) {
 }
 
 async function testAllRoutes() {
-  console.log('🧪 Testing Nuxt Routes...\n')
-  
+  console.log('🧪 Testing Nuxt Routes...\n')  
   // Test if server is running
   try {
     await fetch('http://localhost:3000')
-  } catch (error) {
+  } catch {
     console.log('❌ Cannot connect to http://localhost:3000')
     console.log('   Make sure your Nuxt dev server is running with: npm run dev')
     process.exit(1)

@@ -1,93 +1,93 @@
-<template>
-  <v-card
-    class="glass-card pa-6"
-    width="400"
-    elevation="10"
-    data-cy="login-form"
-    data-testid="login-form"
-  >
-    <v-card-title class="text-white text-center">Login</v-card-title>
-    <v-form ref="form" validate-on="submit lazy" @submit.prevent="handleLogin">
-      <v-alert
-        v-if="login.error"
-        type="error"
-        class="mb-4"
-        border="start"
-        prominent
-      >
-        {{ login.error }}
-      </v-alert>
+<template>  <v-card
+  class="glass-card pa-6 pa-sm-8"
+  :width="cardWidth"
+  max-width="400"
+  elevation="10"
+  data-cy="login-form"
+  data-testid="login-form"
+>
+  <v-card-title class="text-white text-center">Login</v-card-title>
+  <v-form ref="form" validate-on="submit lazy" @submit.prevent="handleLogin">
+    <v-alert
+      v-if="login.error"
+      type="error"
+      class="mb-4"
+      border="start"
+      prominent
+    >
+      {{ login.error }}
+    </v-alert>
 
-      <v-text-field
-        v-model="login.email"
-        label="Email"
-        placeholder="you@example.com"
-        prepend-icon="mdi-email-outline"
-        clearable
-        variant="solo-inverted"
-        color="blue"
-        class="glass-input mb-4"
-        :rules="[rules.required, rules.email]"
-        :disabled="login.loading"
-        data-cy="email-input"
-        data-testid="email-input"
-        type="email"
-      />
+    <v-text-field
+      v-model="login.email"
+      label="Email"
+      placeholder="you@example.com"
+      prepend-icon="mdi-email-outline"
+      clearable
+      variant="solo-inverted"
+      color="blue"
+      class="glass-input mb-4"
+      :rules="[rules.required, rules.email]"
+      :disabled="login.loading"
+      data-cy="email-input"
+      data-testid="email-input"
+      type="email"
+    />
 
-      <v-text-field
-        v-model="login.password"
-        :type="showPassword ? 'text' : 'password'"
-        label="Password"
-        prepend-icon="mdi-lock-outline"
-        :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-        clearable
-        variant="solo-inverted"
-        color="blue"
-        class="glass-input"
-        :rules="[rules.required]"
-        :disabled="login.loading"
-        data-cy="password-input"
-        data-testid="password-input"
-        @click:append="showPassword = !showPassword"
-      />
+    <v-text-field
+      v-model="login.password"
+      :type="showPassword ? 'text' : 'password'"
+      label="Password"
+      prepend-icon="mdi-lock-outline"
+      :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+      clearable
+      variant="solo-inverted"
+      color="blue"
+      class="glass-input"
+      :rules="[rules.required]"
+      :disabled="login.loading"
+      data-cy="password-input"
+      data-testid="password-input"
+      @click:append="showPassword = !showPassword"
+    />
 
-      <v-btn
-        type="submit"
-        block
-        color="blue"
-        class="mt-4"
-        :loading="login.loading"
-        :disabled="login.loading"
-        data-cy="login-button"
-        data-testid="login-button"
-      >
-        <v-icon left>mdi-login</v-icon> Login
-      </v-btn>
+    <v-btn
+      type="submit"
+      block
+      color="blue"
+      class="mt-4"
+      :loading="login.loading"
+      :disabled="login.loading"
+      data-cy="login-button"
+      data-testid="login-button"
+    >
+      <v-icon left>mdi-login</v-icon> Login
+    </v-btn>
 
-      <v-btn
-        variant="text"
-        block
-        color="white"
-        class="mt-4"
-        :disabled="login.loading"
-        data-cy="forgot-password-button"
-        data-testid="forgot-password-button"
-        @click="navigateTo('/auth/reset')"
-      >
-        Forgot Password?
-      </v-btn>
+    <v-btn
+      variant="text"
+      block
+      color="white"
+      class="mt-4"
+      :disabled="login.loading"
+      data-cy="forgot-password-button"
+      data-testid="forgot-password-button"
+      @click="navigateTo('/auth/reset')"
+    >
+      Forgot Password?
+    </v-btn>
 
-      <!-- Debug info (remove in production) -->
-      <div v-if="debugInfo" class="mt-2 text-caption text-white">
-        <div>Debug: {{ debugInfo }}</div>
-      </div>
-    </v-form>
+    <!-- Debug info (remove in production) -->
+    <div v-if="debugInfo" class="mt-2 text-caption text-white">
+      <div>Debug: {{ debugInfo }}</div>
+    </div>
+  </v-form>
 
-    <NuxtLink to="/auth/register" class="register-link mt-4">
-      <v-icon left size="18" color="#a855f7">mdi-account-plus</v-icon>
-      <span>Don’t have an account? <span class="gradient-text">Register</span></span>
-    </NuxtLink>
-  </v-card>
+  <NuxtLink to="/auth/register" class="register-link mt-4">
+    <v-icon left size="18" color="#a855f7">mdi-account-plus</v-icon>
+    <span>Don’t have an account? <span class="gradient-text">Register</span></span>
+  </NuxtLink>
+</v-card>
 </template>
 
 <script setup lang="ts">
@@ -103,6 +103,15 @@ const debugInfo = ref('');
 const formsStore = useFormsStore();
 const authStore = useAuthStore();
 const { login } = storeToRefs(formsStore);
+
+// Responsive card width
+const cardWidth = computed(() => {
+  // Use 100% width on mobile, fixed width on desktop
+  if (process.client) {
+    return window.innerWidth < 480 ? '100%' : '400';
+  }
+  return '400';
+});
 
 // Validation rules
 const rules = {
@@ -174,7 +183,33 @@ async function handleLogin() {
   backdrop-filter: blur(12px);
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(31, 38, 135, 0.3);
+  width: 100%;
+  max-width: 400px;
 }
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+  .glass-card {
+    margin: 0;
+    border-radius: 12px;
+    max-width: 100%;
+  }
+  
+  .glass-card .v-card-title {
+    font-size: 1.5rem !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .glass-card {
+    border-radius: 8px;
+  }
+  
+  .glass-card .v-card-title {
+    font-size: 1.3rem !important;
+  }
+}
+
 .glass-input input {
   color: #fff !important;
   text-shadow:
@@ -191,20 +226,37 @@ async function handleLogin() {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(31, 38, 135, 0.1);
 }
+
+/* Mobile input adjustments */
+@media (max-width: 480px) {
+  .glass-input input {
+    font-size: 1rem;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  
+  .glass-input .v-field__input {
+    min-height: 48px;
+  }
+}
+
 .glass-input .v-field__overlay {
   background: transparent !important;
 }
+
 .v-label {
   color: #fff !important;
   text-shadow:
     0 1px 6px rgba(30, 30, 60, 0.45),
     0 0px 1px #000;
 }
+
 ::placeholder {
   color: #f3f6fa !important;
   text-shadow: 0 1px 6px rgba(30, 30, 60, 0.35);
   opacity: 1;
 }
+
 .register-link {
   display: flex;
   align-items: center;
@@ -215,10 +267,22 @@ async function handleLogin() {
   gap: 0.4em;
   text-decoration: none;
   transition: color 0.2s;
+  text-align: center;
+  flex-wrap: wrap;
 }
+
+/* Mobile register link adjustments */
+@media (max-width: 480px) {
+  .register-link {
+    font-size: 0.95rem;
+    gap: 0.3em;
+  }
+}
+
 .register-link:hover {
   color: #a855f7;
 }
+
 .gradient-text {
   background: linear-gradient(90deg, #3b82f6 30%, #a855f7 70%);
   -webkit-background-clip: text;
@@ -226,6 +290,7 @@ async function handleLogin() {
   background-clip: text;
   font-weight: 700;
 }
+
 .glass-card .v-card-title,
 .glass-card .v-card-subtitle,
 .glass-card .v-btn,
@@ -235,5 +300,17 @@ async function handleLogin() {
   text-shadow:
     0 1px 6px rgba(30, 30, 60, 0.45),
     0 0px 1px #000;
+}
+
+/* Button mobile improvements */
+@media (max-width: 480px) {
+  .glass-card .v-btn {
+    font-size: 1rem;
+    min-height: 48px;
+  }
+  
+  .glass-card .v-btn .v-icon {
+    font-size: 1.2rem;
+  }
 }
 </style>

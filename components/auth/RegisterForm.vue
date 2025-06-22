@@ -1,7 +1,8 @@
 <template>
   <v-card
-    class="glass-card pa-6"
-    width="450"
+    class="glass-card pa-6 pa-sm-8"
+    :width="cardWidth"
+    max-width="450"
     elevation="10"
     data-cy="register-form"
     data-testid="register-form"
@@ -150,8 +151,8 @@
 import { navigateTo } from '#app';
 import { storeToRefs } from 'pinia';
 import { computed, ref } from 'vue';
-import { useFormsStore } from '~/stores/formsStore';
 import { useAuthStore } from '~/stores/authStore';
+import { useFormsStore } from '~/stores/formsStore';
 
 const isDevelopment = computed(() => process.env.NODE_ENV === 'development');
 const form = ref(null);
@@ -161,6 +162,15 @@ const showConfirmPassword = ref(false);
 const formsStore = useFormsStore();
 const authStore = useAuthStore();
 const { register } = storeToRefs(formsStore);
+
+// Responsive card width
+const cardWidth = computed(() => {
+  // Use 100% width on mobile, fixed width on desktop
+  if (process.client) {
+    return window.innerWidth < 480 ? '100%' : '450';
+  }
+  return '450';
+});
 
 function handleButtonClick(_event: Event) {
   if (!register.value.agreeTerms) {
@@ -384,19 +394,57 @@ async function handleRegister() {
 @media (max-width: 768px) {
   .glass-card {
     width: 100%;
-    max-width: 360px;
+    max-width: 100%;
     border-radius: 18px;
+    margin: 0;
   }
 
   .glass-input input {
     font-size: 1rem;
   }
+  
+  .glass-card .v-card-title {
+    font-size: 1.5rem !important;
+  }
 }
 
 @media (max-width: 480px) {
   .glass-card {
-    max-width: 320px;
-    border-radius: 16px;
+    max-width: 100%;
+    border-radius: 12px;
+  }
+  
+  .glass-card .v-card-title {
+    font-size: 1.3rem !important;
+  }
+  
+  .glass-input input {
+    font-size: 1rem;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  
+  .glass-input .v-field__input {
+    min-height: 48px;
+  }
+  
+  .create-account-btn {
+    font-size: 1rem;
+    min-height: 48px;
+  }
+  
+  .create-account-btn .v-icon {
+    font-size: 1.2rem;
+  }
+  
+  .text-blue-300 {
+    word-break: break-word;
+  }
+}
+
+@media (max-width: 360px) {
+  .glass-card {
+    border-radius: 8px;
   }
 }
 </style>

@@ -163,11 +163,10 @@ class RouteChecker {
     const middlewarePathJs = path.join(__dirname, 'middleware', `${middlewareName}.js`)
     if (!fs.existsSync(middlewarePath) && !fs.existsSync(middlewarePathJs)) {
       this.addIssue('error', `${routeFile}: References non-existent middleware '${middlewareName}'`)
-    }
-  }
+    }  }
 
   // Check middleware files
-  checkMiddleware() {
+  checkMiddlewareFiles() {
     const middlewareDir = path.join(__dirname, 'middleware')
     if (!fs.existsSync(middlewareDir)) {
       console.log(`${colors.yellow}⚠️  No middleware directory found${colors.reset}`)
@@ -270,7 +269,7 @@ class RouteChecker {
     this.scanPages()
     this.checkRoutes()
     this.checkLayouts()
-    this.checkMiddleware()
+    this.checkMiddlewareFiles()
     this.displayResults()
     this.generateSuggestions()
     

@@ -14,7 +14,13 @@
 
       <div v-else>
         <v-row>
-          <v-col v-for="deployment in deployments" :key="deployment.id" cols="12" md="6" lg="4">
+          <v-col
+            v-for="deployment in deployments"
+            :key="deployment.id"
+            cols="12"
+            md="6"
+            lg="4"
+          >
             <v-card
               :class="['deployment-card', `deployment-card--${deployment.status}`]"
               variant="outlined"

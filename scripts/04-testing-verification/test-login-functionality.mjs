@@ -116,7 +116,7 @@ async function testLoginFlow() {
 
       // If login fails, try to register the user first
       console.log('\n🔄 Attempting to register user first...')
-      const { data: regData, error: regError } = await supabase.auth.signUp({
+      const { error: regError } = await supabase.auth.signUp({
         email: testUser.email,
         password: testUser.password,
         options: {

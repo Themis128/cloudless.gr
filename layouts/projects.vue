@@ -3,43 +3,48 @@
     <!-- Starry night sky background -->
     <div class="background-container">
       <!-- Small twinkling stars -->
-      <div class="stars stars-small"></div>
-      <div class="stars stars-medium"></div>
-      <div class="stars stars-large"></div>
+      <div class="stars stars-small" />
+      <div class="stars stars-medium" />
+      <div class="stars stars-large" />
       <!-- Falling stars / shooting stars -->
-      <div class="falling-star falling-star-1"></div>
-      <div class="falling-star falling-star-2"></div>
-      <div class="falling-star falling-star-3"></div>
-      <div class="falling-star falling-star-4"></div>
+      <div class="falling-star falling-star-1" />
+      <div class="falling-star falling-star-2" />
+      <div class="falling-star falling-star-3" />
+      <div class="falling-star falling-star-4" />
       <!-- Additional shooting stars in different directions -->
-      <div class="falling-star falling-star-vertical-1"></div>
-      <div class="falling-star falling-star-vertical-2"></div>
-      <div class="falling-star falling-star-reverse-1"></div>
-      <div class="falling-star falling-star-reverse-2"></div>
-      <div class="falling-star falling-star-steep-1"></div>
-      <div class="falling-star falling-star-steep-2"></div>
-      <div class="falling-star falling-star-horizontal-1"></div>
-      <div class="falling-star falling-star-horizontal-2"></div>
+      <div class="falling-star falling-star-vertical-1" />
+      <div class="falling-star falling-star-vertical-2" />
+      <div class="falling-star falling-star-reverse-1" />
+      <div class="falling-star falling-star-reverse-2" />
+      <div class="falling-star falling-star-steep-1" />
+      <div class="falling-star falling-star-steep-2" />
+      <div class="falling-star falling-star-horizontal-1" />
+      <div class="falling-star falling-star-horizontal-2" />
       <!-- Extra volume shooting stars - Layer 2 -->
-      <div class="falling-star falling-star-extra-1"></div>
-      <div class="falling-star falling-star-extra-2"></div>
-      <div class="falling-star falling-star-extra-3"></div>
-      <div class="falling-star falling-star-extra-4"></div>
-      <div class="falling-star falling-star-extra-5"></div>
-      <div class="falling-star falling-star-extra-6"></div>
+      <div class="falling-star falling-star-extra-1" />
+      <div class="falling-star falling-star-extra-2" />
+      <div class="falling-star falling-star-extra-3" />
+      <div class="falling-star falling-star-extra-4" />
+      <div class="falling-star falling-star-extra-5" />
+      <div class="falling-star falling-star-extra-6" />
       <!-- More volume shooting stars - Layer 3 -->
-      <div class="falling-star falling-star-volume-1"></div>
-      <div class="falling-star falling-star-volume-2"></div>
-      <div class="falling-star falling-star-volume-3"></div>
-      <div class="falling-star falling-star-volume-4"></div>
-      <div class="falling-star falling-star-volume-5"></div>
-      <div class="falling-star falling-star-volume-6"></div>
-      <div class="falling-star falling-star-volume-7"></div>
-      <div class="falling-star falling-star-volume-8"></div>
+      <div class="falling-star falling-star-volume-1" />
+      <div class="falling-star falling-star-volume-2" />
+      <div class="falling-star falling-star-volume-3" />
+      <div class="falling-star falling-star-volume-4" />
+      <div class="falling-star falling-star-volume-5" />
+      <div class="falling-star falling-star-volume-6" />
+      <div class="falling-star falling-star-volume-7" />
+      <div class="falling-star falling-star-volume-8" />
     </div>
 
     <!-- Main content area -->
-    <main id="main-content" role="main" class="projects-content" tabindex="-1">
+    <main
+      id="main-content"
+      role="main"
+      class="projects-content"
+      tabindex="-1"
+    >
       <!-- Page content with glass effect -->
       <div class="content-wrapper">
         <NuxtPage />

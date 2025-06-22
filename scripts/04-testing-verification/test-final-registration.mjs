@@ -100,7 +100,7 @@ async function testCompleteRegistrationFlow() {
       } else {
         console.log('ℹ️  Profile creation would be handled by app')
       }
-    } catch (profileErr) {
+    } catch {
       console.log('ℹ️  Profile check skipped (policy restriction)')
     }
 

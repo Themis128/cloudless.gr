@@ -101,7 +101,13 @@
               <div class="chart-placeholder">
                 <svg viewBox="0 0 400 200" class="response-chart">
                   <defs>
-                    <linearGradient id="responseGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <linearGradient
+                      id="responseGradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="0%"
+                      y2="100%"
+                    >
                       <stop offset="0%" style="stop-color: rgb(33, 150, 243); stop-opacity: 0.8" />
                       <stop
                         offset="100%"
@@ -135,19 +141,73 @@
               <div class="chart-placeholder">
                 <svg viewBox="0 0 400 200" class="throughput-chart">
                   <defs>
-                    <linearGradient id="throughputGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <linearGradient
+                      id="throughputGradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="0%"
+                      y2="100%"
+                    >
                       <stop offset="0%" style="stop-color: rgb(76, 175, 80); stop-opacity: 0.8" />
                       <stop offset="100%" style="stop-color: rgb(76, 175, 80); stop-opacity: 0.1" />
                     </linearGradient>
                   </defs>
-                  <rect x="20" y="160" width="15" height="40" fill="url(#throughputGradient)" />
-                  <rect x="40" y="140" width="15" height="60" fill="url(#throughputGradient)" />
-                  <rect x="60" y="120" width="15" height="80" fill="url(#throughputGradient)" />
-                  <rect x="80" y="100" width="15" height="100" fill="url(#throughputGradient)" />
-                  <rect x="100" y="130" width="15" height="70" fill="url(#throughputGradient)" />
-                  <rect x="120" y="110" width="15" height="90" fill="url(#throughputGradient)" />
-                  <rect x="140" y="90" width="15" height="110" fill="url(#throughputGradient)" />
-                  <rect x="160" y="120" width="15" height="80" fill="url(#throughputGradient)" />
+                  <rect
+                    x="20"
+                    y="160"
+                    width="15"
+                    height="40"
+                    fill="url(#throughputGradient)"
+                  />
+                  <rect
+                    x="40"
+                    y="140"
+                    width="15"
+                    height="60"
+                    fill="url(#throughputGradient)"
+                  />
+                  <rect
+                    x="60"
+                    y="120"
+                    width="15"
+                    height="80"
+                    fill="url(#throughputGradient)"
+                  />
+                  <rect
+                    x="80"
+                    y="100"
+                    width="15"
+                    height="100"
+                    fill="url(#throughputGradient)"
+                  />
+                  <rect
+                    x="100"
+                    y="130"
+                    width="15"
+                    height="70"
+                    fill="url(#throughputGradient)"
+                  />
+                  <rect
+                    x="120"
+                    y="110"
+                    width="15"
+                    height="90"
+                    fill="url(#throughputGradient)"
+                  />
+                  <rect
+                    x="140"
+                    y="90"
+                    width="15"
+                    height="110"
+                    fill="url(#throughputGradient)"
+                  />
+                  <rect
+                    x="160"
+                    y="120"
+                    width="15"
+                    height="80"
+                    fill="url(#throughputGradient)"
+                  />
                 </svg>
                 <div class="chart-overlay">
                   <p class="text-caption">Requests per minute</p>

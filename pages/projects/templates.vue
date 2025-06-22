@@ -37,14 +37,26 @@
 
     <!-- Loader -->
     <div v-if="loading" class="loading-container glassmorphism-loading text-center py-12">
-      <v-progress-circular indeterminate size="64" color="white" width="4" />
+      <v-progress-circular
+        indeterminate
+        size="64"
+        color="white"
+        width="4"
+      />
       <div class="mt-4 text-h6 text-white">Loading templates...</div>
       <div class="text-body-2 text-white opacity-80">Fetching available project templates</div>
     </div>
 
     <!-- Templates -->
     <v-row v-else>
-      <v-col v-for="template in templates" :key="template.id" cols="12" sm="6" lg="4" xl="3">
+      <v-col
+        v-for="template in templates"
+        :key="template.id"
+        cols="12"
+        sm="6"
+        lg="4"
+        xl="3"
+      >
         <v-card
           class="h-100 template-card glassmorphism-card"
           elevation="0"
@@ -190,15 +202,16 @@
         </v-card-text>
         <v-card-actions class="glassmorphism-dialog-actions">
           <v-spacer />
-          <v-btn variant="text" class="glassmorphism-btn" @click="showPreviewDialog = false"
-            >Close</v-btn
-          >
+          <v-btn
+            variant="text"
+            class="glassmorphism-btn"
+            @click="showPreviewDialog = false"
+          >Close</v-btn>
           <v-btn
             color="primary"
             class="glassmorphism-btn-primary"
             @click="useTemplate(selectedTemplate)"
-            >Use This Template</v-btn
-          >
+          >Use This Template</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

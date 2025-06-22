@@ -26,59 +26,71 @@
     <v-card class="progress-card mb-8" elevation="2">
       <v-card-text class="pa-6">
         <h3 class="text-h5 font-weight-bold mb-4">Quick Start Progress</h3>
-        <v-stepper v-model="currentStep" :items="steps" class="custom-stepper">
-          <template #item.1>
-            <div class="step-content">
-              <h4 class="text-h6 font-weight-bold mb-3">Create Your Account</h4>
-              <p class="text-body-2 mb-4">
-                Sign up for a free account to start building ML projects. No credit card required.
-              </p>
-              <v-btn color="primary" variant="outlined" @click="navigateTo('/auth')">
-                Sign Up Now
-              </v-btn>
-            </div>
-          </template>
+        <v-stepper v-model="currentStep" class="custom-stepper">
+          <v-stepper-header>
+            <v-stepper-item :value="1" title="Account" />
+            <v-divider />
+            <v-stepper-item :value="2" title="Template" />
+            <v-divider />
+            <v-stepper-item :value="3" title="Project" />
+            <v-divider />
+            <v-stepper-item :value="4" title="Deploy" />
+          </v-stepper-header>
 
-          <template #item.2>
-            <div class="step-content">
-              <h4 class="text-h6 font-weight-bold mb-3">Choose a Template</h4>
-              <p class="text-body-2 mb-4">
-                Select from our pre-built templates for common ML use cases like image
-                classification, NLP, and more.
-              </p>
-              <v-btn color="primary" variant="outlined" @click="navigateTo('/projects/templates')">
-                Browse Templates
-              </v-btn>
-            </div>
-          </template>
+          <v-stepper-window>
+            <v-stepper-window-item :value="1">
+              <div class="step-content">
+                <h4 class="text-h6 font-weight-bold mb-3">Create Your Account</h4>
+                <p class="text-body-2 mb-4">
+                  Sign up for a free account to start building ML projects. No credit card required.
+                </p>
+                <v-btn color="primary" variant="outlined" @click="navigateTo('/auth')">
+                  Sign Up Now
+                </v-btn>
+              </div>
+            </v-stepper-window-item>
 
-          <template #item.3>
-            <div class="step-content">
-              <h4 class="text-h6 font-weight-bold mb-3">Create Your First Project</h4>
-              <p class="text-body-2 mb-4">
-                Set up your project with the visual pipeline builder and start training your model.
-              </p>
-              <v-btn color="primary" variant="outlined" @click="navigateTo('/projects/create')">
-                Create Project
-              </v-btn>
-            </div>
-          </template>
+            <v-stepper-window-item :value="2">
+              <div class="step-content">
+                <h4 class="text-h6 font-weight-bold mb-3">Choose a Template</h4>
+                <p class="text-body-2 mb-4">
+                  Select from our pre-built templates for common ML use cases like image
+                  classification, NLP, and more.
+                </p>
+                <v-btn color="primary" variant="outlined" @click="navigateTo('/projects/templates')">
+                  Browse Templates
+                </v-btn>
+              </div>
+            </v-stepper-window-item>
 
-          <template #item.4>
-            <div class="step-content">
-              <h4 class="text-h6 font-weight-bold mb-3">Deploy & Monitor</h4>
-              <p class="text-body-2 mb-4">
-                Deploy your trained model with one click and monitor its performance in real-time.
-              </p>
-              <v-btn
-                color="primary"
-                variant="outlined"
-                @click="navigateTo('/documentation/deployment')"
-              >
-                Learn More
-              </v-btn>
-            </div>
-          </template>
+            <v-stepper-window-item :value="3">
+              <div class="step-content">
+                <h4 class="text-h6 font-weight-bold mb-3">Create Your First Project</h4>
+                <p class="text-body-2 mb-4">
+                  Set up your project with the visual pipeline builder and start training your model.
+                </p>
+                <v-btn color="primary" variant="outlined" @click="navigateTo('/projects/create')">
+                  Create Project
+                </v-btn>
+              </div>
+            </v-stepper-window-item>
+
+            <v-stepper-window-item :value="4">
+              <div class="step-content">
+                <h4 class="text-h6 font-weight-bold mb-3">Deploy & Monitor</h4>
+                <p class="text-body-2 mb-4">
+                  Deploy your trained model with one click and monitor its performance in real-time.
+                </p>
+                <v-btn
+                  color="primary"
+                  variant="outlined"
+                  @click="navigateTo('/documentation/deployment')"
+                >
+                  Learn More
+                </v-btn>
+              </div>
+            </v-stepper-window-item>
+          </v-stepper-window>
         </v-stepper>
       </v-card-text>
     </v-card>
@@ -181,13 +193,6 @@ definePageMeta({
 });
 
 const currentStep = ref(1);
-
-const steps = [
-  { title: 'Account', value: 1 },
-  { title: 'Template', value: 2 },
-  { title: 'Project', value: 3 },
-  { title: 'Deploy', value: 4 },
-];
 
 const keyFeatures = [
   {
