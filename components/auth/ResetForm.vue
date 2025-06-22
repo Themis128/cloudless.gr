@@ -1,14 +1,23 @@
 <template>
   <v-card class="glass-card pa-6" width="400" elevation="10">
     <v-card-title class="text-h5 text-white text-center">Reset Password</v-card-title>
-    <v-form @submit.prevent="handleReset">
-      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
-        {{ errorMsg }}
-      </v-alert>
-      <v-alert v-if="successMsg" type="success" class="mb-4" border="start" prominent>
-        {{ successMsg }}
-      </v-alert>
-      <v-text-field
+    <v-form @submit.prevent="handleReset">      <v-alert
+                                                  v-if="error"
+                                                  type="error"
+                                                  class="mb-4"
+                                                  border="start"
+                                                  prominent
+                                                >
+                                                  {{ error }}
+                                                </v-alert>      <v-alert
+                                                  v-if="success"
+                                                  type="success"
+                                                  class="mb-4"
+                                                  border="start"
+                                                  prominent
+                                                >
+                                                  Password reset link sent! Check your email for instructions. The link will expire in 1 hour.
+                                                </v-alert><v-text-field
         v-model="email"
         label="Email"
         placeholder="you@example.com"
@@ -19,9 +28,16 @@
         class="glass-input mb-4"
         :rules="[rules.required, rules.email]"
       />
-      <v-btn type="submit" block color="blue" class="mt-4" :loading="loading" :disabled="loading"
-        >Send Reset Link</v-btn
+      <v-btn
+        type="submit"
+        block
+        color="blue"
+        class="mt-4"
+        :loading="loading"
+        :disabled="loading"
       >
+        Send Reset Link
+      </v-btn>
     </v-form>
     <NuxtLink to="/auth/login" class="login-link mt-4">
       <v-icon left size="18" color="#3b82f6">mdi-login</v-icon>
@@ -31,14 +47,15 @@
 </template>
 
 <script setup lang="ts">
-import { useSupabase } from '@/composables/useSupabase';
-import { ref } from 'vue';
 
-const errorMsg = ref('');
-const successMsg = ref('');
-const loading = ref(false);
+import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
+import { useAuthStore } from '~/stores/authStore';
+
+const authStore = useAuthStore();
+const { loading, error } = storeToRefs(authStore);
+const success = ref(false);
 const email = ref('');
-const supabase = useSupabase();
 
 const rules = {
   required: (v: string) => !!v || 'Required',
@@ -46,56 +63,10 @@ const rules = {
 };
 
 async function handleReset() {
-  errorMsg.value = '';
-  successMsg.value = '';
-  loading.value = true;
-
-  try {
-    // First check if user exists in our profiles table
-    const { data: userProfile } = await supabase
-      .from('profiles')
-      .select('email, is_active')
-      .eq('email', email.value)
-      .single();
-
-    if (!userProfile) {
-      throw new Error('No account found with this email address.');
-    }
-
-    if (!(userProfile as any).is_active) {
-      throw new Error('Account is deactivated. Please contact support.');
-    } // Generate secure reset token and save to database
-    const resetToken =
-      Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
-
-    await (supabase as any)
-      .from('profiles')
-      .update({
-        reset_token: resetToken,
-        reset_token_expires: expiresAt,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('email', email.value);
-
-    // Send password reset email through Supabase Auth
-    const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
-      redirectTo: `${window.location.origin}/auth/reset-password?token=${resetToken}`,
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    successMsg.value =
-      'Password reset link sent! Check your email for instructions. The link will expire in 1 hour.';
-    email.value = ''; // Clear the email field
-  } catch (err) {
-    console.error('Password reset error:', err);
-    const errorMessage = err instanceof Error ? err.message : 'Password reset failed';
-    errorMsg.value = errorMessage;
-  } finally {
-    loading.value = false;
+  const result = await authStore.sendPasswordReset(email.value);
+  if (result.success) {
+    success.value = true;
+    email.value = '';
   }
 }
 </script>

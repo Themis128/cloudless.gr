@@ -24,10 +24,17 @@
 
     <!-- Navigation Menu -->
     <v-scale-transition>
-      <v-card v-if="isMenuOpen" class="nav-menu" elevation="12" rounded="lg">
+      <v-card
+        v-if="isMenuOpen"
+        class="nav-menu"
+        elevation="12"
+        rounded="lg"
+      >
         <v-card-title class="pb-2">
           <v-icon class="mr-2">mdi-navigation</v-icon>
           Quick Navigation
+          <v-spacer />
+          <v-chip v-if="authStore.isAdmin" color="purple" size="small">Admin</v-chip>
         </v-card-title>
 
         <v-divider />
@@ -75,7 +82,7 @@
           <v-list-subheader>Account</v-list-subheader>
 
           <!-- Logout Button -->
-          <v-list-item @click="handleLogout" class="logout-item">
+          <v-list-item class="logout-item" @click="handleLogout">
             <template #prepend>
               <v-icon color="error">mdi-logout</v-icon>
             </template>
@@ -100,6 +107,26 @@
             </template>
             <v-list-item-title>{{ page.title }}</v-list-item-title>
           </v-list-item>
+
+          <!-- Admin Pages (only show for admin users) -->
+          <template v-if="authStore.isAdmin">
+            <v-divider class="my-2" />
+            <v-list-subheader>Administration</v-list-subheader>
+            <v-list-item
+              v-for="page in adminPages"
+              :key="page.path"
+              :to="page.path"
+              :class="{ 'v-list-item--active': isActivePage(page.path) }"
+              @click="closeMenu"
+            >
+              <template #prepend>
+                <v-icon :color="isActivePage(page.path) ? 'primary' : undefined">{{
+                  page.icon
+                }}</v-icon>
+              </template>
+              <v-list-item-title>{{ page.title }}</v-list-item-title>
+            </v-list-item>
+          </template>
         </v-list>
 
         <!-- Close Button -->
@@ -129,7 +156,6 @@ const publicRoutes = [
   '/auth',
   '/auth/register',
   '/auth/reset',
-  '/auth/admin-login',
   '/auth/users-nav',
 ];
 
@@ -183,26 +209,59 @@ const userPages: NavPage[] = [
   { title: 'User Permissions', path: '/users/permissions', icon: 'mdi-shield-account' },
 ];
 
+const adminPages: NavPage[] = [
+  { title: 'Admin Dashboard', path: '/admin', icon: 'mdi-view-dashboard-outline' },
+  { title: 'System Admin', path: '/sys', icon: 'mdi-shield-crown' },
+  { title: 'User Management', path: '/admin/users', icon: 'mdi-account-multiple' },
+  { title: 'System Monitor', path: '/admin/monitor', icon: 'mdi-monitor-dashboard' },
+  { title: 'Database Admin', path: '/admin/database', icon: 'mdi-database-cog' },
+  { title: 'Settings Admin', path: '/admin/settings', icon: 'mdi-cog-outline' },
+];
+
+// Initialize auth store
+const authStore = useAuthStore();
+
 // Logout function
 const handleLogout = async () => {
   try {
     closeMenu();
-    // Clear any local storage/session data
+    
+    // Use auth store to handle logout
+    await authStore.signOut();
+    
+    // Clear any additional local data if needed
     if (process.client) {
-      localStorage.clear();
-      sessionStorage.clear();
+      // Only clear non-essential data, auth store handles session cleanup
+      localStorage.removeItem('user-preferences');
     }
-    // Navigate to login page
-    await navigateTo('/auth');
   } catch (error) {
     console.error('Logout error:', error);
+    // Still navigate even if there's an error to be safe
+    await navigateTo('/auth');
   }
 };
 
 const handleButtonClick = (event: Event) => {
   console.log('🎯 BUTTON CLICKED!', event);
+  event.preventDefault();
   event.stopPropagation();
-  toggleMenu();
+  
+  // Small delay to ensure drag detection is complete
+  setTimeout(() => {
+    if (!isDragging.value) {
+      console.log('✅ Processing click - toggling menu');
+      toggleMenu();
+    } else {
+      console.log('❌ Ignoring click - was dragging');
+      // Reset dragging state after a short delay
+      setTimeout(() => {
+        isDragging.value = false;
+        if (floatingButton.value) {
+          floatingButton.value.classList.remove('dragging');
+        }
+      }, 100);
+    }
+  }, 50);
 };
 
 const toggleMenu = () => {

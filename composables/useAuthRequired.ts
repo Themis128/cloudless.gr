@@ -37,9 +37,8 @@ export const useAdminRequired = async () => {
   
   try {
     const { data: { session }, error } = await supabase.auth.getSession()
-    
-    if (error || !session?.user) {
-      await navigateTo('/auth/admin-login')
+      if (error || !session?.user) {
+      await navigateTo('/auth')
       return
     }
     
@@ -50,16 +49,14 @@ export const useAdminRequired = async () => {
       .select('role')
       .eq('id', session.user.id)
       .single<Profile>()
-      
-    if (profileError || !profile || profile.role !== 'admin') {
-      await navigateTo('/auth/admin-login?error=unauthorized')
+        if (profileError || !profile || profile.role !== 'admin') {
+      await navigateTo('/auth?error=unauthorized')
       return
     }
     
     return session.user
-    
-  } catch (err) {
+      } catch (err) {
     console.error('[AUTH] Admin check failed:', err)
-    await navigateTo('/auth/admin-login')
+    await navigateTo('/auth')
   }
 }

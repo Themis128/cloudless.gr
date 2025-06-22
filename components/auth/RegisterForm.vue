@@ -9,16 +9,28 @@
     <v-card-title class="text-h5 text-white text-center">Create Account</v-card-title>
 
     <v-form ref="form" validate-on="submit lazy" @submit.prevent="handleRegister">
-      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
-        {{ errorMsg }}
-      </v-alert>
 
-      <v-alert v-if="successMsg" type="success" class="mb-4" border="start" prominent>
-        {{ successMsg }}
+      <v-alert
+        v-if="register.error"
+        type="error"
+        class="mb-4"
+        border="start"
+        prominent
+      >
+        {{ register.error }}
+      </v-alert>
+      <v-alert
+        v-if="register.success"
+        type="success"
+        class="mb-4"
+        border="start"
+        prominent
+      >
+        {{ register.success }}
       </v-alert>
 
       <v-text-field
-        v-model="fullName"
+        v-model="register.name"
         label="Full Name"
         prepend-icon="mdi-account"
         clearable
@@ -26,14 +38,14 @@
         color="blue"
         class="glass-input mb-4"
         :rules="[rules.required]"
-        :disabled="isSubmitting"
+        :disabled="register.loading"
         data-cy="fullname-input"
         data-testid="fullname-input"
         type="text"
       />
 
       <v-text-field
-        v-model="email"
+        v-model="register.email"
         label="Email"
         placeholder="you@example.com"
         prepend-icon="mdi-email-outline"
@@ -42,14 +54,14 @@
         color="blue"
         class="glass-input mb-4"
         :rules="[rules.required, rules.email]"
-        :disabled="isSubmitting"
+        :disabled="register.loading"
         data-cy="email-input"
         data-testid="email-input"
         type="email"
       />
 
       <v-text-field
-        v-model="password"
+        v-model="register.password"
         :type="showPassword ? 'text' : 'password'"
         label="Password"
         prepend-icon="mdi-lock-outline"
@@ -59,14 +71,14 @@
         color="blue"
         class="glass-input mb-4"
         :rules="[rules.required, rules.password]"
-        :disabled="isSubmitting"
-        @click:append="showPassword = !showPassword"
+        :disabled="register.loading"
         data-cy="password-input"
         data-testid="password-input"
+        @click:append="showPassword = !showPassword"
       />
 
       <v-text-field
-        v-model="confirmPassword"
+        v-model="register.confirmPassword"
         :type="showConfirmPassword ? 'text' : 'password'"
         label="Confirm Password"
         prepend-icon="mdi-lock-check"
@@ -76,17 +88,17 @@
         color="blue"
         class="glass-input mb-4"
         :rules="[rules.required, rules.confirmPassword]"
-        :disabled="isSubmitting"
-        @click:append="showConfirmPassword = !showConfirmPassword"
+        :disabled="register.loading"
         data-cy="confirm-password-input"
         data-testid="confirm-password-input"
+        @click:append="showConfirmPassword = !showConfirmPassword"
       />
 
       <v-checkbox
-        v-model="agreeTerms"
+        v-model="register.agreeTerms"
         color="blue"
         class="text-white mb-2"
-        :disabled="isSubmitting"
+        :disabled="register.loading"
         :rules="[rules.agreeTerms]"
       >
         <template #label>
@@ -104,13 +116,13 @@
         block
         color="blue"
         class="mt-4 create-account-btn"
-        :loading="isSubmitting"
-        :disabled="isSubmitting || !agreeTerms"
+        :loading="register.loading"
+        :disabled="register.loading || !register.agreeTerms"
         size="large"
         elevation="2"
-        @click="handleButtonClick"
         data-cy="create-account-button"
         data-testid="create-account-button"
+        @click="handleButtonClick"
       >
         <v-icon left>mdi-account-plus</v-icon>
         Create Account
@@ -118,9 +130,9 @@
 
       <!-- Debug info (remove in production) -->
       <div v-if="isDevelopment" class="mt-2 text-caption text-white">
-        <div>Debug: isSubmitting = {{ isSubmitting }}</div>
-        <div>Debug: agreeTerms = {{ agreeTerms }}</div>
-        <div>Debug: Button enabled = {{ !isSubmitting && agreeTerms }}</div>
+        <div>Debug: loading = {{ register.loading }}</div>
+        <div>Debug: agreeTerms = {{ register.agreeTerms }}</div>
+        <div>Debug: Button enabled = {{ !register.loading && register.agreeTerms }}</div>
       </div>
     </v-form>
 
@@ -134,43 +146,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+
 import { navigateTo } from '#app';
+import { storeToRefs } from 'pinia';
+import { computed, ref } from 'vue';
+import { useFormsStore } from '~/stores/formsStore';
+import { useAuthStore } from '~/stores/authStore';
 
-// Development mode check
 const isDevelopment = computed(() => process.env.NODE_ENV === 'development');
-
-// Form data
-const fullName = ref('');
-const email = ref('');
-const password = ref('');
-const confirmPassword = ref('');
+const form = ref(null);
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
-const agreeTerms = ref(false);
-const isSubmitting = ref(false);
-const errorMsg = ref('');
-const successMsg = ref('');
-const form = ref(null);
 
-// Use the robust auth composable
-const { signUp } = useRobustAuth();
+const formsStore = useFormsStore();
+const authStore = useAuthStore();
+const { register } = storeToRefs(formsStore);
 
-// Debug function for button clicks
-function handleButtonClick(event: Event) {
-  console.log('🔥 Create Account button clicked!', {
-    isSubmitting: isSubmitting.value,
-    agreeTerms: agreeTerms.value,
-    disabled: isSubmitting.value || !agreeTerms.value,
-    event,
-  });
-
-  if (!agreeTerms.value) {
-    errorMsg.value = 'Please agree to the Terms of Service and Privacy Policy to continue.';
+function handleButtonClick(_event: Event) {
+  if (!register.value.agreeTerms) {
+    register.value.error = 'Please agree to the Terms of Service and Privacy Policy to continue.';
   }
-
-  if (isSubmitting.value) {
-    console.log('⏳ Already submitting, ignoring click');
+  if (register.value.loading) {
+    return;
   }
 }
 
@@ -191,7 +188,7 @@ const rules = {
   },
   confirmPassword: (v: string) => {
     if (!v) return 'Please confirm your password';
-    if (v !== password.value) return 'Passwords do not match';
+    if (v !== register.value.password) return 'Passwords do not match';
     return true;
   },
   agreeTerms: (v: boolean) => {
@@ -201,92 +198,75 @@ const rules = {
 
 // Handle registration
 async function handleRegister() {
-  errorMsg.value = '';
-  successMsg.value = '';
-  isSubmitting.value = true;
+  register.value.error = null;
+  register.value.loading = true;
 
   try {
-    console.log('🔍 Starting registration process...');
-    console.log('Form data:', {
-      fullName: fullName.value,
-      email: email.value,
-      passwordLength: password.value?.length || 0,
-      confirmPasswordLength: confirmPassword.value?.length || 0,
-      agreeTerms: agreeTerms.value,
-    });
 
     // Check basic field requirements first
-    if (!fullName.value?.trim()) {
+    if (!register.value.name?.trim()) {
       throw new Error('Full name is required');
     }
-    if (!email.value?.trim()) {
+    if (!register.value.email?.trim()) {
       throw new Error('Email is required');
     }
-    if (!password.value) {
+    if (!register.value.password) {
       throw new Error('Password is required');
     }
-    if (!confirmPassword.value) {
+    if (!register.value.confirmPassword) {
       throw new Error('Password confirmation is required');
     }
-    if (password.value !== confirmPassword.value) {
+    if (register.value.password !== register.value.confirmPassword) {
       throw new Error('Passwords do not match');
     }
-    if (!agreeTerms.value) {
+    if (!register.value.agreeTerms) {
       throw new Error('Please agree to the Terms of Service and Privacy Policy');
     }
 
     // Validate form with Vuetify
+
     if (form.value) {
       const formElement = form.value as { validate: () => Promise<{ valid: boolean }> };
-      console.log('🔍 Validating form with Vuetify...');
       const { valid } = await formElement.validate();
-      console.log('Form validation result:', valid);
-
       if (!valid) {
         throw new Error('Please fix the form validation errors and try again');
       }
     }
 
-    // Use the robust auth composable for registration
-    const result = await signUp(email.value, password.value, {
-      full_name: fullName.value,
+    // Use the auth store for registration
+    const result = await authStore.signUp(register.value.email, register.value.password, {
+      full_name: register.value.name,
     });
 
     if (!result.success) {
       throw new Error(result.error || 'Registration failed');
     }
 
-    console.log('✅ Registration successful:', result.user?.email);
-
     // Check if email verification is required
     if (result.requiresEmailVerification) {
-      successMsg.value =
-        'Registration successful! Please check your email to confirm your account before logging in.';
+      register.value.success = 'Registration successful! Please check your email to confirm your account before logging in.';
     } else {
-      successMsg.value = 'Registration successful! You can now log in with your credentials.';
+      register.value.success = 'Registration successful! You can now log in with your credentials.';
     }
 
     // Clear form
-    fullName.value = '';
-    email.value = '';
-    password.value = '';
-    confirmPassword.value = '';
-    agreeTerms.value = false;
+    register.value.name = '';
+    register.value.email = '';
+    register.value.password = '';
+    register.value.confirmPassword = '';
+    register.value.agreeTerms = false;
 
     // Redirect to login page after a delay
     setTimeout(() => {
       navigateTo('/auth');
     }, 3000);
   } catch (err) {
-    console.error('[REGISTRATION] Error:', err);
     const errorMessage = err instanceof Error ? err.message : 'Registration failed';
-    errorMsg.value = errorMessage;
-
-    // Clear sensitive fields on error
-    password.value = '';
-    confirmPassword.value = '';
+    register.value.error = errorMessage;
+    register.value.password = '';
+    register.value.confirmPassword = '';
   } finally {
-    isSubmitting.value = false;
+    register.value.loading = false;
   }
 }
 </script>

@@ -26,7 +26,7 @@
 
 <script setup lang="ts">
 import VantaBackground from '@/components/Base/VantaBackground.vue'
-definePageMeta({ layout: 'default' })
+definePageMeta({ layout: 'user' })
 </script>
 
 <style scoped>

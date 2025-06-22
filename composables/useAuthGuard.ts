@@ -1,4 +1,4 @@
-import type { UserRole, RoleCheckResult, SessionData } from '~/types/auth'
+import type { RoleCheckResult, SessionData, UserRole } from '~/types/auth'
 
 /**
  * Enhanced auth guard composable with better error handling and type safety
@@ -116,14 +116,12 @@ export const useAuthGuard = () => {
       '/',
       '/info',
       '/info/matrix',
-      '/info/about',
-      '/info/contact',
+      '/info/about',      '/info/contact',
       '/info/faq',
       '/info/sitemap',
       '/auth',
       '/auth/register',
       '/auth/reset',
-      '/auth/admin-login',
       '/auth/users-nav',
     ]
 
@@ -159,9 +157,8 @@ export const useAuthGuard = () => {
       // User not authenticated
       const adminRoutes = ['/admin']
       const isAdminRoute = adminRoutes.some(route => targetPath.startsWith(route))
-      
-      if (isAdminRoute) {
-        return '/auth/admin-login?error=login_required'
+        if (isAdminRoute) {
+        return '/auth?error=login_required'
       } else {
         return `/auth?redirect=${encodeURIComponent(targetPath)}`
       }
@@ -170,11 +167,10 @@ export const useAuthGuard = () => {
     // User is authenticated but may not have correct role
     const adminRoutes = ['/admin']
     const isAdminRoute = adminRoutes.some(route => targetPath.startsWith(route))
-    
-    if (isAdminRoute) {
+      if (isAdminRoute) {
       const roleCheck = await hasRole('admin')
       if (!roleCheck.hasRole) {
-        return '/auth/admin-login?error=unauthorized'
+        return '/auth?error=unauthorized'
       }
     }
 

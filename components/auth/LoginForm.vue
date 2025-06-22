@@ -8,16 +8,18 @@
   >
     <v-card-title class="text-white text-center">Login</v-card-title>
     <v-form ref="form" validate-on="submit lazy" @submit.prevent="handleLogin">
-      <v-alert v-if="errorMsg" type="error" class="mb-4" border="start" prominent>
-        {{ errorMsg }}
-      </v-alert>
-
-      <v-alert v-if="successMsg" type="success" class="mb-4" border="start" prominent>
-        {{ successMsg }}
+      <v-alert
+        v-if="login.error"
+        type="error"
+        class="mb-4"
+        border="start"
+        prominent
+      >
+        {{ login.error }}
       </v-alert>
 
       <v-text-field
-        v-model="email"
+        v-model="login.email"
         label="Email"
         placeholder="you@example.com"
         prepend-icon="mdi-email-outline"
@@ -26,14 +28,14 @@
         color="blue"
         class="glass-input mb-4"
         :rules="[rules.required, rules.email]"
-        :disabled="loading"
+        :disabled="login.loading"
         data-cy="email-input"
         data-testid="email-input"
         type="email"
       />
 
       <v-text-field
-        v-model="password"
+        v-model="login.password"
         :type="showPassword ? 'text' : 'password'"
         label="Password"
         prepend-icon="mdi-lock-outline"
@@ -43,10 +45,10 @@
         color="blue"
         class="glass-input"
         :rules="[rules.required]"
-        :disabled="loading"
-        @click:append="showPassword = !showPassword"
+        :disabled="login.loading"
         data-cy="password-input"
         data-testid="password-input"
+        @click:append="showPassword = !showPassword"
       />
 
       <v-btn
@@ -54,8 +56,8 @@
         block
         color="blue"
         class="mt-4"
-        :loading="loading"
-        :disabled="loading"
+        :loading="login.loading"
+        :disabled="login.loading"
         data-cy="login-button"
         data-testid="login-button"
       >
@@ -63,28 +65,14 @@
       </v-btn>
 
       <v-btn
-        variant="outlined"
-        block
-        color="blue"
-        class="mt-2"
-        to="/auth/admin-login"
-        tag="router-link"
-        :disabled="loading"
-        data-cy="admin-login-button"
-        data-testid="admin-login-button"
-      >
-        Login as Admin
-      </v-btn>
-
-      <v-btn
         variant="text"
         block
         color="white"
         class="mt-4"
-        :disabled="loading"
-        @click="navigateTo('/auth/reset')"
+        :disabled="login.loading"
         data-cy="forgot-password-button"
         data-testid="forgot-password-button"
+        @click="navigateTo('/auth/reset')"
       >
         Forgot Password?
       </v-btn>
@@ -103,21 +91,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+
 import { navigateTo } from '#app';
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from '~/stores/authStore';
+import { useFormsStore } from '~/stores/formsStore';
 
-// Use the robust auth composable instead of direct Supabase
-const { signIn } = useRobustAuth();
-
-// Form data
 const form = ref(null);
-const email = ref('');
-const password = ref('');
 const showPassword = ref(false);
-const loading = ref(false);
-const errorMsg = ref('');
-const successMsg = ref('');
 const debugInfo = ref('');
+const formsStore = useFormsStore();
+const authStore = useAuthStore();
+const { login } = storeToRefs(formsStore);
 
 // Validation rules
 const rules = {
@@ -129,10 +114,9 @@ const rules = {
 };
 
 async function handleLogin() {
-  errorMsg.value = '';
-  successMsg.value = '';
   debugInfo.value = '';
-  loading.value = true;
+  login.value.error = null;
+  login.value.loading = true;
 
   try {
     console.log('🔍 Starting login process...');
@@ -142,67 +126,44 @@ async function handleLogin() {
     if (form.value) {
       const formElement = form.value as { validate: () => Promise<{ valid: boolean }> };
       const { valid } = await formElement.validate();
-
       if (!valid) {
         throw new Error('Please fix the form validation errors');
       }
     }
-
     // Check basic field requirements
-    if (!email.value?.trim()) {
+    if (!login.value.email?.trim()) {
       throw new Error('Email is required');
     }
-    if (!password.value) {
+    if (!login.value.password) {
       throw new Error('Password is required');
-    }
-
-    console.log('🔑 Attempting login with:', email.value);
-    debugInfo.value = 'Authenticating...'; // Use the robust auth composable for login
-    const result = await signIn(email.value, password.value);
-
+    }    console.log('🔑 Attempting login with:', login.value.email);
+    debugInfo.value = 'Authenticating...';
+    const result = await authStore.signIn(login.value.email, login.value.password);
     if (!result.success) {
       throw new Error(result.error || 'Login failed');
     }
-
     console.log('✅ Login successful:', result.user?.email);
-    successMsg.value = 'Login successful! Redirecting...';
     debugInfo.value = 'Login successful, redirecting...';
-
     // Clear form on success
-    email.value = '';
-    password.value = '';
-
-    // Show success message briefly, then redirect
+    login.value.email = '';
+    login.value.password = '';    // Show success message briefly, then redirect
     setTimeout(async () => {
       try {
-        // Check user role for redirection
-        // Handle profile RLS policy issues gracefully
-        let targetRoute = '/users/index'; // Default route
-
-        if (result.profile?.role === 'admin') {
-          console.log('🔄 Redirecting to admin dashboard...');
-          targetRoute = '/admin';
-        } else {
-          console.log('🔄 Redirecting to user dashboard...');
-        }
-
+        // Always redirect to user dashboard first for successful authentication
+        // Admin users can then navigate to admin areas from the user dashboard
+        let targetRoute = '/users/';
         await navigateTo(targetRoute);
-      } catch (redirectError) {
-        console.error('Redirect error:', redirectError);
-        // Fallback redirect
-        await navigateTo('/users/index');
+      } catch {
+        await navigateTo('/users/');
       }
     }, 1500);
   } catch (err) {
-    console.error('[LOGIN] Error:', err);
     const errorMessage = err instanceof Error ? err.message : 'Login failed';
-    errorMsg.value = errorMessage;
+    login.value.error = errorMessage;
     debugInfo.value = `Error: ${errorMessage}`;
-
-    // Clear password on error
-    password.value = '';
+    login.value.password = '';
   } finally {
-    loading.value = false;
+    login.value.loading = false;
   }
 }
 </script>

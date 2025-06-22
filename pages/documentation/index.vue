@@ -6,14 +6,47 @@
         <div class="header-text">
           <h1 class="text-h3 font-weight-bold mb-2">
             <v-icon icon="mdi-book-open-variant" class="me-3" color="primary" />
-            Documentation
+            User Documentation
           </h1>
           <p class="text-h6 text-medium-emphasis">
             Complete guide to using the Cloudless.gr ML platform
           </p>
+          <v-chip 
+            color="green" 
+            size="small" 
+            class="mt-2"
+            prepend-icon="mdi-earth"
+          >
+            Public Access
+          </v-chip>
         </div>
       </div>
     </div>
+
+    <!-- Admin Documentation Notice -->
+    <v-alert 
+      v-if="authStore.isAdmin"
+      type="info" 
+      variant="tonal" 
+      class="mb-6"
+      icon="mdi-shield-crown"
+    >
+      <template #title>
+        Admin Documentation Available
+      </template>
+      <div class="d-flex align-center justify-space-between">
+        <span>You have access to administrative documentation with advanced guides and system information.</span>
+        <v-btn 
+          color="primary" 
+          variant="outlined" 
+          size="small"
+          to="/admin/docs"
+          class="ml-4"
+        >
+          View Admin Docs
+        </v-btn>
+      </div>
+    </v-alert>
 
     <!-- Quick Links -->
     <v-row class="mb-8">
@@ -140,6 +173,8 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue';
+
 definePageMeta({
   title: 'Documentation',
   description: 'Complete documentation for the Cloudless.gr ML platform',
@@ -148,6 +183,15 @@ definePageMeta({
 
 const searchQuery = ref('');
 const searchResults = ref<any[]>([]);
+const authStore = useAuthStore();
+const docStore = useDocumentationStore();
+
+// Initialize documentation store
+onMounted(async () => {
+  if (docStore.pages.length === 0) {
+    await docStore.initialize()
+  }
+})
 
 const quickLinks = [
   {

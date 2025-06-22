@@ -51,12 +51,10 @@ const newTreeData = ref<TreeNode[]>([
   {
     id: 'auth',
     text: 'Authentication',
-    icon: 'mdi-account-key',
-    children: [
+    icon: 'mdi-account-key',    children: [
       { id: 'auth', text: 'Login', icon: 'mdi-login', link: '/auth' },
       { id: 'auth-register', text: 'Register', icon: 'mdi-account-plus', link: '/auth/register' },
       { id: 'auth-reset', text: 'Password Reset', icon: 'mdi-lock-reset', link: '/auth/reset' },
-      { id: 'auth-admin-login', text: 'Admin Login', icon: 'mdi-shield-account', link: '/auth/admin-login' },
       { id: 'auth-users-nav', text: 'User Navigation', icon: 'mdi-navigation', link: '/auth/users-nav' },
       { id: 'auth-callback', text: 'Auth Callback', icon: 'mdi-link', link: '/auth/callback' },
     ]
@@ -82,7 +80,7 @@ const newTreeData = ref<TreeNode[]>([
     text: 'User Area',
     icon: 'mdi-account',
     children: [
-      { id: 'user-index', text: 'User Dashboard', icon: 'mdi-view-dashboard', link: '/users/index' },
+      { id: 'user-index', text: 'User Dashboard', icon: 'mdi-view-dashboard', link: '/users/' },
       { id: 'user-contact', text: 'Contact', icon: 'mdi-email-outline', link: '/users/contact' },
       { id: 'user-codegen', text: 'Codegen', icon: 'mdi-code-braces', link: '/users/codegen' },
       { id: 'user-profile', text: 'Profile', icon: 'mdi-account-circle', link: '/users/profile/index' },

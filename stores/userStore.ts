@@ -1,87 +1,156 @@
-import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { defineStore } from 'pinia'
 
-export const useUserStore = defineStore('user', () => {
-  const user = ref({
-    full_name: '',
-    avatar_url: '',
-    role: '',
-    email: '',
-  });
+interface UserPreferences {
+  theme?: 'light' | 'dark' | 'auto'
+  language?: string
+  notifications?: boolean
+  timezone?: string
+}
 
-  const fetchUserProfile = async () => {
-    if (typeof window === 'undefined') return; // prevent SSR error
-    console.log('🔍 [UserStore] Starting fetchUserProfile...');
+export const useUserStore = defineStore('user', {
+  state: () => ({
+    preferences: null as UserPreferences | null,
+    loading: false,
+    error: null as string | null,
+  }),
 
-    const supabase = useSupabaseClient();
-    const { data: authData } = await supabase.auth.getUser();
-    const authUser = authData?.user;
+  getters: {
+    // Get user info from auth store
+    profile: () => {
+      const authStore = useAuthStore()
+      return authStore.user
+    },
+    
+    fullName: () => {
+      const authStore = useAuthStore()
+      return authStore.user?.full_name || authStore.user?.email || 'User'
+    },
+    
+    isEmailVerified: () => {
+      const authStore = useAuthStore()
+      return authStore.user?.email_verified ?? false
+    },
+    
+    isActive: () => {
+      const authStore = useAuthStore()
+      return authStore.user?.is_active ?? false
+    },
+    
+    isUser: () => {
+      const authStore = useAuthStore()
+      return authStore.user?.role === 'user'
+    },
+    
+    currentTheme: (state) => state.preferences?.theme || 'auto',
+  },
 
-    console.log('🔐 [UserStore] Auth user:', authUser?.id, authUser?.email);
+  actions: {
+    // Initialize user data
+    async initialize() {
+      const authStore = useAuthStore()
+      
+      if (authStore.user && authStore.isAuthenticated) {
+        await this.loadUserPreferences()
+      }
+    },
 
-    if (!authUser) {
-      console.log('❌ [UserStore] No authenticated user found');
-      user.value = { full_name: '', avatar_url: '', role: '', email: '' };
-      return;
-    }
+    // Load user preferences (stored locally for now)
+    async loadUserPreferences() {
+      const authStore = useAuthStore()
+      if (!authStore.user) return
 
-    // Fetch user info
-    console.log('📡 [UserStore] Fetching from user-info table...');
-    const { data: userInfo, error: userInfoError } = await supabase
-      .from('user-info')
-      .select('full_name, avatar_url')
-      .eq('id', authUser.id)
-      .single();
+      try {
+        // For now, use localStorage for preferences since table doesn't exist in DB schema
+        const stored = localStorage.getItem(`user_preferences_${authStore.user.id}`)
+        
+        if (stored) {
+          this.preferences = JSON.parse(stored)
+        } else {
+          this.preferences = {
+            theme: 'auto',
+            language: 'en',
+            notifications: true,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+          }
+        }
+      } catch (err) {
+        console.error('Error loading user preferences:', err)
+        this.preferences = {
+          theme: 'auto',
+          language: 'en',
+          notifications: true,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        }
+      }
+    },
 
-    console.log('👤 [UserStore] User info result:', { userInfo, userInfoError });
+    // Update user preferences
+    async updatePreferences(newPreferences: Partial<UserPreferences>): Promise<{ success: boolean; error?: string }> {
+      const authStore = useAuthStore()
+      if (!authStore.user) {
+        return { success: false, error: 'No user profile loaded' }
+      }
 
-    // Fetch user profile/role
-    console.log('📡 [UserStore] Fetching from profiles table...');
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', authUser.id)
-      .single();
+      try {
+        const updatedPreferences = { ...this.preferences, ...newPreferences }
+        
+        // Store locally for now
+        localStorage.setItem(
+          `user_preferences_${authStore.user.id}`, 
+          JSON.stringify(updatedPreferences)
+        )
 
-    console.log('🎭 [UserStore] Profile result:', { profile, profileError });
-    if (userInfoError && profileError) {
-      console.error('❌ [UserStore] Failed to fetch user data:', { userInfoError, profileError });
-      user.value = {
-        full_name: 'Themistoklis Baltzakis', // Fallback name
-        avatar_url: '',
-        role: 'user',
-        email: authUser.email ?? '',
-      };
-    } else {
-      const finalUser = {
-        full_name: (userInfo as any)?.full_name ?? 'Themistoklis Baltzakis', // Use fallback if database is empty
-        avatar_url: (userInfo as any)?.avatar_url ?? '',
-        role: (profile as any)?.role ?? 'user',
-        email: authUser.email ?? '',
-      };
+        this.preferences = updatedPreferences
+        return { success: true }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Preferences update failed'
+        console.error('Error updating preferences:', err)
+        return { success: false, error: errorMsg }
+      }
+    },
 
-      console.log('✅ [UserStore] Setting user data:', finalUser);
-      user.value = finalUser;
-    }
-  };
+    // Change password
+    async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+      const supabase = useSupabaseClient()
+      
+      try {
+        // Update to new password
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: newPassword
+        })
 
-  const isAdmin = () => {
-    return user.value.role === 'admin';
-  };
+        if (updateError) throw updateError
 
-  const isUser = () => {
-    return user.value.role === 'user';
-  };
+        return { success: true }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Password change failed'
+        console.error('Error changing password:', err)
+        return { success: false, error: errorMsg }
+      }
+    },
 
-  const logout = async () => {
-    const supabase = useSupabaseClient();
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.error('Logout error:', e);
-    }
-    user.value = { full_name: '', avatar_url: '', role: '', email: '' };
-  };
+    // Legacy methods for compatibility
+    async fetchUserProfile() {
+      // This is now handled by the auth store
+      await this.initialize()
+    },
 
-  return { user, fetchUserProfile, isAdmin, isUser, logout };
-});
+    isAdmin() {
+      const authStore = useAuthStore()
+      return authStore.user?.role === 'admin'
+    },
+
+    async logout() {
+      const authStore = useAuthStore()
+      await authStore.signOut()
+      this.resetStore()
+    },
+
+    // Reset store
+    resetStore() {
+      this.preferences = null
+      this.loading = false
+      this.error = null
+    },
+  },
+})

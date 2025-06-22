@@ -9,11 +9,9 @@ export default defineNuxtRouteMiddleware(async (to, _from) => {
     // If the user is not logged in and trying to access a protected route
     if (!user && to.path.startsWith('/users')) {
       return navigateTo(`/auth?redirect=${encodeURIComponent(to.fullPath)}`);
-    }
-
-    // If user is logged in and trying to access the login page, redirect to dashboard
+    }    // If user is logged in and trying to access the login page, redirect to dashboard
     if (user && (to.path === '/auth/login' || to.path === '/auth')) {
-      return navigateTo('/users/index');
+      return navigateTo('/users/');
     }
   } catch (error) {
     console.error('[AUTH] Middleware error:', error);

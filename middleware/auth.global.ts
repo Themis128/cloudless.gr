@@ -12,7 +12,6 @@ const publicRoutes = [
   '/auth',
   '/auth/register',
   '/auth/reset',
-  '/auth/admin-login',
   '/auth/users-nav',
   '/documentation',
   '/documentation/api-reference',
@@ -24,7 +23,7 @@ const publicRoutes = [
 ]
 
 // Admin routes that require admin role
-const adminRoutes = ['/admin']
+const adminRoutes = ['/admin', '/sys']
 
 export default defineNuxtRouteMiddleware(async (to) => {
   // Skip middleware on server side in SPA mode
@@ -43,7 +42,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // Check if this is an admin route
   const isAdminRoute = adminRoutes.some(route => normalizedPath.startsWith(route))
   console.log('[AUTH] Is admin route:', isAdminRoute)
-
   // Check authentication status
   try {
     const supabase = useSupabaseClient()
@@ -54,35 +52,42 @@ export default defineNuxtRouteMiddleware(async (to) => {
       hasUser: !!sessionData.session?.user,
       error: sessionError 
     })
-    
-    // Handle case where there's no session or there's an error
+      // Handle case where there's no session or there's an error
     if (sessionError || !sessionData.session?.user) {
-      // Redirect to appropriate auth page based on route type
-      const redirectUrl = isAdminRoute ? '/auth/admin-login' : `/auth?redirect=${encodeURIComponent(to.fullPath)}`
+      // Redirect to auth page with original route for redirect after login
+      const redirectUrl = `/auth?redirect=${encodeURIComponent(to.fullPath)}`
       console.log('[AUTH] No valid session, redirecting to:', redirectUrl)
       return navigateTo(redirectUrl)
     }
 
-    console.log('[AUTH] Valid session found, allowing access')
+    console.log('[AUTH] Valid session found, checking user role for admin access')
     
-    // If this is an admin route, verify admin role
-    if (isAdminRoute) {
-      const userId = sessionData.session.user.id
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single<{ role: string }>()
+    // Check if user is admin for universal access
+    const userId = sessionData.session.user.id
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single<{ role: string }>()
 
-      if (profileError || !profile || profile.role !== 'admin') {
-        console.warn('[AUTH] Admin access denied:', profileError || 'User is not admin')
-        return navigateTo('/auth/admin-login?error=unauthorized')
-      }
+    const isUserAdmin = !profileError && profile && profile.role === 'admin'
+    console.log('[AUTH] User admin status:', isUserAdmin)
+      // If this is an admin route, verify admin role
+    if (isAdminRoute && !isUserAdmin) {
+      console.warn('[AUTH] Admin access denied:', profileError || 'User is not admin')
+      return navigateTo('/auth?error=unauthorized')
     }
-
+    
+    // Admin users have access to all pages - no further checks needed
+    if (isUserAdmin) {
+      console.log('[AUTH] Admin user - universal access granted')
+      return
+    }
+    
+    console.log('[AUTH] Regular user access granted to non-admin route')
   } catch (err) {
     console.error(`[AUTH] Error during session check:`, err)
-    const redirectUrl = isAdminRoute ? '/auth/admin-login' : `/auth?redirect=${encodeURIComponent(to.fullPath)}`
+    const redirectUrl = `/auth?redirect=${encodeURIComponent(to.fullPath)}`
     return navigateTo(redirectUrl)
   }
 })

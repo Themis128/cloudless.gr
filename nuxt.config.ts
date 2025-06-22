@@ -34,11 +34,11 @@ export default defineNuxtConfig({
       callback: '/auth/callback',
       exclude: ['/', '/info', '/info/*', '/auth', '/auth/*'],
     },
-  },
-  runtimeConfig: {
+  },  runtimeConfig: {
     // Private keys (only available on server-side)
     ollamaHost: process.env.OLLAMA_HOST ?? 'http://localhost:11434',
     ollamaModel: process.env.OLLAMA_MODEL ?? 'llama3.2:latest',
+    supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU',
     public: {
       supabaseUrl: process.env.SUPABASE_URL ?? 'http://127.0.0.1:8000',
       supabaseAnonKey:
@@ -46,11 +46,26 @@ export default defineNuxtConfig({
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
       devMode: process.env.NODE_ENV === 'development',
     },
-  },
-  vite: {
+  },  vite: {
     define: {
       'process.env.DEBUG': false,
     },
+  },  nitro: {
+    experimental: {
+      wasm: true
+    },
+    routeRules: {
+      '/api/**': {
+        cors: true,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
+    },
+    // Increase timeout for API routes
+    timing: true
   },
   imports: {
     dirs: ['utils/**', 'composables/**', 'stores/**'],

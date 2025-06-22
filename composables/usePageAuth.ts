@@ -75,11 +75,10 @@ export const usePageAuth = (options: {
       loading.value = false
     }
   }
-  
-  const redirectToAuth = () => {
+    const redirectToAuth = () => {
     const currentPath = route.fullPath
     const redirect = currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}` : ''
-    const targetUrl = requireAdmin ? '/auth/admin-login' : `${redirectTo}${redirect}`
+    const targetUrl = `${redirectTo}${redirect}`
     
     console.log('[PAGE_AUTH] Redirecting to:', targetUrl)
     return navigateTo(targetUrl)

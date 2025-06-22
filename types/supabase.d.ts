@@ -533,6 +533,69 @@ export interface Database {
             columns: ["owner_id"]
             referencedRelation: "user_profiles"
             referencedColumns: ["id"]
+          }        ]
+      }
+      contact_messages: {
+        Row: {
+          id: string
+          name: string
+          email: string
+          message: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email: string
+          message: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string
+          message?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          title: string
+          message: string
+          read: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          title: string
+          message: string
+          read?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          title?: string
+          message?: string
+          read?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           }
         ]
       }
@@ -567,6 +630,8 @@ export type ModelVersion = Tables<'model_versions'>
 export type Deployment = Tables<'deployments'>
 export type Dataset = Tables<'datasets'>
 export type Experiment = Tables<'experiments'>
+export type ContactMessage = Tables<'contact_messages'>
+export type Notification = Tables<'notifications'>
 
 // Insert types
 export type ProfileInsert = TablesInsert<'profiles'>
@@ -578,6 +643,8 @@ export type ModelVersionInsert = TablesInsert<'model_versions'>
 export type DeploymentInsert = TablesInsert<'deployments'>
 export type DatasetInsert = TablesInsert<'datasets'>
 export type ExperimentInsert = TablesInsert<'experiments'>
+export type ContactMessageInsert = TablesInsert<'contact_messages'>
+export type NotificationInsert = TablesInsert<'notifications'>
 
 // Update types
 export type ProfileUpdate = TablesUpdate<'profiles'>
@@ -589,3 +656,5 @@ export type ModelVersionUpdate = TablesUpdate<'model_versions'>
 export type DeploymentUpdate = TablesUpdate<'deployments'>
 export type DatasetUpdate = TablesUpdate<'datasets'>
 export type ExperimentUpdate = TablesUpdate<'experiments'>
+export type ContactMessageUpdate = TablesUpdate<'contact_messages'>
+export type NotificationUpdate = TablesUpdate<'notifications'>
