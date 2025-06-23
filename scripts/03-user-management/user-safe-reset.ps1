@@ -7,12 +7,36 @@ param(
     [switch]$RestoreOnly,
     [switch]$ResetWithBackup,
     [string]$BackupFile,
-    [switch]$Force
+    [switch]$Force,
+    [string]$UnlockEmail
 )
 
 function Write-ColoredOutput {
     param($Message, $Color = "White")
     Write-Host $Message -ForegroundColor $Color
+}
+
+# Unlock user account by email (clears lockout/failed attempts)
+function Unlock-UserAccount {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Email
+    )
+    Write-ColoredOutput "🔓 Attempting to unlock account for: $Email" "Cyan"
+    try {
+        $unlockSql = @"
+UPDATE auth.users
+SET
+    updated_at = NOW()
+    -- Add or reset any other lockout-related fields here, e.g. failed_attempts = 0, locked_until = NULL
+WHERE email = '$Email';
+"@
+        $result = docker exec supabase-db psql -U postgres -d postgres -c "$unlockSql"
+        Write-ColoredOutput "✅ Unlock attempted. Please verify in the Supabase dashboard." "Green"
+    }
+    catch {
+        Write-ColoredOutput "❌ Failed to unlock user: $($_.Exception.Message)" "Red"
+    }
 }
 
 function Show-Banner {
@@ -183,6 +207,12 @@ function Reset-WithUserPreservation {
 
 # Main execution
 Show-Banner
+
+# Unlock user if requested
+if ($UnlockEmail) {
+    Unlock-UserAccount -Email $UnlockEmail
+    exit 0
+}
 
 # Check if Supabase is running
 try {

@@ -1,6 +1,20 @@
 <template>
   <v-container class="legal-page" fluid>
     <div class="page-header mb-8">
+      <div class="d-flex align-center mb-6">
+        <v-btn
+          color="primary"
+          variant="elevated"
+          class="back-btn-glass mr-3"
+          size="large"
+          rounded
+          prepend-icon="mdi-arrow-left"
+          @click="$router.back()"
+        >
+          Back
+        </v-btn>
+        <span class="text-h6 font-weight-medium">Legal</span>
+      </div>
       <v-row justify="center">
         <v-col cols="12" md="8">
           <h1 class="text-h2 font-weight-bold primary--text text-center mb-4">
@@ -16,7 +30,7 @@
 
     <v-row justify="center">
       <v-col cols="12" md="8">
-        <v-card class="pa-6">
+        <v-card class="pa-6 glassmorph-card">
           <div class="legal-content">
             <section class="mb-8">
               <h2 class="text-h4 mb-4">What Are Cookies</h2>
@@ -360,7 +374,7 @@
 import { onMounted, ref } from 'vue'
 
 definePageMeta({
-  layout: 'default',
+  layout: 'auth',
 })
 
 const lastUpdated = 'January 20, 2024'
@@ -426,5 +440,28 @@ onMounted(() => {
 
 .gap-3 > * + * {
   margin-top: 1rem;
+}
+/* Glassmorphism effect for the main legal card */
+.glassmorph-card {
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Glassy, prominent back button */
+.back-btn-glass {
+  background: rgba(255,255,255,0.45) !important;
+  box-shadow: 0 2px 8px 0 rgba(31,38,135,0.10);
+  backdrop-filter: blur(8px) saturate(160%);
+  -webkit-backdrop-filter: blur(8px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.18);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.back-btn-glass:hover {
+  background: rgba(255,255,255,0.65) !important;
+  box-shadow: 0 4px 16px 0 rgba(31,38,135,0.18);
 }
 </style>

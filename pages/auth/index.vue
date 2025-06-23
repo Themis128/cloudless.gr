@@ -5,11 +5,37 @@
 </template>
 
 <script setup lang="ts">
-import LoginForm from '~/components/auth/LoginForm.vue'
+import { onErrorCaptured, onMounted } from 'vue';
+import LoginForm from '~/components/auth/LoginForm.vue';
 
 definePageMeta({
   layout: 'auth'
 })
+
+// Verbose debugging and logging for /auth page
+onMounted(() => {
+  if (process.client) {
+    console.log('[DEBUG] /auth page loaded');
+    try {
+      // Only log non-sensitive info
+      console.log('[DEBUG] SUPABASE_URL:', process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL);
+      console.log('[DEBUG] SUPABASE_ANON_KEY length:', (process.env.SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '').length);
+    } catch (e) {
+      console.error('[DEBUG] Error logging env vars:', e);
+    }
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('[DEBUG] Unhandled Promise rejection:', event.reason);
+    });
+    window.addEventListener('error', (event) => {
+      console.error('[DEBUG] Window error:', event.error || event.message);
+    });
+  }
+});
+
+onErrorCaptured((err, instance, info) => {
+  console.error('[DEBUG] Vue error captured on /auth:', err, info);
+  return false;
+});
 </script>
 
 <style scoped>

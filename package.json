@@ -23,6 +23,7 @@
     "fix:database": "pwsh -File .vscode/auto-fix-critical.ps1 database",
     "fix:preview": "pwsh -File .vscode/auto-fix-critical.ps1 all -DryRun",
     "supabase:types": "supabase gen types typescript --local > types/supabase-generated.ts",
+    "gen:types": "supabase gen types typescript --linked --schema public > types/supabase.ts",
     "sonar": "sonar-scanner",
     "ci:local": "npm run check:all && npm run build",
     "cypress:report": "npx mochawesome-merge cypress/results/html/*.json | npx mochawesome-report-generator --reportDir cypress/results/html/merged",
@@ -123,10 +124,9 @@
     "mocha-junit-reporter": "^2.2.1",
     "playwright": "^1.53.0",
     "prettier": "^3.5.3",
-    "supabase": "^2.24.3",
+    "supabase": "^2.26.9",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.34.1",
-    "vercel": "^43.3.0",
     "vitest": "^3.2.4"
   }
 }

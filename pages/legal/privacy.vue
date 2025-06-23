@@ -1,6 +1,16 @@
+
 <template>
   <v-container class="legal-page" fluid>
     <div class="page-header mb-8">
+      <v-btn
+        class="mb-4"
+        color="primary"
+        variant="text"
+        prepend-icon="mdi-arrow-left"
+        @click="$router.back()"
+      >
+        Back
+      </v-btn>
       <v-row justify="center">
         <v-col cols="12" md="8">
           <h1 class="text-h2 font-weight-bold primary--text text-center mb-4">
@@ -13,7 +23,6 @@
         </v-col>
       </v-row>
     </div>
-
     <v-row justify="center">
       <v-col cols="12" md="8">
         <v-card class="pa-6">
@@ -27,10 +36,8 @@
                 This policy applies to all information collected through our website, applications, and services. By using our services, you agree to the collection and use of information in accordance with this policy.
               </p>
             </section>
-
             <section class="mb-8">
               <h2 class="text-h4 mb-4">Information We Collect</h2>
-              
               <h3 class="text-h5 mb-3">Personal Information</h3>
               <p class="text-body-1 mb-4">
                 We may collect the following types of personal information:
@@ -42,7 +49,6 @@
                 <li>Profile information and preferences</li>
                 <li>Communication history and support requests</li>
               </ul>
-
               <h3 class="text-h5 mb-3">Technical Information</h3>
               <p class="text-body-1 mb-4">
                 We automatically collect certain technical information when you use our services:
@@ -55,7 +61,6 @@
                 <li>Cookies and similar tracking technologies</li>
               </ul>
             </section>
-
             <section class="mb-8">
               <h2 class="text-h4 mb-4">How We Use Your Information</h2>
               <p class="text-body-1 mb-4">
@@ -71,7 +76,6 @@
                 <li>Detect and prevent fraud or security threats</li>
               </ul>
             </section>
-
             <section class="mb-8">
               <h2 class="text-h4 mb-4">Information Sharing</h2>
               <p class="text-body-1 mb-4">
@@ -85,7 +89,6 @@
                 <li>In connection with a business transfer or merger</li>
               </ul>
             </section>
-
             <section class="mb-8">
               <h2 class="text-h4 mb-4">Data Security</h2>
               <p class="text-body-1 mb-4">
@@ -99,7 +102,6 @@
                 <li>Incident response and monitoring procedures</li>
               </ul>
             </section>
-
             <section class="mb-8">
               <h2 class="text-h4 mb-4">Your Rights and Choices</h2>
               <p class="text-body-1 mb-4">
@@ -117,35 +119,30 @@
                 To exercise these rights, please contact us at <strong>privacy@cloudless.dev</strong>.
               </p>
             </section>
-
             <section class="mb-8">
               <h2 class="text-h4 mb-4">Cookies and Tracking</h2>
               <p class="text-body-1 mb-4">
                 We use cookies and similar tracking technologies to enhance your experience on our platform. You can control cookie preferences through your browser settings. For more information, see our <NuxtLink to="/legal/cookies" class="text-primary">Cookie Policy</NuxtLink>.
               </p>
             </section>
-
             <section class="mb-8">
               <h2 class="text-h4 mb-4">International Data Transfers</h2>
               <p class="text-body-1 mb-4">
                 Your information may be transferred to and processed in countries other than your own. We ensure appropriate safeguards are in place to protect your data in accordance with applicable data protection laws.
               </p>
             </section>
-
             <section class="mb-8">
               <h2 class="text-h4 mb-4">Children's Privacy</h2>
               <p class="text-body-1 mb-4">
                 Our services are not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If you believe we have collected information from a child under 13, please contact us immediately.
               </p>
             </section>
-
             <section class="mb-8">
               <h2 class="text-h4 mb-4">Changes to This Policy</h2>
               <p class="text-body-1 mb-4">
                 We may update this privacy policy from time to time. We will notify you of any material changes by posting the new policy on our website and updating the "Last updated" date. Your continued use of our services after such changes constitutes acceptance of the updated policy.
               </p>
             </section>
-
             <section>
               <h2 class="text-h4 mb-4">Contact Us</h2>
               <p class="text-body-1 mb-4">
@@ -177,7 +174,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
+  layout: 'auth',
 })
 
 const lastUpdated = 'January 20, 2024'

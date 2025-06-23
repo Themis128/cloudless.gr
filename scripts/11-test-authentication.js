@@ -8,8 +8,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || 'http://localhost:8000';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzUwMDIxMjAwLCJleHAiOjE5MDc3ODc2MDB9.t_fNs-0FseUffAlk14mKEhQEr_PF3-IlHQ0z4VK3fxQ';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -276,4 +276,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch(console.error);
 }
 
-export { comprehensiveAuthTest, quickVerification, testUserExists, checkUserProfile, checkUserInfo, testLogin };
+export { checkUserInfo, checkUserProfile, comprehensiveAuthTest, quickVerification, testLogin, testUserExists };
+

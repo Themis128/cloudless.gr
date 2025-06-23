@@ -1,34 +1,47 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-    <div class="container mx-auto px-4 py-8">
-      <div class="mb-8">
-        <h1 class="text-4xl font-bold text-white mb-2">
-          System Administration
-        </h1>
-        <p class="text-slate-300">
-          Manage users, monitor system health, and maintain the platform
-        </p>
-      </div>
+  <v-app class="sys-admin-app">
+    <FloatingNavButton />
+    <v-container fluid class="pa-0 fill-height sys-admin-bg">
+      <v-row class="mb-8 mt-0">
+        <v-col cols="12">
+          <v-card
+            class="pa-6 mb-4"
+            color="primary"
+            variant="flat"
+            elevation="6"
+          >
+            <h1 class="text-h4 font-weight-bold text-white mb-2">System Administration</h1>
+            <p class="text-subtitle-1 text-white">Manage users, monitor system health, and maintain the platform</p>
+          </v-card>
+        </v-col>
+      </v-row>
 
-      <div
-        v-if="adminStore.loading"
-        class="flex justify-center items-center py-12"
-      >
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white" />
-        <span class="ml-4 text-white">Loading system data...</span>
-      </div>
+      <v-row>
+        <v-col cols="12">
+          <v-alert
+            v-if="adminStore.loading"
+            type="info"
+            variant="tonal"
+            border="start"
+            class="mb-6 d-flex align-center justify-center"
+          >
+            <v-progress-circular indeterminate color="primary" class="mr-4" />
+            Loading system data...
+          </v-alert>
+          <v-alert
+            v-else-if="adminStore.error"
+            type="error"
+            variant="tonal"
+            border="start"
+            class="mb-6"
+          >
+            <v-icon class="mr-2">mdi-alert-circle</v-icon>
+            {{ adminStore.error }}
+          </v-alert>
+        </v-col>
+      </v-row>
 
-      <div
-        v-else-if="adminStore.error"
-        class="bg-red-500/20 border border-red-500 rounded-lg p-4 mb-6"
-      >
-        <div class="flex items-center">
-          <span class="text-red-200">{{ adminStore.error }}</span>
-        </div>
-      </div>      <div
-        v-else-if="authStore.isAdmin"
-        class="space-y-8"
-      >
+      <div v-if="authStore.isAdmin" class="space-y-8">
         <!-- Success Admin Login Message -->
         <div
           v-if="authStore.successMessage"
@@ -272,11 +285,12 @@
           Return to Dashboard
         </NuxtLink>
       </div>
-    </div>
-  </div>
+    </v-container>
+  </v-app>
 </template>
 
 <script setup>
+import FloatingNavButton from '@/components/ui/FloatingNavButton.vue'
 import { computed, onMounted, ref } from 'vue'
 
 definePageMeta({

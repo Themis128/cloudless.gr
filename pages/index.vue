@@ -1,37 +1,39 @@
 <template>
   <div class="landing-page">
-    <!-- Hero Section -->
-    <HeroSection />
+    <div class="glass-container">
+      <!-- Hero Section -->
+      <HeroSection />
 
-    <!-- Stats Section -->
-    <StatsSection />
+      <!-- Stats Section -->
+      <StatsSection />
 
-    <!-- Features Carousel Section -->
-    <FeaturesCarousel />
+      <!-- Features Carousel Section -->
+      <FeaturesCarousel />
 
-    <!-- Process Steps Section -->
-    <ProcessSteps />
+      <!-- Process Steps Section -->
+      <ProcessSteps />
 
-    <!-- Interactive Demo Section -->
-    <InteractiveDemo />
+      <!-- Interactive Demo Section -->
+      <InteractiveDemo />
 
-    <!-- Features Tabs Section -->
-    <FeaturesTabs />
+      <!-- Features Tabs Section -->
+      <FeaturesTabs />
 
-    <!-- Testimonials Section -->
-    <TestimonialsSection />
+      <!-- Testimonials Section -->
+      <TestimonialsSection />
 
-    <!-- Pricing Section -->
-    <PricingSection />
+      <!-- Pricing Section -->
+      <PricingSection />
 
-    <!-- FAQ Section -->
-    <FAQSection />
+      <!-- FAQ Section -->
+      <FAQSection />
 
-    <!-- CTA Section -->
-    <CTASection />
+      <!-- CTA Section -->
+      <CTASection />
 
-    <!-- Footer -->
-    <FooterSection />
+      <!-- Footer -->
+      <FooterSection />
+    </div>
   </div>
 </template>
 
@@ -88,19 +90,39 @@ useHead({
   ]
 });
 
-definePageMeta({ 
-  layout: 'default',
+definePageMeta({
+  layout: 'auth',
   name: 'Home',
   title: 'Cloudless.gr - Power Without the Code'
 });
 
-// Analytics tracking
+// Verbose debugging and logging
+import { onErrorCaptured, onMounted } from 'vue';
 onMounted(() => {
-  // Track page view
   if (process.client) {
-    console.log('Landing page loaded');
-    // Add any analytics tracking here
+    console.log('[DEBUG] Landing page loaded');
+    // Log environment variables (safe subset only)
+    try {
+      // Only log non-sensitive info
+      console.log('[DEBUG] SUPABASE_URL:', process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL);
+      console.log('[DEBUG] SUPABASE_ANON_KEY length:', (process.env.SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '').length);
+    } catch (e) {
+      console.error('[DEBUG] Error logging env vars:', e);
+    }
+    // Listen for global unhandledrejection and error events
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('[DEBUG] Unhandled Promise rejection:', event.reason);
+    });
+    window.addEventListener('error', (event) => {
+      console.error('[DEBUG] Window error:', event.error || event.message);
+    });
   }
+});
+
+onErrorCaptured((err, instance, info) => {
+  // Vue 3 error boundary
+  console.error('[DEBUG] Vue error captured:', err, info);
+  return false; // Let error propagate further
 });
 </script>
 
@@ -111,6 +133,18 @@ onMounted(() => {
   position: relative;
   overflow-x: hidden;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.glass-container {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 2rem;
+  margin: 2rem auto;
+  max-width: 1200px;
 }
 
 /* Smooth scrolling for anchor links */

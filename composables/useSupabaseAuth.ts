@@ -140,19 +140,23 @@ export const useSupabaseAuth = () => {
       return null
     }
   }
-  // Get user role from profiles table
+  // Get user role from profiles table (best practice: single source of truth)
   const getUserRole = async () => {
     try {
       if (!user.value) return null
 
-      const { data: profile, error } = await supabase
-        .from('user_profiles')
+      // Use the 'profiles' table as the canonical user profile/role source
+      const email = user.value?.email;
+      if (!email) return null;
+      const { data, error } = await supabase
+        .from('profiles')
         .select('role')
-        .eq('id', user.value.id)
-        .single()
+        .eq('email', email)
+        .single();
 
-      if (error || !profile) return null
-      return (profile as any).role
+      const profile = data as { role: string } | null;
+      if (error || !profile || typeof profile.role !== 'string') return null;
+      return profile.role;
     } catch (err) {
       console.error('[getUserRole error]', err)
       return null

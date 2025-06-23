@@ -22,6 +22,7 @@
                   <div>
                     <h1 class="text-h4 font-weight-bold mb-2">Welcome, {{ userDisplayName }}!</h1>
                     <p class="text-h6 text-grey-darken-1">{{ welcomeMessage }}</p>
+                    <!-- Role is now shown in a card below for better layout -->
                   </div>
                 </div>
               </v-col>
@@ -41,34 +42,36 @@
         </v-col>
       </v-row>
 
-      <!-- Quick Stats -->
+
+
+      <!-- Quick Stats + User Role Card -->
       <v-row class="mb-6">
         <v-col cols="12" sm="6" md="3">
-          <v-card class="text-center pa-4" variant="outlined">
+          <v-card class="glass-card text-center pa-4 mb-4" variant="outlined">
             <v-icon size="48" color="primary" class="mb-2">mdi-folder-multiple</v-icon>
             <div class="text-h5 font-weight-bold">{{ userStats.projects }}</div>
             <div class="text-body-2 text-grey-darken-1">Projects</div>
           </v-card>
         </v-col>
         <v-col cols="12" sm="6" md="3">
-          <v-card class="text-center pa-4" variant="outlined">
+          <v-card class="glass-card text-center pa-4 mb-4" variant="outlined">
             <v-icon size="48" color="success" class="mb-2">mdi-chart-line</v-icon>
             <div class="text-h5 font-weight-bold">{{ userStats.activeProjects }}</div>
             <div class="text-body-2 text-grey-darken-1">Active</div>
           </v-card>
         </v-col>
         <v-col cols="12" sm="6" md="3">
-          <v-card class="text-center pa-4" variant="outlined">
+          <v-card class="glass-card text-center pa-4 mb-4" variant="outlined">
             <v-icon size="48" color="warning" class="mb-2">mdi-clock-outline</v-icon>
             <div class="text-h5 font-weight-bold">{{ userStats.lastActive }}</div>
             <div class="text-body-2 text-grey-darken-1">Last Active</div>
           </v-card>
         </v-col>
         <v-col cols="12" sm="6" md="3">
-          <v-card class="text-center pa-4" variant="outlined">
-            <v-icon size="48" color="info" class="mb-2">mdi-database</v-icon>
-            <div class="text-h5 font-weight-bold">{{ userStats.storageUsed }}</div>
-            <div class="text-body-2 text-grey-darken-1">Storage Used</div>
+          <v-card class="glass-card text-center pa-4 mb-4" variant="outlined">
+            <v-icon size="48" color="primary" class="mb-2">mdi-account-key</v-icon>
+            <div class="text-h5 font-weight-bold text-primary">{{ userRole || 'Loading...' }}</div>
+            <div class="text-body-2 text-grey-darken-1">Your Role</div>
           </v-card>
         </v-col>
       </v-row>
@@ -77,7 +80,7 @@
       <v-row>
         <!-- User Profile Section -->
         <v-col cols="12" md="6">
-          <v-card class="elevation-2 mb-4">
+          <v-card class="glass-card elevation-2 mb-4">
             <v-card-title class="text-h6 font-weight-bold text-primary pa-4">
               <v-icon class="mr-2">mdi-account-circle</v-icon>
               Profile Information
@@ -129,7 +132,7 @@
 
         <!-- Quick Actions Section -->
         <v-col cols="12" md="6">
-          <v-card class="elevation-2 mb-4">
+          <v-card class="glass-card elevation-2 mb-4">
             <v-card-title class="text-h6 font-weight-bold text-primary pa-4">
               <v-icon class="mr-2">mdi-lightning-bolt</v-icon>
               Quick Actions
@@ -190,7 +193,7 @@
 
         <!-- Recent Activity -->
         <v-col cols="12" md="8">
-          <v-card class="elevation-2">
+          <v-card class="glass-card elevation-2 mb-4">
             <v-card-title class="text-h6 font-weight-bold text-primary pa-4">
               <v-icon class="mr-2">mdi-history</v-icon>
               Recent Activity
@@ -290,8 +293,15 @@
 </template>
 
 <script setup lang="ts">
+import { useSupabaseAuth } from '@/composables/useSupabaseAuth';
 import { computed, onMounted, ref } from 'vue';
-import type { Project } from '~/types/supabase';
+// Define Project type locally if not exported from '~/types/supabase'
+type Project = {
+  id: string;
+  name: string;
+  status: string;
+  // Add other fields as needed
+};
 
 // Define page meta
 definePageMeta({
@@ -313,8 +323,10 @@ useHead({
 });
 
 // Composables and stores
-const { user } = useSupabaseAuth();
+const { user, getUserRole } = useSupabaseAuth();
 const userProfileStore = useUserProfileStore();
+
+const userRole = ref<string | null>(null);
 
 // Reactive data
 const userStats = ref({
@@ -443,9 +455,10 @@ onMounted(async () => {
     if (!userProfile.value && !userProfileStore.loading) {
       await userProfileStore.loadProfile();
     }
-    
     await loadUserStats();
     await loadRecentActivity();
+    // Fetch user role
+    userRole.value = await getUserRole();
   } catch (error) {
     console.error('Error initializing user dashboard:', error);
   }
@@ -453,6 +466,36 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+
+/* Glassmorphism effect for cards */
+.glass-card {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  transition: box-shadow 0.2s, border 0.2s;
+}
+.glass-card:hover {
+  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.22);
+  border: 1.5px solid rgba(255, 255, 255, 0.38);
+}
+
+@media (max-width: 600px) {
+  .glass-card {
+    padding: 1rem !important;
+    border-radius: 0.75rem;
+  }
+  .users-dashboard .v-card-title {
+    font-size: 1.1rem;
+    padding: 0.75rem 1rem !important;
+  }
+  .users-dashboard .v-card-text {
+    font-size: 0.98rem;
+    padding: 0.75rem 1rem !important;
+  }
+}
 .users-dashboard {
   min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);

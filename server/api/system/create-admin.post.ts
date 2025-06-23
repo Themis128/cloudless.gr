@@ -52,16 +52,21 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character'
       })
     }    // Initialize Supabase client for server-side operations
-    const supabaseUrl = process.env.SUPABASE_URL || 'http://127.0.0.1:8000'
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
-    
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Supabase environment variables are not set.'
+      });
+    }
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient<Database>(supabaseUrl as string, supabaseServiceKey as string, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
       }
-    })
+    });
 
     // Check if admin already exists
     const { data: existingProfile } = await supabase
@@ -110,10 +115,10 @@ export default defineEventHandler(async (event) => {
         role: 'admin',
         is_active: true,
         email_verified: true,
-        full_name: fullName,
+        full_name: fullName as string,
         updated_at: new Date().toISOString()
       })
-      .eq('id', authData.user.id)
+      .eq('id', authData.user.id as string)
 
     if (profileError) {
       console.error('[ADMIN CREATION] Profile update error:', profileError)

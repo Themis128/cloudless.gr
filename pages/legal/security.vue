@@ -1,6 +1,15 @@
 <template>
   <v-container class="legal-page" fluid>
     <div class="page-header mb-8">
+      <v-btn
+        class="mb-4"
+        color="primary"
+        variant="text"
+        prepend-icon="mdi-arrow-left"
+        @click="$router.back()"
+      >
+        Back
+      </v-btn>
       <v-row justify="center">
         <v-col cols="12" md="8">
           <h1 class="text-h2 font-weight-bold primary--text text-center mb-4">
@@ -350,7 +359,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
+  layout: 'auth',
 })
 
 const lastUpdated = 'January 20, 2024'
