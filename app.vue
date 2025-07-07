@@ -8,19 +8,31 @@
   </VApp>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useHead } from '#imports'
 
+// SEO and meta improvements
 useHead({
-  title: 'Cloudless.gr',
+  title: 'Cloudless.gr - ML Platform',
+  titleTemplate: '%s | Cloudless.gr',
+  meta: [
+    { name: 'description', content: 'Modern machine learning platform for AI development and deployment' },
+    { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+    { name: 'theme-color', content: '#1976D2' }
+  ],
   htmlAttrs: {
     lang: 'en'
-  }
+  },
+  link: [
+    { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+  ]
 })
 
+// Enhanced page transitions
 const pageTransition = {
   name: 'fade-page',
   mode: 'out-in',
+  duration: 300
 }
 </script>
 

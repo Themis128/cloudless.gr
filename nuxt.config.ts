@@ -16,6 +16,12 @@ export default defineNuxtConfig({
   build: {
     transpile: ['vuetify'],
   },
+  // Performance optimizations
+  experimental: {
+    payloadExtraction: false,
+    renderJsonPayloads: true,
+    typedPages: true
+  },
   modules: [
     [
       '@nuxtjs/supabase',
@@ -31,7 +37,34 @@ export default defineNuxtConfig({
         },
       }
     ],
-    '@pinia/nuxt'
+    '@pinia/nuxt',
+    // Add PWA module for better mobile experience
+    ['@vite-pwa/nuxt', {
+      registerType: 'autoUpdate',
+      workbox: {
+        navigateFallback: '/',
+        globPatterns: ['**/*.{js,css,html,png,svg,ico}']
+      },
+      client: {
+        installPrompt: true
+      },
+      manifest: {
+        name: 'Cloudless.gr',
+        short_name: 'Cloudless',
+        description: 'Modern ML Platform',
+        theme_color: '#1976D2',
+        background_color: '#FAFAFA',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          {
+            src: '/favicon.ico',
+            sizes: '64x64',
+            type: 'image/x-icon'
+          }
+        ]
+      }
+    }]
   ],
   runtimeConfig: {
     // Private keys (only available on server-side)

@@ -1,7 +1,7 @@
 <template>
-  <div class="layout">
+  <VApp class="layout">
     <!-- Animated Vanta Background -->
-    <client-only>
+    <ClientOnly>
       <Suspense>
         <template #default>
           <VantaBackground />
@@ -10,26 +10,40 @@
           <div class="fallback-bg" />
         </template>
       </Suspense>
-    </client-only>
+    </ClientOnly>
+    
+    <!-- Navigation -->
     <LargeNav class="header" />
 
-    <main
+    <!-- Main Content Area -->
+    <VMain
       id="main-content"
       role="main"
       class="page-content"
       tabindex="-1"
     >
       <NuxtPage />
-    </main>
+    </VMain>
 
+    <!-- Footer with Suspense -->
     <Suspense>
       <template #default>
         <Footer :year="new Date().getFullYear()" />
       </template>
       <template #fallback>
-        <div class="text-sm text-gray-400 text-center py-2">Loading footer...</div>
+        <VContainer class="text-center py-2">
+          <VProgressCircular 
+            indeterminate 
+            size="16" 
+            width="2"
+            class="mr-2"
+          />
+          <span class="text-caption">Loading footer...</span>
+        </VContainer>
       </template>
     </Suspense>
+    
+    <!-- Accessibility Menu -->
     <Suspense>
       <template #default>
         <AccessibilityMenu />
@@ -42,27 +56,28 @@
         <FloatingNavButton />
       </template>
     </Suspense>
-  </div>
+  </VApp>
 </template>
 
 <script setup lang="ts">
-import VantaBackground from '@/components/Base/VantaBackground.vue';
-import { defineAsyncComponent } from 'vue';
+import { defineAsyncComponent } from 'vue'
 
-const Footer = defineAsyncComponent(() => import('@/components/Layout/Footer.vue'));
-const LargeNav = defineAsyncComponent(() => import('@/components/Layout/Navigation/LargeNav.vue'));
+// Lazy load components for better performance
+const VantaBackground = defineAsyncComponent(() => import('@/components/Base/VantaBackground.vue'))
+const Footer = defineAsyncComponent(() => import('@/components/Layout/Footer.vue'))
+const LargeNav = defineAsyncComponent(() => import('@/components/Layout/Navigation/LargeNav.vue'))
 const AccessibilityMenu = defineAsyncComponent(
-  () => import('@/components/accessibility/AccessibilityMenu.vue'),
-);
+  () => import('@/components/accessibility/AccessibilityMenu.vue')
+)
 const FloatingNavButton = defineAsyncComponent(
-  () => import('@/components/ui/FloatingNavButton.vue'),
-);
+  () => import('@/components/ui/FloatingNavButton.vue')
+)
 </script>
 
 <style scoped>
 .fallback-bg {
   position: fixed;
-  top: -300px; /* Match VantaBackground positioning */
+  top: -300px;
   left: -100px;
   right: -100px;
   bottom: -100px;
@@ -77,7 +92,7 @@ const FloatingNavButton = defineAsyncComponent(
     #16213e 100%
   );
   z-index: 0;
-  transform: scale(1.3) translateY(-60px); /* Match VantaBackground transform */
+  transform: scale(1.3) translateY(-60px);
 }
 
 .vanta-bg {
@@ -90,19 +105,32 @@ const FloatingNavButton = defineAsyncComponent(
 }
 
 .layout {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
 }
 
 .header {
   flex-shrink: 0;
+  z-index: 1;
 }
 
 .page-content {
   flex: 1;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+/* Improved responsive design */
+@media (max-width: 768px) {
+  .fallback-bg {
+    transform: scale(1.5) translateY(-40px);
+  }
+}
+
+@media (max-width: 480px) {
+  .fallback-bg {
+    transform: scale(1.8) translateY(-20px);
+  }
 }
 </style>
