@@ -62,34 +62,31 @@
 
 <script setup lang="ts">
 
-import { useSupabase } from '@/composables/useSupabase';
+import { getSupabaseClient } from '@/composables/useSupabase';
 import { onMounted, ref } from 'vue';
 
+// @ts-expect-error: Nuxt auto-import
 definePageMeta({
   layout: 'default',
   title: 'Admin/User Matrix',
   description: 'View all registered admins and users in tabular format.',
-  middleware: [
-    'auth',
-    async () => {
-        // Adjust this logic to match your actual user state management
-        const nuxtApp = useNuxtApp();
-        const user = (nuxtApp.$auth as any)?.user || (nuxtApp.$user as any)?.user || null;
-        if (!user || !user.is_admin) {
-          return navigateTo('/'); // Redirect non-admins to home or another page
-        }
-      // No need to call next()
-    },
-  ],
+  middleware: 'auth'
 })
 
 interface UserProfile {
   id: string
-  first_name: string
-  last_name: string
+  first_name: string | null
+  last_name: string | null
   email: string
   is_admin: boolean
-  [key: string]: any
+  role: string
+  created_at: string
+  updated_at: string
+  avatar_url?: string | null
+  full_name?: string | null
+  is_active?: boolean
+  email_verified?: boolean
+  [key: string]: string | boolean | null | undefined
 }
 
 const admins = ref<UserProfile[]>([])
@@ -100,7 +97,7 @@ const loading = ref(true)
 
 onMounted(async () => {
   loading.value = true
-  const supabase = useSupabase();
+  const supabase = getSupabaseClient();
   try {
     // Fetch admins
     const { data: adminData, error: adminError } = await supabase

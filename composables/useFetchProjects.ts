@@ -1,5 +1,8 @@
+import { useSupabaseUser } from '#imports';
+import { getSupabaseClient } from './useSupabase';
 // Composable to fetch and manage project data for user profile
 import { computed, ref } from 'vue'
+
 
 export interface ProjectSummary {
   id: string
@@ -22,7 +25,7 @@ export function useFetchProjects() {
       error.value = null
 
       // Use Supabase to fetch projects for the current user
-      const supabase = useSupabaseClient()
+      const supabase = getSupabaseClient()
       const user = useSupabaseUser()
 
       if (!user.value) {

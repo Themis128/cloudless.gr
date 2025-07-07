@@ -79,7 +79,7 @@ import { ref, computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faTwitter, faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 import { useContactInfo } from '@/composables/useContactInfo'
-import { useSupabase } from '@/composables/useSupabase'
+import { getSupabaseClient } from '@/composables/useSupabase'
 
 const name = ref('')
 const email = ref('')
@@ -100,7 +100,7 @@ const socialWithIcons = computed(() => contact.social.map(item => ({
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-const supabase = useSupabase() as SupabaseClient
+const supabase = getSupabaseClient() as SupabaseClient
 
 async function handleSubmit() {
   errorMsg.value = ''

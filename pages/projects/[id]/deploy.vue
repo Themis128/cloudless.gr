@@ -11,7 +11,7 @@
                   variant="text"
                   prepend-icon="mdi-arrow-left"
                   class="mb-3"
-                  @click="navigateTo(`/projects/${route.params.id}`)"
+                  @click="router.push(`/projects/${route.params.id}`)"
                 >
                   Back to Project
                 </v-btn>
@@ -299,12 +299,17 @@
 </template>
 
 <script setup lang="ts">
+
+import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { definePageMeta } from '#imports';
 definePageMeta({ layout: 'projects', middleware: 'auth' })
 import { useDeploymentStore } from '~/stores/deploymentStore';
 import type { Deployment } from '~/types/project';
 
 // Route and project data
 const route = useRoute();
+const router = useRouter();
 const projectId = route.params.id as string;
 
 // Initialize stores
@@ -505,6 +510,28 @@ const getInstanceType = (config: unknown) => {
     return config.instance_type || 'Not specified';
   }
   return 'Not specified';
+};
+
+// Format date utility for template
+const formatDate = (date: string | number | Date | undefined) => {
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString();
+};
+
+// Map deployment status to color for v-chip
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'active':
+      return 'success';
+    case 'deploying':
+      return 'warning';
+    case 'stopped':
+      return 'error';
+    default:
+      return 'default';
+  }
 };
 </script>
 

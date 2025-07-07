@@ -7,7 +7,7 @@
           variant="text"
           prepend-icon="mdi-arrow-left"
           class="mb-2"
-          @click="navigateTo('/projects')"
+          @click="router.push('/projects')"
         >
           Back to Projects
         </v-btn>
@@ -15,8 +15,13 @@
 
       <div class="header-content">
         <div class="project-info">
-          <v-avatar :color="getProjectColor(project?.type)" size="48" class="me-4">
-            <v-icon :icon="getProjectIcon(project?.type)" color="white" />
+          <v-avatar
+            color="success"
+            size="48"
+            class="me-4"
+            aria-label="User initials avatar"
+          >
+            <span class="text-h6 font-weight-bold">{{ project?.name?.charAt(0) || 'U' }}</span>
           </v-avatar>
           <div>
             <h1 class="text-h4 font-weight-bold mb-1">{{ project?.name || 'Loading...' }}</h1>
@@ -101,7 +106,7 @@
       <!-- Pipeline Flow Container -->
       <FlowContainer
         :steps="pipelineSteps"
-        @update:steps="pipelineSteps = $event"
+        @update:steps="updatePipelineSteps"
         @add-step="addStep"
         @execute="executePipeline"
       />
@@ -264,9 +269,10 @@
 
 import { usePipelineStore } from '@/stores/pipelineStore';
 import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter, navigateTo, definePageMeta } from '#imports';
 import FlowContainer from '~/components/builder/FlowContainer.vue';
 import FlowToolbar from '~/components/builder/FlowToolbar.vue';
-import { useIcons } from '~/composables/useIcons';
+// Removed unused useIcons import
 import type { PipelineConfig, PipelineNode } from '~/types/project';
 
 // Meta
@@ -279,13 +285,13 @@ definePageMeta({
 
 // Route
 const route = useRoute();
+const router = useRouter();
 const projectId = route.params.id as string;
 
 // Composables
-const { getIcon, getIconColor } = useIcons();
+// Removed unused getIcon, getIconColor
 const pipelineStore = usePipelineStore();
 const project = computed(() => pipelineStore.project);
-const loading = computed(() => pipelineStore.loading);
 const fetchProject = () => pipelineStore.fetchProject(projectId);
 onMounted(fetchProject);
 
@@ -305,7 +311,8 @@ const pipelineConfig = ref<PipelineConfig>({
 });
 
 // Pipeline steps for the new builder
-const pipelineSteps = ref([
+type PipelineStep = { component: string; data: Record<string, unknown> };
+const pipelineSteps = ref<PipelineStep[]>([
   { component: 'DataInput', data: {} },
   { component: 'DataValidation', data: {} },
   { component: 'SmartProcessing', data: {} },
@@ -317,29 +324,7 @@ const canRun = computed(() => {
 });
 
 // Methods
-const getProjectIcon = (type: string) => {
-  return getIcon('project', type || 'custom');
-};
-
-const getProjectColor = (type: string) => {
-  return getIconColor(type || 'custom');
-};
-
-const getStatusIcon = (status: string) => {
-  return getIcon('status', status);
-};
-
-const getStatusColor = (status: string) => {
-  const colorMap = {
-    draft: 'grey',
-    active: 'success',
-    training: 'info',
-    deployed: 'primary',
-    completed: 'success',
-    error: 'error',
-  };
-  return colorMap[status as keyof typeof colorMap] || 'grey';
-};
+// Removed unused getProjectIcon, getProjectColor, getStatusIcon, getStatusColor
 
 const savePipeline = async () => {
   try {
@@ -355,60 +340,21 @@ const runPipeline = () => {
   showValidation.value = true;
 };
 
-const handleNodeSelect = (node: PipelineNode) => {
-  selectedNode.value = node;
-  showProperties.value = true;
-};
+// Removed unused handleNodeSelect
 
-const handleNodeAdd = (nodeType: string, position: { x: number; y: number }) => {
-  const newNode: PipelineNode = {
-    id: `node-${Date.now()}`,
-    name: `${nodeType.charAt(0).toUpperCase() + nodeType.slice(1)} Step`,
-    type: nodeType as any,
-    position,
-    config: {},
-    inputs: [],
-  };
+// Removed unused handleNodeAdd
 
-  pipelineConfig.value.nodes.push(newNode);
-};
+// Removed unused handleNodeDelete
 
-const handleNodeDelete = (nodeId: string) => {
-  pipelineConfig.value.nodes = pipelineConfig.value.nodes.filter((n) => n.id !== nodeId);
-  pipelineConfig.value.connections = pipelineConfig.value.connections.filter(
-    (c) => c.source !== nodeId && c.target !== nodeId,
-  );
+// Removed unused handleNodeConnect
 
-  if (selectedNode.value?.id === nodeId) {
-    selectedNode.value = null;
-  }
-};
+// Removed unused handlePipelineChange
 
-const handleNodeConnect = (connection: any) => {
-  pipelineConfig.value.connections.push(connection);
-};
+// Removed unused handleNodeUpdate
 
-const handlePipelineChange = (newConfig: PipelineConfig) => {
-  pipelineConfig.value = newConfig;
-};
+// Removed unused handleNodeDragStart
 
-const handleNodeUpdate = (nodeId: string, updates: any) => {
-  const node = pipelineConfig.value.nodes.find((n) => n.id === nodeId);
-  if (node) {
-    Object.assign(node, updates);
-  }
-};
-
-const handleNodeDragStart = (nodeType: string) => {
-  console.log('Node drag started:', nodeType);
-};
-
-const addNodeToCanvas = (nodeType: string) => {
-  const centerX = 400;
-  const centerY = 300;
-  handleNodeAdd(nodeType, { x: centerX, y: centerY });
-  showNodeLibrary.value = false;
-};
+// Removed unused addNodeToCanvas
 
 const zoomIn = () => {
   zoomLevel.value = Math.min(zoomLevel.value * 1.2, 3);
@@ -440,7 +386,7 @@ const exportPipeline = () => {
 };
 
 // New pipeline builder methods
-const addStep = (step: any) => {
+const addStep = (step: PipelineStep) => {
   pipelineSteps.value.push(step);
 };
 
@@ -448,8 +394,12 @@ const clearAllSteps = () => {
   pipelineSteps.value = [];
 };
 
-const applyTemplate = (template: any[]) => {
+const applyTemplate = (template: PipelineStep[]) => {
   pipelineSteps.value = [...template];
+};
+
+const updatePipelineSteps = (steps: (PipelineStep | null | undefined)[]) => {
+  pipelineSteps.value = steps.filter((s): s is PipelineStep => s != null);
 };
 
 const executePipeline = () => {

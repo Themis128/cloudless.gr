@@ -6,6 +6,16 @@
     "types": ["@playwright/test"]
   },
   "exclude": [
+    "node_modules",
+    ".output",
+    ".nuxt",
+    "dist",
+    "build",
+    "cypress",
+    "playwright",
+    "test-results",
+    "db-backups",
+    "jenkins-reports",
     "docker/**/*",
     "test-*.mjs",
     "test-*.js",

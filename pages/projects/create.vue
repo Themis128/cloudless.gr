@@ -1,6 +1,6 @@
 <script setup lang="ts">
-
-
+import { navigateTo } from '#app';
+import { definePageMeta } from '#imports';
 import ProjectCreateForm from '@/components/projects/ProjectCreateForm.vue';
 import { useCreateProjectStore } from '@/stores/createProjectStore';
 import { useUserStore } from '@/stores/userStore';
@@ -14,69 +14,63 @@ definePageMeta({
   middleware: 'auth',
 });
 
-// Stores
 const userStore = useUserStore();
-
-// User personalization
 const userName = computed(() => {
-  // Try multiple fallback options for user name
-  const user = userStore.user;
-  if (user?.full_name) {
-    return user.full_name.split(' ')[0]; // First name only
-  }
-  if (user?.email) {
-    return user.email.split('@')[0]; // Use email username as fallback
-  }
-  return 'User'; // Final fallback
+  const user = userStore.profile;
+  if (user?.full_name) return user.full_name.split(' ')[0];
+  if (user?.email) return user.email.split('@')[0];
+  return 'User';
 });
-
 const userInitials = computed(() => {
-  const user = userStore.user;
+  const user = userStore.profile;
   if (user?.full_name) {
     const names = user.full_name.split(' ');
-    return names
-      .map((name) => name[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    return names.map((name: string) => name[0]).join('').toUpperCase().slice(0, 2);
   }
-  if (user?.email) {
-    return user.email.slice(0, 2).toUpperCase();
-  }
+  if (user?.email) return user.email.slice(0, 2).toUpperCase();
   return 'U';
 });
 
 const createProjectStore = useCreateProjectStore();
-const createProject = createProjectStore.createProject;
+import type { Project } from '~/types/project';
+const createProject = async (data: CreateProjectData): Promise<Project> => {
+  // Transform all nullable fields to undefined for backend compatibility
+  const transformedData = {
+    ...data,
+    description: data.description || undefined,
+    framework: data.framework || undefined,
+    type: (data.type || 'custom') as 'cv' | 'nlp' | 'regression' | 'recommendation' | 'time-series' | 'custom',
+    config: {
+      environment: data.environment,
+      enable_versioning: data.enable_versioning,
+      enable_monitoring: data.enable_monitoring,
+      enable_auto_scaling: data.enable_auto_scaling,
+      enable_experiment_tracking: data.enable_experiment_tracking,
+      tags: data.tags,
+    },
+  };
+  return await createProjectStore.createProject(transformedData);
+};
 const loading = ref(false);
+const errorMsg = ref<string | null>(null);
+const successMsg = ref<string | null>(null);
 
 const handleCreateProject = async (projectData: CreateProjectData) => {
+  errorMsg.value = null;
+  successMsg.value = null;
+  loading.value = true;
   try {
-    loading.value = true; // Transform the data to match what the composable expects
-    const transformedData = {
-      name: projectData.name,
-      description: projectData.description || undefined,
-      type: (projectData.type || 'custom') as
-        | 'cv'
-        | 'nlp'
-        | 'regression'
-        | 'recommendation'
-        | 'time-series'
-        | 'custom',
-      framework: projectData.framework || undefined,
-      config: {
-        environment: projectData.environment,
-        enable_versioning: projectData.enable_versioning,
-        enable_monitoring: projectData.enable_monitoring,
-        enable_auto_scaling: projectData.enable_auto_scaling,
-        enable_experiment_tracking: projectData.enable_experiment_tracking,
-        tags: projectData.tags,
-      },
-    };
-
-    const project = await createProject(transformedData);
-    await navigateTo(`/projects/${project.id}`);
-  } catch (err) {
+    const project = await createProject(projectData);
+    successMsg.value = 'Project created successfully!';
+    setTimeout(async () => {
+      await navigateTo(`/projects/${project.id}`);
+    }, 1000);
+  } catch (err: unknown) {
+    if (err && typeof err === 'object' && 'message' in err) {
+      errorMsg.value = (err as { message?: string }).message || 'Failed to create project.';
+    } else {
+      errorMsg.value = 'Failed to create project.';
+    }
     console.error('Failed to create project', err);
   } finally {
     loading.value = false;
@@ -91,19 +85,27 @@ const handleCreateProject = async (projectData: CreateProjectData) => {
         variant="text"
         prepend-icon="mdi-arrow-left"
         class="mb-4"
+        :disabled="loading"
+        aria-label="Back to Projects"
         @click="navigateTo('/projects')"
       >
         Back to Projects
       </v-btn>
       <div class="header-content">
-        <v-avatar v-if="userStore.user.avatar_url" size="48" class="me-4">
-          <v-img :src="userStore.user.avatar_url" :alt="userName" />
+        <v-avatar
+          v-if="userStore.profile?.avatar_url"
+          size="48"
+          class="me-4"
+          aria-label="User avatar"
+        >
+          <v-img :src="userStore.profile?.avatar_url" :alt="userName" />
         </v-avatar>
         <v-avatar
           v-else
           size="48"
           color="success"
           class="me-4"
+          aria-label="User initials avatar"
         >
           <span class="text-h6 font-weight-bold">{{ userInitials }}</span>
         </v-avatar>
@@ -127,9 +129,12 @@ const handleCreateProject = async (projectData: CreateProjectData) => {
         <ProjectCreateForm
           :loading="loading"
           :show-advanced="true"
+          :disabled="loading"
           @create="handleCreateProject"
           @cancel="navigateTo('/projects')"
         />
+        <v-alert v-if="errorMsg" type="error" class="mt-4">{{ errorMsg }}</v-alert>
+        <v-alert v-if="successMsg" type="success" class="mt-4">{{ successMsg }}</v-alert>
       </v-card-text>
     </v-card>
   </div>

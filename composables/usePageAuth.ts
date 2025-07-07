@@ -3,7 +3,10 @@
  * This runs on each protected page to ensure auth before rendering
  */
 
+import { ref, readonly } from 'vue'
+import { useRoute, navigateTo } from '#imports'
 import type { User } from '@supabase/supabase-js'
+import { getSupabaseClient } from './useSupabase'
 
 export const usePageAuth = (options: { 
   requireAuth?: boolean,
@@ -16,7 +19,7 @@ export const usePageAuth = (options: {
     redirectTo = '/auth'
   } = options
     const route = useRoute()
-  const supabase = useSupabaseClient()
+  const supabase = getSupabaseClient()
   
   const isAuthenticated = ref(false)
   const isAdmin = ref(false)

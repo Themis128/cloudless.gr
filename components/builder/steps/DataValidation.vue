@@ -172,14 +172,14 @@ import { computed, ref, watch } from 'vue';
 
 // Props
 const props = defineProps<{
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   index?: number;
   previewMode?: boolean;
 }>();
 
 // Emits
 const emit = defineEmits<{
-  update: [data: Record<string, any>];
+  update: [data: Record<string, unknown>];
   validate: [valid: boolean];
 }>();
 
@@ -195,25 +195,166 @@ const localData = ref({
 });
 
 const validating = ref(false);
-const validationResults = ref<Record<string, any> | null>(null);
 
-// Mock validation data
-const validationIssues = ref([
-  {
-    id: 1,
-    severity: 'warning',
-    message: 'Missing values detected',
-    details: '5% of values in column "age" are missing',
-    fixable: true,
-  },
-  {
-    id: 2,
-    severity: 'error',
-    message: 'Invalid data type',
-    details: 'Column "price" contains non-numeric values',
-    fixable: true,
-  },
-]);
+type ValidationResults = {
+  qualityScore: number;
+  completeness: number;
+  accuracy: number;
+  consistency: number;
+};
+
+type ValidationIssue = {
+  id: number;
+  severity: 'warning' | 'error';
+  message: string;
+  details: string;
+  fixable: boolean;
+  column?: string;
+};
+
+const validationResults = ref<ValidationResults | null>(null);
+const validationIssues = ref<ValidationIssue[]>([]);
+let issueId = 1;
+
+// Helper: get tabular data from props.dataSource or props.data
+const getData = (): Array<Record<string, unknown>> => {
+  // Accepts either a 'dataSource' prop or expects tabular data in props.data.dataSource
+  const dataSource = (props.data as Record<string, unknown>)?.dataSource;
+  if (Array.isArray(dataSource)) {
+    return dataSource as Array<Record<string, unknown>>;
+  }
+  if (Array.isArray(props.data)) {
+    return props.data as Array<Record<string, unknown>>;
+  }
+  return [];
+};
+
+// Validation logic
+const validateData = () => {
+  const data = getData();
+  const issues: ValidationIssue[] = [];
+  let totalCells = 0;
+  let missingCells = 0;
+  let typeErrors = 0;
+  let duplicateRows = 0;
+  let outlierCells = 0;
+  const columns = data.length > 0 ? Object.keys(data[0]) : [];
+  const seenRows = new Set<string>();
+
+  // Check for missing values
+  if (localData.value.checkMissingValues) {
+    columns.forEach((col) => {
+      let colMissing = 0;
+      data.forEach((row) => {
+        totalCells++;
+        if (row[col] === null || row[col] === undefined || row[col] === '') {
+          missingCells++;
+          colMissing++;
+        }
+      });
+      if (colMissing > 0) {
+        issues.push({
+          id: issueId++,
+          severity: 'warning',
+          message: 'Missing values detected',
+          details: `${((colMissing / data.length) * 100).toFixed(1)}% of values in column "${col}" are missing`,
+          fixable: true,
+          column: col,
+        });
+      }
+    });
+  }
+
+  // Check for duplicates
+  if (localData.value.checkDuplicates) {
+    data.forEach((row) => {
+      const key = JSON.stringify(row);
+      if (seenRows.has(key)) {
+        duplicateRows++;
+      } else {
+        seenRows.add(key);
+      }
+    });
+    if (duplicateRows > 0) {
+      issues.push({
+        id: issueId++,
+        severity: 'warning',
+        message: 'Duplicate rows detected',
+        details: `${duplicateRows} duplicate rows found`,
+        fixable: true,
+      });
+    }
+  }
+
+  // Check for data type errors (assume numeric columns should be numbers)
+  if (localData.value.validateDataTypes) {
+    columns.forEach((col) => {
+      let colTypeErrors = 0;
+      // Heuristic: if >80% of values are numbers, treat as numeric column
+      const values = data.map((row) => row[col]);
+      const numCount = values.filter((v) => typeof v === 'number' && !isNaN(v as number)).length;
+      if (numCount / data.length > 0.8) {
+        values.forEach((v) => {
+          if (v !== null && v !== undefined && typeof v !== 'number') {
+            typeErrors++;
+            colTypeErrors++;
+          }
+        });
+        if (colTypeErrors > 0) {
+          issues.push({
+            id: issueId++,
+            severity: 'error',
+            message: 'Invalid data type',
+            details: `${colTypeErrors} non-numeric values in column "${col}"`,
+            fixable: true,
+            column: col,
+          });
+        }
+      }
+    });
+  }
+
+  // Check for outliers (z-score method)
+  if (localData.value.checkOutliers) {
+    columns.forEach((col) => {
+      const values = data.map((row) => row[col]).filter((v) => typeof v === 'number') as number[];
+      if (values.length > 0) {
+        const mean = values.reduce((a, b) => a + b, 0) / values.length;
+        const std = Math.sqrt(values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length);
+        values.forEach((v) => {
+          if (Math.abs((v - mean) / (std || 1)) > localData.value.outlierThreshold) {
+            outlierCells++;
+          }
+        });
+        if (outlierCells > 0) {
+          issues.push({
+            id: issueId++,
+            severity: 'warning',
+            message: 'Outliers detected',
+            details: `${outlierCells} outliers in column "${col}"`,
+            fixable: false,
+            column: col,
+          });
+        }
+      }
+    });
+  }
+
+  // Compute metrics
+  const completeness = totalCells > 0 ? 100 - (missingCells / totalCells) * 100 : 100;
+  const accuracy = totalCells > 0 ? 100 - (typeErrors / totalCells) * 100 : 100;
+  const consistency = duplicateRows > 0 ? 100 - (duplicateRows / data.length) * 100 : 100;
+  // Quality score: average of metrics
+  const qualityScore = (completeness + accuracy + consistency) / 3;
+
+  validationResults.value = {
+    qualityScore: Math.round(qualityScore),
+    completeness: Math.round(completeness),
+    accuracy: Math.round(accuracy),
+    consistency: Math.round(consistency),
+  };
+  validationIssues.value = issues;
+};
 
 // Computed
 const isConfigured = computed(() => {
@@ -264,39 +405,68 @@ const updateData = () => {
 
 const runValidation = async () => {
   validating.value = true;
-
   try {
-    // Mock validation process
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    validationResults.value = {
-      qualityScore: 92,
-      completeness: 95,
-      accuracy: 88,
-      consistency: 94,
-    };
-  } catch (error) {
-    console.error('Validation failed:', error);
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate processing
+    validateData();
   } finally {
     validating.value = false;
   }
 };
 
-const fixIssue = async (issue: any) => {
-  console.log('Fixing issue:', issue.message);
-  // Mock fix process
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
+const fixIssue = async (issue: ValidationIssue) => {
+  const data = getData();
+  if (issue.message === 'Missing values detected' && issue.column) {
+    // Fill missing values with median for numeric, mode for string
+    const col = issue.column;
+    const values = data.map((row) => row[col]).filter((v) => v !== null && v !== undefined && v !== '');
+    let fillValue: unknown = '';
+    if (values.length > 0 && typeof values[0] === 'number') {
+      // Median
+      const nums = (values as number[]).sort((a, b) => a - b);
+      fillValue = nums[Math.floor(nums.length / 2)];
+    } else {
+      // Mode
+      const freq: Record<string, number> = {};
+      (values as string[]).forEach((v) => { freq[v] = (freq[v] || 0) + 1; });
+      fillValue = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+    }
+    data.forEach((row) => {
+      if (row[col] === null || row[col] === undefined || row[col] === '') {
+        row[col] = fillValue;
+      }
+    });
+  } else if (issue.message === 'Duplicate rows detected') {
+    // Remove duplicate rows
+    const seen = new Set<string>();
+    for (let i = data.length - 1; i >= 0; i--) {
+      const key = JSON.stringify(data[i]);
+      if (seen.has(key)) {
+        data.splice(i, 1);
+      } else {
+        seen.add(key);
+      }
+    }
+  } else if (issue.message === 'Invalid data type' && issue.column) {
+    // Attempt to coerce values to number
+    const col = issue.column;
+    data.forEach((row) => {
+      if (typeof row[col] !== 'number') {
+        const num = Number(row[col]);
+        if (!isNaN(num)) row[col] = num;
+      }
+    });
+  }
   // Remove the fixed issue
   const index = validationIssues.value.findIndex((i) => i.id === issue.id);
   if (index > -1) {
     validationIssues.value.splice(index, 1);
   }
+  // Re-run validation to update issues/metrics
+  validateData();
 };
 
 const autoFix = async () => {
   const fixableIssues = validationIssues.value.filter((issue) => issue.fixable);
-
   for (const issue of fixableIssues) {
     await fixIssue(issue);
   }

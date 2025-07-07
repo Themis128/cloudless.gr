@@ -25,10 +25,11 @@
 </template>
 
 <script setup lang="ts">
-import { navigateTo } from '#app'
-import { ref } from 'vue'
-import UiTreeView from '~/components/ui/TreeView.vue'
-import type { TreeNode } from '~/composables/useTreeView'
+
+import { navigateTo } from '#app';
+import { ref } from 'vue';
+import UiTreeView from '~/components/ui/TreeView.vue';
+import type { TreeNode } from '~/composables/useTreeView';
 
 const newTreeData = ref<TreeNode[]>([
   // Public
@@ -131,9 +132,9 @@ const newTreeData = ref<TreeNode[]>([
 
 const onNodeSelect = (node: TreeNode) => {
   if (node.link) {
-    navigateTo(node.link)
+    navigateTo(node.link);
   }
-}
+};
 </script>
 
 <style scoped>

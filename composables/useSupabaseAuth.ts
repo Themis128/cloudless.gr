@@ -1,8 +1,13 @@
+import { useSupabaseUser } from '#imports'
+import { computed, readonly } from 'vue'
+import { useSupabaseDB } from './useSupabaseDB'
+import { getSupabaseClient } from './useSupabase'
+
 /**
  * Enhanced Supabase Authentication Composable
  */
 export const useSupabaseAuth = () => {
-  const supabase = useSupabaseClient()
+  const supabase = getSupabaseClient()
   const user = useSupabaseUser()
   // Sign in with email and password
   const signIn = async (email: string, password: string, requireAdminRole = false) => {

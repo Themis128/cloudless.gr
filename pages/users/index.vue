@@ -294,7 +294,10 @@
 
 <script setup lang="ts">
 import { useSupabaseAuth } from '@/composables/useSupabaseAuth';
+import { useSupabaseDB } from '@/composables/useSupabaseDB';
 import { computed, onMounted, ref } from 'vue';
+import { useUserProfileStore } from '@/stores/userProfileStore';
+import { definePageMeta, useHead } from '#imports';
 // Define Project type locally if not exported from '~/types/supabase'
 type Project = {
   id: string;
@@ -415,10 +418,15 @@ const formatDate = (date: Date) => {
 
 const loadUserStats = async () => {
   try {
-    // Load user statistics (projects, activity, etc.)
-    // This would typically come from your API
+    console.log('📊 Loading user stats...');
+    // Load user statistics (projects, activity, etc.) with timeout
     const { projects } = useSupabaseDB();
-    const projectsList = await projects.getAll();
+    
+    // Add timeout to prevent hanging
+    const projectsList = await Promise.race([
+      projects.getAll(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Projects fetch timeout')), 10000))
+    ]);
     
     userStats.value = {
       projects: projectsList?.length || 0,
@@ -426,8 +434,16 @@ const loadUserStats = async () => {
       lastActive: 'Today',
       storageUsed: '2.1 MB'
     };
+    console.log('✅ User stats loaded:', userStats.value);
   } catch (error) {
-    console.error('Error loading user stats:', error);
+    console.warn('⚠️ Error loading user stats, using defaults:', error);
+    // Use default stats on error
+    userStats.value = {
+      projects: 0,
+      activeProjects: 0,
+      lastActive: 'Today',
+      storageUsed: '0 MB'
+    };
   }
 };
 
@@ -451,16 +467,69 @@ const loadRecentActivity = async () => {
 // Lifecycle
 onMounted(async () => {
   try {
-    // Load user profile if not already loaded
+    console.log('🚀 Initializing user dashboard...');
+    
+    // Load user profile if not already loaded (with timeout and retries)
     if (!userProfile.value && !userProfileStore.loading) {
-      await userProfileStore.loadProfile();
+      try {
+        await Promise.race([
+          userProfileStore.loadProfile(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Profile load timeout')), 10000))
+        ]);
+        console.log('✅ User profile loaded successfully');
+      } catch (profileError) {
+        console.warn('⚠️ Profile loading failed, continuing with basic user info:', profileError);
+        // Don't block the page if profile loading fails
+      }
     }
-    await loadUserStats();
-    await loadRecentActivity();
-    // Fetch user role
-    userRole.value = await getUserRole();
+    
+    // Load stats with error handling
+    try {
+      await Promise.race([
+        loadUserStats(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Stats load timeout')), 8000))
+      ]);
+      console.log('✅ User stats loaded successfully');
+    } catch (statsError) {
+      console.warn('⚠️ Stats loading failed, using defaults:', statsError);
+      // Use default stats if loading fails
+      userStats.value = {
+        projects: 0,
+        activeProjects: 0,
+        lastActive: 'Today',
+        storageUsed: '0 MB'
+      };
+    }
+    
+    // Load activity with error handling
+    try {
+      await Promise.race([
+        loadRecentActivity(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Activity load timeout')), 8000))
+      ]);
+      console.log('✅ Recent activity loaded successfully');
+    } catch (activityError) {
+      console.warn('⚠️ Activity loading failed, using defaults:', activityError);
+      // Keep default activity
+    }
+    
+    // Fetch user role with error handling
+    try {
+      const role = await Promise.race([
+        getUserRole(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Role fetch timeout')), 8000))
+      ]);
+      userRole.value = role as string | null;
+      console.log('✅ User role loaded:', userRole.value);
+    } catch (roleError) {
+      console.warn('⚠️ Role loading failed, using default:', roleError);
+      userRole.value = 'user'; // Default role
+    }
+    
+    console.log('🎉 Dashboard initialization completed');
   } catch (error) {
-    console.error('Error initializing user dashboard:', error);
+    console.error('❌ Error initializing user dashboard:', error);
+    // Dashboard should still be functional even if some data fails to load
   }
 });
 </script>

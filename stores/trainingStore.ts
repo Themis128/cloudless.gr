@@ -1,4 +1,10 @@
-import type { TrainingConfig, TrainingMetrics, TrainingSession } from '@/types/project';
+
+import { ref, computed, readonly } from 'vue';
+import { defineStore } from 'pinia';
+import { getSupabaseClient } from '~/composables/useSupabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
+import type { TrainingConfig, TrainingMetrics, TrainingSession, TrainingSessionInsert, TrainingSessionUpdate } from '@/types/project';
 
 export const useTrainingStore = defineStore('training', () => {
   // State
@@ -32,7 +38,7 @@ export const useTrainingStore = defineStore('training', () => {
 
     try {
       loading.value = true;
-      const supabase = useSupabaseClient() as any;
+      const supabase = getSupabaseClient() as SupabaseClient<Database>;
 
       const { data, error } = await supabase
         .from('training_sessions')
@@ -54,14 +60,14 @@ export const useTrainingStore = defineStore('training', () => {
         return [];
       }
 
-      trainingSessions.value = data || [];
+      trainingSessions.value = (data || []) as TrainingSession[];
 
       // Separate active and historical sessions
       activeTrainingSessions.value = trainingSessions.value.filter(
-        (s) => s.status === 'running' || s.status === 'training' || s.status === 'starting',
+        (s: TrainingSession) => s.status === 'running' || s.status === 'training' || s.status === 'starting',
       );
       trainingHistory.value = trainingSessions.value.filter(
-        (s) => s.status === 'completed' || s.status === 'failed' || s.status === 'stopped',
+        (s: TrainingSession) => s.status === 'completed' || s.status === 'failed' || s.status === 'stopped',
       );
 
       return trainingSessions.value;
@@ -80,16 +86,18 @@ export const useTrainingStore = defineStore('training', () => {
   ): Promise<TrainingSession | null> => {
     try {
       training.value = true;
-      const supabase = useSupabaseClient() as any;
+      const supabase = getSupabaseClient() as SupabaseClient<Database>;
 
+      // You may need to provide project_id and owner_id depending on your schema
+      // TODO: Fetch project_id and owner_id from context if needed
+      const insertPayload: TrainingSessionInsert = {
+        name,
+        config,
+        status: 'starting',
+      };
       const { data, error } = await supabase
         .from('training_sessions')
-        .insert({
-          model_version_id: modelVersionId,
-          name,
-          config,
-          status: 'starting',
-        })
+        .insert([insertPayload])
         .select()
         .single();
 
@@ -99,8 +107,8 @@ export const useTrainingStore = defineStore('training', () => {
       }
 
       // Add to active sessions
-      activeTrainingSessions.value.unshift(data);
-      trainingSessions.value.unshift(data);
+      activeTrainingSessions.value.unshift(data as TrainingSession);
+      trainingSessions.value.unshift(data as TrainingSession);
 
       return data;
     } catch (error) {
@@ -118,9 +126,9 @@ export const useTrainingStore = defineStore('training', () => {
     metrics?: TrainingMetrics,
   ): Promise<boolean> => {
     try {
-      const supabase = useSupabaseClient() as any;
+      const supabase = getSupabaseClient() as SupabaseClient<Database>;
 
-      const updateData: any = {
+      const updateData: Partial<TrainingSession> & { status: string; updated_at: string } = {
         status,
         updated_at: new Date().toISOString(),
       };
@@ -135,7 +143,7 @@ export const useTrainingStore = defineStore('training', () => {
 
       const { error } = await supabase
         .from('training_sessions')
-        .update(updateData)
+        .update(updateData as TrainingSessionUpdate)
         .eq('id', sessionId);
 
       if (error) {
@@ -144,7 +152,7 @@ export const useTrainingStore = defineStore('training', () => {
       }
 
       // Update local state
-      const session = trainingSessions.value.find((s) => s.id === sessionId);
+      const session = trainingSessions.value.find((s: TrainingSession) => s.id === sessionId);
       if (session) {
         session.status = status;
         session.updated_at = updateData.updated_at;
@@ -157,13 +165,13 @@ export const useTrainingStore = defineStore('training', () => {
 
         // Move between active and history based on status
         if (status === 'running' || status === 'training') {
-          const historyIndex = trainingHistory.value.findIndex((s) => s.id === sessionId);
+          const historyIndex = trainingHistory.value.findIndex((s: TrainingSession) => s.id === sessionId);
           if (historyIndex !== -1) {
             trainingHistory.value.splice(historyIndex, 1);
             activeTrainingSessions.value.push(session);
           }
         } else if (status === 'completed' || status === 'failed' || status === 'stopped') {
-          const activeIndex = activeTrainingSessions.value.findIndex((s) => s.id === sessionId);
+          const activeIndex = activeTrainingSessions.value.findIndex((s: TrainingSession) => s.id === sessionId);
           if (activeIndex !== -1) {
             activeTrainingSessions.value.splice(activeIndex, 1);
             trainingHistory.value.unshift(session);
@@ -189,7 +197,7 @@ export const useTrainingStore = defineStore('training', () => {
 
   const deleteTrainingSession = async (sessionId: string): Promise<boolean> => {
     try {
-      const supabase = useSupabaseClient() as any;
+      const supabase = getSupabaseClient() as SupabaseClient<Database>;
 
       const { error } = await supabase.from('training_sessions').delete().eq('id', sessionId);
 
@@ -199,17 +207,17 @@ export const useTrainingStore = defineStore('training', () => {
       }
 
       // Remove from all local arrays
-      const sessionIndex = trainingSessions.value.findIndex((s) => s.id === sessionId);
+      const sessionIndex = trainingSessions.value.findIndex((s: TrainingSession) => s.id === sessionId);
       if (sessionIndex !== -1) {
         trainingSessions.value.splice(sessionIndex, 1);
       }
 
-      const activeIndex = activeTrainingSessions.value.findIndex((s) => s.id === sessionId);
+      const activeIndex = activeTrainingSessions.value.findIndex((s: TrainingSession) => s.id === sessionId);
       if (activeIndex !== -1) {
         activeTrainingSessions.value.splice(activeIndex, 1);
       }
 
-      const historyIndex = trainingHistory.value.findIndex((s) => s.id === sessionId);
+      const historyIndex = trainingHistory.value.findIndex((s: TrainingSession) => s.id === sessionId);
       if (historyIndex !== -1) {
         trainingHistory.value.splice(historyIndex, 1);
       }
@@ -223,17 +231,25 @@ export const useTrainingStore = defineStore('training', () => {
 
   const getTrainingLogs = async (sessionId: string): Promise<string[]> => {
     try {
-      // In a real implementation, this would fetch logs from your logging service
-      // For now, return mock logs
-      return [
-        `[${new Date().toISOString()}] Training session ${sessionId} started`,
-        `[${new Date().toISOString()}] Loading dataset...`,
-        `[${new Date().toISOString()}] Dataset loaded successfully`,
-        `[${new Date().toISOString()}] Starting training...`,
-        `[${new Date().toISOString()}] Epoch 1/10 - Loss: 0.8523`,
-        `[${new Date().toISOString()}] Epoch 2/10 - Loss: 0.7234`,
-        `[${new Date().toISOString()}] Epoch 3/10 - Loss: 0.6891`,
-      ];
+      const supabase = getSupabaseClient() as SupabaseClient<Database>;
+      // Define a type for training_logs rows
+      type TrainingLog = { timestamp: string; message: string };
+      const { data, error } = await (supabase.from as unknown as (table: string) => {
+        select: (columns: string) => {
+          eq: (col: string, val: string) => {
+            order: (col: string, opts: { ascending: boolean }) => Promise<{ data: TrainingLog[]; error: unknown }>;
+          };
+        };
+      })('training_logs')
+        .select('timestamp,message')
+        .eq('session_id', sessionId)
+        .order('timestamp', { ascending: true });
+      if (error) {
+        console.error('Error fetching training logs:', error);
+        return [];
+      }
+      // Combine timestamp and message for display
+      return (data || []).map((log: TrainingLog) => `[${log.timestamp}] ${log.message}`);
     } catch (error) {
       console.error('Error fetching training logs:', error);
       return [];

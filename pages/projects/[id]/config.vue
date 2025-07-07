@@ -34,6 +34,7 @@
 </template>
 
 <script setup lang="ts">
+import { definePageMeta } from '#imports';
 definePageMeta({ layout: 'projects', middleware: 'auth' })
 import DatasetConfigForm from '@/components/projects/DatasetConfigForm.vue';
 import EnvironmentConfigForm from '@/components/projects/EnvironmentConfigForm.vue';
@@ -42,6 +43,7 @@ import ProjectMetadataForm from '@/components/projects/ProjectMetadataForm.vue';
 import SecretsManager from '@/components/projects/SecretsManager.vue';
 import { useProjectsStore } from '@/stores/projectsStore';
 import { ref } from 'vue';
+import { useRoute } from 'vue-router';
 
 const route = useRoute();
 const projectsStore = useProjectsStore();

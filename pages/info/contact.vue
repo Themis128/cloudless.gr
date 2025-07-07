@@ -61,9 +61,10 @@
 
 <script setup lang="ts">
 import { useContactForm } from '@/composables/useContactForm';
-import { useSupabase } from '@/composables/useSupabase';
+import { getSupabaseClient } from '@/composables/useSupabase';
 import { ref } from 'vue';
 
+// @ts-expect-error: Nuxt auto-import
 definePageMeta({
   layout: 'default',
   title: 'Contact - Cloudless GR',
@@ -73,7 +74,7 @@ definePageMeta({
 const { name, email, message, errorMsg, submitting, form, formValid, reset } = useContactForm();
 
 const showSuccess = ref(false);
-const supabase = useSupabase();
+const supabase = getSupabaseClient();
 
 
 async function onSubmit() {

@@ -136,7 +136,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(row, index) in previewData.slice(0, 3)" :key="index">
+              <tr v-for="(row, rowIdx) in previewData.slice(0, 3)" :key="rowIdx">
                 <td v-for="column in Object.keys(row)" :key="column">
                   {{ row[column] }}
                 </td>
@@ -217,15 +217,28 @@
 import { computed, ref, watch } from 'vue';
 
 // Props
+type DataInputProps = {
+  sourceType?: string;
+  files?: File[] | null;
+  connectionString?: string;
+  query?: string;
+  apiUrl?: string;
+  httpMethod?: 'GET' | 'POST';
+  requestBody?: string;
+  sampleSize?: number;
+  includeHeaders?: boolean;
+  preprocessingScript?: string;
+};
+
 const props = defineProps<{
-  data: Record<string, any>;
+  data: DataInputProps;
   index?: number;
   previewMode?: boolean;
 }>();
 
 // Emits
 const emit = defineEmits<{
-  update: [data: Record<string, any>];
+  update: [data: DataInputProps];
   validate: [valid: boolean];
 }>();
 
@@ -245,7 +258,8 @@ const localData = ref({
 });
 
 const showAdvanced = ref(false);
-const previewData = ref<any[]>([]);
+type PreviewRow = Record<string, string | number | boolean | null>;
+const previewData = ref<PreviewRow[]>([]);
 
 // Source type options
 const sourceTypes = [

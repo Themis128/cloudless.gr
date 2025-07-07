@@ -1,8 +1,8 @@
-import { useSupabase } from '~/composables/useSupabase'
+import { getSupabaseClient } from '~/composables/useSupabase'
 import { ref } from 'vue'
 
 export function useStorage() {
-    const supabase = useSupabase()
+    const supabase = getSupabaseClient()
     const loading = ref(false)
     const error = ref<string | null>(null)
 

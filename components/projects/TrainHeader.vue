@@ -129,7 +129,9 @@ defineEmits<{
   stopTraining: [session: TrainingSessionUI];
 }>();
 
+import { navigateTo } from '#app';
 // Composables
+import { useIcons } from '@/composables/useIcons';
 const { getProjectIcon, getProjectColor } = useIcons();
 </script>
 

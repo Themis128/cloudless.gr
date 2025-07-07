@@ -7,7 +7,7 @@
           variant="text"
           prepend-icon="mdi-arrow-left"
           class="mb-2"
-          @click="navigateTo(`/projects/${route.params.id}`)"
+          @click="router.push(`/projects/${route.params.id}`)"
         >
           Back to Pipeline
         </v-btn>
@@ -15,8 +15,13 @@
 
       <div class="header-content">
         <div class="project-info">
-          <v-avatar :color="getProjectColor(project?.type)" size="48" class="me-4">
-            <v-icon :icon="getProjectIcon(project?.type)" color="white" />
+          <v-avatar
+            color="success"
+            size="48"
+            class="me-4"
+            aria-label="User initials avatar"
+          >
+            <span class="text-h6 font-weight-bold">{{ project?.name?.charAt(0) || 'U' }}</span>
           </v-avatar>
           <div>
             <h1 class="text-h4 mb-1">{{ project?.name || 'Training' }}</h1>
@@ -109,7 +114,7 @@
                 :loading="modelsLoading"
                 @view-model="(model: any) => console.log('View model:', model)"
                 @download-model="(model: any) => console.log('Download model:', model)"
-                @deploy-model="(model: any) => navigateTo(`/projects/${route.params.id}/deploy`)"
+                @deploy-model="(model: any) => router.push(`/projects/${route.params.id}/deploy`)"
               />
             </v-card-text>
           </v-card>
@@ -120,6 +125,10 @@
 </template>
 
 <script setup lang="ts">
+
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { definePageMeta } from '#imports';
 definePageMeta({ layout: 'projects', middleware: 'auth' })
 
 import { useProjectsStore } from '@/stores/projectsStore';
@@ -145,7 +154,7 @@ interface TrainingSessionUI {
   totalEpochs?: number;
 }
 const route = useRoute();
-const { getProjectIcon, getProjectColor } = useIcons();
+const router = useRouter();
 const projectsStore = useProjectsStore();
 // const trainingStore = useTrainingStore();
 // Use trainingStore.sessions, trainingStore.fetchTrainingSessions, trainingStore.startTraining, etc.

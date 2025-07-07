@@ -8,6 +8,8 @@ export const useFormsStore = defineStore('forms', () => {
     password: '',
     loading: false,
     error: null as string | null,
+    success: false,
+    successMessage: null as string | null,
   });
 
   // Register form state
@@ -32,7 +34,7 @@ export const useFormsStore = defineStore('forms', () => {
 
   // Utility actions
   function resetLogin() {
-    login.value = { email: '', password: '', loading: false, error: null };
+    login.value = { email: '', password: '', loading: false, error: null, success: false, successMessage: null };
   }
   function resetRegister() {
     register.value = { name: '', email: '', password: '', confirmPassword: '', agreeTerms: false, loading: false, error: null, success: '' };

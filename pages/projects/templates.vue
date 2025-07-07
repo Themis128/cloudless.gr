@@ -220,6 +220,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { definePageMeta, navigateTo } from '#imports';
 import { mockTemplates } from '~/data/templates';
 import type { ProjectTemplate } from '~/types/project';
 

@@ -1,12 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useSupabase } from '~/composables/useSupabase'
+import { getSupabaseClient } from '~/composables/useSupabase'
+
+interface StorageFile {
+    id?: string
+    name: string
+    url: string | null
+    [key: string]: unknown
+}
 
 export const useStorageStore = defineStore('storage', () => {
-    const files = ref<any[]>([])
+    const files = ref<StorageFile[]>([])
     const loading = ref(false)
     const error = ref<string | null>(null)
-    const supabase = useSupabase()
+    const supabase = getSupabaseClient()
 
     async function fetchFiles(userId: string) {
         loading.value = true

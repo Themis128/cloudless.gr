@@ -124,20 +124,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, defineAsyncComponent } from 'vue';
 
 // Props
 const props = defineProps<{
   steps: Array<{
     component: string;
-    data: Record<string, any>;
+    data: Record<string, unknown>;
   }>;
 }>();
 
 // Emits
 const emit = defineEmits<{
-  'update:steps': [steps: Array<any>];
-  'add-step': [step: any];
+  'update:steps': [steps: Array<{ component: string; data: Record<string, unknown> } | undefined>];
+  'add-step': [step: { component: string; data: Record<string, unknown> }];
   execute: [];
 }>();
 
@@ -171,7 +171,7 @@ const resolveComponent = (name: string) => {
   return defineAsyncComponent(() => import(`~/components/builder/steps/${name}.vue`));
 };
 
-const updateStep = (index: number, newData: any) => {
+const updateStep = (index: number, newData: Record<string, unknown>) => {
   const updated = [...props.steps];
   updated[index].data = newData;
   emit('update:steps', updated);

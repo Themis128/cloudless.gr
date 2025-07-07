@@ -27,7 +27,7 @@
 
 <script setup lang="ts">
 import { navigateTo } from '#app';
-import { useSupabase } from '@/composables/useSupabase';
+import { getSupabaseClient } from '@/composables/useSupabase';
 import { computed, onMounted, ref } from 'vue';
 
 const props = defineProps<{
@@ -40,7 +40,7 @@ const drawer = computed({
   set: (val) => emit('update:modelValue', val),
 });
 
-const supabase = useSupabase();
+const supabase = getSupabaseClient();
 const isAdmin = ref(false);
 
 const navLinks = [
@@ -63,7 +63,8 @@ async function fetchUserRole() {
     .eq('id', user.id)
     .single();
 
-  isAdmin.value = !!(profile as any)?.is_admin;
+  const typedProfile = profile as { is_admin?: boolean } | null;
+  isAdmin.value = !!typedProfile?.is_admin;
 }
 
 onMounted(() => {

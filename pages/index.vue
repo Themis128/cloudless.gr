@@ -1,3 +1,4 @@
+// ...existing code...
 <template>
   <div class="landing-page">
     <div class="glass-container">
@@ -51,7 +52,9 @@ import ProcessSteps from '~/components/landing/ProcessSteps.vue';
 import StatsSection from '~/components/landing/StatsSection.vue';
 import TestimonialsSection from '~/components/landing/TestimonialsSection.vue';
 
+
 // SEO and Meta
+import { useHead, definePageMeta } from '#imports';
 useHead({
   title: 'Cloudless.gr - Power Without the Code',
   meta: [
@@ -104,8 +107,10 @@ onMounted(() => {
     // Log environment variables (safe subset only)
     try {
       // Only log non-sensitive info
-      console.log('[DEBUG] SUPABASE_URL:', process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL);
-      console.log('[DEBUG] SUPABASE_ANON_KEY length:', (process.env.SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '').length);
+      // Nuxt 3: import.meta.env is available, but type guard for TS
+      const env = (typeof import.meta.env !== 'undefined' ? import.meta.env : {}) as Record<string, string | undefined>;
+      console.log('[DEBUG] SUPABASE_URL:', process.env.SUPABASE_URL || env.VITE_SUPABASE_URL);
+      console.log('[DEBUG] SUPABASE_ANON_KEY length:', (process.env.SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY || '').length);
     } catch (e) {
       console.error('[DEBUG] Error logging env vars:', e);
     }

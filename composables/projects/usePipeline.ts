@@ -1,4 +1,6 @@
+
 // usePipeline composable for pipeline management
+import { ref, readonly } from 'vue';
 import type { PipelineConfig, PipelineConnection, PipelineNode, Project } from '~/types/project';
 
 export const usePipeline = (projectId: string) => {
@@ -31,8 +33,11 @@ export const usePipeline = (projectId: string) => {
         body: { config },
       });
 
-      if (project.value) {
-        (project.value as any).config = { ...(project.value as any).config, pipeline: config };
+      if (project.value && typeof project.value.config === 'object' && project.value.config !== null) {
+        project.value.config = {
+          ...(project.value.config as Record<string, unknown>),
+          pipeline: config,
+        };
       }
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to update pipeline';

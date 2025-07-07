@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Database } from '~/types/supabase.d'
+import { getSupabaseClient } from '~/composables/useSupabase'
 
 type UserProfile = {
   id: string
@@ -28,7 +29,7 @@ export const useSupabaseStore = defineStore('supabase', {
   actions: {    async fetchUserProfile(email: string) {
       this.loading = true
       this.error = null
-      const supabase = useSupabaseClient<Database>()
+      const supabase = getSupabaseClient() as import('@supabase/supabase-js').SupabaseClient<Database>
       
       try {
         const { data, error } = await supabase
@@ -71,7 +72,7 @@ export const useSupabaseStore = defineStore('supabase', {
       this.loading = true
       this.error = null
       this.success = false
-      const supabase = useSupabaseClient<Database>()
+      const supabase = getSupabaseClient() as import('@supabase/supabase-js').SupabaseClient<Database>
       
       try {
         // Check user profile

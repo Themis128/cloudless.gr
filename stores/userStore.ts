@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia'
+import { getSupabaseClient } from '~/composables/useSupabase'
+import { useAuthStore } from './authStore'
 
 interface UserPreferences {
   theme?: 'light' | 'dark' | 'auto'
@@ -111,7 +113,7 @@ export const useUserStore = defineStore('user', {
 
     // Change password
     async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
-      const supabase = useSupabaseClient()
+      const supabase = getSupabaseClient()
       
       try {
         // Update to new password

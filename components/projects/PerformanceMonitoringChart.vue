@@ -278,6 +278,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import type { PerformanceMetrics } from '@/types/project';
 
 interface Props {

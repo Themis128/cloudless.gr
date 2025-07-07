@@ -1,10 +1,11 @@
 import type { RoleCheckResult, SessionData, UserRole } from '~/types/auth'
+import { getSupabaseClient } from './useSupabase'
 
 /**
  * Enhanced auth guard composable with better error handling and type safety
  */
 export const useAuthGuard = () => {
-  const supabase = useSupabaseClient()
+  const supabase = getSupabaseClient()
 
   /**
    * Check if current user has a specific role

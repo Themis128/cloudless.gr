@@ -25,12 +25,12 @@
       </div>
 
       <v-menu>
-        <template #activator="{ props }">
+        <template #activator="{ props: menuProps }">
           <v-btn
             icon="mdi-dots-vertical"
             size="small"
             variant="text"
-            v-bind="props"
+            v-bind="menuProps"
             class="card-menu-btn"
             @click.stop
           />
@@ -156,7 +156,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useIcons } from '~/composables/useIcons';
-import type { Project } from '~/types/project';
+import { navigateTo } from '#app';
+import type { Project, ModelVersion } from '~/types/project';
 
 // Props
 interface Props {
@@ -169,7 +170,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 // Emits
-const emit = defineEmits<{
+const _emit = defineEmits<{
   click: [];
   delete: [];
 }>();
@@ -179,7 +180,7 @@ const { getIcon, getIconColor } = useIcons();
 
 // Computed
 const hasDeployedModel = computed(() => {
-  return props.project.model_versions?.some((version) => version.deployed) || false;
+  return props.project.model_versions?.some((version: ModelVersion) => version.deployed) || false;
 });
 
 // Methods
@@ -266,7 +267,7 @@ const viewTraining = () => {
 };
 
 const openDeployment = () => {
-  const deployedVersion = props.project.model_versions?.find((v) => v.deployed);
+  const deployedVersion = props.project.model_versions?.find((v: any) => v.deployed);
   if (deployedVersion?.endpoint_url) {
     window.open(deployedVersion.endpoint_url, '_blank');
   }

@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia';
+import { getSupabaseClient } from '~/composables/useSupabase';
+import { useSupabaseUser } from '#imports';
 
 export const useCreateProjectStore = defineStore('createProject', {
   state: () => ({
@@ -17,7 +19,7 @@ export const useCreateProjectStore = defineStore('createProject', {
       this.loading = true;
       this.error = null;
       try {
-        const supabase = useSupabaseClient<any>() as import('@supabase/supabase-js').SupabaseClient;
+        const supabase = getSupabaseClient();
         const user = useSupabaseUser();
         if (!user.value) throw new Error('User must be authenticated to create projects');
         const projectPayload = {

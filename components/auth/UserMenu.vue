@@ -27,10 +27,10 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { useSupabase } from '@/composables/useSupabase'
+import { getSupabaseClient } from '@/composables/useSupabase'
 
 const router = useRouter()
-const supabase = useSupabase()
+const supabase = getSupabaseClient()
 
 const menuItems = [
   { title: 'Profile', to: '/users/profile' },

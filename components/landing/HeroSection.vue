@@ -69,6 +69,8 @@
 </template>
 
 <script setup lang="ts">
+import { navigateTo } from '#app';
+
 const goToInfo = async () => {
   console.log('Navigating to /info');
   await navigateTo('/info');

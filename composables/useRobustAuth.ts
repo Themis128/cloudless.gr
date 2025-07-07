@@ -3,6 +3,8 @@
  * Features: Account lockout, password reset, email verification, admin roles, Greek timezone
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { useSupabaseClient, useSupabaseUser } from '#imports'
+import { readonly, ref, computed } from 'vue'
 import type { User } from '@supabase/supabase-js'
 import type { Database } from '~/types/supabase'
 
@@ -87,7 +89,7 @@ export const useRobustAuth = () => {
         return false
       }
 
-      const profile = data as any
+      const profile = data as UserProfile
       if (!profile.locked_until) return false
 
       const lockTime = new Date(profile.locked_until)
@@ -113,7 +115,7 @@ export const useRobustAuth = () => {
         .single()
 
       if (currentProfile) {
-        const profile = currentProfile as any
+        const profile = currentProfile as UserProfile
         const newAttempts = (profile.failed_login_attempts ?? 0) + 1
         const updates: ProfilesUpdate = {
           failed_login_attempts: newAttempts,

@@ -9,9 +9,11 @@ import type {
   Project,
   TrainingSession,
 } from '~/types/supabase.d';
+import { getSupabaseClient } from './useSupabase';
+import { useSupabaseUser } from '#imports';
 
 export function useSupabaseDB() {
-  const supabase = useSupabaseClient<Database>();
+  const supabase = getSupabaseClient() as import('@supabase/supabase-js').SupabaseClient<Database>;
   const user = useSupabaseUser();
 
   // Helper function for error handling

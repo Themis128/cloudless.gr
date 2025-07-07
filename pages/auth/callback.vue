@@ -27,7 +27,7 @@
             <v-btn
               color="primary"
               variant="elevated"
-              @click="navigateTo('/auth/login')"
+              @click="navigateTo('/auth')"
             >
               Try Again
             </v-btn>
@@ -39,7 +39,7 @@
             </v-icon>
             <h2 class="text-h5 mb-2 text-success">Authentication Successful!</h2>
             <p class="text-body-1 text-medium-emphasis">
-              Redirecting you to your dashboard...
+              Redirecting you to your users page...
             </p>
           </div>
         </v-col>
@@ -49,18 +49,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
+import { navigateTo, useRoute } from '#app'
 
+// Define page meta (Nuxt 3 compiler macro)
+// @ts-ignore - definePageMeta is a Nuxt compiler macro
 definePageMeta({ 
   layout: 'auth'
 })
 
 const loading = ref(true)
 const error = ref<string | null>(null)
-const supabase = useSupabaseClient()
 
 onMounted(async () => {
   try {
+    // Use the same manual client as the auth middleware for consistency
+    const { useManualSupabaseClient } = await import('~/composables/useManualSupabase')
+    const supabase = useManualSupabaseClient()
+    
+    // Get the redirect query parameter
+    const route = useRoute()
+    const redirectTo = route.query.redirect as string || '/users/index'
+    
     // Handle the auth callback
     const { data, error: authError } = await supabase.auth.getSession()
     
@@ -69,14 +79,18 @@ onMounted(async () => {
     }
     
     if (data.session) {
-      // User is authenticated, redirect to dashboard
+      // User is authenticated, redirect to the intended page
+      console.log(`✅ Authentication successful, redirecting to ${redirectTo}`)
+      // Shorter delay and more direct navigation
+      await nextTick()
       setTimeout(() => {
-        navigateTo('/users')
-      }, 1500)
+        navigateTo(redirectTo)
+      }, 500)
     } else {
       // No session, redirect to login
+      console.log('❌ No session found, redirecting to login')
       setTimeout(() => {
-        navigateTo('/auth/login')
+        navigateTo('/auth')
       }, 1500)
     }
   } catch (err) {

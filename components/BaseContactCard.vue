@@ -78,10 +78,12 @@
 </template>
 
 <script setup lang="ts">
-import { useContactForm } from '@/composables/useContactForm'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { PropType } from 'vue'
-import { computed, ref, onMounted, nextTick } from 'vue'
+
+import { useContactForm } from '@/composables/useContactForm';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import type { PropType } from 'vue';
+import { computed, ref, onMounted, nextTick } from 'vue';
+
 
 interface ContactSocialLink {
   name: string;
@@ -91,7 +93,9 @@ interface ContactSocialLink {
   aria?: string;
 }
 
-const typedSocialLinks = computed<ContactSocialLink[]>(() => props.socialLinks as ContactSocialLink[])
+
+const typedSocialLinks = computed<ContactSocialLink[]>(() => Array.isArray(props.socialLinks) ? props.socialLinks as ContactSocialLink[] : []);
+
 
 const props = defineProps({
   title: { type: String, default: 'Contact Us' },
@@ -100,60 +104,66 @@ const props = defineProps({
   submitText: { type: String, default: 'Send Message' },
   socialLinks: { type: Array as PropType<ContactSocialLink[]>, default: () => [] },
   onSubmit: { type: Function as PropType<(payload: { name: string; email: string; message: string }) => Promise<void>>, required: true },
-})
+});
+
 
 const {
   name,
   email,
   message,
-  errorMsg,  successMsg,
+  errorMsg,
+  successMsg,
   submitting,
   isFlipped,
   form,
   formValid,
-  reset: _reset,
-} = useContactForm()
+} = useContactForm();
 
-const nameField = ref()
+
+const nameField = ref<HTMLInputElement | null>(null);
+
 
 onMounted(() => {
   nextTick(() => {
-    nameField.value?.focus?.()
-  })
-})
+    if (nameField.value && typeof nameField.value.focus === 'function') {
+      nameField.value.focus();
+    }
+  });
+});
+
 
 async function onSubmitInternal() {
-  errorMsg.value = ''
-  successMsg.value = ''
-  submitting.value = true
-  const valid = await form.value?.validate?.()
+  errorMsg.value = '';
+  successMsg.value = '';
+  submitting.value = true;
+  const valid = await form.value?.validate?.();
   if (!valid) {
-    submitting.value = false
-    return
+    submitting.value = false;
+    return;
   }
   if (!name.value || !email.value || !message.value) {
-    errorMsg.value = 'Please fill out all fields.'
-    submitting.value = false
-    return
+    errorMsg.value = 'Please fill out all fields.';
+    submitting.value = false;
+    return;
   }
   try {
-    await props.onSubmit({ name: name.value, email: email.value, message: message.value })
-    successMsg.value = 'Message sent!'
-    name.value = ''
-    email.value = ''
-    message.value = ''
+    await props.onSubmit({ name: name.value, email: email.value, message: message.value });
+    successMsg.value = 'Message sent!';
+    name.value = '';
+    email.value = '';
+    message.value = '';
     setTimeout(() => {
-      isFlipped.value = true
-      successMsg.value = ''
-    }, 1000)
+      isFlipped.value = true;
+      successMsg.value = '';
+    }, 1000);
   } catch (e: unknown) {
     if (e && typeof e === 'object' && 'message' in e) {
-      errorMsg.value = (e as { message?: string }).message || 'Failed to send message. Please try again.'
+      errorMsg.value = (e as { message?: string }).message || 'Failed to send message. Please try again.';
     } else {
-      errorMsg.value = 'Failed to send message. Please try again.'
+      errorMsg.value = 'Failed to send message. Please try again.';
     }
   } finally {
-    submitting.value = false
+    submitting.value = false;
   }
 }
 </script>

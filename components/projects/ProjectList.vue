@@ -47,12 +47,12 @@
                 </div>
 
                 <v-menu>
-                  <template #activator="{ props }">
+                  <template #activator="{ props: menuProps }">
                     <v-btn
                       icon="mdi-dots-vertical"
                       size="small"
                       variant="text"
-                      v-bind="props"
+                      v-bind="menuProps"
                       @click.stop
                     />
                   </template>
@@ -197,6 +197,8 @@ const safeStatusDisplay = (status: string) => {
   };
   return statusMap[status as keyof typeof statusMap] || status || 'Unknown';
 };
+
+import { navigateTo } from '#app';
 
 const editProject = (project: Project) => {
   navigateTo(`/projects/${project.id}/config`);

@@ -140,8 +140,12 @@
 </template>
 
 <script setup lang="ts">
+
 import { withoutTrailingSlash } from 'ufo';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
+import { useAuthStore } from '@/stores/authStore';
+import { navigateTo } from '#app';
 import { useFloatingNavPosition } from '~/composables/useFloatingNavPosition';
 
 // Define public routes that do not require authentication

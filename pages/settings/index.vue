@@ -17,7 +17,9 @@
   </v-container>
 </template>
 
+
 <script setup lang="ts">
+import { definePageMeta } from '#imports';
 definePageMeta({ layout: 'user' })
 import { ref } from 'vue'
 

@@ -23,10 +23,10 @@
 </template>
 
 <script setup lang="ts">
-import { useSupabase } from '@/composables/useSupabase'
+import { getSupabaseClient } from '@/composables/useSupabase'
 import { navigateTo } from '#app'
 
-const supabase = useSupabase()
+const supabase = getSupabaseClient()
 
 const navLinks = [
   { name: 'Dashboard', path: '/dashboard' },

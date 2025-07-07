@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Database } from '~/types/supabase.d'
+import { getSupabaseClient } from '~/composables/useSupabase'
 
 interface ContactForm {
   name: string
@@ -53,7 +54,7 @@ export const useContactStore = defineStore('contact', {
       this.success = false
 
       try {
-        const supabase = useSupabaseClient<Database>()
+        const supabase = getSupabaseClient() as import('@supabase/supabase-js').SupabaseClient<Database>
         
         const { error } = await supabase
           .from('contact_messages')
