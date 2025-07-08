@@ -36,7 +36,7 @@ const navLinks = [
 
 async function logout() {
   await supabase.auth.signOut()
-  navigateTo('/auth/login')
+  navigateTo('/auth')
 }
 </script>
 

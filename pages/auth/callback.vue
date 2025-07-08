@@ -49,11 +49,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
-import { navigateTo, useRoute } from '#app'
 
-// Define page meta (Nuxt 3 compiler macro)
-// @ts-ignore - definePageMeta is a Nuxt compiler macro
+import { ref, onMounted } from 'vue'
+import { navigateTo, useRoute, definePageMeta } from '#imports'
+
 definePageMeta({ 
   layout: 'auth'
 })
@@ -69,7 +68,8 @@ onMounted(async () => {
     
     // Get the redirect query parameter
     const route = useRoute()
-    const redirectTo = route.query.redirect as string || '/users/index'
+    const redirectToRaw = route.query.redirect as string
+    const redirectTo = (!redirectToRaw || redirectToRaw === '/users/index') ? '/users' : redirectToRaw
     
     // Handle the auth callback
     const { data, error: authError } = await supabase.auth.getSession()
@@ -81,21 +81,17 @@ onMounted(async () => {
     if (data.session) {
       // User is authenticated, redirect to the intended page
       console.log(`✅ Authentication successful, redirecting to ${redirectTo}`)
-      // Shorter delay and more direct navigation
-      await nextTick()
-      setTimeout(() => {
-        navigateTo(redirectTo)
-      }, 500)
+      await navigateTo(redirectTo)
     } else {
       // No session, redirect to login
       console.log('❌ No session found, redirecting to login')
-      setTimeout(() => {
-        navigateTo('/auth')
-      }, 1500)
+      await navigateTo('/auth')
     }
   } catch (err) {
     console.error('Auth callback error:', err)
-    error.value = err instanceof Error ? err.message : 'Authentication failed'
+    error.value = err instanceof Error && err.message
+      ? 'Error: ' + err.message
+      : 'Authentication failed. Please try again.'
   } finally {
     loading.value = false
   }

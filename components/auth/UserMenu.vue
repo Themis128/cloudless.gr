@@ -47,7 +47,7 @@ function navigate(path: string) {
 async function logout() {
   const { error } = await supabase.auth.signOut()
   if (!error) {
-    router.push('/auth/login')
+    router.push('/auth')
   } else {
     console.error('Logout failed:', error.message)
   }

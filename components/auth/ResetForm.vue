@@ -39,7 +39,7 @@
         Send Reset Link
       </v-btn>
     </v-form>
-    <NuxtLink to="/auth/login" class="login-link mt-4">
+    <NuxtLink to="/auth" class="login-link mt-4">
       <v-icon left size="18" color="#3b82f6">mdi-login</v-icon>
       <span>Already have an account? <span class="gradient-text">Login</span></span>
     </NuxtLink>
@@ -47,6 +47,14 @@
 </template>
 
 <script setup lang="ts">
+// Registration form interface matching DB fields
+export interface RegistrationForm {
+  email: string;
+  full_name: string;
+  password: string;
+  confirmPassword: string;
+  agreeTerms: boolean;
+}
 
 import { storeToRefs } from 'pinia';
 import { ref } from 'vue';

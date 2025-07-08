@@ -1,3 +1,5 @@
+// Ensure HTMLElement is available for type assertions (for strict/SSR TS environments)
+// (Removed problematic redeclaration of HTMLElement)
 /**
  * Enhanced error handler plugin
  * Vue 3 + Nuxt 3 + Vuetify 3 best practices:
@@ -26,9 +28,14 @@ interface ErrorReport {
 
 export default defineNuxtPlugin((nuxtApp) => {
   // Global error handler with enhanced reporting
-  nuxtApp.vueApp.config.errorHandler = (error: Error, instance, info) => {
+  nuxtApp.vueApp.config.errorHandler = (err: unknown, instance, info) => {
+    let error: Error
+    if (err instanceof Error) {
+      error = err
+    } else {
+      error = new Error(typeof err === 'string' ? err : 'Unknown error')
+    }
     console.error('Vue Error:', error, info)
-    
     const errorReport: ErrorReport = {
       message: error.message,
       stack: error.stack,
@@ -36,10 +43,8 @@ export default defineNuxtPlugin((nuxtApp) => {
       severity: determineSeverity(error, info),
       category: categorizeError(error, info)
     }
-    
     // Report error to monitoring service
     reportError(errorReport)
-    
     // Handle critical errors differently
     if (errorReport.severity === 'critical') {
       console.error('🚨 Critical error detected, may need page reload')
@@ -48,9 +53,25 @@ export default defineNuxtPlugin((nuxtApp) => {
   
   // Enhanced client-side error handling
   if (process.client) {
-    // Global unhandled promise rejection handler
+    // Enhanced client-side error handling
     window.addEventListener('unhandledrejection', (event) => {
       const error = event.reason
+      
+      // Check if it's a Service Worker or PWA-related error
+      if (error && typeof error === 'object' && 
+          (error.message?.includes('service worker') || 
+           error.message?.includes('ServiceWorker') ||
+           error.message?.includes('InvalidStateError') ||
+           error.message?.includes('Failed to register'))) {
+        
+        console.warn('🔧 Service Worker error handled gracefully:', error.message || error)
+        event.preventDefault()
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.info('💡 Service Worker features are disabled in development mode')
+        }
+        return
+      }
       
       // Check if it's a connection-related error (existing logic)
       if (error && typeof error === 'object' && 
@@ -109,27 +130,29 @@ export default defineNuxtPlugin((nuxtApp) => {
     // Resource loading error handler
     window.addEventListener('error', (event) => {
       if (event.target && event.target !== window) {
-        const target = event.target as HTMLElement
-        const resourceType = target.tagName.toLowerCase()
-        
+        const target = event.target as { tagName?: string; getAttribute?: (name: string) => string | null; src?: string; href?: string }
+        const resourceType = target.tagName?.toLowerCase?.() || 'resource'
         console.warn(`Resource loading error: ${resourceType}`, target)
-        
         const errorReport: ErrorReport = {
-          message: `Failed to load ${resourceType}: ${target.getAttribute('src') || target.getAttribute('href')}`,
+          message: `Failed to load ${resourceType}: ${target.getAttribute?.('src') || target.getAttribute?.('href')}`,
           context: getErrorContext(),
           severity: 'medium',
           category: 'network'
         }
-        
         reportError(errorReport)
       }
     }, true)
   }
   
   // Custom error boundary for components
-  nuxtApp.hook('vue:error', (error, instance, info) => {
+  nuxtApp.hook('vue:error', (err, instance, info) => {
+    let error: Error
+    if (err instanceof Error) {
+      error = err
+    } else {
+      error = new Error(typeof err === 'string' ? err : 'Unknown error')
+    }
     console.error('Vue Hook Error:', error, info)
-    
     const errorReport: ErrorReport = {
       message: error.message,
       stack: error.stack,
@@ -137,14 +160,18 @@ export default defineNuxtPlugin((nuxtApp) => {
       severity: determineSeverity(error, info),
       category: 'ui'
     }
-    
     reportError(errorReport)
   })
   
   // API error handler
-  nuxtApp.hook('app:error', (error) => {
+  nuxtApp.hook('app:error', (err) => {
+    let error: Error
+    if (err instanceof Error) {
+      error = err
+    } else {
+      error = new Error(typeof err === 'string' ? err : 'Unknown error')
+    }
     console.error('App Error:', error)
-    
     const errorReport: ErrorReport = {
       message: error.message,
       stack: error.stack,
@@ -152,7 +179,6 @@ export default defineNuxtPlugin((nuxtApp) => {
       severity: 'high',
       category: 'api'
     }
-    
     reportError(errorReport)
   })
   

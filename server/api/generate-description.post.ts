@@ -5,9 +5,21 @@ const ollama = new Ollama({
   host: process.env.OLLAMA_HOST ?? 'http://localhost:11434',
 });
 
+
+interface GenerateDescriptionBody {
+  name: string
+  type?: string
+}
+
 export default defineEventHandler(async (event) => {
+  // Optional: Add authentication here if needed
+  // const user = await serverSupabaseUser(event)
+  // if (!user) {
+  //   event.node.res.statusCode = 401
+  //   return { error: 'Not authenticated' }
+  // }
   try {
-    const body = await readBody(event);
+    const body = await readBody(event) as GenerateDescriptionBody;
     const { name, type } = body;
 
     if (!name) {
@@ -66,25 +78,33 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    event.node.res.statusCode = 200 // Explicit for clarity
     return {
       description,
-    };
-  } catch (error: any) {
+    }
+  } catch (error: unknown) {
     console.error('AI description generation error:', error);
 
-    if (error.statusCode) {
+    if (typeof error === 'object' && error !== null && 'statusCode' in error) {
       throw error;
     }
 
     // Handle Ollama specific errors
-    if (error.message?.includes('model')) {
+    if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string' && (error as any).message.includes('model')) {
       throw createError({
         statusCode: 404,
         statusMessage: `Model not found. Please ensure the model is installed in Ollama.`,
       });
     }
 
-    if (error.message?.includes('connection') || error.code === 'ECONNREFUSED') {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      (
+        ('message' in error && typeof (error as any).message === 'string' && (error as any).message.includes('connection')) ||
+        ('code' in error && (error as any).code === 'ECONNREFUSED')
+      )
+    ) {
       throw createError({
         statusCode: 503,
         statusMessage:

@@ -3,7 +3,8 @@
   "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
     "module": "ESNext",
-    "types": ["@playwright/test"]
+    "types": ["@playwright/test", "./types/nuxt"],
+    "lib": ["ESNext", "dom"]
   },
   "exclude": [
     "node_modules",

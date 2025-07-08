@@ -1,3 +1,4 @@
+export {}
 /**
  * Supabase Database Types
  * Auto-generated from schema.sql

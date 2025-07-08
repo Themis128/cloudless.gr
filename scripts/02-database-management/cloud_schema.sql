@@ -307,9 +307,9 @@ ALTER TYPE realtime.equality_op OWNER TO supabase_admin;
 --
 
 CREATE TYPE realtime.user_defined_filter AS (
-	column_name text,
-	op realtime.equality_op,
-	value text
+    column_name text,
+    op realtime.equality_op,
+    value text
 );
 
 
@@ -320,12 +320,12 @@ ALTER TYPE realtime.user_defined_filter OWNER TO supabase_admin;
 --
 
 CREATE TYPE realtime.wal_column AS (
-	name text,
-	type_name text,
-	type_oid oid,
-	value jsonb,
-	is_pkey boolean,
-	is_selectable boolean
+    name text,
+    type_name text,
+    type_oid oid,
+    value jsonb,
+    is_pkey boolean,
+    is_selectable boolean
 );
 
 
@@ -336,10 +336,10 @@ ALTER TYPE realtime.wal_column OWNER TO supabase_admin;
 --
 
 CREATE TYPE realtime.wal_rls AS (
-	wal jsonb,
-	is_rls_enabled boolean,
-	subscription_ids uuid[],
-	errors text[]
+    wal jsonb,
+    is_rls_enabled boolean,
+    subscription_ids uuid[],
+    errors text[]
 );
 
 
@@ -823,7 +823,8 @@ BEGIN
     COALESCE(new.raw_user_meta_data->>'full_name', ''),
     COALESCE(new.raw_user_meta_data->>'avatar_url', ''),
     new.email_confirmed_at IS NOT NULL
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
   RETURN new;
 END;
 $$;
@@ -1830,8 +1831,8 @@ CREATE FUNCTION storage.filename(name text) RETURNS text
 DECLARE
 _parts text[];
 BEGIN
-	select string_to_array(name, '/') into _parts;
-	return _parts[array_length(_parts,1)];
+    select string_to_array(name, '/') into _parts;
+    return _parts[array_length(_parts,1)];
 END
 $$;
 

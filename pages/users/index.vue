@@ -309,7 +309,6 @@ type Project = {
 // Define page meta
 definePageMeta({
   layout: 'user',
-  middleware: 'auth',
   name: 'User Dashboard',
   title: 'Dashboard - Cloudless.gr'
 });
@@ -428,9 +427,10 @@ const loadUserStats = async () => {
       new Promise((_, reject) => setTimeout(() => reject(new Error('Projects fetch timeout')), 10000))
     ]);
     
+    const safeProjectsList = Array.isArray(projectsList) ? projectsList : [];
     userStats.value = {
-      projects: projectsList?.length || 0,
-      activeProjects: projectsList?.filter((p: Project) => p.status === 'active')?.length || 0,
+      projects: safeProjectsList.length,
+      activeProjects: safeProjectsList.filter((p: Project) => p.status === 'active').length,
       lastActive: 'Today',
       storageUsed: '2.1 MB'
     };

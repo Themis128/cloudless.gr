@@ -2,6 +2,10 @@ import { createVuetify } from 'vuetify'
 // Import only needed components for better tree-shaking
 import {
   VApp,
+  VCardSubtitle,
+  VListGroup,
+  VListSubheader,
+  VScaleTransition,
   VMain,
   VContainer,
   VRow,
@@ -53,12 +57,18 @@ import {
 } from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { defineNuxtPlugin } from '#app'
+import type { NuxtApp } from '#app'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 
-export default defineNuxtPlugin((nuxtApp) => {
+
+export default defineNuxtPlugin((nuxtApp: NuxtApp) => {
   const vuetify = createVuetify({
     components: {
       VApp,
+      VCardSubtitle,
+      VListGroup,
+      VListSubheader,
+      VScaleTransition,
       VMain,
       VContainer,
       VRow,
