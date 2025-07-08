@@ -11,7 +11,7 @@ export interface DocumentationPage {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
   tags: string[]
   lastUpdated: string
-  isAdminOnly: boolean
+
   estimatedReadTime: number
 }
 
@@ -21,7 +21,7 @@ export interface DocumentationSection {
   description: string
   icon: string
   pages: DocumentationPage[]
-  isAdminOnly: boolean
+
 }
 
 export interface SearchResult {
@@ -53,16 +53,11 @@ export const useDocumentationStore = defineStore('documentation', {
 
   getters: {
     // Get public documentation pages (accessible to all users)
-    publicPages: (state) => state.pages.filter(page => !page.isAdminOnly),
-    
-    // Get admin-only documentation pages
-    adminPages: (state) => state.pages.filter(page => page.isAdminOnly),
-    
-    // Get public documentation sections
-    publicSections: (state) => state.sections.filter(section => !section.isAdminOnly),
-    
-    // Get admin-only documentation sections
-    adminSections: (state) => state.sections.filter(section => section.isAdminOnly),
+
+    // All documentation pages (no role-based filtering)
+    allPages: (state) => state.pages,
+    // All documentation sections (no role-based filtering)
+    allSections: (state) => state.sections,
     
     // Get pages by category
     pagesByCategory: (state) => (category: string) => 
@@ -83,19 +78,13 @@ export const useDocumentationStore = defineStore('documentation', {
     
     // Get quick links for landing page
     quickLinks: (state) => {
-      const authStore = useAuthStore()
-      const isAdmin = authStore.isAdmin
-      
       return state.pages
-        .filter(page => isAdmin || !page.isAdminOnly)
         .filter(page => page.tags.includes('quick-start') || page.tags.includes('popular'))
         .slice(0, 6)
     },
       // Get search statistics
     searchStats: (state) => ({
       totalPages: state.pages.length,
-      publicPages: state.pages.filter(page => !page.isAdminOnly).length,
-      adminPages: state.pages.filter(page => page.isAdminOnly).length,
       lastSearchResultCount: state.searchResults.length,
       hasActiveSearch: state.searchQuery.length > 0
     })
@@ -106,10 +95,8 @@ export const useDocumentationStore = defineStore('documentation', {
     async initialize() {
       this.loading = true
       this.error = null
-      
       try {
         await this.loadDocumentationData()
-        await this.loadAdminDocumentationData()
       } catch (error) {
         this.error = `Failed to initialize documentation: ${error instanceof Error ? error.message : 'Unknown error'}`
         console.error('Documentation store initialization error:', error)
@@ -120,7 +107,7 @@ export const useDocumentationStore = defineStore('documentation', {
 
     // Load public documentation data
     async loadDocumentationData() {
-      // Public documentation pages
+      // All documentation pages (no admin-only)
       const publicPages: DocumentationPage[] = [
         {
           id: 'getting-started',
@@ -132,7 +119,7 @@ export const useDocumentationStore = defineStore('documentation', {
           difficulty: 'Beginner',
           tags: ['quick-start', 'beginner', 'setup'],
           lastUpdated: '2025-06-15',
-          isAdminOnly: false,
+
           estimatedReadTime: 5
         },
         {
@@ -145,7 +132,7 @@ export const useDocumentationStore = defineStore('documentation', {
           difficulty: 'Intermediate',
           tags: ['api', 'reference', 'endpoints'],
           lastUpdated: '2025-06-18',
-          isAdminOnly: false,
+
           estimatedReadTime: 15
         },
         {
@@ -158,7 +145,7 @@ export const useDocumentationStore = defineStore('documentation', {
           difficulty: 'Beginner',
           tags: ['manual', 'tutorial', 'features'],
           lastUpdated: '2025-06-10',
-          isAdminOnly: false,
+
           estimatedReadTime: 20
         },
         {
@@ -171,7 +158,7 @@ export const useDocumentationStore = defineStore('documentation', {
           difficulty: 'Intermediate',
           tags: ['problems', 'solutions', 'support'],
           lastUpdated: '2025-06-12',
-          isAdminOnly: false,
+
           estimatedReadTime: 10
         },
         {
@@ -184,7 +171,7 @@ export const useDocumentationStore = defineStore('documentation', {
           difficulty: 'Beginner',
           tags: ['questions', 'answers', 'popular'],
           lastUpdated: '2025-06-14',
-          isAdminOnly: false,
+
           estimatedReadTime: 8
         }
       ]
@@ -197,7 +184,7 @@ export const useDocumentationStore = defineStore('documentation', {
           description: 'Everything you need to start using the platform',
           icon: 'mdi-rocket-launch',
           pages: publicPages.filter(p => p.category === 'Getting Started'),
-          isAdminOnly: false
+
         },
         {
           id: 'guides-section',
@@ -205,7 +192,7 @@ export const useDocumentationStore = defineStore('documentation', {
           description: 'Step-by-step tutorials and comprehensive guides',
           icon: 'mdi-book-open-variant',
           pages: publicPages.filter(p => p.category === 'Guides'),
-          isAdminOnly: false
+
         },
         {
           id: 'reference-section',
@@ -213,7 +200,7 @@ export const useDocumentationStore = defineStore('documentation', {
           description: 'Technical documentation and API specifications',
           icon: 'mdi-api',
           pages: publicPages.filter(p => p.category === 'Reference'),
-          isAdminOnly: false
+
         },
         {
           id: 'support-section',
@@ -221,7 +208,7 @@ export const useDocumentationStore = defineStore('documentation', {
           description: 'Help, troubleshooting, and frequently asked questions',
           icon: 'mdi-help-circle',
           pages: publicPages.filter(p => p.category === 'Support'),
-          isAdminOnly: false
+
         }
       ]
 
@@ -243,7 +230,7 @@ export const useDocumentationStore = defineStore('documentation', {
           difficulty: 'Advanced',
           tags: ['structure', 'access-control', 'routing'],
           lastUpdated: '2025-06-21',
-          isAdminOnly: true,
+
           estimatedReadTime: 12
         },
         {
@@ -256,7 +243,7 @@ export const useDocumentationStore = defineStore('documentation', {
           difficulty: 'Intermediate',
           tags: ['navigation', 'user-flows', 'interface'],
           lastUpdated: '2025-06-21',
-          isAdminOnly: true,
+
           estimatedReadTime: 10
         },
         {
@@ -269,7 +256,7 @@ export const useDocumentationStore = defineStore('documentation', {
           difficulty: 'Advanced',
           tags: ['pinia', 'state-management', 'stores'],
           lastUpdated: '2025-06-21',
-          isAdminOnly: true,
+
           estimatedReadTime: 15
         },
         {
@@ -282,7 +269,7 @@ export const useDocumentationStore = defineStore('documentation', {
           difficulty: 'Advanced',
           tags: ['authentication', 'security', 'roles'],
           lastUpdated: '2025-06-21',
-          isAdminOnly: true,
+
           estimatedReadTime: 18
         },
         {
@@ -295,7 +282,7 @@ export const useDocumentationStore = defineStore('documentation', {
           difficulty: 'Intermediate',
           tags: ['development', 'setup', 'standards'],
           lastUpdated: '2025-06-21',
-          isAdminOnly: true,
+
           estimatedReadTime: 14
         },
         {
@@ -308,7 +295,7 @@ export const useDocumentationStore = defineStore('documentation', {
           difficulty: 'Advanced',
           tags: ['system', 'maintenance', 'administration'],
           lastUpdated: '2025-06-21',
-          isAdminOnly: true,
+
           estimatedReadTime: 20
         }
       ]
@@ -321,7 +308,7 @@ export const useDocumentationStore = defineStore('documentation', {
           description: 'Application structure, routing, and architectural patterns',
           icon: 'mdi-file-tree',
           pages: adminPages.filter(p => p.category === 'Architecture'),
-          isAdminOnly: true
+
         },
         {
           id: 'development-section',
@@ -329,7 +316,7 @@ export const useDocumentationStore = defineStore('documentation', {
           description: 'Development guides, store architecture, and coding standards',
           icon: 'mdi-code-braces',
           pages: adminPages.filter(p => p.category === 'Development'),
-          isAdminOnly: true
+
         },
         {
           id: 'security-section',
@@ -337,7 +324,7 @@ export const useDocumentationStore = defineStore('documentation', {
           description: 'Authentication systems, security implementation, and access control',
           icon: 'mdi-shield-account',
           pages: adminPages.filter(p => p.category === 'Security'),
-          isAdminOnly: true
+
         },
         {
           id: 'administration-section',
@@ -345,7 +332,7 @@ export const useDocumentationStore = defineStore('documentation', {
           description: 'System maintenance, database management, and administrative procedures',
           icon: 'mdi-cog',
           pages: adminPages.filter(p => p.category === 'Administration'),
-          isAdminOnly: true
+
         }
       ]
 
@@ -354,7 +341,7 @@ export const useDocumentationStore = defineStore('documentation', {
     },
 
     // Search documentation
-    async searchDocumentation(query: string, includeAdminDocs = false) {
+    async searchDocumentation(query: string) {
       if (!query.trim()) {
         this.searchResults = []
         this.searchQuery = ''
@@ -364,14 +351,9 @@ export const useDocumentationStore = defineStore('documentation', {
       this.searchQuery = query.toLowerCase()
       this.lastSearchTime = Date.now()
       
-      const authStore = useAuthStore()
-      const canAccessAdminDocs = authStore.isAdmin && includeAdminDocs
 
-      // Filter pages based on access permissions
-      const searchablePages = this.pages.filter(page => {
-        if (page.isAdminOnly && !canAccessAdminDocs) return false
-        return true
-      })
+      // No role-based filtering, just return all pages
+      const searchablePages = this.pages
 
       const results: SearchResult[] = []
 
@@ -445,10 +427,7 @@ export const useDocumentationStore = defineStore('documentation', {
 
     // Update page content (admin only)
     async updatePageContent(pageId: string, content: string) {
-      const authStore = useAuthStore()
-      if (!authStore.isAdmin) {
-        throw new Error('Admin access required to update documentation')
-      }
+
 
       const page = this.getPageById(pageId)
       if (!page) {
@@ -469,10 +448,7 @@ export const useDocumentationStore = defineStore('documentation', {
 
     // Add new documentation page (admin only)
     async addPage(newPage: Omit<DocumentationPage, 'id' | 'lastUpdated'>) {
-      const authStore = useAuthStore()
-      if (!authStore.isAdmin) {
-        throw new Error('Admin access required to add documentation')
-      }
+
 
       try {
         const page: DocumentationPage = {
@@ -498,20 +474,14 @@ export const useDocumentationStore = defineStore('documentation', {
       }
     },
 
-    // Remove documentation page (admin only)
+    // Remove documentation page (no admin check)
     async removePage(pageId: string) {
-      const authStore = useAuthStore()
-      if (!authStore.isAdmin) {
-        throw new Error('Admin access required to remove documentation')
-      }
-
-      try {        const pageIndex = this.pages.findIndex(page => page.id === pageId)
+      try {
+        const pageIndex = this.pages.findIndex(page => page.id === pageId)
         if (pageIndex === -1) {
           throw new Error(`Page with ID ${pageId} not found`)
         }
-
         this.pages.splice(pageIndex, 1)
-
         // Remove from sections
         this.sections.forEach(section => {
           const sectionPageIndex = section.pages.findIndex(p => p.id === pageId)
@@ -519,7 +489,6 @@ export const useDocumentationStore = defineStore('documentation', {
             section.pages.splice(sectionPageIndex, 1)
           }
         })
-
         return { success: true, message: 'Page removed successfully' }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'

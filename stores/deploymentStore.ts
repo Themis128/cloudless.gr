@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { useNuxtApp } from '#app';
 import type { ApiEndpoint, Deployment, DeploymentConfig } from '~/types/project';
 
 export const useDeploymentStore = defineStore('deployment', {

@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia';
-import { computed, readonly, ref } from 'vue';
-import type { Deployment, Project, TrainingSession } from '~/types/supabase.d';
+import { readonly, ref } from 'vue';
+
+import { useSupabaseDB } from '~/composables/useSupabaseDB';
+import type { Project, TrainingSession, Deployment } from '~/types/supabase.d';
 
 export const useProjectsStore = defineStore('projects', () => {
   // State
@@ -19,34 +21,29 @@ export const useProjectsStore = defineStore('projects', () => {
   } = useSupabaseDB();
 
   // Getters
-  const getProjectById = computed(() => {
-    return (id: string) => projects.value.find((p: any) => p.id === id);
-  });
+  function getProjectById(id: string): Project | undefined {
+    return projects.value.find((p) => p.id === id);
+  }
 
-  const getProjectsByStatus = computed(() => {
-    return (status: any) => projects.value.filter((p: any) => p.status === status);
-  });
+  function getProjectsByStatus(status: Project['status']): Project[] {
+    return projects.value.filter((p) => p.status === status);
+  }
 
-  const activeProjects = computed(() => {
-    // Using explicit typing to avoid infinite recursion
-    const allProjects: any[] = projects.value;
-    return allProjects.filter((p: any) => p.status === 'active');
-  });
+  function activeProjects(): Project[] {
+    return projects.value.filter((p) => p.status === 'active');
+  }
 
-  const completedProjects = computed(() => {
-    // Using explicit typing to avoid infinite recursion
-    const allProjects: any[] = projects.value;
-    return allProjects.filter((p: any) => p.status === 'completed');
-  });
+  function completedProjects(): Project[] {
+    return projects.value.filter((p) => p.status === 'completed');
+  }
 
-  const getTrainingSessionsForProject = computed(() => {
-    return (projectId: string) =>
-      trainingSessions.value.filter((s: any) => s.project_id === projectId);
-  });
+  function getTrainingSessionsForProject(projectId: string): TrainingSession[] {
+    return trainingSessions.value.filter((s) => s.project_id === projectId);
+  }
 
-  const getDeploymentsForProject = computed(() => {
-    return (projectId: string) => deployments.value.filter((d: any) => d.project_id === projectId);
-  });
+  function getDeploymentsForProject(projectId: string): Deployment[] {
+    return deployments.value.filter((d) => d.project_id === projectId);
+  }
 
   // Actions
   async function fetchProjects() {
@@ -86,7 +83,7 @@ export const useProjectsStore = defineStore('projects', () => {
     description?: string;
     type: Project['type'];
     status?: Project['status'];
-    config?: any;
+    config?: Project['config'];
   }) {
     loading.value = true;
     error.value = null;
@@ -97,11 +94,11 @@ export const useProjectsStore = defineStore('projects', () => {
         description: projectData.description ?? null,
         type: projectData.type,
         status: projectData.status ?? 'draft',
-        config: projectData.config ?? {},
+        config: typeof projectData.config === 'object' && projectData.config !== null ? projectData.config : {},
       });
 
       if (data) {
-        const newProjects = [data as any, ...projects.value];
+        const newProjects: Project[] = [data as Project, ...projects.value as Project[]];
         projects.value = newProjects;
       }
       return data;
@@ -121,23 +118,27 @@ export const useProjectsStore = defineStore('projects', () => {
       description?: string;
       type?: Project['type'];
       status?: Project['status'];
-      config?: any;
+      config?: TrainingSession['config'];
     },
   ) {
     loading.value = true;
     error.value = null;
 
     try {
-      const data = await projectsAPI.update(id, updates);
+      const safeUpdates = {
+        ...updates,
+        config: typeof updates.config === 'object' && updates.config !== null ? updates.config : {},
+      };
+      const data = await projectsAPI.update(id, safeUpdates);
 
       if (data) {
         const index = projects.value.findIndex((p) => p.id === id);
         if (index !== -1) {
-          projects.value[index] = data as any;
+          projects.value[index] = data as Project;
         }
 
         if (currentProject.value?.id === id) {
-          currentProject.value = data as any;
+          currentProject.value = data as Project;
         }
       }
 
@@ -197,7 +198,7 @@ export const useProjectsStore = defineStore('projects', () => {
     projectId: string,
     sessionData: {
       name: string;
-      config: Record<string, any>;
+      config: TrainingSession['config'];
       pipeline_id?: string;
     },
   ) {
@@ -207,11 +208,13 @@ export const useProjectsStore = defineStore('projects', () => {
     try {
       const data = await trainingAPI.create({
         project_id: projectId,
-        ...sessionData,
+        name: sessionData.name,
+        config: typeof sessionData.config === 'object' && sessionData.config !== null ? sessionData.config : {},
+        pipeline_id: sessionData.pipeline_id,
       });
 
       if (data) {
-        trainingSessions.value.unshift(data as any);
+        trainingSessions.value.unshift(data as TrainingSession);
       }
       return data;
     } catch (err) {
@@ -233,7 +236,7 @@ export const useProjectsStore = defineStore('projects', () => {
       if (data) {
         const index = trainingSessions.value.findIndex((s) => s.id === sessionId);
         if (index !== -1) {
-          trainingSessions.value[index] = data as any;
+          trainingSessions.value[index] = data as TrainingSession;
         }
       }
 
@@ -268,19 +271,22 @@ export const useProjectsStore = defineStore('projects', () => {
     model_version_id: string;
     name: string;
     environment?: 'development' | 'staging' | 'production';
-    config: Record<string, any>;
+    config: Deployment['config'];
   }) {
     loading.value = true;
     error.value = null;
 
     try {
       const data = await deploymentsAPI.create({
-        ...deploymentData,
+        project_id: deploymentData.project_id,
+        model_version_id: deploymentData.model_version_id,
+        name: deploymentData.name,
         environment: deploymentData.environment ?? 'development',
+        config: typeof deploymentData.config === 'object' && deploymentData.config !== null ? deploymentData.config : {},
       });
 
       if (data) {
-        deployments.value.unshift(data as any);
+        deployments.value.unshift(data as Deployment);
       }
       return data;
     } catch (err) {
@@ -302,7 +308,7 @@ export const useProjectsStore = defineStore('projects', () => {
       if (data) {
         const index = deployments.value.findIndex((d) => d.id === deploymentId);
         if (index !== -1) {
-          deployments.value[index] = data as any;
+          deployments.value[index] = data as Deployment;
         }
       }
 
@@ -326,7 +332,7 @@ export const useProjectsStore = defineStore('projects', () => {
       if (data) {
         const index = deployments.value.findIndex((d) => d.id === deploymentId);
         if (index !== -1) {
-          deployments.value[index] = data as any;
+          deployments.value[index] = data as Deployment;
         }
       }
 

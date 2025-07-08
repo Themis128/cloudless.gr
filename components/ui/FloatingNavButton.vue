@@ -34,7 +34,7 @@
           <v-icon class="mr-2">mdi-navigation</v-icon>
           Quick Navigation
           <v-spacer />
-          <v-chip v-if="authStore.isAdmin" color="purple" size="small">Admin</v-chip>
+          <v-chip v-if="isAdmin" color="purple" size="small">Admin</v-chip>
         </v-card-title>
 
         <v-divider />
@@ -109,7 +109,7 @@
           </v-list-item>
 
           <!-- Admin Pages (only show for admin users) -->
-          <template v-if="authStore.isAdmin">
+          <template v-if="isAdmin">
             <v-divider class="my-2" />
             <v-list-subheader>Administration</v-list-subheader>
             <v-list-item
@@ -141,10 +141,13 @@
 
 <script setup lang="ts">
 
+// Always public, no admin
+const isAdmin = false;
+
 import { withoutTrailingSlash } from 'ufo';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { useAuthStore } from '@/stores/authStore';
+
 import { navigateTo } from '#app';
 import { useFloatingNavPosition } from '~/composables/useFloatingNavPosition';
 
@@ -223,7 +226,7 @@ const adminPages: NavPage[] = [
 ];
 
 // Initialize auth store
-const authStore = useAuthStore();
+
 
 // Logout function
 const handleLogout = async () => {
@@ -231,7 +234,7 @@ const handleLogout = async () => {
     closeMenu();
     
     // Use auth store to handle logout
-    await authStore.signOut();
+    // No authStore, nothing to sign out
     
     // Clear any additional local data if needed
     if (process.client) {

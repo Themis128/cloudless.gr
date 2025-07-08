@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { getSupabaseClient } from '~/composables/useSupabase'
-import { useAuthStore } from './authStore'
+
 
 interface UserPreferences {
   theme?: 'light' | 'dark' | 'auto'
@@ -17,54 +17,22 @@ export const useUserStore = defineStore('user', {
   }),
 
   getters: {
-    // Get user info from auth store
-    profile: () => {
-      const authStore = useAuthStore()
-      return authStore.user
-    },
-    
-    fullName: () => {
-      const authStore = useAuthStore()
-      return authStore.user?.full_name || authStore.user?.email || 'User'
-    },
-    
-    isEmailVerified: () => {
-      const authStore = useAuthStore()
-      return authStore.user?.email_verified ?? false
-    },
-    
-    isActive: () => {
-      const authStore = useAuthStore()
-      return authStore.user?.is_active ?? false
-    },
-    
-    isUser: () => {
-      const authStore = useAuthStore()
-      return authStore.user?.role === 'user'
-    },
-    
+    // No longer using authStore, remove all related getters
     currentTheme: (state) => state.preferences?.theme || 'auto',
   },
 
   actions: {
     // Initialize user data
     async initialize() {
-      const authStore = useAuthStore()
-      
-      if (authStore.user && authStore.isAuthenticated) {
-        await this.loadUserPreferences()
-      }
+      // No authStore, just load preferences if needed
+      await this.loadUserPreferences()
     },
 
     // Load user preferences (stored locally for now)
     async loadUserPreferences() {
-      const authStore = useAuthStore()
-      if (!authStore.user) return
-
+      // No authStore, so just use a default key for now
       try {
-        // For now, use localStorage for preferences since table doesn't exist in DB schema
-        const stored = localStorage.getItem(`user_preferences_${authStore.user.id}`)
-        
+        const stored = localStorage.getItem('user_preferences_default')
         if (stored) {
           this.preferences = JSON.parse(stored)
         } else {
@@ -88,20 +56,9 @@ export const useUserStore = defineStore('user', {
 
     // Update user preferences
     async updatePreferences(newPreferences: Partial<UserPreferences>): Promise<{ success: boolean; error?: string }> {
-      const authStore = useAuthStore()
-      if (!authStore.user) {
-        return { success: false, error: 'No user profile loaded' }
-      }
-
       try {
         const updatedPreferences = { ...this.preferences, ...newPreferences }
-        
-        // Store locally for now
-        localStorage.setItem(
-          `user_preferences_${authStore.user.id}`, 
-          JSON.stringify(updatedPreferences)
-        )
-
+        localStorage.setItem('user_preferences_default', JSON.stringify(updatedPreferences))
         this.preferences = updatedPreferences
         return { success: true }
       } catch (err) {
@@ -137,14 +94,9 @@ export const useUserStore = defineStore('user', {
       await this.initialize()
     },
 
-    isAdmin() {
-      const authStore = useAuthStore()
-      return authStore.user?.role === 'admin'
-    },
 
     async logout() {
-      const authStore = useAuthStore()
-      await authStore.signOut()
+      // No authStore, just reset store
       this.resetStore()
     },
 

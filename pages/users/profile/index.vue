@@ -15,7 +15,7 @@
             <div class="text-center mb-6">
               <v-avatar size="120" class="mb-4">
                 <v-img
-                  :src="userProfile?.avatar_url || `https://ui-avatars.com/api/?name=${userDisplayName}&size=120&background=1976d2&color=fff`"
+                  :src="user.value?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${userDisplayName}&size=120&background=1976d2&color=fff`"
                   :alt="`${userDisplayName} avatar`"
                 />
               </v-avatar>
@@ -35,7 +35,7 @@
               <v-col cols="12" sm="6">
                 <v-card variant="outlined" class="pa-4">
                   <div class="text-subtitle2 text-grey-darken-1 mb-1">Full Name</div>
-                  <div class="text-h6">{{ userProfile?.full_name || 'Not set' }}</div>
+                  <div class="text-h6">{{ user.value?.user_metadata?.full_name || 'Not set' }}</div>
                 </v-card>
               </v-col>
               <v-col cols="12" sm="6">
@@ -43,13 +43,13 @@
                   <div class="text-subtitle2 text-grey-darken-1 mb-1">Role</div>
                   <div class="text-h6">
                     <v-chip
-                      :color="getRoleColor(userProfile?.role)"
+                      :color="getRoleColor(user.value?.user_metadata?.role)"
                       size="small"
                       variant="flat"
                       class="text-capitalize"
                     >
-                      <v-icon :icon="getRoleIcon(userProfile?.role)" size="16" class="mr-1" />
-                      {{ userProfile?.role || 'user' }}
+                      <v-icon :icon="getRoleIcon(user.value?.user_metadata?.role)" size="16" class="mr-1" />
+                      {{ user.value?.user_metadata?.role || 'user' }}
                     </v-chip>
                   </div>
                 </v-card>
@@ -78,10 +78,10 @@
                   </v-chip>
                 </v-card>
               </v-col>
-              <v-col v-if="userProfile?.bio" cols="12">
+              <v-col v-if="user.value?.user_metadata?.bio" cols="12">
                 <v-card variant="outlined" class="pa-4">
                   <div class="text-subtitle2 text-grey-darken-1 mb-1">Bio</div>
-                  <div class="text-body-1">{{ userProfile.bio }}</div>
+                  <div class="text-body-1">{{ user.value?.user_metadata?.bio }}</div>
                 </v-card>
               </v-col>
             </v-row>
@@ -140,25 +140,29 @@
 
 <script setup>
 import { useFetchProjects } from '@/composables/useFetchProjects'
-import { useUserProfileStore } from '@/stores/userProfileStore'
 
-const user = useSupabaseAuth().user
-const userProfileStore = useUserProfileStore()
-const userProfile = computed(() => userProfileStore.userProfile)
+
+
+import { useSupabaseAuth } from '@/composables/useSupabaseAuth'
+const { user } = useSupabaseAuth()
 const fetchProjectsStore = useFetchProjects()
 const projects = computed(() => fetchProjectsStore.projects)
 
+
+
 onMounted(() => {
-  userProfileStore.loadProfile()
   fetchProjectsStore.fetchProjects()
 })
 
+
 // Computed
 const userDisplayName = computed(() => {
-  if (userProfile.value?.full_name) {
-    return userProfile.value.full_name.trim()
-  }
-  return userProfile.value?.email || user.value?.email || 'User'
+  const meta = user.value?.user_metadata || {}
+  if (meta.full_name) return meta.full_name.trim()
+  if (meta.first_name && meta.last_name) return `${meta.first_name} ${meta.last_name}`
+  if (meta.first_name) return meta.first_name
+  if (user.value?.email) return user.value.email.split('@')[0]
+  return 'User'
 })
 
 const projectsCount = computed(() => {

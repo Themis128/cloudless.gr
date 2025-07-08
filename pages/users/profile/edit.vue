@@ -174,11 +174,9 @@
 
 <script setup>
 
-import { useUserProfileStore } from '@/stores/userProfileStore'
+import { useSupabaseAuth } from '@/composables/useSupabaseAuth'
+import { useSupabaseClient } from '#imports'
 const user = useSupabaseAuth().user
-const userProfileStore = useUserProfileStore()
-const userProfile = computed(() => userProfileStore.userProfile)
-const refreshProfile = userProfileStore.loadProfile
 const supabase = useSupabaseClient()
 
 // Reactive data
@@ -232,25 +230,26 @@ const rules = {
 
 // Computed
 const isAdmin = computed(() => {
-  return userProfile.value?.role === 'admin'
+  const meta = user.value?.user_metadata || {}
+  return meta.role === 'admin'
 })
 
 const userDisplayName = computed(() => {
-  const fullName = form.full_name || userProfile.value?.full_name
-  if (fullName) {
-    return fullName.trim()
-  }
+  const meta = user.value?.user_metadata || {}
+  if (form.full_name) return form.full_name.trim()
+  if (meta.full_name) return meta.full_name
+  if (meta.first_name && meta.last_name) return `${meta.first_name} ${meta.last_name}`
+  if (meta.first_name) return meta.first_name
   return form.email || user.value?.email || 'User'
 })
 
 // Methods
 const initializeForm = () => {
-  if (userProfile.value) {
-    form.full_name = userProfile.value.full_name || ''
-    form.bio = userProfile.value.bio || ''
-    form.avatar_url = userProfile.value.avatar_url || ''
-    form.role = userProfile.value.role || 'user'
-  }
+  const meta = user.value?.user_metadata || {}
+  form.full_name = meta.full_name || ''
+  form.bio = meta.bio || ''
+  form.avatar_url = meta.avatar_url || ''
+  form.role = meta.role || 'user'
   if (user.value) {
     form.email = user.value.email || ''
   }
@@ -326,7 +325,6 @@ const updateProfile = async () => {
 
     if (updateError) throw updateError
 
-    await refreshProfile()
     success.value = 'Profile updated successfully!'
 
     // Redirect after a short delay
@@ -346,9 +344,7 @@ onMounted(() => {
   initializeForm()
 })
 
-watch(() => userProfile.value, () => {
-  initializeForm()
-}, { immediate: true })
+
 
 // Page meta
 definePageMeta({

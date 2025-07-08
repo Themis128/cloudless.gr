@@ -17,7 +17,7 @@ export const useDocumentation = () => {
   // Search documentation (all docs are public now)
   const searchDocs = async (query: string) => {
     await initializeIfNeeded()
-    return await docStore.searchDocumentation(query, false)
+    return await docStore.searchDocumentation(query)
   }
 
   // Get all pages (all docs are public now)
