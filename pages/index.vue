@@ -54,7 +54,7 @@ import TestimonialsSection from '~/components/landing/TestimonialsSection.vue';
 
 
 // SEO and Meta
-import { useHead, definePageMeta } from '#imports';
+import { useHead, definePageMeta } from 'nuxt/app';
 useHead({
   title: 'Cloudless.gr - Power Without the Code',
   meta: [
