@@ -458,7 +458,6 @@ onMounted(() => {
 // Page meta
 definePageMeta({
   layout: 'user',
-  middleware: 'auth',
   title: 'Security Settings'
 })
 

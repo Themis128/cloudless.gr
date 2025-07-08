@@ -30,11 +30,7 @@ export default defineNuxtConfig({
         key:
           process.env.SUPABASE_ANON_KEY ??
           'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
-        redirectOptions: {
-          login: '/auth',
-          callback: '/auth/callback',
-          exclude: ['/', '/info', '/info/*', '/auth', '/auth/*', '/mcp-demo'],
-        },
+        redirectOptions: {}
       }
     ],
     '@pinia/nuxt'

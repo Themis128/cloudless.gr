@@ -3,109 +3,18 @@
  * This runs on each protected page to ensure auth before rendering
  */
 
-import { ref, readonly } from 'vue'
-import { useRoute, navigateTo } from '#imports'
-import type { User } from '@supabase/supabase-js'
-import { getSupabaseClient } from './useSupabase'
+import { ref } from 'vue'
 
-export const usePageAuth = (options: { 
-  requireAuth?: boolean,
-  requireAdmin?: boolean,
-  redirectTo?: string 
-} = {}) => {
-  const { 
-    requireAuth = true, 
-    requireAdmin = false,
-    redirectTo = '/auth'
-  } = options
-    const route = useRoute()
-  const supabase = getSupabaseClient()
-  
-  const isAuthenticated = ref(false)
-  const isAdmin = ref(false)
-  const user = ref<User | null>(null)
-  const loading = ref(true)
-  const error = ref('')
 
-  const checkAuth = async () => {
-    try {
-      loading.value = true
-      
-      // Get current session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
-      if (sessionError) {
-        console.error('[PAGE_AUTH] Session error:', sessionError)
-        error.value = sessionError.message
-        return false
-      }
-      
-      if (!session?.user) {
-        console.log('[PAGE_AUTH] No session found')
-        isAuthenticated.value = false
-        return false
-      }
-      
-      // Session exists
-      isAuthenticated.value = true
-      user.value = session.user
-      
-      // Check admin role if required
-      if (requireAdmin) {
-        interface Profile { role: string }
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single<Profile>()
-          
-        if (profileError || profile?.role !== 'admin') {
-          console.warn('[PAGE_AUTH] Admin access denied')
-          isAdmin.value = false
-          if (requireAdmin) return false
-        } else {
-          isAdmin.value = true
-        }
-      }
-      
-      return true
-      
-    } catch (err) {
-      console.error('[PAGE_AUTH] Auth check failed:', err)
-      error.value = 'Authentication check failed'
-      return false
-    } finally {
-      loading.value = false
-    }
-  }
-    const redirectToAuth = () => {
-    const currentPath = route.fullPath
-    const redirect = currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}` : ''
-    const targetUrl = `${redirectTo}${redirect}`
-    
-    console.log('[PAGE_AUTH] Redirecting to:', targetUrl)
-    return navigateTo(targetUrl)
-  }
-  
-  // Run auth check immediately
-  const authPromise = checkAuth()
-  
-  // If auth is required and check fails, redirect
-  if (requireAuth) {
-    authPromise.then(authResult => {
-      if (!authResult || (requireAdmin && !isAdmin.value)) {
-        redirectToAuth()
-      }
-    })
-  }
-  
+// Disabled: No authentication enforced. All pages are public.
+export const usePageAuth = () => {
   return {
-    isAuthenticated: readonly(isAuthenticated),
-    isAdmin: readonly(isAdmin),
-    user: readonly(user),
-    loading: readonly(loading),
-    error: readonly(error),
-    checkAuth,
-    redirectToAuth
+    isAuthenticated: ref(true),
+    isAdmin: ref(false),
+    user: ref(null),
+    loading: ref(false),
+    error: ref(''),
+    checkAuth: async () => true,
+    redirectToAuth: () => {}
   }
 }

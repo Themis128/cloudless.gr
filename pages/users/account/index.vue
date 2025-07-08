@@ -222,7 +222,6 @@ const deleteAccount = async () => {
 // Page meta
 definePageMeta({
   layout: 'user',
-  middleware: 'auth',
   title: 'Account Settings'
 })
 
