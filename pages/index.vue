@@ -94,7 +94,7 @@ useHead({
 });
 
 definePageMeta({
-  layout: 'auth',
+  layout: 'default',
   name: 'Home',
   title: 'Cloudless.gr - Power Without the Code'
 });

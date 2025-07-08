@@ -1,8 +1,0 @@
-# pgAdmin Password File
-# Format: hostname:port:database:username:password
-
-# Local Supabase
-supabase-db:5432:*:postgres:your-super-secret-and-long-postgres-password
-
-# Cloud Supabase (replace with actual password)
-db.oflctqligzouzshimuqh.supabase.co:5432:*:postgres:supabase2025

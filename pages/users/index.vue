@@ -8,15 +8,7 @@
             <v-row align="center">
               <v-col cols="12" md="8">
                 <div class="d-flex align-center">
-                  <v-avatar v-if="userProfile?.avatar_url" size="80" class="me-4">
-                    <v-img :src="userProfile.avatar_url" :alt="userDisplayName" />
-                  </v-avatar>
-                  <v-avatar
-                    v-else
-                    size="80"
-                    color="primary"
-                    class="me-4"
-                  >
+                  <v-avatar size="80" color="primary" class="me-4">
                     <span class="text-h4 font-weight-bold">{{ userInitials }}</span>
                   </v-avatar>
                   <div>
@@ -99,7 +91,7 @@
                   <template #prepend>
                     <v-icon>mdi-account</v-icon>
                   </template>
-                  <v-list-item-title>{{ userProfile?.first_name }} {{ userProfile?.last_name }}</v-list-item-title>
+                  <v-list-item-title>{{ userDisplayName }}</v-list-item-title>
                   <v-list-item-subtitle>Full Name</v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item>
@@ -233,18 +225,7 @@
             </v-card-title>
             <v-divider />
             <v-card-text class="pa-4">
-              <div class="mb-4">
-                <div class="d-flex justify-space-between align-center mb-2">
-                  <span class="text-body-2">Profile Completion</span>
-                  <span class="text-caption">{{ profileCompletionPercentage }}%</span>
-                </div>
-                <v-progress-linear
-                  :model-value="profileCompletionPercentage"
-                  color="primary"
-                  height="8"
-                  rounded
-                />
-              </div>
+              <!-- Profile completion removed -->
               
               <v-list density="compact">
                 <v-list-item>
@@ -255,35 +236,10 @@
                   </template>
                   <v-list-item-title>Email Verification</v-list-item-title>
                 </v-list-item>
-                <v-list-item>
-                  <template #prepend>
-                    <v-icon :color="userProfile?.first_name ? 'success' : 'warning'">
-                      {{ userProfile?.first_name ? 'mdi-check-circle' : 'mdi-alert-circle' }}
-                    </v-icon>
-                  </template>
-                  <v-list-item-title>Profile Information</v-list-item-title>
-                </v-list-item>
-                <v-list-item>
-                  <template #prepend>
-                    <v-icon :color="userProfile?.avatar_url ? 'success' : 'warning'">
-                      {{ userProfile?.avatar_url ? 'mdi-check-circle' : 'mdi-alert-circle' }}
-                    </v-icon>
-                  </template>
-                  <v-list-item-title>Profile Picture</v-list-item-title>
-                </v-list-item>
+                <!-- Profile information and picture checks removed -->
               </v-list>
 
-              <v-btn
-                v-if="profileCompletionPercentage < 100"
-                variant="outlined"
-                color="primary"
-                size="small"
-                class="mt-3"
-                block
-                @click="$router.push('/users/profile/edit')"
-              >
-                Complete Profile
-              </v-btn>
+              <!-- Complete Profile button removed -->
             </v-card-text>
           </v-card>
         </v-col>
@@ -296,7 +252,8 @@
 import { useSupabaseAuth } from '@/composables/useSupabaseAuth';
 import { useSupabaseDB } from '@/composables/useSupabaseDB';
 import { computed, onMounted, ref } from 'vue';
-import { useUserProfileStore } from '@/stores/userProfileStore';
+// Update the import path if the store is located elsewhere, e.g. '~/stores/userProfileStore'
+// Update the import path below if your store is not in 'stores/userProfileStore.ts'
 import { definePageMeta, useHead } from '#imports';
 // Define Project type locally if not exported from '~/types/supabase'
 type Project = {
@@ -326,7 +283,6 @@ useHead({
 
 // Composables and stores
 const { user, getUserRole } = useSupabaseAuth();
-const userProfileStore = useUserProfileStore();
 
 const userRole = ref<string | null>(null);
 
@@ -350,31 +306,22 @@ const recentActivity = ref([
 const unreadNotifications = ref(0);
 
 // Computed properties
-const userProfile = computed(() => userProfileStore.userProfile);
 
 const userDisplayName = computed(() => {
-  if (userProfile.value?.first_name && userProfile.value?.last_name) {
-    return `${userProfile.value.first_name} ${userProfile.value.last_name}`;
-  }
-  if (userProfile.value?.first_name) {
-    return userProfile.value.first_name;
-  }
-  if (userProfile.value?.full_name) {
-    return userProfile.value.full_name;
-  }
-  return user.value?.email?.split('@')[0] || 'User';
+  const meta = user.value?.user_metadata || {};
+  if (meta.full_name) return meta.full_name;
+  if (meta.first_name && meta.last_name) return `${meta.first_name} ${meta.last_name}`;
+  if (meta.first_name) return meta.first_name;
+  if (user.value?.email) return user.value.email.split('@')[0];
+  return 'User';
 });
 
 const userInitials = computed(() => {
-  if (userProfile.value?.first_name && userProfile.value?.last_name) {
-    return `${userProfile.value.first_name[0]}${userProfile.value.last_name[0]}`.toUpperCase();
-  }
-  if (userProfile.value?.first_name) {
-    return userProfile.value.first_name[0].toUpperCase();
-  }
-  if (user.value?.email) {
-    return user.value.email[0].toUpperCase();
-  }
+  const meta = user.value?.user_metadata || {};
+  if (meta.full_name) return meta.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+  if (meta.first_name && meta.last_name) return `${meta.first_name[0]}${meta.last_name[0]}`.toUpperCase();
+  if (meta.first_name) return meta.first_name[0].toUpperCase();
+  if (user.value?.email) return user.value.email[0].toUpperCase();
   return 'U';
 });
 
@@ -389,17 +336,6 @@ const welcomeMessage = computed(() => {
   return `${greeting}! Here's your dashboard overview.`;
 });
 
-const profileCompletionPercentage = computed(() => {
-  let completed = 0;
-  const total = 4;
-  
-  if (user.value?.email_confirmed_at) completed++;
-  if (userProfile.value?.first_name) completed++;
-  if (userProfile.value?.last_name) completed++;
-  if (userProfile.value?.avatar_url) completed++;
-  
-  return Math.round((completed / total) * 100);
-});
 
 // Methods
 const formatDate = (date: Date) => {
@@ -470,18 +406,7 @@ onMounted(async () => {
     console.log('🚀 Initializing user dashboard...');
     
     // Load user profile if not already loaded (with timeout and retries)
-    if (!userProfile.value && !userProfileStore.loading) {
-      try {
-        await Promise.race([
-          userProfileStore.loadProfile(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Profile load timeout')), 10000))
-        ]);
-        console.log('✅ User profile loaded successfully');
-      } catch (profileError) {
-        console.warn('⚠️ Profile loading failed, continuing with basic user info:', profileError);
-        // Don't block the page if profile loading fails
-      }
-    }
+
     
     // Load stats with error handling
     try {
