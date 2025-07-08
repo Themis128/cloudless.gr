@@ -231,6 +231,9 @@
 </template>
 
 <script setup lang="ts">
+import { navigateTo } from '#app';
+import { definePageMeta } from '#imports';
+
 definePageMeta({
   title: 'API Reference - Documentation',
   description: 'Complete API documentation for the Cloudless.gr platform',

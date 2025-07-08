@@ -35,7 +35,7 @@
 
 <script setup lang="ts">
 import { definePageMeta } from '#imports';
-definePageMeta({ layout: 'projects', middleware: 'auth' })
+definePageMeta({ layout: 'projects' })
 import DatasetConfigForm from '@/components/projects/DatasetConfigForm.vue';
 import EnvironmentConfigForm from '@/components/projects/EnvironmentConfigForm.vue';
 import ModelDefaultsForm from '@/components/projects/ModelDefaultsForm.vue';

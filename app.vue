@@ -1,3 +1,4 @@
+
 <template>
   <VApp>
     <NuxtLayout>
@@ -9,9 +10,8 @@
 </template>
 
 <script setup lang="ts">
+// Global SEO and meta
 import { useHead } from '#imports'
-
-// SEO and meta improvements
 useHead({
   title: 'Cloudless.gr - ML Platform',
   titleTemplate: '%s | Cloudless.gr',
@@ -20,15 +20,13 @@ useHead({
     { name: 'viewport', content: 'width=device-width, initial-scale=1' },
     { name: 'theme-color', content: '#1976D2' }
   ],
-  htmlAttrs: {
-    lang: 'en'
-  },
+  htmlAttrs: { lang: 'en' },
   link: [
     { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
   ]
 })
 
-// Enhanced page transitions
+// Page transition for NuxtPage
 const pageTransition = {
   name: 'fade-page',
   mode: 'out-in',

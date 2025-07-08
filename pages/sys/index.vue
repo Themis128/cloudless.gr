@@ -294,7 +294,6 @@ import FloatingNavButton from '@/components/ui/FloatingNavButton.vue'
 import { computed, onMounted, ref } from 'vue'
 
 definePageMeta({
-  middleware: 'admin',
   layout: 'admin'
 })
 

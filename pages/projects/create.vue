@@ -1,40 +1,29 @@
 <script setup lang="ts">
-import { navigateTo } from '#app';
+
+import { ref } from 'vue';
+
+
+
 import { definePageMeta } from '#imports';
-import ProjectCreateForm from '@/components/projects/ProjectCreateForm.vue';
+import { navigateTo } from '#app';
 import { useCreateProjectStore } from '@/stores/createProjectStore';
-import { useUserStore } from '@/stores/userStore';
-import { computed, ref } from 'vue';
-import type { CreateProjectData } from '~/types/project';
+import ProjectCreateForm from '@/components/projects/ProjectCreateForm.vue';
+import type { CreateProjectData, Project } from '~/types/project';
 
 definePageMeta({
   layout: 'projects',
   title: 'Create Project',
-  requiresAuth: true,
-  middleware: 'auth',
 });
 
-const userStore = useUserStore();
-const userName = computed(() => {
-  const user = userStore.profile;
-  if (user?.full_name) return user.full_name.split(' ')[0];
-  if (user?.email) return user.email.split('@')[0];
-  return 'User';
-});
-const userInitials = computed(() => {
-  const user = userStore.profile;
-  if (user?.full_name) {
-    const names = user.full_name.split(' ');
-    return names.map((name: string) => name[0]).join('').toUpperCase().slice(0, 2);
-  }
-  if (user?.email) return user.email.slice(0, 2).toUpperCase();
-  return 'U';
-});
+const userName = 'User';
+const userInitials = 'U';
 
 const createProjectStore = useCreateProjectStore();
-import type { Project } from '~/types/project';
+const loading = ref(false);
+const errorMsg = ref<string | null>(null);
+const successMsg = ref<string | null>(null);
+
 const createProject = async (data: CreateProjectData): Promise<Project> => {
-  // Transform all nullable fields to undefined for backend compatibility
   const transformedData = {
     ...data,
     description: data.description || undefined,
@@ -51,9 +40,6 @@ const createProject = async (data: CreateProjectData): Promise<Project> => {
   };
   return await createProjectStore.createProject(transformedData);
 };
-const loading = ref(false);
-const errorMsg = ref<string | null>(null);
-const successMsg = ref<string | null>(null);
 
 const handleCreateProject = async (projectData: CreateProjectData) => {
   errorMsg.value = null;
@@ -62,8 +48,8 @@ const handleCreateProject = async (projectData: CreateProjectData) => {
   try {
     const project = await createProject(projectData);
     successMsg.value = 'Project created successfully!';
-    setTimeout(async () => {
-      await navigateTo(`/projects/${project.id}`);
+    setTimeout(() => {
+      navigateTo(`/projects/${project.id}`);
     }, 1000);
   } catch (err: unknown) {
     if (err && typeof err === 'object' && 'message' in err) {
@@ -93,15 +79,6 @@ const handleCreateProject = async (projectData: CreateProjectData) => {
       </v-btn>
       <div class="header-content">
         <v-avatar
-          v-if="userStore.profile?.avatar_url"
-          size="48"
-          class="me-4"
-          aria-label="User avatar"
-        >
-          <v-img :src="userStore.profile?.avatar_url" :alt="userName" />
-        </v-avatar>
-        <v-avatar
-          v-else
           size="48"
           color="success"
           class="me-4"

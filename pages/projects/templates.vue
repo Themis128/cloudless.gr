@@ -225,7 +225,6 @@ import { mockTemplates } from '~/data/templates';
 import type { ProjectTemplate } from '~/types/project';
 
 definePageMeta({
-  middleware: 'auth',
   layout: 'projects',
   title: 'Project Templates',
 });

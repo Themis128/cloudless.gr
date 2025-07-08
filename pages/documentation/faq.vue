@@ -123,7 +123,8 @@
                 <v-expansion-panel-text>
                   <div class="faq-content">
                     <div class="faq-answer mb-4">
-                      <div v-html="faq.answer" />
+                      <!-- eslint-disable-next-line vue/no-v-html -->
+                      <div v-html="sanitizeHtml(faq.answer)" />
                     </div>
 
                     <div v-if="faq.codeExample" class="code-example mb-4">
@@ -234,6 +235,11 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue';
+import DOMPurify from 'dompurify';
+import { navigateTo } from '#app';
+import { definePageMeta } from '#imports';
+
 definePageMeta({
   title: 'FAQ - Documentation',
   description: 'Frequently asked questions about the Cloudless.gr platform',
@@ -497,7 +503,11 @@ const getCategoryIcon = (category: string) => {
 };
 
 const getFilteredFAQs = (category: string) => {
-  return filteredFAQs.value.filter((faq) => faq.category === category);
+  return filteredFAQs.value.filter((faq: FAQ) => faq.category === category);
+};
+
+const sanitizeHtml = (html: string) => {
+  return DOMPurify.sanitize(html);
 };
 
 const filterFAQs = () => {
@@ -522,7 +532,7 @@ const filterFAQs = () => {
 };
 
 const removeCategory = (category: string) => {
-  activeCategories.value = activeCategories.value.filter((c) => c !== category);
+  activeCategories.value = activeCategories.value.filter((c: string) => c !== category);
   filterFAQs();
 };
 

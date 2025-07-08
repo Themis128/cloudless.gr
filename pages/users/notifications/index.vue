@@ -268,7 +268,6 @@ onMounted(async () => {
 // Page meta
 definePageMeta({
   layout: 'user',
-  middleware: 'auth',
   title: 'Notifications'
 })
 

@@ -69,8 +69,7 @@ import { onMounted, ref } from 'vue';
 definePageMeta({
   layout: 'default',
   title: 'Admin/User Matrix',
-  description: 'View all registered admins and users in tabular format.',
-  middleware: 'auth'
+  description: 'View all registered admins and users in tabular format.'
 })
 
 interface UserProfile {

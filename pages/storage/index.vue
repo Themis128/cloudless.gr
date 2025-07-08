@@ -39,23 +39,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useStorage } from '~/composables/useStorage'
-import { useUserStore } from '~/stores/userStore'
+// import { useUserStore } from '~/stores/userStore'
 definePageMeta({ layout: 'user' })
 
 const { listFiles, uploadFile, getPublicUrl, loading, error } = useStorage()
-const files = ref<any[]>([])
-const userStore = useUserStore()
-const userEmail = userStore.user?.email || ''
+interface StorageFile {
+  name: string;
+  url?: string | null;
+}
+const files = ref<StorageFile[]>([])
+// const userStore = useUserStore()
+// const userEmail = ref('')
 
 async function fetchFiles() {
-  if (!userEmail) return
-  const fileList = await listFiles('users', `${userEmail}/`)
-  // Resolve public URLs for each file
+  // No user context, fetch all files in 'users' bucket root
+  const fileList = await listFiles('users', '')
   files.value = await Promise.all(
-    fileList.map(async (file: any) => {
-      const url = await getPublicUrl('users', `${userEmail}/${file.name}`)
+    fileList.map(async (file: StorageFile) => {
+      const url = await getPublicUrl('users', file.name)
       return { ...file, url }
     })
   )
@@ -63,16 +66,13 @@ async function fetchFiles() {
 
 async function handleUpload(fileList: FileList) {
   const file = fileList?.[0]
-  if (file && userEmail) {
-    await uploadFile('users', `${userEmail}/${file.name}`, file)
+  if (file) {
+    await uploadFile('users', file.name, file)
     await fetchFiles()
   }
 }
 
-// Refetch files when userEmail changes (e.g., after login)
-watch(() => userStore.user?.email, (newEmail) => {
-  if (newEmail) fetchFiles()
-})
+// Removed userStore watcher
 
 onMounted(fetchFiles)
 </script>

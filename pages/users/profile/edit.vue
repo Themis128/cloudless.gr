@@ -349,7 +349,6 @@ onMounted(() => {
 // Page meta
 definePageMeta({
   layout: 'user',
-  middleware: 'auth',
   title: 'Edit Profile'
 })
 

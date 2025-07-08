@@ -299,47 +299,36 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ layout: 'projects' });
 
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { definePageMeta } from '#imports';
-definePageMeta({ layout: 'projects', middleware: 'auth' })
 import { useDeploymentStore } from '~/stores/deploymentStore';
-import type { Deployment } from '~/types/project';
+import type { Deployment, PerformanceMetrics } from '~/types/project';
 
-// Route and project data
+// Routing and store
 const route = useRoute();
 const router = useRouter();
 const projectId = route.params.id as string;
-
-// Initialize stores
 const deploymentStore = useDeploymentStore();
 
-// Reactive data from store
+// State
 const deployments = computed(() => deploymentStore.deployments);
 const deploymentsLoading = computed(() => deploymentStore.loading);
-function getActiveDeployments() {
-  const result = [];
-  for (const d of deployments.value) {
-    // @ts-ignore: status is always present
-    if (d.status === 'active') result.push(d);
-  }
-  return result;
-}
-
-// Local reactive data for UI state
-const project = ref(null);
 const showDeployDialog = ref(false);
 const showDetailsDialog = ref(false);
 const selectedDeployment = ref<Deployment | null>(null);
 const detailsTab = ref('overview');
 const refreshing = ref(false);
 const configLoading = ref(false);
-// Removed unused: endpointsLoading, historyLoading
 const metricsLoading = ref(false);
 const monitoringTimeRange = ref('24h');
+const hasTrainedModels = ref(true); // TODO: wire to actual logic
+const availableModels = ref<string[]>([]); // TODO: wire to actual logic
+const deploymentLogs = ref('');
+const environments = ['development', 'staging', 'production'];
 
-// Deployment configuration
+// Deployment config
 const deploymentConfig = ref({
   name: '',
   environment: 'production' as 'development' | 'staging' | 'production',
@@ -355,13 +344,7 @@ const deploymentConfig = ref({
   secrets: {},
 });
 
-// const availableEnvironments = ref(['development', 'staging', 'production']);
-const hasTrainedModels = ref(true);
-const availableModels = ref<string[]>([]);
-const deploymentLogs = ref('');
-const environments = ['development', 'staging', 'production'];
-
-// Stats for dashboard
+// Dashboard stats
 const stats = ref({
   activeDeployments: 0,
   totalRequests: 0,
@@ -369,22 +352,27 @@ const stats = ref({
   uptime: 99.9,
 });
 
-// Computed properties
+// Get active deployments (avoid deep type inference)
+// Avoid deep type inference and no-explicit-any by using a local type
+type DeploymentStatusOnly = { status: string };
+function getActiveDeployments() {
+  return Array.isArray(deployments.value)
+    ? (deployments.value as DeploymentStatusOnly[]).filter((d) => d.status === 'active')
+    : [];
+}
+
+// Can deploy
 const canDeploy = computed(() => {
   return (
-    project.value &&
     deploymentConfig.value &&
     !deploymentsLoading.value &&
     deploymentConfig.value.environment
   );
 });
 
-// Removed unused: activeDeployment
-
-// Methods using the store
+// Deploy model
 const deployModel = async () => {
   if (!canDeploy.value || !projectId) return;
-
   try {
     const config = {
       instance_type: deploymentConfig.value.instanceType,
@@ -409,16 +397,13 @@ const deployModel = async () => {
       environment_variables: deploymentConfig.value.environmentVariables,
       secrets: deploymentConfig.value.secrets,
     };
-
     const result = await deploymentStore.createDeployment(
-      'dummy-model-version-id', // This should come from selected model
+      'dummy-model-version-id', // TODO: wire to selected model
       config,
       deploymentConfig.value.name,
     );
-
     if (result) {
       showDeployDialog.value = false;
-      // Reset form
       deploymentConfig.value.name = '';
     }
   } catch (error) {
@@ -426,9 +411,7 @@ const deployModel = async () => {
   }
 };
 
-
-
-// Stop a deployment (set status to 'stopped')
+// Stop deployment
 const stopDeployment = async (deployment: Deployment) => {
   try {
     await deploymentStore.updateDeploymentStatus(deployment.id, 'stopped');
@@ -438,39 +421,41 @@ const stopDeployment = async (deployment: Deployment) => {
   }
 };
 
-// Restart a deployment (optional, stub if not supported)
+// Restart deployment (stub)
 const restartDeployment = async (_deployment: Deployment) => {
-  // If not supported, you can remove this or show a notification
+  // Not implemented
   console.warn('Restart deployment is not implemented.');
 };
 
+// Delete deployment
 const deleteDeployment = async (deployment: Deployment) => {
   await deploymentStore.deleteDeployment(deployment.id);
   await refreshDeployments();
 };
 
+// Refresh deployments and update stats
 const refreshDeployments = async () => {
   refreshing.value = true;
   try {
     await deploymentStore.fetchDeployments(projectId);
-    // Update stats
-    stats.value.activeDeployments = deployments.value.filter((d: Deployment) => d.status === 'active').length;
+    // Use a local type to avoid deep type inference
+    type DeploymentStatusOnly = { status: string };
+    const arr = Array.isArray(deployments.value)
+      ? (deployments.value as DeploymentStatusOnly[]).map((d) => ({ status: d.status }))
+      : [];
+    stats.value.activeDeployments = arr.filter((d) => d.status === 'active').length;
   } finally {
     refreshing.value = false;
   }
 };
 
-// Performance metrics for monitoring chart
-import type { PerformanceMetrics } from '~/types/project';
+// Performance metrics
 const performanceMetrics = ref<PerformanceMetrics[]>([]);
-
-// Update monitoring time range and fetch metrics
 const updateMonitoringTimeRange = async (range: string) => {
   monitoringTimeRange.value = range;
   metricsLoading.value = true;
   try {
-    // Replace with actual fetch logic from your store or API
-    // Example: performanceMetrics.value = await deploymentStore.fetchPerformanceMetrics(projectId, selectedDeployment.value?.id, range);
+    // TODO: fetch actual metrics
     performanceMetrics.value = [];
   } catch (error) {
     console.error('Failed to fetch performance metrics:', error);
@@ -479,31 +464,20 @@ const updateMonitoringTimeRange = async (range: string) => {
   }
 };
 
+// Deployment details
 const openDeploymentDetails = (deployment: Deployment) => {
   selectedDeployment.value = deployment;
   showDetailsDialog.value = true;
 };
-
 const viewDeploymentDetails = (deployment: Deployment) => {
   openDeploymentDetails(deployment);
 };
-
 const viewDeploymentLogs = (deployment: Deployment) => {
-  // Implement log viewing
+  // TODO: implement log viewing
   console.log('View logs for deployment:', deployment.id);
 };
 
-
-// Initialize data
-onMounted(async () => {
-  try {
-    await refreshDeployments();
-  } catch (error) {
-    console.error('Failed to load deployment page data:', error);
-  }
-});
-
-// Expose getInstanceType to template
+// Utility: instance type
 const getInstanceType = (config: unknown) => {
   if (config && typeof config === 'object' && 'instance_type' in config) {
     // @ts-ignore: config may be loosely typed from backend, allow dynamic access
@@ -512,7 +486,7 @@ const getInstanceType = (config: unknown) => {
   return 'Not specified';
 };
 
-// Format date utility for template
+// Utility: format date
 const formatDate = (date: string | number | Date | undefined) => {
   if (!date) return '';
   const d = new Date(date);
@@ -520,7 +494,7 @@ const formatDate = (date: string | number | Date | undefined) => {
   return d.toLocaleString();
 };
 
-// Map deployment status to color for v-chip
+// Utility: status color
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'active':
@@ -533,6 +507,15 @@ const getStatusColor = (status: string) => {
       return 'default';
   }
 };
+
+// On mount, fetch deployments
+onMounted(async () => {
+  try {
+    await refreshDeployments();
+  } catch (error) {
+    console.error('Failed to load deployment page data:', error);
+  }
+});
 </script>
 
 <style scoped>

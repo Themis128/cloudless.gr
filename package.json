@@ -109,6 +109,7 @@
     "@supabase/supabase-js": "^2.50.3",
     "@vite-pwa/nuxt": "^1.0.4",
     "@vueuse/core": "^13.3.0",
+    "dompurify": "^3.2.6",
     "dotenv": "^16.5.0",
     "nuxt": "^3.17.5",
     "ollama": "^0.5.16",

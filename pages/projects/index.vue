@@ -109,7 +109,7 @@
     <div class="projects-section">
       <v-container>
         <ProjectList
-          :projects="filteredProjects as any"
+          :projects="filteredProjects"
           :view-mode="viewMode"
           :loading="loading"
           @project-click="handleProjectClick"
@@ -200,9 +200,10 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth', layout: 'projects' })
+import { definePageMeta } from '#imports';
+definePageMeta({ layout: 'projects' })
 import { useProjectsStore } from '@/stores/projectsStore';
-import { useUserStore } from '@/stores/userStore';
+import { useSupabaseAuth } from '@/composables/useSupabaseAuth';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -239,7 +240,7 @@ interface _ProjectCreateData {
 
 // Stores
 const projectStore = useProjectsStore();
-const userStore = useUserStore();
+const { user } = useSupabaseAuth();
 const router = useRouter();
 
 // Reactive data
@@ -248,24 +249,22 @@ const showCreateDialog = ref(false);
 
 // Computed properties
 const userName = computed(() => {
-  const fullName = userStore.profile?.full_name;
-  if (fullName) {
-    return fullName.split(' ')[0]; // First name only
+  if (user.value?.user_metadata?.full_name) {
+    return user.value.user_metadata.full_name.split(' ')[0];
   }
-  return '';
+  return user.value?.email?.split('@')[0] || '';
 });
 
 const userInitials = computed(() => {
-  const fullName = userStore.profile?.full_name;
-  if (fullName) {
-    return fullName
+  if (user.value?.user_metadata?.full_name) {
+    return user.value.user_metadata.full_name
       .split(' ')
-      .map((name) => name.charAt(0))
+      .map((name: string) => name.charAt(0))
       .join('')
       .toUpperCase()
       .slice(0, 2);
   }
-  return userStore.profile?.email?.charAt(0).toUpperCase() || 'U';
+  return user.value?.email?.charAt(0).toUpperCase() || 'U';
 });
 
 const personalizedWelcomeMessage = computed(() => {
@@ -282,18 +281,10 @@ const personalizedWelcomeMessage = computed(() => {
 });
 
 const personalizedSubtitle = computed(() => {
-  const userRole = userStore.profile?.role;
-  if (userRole === 'admin') {
-    return 'Manage and oversee all AI development projects and training pipelines';
-  }
   return 'Manage your AI development projects and training pipelines';
 });
 
 const personalizedEmptyMessage = computed(() => {
-  const userRole = userStore.profile?.role;
-  if (userRole === 'admin') {
-    return 'As an admin, you can create and manage AI projects for your team. Start by creating your first project to get everyone started with model training and deployment.';
-  }
   return 'Create your first AI project to get started with model training and deployment. Every great AI journey begins with a single project!';
 });
 
@@ -309,8 +300,8 @@ const personalizedStatsDescription = computed(() => {
 });
 
 const filteredProjects = computed(() => {
-  const allProjects = projectStore.projects as Project[];
-  return [...(allProjects || [])];
+  const allProjects: Project[] = projectStore.projects as Project[];
+  return (allProjects || []);
 });
 
 const activeProjects = computed(() => {
@@ -437,9 +428,6 @@ const _handleRestartDeployment = async (_deployment: ComponentDeployment) => {
 
 // Lifecycle
 onMounted(async () => {
-  // Fetch user profile for personalization
-  await userStore.fetchUserProfile();
-
   // Fetch projects if not already loaded
   const allProjects = projectStore.projects as Project[];
   if ((allProjects || []).length === 0) {

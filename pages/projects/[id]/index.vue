@@ -280,7 +280,6 @@ definePageMeta({
   layout: 'projects',
   title: 'Pipeline Builder',
   requiresAuth: true,
-  middleware: 'auth',
 });
 
 // Route

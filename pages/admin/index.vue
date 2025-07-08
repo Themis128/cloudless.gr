@@ -187,7 +187,6 @@
 import { onMounted } from 'vue'
 
 definePageMeta({
-  middleware: 'admin',
   layout: 'admin'
 })
 
