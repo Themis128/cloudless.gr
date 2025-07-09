@@ -1,0 +1,16 @@
+{
+  "name": "cloudless.gr",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nuxi dev"
+  },
+  "dependencies": {
+    "@types/vue": "^1.0.31",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.17"
+  },
+  "devDependencies": {
+    "nuxt": "^3.17.6"
+  }
+}
