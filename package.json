@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "nuxi dev"
+    "dev": "nuxi dev",
+    "build": "nuxi build",
+    "preview": "nuxi preview"
   },
   "dependencies": {
-    "@types/vue": "^1.0.31",
+    "@nuxtjs/supabase": "^1.5.3",
+    "@pinia/nuxt": "^0.11.1",
+    "@supabase/supabase-js": "^2.50.4",
     "pinia": "^3.0.3",
     "vue": "^3.5.17"
   },

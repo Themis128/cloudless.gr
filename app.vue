@@ -1,0 +1,46 @@
+<template>
+  <v-app>
+    <v-main>
+      <v-container>
+        <h1 class="text-h4 mb-4">My Todos</h1>
+        <v-list>
+          <v-list-item
+            v-for="todo in todos"
+            :key="todo.id"
+          >
+            <v-list-item-content>
+              <v-list-item-title>{{ todo.title }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list>
+      </v-container>
+    </v-main>
+  </v-app>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { supabase } from '~/composables/supabase'
+
+const todos = ref<any[]>([])
+
+const getTodos = async () => {
+  const { data, error } = await supabase.from('todos').select()
+  if (error) {
+    console.error('Error fetching todos:', error)
+  } else {
+    todos.value = data || []
+  }
+}
+
+onMounted(() => {
+  getTodos()
+  // Subscribe to real-time updates
+  const subscription = supabase
+    .channel('public:todos')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, payload => {
+      getTodos()
+    })
+    .subscribe()
+})
+</script>

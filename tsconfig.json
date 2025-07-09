@@ -19,5 +19,10 @@
       "public/*": ["public/*"]
     }
   },
-  "exclude": ["node_modules", ".output", ".nuxt"]
+  "exclude": [
+    "node_modules",
+    ".output",
+    ".nuxt",
+    "pages/debug/[type].vue/[id].vue"
+  ]
 }
