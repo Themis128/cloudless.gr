@@ -1,8 +1,0 @@
-{
-  "name": "my-module-playground",
-  "type": "module",
-  "private": true,
-  "dependencies": {
-    "nuxt": "catalog:nuxt"
-  }
-}
