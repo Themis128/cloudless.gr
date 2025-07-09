@@ -1,6 +1,0 @@
-{
-  "extends": "../.nuxt/tsconfig.server.json",
-  "exclude": [
-    "../pages/projects/[id]/train-clean.vue"
-  ]
-}
