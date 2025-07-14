@@ -1,6 +1,14 @@
 <template>
   <v-container>
     <v-row>
+      <v-col cols="12">
+        <v-btn color="primary" to="/debug" class="mb-4">
+          <v-icon left>mdi-arrow-left</v-icon>
+          Back to Debug Home
+        </v-btn>
+      </v-col>
+    </v-row>
+    <v-row>
       <v-col cols="12" md="7">
         <v-card>
           <v-card-title class="text-h5 d-flex align-center justify-space-between">
@@ -38,7 +46,9 @@
                 <v-card outlined>
                   <v-card-title class="text-h6">Latency History (ms)</v-card-title>
                   <v-card-text>
-                    <v-chart :options="chartOptions" autoresize style="height:200px;" />
+                    <client-only>
+                      <component :is="VChart" v-if="VChart" :option="chartOptions" autoresize style="height:200px;" />
+                    </client-only>
                   </v-card-text>
                 </v-card>
               </v-col>
@@ -76,7 +86,8 @@
 import { ref, computed, onMounted } from 'vue';
 import DebugConsole from '~/components/debug/DebugConsole.vue';
 import DebugInspector from '~/components/debug/DebugInspector.vue';
-import VChart from 'vue-echarts';
+import type { EChartsOption } from 'echarts';
+const VChart = ref();
 
 const networkState = ref<{ status: string; latency: string | null }>({ status: 'checking...', latency: null });
 const logOutput = ref('');
@@ -106,7 +117,9 @@ async function ping() {
   loading.value = false;
 }
 
-onMounted(() => {
+onMounted(async () => {
+  const mod = await import('vue-echarts');
+  VChart.value = mod.default;
   ping();
 });
 
@@ -121,14 +134,27 @@ const onlineRate = computed(() => {
   return ((onlineCount / onlineHistory.value.length) * 100).toFixed(0);
 });
 
-const chartOptions = computed(() => ({
+const chartOptions = computed<EChartsOption>(() => ({
+  backgroundColor: '#1e1e2f',
+  textStyle: {
+    color: '#ccc'
+  },
+  legend: {
+    textStyle: { color: '#fff' }
+  },
+  toolbox: {
+    feature: {
+      saveAsImage: {}
+    }
+  },
   xAxis: {
     type: 'category',
     data: latencyHistory.value.map((_, i) => `${i + 1}`)
   },
   yAxis: {
     type: 'value',
-    min: 0
+    min: 0,
+    name: 'ms'
   },
   series: [
     {

@@ -1,21 +1,24 @@
 <template>
-  <v-app>
-    <v-main>
-      <v-container>
+  <VApp>
+    <VMain>
+      <VContainer>
+        <VBtn icon class="mb-4" to="/">
+          <VIcon>mdi-arrow-left</VIcon>
+        </VBtn>
         <h1 class="text-h4 mb-4">My Todos</h1>
-        <v-list>
-          <v-list-item
+        <VList>
+          <VListItem
             v-for="todo in todos"
             :key="todo.id"
           >
-            <v-list-item-content>
-              <v-list-item-title>{{ todo.title }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-        </v-list>
-      </v-container>
-    </v-main>
-  </v-app>
+            <VListItemContent>
+              <VListItemTitle>{{ todo.title }}</VListItemTitle>
+            </VListItemContent>
+          </VListItem>
+        </VList>
+      </VContainer>
+    </VMain>
+  </VApp>
 </template>
 
 <script setup lang="ts">
@@ -26,7 +29,7 @@ const todos = ref<any[]>([])
 const supabase = useSupabase()
 
 const getTodos = async () => {
-  const { data, error } = await supabase.from('todos').select()
+  const { data, error } = await supabase.from('todos' as any).select()
   if (error) {
     console.error('Error fetching todos:', error)
   } else {

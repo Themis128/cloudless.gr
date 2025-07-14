@@ -36,6 +36,9 @@
         </v-card>
       </v-col>
     </v-row>
+    <v-btn icon class="mb-4" to="/">
+      <v-icon>mdi-arrow-left</v-icon>
+    </v-btn>
   </v-container>
 </template>
 

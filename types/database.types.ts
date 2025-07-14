@@ -197,6 +197,24 @@ export type Database = {
         }
         Relationships: []
       }
+      network_logs: {
+        Row: {
+          id: string
+          latency: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          latency: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          latency?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       data_sources: {
         Row: {
           connection_config: Json
@@ -1176,7 +1194,7 @@ export type Tables<
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

@@ -1,6 +1,14 @@
 <template>
   <v-container>
     <v-row>
+      <v-col cols="12">
+        <v-btn color="primary" to="/debug" class="mb-4">
+          <v-icon left>mdi-arrow-left</v-icon>
+          Back to Debug Home
+        </v-btn>
+      </v-col>
+    </v-row>
+    <v-row>
       <v-col cols="12" md="6">
         <v-card>
           <v-card-title class="text-h5 d-flex align-center justify-space-between">

@@ -15,7 +15,7 @@ const supabase = useSupabase()
 const todos = ref<any[]>([])
 
 async function getTodos() {
-  const { data } = await supabase.from('todos').select()
+  const { data } = await supabase.from('todos' as any).select()
   todos.value = data || []
 }
 
