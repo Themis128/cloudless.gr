@@ -19,6 +19,13 @@
       "public/*": ["public/*"]
     }
   },
+  "types": [
+    "@nuxt/kit",
+    "@nuxt/schema",
+    "@nuxt/types",
+    "@nuxtjs/supabase",
+    "@types/node"
+  ],
   "exclude": [
     "node_modules",
     ".output",
