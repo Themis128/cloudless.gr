@@ -1,49 +1,63 @@
 <template>
-  <section>
-    <h1>Create Project</h1>
-    <p>Use the template below to create a new project. Fill in the fields and click 'Create Project'.</p>
-    <pre>
+  <v-container>
+    <v-row justify="center">
+      <v-col cols="12" md="8" lg="6">
+        <v-card>
+          <v-card-title>Create Project</v-card-title>
+          <v-card-text>
+            <div class="mb-4">
+              <div>Use the template below to create a new project. Fill in the fields and click 'Create Project'.</div>
+              <v-code>
 {
   "name": "MyProject",
   "description": "Project description"
 }
-    </pre>
-    <form @submit.prevent="createProject">
-      <label>
-        Name:
-        <input v-model="name" required placeholder="e.g. MyProject" />
-      </label>
-      <label>
-        Description:
-        <input v-model="description" placeholder="Project description" />
-      </label>
-      <button type="submit">Create Project</button>
-    </form>
-    <div v-if="success" class="success">Project created!</div>
-    <div v-if="error" class="error">{{ error }}</div>
-  </section>
+              </v-code>
+            </div>
+            <v-form @submit.prevent="createProject" ref="formRef">
+              <v-text-field
+                v-model="name"
+                label="Name"
+                placeholder="e.g. MyProject"
+                required
+                class="mb-3"
+              />
+              <v-text-field
+                v-model="description"
+                label="Description"
+                placeholder="Project description"
+                class="mb-3"
+              />
+              <v-btn type="submit" color="primary" :loading="loading">Create Project</v-btn>
+            </v-form>
+            <v-alert v-if="success" type="success" class="mt-3">Project created!</v-alert>
+            <v-alert v-if="error" type="error" class="mt-3">{{ error }}</v-alert>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useSupabase } from '~/composables/supabase'
+import { useProjectStore } from '~/stores/templateStore'
+import { storeToRefs } from 'pinia'
 
-const name = ref('')
-const description = ref('')
-const success = ref(false)
-const error = ref<string | null>(null)
-const supabase = useSupabase()
+const formRef = ref()
+const projectStore = useProjectStore()
+const { name, description, loading, success, error } = storeToRefs(projectStore)
 
-async function createProject() {
-  success.value = false
-  error.value = null
-  const { error: err } = await supabase.from('projects').insert([{ name: name.value, description: description.value }])
-  if (err) {
-    error.value = err.message
-  } else {
-    success.value = true
-    name.value = ''
-    description.value = ''
-  }
+function createProject() {
+  projectStore.create({ name: name.value, description: description.value })
 }
 </script>
+
+<style scoped>
+.mb-3 {
+  margin-bottom: 1rem;
+}
+.mt-3 {
+  margin-top: 1rem;
+}
+</style>

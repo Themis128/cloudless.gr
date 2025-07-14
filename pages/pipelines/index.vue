@@ -1,20 +1,33 @@
 <template>
-  <section>
-    <h1>Pipelines</h1>
-    <p>Use the template below to create a new pipeline. Fill in the fields and click 'Create Pipeline'.</p>
-    <pre>
+  <v-container>
+    <v-row justify="center">
+      <v-col cols="12" md="10">
+        <v-card>
+          <v-card-title>Pipelines</v-card-title>
+          <v-card-text>
+            <div class="mb-4">
+              <div>Use the template below to create a new pipeline. Fill in the fields and click 'Create Pipeline'.</div>
+              <v-code>
 {
   "name": "MyPipeline",
   "config": { "steps": [] }
 }
-    </pre>
-    <ul>
-      <li v-for="pipeline in pipelines" :key="pipeline.id">
-        {{ pipeline.name }}
-      </li>
-    </ul>
-    <div v-if="error" class="error">{{ error }}</div>
-  </section>
+              </v-code>
+            </div>
+            <v-list>
+              <v-list-item v-for="pipeline in pipelines" :key="pipeline.id">
+                <v-list-item-content>
+                  <v-list-item-title>{{ pipeline.name }}</v-list-item-title>
+                  <v-list-item-subtitle>{{ pipeline.created_at }}</v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+            </v-list>
+            <v-alert v-if="error" type="error" class="mt-3">{{ error }}</v-alert>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup lang="ts">

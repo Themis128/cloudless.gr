@@ -1,20 +1,33 @@
 <template>
-  <section>
-    <h1>Models</h1>
-    <p>Below is a template for using a model. Select a model and use it for inference or other tasks.</p>
-    <pre>
+  <v-container>
+    <v-row justify="center">
+      <v-col cols="12" md="10">
+        <v-card>
+          <v-card-title>Models</v-card-title>
+          <v-card-text>
+            <div class="mb-4">
+              <div>Below is a template for using a model. Select a model and use it for inference or other tasks.</div>
+              <v-code>
 {
   "model_id": "uuid-of-model",
   "input": "Your input data here"
 }
-    </pre>
-    <ul>
-      <li v-for="model in models" :key="model.id">
-        {{ model.name }}
-      </li>
-    </ul>
-    <div v-if="error" class="error">{{ error }}</div>
-  </section>
+              </v-code>
+            </div>
+            <v-list>
+              <v-list-item v-for="model in models" :key="model.id">
+                <v-list-item-content>
+                  <v-list-item-title>{{ model.name }}</v-list-item-title>
+                  <v-list-item-subtitle>{{ model.created_at }}</v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+            </v-list>
+            <v-alert v-if="error" type="error" class="mt-3">{{ error }}</v-alert>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup lang="ts">
