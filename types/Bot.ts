@@ -1,7 +1,6 @@
 // Bot type
 export interface Bot {
-  id: string;
+  id: string; // uuid
   name: string;
-  // ...
 }
 

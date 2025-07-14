@@ -12,7 +12,14 @@
         ".ts",
         ".vue",
         ".json",
-        ".md"
+        ".md",
+        ".css",
+        ".scss",
+        ".yml",
+        ".yaml",
+        ".env",
+        ".sql",
+        ".sh"
     ],
     "exclude": [
         "node_modules/",
@@ -20,6 +27,15 @@
         ".output/",
         ".git/",
         "dist/",
-        "build/"
-    ]
+        "build/",
+        
+        ".vscode/",
+        "coverage/",
+        "logs/",
+        "tmp/",
+        ".DS_Store"
+    ],
+    "maxSuggestions": 10,
+    "enableCopilotChat": true,
+    "enableInlayHints": true
 }
