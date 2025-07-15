@@ -13,7 +13,7 @@
         <v-card>
           <v-card-title class="text-h5">System Logs</v-card-title>
           <v-card-text>
-            <DebugLogsViewer :logs="systemLogs" />
+            <DebugLogsViewer :logs="logs" />
             <v-divider class="my-4" />
             <v-row>
               <v-col cols="12" md="6">
@@ -23,7 +23,7 @@
                     <v-list dense>
                       <v-list-item>
                         <v-list-item-title>Total Logs:</v-list-item-title>
-                        <v-list-item-subtitle>{{ systemLogs.length }}</v-list-item-subtitle>
+                        <v-list-item-subtitle>{{ logs.length }}</v-list-item-subtitle>
                       </v-list-item>
                       <v-list-item>
                         <v-list-item-title>Last Log:</v-list-item-title>
@@ -67,28 +67,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { computed } from 'vue';
 import VChart from 'vue-echarts';
+import { useDebugTools } from '~/composables/useDebugTools';
 
-const systemLogs = ref<string[]>([
-  'Service started...',
-  'Connection established...',
-  'Auth token refreshed.'
-]);
+const { logs } = useDebugTools();
 
-onMounted(() => {
-  // Simulate dynamic log update
-  systemLogs.value.push('Log viewer initialized.');
-});
-
-const lastLog = computed(() => systemLogs.value[systemLogs.value.length - 1] || 'N/A');
+const lastLog = computed(() => logs.value[logs.value.length - 1] || 'N/A');
 const lastUpdated = computed(() => new Date().toLocaleString());
-const diagnosticStatus = computed(() => systemLogs.value.length > 0 ? 'Healthy' : 'No logs');
+const diagnosticStatus = computed(() => logs.value.length > 0 ? 'Healthy' : 'No logs');
 
 const logCounts = computed(() => {
   // Simulate log frequency for last 7 events
   const arr = new Array(7).fill(0);
-  for (let i = 0; i < Math.min(systemLogs.value.length, 7); i++) {
+  for (let i = 0; i < Math.min(logs.value.length, 7); i++) {
     arr[i] = 1 + Math.floor(Math.random() * 3); // Random count for demo
   }
   return arr;

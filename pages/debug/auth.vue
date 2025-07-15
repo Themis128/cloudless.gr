@@ -53,7 +53,7 @@
         <v-card>
           <v-card-title class="text-h6">Auth Logs</v-card-title>
           <v-card-text>
-            <DebugLogsViewer :logs="authLogs" />
+            <DebugLogsViewer :logs="logs" />
           </v-card-text>
         </v-card>
       </v-col>
@@ -68,6 +68,9 @@ import DebugLogsViewer from '~/components/debug/DebugLogsViewer.vue'
 import VChart from 'vue-echarts'
 import type { Session, User } from '@supabase/auth-js'
 import { useSupabase } from '~/composables/supabase'
+import { useDebugTools } from '~/composables/useDebugTools'
+
+const { logs } = useDebugTools()
 
 const supabase = useSupabase()
 
@@ -76,7 +79,6 @@ const authState = ref<{ user: User | null; session: Session | null }>({
   session: null
 })
 
-const authLogs = ref<string[]>(['Fetching auth status...'])
 const sessionDurations = ref<number[]>([10, 15, 8, 20, 12, 18, 25]) // Example data
 
 const tokenExpires = computed(() => {
@@ -110,11 +112,11 @@ const chartOptions = computed(() => ({
 onMounted(async () => {
   const { data, error } = await supabase.auth.getSession()
   if (error) {
-    authLogs.value.push(`Error fetching session: ${error.message}`)
+    logs.value.push(`Error fetching session: ${error.message}`)
   } else {
     authState.value.session = data.session
     authState.value.user = data.session?.user || null
-    authLogs.value.push('Auth state loaded.')
+    logs.value.push('Auth state loaded.')
   }
 })
 </script>

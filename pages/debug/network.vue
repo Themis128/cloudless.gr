@@ -18,7 +18,7 @@
             </v-btn>
           </v-card-title>
           <v-card-text>
-            <DebugConsole :output="logOutput" title="Ping Log" />
+            <DebugConsole :output="logs" title="Ping Log" />
             <v-divider class="my-4" />
             <v-row>
               <v-col cols="12" md="6">
@@ -90,7 +90,8 @@ import type { EChartsOption } from 'echarts';
 const VChart = ref();
 
 const networkState = ref<{ status: string; latency: string | null }>({ status: 'checking...', latency: null });
-const logOutput = ref('');
+import { useDebugTools } from '~/composables/useDebugTools';
+const { logs } = useDebugTools();
 const loading = ref(false);
 const latencyHistory = ref<number[]>([]);
 const onlineHistory = ref<boolean[]>([]);
@@ -100,17 +101,17 @@ const diagnosticStatus = computed(() => networkState.value.status);
 async function ping() {
   loading.value = true;
   const start = Date.now();
-  logOutput.value += `Pinging API server...\n`;
+  logs.value.push(`Pinging API server...`);
   try {
     await fetch('http://127.0.0.1:54321/health');
     const latency = Date.now() - start;
     networkState.value = { status: 'online', latency: `${latency}ms` };
-    logOutput.value += `✅ Online (${latency}ms)\n`;
+  logs.value.push(`✅ Online (${latency}ms)`);
     latencyHistory.value.push(latency);
     onlineHistory.value.push(true);
   } catch (error) {
     networkState.value = { status: 'offline', latency: 'N/A' };
-    logOutput.value += `❌ Offline\n`;
+  logs.value.push(`❌ Offline`);
     latencyHistory.value.push(0);
     onlineHistory.value.push(false);
   }

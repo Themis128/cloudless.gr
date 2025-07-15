@@ -20,7 +20,7 @@
               append-inner-icon="mdi-play"
               @click:append-inner="runInference"
             />
-            <DebugConsole :output="output" title="Model Output" />
+            <DebugConsole :output="logs" title="Model Output" />
             <v-divider class="my-4" />
             <v-row>
               <v-col cols="12" md="6">
@@ -83,9 +83,11 @@ import { ref, onMounted, computed } from 'vue';
 import DebugConsole from '~/components/debug/DebugConsole.vue';
 import DebugInspector from '~/components/debug/DebugInspector.vue';
 import VChart from 'vue-echarts';
+import { useDebugTools } from '~/composables/useDebugTools';
+
+const { logs } = useDebugTools();
 
 const input = ref('');
-const output = ref('');
 const modelInfo = ref({ version: 'v1.2', status: 'ready', params: { layers: 12, size: '1.3B' } });
 const inferenceTimes = ref<number[]>([]);
 const lastUpdated = computed(() => new Date().toLocaleString());
@@ -100,7 +102,9 @@ onMounted(() => {
 
 function runInference() {
   const start = Date.now();
-  output.value = input.value ? `Echo: ${input.value}` : '';
+  if (input.value) {
+    logs.value.push(`Echo: ${input.value}`);
+  }
   setTimeout(() => {
     const elapsed = Date.now() - start;
     inferenceTimes.value.push(elapsed);

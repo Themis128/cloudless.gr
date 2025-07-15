@@ -1,25 +1,34 @@
 <template>
   <div class="debug-console">
+    <div v-if="title" class="console-title">{{ title }}</div>
     <div class="console-output">
-      <div v-for="(line, idx) in output" :key="idx" class="console-line">{{ line }}</div>
+      <div v-for="(line, idx) in outputProp" :key="idx" class="console-line">{{ line }}</div>
     </div>
-    <form @submit.prevent="runCommand" class="console-input-form">
+    <form @submit.prevent="onRunCommand" class="console-input-form">
       <input v-model="command" class="console-input" placeholder="Type a command..." autocomplete="off" />
       <button type="submit">Run</button>
     </form>
   </div>
 </template>
 <script setup lang="ts">
-import { ref } from 'vue';
-
-const output = ref<string[]>(["Welcome to the Debug Console!"]);
+import { ref, computed } from 'vue';
+const props = defineProps({
+  output: {
+    type: Array,
+    default: () => ["Welcome to the Debug Console!"]
+  },
+  title: {
+    type: String,
+    default: ''
+  }
+});
+const emit = defineEmits(['run']);
 const command = ref("");
+const outputProp = computed(() => props.output);
 
-function runCommand() {
+function onRunCommand() {
   if (command.value.trim()) {
-    output.value.push("> " + command.value);
-    // Simulate a response
-    output.value.push("[echo] " + command.value);
+    emit('run', command.value);
     command.value = "";
   }
 }
@@ -34,6 +43,11 @@ function runCommand() {
   max-width: 600px;
   margin: 0 auto;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.console-title {
+  font-weight: bold;
+  font-size: 1.1em;
+  margin-bottom: 8px;
 }
 .console-output {
   min-height: 180px;

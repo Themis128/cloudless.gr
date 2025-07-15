@@ -7,10 +7,16 @@
 
     <div class="d-flex justify-space-between align-center mb-4">
       <h1>Bots</h1>
-      <v-btn color="primary" to="/bots/builder">
+      <v-btn color="primary" @click="showWizard = !showWizard">
         <v-icon start>mdi-plus</v-icon>Create Bot
       </v-btn>
     </div>
+
+    <v-dialog v-model="showWizard" max-width="600">
+      <template #default>
+        <BotWizard @created="onBotCreated" />
+      </template>
+    </v-dialog>
 
     <v-row>
       <v-col
@@ -20,20 +26,7 @@
         md="6"
         lg="4"
       >
-        <v-card>
-          <v-card-title>
-            <v-avatar v-if="bot.avatar_url" size="32" class="me-2">
-              <v-img :src="bot.avatar_url" />
-            </v-avatar>
-            {{ bot.name }}
-          </v-card-title>
-          <v-card-text class="text-truncate" style="max-height: 60px;">
-            {{ bot.prompt }}
-          </v-card-text>
-          <v-card-actions>
-            <v-btn text :to="`/bots/${bot.id}`">View</v-btn>
-          </v-card-actions>
-        </v-card>
+        <BotDetails :bot-id="bot.id" />
       </v-col>
     </v-row>
 
@@ -48,8 +41,16 @@ import { useBotStore } from '~/stores/botStore';
 import { storeToRefs } from 'pinia';
 import BotGuide from '~/components/step-guides/BotGuide.vue';
 
+import BotDetails from '~/components/bots/BotDetails.vue';
+
 const botStore = useBotStore();
 const { bots, error } = storeToRefs(botStore);
+const showWizard = ref(false);
+
+function onBotCreated() {
+  showWizard.value = false;
+  botStore.fetchAll();
+}
 
 onMounted(() => {
   botStore.fetchAll();
