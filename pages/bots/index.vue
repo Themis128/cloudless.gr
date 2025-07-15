@@ -1,4 +1,5 @@
 <template>
+  <BotGuide />
   <section>
     <v-btn icon class="mb-4" to="/">
       <v-icon>mdi-arrow-left</v-icon>
@@ -45,6 +46,7 @@
 import { ref, onMounted } from 'vue';
 import { useBotStore } from '~/stores/botStore';
 import { storeToRefs } from 'pinia';
+import BotGuide from '~/components/step-guides/BotGuide.vue';
 
 const botStore = useBotStore();
 const { bots, error } = storeToRefs(botStore);

@@ -1,4 +1,5 @@
 <template>
+  <AnalyticsGuide />
   <v-container>
     <v-row>
       <v-col cols="12">
@@ -31,5 +32,6 @@
 </template>
 
 <script setup lang="ts">
+import AnalyticsGuide from '~/components/step-guides/AnalyticsGuide.vue'
 // Add composables or logic for dashboard metrics here
 </script>

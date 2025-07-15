@@ -1,4 +1,5 @@
 <template>
+  <TrainGuide />
   <v-container>
     <h1 class="mb-4">Train Model</h1>
     <v-form @submit.prevent="trainModel">
@@ -33,6 +34,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useSupabase } from '~/composables/supabase'
+import TrainGuide from '~/components/step-guides/TrainGuide.vue'
 
 const supabase = useSupabase()
 const loading = ref(false)

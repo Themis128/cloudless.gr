@@ -1,4 +1,6 @@
 <template>
+  <PipelineGuide />
+
   <v-container>
     <v-btn icon class="mb-4" to="/pipelines">
       <v-icon>mdi-arrow-left</v-icon>
@@ -12,6 +14,22 @@
         label="Pipeline Name"
         class="mb-3"
         required
+      />
+      <v-select
+        v-model="selectedModel"
+        :items="modelOptions"
+        item-title="name"
+        item-value="id"
+        label="Select Model (optional)"
+        class="mb-3"
+      />
+      <v-select
+        v-model="selectedBot"
+        :items="botOptions"
+        item-title="name"
+        item-value="id"
+        label="Select Bot (optional)"
+        class="mb-3"
       />
       <v-textarea
         v-model="jsonString"
@@ -41,6 +59,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useSupabase } from '~/composables/supabase'
+import PipelineGuide from '~/components/step-guides/PipelineGuide.vue'
 
 const supabase = useSupabase()
 const loading = ref(false)
@@ -52,6 +71,10 @@ const form = ref({
   name: '',
   config: {} as Record<string, unknown>,
 })
+const selectedModel = ref('')
+const modelOptions = ref<any[]>([])
+const selectedBot = ref('')
+const botOptions = ref<any[]>([])
 
 const jsonString = ref(`{
   "steps": []
@@ -70,6 +93,28 @@ const parsedJson = computed(() => {
   }
 })
 
+import { onMounted } from 'vue'
+onMounted(async () => {
+  // Fetch available models for picker
+  const { data: models, error: modelErr } = await supabase
+    .from('models')
+    .select('id, name')
+    .order('created_at', { ascending: false })
+    .limit(20)
+  if (!modelErr && models) {
+    modelOptions.value = models
+  }
+  // Fetch available bots for picker
+  const { data: bots, error: botErr } = await supabase
+    .from('bots')
+    .select('id, name')
+    .order('created_at', { ascending: false })
+    .limit(20)
+  if (!botErr && bots) {
+    botOptions.value = bots
+  }
+})
+
 async function submit() {
   error.value = null
   success.value = false
@@ -83,21 +128,28 @@ async function submit() {
     return
   }
 
-  // Fetch current user
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
-  if (userError || !user) {
-    error.value = 'Could not get current user.'
+  // Allow user to select either model, bot, or both
+  if (!selectedModel.value && !selectedBot.value) {
+    error.value = 'Please select at least a model or a bot to associate with this pipeline.'
     loading.value = false
     return
   }
+  if (selectedModel.value) form.value.config.model = selectedModel.value
+  if (selectedBot.value) form.value.config.bot_id = selectedBot.value
+
+  // You need to provide owner_id, e.g. from user session or context
+  const { data: userData } = await supabase.auth.getUser()
+  const ownerId = userData?.user?.id || '' // Replace with your actual user id logic
 
   const { error: err } = await supabase.from('pipelines').insert([
     {
       name: form.value.name,
       config: form.value.config as any,
       created_at: new Date().toISOString(),
-      owner_id: user.id,
-      project_id: projectId.value || '' // Ensure project_id is always a string
+      model: selectedModel.value || null,
+      bot_id: selectedBot.value || null,
+      project_id: projectId.value || '', // Ensure project_id is always a string
+      owner_id: ownerId
     }
   ])
 

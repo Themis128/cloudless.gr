@@ -4,17 +4,19 @@
       <v-app-bar-nav-icon @click="drawer = !drawer" />
       <v-toolbar-title>Cloudless LLM Dev Agent</v-toolbar-title>
     </v-app-bar>
-    <v-navigation-drawer v-model="drawer" app>
-      <v-list>
-        <v-list-item to="/" title="Home" prepend-icon="mdi-home" />
-        <v-list-item to="/bots" title="Bots" prepend-icon="mdi-robot" />
-        <v-list-item to="/models" title="Models" prepend-icon="mdi-brain" />
-        <v-list-item to="/pipelines" title="Pipelines" prepend-icon="mdi-timeline" />
-        <v-list-item to="/projects/create" title="Create Project" prepend-icon="mdi-plus-box" />
-        <v-list-item to="/llm/train" title="Train LLM" prepend-icon="mdi-rocket-launch" />
-        <v-list-item to="/debug" title="Debug" prepend-icon="mdi-bug" />
-      </v-list>
-    </v-navigation-drawer>
+    <ClientOnly>
+      <v-navigation-drawer v-model="drawer" app>
+        <v-list>
+          <v-list-item to="/" title="Home" prepend-icon="mdi-home" />
+          <v-list-item to="/bots" title="Bots" prepend-icon="mdi-robot" />
+          <v-list-item to="/models" title="Models" prepend-icon="mdi-brain" />
+          <v-list-item to="/pipelines" title="Pipelines" prepend-icon="mdi-timeline" />
+          <v-list-item to="/projects/create" title="Create Project" prepend-icon="mdi-plus-box" />
+          <v-list-item to="/llm/train" title="Train LLM" prepend-icon="mdi-rocket-launch" />
+          <v-list-item to="/debug" title="Debug" prepend-icon="mdi-bug" />
+        </v-list>
+      </v-navigation-drawer>
+    </ClientOnly>
     <v-main>
       <v-container fluid>
         <v-row class="my-6">
@@ -65,5 +67,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import ProjectListPreview from '~/components/project-list-preview.vue'
+import ActivityFeed from '~/components/activity-feed.vue'
 const drawer = ref(false)
 </script>

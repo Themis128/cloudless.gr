@@ -4,48 +4,35 @@
       <header class="app-header">
         <div class="logo-row">
           <NuxtImg src="/logo.svg" width="40" height="40" alt="Cloudless Logo" class="logo" />
-          <h1 class="logo-text">Cloudless</h1>
+          <span class="wizard-hat-emoji">🧙‍♂️</span>
+          <h1 class="logo-text">Cloudless Wizard</h1>
         </div>
-        <nav class="main-nav" style="flex-direction:column;align-items:flex-start">
-          <ClientOnly><ProjectGuide /></ClientOnly>
-          <!-- 1. Start a Project -->
-          <NuxtLink to="/projects">Projects</NuxtLink>
-          <NuxtLink to="/projects/create">Create Project</NuxtLink>
-
-          <ClientOnly><BotGuide /></ClientOnly>
-          <!-- 2. Add Bots -->
-          <NuxtLink to="/bots">Bots</NuxtLink>
-          <NuxtLink to="/bots/builder">Create Bot</NuxtLink>
-
-          <ClientOnly><ModelGuide /></ClientOnly>
-          <!-- 3. Add Models -->
-          <NuxtLink to="/models">Models</NuxtLink>
-          <NuxtLink to="/models/create">Create Model</NuxtLink>
-
-          <ClientOnly><PipelineGuide /></ClientOnly>
-          <!-- 4. Build Pipelines -->
-          <NuxtLink to="/pipelines">Pipelines</NuxtLink>
-          <NuxtLink to="/pipelines/create">Create Pipeline</NuxtLink>
-
-          <ClientOnly><TrainGuide /></ClientOnly>
-          <!-- 5. Train Models/LLMs -->
-          <NuxtLink to="/models/train">Train Model</NuxtLink>
-          <NuxtLink to="/llm/train">Train LLM</NuxtLink>
-
-          <ClientOnly><DeployGuide /></ClientOnly>
-          <!-- 6. Deploy -->
-          <NuxtLink to="/models/deploy">Deploy Model</NuxtLink>
-          <NuxtLink to="/deploy">Deployments</NuxtLink>
-
-          <ClientOnly><AnalyticsGuide /></ClientOnly>
-          <!-- 7. Analytics & Debug -->
-          <NuxtLink to="/dashboard">Dashboard</NuxtLink>
-          <NuxtLink to="/debug">Debug</NuxtLink>
-        </nav>
       </header>
-      <main class="app-main">
-        <slot />
-      </main>
+      <div class="wizard-body">
+        <aside class="wizard-sidebar">
+          <nav class="main-nav nav-steps">
+            <div v-for="(step, i) in steps" :key="step.title" class="nav-section">
+              <div class="nav-header">
+                <span v-if="i < currentIndex">🟢</span>
+                <span v-else-if="i === currentIndex">🧙‍♂️</span>
+                <span v-else>⚪</span>
+                Step {{ i + 1 }}: {{ step.title }}
+              </div>
+              <NuxtLink :to="step.path">
+                <span class="step-link-icon">
+                  <span v-if="i === currentIndex">✨</span>
+                  <span v-else-if="i < currentIndex">✔️</span>
+                  <span v-else>⭐</span>
+                </span>
+                {{ step.title }} Setup
+              </NuxtLink>
+            </div>
+          </nav>
+        </aside>
+        <main class="app-main">
+          <slot />
+        </main>
+      </div>
       <footer class="app-footer">
         <span>&copy; 2025 Cloudless</span>
       </footer>
@@ -54,13 +41,16 @@
 </template>
 
 <script setup lang="ts">
-import ProjectGuide from '~/components/step-guides/ProjectGuide.vue'
-import BotGuide from '~/components/step-guides/BotGuide.vue'
-import ModelGuide from '~/components/step-guides/ModelGuide.vue'
-import PipelineGuide from '~/components/step-guides/PipelineGuide.vue'
-import TrainGuide from '~/components/step-guides/TrainGuide.vue'
-import DeployGuide from '~/components/step-guides/DeployGuide.vue'
-import AnalyticsGuide from '~/components/step-guides/AnalyticsGuide.vue'
+import { useRoute } from 'vue-router'
+import { computed } from 'vue'
+import { useWizardSteps } from '~/composables/useWizardSteps'
+
+const route = useRoute()
+const { steps } = useWizardSteps()
+
+const currentIndex = computed(() =>
+  steps.findIndex(s => route.path.startsWith(s.path.replace('/create', '')))
+)
 </script>
 
 <style scoped>
@@ -68,33 +58,91 @@ import AnalyticsGuide from '~/components/step-guides/AnalyticsGuide.vue'
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f7f7fa;
+  background: linear-gradient(120deg, #23232b 0%, #2d2d3a 100%);
+}
+.wizard-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.wizard-sidebar {
+  width: 270px;
+  background: #23232b;
+  padding: 2rem 1.2rem 2rem 2rem;
+  border-right: 1px solid #222;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  box-shadow: 2px 0 16px 0 rgba(0,0,0,0.10);
+  z-index: 2;
 }
 .app-header {
-  background: #222;
+  background: #23232b;
   color: #fff;
-  padding: 1rem 2rem;
+  padding: 1.5rem 2rem 1rem 2rem;
   text-align: center;
   letter-spacing: 2px;
+  border-bottom: 1px solid #23232b;
 }
 .main-nav {
-  margin-top: 1rem;
+  margin-top: 0;
   display: flex;
-  gap: 1.5rem;
-  justify-content: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  width: 100%;
 }
 .main-nav a {
   color: #fff;
   text-decoration: none;
   font-weight: 500;
-  transition: color 0.2s;
+  transition: color 0.2s, background 0.2s;
+  margin-left: 1.5rem;
+  border-radius: 6px;
+  padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+  display: flex;
+  align-items: center;
 }
 .main-nav .router-link-active {
   color: #64b5f6;
   font-weight: 600;
+  background: rgba(100,181,246,0.08);
 }
 .main-nav a:hover {
   color: #90caf9;
+  background: rgba(100,181,246,0.10);
+}
+.nav-steps {
+  width: 100%;
+}
+.nav-section {
+  margin-bottom: 1.2rem;
+}
+.nav-header {
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #90caf9;
+  margin-bottom: 0.2rem;
+  margin-left: 0.2rem;
+  display: flex;
+  align-items: center;
+}
+.nav-header span {
+  margin-right: 0.5rem;
+  font-size: 1.2rem;
+}
+.step-link-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0.5rem;
+  font-size: 1.1em;
+}
+.wizard-hat-emoji {
+  font-size: 2rem;
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+  vertical-align: middle;
 }
 .logo-row {
   display: flex;
@@ -122,12 +170,16 @@ import AnalyticsGuide from '~/components/step-guides/AnalyticsGuide.vue'
   max-width: 900px;
   margin: 0 auto;
   width: 100%;
+  background: #23232b;
+  border-radius: 18px;
+  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.08);
 }
 .app-footer {
-  background: #222;
+  background: #23232b;
   color: #fff;
   text-align: center;
   padding: 1rem 2rem;
   font-size: 0.95rem;
+  border-top: 1px solid #23232b;
 }
 </style>

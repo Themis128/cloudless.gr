@@ -17,7 +17,7 @@ export default defineNuxtConfig({
   },
   // To set host and port, use environment variables NUXT_HOST and NUXT_PORT or pass them via CLI
   nitro: {
-    compatibilityDate: '2025-07-09',
+    compatibilityDate: '2025-07-15',
   },
   imports: {
     dirs: [

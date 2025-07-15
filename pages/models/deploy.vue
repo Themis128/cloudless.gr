@@ -1,4 +1,5 @@
 <template>
+  <DeployGuide />
   <div class="deploy-model-page">
     <h1>Deploy Model</h1>
     <v-alert type="info" class="mb-4">
@@ -33,6 +34,7 @@ import { ref, computed } from 'vue'
 import { useModelStore } from '~/stores/modelStore'
 import { storeToRefs } from 'pinia'
 import type { Model } from '~/types/Model'
+import DeployGuide from '~/components/step-guides/DeployGuide.vue'
 
 const modelStore = useModelStore()
 const { models: modelNames } = storeToRefs(modelStore)

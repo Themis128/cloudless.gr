@@ -1,4 +1,5 @@
 <template>
+  <ProjectGuide />
   <v-container>
     <v-row justify="center">
       <v-col cols="12" md="8" lg="6">
@@ -46,6 +47,7 @@
 import { ref } from 'vue'
 import { useProjectStore } from '~/stores/templateStore'
 import { storeToRefs } from 'pinia'
+import ProjectGuide from '~/components/step-guides/ProjectGuide.vue'
 
 const formRef = ref()
 const projectStore = useProjectStore()

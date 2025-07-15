@@ -1,4 +1,5 @@
 <template>
+  <ModelGuide />
   <v-container>
     <h1 class="mb-4">Create Model</h1>
     <v-form @submit.prevent="createModel">
@@ -24,6 +25,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useSupabase } from '~/composables/supabase'
+import ModelGuide from '~/components/step-guides/ModelGuide.vue'
 
 const supabase = useSupabase()
 const loading = ref(false)

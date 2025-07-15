@@ -1,4 +1,5 @@
 <template>
+  <AnalyticsGuide />
   <v-container>
     <h1 class="mb-4">System Overview</h1>
 
@@ -31,6 +32,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useSupabase } from '~/composables/supabase'
 import type { Database } from '~/types/database.types'
+import AnalyticsGuide from '~/components/step-guides/AnalyticsGuide.vue'
 
 const supabase = useSupabase()
 

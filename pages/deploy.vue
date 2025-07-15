@@ -1,4 +1,5 @@
 <template>
+  <DeployGuide />
   <v-container>
     <h1>Deployments</h1>
     <v-alert type="info" class="mb-4">
@@ -29,6 +30,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import DeployGuide from '~/components/step-guides/DeployGuide.vue'
 
 // Example deployments data. Replace with real API call.
 const deployments = ref([

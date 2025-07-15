@@ -1,4 +1,5 @@
 <template>
+  <ModelGuide />
   <v-container>
     <v-row justify="center">
       <v-col cols="12" md="10">
@@ -37,6 +38,7 @@
 import { ref, onMounted } from 'vue'
 import { useSupabase } from '~/composables/supabase'
 import type { Database } from '~/types/database.types'
+import ModelGuide from '~/components/step-guides/ModelGuide.vue'
 
 const models = ref<Database['public']['Tables']['models']['Row'][]>([])
 const error = ref<string | null>(null)
