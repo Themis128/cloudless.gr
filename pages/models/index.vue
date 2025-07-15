@@ -17,10 +17,8 @@
             </div>
             <v-list>
               <v-list-item v-for="model in models" :key="model.id">
-                <v-list-item-content>
-                  <v-list-item-title>{{ model.name }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ model.created_at }}</v-list-item-subtitle>
-                </v-list-item-content>
+                <v-list-item-title>{{ model.name }}</v-list-item-title>
+                <v-list-item-subtitle>{{ model.created_at }}</v-list-item-subtitle>
               </v-list-item>
             </v-list>
             <v-alert v-if="error" type="error" class="mt-3">{{ error }}</v-alert>

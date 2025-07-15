@@ -8,9 +8,21 @@
       <v-navigation-drawer v-model="drawer" app>
         <v-list>
           <v-list-item to="/" title="Home" prepend-icon="mdi-home" />
-          <v-list-item to="/bots" title="Bots" prepend-icon="mdi-robot" />
-          <v-list-item to="/models" title="Models" prepend-icon="mdi-brain" />
-          <v-list-item to="/pipelines" title="Pipelines" prepend-icon="mdi-timeline" />
+          <v-list-item to="/bots" title="Bots">
+            <template #prepend>
+              <SvgIcon name="bot" size="24" style="margin-right:8px;" />
+            </template>
+          </v-list-item>
+          <v-list-item to="/models" title="Models">
+            <template #prepend>
+              <SvgIcon name="model" size="24" style="margin-right:8px;" />
+            </template>
+          </v-list-item>
+          <v-list-item to="/pipelines" title="Pipelines">
+            <template #prepend>
+              <SvgIcon name="pipeline" size="24" style="margin-right:8px;" />
+            </template>
+          </v-list-item>
           <v-list-item to="/projects/create" title="Create Project" prepend-icon="mdi-plus-box" />
           <v-list-item to="/llm/train" title="Train LLM" prepend-icon="mdi-rocket-launch" />
           <v-list-item to="/debug" title="Debug" prepend-icon="mdi-bug" />
@@ -69,5 +81,6 @@
 import { ref } from 'vue'
 import ProjectListPreview from '~/components/project-list-preview.vue'
 import ActivityFeed from '~/components/activity-feed.vue'
+import SvgIcon from '~/components/ui/SvgIcon.vue'
 const drawer = ref(false)
 </script>

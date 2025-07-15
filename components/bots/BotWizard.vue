@@ -1,27 +1,42 @@
 <template>
   <v-card>
     <v-card-title>Bot Builder Wizard</v-card-title>
-    <v-progress-linear :value="progress" color="primary" height="6" class="mb-2" />
+    <v-progress-linear :value="progressValue" color="primary" height="6" class="mb-2" />
     <v-card-text>
-      <v-stepper v-model="step" vertical>
-        <!-- Step 1 -->
-        <v-stepper-step :complete="form.name !== ''" step="1">Bot Identity</v-stepper-step>
-        <v-stepper-content step="1">
+      <VStepper v-model="step" class="mb-6" alt-labels aria-label="Bot Wizard Steps">
+        <VStepperHeader>
+          <template v-for="(s, idx) in steps" :key="s.title">
+            <VStepperItem
+              :complete="(idx === 0 && form.name !== '') || (idx === 1 && form.prompt !== '') || (idx === 2 && form.model !== '') || step > idx"
+              :color="step === idx ? 'primary' : (step > idx ? 'success' : 'grey')"
+              @click="step = idx"
+              :title="s.title"
+              :subtitle="s.subtitle"
+            >
+              <template #icon>
+                <v-avatar :color="step === idx ? 'primary' : (step > idx ? 'success' : 'grey')" size="24">
+                  <v-icon>{{ s.icon }}</v-icon>
+                </v-avatar>
+              </template>
+            </VStepperItem>
+          </template>
+        </VStepperHeader>
+
+        <!-- Step Content -->
+        <div v-if="step === 0">
           <v-text-field v-model="form.name" label="Bot Name" required :rules="[v => !!v || 'Name is required']" />
-          <v-btn color="primary" :disabled="form.name === ''" @click="step++">Continue</v-btn>
-        </v-stepper-content>
-
-        <!-- Step 2 -->
-        <v-stepper-step :complete="form.prompt !== ''" step="2">Instructions / Prompt</v-stepper-step>
-        <v-stepper-content step="2">
+          <VStepperActions class="mt-2">
+            <v-btn color="primary" :disabled="form.name === ''" @click="step = step + 1">Continue</v-btn>
+          </VStepperActions>
+        </div>
+        <div v-else-if="step === 1">
           <v-textarea v-model="form.prompt" label="Prompt" auto-grow :rules="[v => !!v || 'Prompt is required']" />
-          <v-btn class="me-2" @click="step--">Back</v-btn>
-          <v-btn color="primary" :disabled="form.prompt === ''" @click="step++">Continue</v-btn>
-        </v-stepper-content>
-
-        <!-- Step 3 -->
-        <v-stepper-step :complete="form.model !== ''" step="3">Model Choice</v-stepper-step>
-        <v-stepper-content step="3">
+          <VStepperActions class="mt-2">
+            <v-btn class="me-2" @click="step = step - 1">Back</v-btn>
+            <v-btn color="primary" :disabled="form.prompt === ''" @click="step = step + 1">Continue</v-btn>
+          </VStepperActions>
+        </div>
+        <div v-else-if="step === 2">
           <v-select
             v-model="form.model"
             :items="models"
@@ -29,13 +44,12 @@
             required
             :rules="[v => !!v || 'Model is required']"
           />
-          <v-btn class="me-2" @click="step--">Back</v-btn>
-          <v-btn color="primary" :disabled="form.model === ''" @click="step++">Continue</v-btn>
-        </v-stepper-content>
-
-        <!-- Step 4 -->
-        <v-stepper-step step="4">Advanced Settings <v-chip color="info" size="small" class="ml-2">Optional</v-chip></v-stepper-step>
-        <v-stepper-content step="4">
+          <VStepperActions class="mt-2">
+            <v-btn class="me-2" @click="step = step - 1">Back</v-btn>
+            <v-btn color="primary" :disabled="form.model === ''" @click="step = step + 1">Continue</v-btn>
+          </VStepperActions>
+        </div>
+        <div v-else-if="step === 3">
           <v-text-field v-model="form.memory" label="Memory Context">
             <template #append>
               <v-tooltip text="Context window for bot memory (optional)"><v-icon>mdi-help-circle</v-icon></v-tooltip>
@@ -46,24 +60,45 @@
               <v-tooltip text="Comma-separated tool names (optional)"><v-icon>mdi-help-circle</v-icon></v-tooltip>
             </template>
           </v-text-field>
-          <v-btn class="me-2" @click="step--">Back</v-btn>
-          <v-btn color="primary" @click="step++">Summary</v-btn>
-        </v-stepper-content>
-
-        <!-- Step 5: Summary -->
-        <v-stepper-step step="5">Summary & Confirmation</v-stepper-step>
-        <v-stepper-content step="5">
+          <VStepperActions class="mt-2">
+            <v-btn class="me-2" @click="step = step - 1">Back</v-btn>
+            <v-btn color="primary" @click="step = step + 1">Summary</v-btn>
+          </VStepperActions>
+        </div>
+        <div v-else-if="step === 4">
           <v-list>
-            <v-list-item><strong>Name:</strong> {{ form.name }}</v-list-item>
-            <v-list-item><strong>Prompt:</strong> {{ form.prompt }}</v-list-item>
-            <v-list-item><strong>Model:</strong> {{ form.model }}</v-list-item>
-            <v-list-item><strong>Memory Context:</strong> {{ form.memory }}</v-list-item>
-            <v-list-item><strong>Tools:</strong> {{ form.tools }}</v-list-item>
+            <v-list-item>
+              <template #default>
+                <strong>Name:</strong> {{ form.name }}
+              </template>
+            </v-list-item>
+            <v-list-item>
+              <template #default>
+                <strong>Prompt:</strong> {{ form.prompt }}
+              </template>
+            </v-list-item>
+            <v-list-item>
+              <template #default>
+                <strong>Model:</strong> {{ form.model }}
+              </template>
+            </v-list-item>
+            <v-list-item>
+              <template #default>
+                <strong>Memory Context:</strong> {{ form.memory }}
+              </template>
+            </v-list-item>
+            <v-list-item>
+              <template #default>
+                <strong>Tools:</strong> {{ form.tools }}
+              </template>
+            </v-list-item>
           </v-list>
-          <v-btn class="me-2" @click="step--">Back</v-btn>
-          <v-btn color="success" :loading="loading" @click="submitBot">Create Bot</v-btn>
-        </v-stepper-content>
-      </v-stepper>
+          <VStepperActions class="mt-2">
+            <v-btn class="me-2" @click="step = step - 1">Back</v-btn>
+            <v-btn color="success" :loading="loading" @click="submitBot">Create Bot</v-btn>
+          </VStepperActions>
+        </div>
+      </VStepper>
     </v-card-text>
 
     <v-alert type="error" v-if="error" class="mt-2">{{ error }}</v-alert>
@@ -85,7 +120,7 @@ const router = useRouter()
 const botStore = useBotStore()
 const { loading, success, error } = storeToRefs(botStore)
 
-const step = ref(1)
+const step = ref(0)
 const form = ref({
   name: props.template?.name || '',
   prompt: props.template?.prompt || '',
@@ -94,12 +129,28 @@ const form = ref({
   tools: props.template?.tools || '',
 })
 
-const progress = computed(() => Math.round((step.value - 1) * 25))
+const stepIcons = [
+  'mdi-account',
+  'mdi-text-box-outline',
+  'mdi-robot',
+  'mdi-tune',
+  'mdi-check-circle-outline'
+]
+const totalSteps = 5
+const progressValue = computed(() => ((step.value + 1) / totalSteps) * 100)
 const models = ['gpt-4', 'gpt-3.5-turbo', 'claude-3']
+
+const steps = computed(() => [
+  { title: 'Name', subtitle: 'Bot Name', icon: stepIcons[0] },
+  { title: 'Prompt', subtitle: 'Bot Prompt', icon: stepIcons[1] },
+  { title: 'Model', subtitle: 'Select Model', icon: stepIcons[2] },
+  { title: 'Settings', subtitle: 'Memory & Tools', icon: stepIcons[3] },
+  { title: 'Summary', subtitle: 'Review & Create', icon: stepIcons[4] },
+])
 
 watch(success, (val) => {
   if (val) {
-    step.value = 1
+    step.value = 0
     form.value = {
       name: props.template?.name || '',
       prompt: props.template?.prompt || '',
@@ -127,3 +178,9 @@ async function submitBot() {
   })
 }
 </script>
+
+<style scoped>
+.stepper-item {
+  cursor: pointer;
+}
+</style>

@@ -1,47 +1,81 @@
 <template>
+  <div class="mb-4" v-if="wizard.current.value && wizard.current.value.description">
+    <v-alert type="info" border="start" variant="tonal" class="mb-4">
+      <div v-html="wizard.current.value.description" />
+    </v-alert>
+  </div>
+
   <PipelineGuide />
 
-  <v-container>
-    <v-btn icon class="mb-4" to="/pipelines">
-      <v-icon>mdi-arrow-left</v-icon>
-    </v-btn>
-
-    <h1 class="mb-4">Create Pipeline</h1>
-
-    <v-form @submit.prevent="submit">
-      <v-text-field
-        v-model="form.name"
-        label="Pipeline Name"
-        class="mb-3"
-        required
-      />
-      <v-select
-        v-model="selectedModel"
-        :items="modelOptions"
-        item-title="name"
-        item-value="id"
-        label="Select Model (optional)"
-        class="mb-3"
-      />
-      <v-select
-        v-model="selectedBot"
-        :items="botOptions"
-        item-title="name"
-        item-value="id"
-        label="Select Bot (optional)"
-        class="mb-3"
-      />
-      <v-textarea
-        v-model="jsonString"
-        label="Pipeline Config (JSON)"
-        auto-grow
-        rows="6"
-        required
-        class="mb-3"
-        :error-messages="jsonError ? [jsonError] : []"
-      />
-      <v-btn type="submit" color="primary" :loading="loading">Create</v-btn>
-    </v-form>
+  <VStepper v-model="wizard.currentStep.value" class="mb-6" alt-labels aria-label="Wizard steps">
+    <VStepperHeader>
+      <VStepperItem
+        v-for="(step, idx) in wizard.steps"
+        :key="step.title + idx"
+        :complete="wizard.currentStep.value > idx"
+        :value="idx"
+        :aria-current="wizard.currentStep.value === idx ? 'step' : undefined"
+        :tabindex="wizard.currentStep.value === idx ? 0 : -1"
+        @click="wizard.goTo(idx)"
+        :color="wizard.currentStep.value === idx ? 'primary' : (wizard.currentStep.value > idx ? 'success' : 'grey')"
+        class="stepper-item"
+      >
+        <template #icon>
+          <v-avatar :color="wizard.currentStep.value === idx ? 'primary' : (wizard.currentStep.value > idx ? 'success' : 'grey')" size="24">
+            <span class="white--text">{{ idx + 1 }}</span>
+          </v-avatar>
+        </template>
+        <span>{{ step.title }}</span>
+        <v-tooltip activator="parent" location="top">
+          {{ step.subtitle }}
+        </v-tooltip>
+        <div class="text-caption text-secondary">{{ step.subtitle }}</div>
+      </VStepperItem>
+    </VStepperHeader>
+  </VStepper>
+    <VStepperActions class="mt-2">
+      <v-btn color="secondary" variant="outlined" :disabled="wizard.currentStep.value === 0" @click="wizard.prev">
+        <v-icon start>mdi-arrow-left</v-icon> Back
+      </v-btn>
+      <v-btn color="primary" variant="elevated" :disabled="!canProceed" @click="wizard.isLastStep ? submit() : wizard.next">
+        <span v-if="!wizard.isLastStep">Next <v-icon end>mdi-arrow-right</v-icon></span>
+        <span v-else>Submit <v-icon end>mdi-check</v-icon></span>
+      </v-btn>
+    </VStepperActions>
+  <VForm @submit.prevent="submit">
+    <v-text-field
+      v-model="form.name"
+      label="Pipeline Name"
+      class="mb-3"
+      required
+    />
+    <v-select
+      v-model="selectedModel"
+      :items="modelOptions"
+      item-title="name"
+      item-value="id"
+      label="Select Model (optional)"
+      class="mb-3"
+    />
+    <v-select
+      v-model="selectedBot"
+      :items="botOptions"
+      item-title="name"
+      item-value="id"
+      label="Select Bot (optional)"
+      class="mb-3"
+    />
+    <v-textarea
+      v-model="jsonString"
+      label="Pipeline Config (JSON)"
+      auto-grow
+      rows="6"
+      required
+      class="mb-3"
+      :error-messages="jsonError ? [jsonError] : []"
+    />
+    <!-- The submit button is now in the stepper actions -->
+  </VForm>
 
     <v-alert v-if="success" type="success" class="mt-4">Pipeline created!</v-alert>
     <v-alert v-if="error" type="error" class="mt-4">{{ error }}</v-alert>
@@ -53,11 +87,14 @@
         <pre>{{ parsedJson }}</pre>
       </v-card-text>
     </v-card>
-  </v-container>
 </template>
 
 <script setup lang="ts">
+const canProceed = computed(() => {
+  return form.value.name && !jsonError.value
+})
 import { ref, computed } from 'vue'
+import { useWizard } from '~/composables/useWizard'
 import { useSupabase } from '~/composables/supabase'
 import PipelineGuide from '~/components/step-guides/PipelineGuide.vue'
 
@@ -79,6 +116,9 @@ const botOptions = ref<any[]>([])
 const jsonString = ref(`{
   "steps": []
 }`)
+
+// Wizard stepper integration
+const wizard = useWizard()
 
 const projectId = ref<string | null>(null) // Set this if you have project selection
 
@@ -141,17 +181,21 @@ async function submit() {
   const { data: userData } = await supabase.auth.getUser()
   const ownerId = userData?.user?.id || '' // Replace with your actual user id logic
 
-  const { error: err } = await supabase.from('pipelines').insert([
-    {
-      name: form.value.name,
-      config: form.value.config as any,
-      created_at: new Date().toISOString(),
-      model: selectedModel.value || null,
-      bot_id: selectedBot.value || null,
-      project_id: projectId.value || '', // Ensure project_id is always a string
-      owner_id: ownerId
-    }
-  ])
+  // Ensure bot_id is null if not selected or empty string
+  const botId = selectedBot.value && selectedBot.value !== '' ? selectedBot.value : null;
+  console.log('DEBUG bot_id:', botId, 'selectedBot:', selectedBot.value);
+  const pipelineInsert: any = {
+    name: form.value.name,
+    config: form.value.config as any,
+    created_at: new Date().toISOString(),
+    model: selectedModel.value || null,
+    bot_id: botId,
+    owner_id: ownerId
+  }
+  if (typeof projectId.value === 'string' && projectId.value.trim().length > 0) {
+    pipelineInsert.project_id = projectId.value
+  }
+  const { error: err } = await supabase.from('pipelines').insert([pipelineInsert])
 
   loading.value = false
   if (err) {

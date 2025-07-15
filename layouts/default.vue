@@ -1,34 +1,15 @@
 <template>
   <v-app>
+    <div ref="vantaRef" id="vanta-bg" class="vanta-bg"></div>
     <div class="app-layout">
       <header class="app-header">
         <div class="logo-row">
-          <NuxtImg src="/logo.svg" width="40" height="40" alt="Cloudless Logo" class="logo" />
+          <SvgIcon name="logo" size="40" class="logo" />
           <span class="wizard-hat-emoji">🧙‍♂️</span>
           <h1 class="logo-text">Cloudless Wizard</h1>
         </div>
       </header>
       <div class="wizard-body">
-        <aside class="wizard-sidebar">
-          <nav class="main-nav nav-steps">
-            <div v-for="(step, i) in steps" :key="step.title" class="nav-section">
-              <div class="nav-header">
-                <span v-if="i < currentIndex">🟢</span>
-                <span v-else-if="i === currentIndex">🧙‍♂️</span>
-                <span v-else>⚪</span>
-                Step {{ i + 1 }}: {{ step.title }}
-              </div>
-              <NuxtLink :to="step.path">
-                <span class="step-link-icon">
-                  <span v-if="i === currentIndex">✨</span>
-                  <span v-else-if="i < currentIndex">✔️</span>
-                  <span v-else>⭐</span>
-                </span>
-                {{ step.title }} Setup
-              </NuxtLink>
-            </div>
-          </nav>
-        </aside>
         <main class="app-main">
           <slot />
         </main>
@@ -41,145 +22,117 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
-import { computed } from 'vue'
-import { useWizardSteps } from '~/composables/useWizardSteps'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 
-const route = useRoute()
-const { steps } = useWizardSteps()
+const vantaRef = ref(null)
+let vantaEffect = null
 
-const currentIndex = computed(() =>
-  steps.findIndex(s => route.path.startsWith(s.path.replace('/create', '')))
-)
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = src
+    script.async = true
+    script.onload = resolve
+    script.onerror = reject
+    document.head.appendChild(script)
+  })
+}
+
+onMounted(async () => {
+  if (typeof window !== 'undefined') {
+    await loadScript('https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js')
+    await loadScript('https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.clouds2.min.js')
+    if (window.VANTA && window.VANTA.CLOUDS2 && vantaRef.value) {
+      vantaEffect = window.VANTA.CLOUDS2({
+        el: '#vanta-bg',
+        mouseControls: true,
+        touchControls: true,
+        minHeight: 200.00,
+        minWidth: 200.00,
+        skyColor: 0x6a7ba2,
+        cloudColor: 0xe0e6ef,
+        cloudShadowColor: 0x3b4960,
+        sunColor: 0xf9f9fb,
+        sunGlareColor: 0xf9f9fb,
+        sunlightColor: 0xf9f9fb,
+        speed: 1.2,
+        cloudShadow: 1.0,
+        cloudHeight: 0.8,
+        cloudBaseColor: 0xd2d9e6,
+        lightDirection: 1.2,
+        gyroControls: true,
+      })
+    }
+  }
+})
+
+onBeforeUnmount(() => {
+  if (vantaEffect) vantaEffect.destroy()
+})
 </script>
 
 <style scoped>
+.vanta-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .app-layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(120deg, #23232b 0%, #2d2d3a 100%);
+  position: relative;
+  z-index: 3;
 }
+
 .wizard-body {
   display: flex;
-  flex: 1;
-  min-height: 0;
+  flex: 1 1 auto;
 }
-.wizard-sidebar {
-  width: 270px;
-  background: #23232b;
-  padding: 2rem 1.2rem 2rem 2rem;
-  border-right: 1px solid #222;
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  box-shadow: 2px 0 16px 0 rgba(0,0,0,0.10);
-  z-index: 2;
-}
+
 .app-header {
-  background: #23232b;
-  color: #fff;
-  padding: 1.5rem 2rem 1rem 2rem;
-  text-align: center;
-  letter-spacing: 2px;
-  border-bottom: 1px solid #23232b;
-}
-.main-nav {
-  margin-top: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-  width: 100%;
-}
-.main-nav a {
-  color: #fff;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s, background 0.2s;
-  margin-left: 1.5rem;
-  border-radius: 6px;
-  padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  padding: 0.5rem 2rem;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
 }
-.main-nav .router-link-active {
-  color: #64b5f6;
-  font-weight: 600;
-  background: rgba(100,181,246,0.08);
-}
-.main-nav a:hover {
-  color: #90caf9;
-  background: rgba(100,181,246,0.10);
-}
-.nav-steps {
-  width: 100%;
-}
-.nav-section {
-  margin-bottom: 1.2rem;
-}
-.nav-header {
-  font-size: 1.08rem;
-  font-weight: 600;
-  color: #90caf9;
-  margin-bottom: 0.2rem;
-  margin-left: 0.2rem;
-  display: flex;
-  align-items: center;
-}
-.nav-header span {
-  margin-right: 0.5rem;
-  font-size: 1.2rem;
-}
-.step-link-icon {
-  display: inline-flex;
-  align-items: center;
-  margin-right: 0.5rem;
-  font-size: 1.1em;
-}
-.wizard-hat-emoji {
-  font-size: 2rem;
-  margin-left: 0.5rem;
-  margin-right: 0.5rem;
-  vertical-align: middle;
-}
+
 .logo-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
+  gap: 1rem;
 }
-.logo {
-  vertical-align: middle;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
+
 .logo-text {
-  font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: 2px;
-  margin: 0;
+  letter-spacing: 1px;
 }
+
+.wizard-hat-emoji {
+  font-size: 2rem;
+}
+
 .app-main {
-  flex: 1;
+  flex: 1 1 auto;
   padding: 2rem;
-  max-width: 900px;
-  margin: 0 auto;
-  width: 100%;
-  background: #23232b;
-  border-radius: 18px;
-  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.08);
+  background: transparent;
+  min-height: 80vh;
 }
+
 .app-footer {
-  background: #23232b;
-  color: #fff;
-  text-align: center;
+  background: #fff;
+  border-top: 1px solid #eee;
   padding: 1rem 2rem;
-  font-size: 0.95rem;
-  border-top: 1px solid #23232b;
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
 }
 </style>
