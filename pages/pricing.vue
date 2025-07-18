@@ -23,13 +23,15 @@
           v-for="plan in plans"
           :key="plan.name"
           class="plan-card"
-          :class="{ 'popular': plan.popular }"
+          :class="{ popular: plan.popular }"
         >
           <div class="plan-header">
             <h3>{{ plan.name }}</h3>
             <div class="plan-price">
               <span class="currency">$</span>
-              <span class="amount">{{ isAnnual ? plan.annualPrice : plan.monthlyPrice }}</span>
+              <span class="amount">{{
+                isAnnual ? plan.annualPrice : plan.monthlyPrice
+              }}</span>
               <span class="period">/{{ isAnnual ? 'year' : 'month' }}</span>
             </div>
             <p class="plan-description">
@@ -38,7 +40,11 @@
           </div>
 
           <div class="plan-features">
-            <div v-for="feature in plan.features" :key="feature" class="feature">
+            <div
+              v-for="feature in plan.features"
+              :key="feature"
+              class="feature"
+            >
               <v-icon size="20" color="success">
                 mdi-check
               </v-icon>
@@ -69,8 +75,8 @@
             </div>
           </div>
 
-          <v-btn 
-            :color="plan.popular ? 'primary' : 'outlined'" 
+          <v-btn
+            :color="plan.popular ? 'primary' : 'outlined'"
             :variant="plan.popular ? 'elevated' : 'outlined'"
             size="large"
             class="plan-button"
@@ -86,8 +92,9 @@
           <div class="enterprise-content">
             <h2>Enterprise</h2>
             <p>
-              Need a custom solution? Our enterprise plan includes dedicated support, 
-              custom integrations, and unlimited resources for large organizations.
+              Need a custom solution? Our enterprise plan includes dedicated
+              support, custom integrations, and unlimited resources for large
+              organizations.
             </p>
             <div class="enterprise-features">
               <div class="enterprise-feature">
@@ -133,32 +140,34 @@
           <div class="faq-item">
             <h3>Can I change plans anytime?</h3>
             <p>
-              Yes! You can upgrade or downgrade your plan at any time. Changes take effect 
-              immediately, and we'll prorate any billing adjustments.
+              Yes! You can upgrade or downgrade your plan at any time. Changes
+              take effect immediately, and we'll prorate any billing
+              adjustments.
             </p>
           </div>
-          
+
           <div class="faq-item">
             <h3>What happens if I exceed my limits?</h3>
             <p>
-              We'll notify you when you're approaching your limits. You can either upgrade 
-              your plan or purchase additional usage credits to continue without interruption.
+              We'll notify you when you're approaching your limits. You can
+              either upgrade your plan or purchase additional usage credits to
+              continue without interruption.
             </p>
           </div>
-          
+
           <div class="faq-item">
             <h3>Do you offer refunds?</h3>
             <p>
-              We offer a 30-day money-back guarantee for all paid plans. If you're not 
-              satisfied, we'll refund your payment in full.
+              We offer a 30-day money-back guarantee for all paid plans. If
+              you're not satisfied, we'll refund your payment in full.
             </p>
           </div>
-          
+
           <div class="faq-item">
             <h3>Is there a free trial?</h3>
             <p>
-              Yes! All paid plans come with a 14-day free trial. No credit card required 
-              to start your trial.
+              Yes! All paid plans come with a 14-day free trial. No credit card
+              required to start your trial.
             </p>
           </div>
         </div>
@@ -181,8 +190,12 @@
               Business
             </div>
           </div>
-          
-          <div v-for="feature in comparisonFeatures" :key="feature.name" class="table-row">
+
+          <div
+            v-for="feature in comparisonFeatures"
+            :key="feature.name"
+            class="table-row"
+          >
             <div class="feature-cell">
               {{ feature.name }}
             </div>
@@ -190,7 +203,9 @@
               <v-icon v-if="feature.free" size="20" color="success">
                 mdi-check
               </v-icon>
-              <span v-else-if="typeof feature.free === 'string'">{{ feature.free }}</span>
+              <span v-else-if="typeof feature.free === 'string'">{{
+                feature.free
+              }}</span>
               <v-icon v-else size="20" color="error">
                 mdi-close
               </v-icon>
@@ -199,7 +214,9 @@
               <v-icon v-if="feature.pro" size="20" color="success">
                 mdi-check
               </v-icon>
-              <span v-else-if="typeof feature.pro === 'string'">{{ feature.pro }}</span>
+              <span v-else-if="typeof feature.pro === 'string'">{{
+                feature.pro
+              }}</span>
               <v-icon v-else size="20" color="error">
                 mdi-close
               </v-icon>
@@ -208,7 +225,9 @@
               <v-icon v-if="feature.business" size="20" color="success">
                 mdi-check
               </v-icon>
-              <span v-else-if="typeof feature.business === 'string'">{{ feature.business }}</span>
+              <span v-else-if="typeof feature.business === 'string'">{{
+                feature.business
+              }}</span>
               <v-icon v-else size="20" color="error">
                 mdi-close
               </v-icon>
@@ -221,7 +240,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
 const isAnnual = ref(false)
 
@@ -239,15 +258,15 @@ const plans = [
       '3 pipelines',
       '1,000 API requests/month',
       'Basic support',
-      'Community forum access'
+      'Community forum access',
     ],
     limits: {
       apiRequests: '1,000',
       bots: 5,
       models: 2,
       pipelines: 3,
-      teamMembers: 1
-    }
+      teamMembers: 1,
+    },
   },
   {
     name: 'Pro',
@@ -264,15 +283,15 @@ const plans = [
       'Priority support',
       'Advanced analytics',
       'Custom integrations',
-      'Team collaboration'
+      'Team collaboration',
     ],
     limits: {
       apiRequests: '100,000',
       bots: 'Unlimited',
       models: 10,
       pipelines: 'Unlimited',
-      teamMembers: 5
-    }
+      teamMembers: 5,
+    },
   },
   {
     name: 'Business',
@@ -289,20 +308,25 @@ const plans = [
       'Custom branding',
       'Advanced security',
       'SLA guarantee',
-      'White-label options'
+      'White-label options',
     ],
     limits: {
       apiRequests: '1,000,000',
       bots: 'Unlimited',
       models: 'Unlimited',
       pipelines: 'Unlimited',
-      teamMembers: 25
-    }
-  }
+      teamMembers: 25,
+    },
+  },
 ]
 
 const comparisonFeatures = [
-  { name: 'API Requests', free: '1K/month', pro: '100K/month', business: '1M/month' },
+  {
+    name: 'API Requests',
+    free: '1K/month',
+    pro: '100K/month',
+    business: '1M/month',
+  },
   { name: 'Bots', free: 5, pro: true, business: true },
   { name: 'Models', free: 2, pro: 10, business: true },
   { name: 'Pipelines', free: 3, pro: true, business: true },
@@ -311,7 +335,7 @@ const comparisonFeatures = [
   { name: 'Advanced Analytics', free: false, pro: true, business: true },
   { name: 'Custom Integrations', free: false, pro: true, business: true },
   { name: 'Custom Branding', free: false, pro: false, business: true },
-  { name: 'SLA Guarantee', free: false, pro: false, business: true }
+  { name: 'SLA Guarantee', free: false, pro: false, business: true },
 ]
 </script>
 
@@ -375,7 +399,9 @@ const comparisonFeatures = [
   border-radius: 20px;
   padding: 2.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   position: relative;
 }
 
@@ -495,7 +521,11 @@ const comparisonFeatures = [
 }
 
 .enterprise-card {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.1) 0%,
+    rgba(118, 75, 162, 0.1) 100%
+  );
   border: 1px solid rgba(102, 126, 234, 0.2);
   border-radius: 20px;
   padding: 3rem;
@@ -639,51 +669,51 @@ const comparisonFeatures = [
   .pricing-page {
     padding: 1rem;
   }
-  
+
   .page-header h1 {
     font-size: 2rem;
   }
-  
+
   .subtitle {
     font-size: 1rem;
   }
-  
+
   .content-grid {
     gap: 3rem;
   }
-  
+
   .plans-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .plan-card {
     padding: 2rem;
   }
-  
+
   .plan-card.popular {
     transform: none;
   }
-  
+
   .enterprise-features {
     grid-template-columns: 1fr;
   }
-  
+
   .faq-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .table-header,
   .table-row {
     grid-template-columns: 1fr;
   }
-  
+
   .feature-cell {
     border-right: none;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   }
-  
+
   .value-cell {
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   }
 }
-</style> 
+</style>

@@ -37,7 +37,8 @@ export default defineEventHandler(async () => {
     }
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('Redis cache error:', error)
+      // Redis cache error - could be logged to a proper logging service
+      // console.error('Redis cache error:', error)
     }
     return {
       error: error instanceof Error ? error.message : 'Unknown Redis error',

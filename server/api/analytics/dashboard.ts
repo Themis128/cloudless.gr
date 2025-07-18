@@ -91,7 +91,8 @@ export default defineEventHandler(async event => {
     }
   } catch (error: any) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('Analytics dashboard error:', error)
+      // Analytics dashboard error - could be logged to a proper logging service
+      // console.error('Analytics dashboard error:', error)
     }
 
     if (error.statusCode === 429) {

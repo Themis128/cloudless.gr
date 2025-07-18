@@ -101,7 +101,8 @@ export default defineEventHandler(async event => {
     }
   } catch (error: any) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('Advanced cache error:', error)
+      // Advanced cache error - could be logged to a proper logging service
+      // console.error('Advanced cache error:', error)
     }
 
     if (error.statusCode === 429) {

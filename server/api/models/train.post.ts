@@ -83,7 +83,8 @@ export default defineEventHandler(async event => {
 
     if (sessionError) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('Database error:', sessionError)
+        // Database error - could be logged to a proper logging service
+        // console.error('Database error:', sessionError)
       }
       throw createError({
         statusCode: 500,
@@ -112,7 +113,8 @@ export default defineEventHandler(async event => {
 
     if (updateError) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('Failed to update training session:', updateError)
+        // Failed to update training session - could be logged to a proper logging service
+        // console.error('Failed to update training session:', updateError)
       }
       // Don't throw error here as session was created successfully
     }
@@ -132,7 +134,8 @@ export default defineEventHandler(async event => {
     }
   } catch (error: any) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('Training API error:', error)
+      // Training API error - could be logged to a proper logging service
+      // console.error('Training API error:', error)
     }
 
     if (error.statusCode) {
@@ -218,7 +221,8 @@ const simulateTrainingProgress = async (
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('Error updating training progress:', error)
+        // Error updating training progress - could be logged to a proper logging service
+        // console.error('Error updating training progress:', error)
       }
 
       // Mark training as failed
