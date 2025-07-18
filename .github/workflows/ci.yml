@@ -337,6 +337,18 @@ jobs:
           ./tests/test-integration-simple.sh
         continue-on-error: false
 
+      - name: Debug integration test
+        if: failure()
+        run: |
+          echo "🔄 Both tests failed, running debug integration test..."
+
+          # Make the debug integration test script executable
+          chmod +x test-integration-debug.sh
+
+          # Run the debug integration test
+          ./test-integration-debug.sh
+        continue-on-error: true
+
   preview-deploy:
     name: Preview Deploy
     runs-on: ubuntu-latest

@@ -3,10 +3,21 @@ set -e
 
 echo "🚀 Starting integration test..."
 
-# Set environment variables
+# Set environment variables with fallbacks for CI
 export NODE_ENV=production
 export NUXT_HOST=0.0.0.0
 export NUXT_PORT=3000
+
+# Set default Supabase values for testing if not provided
+if [ -z "$NUXT_PUBLIC_SUPABASE_URL" ]; then
+  export NUXT_PUBLIC_SUPABASE_URL="https://test.supabase.co"
+  echo "⚠️ NUXT_PUBLIC_SUPABASE_URL not set, using test value"
+fi
+
+if [ -z "$NUXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
+  export NUXT_PUBLIC_SUPABASE_ANON_KEY="test-key"
+  echo "⚠️ NUXT_PUBLIC_SUPABASE_ANON_KEY not set, using test value"
+fi
 
 # Function to find the server file
 find_server_file() {
@@ -94,6 +105,8 @@ while [ $COUNTER -lt $TIMEOUT ]; do
     echo "   NODE_ENV: $NODE_ENV"
     echo "   NUXT_HOST: $NUXT_HOST"
     echo "   NUXT_PORT: $NUXT_PORT"
+    echo "   NUXT_PUBLIC_SUPABASE_URL: $NUXT_PUBLIC_SUPABASE_URL"
+    echo "   NUXT_PUBLIC_SUPABASE_ANON_KEY: ${NUXT_PUBLIC_SUPABASE_ANON_KEY:0:10}..."
     exit 1
   fi
   
