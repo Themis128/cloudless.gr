@@ -25,8 +25,11 @@ export default defineNuxtConfig({
       'stores',
       'components',
     ]
-  }
-  ,
+  },
+  css: [
+    '@mdi/font/css/materialdesignicons.css',
+    'vuetify/styles'
+  ],
   app: {
     head: {
       title: 'Cloudless',
@@ -34,5 +37,6 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' }
       ]
     }
-  }
+  },
+
 });

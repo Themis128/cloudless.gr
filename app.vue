@@ -11,6 +11,8 @@
 import { ref, onMounted } from 'vue'
 import { useSupabase } from '~/composables/supabase'
 
+
+
 const supabase = useSupabase()
 const todos = ref<any[]>([])
 
