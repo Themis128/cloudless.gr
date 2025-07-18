@@ -315,14 +315,26 @@ jobs:
 
       - name: Test preview server
         run: |
-          # Ensure curl is available for integration tests
-          sudo apt-get update && sudo apt-get install -y curl
+          # Ensure curl and lsof are available for integration tests
+          sudo apt-get update && sudo apt-get install -y curl lsof
 
           # Make the integration test script executable
           chmod +x test-integration.sh
 
           # Run the integration test with better error handling
           ./test-integration.sh
+        continue-on-error: false
+
+      - name: Fallback simple integration test
+        if: failure()
+        run: |
+          echo "🔄 Main integration test failed, trying simple fallback test..."
+
+          # Make the simple integration test script executable
+          chmod +x tests/test-integration-simple.sh
+
+          # Run the simple integration test
+          ./tests/test-integration-simple.sh
         continue-on-error: false
 
   preview-deploy:

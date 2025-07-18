@@ -45,7 +45,15 @@ fi
 echo "📦 Found server file: $SERVER_FILE"
 echo "📦 Launching server..."
 
-# Start server and capture output
+# Check if port 3000 is already in use
+if lsof -i :3000 > /dev/null 2>&1; then
+  echo "⚠️ Port 3000 is already in use. Attempting to kill existing process..."
+  lsof -ti :3000 | xargs kill -9 2>/dev/null || true
+  sleep 2
+fi
+
+# Start server and capture output with better error handling
+echo "🔧 Starting server with enhanced logging..."
 node "$SERVER_FILE" > server.log 2>&1 &
 SERVER_PID=$!
 echo "Server PID: $SERVER_PID"
@@ -70,8 +78,22 @@ COUNTER=0
 while [ $COUNTER -lt $TIMEOUT ]; do
   # Check if server crashed
   if ! ps -p $SERVER_PID > /dev/null 2>&1; then
-    echo "❌ Server crashed during startup. Here are the logs:"
+    echo "❌ Server crashed during startup."
+    echo "📋 Server logs:"
     cat server.log
+    echo ""
+    echo "🔍 Additional debugging information:"
+    echo "📁 Current directory: $(pwd)"
+    echo "📁 .output contents:"
+    ls -la .output/ 2>/dev/null || echo "No .output directory"
+    echo "📁 .output/server contents:"
+    ls -la .output/server/ 2>/dev/null || echo "No server directory"
+    echo "🔧 Node.js version: $(node --version)"
+    echo "🔧 NPM version: $(npm --version)"
+    echo "🔧 Environment variables:"
+    echo "   NODE_ENV: $NODE_ENV"
+    echo "   NUXT_HOST: $NUXT_HOST"
+    echo "   NUXT_PORT: $NUXT_PORT"
     exit 1
   fi
   
@@ -81,13 +103,26 @@ while [ $COUNTER -lt $TIMEOUT ]; do
     break
   fi
   
+  # Show progress every 5 seconds
+  if [ $((COUNTER % 5)) -eq 0 ]; then
+    echo "⏳ Still waiting... ($COUNTER/$TIMEOUT seconds)"
+    echo "📋 Recent server logs:"
+    tail -10 server.log 2>/dev/null || echo "No logs yet"
+    echo ""
+  fi
+  
   sleep 1
   COUNTER=$((COUNTER + 1))
   
   if [ $COUNTER -eq $TIMEOUT ]; then
     echo "❌ Server did not respond within $TIMEOUT seconds"
-    echo "📋 Server logs:"
+    echo "📋 Full server logs:"
     cat server.log
+    echo ""
+    echo "🔍 Process information:"
+    ps aux | grep node | grep -v grep || echo "No node processes found"
+    echo "🔍 Port information:"
+    lsof -i :3000 2>/dev/null || echo "No processes on port 3000"
     exit 1
   fi
 done
@@ -100,6 +135,8 @@ if curl -f -s http://127.0.0.1:3000 | grep -q "<!DOCTYPE html" 2>/dev/null; then
   echo "✅ Homepage returns valid HTML"
 else
   echo "⚠️ Homepage might not be returning valid HTML"
+  echo "📋 Homepage content (first 200 chars):"
+  curl -f -s http://127.0.0.1:3000 | head -c 200 || echo "Could not fetch homepage"
 fi
 
 # Check server response headers
