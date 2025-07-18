@@ -494,7 +494,7 @@ async function initVanta() {
       cloudScale: vantaOptions.value.cloudScale,
       lightDirection: vantaOptions.value.lightDirection,
       lightIntensity: vantaOptions.value.lightIntensity,
-      texturePath: '/vanta/gallery/noise.png'
+      // texturePath: '/vanta/gallery/noise.png'
     })
 
     console.log('Vanta CLOUDS2 initialized successfully')
