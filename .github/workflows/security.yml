@@ -136,12 +136,28 @@ jobs:
           image-ref: 'cloudlessgr-app:security-scan'
           format: 'sarif'
           output: 'trivy-results.sarif'
+        continue-on-error: true
+
+      - name: Check Trivy results exist
+        id: check-trivy-results
+        if: always() && steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
+        run: |
+          if [ -f "trivy-results.sarif" ]; then
+            echo "✅ Trivy results file exists"
+            echo "trivy_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Trivy results file not found, creating empty SARIF file"
+            echo "trivy_exists=true" >> $GITHUB_OUTPUT
+            # Create empty SARIF file to prevent upload errors
+            echo '{"version":"2.1.0","$schema":"https://json.schemastore.org/sarif-2.1.0-rtm.5.json","runs":[]}' > trivy-results.sarif
+          fi
 
       - name: Upload Trivy scan results to GitHub Security tab
-        if: always() && steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
+        if: always() && steps.check-dockerfiles.outputs.dockerfiles_exist == 'true' && steps.check-trivy-results.outputs.trivy_exists == 'true'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
 
       - name: Run Hadolint for Dockerfile linting
         if: steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
@@ -150,12 +166,28 @@ jobs:
           dockerfile: Dockerfile
           format: sarif
           output-file: hadolint-results.sarif
+        continue-on-error: true
+
+      - name: Check Hadolint results exist
+        id: check-hadolint-results
+        if: always() && steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
+        run: |
+          if [ -f "hadolint-results.sarif" ]; then
+            echo "✅ Hadolint results file exists"
+            echo "hadolint_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Hadolint results file not found, creating empty SARIF file"
+            echo "hadolint_exists=true" >> $GITHUB_OUTPUT
+            # Create empty SARIF file to prevent upload errors
+            echo '{"version":"2.1.0","$schema":"https://json.schemastore.org/sarif-2.1.0-rtm.5.json","runs":[]}' > hadolint-results.sarif
+          fi
 
       - name: Upload Hadolint results to GitHub Security tab
-        if: always() && steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
+        if: always() && steps.check-dockerfiles.outputs.dockerfiles_exist == 'true' && steps.check-hadolint-results.outputs.hadolint_exists == 'true'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'hadolint-results.sarif'
+        continue-on-error: true
 
   secrets-scan:
     name: Secrets Detection

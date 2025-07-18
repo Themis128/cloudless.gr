@@ -57,7 +57,6 @@ RUN mkdir -p /app/.output /app/logs /app/uploads && \
     chown -R nuxtjs:nodejs /app
 
 # Copy built application
-COPY --from=builder --chown=nuxtjs:nodejs /app/public ./public
 COPY --from=builder --chown=nuxtjs:nodejs /app/.output ./.output
 COPY --from=builder --chown=nuxtjs:nodejs /app/start-server.js ./start-server.js
 
