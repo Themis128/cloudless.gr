@@ -6,7 +6,6 @@ param(
 )
 
 # Configuration
-$AppName = "cloudless"
 $TestURL = "http://$TestIP`:$TestPort"
 
 # Functions

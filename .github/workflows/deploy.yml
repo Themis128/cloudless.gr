@@ -62,10 +62,15 @@ jobs:
           # Docker deployment example
           # docker run -d --name cloudless-staging -p 3000:3000 cloudless:staging
           
-          # Or deploy to Docker registry
-          echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-          docker tag cloudless:staging ${{ secrets.DOCKER_REGISTRY }}/cloudless:staging
-          docker push ${{ secrets.DOCKER_REGISTRY }}/cloudless:staging
+          # Deploy to Docker registry if credentials are available
+          if [ -n "${{ secrets.DOCKER_PASSWORD }}" ] && [ -n "${{ secrets.DOCKER_USERNAME }}" ] && [ -n "${{ secrets.DOCKER_REGISTRY }}" ]; then
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+            docker tag cloudless:staging "${{ secrets.DOCKER_REGISTRY }}/cloudless:staging"
+            docker push "${{ secrets.DOCKER_REGISTRY }}/cloudless:staging"
+            echo "✅ Staging deployment to registry completed"
+          else
+            echo "⚠️ Docker registry credentials not configured, skipping registry push"
+          fi
           
           echo "✅ Staging deployment completed"
 
@@ -111,10 +116,15 @@ jobs:
           # Docker deployment example
           # docker run -d --name cloudless-production -p 3000:3000 cloudless:production
           
-          # Or deploy to Docker registry
-          echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-          docker tag cloudless:production ${{ secrets.DOCKER_REGISTRY }}/cloudless:production
-          docker push ${{ secrets.DOCKER_REGISTRY }}/cloudless:production
+          # Deploy to Docker registry if credentials are available
+          if [ -n "${{ secrets.DOCKER_PASSWORD }}" ] && [ -n "${{ secrets.DOCKER_USERNAME }}" ] && [ -n "${{ secrets.DOCKER_REGISTRY }}" ]; then
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+            docker tag cloudless:production "${{ secrets.DOCKER_REGISTRY }}/cloudless:production"
+            docker push "${{ secrets.DOCKER_REGISTRY }}/cloudless:production"
+            echo "✅ Production deployment to registry completed"
+          else
+            echo "⚠️ Docker registry credentials not configured, skipping registry push"
+          fi
           
           echo "✅ Production deployment completed"
           
