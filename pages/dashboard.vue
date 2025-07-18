@@ -1,17 +1,29 @@
 <template>
   <AnalyticsGuide />
   <v-container>
-    <h1 class="mb-4">System Overview</h1>
+    <h1 class="mb-4">
+      System Overview
+    </h1>
 
     <v-row>
       <!-- Metric Cards -->
-      <v-col cols="12" sm="6" md="3" v-for="metric in metrics" :key="metric.label">
+      <v-col
+        v-for="metric in metrics"
+        :key="metric.label"
+        cols="12"
+        sm="6"
+        md="3"
+      >
         <v-card>
           <v-card-title class="d-flex justify-space-between align-center">
             <span>{{ metric.label }}</span>
-            <v-icon :color="metric.color">{{ metric.icon }}</v-icon>
+            <v-icon :color="metric.color">
+              {{ metric.icon }}
+            </v-icon>
           </v-card-title>
-          <v-card-text class="text-h5">{{ metric.value }}</v-card-text>
+          <v-card-text class="text-h5">
+            {{ metric.value }}
+          </v-card-text>
         </v-card>
       </v-col>
     </v-row>

@@ -2,7 +2,9 @@
   <div class="cookies-page">
     <div class="page-header">
       <h1>Cookie Policy</h1>
-      <p class="subtitle">Last Updated: January 2025</p>
+      <p class="subtitle">
+        Last Updated: January 2025
+      </p>
     </div>
 
     <div class="content-container">
@@ -63,72 +65,144 @@
           <h3>4.1 Authentication and Session Cookies</h3>
           <div class="cookie-table">
             <div class="cookie-row">
-              <div class="cookie-name">sb-*</div>
-              <div class="cookie-purpose">Supabase authentication tokens</div>
-              <div class="cookie-duration">Session</div>
+              <div class="cookie-name">
+                sb-*
+              </div>
+              <div class="cookie-purpose">
+                Supabase authentication tokens
+              </div>
+              <div class="cookie-duration">
+                Session
+              </div>
             </div>
             <div class="cookie-row">
-              <div class="cookie-name">supabase-auth-token</div>
-              <div class="cookie-purpose">User authentication session</div>
-              <div class="cookie-duration">1 year</div>
+              <div class="cookie-name">
+                supabase-auth-token
+              </div>
+              <div class="cookie-purpose">
+                User authentication session
+              </div>
+              <div class="cookie-duration">
+                1 year
+              </div>
             </div>
             <div class="cookie-row">
-              <div class="cookie-name">session_id</div>
-              <div class="cookie-purpose">Platform session management</div>
-              <div class="cookie-duration">Session</div>
+              <div class="cookie-name">
+                session_id
+              </div>
+              <div class="cookie-purpose">
+                Platform session management
+              </div>
+              <div class="cookie-duration">
+                Session
+              </div>
             </div>
             <div class="cookie-row">
-              <div class="cookie-name">csrf_token</div>
-              <div class="cookie-purpose">Cross-site request forgery protection</div>
-              <div class="cookie-duration">Session</div>
+              <div class="cookie-name">
+                csrf_token
+              </div>
+              <div class="cookie-purpose">
+                Cross-site request forgery protection
+              </div>
+              <div class="cookie-duration">
+                Session
+              </div>
             </div>
           </div>
 
           <h3>4.2 User Preference Cookies</h3>
           <div class="cookie-table">
             <div class="cookie-row">
-              <div class="cookie-name">theme_preference</div>
-              <div class="cookie-purpose">User interface theme (light/dark)</div>
-              <div class="cookie-duration">1 year</div>
+              <div class="cookie-name">
+                theme_preference
+              </div>
+              <div class="cookie-purpose">
+                User interface theme (light/dark)
+              </div>
+              <div class="cookie-duration">
+                1 year
+              </div>
             </div>
             <div class="cookie-row">
-              <div class="cookie-name">language_preference</div>
-              <div class="cookie-purpose">User language preference</div>
-              <div class="cookie-duration">1 year</div>
+              <div class="cookie-name">
+                language_preference
+              </div>
+              <div class="cookie-purpose">
+                User language preference
+              </div>
+              <div class="cookie-duration">
+                1 year
+              </div>
             </div>
             <div class="cookie-row">
-              <div class="cookie-name">ui_state</div>
-              <div class="cookie-purpose">Interface state and preferences</div>
-              <div class="cookie-duration">1 month</div>
+              <div class="cookie-name">
+                ui_state
+              </div>
+              <div class="cookie-purpose">
+                Interface state and preferences
+              </div>
+              <div class="cookie-duration">
+                1 month
+              </div>
             </div>
             <div class="cookie-row">
-              <div class="cookie-name">form_data</div>
-              <div class="cookie-purpose">Temporary form data storage</div>
-              <div class="cookie-duration">Session</div>
+              <div class="cookie-name">
+                form_data
+              </div>
+              <div class="cookie-purpose">
+                Temporary form data storage
+              </div>
+              <div class="cookie-duration">
+                Session
+              </div>
             </div>
           </div>
 
           <h3>4.3 Analytics and Performance Cookies</h3>
           <div class="cookie-table">
             <div class="cookie-row">
-              <div class="cookie-name">_ga</div>
-              <div class="cookie-purpose">Google Analytics user identification</div>
-              <div class="cookie-duration">2 years</div>
+              <div class="cookie-name">
+                _ga
+              </div>
+              <div class="cookie-purpose">
+                Google Analytics user identification
+              </div>
+              <div class="cookie-duration">
+                2 years
+              </div>
             </div>
             <div class="cookie-row">
-              <div class="cookie-name">_gid</div>
-              <div class="cookie-purpose">Google Analytics session tracking</div>
-              <div class="cookie-duration">24 hours</div>
+              <div class="cookie-name">
+                _gid
+              </div>
+              <div class="cookie-purpose">
+                Google Analytics session tracking
+              </div>
+              <div class="cookie-duration">
+                24 hours
+              </div>
             </div>
             <div class="cookie-row">
-              <div class="cookie-name">_gat</div>
-              <div class="cookie-purpose">Google Analytics request throttling</div>
-              <div class="cookie-duration">1 minute</div>
+              <div class="cookie-name">
+                _gat
+              </div>
+              <div class="cookie-purpose">
+                Google Analytics request throttling
+              </div>
+              <div class="cookie-duration">
+                1 minute
+              </div>
             </div>
             <div class="cookie-row">
-              <div class="cookie-name">performance_metrics</div>
-              <div class="cookie-purpose">Platform performance monitoring</div>
-              <div class="cookie-duration">1 month</div>
+              <div class="cookie-name">
+                performance_metrics
+              </div>
+              <div class="cookie-purpose">
+                Platform performance monitoring
+              </div>
+              <div class="cookie-duration">
+                1 month
+              </div>
             </div>
           </div>
 

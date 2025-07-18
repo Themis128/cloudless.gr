@@ -3,7 +3,9 @@
     <v-row>
       <v-col cols="12">
         <v-btn color="primary" to="/debug" class="mb-4">
-          <v-icon left>mdi-arrow-left</v-icon>
+          <v-icon left>
+            mdi-arrow-left
+          </v-icon>
           Back to Debug Home
         </v-btn>
       </v-col>
@@ -11,14 +13,18 @@
     <v-row>
       <v-col cols="12" md="8">
         <v-card>
-          <v-card-title class="text-h5">System Logs</v-card-title>
+          <v-card-title class="text-h5">
+            System Logs
+          </v-card-title>
           <v-card-text>
             <DebugLogsViewer :logs="logs" />
             <v-divider class="my-4" />
             <v-row>
               <v-col cols="12" md="6">
                 <v-card outlined>
-                  <v-card-title class="text-h6">Log Metrics</v-card-title>
+                  <v-card-title class="text-h6">
+                    Log Metrics
+                  </v-card-title>
                   <v-card-text>
                     <v-list dense>
                       <v-list-item>
@@ -35,9 +41,11 @@
               </v-col>
               <v-col cols="12" md="6">
                 <v-card outlined>
-                  <v-card-title class="text-h6">Log Frequency (Last 7 Events)</v-card-title>
+                  <v-card-title class="text-h6">
+                    Log Frequency (Last 7 Events)
+                  </v-card-title>
                   <v-card-text>
-                    <v-chart :options="chartOptions" autoresize style="height:200px;" />
+                    <VChart :options="chartOptions" autoresize style="height:200px;" />
                   </v-card-text>
                 </v-card>
               </v-col>
@@ -47,7 +55,9 @@
       </v-col>
       <v-col cols="12" md="4">
         <v-card>
-          <v-card-title class="text-h6">Diagnostics</v-card-title>
+          <v-card-title class="text-h6">
+            Diagnostics
+          </v-card-title>
           <v-card-text>
             <v-list dense>
               <v-list-item>

@@ -5,7 +5,9 @@
         <v-col cols="12">
           <div class="doc-header">
             <h1 class="doc-title">
-              <v-icon size="32" class="mr-3">mdi-book-open-variant</v-icon>
+              <v-icon size="32" class="mr-3">
+                mdi-book-open-variant
+              </v-icon>
               Cloudless Wizard Documentation
             </h1>
             <p class="doc-subtitle">
@@ -19,7 +21,9 @@
         <v-col cols="12" md="3">
           <v-card class="doc-nav-card">
             <v-card-title class="text-h6">
-              <v-icon class="mr-2">mdi-menu</v-icon>
+              <v-icon class="mr-2">
+                mdi-menu
+              </v-icon>
               Documentation
             </v-card-title>
             <v-card-text class="pa-0">
@@ -58,7 +62,9 @@
                   <v-icon>mdi-lightbulb</v-icon>
                 </template>
                 <strong>Quick Start:</strong> If you're new to Cloudless Wizard, we recommend starting with the 
-                <NuxtLink to="/documentation/getting-started" class="text-decoration-none">Getting Started</NuxtLink> guide.
+                <NuxtLink to="/documentation/getting-started" class="text-decoration-none">
+                  Getting Started
+                </NuxtLink> guide.
               </v-alert>
 
               <div class="feature-grid">
@@ -72,11 +78,13 @@
                   >
                     <v-card class="feature-card h-100" elevation="2">
                       <v-card-title class="text-h6 d-flex align-center">
-                        <v-icon :icon="feature.icon" class="mr-2" color="primary"></v-icon>
+                        <v-icon :icon="feature.icon" class="mr-2" color="primary" />
                         {{ feature.title }}
                       </v-card-title>
                       <v-card-text>
-                        <p class="text-body-2">{{ feature.description }}</p>
+                        <p class="text-body-2">
+                          {{ feature.description }}
+                        </p>
                         <v-btn
                           :to="feature.link"
                           variant="text"
@@ -85,7 +93,9 @@
                           class="mt-2"
                         >
                           Learn More
-                          <v-icon end>mdi-arrow-right</v-icon>
+                          <v-icon end>
+                            mdi-arrow-right
+                          </v-icon>
                         </v-btn>
                       </v-card-text>
                     </v-card>
@@ -93,10 +103,12 @@
                 </v-row>
               </div>
 
-              <v-divider class="my-6"></v-divider>
+              <v-divider class="my-6" />
 
               <div class="quick-links">
-                <h3 class="text-h6 mb-4">Quick Links</h3>
+                <h3 class="text-h6 mb-4">
+                  Quick Links
+                </h3>
                 <v-row>
                   <v-col
                     v-for="link in quickLinks"
@@ -111,7 +123,9 @@
                       block
                       class="quick-link-btn"
                     >
-                      <v-icon start>{{ link.icon }}</v-icon>
+                      <v-icon start>
+                        {{ link.icon }}
+                      </v-icon>
                       {{ link.title }}
                     </v-btn>
                   </v-col>

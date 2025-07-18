@@ -193,9 +193,8 @@ export const createEnhancedRateLimit = (
       }
 
       // If Redis is down, log but don't block requests
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Enhanced rate limiting error:', error)
-      }
+      // Enhanced rate limiting error - could be logged to a proper logging service
+      // console.error('Enhanced rate limiting error:', error)
 
       // Track API performance even on errors
       const duration = Date.now() - startTime

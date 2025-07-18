@@ -22,24 +22,21 @@ if (existsSync(envPath)) {
       }
     }
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Error loading .env file:', error.message)
-    }
+    // Error loading .env file - could be logged to a proper logging service
+    // console.error('Error loading .env file:', error.message)
   }
 }
 
 // Error handling
-process.on('uncaughtException', err => {
-  if (process.env.NODE_ENV === 'development') {
-    console.error('UNCAUGHT EXCEPTION:', err)
-  }
+process.on('uncaughtException', () => {
+  // UNCAUGHT EXCEPTION - could be logged to a proper logging service
+  // console.error('UNCAUGHT EXCEPTION:', err)
   process.exit(1)
 })
 
-process.on('unhandledRejection', reason => {
-  if (process.env.NODE_ENV === 'development') {
-    console.error('UNHANDLED REJECTION:', reason)
-  }
+process.on('unhandledRejection', () => {
+  // UNHANDLED REJECTION - could be logged to a proper logging service
+  // console.error('UNHANDLED REJECTION:', reason)
   process.exit(1)
 })
 
@@ -63,45 +60,38 @@ const startServer = async () => {
       const server = createServer(serverModule.listener)
 
       server.listen(port, host, () => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`✅ Server listening on http://${host}:${port}`)
-        }
+        // Server listening - could be logged to a proper logging service
+        // console.log(`✅ Server listening on http://${host}:${port}`)
       })
 
       // Graceful shutdown
       process.on('SIGTERM', () => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('SIGTERM received, shutting down gracefully...')
-        }
+        // SIGTERM received, shutting down gracefully - could be logged to a proper logging service
+        // console.log('SIGTERM received, shutting down gracefully...')
         server.close(() => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Server closed')
-          }
+          // Server closed - could be logged to a proper logging service
+          // console.log('Server closed')
           process.exit(0)
         })
       })
 
       process.on('SIGINT', () => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('SIGINT received, shutting down gracefully...')
-        }
+        // SIGINT received, shutting down gracefully - could be logged to a proper logging service
+        // console.log('SIGINT received, shutting down gracefully...')
         server.close(() => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Server closed')
-          }
+          // Server closed - could be logged to a proper logging service
+          // console.log('Server closed')
           process.exit(0)
         })
       })
     } else {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('No listener function found in server module')
-      }
+      // No listener function found in server module - could be logged to a proper logging service
+      // console.error('No listener function found in server module')
       process.exit(1)
     }
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Error starting server:', error)
-    }
+    // Error starting server - could be logged to a proper logging service
+    // console.error('Error starting server:', error)
     process.exit(1)
   }
 }

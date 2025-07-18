@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-app-bar app color="primary" dark>
-      <v-app-bar-nav-icon @click="drawer = !drawer" />
+      <v-app-bar-nav-icon @click="toggleDrawer" />
       <v-app-bar-title>Cloudless LLM Dev Agent</v-app-bar-title>
     </v-app-bar>
     <ClientOnly>
@@ -10,9 +10,21 @@
           <v-list-item to="/" title="Home" prepend-icon="mdi-home" />
           <v-list-item to="/bots" title="Bots" prepend-icon="mdi-robot" />
           <v-list-item to="/models" title="Models" prepend-icon="mdi-brain" />
-          <v-list-item to="/pipelines" title="Pipelines" prepend-icon="mdi-timeline" />
-          <v-list-item to="/projects/create" title="Create Project" prepend-icon="mdi-plus-box" />
-          <v-list-item to="/llm/train" title="Train LLM" prepend-icon="mdi-rocket-launch" />
+          <v-list-item
+            to="/pipelines"
+            title="Pipelines"
+            prepend-icon="mdi-timeline"
+          />
+          <v-list-item
+            to="/projects/create"
+            title="Create Project"
+            prepend-icon="mdi-plus-box"
+          />
+          <v-list-item
+            to="/llm/train"
+            title="Train LLM"
+            prepend-icon="mdi-rocket-launch"
+          />
           <v-list-item to="/debug" title="Debug" prepend-icon="mdi-bug" />
         </v-list>
       </v-navigation-drawer>
@@ -24,18 +36,29 @@
             <v-card class="mb-4">
               <v-card-title class="text-h6 d-flex align-center">
                 <SvgIcon name="user" size="32" class="me-2" />
-                <span>Welcome{{ user && user.email ? `, ${user.email}` : '' }}!</span>
+                <span>Welcome{{
+                  user && user.email ? `, ${user.email}` : ''
+                }}!</span>
               </v-card-title>
               <v-card-text>
-                <div>Your all-in-one low-code platform for data pipelines, analytics, and AI.</div>
+                <div>
+                  Your all-in-one low-code platform for data pipelines,
+                  analytics, and AI.
+                </div>
               </v-card-text>
             </v-card>
             <v-card color="primary" dark>
               <v-card-title>Quick Actions</v-card-title>
               <v-card-text>
-                <v-btn block class="mb-2" to="/projects/create">Create Project</v-btn>
-                <v-btn block class="mb-2" to="/pipelines/create">New Data Pipeline</v-btn>
-                <v-btn block class="mb-2" to="/llm/train">Train LLM</v-btn>
+                <v-btn block class="mb-2" to="/projects/create">
+                  Create Project
+                </v-btn>
+                <v-btn block class="mb-2" to="/pipelines/create">
+                  New Data Pipeline
+                </v-btn>
+                <v-btn block class="mb-2" to="/llm/train">
+                  Train LLM
+                </v-btn>
               </v-card-text>
             </v-card>
           </v-col>
@@ -47,7 +70,9 @@
                     <SvgIcon name="bot" size="28" class="me-2" />
                     Bots
                   </v-card-title>
-                  <v-card-text class="text-h4">{{ bots.length }}</v-card-text>
+                  <v-card-text class="text-h4">
+                    {{ bots.length }}
+                  </v-card-text>
                 </v-card>
               </v-col>
               <v-col cols="12" sm="6" md="3">
@@ -56,7 +81,9 @@
                     <SvgIcon name="model" size="28" class="me-2" />
                     Models
                   </v-card-title>
-                  <v-card-text class="text-h4">{{ models.length }}</v-card-text>
+                  <v-card-text class="text-h4">
+                    {{ models.length }}
+                  </v-card-text>
                 </v-card>
               </v-col>
               <v-col cols="12" sm="6" md="3">
@@ -65,16 +92,22 @@
                     <SvgIcon name="pipeline" size="28" class="me-2" />
                     Pipelines
                   </v-card-title>
-                  <v-card-text class="text-h4">{{ pipelineSteps }}</v-card-text>
+                  <v-card-text class="text-h4">
+                    {{ pipelineSteps }}
+                  </v-card-text>
                 </v-card>
               </v-col>
               <v-col cols="12" sm="6" md="3">
                 <v-card class="dashboard-stat" outlined>
                   <v-card-title class="d-flex align-center">
-                    <v-icon class="me-2">mdi-folder</v-icon>
+                    <v-icon class="me-2">
+                      mdi-folder
+                    </v-icon>
                     Projects
                   </v-card-title>
-                  <v-card-text class="text-h4">{{ projectCount }}</v-card-text>
+                  <v-card-text class="text-h4">
+                    {{ projectCount }}
+                  </v-card-text>
                 </v-card>
               </v-col>
             </v-row>
@@ -83,7 +116,7 @@
                 <v-card>
                   <v-card-title>Recent Projects</v-card-title>
                   <v-card-text>
-                    <project-list-preview />
+                    <ProjectListPreview />
                   </v-card-text>
                 </v-card>
               </v-col>
@@ -91,7 +124,7 @@
                 <v-card>
                   <v-card-title>Recent Activity</v-card-title>
                   <v-card-text>
-                    <activity-feed />
+                    <ActivityFeed />
                   </v-card-text>
                 </v-card>
               </v-col>
@@ -113,36 +146,40 @@ import { useAuth } from '~/composables/useAuth'
 import { useBotStore } from '~/stores/botStore'
 import { useModelStore } from '~/stores/modelStore'
 import { usePipelineStore } from '~/stores/pipelineStore'
-import { useProjectStore } from '~/stores/templateStore'
 
 const drawer = ref(false)
 const { user } = useAuth()
 const botStore = useBotStore()
 const modelStore = useModelStore()
 const pipelineStore = usePipelineStore()
-const projectStore = useProjectStore()
 
 const bots = computed(() => botStore.bots || [])
 const models = computed(() => modelStore.models || [])
 const pipelineSteps = computed(() => pipelineStore.pipelines?.length || 0)
 const projectCount = ref(0)
 
+const toggleDrawer = () => {
+  drawer.value = !drawer.value
+}
+
 onMounted(async () => {
   try {
     await botStore.fetchAll()
-    await pipelineStore.fetchAll()  // Add this line to fetch pipelines
+    await pipelineStore.fetchAll() // Add this line to fetch pipelines
     // For models, you may want to fetch from backend if not already loaded
     // For projects, fetch count
     const supabase = useSupabase()
     const { data, error } = await supabase.from('projects').select('id')
     if (error) {
-      console.warn('Failed to fetch projects:', error.message)
+      // Failed to fetch projects - could be logged to a proper logging service
+      // console.warn('Failed to fetch projects:', error.message)
       projectCount.value = 0
     } else {
       projectCount.value = data ? data.length : 0
     }
   } catch (error) {
-    console.warn('Error during page initialization:', error)
+    // Error during page initialization - could be logged to a proper logging service
+    // console.warn('Error during page initialization:', error)
     // Set default values if Supabase is not available
     projectCount.value = 0
   }

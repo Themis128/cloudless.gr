@@ -48,9 +48,8 @@ export class SessionCache {
 
       return sessionData
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Error parsing session data:', error)
-      }
+      // Error parsing session data - could be logged to a proper logging service
+      // console.error('Error parsing session data:', error)
       return null
     }
   }
@@ -88,9 +87,8 @@ export class SessionCache {
             sessions.push(key.replace(this.prefix, ''))
           }
         } catch (error) {
-          if (process.env.NODE_ENV === 'development') {
-            console.error('Error parsing session data:', error)
-          }
+          // Error parsing session data - could be logged to a proper logging service
+          // console.error('Error parsing session data:', error)
         }
       }
     }

@@ -77,7 +77,9 @@
                     <div class="mb-2">
                       <strong>{{ step.name }}</strong>
                     </div>
-                    <div class="text-caption mb-2">Type: {{ step.type }}</div>
+                    <div class="text-caption mb-2">
+                      Type: {{ step.type }}
+                    </div>
                     <v-expansion-panels>
                       <v-expansion-panel>
                         <v-expansion-panel-title>

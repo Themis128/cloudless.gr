@@ -49,9 +49,8 @@ test('accessibility basics', async ({ page }) => {
   for (const img of images) {
     const alt = await img.getAttribute('alt')
     if (alt === null) {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Image without alt text found')
-      }
+      // Image without alt text found - could be logged to a proper logging service
+      // console.warn('Image without alt text found')
     }
   }
 })

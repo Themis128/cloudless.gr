@@ -2,7 +2,9 @@
   <v-container>
     <div class="d-flex justify-space-between align-center mb-6">
       <div>
-        <h1 class="text-h4 mb-2">LLM Management</h1>
+        <h1 class="text-h4 mb-2">
+          LLM Management
+        </h1>
         <p class="text-body-1 text-medium-emphasis">
           Manage your language models, training sessions, and deployments
         </p>
@@ -22,10 +24,16 @@
         <v-card>
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="primary" size="40" class="me-3">mdi-brain</v-icon>
+              <v-icon color="primary" size="40" class="me-3">
+                mdi-brain
+              </v-icon>
               <div>
-                <h3 class="text-h5">{{ models.length }}</h3>
-                <p class="text-body-2 text-medium-emphasis">Active Models</p>
+                <h3 class="text-h5">
+                  {{ models.length }}
+                </h3>
+                <p class="text-body-2 text-medium-emphasis">
+                  Active Models
+                </p>
               </div>
             </div>
           </v-card-text>
@@ -35,10 +43,16 @@
         <v-card>
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="success" size="40" class="me-3">mdi-school</v-icon>
+              <v-icon color="success" size="40" class="me-3">
+                mdi-school
+              </v-icon>
               <div>
-                <h3 class="text-h5">{{ trainingStats.completed }}</h3>
-                <p class="text-body-2 text-medium-emphasis">Completed Training</p>
+                <h3 class="text-h5">
+                  {{ trainingStats.completed }}
+                </h3>
+                <p class="text-body-2 text-medium-emphasis">
+                  Completed Training
+                </p>
               </div>
             </div>
           </v-card-text>
@@ -48,10 +62,16 @@
         <v-card>
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="warning" size="40" class="me-3">mdi-cog</v-icon>
+              <v-icon color="warning" size="40" class="me-3">
+                mdi-cog
+              </v-icon>
               <div>
-                <h3 class="text-h5">{{ trainingStats.running }}</h3>
-                <p class="text-body-2 text-medium-emphasis">Training in Progress</p>
+                <h3 class="text-h5">
+                  {{ trainingStats.running }}
+                </h3>
+                <p class="text-body-2 text-medium-emphasis">
+                  Training in Progress
+                </p>
               </div>
             </div>
           </v-card-text>
@@ -61,10 +81,16 @@
         <v-card>
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="info" size="40" class="me-3">mdi-rocket</v-icon>
+              <v-icon color="info" size="40" class="me-3">
+                mdi-rocket
+              </v-icon>
               <div>
-                <h3 class="text-h5">{{ deploymentStats.active }}</h3>
-                <p class="text-body-2 text-medium-emphasis">Active Deployments</p>
+                <h3 class="text-h5">
+                  {{ deploymentStats.active }}
+                </h3>
+                <p class="text-body-2 text-medium-emphasis">
+                  Active Deployments
+                </p>
               </div>
             </div>
           </v-card-text>
@@ -74,9 +100,15 @@
 
     <!-- Main Content Tabs -->
     <v-tabs v-model="activeTab" class="mb-4">
-      <v-tab value="models">Models</v-tab>
-      <v-tab value="training">Training Sessions</v-tab>
-      <v-tab value="deployments">Deployments</v-tab>
+      <v-tab value="models">
+        Models
+      </v-tab>
+      <v-tab value="training">
+        Training Sessions
+      </v-tab>
+      <v-tab value="deployments">
+        Deployments
+      </v-tab>
     </v-tabs>
 
     <v-tabs-window v-model="activeTab">
@@ -89,8 +121,8 @@
               color="primary"
               variant="outlined"
               prepend-icon="mdi-refresh"
-              @click="refreshModels"
               :loading="loadingModels"
+              @click="refreshModels"
             >
               Refresh
             </v-btn>
@@ -105,7 +137,9 @@
             >
               <template #item.name="{ item }">
                 <div class="d-flex align-center">
-                  <v-icon class="me-2" color="primary">mdi-brain</v-icon>
+                  <v-icon class="me-2" color="primary">
+                    mdi-brain
+                  </v-icon>
                   <span class="font-weight-medium">{{ item.name }}</span>
                 </div>
               </template>
@@ -126,21 +160,21 @@
                   icon="mdi-eye"
                   variant="text"
                   size="small"
-                  @click="viewModel(item)"
+                  @click="() => viewModel(item)"
                 />
                 <v-btn
                   icon="mdi-rocket"
                   variant="text"
                   size="small"
-                  @click="deployModel(item)"
                   :disabled="item.status !== 'ready'"
+                  @click="() => deployModel(item)"
                 />
                 <v-btn
                   icon="mdi-delete"
                   variant="text"
                   size="small"
                   color="error"
-                  @click="deleteModel(item)"
+                  @click="() => deleteModel(item)"
                 />
               </template>
             </v-data-table>
@@ -157,8 +191,8 @@
               color="primary"
               variant="outlined"
               prepend-icon="mdi-refresh"
-              @click="refreshTrainingSessions"
               :loading="loadingTraining"
+              @click="refreshTrainingSessions"
             >
               Refresh
             </v-btn>
@@ -173,7 +207,9 @@
             >
               <template #item.name="{ item }">
                 <div class="d-flex align-center">
-                  <v-icon class="me-2" color="success">mdi-school</v-icon>
+                  <v-icon class="me-2" color="success">
+                    mdi-school
+                  </v-icon>
                   <span class="font-weight-medium">{{ item.name }}</span>
                 </div>
               </template>
@@ -206,7 +242,7 @@
                   icon="mdi-eye"
                   variant="text"
                   size="small"
-                  @click="viewTrainingSession(item)"
+                  @click="() => viewTrainingSession(item)"
                 />
                 <v-btn
                   v-if="item.status === 'running'"
@@ -214,14 +250,14 @@
                   variant="text"
                   size="small"
                   color="warning"
-                  @click="stopTraining(item)"
+                  @click="() => stopTraining(item)"
                 />
                 <v-btn
                   icon="mdi-delete"
                   variant="text"
                   size="small"
                   color="error"
-                  @click="deleteTrainingSession(item)"
+                  @click="() => deleteTrainingSession(item)"
                 />
               </template>
             </v-data-table>
@@ -238,8 +274,8 @@
               color="primary"
               variant="outlined"
               prepend-icon="mdi-refresh"
-              @click="refreshDeployments"
               :loading="loadingDeployments"
+              @click="refreshDeployments"
             >
               Refresh
             </v-btn>
@@ -254,7 +290,9 @@
             >
               <template #item.name="{ item }">
                 <div class="d-flex align-center">
-                  <v-icon class="me-2" color="info">mdi-rocket</v-icon>
+                  <v-icon class="me-2" color="info">
+                    mdi-rocket
+                  </v-icon>
                   <span class="font-weight-medium">{{ item.name }}</span>
                 </div>
               </template>
@@ -272,7 +310,7 @@
                   v-if="item.endpoint_url"
                   variant="text"
                   size="small"
-                  @click="copyEndpoint(item.endpoint_url)"
+                  @click="() => copyEndpoint(item.endpoint_url)"
                 >
                   {{ item.endpoint_url }}
                 </v-btn>
@@ -286,7 +324,7 @@
                   icon="mdi-eye"
                   variant="text"
                   size="small"
-                  @click="viewDeployment(item)"
+                  @click="() => viewDeployment(item)"
                 />
                 <v-btn
                   v-if="item.status === 'active'"
@@ -294,14 +332,14 @@
                   variant="text"
                   size="small"
                   color="warning"
-                  @click="stopDeployment(item)"
+                  @click="() => stopDeployment(item)"
                 />
                 <v-btn
                   icon="mdi-delete"
                   variant="text"
                   size="small"
                   color="error"
-                  @click="deleteDeployment(item)"
+                  @click="() => deleteDeployment(item)"
                 />
               </template>
             </v-data-table>
@@ -336,7 +374,9 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="modelDialog = false">Close</v-btn>
+          <v-btn @click="modelDialog = false">
+            Close
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

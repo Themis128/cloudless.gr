@@ -84,9 +84,9 @@
                       thumb-label
                       class="mb-4"
                     >
-                      <template v-slot:prepend>
+                      <template #prepend>
                         <v-tooltip location="top" text="Controls the randomness in model outputs. Lower values (closer to 0) make the model more focused and deterministic, while higher values (closer to 1) make it more creative and diverse.">
-                          <template v-slot:activator="{ props }">
+                          <template #activator="{ props }">
                             <v-icon
                               v-bind="props"
                               icon="mdi-help-circle-outline"
@@ -104,9 +104,9 @@
                       min="1"
                       class="mb-4"
                     >
-                      <template v-slot:prepend>
+                      <template #prepend>
                         <v-tooltip location="top" text="Maximum number of tokens (words or word pieces) in the model's response. One token is roughly 4 characters or 3/4 of a word in English. Higher values allow for longer responses but may increase processing time and costs.">
-                          <template v-slot:activator="{ props }">
+                          <template #activator="{ props }">
                             <v-icon
                               v-bind="props"
                               icon="mdi-help-circle-outline"
@@ -115,9 +115,9 @@
                           </template>
                         </v-tooltip>
                       </template>
-                      <template v-slot:append>
+                      <template #append>
                         <v-tooltip location="top" text="Estimated maximum words: ~{{ Math.round(modelParams.maxTokens * 0.75) }}">
-                          <template v-slot:activator="{ props }">
+                          <template #activator="{ props }">
                             <v-icon
                               v-bind="props"
                               icon="mdi-text-box-outline"
@@ -136,9 +136,9 @@
                       item-value="value"
                       class="mb-4"
                     >
-                      <template v-slot:prepend>
+                      <template #prepend>
                         <v-tooltip location="top" text="The format in which the model will structure its response. Choose based on how you plan to process or display the output.">
-                          <template v-slot:activator="{ props }">
+                          <template #activator="{ props }">
                             <v-icon
                               v-bind="props"
                               icon="mdi-help-circle-outline"
@@ -147,7 +147,7 @@
                           </template>
                         </v-tooltip>
                       </template>
-                      <template v-slot:item="{ props, item }">
+                      <template #item="{ props, item }">
                         <v-list-item v-bind="props">
                           <v-list-item-title>{{ item.raw.title }}</v-list-item-title>
                           <v-list-item-subtitle>{{ item.raw.description }}</v-list-item-subtitle>

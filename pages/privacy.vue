@@ -2,7 +2,9 @@
   <div class="privacy-page">
     <div class="page-header">
       <h1>Privacy Policy</h1>
-      <p class="subtitle">Last Updated: January 2025</p>
+      <p class="subtitle">
+        Last Updated: January 2025
+      </p>
     </div>
 
     <div class="content-container">

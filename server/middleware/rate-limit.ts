@@ -16,7 +16,7 @@ const defaultConfig: RateLimitConfig = {
   message: 'Too many requests, please try again later.',
 }
 
-export function createRateLimit(config: Partial<RateLimitConfig> = {}) {
+export const createRateLimit = (config: Partial<RateLimitConfig> = {}) => {
   const finalConfig = { ...defaultConfig, ...config }
 
   return defineEventHandler(async event => {
@@ -50,11 +50,8 @@ export function createRateLimit(config: Partial<RateLimitConfig> = {}) {
       }
 
       // Increment counter and set expiry
-      await redis
-        .multi()
-        .incr(key)
-        .expire(key, Math.ceil(finalConfig.windowMs / 1000))
-        .exec()
+      await redis.incr(key)
+      await redis.expire(key, Math.ceil(finalConfig.windowMs / 1000))
 
       // Set rate limit headers
       event.node.res.setHeader('X-RateLimit-Limit', finalConfig.maxRequests)
@@ -72,7 +69,8 @@ export function createRateLimit(config: Partial<RateLimitConfig> = {}) {
         throw error
       }
       // If Redis is down, log but don't block requests
-      console.error('Rate limiting error:', error)
+      // Rate limiting error - could be logged to a proper logging service
+      // console.error('Rate limiting error:', error)
     }
   })
 }

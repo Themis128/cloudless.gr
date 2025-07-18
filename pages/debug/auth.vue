@@ -1,6 +1,6 @@
 <template>
   <div>
-    <BackButton :to="`/debug`" />
+    <BackButton to="/debug" />
     <v-card>
       <v-card-title>Auth Debug</v-card-title>
       <v-card-text>

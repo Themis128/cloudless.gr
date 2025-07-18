@@ -2,7 +2,9 @@
   <div class="api-reference-page">
     <div class="page-header">
       <h1>API Reference</h1>
-      <p class="subtitle">Complete API documentation for Cloudless.gr platform</p>
+      <p class="subtitle">
+        Complete API documentation for Cloudless.gr platform
+      </p>
     </div>
 
     <div class="content-container">
@@ -16,8 +18,15 @@
           <div class="code-block">
             <div class="code-header">
               <span>Authentication Header</span>
-              <v-btn icon size="small" variant="text" @click="copyCode('Authorization: Bearer YOUR_API_KEY')">
-                <v-icon size="16">mdi-content-copy</v-icon>
+              <v-btn
+                icon
+                size="small"
+                variant="text"
+                @click="copyCode('Authorization: Bearer YOUR_API_KEY')"
+              >
+                <v-icon size="16">
+                  mdi-content-copy
+                </v-icon>
               </v-btn>
             </div>
             <pre><code>Authorization: Bearer YOUR_API_KEY</code></pre>
@@ -59,8 +68,15 @@
             <div class="code-block">
               <div class="code-header">
                 <span>JSON</span>
-                <v-btn icon size="small" variant="text" @click="copyCode(botCreateExample)">
-                  <v-icon size="16">mdi-content-copy</v-icon>
+                <v-btn
+                  icon
+                  size="small"
+                  variant="text"
+                  @click="copyCode(botCreateExample)"
+                >
+                  <v-icon size="16">
+                    mdi-content-copy
+                  </v-icon>
                 </v-btn>
               </div>
               <pre><code>{{ botCreateExample }}</code></pre>
@@ -70,8 +86,15 @@
             <div class="code-block">
               <div class="code-header">
                 <span>JSON</span>
-                <v-btn icon size="small" variant="text" @click="copyCode(botCreateResponse)">
-                  <v-icon size="16">mdi-content-copy</v-icon>
+                <v-btn
+                  icon
+                  size="small"
+                  variant="text"
+                  @click="copyCode(botCreateResponse)"
+                >
+                  <v-icon size="16">
+                    mdi-content-copy
+                  </v-icon>
                 </v-btn>
               </div>
               <pre><code>{{ botCreateResponse }}</code></pre>
@@ -145,8 +168,15 @@
             <div class="code-block">
               <div class="code-header">
                 <span>JSON</span>
-                <v-btn icon size="small" variant="text" @click="copyCode(botTestExample)">
-                  <v-icon size="16">mdi-content-copy</v-icon>
+                <v-btn
+                  icon
+                  size="small"
+                  variant="text"
+                  @click="copyCode(botTestExample)"
+                >
+                  <v-icon size="16">
+                    mdi-content-copy
+                  </v-icon>
                 </v-btn>
               </div>
               <pre><code>{{ botTestExample }}</code></pre>
@@ -169,8 +199,15 @@
             <div class="code-block">
               <div class="code-header">
                 <span>JSON</span>
-                <v-btn icon size="small" variant="text" @click="copyCode(modelCreateExample)">
-                  <v-icon size="16">mdi-content-copy</v-icon>
+                <v-btn
+                  icon
+                  size="small"
+                  variant="text"
+                  @click="copyCode(modelCreateExample)"
+                >
+                  <v-icon size="16">
+                    mdi-content-copy
+                  </v-icon>
                 </v-btn>
               </div>
               <pre><code>{{ modelCreateExample }}</code></pre>
@@ -238,8 +275,15 @@
             <div class="code-block">
               <div class="code-header">
                 <span>JSON</span>
-                <v-btn icon size="small" variant="text" @click="copyCode(pipelineCreateExample)">
-                  <v-icon size="16">mdi-content-copy</v-icon>
+                <v-btn
+                  icon
+                  size="small"
+                  variant="text"
+                  @click="copyCode(pipelineCreateExample)"
+                >
+                  <v-icon size="16">
+                    mdi-content-copy
+                  </v-icon>
                 </v-btn>
               </div>
               <pre><code>{{ pipelineCreateExample }}</code></pre>
@@ -338,42 +382,66 @@
           
           <div class="sdk-grid">
             <div class="sdk-card">
-              <v-icon size="48" color="primary">mdi-language-javascript</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-language-javascript
+              </v-icon>
               <h3>JavaScript/Node.js</h3>
               <p>Official SDK for JavaScript and Node.js applications</p>
               <div class="sdk-actions">
-                <v-btn color="primary" variant="outlined" size="small">Install</v-btn>
-                <v-btn color="primary" variant="text" size="small">Documentation</v-btn>
+                <v-btn color="primary" variant="outlined" size="small">
+                  Install
+                </v-btn>
+                <v-btn color="primary" variant="text" size="small">
+                  Documentation
+                </v-btn>
               </div>
             </div>
 
             <div class="sdk-card">
-              <v-icon size="48" color="primary">mdi-language-python</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-language-python
+              </v-icon>
               <h3>Python</h3>
               <p>Official SDK for Python applications</p>
               <div class="sdk-actions">
-                <v-btn color="primary" variant="outlined" size="small">Install</v-btn>
-                <v-btn color="primary" variant="text" size="small">Documentation</v-btn>
+                <v-btn color="primary" variant="outlined" size="small">
+                  Install
+                </v-btn>
+                <v-btn color="primary" variant="text" size="small">
+                  Documentation
+                </v-btn>
               </div>
             </div>
 
             <div class="sdk-card">
-              <v-icon size="48" color="primary">mdi-language-php</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-language-php
+              </v-icon>
               <h3>PHP</h3>
               <p>Official SDK for PHP applications</p>
               <div class="sdk-actions">
-                <v-btn color="primary" variant="outlined" size="small">Install</v-btn>
-                <v-btn color="primary" variant="text" size="small">Documentation</v-btn>
+                <v-btn color="primary" variant="outlined" size="small">
+                  Install
+                </v-btn>
+                <v-btn color="primary" variant="text" size="small">
+                  Documentation
+                </v-btn>
               </div>
             </div>
 
             <div class="sdk-card">
-              <v-icon size="48" color="primary">mdi-language-csharp</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-language-csharp
+              </v-icon>
               <h3>C#/.NET</h3>
               <p>Official SDK for C# and .NET applications</p>
               <div class="sdk-actions">
-                <v-btn color="primary" variant="outlined" size="small">Install</v-btn>
-                <v-btn color="primary" variant="text" size="small">Documentation</v-btn>
+                <v-btn color="primary" variant="outlined" size="small">
+                  Install
+                </v-btn>
+                <v-btn color="primary" variant="text" size="small">
+                  Documentation
+                </v-btn>
               </div>
             </div>
           </div>
@@ -386,8 +454,15 @@
           <div class="code-block">
             <div class="code-header">
               <span>JavaScript</span>
-              <v-btn icon size="small" variant="text" @click="copyCode(jsExample)">
-                <v-icon size="16">mdi-content-copy</v-icon>
+              <v-btn
+                icon
+                size="small"
+                variant="text"
+                @click="copyCode(jsExample)"
+              >
+                <v-icon size="16">
+                  mdi-content-copy
+                </v-icon>
               </v-btn>
             </div>
             <pre><code>{{ jsExample }}</code></pre>
@@ -397,8 +472,15 @@
           <div class="code-block">
             <div class="code-header">
               <span>Python</span>
-              <v-btn icon size="small" variant="text" @click="copyCode(pythonExample)">
-                <v-icon size="16">mdi-content-copy</v-icon>
+              <v-btn
+                icon
+                size="small"
+                variant="text"
+                @click="copyCode(pythonExample)"
+              >
+                <v-icon size="16">
+                  mdi-content-copy
+                </v-icon>
               </v-btn>
             </div>
             <pre><code>{{ pythonExample }}</code></pre>
@@ -408,8 +490,15 @@
           <div class="code-block">
             <div class="code-header">
               <span>cURL</span>
-              <v-btn icon size="small" variant="text" @click="copyCode(curlExample)">
-                <v-icon size="16">mdi-content-copy</v-icon>
+              <v-btn
+                icon
+                size="small"
+                variant="text"
+                @click="copyCode(curlExample)"
+              >
+                <v-icon size="16">
+                  mdi-content-copy
+                </v-icon>
               </v-btn>
             </div>
             <pre><code>{{ curlExample }}</code></pre>

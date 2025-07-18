@@ -2,7 +2,9 @@
   <div class="contact-page">
     <div class="page-header">
       <h1>Contact Us</h1>
-      <p class="subtitle">Get in touch with our team. We'd love to hear from you!</p>
+      <p class="subtitle">
+        Get in touch with our team. We'd love to hear from you!
+      </p>
     </div>
 
     <div class="content-grid">
@@ -17,7 +19,9 @@
         <div class="contact-methods">
           <div class="contact-method">
             <div class="method-icon">
-              <v-icon size="32" color="primary">mdi-email</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-email
+              </v-icon>
             </div>
             <div class="method-content">
               <h3>Email Us</h3>
@@ -28,7 +32,9 @@
           
           <div class="contact-method">
             <div class="method-icon">
-              <v-icon size="32" color="primary">mdi-chat</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-chat
+              </v-icon>
             </div>
             <div class="method-content">
               <h3>Live Chat</h3>
@@ -39,7 +45,9 @@
           
           <div class="contact-method">
             <div class="method-icon">
-              <v-icon size="32" color="primary">mdi-phone</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-phone
+              </v-icon>
             </div>
             <div class="method-content">
               <h3>Call Us</h3>
@@ -50,7 +58,9 @@
           
           <div class="contact-method">
             <div class="method-icon">
-              <v-icon size="32" color="primary">mdi-map-marker</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-map-marker
+              </v-icon>
             </div>
             <div class="method-content">
               <h3>Visit Us</h3>
@@ -61,7 +71,9 @@
 
           <div class="contact-method">
             <div class="method-icon">
-              <v-icon size="32" color="primary">mdi-calendar</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-calendar
+              </v-icon>
             </div>
             <div class="method-content">
               <h3>Schedule a Demo</h3>
@@ -72,7 +84,9 @@
 
           <div class="contact-method">
             <div class="method-icon">
-              <v-icon size="32" color="primary">mdi-account-group</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-account-group
+              </v-icon>
             </div>
             <div class="method-content">
               <h3>Join Our Community</h3>
@@ -185,7 +199,9 @@
               :loading="isSubmitting"
               @click="submitForm"
             >
-              <v-icon left>mdi-send</v-icon>
+              <v-icon left>
+                mdi-send
+              </v-icon>
               Send Message
             </v-btn>
             <v-btn 
@@ -206,49 +222,65 @@
       <div class="support-grid">
         <div class="support-card">
           <div class="support-icon">
-            <v-icon size="32" color="primary">mdi-book-open</v-icon>
+            <v-icon size="32" color="primary">
+              mdi-book-open
+            </v-icon>
           </div>
           <h3>Documentation</h3>
           <p>Comprehensive guides, API references, and tutorials to help you get started quickly.</p>
           <v-btn color="primary" variant="text" class="support-btn">
             Browse Docs
-            <v-icon right>mdi-arrow-right</v-icon>
+            <v-icon right>
+              mdi-arrow-right
+            </v-icon>
           </v-btn>
         </div>
         
         <div class="support-card">
           <div class="support-icon">
-            <v-icon size="32" color="primary">mdi-video</v-icon>
+            <v-icon size="32" color="primary">
+              mdi-video
+            </v-icon>
           </div>
           <h3>Video Tutorials</h3>
           <p>Step-by-step video guides covering everything from basic setup to advanced features.</p>
           <v-btn color="primary" variant="text" class="support-btn">
             Watch Videos
-            <v-icon right>mdi-arrow-right</v-icon>
+            <v-icon right>
+              mdi-arrow-right
+            </v-icon>
           </v-btn>
         </div>
         
         <div class="support-card">
           <div class="support-icon">
-            <v-icon size="32" color="primary">mdi-forum</v-icon>
+            <v-icon size="32" color="primary">
+              mdi-forum
+            </v-icon>
           </div>
           <h3>Community Forum</h3>
           <p>Connect with other developers, share solutions, and get help from the community.</p>
           <v-btn color="primary" variant="text" class="support-btn">
             Join Forum
-            <v-icon right>mdi-arrow-right</v-icon>
+            <v-icon right>
+              mdi-arrow-right
+            </v-icon>
           </v-btn>
         </div>
         
         <div class="support-card">
           <div class="support-icon">
-            <v-icon size="32" color="primary">mdi-github</v-icon>
+            <v-icon size="32" color="primary">
+              mdi-github
+            </v-icon>
           </div>
           <h3>GitHub</h3>
           <p>Open source examples, SDKs, and contribute to our projects on GitHub.</p>
           <v-btn color="primary" variant="text" class="support-btn">
             Visit GitHub
-            <v-icon right>mdi-arrow-right</v-icon>
+            <v-icon right>
+              mdi-arrow-right
+            </v-icon>
           </v-btn>
         </div>
       </div>
@@ -325,38 +357,54 @@
           </p>
           <div class="office-details">
             <div class="detail">
-              <v-icon size="20" color="primary">mdi-map-marker</v-icon>
+              <v-icon size="20" color="primary">
+                mdi-map-marker
+              </v-icon>
               <span>123 Innovation Drive, San Francisco, CA 94105</span>
             </div>
             <div class="detail">
-              <v-icon size="20" color="primary">mdi-clock</v-icon>
+              <v-icon size="20" color="primary">
+                mdi-clock
+              </v-icon>
               <span>Monday - Friday, 9:00 AM - 6:00 PM PST</span>
             </div>
             <div class="detail">
-              <v-icon size="20" color="primary">mdi-phone</v-icon>
+              <v-icon size="20" color="primary">
+                mdi-phone
+              </v-icon>
               <span>+1 (555) 123-4567</span>
             </div>
             <div class="detail">
-              <v-icon size="20" color="primary">mdi-email</v-icon>
+              <v-icon size="20" color="primary">
+                mdi-email
+              </v-icon>
               <span>hello@cloudlesswizard.com</span>
             </div>
           </div>
           <div class="office-actions">
             <v-btn color="primary" variant="outlined" class="office-btn">
-              <v-icon left>mdi-calendar</v-icon>
+              <v-icon left>
+                mdi-calendar
+              </v-icon>
               Schedule a Visit
             </v-btn>
             <v-btn variant="outlined" class="office-btn">
-              <v-icon left>mdi-map</v-icon>
+              <v-icon left>
+                mdi-map
+              </v-icon>
               Get Directions
             </v-btn>
           </div>
         </div>
         <div class="office-map">
           <div class="map-placeholder">
-            <v-icon size="64" color="primary">mdi-map</v-icon>
+            <v-icon size="64" color="primary">
+              mdi-map
+            </v-icon>
             <p>Interactive Map</p>
-            <p class="map-note">Click to view in Google Maps</p>
+            <p class="map-note">
+              Click to view in Google Maps
+            </p>
           </div>
         </div>
       </div>
@@ -367,23 +415,33 @@
       <p>Follow us on social media for the latest updates, tips, and community highlights.</p>
       <div class="social-links">
         <v-btn color="primary" variant="outlined" class="social-btn">
-          <v-icon left>mdi-twitter</v-icon>
+          <v-icon left>
+            mdi-twitter
+          </v-icon>
           Twitter
         </v-btn>
         <v-btn color="primary" variant="outlined" class="social-btn">
-          <v-icon left>mdi-linkedin</v-icon>
+          <v-icon left>
+            mdi-linkedin
+          </v-icon>
           LinkedIn
         </v-btn>
         <v-btn color="primary" variant="outlined" class="social-btn">
-          <v-icon left>mdi-github</v-icon>
+          <v-icon left>
+            mdi-github
+          </v-icon>
           GitHub
         </v-btn>
         <v-btn color="primary" variant="outlined" class="social-btn">
-          <v-icon left>mdi-youtube</v-icon>
+          <v-icon left>
+            mdi-youtube
+          </v-icon>
           YouTube
         </v-btn>
         <v-btn color="primary" variant="outlined" class="social-btn">
-          <v-icon left>mdi-discord</v-icon>
+          <v-icon left>
+            mdi-discord
+          </v-icon>
           Discord
         </v-btn>
       </div>

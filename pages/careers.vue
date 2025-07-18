@@ -2,7 +2,9 @@
   <div class="careers-page">
     <div class="page-header">
       <h1>Join Our Team</h1>
-      <p class="subtitle">Build the future of AI-powered cloud development with us</p>
+      <p class="subtitle">
+        Build the future of AI-powered cloud development with us
+      </p>
     </div>
 
     <div class="content-grid">
@@ -16,42 +18,54 @@
         <div class="benefits-grid">
           <div class="benefit-card">
             <div class="benefit-icon">
-              <v-icon size="24" color="primary">mdi-earth</v-icon>
+              <v-icon size="24" color="primary">
+                mdi-earth
+              </v-icon>
             </div>
             <h3>Remote-First Culture</h3>
             <p>Work from anywhere in the world with flexible hours and async-first communication</p>
           </div>
           <div class="benefit-card">
             <div class="benefit-icon">
-              <v-icon size="24" color="primary">mdi-school</v-icon>
+              <v-icon size="24" color="primary">
+                mdi-school
+              </v-icon>
             </div>
             <h3>Learning & Growth</h3>
             <p>Annual budget for courses, conferences, books, and continuous learning opportunities</p>
           </div>
           <div class="benefit-card">
             <div class="benefit-icon">
-              <v-icon size="24" color="primary">mdi-medal</v-icon>
+              <v-icon size="24" color="primary">
+                mdi-medal
+              </v-icon>
             </div>
             <h3>Competitive Compensation</h3>
             <p>Top-tier salary, equity options, and comprehensive health benefits</p>
           </div>
           <div class="benefit-card">
             <div class="benefit-icon">
-              <v-icon size="24" color="primary">mdi-account-group</v-icon>
+              <v-icon size="24" color="primary">
+                mdi-account-group
+              </v-icon>
             </div>
             <h3>Amazing Team</h3>
             <p>Work with talented, passionate people who care about building great products</p>
           </div>
           <div class="benefit-card">
             <div class="benefit-icon">
-              <v-icon size="24" color="primary">mdi-calendar-heart</v-icon>
+              <v-icon size="24" color="primary">
+                mdi-calendar-heart
+              </v-icon>
             </div>
             <h3>Work-Life Balance</h3>
             <p>Unlimited PTO, flexible schedules, and respect for personal time</p>
           </div>
           <div class="benefit-card">
             <div class="benefit-icon">
-              <v-icon size="24" color="primary">mdi-lightbulb</v-icon>
+              <v-icon size="24" color="primary">
+                mdi-lightbulb
+              </v-icon>
             </div>
             <h3>Innovation Time</h3>
             <p>20% time for personal projects and innovation initiatives</p>
@@ -309,42 +323,54 @@
         <div class="culture-grid">
           <div class="culture-card">
             <div class="culture-icon">
-              <v-icon size="32" color="primary">mdi-lightbulb</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-lightbulb
+              </v-icon>
             </div>
             <h3>Innovation First</h3>
             <p>We encourage experimentation and creative problem-solving. Every team member has the freedom to propose and implement new ideas that can transform our product.</p>
           </div>
           <div class="culture-card">
             <div class="culture-icon">
-              <v-icon size="32" color="primary">mdi-school</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-school
+              </v-icon>
             </div>
             <h3>Continuous Learning</h3>
             <p>We believe in constant growth and provide resources for team members to develop their skills and knowledge. Learning is part of our DNA.</p>
           </div>
           <div class="culture-card">
             <div class="culture-icon">
-              <v-icon size="32" color="primary">mdi-heart</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-heart
+              </v-icon>
             </div>
             <h3>Work-Life Balance</h3>
             <p>We respect personal time and encourage healthy boundaries. Flexible schedules, unlimited PTO, and remote work help maintain balance.</p>
           </div>
           <div class="culture-card">
             <div class="culture-icon">
-              <v-icon size="32" color="primary">mdi-account-group</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-account-group
+              </v-icon>
             </div>
             <h3>Diversity & Inclusion</h3>
             <p>We're committed to building a diverse team where everyone feels valued, heard, and empowered to do their best work. Different perspectives make us stronger.</p>
           </div>
           <div class="culture-card">
             <div class="culture-icon">
-              <v-icon size="32" color="primary">mdi-target</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-target
+              </v-icon>
             </div>
             <h3>Customer-Focused</h3>
             <p>Everything we do is driven by our customers' success. We listen, learn, and build features that solve real problems for developers.</p>
           </div>
           <div class="culture-card">
             <div class="culture-icon">
-              <v-icon size="32" color="primary">mdi-handshake</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-handshake
+              </v-icon>
             </div>
             <h3>Transparency</h3>
             <p>We believe in open communication and transparency. Team members have access to company metrics, roadmap, and decision-making processes.</p>
@@ -364,35 +390,55 @@
             </p>
             <div class="growth-features">
               <div class="growth-feature">
-                <v-icon size="20" color="success">mdi-check</v-icon>
+                <v-icon size="20" color="success">
+                  mdi-check
+                </v-icon>
                 <span>Individual development plans and regular career conversations</span>
               </div>
               <div class="growth-feature">
-                <v-icon size="20" color="success">mdi-check</v-icon>
+                <v-icon size="20" color="success">
+                  mdi-check
+                </v-icon>
                 <span>Mentorship programs with senior team members</span>
               </div>
               <div class="growth-feature">
-                <v-icon size="20" color="success">mdi-check</v-icon>
+                <v-icon size="20" color="success">
+                  mdi-check
+                </v-icon>
                 <span>Internal mobility and cross-functional project opportunities</span>
               </div>
               <div class="growth-feature">
-                <v-icon size="20" color="success">mdi-check</v-icon>
+                <v-icon size="20" color="success">
+                  mdi-check
+                </v-icon>
                 <span>Conference speaking opportunities and industry recognition</span>
               </div>
             </div>
           </div>
           <div class="growth-stats">
             <div class="growth-stat">
-              <div class="stat-number">85%</div>
-              <div class="stat-label">Team members promoted internally</div>
+              <div class="stat-number">
+                85%
+              </div>
+              <div class="stat-label">
+                Team members promoted internally
+              </div>
             </div>
             <div class="growth-stat">
-              <div class="stat-number">$5K</div>
-              <div class="stat-label">Annual learning budget per person</div>
+              <div class="stat-number">
+                $5K
+              </div>
+              <div class="stat-label">
+                Annual learning budget per person
+              </div>
             </div>
             <div class="growth-stat">
-              <div class="stat-number">12</div>
-              <div class="stat-label">Conferences attended annually</div>
+              <div class="stat-number">
+                12
+              </div>
+              <div class="stat-label">
+                Conferences attended annually
+              </div>
             </div>
           </div>
         </div>
@@ -402,35 +448,45 @@
         <h2>Application Process</h2>
         <div class="process-steps">
           <div class="process-step">
-            <div class="step-number">1</div>
+            <div class="step-number">
+              1
+            </div>
             <div class="step-content">
               <h4>Application Review</h4>
               <p>We review your resume and portfolio within 48 hours</p>
             </div>
           </div>
           <div class="process-step">
-            <div class="step-number">2</div>
+            <div class="step-number">
+              2
+            </div>
             <div class="step-content">
               <h4>Initial Call</h4>
               <p>30-minute conversation about your background and our role</p>
             </div>
           </div>
           <div class="process-step">
-            <div class="step-number">3</div>
+            <div class="step-number">
+              3
+            </div>
             <div class="step-content">
               <h4>Technical Assessment</h4>
               <p>Take-home project or technical interview based on role</p>
             </div>
           </div>
           <div class="process-step">
-            <div class="step-number">4</div>
+            <div class="step-number">
+              4
+            </div>
             <div class="step-content">
               <h4>Team Interviews</h4>
               <p>Meet with team members and discuss technical challenges</p>
             </div>
           </div>
           <div class="process-step">
-            <div class="step-number">5</div>
+            <div class="step-number">
+              5
+            </div>
             <div class="step-content">
               <h4>Final Decision</h4>
               <p>We make a decision and extend an offer within 1 week</p>
@@ -448,25 +504,35 @@
         </p>
         <div class="contact-actions">
           <v-btn color="primary" size="large" class="contact-btn">
-            <v-icon left>mdi-email</v-icon>
+            <v-icon left>
+              mdi-email
+            </v-icon>
             Send Resume
           </v-btn>
           <v-btn variant="outlined" size="large" class="contact-btn">
-            <v-icon left>mdi-linkedin</v-icon>
+            <v-icon left>
+              mdi-linkedin
+            </v-icon>
             Connect on LinkedIn
           </v-btn>
           <v-btn variant="outlined" size="large" class="contact-btn">
-            <v-icon left>mdi-github</v-icon>
+            <v-icon left>
+              mdi-github
+            </v-icon>
             Check Our GitHub
           </v-btn>
         </div>
         <div class="contact-info">
           <div class="contact-item">
-            <v-icon size="20" color="primary">mdi-email</v-icon>
+            <v-icon size="20" color="primary">
+              mdi-email
+            </v-icon>
             <span>careers@cloudlesswizard.com</span>
           </div>
           <div class="contact-item">
-            <v-icon size="20" color="primary">mdi-phone</v-icon>
+            <v-icon size="20" color="primary">
+              mdi-phone
+            </v-icon>
             <span>+1 (555) 123-4567</span>
           </div>
         </div>

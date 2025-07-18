@@ -8,7 +8,9 @@
     <div class="d-flex justify-space-between align-center mb-4">
       <h1>Bots</h1>
       <v-btn color="primary" @click="showWizard = !showWizard">
-        <v-icon start>mdi-plus</v-icon>Create Bot
+        <v-icon start>
+          mdi-plus
+        </v-icon>Create Bot
       </v-btn>
     </div>
 
@@ -36,8 +38,12 @@
       </v-col>
     </v-row>
 
-    <v-alert v-if="error" type="error" class="mt-4">{{ error }}</v-alert>
-    <v-alert v-if="!error && bots.length === 0" type="info" class="mt-4">No bots found.</v-alert>
+    <v-alert v-if="error" type="error" class="mt-4">
+      {{ error }}
+    </v-alert>
+    <v-alert v-if="!error && bots.length === 0" type="info" class="mt-4">
+      No bots found.
+    </v-alert>
   </section>
 </template>
 

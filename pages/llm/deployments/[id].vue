@@ -1,9 +1,11 @@
 <template>
   <v-container>
     <div class="d-flex align-center mb-6">
-      <BackButton :to="`/llm`" />
+      <BackButton to="/llm" />
       <div class="ml-4">
-        <h1 class="text-h4 mb-2">Deployment Details</h1>
+        <h1 class="text-h4 mb-2">
+          Deployment Details
+        </h1>
         <p class="text-body-1 text-medium-emphasis">
           Monitor and manage your model deployment
         </p>
@@ -15,7 +17,9 @@
         <!-- Deployment Status -->
         <v-card class="mb-4">
           <v-card-title>
-            <v-icon start color="info">mdi-rocket</v-icon>
+            <v-icon start color="info">
+              mdi-rocket
+            </v-icon>
             Deployment Status
           </v-card-title>
           <v-divider />
@@ -25,19 +29,30 @@
                 <v-list>
                   <v-list-item>
                     <v-list-item-title>Name</v-list-item-title>
-                    <v-list-item-subtitle>{{ deployment.name }}</v-list-item-subtitle>
+                    <v-list-item-subtitle>
+                      {{
+                        deployment.name
+                      }}
+                    </v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item>
                     <v-list-item-title>Status</v-list-item-title>
                     <v-list-item-subtitle>
-                      <v-chip :color="getStatusColor(deployment.status)" size="small">
+                      <v-chip
+                        :color="getStatusColor(deployment.status)"
+                        size="small"
+                      >
                         {{ deployment.status }}
                       </v-chip>
                     </v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item>
                     <v-list-item-title>Created</v-list-item-title>
-                    <v-list-item-subtitle>{{ formatDate(deployment.created_at) }}</v-list-item-subtitle>
+                    <v-list-item-subtitle>
+                      {{
+                        formatDate(deployment.created_at)
+                      }}
+                    </v-list-item-subtitle>
                   </v-list-item>
                 </v-list>
               </v-col>
@@ -47,7 +62,9 @@
                     <v-list-item-title>Endpoint URL</v-list-item-title>
                     <v-list-item-subtitle>
                       <div class="d-flex align-center">
-                        <span class="text-truncate me-2">{{ deployment.endpoint_url || 'Not available' }}</span>
+                        <span class="text-truncate me-2">{{
+                          deployment.endpoint_url || 'Not available'
+                        }}</span>
                         <v-btn
                           v-if="deployment.endpoint_url"
                           icon="mdi-content-copy"
@@ -60,11 +77,19 @@
                   </v-list-item>
                   <v-list-item>
                     <v-list-item-title>Model Version</v-list-item-title>
-                    <v-list-item-subtitle>{{ deployment.model_version_id || 'Unknown' }}</v-list-item-subtitle>
+                    <v-list-item-subtitle>
+                      {{
+                        deployment.model_version_id || 'Unknown'
+                      }}
+                    </v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item>
                     <v-list-item-title>Updated</v-list-item-title>
-                    <v-list-item-subtitle>{{ formatDate(deployment.updated_at) }}</v-list-item-subtitle>
+                    <v-list-item-subtitle>
+                      {{
+                        formatDate(deployment.updated_at)
+                      }}
+                    </v-list-item-subtitle>
                   </v-list-item>
                 </v-list>
               </v-col>
@@ -77,7 +102,9 @@
           <v-card-title>Configuration</v-card-title>
           <v-divider />
           <v-card-text>
-            <pre class="config-json">{{ JSON.stringify(deployment.config, null, 2) }}</pre>
+            <pre class="config-json">{{
+              JSON.stringify(deployment.config, null, 2)
+            }}</pre>
           </v-card-text>
         </v-card>
 
@@ -109,10 +136,12 @@
               variant="outlined"
               block
               class="mb-2"
-              @click="stopDeployment"
               :loading="loading"
+              @click="stopDeployment"
             >
-              <v-icon start>mdi-stop</v-icon>
+              <v-icon start>
+                mdi-stop
+              </v-icon>
               Stop Deployment
             </v-btn>
             <v-btn
@@ -121,20 +150,24 @@
               variant="outlined"
               block
               class="mb-2"
-              @click="startDeployment"
               :loading="loading"
+              @click="startDeployment"
             >
-              <v-icon start>mdi-play</v-icon>
+              <v-icon start>
+                mdi-play
+              </v-icon>
               Start Deployment
             </v-btn>
             <v-btn
               color="error"
               variant="outlined"
               block
-              @click="deleteDeployment"
               :loading="loading"
+              @click="deleteDeployment"
             >
-              <v-icon start>mdi-delete</v-icon>
+              <v-icon start>
+                mdi-delete
+              </v-icon>
               Delete Deployment
             </v-btn>
           </v-card-text>
@@ -148,19 +181,29 @@
             <v-list>
               <v-list-item>
                 <v-list-item-title>Requests (24h)</v-list-item-title>
-                <v-list-item-subtitle>{{ metrics.requests_24h }}</v-list-item-subtitle>
+                <v-list-item-subtitle>
+                  {{
+                    metrics.requests_24h
+                  }}
+                </v-list-item-subtitle>
               </v-list-item>
               <v-list-item>
                 <v-list-item-title>Avg Response Time</v-list-item-title>
-                <v-list-item-subtitle>{{ metrics.avg_response_time }}ms</v-list-item-subtitle>
+                <v-list-item-subtitle>
+                  {{ metrics.avg_response_time }}ms
+                </v-list-item-subtitle>
               </v-list-item>
               <v-list-item>
                 <v-list-item-title>Error Rate</v-list-item-title>
-                <v-list-item-subtitle>{{ metrics.error_rate }}%</v-list-item-subtitle>
+                <v-list-item-subtitle>
+                  {{ metrics.error_rate }}%
+                </v-list-item-subtitle>
               </v-list-item>
               <v-list-item>
                 <v-list-item-title>Uptime</v-list-item-title>
-                <v-list-item-subtitle>{{ metrics.uptime }}%</v-list-item-subtitle>
+                <v-list-item-subtitle>
+                  {{ metrics.uptime }}%
+                </v-list-item-subtitle>
               </v-list-item>
             </v-list>
           </v-card-text>
@@ -174,21 +217,19 @@
         <v-card>
           <v-card-text class="text-center">
             <v-progress-circular indeterminate color="primary" />
-            <p class="mt-4">Loading deployment details...</p>
+            <p class="mt-4">
+              Loading deployment details...
+            </p>
           </v-card-text>
         </v-card>
       </v-col>
     </v-row>
 
     <!-- Snackbar -->
-    <v-snackbar
-      v-model="snackbar.show"
-      :color="snackbar.color"
-      :timeout="3000"
-    >
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">
       {{ snackbar.message }}
       <template #actions>
-        <v-btn variant="text" @click="snackbar.show = false">
+        <v-btn variant="text" @click="closeSnackbar">
           Close
         </v-btn>
       </template>
@@ -197,10 +238,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useSupabase } from '~/composables/supabase'
 import BackButton from '~/components/ui/BackButton.vue'
+import { useSupabase } from '~/composables/supabase'
 
 const route = useRoute()
 const router = useRouter()
@@ -213,13 +254,13 @@ const metrics = ref({
   requests_24h: 1247,
   avg_response_time: 156,
   error_rate: 0.2,
-  uptime: 99.8
+  uptime: 99.8,
 })
 
 const snackbar = ref({
   show: false,
   message: '',
-  color: 'success'
+  color: 'success',
 })
 
 onMounted(async () => {
@@ -227,7 +268,7 @@ onMounted(async () => {
   await fetchDeploymentLogs()
 })
 
-async function fetchDeployment() {
+const fetchDeployment = async () => {
   try {
     const { data, error } = await supabase
       .from('deployments')
@@ -238,12 +279,13 @@ async function fetchDeployment() {
     if (error) throw error
     deployment.value = data
   } catch (error) {
-    console.error('Error fetching deployment:', error)
+    // Error fetching deployment - could be logged to a proper logging service
+    // console.error('Error fetching deployment:', error)
     showSnackbar('Error loading deployment details', 'error')
   }
 }
 
-async function fetchDeploymentLogs() {
+const fetchDeploymentLogs = async () => {
   // Simulate deployment logs
   deploymentLogs.value = [
     '[2024-01-15 10:30:00] Deployment started',
@@ -253,11 +295,11 @@ async function fetchDeploymentLogs() {
     '[2024-01-15 10:31:00] First request processed',
     '[2024-01-15 10:31:15] Scaling up to 2 instances',
     '[2024-01-15 10:32:00] Load balancer configured',
-    '[2024-01-15 10:32:30] Monitoring enabled'
+    '[2024-01-15 10:32:30] Monitoring enabled',
   ]
 }
 
-async function stopDeployment() {
+const stopDeployment = async () => {
   loading.value = true
   try {
     const { error } = await supabase
@@ -270,14 +312,15 @@ async function stopDeployment() {
     deployment.value.status = 'inactive'
     showSnackbar('Deployment stopped successfully', 'success')
   } catch (error) {
-    console.error('Error stopping deployment:', error)
+    // Error stopping deployment - could be logged to a proper logging service
+    // console.error('Error stopping deployment:', error)
     showSnackbar('Error stopping deployment', 'error')
   } finally {
     loading.value = false
   }
 }
 
-async function startDeployment() {
+const startDeployment = async () => {
   loading.value = true
   try {
     const { error } = await supabase
@@ -290,14 +333,15 @@ async function startDeployment() {
     deployment.value.status = 'active'
     showSnackbar('Deployment started successfully', 'success')
   } catch (error) {
-    console.error('Error starting deployment:', error)
+    // Error starting deployment - could be logged to a proper logging service
+    // console.error('Error starting deployment:', error)
     showSnackbar('Error starting deployment', 'error')
   } finally {
     loading.value = false
   }
 }
 
-async function deleteDeployment() {
+const deleteDeployment = async () => {
   if (!confirm('Are you sure you want to delete this deployment?')) return
 
   loading.value = true
@@ -312,47 +356,57 @@ async function deleteDeployment() {
     showSnackbar('Deployment deleted successfully', 'success')
     router.push('/llm')
   } catch (error) {
-    console.error('Error deleting deployment:', error)
+    // Error deleting deployment - could be logged to a proper logging service
+    // console.error('Error deleting deployment:', error)
     showSnackbar('Error deleting deployment', 'error')
   } finally {
     loading.value = false
   }
 }
 
-function copyEndpoint() {
+const copyEndpoint = () => {
   if (deployment.value?.endpoint_url) {
     navigator.clipboard.writeText(deployment.value.endpoint_url)
     showSnackbar('Endpoint URL copied to clipboard', 'success')
   }
 }
 
-function getStatusColor(status: string) {
+const getStatusColor = (status: string) => {
   switch (status) {
-    case 'active': return 'success'
-    case 'pending': return 'warning'
-    case 'failed': return 'error'
-    case 'inactive': return 'grey'
-    default: return 'primary'
+    case 'active':
+      return 'success'
+    case 'pending':
+      return 'warning'
+    case 'failed':
+      return 'error'
+    case 'inactive':
+      return 'grey'
+    default:
+      return 'primary'
   }
 }
 
-function formatDate(dateString: string) {
+const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A'
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 
-function showSnackbar(message: string, color: string = 'success') {
+const showSnackbar = (message: string, color: string = 'success') => {
   snackbar.value = {
     show: true,
     message,
-    color
+    color,
   }
+}
+
+const closeSnackbar = () => {
+  snackbar.value.show = false
 }
 </script>
 
@@ -375,4 +429,4 @@ function showSnackbar(message: string, color: string = 'success') {
   font-family: monospace;
   font-size: 12px;
 }
-</style> 
+</style>

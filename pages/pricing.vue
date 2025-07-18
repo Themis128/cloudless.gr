@@ -2,7 +2,9 @@
   <div class="pricing-page">
     <div class="page-header">
       <h1>Pricing Plans</h1>
-      <p class="subtitle">Choose the perfect plan for your needs</p>
+      <p class="subtitle">
+        Choose the perfect plan for your needs
+      </p>
     </div>
 
     <div class="content-grid">
@@ -17,7 +19,12 @@
       </div>
 
       <div class="plans-grid">
-        <div class="plan-card" v-for="plan in plans" :key="plan.name" :class="{ 'popular': plan.popular }">
+        <div
+          v-for="plan in plans"
+          :key="plan.name"
+          class="plan-card"
+          :class="{ 'popular': plan.popular }"
+        >
           <div class="plan-header">
             <h3>{{ plan.name }}</h3>
             <div class="plan-price">
@@ -25,12 +32,16 @@
               <span class="amount">{{ isAnnual ? plan.annualPrice : plan.monthlyPrice }}</span>
               <span class="period">/{{ isAnnual ? 'year' : 'month' }}</span>
             </div>
-            <p class="plan-description">{{ plan.description }}</p>
+            <p class="plan-description">
+              {{ plan.description }}
+            </p>
           </div>
 
           <div class="plan-features">
-            <div class="feature" v-for="feature in plan.features" :key="feature">
-              <v-icon size="20" color="success">mdi-check</v-icon>
+            <div v-for="feature in plan.features" :key="feature" class="feature">
+              <v-icon size="20" color="success">
+                mdi-check
+              </v-icon>
               <span>{{ feature }}</span>
             </div>
           </div>
@@ -80,23 +91,36 @@
             </p>
             <div class="enterprise-features">
               <div class="enterprise-feature">
-                <v-icon size="24" color="primary">mdi-shield-check</v-icon>
+                <v-icon size="24" color="primary">
+                  mdi-shield-check
+                </v-icon>
                 <span>Custom Security & Compliance</span>
               </div>
               <div class="enterprise-feature">
-                <v-icon size="24" color="primary">mdi-headset</v-icon>
+                <v-icon size="24" color="primary">
+                  mdi-headset
+                </v-icon>
                 <span>24/7 Dedicated Support</span>
               </div>
               <div class="enterprise-feature">
-                <v-icon size="24" color="primary">mdi-cog</v-icon>
+                <v-icon size="24" color="primary">
+                  mdi-cog
+                </v-icon>
                 <span>Custom Integrations</span>
               </div>
               <div class="enterprise-feature">
-                <v-icon size="24" color="primary">mdi-account-group</v-icon>
+                <v-icon size="24" color="primary">
+                  mdi-account-group
+                </v-icon>
                 <span>Unlimited Team Members</span>
               </div>
             </div>
-            <v-btn color="primary" variant="elevated" size="large" class="enterprise-btn">
+            <v-btn
+              color="primary"
+              variant="elevated"
+              size="large"
+              class="enterprise-btn"
+            >
               Contact Sales
             </v-btn>
           </div>
@@ -144,28 +168,50 @@
         <h2>Plan Comparison</h2>
         <div class="comparison-table">
           <div class="table-header">
-            <div class="header-cell">Feature</div>
-            <div class="header-cell">Free</div>
-            <div class="header-cell">Pro</div>
-            <div class="header-cell">Business</div>
+            <div class="header-cell">
+              Feature
+            </div>
+            <div class="header-cell">
+              Free
+            </div>
+            <div class="header-cell">
+              Pro
+            </div>
+            <div class="header-cell">
+              Business
+            </div>
           </div>
           
-          <div class="table-row" v-for="feature in comparisonFeatures" :key="feature.name">
-            <div class="feature-cell">{{ feature.name }}</div>
+          <div v-for="feature in comparisonFeatures" :key="feature.name" class="table-row">
+            <div class="feature-cell">
+              {{ feature.name }}
+            </div>
             <div class="value-cell">
-              <v-icon v-if="feature.free" size="20" color="success">mdi-check</v-icon>
+              <v-icon v-if="feature.free" size="20" color="success">
+                mdi-check
+              </v-icon>
               <span v-else-if="typeof feature.free === 'string'">{{ feature.free }}</span>
-              <v-icon v-else size="20" color="error">mdi-close</v-icon>
+              <v-icon v-else size="20" color="error">
+                mdi-close
+              </v-icon>
             </div>
             <div class="value-cell">
-              <v-icon v-if="feature.pro" size="20" color="success">mdi-check</v-icon>
+              <v-icon v-if="feature.pro" size="20" color="success">
+                mdi-check
+              </v-icon>
               <span v-else-if="typeof feature.pro === 'string'">{{ feature.pro }}</span>
-              <v-icon v-else size="20" color="error">mdi-close</v-icon>
+              <v-icon v-else size="20" color="error">
+                mdi-close
+              </v-icon>
             </div>
             <div class="value-cell">
-              <v-icon v-if="feature.business" size="20" color="success">mdi-check</v-icon>
+              <v-icon v-if="feature.business" size="20" color="success">
+                mdi-check
+              </v-icon>
               <span v-else-if="typeof feature.business === 'string'">{{ feature.business }}</span>
-              <v-icon v-else size="20" color="error">mdi-close</v-icon>
+              <v-icon v-else size="20" color="error">
+                mdi-close
+              </v-icon>
             </div>
           </div>
         </div>

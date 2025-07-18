@@ -1,7 +1,7 @@
 
 <template>
   <v-container>
-    <BackButton :to="`/bots`" />
+    <BackButton to="/bots" />
     <v-row justify="center">
       <v-col cols="12" md="8" lg="6">
         <BotTest :bot-id="botId" />

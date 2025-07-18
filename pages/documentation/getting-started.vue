@@ -5,7 +5,9 @@
         <v-col cols="12">
           <div class="doc-header">
             <h1 class="doc-title">
-              <v-icon size="32" class="mr-3">mdi-rocket-launch</v-icon>
+              <v-icon size="32" class="mr-3">
+                mdi-rocket-launch
+              </v-icon>
               Getting Started
             </h1>
             <p class="doc-subtitle">
@@ -20,7 +22,9 @@
           <v-card class="doc-content-card">
             <v-card-text>
               <h2 class="text-h4 mb-4">
-                <v-icon class="mr-2">mdi-information</v-icon>
+                <v-icon class="mr-2">
+                  mdi-information
+                </v-icon>
                 Overview
               </h2>
               <p class="text-body-1 mb-4">
@@ -42,7 +46,9 @@
               </v-alert>
 
               <h2 class="text-h4 mb-4">
-                <v-icon class="mr-2">mdi-lightning-bolt</v-icon>
+                <v-icon class="mr-2">
+                  mdi-lightning-bolt
+                </v-icon>
                 Quick Start (5 minutes)
               </h2>
               
@@ -54,12 +60,18 @@
                   size="small"
                 >
                   <template #opposite>
-                    <div class="text-caption">{{ index + 1 }}</div>
+                    <div class="text-caption">
+                      {{ index + 1 }}
+                    </div>
                   </template>
                   <v-card>
-                    <v-card-title class="text-h6">{{ step.title }}</v-card-title>
+                    <v-card-title class="text-h6">
+                      {{ step.title }}
+                    </v-card-title>
                     <v-card-text>
-                      <p class="text-body-2">{{ step.description }}</p>
+                      <p class="text-body-2">
+                        {{ step.description }}
+                      </p>
                       <v-btn
                         v-if="step.action"
                         :to="step.action.path"
@@ -68,7 +80,9 @@
                         size="small"
                         class="mt-2"
                       >
-                        <v-icon start>{{ step.action.icon }}</v-icon>
+                        <v-icon start>
+                          {{ step.action.icon }}
+                        </v-icon>
                         {{ step.action.text }}
                       </v-btn>
                     </v-card-text>
@@ -77,7 +91,9 @@
               </v-timeline>
 
               <h2 class="text-h4 mb-4">
-                <v-icon class="mr-2">mdi-arrow-right</v-icon>
+                <v-icon class="mr-2">
+                  mdi-arrow-right
+                </v-icon>
                 Next Steps
               </h2>
               <p class="text-body-1 mb-4">
@@ -94,11 +110,13 @@
                 >
                   <v-card class="next-step-card h-100" elevation="2">
                     <v-card-title class="text-h6 d-flex align-center">
-                      <v-icon :icon="nextStep.icon" class="mr-2" color="primary"></v-icon>
+                      <v-icon :icon="nextStep.icon" class="mr-2" color="primary" />
                       {{ nextStep.title }}
                     </v-card-title>
                     <v-card-text>
-                      <p class="text-body-2 mb-3">{{ nextStep.description }}</p>
+                      <p class="text-body-2 mb-3">
+                        {{ nextStep.description }}
+                      </p>
                       <v-btn
                         :to="nextStep.link"
                         variant="text"
@@ -106,7 +124,9 @@
                         size="small"
                       >
                         Learn More
-                        <v-icon end>mdi-arrow-right</v-icon>
+                        <v-icon end>
+                          mdi-arrow-right
+                        </v-icon>
                       </v-btn>
                     </v-card-text>
                   </v-card>

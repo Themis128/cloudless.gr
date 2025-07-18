@@ -2,7 +2,9 @@
   <div class="blog-page">
     <div class="page-header">
       <h1>Blog</h1>
-      <p class="subtitle">Insights, tutorials, and updates from the Cloudless Wizard team</p>
+      <p class="subtitle">
+        Insights, tutorials, and updates from the Cloudless Wizard team
+      </p>
     </div>
 
     <div class="content-grid">
@@ -11,7 +13,9 @@
         <div class="featured-grid">
           <div class="featured-card featured-main">
             <div class="featured-image">
-              <v-icon size="80" color="primary">mdi-robot</v-icon>
+              <v-icon size="80" color="primary">
+                mdi-robot
+              </v-icon>
             </div>
             <div class="featured-content">
               <div class="article-meta">
@@ -33,7 +37,9 @@
               </div>
               <v-btn color="primary" variant="elevated" class="read-more">
                 Read Full Article
-                <v-icon right>mdi-arrow-right</v-icon>
+                <v-icon right>
+                  mdi-arrow-right
+                </v-icon>
               </v-btn>
             </div>
           </div>
@@ -41,7 +47,9 @@
           <div class="featured-sidebar">
             <div class="featured-card featured-side">
               <div class="featured-image">
-                <v-icon size="48" color="success">mdi-chart-line</v-icon>
+                <v-icon size="48" color="success">
+                  mdi-chart-line
+                </v-icon>
               </div>
               <div class="featured-content">
                 <div class="article-meta">
@@ -58,7 +66,9 @@
             
             <div class="featured-card featured-side">
               <div class="featured-image">
-                <v-icon size="48" color="warning">mdi-rocket-launch</v-icon>
+                <v-icon size="48" color="warning">
+                  mdi-rocket-launch
+                </v-icon>
               </div>
               <div class="featured-content">
                 <div class="article-meta">
@@ -102,9 +112,11 @@
         </div>
 
         <div class="articles-grid">
-          <div class="article-card" v-for="article in filteredArticles" :key="article.id">
+          <div v-for="article in filteredArticles" :key="article.id" class="article-card">
             <div class="article-image">
-              <v-icon size="48" :color="article.iconColor">{{ article.icon }}</v-icon>
+              <v-icon size="48" :color="article.iconColor">
+                {{ article.icon }}
+              </v-icon>
             </div>
             <div class="article-content">
               <div class="article-meta">
@@ -115,16 +127,20 @@
               <h3>{{ article.title }}</h3>
               <p>{{ article.excerpt }}</p>
               <div class="article-tags">
-                <span class="tag" v-for="tag in article.tags" :key="tag">{{ tag }}</span>
+                <span v-for="tag in article.tags" :key="tag" class="tag">{{ tag }}</span>
               </div>
               <div class="article-footer">
                 <div class="author-info">
-                  <v-icon size="16" color="primary">mdi-account-circle</v-icon>
+                  <v-icon size="16" color="primary">
+                    mdi-account-circle
+                  </v-icon>
                   <span>{{ article.author }}</span>
                 </div>
                 <v-btn color="primary" variant="text" class="read-more">
                   Read More
-                  <v-icon right>mdi-arrow-right</v-icon>
+                  <v-icon right>
+                    mdi-arrow-right
+                  </v-icon>
                 </v-btn>
               </div>
             </div>
@@ -144,9 +160,11 @@
       <div class="categories-section">
         <h2>Browse by Category</h2>
         <div class="categories-grid">
-          <div class="category-card" v-for="category in categoryStats" :key="category.name">
+          <div v-for="category in categoryStats" :key="category.name" class="category-card">
             <div class="category-icon">
-              <v-icon size="32" :color="category.color">{{ category.icon }}</v-icon>
+              <v-icon size="32" :color="category.color">
+                {{ category.icon }}
+              </v-icon>
             </div>
             <h3>{{ category.name }}</h3>
             <p>{{ category.description }}</p>
@@ -170,15 +188,21 @@
             </p>
             <div class="newsletter-features">
               <div class="newsletter-feature">
-                <v-icon size="20" color="success">mdi-check</v-icon>
+                <v-icon size="20" color="success">
+                  mdi-check
+                </v-icon>
                 <span>Weekly curated content</span>
               </div>
               <div class="newsletter-feature">
-                <v-icon size="20" color="success">mdi-check</v-icon>
+                <v-icon size="20" color="success">
+                  mdi-check
+                </v-icon>
                 <span>Early access to new features</span>
               </div>
               <div class="newsletter-feature">
-                <v-icon size="20" color="success">mdi-check</v-icon>
+                <v-icon size="20" color="success">
+                  mdi-check
+                </v-icon>
                 <span>Exclusive tutorials and tips</span>
               </div>
             </div>
@@ -205,8 +229,10 @@
       <div class="popular-section">
         <h2>Most Popular Articles</h2>
         <div class="popular-grid">
-          <div class="popular-card" v-for="(article, index) in popularArticles" :key="article.id">
-            <div class="popular-rank">{{ index + 1 }}</div>
+          <div v-for="(article, index) in popularArticles" :key="article.id" class="popular-card">
+            <div class="popular-rank">
+              {{ index + 1 }}
+            </div>
             <div class="popular-content">
               <h4>{{ article.title }}</h4>
               <div class="popular-meta">

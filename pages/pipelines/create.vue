@@ -6,7 +6,9 @@
           <v-icon>mdi-arrow-left</v-icon>
         </v-btn>
 
-        <h1 class="text-h4 mb-6">Create Pipeline</h1>
+        <h1 class="text-h4 mb-6">
+          Create Pipeline
+        </h1>
 
         <!-- Stepper -->
         <v-stepper v-model="currentStep" class="mb-6">

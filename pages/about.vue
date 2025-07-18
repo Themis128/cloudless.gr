@@ -2,7 +2,9 @@
   <div class="about-page">
     <div class="page-header">
       <h1>About Cloudless Wizard</h1>
-      <p class="subtitle">Empowering developers with AI-driven cloud solutions for the modern era</p>
+      <p class="subtitle">
+        Empowering developers with AI-driven cloud solutions for the modern era
+      </p>
     </div>
 
     <div class="content-grid">
@@ -16,20 +18,36 @@
         </p>
         <div class="mission-stats">
           <div class="stat-card">
-            <div class="stat-number">50K+</div>
-            <div class="stat-label">Successful Deployments</div>
+            <div class="stat-number">
+              50K+
+            </div>
+            <div class="stat-label">
+              Successful Deployments
+            </div>
           </div>
           <div class="stat-card">
-            <div class="stat-number">99.9%</div>
-            <div class="stat-label">Uptime Guarantee</div>
+            <div class="stat-number">
+              99.9%
+            </div>
+            <div class="stat-label">
+              Uptime Guarantee
+            </div>
           </div>
           <div class="stat-card">
-            <div class="stat-number">24/7</div>
-            <div class="stat-label">Support Available</div>
+            <div class="stat-number">
+              24/7
+            </div>
+            <div class="stat-label">
+              Support Available
+            </div>
           </div>
           <div class="stat-card">
-            <div class="stat-number">200+</div>
-            <div class="stat-label">Enterprise Clients</div>
+            <div class="stat-number">
+              200+
+            </div>
+            <div class="stat-label">
+              Enterprise Clients
+            </div>
           </div>
         </div>
       </div>
@@ -55,21 +73,27 @@
           </div>
           <div class="story-timeline">
             <div class="timeline-item">
-              <div class="timeline-year">2023</div>
+              <div class="timeline-year">
+                2023
+              </div>
               <div class="timeline-content">
                 <h4>Company Founded</h4>
                 <p>Launched with seed funding and our first AI-powered bot builder</p>
               </div>
             </div>
             <div class="timeline-item">
-              <div class="timeline-year">2024</div>
+              <div class="timeline-year">
+                2024
+              </div>
               <div class="timeline-content">
                 <h4>Platform Expansion</h4>
                 <p>Added model training and pipeline builder capabilities</p>
               </div>
             </div>
             <div class="timeline-item">
-              <div class="timeline-year">2025</div>
+              <div class="timeline-year">
+                2025
+              </div>
               <div class="timeline-content">
                 <h4>Global Growth</h4>
                 <p>Reached 50K+ deployments and expanded to enterprise customers</p>
@@ -84,7 +108,9 @@
         <div class="features-grid">
           <div class="feature-card">
             <div class="feature-icon">
-              <v-icon size="32" color="primary">mdi-robot</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-robot
+              </v-icon>
             </div>
             <h3>AI-Powered Bot Builder</h3>
             <p>Create intelligent chatbots and automation workflows with our intuitive drag-and-drop interface. Train custom models and deploy with one click.</p>
@@ -96,7 +122,9 @@
           </div>
           <div class="feature-card">
             <div class="feature-icon">
-              <v-icon size="32" color="primary">mdi-brain</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-brain
+              </v-icon>
             </div>
             <h3>Model Training Platform</h3>
             <p>Train custom AI models with your data using our advanced machine learning pipeline. From data preparation to model deployment.</p>
@@ -108,7 +136,9 @@
           </div>
           <div class="feature-card">
             <div class="feature-icon">
-              <v-icon size="32" color="primary">mdi-timeline</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-timeline
+              </v-icon>
             </div>
             <h3>Pipeline Creator</h3>
             <p>Build complex data processing pipelines with visual tools and real-time monitoring. Connect any data source to any destination.</p>
@@ -120,7 +150,9 @@
           </div>
           <div class="feature-card">
             <div class="feature-icon">
-              <v-icon size="32" color="primary">mdi-rocket-launch</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-rocket-launch
+              </v-icon>
             </div>
             <h3>One-Click Deployment</h3>
             <p>Deploy your applications to any cloud provider with automated scaling and monitoring. From development to production in minutes.</p>
@@ -188,50 +220,90 @@
         <div class="team-grid">
           <div class="team-member">
             <div class="member-avatar">
-              <v-icon size="48" color="primary">mdi-account-circle</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-account-circle
+              </v-icon>
             </div>
             <h4>Alex Chen</h4>
-            <p class="member-role">CEO & Co-founder</p>
-            <p class="member-bio">Former senior engineer at Google Cloud and AWS with 15+ years in cloud infrastructure. Led teams building scalable systems serving millions of users.</p>
+            <p class="member-role">
+              CEO & Co-founder
+            </p>
+            <p class="member-bio">
+              Former senior engineer at Google Cloud and AWS with 15+ years in cloud infrastructure. Led teams building scalable systems serving millions of users.
+            </p>
             <div class="member-social">
-              <v-icon size="20" color="primary">mdi-linkedin</v-icon>
-              <v-icon size="20" color="primary">mdi-twitter</v-icon>
+              <v-icon size="20" color="primary">
+                mdi-linkedin
+              </v-icon>
+              <v-icon size="20" color="primary">
+                mdi-twitter
+              </v-icon>
             </div>
           </div>
           <div class="team-member">
             <div class="member-avatar">
-              <v-icon size="48" color="primary">mdi-account-circle</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-account-circle
+              </v-icon>
             </div>
             <h4>Sarah Kim</h4>
-            <p class="member-role">CTO & Co-founder</p>
-            <p class="member-bio">AI researcher with PhD from Stanford, specializing in large language models and distributed systems. Previously led ML teams at OpenAI and DeepMind.</p>
+            <p class="member-role">
+              CTO & Co-founder
+            </p>
+            <p class="member-bio">
+              AI researcher with PhD from Stanford, specializing in large language models and distributed systems. Previously led ML teams at OpenAI and DeepMind.
+            </p>
             <div class="member-social">
-              <v-icon size="20" color="primary">mdi-linkedin</v-icon>
-              <v-icon size="20" color="primary">mdi-github</v-icon>
+              <v-icon size="20" color="primary">
+                mdi-linkedin
+              </v-icon>
+              <v-icon size="20" color="primary">
+                mdi-github
+              </v-icon>
             </div>
           </div>
           <div class="team-member">
             <div class="member-avatar">
-              <v-icon size="48" color="primary">mdi-account-circle</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-account-circle
+              </v-icon>
             </div>
             <h4>Marcus Rodriguez</h4>
-            <p class="member-role">Head of Engineering</p>
-            <p class="member-bio">Full-stack developer with deep experience in scalable microservices architecture. Previously built developer tools at GitHub and Vercel.</p>
+            <p class="member-role">
+              Head of Engineering
+            </p>
+            <p class="member-bio">
+              Full-stack developer with deep experience in scalable microservices architecture. Previously built developer tools at GitHub and Vercel.
+            </p>
             <div class="member-social">
-              <v-icon size="20" color="primary">mdi-linkedin</v-icon>
-              <v-icon size="20" color="primary">mdi-github</v-icon>
+              <v-icon size="20" color="primary">
+                mdi-linkedin
+              </v-icon>
+              <v-icon size="20" color="primary">
+                mdi-github
+              </v-icon>
             </div>
           </div>
           <div class="team-member">
             <div class="member-avatar">
-              <v-icon size="48" color="primary">mdi-account-circle</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-account-circle
+              </v-icon>
             </div>
             <h4>Dr. Emily Watson</h4>
-            <p class="member-role">Head of AI Research</p>
-            <p class="member-bio">Leading our AI research initiatives with expertise in natural language processing and computer vision. PhD from MIT with 50+ research publications.</p>
+            <p class="member-role">
+              Head of AI Research
+            </p>
+            <p class="member-bio">
+              Leading our AI research initiatives with expertise in natural language processing and computer vision. PhD from MIT with 50+ research publications.
+            </p>
             <div class="member-social">
-              <v-icon size="20" color="primary">mdi-linkedin</v-icon>
-              <v-icon size="20" color="primary">mdi-github</v-icon>
+              <v-icon size="20" color="primary">
+                mdi-linkedin
+              </v-icon>
+              <v-icon size="20" color="primary">
+                mdi-github
+              </v-icon>
             </div>
           </div>
         </div>
@@ -246,7 +318,9 @@
             </div>
             <div class="testimonial-author">
               <div class="author-avatar">
-                <v-icon size="32" color="primary">mdi-account-circle</v-icon>
+                <v-icon size="32" color="primary">
+                  mdi-account-circle
+                </v-icon>
               </div>
               <div class="author-info">
                 <h4>David Park</h4>
@@ -260,7 +334,9 @@
             </div>
             <div class="testimonial-author">
               <div class="author-avatar">
-                <v-icon size="32" color="primary">mdi-account-circle</v-icon>
+                <v-icon size="32" color="primary">
+                  mdi-account-circle
+                </v-icon>
               </div>
               <div class="author-info">
                 <h4>Lisa Chen</h4>
@@ -274,7 +350,9 @@
             </div>
             <div class="testimonial-author">
               <div class="author-avatar">
-                <v-icon size="32" color="primary">mdi-account-circle</v-icon>
+                <v-icon size="32" color="primary">
+                  mdi-account-circle
+                </v-icon>
               </div>
               <div class="author-info">
                 <h4>Michael Johnson</h4>
@@ -290,28 +368,36 @@
         <div class="values-grid">
           <div class="value-card">
             <div class="value-icon">
-              <v-icon size="32" color="primary">mdi-lightbulb</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-lightbulb
+              </v-icon>
             </div>
             <h3>Innovation</h3>
             <p>We constantly push the boundaries of what's possible with AI and cloud technology, always looking for better ways to solve complex problems.</p>
           </div>
           <div class="value-card">
             <div class="value-icon">
-              <v-icon size="32" color="primary">mdi-check-circle</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-check-circle
+              </v-icon>
             </div>
             <h3>Simplicity</h3>
             <p>Complex problems deserve simple solutions. We make powerful tools easy to use, so developers can focus on what matters most.</p>
           </div>
           <div class="value-card">
             <div class="value-icon">
-              <v-icon size="32" color="primary">mdi-shield-check</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-shield-check
+              </v-icon>
             </div>
             <h3>Reliability</h3>
             <p>Your applications deserve the highest level of uptime and performance. We build with reliability and security as core principles.</p>
           </div>
           <div class="value-card">
             <div class="value-icon">
-              <v-icon size="32" color="primary">mdi-account-group</v-icon>
+              <v-icon size="32" color="primary">
+                mdi-account-group
+              </v-icon>
             </div>
             <h3>Community</h3>
             <p>We believe in building together and sharing knowledge with the developer community. Open source contributions and knowledge sharing are core to our mission.</p>
@@ -324,7 +410,12 @@
           <h2>Ready to Get Started?</h2>
           <p>Join thousands of developers who are already building the future with Cloudless Wizard.</p>
           <div class="cta-actions">
-            <v-btn color="primary" size="large" variant="elevated" class="cta-btn">
+            <v-btn
+              color="primary"
+              size="large"
+              variant="elevated"
+              class="cta-btn"
+            >
               Start Free Trial
             </v-btn>
             <v-btn variant="outlined" size="large" class="cta-btn">

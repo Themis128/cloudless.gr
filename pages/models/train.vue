@@ -1,40 +1,52 @@
 <template>
-  <TrainGuide />
-  <v-container>
-    <h1 class="mb-4">Train Model</h1>
-    <v-form @submit.prevent="trainModel">
-      <v-text-field
-        v-model="form.modelName"
-        label="Model Name"
-        class="mb-3"
-        required
-      />
-      <v-text-field
-        v-model="form.datasetUrl"
-        label="Dataset URL"
-        class="mb-3"
-        required
-      />
-      <v-text-field
-        v-model.number="form.epochs"
-        label="Epochs"
-        type="number"
-        min="1"
-        class="mb-3"
-        required
-      />
-      <v-btn type="submit" color="primary" :loading="loading">Train</v-btn>
-      <v-btn text class="ml-2" @click="resetForm">Reset</v-btn>
-    </v-form>
-    <v-alert v-if="success" type="success" class="mt-4">Training started successfully!</v-alert>
-    <v-alert v-if="error" type="error" class="mt-4">{{ error }}</v-alert>
-  </v-container>
+  <div>
+    <TrainGuide />
+    <v-container>
+      <h1 class="mb-4">
+        Train Model
+      </h1>
+      <v-form @submit.prevent="trainModel">
+        <v-text-field
+          v-model="form.modelName"
+          label="Model Name"
+          class="mb-3"
+          required
+        />
+        <v-text-field
+          v-model="form.datasetUrl"
+          label="Dataset URL"
+          class="mb-3"
+          required
+        />
+        <v-text-field
+          v-model.number="form.epochs"
+          label="Epochs"
+          type="number"
+          min="1"
+          class="mb-3"
+          required
+        />
+        <v-btn type="submit" color="primary" :loading="loading">
+          Train
+        </v-btn>
+        <v-btn text class="ml-2" @click="resetForm">
+          Reset
+        </v-btn>
+      </v-form>
+      <v-alert v-if="success" type="success" class="mt-4">
+        Training started successfully!
+      </v-alert>
+      <v-alert v-if="error" type="error" class="mt-4">
+        {{ error }}
+      </v-alert>
+    </v-container>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useSupabase } from '~/composables/supabase'
 import TrainGuide from '~/components/step-guides/TrainGuide.vue'
+import { useSupabase } from '~/composables/supabase'
 
 const supabase = useSupabase()
 const loading = ref(false)
@@ -44,16 +56,16 @@ const error = ref<string | null>(null)
 const form = ref({
   modelName: '',
   datasetUrl: '',
-  epochs: 3
+  epochs: 3,
 })
 
-function resetForm() {
+const resetForm = () => {
   form.value = { modelName: '', datasetUrl: '', epochs: 3 }
   success.value = false
   error.value = null
 }
 
-async function trainModel() {
+const trainModel = async () => {
   error.value = null
   success.value = false
   loading.value = true
@@ -64,8 +76,8 @@ async function trainModel() {
       dataset_url: form.value.datasetUrl,
       epochs: form.value.epochs,
       created_at: new Date().toISOString(),
-      status: 'pending'
-    }
+      status: 'pending',
+    },
   ])
   loading.value = false
   if (err) {

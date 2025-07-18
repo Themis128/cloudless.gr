@@ -2,7 +2,9 @@
   <div class="input-processor-config">
     <v-card>
       <v-card-title class="d-flex align-center">
-        <v-icon start>mdi-cog</v-icon>
+        <v-icon start>
+          mdi-cog
+        </v-icon>
         Configure Input Processor
       </v-card-title>
       
@@ -11,7 +13,9 @@
         <v-expansion-panels>
           <v-expansion-panel>
             <v-expansion-panel-title>
-              <v-icon start>mdi-database-import</v-icon>
+              <v-icon start>
+                mdi-database-import
+              </v-icon>
               Source Configuration
             </v-expansion-panel-title>
             <v-expansion-panel-text>
@@ -222,7 +226,9 @@
           <!-- Preprocessing Options -->
           <v-expansion-panel>
             <v-expansion-panel-title>
-              <v-icon start>mdi-cog-transfer</v-icon>
+              <v-icon start>
+                mdi-cog-transfer
+              </v-icon>
               Preprocessing Options
             </v-expansion-panel-title>
             <v-expansion-panel-text>
@@ -283,7 +289,7 @@
                           variant="text"
                           color="error"
                           size="small"
-                          @click="removeCustomReplacement(index)"
+                          @click="() => removeCustomReplacement(index)"
                         />
                       </div>
                     </v-expansion-panel-text>
@@ -336,7 +342,9 @@
           <!-- Validation Rules -->
           <v-expansion-panel>
             <v-expansion-panel-title>
-              <v-icon start>mdi-check-circle</v-icon>
+              <v-icon start>
+                mdi-check-circle
+              </v-icon>
               Validation Rules
             </v-expansion-panel-title>
             <v-expansion-panel-text>
@@ -432,7 +440,7 @@
                           variant="text"
                           color="error"
                           size="small"
-                          @click="removeCustomValidator(index)"
+                          @click="() => removeCustomValidator(index)"
                         />
                       </div>
                     </v-expansion-panel-text>
@@ -445,7 +453,9 @@
           <!-- Error Handling -->
           <v-expansion-panel>
             <v-expansion-panel-title>
-              <v-icon start>mdi-alert</v-icon>
+              <v-icon start>
+                mdi-alert
+              </v-icon>
               Error Handling
             </v-expansion-panel-title>
             <v-expansion-panel-text>
@@ -483,7 +493,9 @@
           <!-- Performance Settings -->
           <v-expansion-panel>
             <v-expansion-panel-title>
-              <v-icon start>mdi-speedometer</v-icon>
+              <v-icon start>
+                mdi-speedometer
+              </v-icon>
               Performance Settings
             </v-expansion-panel-title>
             <v-expansion-panel-text>

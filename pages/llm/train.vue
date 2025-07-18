@@ -1,9 +1,11 @@
 <template>
   <v-container>
     <div class="d-flex align-center mb-6">
-      <BackButton :to="`/llm`" />
+      <BackButton to="/llm" />
       <div class="ml-4">
-        <h1 class="text-h4 mb-2">Train LLM Model</h1>
+        <h1 class="text-h4 mb-2">
+          Train LLM Model
+        </h1>
         <p class="text-body-1 text-medium-emphasis">
           Create and train a new language model with your custom data
         </p>
@@ -14,7 +16,9 @@
       <v-col cols="12" md="8">
         <v-card>
           <v-card-title>
-            <v-icon start color="primary">mdi-school</v-icon>
+            <v-icon start color="primary">
+              mdi-school
+            </v-icon>
             Training Configuration
           </v-card-title>
           <v-divider />
@@ -122,7 +126,9 @@
               <v-expansion-panels class="mt-4">
                 <v-expansion-panel>
                   <v-expansion-panel-title>
-                    <v-icon start>mdi-cog</v-icon>
+                    <v-icon start>
+                      mdi-cog
+                    </v-icon>
                     Advanced Training Parameters
                   </v-expansion-panel-title>
                   <v-expansion-panel-text>
@@ -182,8 +188,8 @@
                 <v-spacer />
                 <v-btn
                   variant="outlined"
-                  @click="$router.push('/llm')"
                   :disabled="loading"
+                  @click="$router.push('/llm')"
                 >
                   Cancel
                 </v-btn>
@@ -193,7 +199,9 @@
                   :loading="loading"
                   :disabled="!isFormValid"
                 >
-                  <v-icon start>mdi-play</v-icon>
+                  <v-icon start>
+                    mdi-play
+                  </v-icon>
                   Start Training
                 </v-btn>
               </v-card-actions>
@@ -206,14 +214,18 @@
         <!-- Training Tips -->
         <v-card class="mb-4">
           <v-card-title>
-            <v-icon start color="info">mdi-lightbulb</v-icon>
+            <v-icon start color="info">
+              mdi-lightbulb
+            </v-icon>
             Training Tips
           </v-card-title>
           <v-card-text>
             <v-list density="compact">
               <v-list-item>
                 <template #prepend>
-                  <v-icon color="success" size="small">mdi-check</v-icon>
+                  <v-icon color="success" size="small">
+                    mdi-check
+                  </v-icon>
                 </template>
                 <v-list-item-title class="text-body-2">
                   Use high-quality, diverse training data
@@ -221,7 +233,9 @@
               </v-list-item>
               <v-list-item>
                 <template #prepend>
-                  <v-icon color="success" size="small">mdi-check</v-icon>
+                  <v-icon color="success" size="small">
+                    mdi-check
+                  </v-icon>
                 </template>
                 <v-list-item-title class="text-body-2">
                   Start with smaller datasets for testing
@@ -229,7 +243,9 @@
               </v-list-item>
               <v-list-item>
                 <template #prepend>
-                  <v-icon color="success" size="small">mdi-check</v-icon>
+                  <v-icon color="success" size="small">
+                    mdi-check
+                  </v-icon>
                 </template>
                 <v-list-item-title class="text-body-2">
                   Monitor training progress regularly
@@ -237,7 +253,9 @@
               </v-list-item>
               <v-list-item>
                 <template #prepend>
-                  <v-icon color="success" size="small">mdi-check</v-icon>
+                  <v-icon color="success" size="small">
+                    mdi-check
+                  </v-icon>
                 </template>
                 <v-list-item-title class="text-body-2">
                   Use early stopping to prevent overfitting
@@ -250,7 +268,9 @@
         <!-- Data Format Guide -->
         <v-card>
           <v-card-title>
-            <v-icon start color="warning">mdi-file-document</v-icon>
+            <v-icon start color="warning">
+              mdi-file-document
+            </v-icon>
             Data Format Guide
           </v-card-title>
           <v-card-text>
@@ -259,7 +279,9 @@
                 <v-expansion-panel-title>JSON Lines (.jsonl)</v-expansion-panel-title>
                 <v-expansion-panel-text>
                   <pre class="text-caption">{"input": "Question?", "output": "Answer"}</pre>
-                  <p class="text-caption mt-2">Best for Q&A and conversational training</p>
+                  <p class="text-caption mt-2">
+                    Best for Q&A and conversational training
+                  </p>
                 </v-expansion-panel-text>
               </v-expansion-panel>
               <v-expansion-panel>
@@ -267,13 +289,17 @@
                 <v-expansion-panel-text>
                   <pre class="text-caption">input,output
 "Question?","Answer"</pre>
-                  <p class="text-caption mt-2">Simple tabular format</p>
+                  <p class="text-caption mt-2">
+                    Simple tabular format
+                  </p>
                 </v-expansion-panel-text>
               </v-expansion-panel>
               <v-expansion-panel>
                 <v-expansion-panel-title>Plain Text (.txt)</v-expansion-panel-title>
                 <v-expansion-panel-text>
-                  <p class="text-caption">Raw text for language modeling</p>
+                  <p class="text-caption">
+                    Raw text for language modeling
+                  </p>
                 </v-expansion-panel-text>
               </v-expansion-panel>
             </v-expansion-panels>
@@ -290,7 +316,9 @@
     >
       <v-card>
         <v-card-title>
-          <v-icon start color="primary">mdi-cog</v-icon>
+          <v-icon start color="primary">
+            mdi-cog
+          </v-icon>
           Training in Progress
         </v-card-title>
         <v-card-text>
@@ -317,7 +345,9 @@
             <v-list-item>
               <v-list-item-title>Status</v-list-item-title>
               <v-list-item-subtitle>
-                <v-chip color="primary" size="small">{{ trainingStatus }}</v-chip>
+                <v-chip color="primary" size="small">
+                  {{ trainingStatus }}
+                </v-chip>
               </v-list-item-subtitle>
             </v-list-item>
           </v-list>
@@ -343,8 +373,8 @@
           <v-btn
             color="warning"
             variant="outlined"
-            @click="stopTraining"
             :disabled="trainingStatus === 'stopping'"
+            @click="stopTraining"
           >
             Stop Training
           </v-btn>

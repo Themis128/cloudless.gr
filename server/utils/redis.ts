@@ -24,32 +24,23 @@ if (!skipRedis) {
 
   // Handle connection events
   redis.on('connect', () => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('✅ Redis connected successfully')
-    }
+    // Redis connected successfully
   })
 
-  redis.on('error', error => {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('❌ Redis connection error:', error)
-    }
+  redis.on('error', () => {
+    // Redis connection error - could be logged to a proper logging service
+    // console.error('❌ Redis connection error:', error)
   })
 
   redis.on('ready', () => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🚀 Redis is ready to accept commands')
-    }
+    // Redis is ready to accept commands
   })
 
   redis.on('close', () => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔌 Redis connection closed')
-    }
+    // Redis connection closed
   })
 } else {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('⚠️ Redis disabled (CI environment or SKIP_REDIS=true)')
-  }
+  // Redis disabled (CI environment or SKIP_REDIS=true)
 }
 
 // Create a Redis-like interface that works without Redis
@@ -109,7 +100,7 @@ const createMockRedis = () => {
       return remaining > 0 ? remaining : -1
     },
 
-    async info(section?: string) {
+    async info() {
       return `# Memory\nused_memory:${memoryStore.size * 100}\nused_memory_human:${memoryStore.size * 100}B`
     },
 
@@ -177,7 +168,7 @@ const createMockRedis = () => {
       }
     },
 
-    on(event: string, callback: Function) {
+    on() {
       // Mock event handling
       return this
     },

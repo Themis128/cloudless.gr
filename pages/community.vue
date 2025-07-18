@@ -2,7 +2,9 @@
   <div class="community-page">
     <div class="page-header">
       <h1>Community</h1>
-      <p class="subtitle">Connect, learn, and grow with fellow AI developers</p>
+      <p class="subtitle">
+        Connect, learn, and grow with fellow AI developers
+      </p>
     </div>
 
     <div class="content-container">
@@ -16,20 +18,36 @@
           
           <div class="community-stats">
             <div class="stat-card">
-              <div class="stat-number">5,000+</div>
-              <div class="stat-label">Community Members</div>
+              <div class="stat-number">
+                5,000+
+              </div>
+              <div class="stat-label">
+                Community Members
+              </div>
             </div>
             <div class="stat-card">
-              <div class="stat-number">10,000+</div>
-              <div class="stat-label">Discussions</div>
+              <div class="stat-number">
+                10,000+
+              </div>
+              <div class="stat-label">
+                Discussions
+              </div>
             </div>
             <div class="stat-card">
-              <div class="stat-number">500+</div>
-              <div class="stat-label">Projects Shared</div>
+              <div class="stat-number">
+                500+
+              </div>
+              <div class="stat-label">
+                Projects Shared
+              </div>
             </div>
             <div class="stat-card">
-              <div class="stat-number">24/7</div>
-              <div class="stat-label">Active Support</div>
+              <div class="stat-number">
+                24/7
+              </div>
+              <div class="stat-label">
+                Active Support
+              </div>
             </div>
           </div>
         </section>
@@ -40,7 +58,9 @@
           <div class="forums-grid">
             <div class="forum-card">
               <div class="forum-header">
-                <v-icon size="32" color="primary">mdi-robot</v-icon>
+                <v-icon size="32" color="primary">
+                  mdi-robot
+                </v-icon>
                 <h3>Bot Development</h3>
               </div>
               <p>Discuss bot creation, optimization, and best practices</p>
@@ -65,7 +85,9 @@
 
             <div class="forum-card">
               <div class="forum-header">
-                <v-icon size="32" color="primary">mdi-brain</v-icon>
+                <v-icon size="32" color="primary">
+                  mdi-brain
+                </v-icon>
                 <h3>Model Training</h3>
               </div>
               <p>Share insights on model training and fine-tuning</p>
@@ -90,7 +112,9 @@
 
             <div class="forum-card">
               <div class="forum-header">
-                <v-icon size="32" color="primary">mdi-timeline</v-icon>
+                <v-icon size="32" color="primary">
+                  mdi-timeline
+                </v-icon>
                 <h3>Pipeline Development</h3>
               </div>
               <p>Discuss data processing pipelines and automation</p>
@@ -115,7 +139,9 @@
 
             <div class="forum-card">
               <div class="forum-header">
-                <v-icon size="32" color="primary">mdi-api</v-icon>
+                <v-icon size="32" color="primary">
+                  mdi-api
+                </v-icon>
                 <h3>API & Integration</h3>
               </div>
               <p>Help with API integration and third-party services</p>
@@ -146,8 +172,12 @@
           <div class="challenges-grid">
             <div class="challenge-card featured">
               <div class="challenge-header">
-                <v-icon size="32" color="primary">mdi-trophy</v-icon>
-                <div class="challenge-badge">Featured</div>
+                <v-icon size="32" color="primary">
+                  mdi-trophy
+                </v-icon>
+                <div class="challenge-badge">
+                  Featured
+                </div>
               </div>
               <h3>AI-Powered Customer Service Bot</h3>
               <p>Build a customer service bot that can handle complex queries and provide personalized responses</p>
@@ -163,8 +193,12 @@
 
             <div class="challenge-card">
               <div class="challenge-header">
-                <v-icon size="32" color="primary">mdi-lightbulb</v-icon>
-                <div class="challenge-badge">Innovation</div>
+                <v-icon size="32" color="primary">
+                  mdi-lightbulb
+                </v-icon>
+                <div class="challenge-badge">
+                  Innovation
+                </div>
               </div>
               <h3>Creative Content Generation</h3>
               <p>Create a pipeline that generates creative content for social media</p>
@@ -180,8 +214,12 @@
 
             <div class="challenge-card">
               <div class="challenge-header">
-                <v-icon size="32" color="primary">mdi-chart-line</v-icon>
-                <div class="challenge-badge">Analytics</div>
+                <v-icon size="32" color="primary">
+                  mdi-chart-line
+                </v-icon>
+                <div class="challenge-badge">
+                  Analytics
+                </div>
               </div>
               <h3>Real-time Analytics Dashboard</h3>
               <p>Build a real-time analytics dashboard for monitoring AI model performance</p>
@@ -266,7 +304,9 @@
           <div class="showcase-grid">
             <div class="showcase-card">
               <div class="showcase-image">
-                <v-icon size="48" color="primary">mdi-robot</v-icon>
+                <v-icon size="48" color="primary">
+                  mdi-robot
+                </v-icon>
               </div>
               <div class="showcase-content">
                 <h3>E-commerce Assistant Bot</h3>
@@ -285,7 +325,9 @@
 
             <div class="showcase-card">
               <div class="showcase-image">
-                <v-icon size="48" color="primary">mdi-brain</v-icon>
+                <v-icon size="48" color="primary">
+                  mdi-brain
+                </v-icon>
               </div>
               <div class="showcase-content">
                 <h3>Medical Diagnosis Model</h3>
@@ -304,7 +346,9 @@
 
             <div class="showcase-card">
               <div class="showcase-image">
-                <v-icon size="48" color="primary">mdi-timeline</v-icon>
+                <v-icon size="48" color="primary">
+                  mdi-timeline
+                </v-icon>
               </div>
               <div class="showcase-content">
                 <h3>Real-time Data Processing</h3>
@@ -328,7 +372,9 @@
           
           <div class="involvement-grid">
             <div class="involvement-card">
-              <v-icon size="48" color="primary">mdi-github</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-github
+              </v-icon>
               <h3>Open Source</h3>
               <p>Contribute to our open-source projects and help improve the platform</p>
               <v-btn color="primary" variant="outlined" class="involvement-btn">
@@ -337,7 +383,9 @@
             </div>
 
             <div class="involvement-card">
-              <v-icon size="48" color="primary">mdi-book-open-variant</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-book-open-variant
+              </v-icon>
               <h3>Write Tutorials</h3>
               <p>Share your knowledge by writing tutorials and guides for the community</p>
               <v-btn color="primary" variant="outlined" class="involvement-btn">
@@ -346,7 +394,9 @@
             </div>
 
             <div class="involvement-card">
-              <v-icon size="48" color="primary">mdi-presentation</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-presentation
+              </v-icon>
               <h3>Speak at Events</h3>
               <p>Share your expertise by speaking at our community events</p>
               <v-btn color="primary" variant="outlined" class="involvement-btn">
@@ -355,7 +405,9 @@
             </div>
 
             <div class="involvement-card">
-              <v-icon size="48" color="primary">mdi-account-group</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-account-group
+              </v-icon>
               <h3>Mentor Others</h3>
               <p>Help newcomers by becoming a community mentor</p>
               <v-btn color="primary" variant="outlined" class="involvement-btn">
@@ -370,7 +422,9 @@
           
           <div class="social-grid">
             <div class="social-card">
-              <v-icon size="48" color="primary">mdi-discord</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-discord
+              </v-icon>
               <h3>Discord Server</h3>
               <p>Join our Discord for real-time discussions and support</p>
               <div class="social-stats">
@@ -383,7 +437,9 @@
             </div>
 
             <div class="social-card">
-              <v-icon size="48" color="primary">mdi-github</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-github
+              </v-icon>
               <h3>GitHub Community</h3>
               <p>Collaborate on open-source projects and share code</p>
               <div class="social-stats">
@@ -396,7 +452,9 @@
             </div>
 
             <div class="social-card">
-              <v-icon size="48" color="primary">mdi-twitter</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-twitter
+              </v-icon>
               <h3>Twitter</h3>
               <p>Follow us for updates, tips, and community highlights</p>
               <div class="social-stats">
@@ -409,7 +467,9 @@
             </div>
 
             <div class="social-card">
-              <v-icon size="48" color="primary">mdi-linkedin</v-icon>
+              <v-icon size="48" color="primary">
+                mdi-linkedin
+              </v-icon>
               <h3>LinkedIn</h3>
               <p>Connect with professionals and stay updated on industry news</p>
               <div class="social-stats">

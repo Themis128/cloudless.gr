@@ -3,7 +3,9 @@
     <v-row>
       <v-col cols="12">
         <v-card>
-          <v-card-title class="text-h5">Debug Console</v-card-title>
+          <v-card-title class="text-h5">
+            Debug Console
+          </v-card-title>
           <v-card-text>
             <DebugConsole
               :output="logs"

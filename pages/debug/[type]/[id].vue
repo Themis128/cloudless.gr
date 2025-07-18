@@ -5,7 +5,7 @@
     <v-card>
       <v-card-title>Debug {{ type }} #{{ id }}</v-card-title>
       <v-card-text>
-        <DebugInspector :type="type" :id="id" />
+        <DebugInspector :id="id" :type="type" />
       </v-card-text>
     </v-card>
   </div>
