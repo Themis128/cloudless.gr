@@ -24,7 +24,7 @@ export default defineNuxtConfig({
     preset: 'node'
   },
   devServer: {
-    host: '192.168.0.23',  // Bind to specific IP
+    host: process.env.NUXT_HOST || '0.0.0.0',  // Use environment variable or default
   },
   imports: {
     dirs: [
