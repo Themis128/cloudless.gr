@@ -318,35 +318,43 @@ jobs:
           # Ensure curl and lsof are available for integration tests
           sudo apt-get update && sudo apt-get install -y curl lsof
 
-          # Make the integration test script executable
-          chmod +x test-integration.sh
+          # Make the debug integration test script executable
+          chmod +x test-integration-debug.sh
 
-          # Run the integration test with better error handling
-          ./test-integration.sh
+          # Run the debug integration test as primary test
+          ./test-integration-debug.sh
         continue-on-error: false
 
       - name: Fallback simple integration test
         if: failure()
         run: |
-          echo "🔄 Main integration test failed, trying simple fallback test..."
+          echo "🔄 Debug integration test failed, trying simple fallback test..."
 
-          # Make the simple integration test script executable
-          chmod +x tests/test-integration-simple.sh
+          # Make the integration test script executable
+          chmod +x test-integration.sh
 
           # Run the simple integration test
-          ./tests/test-integration-simple.sh
+          ./test-integration.sh
         continue-on-error: false
 
-      - name: Debug integration test
+      - name: Basic server test
         if: failure()
         run: |
-          echo "🔄 Both tests failed, running debug integration test..."
+          echo "🔄 Both tests failed, trying basic server test..."
 
-          # Make the debug integration test script executable
-          chmod +x test-integration-debug.sh
+          # Try basic server startup
+          node .output/server/index.mjs &
+          sleep 5
+          curl -f http://localhost:3000 || exit 1
+        continue-on-error: true
 
-          # Run the debug integration test
-          ./test-integration-debug.sh
+      - name: Node.js debug test
+        if: failure()
+        run: |
+          echo "🔄 All tests failed, running Node.js debug test..."
+
+          # Run the Node.js debug script
+          node test-server-debug.js
         continue-on-error: true
 
   preview-deploy:
