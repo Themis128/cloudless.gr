@@ -37,6 +37,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Fix nitro dependency
+        run: |
+          echo "🔧 Fixing nitro dependency..."
+          npm install nitro@latest --save
+          npm list nitro
+
       - name: Build application
         run: npm run build
         env:
@@ -108,6 +114,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Fix nitro dependency
+        run: |
+          echo "🔧 Fixing nitro dependency..."
+          npm install nitro@latest --save
+          npm list nitro
+
       - name: Build application
         run: npm run build
         env:
@@ -115,6 +127,16 @@ jobs:
           NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL }}
           NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Validate build output
+        run: |
+          echo "🔍 Validating build output..."
+          if [ ! -f ".output/server/index.mjs" ]; then
+            echo "❌ Server file not found"
+            exit 1
+          fi
+          echo "✅ Server file found"
+          ls -la .output/server/
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -161,15 +183,19 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           GIT_COMMIT="${{ steps.version.outputs.git_commit }}"
           GIT_BRANCH="${{ steps.version.outputs.git_branch }}"
+
           # Login to Docker registry
           echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin "$DOCKER_REGISTRY"
+
           # Tag and push all versions
           docker tag cloudlessgr-app:latest "$DOCKER_REGISTRY/cloudlessgr-app:latest"
           docker tag cloudlessgr-app:v$VERSION "$DOCKER_REGISTRY/cloudlessgr-app:v$VERSION"
           docker tag cloudlessgr-app:v$VERSION-$GIT_COMMIT "$DOCKER_REGISTRY/cloudlessgr-app:v$VERSION-$GIT_COMMIT"
+
           docker push "$DOCKER_REGISTRY/cloudlessgr-app:latest"
           docker push "$DOCKER_REGISTRY/cloudlessgr-app:v$VERSION"
           docker push "$DOCKER_REGISTRY/cloudlessgr-app:v$VERSION-$GIT_COMMIT"
+
           echo "✅ Production deployment to registry completed"
 
       - name: Deploy infrastructure

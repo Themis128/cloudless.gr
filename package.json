@@ -33,7 +33,7 @@
     "@supabase/supabase-js": "^2.51.0",
     "dotenv": "^17.2.0",
     "echarts": "^5.6.0",
-    "nitro": "^0.0.0",
+    "nitro": "^3.17.6",
     "pinia": "^3.0.3",
     "three": "^0.178.0",
     "vanta": "^0.5.24",
