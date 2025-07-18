@@ -10,7 +10,8 @@
         <h2>Get in Touch</h2>
         <p>
           Have questions about our platform? Need help with your implementation? 
-          Want to discuss a partnership? We're here to help!
+          Want to discuss a partnership or enterprise solution? We're here to help 
+          you succeed with AI-powered cloud development.
         </p>
         
         <div class="contact-methods">
@@ -57,6 +58,28 @@
               <span class="response-time">By appointment only</span>
             </div>
           </div>
+
+          <div class="contact-method">
+            <div class="method-icon">
+              <v-icon size="32" color="primary">mdi-calendar</v-icon>
+            </div>
+            <div class="method-content">
+              <h3>Schedule a Demo</h3>
+              <p>Book a personalized demo</p>
+              <span class="response-time">30-60 minute sessions</span>
+            </div>
+          </div>
+
+          <div class="contact-method">
+            <div class="method-icon">
+              <v-icon size="32" color="primary">mdi-account-group</v-icon>
+            </div>
+            <div class="method-content">
+              <h3>Join Our Community</h3>
+              <p>Discord, Slack, and forums</p>
+              <span class="response-time">24/7 community support</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -80,21 +103,37 @@
             />
           </div>
           
-          <v-text-field
-            v-model="form.email"
-            label="Email Address"
-            variant="outlined"
-            type="email"
-            required
-            class="form-field"
-          />
+          <div class="form-row">
+            <v-text-field
+              v-model="form.email"
+              label="Email Address"
+              variant="outlined"
+              type="email"
+              required
+              class="form-field"
+            />
+            <v-text-field
+              v-model="form.phone"
+              label="Phone Number (Optional)"
+              variant="outlined"
+              class="form-field"
+            />
+          </div>
           
-          <v-text-field
-            v-model="form.company"
-            label="Company (Optional)"
-            variant="outlined"
-            class="form-field"
-          />
+          <div class="form-row">
+            <v-text-field
+              v-model="form.company"
+              label="Company"
+              variant="outlined"
+              class="form-field"
+            />
+            <v-text-field
+              v-model="form.jobTitle"
+              label="Job Title"
+              variant="outlined"
+              class="form-field"
+            />
+          </div>
           
           <v-select
             v-model="form.subject"
@@ -105,6 +144,14 @@
             class="form-field"
           />
           
+          <v-select
+            v-model="form.priority"
+            :items="priorityOptions"
+            label="Priority Level"
+            variant="outlined"
+            class="form-field"
+          />
+          
           <v-textarea
             v-model="form.message"
             label="Message"
@@ -112,7 +159,23 @@
             rows="6"
             required
             class="form-field"
+            placeholder="Tell us about your project, questions, or how we can help you..."
           />
+          
+          <div class="form-options">
+            <v-checkbox
+              v-model="form.newsletter"
+              label="Subscribe to our newsletter for updates and tips"
+              color="primary"
+              hide-details
+            />
+            <v-checkbox
+              v-model="form.marketing"
+              label="Allow us to contact you about product updates and offers"
+              color="primary"
+              hide-details
+            />
+          </div>
           
           <div class="form-actions">
             <v-btn 
@@ -125,7 +188,68 @@
               <v-icon left>mdi-send</v-icon>
               Send Message
             </v-btn>
+            <v-btn 
+              variant="outlined" 
+              size="large" 
+              class="reset-btn"
+              @click="resetForm"
+            >
+              Reset Form
+            </v-btn>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="support-section">
+      <h2>Support & Resources</h2>
+      <div class="support-grid">
+        <div class="support-card">
+          <div class="support-icon">
+            <v-icon size="32" color="primary">mdi-book-open</v-icon>
+          </div>
+          <h3>Documentation</h3>
+          <p>Comprehensive guides, API references, and tutorials to help you get started quickly.</p>
+          <v-btn color="primary" variant="text" class="support-btn">
+            Browse Docs
+            <v-icon right>mdi-arrow-right</v-icon>
+          </v-btn>
+        </div>
+        
+        <div class="support-card">
+          <div class="support-icon">
+            <v-icon size="32" color="primary">mdi-video</v-icon>
+          </div>
+          <h3>Video Tutorials</h3>
+          <p>Step-by-step video guides covering everything from basic setup to advanced features.</p>
+          <v-btn color="primary" variant="text" class="support-btn">
+            Watch Videos
+            <v-icon right>mdi-arrow-right</v-icon>
+          </v-btn>
+        </div>
+        
+        <div class="support-card">
+          <div class="support-icon">
+            <v-icon size="32" color="primary">mdi-forum</v-icon>
+          </div>
+          <h3>Community Forum</h3>
+          <p>Connect with other developers, share solutions, and get help from the community.</p>
+          <v-btn color="primary" variant="text" class="support-btn">
+            Join Forum
+            <v-icon right>mdi-arrow-right</v-icon>
+          </v-btn>
+        </div>
+        
+        <div class="support-card">
+          <div class="support-icon">
+            <v-icon size="32" color="primary">mdi-github</v-icon>
+          </div>
+          <h3>GitHub</h3>
+          <p>Open source examples, SDKs, and contribute to our projects on GitHub.</p>
+          <v-btn color="primary" variant="text" class="support-btn">
+            Visit GitHub
+            <v-icon right>mdi-arrow-right</v-icon>
+          </v-btn>
         </div>
       </div>
     </div>
@@ -138,16 +262,16 @@
           <p>
             Getting started is easy! Simply sign up for a free account and follow our 
             step-by-step onboarding process. We'll guide you through creating your first 
-            bot, model, or pipeline.
+            bot, model, or pipeline with interactive tutorials and templates.
           </p>
         </div>
         
         <div class="faq-item">
           <h3>What kind of support do you offer?</h3>
           <p>
-            We offer comprehensive support including documentation, tutorials, live chat, 
-            email support, and phone support for enterprise customers. Our team is here 
-            to help you succeed.
+            We offer comprehensive support including detailed documentation, video tutorials, 
+            live chat during business hours, email support with 24-hour response time, and 
+            phone support for enterprise customers. Our team is here to help you succeed.
           </p>
         </div>
         
@@ -155,8 +279,8 @@
           <h3>Can I integrate with my existing systems?</h3>
           <p>
             Absolutely! Cloudless Wizard is designed to integrate seamlessly with your 
-            existing infrastructure. We support all major cloud providers and offer 
-            extensive API documentation.
+            existing infrastructure. We support all major cloud providers (AWS, GCP, Azure), 
+            popular databases, and offer extensive API documentation for custom integrations.
           </p>
         </div>
         
@@ -165,7 +289,25 @@
           <p>
             We offer flexible pricing plans starting with a free tier for individual 
             developers. Our paid plans scale with your needs and include enterprise 
-            features for larger organizations.
+            features for larger organizations. Contact us for custom enterprise pricing.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Do you offer training and onboarding?</h3>
+          <p>
+            Yes! We provide comprehensive training programs including live workshops, 
+            custom onboarding sessions for enterprise customers, and ongoing support 
+            to ensure your team gets the most out of our platform.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>What security measures do you have in place?</h3>
+          <p>
+            We take security seriously with SOC 2 compliance, end-to-end encryption, 
+            regular security audits, and enterprise-grade security features. Your data 
+            and applications are protected with industry-leading security practices.
           </p>
         </div>
       </div>
@@ -178,7 +320,8 @@
           <h3>San Francisco Headquarters</h3>
           <p>
             Located in the heart of San Francisco's tech district, our office is 
-            designed for collaboration and innovation. We welcome visitors by appointment.
+            designed for collaboration and innovation. We welcome visitors by appointment 
+            and host regular community events and workshops.
           </p>
           <div class="office-details">
             <div class="detail">
@@ -193,14 +336,56 @@
               <v-icon size="20" color="primary">mdi-phone</v-icon>
               <span>+1 (555) 123-4567</span>
             </div>
+            <div class="detail">
+              <v-icon size="20" color="primary">mdi-email</v-icon>
+              <span>hello@cloudlesswizard.com</span>
+            </div>
+          </div>
+          <div class="office-actions">
+            <v-btn color="primary" variant="outlined" class="office-btn">
+              <v-icon left>mdi-calendar</v-icon>
+              Schedule a Visit
+            </v-btn>
+            <v-btn variant="outlined" class="office-btn">
+              <v-icon left>mdi-map</v-icon>
+              Get Directions
+            </v-btn>
           </div>
         </div>
         <div class="office-map">
           <div class="map-placeholder">
             <v-icon size="64" color="primary">mdi-map</v-icon>
             <p>Interactive Map</p>
+            <p class="map-note">Click to view in Google Maps</p>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div class="social-section">
+      <h2>Connect With Us</h2>
+      <p>Follow us on social media for the latest updates, tips, and community highlights.</p>
+      <div class="social-links">
+        <v-btn color="primary" variant="outlined" class="social-btn">
+          <v-icon left>mdi-twitter</v-icon>
+          Twitter
+        </v-btn>
+        <v-btn color="primary" variant="outlined" class="social-btn">
+          <v-icon left>mdi-linkedin</v-icon>
+          LinkedIn
+        </v-btn>
+        <v-btn color="primary" variant="outlined" class="social-btn">
+          <v-icon left>mdi-github</v-icon>
+          GitHub
+        </v-btn>
+        <v-btn color="primary" variant="outlined" class="social-btn">
+          <v-icon left>mdi-youtube</v-icon>
+          YouTube
+        </v-btn>
+        <v-btn color="primary" variant="outlined" class="social-btn">
+          <v-icon left>mdi-discord</v-icon>
+          Discord
+        </v-btn>
       </div>
     </div>
   </div>
@@ -215,9 +400,14 @@ const form = ref({
   firstName: '',
   lastName: '',
   email: '',
+  phone: '',
   company: '',
+  jobTitle: '',
   subject: '',
-  message: ''
+  priority: 'Medium',
+  message: '',
+  newsletter: false,
+  marketing: false
 })
 
 const subjectOptions = [
@@ -227,7 +417,16 @@ const subjectOptions = [
   'Partnership',
   'Feature Request',
   'Bug Report',
+  'Enterprise Inquiry',
+  'Training Request',
   'Other'
+]
+
+const priorityOptions = [
+  'Low',
+  'Medium',
+  'High',
+  'Urgent'
 ]
 
 const submitForm = async () => {
@@ -237,19 +436,28 @@ const submitForm = async () => {
   await new Promise(resolve => setTimeout(resolve, 2000))
   
   // Reset form
+  resetForm()
+  
+  isSubmitting.value = false
+  
+  // Show success message (you can implement a toast notification here)
+  alert('Thank you for your message! We\'ll get back to you soon.')
+}
+
+const resetForm = () => {
   form.value = {
     firstName: '',
     lastName: '',
     email: '',
+    phone: '',
     company: '',
+    jobTitle: '',
     subject: '',
-    message: ''
+    priority: 'Medium',
+    message: '',
+    newsletter: false,
+    marketing: false
   }
-  
-  isSubmitting.value = false
-  
-  // Show success message (you can implement this with a toast notification)
-  alert('Thank you for your message! We\'ll get back to you soon.')
 }
 </script>
 
@@ -282,28 +490,36 @@ const submitForm = async () => {
 }
 
 .content-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 4rem;
-  margin-bottom: 4rem;
 }
 
 .contact-info-section,
-.contact-form-section {
+.contact-form-section,
+.support-section,
+.faq-section,
+.office-section,
+.social-section {
   display: flex;
   flex-direction: column;
   gap: 2rem;
 }
 
 .contact-info-section h2,
-.contact-form-section h2 {
+.contact-form-section h2,
+.support-section h2,
+.faq-section h2,
+.office-section h2,
+.social-section h2 {
   font-size: 2rem;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.9);
   margin: 0;
 }
 
-.contact-info-section p {
+.contact-info-section p,
+.social-section p {
   font-size: 1.1rem;
   line-height: 1.7;
   color: rgba(0, 0, 0, 0.7);
@@ -311,50 +527,49 @@ const submitForm = async () => {
 }
 
 .contact-methods {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
 }
 
 .contact-method {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 1.5rem;
+  border-radius: 16px;
+  padding: 2rem;
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.contact-method:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
 }
 
 .method-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  border-radius: 12px;
   flex-shrink: 0;
 }
 
 .method-content h3 {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.9);
   margin-bottom: 0.5rem;
 }
 
 .method-content p {
-  color: rgba(0, 0, 0, 0.7);
+  color: rgba(0, 0, 0, 0.8);
+  font-weight: 500;
   margin-bottom: 0.5rem;
 }
 
 .response-time {
-  font-size: 0.8rem;
   color: rgba(0, 0, 0, 0.5);
-  font-style: italic;
+  font-size: 0.9rem;
 }
 
 .contact-form {
@@ -362,40 +577,77 @@ const submitForm = async () => {
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 16px;
-  padding: 2rem;
+  padding: 2.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-field {
   margin-bottom: 1.5rem;
 }
 
+.form-options {
+  margin-bottom: 2rem;
+}
+
 .form-actions {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 2rem;
+  gap: 1rem;
+  justify-content: center;
 }
 
-.submit-btn {
-  min-width: 200px;
+.submit-btn,
+.reset-btn {
+  min-width: 160px;
 }
 
-.faq-section {
-  margin-bottom: 4rem;
+.support-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
 }
 
-.faq-section h2 {
-  font-size: 2rem;
+.support-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.support-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.support-icon {
+  margin-bottom: 1rem;
+}
+
+.support-card h3 {
+  font-size: 1.2rem;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.9);
-  margin-bottom: 2rem;
-  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.support-card p {
+  color: rgba(0, 0, 0, 0.7);
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.support-btn {
+  font-weight: 500;
 }
 
 .faq-grid {
@@ -426,28 +678,16 @@ const submitForm = async () => {
   margin: 0;
 }
 
-.office-section {
-  margin-bottom: 2rem;
-}
-
-.office-section h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.9);
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
 .office-card {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  padding: 3rem;
+  border-radius: 16px;
+  padding: 2.5rem;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 3rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .office-info h3 {
@@ -467,6 +707,7 @@ const submitForm = async () => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  margin-bottom: 2rem;
 }
 
 .detail {
@@ -476,6 +717,16 @@ const submitForm = async () => {
   color: rgba(0, 0, 0, 0.7);
 }
 
+.office-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.office-btn {
+  min-width: 140px;
+}
+
 .office-map {
   display: flex;
   align-items: center;
@@ -483,20 +734,39 @@ const submitForm = async () => {
 }
 
 .map-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 300px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  background: rgba(102, 126, 234, 0.1);
+  border: 2px dashed rgba(102, 126, 234, 0.3);
   border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
   color: rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.map-placeholder:hover {
+  background: rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.5);
 }
 
 .map-placeholder p {
-  margin-top: 1rem;
-  font-weight: 500;
+  margin: 0.5rem 0;
+}
+
+.map-note {
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.social-links {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.social-btn {
+  min-width: 120px;
 }
 
 @media (max-width: 768px) {
@@ -513,14 +783,34 @@ const submitForm = async () => {
   }
   
   .content-grid {
-    grid-template-columns: 1fr;
     gap: 3rem;
+  }
+  
+  .contact-methods {
+    grid-template-columns: 1fr;
+  }
+  
+  .contact-method {
+    flex-direction: column;
+    text-align: center;
   }
   
   .form-row {
     grid-template-columns: 1fr;
   }
   
+  .form-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .submit-btn,
+  .reset-btn {
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  .support-grid,
   .faq-grid {
     grid-template-columns: 1fr;
   }
@@ -528,11 +818,26 @@ const submitForm = async () => {
   .office-card {
     grid-template-columns: 1fr;
     gap: 2rem;
-    padding: 2rem;
   }
   
-  .map-placeholder {
-    height: 200px;
+  .office-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .office-btn {
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  .social-links {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .social-btn {
+    width: 100%;
+    max-width: 300px;
   }
 }
 </style> 
