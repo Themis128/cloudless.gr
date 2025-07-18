@@ -1,0 +1,34 @@
+# Third-party libraries
+vanta-gallery/
+public/vanta/
+node_modules/
+
+# Build outputs
+.nuxt/
+.output/
+dist/
+build/
+
+# Generated files
+*.min.js
+*.min.css
+
+# Test files (optional - uncomment if you want to exclude them)
+# test-*.js
+# tests/
+
+# Debug files
+test-*.js
+debug-*.js
+
+# TypeScript declaration files
+*.d.ts
+
+# Configuration files
+*.config.js
+*.config.ts
+
+# Package files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml 

@@ -1,5 +1,7 @@
 <template>
-  <!-- BotGuide content removed: now handled dynamically by wizard info card -->
+  <div>
+    <!-- BotGuide content removed: now handled dynamically by wizard info card -->
+  </div>
 </template>
 
 <script setup lang="ts">

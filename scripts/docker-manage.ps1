@@ -44,7 +44,7 @@ function Show-Help {
     Write-Host ""
 }
 
-function Execute-DockerCompose {
+function Invoke-DockerCompose {
     param(
         [string]$ComposeFile,
         [string[]]$Command
@@ -67,45 +67,45 @@ $ComposeFile = if ($Environment -eq "prod") { $ProdComposeFile } else { $DevComp
 switch ($Action) {
     "up" {
         Write-Host "🚀 Starting $Environment environment..." -ForegroundColor Green
-        Execute-DockerCompose -ComposeFile $ComposeFile -Command @("up", "-d")
+        Invoke-DockerCompose -ComposeFile $ComposeFile -Command @("up", "-d")
     }
     "down" {
         Write-Host "🛑 Stopping and removing $Environment containers..." -ForegroundColor Red
-        Execute-DockerCompose -ComposeFile $ComposeFile -Command @("down")
+        Invoke-DockerCompose -ComposeFile $ComposeFile -Command @("down")
     }
     "stop" {
         Write-Host "⏹️  Stopping $Environment containers..." -ForegroundColor Yellow
-        Execute-DockerCompose -ComposeFile $ComposeFile -Command @("stop")
+        Invoke-DockerCompose -ComposeFile $ComposeFile -Command @("stop")
     }
     "start" {
         Write-Host "▶️  Starting $Environment containers..." -ForegroundColor Green
-        Execute-DockerCompose -ComposeFile $ComposeFile -Command @("start")
+        Invoke-DockerCompose -ComposeFile $ComposeFile -Command @("start")
     }
     "restart" {
         Write-Host "🔄 Restarting $Environment containers..." -ForegroundColor Yellow
-        Execute-DockerCompose -ComposeFile $ComposeFile -Command @("restart")
+        Invoke-DockerCompose -ComposeFile $ComposeFile -Command @("restart")
     }
     "logs" {
         Write-Host "📋 Showing $Environment container logs..." -ForegroundColor Cyan
-        Execute-DockerCompose -ComposeFile $ComposeFile -Command @("logs", "-f")
+        Invoke-DockerCompose -ComposeFile $ComposeFile -Command @("logs", "-f")
     }
     "build" {
         Write-Host "🔨 Building and starting $Environment containers..." -ForegroundColor Green
-        Execute-DockerCompose -ComposeFile $ComposeFile -Command @("up", "-d", "--build")
+        Invoke-DockerCompose -ComposeFile $ComposeFile -Command @("up", "-d", "--build")
     }
     "rebuild" {
         Write-Host "🔨 Full rebuild of $Environment containers..." -ForegroundColor Green
-        Execute-DockerCompose -ComposeFile $ComposeFile -Command @("down", "-v")
-        Execute-DockerCompose -ComposeFile $ComposeFile -Command @("up", "-d", "--build")
+        Invoke-DockerCompose -ComposeFile $ComposeFile -Command @("down", "-v")
+        Invoke-DockerCompose -ComposeFile $ComposeFile -Command @("up", "-d", "--build")
     }
     "clean" {
         Write-Host "🧹 Cleaning $Environment containers and volumes..." -ForegroundColor Red
-        Execute-DockerCompose -ComposeFile $ComposeFile -Command @("down", "-v")
+        Invoke-DockerCompose -ComposeFile $ComposeFile -Command @("down", "-v")
         docker system prune -f
     }
     "status" {
         Write-Host "📊 $Environment container status:" -ForegroundColor Cyan
-        Execute-DockerCompose -ComposeFile $ComposeFile -Command @("ps")
+        Invoke-DockerCompose -ComposeFile $ComposeFile -Command @("ps")
     }
     default {
         Write-Host "❌ Unknown action: $Action" -ForegroundColor Red

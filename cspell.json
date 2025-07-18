@@ -4,15 +4,19 @@
   "words": [
     "ansible",
     "apache",
+    "aquasecurity",
     "audit-ci",
     "aws",
     "azure",
     "babel",
     "bitbucket",
+    "buildkit",
+    "buildx",
     "chokidar",
     "chromium",
     "ci-cd",
     "cloudless",
+    "compose",
     "curl",
     "cypress",
     "devops",
@@ -22,6 +26,7 @@
     "echarts",
     "ecr",
     "ecs",
+    "elif",
     "eslint",
     "essage",
     "fargate",
@@ -70,6 +75,7 @@
     "setex",
     "rollup",
     "s3",
+    "sarif",
     "selenium",
     "sqlite",
     "supabase",
@@ -97,7 +103,8 @@
     "*.log",
     "package-lock.json",
     "yarn.lock",
-    "pnpm-lock.yaml"
+    "pnpm-lock.yaml",
+    "**/*.ps1"
   ],
   "ignoreRegExpList": ["/\\$[A-Z_]+/g", "/[a-z]+-[a-z]+/g"]
 }

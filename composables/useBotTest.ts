@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
 export function useBotTest(botId: string | number) {
   const input = ref('')
@@ -18,27 +18,33 @@ export function useBotTest(botId: string | number) {
       const res = await fetch(`/api/bots/${botId}/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg })
+        body: JSON.stringify({ message: userMsg }),
       })
       const data = await res.json()
       if (data.response) {
         messages.value.push({ id: msgId++, role: 'bot', text: data.response })
       } else {
-        messages.value.push({ id: msgId++, role: 'bot', text: data.error || 'No response from bot.' })
+        messages.value.push({
+          id: msgId++,
+          role: 'bot',
+          text: data.error || 'No response from bot.',
+        })
       }
       if (Array.isArray(data.steps)) {
         steps.value = data.steps.map((s: any) => ({ ...s }))
         progress.value = 0
         // Simulate real-time updates for each step
         let current = 0
-        function updateStep() {
+        const updateStep = () => {
           if (current > 0) {
             steps.value[current - 1].status = 'complete'
-            steps.value[current - 1].result = `Step '${steps.value[current - 1].name}' completed.`
+            steps.value[current - 1].result =
+              `Step '${steps.value[current - 1].name}' completed.`
           }
           if (current < steps.value.length) {
             steps.value[current].status = 'running'
-            steps.value[current].result = `Step '${steps.value[current].name}' started.`
+            steps.value[current].result =
+              `Step '${steps.value[current].name}' started.`
             progress.value = ((current + 1) / steps.value.length) * 100
             current++
             setTimeout(updateStep, 1200)
@@ -49,12 +55,17 @@ export function useBotTest(botId: string | number) {
         // Initialize all steps to pending except first
         steps.value.forEach((s: any, idx: number) => {
           s.status = idx === 0 ? 'running' : 'pending'
-          s.result = idx === 0 ? `Step '${s.name}' started with input: ${userMsg}` : null
+          s.result =
+            idx === 0 ? `Step '${s.name}' started with input: ${userMsg}` : null
         })
         setTimeout(updateStep, 1200)
       }
     } catch (err) {
-      messages.value.push({ id: msgId++, role: 'bot', text: 'Error contacting bot API.' })
+      messages.value.push({
+        id: msgId++,
+        role: 'bot',
+        text: 'Error contacting bot API.',
+      })
     }
   }
 
@@ -69,6 +80,6 @@ export function useBotTest(botId: string | number) {
     steps,
     progress,
     sendMessage,
-    reset
+    reset,
   }
 }

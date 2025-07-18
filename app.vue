@@ -2,16 +2,16 @@
   <NuxtLayout>
     <NuxtPage />
     <ul>
-      <li v-for="todo in todos" :key="todo.id">{{ todo.name }}</li>
+      <li v-for="todo in todos" :key="todo.id">
+        {{ todo.name }}
+      </li>
     </ul>
   </NuxtLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useSupabase } from '~/composables/supabase'
-
-
 
 const supabase = useSupabase()
 const todos = ref<any[]>([])
