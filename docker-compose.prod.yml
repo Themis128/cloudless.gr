@@ -1,34 +1,73 @@
-version: '3.8'
+# Production Docker Compose Configuration
+# This file is for production deployments
+# Environment variables should be set from GitHub secrets or external sources
 
 services:
-  # Main application
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: runner
-    container_name: cloudless-app-prod
+  app-prod:
+    image: ${DOCKER_REGISTRY:-cloudlessgr}/app:${IMAGE_TAG:-latest}
+    container_name: cloudlessgr-app-prod
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - '${APP_PORT:-3000}:3000'
     environment:
-      - NODE_ENV=production
-      - NUXT_HOST=0.0.0.0
-      - NUXT_PORT=3000
-      # Add your production environment variables here
-      - NUXT_PUBLIC_SUPABASE_URL=${NUXT_PUBLIC_SUPABASE_URL}
-      - NUXT_PUBLIC_SUPABASE_ANON_KEY=${NUXT_PUBLIC_SUPABASE_ANON_KEY}
+      # Application configuration
+      NODE_ENV: production
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+      NUXT_HOST: 0.0.0.0
+      NUXT_PORT: 3000
+
+      # Supabase configuration (from secrets)
+      NUXT_PUBLIC_SUPABASE_URL: ${NUXT_PUBLIC_SUPABASE_URL}
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${NUXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+
+      # Database configuration (from secrets)
+      DATABASE_URL: ${DATABASE_URL}
+
+      # Redis configuration (from secrets)
+      REDIS_URL: ${REDIS_URL}
+
+      # External API keys (from secrets)
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+
+      # Monitoring and logging (from secrets)
+      SENTRY_DSN: ${SENTRY_DSN}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # Security
+      SESSION_SECRET: ${SESSION_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+
+      # Application specific
+      APP_ENV: production
+      APP_VERSION: ${APP_VERSION}
+      GIT_COMMIT: ${GIT_COMMIT}
+      BUILD_DATE: ${BUILD_DATE}
     volumes:
+      # Logs
       - ./logs:/app/logs
-      - ./uploads:/app/uploads
+      - ./tmp:/app/tmp
     networks:
-      - cloudless-network
+      - cloudless-prod-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test:
+        [
+          'CMD',
+          'wget',
+          '--no-verbose',
+          '--tries=1',
+          '--spider',
+          'http://localhost:3000/api/health',
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
+    depends_on:
+      redis-prod:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -38,139 +77,105 @@ services:
           memory: 512M
           cpus: '0.25'
 
-  # Nginx reverse proxy
-  nginx:
-    image: nginx:alpine
-    container_name: cloudless-nginx-prod
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - ./logs/nginx:/var/log/nginx
-    depends_on:
-      app:
-        condition: service_healthy
-    networks:
-      - cloudless-network
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.25'
-
-  # Redis for caching
-  redis:
+  # Redis for production (caching, sessions, etc.)
+  redis-prod:
     image: redis:7-alpine
-    container_name: cloudless-redis-prod
+    container_name: cloudlessgr-redis-prod
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory ${REDIS_MAX_MEMORY:-256mb} 
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD}
     volumes:
-      - redis_data:/data
+      - redis_prod_data:/data
     networks:
-      - cloudless-network
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+      - cloudless-prod-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--raw', 'incr', 'ping']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     deploy:
       resources:
         limits:
           memory: 512M
           cpus: '0.25'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
 
-  # PostgreSQL for database (if not using Supabase)
-  postgres:
+  # PostgreSQL for production (optional - can use external database)
+  postgres-prod:
     image: postgres:15-alpine
-    container_name: cloudless-postgres-prod
+    container_name: cloudlessgr-postgres-prod
     restart: unless-stopped
     environment:
-      POSTGRES_DB: cloudless
-      POSTGRES_USER: cloudless_user
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    ports:
-      - "5432:5432"
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_prod_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-      - ./backups:/backups
     networks:
-      - cloudless-network
+      - cloudless-prod-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 30s
+      timeout: 10s
+      retries: 3
     deploy:
       resources:
         limits:
           memory: 1G
           cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
     profiles:
       - database
 
-  # Backup service
-  backup:
-    image: postgres:15-alpine
-    container_name: cloudless-backup
-    restart: "no"
-    environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - ./backups:/backups
-      - ./scripts/backup.sh:/backup.sh:ro
-    networks:
-      - cloudless-network
-    command: ["/backup.sh"]
-    profiles:
-      - backup
-
-  # Monitoring with Prometheus
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: cloudless-prometheus
+  # Nginx reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: cloudlessgr-nginx
     restart: unless-stopped
     ports:
-      - "9090:9090"
+      - '${NGINX_PORT:-80}:80'
+      - '${NGINX_SSL_PORT:-443}:443'
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
     networks:
-      - cloudless-network
+      - cloudless-prod-network
+    depends_on:
+      app-prod:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
     profiles:
-      - monitoring
-
-  # Grafana for visualization
-  grafana:
-    image: grafana/grafana:latest
-    container_name: cloudless-grafana
-    restart: unless-stopped
-    ports:
-      - "3001:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
-    networks:
-      - cloudless-network
-    profiles:
-      - monitoring
+      - nginx
 
 networks:
-  cloudless-network:
+  cloudless-prod-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
 
 volumes:
-  redis_data:
+  redis_prod_data:
     driver: local
-  postgres_data:
+  postgres_prod_data:
     driver: local
-  prometheus_data:
-    driver: local
-  grafana_data:
-    driver: local 

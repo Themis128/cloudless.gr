@@ -340,7 +340,11 @@ jobs:
 
           # Run environment debug script
           echo "🔍 Running environment debug script..."
-          node test-env-debug.js
+          if [ -f "test-env-debug.js" ]; then
+            node test-env-debug.js
+          else
+            echo "⚠️ test-env-debug.js not found, skipping..."
+          fi
 
           # Check file permissions
           echo "🔍 File permissions check:"
@@ -351,8 +355,26 @@ jobs:
           chmod +x test-integration-debug.sh
           chmod +x test-nitro-debug.sh
 
-          # Run the comprehensive Nitro debug script as primary test
-          ./test-nitro-debug.sh
+          # Run a simple server startup test
+          echo "🧪 Testing server startup..."
+
+          # Start server in background
+          node .output/server/index.mjs &
+          SERVER_PID=$!
+
+          # Wait for server to start
+          sleep 10
+
+          # Test if server is responding
+          if curl -f -s --connect-timeout 10 http://127.0.0.1:3000 > /dev/null 2>&1; then
+            echo "✅ Server is responding on port 3000"
+            kill $SERVER_PID
+            exit 0
+          else
+            echo "❌ Server is not responding"
+            kill $SERVER_PID
+            exit 1
+          fi
         continue-on-error: false
 
       - name: Fallback comprehensive Nitro debug

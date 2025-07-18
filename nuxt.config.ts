@@ -18,6 +18,7 @@ export default defineNuxtConfig({
   // To set host and port, use environment variables NUXT_HOST and NUXT_PORT or pass them via CLI
   nitro: {
     compatibilityDate: '2025-07-18',
+    logLevel: 'debug',
     experimental: {
       wasm: true,
     },
