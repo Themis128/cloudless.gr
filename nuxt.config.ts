@@ -12,12 +12,15 @@ export default defineNuxtConfig({
   vite: {
     logLevel: 'info',
     ssr: {
-      noExternal: ['vue-echarts', 'echarts', 'vuetify'] // Ensure Vuetify is bundled
+      noExternal: ['vue-echarts', 'echarts', 'vuetify']
     }
   },
   // To set host and port, use environment variables NUXT_HOST and NUXT_PORT or pass them via CLI
   nitro: {
-    compatibilityDate: '2025-07-15'
+    compatibilityDate: '2025-07-15',
+    experimental: {
+      wasm: true
+    }
   },
   imports: {
     dirs: [
