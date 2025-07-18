@@ -2,14 +2,16 @@
   <div class="support-page">
     <div class="page-header">
       <h1>Support Center</h1>
-      <p class="subtitle">We're here to help you get the most out of our AI development platform</p>
+      <p class="subtitle">
+        We're here to help you get the most out of our AI development platform
+      </p>
     </div>
 
     <div class="content-container">
       <div class="support-content">
         <section class="support-section">
           <h2>🚀 Quick Start Guide</h2>
-          
+
           <h3>Getting Started</h3>
           <div class="step-list">
             <div class="step-item">
@@ -30,7 +32,9 @@
               <div class="step-number">3</div>
               <div class="step-content">
                 <h4>Build Your First Bot</h4>
-                <p>Use our guided bot builder to create your first AI chatbot</p>
+                <p>
+                  Use our guided bot builder to create your first AI chatbot
+                </p>
               </div>
             </div>
             <div class="step-item">
@@ -52,38 +56,46 @@
           <h3>Essential Resources</h3>
           <div class="resource-grid">
             <div class="resource-card">
-              <v-icon size="32" color="primary">mdi-book-open-variant</v-icon>
+              <v-icon size="32" color="primary"> mdi-book-open-variant </v-icon>
               <h4>Documentation</h4>
               <p>Comprehensive guides and API references</p>
-              <v-btn color="primary" variant="outlined" size="small">View Docs</v-btn>
+              <v-btn color="primary" variant="outlined" size="small">
+                View Docs
+              </v-btn>
             </div>
             <div class="resource-card">
-              <v-icon size="32" color="primary">mdi-api</v-icon>
+              <v-icon size="32" color="primary"> mdi-api </v-icon>
               <h4>API Reference</h4>
               <p>Detailed API documentation and examples</p>
-              <v-btn color="primary" variant="outlined" size="small">API Docs</v-btn>
+              <v-btn color="primary" variant="outlined" size="small">
+                API Docs
+              </v-btn>
             </div>
             <div class="resource-card">
-              <v-icon size="32" color="primary">mdi-video</v-icon>
+              <v-icon size="32" color="primary"> mdi-video </v-icon>
               <h4>Video Tutorials</h4>
               <p>Step-by-step video guides</p>
-              <v-btn color="primary" variant="outlined" size="small">Watch Videos</v-btn>
+              <v-btn color="primary" variant="outlined" size="small">
+                Watch Videos
+              </v-btn>
             </div>
             <div class="resource-card">
-              <v-icon size="32" color="primary">mdi-forum</v-icon>
+              <v-icon size="32" color="primary"> mdi-forum </v-icon>
               <h4>Community Forum</h4>
               <p>Connect with other developers</p>
-              <v-btn color="primary" variant="outlined" size="small">Join Forum</v-btn>
+              <v-btn color="primary" variant="outlined" size="small">
+                Join Forum
+              </v-btn>
             </div>
           </div>
         </section>
 
         <section class="support-section">
           <h2>📞 Contact Support</h2>
-          
+
           <div class="contact-grid">
             <div class="contact-card">
-              <v-icon size="48" color="primary">mdi-email</v-icon>
+              <v-icon size="48" color="primary"> mdi-email </v-icon>
               <h3>Email Support</h3>
               <p>Get help via email with detailed responses</p>
               <div class="contact-details">
@@ -103,7 +115,7 @@
             </div>
 
             <div class="contact-card">
-              <v-icon size="48" color="primary">mdi-chat</v-icon>
+              <v-icon size="48" color="primary"> mdi-chat </v-icon>
               <h3>Live Chat</h3>
               <p>Real-time assistance for immediate help</p>
               <div class="availability">
@@ -114,13 +126,18 @@
                   <li>Weekdays only</li>
                 </ul>
               </div>
-              <v-btn color="primary" variant="elevated" size="large" class="chat-btn">
+              <v-btn
+                color="primary"
+                variant="elevated"
+                size="large"
+                class="chat-btn"
+              >
                 Start Live Chat
               </v-btn>
             </div>
 
             <div class="contact-card">
-              <v-icon size="48" color="primary">mdi-phone</v-icon>
+              <v-icon size="48" color="primary"> mdi-phone </v-icon>
               <h3>Phone Support</h3>
               <p>Direct phone support for urgent issues</p>
               <div class="contact-details">
@@ -141,12 +158,14 @@
 
         <section class="support-section">
           <h2>🔧 Technical Support</h2>
-          
+
           <h3>Common Issues & Solutions</h3>
           <div class="faq-grid">
             <div class="faq-item">
               <h4>Authentication Issues</h4>
-              <p><strong>Problem:</strong> Unable to log in or access account</p>
+              <p>
+                <strong>Problem:</strong> Unable to log in or access account
+              </p>
               <p><strong>Solutions:</strong></p>
               <ul>
                 <li>Clear browser cookies and cache</li>
@@ -158,7 +177,9 @@
 
             <div class="faq-item">
               <h4>Bot Creation Problems</h4>
-              <p><strong>Problem:</strong> Errors when creating or deploying bots</p>
+              <p>
+                <strong>Problem:</strong> Errors when creating or deploying bots
+              </p>
               <p><strong>Solutions:</strong></p>
               <ul>
                 <li>Check your plan limits</li>
@@ -170,7 +191,9 @@
 
             <div class="faq-item">
               <h4>Model Training Issues</h4>
-              <p><strong>Problem:</strong> Training failures or poor performance</p>
+              <p>
+                <strong>Problem:</strong> Training failures or poor performance
+              </p>
               <p><strong>Solutions:</strong></p>
               <ul>
                 <li>Check data quality and format</li>
@@ -182,7 +205,10 @@
 
             <div class="faq-item">
               <h4>Pipeline Execution Errors</h4>
-              <p><strong>Problem:</strong> Pipeline failures or unexpected results</p>
+              <p>
+                <strong>Problem:</strong> Pipeline failures or unexpected
+                results
+              </p>
               <p><strong>Solutions:</strong></p>
               <ul>
                 <li>Check input data format</li>
@@ -220,7 +246,7 @@
 
         <section class="support-section">
           <h2>📚 Documentation & Resources</h2>
-          
+
           <div class="docs-grid">
             <div class="docs-category">
               <h3>Getting Started</h3>
@@ -292,10 +318,10 @@
 
         <section class="support-section">
           <h2>🎓 Training & Education</h2>
-          
+
           <div class="training-grid">
             <div class="training-card">
-              <v-icon size="48" color="primary">mdi-school</v-icon>
+              <v-icon size="48" color="primary"> mdi-school </v-icon>
               <h3>Online Courses</h3>
               <p>Comprehensive courses covering all aspects of our platform</p>
               <ul>
@@ -304,11 +330,11 @@
                 <li>Advanced Model Training</li>
                 <li>Pipeline Engineering</li>
               </ul>
-              <v-btn color="primary" variant="outlined">Browse Courses</v-btn>
+              <v-btn color="primary" variant="outlined"> Browse Courses </v-btn>
             </div>
 
             <div class="training-card">
-              <v-icon size="48" color="primary">mdi-video-library</v-icon>
+              <v-icon size="48" color="primary"> mdi-video-library </v-icon>
               <h3>Video Tutorials</h3>
               <p>Step-by-step video guides for common tasks</p>
               <ul>
@@ -317,11 +343,11 @@
                 <li>Best Practices</li>
                 <li>Troubleshooting Guides</li>
               </ul>
-              <v-btn color="primary" variant="outlined">Watch Videos</v-btn>
+              <v-btn color="primary" variant="outlined"> Watch Videos </v-btn>
             </div>
 
             <div class="training-card">
-              <v-icon size="48" color="primary">mdi-calendar</v-icon>
+              <v-icon size="48" color="primary"> mdi-calendar </v-icon>
               <h3>Webinars</h3>
               <p>Live sessions with our experts and community</p>
               <ul>
@@ -330,19 +356,21 @@
                 <li>Case Study Presentations</li>
                 <li>Community Showcases</li>
               </ul>
-              <v-btn color="primary" variant="outlined">Register</v-btn>
+              <v-btn color="primary" variant="outlined"> Register </v-btn>
             </div>
           </div>
         </section>
 
         <section class="support-section">
           <h2>🤝 Community Support</h2>
-          
+
           <div class="community-grid">
             <div class="community-card">
-              <v-icon size="48" color="primary">mdi-forum</v-icon>
+              <v-icon size="48" color="primary"> mdi-forum </v-icon>
               <h3>Community Forum</h3>
-              <p>Connect with other developers, share solutions, and get help</p>
+              <p>
+                Connect with other developers, share solutions, and get help
+              </p>
               <div class="stats">
                 <div class="stat">
                   <span class="stat-number">5,000+</span>
@@ -353,11 +381,11 @@
                   <span class="stat-label">Posts</span>
                 </div>
               </div>
-              <v-btn color="primary" variant="outlined">Join Forum</v-btn>
+              <v-btn color="primary" variant="outlined"> Join Forum </v-btn>
             </div>
 
             <div class="community-card">
-              <v-icon size="48" color="primary">mdi-github</v-icon>
+              <v-icon size="48" color="primary"> mdi-github </v-icon>
               <h3>GitHub Community</h3>
               <p>Open source projects, examples, and contributions</p>
               <div class="stats">
@@ -370,11 +398,11 @@
                   <span class="stat-label">Stars</span>
                 </div>
               </div>
-              <v-btn color="primary" variant="outlined">Visit GitHub</v-btn>
+              <v-btn color="primary" variant="outlined"> Visit GitHub </v-btn>
             </div>
 
             <div class="community-card">
-              <v-icon size="48" color="primary">mdi-discord</v-icon>
+              <v-icon size="48" color="primary"> mdi-discord </v-icon>
               <h3>Discord Server</h3>
               <p>Real-time chat with developers and support team</p>
               <div class="stats">
@@ -387,54 +415,79 @@
                   <span class="stat-label">Active</span>
                 </div>
               </div>
-              <v-btn color="primary" variant="outlined">Join Discord</v-btn>
+              <v-btn color="primary" variant="outlined"> Join Discord </v-btn>
             </div>
           </div>
         </section>
 
         <section class="support-section">
           <h2>📋 Support Request</h2>
-          
+
           <div class="request-form">
-            <p>Can't find what you're looking for? Submit a support request and we'll get back to you as soon as possible.</p>
-            
+            <p>
+              Can't find what you're looking for? Submit a support request and
+              we'll get back to you as soon as possible.
+            </p>
+
             <div class="form-grid">
               <div class="form-field">
                 <label>Name *</label>
-                <v-text-field variant="outlined" placeholder="Your full name"></v-text-field>
+                <v-text-field variant="outlined" placeholder="Your full name" />
               </div>
-              
+
               <div class="form-field">
                 <label>Email *</label>
-                <v-text-field variant="outlined" placeholder="your.email@example.com"></v-text-field>
+                <v-text-field
+                  variant="outlined"
+                  placeholder="your.email@example.com"
+                />
               </div>
-              
+
               <div class="form-field">
                 <label>Plan</label>
-                <v-select variant="outlined" :items="['Free', 'Pro', 'Business', 'Enterprise']" placeholder="Select your plan"></v-select>
+                <v-select
+                  variant="outlined"
+                  :items="['Free', 'Pro', 'Business', 'Enterprise']"
+                  placeholder="Select your plan"
+                />
               </div>
-              
+
               <div class="form-field">
                 <label>Priority</label>
-                <v-select variant="outlined" :items="['Low', 'Medium', 'High', 'Critical']" placeholder="Select priority"></v-select>
+                <v-select
+                  variant="outlined"
+                  :items="['Low', 'Medium', 'High', 'Critical']"
+                  placeholder="Select priority"
+                />
               </div>
-              
+
               <div class="form-field full-width">
                 <label>Subject *</label>
-                <v-text-field variant="outlined" placeholder="Brief description of your issue"></v-text-field>
+                <v-text-field
+                  variant="outlined"
+                  placeholder="Brief description of your issue"
+                />
               </div>
-              
+
               <div class="form-field full-width">
                 <label>Description *</label>
-                <v-textarea variant="outlined" rows="5" placeholder="Please provide detailed information about your issue, including steps to reproduce, error messages, and any relevant screenshots."></v-textarea>
+                <v-textarea
+                  variant="outlined"
+                  rows="5"
+                  placeholder="Please provide detailed information about your issue, including steps to reproduce, error messages, and any relevant screenshots."
+                />
               </div>
-              
+
               <div class="form-field full-width">
                 <label>Attachments</label>
-                <v-file-input variant="outlined" multiple placeholder="Upload screenshots, logs, or other relevant files"></v-file-input>
+                <v-file-input
+                  variant="outlined"
+                  multiple
+                  placeholder="Upload screenshots, logs, or other relevant files"
+                />
               </div>
             </div>
-            
+
             <div class="form-actions">
               <v-btn color="primary" variant="elevated" size="large">
                 Submit Support Request
@@ -622,17 +675,20 @@
   margin-bottom: 0.5rem;
 }
 
-.response-times, .availability {
+.response-times,
+.availability {
   text-align: left;
   margin-bottom: 1.5rem;
 }
 
-.response-times ul, .availability ul {
+.response-times ul,
+.availability ul {
   margin-top: 0.5rem;
   padding-left: 1.5rem;
 }
 
-.response-times li, .availability li {
+.response-times li,
+.availability li {
   margin-bottom: 0.25rem;
   color: rgba(0, 0, 0, 0.7);
 }
@@ -843,23 +899,23 @@
   .support-page {
     padding: 1rem;
   }
-  
+
   .page-header h1 {
     font-size: 2rem;
   }
-  
+
   .content-container {
     padding: 2rem;
   }
-  
+
   .support-section h2 {
     font-size: 1.5rem;
   }
-  
+
   .support-section h3 {
     font-size: 1.2rem;
   }
-  
+
   .contact-grid,
   .faq-grid,
   .docs-grid,
@@ -867,14 +923,14 @@
   .community-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .form-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .stats {
     flex-direction: column;
     gap: 1rem;
   }
 }
-</style> 
+</style>

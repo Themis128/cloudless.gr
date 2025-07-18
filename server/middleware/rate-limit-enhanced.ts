@@ -30,7 +30,9 @@ const defaultConfig: RateLimitConfig = {
   trackAnalytics: true,
 }
 
-export function createEnhancedRateLimit(config: Partial<RateLimitConfig> = {}) {
+export const createEnhancedRateLimit = (
+  config: Partial<RateLimitConfig> = {}
+) => {
   const finalConfig = { ...defaultConfig, ...config }
 
   return defineEventHandler(async event => {
@@ -191,7 +193,9 @@ export function createEnhancedRateLimit(config: Partial<RateLimitConfig> = {}) {
       }
 
       // If Redis is down, log but don't block requests
-      console.error('Enhanced rate limiting error:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Enhanced rate limiting error:', error)
+      }
 
       // Track API performance even on errors
       const duration = Date.now() - startTime

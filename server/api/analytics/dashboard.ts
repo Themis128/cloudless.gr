@@ -90,7 +90,9 @@ export default defineEventHandler(async event => {
       },
     }
   } catch (error: any) {
-    console.error('Analytics dashboard error:', error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Analytics dashboard error:', error)
+    }
 
     if (error.statusCode === 429) {
       return {
@@ -108,11 +110,11 @@ export default defineEventHandler(async event => {
   }
 })
 
-function generateRecommendations(
+const generateRecommendations = (
   dashboard: any,
   apiMetrics: any,
   rateLimitMetrics: any
-): string[] {
+): string[] => {
   const recommendations = []
 
   // Memory usage recommendations

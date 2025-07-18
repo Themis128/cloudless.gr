@@ -1,4 +1,6 @@
 // Capture new debug reports
-export default defineEventHandler(async (event) => {
+import { defineEventHandler } from 'h3'
+
+export default defineEventHandler(async () => {
   // ...
-});
+})

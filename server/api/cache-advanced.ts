@@ -100,7 +100,9 @@ export default defineEventHandler(async event => {
       message: 'Advanced Redis operations completed successfully!',
     }
   } catch (error: any) {
-    console.error('Advanced cache error:', error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Advanced cache error:', error)
+    }
 
     if (error.statusCode === 429) {
       return {

@@ -1,4 +1,6 @@
 // Return job state for a given type/id
-export default defineEventHandler(async (event) => {
+import { defineEventHandler } from 'h3'
+
+export default defineEventHandler(async () => {
   // ...
-});
+})

@@ -11,45 +11,49 @@ export const usePipelineStore = defineStore('pipeline', () => {
   const error = ref<string | null>(null)
   const supabase = useSupabase()
 
-  async function create(payload: { 
-    name: string;
-    config: PipelineConfig;
-    description?: string;
-    model?: string;
-    project_id: string;
-  }) {
+  const create = async (payload: {
+    name: string
+    config: PipelineConfig
+    description?: string
+    model?: string
+    project_id: string
+  }) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const { data: userData } = await supabase.auth.getUser()
       const owner_id = userData?.user?.id
       if (!owner_id) throw new Error('User not authenticated')
 
-      const { data, error: err } = await supabase.from('pipelines').insert({
-        name: payload.name,
-        config: payload.config as unknown as Json,
-        description: payload.description,
-        model: payload.model,
-        project_id: payload.project_id,
-        owner_id,
-        created_at: new Date().toISOString(),
-        is_active: true,
-        version: 1
-      }).select().single()
+      const { data, error: err } = await supabase
+        .from('pipelines')
+        .insert({
+          name: payload.name,
+          config: payload.config as unknown as Json,
+          description: payload.description,
+          model: payload.model,
+          project_id: payload.project_id,
+          owner_id,
+          created_at: new Date().toISOString(),
+          is_active: true,
+          version: 1,
+        })
+        .select()
+        .single()
 
       if (err) throw err
-      
+
       if (data) {
         const pipeline = {
           ...data,
-          config: data.config as unknown as PipelineConfig
+          config: data.config as unknown as PipelineConfig,
         } as Pipeline
-        
+
         pipelines.value.unshift(pipeline)
         currentPipeline.value = pipeline
       }
-      
+
       return { success: true, data }
     } catch (err: any) {
       error.value = err.message
@@ -59,23 +63,23 @@ export const usePipelineStore = defineStore('pipeline', () => {
     }
   }
 
-  async function fetchAll() {
+  const fetchAll = async () => {
     loading.value = true
     error.value = null
-    
+
     try {
       const { data, error: err } = await supabase
         .from('pipelines')
         .select('*')
         .order('created_at', { ascending: false })
-      
+
       if (err) throw err
-      
+
       pipelines.value = (data || []).map(p => ({
         ...p,
-        config: p.config as unknown as PipelineConfig
+        config: p.config as unknown as PipelineConfig,
       })) as Pipeline[]
-      
+
       return { success: true, data }
     } catch (err: any) {
       error.value = err.message
@@ -86,16 +90,16 @@ export const usePipelineStore = defineStore('pipeline', () => {
     }
   }
 
-  async function update(id: string, updates: Partial<Pipeline>) {
+  const update = async (id: string, updates: Partial<Pipeline>) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const updateData = {
         ...updates,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       }
-      
+
       if (updateData.config) {
         updateData.config = updateData.config as unknown as Json
       }
@@ -106,13 +110,13 @@ export const usePipelineStore = defineStore('pipeline', () => {
         .eq('id', id)
         .select()
         .single()
-      
+
       if (err) throw err
-      
+
       if (data) {
         const pipeline = {
           ...data,
-          config: data.config as unknown as PipelineConfig
+          config: data.config as unknown as PipelineConfig,
         } as Pipeline
 
         const index = pipelines.value.findIndex(p => p.id === id)
@@ -123,7 +127,7 @@ export const usePipelineStore = defineStore('pipeline', () => {
           currentPipeline.value = pipeline
         }
       }
-      
+
       return { success: true, data }
     } catch (err: any) {
       error.value = err.message
@@ -133,23 +137,23 @@ export const usePipelineStore = defineStore('pipeline', () => {
     }
   }
 
-  async function remove(id: string) {
+  const remove = async (id: string) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const { error: err } = await supabase
         .from('pipelines')
         .delete()
         .eq('id', id)
-      
+
       if (err) throw err
-      
+
       pipelines.value = pipelines.value.filter(p => p.id !== id)
       if (currentPipeline.value?.id === id) {
         currentPipeline.value = null
       }
-      
+
       return { success: true }
     } catch (err: any) {
       error.value = err.message
@@ -167,6 +171,6 @@ export const usePipelineStore = defineStore('pipeline', () => {
     create,
     fetchAll,
     update,
-    remove
+    remove,
   }
 })

@@ -9,51 +9,108 @@
       <div class="policy-content">
         <section class="policy-section">
           <h2>1. Introduction</h2>
-          <p>Welcome to Cloudless.gr ("we," "our," or "us"). We are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI development platform and services.</p>
+          <p>
+            Welcome to Cloudless.gr ("we," "our," or "us"). We are committed to
+            protecting your privacy and ensuring the security of your personal
+            information. This Privacy Policy explains how we collect, use,
+            disclose, and safeguard your information when you use our AI
+            development platform and services.
+          </p>
         </section>
 
         <section class="policy-section">
           <h2>2. Information We Collect</h2>
-          
+
           <h3>2.1 Personal Information</h3>
-          <p>We collect the following personal information when you use our services:</p>
+          <p>
+            We collect the following personal information when you use our
+            services:
+          </p>
           <ul>
-            <li><strong>Account Information</strong>: Email address, full name, username, and password</li>
-            <li><strong>Profile Information</strong>: Avatar URL, bio, location, website, and role</li>
-            <li><strong>Contact Information</strong>: Email address for communications and support</li>
-            <li><strong>Authentication Data</strong>: Login credentials and session information</li>
+            <li>
+              <strong>Account Information</strong>: Email address, full name,
+              username, and password
+            </li>
+            <li>
+              <strong>Profile Information</strong>: Avatar URL, bio, location,
+              website, and role
+            </li>
+            <li>
+              <strong>Contact Information</strong>: Email address for
+              communications and support
+            </li>
+            <li>
+              <strong>Authentication Data</strong>: Login credentials and
+              session information
+            </li>
           </ul>
 
           <h3>2.2 Usage Information</h3>
-          <p>We automatically collect certain information about your use of our platform:</p>
+          <p>
+            We automatically collect certain information about your use of our
+            platform:
+          </p>
           <ul>
-            <li><strong>Session Data</strong>: Login/logout times, session duration, and activity timestamps</li>
-            <li><strong>Device Information</strong>: IP address, user agent, device type, and browser information</li>
-            <li><strong>Usage Analytics</strong>: Pages visited, features used, and interaction patterns</li>
-            <li><strong>Performance Data</strong>: API request logs, error logs, and system performance metrics</li>
+            <li>
+              <strong>Session Data</strong>: Login/logout times, session
+              duration, and activity timestamps
+            </li>
+            <li>
+              <strong>Device Information</strong>: IP address, user agent,
+              device type, and browser information
+            </li>
+            <li>
+              <strong>Usage Analytics</strong>: Pages visited, features used,
+              and interaction patterns
+            </li>
+            <li>
+              <strong>Performance Data</strong>: API request logs, error logs,
+              and system performance metrics
+            </li>
           </ul>
 
           <h3>2.3 AI Development Data</h3>
           <p>As an AI development platform, we collect:</p>
           <ul>
-            <li><strong>Bot Configurations</strong>: Bot names, prompts, models, and settings</li>
-            <li><strong>Model Training Data</strong>: Training parameters, datasets, and model configurations</li>
-            <li><strong>Pipeline Configurations</strong>: Pipeline steps, configurations, and execution logs</li>
-            <li><strong>Project Data</strong>: Project names, descriptions, and collaboration settings</li>
+            <li>
+              <strong>Bot Configurations</strong>: Bot names, prompts, models,
+              and settings
+            </li>
+            <li>
+              <strong>Model Training Data</strong>: Training parameters,
+              datasets, and model configurations
+            </li>
+            <li>
+              <strong>Pipeline Configurations</strong>: Pipeline steps,
+              configurations, and execution logs
+            </li>
+            <li>
+              <strong>Project Data</strong>: Project names, descriptions, and
+              collaboration settings
+            </li>
           </ul>
 
           <h3>2.4 Technical Information</h3>
           <p>We collect technical information to improve our services:</p>
           <ul>
-            <li><strong>System Logs</strong>: Error logs, performance metrics, and debugging information</li>
-            <li><strong>API Usage</strong>: Request patterns, response times, and usage statistics</li>
-            <li><strong>Security Data</strong>: Failed login attempts, security events, and audit logs</li>
+            <li>
+              <strong>System Logs</strong>: Error logs, performance metrics, and
+              debugging information
+            </li>
+            <li>
+              <strong>API Usage</strong>: Request patterns, response times, and
+              usage statistics
+            </li>
+            <li>
+              <strong>Security Data</strong>: Failed login attempts, security
+              events, and audit logs
+            </li>
           </ul>
         </section>
 
         <section class="policy-section">
           <h2>3. How We Use Your Information</h2>
-          
+
           <h3>3.1 Service Provision</h3>
           <p>We use your information to:</p>
           <ul>
@@ -94,9 +151,12 @@
 
         <section class="policy-section">
           <h2>4. Information Sharing and Disclosure</h2>
-          
+
           <h3>4.1 Service Providers</h3>
-          <p>We may share your information with trusted third-party service providers who assist us in:</p>
+          <p>
+            We may share your information with trusted third-party service
+            providers who assist us in:
+          </p>
           <ul>
             <li>Hosting and infrastructure services (Supabase)</li>
             <li>Analytics and performance monitoring</li>
@@ -114,31 +174,62 @@
           </ul>
 
           <h3>4.3 Business Transfers</h3>
-          <p>In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of the business transaction, subject to the same privacy protections.</p>
+          <p>
+            In the event of a merger, acquisition, or sale of assets, your
+            information may be transferred as part of the business transaction,
+            subject to the same privacy protections.
+          </p>
 
           <h3>4.4 With Your Consent</h3>
-          <p>We will share your information with third parties only with your explicit consent, except as described in this policy.</p>
+          <p>
+            We will share your information with third parties only with your
+            explicit consent, except as described in this policy.
+          </p>
         </section>
 
         <section class="policy-section">
           <h2>5. Data Storage and Security</h2>
-          
+
           <h3>5.1 Data Storage</h3>
           <p>Your information is stored securely using:</p>
           <ul>
-            <li><strong>Supabase</strong>: Cloud database and authentication services</li>
-            <li><strong>Encryption</strong>: Industry-standard encryption for data in transit and at rest</li>
-            <li><strong>Access Controls</strong>: Role-based access controls and authentication</li>
-            <li><strong>Backup Systems</strong>: Regular data backups and disaster recovery procedures</li>
+            <li>
+              <strong>Supabase</strong>: Cloud database and authentication
+              services
+            </li>
+            <li>
+              <strong>Encryption</strong>: Industry-standard encryption for data
+              in transit and at rest
+            </li>
+            <li>
+              <strong>Access Controls</strong>: Role-based access controls and
+              authentication
+            </li>
+            <li>
+              <strong>Backup Systems</strong>: Regular data backups and disaster
+              recovery procedures
+            </li>
           </ul>
 
           <h3>5.2 Security Measures</h3>
           <p>We implement comprehensive security measures including:</p>
           <ul>
-            <li><strong>Authentication</strong>: Multi-factor authentication and secure login procedures</li>
-            <li><strong>Session Management</strong>: Secure session tokens and automatic logout</li>
-            <li><strong>Audit Logging</strong>: Comprehensive audit trails for all data access</li>
-            <li><strong>Regular Security Updates</strong>: Ongoing security monitoring and updates</li>
+            <li>
+              <strong>Authentication</strong>: Multi-factor authentication and
+              secure login procedures
+            </li>
+            <li>
+              <strong>Session Management</strong>: Secure session tokens and
+              automatic logout
+            </li>
+            <li>
+              <strong>Audit Logging</strong>: Comprehensive audit trails for all
+              data access
+            </li>
+            <li>
+              <strong>Regular Security Updates</strong>: Ongoing security
+              monitoring and updates
+            </li>
           </ul>
 
           <h3>5.3 Data Retention</h3>
@@ -153,7 +244,7 @@
 
         <section class="policy-section">
           <h2>6. Your Rights and Choices</h2>
-          
+
           <h3>6.1 Access and Control</h3>
           <p>You have the right to:</p>
           <ul>
@@ -174,7 +265,9 @@
           </ul>
 
           <h3>6.3 Account Deletion</h3>
-          <p>You may delete your account at any time. Upon deletion, we will:</p>
+          <p>
+            You may delete your account at any time. Upon deletion, we will:
+          </p>
           <ul>
             <li>Remove your personal information from our systems</li>
             <li>Delete your AI models, bots, and pipelines</li>
@@ -185,7 +278,7 @@
 
         <section class="policy-section">
           <h2>7. Cookies and Tracking Technologies</h2>
-          
+
           <h3>7.1 Cookies</h3>
           <p>We use cookies and similar technologies to:</p>
           <ul>
@@ -216,7 +309,7 @@
 
         <section class="policy-section">
           <h2>8. Third-Party Services</h2>
-          
+
           <h3>8.1 Supabase Integration</h3>
           <p>Our platform uses Supabase for:</p>
           <ul>
@@ -238,17 +331,30 @@
 
         <section class="policy-section">
           <h2>9. International Data Transfers</h2>
-          <p>Your information may be transferred to and processed in countries other than your own. We ensure appropriate safeguards are in place to protect your data in accordance with applicable data protection laws.</p>
+          <p>
+            Your information may be transferred to and processed in countries
+            other than your own. We ensure appropriate safeguards are in place
+            to protect your data in accordance with applicable data protection
+            laws.
+          </p>
         </section>
 
         <section class="policy-section">
           <h2>10. Children's Privacy</h2>
-          <p>Our services are not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If you believe we have collected information from a child under 13, please contact us immediately.</p>
+          <p>
+            Our services are not intended for children under the age of 13. We
+            do not knowingly collect personal information from children under
+            13. If you believe we have collected information from a child under
+            13, please contact us immediately.
+          </p>
         </section>
 
         <section class="policy-section">
           <h2>11. Changes to This Privacy Policy</h2>
-          <p>We may update this Privacy Policy from time to time. We will notify you of any material changes by:</p>
+          <p>
+            We may update this Privacy Policy from time to time. We will notify
+            you of any material changes by:
+          </p>
           <ul>
             <li>Posting the updated policy on our website</li>
             <li>Sending email notifications to registered users</li>
@@ -258,7 +364,10 @@
 
         <section class="policy-section">
           <h2>12. Contact Information</h2>
-          <p>If you have any questions about this Privacy Policy or our data practices, please contact us:</p>
+          <p>
+            If you have any questions about this Privacy Policy or our data
+            practices, please contact us:
+          </p>
           <div class="contact-info">
             <p><strong>Email:</strong> privacy@cloudless.gr</p>
             <p><strong>Address:</strong> [Your Business Address]</p>
@@ -268,13 +377,18 @@
 
         <section class="policy-section">
           <h2>13. Data Protection Officer</h2>
-          <p>For EU residents, you may contact our Data Protection Officer at:</p>
+          <p>
+            For EU residents, you may contact our Data Protection Officer at:
+          </p>
           <p><strong>Email:</strong> dpo@cloudless.gr</p>
         </section>
 
         <section class="policy-section">
           <h2>14. Complaints</h2>
-          <p>If you believe we have not addressed your privacy concerns adequately, you may:</p>
+          <p>
+            If you believe we have not addressed your privacy concerns
+            adequately, you may:
+          </p>
           <ul>
             <li>Contact us directly to resolve the issue</li>
             <li>File a complaint with your local data protection authority</li>
@@ -284,7 +398,10 @@
 
         <section class="policy-section">
           <h2>15. California Privacy Rights</h2>
-          <p>California residents have additional rights under the California Consumer Privacy Act (CCPA):</p>
+          <p>
+            California residents have additional rights under the California
+            Consumer Privacy Act (CCPA):
+          </p>
           <ul>
             <li>Right to know what personal information is collected</li>
             <li>Right to delete personal information</li>
@@ -295,7 +412,10 @@
 
         <section class="policy-section">
           <h2>16. GDPR Compliance</h2>
-          <p>For EU residents, we comply with the General Data Protection Regulation (GDPR):</p>
+          <p>
+            For EU residents, we comply with the General Data Protection
+            Regulation (GDPR):
+          </p>
           <ul>
             <li>Lawful basis for processing personal data</li>
             <li>Data subject rights and freedoms</li>
@@ -419,21 +539,21 @@
   .privacy-page {
     padding: 1rem;
   }
-  
+
   .page-header h1 {
     font-size: 2rem;
   }
-  
+
   .content-container {
     padding: 2rem;
   }
-  
+
   .policy-section h2 {
     font-size: 1.3rem;
   }
-  
+
   .policy-section h3 {
     font-size: 1.1rem;
   }
 }
-</style> 
+</style>

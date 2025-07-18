@@ -4,8 +4,8 @@ import { useSupabase } from '~/composables/supabase'
 
 export const useTemplateStore = defineStore('template', {
   state: () => ({
-    templates: [] as Array<{ name: string, content: string }>,
-    selectedTemplate: null as string | null
+    templates: [] as Array<{ name: string; content: string }>,
+    selectedTemplate: null as string | null,
   }),
   actions: {
     selectTemplate(name: string) {
@@ -13,8 +13,8 @@ export const useTemplateStore = defineStore('template', {
     },
     addTemplate(name: string, content: string) {
       this.templates.push({ name, content })
-    }
-  }
+    },
+  },
 })
 
 export const useProjectStore = defineStore('project', () => {
@@ -25,7 +25,7 @@ export const useProjectStore = defineStore('project', () => {
   const error = ref<string | null>(null)
   const supabase = useSupabase()
 
-  async function create(payload: { name: string; description: string }) {
+  const create = async (payload: { name: string; description: string }) => {
     loading.value = true
     success.value = false
     error.value = null

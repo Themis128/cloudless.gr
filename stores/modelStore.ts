@@ -6,7 +6,7 @@ export const useModelStore = defineStore('model', {
   state: () => ({
     models: [] as string[],
     activeModel: '' as string,
-    status: '' as 'idle' | 'training' | 'deployed'
+    status: '' as 'idle' | 'training' | 'deployed',
   }),
   actions: {
     setActive(model: string) {
@@ -14,8 +14,8 @@ export const useModelStore = defineStore('model', {
     },
     updateStatus(newStatus: 'idle' | 'training' | 'deployed') {
       this.status = newStatus
-    }
-  }
+    },
+  },
 })
 
 export const useTrainingStore = defineStore('training', () => {
@@ -26,11 +26,16 @@ export const useTrainingStore = defineStore('training', () => {
   const error = ref<string | null>(null)
   const supabase = useSupabase()
 
-  async function train(payload: { name: string; config: { dataUrl: string } }) {
+  const train = async (payload: {
+    name: string
+    config: { dataUrl: string }
+  }) => {
     loading.value = true
     success.value = false
     error.value = null
-    const { error: err } = await supabase.from('training_sessions').insert([payload])
+    const { error: err } = await supabase
+      .from('training_sessions')
+      .insert([payload])
     if (err) {
       error.value = err.message
     } else {

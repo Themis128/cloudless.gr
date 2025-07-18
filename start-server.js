@@ -22,22 +22,28 @@ if (existsSync(envPath)) {
       }
     }
   } catch (error) {
-    console.error('Error loading .env file:', error.message)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error loading .env file:', error.message)
+    }
   }
 }
 
 // Error handling
 process.on('uncaughtException', err => {
-  console.error('UNCAUGHT EXCEPTION:', err)
+  if (process.env.NODE_ENV === 'development') {
+    console.error('UNCAUGHT EXCEPTION:', err)
+  }
   process.exit(1)
 })
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('UNHANDLED REJECTION:', reason)
+process.on('unhandledRejection', reason => {
+  if (process.env.NODE_ENV === 'development') {
+    console.error('UNHANDLED REJECTION:', reason)
+  }
   process.exit(1)
 })
 
-async function startServer() {
+const startServer = async () => {
   try {
     // Set default environment variables
     process.env.NODE_ENV = process.env.NODE_ENV || 'production'
@@ -57,31 +63,45 @@ async function startServer() {
       const server = createServer(serverModule.listener)
 
       server.listen(port, host, () => {
-        console.log(`✅ Server listening on http://${host}:${port}`)
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`✅ Server listening on http://${host}:${port}`)
+        }
       })
 
       // Graceful shutdown
       process.on('SIGTERM', () => {
-        console.log('SIGTERM received, shutting down gracefully...')
+        if (process.env.NODE_ENV === 'development') {
+          console.log('SIGTERM received, shutting down gracefully...')
+        }
         server.close(() => {
-          console.log('Server closed')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Server closed')
+          }
           process.exit(0)
         })
       })
 
       process.on('SIGINT', () => {
-        console.log('SIGINT received, shutting down gracefully...')
+        if (process.env.NODE_ENV === 'development') {
+          console.log('SIGINT received, shutting down gracefully...')
+        }
         server.close(() => {
-          console.log('Server closed')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Server closed')
+          }
           process.exit(0)
         })
       })
     } else {
-      console.error('No listener function found in server module')
+      if (process.env.NODE_ENV === 'development') {
+        console.error('No listener function found in server module')
+      }
       process.exit(1)
     }
   } catch (error) {
-    console.error('Error starting server:', error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error starting server:', error)
+    }
     process.exit(1)
   }
 }

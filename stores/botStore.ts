@@ -11,7 +11,13 @@ export const useBotStore = defineStore('bot', () => {
   const bots = ref<Bot[]>([])
   const supabase = useSupabase()
 
-  async function create(payload: { name: string; prompt?: string; model?: string; memory?: string; tools?: string }) {
+  const create = async (payload: {
+    name: string
+    prompt?: string
+    model?: string
+    memory?: string
+    tools?: string
+  }) => {
     loading.value = true
     success.value = false
     error.value = null
@@ -33,10 +39,13 @@ export const useBotStore = defineStore('bot', () => {
     }
   }
 
-  async function fetchAll() {
+  const fetchAll = async () => {
     loading.value = true
     error.value = null
-    const { data, error: err } = await supabase.from('bots').select('*').order('created_at', { ascending: false })
+    const { data, error: err } = await supabase
+      .from('bots')
+      .select('*')
+      .order('created_at', { ascending: false })
     if (err) {
       error.value = err.message
       bots.value = []

@@ -2,7 +2,7 @@
 import { defineEventHandler } from 'h3'
 import redis from '~/server/utils/redis'
 
-export default defineEventHandler(async (event: any) => {
+export default defineEventHandler(async () => {
   try {
     // Test Redis connection and basic operations
     await redis.set('hello', 'world')
@@ -36,7 +36,9 @@ export default defineEventHandler(async (event: any) => {
       status: 'success',
     }
   } catch (error) {
-    console.error('Redis cache error:', error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Redis cache error:', error)
+    }
     return {
       error: error instanceof Error ? error.message : 'Unknown Redis error',
       status: 'error',

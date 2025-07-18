@@ -24,22 +24,32 @@ if (!skipRedis) {
 
   // Handle connection events
   redis.on('connect', () => {
-    console.log('✅ Redis connected successfully')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Redis connected successfully')
+    }
   })
 
   redis.on('error', error => {
-    console.error('❌ Redis connection error:', error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('❌ Redis connection error:', error)
+    }
   })
 
   redis.on('ready', () => {
-    console.log('🚀 Redis is ready to accept commands')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🚀 Redis is ready to accept commands')
+    }
   })
 
   redis.on('close', () => {
-    console.log('🔌 Redis connection closed')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔌 Redis connection closed')
+    }
   })
 } else {
-  console.log('⚠️ Redis disabled (CI environment or SKIP_REDIS=true)')
+  if (process.env.NODE_ENV === 'development') {
+    console.log('⚠️ Redis disabled (CI environment or SKIP_REDIS=true)')
+  }
 }
 
 // Create a Redis-like interface that works without Redis
