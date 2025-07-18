@@ -21,8 +21,13 @@
         @blur="validatePrompt"
       />
       <v-tooltip location="top">
-        <template #activator="{ props }">
-          <v-btn icon v-bind="props" variant="text" class="ms-2">
+        <template #activator="{ props: tooltipProps }">
+          <v-btn
+            icon
+            v-bind="tooltipProps"
+            variant="text"
+            class="ms-2"
+          >
             <v-icon>mdi-help-circle</v-icon>
           </v-btn>
         </template>
@@ -33,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { usePromptHelp } from '~/composables/usePromptHelp'
+import { usePromptHelp } from '~/composables/usePromptHelp';
 
 const props = defineProps<{
   form: any

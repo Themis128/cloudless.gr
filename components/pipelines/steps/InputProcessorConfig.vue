@@ -4,7 +4,9 @@
     <v-expansion-panels v-model="expandedPanel">
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon start>mdi-database-import</v-icon>
+          <v-icon start>
+            mdi-database-import
+          </v-icon>
           Source Configuration
         </v-expansion-panel-title>
         <v-expansion-panel-text>
@@ -140,7 +142,9 @@
             <v-expansion-panels v-if="sourceSensor.range">
               <v-expansion-panel>
                 <v-expansion-panel-title>
-                  <v-icon start>mdi-chart-range</v-icon>
+                  <v-icon start>
+                    mdi-chart-range
+                  </v-icon>
                   Range Settings
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
@@ -160,7 +164,9 @@
               <!-- Connection Settings -->
               <v-expansion-panel v-if="sourceSensor.connection">
                 <v-expansion-panel-title>
-                  <v-icon start>mdi-connection</v-icon>
+                  <v-icon start>
+                    mdi-connection
+                  </v-icon>
                   Connection Settings
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
@@ -208,7 +214,9 @@
                   <!-- Credentials -->
                   <v-expansion-panel v-if="sourceSensor.connection.credentials">
                     <v-expansion-panel-title>
-                      <v-icon start>mdi-key</v-icon>
+                      <v-icon start>
+                        mdi-key
+                      </v-icon>
                       Credentials
                     </v-expansion-panel-title>
                     <v-expansion-panel-text>
@@ -234,7 +242,9 @@
               <!-- Preprocessing Settings -->
               <v-expansion-panel v-if="sourceSensor.preprocessing">
                 <v-expansion-panel-title>
-                  <v-icon start>mdi-tune</v-icon>
+                  <v-icon start>
+                    mdi-tune
+                  </v-icon>
                   Preprocessing Settings
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
@@ -408,7 +418,9 @@
       <!-- Preprocessing Options -->
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon start>mdi-cog-transfer</v-icon>
+          <v-icon start>
+            mdi-cog-transfer
+          </v-icon>
           Preprocessing Options
         </v-expansion-panel-title>
         <v-expansion-panel-text>
@@ -468,7 +480,7 @@
                     variant="text"
                     color="error"
                     size="small"
-                    @click="removeCustomReplacement(index)"
+                    @click="() => removeCustomReplacement(index)"
                   />
                 </div>
               </v-expansion-panel-text>
@@ -523,7 +535,9 @@
       <!-- Validation Rules -->
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon start>mdi-check-circle</v-icon>
+          <v-icon start>
+            mdi-check-circle
+          </v-icon>
           Validation Rules
         </v-expansion-panel-title>
         <v-expansion-panel-text>
@@ -620,7 +634,7 @@
                     variant="text"
                     color="error"
                     size="small"
-                    @click="removeCustomValidator(index)"
+                    @click="() => removeCustomValidator(index)"
                   />
                 </div>
               </v-expansion-panel-text>
@@ -632,7 +646,9 @@
       <!-- Advanced Settings -->
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon start>mdi-tune</v-icon>
+          <v-icon start>
+            mdi-tune
+          </v-icon>
           Advanced Settings
         </v-expansion-panel-title>
         <v-expansion-panel-text>
@@ -723,21 +739,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue';
 import type {
-  InputProcessorConfig,
-  SourceConfig,
-  PreprocessingOptions,
-  ValidationRules,
-  AdvancedSettings
-} from '~/types/Pipeline'
+    InputProcessorConfig,
+    SourceConfig
+} from '~/types/Pipeline';
 
 const props = defineProps<{
   modelValue: InputProcessorConfig
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: InputProcessorConfig): void
+  'update:modelValue': [value: InputProcessorConfig]
 }>()
 
 const expandedPanel = ref<number | null>(0)
@@ -778,7 +791,7 @@ const validationRange = computed(() => config.value?.validation?.range)
 const sourceApiAuth = computed(() => sourceApi.value?.authentication)
 
 // Helper functions
-function getUnitHint(type: string): string {
+const getUnitHint = (type: string): string => {
   switch (type) {
     case 'temperature':
       return 'e.g., celsius, fahrenheit'
@@ -793,7 +806,7 @@ function getUnitHint(type: string): string {
   }
 }
 
-function getAddressHint(protocol: string): string {
+const getAddressHint = (protocol: string): string => {
   switch (protocol) {
     case 'mqtt':
       return 'Broker URL (e.g., mqtt://localhost:1883)'
@@ -810,7 +823,7 @@ function getAddressHint(protocol: string): string {
   }
 }
 
-function handleSensorTypeChange(type: string) {
+const handleSensorTypeChange = (type: string) => {
   if (!sourceSensor.value) return
 
   // Set default unit based on sensor type
@@ -831,7 +844,7 @@ function handleSensorTypeChange(type: string) {
 }
 
 // Helper functions for source type changes
-function handleSourceTypeChange(type: string) {
+const handleSourceTypeChange = (type: string) => {
   const newSource: SourceConfig = { type: type as any }
   
   switch (type) {
@@ -921,14 +934,14 @@ function handleSourceTypeChange(type: string) {
 }
 
 // Helper function for updating CSV columns
-function updateColumns(value: string) {
+const updateColumns = (value: string) => {
   if (sourceCsv.value && !sourceCsv.value.hasHeader) {
     sourceCsv.value.columns = value.split(',').map(col => col.trim())
   }
 }
 
 // Helper functions for custom replacements
-function addCustomReplacement() {
+const addCustomReplacement = () => {
   if (!config.value.preprocessing.customReplacements) {
     config.value.preprocessing.customReplacements = []
   }
@@ -938,12 +951,12 @@ function addCustomReplacement() {
   })
 }
 
-function removeCustomReplacement(index: number) {
+const removeCustomReplacement = (index: number) => {
   config.value.preprocessing.customReplacements?.splice(index, 1)
 }
 
 // Helper functions for custom validators
-function addCustomValidator() {
+const addCustomValidator = () => {
   if (!config.value.validation.custom) {
     config.value.validation.custom = []
   }
@@ -954,12 +967,12 @@ function addCustomValidator() {
   })
 }
 
-function removeCustomValidator(index: number) {
+const removeCustomValidator = (index: number) => {
   config.value.validation.custom?.splice(index, 1)
 }
 
 // Helper functions for JSON handling
-function updateHeaders() {
+const updateHeaders = () => {
   try {
     if (config.value?.source?.api?.headers) {
       config.value.source.api.headers = JSON.parse(headersText.value)
@@ -969,7 +982,7 @@ function updateHeaders() {
   }
 }
 
-function updateParams() {
+const updateParams = () => {
   try {
     if (config.value?.source?.database?.params) {
       config.value.source.database.params = JSON.parse(paramsText.value)

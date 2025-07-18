@@ -1,5 +1,10 @@
 <template>
-  <v-alert type="info" border="start" color="primary" class="mb-4">
+  <v-alert
+    type="info"
+    border="start"
+    color="primary"
+    class="mb-4"
+  >
     <strong>Step 4: Build Pipelines</strong><br>
     Pipelines connect your data, models, and bots. Build a pipeline to automate data flows and AI tasks.<br>
     <ul>

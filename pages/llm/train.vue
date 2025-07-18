@@ -189,7 +189,7 @@
                 <v-btn
                   variant="outlined"
                   :disabled="loading"
-                  @click="$router.push('/llm')"
+                  @click="navigateBack"
                 >
                   Cancel
                 </v-btn>
@@ -397,7 +397,7 @@
     >
       {{ snackbar.message }}
       <template #actions>
-        <v-btn variant="text" @click="snackbar.show = false">
+        <v-btn variant="text" @click="closeSnackbar">
           Close
         </v-btn>
       </template>
@@ -406,16 +406,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useSupabase } from '~/composables/supabase'
-import { useTrainingStore } from '~/stores/modelStore'
 import BackButton from '~/components/ui/BackButton.vue'
+import { useSupabase } from '~/composables/supabase'
 
 // Composables
 const router = useRouter()
 const supabase = useSupabase()
-const trainingStore = useTrainingStore()
+// const trainingStore = useTrainingStore()
 
 // Form reference
 const formRef = ref<any>(null)
@@ -529,7 +528,7 @@ const isFormValid = computed(() => {
 })
 
 // Methods
-async function startTraining() {
+const startTraining = async () => {
   if (!formRef.value) return
   
   const { valid } = await formRef.value.validate()
@@ -573,14 +572,14 @@ async function startTraining() {
     showSnackbar('Training started successfully!', 'success')
     
   } catch (error) {
-    console.error('Error starting training:', error)
+    // console.error('Error starting training:', error)
     showSnackbar('Error starting training. Please try again.', 'error')
   } finally {
     loading.value = false
   }
 }
 
-function startTrainingProgress() {
+const startTrainingProgress = () => {
   trainingProgress.value = 0
   currentEpoch.value = 0
   trainingStatus.value = 'initializing'
@@ -620,7 +619,7 @@ function startTrainingProgress() {
   }, 1000)
 }
 
-async function stopTraining() {
+const stopTraining = async () => {
   if (progressInterval) {
     clearInterval(progressInterval)
     progressInterval = null
@@ -635,7 +634,7 @@ async function stopTraining() {
   }, 2000)
 }
 
-async function updateTrainingStatus(status: string) {
+const updateTrainingStatus = async (status: string) => {
   if (!currentTrainingJob.value) return
   
   try {
@@ -648,16 +647,16 @@ async function updateTrainingStatus(status: string) {
       })
       .eq('id', currentTrainingJob.value.id)
   } catch (error) {
-    console.error('Error updating training status:', error)
+    // console.error('Error updating training status:', error)
   }
 }
 
-function closeTrainingDialog() {
+const closeTrainingDialog = () => {
   trainingDialog.value = false
   router.push('/llm')
 }
 
-function formatFileSize(bytes: number): string {
+const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes'
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
@@ -665,12 +664,20 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-function showSnackbar(message: string, color: string = 'success') {
+const showSnackbar = (message: string, color: string = 'success') => {
   snackbar.value = {
     show: true,
     message,
     color
   }
+}
+
+const navigateBack = () => {
+  router.push('/llm')
+}
+
+const closeSnackbar = () => {
+  snackbar.value.show = false
 }
 
 // Cleanup on unmount

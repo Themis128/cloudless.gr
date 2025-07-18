@@ -1,5 +1,10 @@
 <template>
-  <v-alert type="info" border="start" color="primary" class="mb-4">
+  <v-alert
+    type="info"
+    border="start"
+    color="primary"
+    class="mb-4"
+  >
     Create a new project to group your bots, models, and pipelines. Projects help you organize and manage all related resources in one place.<br>
     <ul>
       <li>Click <b>Create Project</b> to begin.</li>

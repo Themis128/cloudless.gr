@@ -2,7 +2,12 @@
   <div class="vanta-controls">
     <div class="controls-header">
       <h3>Sky Controls</h3>
-      <v-btn icon size="small" @click="$emit('close')" class="close-btn">
+      <v-btn
+        icon
+        size="small"
+        class="close-btn"
+        @click="handleClose"
+      >
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </div>
@@ -131,10 +136,10 @@
     
     <div class="controls-section">
       <v-btn 
-        @click="resetToDefaults" 
         variant="outlined" 
-        color="primary"
+        color="primary" 
         block
+        @click="resetToDefaults"
       >
         Reset to Defaults
       </v-btn>
@@ -146,7 +151,10 @@
 import { ref, watch } from 'vue'
 
 const props = defineProps({
-  initial: Object
+  initial: {
+    type: Object,
+    default: () => ({})
+  }
 })
 const emit = defineEmits(['update', 'close'])
 
@@ -166,7 +174,11 @@ const gyroControls = ref(props.initial?.gyroControls ?? false)
 const reducedMotion = ref(props.initial?.reducedMotion ?? false)
 const quality = ref(props.initial?.quality ?? 1.0)
 
-function resetToDefaults() {
+const handleClose = () => {
+  emit('close')
+}
+
+const resetToDefaults = () => {
   enabled.value = true
   speed.value = 1.2
   cloudHeight.value = 0.8

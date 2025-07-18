@@ -11,6 +11,16 @@
     "postinstall": "nuxt prepare",
     "test": "playwright test",
     "test:integration": "node test-integration.js",
+    "lint": "eslint . --ext .vue,.ts,.js",
+    "lint:fix": "eslint . --ext .vue,.ts,.js --fix",
+    "lint:vue": "eslint . --ext .vue",
+    "lint:ts": "eslint . --ext .ts",
+    "lint:js": "eslint . --ext .js",
+    "lint:pages": "eslint pages/ --ext .vue",
+    "lint:components": "eslint components/ --ext .vue",
+    "lint:server": "eslint server/ --ext .ts",
+    "spell": "cspell .",
+    "spell:fix": "cspell . --fix",
     "docker:dev": "powershell -ExecutionPolicy Bypass -File scripts/dev-docker.ps1",
     "docker:dev:start": "powershell -ExecutionPolicy Bypass -File scripts/dev-docker.ps1 start",
     "docker:dev:stop": "powershell -ExecutionPolicy Bypass -File scripts/dev-docker.ps1 stop",
@@ -67,6 +77,7 @@
     "nuxt": "^3.17.6",
     "playwright": "^1.42.1",
     "prettier": "^3.2.5",
-    "supabase": "^2.30.4"
+    "supabase": "^2.30.4",
+    "typescript": "^5.3.3"
   }
 }

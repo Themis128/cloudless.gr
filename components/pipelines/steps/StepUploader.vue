@@ -2,7 +2,9 @@
   <div class="step-uploader">
     <v-card>
       <v-card-title class="d-flex align-center">
-        <v-icon start color="primary">mdi-file-upload</v-icon>
+        <v-icon start color="primary">
+          mdi-file-upload
+        </v-icon>
         Upload Pipeline Steps
       </v-card-title>
       
@@ -15,7 +17,9 @@
         <v-expansion-panels class="mb-4">
           <v-expansion-panel>
             <v-expansion-panel-title>
-              <v-icon start>mdi-code-json</v-icon>
+              <v-icon start>
+                mdi-code-json
+              </v-icon>
               Required Schema
             </v-expansion-panel-title>
             <v-expansion-panel-text>
@@ -77,7 +81,7 @@
 
           <v-list>
             <v-list-item
-              v-for="(step, index) in parsedSteps"
+              v-for="step in parsedSteps"
               :key="step.id"
               :title="step.name"
               :subtitle="formatStepType(step.type)"
@@ -104,16 +108,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { PipelineStep, PipelineStepType } from '~/types/Pipeline'
+import { ref } from 'vue';
+import type { PipelineStep, PipelineStepType } from '~/types/Pipeline';
 
-const props = defineProps<{
-  modelValue: PipelineStep[]
-}>()
+// const props = defineProps<{
+//   modelValue: PipelineStep[]
+// }>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: PipelineStep[]): void
-  (e: 'error', message: string): void
+  'update:modelValue': [value: PipelineStep[]]
+  'error': [message: string]
 }>()
 
 const file = ref<File | null>(null)
@@ -129,20 +133,20 @@ const stepTypeInfo: Record<PipelineStepType, { color: string; icon: string }> = 
   validator: { color: 'red', icon: 'mdi-check-circle' }
 }
 
-function getStepTypeColor(type: PipelineStepType): string {
+const getStepTypeColor = (type: PipelineStepType): string => {
   return stepTypeInfo[type]?.color || 'grey'
 }
 
-function getStepTypeIcon(type: PipelineStepType): string {
+const getStepTypeIcon = (type: PipelineStepType): string => {
   return stepTypeInfo[type]?.icon || 'mdi-cog'
 }
 
-function formatStepType(type: PipelineStepType): string {
+const formatStepType = (type: PipelineStepType): string => {
   return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
 }
 
 // Validation functions
-function isStepValid(step: PipelineStep): boolean {
+const isStepValid = (step: PipelineStep): boolean => {
   if (!step.id || !step.name || !step.type || !step.config) {
     return false
   }
@@ -175,35 +179,35 @@ function isStepValid(step: PipelineStep): boolean {
   }
 }
 
-function validateInputProcessorConfig(config: any): boolean {
+const validateInputProcessorConfig = (config: any): boolean => {
   return !!(config.source && config.source.type)
 }
 
-function validateLLMProcessorConfig(config: any): boolean {
+const validateLLMProcessorConfig = (config: any): boolean => {
   return !!(config.model && config.params)
 }
 
-function validateOutputProcessorConfig(config: any): boolean {
+const validateOutputProcessorConfig = (config: any): boolean => {
   return !!(config.format)
 }
 
-function validateDataTransformerConfig(config: any): boolean {
+const validateDataTransformerConfig = (config: any): boolean => {
   return !!(config.transformations && Array.isArray(config.transformations))
 }
 
-function validateValidatorConfig(config: any): boolean {
+const validateValidatorConfig = (config: any): boolean => {
   return !!(config.rules && Array.isArray(config.rules))
 }
 
 // File handling
-async function handleFileChange(uploadedFile: File | null) {
+const handleFileChange = async (_uploadedFile: File | null) => {
   errorMessage.value = ''
   parsedSteps.value = []
   
-  if (!uploadedFile) return
+  if (!_uploadedFile) return
 
   try {
-    const content = await uploadedFile.text()
+    const content = await _uploadedFile.text()
     const data = JSON.parse(content)
 
     if (!data.steps || !Array.isArray(data.steps)) {
@@ -226,7 +230,7 @@ async function handleFileChange(uploadedFile: File | null) {
   }
 }
 
-function clearUpload() {
+const clearUpload = () => {
   file.value = null
   parsedSteps.value = []
   errorMessage.value = ''
@@ -234,7 +238,7 @@ function clearUpload() {
 }
 
 // Template handling
-function downloadTemplate() {
+const downloadTemplate = () => {
   const template = {
     steps: [
       {

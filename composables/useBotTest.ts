@@ -1,13 +1,13 @@
 import { ref } from 'vue'
 
-export function useBotTest(botId: string | number) {
+export const useBotTest = (botId: string | number) => {
   const input = ref('')
   const messages = ref<{ id: number; role: string; text: string }[]>([])
   const steps = ref<any[]>([])
   const progress = ref(0)
   let msgId = 1
 
-  async function sendMessage() {
+  const sendMessage = async () => {
     if (!input.value) return
     const userMsg = input.value
     messages.value.push({ id: msgId++, role: 'user', text: userMsg })
@@ -69,7 +69,7 @@ export function useBotTest(botId: string | number) {
     }
   }
 
-  function reset() {
+  const reset = () => {
     messages.value = []
     msgId = 1
   }

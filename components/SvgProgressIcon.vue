@@ -1,5 +1,10 @@
 <template>
-  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="28"
+    height="28"
+    fill="none"
+  >
     <g clip-path="url(#gbtn-progress-no-background_svg__a)">
       <path
         d="M0 14C0 6.267 6.242 0 13.945 0c7.702 0 13.943 6.267 13.943 14 0 6.766-4.777 12.41-11.131 13.716-.908.187-1.849.284-2.809.284C6.245 28 0 21.703 0 14Z"

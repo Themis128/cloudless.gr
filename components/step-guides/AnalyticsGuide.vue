@@ -1,5 +1,10 @@
 <template>
-  <v-alert type="info" border="start" color="primary" class="mb-4">
+  <v-alert
+    type="info"
+    border="start"
+    color="primary"
+    class="mb-4"
+  >
     <strong>Step 7: Analytics & Debug</strong><br>
     Use the dashboard and debug tools to monitor, analyze, and troubleshoot your project.<br>
     <ul>

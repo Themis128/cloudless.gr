@@ -1,4 +1,4 @@
-import { ref, computed, readonly } from 'vue'
+import { computed, readonly, ref } from 'vue'
 import { useSupabase } from './supabase'
 
 export interface TrainingConfig {
@@ -49,7 +49,7 @@ export interface TrainingMetrics {
   timestamp: string
 }
 
-export function useModelTrainer() {
+export const useModelTrainer = () => {
   const supabase = useSupabase()
   
   // State
@@ -80,7 +80,7 @@ export function useModelTrainer() {
   )
 
   // Methods
-  async function startTraining(config: TrainingConfig): Promise<{ success: boolean; sessionId?: string; error?: string }> {
+  const startTraining = async (config: TrainingConfig): Promise<{ success: boolean; sessionId?: string; error?: string }> => {
     loading.value = true
     error.value = null
     
@@ -125,14 +125,14 @@ export function useModelTrainer() {
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to start training'
       error.value = errorMessage
-      console.error('Training error:', err)
+      // console.error('Training error:', err)
       return { success: false, error: errorMessage }
     } finally {
       loading.value = false
     }
   }
 
-  async function fetchSession(sessionId: string): Promise<TrainingSession | null> {
+  const fetchSession = async (sessionId: string): Promise<TrainingSession | null> => {
     try {
       const { data, error: fetchError } = await supabase
         .from('training_sessions')
@@ -150,7 +150,7 @@ export function useModelTrainer() {
     }
   }
 
-  async function fetchAllSessions(): Promise<TrainingSession[]> {
+  const fetchAllSessions = async (): Promise<TrainingSession[]> => {
     loading.value = true
     error.value = null
     
@@ -180,7 +180,7 @@ export function useModelTrainer() {
     }
   }
 
-  async function stopTraining(sessionId: string): Promise<boolean> {
+  const stopTraining = async (sessionId: string): Promise<boolean> => {
     try {
       const { error: updateError } = await supabase
         .from('training_sessions')
@@ -204,7 +204,7 @@ export function useModelTrainer() {
     }
   }
 
-  async function deleteSession(sessionId: string): Promise<boolean> {
+  const deleteSession = async (sessionId: string): Promise<boolean> => {
     try {
       const { error: deleteError } = await supabase
         .from('training_sessions')
@@ -228,7 +228,7 @@ export function useModelTrainer() {
     }
   }
 
-  async function fetchMetrics(sessionId: string): Promise<TrainingMetrics[]> {
+  const fetchMetrics = async (sessionId: string): Promise<TrainingMetrics[]> => {
     try {
       const { data, error: fetchError } = await supabase
         .from('training_metrics')
@@ -247,7 +247,7 @@ export function useModelTrainer() {
     }
   }
 
-  async function getTrainingLogs(sessionId: string): Promise<string[]> {
+  const getTrainingLogs = async (sessionId: string): Promise<string[]> => {
     // In a real implementation, this would fetch logs from your logging system
     // For demo purposes, we'll generate some sample logs
     const session = await fetchSession(sessionId)
@@ -274,7 +274,7 @@ export function useModelTrainer() {
   }
 
   // Real-time updates (in production, you'd use WebSockets or Server-Sent Events)
-  function subscribeToSession(sessionId: string, callback: (session: TrainingSession) => void) {
+  const subscribeToSession = (sessionId: string, callback: () => void) => {
     const channel = supabase
       .channel(`training_session_${sessionId}`)
       .on(
@@ -285,10 +285,10 @@ export function useModelTrainer() {
           table: 'training_sessions',
           filter: `id=eq.${sessionId}`
         },
-        (payload) => {
+        (payload: any) => {
           const updatedSession = payload.new as TrainingSession
           currentSession.value = updatedSession
-          callback(updatedSession)
+          callback()
         }
       )
       .subscribe()
@@ -299,7 +299,7 @@ export function useModelTrainer() {
   }
 
   // Utility functions
-  function formatTrainingTime(startTime: string, endTime?: string): string {
+  const formatTrainingTime = (startTime: string, endTime?: string): string => {
     const start = new Date(startTime)
     const end = endTime ? new Date(endTime) : new Date()
     const duration = end.getTime() - start.getTime()
@@ -317,7 +317,7 @@ export function useModelTrainer() {
     }
   }
 
-  function getStatusColor(status: string): string {
+  const getStatusColor = (status: string): string => {
     switch (status) {
       case 'completed': return 'success'
       case 'running': return 'primary'
@@ -328,7 +328,7 @@ export function useModelTrainer() {
     }
   }
 
-  function validateTrainingConfig(config: Partial<TrainingConfig>): { valid: boolean; errors: string[] } {
+  const validateTrainingConfig = (config: Partial<TrainingConfig>): { valid: boolean; errors: string[] } => {
     const errors: string[] = []
     
     if (!config.name?.trim()) {

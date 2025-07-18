@@ -1,5 +1,10 @@
 <template>
-  <v-alert type="info" border="start" color="primary" class="mb-4">
+  <v-alert
+    type="info"
+    border="start"
+    color="primary"
+    class="mb-4"
+  >
     <strong>Step 5: Train Models/LLMs</strong><br>
     Train your models or LLMs to improve their performance on your data.<br>
     <ul>

@@ -16,7 +16,7 @@ import { useSupabase } from '~/composables/supabase'
 const supabase = useSupabase()
 const todos = ref<any[]>([])
 
-async function getTodos() {
+const getTodos = async () => {
   const { data } = await supabase.from('todos' as any).select()
   todos.value = data || []
 }

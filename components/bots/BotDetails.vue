@@ -6,13 +6,17 @@
         View your bot's details and test its pipeline.
       </v-alert>
       <v-toolbar flat color="transparent" class="mb-4">
-        <v-btn color="primary" :to="`/bots/${botId}/test`" variant="text">Test Bot</v-btn>
+        <v-btn color="primary" :to="`/bots/${botId}/test`" variant="text">
+          Test Bot
+        </v-btn>
       </v-toolbar>
       <div v-if="loading">
         <v-progress-linear indeterminate color="primary" />
       </div>
       <div v-else-if="error">
-        <v-alert type="error">{{ error }}</v-alert>
+        <v-alert type="error">
+          {{ error }}
+        </v-alert>
       </div>
       <div v-else>
         <div><strong>Name:</strong> {{ bot?.name }}</div>

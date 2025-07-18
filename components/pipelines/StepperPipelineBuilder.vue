@@ -105,14 +105,14 @@
           color="primary"
           variant="outlined"
           :disabled="currentStep === 1"
-          @click="currentStep--"
+          @click="goBack"
         >
           Back
         </v-btn>
         <v-btn
           color="primary"
           :disabled="!canProceed"
-          @click="currentStep === steps.length ? submit() : currentStep++"
+          @click="handleNext"
         >
           {{ currentStep === steps.length ? 'Create Pipeline' : 'Next' }}
         </v-btn>
@@ -126,17 +126,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useSupabase } from '~/composables/supabase'
-import { usePipelineStore } from '~/stores/pipelineStore'
-import type { PipelineConfig } from '~/types/Pipeline'
+import { computed, onMounted, ref } from 'vue';
+import { useSupabase } from '~/composables/supabase';
+import { usePipelineStore } from '~/stores/pipelineStore';
+// import type { PipelineConfig } from '~/types/Pipeline';
 
 const props = defineProps<{
   projectId: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'created'): void
+  'created': []
 }>()
 
 const supabase = useSupabase()
@@ -158,7 +158,7 @@ const form = ref({
   name: '',
   description: '',
   model: '',
-  config: {} as PipelineConfig
+  config: {} as any
 })
 
 const defaultConfig = {
@@ -213,7 +213,7 @@ const canProceed = computed(() => {
   return true
 })
 
-function validateJson() {
+const validateJson = () => {
   try {
     JSON.parse(jsonConfig.value)
     jsonError.value = null
@@ -222,11 +222,23 @@ function validateJson() {
   }
 }
 
-function getModelName(id: string) {
+const getModelName = (id: string) => {
   return modelOptions.value.find(m => m.id === id)?.name || id
 }
 
-async function submit() {
+const goBack = () => {
+  currentStep.value--
+}
+
+const handleNext = () => {
+  if (currentStep.value === steps.length) {
+    submit()
+  } else {
+    currentStep.value++
+  }
+}
+
+const submit = async () => {
   error.value = null
   
   try {

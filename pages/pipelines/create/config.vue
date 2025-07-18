@@ -533,7 +533,7 @@
         <v-btn
           color="secondary"
           variant="outlined"
-          @click="router.push('/pipelines/create/model-selection')"
+          @click="navigateBack"
         >
           Back
         </v-btn>
@@ -552,24 +552,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import draggable from 'vuedraggable'
-import StepUploader from '~/components/pipelines/steps/StepUploader.vue'
-import type { PipelineStepType } from '~/types/Pipeline'
 
-interface PipelineStep {
-  id: number
-  name: string
-  type: PipelineStepType
-  config: string
-}
-
-interface StepTypeInfo {
-  color: string
-  icon: string
-  description: string
-}
+// interface StepTypeInfo {
+//   color: string
+//   icon: string
+//   description: string
+// }
 
 interface InputProcessorConfig {
   source: {
@@ -673,22 +663,22 @@ interface InputProcessorConfig {
 
 const router = useRouter()
 const loading = ref(false)
-const showStepDialog = ref(false)
-const editingStepIndex = ref(-1)
-const configError = ref('')
-const drag = ref(false)
-const showUploader = ref(false)
+// const showStepDialog = ref(false)
+// const editingStepIndex = ref(-1)
+// const configError = ref('')
+// const drag = ref(false)
+// const showUploader = ref(false)
 
 const headersText = ref('')
 
-function updateHeaders() {
+const updateHeaders = () => {
   try {
     if (inputConfig.value.source.api?.headers) {
       inputConfig.value.source.api.headers = JSON.parse(headersText.value)
     }
   } catch (e) {
     // Handle invalid JSON
-    console.error('Invalid JSON in headers:', e)
+    // console.error('Invalid JSON in headers:', e)
   }
 }
 
@@ -700,7 +690,7 @@ const sourceTypes = [
   { title: 'Data Stream', value: 'stream', icon: 'mdi-transit-connection-variant', description: 'Process real-time data streams with buffering and reconnection handling' }
 ]
 
-function handleSourceTypeChange(type: string) {
+const handleSourceTypeChange = (type: string) => {
   const newSource = {
     type: type as 'text' | 'file' | 'api' | 'database' | 'stream'
   } as InputProcessorConfig['source']
@@ -755,16 +745,16 @@ function handleSourceTypeChange(type: string) {
   }
 }
 
-const stepTypes: PipelineStepType[] = [
-  'input_processor',
-  'llm_processor',
-  'output_processor',
-  'data_transformer',
-  'validator'
-]
+// const stepTypes: PipelineStepType[] = [
+//   'input_processor',
+//   'llm_processor',
+//   'output_processor',
+//   'data_transformer',
+//   'validator'
+// ]
 
-const steps = ref<PipelineStep[]>([])
-const editingStep = ref<PipelineStep | null>(null)
+// const steps = ref<PipelineStep[]>([])
+// const editingStep = ref<PipelineStep | null>(null)
 
 // Initialize inputConfig with default values
 const inputConfig = ref<InputProcessorConfig>({
@@ -817,11 +807,11 @@ const inputConfig = ref<InputProcessorConfig>({
 })
 
 // Add computed properties for type-safe access
-const sourceText = computed(() => inputConfig.value.source.text)
-const sourceFile = computed(() => inputConfig.value.source.file)
-const sourceApi = computed(() => inputConfig.value.source.api)
-const sourceDatabase = computed(() => inputConfig.value.source.database)
-const sourceStream = computed(() => inputConfig.value.source.stream)
+// const sourceText = computed(() => inputConfig.value.source.text)
+// const sourceFile = computed(() => inputConfig.value.source.file)
+// const sourceApi = computed(() => inputConfig.value.source.api)
+// const sourceDatabase = computed(() => inputConfig.value.source.database)
+// const sourceStream = computed(() => inputConfig.value.source.stream)
 const preprocessingConfig = computed(() => inputConfig.value.preprocessing)
 const validationConfig = computed(() => inputConfig.value.validation)
 const errorHandlingConfig = computed(() => inputConfig.value.errorHandling)
@@ -832,7 +822,7 @@ watch(() => inputConfig.value.source.api?.headers, (newHeaders) => {
   headersText.value = JSON.stringify(newHeaders, null, 2)
 }, { immediate: true })
 
-async function savePipelineConfig() {
+const savePipelineConfig = async () => {
   if (!isValid.value) return
   
   loading.value = true
@@ -852,16 +842,16 @@ async function savePipelineConfig() {
     localStorage.setItem('pipelineSteps', JSON.stringify(updatedSteps))
     router.push('/pipelines/create/review')
   } catch (error) {
-    console.error('Error saving pipeline config:', error)
+    // console.error('Error saving pipeline config:', error)
   } finally {
     loading.value = false
   }
 }
 
-function handleUploaderError(message: string) {
-  // Handle upload errors (e.g., show a notification)
-  console.error('Upload error:', message)
-}
+// const handleUploaderError = (_message: string) => {
+//   // Handle upload errors (e.g., show a notification)
+//   // console.error('Upload error:', message)
+// }
 
 const isValid = computed(() => {
   // For input processor configuration, we need at least a valid source type
@@ -870,206 +860,209 @@ const isValid = computed(() => {
           inputConfig.value.source.text?.content : true)
 })
 
-function formatStepType(type: PipelineStepType) {
-  return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-}
+// const formatStepType = (_type: PipelineStepType) => {
+//   return _type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+// }
 
-const stepTypeInfo: Record<PipelineStepType, StepTypeInfo> = {
-  input_processor: {
-    color: 'blue',
-    icon: 'mdi-database-import',
-    description: 'Handles data input and initial preprocessing'
-  },
-  llm_processor: {
-    color: 'purple',
-    icon: 'mdi-brain',
-    description: 'Processes data using the selected language model'
-  },
-  output_processor: {
-    color: 'green',
-    icon: 'mdi-database-export',
-    description: 'Formats and structures the model output'
-  },
-  data_transformer: {
-    color: 'orange',
-    icon: 'mdi-transform',
-    description: 'Transforms data between processing steps'
-  },
-  validator: {
-    color: 'red',
-    icon: 'mdi-check-circle',
-    description: 'Validates data against defined rules'
-  }
-}
+// const stepTypeInfo: Record<PipelineStepType, StepTypeInfo> = {
+//   input_processor: {
+//     color: 'blue',
+//     icon: 'mdi-database-import',
+//     description: 'Handles data input and initial preprocessing'
+//   },
+//   llm_processor: {
+//     color: 'purple',
+//     icon: 'mdi-brain',
+//     description: 'Processes data using the selected language model'
+//   },
+//   output_processor: {
+//     color: 'green',
+//     icon: 'mdi-database-export',
+//     description: 'Formats and structures the model output'
+//   },
+//   data_transformer: {
+//     color: 'orange',
+//     icon: 'mdi-transform',
+//     description: 'Transforms data between processing steps'
+//   },
+//   validator: {
+//     color: 'red',
+//     icon: 'mdi-check-circle',
+//     description: 'Validates data against defined rules'
+//   }
+// }
 
-function getStepTypeColor(type: PipelineStepType) {
-  return stepTypeInfo[type]?.color || 'grey'
-}
+// const getStepTypeColor = (_type: PipelineStepType) => {
+//   return stepTypeInfo[_type]?.color || 'grey'
+// }
 
-function getStepTypeIcon(type: PipelineStepType) {
-  return stepTypeInfo[type]?.icon || 'mdi-cog'
-}
+// const getStepTypeIcon = (_type: PipelineStepType) => {
+//   return stepTypeInfo[_type]?.icon || 'mdi-cog'
+// }
 
-function getStepTypeDescription(type: PipelineStepType) {
-  return stepTypeInfo[type]?.description || ''
-}
+// const getStepTypeDescription = (_type: PipelineStepType) => {
+//   return stepTypeInfo[_type]?.description || ''
+// }
 
-function addStep() {
-  const newStep: PipelineStep = {
-    id: Date.now(),
-    name: `Step ${steps.value.length + 1}`,
-    type: 'input_processor',
-    config: '{}'
-  }
-  steps.value.push(newStep)
-}
+// const addStep = () => {
+//   const newStep: PipelineStep = {
+//     id: Date.now(),
+//     name: `Step ${steps.value.length + 1}`,
+//     type: 'input_processor',
+//     config: '{}'
+//   }
+//   steps.value.push(newStep)
+// }
 
-function editStep(index: number) {
-  editingStepIndex.value = index
-  editingStep.value = JSON.parse(JSON.stringify(steps.value[index]))
-  
-  if (editingStep.value?.type === 'input_processor') {
-    try {
-      const config = JSON.parse(editingStep.value.config)
-      inputConfig.value = {
-        source: config.source || {
-          type: 'text',
-          text: { content: '', encoding: 'utf-8' }
-        },
-        preprocessing: config.preprocessing || {
-          cleanText: true,
-          removeStopwords: false,
-          lowercase: true,
-          trim: true,
-          normalizeWhitespace: true,
-          removeSpecialChars: false,
-          tokenization: {
-            enabled: false,
-            method: 'word'
-          },
-          encoding: {
-            type: 'utf8',
-            handleErrors: 'replace'
-          }
-        },
-        validation: config.validation || {
-          required: true,
-          dataType: {
-            type: 'string'
-          }
-        },
-        errorHandling: config.errorHandling || {
-          onValidationFail: 'skip',
-          retryStrategy: {
-            maxRetries: 3,
-            retryDelayMs: 1000
-          },
-          logging: {
-            level: 'info',
-            includeDetails: false
-          }
-        },
-        performance: config.performance || {
-          parallelProcessing: false,
-          maxThreads: 4,
-          memoryLimitMb: 1024,
-          timeoutSeconds: 30
-        }
-      }
-    } catch {
-      // If config is invalid or empty, use default config
-      inputConfig.value = {
-        source: {
-          type: 'text',
-          text: { content: '', encoding: 'utf-8' }
-        },
-        preprocessing: {
-          cleanText: true,
-          removeStopwords: false,
-          lowercase: true,
-          trim: true,
-          normalizeWhitespace: true,
-          removeSpecialChars: false,
-          tokenization: {
-            enabled: false,
-            method: 'word'
-          },
-          encoding: {
-            type: 'utf8',
-            handleErrors: 'replace'
-          }
-        },
-        validation: {
-          required: true,
-          dataType: {
-            type: 'string'
-          }
-        },
-        errorHandling: {
-          onValidationFail: 'skip',
-          retryStrategy: {
-            maxRetries: 3,
-            retryDelayMs: 1000
-          },
-          logging: {
-            level: 'info',
-            includeDetails: false
-          }
-        },
-        performance: {
-          parallelProcessing: false,
-          maxThreads: 4,
-          memoryLimitMb: 1024,
-          timeoutSeconds: 30
-        }
-      }
-    }
-  }
-  
-  showStepDialog.value = true
-}
+// const editStep = (index: number) => {
+//   editingStepIndex.value = index
+//   editingStep.value = JSON.parse(JSON.stringify(steps.value[index]))
+//   
+//   if (editingStep.value?.type === 'input_processor') {
+//     try {
+//       const config = JSON.parse(editingStep.value.config)
+//       inputConfig.value = {
+//         source: config.source || {
+//           type: 'text',
+//           text: { content: '', encoding: 'utf-8' }
+//         },
+//         preprocessing: config.preprocessing || {
+//           cleanText: true,
+//           removeStopwords: false,
+//           lowercase: true,
+//           trim: true,
+//           normalizeWhitespace: true,
+//           removeSpecialChars: false,
+//           tokenization: {
+//             enabled: false,
+//             method: 'word'
+//           },
+//           encoding: {
+//             type: 'utf8',
+//             handleErrors: 'replace'
+//           }
+//         },
+//         validation: config.validation || {
+//           required: true,
+//           dataType: {
+//             type: 'string'
+//           }
+//         },
+//         errorHandling: config.errorHandling || {
+//           onValidationFail: 'skip',
+//           retryStrategy: {
+//             maxRetries: 3,
+//             retryDelayMs: 1000
+//           },
+//           logging: {
+//             level: 'info',
+//             includeDetails: false
+//           }
+//         },
+//         performance: config.performance || {
+//           parallelProcessing: false,
+//           maxThreads: 4,
+//           memoryLimitMb: 1024,
+//           timeoutSeconds: 30
+//         }
+//       }
+//     } catch {
+//       // If config is invalid or empty, use default config
+//       inputConfig.value = {
+//         source: {
+//           type: 'text',
+//           text: { content: '', encoding: 'utf-8' }
+//         },
+//         preprocessing: {
+//           cleanText: true,
+//           removeStopwords: false,
+//           lowercase: true,
+//           trim: true,
+//           normalizeWhitespace: true,
+//           removeSpecialChars: false,
+//           tokenization: {
+//             enabled: false,
+//             method: 'word'
+//           },
+//           encoding: {
+//             type: 'utf8',
+//             handleErrors: 'replace'
+//           }
+//         },
+//         validation: {
+//           required: true,
+//           dataType: {
+//             type: 'string'
+//           }
+//         },
+//         errorHandling: {
+//           onValidationFail: 'skip',
+//           retryStrategy: {
+//             maxRetries: 3,
+//             retryDelayMs: 1000
+//           },
+//           logging: {
+//             level: 'info',
+//             includeDetails: false
+//           }
+//         },
+//         performance: {
+//           parallelProcessing: false,
+//           maxThreads: 4,
+//           memoryLimitMb: 1024,
+//           timeoutSeconds: 30
+//         }
+//       }
+//     }
+//   }
+//   
+//   showStepDialog.value = true
+// }
 
-function removeStep(index: number) {
-  steps.value.splice(index, 1)
-}
+// const removeStep = (_index: number) => {
+//   steps.value.splice(_index, 1)
+// }
 
-function addCustomReplacement() {
+const addCustomReplacement = () => {
   if (preprocessingConfig.value) {
     preprocessingConfig.value.customReplacements?.push({ pattern: '', replacement: '' })
   }
 }
 
-function removeCustomReplacement(index: number) {
+const removeCustomReplacement = (index: number) => {
   if (preprocessingConfig.value) {
     preprocessingConfig.value.customReplacements?.splice(index, 1)
   }
 }
 
-function addCustomValidator() {
+const addCustomValidator = () => {
   if (validationConfig.value) {
     validationConfig.value.custom?.push({ name: '', validator: '', errorMessage: '' })
   }
 }
 
-function removeCustomValidator(index: number) {
+const removeCustomValidator = (index: number) => {
   if (validationConfig.value) {
     validationConfig.value.custom?.splice(index, 1)
   }
 }
 
-function saveStepConfig() {
-  const step = editingStep.value
-  if (!step || editingStepIndex.value === -1) return
+// const saveStepConfig = () => {
+//   const step = editingStep.value
+//   if (!step || editingStepIndex.value === -1) return
 
-  const updatedStep = { ...step }
-  if (updatedStep.type === 'input_processor') {
-    updatedStep.config = JSON.stringify(inputConfig.value)
-  }
+//   const updatedStep = { ...step }
+//   if (updatedStep.type === 'input_processor') {
+//     updatedStep.config = JSON.stringify(inputConfig.value)
+//   }
 
-  steps.value[editingStepIndex.value] = updatedStep
-  showStepDialog.value = false
-  editingStep.value = null
-  editingStepIndex.value = -1
+//   steps.value[editingStepIndex.value] = updatedStep
+//   showStepDialog.value = false
+//   editingStep.value = null
+// }
+
+const navigateBack = () => {
+  router.push('/pipelines/create/model-selection')
 }
 </script>
 

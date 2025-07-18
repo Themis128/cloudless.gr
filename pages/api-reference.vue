@@ -22,7 +22,8 @@
                 icon
                 size="small"
                 variant="text"
-                @click="copyCode('Authorization: Bearer YOUR_API_KEY')"
+                data-code="Authorization: Bearer YOUR_API_KEY"
+                @click="onCopyCode"
               >
                 <v-icon size="16">
                   mdi-content-copy
@@ -72,7 +73,8 @@
                   icon
                   size="small"
                   variant="text"
-                  @click="copyCode(botCreateExample)"
+                  :data-code="botCreateExample"
+                  @click="onCopyCode"
                 >
                   <v-icon size="16">
                     mdi-content-copy
@@ -90,7 +92,8 @@
                   icon
                   size="small"
                   variant="text"
-                  @click="copyCode(botCreateResponse)"
+                  :data-code="botCreateResponse"
+                  @click="onCopyCode"
                 >
                   <v-icon size="16">
                     mdi-content-copy
@@ -172,7 +175,8 @@
                   icon
                   size="small"
                   variant="text"
-                  @click="copyCode(botTestExample)"
+                  :data-code="botTestExample"
+                  @click="onCopyCode"
                 >
                   <v-icon size="16">
                     mdi-content-copy
@@ -203,7 +207,8 @@
                   icon
                   size="small"
                   variant="text"
-                  @click="copyCode(modelCreateExample)"
+                  :data-code="modelCreateExample"
+                  @click="onCopyCode"
                 >
                   <v-icon size="16">
                     mdi-content-copy
@@ -279,7 +284,8 @@
                   icon
                   size="small"
                   variant="text"
-                  @click="copyCode(pipelineCreateExample)"
+                  :data-code="pipelineCreateExample"
+                  @click="onCopyCode"
                 >
                   <v-icon size="16">
                     mdi-content-copy
@@ -458,7 +464,8 @@
                 icon
                 size="small"
                 variant="text"
-                @click="copyCode(jsExample)"
+                :data-code="jsExample"
+                @click="onCopyCode"
               >
                 <v-icon size="16">
                   mdi-content-copy
@@ -476,7 +483,8 @@
                 icon
                 size="small"
                 variant="text"
-                @click="copyCode(pythonExample)"
+                :data-code="pythonExample"
+                @click="onCopyCode"
               >
                 <v-icon size="16">
                   mdi-content-copy
@@ -494,7 +502,8 @@
                 icon
                 size="small"
                 variant="text"
-                @click="copyCode(curlExample)"
+                :data-code="curlExample"
+                @click="onCopyCode"
               >
                 <v-icon size="16">
                   mdi-content-copy
@@ -657,7 +666,7 @@ const response = await cloudless.bots.test(bot.id, {
   user_id: 'user_123'
 });
 
-console.log(response.reply);`)
+// console.log(response.reply);`)
 
 const pythonExample = ref(`import cloudless
 
@@ -704,6 +713,12 @@ curl -X POST https://api.cloudless.gr/bots/BOT_ID/test \\
 const copyCode = (code: string) => {
   navigator.clipboard.writeText(code)
   // You could add a toast notification here
+}
+
+const onCopyCode = (event: Event) => {
+  const target = event.currentTarget as HTMLElement
+  const code = target.getAttribute('data-code')
+  if (code) copyCode(code)
 }
 </script>
 

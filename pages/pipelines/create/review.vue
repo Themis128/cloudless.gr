@@ -86,7 +86,7 @@
                           Configuration
                         </v-expansion-panel-title>
                         <v-expansion-panel-text>
-                          <pre>{{ JSON.stringify(JSON.parse(step.config), null, 2) }}</pre>
+                          <pre>{{ JSON.stringify(typeof step.config === 'string' ? JSON.parse(step.config) : step.config, null, 2) }}</pre>
                         </v-expansion-panel-text>
                       </v-expansion-panel>
                     </v-expansion-panels>
@@ -100,7 +100,7 @@
               <v-btn
                 color="secondary"
                 variant="outlined"
-                @click="router.push('/pipelines/create/config')"
+                @click="goBack"
               >
                 Back
               </v-btn>
@@ -130,10 +130,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSupabase } from '~/composables/supabase'
-import type { PipelineDetails, ModelConfig, PipelineStep, PipelineStepType } from '~/types/Pipeline'
+import type { ModelConfig, PipelineDetails, PipelineStep, PipelineStepType } from '~/types/Pipeline'
 import type { Database } from '~/types/database.types'
 
 const router = useRouter()
@@ -160,11 +160,11 @@ onMounted(() => {
     modelConfig.value = JSON.parse(localStorage.getItem('pipelineModelConfig') || 'null')
     pipelineSteps.value = JSON.parse(localStorage.getItem('pipelineSteps') || 'null')
   } catch (error) {
-    console.error('Error loading pipeline data:', error)
+    // console.error('Error loading pipeline data:', error)
   }
 })
 
-function getStepColor(type: PipelineStepType): string {
+const getStepColor = (type: PipelineStepType): string => {
   const colors: Record<PipelineStepType, string> = {
     input_processor: 'primary',
     llm_processor: 'success',
@@ -175,14 +175,18 @@ function getStepColor(type: PipelineStepType): string {
   return colors[type]
 }
 
-function resetPipeline() {
+const goBack = () => {
+  router.push('/pipelines/create/config')
+}
+
+const resetPipeline = () => {
   localStorage.removeItem('pipelineDetails')
   localStorage.removeItem('pipelineModelConfig')
   localStorage.removeItem('pipelineSteps')
   router.push('/pipelines/create/details')
 }
 
-async function createPipeline() {
+const createPipeline = async () => {
   if (!isValid.value || !pipelineDetails.value || !modelConfig.value || !pipelineSteps.value) return
   
   loading.value = true
@@ -212,7 +216,7 @@ async function createPipeline() {
     // Navigate to pipelines list
     router.push('/pipelines')
   } catch (error) {
-    console.error('Error creating pipeline:', error)
+    // console.error('Error creating pipeline:', error)
   } finally {
     loading.value = false
   }

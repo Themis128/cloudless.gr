@@ -4,56 +4,75 @@
       Please complete the required fields for this step.
     </v-snackbar>
 
-
-    <v-progress-linear :value="progressValue" color="primary" height="6" class="mb-2" />
+    <v-progress-linear
+      :value="progressValue"
+      color="primary"
+      height="6"
+      class="mb-2"
+    />
 
     <v-card-text>
       <div v-if="step === 0">
         <StepBotDetails
           :form="form"
-          :nameError="nameError ? [nameError] : []"
-          :promptError="promptError ? [promptError] : []"
-          :validateName="validateName"
-          :validatePrompt="validatePrompt"
+          :name-error="nameError ? [nameError] : []"
+          :prompt-error="promptError ? [promptError] : []"
+          :validate-name="validateName"
+          :validate-prompt="validatePrompt"
           :description="steps[0]?.description || ''"
         />
         <div class="mt-4">
-          <v-btn color="primary" @click="handleNextStep">Continue</v-btn>
+          <v-btn color="primary" @click="handleNextStep">
+            Continue
+          </v-btn>
         </div>
       </div>
       <div v-else-if="step === 1">
         <StepModelSelect
           :form="form"
-          :modelError="modelError ? [modelError] : []"
-          :validateModel="validateModel"
+          :model-error="modelError ? [modelError] : []"
+          :validate-model="validateModel"
           :description="steps[1]?.description || ''"
         />
         <div class="mt-4">
-          <v-btn class="me-2" @click="prevStep">Back</v-btn>
-          <v-btn color="primary" @click="handleNextStep">Continue</v-btn>
+          <v-btn class="me-2" @click="prevStep">
+            Back
+          </v-btn>
+          <v-btn color="primary" @click="handleNextStep">
+            Continue
+          </v-btn>
         </div>
       </div>
       <div v-else-if="step === 2">
-        <StepSettings
-          :form="form"
-          :description="steps[2]?.description || ''"
-        />
+        <StepSettings :form="form" :description="steps[2]?.description || ''" />
         <div class="mt-4">
-          <v-btn class="me-2" @click="prevStep">Back</v-btn>
-          <v-btn color="primary" @click="handleNextStep">Continue</v-btn>
+          <v-btn class="me-2" @click="prevStep">
+            Back
+          </v-btn>
+          <v-btn color="primary" @click="handleNextStep">
+            Continue
+          </v-btn>
         </div>
       </div>
       <div v-else-if="step === 3">
         <StepSummary :form="form" />
         <div class="mt-4">
-          <v-btn class="me-2" @click="prevStep">Back</v-btn>
-          <v-btn color="success" :loading="loading" @click="handleSubmit">Create Bot</v-btn>
+          <v-btn class="me-2" @click="prevStep">
+            Back
+          </v-btn>
+          <v-btn color="success" :loading="loading" @click="handleSubmit">
+            Create Bot
+          </v-btn>
         </div>
       </div>
     </v-card-text>
 
-    <v-alert type="error" v-if="error" class="mt-2">{{ error }}</v-alert>
-    <v-alert type="success" v-if="success" class="mt-2">Bot created successfully!</v-alert>
+    <v-alert v-if="error" type="error" class="mt-2">
+      {{ error }}
+    </v-alert>
+    <v-alert v-if="success" type="success" class="mt-2">
+      Bot created successfully!
+    </v-alert>
   </v-card>
 </template>
 
@@ -63,30 +82,40 @@ import StepModelSelect from '~/components/bots/steps/StepModelSelect.vue'
 import StepSettings from '~/components/bots/steps/StepSettings.vue'
 import StepSummary from '~/components/bots/steps/StepSummary.vue'
 
-import { ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { computed, ref } from 'vue'
 import { useBotBuilder } from '~/composables/useBotBuilder'
 import { useBotFormValidation } from '~/composables/useBotFormValidation'
-import { storeToRefs } from 'pinia'
 import { useBotStore } from '~/stores/botStore'
 
-const emit = defineEmits(['created'])
 const props = defineProps<{ template?: any }>()
-
+const emit = defineEmits(['created'])
 // Use the composable for all stepper state and logic
 
 const {
-  form, step: stepRef, steps, progressValue,
-  nextStep, prevStep, goToStep, isStepComplete, submitBot
+  form,
+  step: stepRef,
+  steps,
+  progressValue,
+  nextStep,
+  prevStep,
+  submitBot,
 } = useBotBuilder(props.template)
 
 const step = computed({
   get: () => Number(stepRef.value),
-  set: v => { stepRef.value = Number(v) }
+  set: v => {
+    stepRef.value = Number(v)
+  },
 })
 
 const {
-  nameError, promptError, modelError,
-  validateName, validatePrompt, validateModel
+  nameError,
+  promptError,
+  modelError,
+  validateName,
+  validatePrompt,
+  validateModel,
 } = useBotFormValidation(form)
 
 const botStore = useBotStore()
@@ -94,22 +123,21 @@ const { loading, success, error } = storeToRefs(botStore)
 
 const showIncompleteWarning = ref(false)
 
-
-function validateStep(idx: number) {
+const validateStep = (idx: number) => {
   // Always run validation before checking errors
   if (idx === 0) {
-    validateName();
-    validatePrompt();
+    validateName()
+    validatePrompt()
     return !nameError.value && !promptError.value
   }
   if (idx === 1) {
-    validateModel();
+    validateModel()
     return !modelError.value
   }
   return true
 }
 
-function handleNextStep() {
+const handleNextStep = () => {
   const valid = validateStep(step.value)
   if (!valid) {
     showIncompleteWarning.value = true
@@ -118,7 +146,7 @@ function handleNextStep() {
   nextStep()
 }
 
-async function handleSubmit() {
+const handleSubmit = async () => {
   const result = await submitBot()
   if (result) {
     emit('created')

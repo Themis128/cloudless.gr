@@ -1,4 +1,4 @@
 // composable for templates
-export function useTemplates() {
+export const useTemplates = () => {
   // ...
 }

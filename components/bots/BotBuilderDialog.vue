@@ -1,12 +1,12 @@
 <template>
-  <v-card 
+  <v-card
     class="bot-builder-dialog"
     :style="{ transform: `translate(${position.x}px, ${position.y}px)` }"
     @mousedown="startDrag"
   >
     <v-card-title class="d-flex justify-space-between align-center cursor-move">
       Create New Bot
-      <v-btn icon="mdi-close" variant="text" @click="$emit('close')" />
+      <v-btn icon="mdi-close" variant="text" @click="handleClose" />
     </v-card-title>
     <v-card-text>
       <BotBuilderCard @created="onBotCreated" />
@@ -27,7 +27,7 @@ let startY = 0
 let startPosX = 0
 let startPosY = 0
 
-function startDrag(e: MouseEvent) {
+const startDrag = (e: MouseEvent) => {
   // Only start drag if clicking the title bar
   if (!(e.target as HTMLElement).closest('.cursor-move')) return
 
@@ -41,7 +41,7 @@ function startDrag(e: MouseEvent) {
   document.addEventListener('mouseup', stopDrag)
 }
 
-function onDrag(e: MouseEvent) {
+const onDrag = (e: MouseEvent) => {
   if (!isDragging) return
 
   const deltaX = e.clientX - startX
@@ -49,17 +49,21 @@ function onDrag(e: MouseEvent) {
 
   position.value = {
     x: startPosX + deltaX,
-    y: startPosY + deltaY
+    y: startPosY + deltaY,
   }
 }
 
-function stopDrag() {
+const stopDrag = () => {
   isDragging = false
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', stopDrag)
 }
 
-function onBotCreated() {
+const handleClose = () => {
+  emit('close')
+}
+
+const onBotCreated = () => {
   emit('created')
 }
 </script>

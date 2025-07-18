@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { useDebugStore } from '~/stores/debugStore'
 
-export function useDebugTools() {
+export const useDebugTools = () => {
   const debugStore = useDebugStore()
 
   // Logs and diagnostics from Pinia store
@@ -9,17 +9,17 @@ export function useDebugTools() {
   const diagnostics = computed(() => debugStore.diagnostics)
 
   // Add a log entry
-  function addLog(entry: string) {
+  const addLog = (entry: string) => {
     debugStore.addLog(entry)
   }
 
   // Set diagnostics
-  function setDiagnostics(data: Record<string, any>) {
+  const setDiagnostics = (data: Record<string, any>) => {
     debugStore.setDiagnostics(data)
   }
 
   // Command handler for DebugConsole
-  function handleCommand(cmd: string) {
+  const handleCommand = (cmd: string) => {
     addLog('> ' + cmd)
     // Example: echo command
     if (cmd.startsWith('echo ')) {

@@ -55,7 +55,7 @@ export default async function mountVantaClouds2(el, options = {}) {
     } catch (error) {
       // Error loading Vanta Clouds2 - silent fail for production
       if (process.env.NODE_ENV === 'development') {
-        console.error('Error loading Vanta Clouds2:', error)
+        // console.error('Error loading Vanta Clouds2:', error)
       }
     }
   }
@@ -67,7 +67,7 @@ export default async function mountVantaClouds2(el, options = {}) {
       } catch (error) {
         // Error destroying Vanta effect - silent fail for production
         if (process.env.NODE_ENV === 'development') {
-          console.warn('Error destroying Vanta effect:', error)
+          // console.warn('Error destroying Vanta effect:', error)
         }
       }
     }

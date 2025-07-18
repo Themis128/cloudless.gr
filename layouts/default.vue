@@ -2,14 +2,14 @@
   <v-app>
     <div
       v-show="vantaEnabled"
-      ref="vantaRef"
       id="vanta-bg"
+      ref="vantaRef"
       class="vanta-bg"
-    ></div>
+    />
     <button
       class="vanta-toggle-btn"
-      @click="showVantaControls = !showVantaControls"
       aria-label="Toggle Vanta Controls"
+      @click="toggleVantaControls"
     >
       <svg
         width="28"
@@ -21,7 +21,13 @@
         stroke-linecap="round"
         stroke-linejoin="round"
       >
-        <rect x="3" y="3" width="18" height="18" rx="4" />
+        <rect
+          x="3"
+          y="3"
+          width="18"
+          height="18"
+          rx="4"
+        />
         <path d="M9 9h.01M15 9h.01M9 15h.01M15 15h.01" />
       </svg>
     </button>
@@ -30,7 +36,7 @@
         v-if="showVantaControls"
         :initial="vantaOptions"
         @update="onVantaUpdate"
-        @close="showVantaControls = false"
+        @close="closeVantaControls"
       />
     </client-only>
     <div class="app-layout">
@@ -47,8 +53,18 @@
                   xmlns="http://www.w3.org/2000/svg"
                   class="logo"
                 >
-                  <rect width="48" height="48" rx="12" fill="#23232b"></rect>
-                  <circle cx="24" cy="24" r="14" fill="#fff"></circle>
+                  <rect
+                    width="48"
+                    height="48"
+                    rx="12"
+                    fill="#23232b"
+                  />
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="14"
+                    fill="#fff"
+                  />
                   <text
                     x="24"
                     y="28"
@@ -63,81 +79,107 @@
                 </svg>
               </div>
               <span class="wizard-hat-emoji">🧙‍♂️</span>
-              <h1 class="logo-text">Cloudless Wizard</h1>
+              <h1 class="logo-text">
+                Cloudless Wizard
+              </h1>
             </NuxtLink>
           </div>
 
           <nav class="nav-menu">
             <div class="nav-dropdown">
-              <button class="nav-dropdown-btn" @click="toggleDropdown('build')">
-                <v-icon size="16">mdi-tools</v-icon>
+              <button class="nav-dropdown-btn" @click="toggleBuildDropdown">
+                <v-icon size="16">
+                  mdi-tools
+                </v-icon>
                 <span>Build</span>
-                <v-icon size="14" class="dropdown-arrow"
-                  >mdi-chevron-down</v-icon
-                >
+                <v-icon size="14" class="dropdown-arrow">
+                  mdi-chevron-down
+                </v-icon>
               </button>
               <div
-                class="nav-dropdown-menu"
                 v-show="activeDropdown === 'build'"
+                class="nav-dropdown-menu"
               >
                 <NuxtLink to="/projects" class="dropdown-item">
-                  <v-icon size="16">mdi-folder-multiple</v-icon>
+                  <v-icon size="16">
+                    mdi-folder-multiple
+                  </v-icon>
                   <span>Projects</span>
                 </NuxtLink>
                 <NuxtLink to="/bots" class="dropdown-item">
-                  <v-icon size="16">mdi-robot</v-icon>
+                  <v-icon size="16">
+                    mdi-robot
+                  </v-icon>
                   <span>Bots</span>
                 </NuxtLink>
                 <NuxtLink to="/models" class="dropdown-item">
-                  <v-icon size="16">mdi-brain</v-icon>
+                  <v-icon size="16">
+                    mdi-brain
+                  </v-icon>
                   <span>Models</span>
                 </NuxtLink>
                 <NuxtLink to="/pipelines" class="dropdown-item">
-                  <v-icon size="16">mdi-timeline</v-icon>
+                  <v-icon size="16">
+                    mdi-timeline
+                  </v-icon>
                   <span>Pipelines</span>
                 </NuxtLink>
               </div>
             </div>
 
             <div class="nav-dropdown">
-              <button class="nav-dropdown-btn" @click="toggleDropdown('ai')">
-                <v-icon size="16">mdi-robot</v-icon>
+              <button class="nav-dropdown-btn" @click="toggleAiDropdown">
+                <v-icon size="16">
+                  mdi-robot
+                </v-icon>
                 <span>AI</span>
-                <v-icon size="14" class="dropdown-arrow"
-                  >mdi-chevron-down</v-icon
-                >
+                <v-icon size="14" class="dropdown-arrow">
+                  mdi-chevron-down
+                </v-icon>
               </button>
-              <div class="nav-dropdown-menu" v-show="activeDropdown === 'ai'">
+              <div v-show="activeDropdown === 'ai'" class="nav-dropdown-menu">
                 <NuxtLink to="/llm" class="dropdown-item">
-                  <v-icon size="16">mdi-brain</v-icon>
+                  <v-icon size="16">
+                    mdi-brain
+                  </v-icon>
                   <span>LLM</span>
                 </NuxtLink>
                 <NuxtLink to="/llm/train" class="dropdown-item">
-                  <v-icon size="16">mdi-school</v-icon>
+                  <v-icon size="16">
+                    mdi-school
+                  </v-icon>
                   <span>Training</span>
                 </NuxtLink>
               </div>
             </div>
 
             <div class="nav-dropdown">
-              <button class="nav-dropdown-btn" @click="toggleDropdown('ops')">
-                <v-icon size="16">mdi-server</v-icon>
+              <button class="nav-dropdown-btn" @click="toggleOpsDropdown">
+                <v-icon size="16">
+                  mdi-server
+                </v-icon>
                 <span>Ops</span>
-                <v-icon size="14" class="dropdown-arrow"
-                  >mdi-chevron-down</v-icon
-                >
+                <v-icon size="14" class="dropdown-arrow">
+                  mdi-chevron-down
+                </v-icon>
               </button>
-              <div class="nav-dropdown-menu" v-show="activeDropdown === 'ops'">
+              <div v-show="activeDropdown === 'ops'" class="nav-dropdown-menu">
                 <NuxtLink to="/deploy" class="dropdown-item">
-                  <v-icon size="16">mdi-rocket-launch</v-icon>
+                  <v-icon size="16">
+                    mdi-rocket-launch
+                  </v-icon>
                   <span>Deploy</span>
                 </NuxtLink>
                 <NuxtLink to="/dashboard" class="dropdown-item">
-                  <v-icon size="16">mdi-view-dashboard</v-icon>
+                  <v-icon size="16">
+                    mdi-view-dashboard
+                  </v-icon>
                   <span>Dashboard</span>
                 </NuxtLink>
                 <NuxtLink to="/debug" class="dropdown-item">
-                  <v-icon size="16">mdi-bug</v-icon>
+                  <v-icon size="16">
+                    mdi-bug
+                  </v-icon>
                   <span>Debug</span>
                 </NuxtLink>
               </div>
@@ -148,7 +190,9 @@
               class="nav-link"
               title="Documentation"
             >
-              <v-icon size="16">mdi-book-open-variant</v-icon>
+              <v-icon size="16">
+                mdi-book-open-variant
+              </v-icon>
               <span>Docs</span>
             </NuxtLink>
           </nav>
@@ -159,8 +203,8 @@
               icon
               variant="text"
               class="mobile-menu-btn"
-              @click="showMobileMenu = !showMobileMenu"
               :aria-label="showMobileMenu ? 'Close menu' : 'Open menu'"
+              @click="toggleMobileMenu"
             >
               <v-icon>{{ showMobileMenu ? 'mdi-close' : 'mdi-menu' }}</v-icon>
             </v-btn>
@@ -174,33 +218,41 @@
             <NuxtLink
               to="/projects"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-folder-multiple</v-icon>
+              <v-icon size="20">
+                mdi-folder-multiple
+              </v-icon>
               Projects
             </NuxtLink>
             <NuxtLink
               to="/bots"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-robot</v-icon>
+              <v-icon size="20">
+                mdi-robot
+              </v-icon>
               Bots
             </NuxtLink>
             <NuxtLink
               to="/models"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-brain</v-icon>
+              <v-icon size="20">
+                mdi-brain
+              </v-icon>
               Models
             </NuxtLink>
             <NuxtLink
               to="/pipelines"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-timeline</v-icon>
+              <v-icon size="20">
+                mdi-timeline
+              </v-icon>
               Pipelines
             </NuxtLink>
           </div>
@@ -210,17 +262,21 @@
             <NuxtLink
               to="/llm"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-brain</v-icon>
+              <v-icon size="20">
+                mdi-brain
+              </v-icon>
               LLM
             </NuxtLink>
             <NuxtLink
               to="/llm/train"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-school</v-icon>
+              <v-icon size="20">
+                mdi-school
+              </v-icon>
               Training
             </NuxtLink>
           </div>
@@ -230,25 +286,31 @@
             <NuxtLink
               to="/deploy"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-rocket-launch</v-icon>
+              <v-icon size="20">
+                mdi-rocket-launch
+              </v-icon>
               Deploy
             </NuxtLink>
             <NuxtLink
               to="/dashboard"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-view-dashboard</v-icon>
+              <v-icon size="20">
+                mdi-view-dashboard
+              </v-icon>
               Dashboard
             </NuxtLink>
             <NuxtLink
               to="/debug"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-bug</v-icon>
+              <v-icon size="20">
+                mdi-bug
+              </v-icon>
               Debug
             </NuxtLink>
           </div>
@@ -258,41 +320,51 @@
             <NuxtLink
               to="/documentation"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-book-open-variant</v-icon>
+              <v-icon size="20">
+                mdi-book-open-variant
+              </v-icon>
               Documentation
             </NuxtLink>
             <NuxtLink
               to="/support"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-help-circle</v-icon>
+              <v-icon size="20">
+                mdi-help-circle
+              </v-icon>
               Support
             </NuxtLink>
             <NuxtLink
               to="/api-reference"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-api</v-icon>
+              <v-icon size="20">
+                mdi-api
+              </v-icon>
               API Reference
             </NuxtLink>
             <NuxtLink
               to="/tutorials"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-school</v-icon>
+              <v-icon size="20">
+                mdi-school
+              </v-icon>
               Tutorials
             </NuxtLink>
             <NuxtLink
               to="/community"
               class="mobile-nav-link"
-              @click="showMobileMenu = false"
+              @click="closeMobileMenu"
             >
-              <v-icon size="20">mdi-account-group</v-icon>
+              <v-icon size="20">
+                mdi-account-group
+              </v-icon>
               Community
             </NuxtLink>
           </div>
@@ -304,7 +376,7 @@
         </main>
       </div>
       <footer class="app-footer">
-        <div class="footer-gradient"></div>
+        <div class="footer-gradient" />
         <div class="footer-content">
           <div class="footer-main">
             <div class="footer-brand-section">
@@ -322,8 +394,13 @@
                       height="48"
                       rx="12"
                       fill="url(#gradient)"
-                    ></rect>
-                    <circle cx="24" cy="24" r="14" fill="#fff"></circle>
+                    />
+                    <circle
+                      cx="24"
+                      cy="24"
+                      r="14"
+                      fill="#fff"
+                    />
                     <text
                       x="50%"
                       y="54%"
@@ -356,8 +433,12 @@
                   </svg>
                 </div>
                 <div class="brand-info">
-                  <h3 class="footer-brand">Cloudless Wizard</h3>
-                  <p class="footer-tagline">AI-Powered Cloud Solutions</p>
+                  <h3 class="footer-brand">
+                    Cloudless Wizard
+                  </h3>
+                  <p class="footer-tagline">
+                    AI-Powered Cloud Solutions
+                  </p>
                 </div>
               </div>
               <p class="footer-description">
@@ -383,105 +464,107 @@
             <div class="footer-links-grid">
               <div class="footer-section">
                 <h4 class="footer-section-title">
-                  <v-icon size="16" class="section-icon"
-                    >mdi-rocket-launch</v-icon
-                  >
+                  <v-icon size="16" class="section-icon">
+                    mdi-rocket-launch
+                  </v-icon>
                   Build
                 </h4>
                 <ul class="footer-links">
                   <li>
-                    <NuxtLink to="/bots" class="footer-link"
-                      >Bot Builder</NuxtLink
-                    >
+                    <NuxtLink to="/bots" class="footer-link">
+                      Bot Builder
+                    </NuxtLink>
                   </li>
                   <li>
-                    <NuxtLink to="/models" class="footer-link"
-                      >Model Training</NuxtLink
-                    >
+                    <NuxtLink to="/models" class="footer-link">
+                      Model Training
+                    </NuxtLink>
                   </li>
                   <li>
-                    <NuxtLink to="/pipelines" class="footer-link"
-                      >Pipeline Creator</NuxtLink
-                    >
+                    <NuxtLink to="/pipelines" class="footer-link">
+                      Pipeline Creator
+                    </NuxtLink>
                   </li>
                   <li>
-                    <NuxtLink to="/llm" class="footer-link"
-                      >LLM Management</NuxtLink
-                    >
+                    <NuxtLink to="/llm" class="footer-link">
+                      LLM Management
+                    </NuxtLink>
                   </li>
                 </ul>
               </div>
 
               <div class="footer-section">
                 <h4 class="footer-section-title">
-                  <v-icon size="16" class="section-icon">mdi-tools</v-icon>
+                  <v-icon size="16" class="section-icon">
+                    mdi-tools
+                  </v-icon>
                   Tools
                 </h4>
                 <ul class="footer-links">
                   <li>
-                    <NuxtLink to="/debug" class="footer-link"
-                      >Debug Tools</NuxtLink
-                    >
+                    <NuxtLink to="/debug" class="footer-link">
+                      Debug Tools
+                    </NuxtLink>
                   </li>
                   <li>
-                    <NuxtLink to="/deploy" class="footer-link"
-                      >Deployment</NuxtLink
-                    >
+                    <NuxtLink to="/deploy" class="footer-link">
+                      Deployment
+                    </NuxtLink>
                   </li>
                   <li>
-                    <NuxtLink to="/projects" class="footer-link"
-                      >Projects</NuxtLink
-                    >
+                    <NuxtLink to="/projects" class="footer-link">
+                      Projects
+                    </NuxtLink>
                   </li>
                   <li>
-                    <NuxtLink to="/dashboard" class="footer-link"
-                      >Dashboard</NuxtLink
-                    >
+                    <NuxtLink to="/dashboard" class="footer-link">
+                      Dashboard
+                    </NuxtLink>
                   </li>
                 </ul>
               </div>
 
               <div class="footer-section">
                 <h4 class="footer-section-title">
-                  <v-icon size="16" class="section-icon"
-                    >mdi-book-open-variant</v-icon
-                  >
+                  <v-icon size="16" class="section-icon">
+                    mdi-book-open-variant
+                  </v-icon>
                   Resources
                 </h4>
                 <ul class="footer-links">
                   <li>
-                    <NuxtLink to="/documentation" class="footer-link"
-                      >Documentation</NuxtLink
-                    >
+                    <NuxtLink to="/documentation" class="footer-link">
+                      Documentation
+                    </NuxtLink>
                   </li>
                   <li>
-                    <NuxtLink to="/support" class="footer-link"
-                      >Support</NuxtLink
-                    >
+                    <NuxtLink to="/support" class="footer-link">
+                      Support
+                    </NuxtLink>
                   </li>
                   <li>
-                    <NuxtLink to="/api-reference" class="footer-link"
-                      >API Reference</NuxtLink
-                    >
+                    <NuxtLink to="/api-reference" class="footer-link">
+                      API Reference
+                    </NuxtLink>
                   </li>
                   <li>
-                    <NuxtLink to="/tutorials" class="footer-link"
-                      >Tutorials</NuxtLink
-                    >
+                    <NuxtLink to="/tutorials" class="footer-link">
+                      Tutorials
+                    </NuxtLink>
                   </li>
                   <li>
-                    <NuxtLink to="/community" class="footer-link"
-                      >Community</NuxtLink
-                    >
+                    <NuxtLink to="/community" class="footer-link">
+                      Community
+                    </NuxtLink>
                   </li>
                 </ul>
               </div>
 
               <div class="footer-section">
                 <h4 class="footer-section-title">
-                  <v-icon size="16" class="section-icon"
-                    >mdi-account-group</v-icon
-                  >
+                  <v-icon size="16" class="section-icon">
+                    mdi-account-group
+                  </v-icon>
                   Company
                 </h4>
                 <ul class="footer-links">
@@ -583,27 +666,25 @@
         <div class="footer-bottom">
           <div class="footer-bottom-content">
             <div class="footer-bottom-left">
-              <span class="copyright"
-                >&copy; 2025 Cloudless Wizard. All rights reserved.</span
-              >
+              <span class="copyright">&copy; 2025 Cloudless Wizard. All rights reserved.</span>
               <div class="footer-badges">
                 <span class="badge">Made with ❤️</span>
                 <span class="badge">Powered by AI</span>
               </div>
             </div>
             <div class="footer-bottom-links">
-              <NuxtLink to="/privacy" class="footer-bottom-link"
-                >Privacy Policy</NuxtLink
-              >
-              <NuxtLink to="/terms" class="footer-bottom-link"
-                >Terms of Service</NuxtLink
-              >
-              <NuxtLink to="/cookies" class="footer-bottom-link"
-                >Cookie Policy</NuxtLink
-              >
-              <NuxtLink to="/support" class="footer-bottom-link"
-                >Support</NuxtLink
-              >
+              <NuxtLink to="/privacy" class="footer-bottom-link">
+                Privacy Policy
+              </NuxtLink>
+              <NuxtLink to="/terms" class="footer-bottom-link">
+                Terms of Service
+              </NuxtLink>
+              <NuxtLink to="/cookies" class="footer-bottom-link">
+                Cookie Policy
+              </NuxtLink>
+              <NuxtLink to="/support" class="footer-bottom-link">
+                Support
+              </NuxtLink>
             </div>
           </div>
         </div>
@@ -652,7 +733,7 @@ declare global {
   }
 }
 
-function loadScript(src: string): Promise<void> {
+const loadScript = (src: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     // Check if script is already loaded
     if (document.querySelector(`script[src="${src}"]`)) {
@@ -669,7 +750,7 @@ function loadScript(src: string): Promise<void> {
   })
 }
 
-function hexToColor(hex: string | number): number {
+const hexToColor = (hex: string | number): number => {
   if (typeof hex === 'number') return hex
   if (typeof hex === 'string' && hex.startsWith('#')) {
     return parseInt(hex.replace('#', '0x'))
@@ -678,7 +759,7 @@ function hexToColor(hex: string | number): number {
 }
 
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null
-function debouncedResize() {
+const debouncedResize = () => {
   if (resizeTimeout) clearTimeout(resizeTimeout)
   resizeTimeout = setTimeout(() => {
     if (vantaEffect && typeof vantaEffect.resize === 'function') {
@@ -687,18 +768,18 @@ function debouncedResize() {
   }, 200)
 }
 
-function destroyVanta() {
+const destroyVanta = () => {
   if (vantaEffect) {
     try {
       vantaEffect.destroy()
     } catch (error) {
-      console.warn('Error destroying Vanta effect:', error)
+      // console.warn('Error destroying Vanta effect:', error)
     }
     vantaEffect = null
   }
 }
 
-async function initVanta() {
+const initVanta = async () => {
   if (!process.client) return
 
   destroyVanta()
@@ -720,12 +801,12 @@ async function initVanta() {
 
     // Check if everything is loaded
     if (!window.THREE) {
-      console.error('THREE.js not loaded')
+      // console.error('THREE.js not loaded')
       return
     }
 
     if (!window.VANTA || !window.VANTA.CLOUDS2) {
-      console.error('VANTA.CLOUDS2 not loaded')
+      // console.error('VANTA.CLOUDS2 not loaded')
       return
     }
 
@@ -750,13 +831,13 @@ async function initVanta() {
       // texturePath: '/vanta/gallery/noise.png'
     })
 
-    console.log('Vanta CLOUDS2 initialized successfully')
+    // console.log('Vanta CLOUDS2 initialized successfully')
   } catch (error) {
-    console.error('Error initializing Vanta:', error)
+    // console.error('Error initializing Vanta:', error)
   }
 }
 
-function onVantaUpdate(opts: any) {
+const onVantaUpdate = (opts: any) => {
   vantaEnabled.value = opts.enabled
   vantaOptions.value = { ...vantaOptions.value, ...opts }
 
@@ -778,7 +859,7 @@ function onVantaUpdate(opts: any) {
         gyroControls: opts.gyroControls,
       })
     } catch (error) {
-      console.warn('Error updating Vanta options:', error)
+      // console.warn('Error updating Vanta options:', error)
       // Reinitialize if update fails
       initVanta()
     }
@@ -788,12 +869,16 @@ function onVantaUpdate(opts: any) {
   }
 }
 
-function toggleDropdown(dropdown: string) {
-  if (activeDropdown.value === dropdown) {
-    activeDropdown.value = null
-  } else {
-    activeDropdown.value = dropdown
-  }
+const toggleDropdown = (dropdown: string) => {
+  activeDropdown.value = activeDropdown.value === dropdown ? null : dropdown
+}
+
+const toggleMobileMenu = () => {
+  showMobileMenu.value = !showMobileMenu.value
+}
+
+const closeMobileMenu = () => {
+  showMobileMenu.value = false
 }
 
 // Watch for vanta options changes
@@ -817,7 +902,7 @@ watch(
           gyroControls: newOptions.gyroControls,
         })
       } catch (error) {
-        console.warn('Error updating Vanta options from watch:', error)
+        // console.warn('Error updating Vanta options from watch:', error)
       }
     }
   },
@@ -844,6 +929,18 @@ onBeforeUnmount(() => {
     clearTimeout(resizeTimeout)
   }
 })
+
+const toggleVantaControls = () => {
+  showVantaControls.value = !showVantaControls.value
+}
+
+const closeVantaControls = () => {
+  showVantaControls.value = false
+}
+
+const toggleBuildDropdown = () => toggleDropdown('build')
+const toggleAiDropdown = () => toggleDropdown('ai')
+const toggleOpsDropdown = () => toggleDropdown('ops')
 </script>
 
 <style scoped>

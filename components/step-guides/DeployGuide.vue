@@ -1,5 +1,10 @@
 <template>
-  <v-alert type="info" border="start" color="primary" class="mb-4">
+  <v-alert
+    type="info"
+    border="start"
+    color="primary"
+    class="mb-4"
+  >
     <strong>Step 6: Deploy</strong><br>
     Deploy your models to make them available as APIs or endpoints.<br>
     <ul>

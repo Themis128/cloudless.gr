@@ -1,11 +1,15 @@
 <template>
   <v-card class="pipeline-builder-card">
     <v-card-title class="d-flex align-center">
-      <v-icon start>mdi-pipe</v-icon>
+      <v-icon start>
+        mdi-pipe
+      </v-icon>
       Create Pipeline
     </v-card-title>
     <v-card-text>
-      <p class="mb-4">Build a new pipeline to automate your workflows.</p>
+      <p class="mb-4">
+        Build a new pipeline to automate your workflows.
+      </p>
       <v-list>
         <v-list-item prepend-icon="mdi-cog-outline">
           Configure steps and logic

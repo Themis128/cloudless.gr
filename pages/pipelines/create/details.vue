@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -81,7 +81,7 @@ const isValid = computed(() => {
   return form.value.name.length > 0
 })
 
-async function savePipelineDetails() {
+const savePipelineDetails = async () => {
   if (!isValid.value) return
   
   loading.value = true
@@ -91,7 +91,7 @@ async function savePipelineDetails() {
     // Navigate to next step
     router.push('/pipelines/create/model-selection')
   } catch (error) {
-    console.error('Error saving pipeline details:', error)
+    // console.error('Error saving pipeline details:', error)
   } finally {
     loading.value = false
   }

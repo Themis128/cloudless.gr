@@ -1,8 +1,7 @@
 import { ref } from 'vue'
 import { useSupabase } from './supabase'
-import type { Pipeline, PipelineStep, PipelineConfig } from '~/types/Pipeline'
 
-export function usePipelineRunner() {
+export const usePipelineRunner = () => {
   const supabase = useSupabase()
   const isRunning = ref(false)
   const currentStep = ref<number>(0)
@@ -10,11 +9,11 @@ export function usePipelineRunner() {
   const error = ref<string | null>(null)
   const progress = ref<number>(0)
 
-  function addLog(message: string) {
+  const addLog = (message: string) => {
     logs.value.push(`[${new Date().toISOString()}] ${message}`)
   }
 
-  async function executeStep(step: PipelineStep) {
+  const executeStep = async (step: any) => {
     addLog(`Starting step: ${step.name}`)
     step.status = 'running'
 
@@ -43,28 +42,28 @@ export function usePipelineRunner() {
     }
   }
 
-  async function handleInputProcessing(step: PipelineStep) {
+  const handleInputProcessing = async () => {
     // Implement input processing logic based on step.config
-    const { extract_code_context, identify_language } = step.config
+    // const { extract_code_context, identify_language } = step.config
     await new Promise(resolve => setTimeout(resolve, 1000)) // Simulated delay
     return { processed: true }
   }
 
-  async function handleLLMProcessing(step: PipelineStep) {
+  const handleLLMProcessing = async () => {
     // Implement LLM processing logic based on step.config
-    const { temperature, max_tokens, include_code_blocks, format } = step.config
+    // const { temperature, max_tokens, include_code_blocks, format } = step.config
     await new Promise(resolve => setTimeout(resolve, 1000)) // Simulated delay
     return { processed: true }
   }
 
-  async function handleOutputProcessing(step: PipelineStep) {
+  const handleOutputProcessing = async () => {
     // Implement output processing logic based on step.config
-    const { highlight_code, add_explanations, format_markdown } = step.config
+    // const { highlight_code, add_explanations, format_markdown } = step.config
     await new Promise(resolve => setTimeout(resolve, 1000)) // Simulated delay
     return { processed: true }
   }
 
-  async function runPipeline(pipelineId: string) {
+  const runPipeline = async (pipelineId: string) => {
     isRunning.value = true
     error.value = null
     logs.value = []
@@ -82,13 +81,13 @@ export function usePipelineRunner() {
       if (err) throw err
       if (!pipeline) throw new Error('Pipeline not found')
 
-      const config = pipeline.config as PipelineConfig
+      const config = pipeline.config as any
       if (!config.steps?.length) {
         throw new Error('Pipeline has no steps configured')
       }
 
       // Initialize steps
-      config.steps.forEach(step => {
+      config.steps.forEach((step: any) => {
         step.status = 'pending'
       })
 

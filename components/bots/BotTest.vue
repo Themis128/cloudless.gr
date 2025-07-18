@@ -7,35 +7,48 @@
       </v-alert>
       <v-list>
         <v-list-item v-for="msg in messages" :key="msg.id">
-          <template #prepend v-if="msg.role === 'user'">
+          <template v-if="msg.role === 'user'" #prepend>
             <v-icon icon="mdi-account" class="me-2" />
           </template>
-          <template #prepend v-else>
+          <template v-else #prepend>
             <v-icon icon="mdi-robot" color="primary" class="me-2" />
           </template>
           <v-list-item-title>
-            <span v-if="msg.role === 'user'" class="font-weight-bold">You:</span>
+            <span
+              v-if="msg.role === 'user'"
+              class="font-weight-bold"
+            >You:</span>
             <span v-else class="text-primary">Bot:</span>
             <span class="ml-2">{{ msg.text }}</span>
           </v-list-item-title>
         </v-list-item>
       </v-list>
-      <v-text-field 
-        v-model="input" 
-        label="Type your message..." 
-        @keyup.enter="sendMessage"
+      <v-text-field
+        v-model="input"
+        label="Type your message..."
         append-inner-icon="mdi-send"
-        @click:append-inner="sendMessage"
         :disabled="loading"
+        @keyup.enter="sendMessage"
+        @click:append-inner="sendMessage"
       />
       <div v-if="steps.length" class="mt-6">
-        <v-progress-linear :value="progress" color="primary" height="8" rounded />
+        <v-progress-linear
+          :value="progress"
+          color="primary"
+          height="8"
+          rounded
+        />
         <v-list class="mt-2">
           <v-list-item v-for="(step, idx) in steps" :key="step.name">
-            <v-list-item-title :class="[
-              step.status === 'running' ? 'text-primary font-weight-bold' : 
-              step.status === 'complete' ? 'text-success' : 'text-grey'
-            ]">
+            <v-list-item-title
+              :class="[
+                step.status === 'running'
+                  ? 'text-primary font-weight-bold'
+                  : step.status === 'complete'
+                    ? 'text-success'
+                    : 'text-grey',
+              ]"
+            >
               {{ idx + 1 }}. {{ step.name }}
               <span v-if="step.status === 'running'">(Running)</span>
               <span v-else-if="step.status === 'complete'">(Complete)</span>
@@ -63,14 +76,7 @@ if (Array.isArray(botId)) botId = botId[0]
 
 const loading = ref(false)
 
-const {
-  input,
-  messages,
-  steps,
-  progress,
-  sendMessage,
-  reset
-} = useBotTest(botId)
+const { input, messages, steps, progress, sendMessage } = useBotTest(botId)
 </script>
 
 <style scoped>

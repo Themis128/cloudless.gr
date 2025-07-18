@@ -5,7 +5,9 @@
         <v-list-item-title>{{ project.name }}</v-list-item-title>
       </v-list-item>
     </v-list>
-    <div v-else>No projects found.</div>
+    <div v-else>
+      No projects found.
+    </div>
   </div>
 </template>
 

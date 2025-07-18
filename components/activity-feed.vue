@@ -6,14 +6,15 @@
         <v-list-item-subtitle>{{ log.created_at }}</v-list-item-subtitle>
       </v-list-item>
     </v-list>
-    <div v-else>No recent activity.</div>
+    <div v-else>
+      No recent activity.
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useSupabase } from '~/composables/supabase'
-import type { Database } from '~/types/database.types'
 
 type AuditLog = {
   id: string

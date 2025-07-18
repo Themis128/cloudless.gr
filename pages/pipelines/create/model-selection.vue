@@ -163,7 +163,7 @@
                 <v-btn
                   color="secondary"
                   variant="outlined"
-                  @click="router.push('/pipelines/create/details')"
+                  @click="goBack"
                 >
                   Back
                 </v-btn>
@@ -186,10 +186,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSupabase } from '~/composables/supabase'
-import type { Model, ModelConfig, ModelParams, CustomModel } from '~/types/Pipeline'
+import type { CustomModel, Model, ModelConfig, ModelParams } from '~/types/Pipeline'
 
 const router = useRouter()
 const supabase = useSupabase()
@@ -243,13 +243,17 @@ onMounted(async () => {
     if (error) throw error
     availableModels.value = data || []
   } catch (error) {
-    console.error('Error loading models:', error)
+    // console.error('Error loading models:', error)
   } finally {
     loadingModels.value = false
   }
 })
 
-async function saveModelSelection() {
+const goBack = () => {
+  router.push('/pipelines/create/details')
+}
+
+const saveModelSelection = async () => {
   if (!isValid.value) return
   
   loading.value = true
@@ -270,7 +274,7 @@ async function saveModelSelection() {
     localStorage.setItem('pipelineModelConfig', JSON.stringify(modelConfig))
     router.push('/pipelines/create/config')
   } catch (error) {
-    console.error('Error saving model selection:', error)
+    // console.error('Error saving model selection:', error)
   } finally {
     loading.value = false
   }

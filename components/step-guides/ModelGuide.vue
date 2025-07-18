@@ -1,5 +1,10 @@
 <template>
-  <v-alert type="info" border="start" color="primary" class="mb-4">
+  <v-alert
+    type="info"
+    border="start"
+    color="primary"
+    class="mb-4"
+  >
     <strong>Step 3: Add Models</strong><br>
     Models are the brains of your bots and pipelines. Add or create a model to enable AI capabilities.<br>
     <ul>

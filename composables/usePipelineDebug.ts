@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 
-export function usePipelineDebug() {
+export const usePipelineDebug = () => {
   const pipelineStatus = ref({
     step: 'Initializing',
     complete: 0,
@@ -10,7 +10,7 @@ export function usePipelineDebug() {
 
   const pipelineLogs = ref<string[]>([])
 
-  function simulateStep(step: string) {
+  const simulateStep = (step: string) => {
     pipelineLogs.value.push(`Starting ${step}...`)
     setTimeout(() => {
       pipelineStatus.value.complete++
@@ -18,7 +18,7 @@ export function usePipelineDebug() {
     }, 500)
   }
 
-  function runAll() {
+  const runAll = () => {
     for (const step of pipelineStatus.value.steps) simulateStep(step)
   }
 

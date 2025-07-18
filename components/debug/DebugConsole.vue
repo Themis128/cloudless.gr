@@ -1,38 +1,51 @@
 <template>
   <div class="debug-console">
-    <div v-if="title" class="console-title">{{ title }}</div>
-    <div class="console-output">
-      <div v-for="(line, idx) in outputProp" :key="idx" class="console-line">{{ line }}</div>
+    <div v-if="title" class="console-title">
+      {{ title }}
     </div>
-    <form @submit.prevent="onRunCommand" class="console-input-form">
-      <input v-model="command" class="console-input" placeholder="Type a command..." autocomplete="off" />
-      <button type="submit">Run</button>
+    <div class="console-output">
+      <div v-for="(line, idx) in outputProp" :key="idx" class="console-line">
+        {{ line }}
+      </div>
+    </div>
+    <form class="console-input-form" @submit.prevent="onRunCommand">
+      <input
+        v-model="command"
+        class="console-input"
+        placeholder="Type a command..."
+        autocomplete="off"
+      >
+      <button type="submit">
+        Run
+      </button>
     </form>
   </div>
 </template>
+
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue'
 const props = defineProps({
   output: {
     type: Array,
-    default: () => ["Welcome to the Debug Console!"]
+    default: () => ['Welcome to the Debug Console!'],
   },
   title: {
     type: String,
-    default: ''
-  }
-});
-const emit = defineEmits(['run']);
-const command = ref("");
-const outputProp = computed(() => props.output);
+    default: '',
+  },
+})
+const emit = defineEmits(['run'])
+const command = ref('')
+const outputProp = computed(() => props.output)
 
-function onRunCommand() {
+const onRunCommand = () => {
   if (command.value.trim()) {
-    emit('run', command.value);
-    command.value = "";
+    emit('run', command.value)
+    command.value = ''
   }
 }
 </script>
+
 <style scoped>
 .debug-console {
   font-family: monospace;
@@ -42,7 +55,7 @@ function onRunCommand() {
   padding: 16px;
   max-width: 600px;
   margin: 0 auto;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 .console-title {
   font-weight: bold;
@@ -73,7 +86,7 @@ function onRunCommand() {
   background: #222;
   color: #e0e0e0;
 }
-button[type="submit"] {
+button[type='submit'] {
   background: #444;
   color: #fff;
   border: none;
@@ -82,7 +95,7 @@ button[type="submit"] {
   cursor: pointer;
   transition: background 0.2s;
 }
-button[type="submit"]:hover {
+button[type='submit']:hover {
   background: #666;
 }
 </style>

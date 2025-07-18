@@ -34,7 +34,11 @@ module.exports = {
     'vue/v-on-function-call': 'error',
     'vue/v-on-event-hyphenation': 'error',
     'vue/v-on-handler-style': 'error',
-    'vue/v-slot-style': 'error',
+    // Vuetify 3 v-slot compatibility rules
+    'vue/valid-v-slot': ['error', {
+      allowModifiers: true
+    }],
+    'vue/v-slot-style': ['error', 'shorthand'],
     // Function declaration rules
     'func-style': ['error', 'expression'],
     'no-inner-declarations': 'error',
