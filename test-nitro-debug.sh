@@ -69,6 +69,29 @@ echo "  NITRO_LOG_LEVEL: $NITRO_LOG_LEVEL"
 echo "  NUXT_PUBLIC_SUPABASE_URL: $NUXT_PUBLIC_SUPABASE_URL"
 echo "  NUXT_PUBLIC_SUPABASE_ANON_KEY: ${NUXT_PUBLIC_SUPABASE_ANON_KEY:0:10}..."
 
+# Print all environment variables for debugging
+print_status "🔍 All environment variables:"
+env | grep -E "(NITRO|NUXT|SUPABASE|NODE)" | sort
+
+# Check for .env file
+print_status "🔍 Checking for .env file..."
+if [ -f ".env" ]; then
+    print_success "✅ .env file found"
+    echo "First 5 lines of .env:"
+    head -5 .env
+else
+    print_warning "⚠️  No .env file found"
+fi
+
+# Check nuxt.config.ts
+print_status "🔍 Checking nuxt.config.ts..."
+if [ -f "nuxt.config.ts" ]; then
+    print_success "✅ nuxt.config.ts found"
+    echo "Config file size: $(wc -l < nuxt.config.ts) lines"
+else
+    print_error "❌ nuxt.config.ts not found"
+fi
+
 # Check file permissions and dependencies
 print_status "🔍 Checking file permissions and dependencies..."
 echo "Server file permissions:"
@@ -100,6 +123,23 @@ if [ -f ".output/server/package.json" ]; then
     fi
 fi
 
+# Check for external dependencies bundling
+print_status "🔍 Checking external dependencies bundling..."
+if [ -f ".output/server/package.json" ]; then
+    echo "External dependencies in server package.json:"
+    grep -A 10 '"dependencies"' .output/server/package.json || echo "No dependencies section found"
+fi
+
+# Check if external modules are properly bundled
+print_status "🔍 Checking for external module issues..."
+EXTERNAL_MODULES=$(find .output/server -name "*.mjs" -exec grep -l "import.*from.*['\"]" {} \; 2>/dev/null | head -5)
+if [ -n "$EXTERNAL_MODULES" ]; then
+    echo "Files with imports found:"
+    echo "$EXTERNAL_MODULES"
+else
+    print_warning "⚠️  No import statements found in .mjs files"
+fi
+
 # Test 1: Syntax check
 print_status "🧪 Test 1: Syntax check..."
 if node --check .output/server/index.mjs 2>/dev/null; then
@@ -109,9 +149,9 @@ else
     node --check .output/server/index.mjs
 fi
 
-# Test 2: Module loading test
-print_status "🧪 Test 2: Module loading test..."
-if timeout 10s node --input-type=module --trace-warnings .output/server/index.mjs > /dev/null 2>&1; then
+# Test 2: Module loading test with --trace-uncaught
+print_status "🧪 Test 2: Module loading test with --trace-uncaught..."
+if timeout 10s node --input-type=module --trace-warnings --trace-uncaught .output/server/index.mjs > /dev/null 2>&1; then
     print_success "✅ Module loading test passed"
 else
     print_error "❌ Module loading test failed"
@@ -119,15 +159,15 @@ else
     timeout 10s node --input-type=module --trace-warnings --trace-uncaught .output/server/index.mjs 2>&1 || true
 fi
 
-# Test 3: Direct execution with full error capture
-print_status "🧪 Test 3: Direct execution with full error capture..."
+# Test 3: Direct execution with full error capture and --trace-uncaught
+print_status "🧪 Test 3: Direct execution with full error capture and --trace-uncaught..."
 echo "Running: node --trace-warnings --trace-uncaught .output/server/index.mjs"
 
 # Create a temporary log file
 LOG_FILE=$(mktemp)
 echo "Log file: $LOG_FILE"
 
-# Run server with detailed output
+# Run server with detailed output including --trace-uncaught
 timeout 30s node --trace-warnings --trace-uncaught .output/server/index.mjs > "$LOG_FILE" 2>&1 &
 SERVER_PID=$!
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# GitHub Secrets Setup Script
-# This script helps you set up GitHub repository secrets using GitHub CLI
+# GitHub Secrets Setup Script (Bash)
+# This script helps set up GitHub secrets for the CI workflow
 
 set -e
 
@@ -29,90 +29,69 @@ print_error() {
 }
 
 echo "🔐 GitHub Secrets Setup Script"
-echo ""
+echo "================================"
 
-# Check if GitHub CLI is installed
+# Check if GitHub CLI is available
 if ! command -v gh &> /dev/null; then
-    print_error "❌ GitHub CLI (gh) is not installed"
-    echo ""
-    print_warning "Install GitHub CLI:"
-    echo "  Windows: winget install GitHub.cli"
+    print_error "❌ GitHub CLI not found"
+    echo "Please install GitHub CLI first:"
     echo "  macOS: brew install gh"
-    echo "  Linux: sudo apt install gh"
-    echo ""
-    print_warning "After installation, restart your terminal and run:"
-    echo "  gh auth login"
+    echo "  Ubuntu/Debian: sudo apt install gh"
+    echo "  Windows: winget install --id GitHub.cli"
+    echo "  Or download from: https://cli.github.com/"
     exit 1
 fi
+
+print_success "✅ GitHub CLI is available"
 
 # Check if user is authenticated
 if ! gh auth status &> /dev/null; then
     print_error "❌ Not authenticated with GitHub CLI"
-    echo ""
-    print_warning "Please authenticate first:"
-    echo "  gh auth login"
+    echo "Please run: gh auth login"
     exit 1
 fi
 
-print_success "✅ GitHub CLI is installed and authenticated"
+print_success "✅ Authenticated with GitHub CLI"
+
+# Get Supabase credentials
 echo ""
-
-# Get repository info
-REPO_OWNER="Themis128"
-REPO_NAME="cloudless.gr"
-
-print_status "Repository: $REPO_OWNER/$REPO_NAME"
-echo ""
-
-# Prompt for Supabase credentials
-echo "Please enter your Supabase credentials:"
-echo ""
-
-read -p "Supabase URL (e.g., https://abcdefghijklmnop.supabase.co): " SUPABASE_URL
-read -p "Supabase anon key (starts with eyJ...): " SUPABASE_ANON_KEY
+read -p "Enter your Supabase URL (e.g., https://your-project.supabase.co): " SUPABASE_URL
+read -p "Enter your Supabase Anon Key: " SUPABASE_ANON_KEY
 
 # Validate inputs
-if [[ ! "$SUPABASE_URL" =~ ^https://.*\.supabase\.co$ ]]; then
-    print_error "❌ Invalid Supabase URL format"
+if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+    print_error "❌ Both Supabase URL and Anon Key are required"
     exit 1
 fi
 
-if [[ ! "$SUPABASE_ANON_KEY" =~ ^eyJ.* ]]; then
-    print_error "❌ Invalid Supabase anon key format"
+if [[ ! "$SUPABASE_URL" =~ ^https:// ]]; then
+    print_error "❌ Supabase URL must start with https://"
     exit 1
 fi
 
-print_success "✅ Input validation passed"
-echo ""
-
-# Set GitHub secrets
 print_status "🔧 Setting up GitHub secrets..."
 
 # Set SUPABASE_URL secret
 print_status "Setting SUPABASE_URL secret..."
-if gh secret set SUPABASE_URL --repo "$REPO_OWNER/$REPO_NAME" --body "$SUPABASE_URL"; then
-    print_success "✅ Successfully set SUPABASE_URL secret"
+if gh secret set SUPABASE_URL --body "$SUPABASE_URL"; then
+    print_success "✅ SUPABASE_URL secret set successfully"
 else
     print_error "❌ Failed to set SUPABASE_URL secret"
-    exit 1
 fi
 
 # Set SUPABASE_ANON_KEY secret
 print_status "Setting SUPABASE_ANON_KEY secret..."
-if gh secret set SUPABASE_ANON_KEY --repo "$REPO_OWNER/$REPO_NAME" --body "$SUPABASE_ANON_KEY"; then
-    print_success "✅ Successfully set SUPABASE_ANON_KEY secret"
+if gh secret set SUPABASE_ANON_KEY --body "$SUPABASE_ANON_KEY"; then
+    print_success "✅ SUPABASE_ANON_KEY secret set successfully"
 else
     print_error "❌ Failed to set SUPABASE_ANON_KEY secret"
-    exit 1
 fi
 
+# List current secrets
 echo ""
-print_success "🎉 All secrets set successfully!"
+print_status "📋 Current repository secrets:"
+gh secret list || print_warning "⚠️  Could not list secrets"
+
 echo ""
-print_status "Next steps:"
-print_warning "1. Push a new commit to trigger the CI workflow"
-print_warning "2. Or re-run the failed workflow from GitHub Actions tab"
-print_warning "3. The integration tests should now pass with real Supabase credentials"
-echo ""
-print_status "You can verify the secrets were set by running:"
-echo "  gh secret list --repo $REPO_OWNER/$REPO_NAME" 
+print_success "🎉 GitHub secrets setup completed!"
+echo "You can now run your CI workflow and it should have access to the Supabase credentials." 

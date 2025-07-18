@@ -334,22 +334,50 @@ jobs:
           echo "NUXT_PUBLIC_SUPABASE_URL: $NUXT_PUBLIC_SUPABASE_URL"
           echo "NUXT_PUBLIC_SUPABASE_ANON_KEY: ${NUXT_PUBLIC_SUPABASE_ANON_KEY:0:20}..."
 
+          # Print all environment variables for debugging
+          echo "🔍 All environment variables:"
+          env | grep -E "(NITRO|NUXT|SUPABASE|NODE)" | sort
+
+          # Run environment debug script
+          echo "🔍 Running environment debug script..."
+          node test-env-debug.js
+
           # Check file permissions
           echo "🔍 File permissions check:"
           ls -la .output/server/index.mjs
           ls -la .output/server/node_modules | head -5
 
-          # Make the debug integration test script executable
+          # Make the debug scripts executable
           chmod +x test-integration-debug.sh
+          chmod +x test-nitro-debug.sh
 
-          # Run the debug integration test as primary test
-          ./test-integration-debug.sh
+          # Run the comprehensive Nitro debug script as primary test
+          ./test-nitro-debug.sh
+        continue-on-error: false
+
+      - name: Fallback comprehensive Nitro debug
+        if: failure()
+        env:
+          NODE_ENV: production
+          NITRO_HOST: 0.0.0.0
+          NITRO_PORT: 3000
+          NITRO_LOG_LEVEL: debug
+          NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "🔄 Primary test failed, running comprehensive Nitro debug..."
+
+          # Make the debug script executable
+          chmod +x test-nitro-debug.sh
+
+          # Run the comprehensive Nitro debug script
+          ./test-nitro-debug.sh
         continue-on-error: false
 
       - name: Fallback simple integration test
         if: failure()
         run: |
-          echo "🔄 Debug integration test failed, trying simple fallback test..."
+          echo "🔄 Comprehensive debug failed, trying simple fallback test..."
 
           # Make the integration test script executable
           chmod +x test-integration.sh
@@ -402,13 +430,18 @@ jobs:
           NODE_ENV: production
           NITRO_HOST: 0.0.0.0
           NITRO_PORT: 3000
+          NITRO_LOG_LEVEL: debug
           NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           echo "🔄 All tests failed, running verbose Node.js error test..."
 
-          # Show Node.js errors with full stack traces
-          echo "Running server with verbose error output..."
+          # Print environment variables for debugging
+          echo "🔍 Environment variables:"
+          env | grep -E "(NITRO|NUXT|SUPABASE|NODE)" | sort
+
+          # Show Node.js errors with full stack traces and --trace-uncaught
+          echo "Running server with verbose error output and --trace-uncaught..."
           node --trace-uncaught --trace-warnings .output/server/index.mjs
         continue-on-error: true
 

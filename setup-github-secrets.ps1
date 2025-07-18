@@ -1,130 +1,113 @@
 # GitHub Secrets Setup Script
-# This script helps you set up GitHub repository secrets using the GitHub API
+# This script helps set up GitHub secrets for the CI workflow
 
 param(
-    [string]$RepoOwner = "Themis128",
-    [string]$RepoName = "cloudless.gr",
     [string]$SupabaseUrl,
-    [string]$SupabaseAnonKey
+    [string]$SupabaseAnonKey,
+    [string]$Repo = "cloudless.gr"
 )
 
-Write-Host "🔐 GitHub Secrets Setup Script" -ForegroundColor Cyan
-Write-Host ""
+Write-Host "🔐 GitHub Secrets Setup Script" -ForegroundColor Blue
+Write-Host "=================================" -ForegroundColor Blue
 
-# Check if GitHub token is available
-$githubToken = $env:GITHUB_TOKEN
-if (-not $githubToken) {
-    Write-Host "❌ GITHUB_TOKEN environment variable not set" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "To set up GitHub secrets, you need a Personal Access Token:" -ForegroundColor Yellow
-    Write-Host "1. Go to GitHub.com → Settings → Developer settings → Personal access tokens → Tokens (classic)" -ForegroundColor Yellow
-    Write-Host "2. Generate new token with 'repo' scope" -ForegroundColor Yellow
-    Write-Host "3. Set the token as environment variable: `$env:GITHUB_TOKEN = 'your-token'" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Or run this script with: GITHUB_TOKEN=your-token .\setup-github-secrets.ps1" -ForegroundColor Yellow
+# Check if GitHub CLI is available
+try {
+    $ghVersion = gh --version 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✅ GitHub CLI is available" -ForegroundColor Green
+    }
+    else {
+        throw "GitHub CLI not found"
+    }
+}
+catch {
+    Write-Host "❌ GitHub CLI not found or not working" -ForegroundColor Red
+    Write-Host "Please install GitHub CLI first:" -ForegroundColor Yellow
+    Write-Host "  winget install --id GitHub.cli" -ForegroundColor Yellow
+    Write-Host "  OR" -ForegroundColor Yellow
+    Write-Host "  choco install gh" -ForegroundColor Yellow
+    Write-Host "  OR" -ForegroundColor Yellow
+    Write-Host "  Download from: https://cli.github.com/" -ForegroundColor Yellow
+    exit 1
+}
+
+# Check if user is authenticated
+try {
+    $authStatus = gh auth status 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Not authenticated with GitHub CLI" -ForegroundColor Red
+        Write-Host "Please run: gh auth login" -ForegroundColor Yellow
+        exit 1
+    }
+    else {
+        Write-Host "✅ Authenticated with GitHub CLI" -ForegroundColor Green
+    }
+}
+catch {
+    Write-Host "❌ Authentication check failed" -ForegroundColor Red
     exit 1
 }
 
 # Prompt for Supabase credentials if not provided
 if (-not $SupabaseUrl) {
-    $SupabaseUrl = Read-Host "Enter your Supabase URL (e.g., https://abcdefghijklmnop.supabase.co)"
+    $SupabaseUrl = Read-Host "Enter your Supabase URL (e.g., https://your-project.supabase.co)"
 }
 
 if (-not $SupabaseAnonKey) {
-    $SupabaseAnonKey = Read-Host "Enter your Supabase anon key (starts with eyJ...)"
+    $SupabaseAnonKey = Read-Host "Enter your Supabase Anon Key"
 }
 
 # Validate inputs
-if (-not $SupabaseUrl.StartsWith("https://") -or -not $SupabaseUrl.EndsWith(".supabase.co")) {
-    Write-Host "❌ Invalid Supabase URL format" -ForegroundColor Red
+if (-not $SupabaseUrl -or -not $SupabaseAnonKey) {
+    Write-Host "❌ Both Supabase URL and Anon Key are required" -ForegroundColor Red
     exit 1
 }
 
-if (-not $SupabaseAnonKey.StartsWith("eyJ")) {
-    Write-Host "❌ Invalid Supabase anon key format" -ForegroundColor Red
+if (-not $SupabaseUrl.StartsWith("https://")) {
+    Write-Host "❌ Supabase URL must start with https://" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "✅ Input validation passed" -ForegroundColor Green
-Write-Host ""
-
-# Function to encrypt secret value using GitHub's public key
-function Get-GitHubPublicKey {
-    $url = "https://api.github.com/repos/$RepoOwner/$RepoName/actions/secrets/public-key"
-    $headers = @{
-        "Authorization" = "token $githubToken"
-        "Accept"        = "application/vnd.github.v3+json"
-    }
-    
-    try {
-        $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Get
-        return $response
-    }
-    catch {
-        Write-Host "❌ Failed to get GitHub public key: $($_.Exception.Message)" -ForegroundColor Red
-        exit 1
-    }
-}
-
-# Function to encrypt value using public key
-function Encrypt-GitHubSecret {
-    param(
-        [string]$Value,
-        [string]$PublicKey,
-        [string]$KeyId
-    )
-    
-    # This is a simplified version - in practice, you'd need to implement RSA encryption
-    # For now, we'll use the GitHub CLI approach or direct API call
-    return $Value
-}
-
-# Function to set GitHub secret
-function Set-GitHubSecret {
-    param(
-        [string]$SecretName,
-        [string]$SecretValue
-    )
-    
-    $url = "https://api.github.com/repos/$RepoOwner/$RepoName/actions/secrets/$SecretName"
-    $headers = @{
-        "Authorization" = "token $githubToken"
-        "Accept"        = "application/vnd.github.v3+json"
-        "Content-Type"  = "application/json"
-    }
-    
-    $body = @{
-        encrypted_value = $SecretValue
-    } | ConvertTo-Json
-    
-    try {
-        $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Put -Body $body
-        Write-Host "✅ Successfully set secret: $SecretName" -ForegroundColor Green
-        return $true
-    }
-    catch {
-        Write-Host "❌ Failed to set secret $SecretName`: $($_.Exception.Message)" -ForegroundColor Red
-        return $false
-    }
-}
-
-Write-Host "🔧 Setting up GitHub secrets..." -ForegroundColor Blue
+Write-Host "`n🔧 Setting up GitHub secrets..." -ForegroundColor Blue
 
 # Set SUPABASE_URL secret
-$success1 = Set-GitHubSecret -SecretName "SUPABASE_URL" -SecretValue $SupabaseUrl
+Write-Host "Setting SUPABASE_URL secret..." -ForegroundColor Yellow
+try {
+    gh secret set SUPABASE_URL --body $SupabaseUrl --repo $Repo
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✅ SUPABASE_URL secret set successfully" -ForegroundColor Green
+    }
+    else {
+        Write-Host "❌ Failed to set SUPABASE_URL secret" -ForegroundColor Red
+    }
+}
+catch {
+    Write-Host "❌ Error setting SUPABASE_URL secret: $($_.Exception.Message)" -ForegroundColor Red
+}
 
 # Set SUPABASE_ANON_KEY secret
-$success2 = Set-GitHubSecret -SecretName "SUPABASE_ANON_KEY" -SecretValue $SupabaseAnonKey
-
-Write-Host ""
-if ($success1 -and $success2) {
-    Write-Host "🎉 All secrets set successfully!" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "Next steps:" -ForegroundColor Cyan
-    Write-Host "1. Push a new commit to trigger the CI workflow" -ForegroundColor Yellow
-    Write-Host "2. Or re-run the failed workflow from GitHub Actions tab" -ForegroundColor Yellow
-    Write-Host "3. The integration tests should now pass with real Supabase credentials" -ForegroundColor Yellow
+Write-Host "Setting SUPABASE_ANON_KEY secret..." -ForegroundColor Yellow
+try {
+    gh secret set SUPABASE_ANON_KEY --body $SupabaseAnonKey --repo $Repo
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✅ SUPABASE_ANON_KEY secret set successfully" -ForegroundColor Green
+    }
+    else {
+        Write-Host "❌ Failed to set SUPABASE_ANON_KEY secret" -ForegroundColor Red
+    }
 }
-else {
-    Write-Host "⚠️ Some secrets failed to set. Please check the errors above." -ForegroundColor Yellow
-} 
+catch {
+    Write-Host "❌ Error setting SUPABASE_ANON_KEY secret: $($_.Exception.Message)" -ForegroundColor Red
+}
+
+# List current secrets
+Write-Host "`n📋 Current repository secrets:" -ForegroundColor Blue
+try {
+    gh secret list --repo $Repo
+}
+catch {
+    Write-Host "❌ Could not list secrets: $($_.Exception.Message)" -ForegroundColor Red
+}
+
+Write-Host "`n🎉 GitHub secrets setup completed!" -ForegroundColor Green
+Write-Host "You can now run your CI workflow and it should have access to the Supabase credentials." -ForegroundColor Green 
