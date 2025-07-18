@@ -318,11 +318,26 @@ jobs:
           NODE_ENV: production
           NITRO_HOST: 0.0.0.0
           NITRO_PORT: 3000
+          NITRO_LOG_LEVEL: debug
           NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           # Ensure curl and lsof are available for integration tests
           sudo apt-get update && sudo apt-get install -y curl lsof
+
+          # Debug environment variables
+          echo "🔍 Environment variables check:"
+          echo "NODE_ENV: $NODE_ENV"
+          echo "NITRO_HOST: $NITRO_HOST"
+          echo "NITRO_PORT: $NITRO_PORT"
+          echo "NITRO_LOG_LEVEL: $NITRO_LOG_LEVEL"
+          echo "NUXT_PUBLIC_SUPABASE_URL: $NUXT_PUBLIC_SUPABASE_URL"
+          echo "NUXT_PUBLIC_SUPABASE_ANON_KEY: ${NUXT_PUBLIC_SUPABASE_ANON_KEY:0:20}..."
+
+          # Check file permissions
+          echo "🔍 File permissions check:"
+          ls -la .output/server/index.mjs
+          ls -la .output/server/node_modules | head -5
 
           # Make the debug integration test script executable
           chmod +x test-integration-debug.sh
@@ -410,6 +425,41 @@ jobs:
 
           # Run the startup error handler script
           node test-server-startup.js
+        continue-on-error: true
+
+      - name: Direct Nitro server debug
+        if: failure()
+        env:
+          NODE_ENV: production
+          NITRO_HOST: 0.0.0.0
+          NITRO_PORT: 3000
+          NITRO_LOG_LEVEL: debug
+          NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "🔄 All tests failed, running direct Nitro server debug..."
+
+          # Debug environment variables
+          echo "🔍 Environment variables check:"
+          echo "NODE_ENV: $NODE_ENV"
+          echo "NITRO_HOST: $NITRO_HOST"
+          echo "NITRO_PORT: $NITRO_PORT"
+          echo "NITRO_LOG_LEVEL: $NITRO_LOG_LEVEL"
+          echo "NUXT_PUBLIC_SUPABASE_URL: $NUXT_PUBLIC_SUPABASE_URL"
+          echo "NUXT_PUBLIC_SUPABASE_ANON_KEY: ${NUXT_PUBLIC_SUPABASE_ANON_KEY:0:20}..."
+
+          # Check file permissions and dependencies
+          echo "🔍 File permissions check:"
+          ls -la .output/server/index.mjs
+          echo "🔍 Node modules check:"
+          ls -la .output/server/node_modules | head -10
+
+          # Try direct server execution with full error capture
+          echo "🧪 Direct Nitro server execution with full error capture..."
+          timeout 30s node --trace-warnings --trace-uncaught .output/server/index.mjs 2>&1 || {
+            echo "❌ Server failed with exit code $?"
+            echo "📋 Full output captured above"
+          }
         continue-on-error: true
 
   preview-deploy:
