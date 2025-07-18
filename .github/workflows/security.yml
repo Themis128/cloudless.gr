@@ -1,0 +1,169 @@
+name: Security Scan
+
+on:
+  schedule:
+    # Run security scans weekly
+    - cron: '0 2 * * 1'
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run npm audit
+        run: npm audit --audit-level moderate
+        
+      - name: Run audit-ci
+        run: npx audit-ci --moderate
+        
+      - name: Check for outdated packages
+        run: npm outdated || true
+        
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-security-report
+          path: |
+            npm-debug.log*
+            audit-ci-results.json
+          retention-days: 30
+
+  code-scan:
+    name: Code Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run ESLint security rules
+        run: npx eslint . --ext .vue,.js,.ts,.jsx,.tsx --config .eslintrc.js
+        
+      - name: Check for hardcoded secrets
+        run: |
+          echo "🔍 Scanning for potential secrets..."
+          # Check for common secret patterns
+          if grep -r -i "password\|secret\|key\|token" . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.nuxt --exclude-dir=.output; then
+            echo "⚠️ Potential secrets found. Please review the output above."
+            exit 1
+          else
+            echo "✅ No obvious secrets found"
+          fi
+        
+      - name: Check for dangerous dependencies
+        run: |
+          echo "🔍 Checking for dangerous dependencies..."
+          # List all dependencies for manual review
+          npm list --depth=0
+          
+      - name: Upload code scan report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: code-security-report
+          path: |
+            eslint-report.json
+          retention-days: 30
+
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    # if: hashFiles('Dockerfile') != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  secrets-scan:
+    name: Secrets Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: .
+          base: HEAD~1
+          head: HEAD
+          extra_args: --only-verified
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-scan, container-scan, secrets-scan]
+    if: always()
+    steps:
+      - name: Generate security summary
+        run: |
+          echo "🔒 Security Scan Summary"
+          echo "========================="
+          echo "📅 Scan Date: $(date)"
+          echo "🔗 Repository: ${{ github.repository }}"
+          echo "📝 Commit: ${{ github.sha }}"
+          echo ""
+          echo "📊 Job Results:"
+          echo "- Dependency Scan: ${{ needs.dependency-scan.result }}"
+          echo "- Code Scan: ${{ needs.code-scan.result }}"
+          echo "- Container Scan: ${{ needs.container-scan.result }}"
+          echo "- Secrets Scan: ${{ needs.secrets-scan.result }}"
+          echo ""
+          
+          # Determine overall status
+          if [ "${{ needs.dependency-scan.result }}" = "success" ] && \
+             [ "${{ needs.code-scan.result }}" = "success" ] && \
+             [ "${{ needs.secrets-scan.result }}" = "success" ]; then
+            echo "✅ All security checks passed!"
+          else
+            echo "❌ Some security checks failed. Please review the results above."
+            exit 1
+          fi 
