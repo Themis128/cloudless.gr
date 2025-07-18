@@ -14,11 +14,11 @@ sleep 15
 # Test if server is responding - try multiple approaches
 echo "🔍 Testing server response..."
 
-# Try IPv6 localhost
-if curl -f -s --connect-timeout 10 http://[::1]:3000 > /dev/null 2>&1; then
-    echo "✅ Server is responding on IPv6"
+# Try different server variants
+if curl -f -s --connect-timeout 10 http://192.168.0.23:3000 > /dev/null 2>&1; then
+    echo "✅ Server is responding on 192.168.0.23:3000"
 elif curl -f -s --connect-timeout 10 http://localhost:3000 > /dev/null 2>&1; then
-    echo "✅ Server is responding on IPv4"
+    echo "✅ Server is responding on localhost"
 elif curl -f -s --connect-timeout 10 http://127.0.0.1:3000 > /dev/null 2>&1; then
     echo "✅ Server is responding on 127.0.0.1"
 else

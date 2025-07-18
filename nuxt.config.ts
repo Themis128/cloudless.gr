@@ -20,7 +20,11 @@ export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
     experimental: {
       wasm: true
-    }
+    },
+    preset: 'node'
+  },
+  devServer: {
+    host: '192.168.0.23',  // Bind to specific IP
   },
   imports: {
     dirs: [

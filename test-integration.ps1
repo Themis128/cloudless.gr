@@ -15,11 +15,11 @@ Write-Host "🔍 Testing server response..." -ForegroundColor Yellow
 
 $serverResponding = $false
 
-# Try different localhost variants
+# Try different server variants
 $urls = @(
+    "http://192.168.0.23:3000",
     "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://[::1]:3000"
+    "http://127.0.0.1:3000"
 )
 
 foreach ($url in $urls) {
