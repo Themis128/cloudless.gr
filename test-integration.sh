@@ -1,58 +1,47 @@
 #!/bin/bash
+set -e
 
 echo "🚀 Starting integration test..."
 
-# Start server and redirect output to log
-echo "📦 Starting server from build output..."
-node .output/server/index.mjs > server.log 2>&1 &
+# Start server in background, redirect output to log
+echo "📦 Launching server..."
+node .output/server/index.mjs --hostname=0.0.0.0 > server.log 2>&1 &
 SERVER_PID=$!
+echo "Server PID: $SERVER_PID"
 
-# Wait briefly for server to attempt startup
-echo "⏳ Waiting for server to start..."
+# Give the server time to initialize
 sleep 5
 
-# Check if server is still running
+# Check if the server is still running
 if ps -p $SERVER_PID > /dev/null; then
-  echo "✅ Server is still running (PID: $SERVER_PID)"
-  # Wait a bit more for full startup
-  sleep 10
+  echo "✅ Server is still running"
 else
-  echo "❌ Server crashed. Logs:"
+  echo "❌ Server crashed during startup. Here are the logs:"
   cat server.log
-  echo "📊 Checking if any node processes are running:"
-  ps aux | grep node
   exit 1
 fi
 
-# Test if server is responding - try multiple approaches
+# Try connecting via IPv4 and IPv6
 echo "🔍 Testing server response..."
 
-# Try different server variants
-if curl -f -s --connect-timeout 10 http://192.168.0.23:3000 > /dev/null 2>&1; then
-    echo "✅ Server is responding on 192.168.0.23:3000"
-elif curl -f -s --connect-timeout 10 http://localhost:3000 > /dev/null 2>&1; then
-    echo "✅ Server is responding on localhost"
-elif curl -f -s --connect-timeout 10 http://127.0.0.1:3000 > /dev/null 2>&1; then
-    echo "✅ Server is responding on 127.0.0.1"
+if curl -f http://127.0.0.1:3000 > /dev/null 2>&1 \
+  || curl -f http://localhost:3000 > /dev/null 2>&1 \
+  || curl -f http://[::1]:3000 > /dev/null 2>&1; then
+  echo "✅ Server responded successfully"
 else
-    echo "❌ Server is not responding to any localhost variant"
-    echo "📊 Checking server status..."
-    ps aux | grep node
-    echo "📊 Checking port 3000..."
-    netstat -tlnp | grep :3000 || echo "Port 3000 not found"
-    echo "📊 Checking server logs..."
-    echo "Server PID: $SERVER_PID"
-    if ps -p $SERVER_PID > /dev/null; then
-        echo "Server process is still running"
-    else
-        echo "Server process has stopped"
-    fi
-    exit 1
+  echo "❌ Server didn't respond correctly. Logs:"
+  cat server.log
+
+  echo "📊 Process check:"
+  ps -p $SERVER_PID || echo "Process $SERVER_PID not found"
+
+  echo "📊 Port 3000 status:"
+  netstat -tlnp | grep :3000 || echo "No listener on port 3000"
+
+  kill $SERVER_PID || true
+  exit 1
 fi
 
-# Kill server
-echo "🛑 Stopping server..."
-kill $SERVER_PID
-wait $SERVER_PID 2>/dev/null
-
-echo "✅ Integration test passed" 
+# Clean up
+kill $SERVER_PID || true
+echo "✅ Integration test passed!" 

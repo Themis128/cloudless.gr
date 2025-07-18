@@ -243,9 +243,9 @@ jobs:
             exit 1
           fi
           
-          # Test if server is responding on the configured IP
-          if curl -f -s --connect-timeout 10 http://192.168.0.23:3000 > /dev/null 2>&1; then
-            echo "✅ Server is responding on 192.168.0.23:3000"
+          # Test if server is responding
+          if curl -f -s --connect-timeout 10 http://127.0.0.1:3000 > /dev/null 2>&1; then
+            echo "✅ Server is responding on 127.0.0.1:3000"
           else
             echo "❌ Server is not responding"
             echo "📋 Server logs:"
@@ -320,12 +320,6 @@ jobs:
           
           # Run the integration test
           ./test-integration.sh
-          
-          # If test fails, show server logs for debugging
-          if [ $? -ne 0 ] && [ -f "server.log" ]; then
-            echo "📋 Server logs for debugging:"
-            cat server.log
-          fi
 
   preview-deploy:
     name: Preview Deploy
@@ -354,17 +348,35 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const lintResult = '${{ needs.lint-and-check.result }}';
+            const buildResult = '${{ needs.build-test.result }}';
+            const securityResult = '${{ needs.security-check.result }}';
+            
+            const allPassed = lintResult === 'success' && buildResult === 'success' && securityResult === 'success';
+            
+            const status = allPassed ? '✅' : '❌';
+            const statusText = allPassed ? 'Preview build completed successfully!' : 'Preview build failed!';
+            
+            const checks = [
+              { name: 'Lint & Type Check', result: lintResult },
+              { name: 'Build Test', result: buildResult },
+              { name: 'Security Check', result: securityResult }
+            ];
+            
+            const checkList = checks.map(check => {
+              const icon = check.result === 'success' ? '✅' : '❌';
+              return `- ${icon} ${check.name}`;
+            }).join('\n');
+            
             const body = `## 🚀 CI/CD Pipeline Results
             
-            **Status:** ✅ Preview build completed successfully!
+            **Status:** ${status} ${statusText}
             
-            ### ✅ Completed Checks:
-            - Lint & Type Check
-            - Build Test
-            - Security Check
+            ### Checks:
+            ${checkList}
             
             ---
-            **Preview build completed successfully! Ready for review.**`;
+            ${allPassed ? '**Preview build completed successfully! Ready for review.**' : '**Please check the failed checks above and fix the issues.**'}`;
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,

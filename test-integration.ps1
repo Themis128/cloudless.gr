@@ -2,21 +2,19 @@
 
 Write-Host "🚀 Starting integration test..." -ForegroundColor Green
 
-# Start server and redirect output to log
-Write-Host "📦 Starting server from build output..." -ForegroundColor Yellow
-$serverProcess = Start-Process -FilePath "node" -ArgumentList ".output/server/index.mjs" -RedirectStandardOutput "server.log" -RedirectStandardError "server-error.log" -PassThru -WindowStyle Hidden
+# Start server in background, redirect output to log
+Write-Host "📦 Launching server..." -ForegroundColor Yellow
+$serverProcess = Start-Process -FilePath "node" -ArgumentList ".output/server/index.mjs", "--hostname=0.0.0.0" -RedirectStandardOutput "server.log" -RedirectStandardError "server-error.log" -PassThru -WindowStyle Hidden
+Write-Host "Server PID: $($serverProcess.Id)" -ForegroundColor Cyan
 
-# Wait briefly for server to attempt startup
-Write-Host "⏳ Waiting for server to start..." -ForegroundColor Yellow
+# Give the server time to initialize
 Start-Sleep -Seconds 5
 
-# Check if server is still running
+# Check if the server is still running
 if ($serverProcess -and -not $serverProcess.HasExited) {
-    Write-Host "✅ Server is still running (PID: $($serverProcess.Id))" -ForegroundColor Green
-    # Wait a bit more for full startup
-    Start-Sleep -Seconds 10
+    Write-Host "✅ Server is still running" -ForegroundColor Green
 } else {
-    Write-Host "❌ Server crashed. Logs:" -ForegroundColor Red
+    Write-Host "❌ Server crashed during startup. Here are the logs:" -ForegroundColor Red
     if (Test-Path "server.log") {
         Write-Host "📋 Standard output:" -ForegroundColor Yellow
         Get-Content "server.log"
@@ -25,28 +23,20 @@ if ($serverProcess -and -not $serverProcess.HasExited) {
         Write-Host "📋 Error output:" -ForegroundColor Yellow
         Get-Content "server-error.log"
     }
-    Write-Host "📊 Checking if any node processes are running:" -ForegroundColor Yellow
-    Get-Process | Where-Object {$_.ProcessName -eq "node"}
     exit 1
 }
 
-# Test if server is responding - try multiple approaches
+# Try connecting via IPv4 and IPv6
 Write-Host "🔍 Testing server response..." -ForegroundColor Yellow
 
 $serverResponding = $false
-
-# Try different server variants
-$urls = @(
-    "http://192.168.0.23:3000",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000"
-)
+$urls = @("http://127.0.0.1:3000", "http://localhost:3000", "http://[::1]:3000")
 
 foreach ($url in $urls) {
     try {
         $response = Invoke-WebRequest -Uri $url -TimeoutSec 10 -UseBasicParsing
         if ($response.StatusCode -eq 200) {
-            Write-Host "✅ Server is responding on $url" -ForegroundColor Green
+            Write-Host "✅ Server responded successfully on $url" -ForegroundColor Green
             $serverResponding = $true
             break
         }
@@ -57,24 +47,29 @@ foreach ($url in $urls) {
 }
 
 if (-not $serverResponding) {
-    Write-Host "❌ Server is not responding to any localhost variant" -ForegroundColor Red
-    Write-Host "📊 Checking server status..." -ForegroundColor Yellow
-    Get-Process | Where-Object {$_.ProcessName -eq "node"}
-    Write-Host "📊 Checking port 3000..." -ForegroundColor Yellow
-    netstat -an | Select-String ":3000"
-    Write-Host "📊 Checking server process..." -ForegroundColor Yellow
+    Write-Host "❌ Server didn't respond correctly. Logs:" -ForegroundColor Red
+    if (Test-Path "server.log") {
+        Get-Content "server.log"
+    }
+    
+    Write-Host "📊 Process check:" -ForegroundColor Yellow
     if ($serverProcess -and -not $serverProcess.HasExited) {
-        Write-Host "Server process is still running (PID: $($serverProcess.Id))" -ForegroundColor Yellow
+        Write-Host "Process $($serverProcess.Id) is still running" -ForegroundColor Yellow
     } else {
-        Write-Host "Server process has stopped" -ForegroundColor Red
+        Write-Host "Process $($serverProcess.Id) not found" -ForegroundColor Red
+    }
+    
+    Write-Host "📊 Port 3000 status:" -ForegroundColor Yellow
+    netstat -an | Select-String ":3000" || Write-Host "No listener on port 3000" -ForegroundColor Red
+    
+    if ($serverProcess -and -not $serverProcess.HasExited) {
+        Stop-Process -Id $serverProcess.Id -Force
     }
     exit 1
 }
 
-# Kill server
-Write-Host "🛑 Stopping server..." -ForegroundColor Yellow
+# Clean up
 if ($serverProcess -and -not $serverProcess.HasExited) {
     Stop-Process -Id $serverProcess.Id -Force
 }
-
-Write-Host "✅ Integration test passed" -ForegroundColor Green 
+Write-Host "✅ Integration test passed!" -ForegroundColor Green 
