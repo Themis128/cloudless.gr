@@ -316,8 +316,8 @@ jobs:
       - name: Test preview server
         env:
           NODE_ENV: production
-          NUXT_HOST: 0.0.0.0
-          NUXT_PORT: 3000
+          NITRO_HOST: 0.0.0.0
+          NITRO_PORT: 3000
           NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
@@ -385,8 +385,8 @@ jobs:
         if: failure()
         env:
           NODE_ENV: production
-          NUXT_HOST: 0.0.0.0
-          NUXT_PORT: 3000
+          NITRO_HOST: 0.0.0.0
+          NITRO_PORT: 3000
           NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
@@ -401,8 +401,8 @@ jobs:
         if: failure()
         env:
           NODE_ENV: production
-          NUXT_HOST: 0.0.0.0
-          NUXT_PORT: 3000
+          NITRO_HOST: 0.0.0.0
+          NITRO_PORT: 3000
           NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |

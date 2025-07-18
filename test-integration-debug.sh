@@ -55,15 +55,15 @@ print_success "✅ Server file found: .output/server/index.mjs"
 
 # Set environment variables with fallbacks
 export NODE_ENV=production
-export NUXT_HOST=0.0.0.0
-export NUXT_PORT=3000
+export NITRO_HOST=0.0.0.0
+export NITRO_PORT=3000
 export NUXT_PUBLIC_SUPABASE_URL=${NUXT_PUBLIC_SUPABASE_URL:-"https://test.supabase.co"}
 export NUXT_PUBLIC_SUPABASE_ANON_KEY=${NUXT_PUBLIC_SUPABASE_ANON_KEY:-"test-key-123456789"}
 
 print_status "🔧 Environment variables set:"
 echo "  NODE_ENV: $NODE_ENV"
-echo "  NUXT_HOST: $NUXT_HOST"
-echo "  NUXT_PORT: $NUXT_PORT"
+echo "  NITRO_HOST: $NITRO_HOST"
+echo "  NITRO_PORT: $NITRO_PORT"
 echo "  NUXT_PUBLIC_SUPABASE_URL: $NUXT_PUBLIC_SUPABASE_URL"
 echo "  NUXT_PUBLIC_SUPABASE_ANON_KEY: ${NUXT_PUBLIC_SUPABASE_ANON_KEY:0:10}..."
 
