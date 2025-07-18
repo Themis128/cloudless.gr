@@ -317,6 +317,8 @@ jobs:
 
       - name: Test preview server
         env:
+          CI: true
+          GITHUB_ACTIONS: true
           NODE_ENV: production
           NITRO_HOST: 0.0.0.0
           NITRO_PORT: 3000

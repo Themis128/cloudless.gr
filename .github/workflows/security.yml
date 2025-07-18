@@ -105,19 +105,32 @@ jobs:
   container-scan:
     name: Container Security Scan
     runs-on: ubuntu-latest
-    if: hashFiles('Dockerfile*') != ''
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check for Dockerfiles
+        id: check-dockerfiles
+        run: |
+          if [ -f "Dockerfile" ] || [ -f "Dockerfile.dev" ]; then
+            echo "dockerfiles_exist=true" >> $GITHUB_OUTPUT
+            echo "✅ Dockerfiles found"
+          else
+            echo "dockerfiles_exist=false" >> $GITHUB_OUTPUT
+            echo "❌ No Dockerfiles found"
+          fi
+
       - name: Set up Docker Buildx
+        if: steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image for scanning
+        if: steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
         run: |
           docker build -t cloudlessgr-app:security-scan -f Dockerfile --target runner .
 
       - name: Run Trivy vulnerability scanner
+        if: steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'cloudlessgr-app:security-scan'
@@ -125,12 +138,13 @@ jobs:
           output: 'trivy-results.sarif'
 
       - name: Upload Trivy scan results to GitHub Security tab
+        if: always() && steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
         with:
           sarif_file: 'trivy-results.sarif'
 
       - name: Run Hadolint for Dockerfile linting
+        if: steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
@@ -138,8 +152,8 @@ jobs:
           output-file: hadolint-results.sarif
 
       - name: Upload Hadolint results to GitHub Security tab
+        if: always() && steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
         with:
           sarif_file: 'hadolint-results.sarif'
 
