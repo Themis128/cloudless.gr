@@ -15,21 +15,27 @@
           <h3>Getting Started</h3>
           <div class="step-list">
             <div class="step-item">
-              <div class="step-number">1</div>
+              <div class="step-number">
+                1
+              </div>
               <div class="step-content">
                 <h4>Create an Account</h4>
                 <p>Sign up for a free account to access all features</p>
               </div>
             </div>
             <div class="step-item">
-              <div class="step-number">2</div>
+              <div class="step-number">
+                2
+              </div>
               <div class="step-content">
                 <h4>Choose Your Plan</h4>
                 <p>Select the plan that best fits your needs</p>
               </div>
             </div>
             <div class="step-item">
-              <div class="step-number">3</div>
+              <div class="step-number">
+                3
+              </div>
               <div class="step-content">
                 <h4>Build Your First Bot</h4>
                 <p>
@@ -38,14 +44,18 @@
               </div>
             </div>
             <div class="step-item">
-              <div class="step-number">4</div>
+              <div class="step-number">
+                4
+              </div>
               <div class="step-content">
                 <h4>Train a Model</h4>
                 <p>Upload your data and start training custom AI models</p>
               </div>
             </div>
             <div class="step-item">
-              <div class="step-number">5</div>
+              <div class="step-number">
+                5
+              </div>
               <div class="step-content">
                 <h4>Deploy Your Pipeline</h4>
                 <p>Create and execute AI data processing workflows</p>
@@ -56,7 +66,9 @@
           <h3>Essential Resources</h3>
           <div class="resource-grid">
             <div class="resource-card">
-              <v-icon size="32" color="primary"> mdi-book-open-variant </v-icon>
+              <v-icon size="32" color="primary">
+                mdi-book-open-variant
+              </v-icon>
               <h4>Documentation</h4>
               <p>Comprehensive guides and API references</p>
               <v-btn color="primary" variant="outlined" size="small">
@@ -64,7 +76,9 @@
               </v-btn>
             </div>
             <div class="resource-card">
-              <v-icon size="32" color="primary"> mdi-api </v-icon>
+              <v-icon size="32" color="primary">
+                mdi-api
+              </v-icon>
               <h4>API Reference</h4>
               <p>Detailed API documentation and examples</p>
               <v-btn color="primary" variant="outlined" size="small">
@@ -72,7 +86,9 @@
               </v-btn>
             </div>
             <div class="resource-card">
-              <v-icon size="32" color="primary"> mdi-video </v-icon>
+              <v-icon size="32" color="primary">
+                mdi-video
+              </v-icon>
               <h4>Video Tutorials</h4>
               <p>Step-by-step video guides</p>
               <v-btn color="primary" variant="outlined" size="small">
@@ -80,7 +96,9 @@
               </v-btn>
             </div>
             <div class="resource-card">
-              <v-icon size="32" color="primary"> mdi-forum </v-icon>
+              <v-icon size="32" color="primary">
+                mdi-forum
+              </v-icon>
               <h4>Community Forum</h4>
               <p>Connect with other developers</p>
               <v-btn color="primary" variant="outlined" size="small">
@@ -95,7 +113,9 @@
 
           <div class="contact-grid">
             <div class="contact-card">
-              <v-icon size="48" color="primary"> mdi-email </v-icon>
+              <v-icon size="48" color="primary">
+                mdi-email
+              </v-icon>
               <h3>Email Support</h3>
               <p>Get help via email with detailed responses</p>
               <div class="contact-details">
@@ -115,7 +135,9 @@
             </div>
 
             <div class="contact-card">
-              <v-icon size="48" color="primary"> mdi-chat </v-icon>
+              <v-icon size="48" color="primary">
+                mdi-chat
+              </v-icon>
               <h3>Live Chat</h3>
               <p>Real-time assistance for immediate help</p>
               <div class="availability">
@@ -137,7 +159,9 @@
             </div>
 
             <div class="contact-card">
-              <v-icon size="48" color="primary"> mdi-phone </v-icon>
+              <v-icon size="48" color="primary">
+                mdi-phone
+              </v-icon>
               <h3>Phone Support</h3>
               <p>Direct phone support for urgent issues</p>
               <div class="contact-details">
@@ -248,70 +272,48 @@
           <h2>📚 Documentation & Resources</h2>
 
           <div class="docs-grid">
-            <div class="docs-category">
-              <h3>Getting Started</h3>
-              <ul>
-                <li><a href="#">Platform Overview</a></li>
-                <li><a href="#">Account Setup</a></li>
-                <li><a href="#">First Bot Creation</a></li>
-                <li><a href="#">Model Training Basics</a></li>
-                <li><a href="#">Pipeline Fundamentals</a></li>
-              </ul>
+            <div class="doc-card">
+              <v-icon size="32" color="primary">
+                mdi-file-document
+              </v-icon>
+              <h4>Getting Started Guide</h4>
+              <p>Complete beginner's guide to Cloudless.gr</p>
+              <v-btn color="primary" variant="outlined" size="small">
+                Read Guide
+              </v-btn>
             </div>
 
-            <div class="docs-category">
-              <h3>Bot Development</h3>
-              <ul>
-                <li><a href="#">Bot Builder Guide</a></li>
-                <li><a href="#">Conversation Design</a></li>
-                <li><a href="#">Integration Options</a></li>
-                <li><a href="#">Testing & Deployment</a></li>
-                <li><a href="#">Analytics & Monitoring</a></li>
-              </ul>
+            <div class="doc-card">
+              <v-icon size="32" color="primary">
+                mdi-code-braces
+              </v-icon>
+              <h4>API Documentation</h4>
+              <p>Comprehensive API reference and examples</p>
+              <v-btn color="primary" variant="outlined" size="small">
+                View API Docs
+              </v-btn>
             </div>
 
-            <div class="docs-category">
-              <h3>Model Training</h3>
-              <ul>
-                <li><a href="#">Data Preparation</a></li>
-                <li><a href="#">Training Parameters</a></li>
-                <li><a href="#">Model Evaluation</a></li>
-                <li><a href="#">Fine-tuning Guide</a></li>
-                <li><a href="#">Model Deployment</a></li>
-              </ul>
+            <div class="doc-card">
+              <v-icon size="32" color="primary">
+                mdi-lightbulb
+              </v-icon>
+              <h4>Best Practices</h4>
+              <p>Tips and best practices for optimal results</p>
+              <v-btn color="primary" variant="outlined" size="small">
+                Learn More
+              </v-btn>
             </div>
 
-            <div class="docs-category">
-              <h3>Pipeline Development</h3>
-              <ul>
-                <li><a href="#">Pipeline Components</a></li>
-                <li><a href="#">Data Processing</a></li>
-                <li><a href="#">Error Handling</a></li>
-                <li><a href="#">Performance Optimization</a></li>
-                <li><a href="#">Monitoring & Logging</a></li>
-              </ul>
-            </div>
-
-            <div class="docs-category">
-              <h3>API Reference</h3>
-              <ul>
-                <li><a href="#">Authentication</a></li>
-                <li><a href="#">Bot API</a></li>
-                <li><a href="#">Model API</a></li>
-                <li><a href="#">Pipeline API</a></li>
-                <li><a href="#">Webhooks</a></li>
-              </ul>
-            </div>
-
-            <div class="docs-category">
-              <h3>Advanced Topics</h3>
-              <ul>
-                <li><a href="#">Custom Integrations</a></li>
-                <li><a href="#">Security Best Practices</a></li>
-                <li><a href="#">Performance Tuning</a></li>
-                <li><a href="#">Troubleshooting</a></li>
-                <li><a href="#">Migration Guides</a></li>
-              </ul>
+            <div class="doc-card">
+              <v-icon size="32" color="primary">
+                mdi-tools
+              </v-icon>
+              <h4>Developer Tools</h4>
+              <p>Debug and monitoring tools documentation</p>
+              <v-btn color="primary" variant="outlined" size="small">
+                Explore Tools
+              </v-btn>
             </div>
           </div>
         </section>
@@ -321,42 +323,47 @@
 
           <div class="training-grid">
             <div class="training-card">
-              <v-icon size="48" color="primary"> mdi-school </v-icon>
-              <h3>Online Courses</h3>
-              <p>Comprehensive courses covering all aspects of our platform</p>
-              <ul>
-                <li>AI Development Fundamentals</li>
-                <li>Bot Building Masterclass</li>
-                <li>Advanced Model Training</li>
-                <li>Pipeline Engineering</li>
-              </ul>
-              <v-btn color="primary" variant="outlined"> Browse Courses </v-btn>
+              <v-icon size="32" color="primary">
+                mdi-school
+              </v-icon>
+              <h4>Online Courses</h4>
+              <p>Structured learning paths for different skill levels</p>
+              <v-btn color="primary" variant="outlined" size="small">
+                Browse Courses
+              </v-btn>
             </div>
 
             <div class="training-card">
-              <v-icon size="48" color="primary"> mdi-video-library </v-icon>
-              <h3>Video Tutorials</h3>
-              <p>Step-by-step video guides for common tasks</p>
-              <ul>
-                <li>Quick Start Tutorials</li>
-                <li>Feature Deep Dives</li>
-                <li>Best Practices</li>
-                <li>Troubleshooting Guides</li>
-              </ul>
-              <v-btn color="primary" variant="outlined"> Watch Videos </v-btn>
+              <v-icon size="32" color="primary">
+                mdi-webinar
+              </v-icon>
+              <h4>Webinars</h4>
+              <p>Live training sessions and Q&A</p>
+              <v-btn color="primary" variant="outlined" size="small">
+                Register
+              </v-btn>
             </div>
 
             <div class="training-card">
-              <v-icon size="48" color="primary"> mdi-calendar </v-icon>
-              <h3>Webinars</h3>
-              <p>Live sessions with our experts and community</p>
-              <ul>
-                <li>Weekly Q&A Sessions</li>
-                <li>Feature Announcements</li>
-                <li>Case Study Presentations</li>
-                <li>Community Showcases</li>
-              </ul>
-              <v-btn color="primary" variant="outlined"> Register </v-btn>
+              <v-icon size="32" color="primary">
+                mdi-certificate
+              </v-icon>
+              <h4>Certification</h4>
+              <p>Get certified in Cloudless.gr development</p>
+              <v-btn color="primary" variant="outlined" size="small">
+                Get Certified
+              </v-btn>
+            </div>
+
+            <div class="training-card">
+              <v-icon size="32" color="primary">
+                mdi-account-group
+              </v-icon>
+              <h4>Community</h4>
+              <p>Connect with other developers and experts</p>
+              <v-btn color="primary" variant="outlined" size="small">
+                Join Community
+              </v-btn>
             </div>
           </div>
         </section>
@@ -366,7 +373,9 @@
 
           <div class="community-grid">
             <div class="community-card">
-              <v-icon size="48" color="primary"> mdi-forum </v-icon>
+              <v-icon size="48" color="primary">
+                mdi-forum
+              </v-icon>
               <h3>Community Forum</h3>
               <p>
                 Connect with other developers, share solutions, and get help
@@ -381,11 +390,15 @@
                   <span class="stat-label">Posts</span>
                 </div>
               </div>
-              <v-btn color="primary" variant="outlined"> Join Forum </v-btn>
+              <v-btn color="primary" variant="outlined">
+                Join Forum
+              </v-btn>
             </div>
 
             <div class="community-card">
-              <v-icon size="48" color="primary"> mdi-github </v-icon>
+              <v-icon size="48" color="primary">
+                mdi-github
+              </v-icon>
               <h3>GitHub Community</h3>
               <p>Open source projects, examples, and contributions</p>
               <div class="stats">
@@ -398,11 +411,15 @@
                   <span class="stat-label">Stars</span>
                 </div>
               </div>
-              <v-btn color="primary" variant="outlined"> Visit GitHub </v-btn>
+              <v-btn color="primary" variant="outlined">
+                Visit GitHub
+              </v-btn>
             </div>
 
             <div class="community-card">
-              <v-icon size="48" color="primary"> mdi-discord </v-icon>
+              <v-icon size="48" color="primary">
+                mdi-discord
+              </v-icon>
               <h3>Discord Server</h3>
               <p>Real-time chat with developers and support team</p>
               <div class="stats">
@@ -415,7 +432,9 @@
                   <span class="stat-label">Active</span>
                 </div>
               </div>
-              <v-btn color="primary" variant="outlined"> Join Discord </v-btn>
+              <v-btn color="primary" variant="outlined">
+                Join Discord
+              </v-btn>
             </div>
           </div>
         </section>
@@ -739,36 +758,23 @@
   margin-bottom: 2rem;
 }
 
-.docs-category {
+.doc-card {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(102, 126, 234, 0.1);
   border-radius: 12px;
   padding: 1.5rem;
+  text-align: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.docs-category h3 {
+.doc-card h4 {
   color: #667eea;
   margin-bottom: 1rem;
 }
 
-.docs-category ul {
-  list-style: none;
-  padding: 0;
-}
-
-.docs-category li {
-  margin-bottom: 0.5rem;
-}
-
-.docs-category a {
+.doc-card p {
   color: rgba(0, 0, 0, 0.7);
-  text-decoration: none;
-  transition: color 0.3s ease;
-}
-
-.docs-category a:hover {
-  color: #667eea;
+  margin-bottom: 1.5rem;
 }
 
 .training-grid {

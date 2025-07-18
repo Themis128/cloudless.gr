@@ -36,7 +36,7 @@
           </VCol>
         </VRow>
       </div>
-      <VBtn color="primary" class="mt-8" @click="showCreate = true">
+      <VBtn color="primary" class="mt-8" @click="handleCreateClick">
         Create Project
       </VBtn>
       <VDialog v-model="showCreate" max-width="500">
@@ -51,8 +51,12 @@
             <VTextarea v-model="newProject.description" label="Description" />
           </VCardText>
           <VCardActions>
-            <VBtn color="primary" @click="createProject"> Create </VBtn>
-            <VBtn text @click="showCreate = false"> Cancel </VBtn>
+            <VBtn color="primary" @click="createProject">
+              Create
+            </VBtn>
+            <VBtn text @click="handleCancelClick">
+              Cancel
+            </VBtn>
           </VCardActions>
         </VCard>
       </VDialog>
@@ -78,6 +82,14 @@ const projects = ref<
 
 const showCreate = ref(false)
 const newProject = ref({ name: '', description: '' })
+
+const handleCreateClick = () => {
+  showCreate.value = true
+}
+
+const handleCancelClick = () => {
+  showCreate.value = false
+}
 
 const createProject = () => {
   if (!newProject.value.name) return

@@ -2,33 +2,60 @@
   <div class="terms-page">
     <div class="page-header">
       <h1>Terms of Service</h1>
-      <p class="subtitle">Last Updated: January 2025</p>
+      <p class="subtitle">
+        Last Updated: January 2025
+      </p>
     </div>
 
     <div class="content-container">
       <div class="terms-content">
         <section class="terms-section">
           <h2>1. Acceptance of Terms</h2>
-          <p>By accessing and using Cloudless.gr ("the Platform," "we," "our," or "us"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you must not use our services.</p>
+          <p>
+            By accessing and using Cloudless.gr ("the Platform," "we," "our," or
+            "us"), you agree to be bound by these Terms of Service ("Terms"). If
+            you do not agree to these Terms, you must not use our services.
+          </p>
         </section>
 
         <section class="terms-section">
           <h2>2. Description of Services</h2>
           <p>Cloudless.gr is an AI development platform that provides:</p>
           <ul>
-            <li><strong>Bot Builder</strong>: Create and deploy AI-powered chatbots and conversational agents</li>
-            <li><strong>Model Training</strong>: Train and fine-tune machine learning models</li>
-            <li><strong>Pipeline Creator</strong>: Build and execute AI data processing pipelines</li>
-            <li><strong>LLM Management</strong>: Manage and deploy large language models</li>
-            <li><strong>Project Management</strong>: Organize and collaborate on AI development projects</li>
-            <li><strong>Debug Tools</strong>: Comprehensive debugging and monitoring capabilities</li>
-            <li><strong>Deployment Services</strong>: Deploy AI models and applications</li>
+            <li>
+              <strong>Bot Builder</strong>: Create and deploy AI-powered
+              chatbots and conversational agents
+            </li>
+            <li>
+              <strong>Model Training</strong>: Train and fine-tune machine
+              learning models
+            </li>
+            <li>
+              <strong>Pipeline Creator</strong>: Build and execute AI data
+              processing pipelines
+            </li>
+            <li>
+              <strong>LLM Management</strong>: Manage and deploy large language
+              models
+            </li>
+            <li>
+              <strong>Project Management</strong>: Organize and collaborate on
+              AI development projects
+            </li>
+            <li>
+              <strong>Debug Tools</strong>: Comprehensive debugging and
+              monitoring capabilities
+            </li>
+            <li>
+              <strong>Deployment Services</strong>: Deploy AI models and
+              applications
+            </li>
           </ul>
         </section>
 
         <section class="terms-section">
           <h2>3. User Accounts and Registration</h2>
-          
+
           <h3>3.1 Account Creation</h3>
           <p>To use our services, you must:</p>
           <ul>
@@ -44,7 +71,9 @@
             <li>Maintaining the confidentiality of your login credentials</li>
             <li>All activities that occur under your account</li>
             <li>Notifying us immediately of any unauthorized use</li>
-            <li>Ensuring your account information remains current and accurate</li>
+            <li>
+              Ensuring your account information remains current and accurate
+            </li>
           </ul>
 
           <h3>3.3 Account Termination</h3>
@@ -58,7 +87,7 @@
 
         <section class="terms-section">
           <h2>4. Acceptable Use Policy</h2>
-          
+
           <h3>4.1 Permitted Uses</h3>
           <p>You may use our services to:</p>
           <ul>
@@ -93,20 +122,32 @@
 
         <section class="terms-section">
           <h2>5. Service Plans and Pricing</h2>
-          
+
           <h3>5.1 Available Plans</h3>
           <p>We offer the following service plans:</p>
           <ul>
-            <li><strong>Free Plan</strong>: Limited features for getting started</li>
-            <li><strong>Pro Plan</strong>: Enhanced features for growing teams</li>
-            <li><strong>Business Plan</strong>: Advanced features for large organizations</li>
-            <li><strong>Enterprise Plan</strong>: Custom solutions for enterprise needs</li>
+            <li>
+              <strong>Free Plan</strong>: Limited features for getting started
+            </li>
+            <li>
+              <strong>Pro Plan</strong>: Enhanced features for growing teams
+            </li>
+            <li>
+              <strong>Business Plan</strong>: Advanced features for large
+              organizations
+            </li>
+            <li>
+              <strong>Enterprise Plan</strong>: Custom solutions for enterprise
+              needs
+            </li>
           </ul>
 
           <h3>5.2 Pricing and Billing</h3>
           <ul>
             <li>Pricing is subject to change with 30 days' notice</li>
-            <li>Annual plans offer a 20% discount compared to monthly billing</li>
+            <li>
+              Annual plans offer a 20% discount compared to monthly billing
+            </li>
             <li>Payment is due in advance for all paid plans</li>
             <li>Unpaid accounts may be suspended or terminated</li>
           </ul>
@@ -123,7 +164,7 @@
 
         <section class="terms-section">
           <h2>6. Intellectual Property Rights</h2>
-          
+
           <h3>6.1 Your Content</h3>
           <p>You retain ownership of:</p>
           <ul>
@@ -156,9 +197,12 @@
 
         <section class="terms-section">
           <h2>7. Data and Privacy</h2>
-          
+
           <h3>7.1 Data Processing</h3>
-          <p>We process your data in accordance with our Privacy Policy, including:</p>
+          <p>
+            We process your data in accordance with our Privacy Policy,
+            including:
+          </p>
           <ul>
             <li>Account and profile information</li>
             <li>AI model configurations and training data</li>
@@ -167,7 +211,10 @@
           </ul>
 
           <h3>7.2 Data Security</h3>
-          <p>We implement appropriate security measures to protect your data, including:</p>
+          <p>
+            We implement appropriate security measures to protect your data,
+            including:
+          </p>
           <ul>
             <li>Encryption of data in transit and at rest</li>
             <li>Access controls and authentication</li>
@@ -187,9 +234,12 @@
 
         <section class="terms-section">
           <h2>8. Service Availability and Support</h2>
-          
+
           <h3>8.1 Service Availability</h3>
-          <p>We strive to maintain high service availability but do not guarantee:</p>
+          <p>
+            We strive to maintain high service availability but do not
+            guarantee:
+          </p>
           <ul>
             <li>100% uptime or uninterrupted service</li>
             <li>Specific response times or performance levels</li>
@@ -218,7 +268,7 @@
 
         <section class="terms-section">
           <h2>9. Third-Party Services and Integrations</h2>
-          
+
           <h3>9.1 Supabase Integration</h3>
           <p>Our platform uses Supabase for:</p>
           <ul>
@@ -238,14 +288,20 @@
           </ul>
 
           <h3>9.3 Third-Party Terms</h3>
-          <p>Use of third-party services is subject to their respective terms of service and privacy policies.</p>
+          <p>
+            Use of third-party services is subject to their respective terms of
+            service and privacy policies.
+          </p>
         </section>
 
         <section class="terms-section">
           <h2>10. Limitation of Liability</h2>
-          
+
           <h3>10.1 Disclaimer of Warranties</h3>
-          <p>Our services are provided "as is" without warranties of any kind, including:</p>
+          <p>
+            Our services are provided "as is" without warranties of any kind,
+            including:
+          </p>
           <ul>
             <li>Merchantability or fitness for a particular purpose</li>
             <li>Non-infringement of third-party rights</li>
@@ -263,7 +319,10 @@
           </ul>
 
           <h3>10.3 Essential Purpose</h3>
-          <p>These limitations apply even if we have been advised of the possibility of such damages.</p>
+          <p>
+            These limitations apply even if we have been advised of the
+            possibility of such damages.
+          </p>
         </section>
 
         <section class="terms-section">
@@ -279,7 +338,7 @@
 
         <section class="terms-section">
           <h2>12. Termination</h2>
-          
+
           <h3>12.1 Termination by You</h3>
           <p>You may terminate your account at any time by:</p>
           <ul>
@@ -309,9 +368,12 @@
 
         <section class="terms-section">
           <h2>13. Dispute Resolution</h2>
-          
+
           <h3>13.1 Governing Law</h3>
-          <p>These Terms are governed by the laws of [Your Jurisdiction], without regard to conflict of law principles.</p>
+          <p>
+            These Terms are governed by the laws of [Your Jurisdiction], without
+            regard to conflict of law principles.
+          </p>
 
           <h3>13.2 Dispute Resolution Process</h3>
           <p>Disputes will be resolved through:</p>
@@ -322,12 +384,15 @@
           </ul>
 
           <h3>13.3 Class Action Waiver</h3>
-          <p>You agree to resolve disputes individually and waive any right to participate in class action lawsuits.</p>
+          <p>
+            You agree to resolve disputes individually and waive any right to
+            participate in class action lawsuits.
+          </p>
         </section>
 
         <section class="terms-section">
           <h2>14. Changes to Terms</h2>
-          
+
           <h3>14.1 Modification of Terms</h3>
           <p>We may modify these Terms at any time by:</p>
           <ul>
@@ -337,26 +402,44 @@
           </ul>
 
           <h3>14.2 Continued Use</h3>
-          <p>Continued use of our services after changes constitutes acceptance of the modified Terms.</p>
+          <p>
+            Continued use of our services after changes constitutes acceptance
+            of the modified Terms.
+          </p>
         </section>
 
         <section class="terms-section">
           <h2>15. Miscellaneous</h2>
-          
+
           <h3>15.1 Entire Agreement</h3>
-          <p>These Terms constitute the entire agreement between you and us regarding our services.</p>
+          <p>
+            These Terms constitute the entire agreement between you and us
+            regarding our services.
+          </p>
 
           <h3>15.2 Severability</h3>
-          <p>If any provision is found to be unenforceable, the remaining provisions remain in effect.</p>
+          <p>
+            If any provision is found to be unenforceable, the remaining
+            provisions remain in effect.
+          </p>
 
           <h3>15.3 Waiver</h3>
-          <p>Our failure to enforce any provision does not constitute a waiver of that provision.</p>
+          <p>
+            Our failure to enforce any provision does not constitute a waiver of
+            that provision.
+          </p>
 
           <h3>15.4 Assignment</h3>
-          <p>You may not assign your rights under these Terms without our written consent.</p>
+          <p>
+            You may not assign your rights under these Terms without our written
+            consent.
+          </p>
 
           <h3>15.5 Force Majeure</h3>
-          <p>We are not liable for delays or failures due to circumstances beyond our control.</p>
+          <p>
+            We are not liable for delays or failures due to circumstances beyond
+            our control.
+          </p>
         </section>
 
         <section class="terms-section">
@@ -371,13 +454,17 @@
 
         <section class="terms-section">
           <h2>17. Service-Specific Terms</h2>
-          
+
           <h3>17.1 AI Model Training</h3>
           <p>When using our model training services:</p>
           <ul>
-            <li>You are responsible for the quality and legality of training data</li>
+            <li>
+              You are responsible for the quality and legality of training data
+            </li>
             <li>We do not guarantee model performance or accuracy</li>
-            <li>Training results may vary based on data quality and parameters</li>
+            <li>
+              Training results may vary based on data quality and parameters
+            </li>
             <li>You must comply with applicable AI and data regulations</li>
           </ul>
 
@@ -515,21 +602,21 @@
   .terms-page {
     padding: 1rem;
   }
-  
+
   .page-header h1 {
     font-size: 2rem;
   }
-  
+
   .content-container {
     padding: 2rem;
   }
-  
+
   .terms-section h2 {
     font-size: 1.3rem;
   }
-  
+
   .terms-section h3 {
     font-size: 1.1rem;
   }
 }
-</style> 
+</style>

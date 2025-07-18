@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-btn icon class="mb-4" to="/projects">
+    <v-btn icon to="/projects" class="mb-4">
       <v-icon> mdi-arrow-left </v-icon>
     </v-btn>
 
@@ -8,7 +8,12 @@
       v-if="wizard.current.value && wizard.current.value.description"
       class="mb-4"
     >
-      <v-alert type="info" border="start" variant="tonal" class="mb-4">
+      <v-alert
+        type="info"
+        border="start"
+        variant="tonal"
+        class="mb-4"
+      >
         <div v-text="wizard.current.value.description" />
       </v-alert>
     </div>
@@ -19,19 +24,21 @@
         <v-card-title>Welcome to the Project Wizard</v-card-title>
         <v-card-text>
           This wizard will guide you through creating and managing your project
-          step by step.<br />
+          step by step.<br>
           <ul>
             <li>Follow the steps below and use the navigation buttons.</li>
             <li>
               Click the help icon
-              <v-icon small color="primary"> mdi-help-circle </v-icon> for more
+              <v-icon small color="primary">
+                mdi-help-circle
+              </v-icon> for more
               info on each step.
             </li>
           </ul>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn color="primary" @click="showOnboarding = false">
+          <v-btn color="primary" @click="handleOnboardingClose">
             Get Started
           </v-btn>
         </v-card-actions>
@@ -60,7 +67,7 @@
                 : 'grey'
           "
           class="stepper-item"
-          @click="() => wizard.goTo(idx)"
+          @click="() => handleStepClick(idx)"
         >
           <template #icon>
             <v-avatar
@@ -87,9 +94,9 @@
       </VStepperHeader>
     </VStepper>
     <div class="mb-2 text-right">
-      <span class="text-caption"
-        >Step {{ wizard.currentStep.value + 1 }} of {{ wizard.stepCount }}</span
-      >
+      <span class="text-caption">
+        Step {{ wizard.currentStep.value + 1 }} of {{ wizard.stepCount }}
+      </span>
     </div>
     <v-container>
       <v-row justify="center">
@@ -102,7 +109,7 @@
                 size="small"
                 class="ml-2"
                 aria-label="Help"
-                @click="showHelp = true"
+                @click="handleHelpClick"
               >
                 <v-icon>mdi-help-circle</v-icon>
               </v-btn>
@@ -153,9 +160,11 @@
                       color="secondary"
                       variant="outlined"
                       :disabled="wizard.isFirstStep.value"
-                      @click="wizard.prev"
+                      @click="handleBackClick"
                     >
-                      <v-icon start> mdi-arrow-left </v-icon> Back
+                      <v-icon start>
+                        mdi-arrow-left
+                      </v-icon> Back
                     </v-btn>
                   </v-col>
                   <v-col cols="6" class="text-right">
@@ -163,11 +172,11 @@
                       color="primary"
                       variant="elevated"
                       :disabled="!canProceed"
-                      @click="wizard.isLastStep ? onSubmit() : wizard.next"
+                      @click="handleNextClick"
                     >
-                      <span v-if="!wizard.isLastStep"
-                        >Next <v-icon end>mdi-arrow-right</v-icon></span
-                      >
+                      <span v-if="!wizard.isLastStep">
+                        Next <v-icon end>mdi-arrow-right</v-icon>
+                      </span>
                       <span v-else>Submit <v-icon end>mdi-check</v-icon></span>
                     </v-btn>
                   </v-col>
@@ -190,7 +199,7 @@
                   </v-card-text>
                   <v-card-actions>
                     <v-spacer />
-                    <v-btn color="primary" @click="showHelp = false">
+                    <v-btn color="primary" @click="handleHelpClose">
                       Close
                     </v-btn>
                   </v-card-actions>
@@ -216,7 +225,12 @@
           </v-card>
         </v-col>
       </v-row>
-      <v-btn icon class="mb-4" to="/" aria-label="Back to home">
+      <v-btn
+        icon
+        to="/"
+        class="mb-4"
+        aria-label="Back to home"
+      >
         <v-icon>mdi-arrow-left</v-icon>
       </v-btn>
     </v-container>
@@ -232,7 +246,7 @@ import { useProjectStore } from '~/stores/templateStore'
 
 const formRef = ref()
 const projectStore = useProjectStore()
-const { name, description, loading, success, error } = storeToRefs(projectStore)
+const { name, description, success, error } = storeToRefs(projectStore)
 
 // Wizard stepper integration
 const wizard = useWizard()
@@ -263,6 +277,34 @@ watch(description, val => {
   if (val && val.length > 200) descError.value = 'Description too long.'
   else descError.value = ''
 })
+
+const handleOnboardingClose = () => {
+  showOnboarding.value = false
+}
+
+const handleStepClick = (idx: number) => {
+  wizard.goTo(idx)
+}
+
+const handleHelpClick = () => {
+  showHelp.value = true
+}
+
+const handleHelpClose = () => {
+  showHelp.value = false
+}
+
+const handleBackClick = () => {
+  wizard.prev()
+}
+
+const handleNextClick = () => {
+  if (wizard.isLastStep) {
+    onSubmit()
+  } else {
+    wizard.next
+  }
+}
 
 const onSubmit = () => {
   if (!canProceed.value) {

@@ -2,19 +2,25 @@
   <div class="tutorials-page">
     <div class="page-header">
       <h1>Tutorials</h1>
-      <p class="subtitle">Learn how to build amazing AI applications with Cloudless.gr</p>
+      <p class="subtitle">
+        Learn how to build amazing AI applications with Cloudless.gr
+      </p>
     </div>
 
     <div class="content-container">
       <div class="tutorials-content">
         <section class="tutorials-section">
           <h2>🚀 Getting Started</h2>
-          
+
           <div class="tutorial-grid">
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-rocket-launch</v-icon>
-                <div class="difficulty beginner">Beginner</div>
+                <v-icon size="32" color="primary">
+                  mdi-rocket-launch
+                </v-icon>
+                <div class="difficulty beginner">
+                  Beginner
+                </div>
               </div>
               <h3>Your First Bot</h3>
               <p>Create your first AI chatbot in under 10 minutes</p>
@@ -29,8 +35,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-brain</v-icon>
-                <div class="difficulty beginner">Beginner</div>
+                <v-icon size="32" color="primary">
+                  mdi-brain
+                </v-icon>
+                <div class="difficulty beginner">
+                  Beginner
+                </div>
               </div>
               <h3>Model Training Basics</h3>
               <p>Learn how to train your first custom AI model</p>
@@ -45,8 +55,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-timeline</v-icon>
-                <div class="difficulty beginner">Beginner</div>
+                <v-icon size="32" color="primary">
+                  mdi-timeline
+                </v-icon>
+                <div class="difficulty beginner">
+                  Beginner
+                </div>
               </div>
               <h3>Building Your First Pipeline</h3>
               <p>Create a data processing pipeline from scratch</p>
@@ -61,8 +75,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-api</v-icon>
-                <div class="difficulty beginner">Beginner</div>
+                <v-icon size="32" color="primary">
+                  mdi-api
+                </v-icon>
+                <div class="difficulty beginner">
+                  Beginner
+                </div>
               </div>
               <h3>API Integration</h3>
               <p>Connect your applications to Cloudless.gr APIs</p>
@@ -79,12 +97,16 @@
 
         <section class="tutorials-section">
           <h2>🤖 Bot Development</h2>
-          
+
           <div class="tutorial-grid">
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-robot</v-icon>
-                <div class="difficulty intermediate">Intermediate</div>
+                <v-icon size="32" color="primary">
+                  mdi-robot
+                </v-icon>
+                <div class="difficulty intermediate">
+                  Intermediate
+                </div>
               </div>
               <h3>Advanced Bot Configuration</h3>
               <p>Master advanced bot settings and customization</p>
@@ -99,8 +121,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-webhook</v-icon>
-                <div class="difficulty intermediate">Intermediate</div>
+                <v-icon size="32" color="primary">
+                  mdi-webhook
+                </v-icon>
+                <div class="difficulty intermediate">
+                  Intermediate
+                </div>
               </div>
               <h3>Webhook Integration</h3>
               <p>Integrate bots with external services via webhooks</p>
@@ -115,8 +141,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-chat-processing</v-icon>
-                <div class="difficulty intermediate">Intermediate</div>
+                <v-icon size="32" color="primary">
+                  mdi-chat-processing
+                </v-icon>
+                <div class="difficulty intermediate">
+                  Intermediate
+                </div>
               </div>
               <h3>Conversation Design</h3>
               <p>Design engaging and effective conversation flows</p>
@@ -131,8 +161,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-test-tube</v-icon>
-                <div class="difficulty intermediate">Intermediate</div>
+                <v-icon size="32" color="primary">
+                  mdi-test-tube
+                </v-icon>
+                <div class="difficulty intermediate">
+                  Intermediate
+                </div>
               </div>
               <h3>Bot Testing & Debugging</h3>
               <p>Test and debug your bots effectively</p>
@@ -149,12 +183,16 @@
 
         <section class="tutorials-section">
           <h2>🧠 Model Training</h2>
-          
+
           <div class="tutorial-grid">
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-school</v-icon>
-                <div class="difficulty intermediate">Intermediate</div>
+                <v-icon size="32" color="primary">
+                  mdi-school
+                </v-icon>
+                <div class="difficulty intermediate">
+                  Intermediate
+                </div>
               </div>
               <h3>Fine-tuning LLMs</h3>
               <p>Fine-tune large language models for your specific use case</p>
@@ -169,8 +207,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-database</v-icon>
-                <div class="difficulty intermediate">Intermediate</div>
+                <v-icon size="32" color="primary">
+                  mdi-database
+                </v-icon>
+                <div class="difficulty intermediate">
+                  Intermediate
+                </div>
               </div>
               <h3>Data Preparation</h3>
               <p>Prepare and clean your training data effectively</p>
@@ -185,8 +227,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-chart-line</v-icon>
-                <div class="difficulty intermediate">Intermediate</div>
+                <v-icon size="32" color="primary">
+                  mdi-chart-line
+                </v-icon>
+                <div class="difficulty intermediate">
+                  Intermediate
+                </div>
               </div>
               <h3>Model Evaluation</h3>
               <p>Evaluate and compare model performance</p>
@@ -201,8 +247,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-rocket-launch</v-icon>
-                <div class="difficulty intermediate">Intermediate</div>
+                <v-icon size="32" color="primary">
+                  mdi-rocket-launch
+                </v-icon>
+                <div class="difficulty intermediate">
+                  Intermediate
+                </div>
               </div>
               <h3>Model Deployment</h3>
               <p>Deploy your trained models to production</p>
@@ -219,12 +269,16 @@
 
         <section class="tutorials-section">
           <h2>🔗 Pipeline Development</h2>
-          
+
           <div class="tutorial-grid">
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-pipe</v-icon>
-                <div class="difficulty intermediate">Intermediate</div>
+                <v-icon size="32" color="primary">
+                  mdi-pipe
+                </v-icon>
+                <div class="difficulty intermediate">
+                  Intermediate
+                </div>
               </div>
               <h3>Pipeline Components</h3>
               <p>Learn about different pipeline components and their uses</p>
@@ -239,8 +293,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-cog</v-icon>
-                <div class="difficulty advanced">Advanced</div>
+                <v-icon size="32" color="primary">
+                  mdi-cog
+                </v-icon>
+                <div class="difficulty advanced">
+                  Advanced
+                </div>
               </div>
               <h3>Custom Pipeline Components</h3>
               <p>Build custom components for your pipelines</p>
@@ -255,8 +313,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-speedometer</v-icon>
-                <div class="difficulty advanced">Advanced</div>
+                <v-icon size="32" color="primary">
+                  mdi-speedometer
+                </v-icon>
+                <div class="difficulty advanced">
+                  Advanced
+                </div>
               </div>
               <h3>Pipeline Optimization</h3>
               <p>Optimize your pipelines for performance and cost</p>
@@ -271,8 +333,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-monitor-dashboard</v-icon>
-                <div class="difficulty intermediate">Intermediate</div>
+                <v-icon size="32" color="primary">
+                  mdi-monitor-dashboard
+                </v-icon>
+                <div class="difficulty intermediate">
+                  Intermediate
+                </div>
               </div>
               <h3>Pipeline Monitoring</h3>
               <p>Monitor and debug pipeline execution</p>
@@ -289,12 +355,16 @@
 
         <section class="tutorials-section">
           <h2>🎯 Real-World Projects</h2>
-          
+
           <div class="tutorial-grid">
             <div class="tutorial-card featured">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-star</v-icon>
-                <div class="difficulty intermediate">Intermediate</div>
+                <v-icon size="32" color="primary">
+                  mdi-star
+                </v-icon>
+                <div class="difficulty intermediate">
+                  Intermediate
+                </div>
               </div>
               <h3>Customer Support Bot</h3>
               <p>Build a complete customer support chatbot with FAQ handling</p>
@@ -309,8 +379,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-chart-bubble</v-icon>
-                <div class="difficulty advanced">Advanced</div>
+                <v-icon size="32" color="primary">
+                  mdi-chart-bubble
+                </v-icon>
+                <div class="difficulty advanced">
+                  Advanced
+                </div>
               </div>
               <h3>Sentiment Analysis Pipeline</h3>
               <p>Create a pipeline for analyzing customer sentiment</p>
@@ -325,8 +399,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-translate</v-icon>
-                <div class="difficulty intermediate">Intermediate</div>
+                <v-icon size="32" color="primary">
+                  mdi-translate
+                </v-icon>
+                <div class="difficulty intermediate">
+                  Intermediate
+                </div>
               </div>
               <h3>Multi-language Bot</h3>
               <p>Build a bot that can handle multiple languages</p>
@@ -341,8 +419,12 @@
 
             <div class="tutorial-card">
               <div class="tutorial-header">
-                <v-icon size="32" color="primary">mdi-file-document</v-icon>
-                <div class="difficulty advanced">Advanced</div>
+                <v-icon size="32" color="primary">
+                  mdi-file-document
+                </v-icon>
+                <div class="difficulty advanced">
+                  Advanced
+                </div>
               </div>
               <h3>Document Processing Pipeline</h3>
               <p>Create a pipeline for processing and analyzing documents</p>
@@ -359,14 +441,19 @@
 
         <section class="tutorials-section">
           <h2>📚 Learning Paths</h2>
-          
+
           <div class="learning-paths">
             <div class="path-card">
               <div class="path-header">
-                <v-icon size="48" color="primary">mdi-robot</v-icon>
+                <v-icon size="48" color="primary">
+                  mdi-robot
+                </v-icon>
                 <h3>Bot Developer Path</h3>
               </div>
-              <p>Master the art of building intelligent chatbots and conversational AI</p>
+              <p>
+                Master the art of building intelligent chatbots and
+                conversational AI
+              </p>
               <div class="path-steps">
                 <div class="step">
                   <span class="step-number">1</span>
@@ -396,7 +483,9 @@
 
             <div class="path-card">
               <div class="path-header">
-                <v-icon size="48" color="primary">mdi-brain</v-icon>
+                <v-icon size="48" color="primary">
+                  mdi-brain
+                </v-icon>
                 <h3>AI Model Developer Path</h3>
               </div>
               <p>Learn to train, fine-tune, and deploy custom AI models</p>
@@ -429,7 +518,9 @@
 
             <div class="path-card">
               <div class="path-header">
-                <v-icon size="48" color="primary">mdi-timeline</v-icon>
+                <v-icon size="48" color="primary">
+                  mdi-timeline
+                </v-icon>
                 <h3>Pipeline Engineer Path</h3>
               </div>
               <p>Master data processing pipelines and automation</p>
@@ -464,11 +555,13 @@
 
         <section class="tutorials-section">
           <h2>🎥 Video Tutorials</h2>
-          
+
           <div class="video-grid">
             <div class="video-card">
               <div class="video-thumbnail">
-                <v-icon size="48" color="white">mdi-play-circle</v-icon>
+                <v-icon size="48" color="white">
+                  mdi-play-circle
+                </v-icon>
               </div>
               <div class="video-content">
                 <h3>Quick Start Guide</h3>
@@ -482,7 +575,9 @@
 
             <div class="video-card">
               <div class="video-thumbnail">
-                <v-icon size="48" color="white">mdi-play-circle</v-icon>
+                <v-icon size="48" color="white">
+                  mdi-play-circle
+                </v-icon>
               </div>
               <div class="video-content">
                 <h3>Bot Builder Walkthrough</h3>
@@ -496,7 +591,9 @@
 
             <div class="video-card">
               <div class="video-thumbnail">
-                <v-icon size="48" color="white">mdi-play-circle</v-icon>
+                <v-icon size="48" color="white">
+                  mdi-play-circle
+                </v-icon>
               </div>
               <div class="video-content">
                 <h3>Model Training Deep Dive</h3>
@@ -510,7 +607,9 @@
 
             <div class="video-card">
               <div class="video-thumbnail">
-                <v-icon size="48" color="white">mdi-play-circle</v-icon>
+                <v-icon size="48" color="white">
+                  mdi-play-circle
+                </v-icon>
               </div>
               <div class="video-content">
                 <h3>Pipeline Debugging</h3>
@@ -604,7 +703,9 @@
   border-radius: 16px;
   padding: 1.5rem;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .tutorial-card:hover {
@@ -614,7 +715,11 @@
 
 .tutorial-card.featured {
   border: 2px solid #667eea;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.05) 0%,
+    rgba(118, 75, 162, 0.05) 100%
+  );
 }
 
 .tutorial-header {
@@ -804,29 +909,29 @@
   .tutorials-page {
     padding: 1rem;
   }
-  
+
   .page-header h1 {
     font-size: 2rem;
   }
-  
+
   .content-container {
     padding: 2rem;
   }
-  
+
   .tutorials-section h2 {
     font-size: 1.5rem;
   }
-  
+
   .tutorial-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .learning-paths {
     grid-template-columns: 1fr;
   }
-  
+
   .video-grid {
     grid-template-columns: 1fr;
   }
 }
-</style> 
+</style>

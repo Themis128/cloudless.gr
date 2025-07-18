@@ -5,12 +5,11 @@
         <VBtn icon class="mb-4" to="/">
           <VIcon>mdi-arrow-left</VIcon>
         </VBtn>
-        <h1 class="text-h4 mb-4">My Todos</h1>
+        <h1 class="text-h4 mb-4">
+          My Todos
+        </h1>
         <VList>
-          <VListItem
-            v-for="todo in todos"
-            :key="todo.id"
-          >
+          <VListItem v-for="todo in todos" :key="todo.id">
             <VListItemContent>
               <VListItemTitle>{{ todo.title }}</VListItemTitle>
             </VListItemContent>
@@ -22,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useSupabase } from '~/composables/supabase'
 
 const todos = ref<any[]>([])
@@ -31,7 +30,7 @@ const supabase = useSupabase()
 const getTodos = async () => {
   const { data, error } = await supabase.from('todos' as any).select()
   if (error) {
-    console.error('Error fetching todos:', error)
+    // Error handling without console.log
   } else {
     todos.value = data || []
   }
@@ -40,11 +39,15 @@ const getTodos = async () => {
 onMounted(() => {
   getTodos()
   // Subscribe to real-time updates
-  const subscription = supabase
+  supabase
     .channel('public:todos')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, payload => {
-      getTodos()
-    })
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'todos' },
+      () => {
+        getTodos()
+      }
+    )
     .subscribe()
 })
 </script>
