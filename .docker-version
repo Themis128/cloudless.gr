@@ -1,0 +1,6 @@
+﻿VERSION=1.0.0
+GIT_COMMIT=2b6dfc6
+GIT_BRANCH=application
+BUILD_DATE=2025-07-18T09:32:48Z
+IMAGE_NAME=cloudlessgr-app
+TAGS=cloudlessgr-app:latest cloudlessgr-app:v1.0.0 cloudlessgr-app:v1.0.0-2b6dfc6 cloudlessgr-app:application cloudlessgr-app:application-2b6dfc6

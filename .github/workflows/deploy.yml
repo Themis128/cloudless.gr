@@ -51,22 +51,58 @@ jobs:
           path: .output/
           retention-days: 7
           
-      - name: Build Docker image
+      - name: Get version info
+        id: version
         run: |
-          echo "🐳 Building Docker image..."
-          docker build -t cloudless:staging .
+          VERSION=$(node -p "require('./package.json').version")
+          GIT_COMMIT=$(git rev-parse --short HEAD)
+          GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "git_commit=$GIT_COMMIT" >> $GITHUB_OUTPUT
+          echo "git_branch=$GIT_BRANCH" >> $GITHUB_OUTPUT
+          echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+          
+      - name: Build versioned Docker image
+        run: |
+          echo "🐳 Building versioned Docker image..."
+          VERSION="${{ steps.version.outputs.version }}"
+          GIT_COMMIT="${{ steps.version.outputs.git_commit }}"
+          GIT_BRANCH="${{ steps.version.outputs.git_branch }}"
+          BUILD_DATE="${{ steps.version.outputs.build_date }}"
+          
+          # Build with multiple tags
+          docker build \
+            --build-arg VERSION="$VERSION" \
+            --build-arg GIT_COMMIT="$GIT_COMMIT" \
+            --build-arg GIT_BRANCH="$GIT_BRANCH" \
+            --build-arg BUILD_DATE="$BUILD_DATE" \
+            -t cloudlessgr-app:latest \
+            -t cloudlessgr-app:v$VERSION \
+            -t cloudlessgr-app:v$VERSION-$GIT_COMMIT \
+            -t cloudlessgr-app:$GIT_BRANCH \
+            -t cloudlessgr-app:$GIT_BRANCH-$GIT_COMMIT \
+            .
           
       - name: Deploy to staging
         run: |
           echo "🚀 Deploying to staging environment..."
-          # Docker deployment example
-          # docker run -d --name cloudless-staging -p 3000:3000 cloudless:staging
+          VERSION="${{ steps.version.outputs.version }}"
           
           # Deploy to Docker registry if credentials are available
           if [ -n "${{ secrets.DOCKER_PASSWORD }}" ] && [ -n "${{ secrets.DOCKER_USERNAME }}" ] && [ -n "${{ secrets.DOCKER_REGISTRY }}" ]; then
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-            docker tag cloudless:staging "${{ secrets.DOCKER_REGISTRY }}/cloudless:staging"
-            docker push "${{ secrets.DOCKER_REGISTRY }}/cloudless:staging"
+            
+            # Tag and push all versions
+            docker tag cloudlessgr-app:latest "${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:latest"
+            docker tag cloudlessgr-app:v$VERSION "${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:v$VERSION"
+            docker tag cloudlessgr-app:v$VERSION-$GIT_COMMIT "${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:v$VERSION-$GIT_COMMIT"
+            
+            docker push "${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:latest"
+            docker push "${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:v$VERSION"
+            docker push "${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:v$VERSION-$GIT_COMMIT"
+            
             echo "✅ Staging deployment to registry completed"
           else
             echo "⚠️ Docker registry credentials not configured, skipping registry push"
@@ -105,22 +141,58 @@ jobs:
           path: .output/
           retention-days: 30
           
-      - name: Build Docker image
+      - name: Get version info
+        id: version
         run: |
-          echo "🐳 Building Docker image..."
-          docker build -t cloudless:production .
+          VERSION=$(node -p "require('./package.json').version")
+          GIT_COMMIT=$(git rev-parse --short HEAD)
+          GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "git_commit=$GIT_COMMIT" >> $GITHUB_OUTPUT
+          echo "git_branch=$GIT_BRANCH" >> $GITHUB_OUTPUT
+          echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+          
+      - name: Build versioned Docker image
+        run: |
+          echo "🐳 Building versioned Docker image..."
+          VERSION="${{ steps.version.outputs.version }}"
+          GIT_COMMIT="${{ steps.version.outputs.git_commit }}"
+          GIT_BRANCH="${{ steps.version.outputs.git_branch }}"
+          BUILD_DATE="${{ steps.version.outputs.build_date }}"
+          
+          # Build with multiple tags
+          docker build \
+            --build-arg VERSION="$VERSION" \
+            --build-arg GIT_COMMIT="$GIT_COMMIT" \
+            --build-arg GIT_BRANCH="$GIT_BRANCH" \
+            --build-arg BUILD_DATE="$BUILD_DATE" \
+            -t cloudlessgr-app:latest \
+            -t cloudlessgr-app:v$VERSION \
+            -t cloudlessgr-app:v$VERSION-$GIT_COMMIT \
+            -t cloudlessgr-app:$GIT_BRANCH \
+            -t cloudlessgr-app:$GIT_BRANCH-$GIT_COMMIT \
+            .
           
       - name: Deploy to production
         run: |
           echo "🚀 Deploying to production environment..."
-          # Docker deployment example
-          # docker run -d --name cloudless-production -p 3000:3000 cloudless:production
+          VERSION="${{ steps.version.outputs.version }}"
           
           # Deploy to Docker registry if credentials are available
           if [ -n "${{ secrets.DOCKER_PASSWORD }}" ] && [ -n "${{ secrets.DOCKER_USERNAME }}" ] && [ -n "${{ secrets.DOCKER_REGISTRY }}" ]; then
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-            docker tag cloudless:production "${{ secrets.DOCKER_REGISTRY }}/cloudless:production"
-            docker push "${{ secrets.DOCKER_REGISTRY }}/cloudless:production"
+            
+            # Tag and push all versions
+            docker tag cloudlessgr-app:latest "${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:latest"
+            docker tag cloudlessgr-app:v$VERSION "${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:v$VERSION"
+            docker tag cloudlessgr-app:v$VERSION-$GIT_COMMIT "${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:v$VERSION-$GIT_COMMIT"
+            
+            docker push "${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:latest"
+            docker push "${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:v$VERSION"
+            docker push "${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:v$VERSION-$GIT_COMMIT"
+            
             echo "✅ Production deployment to registry completed"
           else
             echo "⚠️ Docker registry credentials not configured, skipping registry push"
@@ -136,10 +208,17 @@ jobs:
             
             **Status:** ✅ Successfully deployed to production
             
-            **Commit:** ${context.sha}
-            **Branch:** ${context.ref}
+            **Version:** ${{ steps.version.outputs.version }}
+            **Commit:** ${{ steps.version.outputs.git_commit }}
+            **Branch:** ${{ steps.version.outputs.git_branch }}
+            **Build Date:** ${{ steps.version.outputs.build_date }}
             **Deployed by:** ${context.actor}
             **Deployed at:** ${new Date().toISOString()}
+            
+            **Docker Images:**
+            - \`cloudlessgr-app:latest\`
+            - \`cloudlessgr-app:v${{ steps.version.outputs.version }}\`
+            - \`cloudlessgr-app:v${{ steps.version.outputs.version }}-${{ steps.version.outputs.git_commit }}\`
             
             ---
             **Production deployment completed successfully!**`;
@@ -148,7 +227,7 @@ jobs:
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Production Deployment - ${new Date().toISOString().split('T')[0]}`,
+              title: `Production Deployment v${{ steps.version.outputs.version }} - ${new Date().toISOString().split('T')[0]}`,
               body: body,
               labels: ['deployment', 'production']
             }); 

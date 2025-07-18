@@ -104,16 +104,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import ProjectListPreview from '~/components/project-list-preview.vue'
+import { computed, onMounted, ref } from 'vue'
 import ActivityFeed from '~/components/activity-feed.vue'
+import ProjectListPreview from '~/components/project-list-preview.vue'
 import SvgIcon from '~/components/ui/SvgIcon.vue'
+import { useSupabase } from '~/composables/supabase'
 import { useAuth } from '~/composables/useAuth'
 import { useBotStore } from '~/stores/botStore'
 import { useModelStore } from '~/stores/modelStore'
 import { usePipelineStore } from '~/stores/pipelineStore'
 import { useProjectStore } from '~/stores/templateStore'
-import { useSupabase } from '~/composables/supabase'
 
 const drawer = ref(false)
 const { user } = useAuth()
@@ -128,12 +128,23 @@ const pipelineSteps = computed(() => pipelineStore.pipelines?.length || 0)
 const projectCount = ref(0)
 
 onMounted(async () => {
-  await botStore.fetchAll()
-  await pipelineStore.fetchAll()  // Add this line to fetch pipelines
-  // For models, you may want to fetch from backend if not already loaded
-  // For projects, fetch count
-  const supabase = useSupabase()
-  const { data } = await supabase.from('projects').select('id')
-  projectCount.value = data ? data.length : 0
+  try {
+    await botStore.fetchAll()
+    await pipelineStore.fetchAll()  // Add this line to fetch pipelines
+    // For models, you may want to fetch from backend if not already loaded
+    // For projects, fetch count
+    const supabase = useSupabase()
+    const { data, error } = await supabase.from('projects').select('id')
+    if (error) {
+      console.warn('Failed to fetch projects:', error.message)
+      projectCount.value = 0
+    } else {
+      projectCount.value = data ? data.length : 0
+    }
+  } catch (error) {
+    console.warn('Error during page initialization:', error)
+    // Set default values if Supabase is not available
+    projectCount.value = 0
+  }
 })
 </script>

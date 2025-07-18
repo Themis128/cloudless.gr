@@ -1,20 +1,30 @@
 {
-  "name": "cloudless.gr",
-  "version": "0.1.1",
+  "name": "cloudless-gr",
+  "version": "1.0.0",
+  "description": "Cloudless LLM Dev Agent - Low-code platform for data pipelines, analytics, and AI",
   "private": true,
   "scripts": {
-    "dev": "nuxi dev",
-    "build": "nuxi build",
-    "preview": "nuxi preview",
-    "test": "npm run lint && npm run typecheck && npm run build",
-    "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --max-warnings 0",
-    "lint:fix": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix",
-    "typecheck": "nuxi typecheck",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "audit": "npm audit --audit-level moderate",
-    "outdated": "npm outdated",
-    "ci": "npm run lint && npm run typecheck && npm run build && npm run audit"
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test": "playwright test",
+    "test:integration": "node test-integration.js",
+    "docker:dev": "powershell -ExecutionPolicy Bypass -File scripts/dev-docker.ps1",
+    "docker:dev:start": "powershell -ExecutionPolicy Bypass -File scripts/dev-docker.ps1 start",
+    "docker:dev:stop": "powershell -ExecutionPolicy Bypass -File scripts/dev-docker.ps1 stop",
+    "docker:dev:restart": "powershell -ExecutionPolicy Bypass -File scripts/dev-docker.ps1 restart",
+    "docker:dev:logs": "powershell -ExecutionPolicy Bypass -File scripts/dev-docker.ps1 logs",
+    "docker:dev:shell": "powershell -ExecutionPolicy Bypass -File scripts/dev-docker.ps1 shell",
+    "docker:dev:status": "powershell -ExecutionPolicy Bypass -File scripts/dev-docker.ps1 status",
+    "docker:build": "bash scripts/version.sh",
+    "docker:build:win": "powershell -ExecutionPolicy Bypass -File scripts/version.ps1",
+    "docker:build:registry": "bash scripts/version.sh --registry your-registry.com",
+    "docker:build:push": "bash scripts/version.sh --push",
+    "docker:build:win:push": "powershell -ExecutionPolicy Bypass -File scripts/version.ps1 -Push",
+    "docker:clean": "docker system prune -f && docker image prune -f",
+    "docker:clean:all": "docker system prune -a -f && docker image prune -a -f"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
@@ -32,16 +42,17 @@
     "vuetify": "^3.9.0-beta.1"
   },
   "devDependencies": {
+    "@nuxt/eslint-config": "^0.2.0",
     "@nuxt/image": "^1.10.0",
+    "@playwright/test": "^1.54.1",
     "@types/echarts": "^4.9.22",
     "@vscode/test-electron": "^2.5.2",
-    "nuxt": "^3.17.6",
-    "supabase": "^2.30.4",
-    "@nuxt/eslint-config": "^0.2.0",
+    "audit-ci": "^7.0.0",
     "eslint": "^8.57.0",
     "eslint-plugin-vue": "^9.21.1",
-    "prettier": "^3.2.5",
+    "nuxt": "^3.17.6",
     "playwright": "^1.42.1",
-    "audit-ci": "^7.0.0"
+    "prettier": "^3.2.5",
+    "supabase": "^2.30.4"
   }
 }
