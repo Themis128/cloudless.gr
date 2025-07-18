@@ -226,9 +226,9 @@ jobs:
         
       - name: Run accessibility tests
         run: |
-          # Start preview server
-          npm run preview &
-          PREVIEW_PID=$!
+          # Start server directly from build output
+          node .output/server/index.mjs &
+          SERVER_PID=$!
           
           # Wait for server to start
           sleep 10
@@ -236,8 +236,8 @@ jobs:
           # Run accessibility checks
           npx playwright test tests/basic.spec.js --grep "accessibility"
           
-          # Kill preview server
-          kill $PREVIEW_PID
+          # Kill server
+          kill $SERVER_PID
         continue-on-error: true
 
   performance-test:
@@ -295,23 +295,27 @@ jobs:
         
       - name: Test preview server
         run: |
-          # Start preview server in background
-          npm run preview &
-          PREVIEW_PID=$!
+          # Start server directly from build output
+          node .output/server/index.mjs &
+          SERVER_PID=$!
           
           # Wait for server to start
           sleep 10
           
           # Test if server is responding
           if curl -f http://localhost:3000 > /dev/null 2>&1; then
-            echo "✅ Preview server is responding"
+            echo "✅ Server is responding"
           else
-            echo "❌ Preview server is not responding"
+            echo "❌ Server is not responding"
+            echo "📊 Checking server status..."
+            ps aux | grep node
+            echo "📊 Checking port 3000..."
+            netstat -tlnp | grep :3000 || echo "Port 3000 not found"
             exit 1
           fi
           
-          # Kill preview server
-          kill $PREVIEW_PID
+          # Kill server
+          kill $SERVER_PID
           
           echo "✅ Integration test passed"
 
