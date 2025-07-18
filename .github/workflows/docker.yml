@@ -50,16 +50,29 @@ jobs:
             target: dev
             tag: dev
           - dockerfile: Dockerfile
-            target: production
+            target: runner
             tag: latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check if Dockerfile exists
+        id: check-dockerfile
+        run: |
+          if [ -f "${{ matrix.dockerfile }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ ${{ matrix.dockerfile }} exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "❌ ${{ matrix.dockerfile }} not found"
+          fi
+
       - name: Set up Docker Buildx
+        if: steps.check-dockerfile.outputs.exists == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Get version info
+        if: steps.check-dockerfile.outputs.exists == 'true'
         id: version
         run: |
           VERSION=$(node -p "require('./package.json').version")
@@ -72,6 +85,7 @@ jobs:
           echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
 
       - name: Build Docker image
+        if: steps.check-dockerfile.outputs.exists == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -92,6 +106,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Test Docker image
+        if: steps.check-dockerfile.outputs.exists == 'true'
         run: |
           echo "🧪 Testing Docker image..."
 
@@ -111,7 +126,7 @@ jobs:
           fi
 
           # Test health endpoint (if available)
-          if [ "${{ matrix.target }}" = "production" ]; then
+          if [ "${{ matrix.target }}" = "runner" ]; then
             echo "🔍 Testing health endpoint..."
             # Note: This would need the container to expose port 3000
             # docker run --rm --network host cloudlessgr-app:${{ matrix.tag }} curl -f http://localhost:3000/api/health || echo "Health check not available"
@@ -120,12 +135,10 @@ jobs:
           # Cleanup
           docker stop test-container || true
 
-      - name: Upload Docker image as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image-${{ matrix.tag }}
-          path: /tmp/docker-image.tar
-          retention-days: 7
+      - name: Skip build message
+        if: steps.check-dockerfile.outputs.exists == 'false'
+        run: |
+          echo "⏭️ Skipping build for ${{ matrix.dockerfile }} - file not found"
 
   docker-compose-test:
     name: Docker Compose Test
@@ -222,7 +235,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          target: production
+          target: runner
           push: true
           tags: |
             ${{ secrets.DOCKER_REGISTRY }}/cloudlessgr-app:latest

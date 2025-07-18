@@ -115,7 +115,7 @@ jobs:
 
       - name: Build Docker image for scanning
         run: |
-          docker build -t cloudlessgr-app:security-scan -f Dockerfile .
+          docker build -t cloudlessgr-app:security-scan -f Dockerfile --target runner .
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master

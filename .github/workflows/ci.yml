@@ -360,21 +360,47 @@ jobs:
           # Run a simple server startup test
           echo "🧪 Testing server startup..."
 
-          # Start server in background
-          node .output/server/index.mjs &
+          # Create a temporary log file for server output
+          SERVER_LOG=$(mktemp)
+          echo "📝 Server output will be logged to: $SERVER_LOG"
+
+          # Use start-server.js for proper server startup with output capture
+          echo "🚀 Starting server with start-server.js..."
+          timeout 30s node start-server.js > "$SERVER_LOG" 2>&1 &
           SERVER_PID=$!
 
           # Wait for server to start
+          echo "⏳ Waiting for server to start..."
           sleep 10
 
-          # Test if server is responding
-          if curl -f -s --connect-timeout 10 http://127.0.0.1:3000 > /dev/null 2>&1; then
-            echo "✅ Server is responding on port 3000"
-            kill $SERVER_PID
-            exit 0
+          # Check if server process is still running
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "✅ Server process is running (PID: $SERVER_PID)"
+            
+            # Show server output for debugging
+            echo "📋 Server output so far:"
+            cat "$SERVER_LOG"
+            
+            # Test if server is responding
+            echo "🔍 Testing server response..."
+            if curl -f -s --connect-timeout 10 http://127.0.0.1:3000 > /dev/null 2>&1; then
+              echo "✅ Server is responding on port 3000"
+              kill $SERVER_PID
+              rm -f "$SERVER_LOG"
+              exit 0
+            else
+              echo "❌ Server is not responding on port 3000"
+              echo "📋 Full server output:"
+              cat "$SERVER_LOG"
+              kill $SERVER_PID
+              rm -f "$SERVER_LOG"
+              exit 1
+            fi
           else
-            echo "❌ Server is not responding"
-            kill $SERVER_PID
+            echo "❌ Server process failed to start or crashed"
+            echo "📋 Server output:"
+            cat "$SERVER_LOG"
+            rm -f "$SERVER_LOG"
             exit 1
           fi
         continue-on-error: false
@@ -415,10 +441,19 @@ jobs:
         run: |
           echo "🔄 Both tests failed, trying basic server test..."
 
-          # Try basic server startup
-          node .output/server/index.mjs &
-          sleep 5
-          curl -f http://localhost:3000 || exit 1
+          # Try basic server startup with start-server.js
+          echo "🚀 Trying basic server startup..."
+          timeout 20s node start-server.js &
+          SERVER_PID=$!
+          sleep 10
+
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "✅ Server started successfully"
+            curl -f http://localhost:3000 && kill $SERVER_PID || (kill $SERVER_PID && exit 1)
+          else
+            echo "❌ Server failed to start"
+            exit 1
+          fi
         continue-on-error: true
 
       - name: Node.js debug test
@@ -484,6 +519,31 @@ jobs:
           node test-server-startup.js
         continue-on-error: true
 
+      - name: Enhanced server debug test
+        if: failure()
+        env:
+          NODE_ENV: production
+          NITRO_HOST: 0.0.0.0
+          NITRO_PORT: 3000
+          NITRO_LOG_LEVEL: debug
+          NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL }}
+          NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          echo "🔄 All tests failed, running enhanced server debug test..."
+
+          # Run the enhanced debug script
+          node test-server-debug-enhanced.js
+        continue-on-error: true
+
+      - name: Simple server module test
+        if: failure()
+        run: |
+          echo "🔄 All tests failed, running simple server module test..."
+
+          # Run the simple server module test
+          node test-server-simple.js
+        continue-on-error: true
+
       - name: Direct Nitro server debug
         if: failure()
         env:
@@ -513,7 +573,7 @@ jobs:
 
           # Try direct server execution with full error capture
           echo "🧪 Direct Nitro server execution with full error capture..."
-          timeout 30s node --trace-warnings --trace-uncaught .output/server/index.mjs 2>&1 || {
+          timeout 30s node --trace-warnings --trace-uncaught start-server.js 2>&1 || {
             echo "❌ Server failed with exit code $?"
             echo "📋 Full output captured above"
           }
