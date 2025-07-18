@@ -95,7 +95,7 @@ function Build-DevImage {
     }
 }
 
-function Clean-DevEnvironment {
+function Remove-DevEnvironment {
     Write-Info "Cleaning development environment..."
     docker-compose -f docker-compose.dev.yml down -v --remove-orphans
     docker system prune -f
@@ -121,7 +121,7 @@ switch ($Action.ToLower()) {
     "logs" { Show-Logs }
     "shell" { Enter-Shell }
     "build" { Build-DevImage }
-    "clean" { Clean-DevEnvironment }
+    "clean" { Remove-DevEnvironment }
     "status" { Show-Status }
     default {
         Write-Error "Unknown action: $Action"
