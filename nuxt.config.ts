@@ -12,12 +12,12 @@ export default defineNuxtConfig({
   vite: {
     logLevel: 'info',
     ssr: {
-      noExternal: ['vue-echarts', 'echarts']
+      noExternal: ['vue-echarts', 'echarts', 'vuetify'] // Ensure Vuetify is bundled
     }
   },
   // To set host and port, use environment variables NUXT_HOST and NUXT_PORT or pass them via CLI
   nitro: {
-    compatibilityDate: '2025-07-15',
+    compatibilityDate: '2025-07-15'
   },
   imports: {
     dirs: [
@@ -25,6 +25,9 @@ export default defineNuxtConfig({
       'stores',
       'components',
     ]
+  },
+  build: {
+    transpile: ['vuetify']
   },
   css: [
     '@mdi/font/css/materialdesignicons.css',
