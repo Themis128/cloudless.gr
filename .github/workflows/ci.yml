@@ -357,6 +357,24 @@ jobs:
           node test-server-debug.js
         continue-on-error: true
 
+      - name: Direct server test
+        if: failure()
+        run: |
+          echo "🔄 All tests failed, running direct server test..."
+
+          # Run the direct server test
+          node test-server-direct.js
+        continue-on-error: true
+
+      - name: ES Module test
+        if: failure()
+        run: |
+          echo "🔄 All tests failed, running ES Module test..."
+
+          # Run the ES Module test
+          node test-server-esm.js
+        continue-on-error: true
+
   preview-deploy:
     name: Preview Deploy
     runs-on: ubuntu-latest
