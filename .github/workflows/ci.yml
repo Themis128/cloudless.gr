@@ -64,24 +64,53 @@ jobs:
           
       - name: Install dependencies
         run: npm ci
-        continue-on-error: true
         
       - name: Build application
         run: npm run build
-        continue-on-error: true
         
       - name: Test build output
         run: |
+          echo "🔍 Checking build output..."
+          
+          # List current directory contents
+          echo "📁 Current directory contents:"
+          ls -la
+          
           # Check if build output exists
           if [ ! -d ".output" ]; then
             echo "❌ Build output directory not found"
+            echo "📁 Available directories:"
+            ls -la | grep "^d"
             exit 1
           fi
           
-          # Check if key files exist
-          if [ ! -f ".output/server/index.mjs" ]; then
-            echo "❌ Server build file not found"
+          # List .output contents
+          echo "📁 .output directory contents:"
+          ls -la .output/
+          
+          # Check for different possible server file locations
+          if [ -f ".output/server/index.mjs" ]; then
+            echo "✅ Found server file at .output/server/index.mjs"
+          elif [ -f ".output/server/index.js" ]; then
+            echo "✅ Found server file at .output/server/index.js"
+          elif [ -f ".output/server/index.cjs" ]; then
+            echo "✅ Found server file at .output/server/index.cjs"
+          else
+            echo "❌ Server build file not found in expected locations"
+            echo "📁 Server directory contents:"
+            if [ -d ".output/server" ]; then
+              ls -la .output/server/
+            else
+              echo "Server directory does not exist"
+            fi
             exit 1
+          fi
+          
+          # Check for client files
+          if [ -d ".output/public" ]; then
+            echo "✅ Found public directory"
+            echo "📁 Public directory contents:"
+            ls -la .output/public/ | head -10
           fi
           
           echo "✅ Build test passed for Node.js ${{ matrix.node-version }}"
@@ -151,11 +180,9 @@ jobs:
           
       - name: Install dependencies
         run: npm ci
-        continue-on-error: true
         
       - name: Build application
         run: npm run build
-        continue-on-error: true
         
       - name: Install Playwright
         run: npx playwright install --with-deps
@@ -192,7 +219,6 @@ jobs:
         
       - name: Build application
         run: npm run build
-        continue-on-error: true
         
       - name: Install Playwright
         run: npx playwright install --with-deps
@@ -233,7 +259,6 @@ jobs:
         
       - name: Build application
         run: npm run build
-        continue-on-error: true
         
       - name: Analyze bundle size
         run: |
@@ -267,7 +292,6 @@ jobs:
         
       - name: Build application
         run: npm run build
-        continue-on-error: true
         
       - name: Test preview server
         run: |
