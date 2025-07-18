@@ -1,7 +1,6 @@
 <template>
   <v-app>
     <div v-show="vantaEnabled" ref="vantaRef" id="vanta-bg" class="vanta-bg">
-      <img src="/vanta/gallery/noise.png" class="vanta-noise" alt="noise" />
     </div>
     <button
       class="vanta-toggle-btn"
