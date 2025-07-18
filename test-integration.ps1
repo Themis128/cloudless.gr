@@ -2,13 +2,33 @@
 
 Write-Host "🚀 Starting integration test..." -ForegroundColor Green
 
-# Start server directly from build output
+# Start server and redirect output to log
 Write-Host "📦 Starting server from build output..." -ForegroundColor Yellow
-$serverProcess = Start-Process -FilePath "node" -ArgumentList ".output/server/index.mjs" -PassThru -WindowStyle Hidden
+$serverProcess = Start-Process -FilePath "node" -ArgumentList ".output/server/index.mjs" -RedirectStandardOutput "server.log" -RedirectStandardError "server-error.log" -PassThru -WindowStyle Hidden
 
-# Wait for server to start (increased wait time)
+# Wait briefly for server to attempt startup
 Write-Host "⏳ Waiting for server to start..." -ForegroundColor Yellow
-Start-Sleep -Seconds 15
+Start-Sleep -Seconds 5
+
+# Check if server is still running
+if ($serverProcess -and -not $serverProcess.HasExited) {
+    Write-Host "✅ Server is still running (PID: $($serverProcess.Id))" -ForegroundColor Green
+    # Wait a bit more for full startup
+    Start-Sleep -Seconds 10
+} else {
+    Write-Host "❌ Server crashed. Logs:" -ForegroundColor Red
+    if (Test-Path "server.log") {
+        Write-Host "📋 Standard output:" -ForegroundColor Yellow
+        Get-Content "server.log"
+    }
+    if (Test-Path "server-error.log") {
+        Write-Host "📋 Error output:" -ForegroundColor Yellow
+        Get-Content "server-error.log"
+    }
+    Write-Host "📊 Checking if any node processes are running:" -ForegroundColor Yellow
+    Get-Process | Where-Object {$_.ProcessName -eq "node"}
+    exit 1
+}
 
 # Test if server is responding - try multiple approaches
 Write-Host "🔍 Testing server response..." -ForegroundColor Yellow

@@ -2,14 +2,27 @@
 
 echo "🚀 Starting integration test..."
 
-# Start server directly from build output
+# Start server and redirect output to log
 echo "📦 Starting server from build output..."
-node .output/server/index.mjs &
+node .output/server/index.mjs > server.log 2>&1 &
 SERVER_PID=$!
 
-# Wait for server to start (increased wait time)
+# Wait briefly for server to attempt startup
 echo "⏳ Waiting for server to start..."
-sleep 15
+sleep 5
+
+# Check if server is still running
+if ps -p $SERVER_PID > /dev/null; then
+  echo "✅ Server is still running (PID: $SERVER_PID)"
+  # Wait a bit more for full startup
+  sleep 10
+else
+  echo "❌ Server crashed. Logs:"
+  cat server.log
+  echo "📊 Checking if any node processes are running:"
+  ps aux | grep node
+  exit 1
+fi
 
 # Test if server is responding - try multiple approaches
 echo "🔍 Testing server response..."

@@ -226,18 +226,30 @@ jobs:
         
       - name: Run accessibility tests
         run: |
-          # Start server using the integration test approach
-          node .output/server/index.mjs &
+          # Start server with logging
+          node .output/server/index.mjs > server.log 2>&1 &
           SERVER_PID=$!
           
-          # Wait for server to start
-          sleep 15
+          # Wait briefly for server to attempt startup
+          sleep 5
+          
+          # Check if server is still running
+          if ps -p $SERVER_PID > /dev/null; then
+            echo "✅ Server is still running (PID: $SERVER_PID)"
+            sleep 10
+          else
+            echo "❌ Server crashed. Logs:"
+            cat server.log
+            exit 1
+          fi
           
           # Test if server is responding on the configured IP
           if curl -f -s --connect-timeout 10 http://192.168.0.23:3000 > /dev/null 2>&1; then
             echo "✅ Server is responding on 192.168.0.23:3000"
           else
             echo "❌ Server is not responding"
+            echo "📋 Server logs:"
+            cat server.log
             exit 1
           fi
           
@@ -308,6 +320,12 @@ jobs:
           
           # Run the integration test
           ./test-integration.sh
+          
+          # If test fails, show server logs for debugging
+          if [ $? -ne 0 ] && [ -f "server.log" ]; then
+            echo "📋 Server logs for debugging:"
+            cat server.log
+          fi
 
   preview-deploy:
     name: Preview Deploy
