@@ -1,6 +1,10 @@
 <template>
   <DeployGuide />
   <v-container>
+    <v-btn icon class="mb-4" to="/">
+      <v-icon>mdi-arrow-left</v-icon>
+    </v-btn>
+
     <h1>Deployments</h1>
     <v-alert type="info" class="mb-4">
       This page lists all deployments across your app (models, pipelines, bots, etc). Use it to monitor and manage deployments in one place.

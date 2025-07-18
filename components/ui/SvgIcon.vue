@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue'
+// defineProps is a compiler macro and doesn't need to be imported
 const props = defineProps({
   name: { type: String, required: true },
   size: { type: [Number, String], default: 32 },

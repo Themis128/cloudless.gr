@@ -1,3 +1,33 @@
+node_modules/
+dist/
+*.tmp
+*.swp
+*.bak
+*.o
+*.obj
+*.so
+*.a
+*.dll
+*.lib
+*.exe
+*.pyc
+*.pyo
+*.class
+*.jar
+*.ear
+*.war
+*.egg
+*.out
+*.tgz
+*.gz
+*.arj
+*.tar.bz2
+*.bz
+*.deb
+*.rpm
+*.jar.metadata.efactory
+*.jar.metadata.xml
+
 # Nuxt dev/build outputs
 .output
 .data
@@ -249,3 +279,6 @@ docker/volumes/db/data/pg_xact/0000
 docker/volumes/db/data/pg_xact/0000
 docker/volumes/db/data/pg_wal/000000010000000000000002
 docker/volumes/db/data/base/5/16742
+
+# Cursor IDE
+.cursor/

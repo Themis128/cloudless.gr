@@ -47,7 +47,7 @@
         <StepSummary :form="form" />
         <div class="mt-4">
           <v-btn class="me-2" @click="prevStep">Back</v-btn>
-          <v-btn color="success" :loading="loading" @click="submitBot">Create Bot</v-btn>
+          <v-btn color="success" :loading="loading" @click="handleSubmit">Create Bot</v-btn>
         </div>
       </div>
     </v-card-text>
@@ -69,6 +69,7 @@ import { useBotFormValidation } from '~/composables/useBotFormValidation'
 import { storeToRefs } from 'pinia'
 import { useBotStore } from '~/stores/botStore'
 
+const emit = defineEmits(['created'])
 const props = defineProps<{ template?: any }>()
 
 // Use the composable for all stepper state and logic
@@ -109,16 +110,18 @@ function validateStep(idx: number) {
 }
 
 function handleNextStep() {
-  // Debug: log step and validation
-  console.log('handleNextStep called, step:', step.value)
   const valid = validateStep(step.value)
-  console.log('validateStep result:', valid, 'nameError:', nameError.value, 'promptError:', promptError.value, 'modelError:', modelError.value)
   if (!valid) {
     showIncompleteWarning.value = true
     return
   }
-  // Directly increment step to ensure reactivity
-  step.value++
-  console.log('After step.value++, step:', step.value)
+  nextStep()
+}
+
+async function handleSubmit() {
+  const result = await submitBot()
+  if (result) {
+    emit('created')
+  }
 }
 </script>

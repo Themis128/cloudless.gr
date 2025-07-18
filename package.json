@@ -1,11 +1,20 @@
 {
   "name": "cloudless.gr",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "nuxi dev",
     "build": "nuxi build",
-    "preview": "nuxi preview"
+    "preview": "nuxi preview",
+    "test": "npm run lint && npm run typecheck && npm run build",
+    "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --max-warnings 0",
+    "lint:fix": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix",
+    "typecheck": "nuxi typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "audit": "npm audit --audit-level moderate",
+    "outdated": "npm outdated",
+    "ci": "npm run lint && npm run typecheck && npm run build && npm run audit"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
@@ -19,6 +28,7 @@
     "vanta": "^0.5.24",
     "vue": "^3.5.17",
     "vue-echarts": "^7.0.3",
+    "vuedraggable": "^4.1.0",
     "vuetify": "^3.9.0-beta.1"
   },
   "devDependencies": {
@@ -26,6 +36,12 @@
     "@types/echarts": "^4.9.22",
     "@vscode/test-electron": "^2.5.2",
     "nuxt": "^3.17.6",
-    "supabase": "^2.30.4"
+    "supabase": "^2.30.4",
+    "@nuxt/eslint-config": "^0.2.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.21.1",
+    "prettier": "^3.2.5",
+    "playwright": "^1.42.1",
+    "audit-ci": "^7.0.0"
   }
 }

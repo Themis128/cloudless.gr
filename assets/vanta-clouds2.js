@@ -1,38 +1,69 @@
 // VANTA.Clouds2 background integration for Nuxt/Vite
 // Dynamically import three and vanta, and ensure window.THREE is set before Vanta loads
 
-export default async function mountVantaClouds2(el) {
+export default async function mountVantaClouds2(el, options = {}) {
   let vantaEffect = null
+  
   if (typeof window !== 'undefined') {
-    if (!window.THREE) {
-      const THREE = await import('three')
-      window.THREE = THREE
+    try {
+      // Load Three.js if not already loaded
+      if (!window.THREE) {
+        const script1 = document.createElement('script')
+        script1.src = '/vanta/three.min.js'
+        script1.async = true
+        document.head.appendChild(script1)
+        
+        await new Promise((resolve, reject) => {
+          script1.onload = resolve
+          script1.onerror = reject
+        })
+      }
+      
+      // Load Vanta Clouds2 if not already loaded
+      if (!window.VANTA || !window.VANTA.CLOUDS2) {
+        const script2 = document.createElement('script')
+        script2.src = '/vanta/vanta.clouds2.min.js'
+        script2.async = true
+        document.head.appendChild(script2)
+        
+        await new Promise((resolve, reject) => {
+          script2.onload = resolve
+          script2.onerror = reject
+        })
+      }
+      
+      // Wait a bit for initialization
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      if (window.VANTA && window.VANTA.CLOUDS2) {
+        vantaEffect = window.VANTA.CLOUDS2({
+          el,
+          THREE: window.THREE,
+          mouseControls: true,
+          touchControls: true,
+          gyroControls: false,
+          minHeight: 200.00,
+          minWidth: 200.00,
+          skyColor: options.skyColor || 0x6a7ba2,
+          cloudColor: options.cloudColor || 0xe0e6ef,
+          lightColor: options.lightColor || 0xffffff,
+          speed: options.speed || 1.2,
+          texturePath: '/vanta/gallery/noise.png',
+          ...options
+        })
+      }
+    } catch (error) {
+      console.error('Error loading Vanta Clouds2:', error)
     }
-    const { default: CLOUDS2 } = await import('vanta/dist/vanta.clouds2.min.js')
-    vantaEffect = CLOUDS2({
-      el,
-      mouseControls: true,
-      touchControls: true,
-      minHeight: 200.00,
-      minWidth: 200.00,
-      skyColor: 0x6a7ba2,
-      cloudColor: 0xe0e6ef,
-      cloudShadowColor: 0x3b4960,
-      sunColor: 0xf9f9fb,
-      sunGlareColor: 0xf9f9fb,
-      sunlightColor: 0xf9f9fb,
-      speed: 1.2, // more movement
-      cloudShadow: 1.0, // more depth
-      cloudHeight: 0.8, // more vertical movement
-      cloudBaseColor: 0xd2d9e6, // subtle color variation
-      lightDirection: 1.2, // more dynamic lighting
-      mouseControls: true,
-      touchControls: true,
-      gyroControls: true,
-      // You can further tweak these for realism
-    })
   }
+  
   return () => {
-    if (vantaEffect) vantaEffect.destroy()
+    if (vantaEffect) {
+      try {
+        vantaEffect.destroy()
+      } catch (error) {
+        console.warn('Error destroying Vanta effect:', error)
+      }
+    }
   }
 }

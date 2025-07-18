@@ -124,13 +124,13 @@ const projectStore = useProjectStore()
 
 const bots = computed(() => botStore.bots || [])
 const models = computed(() => modelStore.models || [])
-const pipelineSteps = computed(() => pipelineStore.steps.length)
+const pipelineSteps = computed(() => pipelineStore.pipelines?.length || 0)
 const projectCount = ref(0)
 
 onMounted(async () => {
   await botStore.fetchAll()
+  await pipelineStore.fetchAll()  // Add this line to fetch pipelines
   // For models, you may want to fetch from backend if not already loaded
-  // For pipelines, you may want to fetch from backend if not already loaded
   // For projects, fetch count
   const supabase = useSupabase()
   const { data } = await supabase.from('projects').select('id')

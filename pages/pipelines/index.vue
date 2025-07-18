@@ -1,6 +1,10 @@
 <template>
   <PipelineGuide />
   <v-container>
+    <v-btn icon class="mb-4" to="/">
+      <v-icon>mdi-arrow-left</v-icon>
+    </v-btn>
+
     <v-row align="center" justify="space-between" class="mb-4">
       <v-col cols="12" md="6">
         <v-btn color="primary" to="/pipelines/create">
@@ -18,7 +22,10 @@
         <v-card>
           <v-card-title>Pipeline Steps Distribution</v-card-title>
           <v-card-text>
-            <VEcharts :option="chartOption" autoresize style="height: 300px;" />
+            <client-only>
+              <VChart v-if="chartOption" :option="chartOption" autoresize style="height: 300px;" />
+              <v-skeleton-loader v-else type="image" height="300" />
+            </client-only>
           </v-card-text>
         </v-card>
       </v-col>
@@ -56,10 +63,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import { useSupabase } from '~/composables/supabase'
 import type { Database } from '~/types/database.types'
 import PipelineGuide from '~/components/step-guides/PipelineGuide.vue'
+
+// Lazy load VChart component for client-side only
+const VChart = defineAsyncComponent(() => 
+  import('vue-echarts').then(mod => mod.default)
+)
 
 type PipelineRow = {
   config: any;
@@ -85,17 +97,26 @@ const avgSteps = computed(() => {
 })
 
 const chartOption = computed(() => {
+  if (!pipelines.value.length) return null
+  
   const data = pipelines.value.map((p: PipelineRow) => ({ name: p.name, value: stepsCount(p) }))
   return {
     tooltip: { trigger: 'item' },
-    xAxis: { type: 'category', data: data.map((d: { name: string; value: number }) => d.name) },
+    xAxis: { 
+      type: 'category', 
+      data: data.map((d: { name: string; value: number }) => d.name),
+      axisLabel: {
+        interval: 0,
+        rotate: 45
+      }
+    },
     yAxis: { type: 'value' },
     series: [{
       data: data.map((d: { name: string; value: number }) => d.value),
       type: 'bar',
       itemStyle: { color: '#1976d2' },
     }],
-    grid: { left: 40, right: 20, top: 40, bottom: 40 },
+    grid: { left: 40, right: 20, top: 40, bottom: 80 },
   }
 })
 

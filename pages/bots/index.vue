@@ -12,9 +12,15 @@
       </v-btn>
     </div>
 
-    <v-dialog v-model="showWizard" max-width="600">
+    <v-dialog
+      v-model="showWizard"
+      max-width="600"
+      persistent
+      :scrim="false"
+      transition="dialog-transition"
+    >
       <template #default>
-        <BotWizard @created="onBotCreated" />
+        <BotBuilderDialog @created="onBotCreated" @close="showWizard = false" />
       </template>
     </v-dialog>
 
@@ -40,8 +46,8 @@ import { ref, onMounted } from 'vue';
 import { useBotStore } from '~/stores/botStore';
 import { storeToRefs } from 'pinia';
 import BotGuide from '~/components/step-guides/BotGuide.vue';
-
 import BotDetails from '~/components/bots/BotDetails.vue';
+import BotBuilderDialog from '~/components/bots/BotBuilderDialog.vue';
 
 const botStore = useBotStore();
 const { bots, error } = storeToRefs(botStore);

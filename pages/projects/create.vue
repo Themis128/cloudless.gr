@@ -1,4 +1,8 @@
 <template>
+  <v-btn icon class="mb-4" to="/projects">
+    <v-icon>mdi-arrow-left</v-icon>
+  </v-btn>
+
   <div class="mb-4" v-if="wizard.current.value && wizard.current.value.description">
     <v-alert type="info" border="start" variant="tonal" class="mb-4">
       <div v-html="wizard.current.value.description" />
