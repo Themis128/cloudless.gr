@@ -1,0 +1,24 @@
+{
+  "watch": [
+    ".output/server/**/*",
+    "server/**/*",
+    "composables/**/*",
+    "stores/**/*"
+  ],
+  "ext": "js,ts,json,vue",
+  "ignore": [
+    "node_modules/**/*",
+    ".nuxt/**/*",
+    ".output/client/**/*",
+    "logs/**/*",
+    "tmp/**/*"
+  ],
+  "env": {
+    "NODE_ENV": "development",
+    "NITRO_HOST": "0.0.0.0",
+    "NITRO_PORT": "3000"
+  },
+  "exec": "node .output/server/index.mjs",
+  "legacyWatch": true,
+  "delay": 1000
+}

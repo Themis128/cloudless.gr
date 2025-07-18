@@ -8,10 +8,14 @@ on:
     branches:
       - main
       - develop
+      - application
+      - platform
   pull_request:
     branches:
       - main
       - develop
+      - application
+      - platform
   workflow_dispatch:
 
 env:
@@ -24,25 +28,25 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Run npm audit
         run: npm audit --audit-level moderate
-        
+
       - name: Run audit-ci
         run: npx audit-ci --moderate
-        
+
       - name: Check for outdated packages
         run: npm outdated || true
-        
+
       - name: Upload security report
         uses: actions/upload-artifact@v4
         if: always()
@@ -59,19 +63,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Run ESLint security rules
         run: npx eslint . --ext .vue,.js,.ts,.jsx,.tsx --config .eslintrc.js
-        
+
       - name: Check for hardcoded secrets
         run: |
           echo "🔍 Scanning for potential secrets..."
@@ -82,13 +86,13 @@ jobs:
           else
             echo "✅ No obvious secrets found"
           fi
-        
+
       - name: Check for dangerous dependencies
         run: |
           echo "🔍 Checking for dangerous dependencies..."
           # List all dependencies for manual review
           npm list --depth=0
-          
+
       - name: Upload code scan report
         uses: actions/upload-artifact@v4
         if: always()
@@ -101,24 +105,43 @@ jobs:
   container-scan:
     name: Container Security Scan
     runs-on: ubuntu-latest
-    # if: hashFiles('Dockerfile') != ''
+    if: hashFiles('Dockerfile*') != ''
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image for scanning
+        run: |
+          docker build -t cloudlessgr-app:security-scan -f Dockerfile .
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
+          image-ref: 'cloudlessgr-app:security-scan'
           format: 'sarif'
           output: 'trivy-results.sarif'
-          
+
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
+
+      - name: Run Hadolint for Dockerfile linting
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          format: sarif
+          output-file: hadolint-results.sarif
+
+      - name: Upload Hadolint results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'hadolint-results.sarif'
 
   secrets-scan:
     name: Secrets Detection
@@ -128,7 +151,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+
       - name: Run TruffleHog
         uses: trufflesecurity/trufflehog@main
         with:
@@ -157,7 +180,7 @@ jobs:
           echo "- Container Scan: ${{ needs.container-scan.result }}"
           echo "- Secrets Scan: ${{ needs.secrets-scan.result }}"
           echo ""
-          
+
           # Determine overall status
           if [ "${{ needs.dependency-scan.result }}" = "success" ] && \
              [ "${{ needs.code-scan.result }}" = "success" ] && \
@@ -166,4 +189,4 @@ jobs:
           else
             echo "❌ Some security checks failed. Please review the results above."
             exit 1
-          fi 
+          fi

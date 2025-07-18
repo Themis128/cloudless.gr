@@ -6,10 +6,12 @@ on:
       - application
       - main
       - develop
+      - platform
   pull_request:
     branches:
       - application
       - main
+      - platform
 
 permissions:
   contents: read

@@ -16,6 +16,8 @@ services:
       NITRO_PORT: 3000
       NUXT_HOST: 0.0.0.0
       NUXT_PORT: 3000
+      # Timezone for consistent timestamps
+      TZ: Europe/Athens
 
       # Supabase configuration (from secrets)
       NUXT_PUBLIC_SUPABASE_URL: ${NUXT_PUBLIC_SUPABASE_URL}
@@ -27,6 +29,7 @@ services:
 
       # Redis configuration (from secrets)
       REDIS_URL: ${REDIS_URL}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
 
       # External API keys (from secrets)
       OPENAI_API_KEY: ${OPENAI_API_KEY}
@@ -61,9 +64,9 @@ services:
           '--spider',
           'http://localhost:3000/api/health',
         ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
       start_period: 60s
     depends_on:
       redis-prod:
@@ -93,12 +96,13 @@ services:
     networks:
       - cloudless-prod-network
     healthcheck:
-      test: ['CMD', 'redis-cli', '--raw', 'incr', 'ping']
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ['CMD', 'redis-cli', '--raw', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - TZ: Europe/Athens
     deploy:
       resources:
         limits:
@@ -118,6 +122,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
+      TZ: Europe/Athens
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -125,9 +130,9 @@ services:
       - cloudless-prod-network
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
     deploy:
       resources:
         limits:

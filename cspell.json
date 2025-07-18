@@ -61,6 +61,13 @@
     "pwsh",
     "rds",
     "redis",
+    "dbsize",
+    "lpush",
+    "lrange",
+    "ltrim",
+    "sadd",
+    "scard",
+    "setex",
     "rollup",
     "s3",
     "selenium",
@@ -92,8 +99,5 @@
     "yarn.lock",
     "pnpm-lock.yaml"
   ],
-  "ignoreRegExpList": [
-    "/\\$[A-Z_]+/g",
-    "/[a-z]+-[a-z]+/g"
-  ]
+  "ignoreRegExpList": ["/\\$[A-Z_]+/g", "/[a-z]+-[a-z]+/g"]
 }
