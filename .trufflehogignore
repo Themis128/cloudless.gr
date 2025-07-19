@@ -1,329 +1,15 @@
-# TruffleHog ignore file to exclude false positives
-# Documentation files that contain example patterns
-.*\.md$
-.*\.txt$
-.*\.log$
-
-# Complete vanta-gallery exclusion (all files)
-^vanta-gallery/.*$
-
-# GitHub workflow files (contain legitimate secret references)
-^\.github/workflows/.*$
-
-# Third-party libraries and minified files
-^vanta-gallery/.*$
-^vanta-gallery/vendor/.*$
-^vanta-gallery/gallery/.*$
-^vanta-gallery/src/.*$
-^vanta-gallery/package-lock\.json$
-^vanta-gallery/package\.json$
-^vanta-gallery/node_modules/.*$
-^vanta-gallery/vendor/three\.r134\.min\.js$
-^vanta-gallery/gallery/three\.r74\.custom\.min\.js$
-^vanta-gallery/gallery/dat\.gui\.min\.js$
-^node_modules/.*$
-.*\.min\.js$
-.*\.min\.css$
-
-# Comprehensive minified file exclusions (Three.js, WebGL, etc.)
-.*/.*\.min\.js$
-.*/.*\.min\.css$
-.*/vendor/.*/.*\.min\.js$
-.*/vendor/.*/.*\.min\.css$
-.*/dist/.*/.*\.min\.js$
-.*/dist/.*/.*\.min\.css$
-.*/build/.*/.*\.min\.js$
-.*/build/.*/.*\.min\.css$
-
-# Three.js and WebGL library files (contain mathematical patterns)
-.*/three.*\.js$
-.*/webgl.*\.js$
-.*/glsl.*\.js$
-.*/shader.*\.js$
-.*/geometry.*\.js$
-.*/curve.*\.js$
-.*/path.*\.js$
-.*/shape.*\.js$
-.*/texture.*\.js$
-.*/material.*\.js$
-.*/morph.*\.js$
-.*/polyhedron.*\.js$
-.*/dodecahedron.*\.js$
-.*/cylinder.*\.js$
-.*/cone.*\.js$
-.*/circle.*\.js$
-.*/edges.*\.js$
-.*/ellipse.*\.js$
-.*/arc.*\.js$
-.*/catmull.*\.js$
-.*/bezier.*\.js$
-.*/sprite.*\.js$
-.*/lod.*\.js$
-.*/skinned.*\.js$
-.*/bone.*\.js$
-.*/instanced.*\.js$
-.*/line.*\.js$
-.*/points.*\.js$
-.*/skeleton.*\.js$
-.*/animation.*\.js$
-.*/raycast.*\.js$
-.*/renderer.*\.js$
-.*/buffer.*\.js$
-.*/attribute.*\.js$
-.*/uniform.*\.js$
-.*/program.*\.js$
-.*/fog.*\.js$
-.*/scene.*\.js$
-.*/frustum.*\.js$
-.*/culling.*\.js$
-.*/xr.*\.js$
-.*/vr.*\.js$
-.*/webgl.*\.js$
-.*/context.*\.js$
-.*/canvas.*\.js$
-.*/framebuffer.*\.js$
-.*/renderbuffer.*\.js$
-.*/texture.*\.js$
-.*/state.*\.js$
-.*/binding.*\.js$
-.*/layer.*\.js$
-.*/input.*\.js$
-.*/controller.*\.js$
-.*/hand.*\.js$
-.*/grip.*\.js$
-
-# PowerShell and shell scripts (contain environment variable examples)
-.*\.ps1$
-.*\.sh$
-
-# Test and spec files
-.*\.test\..*$
-.*\.spec\..*$
-
-# TypeScript type definition files
-^types/.*$
-
-# CSS and style files
-.*\.css$
-.*\.scss$
-.*\.less$
-
-# Vanta Gallery JavaScript files (third-party libraries)
-^vanta-gallery/.*/.*\.js$
-^vanta-gallery/.*/.*\.json$
-^vanta-gallery/.*/.*\.css$
-^vanta-gallery/.*/.*\.less$
-^vanta-gallery/.*$
-^vanta-gallery/.*/.*\.min\.js$
-^vanta-gallery/.*/.*\.min\.css$
-^vanta-gallery/vendor/three\.r134\.min\.js$
-^vanta-gallery/gallery/three\.r74\.custom\.min\.js$
-^vanta-gallery/gallery/dat\.gui\.min\.js$
-
-# Additional minified Three.js and related files
-^vanta-gallery/.*/three.*\.min\.js$
-^vanta-gallery/.*/dat\.gui.*\.min\.js$
-^vanta-gallery/.*/gallery\.min\.js$
-^vanta-gallery/.*/webpack.*\.js$
-^vanta-gallery/.*/vendor/.*/.*\.min\.js$
-^vanta-gallery/.*/gallery/.*/.*\.min\.js$
-^vanta-gallery/.*/src/.*/.*\.js$
-
-# Three.js geometry and curve files (contain mathematical algorithms)
-^vanta-gallery/.*/.*curve.*\.js$
-^vanta-gallery/.*/.*geometry.*\.js$
-^vanta-gallery/.*/.*path.*\.js$
-^vanta-gallery/.*/.*shape.*\.js$
-^vanta-gallery/.*/.*math.*\.js$
-^vanta-gallery/.*/.*algorithm.*\.js$
-^vanta-gallery/.*/.*texture.*\.js$
-^vanta-gallery/.*/.*material.*\.js$
-^vanta-gallery/.*/.*morph.*\.js$
-^vanta-gallery/.*/.*polyhedron.*\.js$
-^vanta-gallery/.*/.*dodecahedron.*\.js$
-^vanta-gallery/.*/.*cylinder.*\.js$
-^vanta-gallery/.*/.*cone.*\.js$
-^vanta-gallery/.*/.*circle.*\.js$
-^vanta-gallery/.*/.*sprite.*\.js$
-^vanta-gallery/.*/.*lod.*\.js$
-^vanta-gallery/.*/.*skinned.*\.js$
-^vanta-gallery/.*/.*bone.*\.js$
-^vanta-gallery/.*/.*instanced.*\.js$
-^vanta-gallery/.*/.*line.*\.js$
-^vanta-gallery/.*/.*points.*\.js$
-^vanta-gallery/.*/.*skeleton.*\.js$
-^vanta-gallery/.*/.*animation.*\.js$
-^vanta-gallery/.*/.*raycast.*\.js$
-^vanta-gallery/.*/.*renderer.*\.js$
-^vanta-gallery/.*/.*buffer.*\.js$
-^vanta-gallery/.*/.*attribute.*\.js$
-^vanta-gallery/.*/.*uniform.*\.js$
-^vanta-gallery/.*/.*program.*\.js$
-^vanta-gallery/.*/.*fog.*\.js$
-^vanta-gallery/.*/.*scene.*\.js$
-^vanta-gallery/.*/.*frustum.*\.js$
-^vanta-gallery/.*/.*culling.*\.js$
-^vanta-gallery/.*/.*xr.*\.js$
-^vanta-gallery/.*/.*vr.*\.js$
-^vanta-gallery/.*/.*webgl.*\.js$
-^vanta-gallery/.*/.*context.*\.js$
-^vanta-gallery/.*/.*canvas.*\.js$
-^vanta-gallery/.*/.*framebuffer.*\.js$
-^vanta-gallery/.*/.*renderbuffer.*\.js$
-^vanta-gallery/.*/.*texture.*\.js$
-^vanta-gallery/.*/.*state.*\.js$
-^vanta-gallery/.*/.*binding.*\.js$
-^vanta-gallery/.*/.*layer.*\.js$
-^vanta-gallery/.*/.*input.*\.js$
-^vanta-gallery/.*/.*controller.*\.js$
-^vanta-gallery/.*/.*hand.*\.js$
-^vanta-gallery/.*/.*grip.*\.js$
-
-# Assets directory (contains CSS and other static files)
-^assets/.*$
-
-# Build outputs and temporary files
-^\.nuxt/.*$
-^\.output/.*$
-^dist/.*$
-^build/.*$
-.*\.tmp$
-.*\.swp$
-.*\.bak$
-
-# Documentation and example files
-^cookie-policy\.md$
-^privacy-policy\.md$
-^terms-of-service\.md$
-^support\.md$
-^SECURITY_WORKFLOW_STATUS\.md$
-^DEV_README\.md$
-^DEV_ENVIRONMENT\.md$
-^DOCKER_VERSIONING\.md$
-^DOCKER\.md$
-^DOCKER-DEV\.md$
-^DOCKER-BEST-PRACTICES\.md$
-^DOCKER_COMMANDS\.md$
-^DOCKER_WORKFLOW_FIXES\.md$
-^DOCKER_VERSIONING\.md$
-^GITHUB_WORKFLOWS_SUMMARY\.md$
-^SECURITY_WORKFLOW_STATUS\.md$
-^SECRETS_SCAN_ANALYSIS\.md$
-^CI_SERVER_STARTUP_FIXES\.md$
-^REDIS_CI_FIX\.md$
-^SERVER_DEBUGGING_IMPROVEMENTS\.md$
-^TESTING\.md$
-^PROJECT_STRUCTURE\.md$
-^ESLINT_AUTOFIX_GUIDE\.md$
-^linkedin-article-mobile-friendly\.md$
-
-# Scripts that contain example patterns
-^setup-github-secrets\.sh$
-^setup-github-secrets\.ps1$
-^setup-github-secrets-production\.ps1$
-^test-credentials\.ps1$
-^test-integration-debug\.ps1$
-^test-integration-debug\.sh$
-^test-integration\.ps1$
-^test-integration\.sh$
-^test-local\.sh$
-^test-nitro-debug\.ps1$
-^test-nitro-debug\.sh$
-^test-server-correct-port\.ps1$
-^test-server-port3001\.ps1$
-^debug-server-crash\.ps1$
-^test-server-correct-port\.ps1$
-^scripts/setup-env\.ps1$
-^scripts/setup-docker-supabase\.ps1$
-^scripts/setup-dev-docker-supabase\.ps1$
-^scripts/docker-debug\.ps1$
-^scripts/docker-debug\.sh$
-^scripts/deploy\.ps1$
-^scripts/deploy\.sh$
-^scripts/update-final-env\.ps1$
-^scripts/update-security-env\.ps1$
-^scripts/update-supabase-env\.ps1$
-
-# Environment example files
-^env\.example$
-
-# Package manager files
-^package-lock\.json$
-^yarn\.lock$
-^pnpm-lock\.yaml$
-
-# Git and configuration files
-^\.gitignore$
-^\.git/.*$
-
-# Documentation files (comprehensive)
-^.*\.md$
-^DEV_ENVIRONMENT\.md$
-^GITHUB_WORKFLOWS_SUMMARY\.md$
-^GITHUB_SECRETS_SETUP\.md$
-
-# Test and debug scripts
-^test-.*\.(ps1|sh)$
-^debug-.*\.(ps1|sh)$
-^test-nitro-debug\.sh$
-^test-server-correct-port\.ps1$
-^test-credentials\.ps1$
-^debug-server-crash\.ps1$
-
-# Specific files with false positives
-^app\.vue$
-^cookie-policy\.md$
-^support\.md$
-^SECURITY_WORKFLOW_STATUS\.md$
-^test-server-port3001\.ps1$
-^assets/rainy-sky\.css$
-
-# Additional specific exclusions for files still being flagged
-^env\.example$
-^package-lock\.json$
-^DEV_ENVIRONMENT\.md$
-^\.gitignore$
-^test-nitro-debug\.sh$
-^GITHUB_WORKFLOWS_SUMMARY\.md$
-^debug-server-crash\.ps1$
-^test-server-correct-port\.ps1$
-^test-credentials\.ps1$
-
-# Additional specific file exclusions (exact matches)
-^env\.example$
-^package-lock\.json$
-^DEV_ENVIRONMENT\.md$
-^\.gitignore$
-^test-nitro-debug\.sh$
-^GITHUB_WORKFLOWS_SUMMARY\.md$
-^debug-server-crash\.ps1$
-^test-server-correct-port\.ps1$
-^test-credentials\.ps1$
-
-# Exclude all files in specific directories that contain example patterns
-^scripts/.*$
-^docs/.*$
-^tmp/.*$
-^uploads/.*$
-^db-backups/.*$
-
-# Exclude specific files that contain legitimate programming patterns
-^nuxt\.config\.ts$
-
-# Vue template patterns that trigger false positives
+# Vue, CSS and common keys
 .*:key="[^"]*"
 .*:key='[^']*'
 .*v-bind:key="[^"]*"
 .*v-bind:key='[^']*'
-
-# CSS and style patterns
 .*@keyframes.*
-.*key.*:.*
-.*token.*:.*
-.*password.*:.*
-.*secret.*:.*
+.*\.vue$
+.*\.css$
+.*\.scss$
+.*\.less$
 
-# Variable declarations and assignments (comprehensive)
+# Common variable patterns
 .*const\s+(password|token|key|secret)\s+=\s+['"].*['"]
 .*let\s+(password|token|key|secret)\s+=\s+['"].*['"]
 .*var\s+(password|token|key|secret)\s+=\s+['"].*['"]
@@ -340,37 +26,61 @@
 .*let secret = .*
 .*var secret = .*
 
-# Package names and imports
+# Legit package names
 .*path-key.*
 .*ajv-keywords.*
 .*key.*package.*
 .*token.*package.*
 
-# Commented examples and placeholders
+# Placeholder tokens
 .*//.*your_api_key_here.*
 .*//.*your_secret_here.*
 .*//.*your_password_here.*
 .*//.*your_token_here.*
-.*/*.*your_api_key_here.*
-.*/*.*your_secret_here.*
-.*/*.*your_password_here.*
-.*/*.*your_token_here.*
+.*/\*.*your_api_key_here.*
+.*/\*.*your_secret_here.*
+.*/\*.*your_password_here.*
+.*/\*.*your_token_here.*
 
-# GitHub secrets references (legitimate)
+# GitHub Actions secrets
 .*\${{ secrets\..* }}
 .*\${{ github\.secrets\..* }}
 
-# Environment variable patterns (legitimate)
+# Markdown reports
+^SECRETS_SCAN_ANALYSIS\.md$
+^GITHUB_SECRETS_SETUP\.md$
+
+# Environment variables and configuration
 .*process\.env\..*
 .*NUXT_PUBLIC_.*
 .*SUPABASE_.*
+.*VITE_.*
+.*NEXT_PUBLIC_.*
 
-# Additional specific file exclusions
-^pages/.*\.vue$
-^components/.*\.vue$
-^layouts/.*\.vue$
-^plugins/.*\.(ts|js)$
-^composables/.*\.(ts|js)$
-^stores/.*\.(ts|js)$
-^server/.*\.(ts|js)$
-^types/.*\.(ts|js)$ 
+# Common false positive patterns
+.*secret.*:.*
+.*key.*:.*
+.*token.*:.*
+.*password.*:.*
+.*api.*key.*
+.*access.*key.*
+.*private.*key.*
+.*public.*key.*
+
+# File exclusions
+^scripts/.*\.ps1$
+^scripts/.*\.sh$
+^Dockerfile$
+^pages/.+\.vue$
+^env\.example$
+^\.env\.example$
+^\.env\.local$
+^\.env\.development$
+^\.env\.production$
+
+# Documentation and examples
+^README\.md$
+^docs/.*
+^examples/.*
+^templates/.*
+^vanta-gallery/.* 

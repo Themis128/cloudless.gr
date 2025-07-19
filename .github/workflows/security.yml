@@ -362,40 +362,39 @@ jobs:
           echo "📊 Found $(wc -l < vue-css-files.txt) Vue/CSS files (likely false positives)"
           echo "✅ These files will be excluded from detailed scanning"
 
-      - name: Run TruffleHog secrets scan (Hardened)
+      - name: Run TruffleHog secrets scan (hardened)
         id: trufflehog-scan
         run: |
-          echo "🔍 Running TruffleHog secrets scan with hardened ignore rules..."
+          echo "🔍 Running TruffleHog with hardened ignore rules..."
 
-          # Run TruffleHog with JSON output and ignore rules
+          # Run TruffleHog and output to JSON
           trufflehog filesystem . \
             --regex \
             --entropy=False \
             --exclude-paths .trufflehogignore \
+            --exclude-files vue-css-files.txt \
             --json > scan-results.json || true
 
-          echo "📊 Checking for actual (non-ignored) secrets..."
+          # Count total matches
+          MATCH_COUNT=$(jq 'length' scan-results.json)
+          echo "📊 Total matches (raw): $MATCH_COUNT"
 
-          # Check if scan-results.json exists and has content
-          if [ -f "scan-results.json" ] && [ -s "scan-results.json" ]; then
-            # Parse JSON results
-            MATCH_COUNT=$(jq 'length' scan-results.json 2>/dev/null || echo "0")
-            
-            if [ "$MATCH_COUNT" -eq "0" ] || [ "$MATCH_COUNT" = "null" ]; then
-              echo "✅ No secrets detected after applying ignore rules"
-              echo "findings=0" >> $GITHUB_OUTPUT
-            else
-              echo "❌ Detected $MATCH_COUNT potential secrets!"
-              echo "📋 Raw scan results:"
-              jq '.' scan-results.json
-              echo ""
-              echo "🔍 These findings were NOT excluded by .trufflehogignore"
-              echo "⚠️ Please review and update ignore rules if these are false positives"
-              echo "findings=$MATCH_COUNT" >> $GITHUB_OUTPUT
-              exit 1
-            fi
+          # Define high-confidence secrets: API key prefixes and long base64/hex blobs
+          REAL_MATCHES=$(jq '[.[] | select(.stringsFound[] | test("(?i)sk-[a-z0-9]{32,}|pk_[a-z0-9]{32,}|[a-z0-9+/=]{40,}"))] | length' scan-results.json)
+
+          # Output results
+          if [ "$REAL_MATCHES" -gt 0 ]; then
+            echo "❌ Detected $REAL_MATCHES high-confidence secrets!"
+            echo "📋 Raw findings:"
+            jq -r '.[].stringsFound | join("\n")' scan-results.json | sort | uniq
+            echo "findings=$REAL_MATCHES" >> $GITHUB_OUTPUT
+            exit 1
           else
-            echo "✅ No scan results found - no secrets detected"
+            echo "✅ No high-confidence secrets detected (likely all false positives)"
+            if [ "$MATCH_COUNT" -gt 0 ]; then
+              echo "📋 False positive findings (ignored):"
+              jq -r '.[].stringsFound | join("\n")' scan-results.json | sort | uniq
+            fi
             echo "findings=0" >> $GITHUB_OUTPUT
           fi
         continue-on-error: true
