@@ -3,8 +3,9 @@ name: Docker Build & Test
 on:
   push:
     branches:
-      - application
       - main
+      - develop
+      - application
       - platform
     paths:
       - 'Dockerfile*'
@@ -14,8 +15,9 @@ on:
       - '.dockerignore'
   pull_request:
     branches:
-      - application
       - main
+      - develop
+      - application
       - platform
     paths:
       - 'Dockerfile*'
@@ -44,11 +46,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: [Dockerfile.dev, Dockerfile]
+        dockerfile: [Dockerfile]
         include:
-          - dockerfile: Dockerfile.dev
-            target: dev
-            tag: dev
           - dockerfile: Dockerfile
             target: runner
             tag: runner

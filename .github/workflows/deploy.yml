@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - develop
       - production
       - application
   workflow_dispatch:
@@ -42,6 +43,9 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key' }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

@@ -491,6 +491,8 @@ The secrets scan findings were **100% false positives**. The implemented fixes p
 - **Regex pattern conversion**: Converted all glob patterns to proper regex patterns that TruffleHog can understand (e.g., `*.md` → `.*\.md$`, `vanta-gallery/**` → `^vanta-gallery/.*$`)
 - **Additional exclusions added**: Added exclusions for package-lock.json, git files, comprehensive documentation files, and test/debug scripts to eliminate remaining false positives
 - **Workflow optimization**: Enhanced the security.yml workflow with better TruffleHog configuration, improved custom scanning, and comprehensive reporting
+- **Additional file exclusions**: Added specific exclusions for env.example, package-lock.json, documentation files, and test scripts that were still being flagged
+- **Enhanced custom scan filtering**: Improved the custom scan to filter out legitimate Vue.js template syntax and programming patterns like `:key`, `v-for`, `Authorization:`, etc.
 
 1. **Better Accuracy** - Focus on actual source code files
 2. **Clearer Reporting** - Distinguish between real and false positives

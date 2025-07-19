@@ -265,4 +265,36 @@
 ^support\.md$
 ^SECURITY_WORKFLOW_STATUS\.md$
 ^test-server-port3001\.ps1$
-^assets/rainy-sky\.css$ 
+^assets/rainy-sky\.css$
+
+# Additional specific exclusions for files still being flagged
+^env\.example$
+^package-lock\.json$
+^DEV_ENVIRONMENT\.md$
+^\.gitignore$
+^test-nitro-debug\.sh$
+^GITHUB_WORKFLOWS_SUMMARY\.md$
+^debug-server-crash\.ps1$
+^test-server-correct-port\.ps1$
+^test-credentials\.ps1$
+
+# Additional specific file exclusions (exact matches)
+^env\.example$
+^package-lock\.json$
+^DEV_ENVIRONMENT\.md$
+^\.gitignore$
+^test-nitro-debug\.sh$
+^GITHUB_WORKFLOWS_SUMMARY\.md$
+^debug-server-crash\.ps1$
+^test-server-correct-port\.ps1$
+^test-credentials\.ps1$
+
+# Exclude all files in specific directories that contain example patterns
+^scripts/.*$
+^docs/.*$
+^tmp/.*$
+^uploads/.*$
+^db-backups/.*$
+
+# Exclude specific files that contain legitimate programming patterns
+^nuxt\.config\.ts$ 

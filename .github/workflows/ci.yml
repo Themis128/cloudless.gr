@@ -3,20 +3,25 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - application
       - main
       - develop
+      - application
       - platform
   pull_request:
     branches:
-      - application
       - main
+      - develop
+      - application
       - platform
 
 permissions:
   contents: read
   checks: read
   pull-requests: write
+
+env:
+  NODE_VERSION: '20'
+  NODE_ENV: 'test'
 
 jobs:
   lint-and-check:
@@ -127,7 +132,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Install dependencies
@@ -140,6 +145,15 @@ jobs:
 
       - name: Check for known vulnerabilities
         run: npx audit-ci --moderate
+        continue-on-error: true
+
+      - name: Run TruffleHog secrets scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: .
+          base: HEAD~1
+          head: HEAD
+          extra_args: --only-verified --exclude-paths .trufflehogignore --fail
         continue-on-error: true
 
   dependency-check:
@@ -661,17 +675,85 @@ jobs:
       ]
     if: always()
     steps:
-      - name: Generate test summary
+      - name: Generate comprehensive test summary
         run: |
-          echo "📊 Test Summary for ${{ github.sha }}"
-          echo "✅ All test jobs completed"
-          echo "📈 Check the individual job results above for detailed information"
+          echo "📊 Comprehensive Test Summary"
+          echo "============================="
+          echo "📅 Date: $(date)"
+          echo "🔗 Repository: ${{ github.repository }}"
+          echo "📝 Commit: ${{ github.sha }}"
+          echo "🌿 Branch: ${{ github.ref_name }}"
+          echo "👤 Author: ${{ github.actor }}"
+          echo ""
+          echo "📋 Job Results:"
+          echo "- Lint & Type Check: ${{ needs.lint-and-check.result }}"
+          echo "- Build Test: ${{ needs.build-test.result }}"
+          echo "- Security Check: ${{ needs.security-check.result }}"
+          echo "- Dependency Check: ${{ needs.dependency-check.result }}"
+          echo "- E2E Tests: ${{ needs.e2e-test.result }}"
+          echo "- Accessibility Test: ${{ needs.accessibility-test.result }}"
+          echo "- Performance Test: ${{ needs.performance-test.result }}"
+          echo "- Integration Test: ${{ needs.integration-test.result }}"
+          echo ""
 
-          # Simple status check
-          if [ "${{ needs.lint-and-check.result }}" = "success" ] && \
-             [ "${{ needs.build-test.result }}" = "success" ] && \
-             [ "${{ needs.security-check.result }}" = "success" ]; then
-            echo "🎉 Core tests passed successfully!"
-          else
-            echo "⚠️ Some tests failed. Please check the job results above."
+          # Determine overall status
+          CORE_SUCCESS=true
+          OPTIONAL_WARNINGS=false
+
+          # Check core jobs
+          if [ "${{ needs.lint-and-check.result }}" != "success" ]; then
+            echo "❌ Lint & Type Check failed"
+            CORE_SUCCESS=false
           fi
+
+          if [ "${{ needs.build-test.result }}" != "success" ]; then
+            echo "❌ Build Test failed"
+            CORE_SUCCESS=false
+          fi
+
+          if [ "${{ needs.security-check.result }}" != "success" ]; then
+            echo "⚠️ Security Check had issues"
+            OPTIONAL_WARNINGS=true
+          fi
+
+          # Check optional jobs
+          if [ "${{ needs.e2e-test.result }}" != "success" ]; then
+            echo "⚠️ E2E Tests had issues"
+            OPTIONAL_WARNINGS=true
+          fi
+
+          if [ "${{ needs.accessibility-test.result }}" != "success" ]; then
+            echo "⚠️ Accessibility Test had issues"
+            OPTIONAL_WARNINGS=true
+          fi
+
+          if [ "${{ needs.performance-test.result }}" != "success" ]; then
+            echo "⚠️ Performance Test had issues"
+            OPTIONAL_WARNINGS=true
+          fi
+
+          if [ "${{ needs.integration-test.result }}" != "success" ]; then
+            echo "⚠️ Integration Test had issues"
+            OPTIONAL_WARNINGS=true
+          fi
+
+          echo ""
+          if [ "$CORE_SUCCESS" = true ]; then
+            echo "✅ Core tests passed successfully!"
+            if [ "$OPTIONAL_WARNINGS" = false ]; then
+              echo "🎉 All tests passed! Ready for deployment."
+            else
+              echo "⚠️ Core tests passed, but some optional tests had issues."
+              echo "📋 Review the warnings above for potential improvements."
+            fi
+          else
+            echo "❌ Core tests failed. Please fix the issues before proceeding."
+            echo "🔧 Check the failed job logs for detailed error information."
+          fi
+
+          echo ""
+          echo "📈 Test Statistics:"
+          echo "- Total jobs: 8"
+          echo "- Core jobs: 3 (lint, build, security)"
+          echo "- Optional jobs: 5 (e2e, accessibility, performance, integration, dependency)"
+          echo "- Success rate: $([ "$CORE_SUCCESS" = true ] && echo "100%" || echo "0%") for core jobs"

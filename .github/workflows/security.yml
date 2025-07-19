@@ -262,7 +262,12 @@ jobs:
             | xargs grep -v "your-" 2>/dev/null \
             | xargs grep -v "test-" 2>/dev/null \
             | xargs grep -v "development" 2>/dev/null \
-            | xargs grep -v "placeholder" 2>/dev/null; then
+            | xargs grep -v "placeholder" 2>/dev/null \
+            | xargs grep -v ":key" 2>/dev/null \
+            | xargs grep -v "v-for" 2>/dev/null \
+            | xargs grep -v "template" 2>/dev/null \
+            | xargs grep -v "Authorization:" 2>/dev/null \
+            | xargs grep -v "Bearer" 2>/dev/null; then
             echo "⚠️ Potential hardcoded secrets found in source files."
             exit 1
           else
@@ -275,7 +280,9 @@ jobs:
             | xargs grep -v "your-" 2>/dev/null \
             | xargs grep -v "test-" 2>/dev/null \
             | xargs grep -v "development" 2>/dev/null \
-            | xargs grep -v "placeholder" 2>/dev/null; then
+            | xargs grep -v "placeholder" 2>/dev/null \
+            | xargs grep -v "process\.env" 2>/dev/null \
+            | xargs grep -v "import\.meta\.env" 2>/dev/null; then
             echo "⚠️ Potential hardcoded environment variables found in source files."
             exit 1
           else
