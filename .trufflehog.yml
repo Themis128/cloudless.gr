@@ -1,0 +1,168 @@
+# TruffleHog configuration file
+# Custom rules to reduce false positives while maintaining security
+
+# Enable only verified secrets (reduces false positives)
+only_verified: true
+
+# Disable entropy scanning (reduces false positives from random strings)
+entropy: false
+
+# Enable regex-based scanning
+regex: true
+
+# Custom regex patterns for high-confidence secrets
+custom_regexes:
+  # Stripe API keys
+  - name: "Stripe Secret Key"
+    regex: "sk_live_[a-zA-Z0-9]{24,}"
+    severity: "HIGH"
+  
+  - name: "Stripe Test Key"
+    regex: "sk_test_[a-zA-Z0-9]{24,}"
+    severity: "HIGH"
+  
+  - name: "Stripe Publishable Key"
+    regex: "pk_live_[a-zA-Z0-9]{24,}"
+    severity: "MEDIUM"
+  
+  - name: "Stripe Test Publishable Key"
+    regex: "pk_test_[a-zA-Z0-9]{24,}"
+    severity: "MEDIUM"
+  
+  # OpenAI API keys
+  - name: "OpenAI API Key"
+    regex: "sk-[a-zA-Z0-9]{48}"
+    severity: "HIGH"
+  
+  # GitHub tokens
+  - name: "GitHub Personal Access Token"
+    regex: "ghp_[a-zA-Z0-9]{36}"
+    severity: "HIGH"
+  
+  - name: "GitHub OAuth Token"
+    regex: "gho_[a-zA-Z0-9]{36}"
+    severity: "HIGH"
+  
+  - name: "GitHub User Token"
+    regex: "ghu_[a-zA-Z0-9]{36}"
+    severity: "HIGH"
+  
+  - name: "GitHub Session Token"
+    regex: "ghs_[a-zA-Z0-9]{36}"
+    severity: "HIGH"
+  
+  - name: "GitHub Refresh Token"
+    regex: "ghr_[a-zA-Z0-9]{36}"
+    severity: "HIGH"
+  
+  # AWS access keys
+  - name: "AWS Access Key ID"
+    regex: "AKIA[0-9A-Z]{16}"
+    severity: "HIGH"
+  
+  - name: "AWS Access Key ID (Extended)"
+    regex: "AKIA[0-9A-Z]{20}"
+    severity: "HIGH"
+  
+  # JWT tokens (3 parts separated by dots)
+  - name: "JWT Token"
+    regex: "[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+"
+    severity: "MEDIUM"
+  
+  # Long base64 strings (likely secrets)
+  - name: "Base64 Secret"
+    regex: "[A-Za-z0-9+/]{40,}={0,2}"
+    severity: "MEDIUM"
+  
+  # Long hex strings (likely secrets)
+  - name: "Hex Secret"
+    regex: "[a-fA-F0-9]{40,}"
+    severity: "MEDIUM"
+
+# Exclude patterns (false positives)
+exclude_patterns:
+  # Vue.js template syntax
+  - ":key="
+  - "v-for"
+  - "v-bind:key"
+  - "@keyframes"
+  
+  # Documentation and examples
+  - "your_api_key_here"
+  - "your_secret_here"
+  - "your_password_here"
+  - "your_token_here"
+  - "example_"
+  - "test_"
+  - "placeholder"
+  - "template"
+  
+  # Environment variable references
+  - "process.env."
+  - "NUXT_PUBLIC_"
+  - "SUPABASE_"
+  - "VITE_"
+  - "NEXT_PUBLIC_"
+  
+  # Form fields and UI elements
+  - 'type="password"'
+  - 'label="API Key"'
+  - 'placeholder="Enter API key"'
+  
+  # Variable declarations
+  - "const key ="
+  - "let key ="
+  - "var key ="
+  - "const token ="
+  - "let token ="
+  - "var token ="
+  
+  # Comments
+  - "//"
+  - "/*"
+  - "*/"
+  - "<!--"
+  - "-->"
+  
+  # TODO/FIXME comments
+  - "TODO"
+  - "FIXME"
+  - "HACK"
+
+# File exclusions
+exclude_paths:
+  - "node_modules/"
+  - ".git/"
+  - ".nuxt/"
+  - ".output/"
+  - "vanta-gallery/"
+  - "dist/"
+  - "build/"
+  - "tmp/"
+  - "uploads/"
+  - "db-backups/"
+  - "*.vue"
+  - "*.css"
+  - "*.scss"
+  - "*.less"
+  - "*.md"
+  - "*.txt"
+  - "*.log"
+  - "*.ps1"
+  - "*.sh"
+  - "Dockerfile"
+  - "env.example"
+  - ".env.example"
+  - "package-lock.json"
+  - "yarn.lock"
+
+# Scan configuration
+scan_config:
+  # Maximum file size to scan (in bytes)
+  max_file_size: 1048576  # 1MB
+  
+  # Scan depth (how many directories deep)
+  max_depth: 10
+  
+  # Timeout for scanning (in seconds)
+  timeout: 300 

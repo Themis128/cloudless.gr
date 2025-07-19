@@ -371,6 +371,28 @@ jobs:
           echo "📊 Found $(wc -l < vue-css-files.txt) Vue/CSS files (likely false positives)"
           echo "✅ These files will be excluded from detailed scanning"
 
+      - name: Run custom secrets scanner
+        id: custom-secrets-scan
+        run: |
+          echo "🔍 Running custom secrets scanner..."
+
+          # Make script executable and run it
+          chmod +x .github/scripts/custom-secrets-scan.sh
+          .github/scripts/custom-secrets-scan.sh
+
+          # Capture exit code
+          EXIT_CODE=$?
+
+          # Set output based on script results
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "findings=0" >> $GITHUB_OUTPUT
+            echo "✅ Custom secrets scan completed successfully"
+          else
+            echo "findings=1" >> $GITHUB_OUTPUT
+            echo "❌ Custom secrets scan found potential hardcoded secrets"
+          fi
+        continue-on-error: true
+
       - name: Run TruffleHog secrets scan (hardened)
         id: trufflehog-scan
         run: |
@@ -478,6 +500,9 @@ jobs:
           fi
           if [ "${{ needs.secrets-scan.outputs.custom_scan_findings }}" != "" ]; then
             echo "- Secrets: ${{ needs.secrets-scan.outputs.custom_scan_findings }} potential findings"
+          fi
+          if [ "${{ needs.secrets-scan.outputs.trufflehog_findings }}" != "" ]; then
+            echo "- TruffleHog: ${{ needs.secrets-scan.outputs.trufflehog_findings }} findings"
           fi
           echo ""
 
