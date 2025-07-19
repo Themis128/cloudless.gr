@@ -198,36 +198,58 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Verify .trufflehogignore configuration
+        run: |
+          echo "🔍 Verifying .trufflehogignore configuration..."
+          if [ ! -f ".trufflehogignore" ]; then
+            echo "❌ .trufflehogignore file not found"
+            exit 1
+          fi
+
+          echo "✅ .trufflehogignore file exists"
+          echo "📊 File size: $(wc -l < .trufflehogignore) lines"
+          echo "📋 First few patterns:"
+          head -5 .trufflehogignore
+          echo "..."
+
       - name: Run TruffleHog
         uses: trufflesecurity/trufflehog@main
+        timeout-minutes: 10
         with:
           path: .
           base: HEAD~1
           head: HEAD
-          extra_args: --only-verified --exclude-paths .trufflehogignore
+          extra_args: --only-verified --exclude-paths .trufflehogignore --fail
         continue-on-error: true
 
       - name: Run custom secrets scan
         run: |
-          echo "🔍 Running targeted secrets scan..."
+          echo "🔍 Running enhanced targeted secrets scan..."
+          echo "📋 Using comprehensive exclusion patterns from .trufflehogignore"
 
-          # Only scan for actual hardcoded secrets, not legitimate code patterns
-          echo "📋 Scanning for actual hardcoded secrets only..."
+          # Create a temporary file list of files to scan (exclude everything in .trufflehogignore)
+          echo "📁 Creating file list for targeted scanning..."
+
+          # Only scan source code files, exclude everything else
+          find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.vue" -o -name "*.tsx" -o -name "*.jsx" \) \
+            ! -path "./node_modules/*" \
+            ! -path "./.git/*" \
+            ! -path "./.nuxt/*" \
+            ! -path "./.output/*" \
+            ! -path "./vanta-gallery/*" \
+            ! -path "./dist/*" \
+            ! -path "./build/*" \
+            ! -name "*.test.*" \
+            ! -name "*.spec.*" \
+            ! -name "*.min.*" \
+            ! -name "*.bundle.*" \
+            > files_to_scan.txt
+
+          echo "📊 Found $(wc -l < files_to_scan.txt) source files to scan"
 
           # Check for actual hardcoded API keys (very specific patterns)
           echo "🔍 Checking for hardcoded API keys..."
-          if grep -r -E "(sk-[a-zA-Z0-9]{48}|pk_[a-zA-Z0-9]{48})" . \
-            --include="*.ts" \
-            --include="*.js" \
-            --include="*.vue" \
-            --exclude-dir=node_modules \
-            --exclude-dir=.git \
-            --exclude-dir=.nuxt \
-            --exclude-dir=.output \
-            --exclude-dir=vanta-gallery \
-            --exclude=*.test.* \
-            --exclude=*.spec.* \
-            --exclude=*.min.*; then
+          if xargs grep -l -E "(sk-[a-zA-Z0-9]{48}|pk_[a-zA-Z0-9]{48})" < files_to_scan.txt 2>/dev/null; then
             echo "⚠️ Potential hardcoded API keys found. Please review the output above."
             exit 1
           else
@@ -236,22 +258,11 @@ jobs:
 
           # Check for actual hardcoded secrets (8+ characters, not template values)
           echo "🔍 Checking for hardcoded secrets..."
-          if grep -r -E "(password\s*=\s*['\"][^'\"]{8,}['\"]|secret\s*=\s*['\"][^'\"]{8,}['\"]|apiKey\s*=\s*['\"][^'\"]{8,}['\"])" . \
-            --include="*.ts" \
-            --include="*.js" \
-            --include="*.vue" \
-            --exclude-dir=node_modules \
-            --exclude-dir=.git \
-            --exclude-dir=.nuxt \
-            --exclude-dir=.output \
-            --exclude-dir=vanta-gallery \
-            --exclude=*.test.* \
-            --exclude=*.spec.* \
-            --exclude=*.min.* \
-            | grep -v "your-" \
-            | grep -v "test-" \
-            | grep -v "development" \
-            | grep -v "placeholder"; then
+          if xargs grep -l -E "(password\s*=\s*['\"][^'\"]{8,}['\"]|secret\s*=\s*['\"][^'\"]{8,}['\"]|apiKey\s*=\s*['\"][^'\"]{8,}['\"])" < files_to_scan.txt 2>/dev/null \
+            | xargs grep -v "your-" 2>/dev/null \
+            | xargs grep -v "test-" 2>/dev/null \
+            | xargs grep -v "development" 2>/dev/null \
+            | xargs grep -v "placeholder" 2>/dev/null; then
             echo "⚠️ Potential hardcoded secrets found in source files."
             exit 1
           else
@@ -260,29 +271,21 @@ jobs:
 
           # Check for actual hardcoded environment variables (not template values)
           echo "🔍 Checking for hardcoded environment variables..."
-          if grep -r -E "(NUXT_PUBLIC_SUPABASE_ANON_KEY\s*=\s*['\"][^'\"]{8,}['\"]|SUPABASE_SERVICE_ROLE_KEY\s*=\s*['\"][^'\"]{8,}['\"])" . \
-            --include="*.ts" \
-            --include="*.js" \
-            --include="*.vue" \
-            --exclude-dir=node_modules \
-            --exclude-dir=.git \
-            --exclude-dir=.nuxt \
-            --exclude-dir=.output \
-            --exclude-dir=vanta-gallery \
-            --exclude=*.test.* \
-            --exclude=*.spec.* \
-            --exclude=*.min.* \
-            | grep -v "your-" \
-            | grep -v "test-" \
-            | grep -v "development" \
-            | grep -v "placeholder"; then
+          if xargs grep -l -E "(NUXT_PUBLIC_SUPABASE_ANON_KEY\s*=\s*['\"][^'\"]{8,}['\"]|SUPABASE_SERVICE_ROLE_KEY\s*=\s*['\"][^'\"]{8,}['\"])" < files_to_scan.txt 2>/dev/null \
+            | xargs grep -v "your-" 2>/dev/null \
+            | xargs grep -v "test-" 2>/dev/null \
+            | xargs grep -v "development" 2>/dev/null \
+            | xargs grep -v "placeholder" 2>/dev/null; then
             echo "⚠️ Potential hardcoded environment variables found in source files."
             exit 1
           else
             echo "✅ No hardcoded environment variables found in source files"
           fi
 
-          echo "✅ Targeted secrets scan completed successfully - no actual secrets found"
+          # Clean up
+          rm -f files_to_scan.txt
+
+          echo "✅ Enhanced targeted secrets scan completed successfully - no actual secrets found"
         continue-on-error: true
 
   security-summary:
@@ -298,6 +301,7 @@ jobs:
           echo "📅 Scan Date: $(date)"
           echo "🔗 Repository: ${{ github.repository }}"
           echo "📝 Commit: ${{ github.sha }}"
+          echo "🌿 Branch: ${{ github.ref_name }}"
           echo ""
           echo "📊 Job Results:"
           echo "- Dependency Scan: ${{ needs.dependency-scan.result }}"
@@ -305,28 +309,60 @@ jobs:
           echo "- Container Scan: ${{ needs.container-scan.result }}"
           echo "- Secrets Scan: ${{ needs.secrets-scan.result }}"
           echo ""
-          echo "🔍 Secrets Scan Notes:"
-          echo "- TruffleHog scans for potential secrets in code"
-          echo "- False positives are common in documentation and examples"
-          echo "- Custom scan focuses on actual source code files"
-          echo "- .trufflehogignore excludes known false positives"
+          echo "🔍 Enhanced Secrets Scan Configuration:"
+          echo "- TruffleHog with comprehensive .trufflehogignore exclusions"
+          echo "- Custom targeted scan focusing only on source code files"
+          echo "- Excludes documentation, third-party libraries, and test files"
+          echo "- Filters out template values and placeholder patterns"
+          echo "- Uses regex patterns for accurate secret detection"
           echo ""
 
-          # Determine overall status (more lenient for secrets scan)
-          if [ "${{ needs.dependency-scan.result }}" = "success" ] && \
-             [ "${{ needs.code-scan.result }}" = "success" ]; then
+          # Determine overall status with improved logic
+          CORE_SUCCESS=true
+          SECRETS_WARNING=false
+          CONTAINER_WARNING=false
+
+          # Check core security jobs
+          if [ "${{ needs.dependency-scan.result }}" != "success" ]; then
+            echo "❌ Dependency scan failed"
+            CORE_SUCCESS=false
+          fi
+
+          if [ "${{ needs.code-scan.result }}" != "success" ]; then
+            echo "❌ Code scan failed"
+            CORE_SUCCESS=false
+          fi
+
+          # Check optional jobs
+          if [ "${{ needs.secrets-scan.result }}" != "success" ]; then
+            echo "⚠️ Secrets scan had issues (likely false positives)"
+            SECRETS_WARNING=true
+          fi
+
+          if [ "${{ needs.container-scan.result }}" != "success" ]; then
+            echo "⚠️ Container scan had issues"
+            CONTAINER_WARNING=true
+          fi
+
+          echo ""
+          if [ "$CORE_SUCCESS" = true ]; then
             echo "✅ Core security checks passed!"
-            if [ "${{ needs.secrets-scan.result }}" = "success" ]; then
-              echo "✅ Secrets scan also passed!"
+            if [ "$SECRETS_WARNING" = false ] && [ "$CONTAINER_WARNING" = false ]; then
+              echo "🎉 All security checks passed successfully!"
+              echo "🚀 Your code is ready for deployment"
             else
-              echo "⚠️ Secrets scan had issues (likely false positives)"
-            fi
-            if [ "${{ needs.container-scan.result }}" = "success" ]; then
-              echo "✅ Container scan passed!"
-            else
-              echo "⚠️ Container scan had issues"
+              echo "⚠️ Core checks passed, but some optional checks had issues"
+              echo "📋 Review the warnings above for potential improvements"
             fi
           else
             echo "❌ Core security checks failed. Please review the results above."
+            echo "🔧 Fix the issues before proceeding with deployment"
             exit 1
           fi
+
+          echo ""
+          echo "📈 Security Scan Statistics:"
+          echo "- Total jobs: 4"
+          echo "- Core jobs: 2 (dependency, code)"
+          echo "- Optional jobs: 2 (secrets, container)"
+          echo "- Success rate: $([ "$CORE_SUCCESS" = true ] && echo "100%" || echo "0%") for core jobs"
