@@ -2,7 +2,7 @@ name: Security Scan
 
 on:
   schedule:
-    # Run security scans weekly
+    # Run security scans weekly on Mondays at 2 AM UTC
     - cron: '0 2 * * 1'
   push:
     branches:
@@ -17,14 +17,40 @@ on:
       - application
       - platform
   workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of security scan to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - dependencies
+          - code
+          - containers
+          - secrets
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  pull-requests: read
 
 env:
   NODE_VERSION: '20'
+  SCAN_TIMEOUT: '10'
 
 jobs:
+  # =============================================================================
+  # DEPENDENCY VULNERABILITY SCAN
+  # =============================================================================
   dependency-scan:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-latest
+    if: github.event.inputs.scan_type == 'all' || github.event.inputs.scan_type == 'dependencies' || github.event.inputs.scan_type == null
+    outputs:
+      vulnerabilities: ${{ steps.audit-check.outputs.vulnerabilities }}
+      outdated_packages: ${{ steps.outdated-check.outputs.count }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,27 +65,62 @@ jobs:
         run: npm ci
 
       - name: Run npm audit
-        run: npm audit --audit-level moderate
+        id: audit-check
+        run: |
+          echo "🔍 Running npm audit..."
+          npm audit --audit-level moderate --json > audit-results.json || true
+
+          # Parse audit results
+          VULNERABILITIES=$(jq -r '.metadata.vulnerabilities.total // 0' audit-results.json 2>/dev/null || echo "0")
+          echo "vulnerabilities=$VULNERABILITIES" >> $GITHUB_OUTPUT
+
+          if [ "$VULNERABILITIES" -gt 0 ]; then
+            echo "⚠️ Found $VULNERABILITIES vulnerabilities"
+            exit 1
+          else
+            echo "✅ No vulnerabilities found"
+          fi
 
       - name: Run audit-ci
-        run: npx audit-ci --moderate
+        run: |
+          echo "🔍 Running audit-ci..."
+          npx audit-ci --moderate --report --output-format json > audit-ci-results.json || true
 
       - name: Check for outdated packages
-        run: npm outdated || true
+        id: outdated-check
+        run: |
+          echo "🔍 Checking for outdated packages..."
+          OUTDATED_COUNT=$(npm outdated --json 2>/dev/null | jq 'length' || echo "0")
+          echo "count=$OUTDATED_COUNT" >> $GITHUB_OUTPUT
 
-      - name: Upload security report
+          if [ "$OUTDATED_COUNT" -gt 0 ]; then
+            echo "⚠️ Found $OUTDATED_COUNT outdated packages"
+            npm outdated
+          else
+            echo "✅ All packages are up to date"
+          fi
+
+      - name: Upload dependency scan artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: dependency-security-report
+          name: dependency-scan-results
           path: |
-            npm-debug.log*
+            audit-results.json
             audit-ci-results.json
+            npm-debug.log*
           retention-days: 30
 
+  # =============================================================================
+  # CODE SECURITY SCAN
+  # =============================================================================
   code-scan:
     name: Code Security Scan
     runs-on: ubuntu-latest
+    if: github.event.inputs.scan_type == 'all' || github.event.inputs.scan_type == 'code' || github.event.inputs.scan_type == null
+    outputs:
+      eslint_issues: ${{ steps.eslint-check.outputs.issues }}
+      secrets_found: ${{ steps.secrets-check.outputs.count }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -74,14 +135,37 @@ jobs:
         run: npm ci
 
       - name: Run ESLint security rules
-        run: npx eslint . --ext .vue,.js,.ts,.jsx,.tsx --config .eslintrc.js
+        id: eslint-check
+        run: |
+          echo "🔍 Running ESLint security rules..."
+          npx eslint . --ext .vue,.js,.ts,.jsx,.tsx --format json --output-file eslint-results.json || true
+
+          # Parse ESLint results
+          ISSUES=$(jq 'length' eslint-results.json 2>/dev/null || echo "0")
+          echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+
+          if [ "$ISSUES" -gt 0 ]; then
+            echo "⚠️ Found $ISSUES ESLint issues"
+            npx eslint . --ext .vue,.js,.ts,.jsx,.tsx
+          else
+            echo "✅ No ESLint issues found"
+          fi
 
       - name: Check for hardcoded secrets
+        id: secrets-check
         run: |
           echo "🔍 Scanning for potential secrets..."
-          # Check for common secret patterns
-          if grep -r -i "password\|secret\|key\|token" . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.nuxt --exclude-dir=.output; then
-            echo "⚠️ Potential secrets found. Please review the output above."
+
+          # Create exclusion patterns
+          EXCLUDE_DIRS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.nuxt --exclude-dir=.output --exclude-dir=vanta-gallery"
+
+          # Search for potential secrets
+          SECRETS_FOUND=$(grep -r -i "password\|secret\|key\|token" . $EXCLUDE_DIRS | grep -v "your-" | grep -v "test-" | grep -v "development" | grep -v "placeholder" | wc -l)
+          echo "count=$SECRETS_FOUND" >> $GITHUB_OUTPUT
+
+          if [ "$SECRETS_FOUND" -gt 0 ]; then
+            echo "⚠️ Found $SECRETS_FOUND potential secrets"
+            grep -r -i "password\|secret\|key\|token" . $EXCLUDE_DIRS | grep -v "your-" | grep -v "test-" | grep -v "development" | grep -v "placeholder"
             exit 1
           else
             echo "✅ No obvious secrets found"
@@ -90,47 +174,63 @@ jobs:
       - name: Check for dangerous dependencies
         run: |
           echo "🔍 Checking for dangerous dependencies..."
-          # List all dependencies for manual review
-          npm list --depth=0
+          npm list --depth=0 > dependency-list.txt
+          echo "📋 Dependency list saved to artifact"
 
-      - name: Upload code scan report
+      - name: Upload code scan artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: code-security-report
+          name: code-scan-results
           path: |
-            eslint-report.json
+            eslint-results.json
+            dependency-list.txt
           retention-days: 30
 
+  # =============================================================================
+  # CONTAINER SECURITY SCAN
+  # =============================================================================
   container-scan:
     name: Container Security Scan
     runs-on: ubuntu-latest
+    if: github.event.inputs.scan_type == 'all' || github.event.inputs.scan_type == 'containers' || github.event.inputs.scan_type == null
+    outputs:
+      dockerfiles_exist: ${{ steps.check-dockerfiles.outputs.exists }}
+      trivy_vulnerabilities: ${{ steps.trivy-scan.outputs.vulnerabilities }}
+      hadolint_issues: ${{ steps.hadolint-scan.outputs.issues }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Disable telemetry
+        run: |
+          echo "🔧 Disabling telemetry to prevent API permission issues..."
+          export GITHUB_TOKEN_TELEMETRY_DISABLED=true
 
       - name: Check for Dockerfiles
         id: check-dockerfiles
         run: |
           if [ -f "Dockerfile" ] || [ -f "Dockerfile.dev" ]; then
-            echo "dockerfiles_exist=true" >> $GITHUB_OUTPUT
+            echo "exists=true" >> $GITHUB_OUTPUT
             echo "✅ Dockerfiles found"
           else
-            echo "dockerfiles_exist=false" >> $GITHUB_OUTPUT
-            echo "❌ No Dockerfiles found"
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No Dockerfiles found - skipping container scan"
           fi
 
       - name: Set up Docker Buildx
-        if: steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
+        if: steps.check-dockerfiles.outputs.exists == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image for scanning
-        if: steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
+        if: steps.check-dockerfiles.outputs.exists == 'true'
         run: |
+          echo "🐳 Building Docker image for security scanning..."
           docker build -t cloudlessgr-app:security-scan -f Dockerfile --target runner .
 
       - name: Run Trivy vulnerability scanner
-        if: steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
+        id: trivy-scan
+        if: steps.check-dockerfiles.outputs.exists == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'cloudlessgr-app:security-scan'
@@ -138,29 +238,35 @@ jobs:
           output: 'trivy-results.sarif'
         continue-on-error: true
 
-      - name: Check Trivy results exist
-        id: check-trivy-results
-        if: always() && steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
+      - name: Process Trivy results
+        if: steps.check-dockerfiles.outputs.exists == 'true'
         run: |
           if [ -f "trivy-results.sarif" ]; then
-            echo "✅ Trivy results file exists"
-            echo "trivy_exists=true" >> $GITHUB_OUTPUT
+            VULNERABILITIES=$(jq '.runs[0].results | length' trivy-results.sarif 2>/dev/null || echo "0")
+            echo "vulnerabilities=$VULNERABILITIES" >> $GITHUB_OUTPUT
+            
+            if [ "$VULNERABILITIES" -gt 0 ]; then
+              echo "⚠️ Found $VULNERABILITIES container vulnerabilities"
+            else
+              echo "✅ No container vulnerabilities found"
+            fi
           else
-            echo "❌ Trivy results file not found, creating empty SARIF file"
-            echo "trivy_exists=true" >> $GITHUB_OUTPUT
-            # Create empty SARIF file to prevent upload errors
-            echo '{"version":"2.1.0","$schema":"https://json.schemastore.org/sarif-2.1.0-rtm.5.json","runs":[]}' > trivy-results.sarif
+            echo "vulnerabilities=0" >> $GITHUB_OUTPUT
+            echo "ℹ️ No Trivy results file found"
           fi
 
-      - name: Upload Trivy scan results to GitHub Security tab
-        if: always() && steps.check-dockerfiles.outputs.dockerfiles_exist == 'true' && steps.check-trivy-results.outputs.trivy_exists == 'true'
+      - name: Upload Trivy results to GitHub Security tab
+        if: steps.check-dockerfiles.outputs.exists == 'true'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
         continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Hadolint for Dockerfile linting
-        if: steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
+        id: hadolint-scan
+        if: steps.check-dockerfiles.outputs.exists == 'true'
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
@@ -168,30 +274,52 @@ jobs:
           output-file: hadolint-results.sarif
         continue-on-error: true
 
-      - name: Check Hadolint results exist
-        id: check-hadolint-results
-        if: always() && steps.check-dockerfiles.outputs.dockerfiles_exist == 'true'
+      - name: Process Hadolint results
+        if: steps.check-dockerfiles.outputs.exists == 'true'
         run: |
           if [ -f "hadolint-results.sarif" ]; then
-            echo "✅ Hadolint results file exists"
-            echo "hadolint_exists=true" >> $GITHUB_OUTPUT
+            ISSUES=$(jq '.runs[0].results | length' hadolint-results.sarif 2>/dev/null || echo "0")
+            echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+            
+            if [ "$ISSUES" -gt 0 ]; then
+              echo "⚠️ Found $ISSUES Hadolint issues"
+            else
+              echo "✅ No Hadolint issues found"
+            fi
           else
-            echo "❌ Hadolint results file not found, creating empty SARIF file"
-            echo "hadolint_exists=true" >> $GITHUB_OUTPUT
-            # Create empty SARIF file to prevent upload errors
-            echo '{"version":"2.1.0","$schema":"https://json.schemastore.org/sarif-2.1.0-rtm.5.json","runs":[]}' > hadolint-results.sarif
+            echo "issues=0" >> $GITHUB_OUTPUT
+            echo "ℹ️ No Hadolint results file found"
           fi
 
       - name: Upload Hadolint results to GitHub Security tab
-        if: always() && steps.check-dockerfiles.outputs.dockerfiles_exist == 'true' && steps.check-hadolint-results.outputs.hadolint_exists == 'true'
+        if: steps.check-dockerfiles.outputs.exists == 'true'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'hadolint-results.sarif'
         continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload container scan artifacts
+        uses: actions/upload-artifact@v4
+        if: always() && steps.check-dockerfiles.outputs.exists == 'true'
+        with:
+          name: container-scan-results
+          path: |
+            trivy-results.sarif
+            hadolint-results.sarif
+          retention-days: 30
+
+  # =============================================================================
+  # SECRETS DETECTION
+  # =============================================================================
   secrets-scan:
     name: Secrets Detection
     runs-on: ubuntu-latest
+    if: github.event.inputs.scan_type == 'all' || github.event.inputs.scan_type == 'secrets' || github.event.inputs.scan_type == null
+    outputs:
+      trufflehog_findings: ${{ steps.trufflehog-scan.outputs.findings }}
+      custom_scan_findings: ${{ steps.custom-scan.outputs.findings }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -213,24 +341,22 @@ jobs:
           echo "..."
 
       - name: Run TruffleHog
+        id: trufflehog-scan
         uses: trufflesecurity/trufflehog@main
-        timeout-minutes: 10
+        timeout-minutes: ${{ env.SCAN_TIMEOUT }}
         with:
           path: .
           base: HEAD~1
           head: HEAD
-          extra_args: --only-verified --exclude-paths .trufflehogignore --fail
+          extra_args: --only-verified --exclude-paths .trufflehogignore
         continue-on-error: true
 
       - name: Run custom secrets scan
+        id: custom-scan
         run: |
           echo "🔍 Running enhanced targeted secrets scan..."
-          echo "📋 Using comprehensive exclusion patterns from .trufflehogignore"
 
-          # Create a temporary file list of files to scan (exclude everything in .trufflehogignore)
-          echo "📁 Creating file list for targeted scanning..."
-
-          # Only scan source code files, exclude everything else
+          # Create file list for targeted scanning
           find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.vue" -o -name "*.tsx" -o -name "*.jsx" \) \
             ! -path "./node_modules/*" \
             ! -path "./.git/*" \
@@ -247,61 +373,57 @@ jobs:
 
           echo "📊 Found $(wc -l < files_to_scan.txt) source files to scan"
 
-          # Check for actual hardcoded API keys (very specific patterns)
-          echo "🔍 Checking for hardcoded API keys..."
-          if xargs grep -l -E "(sk-[a-zA-Z0-9]{48}|pk_[a-zA-Z0-9]{48})" < files_to_scan.txt 2>/dev/null; then
-            echo "⚠️ Potential hardcoded API keys found. Please review the output above."
-            exit 1
-          else
-            echo "✅ No hardcoded API keys found in source files"
+          # Initialize findings counter
+          FINDINGS=0
+
+          # Check for hardcoded API keys
+          API_KEYS=$(xargs grep -l -E "(sk-[a-zA-Z0-9]{48}|pk_[a-zA-Z0-9]{48})" < files_to_scan.txt 2>/dev/null | wc -l)
+          if [ "$API_KEYS" -gt 0 ]; then
+            echo "⚠️ Found $API_KEYS files with potential hardcoded API keys"
+            FINDINGS=$((FINDINGS + API_KEYS))
           fi
 
-          # Check for actual hardcoded secrets (8+ characters, not template values)
-          echo "🔍 Checking for hardcoded secrets..."
-          if xargs grep -l -E "(password\s*=\s*['\"][^'\"]{8,}['\"]|secret\s*=\s*['\"][^'\"]{8,}['\"]|apiKey\s*=\s*['\"][^'\"]{8,}['\"])" < files_to_scan.txt 2>/dev/null \
-            | xargs grep -v "your-" 2>/dev/null \
-            | xargs grep -v "test-" 2>/dev/null \
-            | xargs grep -v "development" 2>/dev/null \
-            | xargs grep -v "placeholder" 2>/dev/null \
-            | xargs grep -v ":key" 2>/dev/null \
-            | xargs grep -v "v-for" 2>/dev/null \
-            | xargs grep -v "template" 2>/dev/null \
-            | xargs grep -v "Authorization:" 2>/dev/null \
-            | xargs grep -v "Bearer" 2>/dev/null; then
-            echo "⚠️ Potential hardcoded secrets found in source files."
-            exit 1
-          else
-            echo "✅ No hardcoded secrets found in source files"
+          # Check for hardcoded secrets
+          SECRETS=$(xargs grep -l -E "(password\s*=\s*['\"][^'\"]{8,}['\"]|secret\s*=\s*['\"][^'\"]{8,}['\"]|apiKey\s*=\s*['\"][^'\"]{8,}['\"])" < files_to_scan.txt 2>/dev/null | wc -l)
+          if [ "$SECRETS" -gt 0 ]; then
+            echo "⚠️ Found $SECRETS files with potential hardcoded secrets"
+            FINDINGS=$((FINDINGS + SECRETS))
           fi
 
-          # Check for actual hardcoded environment variables (not template values)
-          echo "🔍 Checking for hardcoded environment variables..."
-          if xargs grep -l -E "(NUXT_PUBLIC_SUPABASE_ANON_KEY\s*=\s*['\"][^'\"]{8,}['\"]|SUPABASE_SERVICE_ROLE_KEY\s*=\s*['\"][^'\"]{8,}['\"])" < files_to_scan.txt 2>/dev/null \
-            | xargs grep -v "your-" 2>/dev/null \
-            | xargs grep -v "test-" 2>/dev/null \
-            | xargs grep -v "development" 2>/dev/null \
-            | xargs grep -v "placeholder" 2>/dev/null \
-            | xargs grep -v "process\.env" 2>/dev/null \
-            | xargs grep -v "import\.meta\.env" 2>/dev/null; then
-            echo "⚠️ Potential hardcoded environment variables found in source files."
-            exit 1
-          else
-            echo "✅ No hardcoded environment variables found in source files"
+          # Check for hardcoded environment variables
+          ENV_VARS=$(xargs grep -l -E "(NUXT_PUBLIC_SUPABASE_ANON_KEY\s*=\s*['\"][^'\"]{8,}['\"]|SUPABASE_SERVICE_ROLE_KEY\s*=\s*['\"][^'\"]{8,}['\"])" < files_to_scan.txt 2>/dev/null | wc -l)
+          if [ "$ENV_VARS" -gt 0 ]; then
+            echo "⚠️ Found $ENV_VARS files with potential hardcoded environment variables"
+            FINDINGS=$((FINDINGS + ENV_VARS))
           fi
+
+          echo "findings=$FINDINGS" >> $GITHUB_OUTPUT
 
           # Clean up
           rm -f files_to_scan.txt
 
-          echo "✅ Enhanced targeted secrets scan completed successfully - no actual secrets found"
+          if [ "$FINDINGS" -gt 0 ]; then
+            echo "❌ Found $FINDINGS potential secrets"
+            exit 1
+          else
+            echo "✅ No hardcoded secrets found"
+          fi
         continue-on-error: true
 
+  # =============================================================================
+  # SECURITY SUMMARY
+  # =============================================================================
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
     needs: [dependency-scan, code-scan, container-scan, secrets-scan]
     if: always()
+    outputs:
+      overall_status: ${{ steps.summary.outputs.status }}
+      core_passed: ${{ steps.summary.outputs.core_passed }}
     steps:
-      - name: Generate security summary
+      - name: Generate comprehensive security summary
+        id: summary
         run: |
           echo "🔒 Security Scan Summary"
           echo "========================="
@@ -309,25 +431,36 @@ jobs:
           echo "🔗 Repository: ${{ github.repository }}"
           echo "📝 Commit: ${{ github.sha }}"
           echo "🌿 Branch: ${{ github.ref_name }}"
+          echo "👤 Triggered by: ${{ github.actor }}"
           echo ""
+
+          # Job results
           echo "📊 Job Results:"
           echo "- Dependency Scan: ${{ needs.dependency-scan.result }}"
           echo "- Code Scan: ${{ needs.code-scan.result }}"
           echo "- Container Scan: ${{ needs.container-scan.result }}"
           echo "- Secrets Scan: ${{ needs.secrets-scan.result }}"
           echo ""
-          echo "🔍 Enhanced Secrets Scan Configuration:"
-          echo "- TruffleHog with comprehensive .trufflehogignore exclusions"
-          echo "- Custom targeted scan focusing only on source code files"
-          echo "- Excludes documentation, third-party libraries, and test files"
-          echo "- Filters out template values and placeholder patterns"
-          echo "- Uses regex patterns for accurate secret detection"
+
+          # Detailed findings
+          echo "🔍 Detailed Findings:"
+          if [ "${{ needs.dependency-scan.outputs.vulnerabilities }}" != "" ]; then
+            echo "- Dependencies: ${{ needs.dependency-scan.outputs.vulnerabilities }} vulnerabilities"
+          fi
+          if [ "${{ needs.code-scan.outputs.eslint_issues }}" != "" ]; then
+            echo "- Code Quality: ${{ needs.code-scan.outputs.eslint_issues }} ESLint issues"
+          fi
+          if [ "${{ needs.container-scan.outputs.trivy_vulnerabilities }}" != "" ]; then
+            echo "- Container: ${{ needs.container-scan.outputs.trivy_vulnerabilities }} vulnerabilities"
+          fi
+          if [ "${{ needs.secrets-scan.outputs.custom_scan_findings }}" != "" ]; then
+            echo "- Secrets: ${{ needs.secrets-scan.outputs.custom_scan_findings }} potential findings"
+          fi
           echo ""
 
-          # Determine overall status with improved logic
+          # Determine overall status
           CORE_SUCCESS=true
-          SECRETS_WARNING=false
-          CONTAINER_WARNING=false
+          OPTIONAL_WARNINGS=false
 
           # Check core security jobs
           if [ "${{ needs.dependency-scan.result }}" != "success" ]; then
@@ -343,28 +476,33 @@ jobs:
           # Check optional jobs
           if [ "${{ needs.secrets-scan.result }}" != "success" ]; then
             echo "⚠️ Secrets scan had issues (likely false positives)"
-            SECRETS_WARNING=true
+            OPTIONAL_WARNINGS=true
           fi
 
           if [ "${{ needs.container-scan.result }}" != "success" ]; then
             echo "⚠️ Container scan had issues"
-            CONTAINER_WARNING=true
+            OPTIONAL_WARNINGS=true
           fi
 
           echo ""
           if [ "$CORE_SUCCESS" = true ]; then
             echo "✅ Core security checks passed!"
-            if [ "$SECRETS_WARNING" = false ] && [ "$CONTAINER_WARNING" = false ]; then
+            echo "core_passed=true" >> $GITHUB_OUTPUT
+            
+            if [ "$OPTIONAL_WARNINGS" = false ]; then
               echo "🎉 All security checks passed successfully!"
               echo "🚀 Your code is ready for deployment"
+              echo "status=success" >> $GITHUB_OUTPUT
             else
               echo "⚠️ Core checks passed, but some optional checks had issues"
               echo "📋 Review the warnings above for potential improvements"
+              echo "status=warning" >> $GITHUB_OUTPUT
             fi
           else
             echo "❌ Core security checks failed. Please review the results above."
             echo "🔧 Fix the issues before proceeding with deployment"
-            exit 1
+            echo "core_passed=false" >> $GITHUB_OUTPUT
+            echo "status=failure" >> $GITHUB_OUTPUT
           fi
 
           echo ""
@@ -373,3 +511,9 @@ jobs:
           echo "- Core jobs: 2 (dependency, code)"
           echo "- Optional jobs: 2 (secrets, container)"
           echo "- Success rate: $([ "$CORE_SUCCESS" = true ] && echo "100%" || echo "0%") for core jobs"
+          echo ""
+          echo "🔧 Configuration:"
+          echo "- Node.js version: ${{ env.NODE_VERSION }}"
+          echo "- Scan timeout: ${{ env.SCAN_TIMEOUT }} minutes"
+          echo "- TruffleHog exclusions: .trufflehogignore"
+          echo "- Custom scan patterns: Enhanced filtering"

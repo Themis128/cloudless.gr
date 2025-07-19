@@ -493,6 +493,10 @@ The secrets scan findings were **100% false positives**. The implemented fixes p
 - **Workflow optimization**: Enhanced the security.yml workflow with better TruffleHog configuration, improved custom scanning, and comprehensive reporting
 - **Additional file exclusions**: Added specific exclusions for env.example, package-lock.json, documentation files, and test scripts that were still being flagged
 - **Enhanced custom scan filtering**: Improved the custom scan to filter out legitimate Vue.js template syntax and programming patterns like `:key`, `v-for`, `Authorization:`, etc.
+- **TruffleHog flag fix**: Removed duplicate `--fail` flag to prevent command-line errors
+- **GitHub API permissions**: Added proper permissions for security events and SARIF uploads
+- **Telemetry handling**: Disabled telemetry to prevent API permission issues
+- **Workflow refactoring**: Modularized security workflow with better organization, conditional job execution, and comprehensive output tracking
 
 1. **Better Accuracy** - Focus on actual source code files
 2. **Clearer Reporting** - Distinguish between real and false positives

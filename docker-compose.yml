@@ -21,11 +21,17 @@ services:
     env_file:
       - .env
     environment:
+      # Application configuration
       - NODE_ENV=production
       - NITRO_HOST=0.0.0.0
       - NITRO_PORT=3000
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3000
+      - NITRO_LOG_LEVEL=info
+      # Ensure Supabase environment variables are passed through
+      - NUXT_PUBLIC_SUPABASE_URL=${NUXT_PUBLIC_SUPABASE_URL}
+      - NUXT_PUBLIC_SUPABASE_ANON_KEY=${NUXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     healthcheck:
       test:
         [

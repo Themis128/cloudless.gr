@@ -66,6 +66,7 @@
     "SONARQUBE",
     "opentelemetry",
     "pinia",
+    "pgrst",
     "playwright",
     "postgresql",
     "powershell",

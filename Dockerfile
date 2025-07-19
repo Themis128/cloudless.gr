@@ -66,6 +66,20 @@ COPY --from=builder --chown=nuxtjs:nodejs /app/.env* ./
 # Copy only production node_modules
 COPY --from=builder --chown=nuxtjs:nodejs /app/node_modules ./node_modules
 
+# Create environment validation script
+RUN echo '#!/bin/sh\n\
+    echo "🔍 Validating environment variables..."\n\
+    if [ -z "$NUXT_PUBLIC_SUPABASE_URL" ]; then\n\
+    echo "❌ NUXT_PUBLIC_SUPABASE_URL is not set"\n\
+    exit 1\n\
+    fi\n\
+    if [ -z "$NUXT_PUBLIC_SUPABASE_ANON_KEY" ]; then\n\
+    echo "❌ NUXT_PUBLIC_SUPABASE_ANON_KEY is not set"\n\
+    exit 1\n\
+    fi\n\
+    echo "✅ Environment variables validated"\n\
+    ' > /app/validate-env.sh && chmod +x /app/validate-env.sh
+
 # Switch to non-root user
 USER nuxtjs
 
@@ -78,6 +92,7 @@ ENV NITRO_HOST=0.0.0.0
 ENV NITRO_PORT=3000
 ENV NUXT_HOST=0.0.0.0
 ENV NUXT_PORT=3000
+ENV NITRO_LOG_LEVEL=info
 
 # Health check with proper timeout and retries
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
@@ -86,5 +101,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the application
-CMD ["node", "start-server.js"] 
+# Start the application with environment validation
+CMD ["sh", "-c", "/app/validate-env.sh && node start-server.js"] 

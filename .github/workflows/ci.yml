@@ -153,7 +153,7 @@ jobs:
           path: .
           base: HEAD~1
           head: HEAD
-          extra_args: --only-verified --exclude-paths .trufflehogignore --fail
+          extra_args: --only-verified --exclude-paths .trufflehogignore
         continue-on-error: true
 
   dependency-check:

@@ -36,6 +36,11 @@ on:
           - development
           - production
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 env:
   NODE_VERSION: '20'
   DOCKER_BUILDKIT: 1
