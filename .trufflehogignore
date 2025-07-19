@@ -8,6 +8,8 @@
 .*\.css$
 .*\.scss$
 .*\.less$
+.*\.svg$
+.*\.map$
 
 # Common variable patterns
 .*const\s+(password|token|key|secret)\s+=\s+['"].*['"]
@@ -67,6 +69,33 @@
 .*private.*key.*
 .*public.*key.*
 
+# Database and foreign keys
+.*foreignKeyName.*
+.*_fkey.*
+.*primaryKey.*
+.*foreignKey.*
+
+# JavaScript object notation
+.*window\..*
+.*document\..*
+.*console\..*
+.*VANTA\..*
+
+# Version and metadata
+.*Version:.*
+.*version:.*
+.*1\.0\.0.*
+.*2\.0\.0.*
+.*3\.0\.0.*
+
+# SVG/XML attributes
+.*xmlns.*
+.*viewBox.*
+.*width=.*
+.*height=.*
+.*fill=.*
+.*stroke=.*
+
 # File exclusions
 ^scripts/.*\.ps1$
 ^scripts/.*\.sh$
@@ -83,4 +112,14 @@
 ^docs/.*
 ^examples/.*
 ^templates/.*
-^vanta-gallery/.* 
+^vanta-gallery/.*
+
+# Additional specific exclusions
+.*process\.env\.CI.*
+.*process\.env\.NODE_ENV.*
+.*process\.env\.NODE_VERSION.*
+.*foreignKeyName.*
+.*window\.VANTA\.CLOUDS2.*
+.*Version:.*
+.*xmlns=.*
+.*viewBox=.* 

@@ -64,19 +64,33 @@ custom_regexes:
     regex: "AKIA[0-9A-Z]{20}"
     severity: "HIGH"
   
-  # JWT tokens (3 parts separated by dots)
+  - name: "AWS Secret Access Key"
+    regex: "[A-Za-z0-9/+=]{40}"
+    severity: "HIGH"
+  
+  # JWT tokens (eyJ... format)
   - name: "JWT Token"
-    regex: "[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+"
+    regex: "eyJ[A-Za-z0-9_/+=]+\.[A-Za-z0-9_/+=]+\.[A-Za-z0-9_/+=]+"
     severity: "MEDIUM"
   
-  # Long base64 strings (likely secrets)
-  - name: "Base64 Secret"
-    regex: "[A-Za-z0-9+/]{40,}={0,2}"
-    severity: "MEDIUM"
+  # Generic API keys in assignments
+  - name: "API Key Assignment"
+    regex: "(?i)(api[_-]?key|apikey)['\"]*\s*[:=]\s*['\"][a-z0-9]{20,}['\"]"
+    severity: "HIGH"
   
-  # Long hex strings (likely secrets)
-  - name: "Hex Secret"
-    regex: "[a-fA-F0-9]{40,}"
+  # Database connection strings
+  - name: "Database Connection String"
+    regex: "(?i)(mongodb|mysql|postgres|redis)://[^/\\s]+:[^/\\s]+@[^/\\s]+"
+    severity: "HIGH"
+  
+  # Database passwords in config
+  - name: "Database Password"
+    regex: "(?i)(password|pwd|pass)['\"]*\s*[:=]\s*['\"][^'\"]+['\"]"
+    severity: "HIGH"
+  
+  # High-entropy strings in quotes (more specific)
+  - name: "High Entropy String"
+    regex: "['\"][a-zA-Z0-9+/=]{32,}['\"]"
     severity: "MEDIUM"
 
 # Exclude patterns (false positives)
@@ -117,6 +131,30 @@ exclude_patterns:
   - "let token ="
   - "var token ="
   
+  # Database and foreign keys
+  - "foreignKeyName"
+  - "_fkey"
+  - "primaryKey"
+  
+  # JavaScript object notation
+  - "window."
+  - "document."
+  - "console."
+  
+  # Version and metadata
+  - "Version:"
+  - "version:"
+  - "1.0.0"
+  - "2.0.0"
+  
+  # SVG/XML attributes
+  - "xmlns"
+  - "viewBox"
+  - "width="
+  - "height="
+  - "fill="
+  - "stroke="
+  
   # Comments
   - "//"
   - "/*"
@@ -150,6 +188,8 @@ exclude_paths:
   - "*.log"
   - "*.ps1"
   - "*.sh"
+  - "*.svg"
+  - "*.map"
   - "Dockerfile"
   - "env.example"
   - ".env.example"

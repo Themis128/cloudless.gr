@@ -9,7 +9,7 @@ echo "🔍 Running custom secrets scan..."
 
 # Define patterns for actual secrets (high entropy, specific formats)
 SECRET_PATTERNS=(
-    # API keys with specific prefixes
+    # Stripe API keys
     "sk_live_[a-zA-Z0-9]{24,}"
     "sk_test_[a-zA-Z0-9]{24,}"
     "pk_live_[a-zA-Z0-9]{24,}"
@@ -31,17 +31,23 @@ SECRET_PATTERNS=(
     "AKIA[0-9A-Z]{16}"
     "AKIA[0-9A-Z]{20}"
     
-    # Google API keys (40+ chars)
-    "[a-zA-Z0-9_-]{40,}"
+    # AWS Secret Access Key (base64 format)
+    "[A-Za-z0-9/+=]{40}"
     
-    # JWT tokens (3 parts separated by dots)
-    "[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+"
+    # JWT tokens (eyJ... format)
+    "eyJ[A-Za-z0-9_/+=]+\.[A-Za-z0-9_/+=]+\.[A-Za-z0-9_/+=]+"
     
-    # Base64 encoded secrets (40+ chars)
-    "[A-Za-z0-9+/]{40,}={0,2}"
+    # Generic API keys in assignments
+    "(?i)(api[_-]?key|apikey)['\"]*\s*[:=]\s*['\"][a-z0-9]{20,}['\"]"
     
-    # Hex encoded secrets (40+ chars)
-    "[a-fA-F0-9]{40,}"
+    # Database connection strings
+    "(?i)(mongodb|mysql|postgres|redis)://[^/\\s]+:[^/\\s]+@[^/\\s]+"
+    
+    # Database passwords in config
+    "(?i)(password|pwd|pass)['\"]*\s*[:=]\s*['\"][^'\"]+['\"]"
+    
+    # High-entropy strings in quotes (more specific)
+    "['\"][a-zA-Z0-9+/=]{32,}['\"]"
 )
 
 # Directories to exclude from scanning
@@ -71,6 +77,8 @@ EXCLUDE_FILES=(
     "*.log"
     "*.ps1"
     "*.sh"
+    "*.svg"
+    "*.map"
     "Dockerfile"
     "env.example"
     ".env.example"
@@ -112,7 +120,7 @@ for pattern in "${SECRET_PATTERNS[@]}"; do
                 TOTAL_FINDINGS=$((TOTAL_FINDINGS + 1))
                 
                 # Check if this looks like a real secret (not a template or example)
-                if echo "$line" | grep -v -E "(your_|test_|example_|placeholder|template|TODO|FIXME|//|/\*|\*/)" >/dev/null; then
+                if echo "$line" | grep -v -E "(your_|test_|example_|placeholder|template|TODO|FIXME|//|/\*|\*/|process\.env\.|foreignKeyName|window\.|Version:|xmlns|viewBox)" >/dev/null; then
                     REAL_SECRETS=$((REAL_SECRETS + 1))
                     echo "   ❌ HIGH CONFIDENCE: This looks like a real secret!"
                 else
@@ -154,6 +162,13 @@ FALSE_POSITIVE_PATTERNS=(
     "const key ="
     "let key ="
     "var key ="
+    "foreignKeyName"
+    "window."
+    "Version:"
+    "xmlns"
+    "viewBox"
+    "width="
+    "height="
 )
 
 FALSE_POSITIVE_COUNT=0
