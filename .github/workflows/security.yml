@@ -89,19 +89,28 @@ jobs:
         id: outdated-check
         run: |
           echo "🔍 Checking for outdated packages..."
-          OUTDATED=$(npm outdated --json 2>/dev/null || echo "{}")
-          OUTDATED_COUNT=$(echo "$OUTDATED" | jq 'length')
-          echo "count=$OUTDATED_COUNT" >> $GITHUB_OUTPUT
 
-          if [ "$OUTDATED_COUNT" -gt 0 ]; then
-            echo "⚠️ Found $OUTDATED_COUNT outdated packages"
-            echo ""
-            echo "📋 Outdated packages:"
-            npm outdated || true
-            echo ""
-            echo "::warning::Outdated packages found. Review and update as needed. This does not block the build."
-          else
+          # Check for outdated packages using exit code
+          if npm outdated --silent 2>/dev/null; then
             echo "✅ All packages are up to date"
+            echo "count=0" >> $GITHUB_OUTPUT
+          else
+            # Get the actual count by parsing the output
+            OUTDATED_OUTPUT=$(npm outdated 2>/dev/null || echo "")
+            if [ -n "$OUTDATED_OUTPUT" ]; then
+              # Count lines minus header (if present)
+              OUTDATED_COUNT=$(echo "$OUTDATED_OUTPUT" | tail -n +2 | wc -l)
+              echo "⚠️ Found $OUTDATED_COUNT outdated packages"
+              echo ""
+              echo "📋 Outdated packages:"
+              echo "$OUTDATED_OUTPUT"
+              echo ""
+              echo "::warning::Outdated packages found. Review and update as needed. This does not block the build."
+              echo "count=$OUTDATED_COUNT" >> $GITHUB_OUTPUT
+            else
+              echo "✅ All packages are up to date"
+              echo "count=0" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Upload dependency scan artifacts
