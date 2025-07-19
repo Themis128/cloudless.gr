@@ -86,7 +86,7 @@ jobs:
           echo "🔍 Running audit-ci..."
           npx audit-ci --moderate --report --output-format json > audit-ci-results.json || true
 
-      - name: Check for outdated packages
+      - name: Check for outdated packages (non-blocking)
         id: outdated-check
         run: |
           echo "🔍 Checking for outdated packages..."
@@ -95,7 +95,20 @@ jobs:
 
           if [ "$OUTDATED_COUNT" -gt 0 ]; then
             echo "⚠️ Found $OUTDATED_COUNT outdated packages"
+            echo ""
+            echo "📋 Outdated packages:"
             npm outdated
+            echo ""
+            echo "📝 Notes:"
+            echo "- Major version updates may include breaking changes"
+            echo "- Review changelogs before updating in production"
+            echo "- Consider updating packages incrementally"
+            echo "- This check is informational and does not block the workflow"
+            echo ""
+            echo "🔧 To update packages:"
+            echo "  npm update                    # Update minor/patch versions"
+            echo "  npm install package@latest    # Update specific package"
+            echo "  npm audit fix --force         # Fix security issues"
           else
             echo "✅ All packages are up to date"
           fi
@@ -454,6 +467,9 @@ jobs:
           echo "🔍 Detailed Findings:"
           if [ "${{ needs.dependency-scan.outputs.vulnerabilities }}" != "" ]; then
             echo "- Dependencies: ${{ needs.dependency-scan.outputs.vulnerabilities }} vulnerabilities"
+          fi
+          if [ "${{ needs.dependency-scan.outputs.outdated_packages }}" != "" ]; then
+            echo "- Outdated Packages: ${{ needs.dependency-scan.outputs.outdated_packages }} packages need updates"
           fi
           if [ "${{ needs.code-scan.outputs.eslint_issues }}" != "" ]; then
             echo "- Code Quality: ${{ needs.code-scan.outputs.eslint_issues }} ESLint issues"
