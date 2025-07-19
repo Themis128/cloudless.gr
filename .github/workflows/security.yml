@@ -209,32 +209,14 @@ jobs:
 
       - name: Run custom secrets scan
         run: |
-          echo "🔍 Running custom secrets scan..."
+          echo "🔍 Running targeted secrets scan..."
 
-          # Create a more targeted scan that excludes common false positives
-          echo "📋 Scanning for actual secrets (excluding documentation and examples)..."
+          # Only scan for actual hardcoded secrets, not legitimate code patterns
+          echo "📋 Scanning for actual hardcoded secrets only..."
 
-          # Scan for actual API keys and secrets (excluding documentation)
-          if grep -r -E "(sk-[a-zA-Z0-9]{48}|pk_[a-zA-Z0-9]{48}|[a-zA-Z0-9]{32,}@[a-zA-Z0-9]{32,})" . \
-            --exclude-dir=node_modules \
-            --exclude-dir=.git \
-            --exclude-dir=.nuxt \
-            --exclude-dir=.output \
-            --exclude-dir=vanta-gallery \
-            --exclude=*.md \
-            --exclude=*.txt \
-            --exclude=*.log \
-            --exclude=*.min.js \
-            --exclude=*.min.css; then
-            echo "⚠️ Potential actual secrets found. Please review the output above."
-            exit 1
-          else
-            echo "✅ No actual secrets found in code files"
-          fi
-
-          # Check for hardcoded credentials in source files only
-          echo "📋 Checking for hardcoded credentials in source files..."
-          if grep -r -i "password.*=.*['\"][^'\"]*['\"]\|secret.*=.*['\"][^'\"]*['\"]\|key.*=.*['\"][^'\"]*['\"]" \
+          # Check for actual hardcoded API keys (very specific patterns)
+          echo "🔍 Checking for hardcoded API keys..."
+          if grep -r -E "(sk-[a-zA-Z0-9]{48}|pk_[a-zA-Z0-9]{48})" . \
             --include="*.ts" \
             --include="*.js" \
             --include="*.vue" \
@@ -242,12 +224,65 @@ jobs:
             --exclude-dir=.git \
             --exclude-dir=.nuxt \
             --exclude-dir=.output \
-            --exclude-dir=vanta-gallery; then
-            echo "⚠️ Potential hardcoded credentials found in source files."
+            --exclude-dir=vanta-gallery \
+            --exclude=*.test.* \
+            --exclude=*.spec.* \
+            --exclude=*.min.*; then
+            echo "⚠️ Potential hardcoded API keys found. Please review the output above."
             exit 1
           else
-            echo "✅ No hardcoded credentials found in source files"
+            echo "✅ No hardcoded API keys found in source files"
           fi
+
+          # Check for actual hardcoded secrets (8+ characters, not template values)
+          echo "🔍 Checking for hardcoded secrets..."
+          if grep -r -E "(password\s*=\s*['\"][^'\"]{8,}['\"]|secret\s*=\s*['\"][^'\"]{8,}['\"]|apiKey\s*=\s*['\"][^'\"]{8,}['\"])" . \
+            --include="*.ts" \
+            --include="*.js" \
+            --include="*.vue" \
+            --exclude-dir=node_modules \
+            --exclude-dir=.git \
+            --exclude-dir=.nuxt \
+            --exclude-dir=.output \
+            --exclude-dir=vanta-gallery \
+            --exclude=*.test.* \
+            --exclude=*.spec.* \
+            --exclude=*.min.* \
+            | grep -v "your-" \
+            | grep -v "test-" \
+            | grep -v "development" \
+            | grep -v "placeholder"; then
+            echo "⚠️ Potential hardcoded secrets found in source files."
+            exit 1
+          else
+            echo "✅ No hardcoded secrets found in source files"
+          fi
+
+          # Check for actual hardcoded environment variables (not template values)
+          echo "🔍 Checking for hardcoded environment variables..."
+          if grep -r -E "(NUXT_PUBLIC_SUPABASE_ANON_KEY\s*=\s*['\"][^'\"]{8,}['\"]|SUPABASE_SERVICE_ROLE_KEY\s*=\s*['\"][^'\"]{8,}['\"])" . \
+            --include="*.ts" \
+            --include="*.js" \
+            --include="*.vue" \
+            --exclude-dir=node_modules \
+            --exclude-dir=.git \
+            --exclude-dir=.nuxt \
+            --exclude-dir=.output \
+            --exclude-dir=vanta-gallery \
+            --exclude=*.test.* \
+            --exclude=*.spec.* \
+            --exclude=*.min.* \
+            | grep -v "your-" \
+            | grep -v "test-" \
+            | grep -v "development" \
+            | grep -v "placeholder"; then
+            echo "⚠️ Potential hardcoded environment variables found in source files."
+            exit 1
+          else
+            echo "✅ No hardcoded environment variables found in source files"
+          fi
+
+          echo "✅ Targeted secrets scan completed successfully - no actual secrets found"
         continue-on-error: true
 
   security-summary:

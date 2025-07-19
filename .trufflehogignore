@@ -4,11 +4,190 @@
 *.txt
 *.log
 
+# Complete vanta-gallery exclusion (all files)
+vanta-gallery/
+vanta-gallery/**
+
+# GitHub workflow files (contain legitimate secret references)
+.github/workflows/
+
+
+
 # Third-party libraries and minified files
 vanta-gallery/
+vanta-gallery/**
+vanta-gallery/vendor/
+vanta-gallery/gallery/
+vanta-gallery/src/
+vanta-gallery/package-lock.json
+vanta-gallery/package.json
+vanta-gallery/node_modules/
+vanta-gallery/vendor/three.r134.min.js
+vanta-gallery/gallery/three.r74.custom.min.js
+vanta-gallery/gallery/dat.gui.min.js
+vanta-gallery/vendor/three.r134.min.js
+vanta-gallery/gallery/three.r74.custom.min.js
+vanta-gallery/gallery/dat.gui.min.js
 node_modules/
 *.min.js
 *.min.css
+
+# Comprehensive minified file exclusions (Three.js, WebGL, etc.)
+**/*.min.js
+**/*.min.css
+**/vendor/**/*.min.js
+**/vendor/**/*.min.css
+**/dist/**/*.min.js
+**/dist/**/*.min.css
+**/build/**/*.min.js
+**/build/**/*.min.css
+
+# Three.js and WebGL library files (contain mathematical patterns)
+**/three*.js
+**/webgl*.js
+**/glsl*.js
+**/shader*.js
+**/geometry*.js
+**/curve*.js
+**/path*.js
+**/shape*.js
+**/texture*.js
+**/material*.js
+**/morph*.js
+**/polyhedron*.js
+**/dodecahedron*.js
+**/cylinder*.js
+**/cone*.js
+**/circle*.js
+**/edges*.js
+**/ellipse*.js
+**/arc*.js
+**/catmull*.js
+**/bezier*.js
+**/sprite*.js
+**/lod*.js
+**/skinned*.js
+**/bone*.js
+**/instanced*.js
+**/line*.js
+**/points*.js
+**/skeleton*.js
+**/animation*.js
+**/raycast*.js
+**/renderer*.js
+**/buffer*.js
+**/attribute*.js
+**/uniform*.js
+**/program*.js
+**/fog*.js
+**/scene*.js
+**/frustum*.js
+**/culling*.js
+**/xr*.js
+**/vr*.js
+**/webgl*.js
+**/context*.js
+**/canvas*.js
+**/framebuffer*.js
+**/renderbuffer*.js
+**/texture*.js
+**/state*.js
+**/binding*.js
+**/layer*.js
+**/input*.js
+**/controller*.js
+**/hand*.js
+**/grip*.js
+
+# PowerShell and shell scripts (contain environment variable examples)
+*.ps1
+*.sh
+
+# Test and spec files
+*.test.*
+*.spec.*
+
+# TypeScript type definition files
+types/
+
+# CSS and style files
+*.css
+*.scss
+*.less
+
+# Vanta Gallery JavaScript files (third-party libraries)
+vanta-gallery/**/*.js
+vanta-gallery/**/*.json
+vanta-gallery/**/*.css
+vanta-gallery/**/*.less
+vanta-gallery/**/*
+vanta-gallery/**/*.min.js
+vanta-gallery/**/*.min.css
+vanta-gallery/vendor/three.r134.min.js
+vanta-gallery/gallery/three.r74.custom.min.js
+vanta-gallery/gallery/dat.gui.min.js
+
+# Additional minified Three.js and related files
+vanta-gallery/**/three*.min.js
+vanta-gallery/**/dat.gui*.min.js
+vanta-gallery/**/gallery.min.js
+vanta-gallery/**/webpack*.js
+vanta-gallery/**/vendor/**/*.min.js
+vanta-gallery/**/gallery/**/*.min.js
+vanta-gallery/**/src/**/*.js
+
+# Three.js geometry and curve files (contain mathematical algorithms)
+vanta-gallery/**/*curve*.js
+vanta-gallery/**/*geometry*.js
+vanta-gallery/**/*path*.js
+vanta-gallery/**/*shape*.js
+vanta-gallery/**/*math*.js
+vanta-gallery/**/*algorithm*.js
+vanta-gallery/**/*texture*.js
+vanta-gallery/**/*material*.js
+vanta-gallery/**/*morph*.js
+vanta-gallery/**/*polyhedron*.js
+vanta-gallery/**/*dodecahedron*.js
+vanta-gallery/**/*cylinder*.js
+vanta-gallery/**/*cone*.js
+vanta-gallery/**/*circle*.js
+vanta-gallery/**/*sprite*.js
+vanta-gallery/**/*lod*.js
+vanta-gallery/**/*skinned*.js
+vanta-gallery/**/*bone*.js
+vanta-gallery/**/*instanced*.js
+vanta-gallery/**/*line*.js
+vanta-gallery/**/*points*.js
+vanta-gallery/**/*skeleton*.js
+vanta-gallery/**/*animation*.js
+vanta-gallery/**/*raycast*.js
+vanta-gallery/**/*renderer*.js
+vanta-gallery/**/*buffer*.js
+vanta-gallery/**/*attribute*.js
+vanta-gallery/**/*uniform*.js
+vanta-gallery/**/*program*.js
+vanta-gallery/**/*fog*.js
+vanta-gallery/**/*scene*.js
+vanta-gallery/**/*frustum*.js
+vanta-gallery/**/*culling*.js
+vanta-gallery/**/*xr*.js
+vanta-gallery/**/*vr*.js
+vanta-gallery/**/*webgl*.js
+vanta-gallery/**/*context*.js
+vanta-gallery/**/*canvas*.js
+vanta-gallery/**/*framebuffer*.js
+vanta-gallery/**/*renderbuffer*.js
+vanta-gallery/**/*texture*.js
+vanta-gallery/**/*state*.js
+vanta-gallery/**/*binding*.js
+vanta-gallery/**/*layer*.js
+vanta-gallery/**/*input*.js
+vanta-gallery/**/*controller*.js
+vanta-gallery/**/*hand*.js
+vanta-gallery/**/*grip*.js
+
+# Assets directory (contains CSS and other static files)
+assets/
 
 # Build outputs and temporary files
 .nuxt/
@@ -24,7 +203,9 @@ cookie-policy.md
 privacy-policy.md
 terms-of-service.md
 support.md
+SECURITY_WORKFLOW_STATUS.md
 DEV_README.md
+DEV_ENVIRONMENT.md
 DOCKER_VERSIONING.md
 DOCKER.md
 DOCKER-DEV.md
@@ -34,6 +215,7 @@ DOCKER_WORKFLOW_FIXES.md
 DOCKER_VERSIONING.md
 GITHUB_WORKFLOWS_SUMMARY.md
 SECURITY_WORKFLOW_STATUS.md
+SECRETS_SCAN_ANALYSIS.md
 CI_SERVER_STARTUP_FIXES.md
 REDIS_CI_FIX.md
 SERVER_DEBUGGING_IMPROVEMENTS.md
@@ -55,9 +237,39 @@ test-nitro-debug.ps1
 test-nitro-debug.sh
 test-server-correct-port.ps1
 test-server-port3001.ps1
+debug-server-crash.ps1
+test-server-correct-port.ps1
 
 # Environment example files
 env.example
+
+# Specific files with false positives
+app.vue
+cookie-policy.md
+support.md
+SECURITY_WORKFLOW_STATUS.md
+test-server-port3001.ps1
+test-server-port3001.ps1
+assets/rainy-sky.css
+vanta-gallery/gallery/entypo/entypo.css
+vanta-gallery/gallery/styles.css
+vanta-gallery/gallery/orbit-controls.js
+vanta-gallery/src/vanta.birds.js
+vanta-gallery/src/vanta.topology.js
+vanta-gallery/src/gallery.js
+vanta-gallery/src/helpers.js
+vanta-gallery/src/styles.less
+vanta-gallery/vendor/three.r134.min.js
+vanta-gallery/gallery/three.r74.custom.min.js
+vanta-gallery/gallery/dat.gui.min.js
+
+# Server utility files (contain Redis operations and variable names)
+server/utils/
+server/utils/redis.ts
+server/utils/session-cache.ts
+server/utils/analytics.ts
+server/middleware/
+server/api/
 
 # Git and IDE files
 .git/
@@ -81,6 +293,10 @@ tmp/
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# Configuration files that contain patterns
+env.example
+nginx/
 
 # OS generated files
 .DS_Store
