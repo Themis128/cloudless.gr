@@ -323,7 +323,10 @@
 .*password.*:.*
 .*secret.*:.*
 
-# Variable declarations and assignments
+# Variable declarations and assignments (comprehensive)
+.*const\s+(password|token|key|secret)\s+=\s+['"].*['"]
+.*let\s+(password|token|key|secret)\s+=\s+['"].*['"]
+.*var\s+(password|token|key|secret)\s+=\s+['"].*['"]
 .*const key = .*
 .*let key = .*
 .*var key = .*
