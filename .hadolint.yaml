@@ -1,0 +1,43 @@
+# Hadolint configuration file
+# Customize Dockerfile linting rules
+
+# Enable all rules by default
+trustedRegistries:
+  - docker.io
+  - registry.hub.docker.com
+
+# Ignore specific rules if needed (uncomment if you want to ignore certain warnings)
+# ignore:
+#   - DL3008  # Pin versions in apt-get
+#   - DL3009  # Delete the apt-get lists after installing packages
+#   - DL3018  # Pin versions in apk add
+#   - SC2028  # echo may not expand escape sequences
+
+# Custom rule configurations
+rules:
+  # Require specific base images
+  - rule: DL3007
+    description: 'Use latest tag only when necessary'
+    severity: warning
+
+  # Require non-root user
+  - rule: DL3002
+    description: 'Use a non-root user'
+    severity: error
+
+  # Require health checks
+  - rule: DL3025
+    description: 'Use arguments JSON notation for CMD and ENTRYPOINT'
+    severity: warning
+
+# File patterns to include/exclude
+include:
+  - '**/Dockerfile'
+  - '**/Dockerfile.*'
+  - '**/*.dockerfile'
+
+exclude:
+  - 'node_modules/**'
+  - '.git/**'
+  - 'dist/**'
+  - 'build/**'

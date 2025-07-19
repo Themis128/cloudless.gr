@@ -1,10 +1,10 @@
 # Multi-stage build for production
-FROM node:20-alpine AS base
+FROM node:21-alpine AS base
 
-# Install security updates and essential packages
-RUN apk add --no-cache \
-    libc6-compat \
-    dumb-init \
+# Install security updates and essential packages with pinned versions
+RUN apk add --no-cache --upgrade \
+    libc6-compat=1.2.4-r1 \
+    dumb-init=1.2.5-r1 \
     && rm -rf /var/cache/apk/*
 
 # Build arguments for versioning
@@ -66,18 +66,18 @@ COPY --from=builder --chown=nuxtjs:nodejs /app/.env* ./
 # Copy only production node_modules
 COPY --from=builder --chown=nuxtjs:nodejs /app/node_modules ./node_modules
 
-# Create environment validation script
-RUN echo '#!/bin/sh\n\
-    echo "🔍 Validating environment variables..."\n\
+# Create environment validation script using printf instead of echo
+RUN printf '#!/bin/sh\n\
+    printf "🔍 Validating environment variables...\n"\n\
     if [ -z "$NUXT_PUBLIC_SUPABASE_URL" ]; then\n\
-    echo "❌ NUXT_PUBLIC_SUPABASE_URL is not set"\n\
+    printf "❌ NUXT_PUBLIC_SUPABASE_URL is not set\n"\n\
     exit 1\n\
     fi\n\
     if [ -z "$NUXT_PUBLIC_SUPABASE_ANON_KEY" ]; then\n\
-    echo "❌ NUXT_PUBLIC_SUPABASE_ANON_KEY is not set"\n\
+    printf "❌ NUXT_PUBLIC_SUPABASE_ANON_KEY is not set\n"\n\
     exit 1\n\
     fi\n\
-    echo "✅ Environment variables validated"\n\
+    printf "✅ Environment variables validated\n"\n\
     ' > /app/validate-env.sh && chmod +x /app/validate-env.sh
 
 # Switch to non-root user
