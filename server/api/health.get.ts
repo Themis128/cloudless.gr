@@ -59,7 +59,7 @@ export default defineEventHandler(async (event: any) => {
         if (error) {
           // If migrations table doesn't exist, try a different approach
           // Just test the connection without requiring specific functions
-          const { data: testData, error: testError } = await supabase
+          const { error: testError } = await supabase
             .from('_supabase_migrations')
             .select('*')
             .limit(0)

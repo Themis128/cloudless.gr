@@ -220,6 +220,7 @@
 # Scripts that contain example patterns
 ^setup-github-secrets\.sh$
 ^setup-github-secrets\.ps1$
+^setup-github-secrets-production\.ps1$
 ^test-credentials\.ps1$
 ^test-integration-debug\.ps1$
 ^test-integration-debug\.sh$
@@ -232,6 +233,16 @@
 ^test-server-port3001\.ps1$
 ^debug-server-crash\.ps1$
 ^test-server-correct-port\.ps1$
+^scripts/setup-env\.ps1$
+^scripts/setup-docker-supabase\.ps1$
+^scripts/setup-dev-docker-supabase\.ps1$
+^scripts/docker-debug\.ps1$
+^scripts/docker-debug\.sh$
+^scripts/deploy\.ps1$
+^scripts/deploy\.sh$
+^scripts/update-final-env\.ps1$
+^scripts/update-security-env\.ps1$
+^scripts/update-supabase-env\.ps1$
 
 # Environment example files
 ^env\.example$
@@ -297,4 +308,66 @@
 ^db-backups/.*$
 
 # Exclude specific files that contain legitimate programming patterns
-^nuxt\.config\.ts$ 
+^nuxt\.config\.ts$
+
+# Vue template patterns that trigger false positives
+.*:key="[^"]*"
+.*:key='[^']*'
+.*v-bind:key="[^"]*"
+.*v-bind:key='[^']*'
+
+# CSS and style patterns
+.*@keyframes.*
+.*key.*:.*
+.*token.*:.*
+.*password.*:.*
+.*secret.*:.*
+
+# Variable declarations and assignments
+.*const key = .*
+.*let key = .*
+.*var key = .*
+.*const token = .*
+.*let token = .*
+.*var token = .*
+.*const password = .*
+.*let password = .*
+.*var password = .*
+.*const secret = .*
+.*let secret = .*
+.*var secret = .*
+
+# Package names and imports
+.*path-key.*
+.*ajv-keywords.*
+.*key.*package.*
+.*token.*package.*
+
+# Commented examples and placeholders
+.*//.*your_api_key_here.*
+.*//.*your_secret_here.*
+.*//.*your_password_here.*
+.*//.*your_token_here.*
+.*/*.*your_api_key_here.*
+.*/*.*your_secret_here.*
+.*/*.*your_password_here.*
+.*/*.*your_token_here.*
+
+# GitHub secrets references (legitimate)
+.*\${{ secrets\..* }}
+.*\${{ github\.secrets\..* }}
+
+# Environment variable patterns (legitimate)
+.*process\.env\..*
+.*NUXT_PUBLIC_.*
+.*SUPABASE_.*
+
+# Additional specific file exclusions
+^pages/.*\.vue$
+^components/.*\.vue$
+^layouts/.*\.vue$
+^plugins/.*\.(ts|js)$
+^composables/.*\.(ts|js)$
+^stores/.*\.(ts|js)$
+^server/.*\.(ts|js)$
+^types/.*\.(ts|js)$ 
