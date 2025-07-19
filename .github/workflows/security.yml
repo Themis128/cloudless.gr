@@ -70,12 +70,11 @@ jobs:
           echo "🔍 Running npm audit..."
           npm audit --audit-level moderate --json > audit-results.json || true
 
-          # Parse audit results
           VULNERABILITIES=$(jq -r '.metadata.vulnerabilities.total // 0' audit-results.json 2>/dev/null || echo "0")
           echo "vulnerabilities=$VULNERABILITIES" >> $GITHUB_OUTPUT
 
           if [ "$VULNERABILITIES" -gt 0 ]; then
-            echo "⚠️ Found $VULNERABILITIES vulnerabilities"
+            echo "❌ Found $VULNERABILITIES vulnerabilities"
             exit 1
           else
             echo "✅ No vulnerabilities found"
@@ -90,25 +89,17 @@ jobs:
         id: outdated-check
         run: |
           echo "🔍 Checking for outdated packages..."
-          OUTDATED_COUNT=$(npm outdated --json 2>/dev/null | jq 'length' || echo "0")
+          OUTDATED=$(npm outdated --json 2>/dev/null || echo "{}")
+          OUTDATED_COUNT=$(echo "$OUTDATED" | jq 'length')
           echo "count=$OUTDATED_COUNT" >> $GITHUB_OUTPUT
 
           if [ "$OUTDATED_COUNT" -gt 0 ]; then
             echo "⚠️ Found $OUTDATED_COUNT outdated packages"
             echo ""
             echo "📋 Outdated packages:"
-            npm outdated
+            npm outdated || true
             echo ""
-            echo "📝 Notes:"
-            echo "- Major version updates may include breaking changes"
-            echo "- Review changelogs before updating in production"
-            echo "- Consider updating packages incrementally"
-            echo "- This check is informational and does not block the workflow"
-            echo ""
-            echo "🔧 To update packages:"
-            echo "  npm update                    # Update minor/patch versions"
-            echo "  npm install package@latest    # Update specific package"
-            echo "  npm audit fix --force         # Fix security issues"
+            echo "::warning::Outdated packages found. Review and update as needed. This does not block the build."
           else
             echo "✅ All packages are up to date"
           fi
