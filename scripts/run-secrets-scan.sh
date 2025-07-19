@@ -1,13 +1,9 @@
 #!/bin/bash
 
-# Enhanced Secrets Scanning Script
-# This script runs a targeted secrets scan with intelligent filtering
-# to reduce false positives while catching real security issues
+# Enhanced secrets scanner with intelligent false positive detection
+# This script scans for hardcoded secrets while filtering out common false positives
 
 set -e
-
-echo "🔍 Running Enhanced Secrets Scan..."
-echo "=================================="
 
 # Colors for output
 RED='\033[0;31m'
@@ -58,37 +54,37 @@ is_false_positive() {
     local line=$3
     
     # Vue template patterns
-    if [[ $pattern =~ :key= ]]; then
+    if echo "$pattern" | grep -q ":key="; then
         return 0  # False positive
     fi
     
     # CSS patterns
-    if [[ $pattern =~ @keyframes ]] || [[ $pattern =~ key[[:space:]]*: ]]; then
+    if echo "$pattern" | grep -q "@keyframes" || echo "$pattern" | grep -q "key[[:space:]]*:"; then
         return 0  # False positive
     fi
     
     # Variable declarations
-    if [[ $pattern =~ (const|let|var)[[:space:]]+key[[:space:]]*= ]]; then
+    if echo "$pattern" | grep -q "const key =" || echo "$pattern" | grep -q "let key =" || echo "$pattern" | grep -q "var key ="; then
         return 0  # False positive
     fi
     
     # Package names
-    if [[ $pattern =~ path-key ]] || [[ $pattern =~ ajv-keywords ]]; then
+    if echo "$pattern" | grep -q "path-key" || echo "$pattern" | grep -q "ajv-keywords"; then
         return 0  # False positive
     fi
     
     # Commented examples
-    if [[ $pattern =~ //.*your_ ]] || [[ $pattern =~ /\*.*your_ ]]; then
+    if echo "$pattern" | grep -q "//.*your_" || echo "$pattern" | grep -q "/\*.*your_"; then
         return 0  # False positive
     fi
     
     # GitHub secrets references
-    if [[ $pattern =~ secrets\. ]]; then
+    if echo "$pattern" | grep -q "secrets\."; then
         return 0  # False positive
     fi
     
     # Environment variables
-    if [[ $pattern =~ process\.env ]] || [[ $pattern =~ NUXT_PUBLIC_ ]] || [[ $pattern =~ SUPABASE_ ]]; then
+    if echo "$pattern" | grep -q "process\.env" || echo "$pattern" | grep -q "NUXT_PUBLIC_" || echo "$pattern" | grep -q "SUPABASE_"; then
         return 0  # False positive
     fi
     
@@ -124,8 +120,8 @@ while IFS= read -r file; do
         while IFS= read -r line; do
             line_number=$((line_number + 1))
             
-            # Look for API key patterns
-            if [[ $line =~ sk-[a-zA-Z0-9]{48} ]] || [[ $line =~ pk_[a-zA-Z0-9]{48} ]]; then
+            # Look for API key patterns using grep instead of complex regex
+            if echo "$line" | grep -q "sk-[a-zA-Z0-9]\{48\}" || echo "$line" | grep -q "pk_[a-zA-Z0-9]\{48\}"; then
                 if is_false_positive "$line" "$file" "$line_number"; then
                     log_finding "warning" "Potential API key (likely false positive)" "$file" "$line_number"
                 else
@@ -147,10 +143,10 @@ while IFS= read -r file; do
         while IFS= read -r line; do
             line_number=$((line_number + 1))
             
-            # Look for secret patterns
-            if [[ $line =~ password[[:space:]]*=[[:space:]]*['\"][^'\"]{8,}['\"] ]] || \
-               [[ $line =~ secret[[:space:]]*=[[:space:]]*['\"][^'\"]{8,}['\"] ]] || \
-               [[ $line =~ apiKey[[:space:]]*=[[:space:]]*['\"][^'\"]{8,}['\"] ]]; then
+            # Look for secret patterns using simpler grep patterns
+            if echo "$line" | grep -q "password[[:space:]]*=[[:space:]]*['\"][^'\"]\{8,\}['\"]" || \
+               echo "$line" | grep -q "secret[[:space:]]*=[[:space:]]*['\"][^'\"]\{8,\}['\"]" || \
+               echo "$line" | grep -q "apiKey[[:space:]]*=[[:space:]]*['\"][^'\"]\{8,\}['\"]"; then
                 if is_false_positive "$line" "$file" "$line_number"; then
                     log_finding "warning" "Potential secret (likely false positive)" "$file" "$line_number"
                 else
@@ -172,9 +168,9 @@ while IFS= read -r file; do
         while IFS= read -r line; do
             line_number=$((line_number + 1))
             
-            # Look for environment variable patterns
-            if [[ $line =~ NUXT_PUBLIC_SUPABASE_ANON_KEY[[:space:]]*=[[:space:]]*['\"][^'\"]{8,}['\"] ]] || \
-               [[ $line =~ SUPABASE_SERVICE_ROLE_KEY[[:space:]]*=[[:space:]]*['\"][^'\"]{8,}['\"] ]]; then
+            # Look for environment variable patterns using simpler grep patterns
+            if echo "$line" | grep -q "NUXT_PUBLIC_SUPABASE_ANON_KEY[[:space:]]*=[[:space:]]*['\"][^'\"]\{8,\}['\"]" || \
+               echo "$line" | grep -q "SUPABASE_SERVICE_ROLE_KEY[[:space:]]*=[[:space:]]*['\"][^'\"]\{8,\}['\"]"; then
                 if is_false_positive "$line" "$file" "$line_number"; then
                     log_finding "warning" "Potential environment variable (likely false positive)" "$file" "$line_number"
                 else
