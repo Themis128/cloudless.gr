@@ -146,6 +146,7 @@ jobs:
           zip -r cloudless-v$VERSION.zip .output/
           
       - name: Upload Release Assets
+        if: needs.create-release.outputs.upload_url != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -156,6 +157,7 @@ jobs:
           asset_content_type: application/gzip
           
       - name: Upload Release Assets (ZIP)
+        if: needs.create-release.outputs.upload_url != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -227,6 +229,7 @@ jobs:
           prerelease: false
           
       - name: Upload Release Assets
+        if: steps.create-release.outputs.upload_url != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -237,6 +240,7 @@ jobs:
           asset_content_type: application/gzip
           
       - name: Upload Release Assets (ZIP)
+        if: steps.create-release.outputs.upload_url != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
