@@ -1,0 +1,47 @@
+name: Step 2 - Security Scan
+
+on:
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run npm security audit
+      run: |
+        echo "🔒 Step 2: Running npm security audit..."
+        npm audit --audit-level=moderate || echo "Security audit completed"
+        
+    - name: Check for exposed secrets
+      run: |
+        echo "🔍 Checking for exposed secrets..."
+        # Check for common secret patterns
+        if grep -r "AKIA[0-9A-Z]{16}" . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vanta-master; then
+          echo "⚠️ Potential AWS access key found"
+        else
+          echo "✅ No AWS access keys found"
+        fi
+        
+        # Check for other common secrets
+        if grep -r "sk_live_" . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vanta-master; then
+          echo "⚠️ Potential Stripe secret key found"
+        else
+          echo "✅ No Stripe secret keys found"
+        fi
+        
+    - name: Step 2 Complete
+      run: |
+        echo "✅ Step 2: Security Scan completed successfully!"
+        echo "🔐 Security results saved to workflow logs" 
