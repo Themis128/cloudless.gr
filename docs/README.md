@@ -1,24 +1,66 @@
-# Cloudless Documentation
+# Cloudless.gr Documentation
 
-This directory contains all project documentation.
+Welcome to the Cloudless.gr LLM Development Agent documentation.
 
-## 📚 Documentation Structure
+## 📚 Documentation Sections
 
-- `DOCKER-DEV.md` - Docker development guide
-- `DOCKER.md` - Docker deployment guide
-- `DOCKER_VERSIONING.md` - Docker versioning strategy
-- `TESTING.md` - Testing documentation
-- `support.md` - Support documentation
-- `linkedin-article-mobile-friendly.md` - LinkedIn article content
+### 🛠️ [Development](./development/)
+- Development environment setup
+- API integration guides
+- Code optimization tips
+- ESLint configuration
 
-## 📄 Legal & Policy Documents
+### 🐳 [Docker](./docker/)
+- Docker setup and configuration
+- Container best practices
+- Docker Compose workflows
+- Supabase Docker integration
 
-- `privacy-policy.md` - Privacy policy
-- `terms-of-service.md` - Terms of service
-- `cookie-policy.md` - Cookie policy
+### 🚀 [Deployment](./deployment/)
+- Production environment setup
+- Container deployment guides
+- Environment configuration
 
-## 🚀 Quick Links
+### ⚙️ [Workflows](./workflows/)
+- GitHub Actions configuration
+- CI/CD pipeline documentation
+- Workflow troubleshooting
 
-- [Docker Development Guide](./DOCKER-DEV.md)
-- [Testing Guide](./TESTING.md)
-- [Support Documentation](./support.md)
+### 🔒 [Security](./security/)
+- Security scanning results
+- Secrets management
+- Security best practices
+
+### 🔧 [Troubleshooting](./troubleshooting/)
+- Common issues and fixes
+- Debugging guides
+- Performance optimization
+
+### 📋 [Project](./project/)
+- Project structure overview
+- Architecture documentation
+
+### 📜 [Legal](./legal/)
+- Privacy policy
+- Terms of service
+- Cookie policy
+
+### 📝 [Content](./content/)
+- LinkedIn articles
+- Support documentation
+
+## 🚀 Quick Start
+
+1. Check the [Development Guide](./development/DEV_README.md)
+2. Set up [Docker Environment](./docker/DOCKER-DEV.md)
+3. Review [Workflow Configuration](./workflows/GITHUB_WORKFLOWS_SUMMARY.md)
+
+## 📞 Support
+
+For issues and questions, please check the troubleshooting section or create an issue.
+
+## 📝 Additional Documentation
+
+- [Contact Messages Setup](./CONTACT_MESSAGES_SETUP.md) - Contact form configuration
+- [Page Structure Guide](./PAGE_STRUCTURE_GUIDE.md) - Page layout and structure
+- [CI Setup](./CI_SETUP.md) - Continuous Integration setup
