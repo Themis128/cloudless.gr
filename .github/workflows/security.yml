@@ -151,7 +151,7 @@ jobs:
         id: eslint-check
         run: |
           echo "🔍 Running ESLint security rules..."
-          npx eslint . --ext .vue,.js,.ts,.jsx,.tsx --format json --output-file eslint-results.json || true
+          npm run lint -- --format json --output-file eslint-results.json || true
 
           # Parse ESLint results
           ISSUES=$(jq 'length' eslint-results.json 2>/dev/null || echo "0")
@@ -159,7 +159,7 @@ jobs:
 
           if [ "$ISSUES" -gt 0 ]; then
             echo "⚠️ Found $ISSUES ESLint issues"
-            npx eslint . --ext .vue,.js,.ts,.jsx,.tsx
+            npm run lint
           else
             echo "✅ No ESLint issues found"
           fi

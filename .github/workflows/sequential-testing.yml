@@ -100,7 +100,8 @@ jobs:
     - name: Run linting
       run: |
         echo "🔍 Step 3: Running ESLint..."
-        npm run lint || echo "Linting completed with warnings"
+        npm run lint
+        echo "✅ Linting completed successfully"
         
     - name: Run type checking
       run: |
