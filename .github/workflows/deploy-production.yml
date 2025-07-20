@@ -68,22 +68,6 @@ jobs:
     environment: production
     
     env:
-      # Required secrets (validated in Validate secrets step)
-      NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL }}
-      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      
-      # Optional secrets (with fallbacks)
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      REDIS_URL: ${{ secrets.REDIS_URL }}
-      REDIS_MAX_MEMORY: ${{ secrets.REDIS_MAX_MEMORY }}
-      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-      
       # Build variables
       REGISTRY: ghcr.io
       IMAGE_NAME: cloudlessgr-app
@@ -135,25 +119,26 @@ jobs:
             GIT_COMMIT=${{ github.sha }}
             APP_VERSION=${{ github.ref_name }}
 
-      - name: Validate secrets
+      - name: Validate environment variables
         run: |
-          echo "🔍 Validating required secrets..."
+          echo "🔍 Validating required environment variables..."
           
-          REQUIRED_SECRETS=(
+          REQUIRED_VARS=(
             "NUXT_PUBLIC_SUPABASE_URL"
             "NUXT_PUBLIC_SUPABASE_ANON_KEY"
             "SUPABASE_SERVICE_ROLE_KEY"
           )
           
-          for secret in "${REQUIRED_SECRETS[@]}"; do
-            if [ -z "${!secret}" ]; then
-              echo "❌ Required secret $secret is not set"
+          for var in "${REQUIRED_VARS[@]}"; do
+            if [ -z "${!var}" ]; then
+              echo "❌ Required environment variable $var is not set"
+              echo "Please set this variable in your GitHub repository's production environment settings"
               exit 1
             fi
-            echo "✅ $secret is configured"
+            echo "✅ $var is configured"
           done
           
-          echo "✅ All required secrets validated"
+          echo "✅ All required environment variables validated"
 
       - name: Set deployment variables
         run: |
