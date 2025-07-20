@@ -609,6 +609,33 @@ jobs:
           echo "NUXT_HOST=localhost" >> .env
           echo "NUXT_PORT=3000" >> .env
           echo "JWT_SECRET=test-secret-key" >> .env
+          echo "SESSION_SECRET=test-session-secret" >> .env
+          echo "NODE_ENV=test" >> .env
+          echo "NITRO_HOST=0.0.0.0" >> .env
+          echo "NITRO_PORT=3000" >> .env
+          
+          # Mock Supabase configuration for testing
+          echo "NUXT_PUBLIC_SUPABASE_URL=https://test.supabase.co" >> .env
+          echo "NUXT_PUBLIC_SUPABASE_ANON_KEY=test-anon-key" >> .env
+          echo "SUPABASE_SERVICE_ROLE_KEY=test-service-role-key" >> .env
+          
+          # Mock database configuration for testing
+          echo "DATABASE_URL=postgresql://test:test@localhost:5432/test" >> .env
+          
+          # Mock Redis configuration for testing
+          echo "REDIS_URL=redis://localhost:6379" >> .env
+          
+          # Mock API keys for testing
+          echo "OPENAI_API_KEY=test-openai-key" >> .env
+          echo "ANTHROPIC_API_KEY=test-anthropic-key" >> .env
+          
+          # Logging configuration
+          echo "LOG_LEVEL=debug" >> .env
+          echo "DEBUG=*" >> .env
+          
+          echo "🔧 [DEBUG] Environment setup completed"
+          echo "🔧 [DEBUG] .env file contents (first 10 lines):"
+          head -10 .env || echo "Cannot read .env file"
           
       - name: Start application
         run: |
