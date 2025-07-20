@@ -189,7 +189,7 @@
                     size="small"
                     variant="text"
                     color="primary"
-                    @click="() => viewDataset(item)"
+                    @click="viewDataset(item)"
                   />
                   <v-btn
                     icon="mdi-pencil"

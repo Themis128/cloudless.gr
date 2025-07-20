@@ -4,7 +4,7 @@ export interface FormField<T = any> {
   value: T
   error?: string
   required?: boolean
-  validator?: (value: T) => string | null
+  validator?: (val: T) => string | null
 }
 
 export interface FormState {
