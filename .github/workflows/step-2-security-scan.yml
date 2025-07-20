@@ -2,11 +2,29 @@ name: Step 2 - Security Scan
 
 on:
   workflow_dispatch:
+    inputs:
+      triggered_by:
+        description: 'Workflow that triggered this step'
+        required: false
+        default: 'manual'
+      commit_sha:
+        description: 'Commit SHA that triggered the sequence'
+        required: false
+        default: ''
 
 jobs:
   security-scan:
     runs-on: ubuntu-latest
     steps:
+    - name: Show trigger info
+      run: |
+        echo "🔗 Step 2 - Security Scan"
+        echo "========================="
+        echo "Triggered by: ${{ github.event.inputs.triggered_by || 'manual' }}"
+        echo "Commit SHA: ${{ github.event.inputs.commit_sha || github.sha }}"
+        echo "Workflow run: ${{ github.run_id }}"
+        echo ""
+        
     - name: Checkout code
       uses: actions/checkout@v4
       
@@ -65,4 +83,26 @@ jobs:
     - name: Step 2 Complete
       run: |
         echo "✅ Step 2: Security Scan completed successfully!"
-        echo "🔐 Security results saved to workflow logs" 
+        echo "🔐 Security results saved to workflow logs"
+        
+    - name: Trigger Step 3 - Code Quality
+      if: success()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'step-3-code-quality.yml',
+              ref: context.ref,
+              inputs: {
+                triggered_by: 'step-2-security-scan',
+                commit_sha: context.sha
+              }
+            });
+            console.log('✅ Successfully triggered Step 3 - Code Quality');
+          } catch (error) {
+            console.log('⚠️ Could not trigger Step 3 automatically:', error.message);
+            console.log('📋 You can manually trigger Step 3 from the Actions tab');
+          } 

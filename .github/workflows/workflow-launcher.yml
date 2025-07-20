@@ -1,0 +1,86 @@
+name: Workflow Launcher
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_sequence:
+        description: 'Start the complete workflow sequence'
+        required: true
+        default: 'step-1-dependency-audit'
+        type: choice
+        options:
+          - step-1-dependency-audit
+          - step-2-security-scan
+          - step-3-code-quality
+          - step-4-build-test
+          - complete-sequence
+      commit_sha:
+        description: 'Specific commit SHA to test (optional)'
+        required: false
+        default: ''
+
+jobs:
+  launcher:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Show launcher info
+      run: |
+        echo "🚀 Workflow Launcher"
+        echo "==================="
+        echo "Starting: ${{ github.event.inputs.start_sequence }}"
+        echo "Commit SHA: ${{ github.event.inputs.commit_sha || github.sha }}"
+        echo "Workflow run: ${{ github.run_id }}"
+        echo ""
+
+    - name: Start Complete Sequence
+      if: github.event.inputs.start_sequence == 'complete-sequence'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'step-1-dependency-audit.yml',
+              ref: '${{ github.event.inputs.commit_sha || github.ref }}',
+              inputs: {
+                commit_sha: '${{ github.event.inputs.commit_sha || github.sha }}'
+              }
+            });
+            console.log('✅ Successfully started complete workflow sequence');
+            console.log('📋 Step 1 will automatically trigger Step 2, then Step 3, then Step 4');
+          } catch (error) {
+            console.log('❌ Could not start workflow sequence:', error.message);
+          }
+
+    - name: Start Specific Step
+      if: github.event.inputs.start_sequence != 'complete-sequence'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            const workflowId = '${{ github.event.inputs.start_sequence }}.yml';
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflowId,
+              ref: '${{ github.event.inputs.commit_sha || github.ref }}',
+              inputs: {
+                commit_sha: '${{ github.event.inputs.commit_sha || github.sha }}'
+              }
+            });
+            console.log(`✅ Successfully started ${workflowId}`);
+            console.log('📋 This step will automatically trigger the next step if successful');
+          } catch (error) {
+            console.log('❌ Could not start workflow:', error.message);
+          }
+
+    - name: Launcher Complete
+      run: |
+        echo "✅ Workflow launcher completed!"
+        echo "📋 Check the Actions tab to see your workflow running"
+        echo ""
+        echo "🔗 Workflow Sequence:"
+        echo "  Step 1 → Step 2 → Step 3 → Step 4 → Summary"
+        echo ""
+        echo "📊 Each step will automatically trigger the next upon success" 

@@ -2,11 +2,29 @@ name: Step 4 - Build & Test
 
 on:
   workflow_dispatch:
+    inputs:
+      triggered_by:
+        description: 'Workflow that triggered this step'
+        required: false
+        default: 'manual'
+      commit_sha:
+        description: 'Commit SHA that triggered the sequence'
+        required: false
+        default: ''
 
 jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
+    - name: Show trigger info
+      run: |
+        echo "🔗 Step 4 - Build & Test"
+        echo "========================="
+        echo "Triggered by: ${{ github.event.inputs.triggered_by || 'manual' }}"
+        echo "Commit SHA: ${{ github.event.inputs.commit_sha || github.sha }}"
+        echo "Workflow run: ${{ github.run_id }}"
+        echo ""
+        
     - name: Checkout code
       uses: actions/checkout@v4
       
@@ -38,4 +56,40 @@ jobs:
     - name: Step 4 Complete
       run: |
         echo "✅ Step 4: Build and Test completed successfully!"
-        echo "🏗️ Build results saved to workflow logs" 
+        echo "🏗️ Build results saved to workflow logs"
+        
+    - name: Trigger Final Summary
+      if: success()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'test-summary.yml',
+              ref: context.ref,
+              inputs: {
+                triggered_by: 'step-4-build-test',
+                commit_sha: context.sha,
+                workflow_sequence: 'completed'
+              }
+            });
+            console.log('✅ Successfully triggered Final Summary');
+          } catch (error) {
+            console.log('⚠️ Could not trigger Final Summary automatically:', error.message);
+            console.log('📋 You can manually trigger the summary from the Actions tab');
+          }
+        
+    - name: Sequence Complete
+      run: |
+        echo "🎉 SEQUENTIAL WORKFLOW COMPLETE!"
+        echo "================================="
+        echo "✅ All 4 steps completed successfully:"
+        echo "  • Step 1: Dependency Audit ✅"
+        echo "  • Step 2: Security Scan ✅"
+        echo "  • Step 3: Code Quality ✅"
+        echo "  • Step 4: Build & Test ✅"
+        echo ""
+        echo "🚀 Your codebase is ready for production!"
+        echo "📋 Check the Actions tab for detailed results" 

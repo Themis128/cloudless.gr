@@ -2,11 +2,29 @@ name: Step 3 - Code Quality
 
 on:
   workflow_dispatch:
+    inputs:
+      triggered_by:
+        description: 'Workflow that triggered this step'
+        required: false
+        default: 'manual'
+      commit_sha:
+        description: 'Commit SHA that triggered the sequence'
+        required: false
+        default: ''
 
 jobs:
   code-quality:
     runs-on: ubuntu-latest
     steps:
+    - name: Show trigger info
+      run: |
+        echo "🔗 Step 3 - Code Quality"
+        echo "========================="
+        echo "Triggered by: ${{ github.event.inputs.triggered_by || 'manual' }}"
+        echo "Commit SHA: ${{ github.event.inputs.commit_sha || github.sha }}"
+        echo "Workflow run: ${{ github.run_id }}"
+        echo ""
+        
     - name: Checkout code
       uses: actions/checkout@v4
       
@@ -33,4 +51,26 @@ jobs:
     - name: Step 3 Complete
       run: |
         echo "✅ Step 3: Code Quality checks completed successfully!"
-        echo "🔍 Code quality results saved to workflow logs" 
+        echo "🔍 Code quality results saved to workflow logs"
+        
+    - name: Trigger Step 4 - Build & Test
+      if: success()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'step-4-build-test.yml',
+              ref: context.ref,
+              inputs: {
+                triggered_by: 'step-3-code-quality',
+                commit_sha: context.sha
+              }
+            });
+            console.log('✅ Successfully triggered Step 4 - Build & Test');
+          } catch (error) {
+            console.log('⚠️ Could not trigger Step 4 automatically:', error.message);
+            console.log('📋 You can manually trigger Step 4 from the Actions tab');
+          } 

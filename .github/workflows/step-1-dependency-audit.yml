@@ -32,4 +32,26 @@ jobs:
     - name: Step 1 Complete
       run: |
         echo "✅ Step 1: Dependency Audit completed successfully!"
-        echo "📊 Results saved to workflow logs" 
+        echo "📊 Results saved to workflow logs"
+        
+    - name: Trigger Step 2 - Security Scan
+      if: success()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'step-2-security-scan.yml',
+              ref: context.ref,
+              inputs: {
+                triggered_by: 'step-1-dependency-audit',
+                commit_sha: context.sha
+              }
+            });
+            console.log('✅ Successfully triggered Step 2 - Security Scan');
+          } catch (error) {
+            console.log('⚠️ Could not trigger Step 2 automatically:', error.message);
+            console.log('📋 You can manually trigger Step 2 from the Actions tab');
+          } 
