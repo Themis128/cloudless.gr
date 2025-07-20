@@ -510,7 +510,7 @@ const formatDuration = (seconds: number) => {
 
 const refreshLogs = () => {
   // In a real app, this would refresh the logs from the API
-  console.log('Refreshing logs...')
+      // Refreshing logs...
 }
 
 const downloadLogs = () => {

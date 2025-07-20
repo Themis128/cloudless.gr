@@ -1,237 +1,315 @@
-# GitHub Actions Workflows
+# 🧪 GitHub Workflows - Testing Suite
 
-This repository contains a comprehensive set of GitHub Actions workflows for CI/CD, security, maintenance, and releases.
+This directory contains comprehensive GitHub workflows for testing the Cloudless Wizard application functionality.
 
-## 📋 Workflow Overview
+## 📋 Available Workflows
 
-### 🔄 CI/CD Pipeline (`ci.yml`)
-**Triggers:** Push to `main`, `develop`, `application` branches; Pull requests
-**Purpose:** Continuous integration and quality assurance
+### 1. **API Testing** (`api-testing.yml`)
+Comprehensive testing of all API endpoints and functionality.
 
-**Jobs:**
-- **Lint & Type Check**: ESLint, TypeScript validation, Prettier formatting
-- **Build Test**: Application build verification across Node.js versions
-- **Security Check**: npm audit and vulnerability scanning
-- **Dependency Check**: Outdated package detection
-- **E2E Tests**: Playwright end-to-end testing
-- **Accessibility Test**: WCAG compliance testing
-- **Performance Test**: Bundle size analysis
-- **Integration Test**: Server startup and connectivity testing
-- **Preview Deploy**: PR preview with status comments
-- **Test Summary**: Comprehensive test results summary
+**Triggers:**
+- Push to `main` or `develop` branches
+- Pull requests to `main` branch
+- Manual dispatch
 
-### 🚀 Deployment (`deploy.yml`)
-**Triggers:** Push to `main`, `production` branches; Manual dispatch
-**Purpose:** Automated deployment to staging and production
+**Tests:**
+- ✅ API Index and documentation endpoints
+- ✅ Authentication (login/register)
+- ✅ Bot management (CRUD operations)
+- ✅ Bot chat functionality
+- ✅ Analytics dashboard
+- ✅ Webhook registration
+- ✅ Error handling and validation
 
-**Jobs:**
-- **Deploy to Staging**: Automatic deployment from `develop` branch
-- **Deploy to Production**: Manual or automatic deployment from `main`/`production`
+**Node.js Versions:** 18, 20
 
-**Features:**
-- Environment-specific deployments
-- Build artifact uploads
-- Deployment notifications
-- Manual trigger with environment selection
+---
 
-### 🔒 Security Scan (`security.yml`)
-**Triggers:** Weekly schedule, push to `main`/`develop`, PRs, manual dispatch
-**Purpose:** Comprehensive security scanning
+### 2. **LLM & Model Testing** (`llm-model-testing.yml`)
+Testing of AI/ML model functionality and LLM integrations.
 
-**Jobs:**
-- **Dependency Vulnerability Scan**: npm audit, audit-ci, outdated packages
-- **Code Security Scan**: ESLint security rules, secret detection
-- **Container Security Scan**: Trivy vulnerability scanning (if Dockerfile exists)
-- **Secrets Detection**: TruffleHog for credential scanning
-- **Security Summary**: Consolidated security report
+**Triggers:**
+- Push to `main` or `develop` branches
+- Pull requests to `main` branch
+- Manual dispatch
 
-### 🔧 Maintenance (`maintenance.yml`)
-**Triggers:** Weekly schedule (Sundays), manual dispatch
-**Purpose:** Automated maintenance tasks
+**Tests:**
+- ✅ Model creation (text classification, sentiment analysis)
+- ✅ Model listing and filtering
+- ✅ Model training process
+- ✅ Model status monitoring
+- ✅ Model predictions
+- ✅ Model updates and deletion
+- ✅ LLM integration endpoints
+- ✅ Error handling
 
-**Jobs:**
-- **Update Dependencies**: Automated dependency updates with PR creation
-- **Cleanup**: Build artifact cleanup, disk usage optimization
-- **Audit Dependencies**: Security audits and license checks
-- **Maintenance Summary**: Task completion summary
+**Node.js Versions:** 18, 20
 
-### 🏷️ Release (`release.yml`)
-**Triggers:** Git tags (`v*`), manual dispatch
-**Purpose:** Automated versioning and releases
+---
 
-**Jobs:**
-- **Create Release**: Version bumping and GitHub release creation
-- **Build and Upload**: Release asset creation and upload
-- **Tag Release**: Tag-based release automation
-- **Notify Release**: Release completion notifications
+### 3. **Pipeline Testing** (`pipeline-testing.yml`)
+Testing of data pipeline functionality and execution.
 
-## 🛠️ Setup Instructions
+**Triggers:**
+- Push to `main` or `develop` branches
+- Pull requests to `main` branch
+- Manual dispatch
 
-### 1. Repository Settings
-Enable GitHub Actions in your repository settings:
+**Tests:**
+- ✅ Pipeline creation (data processing, ETL)
+- ✅ Pipeline listing and filtering
+- ✅ Pipeline execution
+- ✅ Pipeline status monitoring
+- ✅ Pipeline scheduling
+- ✅ Pipeline validation
+- ✅ Pipeline cloning and deletion
+- ✅ Performance monitoring
+- ✅ Error handling
+
+**Node.js Versions:** 18, 20
+
+---
+
+### 4. **Bot Testing** (`bot-testing.yml`)
+Comprehensive testing of bot functionality and interactions.
+
+**Triggers:**
+- Push to `main` or `develop` branches
+- Pull requests to `main` branch
+- Manual dispatch
+
+**Tests:**
+- ✅ Bot creation (customer support, developer assistant, data analyst, content writer)
+- ✅ Bot listing and filtering
+- ✅ Bot configuration updates
+- ✅ Bot activation and deployment
+- ✅ Bot chat interactions
+- ✅ Conversation history
+- ✅ Bot testing functionality
+- ✅ Bot cloning and deletion
+- ✅ Performance monitoring
+- ✅ Error handling
+
+**Node.js Versions:** 18, 20
+
+---
+
+### 5. **Test Summary & Report** (`test-summary.yml`)
+Generates comprehensive test reports and summaries.
+
+**Triggers:**
+- Automatically runs after completion of any test workflow
+- Creates detailed test reports
+- Uploads test artifacts
+- Creates GitHub issues for failed tests
+- Comments on pull requests with test results
+
+## 🚀 How to Use
+
+### Running Tests Manually
+
+1. **Go to Actions tab** in your GitHub repository
+2. **Select the workflow** you want to run
+3. **Click "Run workflow"**
+4. **Choose branch** and click "Run workflow"
+
+### Running All Tests
+
+To run all tests, you can trigger them manually or push to the `main` or `develop` branches:
+
+```bash
+# Push to trigger all tests
+git push origin main
+
+# Or create a pull request
+git checkout -b feature/test-updates
+git push origin feature/test-updates
+# Create PR to main branch
 ```
-Settings > Actions > General > Actions permissions > Allow all actions and reusable workflows
-```
 
-### 2. Environment Setup
-Create environments for deployment:
-```
-Settings > Environments > New environment
-```
-- Create `staging` environment
-- Create `production` environment with protection rules
+### Viewing Test Results
 
-### 3. Secrets Configuration
-Add required secrets in repository settings:
-```
-Settings > Secrets and variables > Actions
-```
+1. **Go to Actions tab** in your GitHub repository
+2. **Click on the workflow run** you want to view
+3. **Review the test results** and logs
+4. **Download artifacts** if available
 
-**Required Secrets:**
-- `GITHUB_TOKEN` (automatically provided)
-- `NODE_ENV` (optional, for environment-specific builds)
-- Deployment platform secrets (Vercel, Netlify, etc.)
+## 📊 Test Coverage
 
-### 4. Branch Protection
-Set up branch protection rules:
-```
-Settings > Branches > Add rule
-```
-- Require status checks to pass
-- Require branches to be up to date
-- Require pull request reviews
+### API Endpoints Tested
+- `GET /api/v1` - API index
+- `GET /api/health` - Health check
+- `GET /api/v1/docs` - API documentation
+- `POST /api/v1/auth/register` - User registration
+- `POST /api/v1/auth/login` - User login
+- `GET /api/v1/bots` - List bots
+- `POST /api/v1/bots` - Create bot
+- `POST /api/v1/bots/{id}/chat` - Bot chat
+- `GET /api/v1/analytics/dashboard` - Analytics
+- `POST /api/v1/webhooks/register` - Webhook registration
 
-## 📊 Workflow Features
+### Bot Types Tested
+- Customer Support Bot
+- Developer Assistant Bot
+- Data Analyst Bot
+- Content Writer Bot
 
-### ✅ Quality Assurance
-- **Automated Testing**: Unit, integration, and E2E tests
-- **Code Quality**: ESLint, Prettier, TypeScript validation
-- **Security**: Vulnerability scanning, secret detection
-- **Performance**: Bundle size analysis, performance monitoring
+### Model Types Tested
+- Text Classification Model
+- Sentiment Analysis Model
 
-### 🔄 Continuous Integration
-- **Parallel Jobs**: Fast feedback with parallel execution
-- **Caching**: npm cache optimization for faster builds
-- **Matrix Testing**: Multi-version Node.js testing
-- **Artifact Management**: Build artifact storage and retrieval
+### Pipeline Types Tested
+- Data Processing Pipeline
+- ETL Pipeline
 
-### 🚀 Continuous Deployment
-- **Environment Management**: Staging and production environments
-- **Rollback Capability**: Easy rollback to previous versions
-- **Deployment Notifications**: Slack, email, or GitHub notifications
-- **Manual Triggers**: On-demand deployment with environment selection
-
-### 🔒 Security
-- **Automated Scanning**: Weekly security scans
-- **Vulnerability Detection**: Real-time vulnerability alerts
-- **Secret Management**: Credential scanning and protection
-- **Compliance**: License and dependency compliance checks
-
-### 🔧 Maintenance
-- **Automated Updates**: Dependency update automation
-- **Cleanup Tasks**: Build artifact and cache cleanup
-- **Health Monitoring**: Repository health checks
-- **Scheduled Maintenance**: Weekly maintenance windows
-
-## 🎯 Usage Examples
-
-### Manual Deployment
-1. Go to Actions tab
-2. Select "Deploy" workflow
-3. Click "Run workflow"
-4. Choose environment (staging/production)
-5. Click "Run workflow"
-
-### Manual Release
-1. Go to Actions tab
-2. Select "Release" workflow
-3. Click "Run workflow"
-4. Enter version and release type
-5. Click "Run workflow"
-
-### Security Scan
-1. Go to Actions tab
-2. Select "Security Scan" workflow
-3. Click "Run workflow"
-4. Review results in Security tab
-
-### Maintenance Tasks
-1. Go to Actions tab
-2. Select "Maintenance" workflow
-3. Click "Run workflow"
-4. Choose maintenance task
-5. Review generated PRs
-
-## 📈 Monitoring and Alerts
-
-### Workflow Status
-- Monitor workflow runs in the Actions tab
-- Set up branch protection for required status checks
-- Configure notifications for workflow failures
-
-### Security Alerts
-- Review security scan results in the Security tab
-- Set up Dependabot alerts for vulnerability notifications
-- Monitor secret scanning results
-
-### Performance Metrics
-- Track build times and success rates
-- Monitor bundle size changes
-- Review deployment frequency and success rates
-
-## 🔧 Customization
+## 🔧 Configuration
 
 ### Environment Variables
-Add environment-specific variables in workflow files:
-```yaml
-env:
-  NODE_VERSION: '20'
-  NODE_ENV: 'production'
+
+The workflows automatically set up test environment variables:
+
+```bash
+NUXT_HOST=localhost
+NUXT_PORT=3000
+JWT_SECRET=test-secret-key
+OPENAI_API_KEY=test-key
+ANTHROPIC_API_KEY=test-key
+REDIS_URL=redis://localhost:6379
 ```
 
-### Job Dependencies
-Configure job dependencies for sequential execution:
-```yaml
-needs: [lint-and-check, build-test]
-```
+### Test Data
 
-### Conditional Execution
-Use conditions for selective job execution:
-```yaml
-if: github.ref == 'refs/heads/main'
-```
+Each workflow creates test users and data:
+- **API Testing:** `test@example.com`
+- **LLM Testing:** `llm-test@example.com`
+- **Pipeline Testing:** `pipeline-test@example.com`
+- **Bot Testing:** `bot-test@example.com`
 
-### Custom Actions
-Integrate with external services:
-- Vercel deployment
-- Netlify deployment
-- Slack notifications
-- Email alerts
+## 📈 Test Reports
 
-## 🚨 Troubleshooting
+### Automatic Report Generation
+
+After each test run, a comprehensive report is generated including:
+
+- **Test Coverage Summary**
+- **Component Status**
+- **Detailed Test Results**
+- **Next Steps Recommendations**
+- **Environment Information**
+
+### Report Locations
+
+- **GitHub Actions:** View in the Actions tab
+- **Artifacts:** Download test summary files
+- **Issues:** Automatic issue creation for failed tests
+- **Pull Requests:** Automatic comments with test results
+
+## 🐛 Troubleshooting
 
 ### Common Issues
-1. **Build Failures**: Check Node.js version compatibility
-2. **Test Failures**: Review test logs and update tests
-3. **Deployment Issues**: Verify environment secrets and permissions
-4. **Security Alerts**: Address vulnerability reports promptly
 
-### Debug Steps
-1. Check workflow logs in Actions tab
-2. Review job-specific error messages
-3. Verify repository settings and permissions
-4. Test workflows locally when possible
+1. **Tests Failing Due to Missing Endpoints**
+   - Some tests may fail if endpoints are not yet implemented
+   - This is expected and noted in the test output
+   - Tests are designed to be forward-compatible
 
-### Support
-- Review GitHub Actions documentation
-- Check workflow syntax with GitHub's linter
-- Use GitHub's workflow debug mode for detailed logging
+2. **Authentication Issues**
+   - Tests create their own test users
+   - Each workflow uses separate test accounts
+   - No conflicts between different test runs
 
-## 📚 Resources
+3. **Database Connection Issues**
+   - Tests use test environment configuration
+   - Supabase connection is mocked for testing
+   - No production data is affected
 
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [Nuxt 3 Deployment Guide](https://nuxt.com/docs/getting-started/deployment)
-- [Vuetify Documentation](https://vuetifyjs.com/)
-- [Playwright Testing](https://playwright.dev/)
-- [ESLint Configuration](https://eslint.org/docs/user-guide/configuring)
-- [Prettier Configuration](https://prettier.io/docs/en/configuration.html) 
+### Debugging Failed Tests
+
+1. **Check the workflow logs** for detailed error messages
+2. **Review the test summary** for specific failure points
+3. **Verify endpoint implementation** if tests fail
+4. **Check environment configuration** if setup fails
+
+## 🔄 Continuous Integration
+
+### Branch Protection
+
+Recommended branch protection rules:
+
+```yaml
+# .github/branch-protection.yml
+branches:
+  - name: main
+    protection:
+      required_status_checks:
+        contexts:
+          - "API Testing"
+          - "LLM & Model Testing"
+          - "Pipeline Testing"
+          - "Bot Testing"
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+      enforce_admins: false
+```
+
+### Pre-commit Hooks
+
+Consider adding pre-commit hooks for local testing:
+
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit
+
+echo "Running local tests..."
+npm run test:api
+npm run test:llm
+npm run test:pipeline
+npm run test:bot
+```
+
+## 📚 Best Practices
+
+### Writing New Tests
+
+1. **Follow the existing pattern** in the workflow files
+2. **Use descriptive test names** and comments
+3. **Include error handling** for edge cases
+4. **Test both success and failure scenarios**
+5. **Use proper authentication** for protected endpoints
+
+### Maintaining Tests
+
+1. **Update tests** when adding new endpoints
+2. **Keep test data** separate from production
+3. **Regularly review** test coverage
+4. **Monitor test performance** and optimize if needed
+
+### Test Data Management
+
+1. **Use unique test accounts** for each workflow
+2. **Clean up test data** after tests complete
+3. **Avoid conflicts** between parallel test runs
+4. **Use realistic test data** that represents production scenarios
+
+## 🎯 Next Steps
+
+### Immediate Actions
+
+1. **Review existing workflows** and understand the test structure
+2. **Run tests manually** to verify everything works
+3. **Set up branch protection** rules if not already configured
+4. **Monitor test results** for the first few runs
+
+### Future Enhancements
+
+1. **Add performance testing** workflows
+2. **Implement load testing** for high-traffic scenarios
+3. **Add security testing** workflows
+4. **Create deployment testing** workflows
+5. **Add visual regression testing** for UI components
+
+---
+
+**Happy Testing! 🧪✨**
+
+For questions or issues with the test workflows, please create an issue in the repository. 

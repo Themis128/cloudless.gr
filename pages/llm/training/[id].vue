@@ -470,12 +470,12 @@ const getEstimatedCompletion = () => {
 
 const stopTraining = () => {
   // In a real app, this would stop the training session
-  console.log('Stopping training session:', session.value?.name)
+      // Stopping training session
 }
 
 const downloadModel = () => {
   // In a real app, this would download the trained model
-  console.log('Downloading model from session:', session.value?.name)
+      // Downloading model from session
 }
 
 const deployModel = () => {
@@ -485,7 +485,7 @@ const deployModel = () => {
 
 const refreshSession = () => {
   // In a real app, this would refresh the session data
-  console.log('Refreshing session data')
+      // Refreshing session data
 }
 
 onMounted(async () => {

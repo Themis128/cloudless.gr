@@ -19,6 +19,7 @@
           <v-list-item to="/llm/analytics" title="LLM Analytics" prepend-icon="mdi-chart-line" />
           <v-list-item to="/llm/api" title="LLM API Docs" prepend-icon="mdi-api" />
           <v-list-item to="/debug" title="Debug" prepend-icon="mdi-bug" />
+          <v-list-item to="/test-error" title="Test Errors" prepend-icon="mdi-alert-circle" />
         </v-list>
       </v-navigation-drawer>
     </ClientOnly>
@@ -43,23 +44,64 @@
                 </div>
                 <v-chip-group>
                   <v-chip color="primary" variant="outlined" size="small">
-                    <v-icon start>mdi-robot</v-icon>
+                    <v-icon start>
+                      mdi-robot
+                    </v-icon>
                     AI-Powered
                   </v-chip>
                   <v-chip color="success" variant="outlined" size="small">
-                    <v-icon start>mdi-lightning-bolt</v-icon>
+                    <v-icon start>
+                      mdi-lightning-bolt
+                    </v-icon>
                     Low-Code
                   </v-chip>
                   <v-chip color="warning" variant="outlined" size="small">
-                    <v-icon start>mdi-chart-line</v-icon>
+                    <v-icon start>
+                      mdi-chart-line
+                    </v-icon>
                     Analytics
                   </v-chip>
                 </v-chip-group>
               </v-card-text>
             </v-card>
 
+            <!-- Gradient Card Example -->
+            <GradientCard variant="primary" class="mb-6">
+              <div class="text-center">
+                <h3 class="text-h5 mb-2">✨ Enhanced Dashboard</h3>
+                <p class="text-body-1">Your dashboard is now fully synced with Supabase and displays real-time data!</p>
+              </div>
+            </GradientCard>
+
+            <!-- Loading State -->
+            <v-row v-if="isLoading" class="mb-6">
+              <v-col cols="12">
+                <v-card class="bg-white" elevation="2">
+                  <v-card-text class="text-center">
+                    <v-progress-circular indeterminate color="primary" size="64" />
+                    <div class="mt-4 text-h6">Loading dashboard data...</div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <!-- Error State -->
+            <v-row v-if="error" class="mb-6">
+              <v-col cols="12">
+                <v-alert type="error" variant="tonal" class="mb-4">
+                  <template #title>Error Loading Dashboard</template>
+                  {{ error }}
+                  <template #append>
+                    <v-btn color="primary" variant="text" @click="fetchAllData">
+                      Retry
+                    </v-btn>
+                  </template>
+                </v-alert>
+              </v-col>
+            </v-row>
+
             <!-- Statistics Overview -->
-            <v-row class="mb-6">
+            <v-row v-if="!isLoading && !error" class="mb-6">
               <v-row>
                 <v-col cols="12" sm="6" md="3">
                   <v-card class="bg-white stats-card" elevation="2">
@@ -70,7 +112,7 @@
                       Bots
                     </v-card-title>
                     <v-card-text class="text-h3 font-weight-bold text-primary">
-                      {{ bots.length }}
+                      {{ stats.bots }}
                     </v-card-text>
                     <v-card-subtitle class="text-caption">
                       Active AI assistants
@@ -86,7 +128,7 @@
                       Models
                     </v-card-title>
                     <v-card-text class="text-h3 font-weight-bold text-success">
-                      {{ models.length }}
+                      {{ stats.models }}
                     </v-card-text>
                     <v-card-subtitle class="text-caption">
                       Trained AI models
@@ -102,7 +144,7 @@
                       Pipelines
                     </v-card-title>
                     <v-card-text class="text-h3 font-weight-bold text-warning">
-                      {{ pipelineSteps }}
+                      {{ stats.pipelines }}
                     </v-card-text>
                     <v-card-subtitle class="text-caption">
                       Data processing workflows
@@ -118,7 +160,7 @@
                       Projects
                     </v-card-title>
                     <v-card-text class="text-h3 font-weight-bold text-info">
-                      {{ projectCount }}
+                      {{ stats.projects }}
                     </v-card-text>
                     <v-card-subtitle class="text-caption">
                       Active projects
@@ -136,7 +178,39 @@
                       Recent Projects
                     </v-card-title>
                     <v-card-text>
-                      <ProjectListPreview />
+                      <div v-if="recentProjects.length === 0" class="text-center pa-4">
+                        <v-icon size="48" color="grey-lighten-1">mdi-folder-open</v-icon>
+                        <div class="text-h6 mt-2 text-grey">No projects yet</div>
+                        <div class="text-body-2 text-grey-lighten-1">Create your first project to get started</div>
+                        <v-btn color="primary" class="mt-4" to="/projects/create">
+                          Create Project
+                        </v-btn>
+                      </div>
+                      <div v-else>
+                        <v-list>
+                          <v-list-item
+                            v-for="project in recentProjects"
+                            :key="project.id"
+                            :to="`/projects/${project.id}`"
+                            class="mb-2"
+                          >
+                            <template #prepend>
+                              <v-icon :color="getProjectStatusColor(project.status)">
+                                mdi-folder
+                              </v-icon>
+                            </template>
+                            <v-list-item-title>{{ project.name }}</v-list-item-title>
+                            <v-list-item-subtitle>
+                              {{ project.description || 'No description' }}
+                            </v-list-item-subtitle>
+                            <template #append>
+                              <v-chip size="small" :color="getProjectStatusColor(project.status)" variant="outlined">
+                                {{ project.status || 'draft' }}
+                              </v-chip>
+                            </template>
+                          </v-list-item>
+                        </v-list>
+                      </div>
                     </v-card-text>
                   </v-card>
                 </v-col>
@@ -149,11 +223,38 @@
                       Recent Activity
                     </v-card-title>
                     <v-card-text>
-                      <ActivityFeed />
+                      <div v-if="recentActivity.length === 0" class="text-center pa-4">
+                        <v-icon size="48" color="grey-lighten-1">mdi-clock-outline</v-icon>
+                        <div class="text-h6 mt-2 text-grey">No recent activity</div>
+                        <div class="text-body-2 text-grey-lighten-1">Start creating bots, models, or pipelines to see activity here</div>
+                      </div>
+                      <div v-else>
+                        <v-list>
+                          <v-list-item
+                            v-for="activity in recentActivity"
+                            :key="activity.id"
+                            class="mb-2"
+                          >
+                            <template #prepend>
+                              <v-icon :color="activity.color">
+                                {{ activity.icon }}
+                              </v-icon>
+                            </template>
+                            <v-list-item-title>{{ activity.title }}</v-list-item-title>
+                            <v-list-item-subtitle>{{ activity.description }}</v-list-item-subtitle>
+                            <template #append>
+                              <v-chip size="small" color="grey" variant="outlined">
+                                {{ formatTimeAgo(activity.created_at) }}
+                              </v-chip>
+                            </template>
+                          </v-list-item>
+                        </v-list>
+                      </div>
                     </v-card-text>
                   </v-card>
                 </v-col>
               </v-row>
+            </v-row>
           </v-col>
         </v-row>
       </v-container>
@@ -162,52 +263,56 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import ActivityFeed from '~/components/activity-feed.vue'
-import ProjectListPreview from '~/components/project-list-preview.vue'
-import { useSupabase } from '~/composables/supabase'
+import { onMounted, ref } from 'vue'
 import { useAuth } from '~/composables/useAuth'
-import { useBotStore } from '~/stores/botStore'
-import { useModelStore } from '~/stores/modelStore'
-import { usePipelineStore } from '~/stores/pipelineStore'
+import { useDashboard } from '~/composables/useDashboard'
+import GradientCard from '~/components/ui/GradientCard.vue'
 
 const drawer = ref(false)
 const { user } = useAuth()
-const botStore = useBotStore()
-const modelStore = useModelStore()
-const pipelineStore = usePipelineStore()
-
-const bots = computed(() => botStore.bots || [])
-const models = computed(() => modelStore.models || [])
-const pipelineSteps = computed(() => pipelineStore.pipelines?.length || 0)
-const projectCount = ref(0)
+const { 
+  isLoading, 
+  error, 
+  stats, 
+  recentProjects, 
+  recentActivity, 
+  fetchAllData 
+} = useDashboard()
 
 const toggleDrawer = () => {
   drawer.value = !drawer.value
 }
 
-onMounted(async () => {
-  try {
-    await botStore.fetchAll()
-    await pipelineStore.fetchAll() // Add this line to fetch pipelines
-    // For models, you may want to fetch from backend if not already loaded
-    // For projects, fetch count
-    const supabase = useSupabase()
-    const { data, error } = await supabase.from('projects').select('id')
-    if (error) {
-      // Failed to fetch projects - could be logged to a proper logging service
-      // console.warn('Failed to fetch projects:', error.message)
-      projectCount.value = 0
-    } else {
-      projectCount.value = data ? data.length : 0
-    }
-  } catch (error) {
-    // Error during page initialization - could be logged to a proper logging service
-    // console.warn('Error during page initialization:', error)
-    // Set default values if Supabase is not available
-    projectCount.value = 0
+const getProjectStatusColor = (status: string | null) => {
+  switch (status) {
+    case 'active': return 'success'
+    case 'training': return 'warning'
+    case 'deployed': return 'info'
+    case 'completed': return 'success'
+    case 'error': return 'error'
+    case 'archived': return 'grey'
+    case 'paused': return 'orange'
+    default: return 'grey'
   }
-})
+}
+
+const formatTimeAgo = (dateString: string | null) => {
+  if (!dateString) return 'Unknown'
+  
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  
+  if (diffInSeconds < 60) return 'Just now'
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`
+  return `${Math.floor(diffInSeconds / 2592000)}mo ago`
+}
+
+  onMounted(async () => {
+    await fetchAllData()
+  })
 </script>
 
 <style scoped>

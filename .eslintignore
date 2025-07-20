@@ -1,12 +1,12 @@
 # Third-party libraries
-vanta-gallery/
-public/vanta/
-node_modules/
+vanta-gallery/**/*
+vanta-master/**/*
+node_modules/**/*
 
 # Build outputs
-.nuxt/
-.output/
-dist/
+.nuxt/**/*
+.output/**/*
+dist/**/*
 build/
 
 # Generated files

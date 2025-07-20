@@ -299,28 +299,28 @@ const formatDate = (date: string) => {
 
 const viewModel = (model: Model) => {
   // Navigate to model details page
-  console.log('Viewing model:', model)
+      // Viewing model
 }
 
 const editModel = (model: Model) => {
   // Navigate to model edit page
-  console.log('Editing model:', model)
+      // Editing model
 }
 
 const testModel = (model: Model) => {
   // Navigate to model test page
-  console.log('Testing model:', model)
+      // Testing model
 }
 
 const deployModel = (model: Model) => {
   // Navigate to model deploy page
-  console.log('Deploying model:', model)
+      // Deploying model
 }
 
 const deleteModel = (model: Model) => {
   // Delete model confirmation
   if (confirm(`Are you sure you want to delete "${model.name}"?`)) {
-    console.log('Deleting model:', model)
+    // Deleting model
   }
 }
 

@@ -380,7 +380,7 @@ const submitForm = async () => {
     setTimeout(() => {
       isSubmitting.value = false
       // Here you would typically send the data to your backend
-      console.log('Form submitted:', formData)
+      // Form submitted
       resetForm()
     }, 2000)
   }

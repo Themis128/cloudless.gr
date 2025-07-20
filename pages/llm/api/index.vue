@@ -392,7 +392,7 @@ const response = await fetch('https://api.cloudless.gr/v1/generate', {
 });
 
 const data = await response.json();
-console.log(data.text);
+        // API response received
 
 // Using axios
 const axios = require('axios');
@@ -408,7 +408,7 @@ const response = await axios.post('https://api.cloudless.gr/v1/generate', {
   }
 });
 
-console.log(response.data.text);`
+        // API response received`
 
 const pythonExample = `import requests
 import json

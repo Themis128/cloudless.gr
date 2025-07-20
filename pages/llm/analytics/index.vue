@@ -429,7 +429,7 @@ const formatTimeAgo = (timestamp: Date) => {
 
 onMounted(() => {
   // Load analytics data from API
-  console.log('Loading analytics data...')
+      // Loading analytics data...
 })
 </script>
 

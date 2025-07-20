@@ -262,7 +262,7 @@ const submit = async () => {
   try {
     form.value.config = parsedConfig.value
 
-    const { data, error: err } = await supabase
+    const { error: err } = await supabase
       .from('models')
       .insert([{
         name: form.value.name,

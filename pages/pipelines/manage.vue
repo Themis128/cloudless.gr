@@ -360,7 +360,7 @@ const deleteSelected = () => {
 
 const confirmAction = () => {
   // Implement action logic here
-  console.log(`Executing ${pendingAction.value} for`, selectedPipelines.value)
+      // Executing bulk action for selected pipelines
   showConfirmDialog.value = false
   selectedPipelines.value = []
   selectedStatus.value = ''
@@ -372,15 +372,15 @@ const cancelAction = () => {
 
 const refreshPipelines = () => {
   // Implement refresh logic here
-  console.log('Refreshing pipelines...')
+      // Refreshing pipelines...
 }
 
 const editPipeline = (pipeline: Pipeline) => {
-  console.log('Editing pipeline:', pipeline)
+      // Editing pipeline
 }
 
 const testPipeline = (pipeline: Pipeline) => {
-  console.log('Testing pipeline:', pipeline)
+      // Testing pipeline
 }
 
 const deletePipeline = (pipeline: Pipeline) => {
@@ -393,7 +393,7 @@ onMounted(async () => {
   loading.value = true
   const { data, error } = await supabase.from('pipelines').select('*')
   if (error) {
-    console.error('Error loading pipelines:', error)
+          // Error loading pipelines
   } else {
     pipelines.value = data || []
   }

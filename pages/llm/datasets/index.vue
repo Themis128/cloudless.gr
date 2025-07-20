@@ -479,7 +479,7 @@ const editDataset = (dataset: any) => {
 
 const downloadDataset = (dataset: any) => {
   // In a real app, this would download the dataset
-  console.log('Downloading dataset:', dataset.name)
+      // Downloading dataset
 }
 
 const deleteDataset = (dataset: any) => {

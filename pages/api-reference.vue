@@ -336,7 +336,7 @@ const client = new CloudlessClient({
 
 // List models
 const models = await client.models.list();
-console.log(`Found ${models.length} models`);
+        // Found models
 
 // Create a new model
 const model = await client.models.create({
@@ -363,7 +363,7 @@ const result = await client.inference.predict({
   deploymentId: deployment.id,
   data: { text: 'Hello, world!' }
 });
-console.log(result.predictions);</pre>
+        // Model predictions</pre>
                 </div>
               </v-window-item>
               

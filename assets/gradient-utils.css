@@ -1,0 +1,243 @@
+/* Gradient Utilities - Based on the provided CSS */
+
+/* Spotlight Effect */
+.spotlight {
+  background: linear-gradient(45deg, #00dc82, #36e4da 50%, #0047e1);
+  bottom: -30vh;
+  filter: blur(20vh);
+  height: 40vh;
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+/* Gradient Border Base */
+.gradient-border {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-radius: 0.5rem;
+  position: relative;
+}
+
+/* Light Mode */
+@media (prefers-color-scheme: light) {
+  .gradient-border {
+    background-color: hsla(0, 0%, 100%, 0.3);
+  }
+  
+  .gradient-border::before {
+    background: linear-gradient(90deg, #e2e2e2, #e2e2e2 25%, #00dc82 50%, #36e4da 75%, #0047e1);
+  }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .gradient-border {
+    background-color: hsla(0, 0%, 8%, 0.3);
+  }
+  
+  .gradient-border::before {
+    background: linear-gradient(90deg, #303030, #303030 25%, #00dc82 50%, #36e4da 75%, #0047e1);
+  }
+}
+
+/* Gradient Border Pseudo-element */
+.gradient-border::before {
+  background-size: 400% auto;
+  border-radius: 0.5rem;
+  bottom: 0;
+  content: "";
+  left: 0;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.5;
+  padding: 2px;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transition: background-position 0.3s ease-in-out, opacity 0.2s ease-in-out;
+  width: 100%;
+}
+
+/* Hover Effects */
+.gradient-border:hover::before {
+  background-position: -50% 0;
+  opacity: 1;
+}
+
+/* Utility Classes */
+.fixed {
+  position: fixed;
+}
+
+.left-0 {
+  left: 0;
+}
+
+.right-0 {
+  right: 0;
+}
+
+.z-10 {
+  z-index: 10;
+}
+
+.z-20 {
+  z-index: 20;
+}
+
+/* Grid Layout */
+.grid {
+  display: grid;
+}
+
+/* Spacing */
+.mb-16 {
+  margin-bottom: 4rem;
+}
+
+.mb-8 {
+  margin-bottom: 2rem;
+}
+
+/* Sizing */
+.max-w-520px {
+  max-width: 520px;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.w-full {
+  width: 100%;
+}
+
+/* Flexbox */
+.flex {
+  display: flex;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.place-content-center {
+  place-content: center;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+/* Layout */
+.overflow-hidden {
+  overflow: hidden;
+}
+
+/* Background */
+.bg-white {
+  background-color: rgb(255 255 255);
+}
+
+/* Padding */
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.px-8 {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.py-2 {
+  padding-bottom: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+/* Typography */
+.text-center {
+  text-align: center;
+}
+
+.text-8xl {
+  font-size: 6rem;
+  line-height: 1;
+}
+
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.text-black {
+  color: rgb(0 0 0);
+}
+
+.font-light {
+  font-weight: 300;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.leading-tight {
+  line-height: 1.25;
+}
+
+.font-sans {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+.antialiased {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .dark\:bg-black {
+    background-color: rgb(0 0 0);
+  }
+  
+  .dark\:text-white {
+    color: rgb(255 255 255);
+  }
+}
+
+/* Responsive */
+@media (min-width: 640px) {
+  .sm\:px-0 {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  
+  .sm\:px-6 {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  
+  .sm\:py-3 {
+    padding-bottom: 0.75rem;
+    padding-top: 0.75rem;
+  }
+  
+  .sm\:text-4xl {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+  }
+  
+  .sm\:text-xl {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+} 

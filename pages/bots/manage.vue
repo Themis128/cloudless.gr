@@ -263,7 +263,7 @@
               <v-btn
                 color="grey"
                 variant="text"
-                @click="showDeleteDialog = false"
+                @click="cancelDelete"
               >
                 Cancel
               </v-btn>
@@ -291,10 +291,9 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import BotGuide from '~/components/step-guides/BotGuide.vue'
-import { useBotStore } from '~/stores/botStore'
+
 
 const router = useRouter()
-const botStore = useBotStore()
 
 // Reactive data
 const searchQuery = ref('')
@@ -406,27 +405,27 @@ const formatDate = (date: string) => {
 
 const refreshData = () => {
   // In a real app, this would refresh from the API
-  console.log('Refreshing bot data...')
+      // Refreshing bot data...
 }
 
 const executeBulkAction = () => {
   if (!bulkAction.value || !selectedBots.value.length) return
 
-  console.log(`Executing ${bulkAction.value} on ${selectedBots.value.length} bots`)
+      // Executing bulk action on selected bots
   
   // In a real app, this would execute the bulk action
   switch (bulkAction.value) {
     case 'activate':
-      console.log('Activating selected bots')
+      // Activating selected bots
       break
     case 'deactivate':
-      console.log('Deactivating selected bots')
+      // Deactivating selected bots
       break
     case 'delete':
-      console.log('Deleting selected bots')
+      // Deleting selected bots
       break
     case 'export':
-      console.log('Exporting selected bots')
+      // Exporting selected bots
       break
   }
 }
@@ -448,6 +447,11 @@ const deleteBot = (bot: any) => {
   showDeleteDialog.value = true
 }
 
+const cancelDelete = () => {
+  showDeleteDialog.value = false
+  botToDelete.value = null
+}
+
 const confirmDelete = () => {
   if (botToDelete.value) {
     // In a real app, this would delete from the API
@@ -459,7 +463,7 @@ const confirmDelete = () => {
 
 onMounted(() => {
   // In a real app, this would fetch bots from the store
-  console.log('Loading bot management page...')
+      // Loading bot management page...
 })
 </script>
 

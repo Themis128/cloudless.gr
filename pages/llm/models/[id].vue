@@ -419,7 +419,7 @@ const deployModel = () => {
 
 const downloadModel = () => {
   // In a real app, this would trigger a download
-  console.log('Downloading model:', model.value?.name)
+      // Downloading model
 }
 
 onMounted(async () => {

@@ -1,0 +1,212 @@
+name: API Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Setup environment
+      run: |
+        cp env.example .env
+        echo "NUXT_HOST=localhost" >> .env
+        echo "NUXT_PORT=3000" >> .env
+        echo "JWT_SECRET=test-secret-key" >> .env
+        
+    - name: Start application
+      run: |
+        npm run build
+        npm run start &
+        sleep 30
+        
+    - name: Test API endpoints
+      run: |
+        # Test API index
+        echo "Testing API index..."
+        curl -f http://localhost:3000/api/v1 || exit 1
+        
+        # Test health endpoint
+        echo "Testing health endpoint..."
+        curl -f http://localhost:3000/api/health || exit 1
+        
+        # Test API documentation
+        echo "Testing API documentation..."
+        curl -f http://localhost:3000/api/v1/docs || exit 1
+        
+    - name: Test authentication endpoints
+      run: |
+        # Test registration endpoint
+        echo "Testing registration endpoint..."
+        REGISTER_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/auth/register \
+          -H "Content-Type: application/json" \
+          -d '{
+            "email": "test@example.com",
+            "password": "testpassword123",
+            "firstName": "Test",
+            "lastName": "User",
+            "company": "Test Company"
+          }')
+        echo "Registration response: $REGISTER_RESPONSE"
+        
+        # Test login endpoint
+        echo "Testing login endpoint..."
+        LOGIN_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/auth/login \
+          -H "Content-Type: application/json" \
+          -d '{
+            "email": "test@example.com",
+            "password": "testpassword123"
+          }')
+        echo "Login response: $LOGIN_RESPONSE"
+        
+        # Extract token for further tests
+        TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.token')
+        if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
+          echo "Failed to get token from login response"
+          exit 1
+        fi
+        echo "Token extracted successfully"
+        
+    - name: Test bot endpoints
+      run: |
+        # Get token from previous step
+        TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.token')
+        
+        # Test bot creation
+        echo "Testing bot creation..."
+        BOT_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/bots \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "name": "Test Bot",
+            "type": "customer-support",
+            "description": "Test bot for API testing"
+          }')
+        echo "Bot creation response: $BOT_RESPONSE"
+        
+        # Extract bot ID
+        BOT_ID=$(echo $BOT_RESPONSE | jq -r '.data.bot.id')
+        if [ "$BOT_ID" = "null" ] || [ -z "$BOT_ID" ]; then
+          echo "Failed to get bot ID from creation response"
+          exit 1
+        fi
+        
+        # Test bot listing
+        echo "Testing bot listing..."
+        curl -f -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots" || exit 1
+        
+        # Test bot chat
+        echo "Testing bot chat..."
+        CHAT_RESPONSE=$(curl -s -X POST "http://localhost:3000/api/v1/bots/$BOT_ID/chat" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "message": "Hello, this is a test message"
+          }')
+        echo "Chat response: $CHAT_RESPONSE"
+        
+        # Verify chat response
+        if ! echo $CHAT_RESPONSE | jq -e '.success' > /dev/null; then
+          echo "Chat endpoint failed"
+          exit 1
+        fi
+        
+    - name: Test analytics endpoints
+      run: |
+        # Get token from previous step
+        TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.token')
+        
+        # Test analytics dashboard
+        echo "Testing analytics dashboard..."
+        ANALYTICS_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/analytics/dashboard?period=7d")
+        echo "Analytics response: $ANALYTICS_RESPONSE"
+        
+        # Verify analytics response
+        if ! echo $ANALYTICS_RESPONSE | jq -e '.success' > /dev/null; then
+          echo "Analytics endpoint failed"
+          exit 1
+        fi
+        
+    - name: Test webhook endpoints
+      run: |
+        # Get token from previous step
+        TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.token')
+        
+        # Test webhook registration
+        echo "Testing webhook registration..."
+        WEBHOOK_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/webhooks/register \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "url": "https://example.com/webhook",
+            "events": ["bot.created", "conversation.created"],
+            "description": "Test webhook"
+          }')
+        echo "Webhook registration response: $WEBHOOK_RESPONSE"
+        
+        # Verify webhook response
+        if ! echo $WEBHOOK_RESPONSE | jq -e '.success' > /dev/null; then
+          echo "Webhook registration failed"
+          exit 1
+        fi
+        
+    - name: Test error handling
+      run: |
+        # Test invalid token
+        echo "Testing invalid token..."
+        INVALID_RESPONSE=$(curl -s -H "Authorization: Bearer invalid-token" \
+          "http://localhost:3000/api/v1/bots")
+        if ! echo $INVALID_RESPONSE | jq -e '.success == false' > /dev/null; then
+          echo "Invalid token test failed"
+          exit 1
+        fi
+        
+        # Test missing required fields
+        echo "Testing missing required fields..."
+        MISSING_FIELDS_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/bots \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{}')
+        if ! echo $MISSING_FIELDS_RESPONSE | jq -e '.success == false' > /dev/null; then
+          echo "Missing fields test failed"
+          exit 1
+        fi
+        
+    - name: Cleanup
+      run: |
+        pkill -f "npm run start" || true
+        
+    - name: Test Results
+      run: |
+        echo "✅ All API tests completed successfully!"
+        echo "📊 Tested endpoints:"
+        echo "  - API Index"
+        echo "  - Health Check"
+        echo "  - Authentication (Login/Register)"
+        echo "  - Bot Management (Create/List/Chat)"
+        echo "  - Analytics Dashboard"
+        echo "  - Webhook Registration"
+        echo "  - Error Handling" 

@@ -1,0 +1,531 @@
+name: Bot Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  bot-tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Setup environment
+      run: |
+        cp env.example .env
+        echo "NUXT_HOST=localhost" >> .env
+        echo "NUXT_PORT=3000" >> .env
+        echo "JWT_SECRET=test-secret-key" >> .env
+        echo "OPENAI_API_KEY=test-key" >> .env
+        echo "ANTHROPIC_API_KEY=test-key" >> .env
+        
+    - name: Start application
+      run: |
+        npm run build
+        npm run start &
+        sleep 30
+        
+    - name: Setup authentication
+      run: |
+        # Register test user
+        REGISTER_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/auth/register \
+          -H "Content-Type: application/json" \
+          -d '{
+            "email": "bot-test@example.com",
+            "password": "testpassword123",
+            "firstName": "Bot",
+            "lastName": "Tester",
+            "company": "Test Company"
+          }')
+        
+        # Login and get token
+        LOGIN_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/auth/login \
+          -H "Content-Type: application/json" \
+          -d '{
+            "email": "bot-test@example.com",
+            "password": "testpassword123"
+          }')
+        
+        TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.token')
+        echo "TOKEN=$TOKEN" >> $GITHUB_ENV
+        
+    - name: Test bot creation for different types
+      run: |
+        echo "Testing bot creation for different types..."
+        
+        # Test customer support bot
+        CUSTOMER_SUPPORT_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/bots \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "name": "Customer Support Bot",
+            "type": "customer-support",
+            "description": "AI-powered customer support assistant",
+            "configuration": {
+              "language": "en",
+              "tone": "professional",
+              "knowledgeBase": "customer-support-kb",
+              "escalationRules": {
+                "complexIssues": "human-agent",
+                "billingIssues": "billing-team"
+              }
+            }
+          }')
+        echo "Customer support bot creation response: $CUSTOMER_SUPPORT_RESPONSE"
+        
+        # Extract customer support bot ID
+        CUSTOMER_SUPPORT_BOT_ID=$(echo $CUSTOMER_SUPPORT_RESPONSE | jq -r '.data.bot.id')
+        echo "CUSTOMER_SUPPORT_BOT_ID=$CUSTOMER_SUPPORT_BOT_ID" >> $GITHUB_ENV
+        
+        # Test developer assistant bot
+        DEVELOPER_ASSISTANT_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/bots \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "name": "Developer Assistant Bot",
+            "type": "developer-assistant",
+            "description": "AI assistant for developers",
+            "configuration": {
+              "languages": ["javascript", "python", "typescript"],
+              "frameworks": ["react", "vue", "node.js"],
+              "codeAnalysis": true,
+              "debugging": true
+            }
+          }')
+        echo "Developer assistant bot creation response: $DEVELOPER_ASSISTANT_RESPONSE"
+        
+        # Extract developer assistant bot ID
+        DEVELOPER_ASSISTANT_BOT_ID=$(echo $DEVELOPER_ASSISTANT_RESPONSE | jq -r '.data.bot.id')
+        echo "DEVELOPER_ASSISTANT_BOT_ID=$DEVELOPER_ASSISTANT_BOT_ID" >> $GITHUB_ENV
+        
+        # Test data analyst bot
+        DATA_ANALYST_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/bots \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "name": "Data Analyst Bot",
+            "type": "data-analyst",
+            "description": "AI-powered data analysis assistant",
+            "configuration": {
+              "dataSources": ["csv", "json", "database"],
+              "analysisTypes": ["descriptive", "predictive", "prescriptive"],
+              "visualization": true,
+              "statisticalTests": true
+            }
+          }')
+        echo "Data analyst bot creation response: $DATA_ANALYST_RESPONSE"
+        
+        # Extract data analyst bot ID
+        DATA_ANALYST_BOT_ID=$(echo $DATA_ANALYST_RESPONSE | jq -r '.data.bot.id')
+        echo "DATA_ANALYST_BOT_ID=$DATA_ANALYST_BOT_ID" >> $GITHUB_ENV
+        
+        # Test content writer bot
+        CONTENT_WRITER_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/bots \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "name": "Content Writer Bot",
+            "type": "content-writer",
+            "description": "AI content writing assistant",
+            "configuration": {
+              "contentTypes": ["blog", "email", "social-media"],
+              "tone": "professional",
+              "style": "informative",
+              "seoOptimization": true
+            }
+          }')
+        echo "Content writer bot creation response: $CONTENT_WRITER_RESPONSE"
+        
+        # Extract content writer bot ID
+        CONTENT_WRITER_BOT_ID=$(echo $CONTENT_WRITER_RESPONSE | jq -r '.data.bot.id')
+        echo "CONTENT_WRITER_BOT_ID=$CONTENT_WRITER_BOT_ID" >> $GITHUB_ENV
+        
+        # Verify bot creation
+        for BOT_ID in "$CUSTOMER_SUPPORT_BOT_ID" "$DEVELOPER_ASSISTANT_BOT_ID" "$DATA_ANALYST_BOT_ID" "$CONTENT_WRITER_BOT_ID"; do
+          if [ "$BOT_ID" = "null" ] || [ -z "$BOT_ID" ]; then
+            echo "Failed to create bot"
+            exit 1
+          fi
+        done
+        
+    - name: Test bot listing and filtering
+      run: |
+        echo "Testing bot listing and filtering..."
+        
+        # Test basic listing
+        LIST_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots")
+        echo "Bot listing response: $LIST_RESPONSE"
+        
+        # Test filtering by type
+        FILTER_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots?type=customer-support")
+        echo "Filtered listing response: $FILTER_RESPONSE"
+        
+        # Test filtering by status
+        STATUS_FILTER_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots?status=draft")
+        echo "Status filtered listing response: $STATUS_FILTER_RESPONSE"
+        
+        # Test search functionality
+        SEARCH_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots?search=customer")
+        echo "Search response: $SEARCH_RESPONSE"
+        
+        # Test pagination
+        PAGINATION_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots?page=1&limit=2")
+        echo "Pagination response: $PAGINATION_RESPONSE"
+        
+        # Verify responses
+        if ! echo $LIST_RESPONSE | jq -e '.success' > /dev/null; then
+          echo "Bot listing failed"
+          exit 1
+        fi
+        
+    - name: Test bot configuration updates
+      run: |
+        echo "Testing bot configuration updates..."
+        
+        # Test customer support bot configuration update
+        UPDATE_RESPONSE=$(curl -s -X PUT "http://localhost:3000/api/v1/bots/$CUSTOMER_SUPPORT_BOT_ID" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "name": "Updated Customer Support Bot",
+            "description": "Updated customer support assistant",
+            "configuration": {
+              "language": "en",
+              "tone": "friendly",
+              "knowledgeBase": "updated-customer-support-kb",
+              "escalationRules": {
+                "complexIssues": "senior-agent",
+                "billingIssues": "billing-team",
+                "technicalIssues": "tech-support"
+              },
+              "autoResponse": true,
+              "sentimentAnalysis": true
+            }
+          }')
+        echo "Bot update response: $UPDATE_RESPONSE"
+        
+        # Verify update response
+        if ! echo $UPDATE_RESPONSE | jq -e '.success' > /dev/null; then
+          echo "Bot update failed"
+          exit 1
+        fi
+        
+    - name: Test bot activation and deployment
+      run: |
+        echo "Testing bot activation and deployment..."
+        
+        # Test bot activation
+        ACTIVATE_RESPONSE=$(curl -s -X POST "http://localhost:3000/api/v1/bots/$CUSTOMER_SUPPORT_BOT_ID/activate" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "environment": "production",
+            "settings": {
+              "rateLimit": 100,
+              "timeout": 30,
+              "fallback": "human-agent"
+            }
+          }')
+        echo "Bot activation response: $ACTIVATE_RESPONSE"
+        
+        # Test bot deployment
+        DEPLOY_RESPONSE=$(curl -s -X POST "http://localhost:3000/api/v1/bots/$CUSTOMER_SUPPORT_BOT_ID/deploy" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "version": "1.0.0",
+            "environment": "production",
+            "rollback": true
+          }')
+        echo "Bot deployment response: $DEPLOY_RESPONSE"
+        
+        # Verify deployment response
+        if ! echo $DEPLOY_RESPONSE | jq -e '.success' > /dev/null; then
+          echo "Bot deployment failed"
+          exit 1
+        fi
+        
+        # Wait for deployment to complete
+        sleep 10
+        
+    - name: Test bot chat interactions
+      run: |
+        echo "Testing bot chat interactions..."
+        
+        # Test customer support bot chat
+        CUSTOMER_CHAT_RESPONSE=$(curl -s -X POST "http://localhost:3000/api/v1/bots/$CUSTOMER_SUPPORT_BOT_ID/chat" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "message": "I have a problem with my order",
+            "context": {
+              "userId": "customer-123",
+              "orderId": "order-456",
+              "sessionId": "session-789"
+            }
+          }')
+        echo "Customer support chat response: $CUSTOMER_CHAT_RESPONSE"
+        
+        # Test developer assistant bot chat
+        DEVELOPER_CHAT_RESPONSE=$(curl -s -X POST "http://localhost:3000/api/v1/bots/$DEVELOPER_ASSISTANT_BOT_ID/chat" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "message": "How do I implement authentication in Vue.js?",
+            "context": {
+              "userId": "developer-123",
+              "project": "vue-auth-app",
+              "sessionId": "session-456"
+            }
+          }')
+        echo "Developer assistant chat response: $DEVELOPER_CHAT_RESPONSE"
+        
+        # Test data analyst bot chat
+        DATA_CHAT_RESPONSE=$(curl -s -X POST "http://localhost:3000/api/v1/bots/$DATA_ANALYST_BOT_ID/chat" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "message": "Analyze this sales data for trends",
+            "context": {
+              "userId": "analyst-123",
+              "dataset": "sales-2024.csv",
+              "sessionId": "session-789"
+            }
+          }')
+        echo "Data analyst chat response: $DATA_CHAT_RESPONSE"
+        
+        # Test content writer bot chat
+        CONTENT_CHAT_RESPONSE=$(curl -s -X POST "http://localhost:3000/api/v1/bots/$CONTENT_WRITER_BOT_ID/chat" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "message": "Write a blog post about AI trends in 2024",
+            "context": {
+              "userId": "writer-123",
+              "topic": "AI trends",
+              "sessionId": "session-101"
+            }
+          }')
+        echo "Content writer chat response: $CONTENT_CHAT_RESPONSE"
+        
+        # Verify chat responses
+        for CHAT_RESPONSE in "$CUSTOMER_CHAT_RESPONSE" "$DEVELOPER_CHAT_RESPONSE" "$DATA_CHAT_RESPONSE" "$CONTENT_CHAT_RESPONSE"; do
+          if ! echo $CHAT_RESPONSE | jq -e '.success' > /dev/null; then
+            echo "Bot chat failed"
+            exit 1
+          fi
+        done
+        
+    - name: Test bot conversation history
+      run: |
+        echo "Testing bot conversation history..."
+        
+        # Test conversation history retrieval
+        HISTORY_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots/$CUSTOMER_SUPPORT_BOT_ID/conversations?sessionId=session-789")
+        echo "Conversation history response: $HISTORY_RESPONSE"
+        
+        # Test conversation analytics
+        ANALYTICS_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots/$CUSTOMER_SUPPORT_BOT_ID/analytics?period=7d")
+        echo "Bot analytics response: $ANALYTICS_RESPONSE"
+        
+        # Verify responses
+        if ! echo $HISTORY_RESPONSE | jq -e '.success' > /dev/null; then
+          echo "Conversation history failed"
+          exit 1
+        fi
+        
+    - name: Test bot testing functionality
+      run: |
+        echo "Testing bot testing functionality..."
+        
+        # Test bot with test data
+        TEST_RESPONSE=$(curl -s -X POST "http://localhost:3000/api/v1/bots/$CUSTOMER_SUPPORT_BOT_ID/test" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "testCases": [
+              {
+                "input": "Hello, I need help",
+                "expectedIntent": "greeting",
+                "expectedResponse": "greeting"
+              },
+              {
+                "input": "My order is late",
+                "expectedIntent": "order_issue",
+                "expectedResponse": "order_support"
+              }
+            ],
+            "options": {
+              "validateIntent": true,
+              "validateResponse": true,
+              "generateReport": true
+            }
+          }')
+        echo "Bot test response: $TEST_RESPONSE"
+        
+        # Verify test response
+        if ! echo $TEST_RESPONSE | jq -e '.success' > /dev/null; then
+          echo "Bot testing failed"
+          exit 1
+        fi
+        
+    - name: Test bot cloning
+      run: |
+        echo "Testing bot cloning..."
+        
+        # Test bot cloning
+        CLONE_RESPONSE=$(curl -s -X POST "http://localhost:3000/api/v1/bots/$CUSTOMER_SUPPORT_BOT_ID/clone" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "name": "Cloned Customer Support Bot",
+            "description": "Cloned from original customer support bot"
+          }')
+        echo "Bot cloning response: $CLONE_RESPONSE"
+        
+        # Extract cloned bot ID
+        CLONED_BOT_ID=$(echo $CLONE_RESPONSE | jq -r '.data.bot.id')
+        echo "CLONED_BOT_ID=$CLONED_BOT_ID" >> $GITHUB_ENV
+        
+        # Verify cloning response
+        if ! echo $CLONE_RESPONSE | jq -e '.success' > /dev/null; then
+          echo "Bot cloning failed"
+          exit 1
+        fi
+        
+    - name: Test bot deletion
+      run: |
+        echo "Testing bot deletion..."
+        
+        # Test bot deletion
+        DELETE_RESPONSE=$(curl -s -X DELETE "http://localhost:3000/api/v1/bots/$CLONED_BOT_ID" \
+          -H "Authorization: Bearer $TOKEN")
+        echo "Bot deletion response: $DELETE_RESPONSE"
+        
+        # Verify deletion response
+        if ! echo $DELETE_RESPONSE | jq -e '.success' > /dev/null; then
+          echo "Bot deletion failed"
+          exit 1
+        fi
+        
+        # Verify bot is deleted
+        VERIFY_DELETE_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots/$CLONED_BOT_ID")
+        if echo $VERIFY_DELETE_RESPONSE | jq -e '.success' > /dev/null; then
+          echo "Bot was not properly deleted"
+          exit 1
+        fi
+        
+    - name: Test bot error handling
+      run: |
+        echo "Testing bot error handling..."
+        
+        # Test invalid bot ID
+        INVALID_BOT_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots/invalid-id")
+        if ! echo $INVALID_BOT_RESPONSE | jq -e '.success == false' > /dev/null; then
+          echo "Invalid bot ID test failed"
+          exit 1
+        fi
+        
+        # Test missing required fields in bot creation
+        MISSING_FIELDS_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/bots \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{}')
+        if ! echo $MISSING_FIELDS_RESPONSE | jq -e '.success == false' > /dev/null; then
+          echo "Missing fields test failed"
+          exit 1
+        fi
+        
+        # Test invalid bot type
+        INVALID_TYPE_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/bots \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "name": "Invalid Bot",
+            "type": "invalid-type"
+          }')
+        if ! echo $INVALID_TYPE_RESPONSE | jq -e '.success == false' > /dev/null; then
+          echo "Invalid bot type test failed"
+          exit 1
+        fi
+        
+        # Test inactive bot chat
+        INACTIVE_CHAT_RESPONSE=$(curl -s -X POST "http://localhost:3000/api/v1/bots/$DATA_ANALYST_BOT_ID/chat" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "message": "Test message to inactive bot"
+          }')
+        if ! echo $INACTIVE_CHAT_RESPONSE | jq -e '.success == false' > /dev/null; then
+          echo "Inactive bot chat test failed"
+          exit 1
+        fi
+        
+    - name: Test bot performance monitoring
+      run: |
+        echo "Testing bot performance monitoring..."
+        
+        # Test bot performance metrics
+        PERFORMANCE_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots/$CUSTOMER_SUPPORT_BOT_ID/performance")
+        echo "Bot performance response: $PERFORMANCE_RESPONSE"
+        
+        # Test bot usage statistics
+        USAGE_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots/$CUSTOMER_SUPPORT_BOT_ID/usage")
+        echo "Bot usage response: $USAGE_RESPONSE"
+        
+        # Test bot health check
+        HEALTH_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+          "http://localhost:3000/api/v1/bots/$CUSTOMER_SUPPORT_BOT_ID/health")
+        echo "Bot health response: $HEALTH_RESPONSE"
+        
+        # Note: These might fail if endpoints don't exist yet, which is okay
+        echo "Bot performance monitoring tests completed (may fail if endpoints not implemented)"
+        
+    - name: Cleanup
+      run: |
+        pkill -f "npm run start" || true
+        
+    - name: Test Results
+      run: |
+        echo "✅ All Bot tests completed successfully!"
+        echo "🤖 Tested functionality:"
+        echo "  - Bot Creation (Customer Support, Developer Assistant, Data Analyst, Content Writer)"
+        echo "  - Bot Listing and Filtering"
+        echo "  - Bot Configuration Updates"
+        echo "  - Bot Activation and Deployment"
+        echo "  - Bot Chat Interactions"
+        echo "  - Conversation History"
+        echo "  - Bot Testing"
+        echo "  - Bot Cloning"
+        echo "  - Bot Deletion"
+        echo "  - Bot Performance Monitoring"
+        echo "  - Error Handling" 

@@ -57,7 +57,7 @@ export default defineNuxtConfig({
     // Development optimizations
     analyze: false,
   },
-  css: ['@mdi/font/css/materialdesignicons.css', 'vuetify/styles', '~/assets/global-cards.css'],
+  css: ['@mdi/font/css/materialdesignicons.css', 'vuetify/styles', '~/assets/global-cards.css', '~/assets/gradient-utils.css'],
   app: {
     head: {
       title: 'Cloudless',
@@ -65,6 +65,8 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       ],
     },
+    // Custom error page configuration
+    pageTransition: { name: 'page', mode: 'out-in' },
   },
   experimental: {
     payloadExtraction: false,

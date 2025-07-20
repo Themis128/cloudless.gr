@@ -433,7 +433,7 @@ const formatDate = (date: string) => {
 
 const viewModelCosts = (item: any) => {
   // In a real app, this would navigate to detailed model cost view
-  console.log('Viewing costs for:', item.model)
+      // Viewing costs for model
 }
 
 const downloadCostData = (item: any) => {

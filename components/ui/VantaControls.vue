@@ -618,7 +618,7 @@ const handleClose = () => {
 }
 
 const onEffectChange = (effect: string) => {
-  console.log('Effect changed to:', effect)
+      // Effect changed
   selectedEffect.value = effect
   resetToDefaults() // Reset all properties to defaults for the new effect
   
@@ -746,7 +746,7 @@ const emitUpdate = () => {
       quality: quality.value
     }
     
-    console.log('Emitting Vanta update:', updateData)
+    // Emitting Vanta update
 
     // Add effect-specific properties
     switch (selectedEffect.value) {

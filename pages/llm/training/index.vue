@@ -396,12 +396,12 @@ const viewSession = (session: any) => {
 
 const stopSession = (session: any) => {
   // In a real app, this would stop the training session
-  console.log('Stopping session:', session.name)
+      // Stopping session
 }
 
 const downloadModel = (session: any) => {
   // In a real app, this would download the trained model
-  console.log('Downloading model from session:', session.name)
+      // Downloading model from session
 }
 
 const deleteSession = (session: any) => {
