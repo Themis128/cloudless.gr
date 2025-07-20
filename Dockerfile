@@ -1,10 +1,10 @@
 # Multi-stage build for production
 FROM node:21-alpine AS base
 
-# Install security updates and essential packages with pinned versions
+# Install security updates and essential packages
 RUN apk add --no-cache --upgrade \
-    libc6-compat=1.2.4-r1 \
-    dumb-init=1.2.5-r1 \
+    libc6-compat \
+    dumb-init \
     && rm -rf /var/cache/apk/*
 
 # Build arguments for versioning
