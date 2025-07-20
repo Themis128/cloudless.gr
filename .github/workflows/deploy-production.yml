@@ -72,6 +72,13 @@ jobs:
       NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL }}
       NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      
+      # Build variables
+      REGISTRY: ghcr.io
+      IMAGE_NAME: cloudlessgr-app
+      APP_VERSION: ${{ github.ref_name }}
+      GIT_COMMIT: ${{ github.sha }}
+      BUILD_DATE: ${{ github.event.head_commit.timestamp }}
 
     steps:
       - name: Checkout code
@@ -141,7 +148,7 @@ jobs:
           echo "🚀 Deploying to production..."
 
           # Create production environment file from secrets
-          cat > .env.production << EOF
+          cat > .env.production << 'EOF'
           # Application Configuration
           NODE_ENV=production
           NITRO_HOST=0.0.0.0
