@@ -1,0 +1,17 @@
+name: production
+url: https://cloudless.gr
+
+protection_rules:
+  - required_reviewers:
+      required_approving_review_count: 2
+      dismiss_stale_reviews: true
+      require_code_owner_reviews: true
+  - wait_timer:
+      wait_time: 5
+  - deployment_branch_policy:
+      protected_branches: true
+      custom_branch_policies: false
+
+deployment_branch_policy:
+  protected_branches: true
+  custom_branch_policies: false 

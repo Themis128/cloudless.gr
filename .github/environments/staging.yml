@@ -1,0 +1,13 @@
+name: staging
+url: https://staging.cloudless.gr
+
+protection_rules:
+  - required_reviewers:
+      required_approving_review_count: 1
+      dismiss_stale_reviews: true
+  - wait_timer:
+      wait_time: 2
+
+deployment_branch_policy:
+  protected_branches: true
+  custom_branch_policies: false 

@@ -1,0 +1,40 @@
+# Global code owners
+* @cloudlessgr
+
+# Frontend specific
+*.vue @cloudlessgr
+*.ts @cloudlessgr
+*.js @cloudlessgr
+components/ @cloudlessgr
+pages/ @cloudlessgr
+layouts/ @cloudlessgr
+
+# Backend specific
+server/ @cloudlessgr
+api/ @cloudlessgr
+
+# Configuration files
+*.yml @cloudlessgr
+*.yaml @cloudlessgr
+*.json @cloudlessgr
+*.config.* @cloudlessgr
+
+# Documentation
+*.md @cloudlessgr
+docs/ @cloudlessgr
+
+# Workflows
+.github/workflows/ @cloudlessgr
+
+# Docker
+Dockerfile* @cloudlessgr
+docker-compose*.yml @cloudlessgr
+
+# Environment and secrets
+.env* @cloudlessgr
+secrets/ @cloudlessgr
+
+# Tests
+tests/ @cloudlessgr
+*.spec.* @cloudlessgr
+*.test.* @cloudlessgr 

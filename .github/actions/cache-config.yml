@@ -1,0 +1,39 @@
+name: Cache Configuration
+description: "Reusable cache configuration for Node.js and Docker builds"
+
+inputs:
+  node-version:
+    description: "Node.js version to cache"
+    required: false
+    default: "20"
+  cache-dependency-path:
+    description: "Path to dependency files"
+    required: false
+    default: "**/package-lock.json"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Cache Node modules
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Cache npm dependencies
+      uses: actions/cache@v4
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-modules-
+
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx- 
