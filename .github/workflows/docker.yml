@@ -29,12 +29,24 @@ on:
     inputs:
       environment:
         description: 'Environment to build for'
-        required: true
+        required: false
         default: 'development'
         type: choice
         options:
           - development
           - production
+      triggered_by:
+        description: 'Workflow that triggered this step'
+        required: false
+        default: 'manual'
+      commit_sha:
+        description: 'Commit SHA that triggered the sequence'
+        required: false
+        default: ''
+      workflow_sequence:
+        description: 'Workflow sequence step'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -57,6 +69,17 @@ jobs:
             target: runner
             tag: runner
     steps:
+      - name: Show trigger info
+        run: |
+          echo "🔗 Docker Build & Test"
+          echo "======================"
+          echo "Triggered by: ${{ github.event.inputs.triggered_by || 'manual' }}"
+          echo "Commit SHA: ${{ github.event.inputs.commit_sha || github.sha }}"
+          echo "Workflow sequence: ${{ github.event.inputs.workflow_sequence || 'standalone' }}"
+          echo "Environment: ${{ github.event.inputs.environment || 'development' }}"
+          echo "Workflow run: ${{ github.run_id }}"
+          echo ""
+          
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -204,33 +227,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Check for available images
-        id: check-images
+      - name: Build Docker image for scanning
+        id: build-image
         run: |
-          echo "🔍 Checking for available Docker images..."
-          docker images | grep cloudlessgr-app || echo "No cloudlessgr-app images found"
-
-          # Check if runner image exists (preferred for security scanning)
-          if docker image inspect cloudlessgr-app:runner > /dev/null 2>&1; then
-            echo "✅ Found cloudlessgr-app:runner image"
-            echo "image_to_scan=cloudlessgr-app:runner" >> $GITHUB_OUTPUT
-          elif docker image inspect cloudlessgr-app:dev > /dev/null 2>&1; then
-            echo "✅ Found cloudlessgr-app:dev image"
-            echo "image_to_scan=cloudlessgr-app:dev" >> $GITHUB_OUTPUT
-          elif docker image inspect cloudlessgr-app:latest > /dev/null 2>&1; then
-            echo "✅ Found cloudlessgr-app:latest image"
-            echo "image_to_scan=cloudlessgr-app:latest" >> $GITHUB_OUTPUT
-          else
-            echo "❌ No suitable image found for scanning"
-            echo "📋 Available images:"
-            docker images | grep cloudlessgr-app || echo "No cloudlessgr-app images found"
-            echo "image_to_scan=" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Build image for scanning if needed
-        if: steps.check-images.outputs.image_to_scan == ''
-        run: |
-          echo "🔨 Building image for security scanning..."
+          echo "🔨 Building Docker image for security scanning..."
 
           # Get version info
           VERSION=$(node -p "require('./package.json').version")
@@ -241,7 +241,7 @@ jobs:
           # Build the runner image
           docker build \
             --target runner \
-            --tag cloudlessgr-app:runner \
+            --tag cloudlessgr-app:security-scan \
             --build-arg VERSION="$VERSION" \
             --build-arg GIT_COMMIT="$GIT_COMMIT" \
             --build-arg GIT_BRANCH="$GIT_BRANCH" \
@@ -249,28 +249,27 @@ jobs:
             --build-arg NODE_ENV=production \
             -f Dockerfile .
 
-          echo "✅ Built cloudlessgr-app:runner for scanning"
-          echo "image_to_scan=cloudlessgr-app:runner" >> $GITHUB_OUTPUT
+          echo "✅ Built cloudlessgr-app:security-scan for scanning"
+          echo "image_to_scan=cloudlessgr-app:security-scan" >> $GITHUB_OUTPUT
 
       - name: Run Trivy vulnerability scanner
-        if: steps.check-images.outputs.image_to_scan != ''
+        if: steps.build-image.outputs.image_to_scan != ''
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ steps.check-images.outputs.image_to_scan }}
+          image-ref: ${{ steps.build-image.outputs.image_to_scan }}
           format: 'sarif'
           output: 'trivy-results.sarif'
 
       - name: Upload Trivy scan results to GitHub Security tab
-        if: always() && steps.check-images.outputs.image_to_scan != ''
+        if: always() && steps.build-image.outputs.image_to_scan != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
 
-      - name: Skip security scan message
-        if: steps.check-images.outputs.image_to_scan == ''
+      - name: Security scan complete
         run: |
-          echo "⏭️ Skipping security scan - no suitable Docker image found"
-          echo "📋 This usually means the Docker build step failed or no images were created"
+          echo "✅ Docker security scan completed"
+          echo "📋 Results uploaded to GitHub Security tab"
 
   docker-push:
     name: Push to Registry

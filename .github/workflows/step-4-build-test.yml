@@ -58,6 +58,116 @@ jobs:
         echo "✅ Step 4: Build and Test completed successfully!"
         echo "🏗️ Build results saved to workflow logs"
         
+    - name: Trigger API Testing
+      if: success()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'api-testing.yml',
+              ref: context.ref,
+              inputs: {
+                triggered_by: 'step-4-build-test',
+                commit_sha: context.sha,
+                workflow_sequence: 'step-5'
+              }
+            });
+            console.log('✅ Successfully triggered API Testing');
+          } catch (error) {
+            console.log('⚠️ Could not trigger API Testing automatically:', error.message);
+          }
+
+    - name: Trigger Bot Testing
+      if: success()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'bot-testing.yml',
+              ref: context.ref,
+              inputs: {
+                triggered_by: 'step-4-build-test',
+                commit_sha: context.sha,
+                workflow_sequence: 'step-5'
+              }
+            });
+            console.log('✅ Successfully triggered Bot Testing');
+          } catch (error) {
+            console.log('⚠️ Could not trigger Bot Testing automatically:', error.message);
+          }
+
+    - name: Trigger Pipeline Testing
+      if: success()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'pipeline-testing.yml',
+              ref: context.ref,
+              inputs: {
+                triggered_by: 'step-4-build-test',
+                commit_sha: context.sha,
+                workflow_sequence: 'step-5'
+              }
+            });
+            console.log('✅ Successfully triggered Pipeline Testing');
+          } catch (error) {
+            console.log('⚠️ Could not trigger Pipeline Testing automatically:', error.message);
+          }
+
+    - name: Trigger LLM Model Testing
+      if: success()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'llm-model-testing.yml',
+              ref: context.ref,
+              inputs: {
+                triggered_by: 'step-4-build-test',
+                commit_sha: context.sha,
+                workflow_sequence: 'step-5'
+              }
+            });
+            console.log('✅ Successfully triggered LLM Model Testing');
+          } catch (error) {
+            console.log('⚠️ Could not trigger LLM Model Testing automatically:', error.message);
+          }
+
+    - name: Trigger Docker Testing
+      if: success()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'docker.yml',
+              ref: context.ref,
+              inputs: {
+                triggered_by: 'step-4-build-test',
+                commit_sha: context.sha,
+                workflow_sequence: 'step-5'
+              }
+            });
+            console.log('✅ Successfully triggered Docker Testing');
+          } catch (error) {
+            console.log('⚠️ Could not trigger Docker Testing automatically:', error.message);
+          }
+
     - name: Trigger Final Summary
       if: success()
       uses: actions/github-script@v7
@@ -85,11 +195,17 @@ jobs:
       run: |
         echo "🎉 SEQUENTIAL WORKFLOW COMPLETE!"
         echo "================================="
-        echo "✅ All 4 steps completed successfully:"
+        echo "✅ All core steps completed successfully:"
         echo "  • Step 1: Dependency Audit ✅"
         echo "  • Step 2: Security Scan ✅"
         echo "  • Step 3: Code Quality ✅"
         echo "  • Step 4: Build & Test ✅"
         echo ""
-        echo "🚀 Your codebase is ready for production!"
-        echo "📋 Check the Actions tab for detailed results" 
+        echo "🚀 Triggering specialized testing workflows:"
+        echo "  • API Testing 🚀"
+        echo "  • Bot Testing 🤖"
+        echo "  • Pipeline Testing 🔄"
+        echo "  • LLM Model Testing 🧠"
+        echo "  • Docker Testing 🐳"
+        echo ""
+        echo "📋 Check the Actions tab for all test results" 

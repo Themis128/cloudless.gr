@@ -13,6 +13,11 @@ on:
           - step-2-security-scan
           - step-3-code-quality
           - step-4-build-test
+          - api-testing
+          - bot-testing
+          - pipeline-testing
+          - llm-model-testing
+          - docker-testing
           - complete-sequence
       commit_sha:
         description: 'Specific commit SHA to test (optional)'
@@ -66,7 +71,9 @@ jobs:
               workflow_id: workflowId,
               ref: '${{ github.event.inputs.commit_sha || github.ref }}',
               inputs: {
-                commit_sha: '${{ github.event.inputs.commit_sha || github.sha }}'
+                commit_sha: '${{ github.event.inputs.commit_sha || github.sha }}',
+                triggered_by: 'workflow-launcher',
+                workflow_sequence: 'manual'
               }
             });
             console.log(`✅ Successfully started ${workflowId}`);

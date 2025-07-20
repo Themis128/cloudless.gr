@@ -6,6 +6,19 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      triggered_by:
+        description: 'Workflow that triggered this step'
+        required: false
+        default: 'manual'
+      commit_sha:
+        description: 'Commit SHA that triggered the sequence'
+        required: false
+        default: ''
+      workflow_sequence:
+        description: 'Workflow sequence step'
+        required: false
+        default: ''
 
 jobs:
   bot-tests:
@@ -16,6 +29,16 @@ jobs:
         node-version: [18, 20]
     
     steps:
+    - name: Show trigger info
+      run: |
+        echo "🔗 Bot Testing"
+        echo "=============="
+        echo "Triggered by: ${{ github.event.inputs.triggered_by || 'manual' }}"
+        echo "Commit SHA: ${{ github.event.inputs.commit_sha || github.sha }}"
+        echo "Workflow sequence: ${{ github.event.inputs.workflow_sequence || 'standalone' }}"
+        echo "Workflow run: ${{ github.run_id }}"
+        echo ""
+        
     - name: Checkout code
       uses: actions/checkout@v4
       
