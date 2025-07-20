@@ -1,21 +1,14 @@
 <template>
-  <v-container>
-    <div class="d-flex align-center mb-6">
-      <BackButton to="/llm" />
-      <div class="ml-4">
-        <h1 class="text-h4 mb-2">
-          Train LLM Model
-        </h1>
-        <p class="text-body-1 text-medium-emphasis">
-          Create and train a new language model with your custom data
-        </p>
-      </div>
-    </div>
-
-    <v-row>
-      <v-col cols="12" md="8">
-        <v-card>
-          <v-card-title>
+  <div>
+    <PageStructure
+      title="Train LLM Model"
+      subtitle="Create and train a new language model with your custom data"
+      back-button-to="/llm"
+      :has-sidebar="true"
+    >
+      <template #main>
+        <v-card class="form-card">
+          <v-card-title class="form-card-title">
             <v-icon start color="primary">
               mdi-school
             </v-icon>
@@ -35,7 +28,7 @@
                     clearable
                   />
                 </v-col>
-                
+              
                 <v-col cols="12" md="6">
                   <v-select
                     v-model="form.baseModel"
@@ -208,105 +201,12 @@
             </v-form>
           </v-card-text>
         </v-card>
-      </v-col>
+      </template>
 
-      <v-col cols="12" md="4">
-        <!-- Training Tips -->
-        <v-card class="mb-4">
-          <v-card-title>
-            <v-icon start color="info">
-              mdi-lightbulb
-            </v-icon>
-            Training Tips
-          </v-card-title>
-          <v-card-text>
-            <v-list density="compact">
-              <v-list-item>
-                <template #prepend>
-                  <v-icon color="success" size="small">
-                    mdi-check
-                  </v-icon>
-                </template>
-                <v-list-item-title class="text-body-2">
-                  Use high-quality, diverse training data
-                </v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <template #prepend>
-                  <v-icon color="success" size="small">
-                    mdi-check
-                  </v-icon>
-                </template>
-                <v-list-item-title class="text-body-2">
-                  Start with smaller datasets for testing
-                </v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <template #prepend>
-                  <v-icon color="success" size="small">
-                    mdi-check
-                  </v-icon>
-                </template>
-                <v-list-item-title class="text-body-2">
-                  Monitor training progress regularly
-                </v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <template #prepend>
-                  <v-icon color="success" size="small">
-                    mdi-check
-                  </v-icon>
-                </template>
-                <v-list-item-title class="text-body-2">
-                  Use early stopping to prevent overfitting
-                </v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
-
-        <!-- Data Format Guide -->
-        <v-card>
-          <v-card-title>
-            <v-icon start color="warning">
-              mdi-file-document
-            </v-icon>
-            Data Format Guide
-          </v-card-title>
-          <v-card-text>
-            <v-expansion-panels variant="accordion">
-              <v-expansion-panel>
-                <v-expansion-panel-title>JSON Lines (.jsonl)</v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <pre class="text-caption">{"input": "Question?", "output": "Answer"}</pre>
-                  <p class="text-caption mt-2">
-                    Best for Q&A and conversational training
-                  </p>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-              <v-expansion-panel>
-                <v-expansion-panel-title>CSV (.csv)</v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <pre class="text-caption">input,output
-"Question?","Answer"</pre>
-                  <p class="text-caption mt-2">
-                    Simple tabular format
-                  </p>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-              <v-expansion-panel>
-                <v-expansion-panel-title>Plain Text (.txt)</v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <p class="text-caption">
-                    Raw text for language modeling
-                  </p>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+      <template #sidebar>
+        <LLMGuide page="train" />
+      </template>
+    </PageStructure>
 
     <!-- Training Progress Dialog -->
     <v-dialog
@@ -332,7 +232,7 @@
               {{ Math.round(trainingProgress) }}%
             </v-progress-circular>
           </div>
-          
+        
           <v-list>
             <v-list-item>
               <v-list-item-title>Training Job</v-list-item-title>
@@ -402,13 +302,14 @@
         </v-btn>
       </template>
     </v-snackbar>
-  </v-container>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import BackButton from '~/components/ui/BackButton.vue'
+import PageStructure from '~/components/layout/PageStructure.vue'
+import LLMGuide from '~/components/step-guides/LLMGuide.vue'
 import { useSupabase } from '~/composables/supabase'
 
 // Composables
@@ -689,19 +590,458 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Page Structure */
+.page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(248, 250, 252, 0.1) 100%);
+  backdrop-filter: blur(10px);
+}
+
+/* Page Header */
+.page-header {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
+  padding: 2rem 0;
+  margin-bottom: 2rem;
+}
+
+.page-header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.page-title-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.back-button {
+  flex-shrink: 0;
+}
+
+.page-title-content {
+  flex: 1;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: 1.125rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Main Content */
+.page-content {
+  flex: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem 2rem;
+  width: 100%;
+}
+
+.content-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Main Content Area */
+.main-content {
+  min-width: 0;
+}
+
+.form-card {
+  background: rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(26px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.025);
+  overflow: hidden;
+}
+
+.form-card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #000000;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+  padding: 1.5rem 1.5rem 1rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(248, 250, 252, 0.04) 100%);
+  backdrop-filter: blur(13px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.025);
+}
+
+/* Sidebar */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: sticky;
+  top: 2rem;
+}
+
+.sidebar-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.sidebar-card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  padding: 1.25rem 1.25rem 0.75rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.8) 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Form Elements */
+.v-text-field,
+.v-select,
+.v-textarea,
+.v-file-input {
+  margin-bottom: 1rem;
+}
+
+.v-text-field :deep(.v-field),
+.v-select :deep(.v-field),
+.v-textarea :deep(.v-field),
+.v-file-input :deep(.v-field) {
+  background: rgba(255, 255, 255, 0.015);
+  backdrop-filter: blur(13px);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+}
+
+.v-text-field :deep(.v-field__input),
+.v-select :deep(.v-field__input),
+.v-textarea :deep(.v-field__input),
+.v-file-input :deep(.v-field__input) {
+  color: #000000 !important;
+}
+
+.v-text-field :deep(.v-label),
+.v-select :deep(.v-label),
+.v-textarea :deep(.v-label),
+.v-file-input :deep(.v-label) {
+  color: #000000 !important;
+}
+
+.v-text-field :deep(.v-field:hover),
+.v-select :deep(.v-field:hover),
+.v-textarea :deep(.v-field:hover),
+.v-file-input :deep(.v-field:hover) {
+  border-color: rgba(var(--v-theme-primary), 0.5);
+  box-shadow: 0 2px 8px rgba(var(--v-theme-primary), 0.1);
+}
+
+.v-text-field :deep(.v-field--focused),
+.v-select :deep(.v-field--focused),
+.v-textarea :deep(.v-field--focused),
+.v-file-input :deep(.v-field--focused) {
+  border-color: rgb(var(--v-theme-primary));
+  box-shadow: 0 0 0 3px rgba(var(--v-theme-primary), 0.1);
+}
+
+/* Buttons */
+.v-btn {
+  border-radius: 8px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.025em;
+  transition: all 0.2s ease;
+}
+
+.v-btn--variant-elevated {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.v-btn--variant-elevated:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Expansion Panels */
 .v-expansion-panels {
   box-shadow: none;
 }
 
 .v-expansion-panel {
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 8px;
+  margin-bottom: 0.5rem;
+  background: rgba(255, 255, 255, 0.015);
+  backdrop-filter: blur(13px);
 }
 
+.v-expansion-panel :deep(.v-expansion-panel-title) {
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+/* Code Blocks */
 pre {
   background: rgba(var(--v-theme-surface-variant), 0.1);
-  padding: 8px;
-  border-radius: 4px;
-  font-family: monospace;
+  padding: 12px;
+  border-radius: 6px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+}
+
+/* List Items */
+.v-list-item {
+  border-radius: 6px;
+  margin-bottom: 0.25rem;
+}
+
+.v-list-item :deep(.v-list-item-title) {
+  font-weight: 500;
+  color: #000000;
+}
+
+.v-list-item :deep(.v-list-item-subtitle) {
+  color: #000000;
+}
+
+.v-expansion-panel :deep(.v-expansion-panel-title) {
+  font-weight: 500;
+  color: #000000;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .content-wrapper {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .sidebar {
+    position: static;
+    order: -1;
+  }
+  
+  .page-title {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    padding: 1.5rem 0;
+    margin-bottom: 1.5rem;
+  }
+  
+  .page-header-content {
+    padding: 0 1rem;
+  }
+  
+  .page-content {
+    padding: 0 1rem 1.5rem;
+  }
+  
+  .page-title-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .page-title {
+    font-size: 1.75rem;
+  }
+  
+  .page-subtitle {
+    font-size: 1rem;
+  }
+  
+  .content-wrapper {
+    gap: 1rem;
+  }
+  
+  .form-card-title,
+  .sidebar-card-title {
+    font-size: 1.125rem;
+    padding: 1rem 1rem 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header {
+    padding: 1rem 0;
+  }
+  
+  .page-content {
+    padding: 0 0.75rem 1rem;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .form-card-title,
+  .sidebar-card-title {
+    font-size: 1rem;
+    padding: 0.75rem 0.75rem 0.5rem;
+  }
+}
+
+/* Animation */
+.page-wrapper {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card Hover Effects */
+.form-card:hover,
+.sidebar-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  transition: all 0.3s ease;
+}
+
+/* Loading States */
+.v-btn--loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.v-btn--loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Ensure all text is black for visibility */
+:deep(.v-card-title) {
+  color: black !important;
+}
+
+:deep(.v-card-text) {
+  color: black !important;
+}
+
+:deep(.form-card-title) {
+  color: black !important;
+}
+
+/* Ensure form labels are black */
+:deep(.v-label) {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+:deep(.v-label--floating) {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Ensure input text is black */
+:deep(.v-field__input) {
+  color: black !important;
+}
+
+:deep(.v-field__input input) {
+  color: black !important;
+}
+
+:deep(.v-field__input textarea) {
+  color: black !important;
+}
+
+/* Ensure placeholder text is visible */
+:deep(.v-field__input::placeholder) {
+  color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Ensure hint text is visible */
+:deep(.v-messages) {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Ensure alert text is black */
+:deep(.v-alert) {
+  color: black !important;
+}
+
+:deep(.v-alert strong) {
+  color: black !important;
+}
+
+/* Ensure expansion panel text is black */
+:deep(.v-expansion-panel-text) {
+  color: black !important;
+}
+
+/* Ensure switch labels are black */
+:deep(.v-switch .v-label) {
+  color: black !important;
+}
+
+/* Ensure chip text is black */
+:deep(.v-chip) {
+  color: black !important;
+}
+
+/* Ensure button text is black */
+:deep(.v-btn) {
+  color: black !important;
+}
+
+/* Ensure all text elements are black */
+:deep(.text-body-1),
+:deep(.text-body-2),
+:deep(.text-caption) {
+  color: black !important;
+}
+
+/* Ensure sidebar text is black */
+:deep(.sidebar-card .v-card-text) {
+  color: black !important;
+}
+
+:deep(.sidebar-card .v-card-title) {
+  color: black !important;
 }
 </style>

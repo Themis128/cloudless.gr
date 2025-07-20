@@ -1,7 +1,7 @@
 <template>
   <v-btn 
     icon 
-    class="mb-4" 
+    class="mb-2" 
     :to="to || '/'"
     :color="color || 'default'"
     :size="size || 'default'"

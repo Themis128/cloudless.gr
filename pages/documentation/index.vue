@@ -1,141 +1,115 @@
 <template>
-  <div class="documentation-container">
-    <v-container max-width="1200">
-      <v-row>
-        <v-col cols="12">
-          <div class="doc-header">
-            <h1 class="doc-title">
-              <v-icon size="32" class="mr-3">
-                mdi-book-open-variant
-              </v-icon>
-              Cloudless Wizard Documentation
-            </h1>
-            <p class="doc-subtitle">
-              Complete guide to building AI-driven cloud solutions with Cloudless Wizard
-            </p>
-          </div>
-        </v-col>
-      </v-row>
+  <div class="documentation-page">
+    <div class="page-header">
+      <h1>
+        <v-icon size="32" class="mr-3">
+          mdi-book-open-variant
+        </v-icon>
+        Documentation
+      </h1>
+      <p class="subtitle">
+        Complete guide to building AI-driven cloud solutions with Cloudless Wizard
+      </p>
+    </div>
 
-      <v-row>
-        <v-col cols="12" md="3">
-          <v-card class="doc-nav-card">
-            <v-card-title class="text-h6">
-              <v-icon class="mr-2">
-                mdi-menu
-              </v-icon>
-              Documentation
-            </v-card-title>
-            <v-card-text class="pa-0">
-              <v-list density="compact">
-                <v-list-item
+    <div class="content-container">
+      <div class="documentation-content">
+        <div class="doc-layout">
+          <div class="doc-sidebar">
+            <div class="sidebar-card">
+              <h3 class="sidebar-title">
+                <v-icon class="mr-2">
+                  mdi-menu
+                </v-icon>
+                Documentation
+              </h3>
+              <div class="sidebar-nav">
+                <div
                   v-for="section in docSections"
                   :key="section.path"
-                  :to="section.path"
-                  :prepend-icon="section.icon"
-                  :title="section.title"
-                  :subtitle="section.subtitle"
-                  class="doc-nav-item"
-                />
-              </v-list>
-            </v-card-text>
-          </v-card>
-        </v-col>
+                  class="nav-item"
+                  :class="{ active: $route.path === section.path }"
+                >
+                  <NuxtLink :to="section.path" class="nav-link">
+                    <v-icon size="20" class="nav-icon">
+                      {{ section.icon }}
+                    </v-icon>
+                    <div class="nav-content">
+                      <span class="nav-title">{{ section.title }}</span>
+                      <span class="nav-subtitle">{{ section.subtitle }}</span>
+                    </div>
+                  </NuxtLink>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <v-col cols="12" md="9">
-          <v-card class="doc-content-card">
-            <v-card-title class="text-h5">
-              Welcome to Cloudless Wizard
-            </v-card-title>
-            <v-card-text>
-              <p class="text-body-1 mb-4">
+          <div class="doc-main">
+            <div class="main-content">
+              <h2>Welcome to Cloudless Wizard</h2>
+              <p class="welcome-text">
                 Cloudless Wizard is a comprehensive platform for building AI-driven cloud solutions. 
                 This documentation will guide you through all the features and capabilities of the platform.
               </p>
 
-              <v-alert
-                type="info"
-                variant="tonal"
-                class="mb-6"
-              >
-                <template #prepend>
-                  <v-icon>mdi-lightbulb</v-icon>
-                </template>
-                <strong>Quick Start:</strong> If you're new to Cloudless Wizard, we recommend starting with the 
-                <NuxtLink to="/documentation/getting-started" class="text-decoration-none">
-                  Getting Started
-                </NuxtLink> guide.
-              </v-alert>
+              <div class="info-alert">
+                <v-icon size="24" color="info">
+                  mdi-lightbulb
+                </v-icon>
+                <div class="alert-content">
+                  <strong>Quick Start:</strong> If you're new to Cloudless Wizard, we recommend starting with the 
+                  <NuxtLink to="/documentation/getting-started" class="text-link">
+                    Getting Started
+                  </NuxtLink> guide.
+                </div>
+              </div>
 
-              <div class="feature-grid">
-                <v-row>
-                  <v-col
+              <div class="features-section">
+                <h3>Platform Features</h3>
+                <div class="features-grid">
+                  <div
                     v-for="feature in mainFeatures"
                     :key="feature.title"
-                    cols="12"
-                    sm="6"
-                    lg="4"
+                    class="feature-card"
                   >
-                    <v-card class="feature-card h-100" elevation="2">
-                      <v-card-title class="text-h6 d-flex align-center">
-                        <v-icon :icon="feature.icon" class="mr-2" color="primary" />
-                        {{ feature.title }}
-                      </v-card-title>
-                      <v-card-text>
-                        <p class="text-body-2">
-                          {{ feature.description }}
-                        </p>
-                        <v-btn
-                          :to="feature.link"
-                          variant="text"
-                          color="primary"
-                          size="small"
-                          class="mt-2"
-                        >
-                          Learn More
-                          <v-icon end>
-                            mdi-arrow-right
-                          </v-icon>
-                        </v-btn>
-                      </v-card-text>
-                    </v-card>
-                  </v-col>
-                </v-row>
+                    <div class="feature-header">
+                      <v-icon size="24" color="primary">
+                        {{ feature.icon }}
+                      </v-icon>
+                      <h4>{{ feature.title }}</h4>
+                    </div>
+                    <p>{{ feature.description }}</p>
+                    <NuxtLink :to="feature.link" class="feature-link">
+                      Learn More
+                      <v-icon size="16">
+                        mdi-arrow-right
+                      </v-icon>
+                    </NuxtLink>
+                  </div>
+                </div>
               </div>
 
-              <v-divider class="my-6" />
-
-              <div class="quick-links">
-                <h3 class="text-h6 mb-4">
-                  Quick Links
-                </h3>
-                <v-row>
-                  <v-col
+              <div class="quick-links-section">
+                <h3>Quick Links</h3>
+                <div class="quick-links-grid">
+                  <NuxtLink
                     v-for="link in quickLinks"
                     :key="link.title"
-                    cols="12"
-                    sm="6"
-                    md="4"
+                    :to="link.path"
+                    class="quick-link-card"
                   >
-                    <v-btn
-                      :to="link.path"
-                      variant="outlined"
-                      block
-                      class="quick-link-btn"
-                    >
-                      <v-icon start>
-                        {{ link.icon }}
-                      </v-icon>
-                      {{ link.title }}
-                    </v-btn>
-                  </v-col>
-                </v-row>
+                    <v-icon size="24" color="primary">
+                      {{ link.icon }}
+                    </v-icon>
+                    <span>{{ link.title }}</span>
+                  </NuxtLink>
+                </div>
               </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -279,92 +253,290 @@ const quickLinks = [
 </script>
 
 <style scoped>
-.documentation-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding: 2rem 0;
+.documentation-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
 }
 
-.doc-header {
+.page-header {
   text-align: center;
   margin-bottom: 3rem;
 }
 
-.doc-title {
+.page-header h1 {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #1a1a1a;
+  color: rgba(255, 255, 255, 0.9) !important;
   margin-bottom: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.doc-subtitle {
+.subtitle {
   font-size: 1.2rem;
-  color: #666;
-  max-width: 600px;
+  color: rgba(255, 255, 255, 0.9) !important;
+  margin: 0;
+}
+
+.content-container {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 3rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.documentation-content {
+  max-width: 1000px;
   margin: 0 auto;
 }
 
-.doc-nav-card {
-  position: sticky;
-  top: 2rem;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+.doc-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 3rem;
 }
 
-.doc-nav-item {
+.doc-sidebar {
+  position: sticky;
+  top: 2rem;
+  height: fit-content;
+}
+
+.sidebar-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nav-item {
   border-radius: 8px;
-  margin: 2px 8px;
   transition: all 0.2s ease;
 }
 
-.doc-nav-item:hover {
+.nav-item:hover,
+.nav-item.active {
   background: rgba(102, 126, 234, 0.1);
 }
 
-.doc-content-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 8px;
+}
+
+.nav-icon {
+  color: #667eea;
+  flex-shrink: 0;
+}
+
+.nav-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.nav-title {
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.8);
+  font-size: 0.9rem;
+}
+
+.nav-subtitle {
+  font-size: 0.75rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.doc-main {
   min-height: 600px;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.main-content h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
+  margin: 0;
+}
+
+.welcome-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: rgba(0, 0, 0, 0.7);
+  margin: 0;
+}
+
+.info-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: rgba(33, 150, 243, 0.1);
+  border: 1px solid rgba(33, 150, 243, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.alert-content {
+  color: rgba(0, 0, 0, 0.8);
+  line-height: 1.6;
+}
+
+.text-link {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.text-link:hover {
+  text-decoration: underline;
+}
+
+.features-section h3,
+.quick-links-section h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
+  margin: 0 0 1.5rem 0;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
 }
 
 .feature-card {
   background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .feature-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
-.quick-link-btn {
-  height: 48px;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.2s ease;
+.feature-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
-.quick-link-btn:hover {
+.feature-header h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
+  margin: 0;
+}
+
+.feature-card p {
+  color: rgba(0, 0, 0, 0.7);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.feature-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.feature-link:hover {
+  text-decoration: underline;
+}
+
+.quick-links-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.quick-link-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  text-decoration: none;
+  color: rgba(0, 0, 0, 0.8);
+  transition: all 0.3s ease;
+}
+
+.quick-link-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  background: rgba(102, 126, 234, 0.05);
+}
+
+@media (max-width: 1024px) {
+  .doc-layout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .doc-sidebar {
+    position: static;
+  }
 }
 
 @media (max-width: 768px) {
-  .doc-title {
+  .documentation-page {
+    padding: 1rem;
+  }
+
+  .content-container {
+    padding: 2rem;
+  }
+
+  .page-header h1 {
     font-size: 2rem;
   }
-  
-  .doc-subtitle {
-    font-size: 1rem;
+
+  .features-grid {
+    grid-template-columns: 1fr;
   }
-  
-  .documentation-container {
-    padding: 1rem 0;
+
+  .quick-links-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style> 

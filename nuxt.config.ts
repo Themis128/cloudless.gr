@@ -1,4 +1,4 @@
-// Nuxt config placeholder
+// Nuxt config - Optimized for Development
 import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
@@ -10,36 +10,89 @@ export default defineNuxtConfig({
     },
   },
   vite: {
-    logLevel: 'info',
+    logLevel: 'warn',
     ssr: {
       noExternal: ['vue-echarts', 'echarts', 'vuetify'],
+    },
+    // Development optimizations
+    optimizeDeps: {
+      include: ['vue', 'vue-router', '@vue/runtime-core'],
+    },
+    // Faster builds in development
+    build: {
+      target: 'esnext',
+      minify: false,
+      sourcemap: true,
+    },
+    // Optimized file watching
+    server: {
+      watch: {
+        usePolling: true,
+        interval: 1000,
+      },
     },
   },
   // To set host and port, use environment variables NUXT_HOST and NUXT_PORT or pass them via CLI
   nitro: {
     compatibilityDate: '2025-07-18',
-    logLevel: 'debug',
+    logLevel: 'warn', // Reduce log level to minimize timer conflicts
     experimental: {
       wasm: true,
     },
     preset: 'node',
+    timing: false, // Disable timing to reduce timer conflicts
+    // Faster development builds
+    minify: false,
+    sourceMap: true,
   },
   devServer: {
     host: process.env.NUXT_HOST || '0.0.0.0', // Use environment variable or default
+    port: parseInt(process.env.NUXT_PORT || '3000'),
   },
   imports: {
     dirs: ['composables', 'stores', 'components'],
   },
   build: {
     transpile: ['vuetify'],
+    // Development optimizations
+    analyze: false,
   },
-  css: ['@mdi/font/css/materialdesignicons.css', 'vuetify/styles'],
+  css: ['@mdi/font/css/materialdesignicons.css', 'vuetify/styles', '~/assets/global-cards.css'],
   app: {
     head: {
       title: 'Cloudless',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       ],
+    },
+  },
+  experimental: {
+    payloadExtraction: false,
+  },
+  // Disable devtools timing features that can cause conflicts
+  devtools: {
+    enabled: false, // Disable devtools to prevent timer conflicts
+  },
+  routeRules: {
+    '/': { prerender: true },
+    '/models/**': { prerender: false },
+    '/bots/**': { prerender: false },
+    '/pipelines/**': { prerender: false },
+  },
+  // Development-specific optimizations
+  typescript: {
+    strict: false, // Faster compilation in development
+    typeCheck: false, // Disable type checking for faster builds
+  },
+  // Optimized file watching
+  watchers: {
+    webpack: {
+      aggregateTimeout: 300,
+    },
+    chokidar: {
+      usePolling: true,
+      interval: 1000,
+      ignored: ['**/node_modules/**', '**/.git/**', '**/.nuxt/**', '**/.output/**', '**/dist/**'],
     },
   },
 })

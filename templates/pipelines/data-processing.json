@@ -1,0 +1,46 @@
+{
+  "name": "Data Processing Pipeline",
+  "description": "A pipeline for processing and transforming data",
+  "type": "data",
+  "version": "1.0.0",
+  "config": {
+    "steps": [
+      {
+        "name": "data_ingestion",
+        "type": "input",
+        "config": {
+          "source": "database",
+          "query": "SELECT * FROM raw_data"
+        }
+      },
+      {
+        "name": "data_cleaning",
+        "type": "transformation",
+        "config": {
+          "remove_duplicates": true,
+          "handle_missing_values": "mean",
+          "normalize_data": true
+        }
+      },
+      {
+        "name": "data_validation",
+        "type": "validation",
+        "config": {
+          "check_data_types": true,
+          "validate_ranges": true,
+          "check_constraints": true
+        }
+      },
+      {
+        "name": "data_output",
+        "type": "output",
+        "config": {
+          "destination": "processed_data",
+          "format": "parquet"
+        }
+      }
+    ]
+  },
+  "category": "data",
+  "tags": ["processing", "transformation", "data", "etl"]
+}

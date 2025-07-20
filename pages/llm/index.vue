@@ -1,801 +1,785 @@
 <template>
-  <v-container>
-    <div class="d-flex justify-space-between align-center mb-6">
-      <div>
-        <h1 class="text-h4 mb-2">
-          LLM Management
-        </h1>
-        <p class="text-body-1 text-medium-emphasis">
-          Manage your language models, training sessions, and deployments
-        </p>
-      </div>
-      <v-btn
-        color="primary"
-        prepend-icon="mdi-plus"
-        @click="navigateToTrain"
-      >
-        Start Training
-      </v-btn>
-    </div>
-
-    <!-- Stats Cards -->
-    <v-row class="mb-6">
-      <v-col cols="12" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="d-flex align-center">
-              <v-icon color="primary" size="40" class="me-3">
-                mdi-brain
-              </v-icon>
-              <div>
-                <h3 class="text-h5">
-                  {{ models.length }}
-                </h3>
-                <p class="text-body-2 text-medium-emphasis">
-                  Active Models
-                </p>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="d-flex align-center">
-              <v-icon color="success" size="40" class="me-3">
-                mdi-school
-              </v-icon>
-              <div>
-                <h3 class="text-h5">
-                  {{ trainingStats.completed }}
-                </h3>
-                <p class="text-body-2 text-medium-emphasis">
-                  Completed Training
-                </p>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="d-flex align-center">
-              <v-icon color="warning" size="40" class="me-3">
-                mdi-cog
-              </v-icon>
-              <div>
-                <h3 class="text-h5">
-                  {{ trainingStats.running }}
-                </h3>
-                <p class="text-body-2 text-medium-emphasis">
-                  Training in Progress
-                </p>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="d-flex align-center">
-              <v-icon color="info" size="40" class="me-3">
-                mdi-rocket
-              </v-icon>
-              <div>
-                <h3 class="text-h5">
-                  {{ deploymentStats.active }}
-                </h3>
-                <p class="text-body-2 text-medium-emphasis">
-                  Active Deployments
-                </p>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- Main Content Tabs -->
-    <v-tabs v-model="activeTab" class="mb-4">
-      <v-tab value="models">
-        Models
-      </v-tab>
-      <v-tab value="training">
-        Training Sessions
-      </v-tab>
-      <v-tab value="deployments">
-        Deployments
-      </v-tab>
-    </v-tabs>
-
-    <v-tabs-window v-model="activeTab">
-      <!-- Models Tab -->
-      <v-tabs-window-item value="models">
-        <v-card>
-          <v-card-title class="d-flex justify-space-between align-center">
-            <span>Available Models</span>
-            <v-btn
-              color="primary"
-              variant="outlined"
-              prepend-icon="mdi-refresh"
-              :loading="loadingModels"
-              @click="refreshModels"
-            >
-              Refresh
-            </v-btn>
+  <div>
+    <PageStructure
+      title="LLM Management"
+      subtitle="Manage your language models, training sessions, and deployments"
+      back-button-to="/"
+      :has-sidebar="true"
+    >
+      <template #main>
+        <!-- Quick Actions -->
+        <v-card class="mb-4 bg-white">
+          <v-card-title class="text-h6">
+            Quick Actions
           </v-card-title>
-          <v-divider />
           <v-card-text>
-            <v-data-table
-              :headers="modelHeaders"
-              :items="models"
-              :loading="loadingModels"
-              class="elevation-0"
+            <div class="quick-actions-header">
+              <div class="quick-actions-title">
+                <p class="text-body-2 text-medium-emphasis">
+                  Train, deploy, or manage language models
+                </p>
+              </div>
+            </div>
+            <div class="quick-actions-buttons">
+              <v-btn
+                to="/llm/train"
+                color="primary"
+                prepend-icon="mdi-school"
+                variant="elevated"
+                class="action-btn"
+                size="large"
+              >
+                Train Model
+              </v-btn>
+              <v-btn
+                to="/llm/models"
+                color="info"
+                prepend-icon="mdi-brain"
+                variant="outlined"
+                class="action-btn"
+                size="large"
+              >
+                Manage Models
+              </v-btn>
+              <v-btn
+                to="/llm/training"
+                color="warning"
+                prepend-icon="mdi-clock"
+                variant="outlined"
+                class="action-btn"
+                size="large"
+              >
+                Training Sessions
+              </v-btn>
+              <v-btn
+                to="/llm/deployments"
+                color="success"
+                prepend-icon="mdi-rocket-launch"
+                variant="outlined"
+                class="action-btn"
+                size="large"
+              >
+                View Deployments
+              </v-btn>
+            </div>
+          </v-card-text>
+        </v-card>
+
+        <!-- Navigation Cards -->
+        <v-row class="mb-6">
+          <v-col cols="12" md="3">
+            <v-card 
+              class="nav-card bg-white" 
+              style="cursor: pointer;"
+              @click="navigateToPage('/llm/models')"
             >
-              <template #item.name="{ item }">
+              <v-card-text class="text-center">
+                <v-icon color="primary" size="48" class="mb-2">
+                  mdi-brain
+                </v-icon>
+                <div class="text-h6 font-weight-bold mb-2">
+                  Models
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Manage and monitor your trained models
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-card 
+              class="nav-card bg-white" 
+              style="cursor: pointer;"
+              @click="navigateToPage('/llm/training')"
+            >
+              <v-card-text class="text-center">
+                <v-icon color="warning" size="48" class="mb-2">
+                  mdi-school
+                </v-icon>
+                <div class="text-h6 font-weight-bold mb-2">
+                  Training
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Monitor training sessions and logs
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-card 
+              class="nav-card bg-white" 
+              style="cursor: pointer;"
+              @click="navigateToPage('/llm/datasets')"
+            >
+              <v-card-text class="text-center">
+                <v-icon color="info" size="48" class="mb-2">
+                  mdi-database
+                </v-icon>
+                <div class="text-h6 font-weight-bold mb-2">
+                  Datasets
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Manage training datasets
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-card 
+              class="nav-card bg-white" 
+              style="cursor: pointer;"
+              @click="navigateToPage('/llm/analytics')"
+            >
+              <v-card-text class="text-center">
+                <v-icon color="success" size="48" class="mb-2">
+                  mdi-chart-line
+                </v-icon>
+                <div class="text-h6 font-weight-bold mb-2">
+                  Analytics
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Performance and cost analysis
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+
+        <!-- Stats Cards -->
+        <v-row class="mb-6">
+          <v-col cols="12" md="3">
+            <v-card class="stats-card bg-white">
+              <v-card-text class="text-center">
+                <v-icon color="primary" size="48" class="mb-2">
+                  mdi-brain
+                </v-icon>
+                <div class="text-h4 font-weight-bold">
+                  {{ models.length }}
+                </div>
+                <div class="text-body-2">
+                  Active Models
+                </div>
+                <div class="text-caption text-medium-emphasis">
+                  Ready for deployment
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-card class="stats-card bg-white">
+              <v-card-text class="text-center">
+                <v-icon color="success" size="48" class="mb-2">
+                  mdi-school
+                </v-icon>
+                <div class="text-h4 font-weight-bold">
+                  {{ trainingStats.completed }}
+                </div>
+                <div class="text-body-2">
+                  Completed Training
+                </div>
+                <div class="text-caption text-medium-emphasis">
+                  Successfully trained models
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-card class="stats-card bg-white">
+              <v-card-text class="text-center">
+                <v-icon color="warning" size="48" class="mb-2">
+                  mdi-cog
+                </v-icon>
+                <div class="text-h4 font-weight-bold">
+                  {{ trainingStats.running }}
+                </div>
+                <div class="text-body-2">
+                  Training in Progress
+                </div>
+                <div class="text-caption text-medium-emphasis">
+                  Currently training models
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-card class="stats-card bg-white">
+              <v-card-text class="text-center">
+                <v-icon color="info" size="48" class="mb-2">
+                  mdi-rocket
+                </v-icon>
+                <div class="text-h4 font-weight-bold">
+                  {{ deploymentStats.active }}
+                </div>
+                <div class="text-body-2">
+                  Active Deployments
+                </div>
+                <div class="text-caption text-medium-emphasis">
+                  Live model endpoints
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+
+        <!-- Main Content Tabs -->
+        <v-tabs v-model="activeTab" class="mb-4">
+          <v-tab value="models">
+            Models
+          </v-tab>
+          <v-tab value="training">
+            Training Sessions
+          </v-tab>
+          <v-tab value="deployments">
+            Deployments
+          </v-tab>
+        </v-tabs>
+
+        <v-tabs-window v-model="activeTab">
+          <!-- Models Tab -->
+          <v-tabs-window-item value="models">
+            <v-card class="bg-white">
+              <v-card-title class="d-flex justify-space-between align-center">
                 <div class="d-flex align-center">
-                  <v-icon class="me-2" color="primary">
+                  <v-icon start color="primary">
                     mdi-brain
                   </v-icon>
-                  <span class="font-weight-medium">{{ item.name }}</span>
+                  Available Models
                 </div>
-              </template>
-              <template #item.status="{ item }">
-                <v-chip
-                  :color="getStatusColor(item.status)"
-                  size="small"
-                  variant="flat"
+                <v-btn
+                  color="primary"
+                  variant="outlined"
+                  prepend-icon="mdi-refresh"
+                  :loading="loadingModels"
+                  @click="refreshModels"
                 >
-                  {{ item.status }}
-                </v-chip>
-              </template>
-              <template #item.created_at="{ item }">
-                {{ formatDate(item.created_at) }}
-              </template>
-              <template #item.actions="{ item }">
-                <v-btn
-                  icon="mdi-eye"
-                  variant="text"
-                  size="small"
-                  @click="() => handleViewModel(item)"
-                />
-                <v-btn
-                  icon="mdi-rocket"
-                  variant="text"
-                  size="small"
-                  :disabled="item.status !== 'ready'"
-                  @click="() => handleDeployModel(item)"
-                />
-                <v-btn
-                  icon="mdi-delete"
-                  variant="text"
-                  size="small"
-                  color="error"
-                  @click="() => handleDeleteModel(item)"
-                />
-              </template>
-            </v-data-table>
-          </v-card-text>
-        </v-card>
-      </v-tabs-window-item>
+                  Refresh
+                </v-btn>
+              </v-card-title>
+              <v-card-text>
+                <v-data-table
+                  :headers="modelHeaders"
+                  :items="models"
+                  :loading="loadingModels"
+                  class="elevation-0 models-table"
+                  :items-per-page="10"
+                  :items-per-page-options="[5, 10, 25, 50]"
+                >
+                  <template #item.name="{ item }">
+                    <div class="d-flex align-center">
+                      <v-icon class="me-2" color="primary">
+                        mdi-brain
+                      </v-icon>
+                      <span class="font-weight-medium">{{ item.name }}</span>
+                    </div>
+                  </template>
 
-      <!-- Training Sessions Tab -->
-      <v-tabs-window-item value="training">
-        <v-card>
-          <v-card-title class="d-flex justify-space-between align-center">
-            <span>Training Sessions</span>
-            <v-btn
-              color="primary"
-              variant="outlined"
-              prepend-icon="mdi-refresh"
-              :loading="loadingTraining"
-              @click="refreshTrainingSessions"
-            >
-              Refresh
-            </v-btn>
-          </v-card-title>
-          <v-divider />
-          <v-card-text>
-            <v-data-table
-              :headers="trainingHeaders"
-              :items="trainingSessions"
-              :loading="loadingTraining"
-              class="elevation-0"
-            >
-              <template #item.name="{ item }">
+                  <template #item.status="{ item }">
+                    <v-chip
+                      :color="getStatusColor(item.status)"
+                      size="small"
+                      variant="tonal"
+                    >
+                      {{ item.status }}
+                    </v-chip>
+                  </template>
+
+                  <template #item.actions="{ item }">
+                    <div class="d-flex gap-1">
+                      <v-btn
+                        icon="mdi-eye"
+                        size="small"
+                        variant="text"
+                        color="primary"
+                        @click="() => viewModel(item)"
+                      />
+                      <v-btn
+                        icon="mdi-pencil"
+                        size="small"
+                        variant="text"
+                        color="warning"
+                        @click="() => editModel(item)"
+                      />
+                      <v-btn
+                        icon="mdi-rocket-launch"
+                        size="small"
+                        variant="text"
+                        color="success"
+                        @click="() => deployModel(item)"
+                      />
+                    </div>
+                  </template>
+                </v-data-table>
+              </v-card-text>
+            </v-card>
+          </v-tabs-window-item>
+
+          <!-- Training Sessions Tab -->
+          <v-tabs-window-item value="training">
+            <v-card class="bg-white">
+              <v-card-title class="d-flex justify-space-between align-center">
                 <div class="d-flex align-center">
-                  <v-icon class="me-2" color="success">
+                  <v-icon start color="primary">
                     mdi-school
                   </v-icon>
-                  <span class="font-weight-medium">{{ item.name }}</span>
+                  Training Sessions
                 </div>
-              </template>
-              <template #item.status="{ item }">
-                <v-chip
-                  :color="getTrainingStatusColor(item.status)"
-                  size="small"
-                  variant="flat"
+                <v-btn
+                  color="primary"
+                  variant="outlined"
+                  prepend-icon="mdi-refresh"
+                  :loading="loadingTraining"
+                  @click="refreshTraining"
                 >
-                  {{ item.status }}
-                </v-chip>
-              </template>
-              <template #item.progress="{ item }">
-                <div class="d-flex align-center">
-                  <v-progress-linear
-                    :model-value="item.progress"
-                    height="6"
-                    :color="item.status === 'completed' ? 'success' : 'primary'"
-                    class="me-2"
-                    style="min-width: 100px"
-                  />
-                  <span class="text-caption">{{ item.progress }}%</span>
-                </div>
-              </template>
-              <template #item.created_at="{ item }">
-                {{ formatDate(item.created_at) }}
-              </template>
-              <template #item.actions="{ item }">
-                <v-btn
-                  icon="mdi-eye"
-                  variant="text"
-                  size="small"
-                  @click="() => handleViewTrainingSession(item)"
-                />
-                <v-btn
-                  v-if="item.status === 'running'"
-                  icon="mdi-stop"
-                  variant="text"
-                  size="small"
-                  color="warning"
-                  @click="() => handleStopTraining(item)"
-                />
-                <v-btn
-                  icon="mdi-delete"
-                  variant="text"
-                  size="small"
-                  color="error"
-                  @click="() => handleDeleteTrainingSession(item)"
-                />
-              </template>
-            </v-data-table>
-          </v-card-text>
-        </v-card>
-      </v-tabs-window-item>
-
-      <!-- Deployments Tab -->
-      <v-tabs-window-item value="deployments">
-        <v-card>
-          <v-card-title class="d-flex justify-space-between align-center">
-            <span>Model Deployments</span>
-            <v-btn
-              color="primary"
-              variant="outlined"
-              prepend-icon="mdi-refresh"
-              :loading="loadingDeployments"
-              @click="refreshDeployments"
-            >
-              Refresh
-            </v-btn>
-          </v-card-title>
-          <v-divider />
-          <v-card-text>
-            <v-data-table
-              :headers="deploymentHeaders"
-              :items="deployments"
-              :loading="loadingDeployments"
-              class="elevation-0"
-            >
-              <template #item.name="{ item }">
-                <div class="d-flex align-center">
-                  <v-icon class="me-2" color="info">
-                    mdi-rocket
-                  </v-icon>
-                  <span class="font-weight-medium">{{ item.name }}</span>
-                </div>
-              </template>
-              <template #item.status="{ item }">
-                <v-chip
-                  :color="getDeploymentStatusColor(item.status)"
-                  size="small"
-                  variant="flat"
-                >
-                  {{ item.status }}
-                </v-chip>
-              </template>
-              <template #item.endpoint_url="{ item }">
-                <v-btn
-                  v-if="item.endpoint_url"
-                  variant="text"
-                  size="small"
-                  @click="() => handleCopyEndpoint(item.endpoint_url)"
-                >
-                  {{ item.endpoint_url }}
+                  Refresh
                 </v-btn>
-                <span v-else class="text-medium-emphasis">-</span>
-              </template>
-              <template #item.created_at="{ item }">
-                {{ formatDate(item.created_at) }}
-              </template>
-              <template #item.actions="{ item }">
-                <v-btn
-                  icon="mdi-eye"
-                  variant="text"
-                  size="small"
-                  @click="() => handleViewDeployment(item)"
-                />
-                <v-btn
-                  v-if="item.status === 'active'"
-                  icon="mdi-stop"
-                  variant="text"
-                  size="small"
-                  color="warning"
-                  @click="() => handleStopDeployment(item)"
-                />
-                <v-btn
-                  icon="mdi-delete"
-                  variant="text"
-                  size="small"
-                  color="error"
-                  @click="() => handleDeleteDeployment(item)"
-                />
-              </template>
-            </v-data-table>
-          </v-card-text>
-        </v-card>
-      </v-tabs-window-item>
-    </v-tabs-window>
-
-    <!-- Model Details Dialog -->
-    <v-dialog v-model="modelDialog" max-width="600">
-      <v-card v-if="selectedModel">
-        <v-card-title>{{ selectedModel.name }}</v-card-title>
-        <v-card-text>
-          <v-list>
-            <v-list-item>
-              <v-list-item-title>Status</v-list-item-title>
-              <v-list-item-subtitle>
-                <v-chip
-                  :color="getStatusColor(selectedModel.status)"
-                  size="small"
+              </v-card-title>
+              <v-card-text>
+                <v-data-table
+                  :headers="trainingHeaders"
+                  :items="trainingSessions"
+                  :loading="loadingTraining"
+                  class="elevation-0 training-table"
+                  :items-per-page="10"
+                  :items-per-page-options="[5, 10, 25, 50]"
                 >
-                  {{ selectedModel.status }}
-                </v-chip>
-              </v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <v-list-item-title>Created</v-list-item-title>
-              <v-list-item-subtitle>
-                {{ formatDate(selectedModel.created_at) }}
-              </v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <v-list-item-title>Type</v-list-item-title>
-              <v-list-item-subtitle>
-                {{ selectedModel.type || 'Custom' }}
-              </v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="closeModelDialog">
-            Close
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+                  <template #item.name="{ item }">
+                    <div class="d-flex align-center">
+                      <v-icon class="me-2" color="primary">
+                        mdi-school
+                      </v-icon>
+                      <span class="font-weight-medium">{{ item.name }}</span>
+                    </div>
+                  </template>
 
-    <!-- Snackbar for notifications -->
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">
-      {{ snackbar.message }}
-      <template #actions>
-        <v-btn variant="text" @click="closeSnackbar">
-          Close
-        </v-btn>
+                  <template #item.status="{ item }">
+                    <v-chip
+                      :color="getTrainingStatusColor(item.status)"
+                      size="small"
+                      variant="tonal"
+                    >
+                      {{ item.status }}
+                    </v-chip>
+                  </template>
+
+                  <template #item.progress="{ item }">
+                    <v-progress-linear
+                      :model-value="item.progress"
+                      color="primary"
+                      height="8"
+                      rounded
+                    />
+                    <span class="text-caption">{{ item.progress }}%</span>
+                  </template>
+
+                  <template #item.actions="{ item }">
+                    <div class="d-flex gap-1">
+                      <v-btn
+                        icon="mdi-eye"
+                        size="small"
+                        variant="text"
+                        color="primary"
+                        @click="() => viewTraining(item)"
+                      />
+                      <v-btn
+                        v-if="item.status === 'running'"
+                        icon="mdi-stop"
+                        size="small"
+                        variant="text"
+                        color="error"
+                        @click="() => stopTraining(item)"
+                      />
+                    </div>
+                  </template>
+                </v-data-table>
+              </v-card-text>
+            </v-card>
+          </v-tabs-window-item>
+
+          <!-- Deployments Tab -->
+          <v-tabs-window-item value="deployments">
+            <v-card class="bg-white">
+              <v-card-title class="d-flex justify-space-between align-center">
+                <div class="d-flex align-center">
+                  <v-icon start color="primary">
+                    mdi-rocket-launch
+                  </v-icon>
+                  Deployments
+                </div>
+                <v-btn
+                  color="primary"
+                  variant="outlined"
+                  prepend-icon="mdi-refresh"
+                  :loading="loadingDeployments"
+                  @click="refreshDeployments"
+                >
+                  Refresh
+                </v-btn>
+              </v-card-title>
+              <v-card-text>
+                <v-data-table
+                  :headers="deploymentHeaders"
+                  :items="deployments"
+                  :loading="loadingDeployments"
+                  class="elevation-0 deployments-table"
+                  :items-per-page="10"
+                  :items-per-page-options="[5, 10, 25, 50]"
+                >
+                  <template #item.name="{ item }">
+                    <div class="d-flex align-center">
+                      <v-icon class="me-2" color="primary">
+                        mdi-rocket-launch
+                      </v-icon>
+                      <span class="font-weight-medium">{{ item.name }}</span>
+                    </div>
+                  </template>
+
+                  <template #item.status="{ item }">
+                    <v-chip
+                      :color="getDeploymentStatusColor(item.status)"
+                      size="small"
+                      variant="tonal"
+                    >
+                      {{ item.status }}
+                    </v-chip>
+                  </template>
+
+                  <template #item.actions="{ item }">
+                    <div class="d-flex gap-1">
+                      <v-btn
+                        icon="mdi-eye"
+                        size="small"
+                        variant="text"
+                        color="primary"
+                        @click="() => viewDeployment(item)"
+                      />
+                      <v-btn
+                        v-if="item.status === 'active'"
+                        icon="mdi-stop"
+                        size="small"
+                        variant="text"
+                        color="error"
+                        @click="() => stopDeployment(item)"
+                      />
+                      <v-btn
+                        v-else
+                        icon="mdi-play"
+                        size="small"
+                        variant="text"
+                        color="success"
+                        @click="() => startDeployment(item)"
+                      />
+                    </div>
+                  </template>
+                </v-data-table>
+              </v-card-text>
+            </v-card>
+          </v-tabs-window-item>
+        </v-tabs-window>
       </template>
-    </v-snackbar>
-  </v-container>
+
+      <template #sidebar>
+        <LLMGuide />
+      </template>
+    </PageStructure>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useSupabase } from '~/composables/supabase'
+import PageStructure from '~/components/layout/PageStructure.vue'
+import LLMGuide from '~/components/step-guides/LLMGuide.vue'
 
-// Composables
 const router = useRouter()
-const supabase = useSupabase()
-// const modelStore = useModelStore()
 
-// Reactive state
+const navigateToPage = (path: string) => {
+  router.push(path)
+}
+
+const navigateToModels = () => navigateToPage('/llm/models')
+const navigateToTraining = () => navigateToPage('/llm/training')
+const navigateToDatasets = () => navigateToPage('/llm/datasets')
+const navigateToAnalytics = () => navigateToPage('/llm/analytics')
+
 const activeTab = ref('models')
-const models = ref<any[]>([])
-const trainingSessions = ref<any[]>([])
-const deployments = ref<any[]>([])
 const loadingModels = ref(false)
 const loadingTraining = ref(false)
 const loadingDeployments = ref(false)
-const modelDialog = ref(false)
-const selectedModel = ref<any>(null)
 
-const snackbar = ref({
-  show: false,
-  message: '',
-  color: 'success',
-})
+// Mock data - replace with actual API calls
+const models = ref([
+  { id: '1', name: 'GPT-4 Fine-tuned', status: 'ready', type: 'text-generation' },
+  { id: '2', name: 'BERT Classification', status: 'training', type: 'text-classification' }
+])
 
-// Computed stats
+const trainingSessions = ref([
+  { id: '1', name: 'GPT-4 Training', status: 'running', progress: 75 },
+  { id: '2', name: 'BERT Training', status: 'completed', progress: 100 }
+])
+
+const deployments = ref([
+  { id: '1', name: 'GPT-4 API', status: 'active', endpoint: '/api/gpt4' },
+  { id: '2', name: 'BERT API', status: 'inactive', endpoint: '/api/bert' }
+])
+
 const trainingStats = computed(() => ({
-  completed: trainingSessions.value.filter(s => s.status === 'completed')
-    .length,
-  running: trainingSessions.value.filter(s => s.status === 'running').length,
-  failed: trainingSessions.value.filter(s => s.status === 'failed').length,
+  completed: trainingSessions.value.filter(t => t.status === 'completed').length,
+  running: trainingSessions.value.filter(t => t.status === 'running').length
 }))
 
 const deploymentStats = computed(() => ({
-  active: deployments.value.filter(d => d.status === 'active').length,
-  pending: deployments.value.filter(d => d.status === 'pending').length,
-  failed: deployments.value.filter(d => d.status === 'failed').length,
+  active: deployments.value.filter(d => d.status === 'active').length
 }))
 
-// Table headers
 const modelHeaders = [
-  { title: 'Name', key: 'name', sortable: true },
-  { title: 'Status', key: 'status', sortable: true },
-  { title: 'Created', key: 'created_at', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false },
+  { title: 'Model', key: 'name' },
+  { title: 'Status', key: 'status' },
+  { title: 'Actions', key: 'actions', sortable: false }
 ]
 
 const trainingHeaders = [
-  { title: 'Name', key: 'name', sortable: true },
-  { title: 'Status', key: 'status', sortable: true },
-  { title: 'Progress', key: 'progress', sortable: true },
-  { title: 'Started', key: 'created_at', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false },
+  { title: 'Session', key: 'name' },
+  { title: 'Status', key: 'status' },
+  { title: 'Progress', key: 'progress' },
+  { title: 'Actions', key: 'actions', sortable: false }
 ]
 
 const deploymentHeaders = [
-  { title: 'Name', key: 'name', sortable: true },
-  { title: 'Status', key: 'status', sortable: true },
-  { title: 'Endpoint', key: 'endpoint_url', sortable: false },
-  { title: 'Created', key: 'created_at', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false },
+  { title: 'Deployment', key: 'name' },
+  { title: 'Status', key: 'status' },
+  { title: 'Actions', key: 'actions', sortable: false }
 ]
-
-// Methods
-const refreshModels = async () => {
-  loadingModels.value = true
-  try {
-    const { data, error } = await supabase
-      .from('models')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-
-    models.value =
-      data?.map(model => ({
-        ...model,
-        status: 'ready', // Default status - you can add a status column to the models table
-      })) || []
-  } catch (error) {
-    // console.error('Error fetching models:', error)
-    showSnackbar('Error fetching models', 'error')
-  } finally {
-    loadingModels.value = false
-  }
-}
-
-const refreshTrainingSessions = async () => {
-  loadingTraining.value = true
-  try {
-    const { data, error } = await supabase
-      .from('training_sessions')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-
-    trainingSessions.value =
-      data?.map(session => ({
-        ...session,
-        progress:
-          session.status === 'completed'
-            ? 100
-            : session.status === 'running'
-              ? Math.floor(Math.random() * 80) + 10
-              : 0,
-      })) || []
-  } catch (error) {
-    // console.error('Error fetching training sessions:', error)
-    showSnackbar('Error fetching training sessions', 'error')
-  } finally {
-    loadingTraining.value = false
-  }
-}
-
-const refreshDeployments = async () => {
-  loadingDeployments.value = true
-  try {
-    const { data, error } = await supabase
-      .from('deployments')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-    deployments.value = data || []
-  } catch (error) {
-    // console.error('Error fetching deployments:', error)
-    showSnackbar('Error fetching deployments', 'error')
-  } finally {
-    loadingDeployments.value = false
-  }
-}
-
-const viewModel = (model: any) => {
-  selectedModel.value = model
-  modelDialog.value = true
-}
-
-const deployModel = async (model: any) => {
-  try {
-    const { error } = await supabase.from('deployments').insert({
-      name: `${model.name} Deployment`,
-      model_version_id: model.id,
-      status: 'pending',
-    })
-
-    if (error) throw error
-
-    showSnackbar('Model deployment started', 'success')
-    refreshDeployments()
-  } catch (error) {
-    // console.error('Error deploying model:', error)
-    showSnackbar('Error deploying model', 'error')
-  }
-}
-
-const deleteModel = async (model: any) => {
-  if (confirm(`Are you sure you want to delete the model "${model.name}"?`)) {
-    try {
-      const { error } = await supabase
-        .from('models')
-        .delete()
-        .eq('id', model.id)
-
-      if (error) throw error
-
-      showSnackbar('Model deleted successfully', 'success')
-      refreshModels()
-    } catch (error) {
-      // console.error('Error deleting model:', error)
-      showSnackbar('Error deleting model', 'error')
-    }
-  }
-}
-
-const viewTrainingSession = (session: any) => {
-  // Navigate to training session details
-  router.push(`/llm/training/${session.id}`)
-}
-
-const stopTraining = async (session: any) => {
-  try {
-    const { error } = await supabase
-      .from('training_sessions')
-      .update({ status: 'stopped' })
-      .eq('id', session.id)
-
-    if (error) throw error
-
-    showSnackbar('Training session stopped', 'success')
-    refreshTrainingSessions()
-  } catch (error) {
-    // console.error('Error stopping training:', error)
-    showSnackbar('Error stopping training', 'error')
-  }
-}
-
-const deleteTrainingSession = async (session: any) => {
-  if (
-    confirm(
-      `Are you sure you want to delete the training session "${session.name}"?`
-    )
-  ) {
-    try {
-      const { error } = await supabase
-        .from('training_sessions')
-        .delete()
-        .eq('id', session.id)
-
-      if (error) throw error
-
-      showSnackbar('Training session deleted successfully', 'success')
-      refreshTrainingSessions()
-    } catch (error) {
-      // console.error('Error deleting training session:', error)
-      showSnackbar('Error deleting training session', 'error')
-    }
-  }
-}
-
-const viewDeployment = (deployment: any) => {
-  // Navigate to deployment details
-  router.push(`/llm/deployments/${deployment.id}`)
-}
-
-const stopDeployment = async (deployment: any) => {
-  try {
-    const { error } = await supabase
-      .from('deployments')
-      .update({ status: 'inactive' })
-      .eq('id', deployment.id)
-
-    if (error) throw error
-
-    showSnackbar('Deployment stopped', 'success')
-    refreshDeployments()
-  } catch (error) {
-    // console.error('Error stopping deployment:', error)
-    showSnackbar('Error stopping deployment', 'error')
-  }
-}
-
-const deleteDeployment = async (deployment: any) => {
-  if (
-    confirm(
-      `Are you sure you want to delete the deployment "${deployment.name}"?`
-    )
-  ) {
-    try {
-      const { error } = await supabase
-        .from('deployments')
-        .delete()
-        .eq('id', deployment.id)
-
-      if (error) throw error
-
-      showSnackbar('Deployment deleted successfully', 'success')
-      refreshDeployments()
-    } catch (error) {
-      // console.error('Error deleting deployment:', error)
-      showSnackbar('Error deleting deployment', 'error')
-    }
-  }
-}
-
-const copyEndpoint = (url: string) => {
-  navigator.clipboard.writeText(url)
-  showSnackbar('Endpoint URL copied to clipboard', 'success')
-}
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'ready':
-      return 'success'
-    case 'training':
-      return 'warning'
-    case 'error':
-      return 'error'
-    default:
-      return 'primary'
+    case 'ready': return 'success'
+    case 'training': return 'warning'
+    case 'error': return 'error'
+    default: return 'grey'
   }
 }
 
 const getTrainingStatusColor = (status: string) => {
   switch (status) {
-    case 'completed':
-      return 'success'
-    case 'running':
-      return 'primary'
-    case 'failed':
-      return 'error'
-    case 'stopped':
-      return 'warning'
-    default:
-      return 'grey'
+    case 'completed': return 'success'
+    case 'running': return 'info'
+    case 'failed': return 'error'
+    default: return 'grey'
   }
 }
 
 const getDeploymentStatusColor = (status: string) => {
   switch (status) {
-    case 'active':
-      return 'success'
-    case 'pending':
-      return 'warning'
-    case 'failed':
-      return 'error'
-    case 'inactive':
-      return 'grey'
-    default:
-      return 'primary'
+    case 'active': return 'success'
+    case 'inactive': return 'grey'
+    case 'error': return 'error'
+    default: return 'grey'
   }
 }
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+const switchToModelsTab = () => {
+  activeTab.value = 'models'
 }
 
-const showSnackbar = (message: string, color: string = 'success') => {
-  snackbar.value = {
-    show: true,
-    message,
-    color,
-  }
+const refreshModels = () => {
+  loadingModels.value = true
+  setTimeout(() => {
+    loadingModels.value = false
+  }, 1000)
 }
 
-// Initialize data on mount
+const refreshTraining = () => {
+  loadingTraining.value = true
+  setTimeout(() => {
+    loadingTraining.value = false
+  }, 1000)
+}
+
+const refreshDeployments = () => {
+  loadingDeployments.value = true
+  setTimeout(() => {
+    loadingDeployments.value = false
+  }, 1000)
+}
+
+const viewModel = (model: any) => {
+  // TODO: Implement model viewing functionality
+}
+
+const editModel = (model: any) => {
+  // TODO: Implement model editing functionality
+}
+
+const deployModel = (model: any) => {
+  // TODO: Implement model deployment functionality
+}
+
+const viewTraining = (session: any) => {
+  // TODO: Implement training session viewing functionality
+}
+
+const stopTraining = (session: any) => {
+  // TODO: Implement training session stopping functionality
+}
+
+const viewDeployment = (deployment: any) => {
+  // TODO: Implement deployment viewing functionality
+}
+
+const stopDeployment = (deployment: any) => {
+  // TODO: Implement deployment stopping functionality
+}
+
+const startDeployment = (deployment: any) => {
+  // TODO: Implement deployment starting functionality
+}
+
 onMounted(() => {
-  refreshModels()
-  refreshTrainingSessions()
-  refreshDeployments()
+  // Load initial data
 })
-
-// In the script section, add these wrapper methods:
-const navigateToTrain = () => {
-  router.push('/llm/train')
-}
-
-const handleViewModel = (item: any) => {
-  viewModel(item)
-}
-
-const handleDeployModel = (item: any) => {
-  deployModel(item)
-}
-
-const handleDeleteModel = (item: any) => {
-  deleteModel(item)
-}
-
-const handleViewTrainingSession = (item: any) => {
-  viewTrainingSession(item)
-}
-
-const handleStopTraining = (item: any) => {
-  stopTraining(item)
-}
-
-const handleDeleteTrainingSession = (item: any) => {
-  deleteTrainingSession(item)
-}
-
-const handleCopyEndpoint = (url: string) => {
-  copyEndpoint(url)
-}
-
-const handleViewDeployment = (item: any) => {
-  viewDeployment(item)
-}
-
-const handleStopDeployment = (item: any) => {
-  stopDeployment(item)
-}
-
-const handleDeleteDeployment = (item: any) => {
-  deleteDeployment(item)
-}
-
-const closeModelDialog = () => {
-  modelDialog.value = false
-}
-
-const closeSnackbar = () => {
-  snackbar.value.show = false
-}
 </script>
 
 <style scoped>
-.v-data-table {
-  background-color: transparent;
+.quick-actions-header {
+  margin-bottom: 1.5rem;
+}
+
+.quick-actions-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: center;
+}
+
+.action-btn {
+  min-height: 48px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-radius: 12px;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stats-card {
+  transition: transform 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.stats-card:hover {
+  transform: translateY(-4px);
+}
+
+.gap-1 {
+  gap: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .quick-actions-buttons {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-btn {
+    width: 100%;
+  }
+}
+
+/* Ensure all text is black for visibility */
+:deep(.v-card-title) {
+  color: black !important;
+}
+
+:deep(.v-card-text) {
+  color: black !important;
+}
+
+:deep(.text-body-2) {
+  color: black !important;
+}
+
+:deep(.text-caption) {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+:deep(.text-medium-emphasis) {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Ensure tabs are black */
+:deep(.v-tab) {
+  color: black !important;
+}
+
+:deep(.v-tab--selected) {
+  color: black !important;
+}
+
+/* Ensure data table text is black */
+:deep(.v-data-table) {
+  color: black !important;
+}
+
+:deep(.v-data-table th) {
+  color: black !important;
+}
+
+:deep(.v-data-table td) {
+  color: black !important;
+}
+
+:deep(.v-data-table-header) {
+  color: black !important;
+}
+
+/* Ensure chips are visible */
+:deep(.v-chip) {
+  color: black !important;
+}
+
+/* Ensure buttons are visible */
+:deep(.v-btn) {
+  color: black !important;
+}
+
+/* Ensure progress bars are visible */
+:deep(.v-progress-linear) {
+  color: black !important;
+}
+
+/* Ensure icons are visible */
+:deep(.v-icon) {
+  color: inherit !important;
+}
+
+/* Ensure all text elements are black */
+:deep(.font-weight-medium) {
+  color: black !important;
+}
+
+:deep(.text-h4) {
+  color: black !important;
+}
+
+:deep(.text-h6) {
+  color: black !important;
+}
+
+/* Ensure stats cards text is black */
+:deep(.stats-card .v-card-text) {
+  color: black !important;
+}
+
+:deep(.stats-card .text-h4) {
+  color: black !important;
+}
+
+:deep(.stats-card .text-body-2) {
+  color: black !important;
+}
+
+:deep(.stats-card .text-caption) {
+  color: rgba(0, 0, 0, 0.7) !important;
 }
 </style>

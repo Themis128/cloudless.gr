@@ -2,19 +2,27 @@
   <v-alert
     type="info"
     border="start"
-    color="primary"
+    variant="tonal"
     class="mb-4"
   >
-    <strong>Step 6: Deploy</strong><br>
-    Deploy your models to make them available as APIs or endpoints.<br>
-    <ul>
-      <li>Go to <b>Deploy Model</b> or <b>Deployments</b> to deploy your model.</li>
-      <li>Follow the instructions to publish your model.</li>
-      <li>After deployment, you will receive an endpoint URL for integration.</li>
-    </ul>
+    <template #title>
+      <strong>Model Deployment Guide</strong>
+    </template>
+    <div class="mt-2">
+      <p class="mb-2">
+        Deploy your models with the following steps:
+      </p>
+      <ul class="mb-0">
+        <li><strong>Select Model:</strong> Choose the model you want to deploy</li>
+        <li><strong>Deployment Name:</strong> Give your deployment a descriptive name</li>
+        <li><strong>Environment:</strong> Choose deployment environment (dev/staging/prod)</li>
+        <li><strong>Instance Type:</strong> Select the compute resources needed</li>
+        <li><strong>Replicas:</strong> Set the number of model instances</li>
+      </ul>
+    </div>
   </v-alert>
 </template>
 
 <script setup lang="ts">
-// No logic needed for static guide
+// Model deployment guide component
 </script>

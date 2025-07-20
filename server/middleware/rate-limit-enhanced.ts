@@ -22,7 +22,7 @@ const defaultConfig: RateLimitConfig = {
   maxRequests: 100,
   keyPrefix: 'rate_limit:',
   message: 'Too many requests, please try again later.',
-  burstLimit: 10,
+  burstLimit: 50,
   slidingWindow: true,
   userBased: false,
   whitelist: [],
@@ -206,26 +206,35 @@ export const createEnhancedRateLimit = (
 // Export pre-configured rate limiters for common use cases
 export const apiRateLimit = createEnhancedRateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 60, // 60 requests per minute
+  maxRequests: 120, // 120 requests per minute
   keyPrefix: 'api_rate_limit:',
-  burstLimit: 10,
+  burstLimit: 30,
   message: 'API rate limit exceeded. Please try again later.',
 })
 
 export const authRateLimit = createEnhancedRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 5, // 5 login attempts per 15 minutes
+  maxRequests: 10, // 10 login attempts per 15 minutes
   keyPrefix: 'auth_rate_limit:',
-  burstLimit: 2,
+  burstLimit: 5,
   message: 'Too many authentication attempts. Please try again later.',
 })
 
 export const uploadRateLimit = createEnhancedRateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 10, // 10 uploads per minute
+  maxRequests: 20, // 20 uploads per minute
   keyPrefix: 'upload_rate_limit:',
-  burstLimit: 3,
+  burstLimit: 8,
   message: 'Upload rate limit exceeded. Please try again later.',
+})
+
+// Development rate limiter - much more lenient
+export const devRateLimit = createEnhancedRateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 1000, // 1000 requests per minute
+  keyPrefix: 'dev_rate_limit:',
+  burstLimit: 200,
+  message: 'Development rate limit exceeded.',
 })
 
 // Export default enhanced rate limiter

@@ -1,0 +1,188 @@
+# Development-specific .dockerignore for faster builds
+# This file excludes more files than the production .dockerignore
+
+# Dependencies (will be installed in container)
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs (will be generated in container)
+.nuxt
+.output
+dist
+.next
+out
+build
+
+# Environment files (will be mounted)
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Git (large repository)
+.git
+.gitignore
+.gitattributes
+
+# Docker files (not needed in container)
+Dockerfile*
+docker-compose*.yml
+.dockerignore*
+docker/
+
+# Logs (will be mounted)
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory
+coverage
+*.lcov
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Cache directories
+.npm
+.cache
+.parcel-cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+.tmp/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Test files (not needed for development)
+tests/
+test/
+__tests__/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+coverage/
+.nyc_output/
+
+# Documentation (large files)
+README.md
+*.md
+docs/
+documentation/
+
+# Scripts (keep only essential ones)
+scripts/
+!scripts/backup.sh
+!scripts/deploy.sh
+
+# Development tools (not needed in container)
+.eslintrc*
+.prettierrc*
+.prettierignore
+.editorconfig
+.babelrc*
+jest.config.*
+
+# CI/CD (not needed in container)
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+azure-pipelines.yml
+
+# Monitoring and debugging
+.monitoring/
+.debug/
+debug-*.log
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+
+# Local development
+.local/
+local/
+
+# Performance profiling
+*.cpuprofile
+*.heapsnapshot
+
+# Security
+.npmrc
+.yarnrc
+
+# Large directories that slow down builds
+vanta-master/
+vanta-gallery/
+playwright-report/
+uploads/
+
+# Development-specific exclusions
+*.ps1
+*.sh
+!scripts/backup.sh
+!scripts/deploy.sh
+
+# Cache and temporary files
+.cursor/
+*.tmp
+*.temp 

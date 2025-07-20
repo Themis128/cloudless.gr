@@ -7,230 +7,234 @@
       </p>
     </div>
 
-    <div class="content-grid">
-      <div class="pricing-toggle">
-        <span class="toggle-label">Billing</span>
-        <v-switch
-          v-model="isAnnual"
-          :label="isAnnual ? 'Annual (Save 20%)' : 'Monthly'"
-          color="primary"
-          hide-details
-        />
-      </div>
+    <div class="content-container">
+      <div class="pricing-content">
+        <div class="pricing-toggle">
+          <span class="toggle-label">Billing</span>
+          <v-switch
+            v-model="isAnnual"
+            :label="isAnnual ? 'Annual (Save 20%)' : 'Monthly'"
+            color="primary"
+            hide-details
+          />
+        </div>
 
-      <div class="plans-grid">
-        <div
-          v-for="plan in plans"
-          :key="plan.name"
-          class="plan-card"
-          :class="{ popular: plan.popular }"
-        >
-          <div class="plan-header">
-            <h3>{{ plan.name }}</h3>
-            <div class="plan-price">
-              <span class="currency">$</span>
-              <span class="amount">{{
-                isAnnual ? plan.annualPrice : plan.monthlyPrice
-              }}</span>
-              <span class="period">/{{ isAnnual ? 'year' : 'month' }}</span>
-            </div>
-            <p class="plan-description">
-              {{ plan.description }}
-            </p>
-          </div>
-
-          <div class="plan-features">
+        <div class="plans-grid">
+          <div class="plans-grid">
             <div
-              v-for="feature in plan.features"
-              :key="feature"
-              class="feature"
+              v-for="plan in plans"
+              :key="plan.name"
+              class="plan-card"
+              :class="{ popular: plan.popular }"
             >
-              <v-icon size="20" color="success">
-                mdi-check
-              </v-icon>
-              <span>{{ feature }}</span>
-            </div>
-          </div>
-
-          <div class="plan-limits">
-            <div class="limit-item">
-              <span class="limit-label">API Requests</span>
-              <span class="limit-value">{{ plan.limits.apiRequests }}/month</span>
-            </div>
-            <div class="limit-item">
-              <span class="limit-label">Bots</span>
-              <span class="limit-value">{{ plan.limits.bots }}</span>
-            </div>
-            <div class="limit-item">
-              <span class="limit-label">Models</span>
-              <span class="limit-value">{{ plan.limits.models }}</span>
-            </div>
-            <div class="limit-item">
-              <span class="limit-label">Pipelines</span>
-              <span class="limit-value">{{ plan.limits.pipelines }}</span>
-            </div>
-            <div class="limit-item">
-              <span class="limit-label">Team Members</span>
-              <span class="limit-value">{{ plan.limits.teamMembers }}</span>
-            </div>
-          </div>
-
-          <v-btn
-            :color="plan.popular ? 'primary' : 'outlined'"
-            :variant="plan.popular ? 'elevated' : 'outlined'"
-            size="large"
-            class="plan-button"
-            block
-          >
-            {{ plan.buttonText }}
-          </v-btn>
-        </div>
-      </div>
-
-      <div class="enterprise-section">
-        <div class="enterprise-card">
-          <div class="enterprise-content">
-            <h2>Enterprise</h2>
-            <p>
-              Need a custom solution? Our enterprise plan includes dedicated
-              support, custom integrations, and unlimited resources for large
-              organizations.
-            </p>
-            <div class="enterprise-features">
-              <div class="enterprise-feature">
-                <v-icon size="24" color="primary">
-                  mdi-shield-check
-                </v-icon>
-                <span>Custom Security & Compliance</span>
+              <div class="plan-header">
+                <h3>{{ plan.name }}</h3>
+                <div class="plan-price">
+                  <span class="currency">$</span>
+                  <span class="amount">{{
+                    isAnnual ? plan.annualPrice : plan.monthlyPrice
+                  }}</span>
+                  <span class="period">/{{ isAnnual ? 'year' : 'month' }}</span>
+                </div>
+                <p class="plan-description">
+                  {{ plan.description }}
+                </p>
               </div>
-              <div class="enterprise-feature">
-                <v-icon size="24" color="primary">
-                  mdi-headset
-                </v-icon>
-                <span>24/7 Dedicated Support</span>
+
+              <div class="plan-features">
+                <div
+                  v-for="feature in plan.features"
+                  :key="feature"
+                  class="feature"
+                >
+                  <v-icon size="20" color="success">
+                    mdi-check
+                  </v-icon>
+                  <span>{{ feature }}</span>
+                </div>
               </div>
-              <div class="enterprise-feature">
-                <v-icon size="24" color="primary">
-                  mdi-cog
-                </v-icon>
-                <span>Custom Integrations</span>
+
+              <div class="plan-limits">
+                <div class="limit-item">
+                  <span class="limit-label">API Requests</span>
+                  <span class="limit-value">{{ plan.limits.apiRequests }}/month</span>
+                </div>
+                <div class="limit-item">
+                  <span class="limit-label">Bots</span>
+                  <span class="limit-value">{{ plan.limits.bots }}</span>
+                </div>
+                <div class="limit-item">
+                  <span class="limit-label">Models</span>
+                  <span class="limit-value">{{ plan.limits.models }}</span>
+                </div>
+                <div class="limit-item">
+                  <span class="limit-label">Pipelines</span>
+                  <span class="limit-value">{{ plan.limits.pipelines }}</span>
+                </div>
+                <div class="limit-item">
+                  <span class="limit-label">Team Members</span>
+                  <span class="limit-value">{{ plan.limits.teamMembers }}</span>
+                </div>
               </div>
-              <div class="enterprise-feature">
-                <v-icon size="24" color="primary">
-                  mdi-account-group
-                </v-icon>
-                <span>Unlimited Team Members</span>
+
+              <v-btn
+                :color="plan.popular ? 'primary' : 'outlined'"
+                :variant="plan.popular ? 'elevated' : 'outlined'"
+                size="large"
+                class="plan-button"
+                block
+              >
+                {{ plan.buttonText }}
+              </v-btn>
+            </div>
+          </div>
+
+          <div class="enterprise-section">
+            <div class="enterprise-card">
+              <div class="enterprise-content">
+                <h2>Enterprise</h2>
+                <p>
+                  Need a custom solution? Our enterprise plan includes dedicated
+                  support, custom integrations, and unlimited resources for large
+                  organizations.
+                </p>
+                <div class="enterprise-features">
+                  <div class="enterprise-feature">
+                    <v-icon size="24" color="primary">
+                      mdi-shield-check
+                    </v-icon>
+                    <span>Custom Security & Compliance</span>
+                  </div>
+                  <div class="enterprise-feature">
+                    <v-icon size="24" color="primary">
+                      mdi-headset
+                    </v-icon>
+                    <span>24/7 Dedicated Support</span>
+                  </div>
+                  <div class="enterprise-feature">
+                    <v-icon size="24" color="primary">
+                      mdi-cog
+                    </v-icon>
+                    <span>Custom Integrations</span>
+                  </div>
+                  <div class="enterprise-feature">
+                    <v-icon size="24" color="primary">
+                      mdi-account-group
+                    </v-icon>
+                    <span>Unlimited Team Members</span>
+                  </div>
+                </div>
+                <v-btn
+                  color="primary"
+                  variant="elevated"
+                  size="large"
+                  class="enterprise-btn"
+                >
+                  Contact Sales
+                </v-btn>
               </div>
             </div>
-            <v-btn
-              color="primary"
-              variant="elevated"
-              size="large"
-              class="enterprise-btn"
-            >
-              Contact Sales
-            </v-btn>
-          </div>
-        </div>
-      </div>
-
-      <div class="faq-section">
-        <h2>Frequently Asked Questions</h2>
-        <div class="faq-grid">
-          <div class="faq-item">
-            <h3>Can I change plans anytime?</h3>
-            <p>
-              Yes! You can upgrade or downgrade your plan at any time. Changes
-              take effect immediately, and we'll prorate any billing
-              adjustments.
-            </p>
           </div>
 
-          <div class="faq-item">
-            <h3>What happens if I exceed my limits?</h3>
-            <p>
-              We'll notify you when you're approaching your limits. You can
-              either upgrade your plan or purchase additional usage credits to
-              continue without interruption.
-            </p>
-          </div>
+          <div class="faq-section">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-grid">
+              <div class="faq-item">
+                <h3>Can I change plans anytime?</h3>
+                <p>
+                  Yes! You can upgrade or downgrade your plan at any time. Changes
+                  take effect immediately, and we'll prorate any billing
+                  adjustments.
+                </p>
+              </div>
 
-          <div class="faq-item">
-            <h3>Do you offer refunds?</h3>
-            <p>
-              We offer a 30-day money-back guarantee for all paid plans. If
-              you're not satisfied, we'll refund your payment in full.
-            </p>
-          </div>
+              <div class="faq-item">
+                <h3>What happens if I exceed my limits?</h3>
+                <p>
+                  We'll notify you when you're approaching your limits. You can
+                  either upgrade your plan or purchase additional usage credits to
+                  continue without interruption.
+                </p>
+              </div>
 
-          <div class="faq-item">
-            <h3>Is there a free trial?</h3>
-            <p>
-              Yes! All paid plans come with a 14-day free trial. No credit card
-              required to start your trial.
-            </p>
-          </div>
-        </div>
-      </div>
+              <div class="faq-item">
+                <h3>Do you offer refunds?</h3>
+                <p>
+                  We offer a 30-day money-back guarantee for all paid plans. If
+                  you're not satisfied, we'll refund your payment in full.
+                </p>
+              </div>
 
-      <div class="comparison-section">
-        <h2>Plan Comparison</h2>
-        <div class="comparison-table">
-          <div class="table-header">
-            <div class="header-cell">
-              Feature
-            </div>
-            <div class="header-cell">
-              Free
-            </div>
-            <div class="header-cell">
-              Pro
-            </div>
-            <div class="header-cell">
-              Business
+              <div class="faq-item">
+                <h3>Is there a free trial?</h3>
+                <p>
+                  Yes! All paid plans come with a 14-day free trial. No credit card
+                  required to start your trial.
+                </p>
+              </div>
             </div>
           </div>
 
-          <div
-            v-for="feature in comparisonFeatures"
-            :key="feature.name"
-            class="table-row"
-          >
-            <div class="feature-cell">
-              {{ feature.name }}
-            </div>
-            <div class="value-cell">
-              <v-icon v-if="feature.free" size="20" color="success">
-                mdi-check
-              </v-icon>
-              <span v-else-if="typeof feature.free === 'string'">{{
-                feature.free
-              }}</span>
-              <v-icon v-else size="20" color="error">
-                mdi-close
-              </v-icon>
-            </div>
-            <div class="value-cell">
-              <v-icon v-if="feature.pro" size="20" color="success">
-                mdi-check
-              </v-icon>
-              <span v-else-if="typeof feature.pro === 'string'">{{
-                feature.pro
-              }}</span>
-              <v-icon v-else size="20" color="error">
-                mdi-close
-              </v-icon>
-            </div>
-            <div class="value-cell">
-              <v-icon v-if="feature.business" size="20" color="success">
-                mdi-check
-              </v-icon>
-              <span v-else-if="typeof feature.business === 'string'">{{
-                feature.business
-              }}</span>
-              <v-icon v-else size="20" color="error">
-                mdi-close
-              </v-icon>
+          <div class="comparison-section">
+            <h2>Plan Comparison</h2>
+            <div class="comparison-table">
+              <div class="table-header">
+                <div class="header-cell">
+                  Feature
+                </div>
+                <div class="header-cell">
+                  Free
+                </div>
+                <div class="header-cell">
+                  Pro
+                </div>
+                <div class="header-cell">
+                  Business
+                </div>
+              </div>
+
+              <div
+                v-for="feature in comparisonFeatures"
+                :key="feature.name"
+                class="table-row"
+              >
+                <div class="feature-cell">
+                  {{ feature.name }}
+                </div>
+                <div class="value-cell">
+                  <v-icon v-if="feature.free" size="20" color="success">
+                    mdi-check
+                  </v-icon>
+                  <span v-else-if="typeof feature.free === 'string'">{{
+                    feature.free
+                  }}</span>
+                  <v-icon v-else size="20" color="error">
+                    mdi-close
+                  </v-icon>
+                </div>
+                <div class="value-cell">
+                  <v-icon v-if="feature.pro" size="20" color="success">
+                    mdi-check
+                  </v-icon>
+                  <span v-else-if="typeof feature.pro === 'string'">{{
+                    feature.pro
+                  }}</span>
+                  <v-icon v-else size="20" color="error">
+                    mdi-close
+                  </v-icon>
+                </div>
+                <div class="value-cell">
+                  <v-icon v-if="feature.business" size="20" color="success">
+                    mdi-check
+                  </v-icon>
+                  <span v-else-if="typeof feature.business === 'string'">{{
+                    feature.business
+                  }}</span>
+                  <v-icon v-else size="20" color="error">
+                    mdi-close
+                  </v-icon>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -367,7 +371,18 @@ const comparisonFeatures = [
   margin: 0;
 }
 
-.content-grid {
+.content-container {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 3rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.pricing-content {
+  max-width: 1000px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 4rem;

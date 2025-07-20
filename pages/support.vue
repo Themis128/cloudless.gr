@@ -3,524 +3,265 @@
     <div class="page-header">
       <h1>Support Center</h1>
       <p class="subtitle">
-        We're here to help you get the most out of our AI development platform
+        Get help with Cloudless Wizard and find answers to your questions
       </p>
     </div>
 
     <div class="content-container">
       <div class="support-content">
-        <section class="support-section">
-          <h2>🚀 Quick Start Guide</h2>
-
-          <h3>Getting Started</h3>
-          <div class="step-list">
-            <div class="step-item">
-              <div class="step-number">
-                1
-              </div>
-              <div class="step-content">
-                <h4>Create an Account</h4>
-                <p>Sign up for a free account to access all features</p>
-              </div>
-            </div>
-            <div class="step-item">
-              <div class="step-number">
-                2
-              </div>
-              <div class="step-content">
-                <h4>Choose Your Plan</h4>
-                <p>Select the plan that best fits your needs</p>
-              </div>
-            </div>
-            <div class="step-item">
-              <div class="step-number">
-                3
-              </div>
-              <div class="step-content">
-                <h4>Build Your First Bot</h4>
-                <p>
-                  Use our guided bot builder to create your first AI chatbot
-                </p>
-              </div>
-            </div>
-            <div class="step-item">
-              <div class="step-number">
-                4
-              </div>
-              <div class="step-content">
-                <h4>Train a Model</h4>
-                <p>Upload your data and start training custom AI models</p>
-              </div>
-            </div>
-            <div class="step-item">
-              <div class="step-number">
-                5
-              </div>
-              <div class="step-content">
-                <h4>Deploy Your Pipeline</h4>
-                <p>Create and execute AI data processing workflows</p>
-              </div>
-            </div>
+        <div class="help-section">
+          <h2>How can we help you?</h2>
+          <div class="search-box">
+            <v-text-field
+              v-model="searchQuery"
+              placeholder="Search for help articles, tutorials, or contact support..."
+              variant="outlined"
+              prepend-inner-icon="mdi-magnify"
+              class="search-input"
+            />
           </div>
+        </div>
 
-          <h3>Essential Resources</h3>
-          <div class="resource-grid">
-            <div class="resource-card">
-              <v-icon size="32" color="primary">
-                mdi-book-open-variant
-              </v-icon>
-              <h4>Documentation</h4>
-              <p>Comprehensive guides and API references</p>
-              <v-btn color="primary" variant="outlined" size="small">
-                View Docs
+        <div class="quick-help-section">
+          <h2>Quick Help</h2>
+          <div class="help-grid">
+            <div class="help-card">
+              <div class="help-icon">
+                <v-icon size="48" color="primary">
+                  mdi-book-open-variant
+                </v-icon>
+              </div>
+              <h3>Documentation</h3>
+              <p>Comprehensive guides and API documentation</p>
+              <v-btn color="primary" variant="outlined" class="help-btn">
+                Browse Docs
               </v-btn>
             </div>
-            <div class="resource-card">
-              <v-icon size="32" color="primary">
-                mdi-api
-              </v-icon>
-              <h4>API Reference</h4>
-              <p>Detailed API documentation and examples</p>
-              <v-btn color="primary" variant="outlined" size="small">
-                API Docs
-              </v-btn>
-            </div>
-            <div class="resource-card">
-              <v-icon size="32" color="primary">
-                mdi-video
-              </v-icon>
-              <h4>Video Tutorials</h4>
-              <p>Step-by-step video guides</p>
-              <v-btn color="primary" variant="outlined" size="small">
+
+            <div class="help-card">
+              <div class="help-icon">
+                <v-icon size="48" color="success">
+                  mdi-video
+                </v-icon>
+              </div>
+              <h3>Video Tutorials</h3>
+              <p>Step-by-step video guides for common tasks</p>
+              <v-btn color="success" variant="outlined" class="help-btn">
                 Watch Videos
               </v-btn>
             </div>
-            <div class="resource-card">
-              <v-icon size="32" color="primary">
-                mdi-forum
-              </v-icon>
-              <h4>Community Forum</h4>
-              <p>Connect with other developers</p>
-              <v-btn color="primary" variant="outlined" size="small">
+
+            <div class="help-card">
+              <div class="help-icon">
+                <v-icon size="48" color="warning">
+                  mdi-forum
+                </v-icon>
+              </div>
+              <h3>Community Forum</h3>
+              <p>Connect with other developers and share solutions</p>
+              <v-btn color="warning" variant="outlined" class="help-btn">
                 Join Forum
               </v-btn>
             </div>
+
+            <div class="help-card">
+              <div class="help-icon">
+                <v-icon size="48" color="info">
+                  mdi-headset
+                </v-icon>
+              </div>
+              <h3>Live Chat</h3>
+              <p>Get instant help from our support team</p>
+              <v-btn color="info" variant="outlined" class="help-btn">
+                Start Chat
+              </v-btn>
+            </div>
           </div>
-        </section>
+        </div>
 
-        <section class="support-section">
-          <h2>📞 Contact Support</h2>
+        <div class="faq-section">
+          <h2>Frequently Asked Questions</h2>
+          <div class="faq-grid">
+            <div v-for="faq in faqs" :key="faq.id" class="faq-item">
+              <v-expansion-panels>
+                <v-expansion-panel>
+                  <v-expansion-panel-title>
+                    {{ faq.question }}
+                  </v-expansion-panel-title>
+                  <v-expansion-panel-text>
+                    <p>{{ faq.answer }}</p>
+                  </v-expansion-panel-text>
+                </v-expansion-panel>
+              </v-expansion-panels>
+            </div>
+          </div>
+        </div>
 
+        <div class="contact-section">
+          <h2>Still need help?</h2>
           <div class="contact-grid">
             <div class="contact-card">
-              <v-icon size="48" color="primary">
-                mdi-email
-              </v-icon>
+              <div class="contact-icon">
+                <v-icon size="48" color="primary">
+                  mdi-email
+                </v-icon>
+              </div>
               <h3>Email Support</h3>
-              <p>Get help via email with detailed responses</p>
-              <div class="contact-details">
-                <p><strong>General Support:</strong> support@cloudless.gr</p>
-                <p><strong>Technical Issues:</strong> tech@cloudless.gr</p>
-                <p><strong>Billing Questions:</strong> billing@cloudless.gr</p>
-              </div>
-              <div class="response-times">
-                <p><strong>Response Times:</strong></p>
-                <ul>
-                  <li>Free Plan: 48-72 hours</li>
-                  <li>Pro Plan: 24 hours</li>
-                  <li>Business Plan: 4-8 hours</li>
-                  <li>Enterprise: 2-4 hours</li>
-                </ul>
-              </div>
-            </div>
-
-            <div class="contact-card">
-              <v-icon size="48" color="primary">
-                mdi-chat
-              </v-icon>
-              <h3>Live Chat</h3>
-              <p>Real-time assistance for immediate help</p>
-              <div class="availability">
-                <p><strong>Available for:</strong></p>
-                <ul>
-                  <li>Pro Plan and above</li>
-                  <li>Business hours (9 AM - 6 PM EST)</li>
-                  <li>Weekdays only</li>
-                </ul>
-              </div>
-              <v-btn
-                color="primary"
-                variant="elevated"
-                size="large"
-                class="chat-btn"
-              >
-                Start Live Chat
+              <p>Send us a detailed message and we'll get back to you within 24 hours</p>
+              <v-btn color="primary" variant="elevated" class="contact-btn">
+                Send Email
               </v-btn>
             </div>
 
             <div class="contact-card">
-              <v-icon size="48" color="primary">
-                mdi-phone
-              </v-icon>
+              <div class="contact-icon">
+                <v-icon size="48" color="success">
+                  mdi-phone
+                </v-icon>
+              </div>
               <h3>Phone Support</h3>
-              <p>Direct phone support for urgent issues</p>
-              <div class="contact-details">
-                <p><strong>Phone:</strong> +1 (555) 123-4567</p>
-                <p><strong>Available:</strong> Business Plan and Enterprise</p>
+              <p>Call us during business hours for immediate assistance</p>
+              <v-btn color="success" variant="elevated" class="contact-btn">
+                Call Now
+              </v-btn>
+            </div>
+
+            <div class="contact-card">
+              <div class="contact-icon">
+                <v-icon size="48" color="warning">
+                  mdi-calendar
+                </v-icon>
               </div>
-              <div class="availability">
-                <p><strong>Hours:</strong></p>
-                <ul>
-                  <li>Monday - Friday: 9 AM - 6 PM EST</li>
-                  <li>Saturday: 10 AM - 2 PM EST</li>
-                  <li>Sunday: Closed</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="support-section">
-          <h2>🔧 Technical Support</h2>
-
-          <h3>Common Issues & Solutions</h3>
-          <div class="faq-grid">
-            <div class="faq-item">
-              <h4>Authentication Issues</h4>
-              <p>
-                <strong>Problem:</strong> Unable to log in or access account
-              </p>
-              <p><strong>Solutions:</strong></p>
-              <ul>
-                <li>Clear browser cookies and cache</li>
-                <li>Reset your password</li>
-                <li>Check if your account is active</li>
-                <li>Contact support if issues persist</li>
-              </ul>
-            </div>
-
-            <div class="faq-item">
-              <h4>Bot Creation Problems</h4>
-              <p>
-                <strong>Problem:</strong> Errors when creating or deploying bots
-              </p>
-              <p><strong>Solutions:</strong></p>
-              <ul>
-                <li>Check your plan limits</li>
-                <li>Verify model configurations</li>
-                <li>Review error logs in debug console</li>
-                <li>Ensure proper API credentials</li>
-              </ul>
-            </div>
-
-            <div class="faq-item">
-              <h4>Model Training Issues</h4>
-              <p>
-                <strong>Problem:</strong> Training failures or poor performance
-              </p>
-              <p><strong>Solutions:</strong></p>
-              <ul>
-                <li>Check data quality and format</li>
-                <li>Verify training parameters</li>
-                <li>Monitor resource usage</li>
-                <li>Review training logs</li>
-              </ul>
-            </div>
-
-            <div class="faq-item">
-              <h4>Pipeline Execution Errors</h4>
-              <p>
-                <strong>Problem:</strong> Pipeline failures or unexpected
-                results
-              </p>
-              <p><strong>Solutions:</strong></p>
-              <ul>
-                <li>Check input data format</li>
-                <li>Verify pipeline configuration</li>
-                <li>Review execution logs</li>
-                <li>Test with sample data</li>
-              </ul>
-            </div>
-
-            <div class="faq-item">
-              <h4>API Rate Limits</h4>
-              <p><strong>Problem:</strong> Hitting API request limits</p>
-              <p><strong>Solutions:</strong></p>
-              <ul>
-                <li>Upgrade your plan for higher limits</li>
-                <li>Implement request caching</li>
-                <li>Optimize API usage patterns</li>
-                <li>Contact support for limit increases</li>
-              </ul>
-            </div>
-
-            <div class="faq-item">
-              <h4>Performance Issues</h4>
-              <p><strong>Problem:</strong> Slow response times or timeouts</p>
-              <p><strong>Solutions:</strong></p>
-              <ul>
-                <li>Check your internet connection</li>
-                <li>Clear browser cache</li>
-                <li>Try different browsers</li>
-                <li>Contact support for investigation</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        <section class="support-section">
-          <h2>📚 Documentation & Resources</h2>
-
-          <div class="docs-grid">
-            <div class="doc-card">
-              <v-icon size="32" color="primary">
-                mdi-file-document
-              </v-icon>
-              <h4>Getting Started Guide</h4>
-              <p>Complete beginner's guide to Cloudless.gr</p>
-              <v-btn color="primary" variant="outlined" size="small">
-                Read Guide
-              </v-btn>
-            </div>
-
-            <div class="doc-card">
-              <v-icon size="32" color="primary">
-                mdi-code-braces
-              </v-icon>
-              <h4>API Documentation</h4>
-              <p>Comprehensive API reference and examples</p>
-              <v-btn color="primary" variant="outlined" size="small">
-                View API Docs
-              </v-btn>
-            </div>
-
-            <div class="doc-card">
-              <v-icon size="32" color="primary">
-                mdi-lightbulb
-              </v-icon>
-              <h4>Best Practices</h4>
-              <p>Tips and best practices for optimal results</p>
-              <v-btn color="primary" variant="outlined" size="small">
-                Learn More
-              </v-btn>
-            </div>
-
-            <div class="doc-card">
-              <v-icon size="32" color="primary">
-                mdi-tools
-              </v-icon>
-              <h4>Developer Tools</h4>
-              <p>Debug and monitoring tools documentation</p>
-              <v-btn color="primary" variant="outlined" size="small">
-                Explore Tools
+              <h3>Schedule a Call</h3>
+              <p>Book a 30-minute consultation with our technical team</p>
+              <v-btn color="warning" variant="elevated" class="contact-btn">
+                Book Call
               </v-btn>
             </div>
           </div>
-        </section>
+        </div>
 
-        <section class="support-section">
-          <h2>🎓 Training & Education</h2>
-
-          <div class="training-grid">
-            <div class="training-card">
-              <v-icon size="32" color="primary">
-                mdi-school
-              </v-icon>
-              <h4>Online Courses</h4>
-              <p>Structured learning paths for different skill levels</p>
-              <v-btn color="primary" variant="outlined" size="small">
-                Browse Courses
-              </v-btn>
+        <div class="status-section">
+          <h2>System Status</h2>
+          <div class="status-grid">
+            <div class="status-card">
+              <div class="status-header">
+                <h3>Platform Status</h3>
+                <v-chip color="success" size="small">
+                  All Systems Operational
+                </v-chip>
+              </div>
+              <p>All services are running normally</p>
+              <div class="status-details">
+                <div class="status-item">
+                  <span>API Services</span>
+                  <v-icon color="success" size="16">
+                    mdi-check-circle
+                  </v-icon>
+                </div>
+                <div class="status-item">
+                  <span>Model Training</span>
+                  <v-icon color="success" size="16">
+                    mdi-check-circle
+                  </v-icon>
+                </div>
+                <div class="status-item">
+                  <span>Deployment</span>
+                  <v-icon color="success" size="16">
+                    mdi-check-circle
+                  </v-icon>
+                </div>
+              </div>
             </div>
 
-            <div class="training-card">
-              <v-icon size="32" color="primary">
-                mdi-webinar
-              </v-icon>
-              <h4>Webinars</h4>
-              <p>Live training sessions and Q&A</p>
-              <v-btn color="primary" variant="outlined" size="small">
-                Register
-              </v-btn>
-            </div>
-
-            <div class="training-card">
-              <v-icon size="32" color="primary">
-                mdi-certificate
-              </v-icon>
-              <h4>Certification</h4>
-              <p>Get certified in Cloudless.gr development</p>
-              <v-btn color="primary" variant="outlined" size="small">
-                Get Certified
-              </v-btn>
-            </div>
-
-            <div class="training-card">
-              <v-icon size="32" color="primary">
-                mdi-account-group
-              </v-icon>
-              <h4>Community</h4>
-              <p>Connect with other developers and experts</p>
-              <v-btn color="primary" variant="outlined" size="small">
-                Join Community
-              </v-btn>
+            <div class="status-card">
+              <div class="status-header">
+                <h3>Recent Updates</h3>
+                <v-chip color="info" size="small">
+                  Latest
+                </v-chip>
+              </div>
+              <div class="updates-list">
+                <div class="update-item">
+                  <div class="update-time">
+                    2 hours ago
+                  </div>
+                  <div class="update-text">
+                    Enhanced pipeline builder released
+                  </div>
+                </div>
+                <div class="update-item">
+                  <div class="update-time">
+                    1 day ago
+                  </div>
+                  <div class="update-text">
+                    Performance improvements deployed
+                  </div>
+                </div>
+                <div class="update-item">
+                  <div class="update-time">
+                    3 days ago
+                  </div>
+                  <div class="update-text">
+                    New AI models available
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </section>
-
-        <section class="support-section">
-          <h2>🤝 Community Support</h2>
-
-          <div class="community-grid">
-            <div class="community-card">
-              <v-icon size="48" color="primary">
-                mdi-forum
-              </v-icon>
-              <h3>Community Forum</h3>
-              <p>
-                Connect with other developers, share solutions, and get help
-              </p>
-              <div class="stats">
-                <div class="stat">
-                  <span class="stat-number">5,000+</span>
-                  <span class="stat-label">Members</span>
-                </div>
-                <div class="stat">
-                  <span class="stat-number">10,000+</span>
-                  <span class="stat-label">Posts</span>
-                </div>
-              </div>
-              <v-btn color="primary" variant="outlined">
-                Join Forum
-              </v-btn>
-            </div>
-
-            <div class="community-card">
-              <v-icon size="48" color="primary">
-                mdi-github
-              </v-icon>
-              <h3>GitHub Community</h3>
-              <p>Open source projects, examples, and contributions</p>
-              <div class="stats">
-                <div class="stat">
-                  <span class="stat-number">500+</span>
-                  <span class="stat-label">Repositories</span>
-                </div>
-                <div class="stat">
-                  <span class="stat-number">2,000+</span>
-                  <span class="stat-label">Stars</span>
-                </div>
-              </div>
-              <v-btn color="primary" variant="outlined">
-                Visit GitHub
-              </v-btn>
-            </div>
-
-            <div class="community-card">
-              <v-icon size="48" color="primary">
-                mdi-discord
-              </v-icon>
-              <h3>Discord Server</h3>
-              <p>Real-time chat with developers and support team</p>
-              <div class="stats">
-                <div class="stat">
-                  <span class="stat-number">3,000+</span>
-                  <span class="stat-label">Members</span>
-                </div>
-                <div class="stat">
-                  <span class="stat-number">24/7</span>
-                  <span class="stat-label">Active</span>
-                </div>
-              </div>
-              <v-btn color="primary" variant="outlined">
-                Join Discord
-              </v-btn>
-            </div>
-          </div>
-        </section>
-
-        <section class="support-section">
-          <h2>📋 Support Request</h2>
-
-          <div class="request-form">
-            <p>
-              Can't find what you're looking for? Submit a support request and
-              we'll get back to you as soon as possible.
-            </p>
-
-            <div class="form-grid">
-              <div class="form-field">
-                <label>Name *</label>
-                <v-text-field variant="outlined" placeholder="Your full name" />
-              </div>
-
-              <div class="form-field">
-                <label>Email *</label>
-                <v-text-field
-                  variant="outlined"
-                  placeholder="your.email@example.com"
-                />
-              </div>
-
-              <div class="form-field">
-                <label>Plan</label>
-                <v-select
-                  variant="outlined"
-                  :items="['Free', 'Pro', 'Business', 'Enterprise']"
-                  placeholder="Select your plan"
-                />
-              </div>
-
-              <div class="form-field">
-                <label>Priority</label>
-                <v-select
-                  variant="outlined"
-                  :items="['Low', 'Medium', 'High', 'Critical']"
-                  placeholder="Select priority"
-                />
-              </div>
-
-              <div class="form-field full-width">
-                <label>Subject *</label>
-                <v-text-field
-                  variant="outlined"
-                  placeholder="Brief description of your issue"
-                />
-              </div>
-
-              <div class="form-field full-width">
-                <label>Description *</label>
-                <v-textarea
-                  variant="outlined"
-                  rows="5"
-                  placeholder="Please provide detailed information about your issue, including steps to reproduce, error messages, and any relevant screenshots."
-                />
-              </div>
-
-              <div class="form-field full-width">
-                <label>Attachments</label>
-                <v-file-input
-                  variant="outlined"
-                  multiple
-                  placeholder="Upload screenshots, logs, or other relevant files"
-                />
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <v-btn color="primary" variant="elevated" size="large">
-                Submit Support Request
-              </v-btn>
-            </div>
-          </div>
-        </section>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// No additional script needed for this static page
+import { ref } from 'vue';
+
+const searchQuery = ref('')
+
+const faqs = ref([
+  {
+    id: 1,
+    question: 'How do I get started with Cloudless Wizard?',
+    answer: 'Getting started is easy! Simply sign up for an account, choose a plan that fits your needs, and follow our quick setup guide. You can start building AI models and deploying applications within minutes.'
+  },
+  {
+    id: 2,
+    question: 'What programming languages are supported?',
+    answer: 'Cloudless Wizard supports multiple programming languages including Python, JavaScript, TypeScript, and more. Our platform is designed to be language-agnostic, allowing you to work with your preferred technology stack.'
+  },
+  {
+    id: 3,
+    question: 'How much does Cloudless Wizard cost?',
+    answer: 'We offer flexible pricing plans starting from $29/month for individual developers. Enterprise plans are available for larger teams and organizations. All plans include access to our core features and support.'
+  },
+  {
+    id: 4,
+    question: 'Can I deploy my own models?',
+    answer: 'Yes! You can deploy custom models trained on your own data. Our platform supports various model formats and provides tools for model optimization and deployment to production environments.'
+  },
+  {
+    id: 5,
+    question: 'Is my data secure?',
+    answer: 'Security is our top priority. We use industry-standard encryption, secure data centers, and follow best practices for data protection. Your data is never shared with third parties without your explicit consent.'
+  },
+  {
+    id: 6,
+    question: 'What kind of support do you offer?',
+    answer: 'We provide comprehensive support including documentation, video tutorials, community forums, email support, and phone support for enterprise customers. Our team is available to help you succeed.'
+  },
+  {
+    id: 7,
+    question: 'Can I integrate with existing systems?',
+    answer: 'Absolutely! Cloudless Wizard provides APIs and SDKs for easy integration with your existing systems and workflows. We support popular frameworks and cloud platforms.'
+  },
+  {
+    id: 8,
+    question: 'How do I scale my applications?',
+    answer: 'Our platform automatically handles scaling based on your application needs. You can configure auto-scaling policies and monitor performance through our dashboard.'
+  }
+])
 </script>
 
 <style scoped>
@@ -565,378 +306,277 @@
   margin: 0 auto;
 }
 
-.support-section {
+.help-section {
   margin-bottom: 4rem;
 }
 
-.support-section:last-child {
-  margin-bottom: 0;
-}
-
-.support-section h2 {
-  font-size: 1.8rem;
+.help-section h2 {
+  font-size: 2rem;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.9);
   margin-bottom: 2rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+  text-align: center;
 }
 
-.support-section h3 {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.8);
-  margin: 2rem 0 1rem 0;
+.search-box {
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-.support-section h4 {
+.search-input {
   font-size: 1.1rem;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.8);
-  margin-bottom: 0.5rem;
 }
 
-.step-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+.quick-help-section {
+  margin-bottom: 4rem;
+}
+
+.quick-help-section h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
   margin-bottom: 2rem;
+  text-align: center;
 }
 
-.step-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-}
-
-.step-number {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.step-content h4 {
-  margin-bottom: 0.5rem;
-}
-
-.step-content p {
-  color: rgba(0, 0, 0, 0.7);
-  margin: 0;
-}
-
-.resource-grid {
+.help-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.resource-card {
-  background: rgba(102, 126, 234, 0.05);
-  border: 1px solid rgba(102, 126, 234, 0.1);
-  border-radius: 12px;
-  padding: 1.5rem;
-  text-align: center;
-  transition: transform 0.3s ease;
-}
-
-.resource-card:hover {
-  transform: translateY(-2px);
-}
-
-.resource-card h4 {
-  margin: 1rem 0 0.5rem 0;
-}
-
-.resource-card p {
-  color: rgba(0, 0, 0, 0.7);
-  margin-bottom: 1rem;
-}
-
-.contact-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
-  margin-bottom: 2rem;
 }
 
-.contact-card {
+.help-card {
   background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(102, 126, 234, 0.1);
   border-radius: 16px;
   padding: 2rem;
   text-align: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.contact-card h3 {
-  margin: 1rem 0;
+.help-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
-.contact-card p {
-  color: rgba(0, 0, 0, 0.7);
-  margin-bottom: 1.5rem;
+.help-icon {
+  margin-bottom: 1rem;
 }
 
-.contact-details {
-  text-align: left;
-  margin-bottom: 1.5rem;
-}
-
-.contact-details p {
+.help-card h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
   margin-bottom: 0.5rem;
 }
 
-.response-times,
-.availability {
-  text-align: left;
+.help-card p {
+  color: rgba(0, 0, 0, 0.7);
+  line-height: 1.5;
   margin-bottom: 1.5rem;
 }
 
-.response-times ul,
-.availability ul {
-  margin-top: 0.5rem;
-  padding-left: 1.5rem;
+.help-btn {
+  width: 100%;
 }
 
-.response-times li,
-.availability li {
-  margin-bottom: 0.25rem;
-  color: rgba(0, 0, 0, 0.7);
+.faq-section {
+  margin-bottom: 4rem;
 }
 
-.chat-btn {
-  margin-top: 1rem;
+.faq-section h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
+  margin-bottom: 2rem;
+  text-align: center;
 }
 
 .faq-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  gap: 1rem;
 }
 
 .faq-item {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(102, 126, 234, 0.1);
   border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
-.faq-item h4 {
-  color: #667eea;
-  margin-bottom: 1rem;
+.contact-section {
+  margin-bottom: 4rem;
 }
 
-.faq-item p {
-  color: rgba(0, 0, 0, 0.7);
-  margin-bottom: 0.5rem;
-}
-
-.faq-item ul {
-  margin-top: 0.5rem;
-  padding-left: 1.5rem;
-}
-
-.faq-item li {
-  margin-bottom: 0.25rem;
-  color: rgba(0, 0, 0, 0.7);
-}
-
-.docs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
+.contact-section h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
   margin-bottom: 2rem;
-}
-
-.doc-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(102, 126, 234, 0.1);
-  border-radius: 12px;
-  padding: 1.5rem;
   text-align: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.doc-card h4 {
-  color: #667eea;
-  margin-bottom: 1rem;
-}
-
-.doc-card p {
-  color: rgba(0, 0, 0, 0.7);
-  margin-bottom: 1.5rem;
-}
-
-.training-grid {
+.contact-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
-  margin-bottom: 2rem;
 }
 
-.training-card {
+.contact-card {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(102, 126, 234, 0.1);
   border-radius: 16px;
   padding: 2rem;
   text-align: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.training-card h3 {
-  margin: 1rem 0;
+.contact-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
-.training-card p {
-  color: rgba(0, 0, 0, 0.7);
-  margin-bottom: 1.5rem;
+.contact-icon {
+  margin-bottom: 1rem;
 }
 
-.training-card ul {
-  text-align: left;
-  margin-bottom: 1.5rem;
-  padding-left: 1.5rem;
-}
-
-.training-card li {
+.contact-card h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
   margin-bottom: 0.5rem;
-  color: rgba(0, 0, 0, 0.7);
 }
 
-.community-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
+.contact-card p {
+  color: rgba(0, 0, 0, 0.7);
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.contact-btn {
+  width: 100%;
+}
+
+.status-section {
   margin-bottom: 2rem;
 }
 
-.community-card {
+.status-section h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+}
+
+.status-card {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(102, 126, 234, 0.1);
   border-radius: 16px;
   padding: 2rem;
-  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.status-card:hover {
+  transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-.community-card h3 {
-  margin: 1rem 0;
-}
-
-.community-card p {
-  color: rgba(0, 0, 0, 0.7);
-  margin-bottom: 1.5rem;
-}
-
-.stats {
+.status-header {
   display: flex;
-  justify-content: center;
-  gap: 2rem;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.status-header h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
+  margin: 0;
+}
+
+.status-card p {
+  color: rgba(0, 0, 0, 0.7);
   margin-bottom: 1.5rem;
 }
 
-.stat {
-  text-align: center;
-}
-
-.stat-number {
-  display: block;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #667eea;
-}
-
-.stat-label {
-  font-size: 0.9rem;
-  color: rgba(0, 0, 0, 0.6);
-}
-
-.request-form {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(102, 126, 234, 0.1);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.request-form > p {
-  color: rgba(0, 0, 0, 0.7);
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.form-field {
+.status-details {
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
 }
 
-.form-field.full-width {
-  grid-column: 1 / -1;
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.form-field label {
-  font-weight: 600;
+.status-item:last-child {
+  border-bottom: none;
+}
+
+.status-item span {
   color: rgba(0, 0, 0, 0.8);
-  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
 }
 
-.form-actions {
-  text-align: center;
+.updates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.update-item {
+  padding: 1rem;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid #667eea;
+}
+
+.update-time {
+  font-size: 0.8rem;
+  color: rgba(0, 0, 0, 0.6);
+  margin-bottom: 0.25rem;
+}
+
+.update-text {
+  color: rgba(0, 0, 0, 0.8);
+  font-size: 0.9rem;
 }
 
 @media (max-width: 768px) {
   .support-page {
     padding: 1rem;
   }
-
-  .page-header h1 {
-    font-size: 2rem;
-  }
-
+  
   .content-container {
     padding: 2rem;
   }
-
-  .support-section h2 {
-    font-size: 1.5rem;
-  }
-
-  .support-section h3 {
-    font-size: 1.2rem;
-  }
-
-  .contact-grid,
-  .faq-grid,
-  .docs-grid,
-  .training-grid,
-  .community-grid {
+  
+  .help-grid {
     grid-template-columns: 1fr;
   }
-
-  .form-grid {
+  
+  .contact-grid {
     grid-template-columns: 1fr;
   }
-
-  .stats {
-    flex-direction: column;
-    gap: 1rem;
+  
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .page-header h1 {
+    font-size: 2rem;
   }
 }
-</style>
+</style> 

@@ -1,176 +1,213 @@
 <template>
-  <v-container>
-    <v-row>
-      <v-col cols="12">
-        <v-btn color="primary" to="/debug" class="mb-4">
-          <v-icon left>
-            mdi-arrow-left
-          </v-icon>
-          Back to Debug Home
+  <div>
+    <v-container>
+      <!-- Back to Debug Button -->
+      <div class="mb-4">
+        <v-btn
+          color="secondary"
+          variant="outlined"
+          prepend-icon="mdi-arrow-left"
+          @click="goBackToDebug"
+        >
+          Back to Debug
         </v-btn>
-      </v-col>
-    </v-row>
-    <v-row>
-      <v-col cols="12" md="7">
-        <v-card>
-          <v-card-title class="text-h5">
-            Test Model Inference
-          </v-card-title>
-          <v-card-text>
-            <v-text-field
-              v-model="input"
-              label="Input for inference"
-              append-inner-icon="mdi-play"
-              @keyup.enter="runInference"
-              @click:append-inner="runInference"
-            />
-            <DebugConsole :output="logs" title="Model Output" />
-            <v-divider class="my-4" />
-            <v-row>
-              <v-col cols="12" md="6">
-                <v-card outlined>
-                  <v-card-title class="text-h6">
-                    Inference Metrics
-                  </v-card-title>
-                  <v-card-text>
-                    <v-list dense>
-                      <v-list-item>
-                        <v-list-item-title>Total Inferences:</v-list-item-title>
-                        <v-list-item-subtitle>
-                          {{
-                            inferenceTimes.length
-                          }}
-                        </v-list-item-subtitle>
-                      </v-list-item>
-                      <v-list-item>
-                        <v-list-item-title>
-                          Last Inference Time:
-                        </v-list-item-title>
-                        <v-list-item-subtitle>
-                          {{ lastInferenceTime }} ms
-                        </v-list-item-subtitle>
-                      </v-list-item>
-                    </v-list>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              <v-col cols="12" md="6">
-                <v-card outlined>
-                  <v-card-title class="text-h6">
-                    Inference Times (ms)
-                  </v-card-title>
-                  <v-card-text>
-                    <VChart
-                      :options="chartOptions"
-                      autoresize
-                      style="height: 200px"
-                    />
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="5">
-        <v-card>
-          <v-card-title class="text-h6">
-            Model Details
-          </v-card-title>
-          <v-card-text>
-            <DebugInspector :data="modelInfo" />
-          </v-card-text>
-        </v-card>
-        <v-card class="mt-4">
-          <v-card-title class="text-h6">
-            Diagnostics
-          </v-card-title>
-          <v-card-text>
-            <v-list dense>
-              <v-list-item>
-                <v-list-item-title>Status:</v-list-item-title>
-                <v-list-item-subtitle>
-                  {{
-                    diagnosticStatus
-                  }}
-                </v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Last Updated:</v-list-item-title>
-                <v-list-item-subtitle>{{ lastUpdated }}</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+      </div>
+      
+      <h1 class="mb-4">
+        Model Debug
+      </h1>
+      <v-form @submit.prevent="testModel">
+        <v-text-field
+          v-model="form.modelId"
+          label="Model ID"
+          class="mb-3"
+          required
+        />
+        <v-textarea
+          v-model="form.input"
+          label="Input for inference"
+          class="mb-3"
+          rows="4"
+          required
+        />
+        <v-select
+          v-model="form.modelType"
+          :items="modelTypes"
+          label="Model Type"
+          class="mb-3"
+          required
+        />
+        <v-text-field
+          v-model.number="form.maxTokens"
+          label="Max Tokens"
+          type="number"
+          min="1"
+          max="4096"
+          class="mb-3"
+          required
+        />
+        <v-btn type="submit" color="primary" :loading="loading">
+          Test Model
+        </v-btn>
+        <v-btn text class="ml-2" @click="resetForm">
+          Reset
+        </v-btn>
+        <v-btn
+          color="secondary"
+          text
+          class="ml-2"
+          @click="loadModelInfo"
+        >
+          Load Model Info
+        </v-btn>
+      </v-form>
+      <v-alert v-if="success" type="success" class="mt-4">
+        Model test completed successfully!
+      </v-alert>
+      <v-alert v-if="error" type="error" class="mt-4">
+        {{ error }}
+      </v-alert>
+      <v-card v-if="modelInfo" class="mt-4">
+        <v-card-title>Model Information</v-card-title>
+        <v-card-text>
+          <v-list>
+            <v-list-item>
+              <v-list-item-title>Model ID</v-list-item-title>
+              <v-list-item-subtitle>{{ modelInfo.id }}</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title>Status</v-list-item-title>
+              <v-list-item-subtitle>{{ modelInfo.status }}</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title>Version</v-list-item-title>
+              <v-list-item-subtitle>{{ modelInfo.version }}</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title>Last Updated</v-list-item-title>
+              <v-list-item-subtitle>{{ modelInfo.lastUpdated }}</v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+      </v-card>
+      <v-card v-if="testResults" class="mt-4">
+        <v-card-title>Test Results</v-card-title>
+        <v-card-text>
+          <v-list>
+            <v-list-item>
+              <v-list-item-title>Output</v-list-item-title>
+              <v-list-item-subtitle>{{ testResults.output }}</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title>Inference Time</v-list-item-title>
+              <v-list-item-subtitle>{{ testResults.inferenceTime }}ms</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title>Tokens Used</v-list-item-title>
+              <v-list-item-subtitle>{{ testResults.tokensUsed }}</v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </v-container>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import VChart from 'vue-echarts'
-import DebugConsole from '~/components/debug/DebugConsole.vue'
-import DebugInspector from '~/components/debug/DebugInspector.vue'
-import { useDebugTools } from '~/composables/useDebugTools'
+import { ref } from 'vue'
+import { useSupabase } from '~/composables/supabase'
 
-const { logs } = useDebugTools()
+const supabase = useSupabase()
+const loading = ref(false)
+const success = ref(false)
+const error = ref<string | null>(null)
+const modelInfo = ref<any>(null)
+const testResults = ref<any>(null)
 
-const input = ref('')
-const modelInfo = ref({
-  version: 'v1.2',
-  status: 'ready',
-  params: { layers: 12, size: '1.3B' },
+const modelTypes = [
+  'gpt-4',
+  'gpt-3.5-turbo',
+  'claude-3-opus',
+  'claude-3-sonnet',
+  'claude-3-haiku',
+  'custom'
+]
+
+const form = ref({
+  modelId: '',
+  input: '',
+  modelType: '',
+  maxTokens: 100,
 })
-const inferenceTimes = ref<number[]>([])
-const lastUpdated = computed(() => new Date().toLocaleString())
-const diagnosticStatus = computed(() => modelInfo.value.status)
 
-onMounted(() => {
-  modelInfo.value.status = 'warming up...'
-  setTimeout(() => {
-    modelInfo.value.status = 'ready'
-  }, 1000)
-})
-
-const runInference = () => {
-  const start = Date.now()
-  if (input.value) {
-    logs.value.push(`Echo: ${input.value}`)
+const resetForm = () => {
+  form.value = {
+    modelId: '',
+    input: '',
+    modelType: '',
+    maxTokens: 100,
   }
-  setTimeout(
-    () => {
-      const elapsed = Date.now() - start
-      inferenceTimes.value.push(elapsed)
-    },
-    100 + Math.random() * 200
-  )
-  input.value = ''
+  success.value = false
+  error.value = null
+  testResults.value = null
 }
 
-const lastInferenceTime = computed(() => {
-  if (inferenceTimes.value.length === 0) return 'N/A'
-  return inferenceTimes.value[inferenceTimes.value.length - 1]
-})
+const testModel = async () => {
+  error.value = null
+  success.value = false
+  loading.value = true
+  
+  try {
+    const startTime = Date.now()
+    
+    // Simulate model inference
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000))
+    
+    const inferenceTime = Date.now() - startTime
+    
+    testResults.value = {
+      output: `Echo: ${form.value.input}`,
+      inferenceTime,
+      tokensUsed: Math.floor(Math.random() * 50) + 10,
+    }
+    
+    success.value = true
+  } catch (err) {
+    error.value = 'An unexpected error occurred during model testing'
+  } finally {
+    loading.value = false
+  }
+}
 
-const chartOptions = computed(() => ({
-  xAxis: {
-    type: 'category',
-    data: inferenceTimes.value.map((_, i) => `${i + 1}`),
-  },
-  yAxis: {
-    type: 'value',
-    min: 0,
-  },
-  series: [
-    {
-      data: inferenceTimes.value,
-      type: 'line',
-      smooth: true,
-      color: '#1976d2',
-      name: 'Inference Time',
-    },
-  ],
-  tooltip: { trigger: 'axis' },
-}))
+const loadModelInfo = async () => {
+  if (!form.value.modelId) {
+    error.value = 'Please enter a Model ID first'
+    return
+  }
+  
+  try {
+    const { data, error: err } = await supabase
+      .from('models')
+      .select('*')
+      .eq('id', form.value.modelId)
+      .single()
+    
+    if (err) {
+      error.value = err.message
+    } else {
+      modelInfo.value = {
+        id: data.id,
+        status: data.status || 'unknown',
+        version: data.version || '1.0.0',
+        lastUpdated: new Date().toLocaleString(),
+      }
+    }
+  } catch (err) {
+    error.value = 'Failed to load model information'
+  }
+}
+
+const goBackToDebug = () => {
+  window.location.href = '/debug'
+}
 </script>

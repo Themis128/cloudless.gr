@@ -6,11 +6,7 @@
       ref="vantaRef"
       class="vanta-bg"
     />
-    <button
-      class="vanta-toggle-btn"
-      aria-label="Toggle Vanta Controls"
-      @click="toggleVantaControls"
-    >
+    <button class="vanta-toggle-btn" aria-label="Toggle Vanta Controls" @click="toggleVantaControls">
       <svg
         width="28"
         height="28"
@@ -34,12 +30,12 @@
     <client-only>
       <VantaControls
         v-if="showVantaControls"
-        :initial="vantaOptions"
+        :initial="{ ...getEffectOptions(currentEffect), selectedEffect: currentEffect }"
         @update="onVantaUpdate"
         @close="closeVantaControls"
       />
     </client-only>
-    <div class="app-layout">
+    <div class="app-layout" :data-route="$route.path">
       <header class="app-header">
         <div class="header-content">
           <div class="logo-row">
@@ -96,10 +92,7 @@
                   mdi-chevron-down
                 </v-icon>
               </button>
-              <div
-                v-show="activeDropdown === 'build'"
-                class="nav-dropdown-menu"
-              >
+              <div v-show="activeDropdown === 'build'" class="nav-dropdown-menu">
                 <NuxtLink to="/projects" class="dropdown-item">
                   <v-icon size="16">
                     mdi-folder-multiple
@@ -142,13 +135,37 @@
                   <v-icon size="16">
                     mdi-brain
                   </v-icon>
-                  <span>LLM</span>
+                  <span>LLM Overview</span>
                 </NuxtLink>
-                <NuxtLink to="/llm/train" class="dropdown-item">
+                <NuxtLink to="/llm/models" class="dropdown-item">
+                  <v-icon size="16">
+                    mdi-brain
+                  </v-icon>
+                  <span>Models</span>
+                </NuxtLink>
+                <NuxtLink to="/llm/training" class="dropdown-item">
                   <v-icon size="16">
                     mdi-school
                   </v-icon>
-                  <span>Training</span>
+                  <span>Training Sessions</span>
+                </NuxtLink>
+                <NuxtLink to="/llm/datasets" class="dropdown-item">
+                  <v-icon size="16">
+                    mdi-database
+                  </v-icon>
+                  <span>Datasets</span>
+                </NuxtLink>
+                <NuxtLink to="/llm/analytics" class="dropdown-item">
+                  <v-icon size="16">
+                    mdi-chart-line
+                  </v-icon>
+                  <span>Analytics</span>
+                </NuxtLink>
+                <NuxtLink to="/llm/api" class="dropdown-item">
+                  <v-icon size="16">
+                    mdi-api
+                  </v-icon>
+                  <span>API Docs</span>
                 </NuxtLink>
               </div>
             </div>
@@ -185,11 +202,7 @@
               </div>
             </div>
 
-            <NuxtLink
-              to="/documentation"
-              class="nav-link"
-              title="Documentation"
-            >
+            <NuxtLink to="/documentation" class="nav-link" title="Documentation">
               <v-icon size="16">
                 mdi-book-open-variant
               </v-icon>
@@ -215,41 +228,25 @@
         <div v-if="showMobileMenu" class="mobile-menu">
           <div class="mobile-nav-group">
             <span class="mobile-nav-group-title">Build</span>
-            <NuxtLink
-              to="/projects"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/projects" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-folder-multiple
               </v-icon>
               Projects
             </NuxtLink>
-            <NuxtLink
-              to="/bots"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/bots" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-robot
               </v-icon>
               Bots
             </NuxtLink>
-            <NuxtLink
-              to="/models"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/models" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-brain
               </v-icon>
               Models
             </NuxtLink>
-            <NuxtLink
-              to="/pipelines"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/pipelines" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-timeline
               </v-icon>
@@ -259,55 +256,59 @@
 
           <div class="mobile-nav-group">
             <span class="mobile-nav-group-title">AI</span>
-            <NuxtLink
-              to="/llm"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/llm" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-brain
               </v-icon>
-              LLM
+              LLM Overview
             </NuxtLink>
-            <NuxtLink
-              to="/llm/train"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/llm/models" class="mobile-nav-link" @click="closeMobileMenu">
+              <v-icon size="20">
+                mdi-brain
+              </v-icon>
+              Models
+            </NuxtLink>
+            <NuxtLink to="/llm/training" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-school
               </v-icon>
-              Training
+              Training Sessions
+            </NuxtLink>
+            <NuxtLink to="/llm/datasets" class="mobile-nav-link" @click="closeMobileMenu">
+              <v-icon size="20">
+                mdi-database
+              </v-icon>
+              Datasets
+            </NuxtLink>
+            <NuxtLink to="/llm/analytics" class="mobile-nav-link" @click="closeMobileMenu">
+              <v-icon size="20">
+                mdi-chart-line
+              </v-icon>
+              Analytics
+            </NuxtLink>
+            <NuxtLink to="/llm/api" class="mobile-nav-link" @click="closeMobileMenu">
+              <v-icon size="20">
+                mdi-api
+              </v-icon>
+              API Docs
             </NuxtLink>
           </div>
 
           <div class="mobile-nav-group">
             <span class="mobile-nav-group-title">Operations</span>
-            <NuxtLink
-              to="/deploy"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/deploy" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-rocket-launch
               </v-icon>
               Deploy
             </NuxtLink>
-            <NuxtLink
-              to="/dashboard"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/dashboard" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-view-dashboard
               </v-icon>
               Dashboard
             </NuxtLink>
-            <NuxtLink
-              to="/debug"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/debug" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-bug
               </v-icon>
@@ -317,51 +318,31 @@
 
           <div class="mobile-nav-group">
             <span class="mobile-nav-group-title">Resources</span>
-            <NuxtLink
-              to="/documentation"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/documentation" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-book-open-variant
               </v-icon>
               Documentation
             </NuxtLink>
-            <NuxtLink
-              to="/support"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/support" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-help-circle
               </v-icon>
               Support
             </NuxtLink>
-            <NuxtLink
-              to="/api-reference"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/api-reference" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-api
               </v-icon>
               API Reference
             </NuxtLink>
-            <NuxtLink
-              to="/tutorials"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/tutorials" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-school
               </v-icon>
               Tutorials
             </NuxtLink>
-            <NuxtLink
-              to="/community"
-              class="mobile-nav-link"
-              @click="closeMobileMenu"
-            >
+            <NuxtLink to="/community" class="mobile-nav-link" @click="closeMobileMenu">
               <v-icon size="20">
                 mdi-account-group
               </v-icon>
@@ -376,10 +357,9 @@
         </main>
       </div>
       <footer class="app-footer">
-        <div class="footer-gradient" />
         <div class="footer-content">
           <div class="footer-main">
-            <div class="footer-brand-section">
+            <div class="footer-brand">
               <div class="footer-logo">
                 <div class="logo-container">
                   <svg
@@ -420,20 +400,14 @@
                         x2="100%"
                         y2="100%"
                       >
-                        <stop
-                          offset="0%"
-                          style="stop-color: #667eea; stop-opacity: 1"
-                        />
-                        <stop
-                          offset="100%"
-                          style="stop-color: #764ba2; stop-opacity: 1"
-                        />
+                        <stop offset="0%" style="stop-color: #667eea; stop-opacity: 1" />
+                        <stop offset="100%" style="stop-color: #764ba2; stop-opacity: 1" />
                       </linearGradient>
                     </defs>
                   </svg>
                 </div>
-                <div class="brand-info">
-                  <h3 class="footer-brand">
+                <div class="footer-brand-text">
+                  <h3 class="footer-brand-title">
                     Cloudless Wizard
                   </h3>
                   <p class="footer-tagline">
@@ -568,10 +542,26 @@
                   Company
                 </h4>
                 <ul class="footer-links">
-                  <li><a href="#" class="footer-link">About Us</a></li>
-                  <li><a href="#" class="footer-link">Careers</a></li>
-                  <li><a href="#" class="footer-link">Blog</a></li>
-                  <li><a href="#" class="footer-link">Contact</a></li>
+                  <li>
+                    <NuxtLink to="/about" class="footer-link">
+                      About Us
+                    </NuxtLink>
+                  </li>
+                  <li>
+                    <NuxtLink to="/careers" class="footer-link">
+                      Careers
+                    </NuxtLink>
+                  </li>
+                  <li>
+                    <NuxtLink to="/blog" class="footer-link">
+                      Blog
+                    </NuxtLink>
+                  </li>
+                  <li>
+                    <NuxtLink to="/contact" class="footer-link">
+                      Contact
+                    </NuxtLink>
+                  </li>
                 </ul>
               </div>
             </div>
@@ -589,11 +579,7 @@
                   hide-details
                   class="newsletter-input"
                 />
-                <v-btn
-                  color="primary"
-                  variant="elevated"
-                  class="newsletter-btn"
-                >
+                <v-btn color="primary" variant="elevated" class="newsletter-btn">
                   Subscribe
                 </v-btn>
               </div>
@@ -694,7 +680,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import VantaControls from '~/components/ui/VantaControls.vue'
 
 // Accessibility: detect prefers-reduced-motion
@@ -709,21 +695,200 @@ const activeDropdown = ref<string | null>(null)
 const vantaRef = ref<HTMLElement | null>(null)
 let vantaEffect: any = null
 const vantaEnabled = ref(true)
+const currentEffect = ref('clouds2')
 const vantaOptions = ref({
-  speed: 1.2,
-  cloudHeight: 0.8,
-  cloudDensity: 1.0,
-  cloudScale: 1.0,
-  lightDirection: 1.2,
-  lightIntensity: 1.0,
-  skyColor: '#6a7ba2',
-  cloudColor: '#e0e6ef',
-  lightColor: '#ffffff',
-  mouseControls: true,
-  touchControls: true,
-  gyroControls: false,
-  reducedMotion: prefersReducedMotion,
-  quality: 1.0,
+  // Clouds2 effect (default) - Optimal settings from vanta-master
+  clouds2: {
+    backgroundColor: '#000000',
+    skyColor: '#5ca6ca',
+    cloudColor: '#334d80',
+    lightColor: '#ffffff',
+    speed: 1.0,
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    reducedMotion: prefersReducedMotion,
+    quality: 1.0,
+  },
+  // Debug pages - more dramatic effects
+  debug: {
+    // Net effect for debug pages - Optimal settings
+    net: {
+      color: '#ff6b6b',
+      backgroundColor: '#1a1a2e',
+      points: 15.0,
+      maxDistance: 25.0,
+      spacing: 20.0,
+      showDots: true,
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      reducedMotion: prefersReducedMotion,
+      quality: 1.0,
+    },
+    // Topology effect for debug pages - Optimal settings
+    topology: {
+      color: '#667eea',
+      backgroundColor: '#0f0f23',
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      reducedMotion: prefersReducedMotion,
+      quality: 1.0,
+    },
+    // Waves effect for debug pages - Optimal settings
+    waves: {
+      color: '#4ecdc4',
+      shininess: 27.0,
+      waveHeight: 20.0,
+      waveSpeed: 1.05,
+      zoom: 0.65,
+      backgroundColor: '#0f0f23',
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      reducedMotion: prefersReducedMotion,
+      quality: 1.0,
+    }
+  },
+  // Original clouds effect - Optimal settings
+  clouds: {
+    backgroundColor: '#000000',
+    skyColor: '#5ca6ca',
+    cloudColor: '#334d80',
+    cloudShadowColor: '#1a1a1a',
+    sunColor: '#ffffff',
+    sunGlareColor: '#ffffff',
+    sunlightColor: '#ffffff',
+    speed: 1.0,
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    reducedMotion: prefersReducedMotion,
+    quality: 1.0,
+  },
+  // Cells effect - Optimal settings
+  cells: {
+    color1: '#ff6b6b',
+    color2: '#4ecdc4',
+    size: 1.0,
+    speed: 1.0,
+    backgroundColor: '#0f0f23',
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    reducedMotion: prefersReducedMotion,
+    quality: 1.0,
+  },
+  // Dots effect
+  dots: {
+    backgroundColor: '#0f0f23',
+    dotSize: 1.0,
+    dotSpeed: 1.0,
+    elementColor: '#4ecdc4',
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    reducedMotion: prefersReducedMotion,
+    quality: 1.0,
+  },
+  // Fog effect
+  fog: {
+    backgroundColor: '#0f0f23',
+    fogSpeed: 1.0,
+    fogDensity: 1.0,
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    reducedMotion: prefersReducedMotion,
+    quality: 1.0,
+  },
+  // Globe effect
+  globe: {
+    backgroundColor: '#0f0f23',
+    globeSize: 1.0,
+    globeSpeed: 1.0,
+    color1: '#ff6b6b',
+    color2: '#4ecdc4',
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    reducedMotion: prefersReducedMotion,
+    quality: 1.0,
+  },
+  // Halo effect
+  halo: {
+    backgroundColor: '#0f0f23',
+    haloSize: 1.0,
+    haloSpeed: 1.0,
+    color1: '#ff6b6b',
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    reducedMotion: prefersReducedMotion,
+    quality: 1.0,
+  },
+  // Ripple effect - Optimal settings
+  ripple: {
+    color1: '#ff6b6b',
+    color2: '#4ecdc4',
+    backgroundColor: '#0f0f23',
+    amplitudeFactor: 1.0,
+    ringFactor: 10.0,
+    rotationFactor: 1.0,
+    speed: 1.0,
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    reducedMotion: prefersReducedMotion,
+    quality: 1.0,
+  },
+  // Rings effect
+  rings: {
+    backgroundColor: '#0f0f23',
+    ringSize: 1.0,
+    ringSpeed: 1.0,
+    color1: '#ff6b6b',
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    reducedMotion: prefersReducedMotion,
+    quality: 1.0,
+  },
+  // Trunk effect
+  trunk: {
+    backgroundColor: '#0f0f23',
+    trunkSize: 1.0,
+    trunkSpeed: 1.0,
+    color1: '#ff6b6b',
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    reducedMotion: prefersReducedMotion,
+    quality: 1.0,
+  },
+  // Training pages - dynamic effects
+  training: {
+    // Birds effect for training pages - Optimal settings from vanta-master
+    birds: {
+      backgroundColor: '#07192F',
+      color1: '#ff0000',
+      color2: '#00d1ff',
+      colorMode: 'varianceGradient',
+      birdSize: 1.0,
+      wingSpan: 30.0,
+      speedLimit: 5.0,
+      separation: 20.0,
+      alignment: 20.0,
+      cohesion: 20.0,
+      quantity: 5.0,
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      reducedMotion: prefersReducedMotion,
+      quality: 1.0,
+    }
+  }
 })
 
 declare global {
@@ -779,12 +944,30 @@ const destroyVanta = () => {
   }
 }
 
+const smoothTransition = async () => {
+  if (!vantaRef.value) return
+
+  // Add transitioning class for smooth fade out
+  vantaRef.value.classList.add('transitioning')
+
+  // Wait for transition to complete
+  await new Promise(resolve => setTimeout(resolve, 400))
+
+  // Remove transitioning class
+  vantaRef.value.classList.remove('transitioning')
+}
+
 const initVanta = async () => {
   if (!process.client) return
 
+  // Start smooth transition
+  await smoothTransition()
+
   destroyVanta()
 
-  if (!vantaEnabled.value || !vantaRef.value) return
+  if (!vantaEnabled.value || !vantaRef.value) {
+    return
+  }
 
   try {
     // Load Three.js first
@@ -793,79 +976,436 @@ const initVanta = async () => {
     // Wait a bit for Three.js to initialize
     await new Promise(resolve => setTimeout(resolve, 100))
 
-    // Load Vanta Clouds2
-    await loadScript('/vanta/vanta.clouds2.min.js')
+    // Load the appropriate Vanta effect script
+    const effectScripts = {
+      clouds2: '/vanta/vanta.clouds2.min.js',
+      clouds: '/vanta/vanta.clouds.min.js',
+      birds: '/vanta/vanta.birds.min.js',
+      cells: '/vanta/vanta.cells.min.js',
+      dots: '/vanta/vanta.dots.min.js',
+      fog: '/vanta/vanta.fog.min.js',
+      globe: '/vanta/vanta.globe.min.js',
+      halo: '/vanta/vanta.halo.min.js',
+      net: '/vanta/vanta.net.min.js',
+      ripple: '/vanta/vanta.ripple.min.js',
+      rings: '/vanta/vanta.rings.min.js',
+      topology: '/vanta/vanta.topology.min.js',
+      trunk: '/vanta/vanta.trunk.min.js',
+      waves: '/vanta/vanta.waves.min.js'
+    }
 
-    // Wait a bit for Vanta to initialize
-    await new Promise(resolve => setTimeout(resolve, 100))
+    const scriptPath = effectScripts[currentEffect.value as keyof typeof effectScripts]
+    if (scriptPath) {
+      await loadScript(scriptPath)
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
 
     // Check if everything is loaded
     if (!window.THREE) {
-      // console.error('THREE.js not loaded')
       return
     }
 
-    if (!window.VANTA || !window.VANTA.CLOUDS2) {
-      // console.error('VANTA.CLOUDS2 not loaded')
-      return
+    const effectOptions = getEffectOptions(currentEffect.value)
+
+    // Initialize the appropriate Vanta effect
+    switch (currentEffect.value) {
+      case 'clouds2':
+        if (!window.VANTA?.CLOUDS2) {
+          return
+        }
+        vantaEffect = window.VANTA.CLOUDS2({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          skyColor: hexToColor(effectOptions.skyColor),
+          cloudColor: hexToColor(effectOptions.cloudColor),
+          lightColor: hexToColor(effectOptions.lightColor),
+          speed: effectOptions.reducedMotion ? 0.2 : effectOptions.speed,
+          cloudHeight: effectOptions.cloudHeight,
+          cloudDensity: effectOptions.cloudDensity,
+          cloudScale: effectOptions.cloudScale,
+          lightDirection: effectOptions.lightDirection,
+          lightIntensity: effectOptions.lightIntensity,
+        })
+        break
+
+      case 'net':
+        if (!window.VANTA?.NET) {
+          return
+        }
+        vantaEffect = window.VANTA.NET({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          backgroundColor: hexToColor(effectOptions.backgroundColor),
+          points: effectOptions.points,
+          maxDistance: effectOptions.maxDistance,
+          spacing: effectOptions.spacing,
+          showLines: effectOptions.showLines,
+          lineColor: hexToColor(effectOptions.lineColor),
+          pointColor: hexToColor(effectOptions.pointColor),
+        })
+        break
+
+      case 'topology':
+        if (!window.VANTA?.TOPOLOGY) {
+          return
+        }
+        vantaEffect = window.VANTA.TOPOLOGY({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          backgroundColor: hexToColor(effectOptions.backgroundColor),
+          points: effectOptions.points,
+          maxDistance: effectOptions.maxDistance,
+          spacing: effectOptions.spacing,
+          showLines: effectOptions.showLines,
+          lineColor: hexToColor(effectOptions.lineColor),
+          pointColor: hexToColor(effectOptions.pointColor),
+        })
+        break
+
+      case 'waves':
+        if (!window.VANTA?.WAVES) {
+          return
+        }
+        vantaEffect = window.VANTA.WAVES({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          backgroundColor: hexToColor(effectOptions.backgroundColor),
+          waveHeight: effectOptions.waveHeight,
+          shininess: effectOptions.shininess,
+          waveSpeed: effectOptions.waveSpeed,
+          zoom: effectOptions.zoom,
+          waveColor: hexToColor(effectOptions.waveColor),
+        })
+        break
+
+      case 'birds':
+        if (!window.VANTA?.BIRDS) {
+          return
+        }
+        vantaEffect = window.VANTA.BIRDS({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          backgroundColor: hexToColor(effectOptions.backgroundColor),
+          color1: hexToColor(effectOptions.color1),
+          color2: hexToColor(effectOptions.color2),
+          colorMode: effectOptions.colorMode,
+          birdSize: effectOptions.birdSize,
+          wingSpan: effectOptions.wingSpan,
+          speedLimit: effectOptions.speedLimit,
+          separation: effectOptions.separation,
+          alignment: effectOptions.alignment,
+          cohesion: effectOptions.cohesion,
+          quantity: effectOptions.quantity,
+        })
+        break
+
+      case 'clouds':
+        if (!window.VANTA?.CLOUDS) {
+          return
+        }
+        vantaEffect = window.VANTA.CLOUDS({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          skyColor: hexToColor(effectOptions.skyColor),
+          cloudColor: hexToColor(effectOptions.cloudColor),
+          lightColor: hexToColor(effectOptions.lightColor),
+          speed: effectOptions.reducedMotion ? 0.2 : effectOptions.speed,
+          cloudHeight: effectOptions.cloudHeight,
+          cloudDensity: effectOptions.cloudDensity,
+          cloudScale: effectOptions.cloudScale,
+          lightDirection: effectOptions.lightDirection,
+          lightIntensity: effectOptions.lightIntensity,
+        })
+        break
+
+      case 'cells':
+        if (!window.VANTA?.CELLS) {
+          return
+        }
+        vantaEffect = window.VANTA.CELLS({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          backgroundColor: hexToColor(effectOptions.backgroundColor),
+          cellSize: effectOptions.cellSize,
+          speed: effectOptions.reducedMotion ? 0.2 : effectOptions.cellSpeed,
+          color1: hexToColor(effectOptions.color1),
+          color2: hexToColor(effectOptions.color2),
+          elementColor: hexToColor(effectOptions.elementColor),
+        })
+        break
+
+      case 'dots':
+        if (!window.VANTA?.DOTS) {
+          return
+        }
+        vantaEffect = window.VANTA.DOTS({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          backgroundColor: hexToColor(effectOptions.backgroundColor),
+          color: hexToColor(effectOptions.color),
+          colorMode: effectOptions.colorMode,
+          size: effectOptions.size,
+          showLines: effectOptions.showLines,
+          spacing: effectOptions.spacing,
+        })
+        break
+
+      case 'fog':
+        if (!window.VANTA?.FOG) {
+          return
+        }
+        vantaEffect = window.VANTA.FOG({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          highlightColor: hexToColor(effectOptions.highlightColor),
+          midtoneColor: hexToColor(effectOptions.midtoneColor),
+          lowlightColor: hexToColor(effectOptions.lowlightColor),
+          baseColor: hexToColor(effectOptions.baseColor),
+          blurFactor: effectOptions.blurFactor,
+          speed: effectOptions.reducedMotion ? 0.2 : effectOptions.speed,
+          zoom: effectOptions.zoom,
+        })
+        break
+
+      case 'globe':
+        if (!window.VANTA?.GLOBE) {
+          return
+        }
+        vantaEffect = window.VANTA.GLOBE({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          backgroundColor: hexToColor(effectOptions.backgroundColor),
+          color: hexToColor(effectOptions.color),
+          color2: hexToColor(effectOptions.color2),
+          size: effectOptions.size,
+          points: effectOptions.points,
+          maxDistance: effectOptions.maxDistance,
+          spacing: effectOptions.spacing,
+          showLines: effectOptions.showLines,
+          lineColor: hexToColor(effectOptions.lineColor),
+          pointColor: hexToColor(effectOptions.pointColor),
+        })
+        break
+
+      case 'halo':
+        if (!window.VANTA?.HALO) {
+          return
+        }
+        vantaEffect = window.VANTA.HALO({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          backgroundColor: hexToColor(effectOptions.backgroundColor),
+          amplitudeFactor: effectOptions.amplitudeFactor,
+          baseColor: hexToColor(effectOptions.baseColor),
+          baseColorOpacity: effectOptions.baseColorOpacity,
+          curveDefinition: effectOptions.curveDefinition,
+          mouseEase: effectOptions.mouseEase,
+          xOffset: effectOptions.xOffset,
+          yOffset: effectOptions.yOffset,
+        })
+        break
+
+      case 'ripple':
+        if (!window.VANTA?.RIPPLE) {
+          return
+        }
+        vantaEffect = window.VANTA.RIPPLE({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          backgroundColor: hexToColor(effectOptions.backgroundColor),
+          color: hexToColor(effectOptions.color),
+          shininess: effectOptions.shininess,
+          waveHeight: effectOptions.waveHeight,
+          waveSpeed: effectOptions.waveSpeed,
+          zoom: effectOptions.zoom,
+        })
+        break
+
+      case 'rings':
+        if (!window.VANTA?.RINGS) {
+          return
+        }
+        vantaEffect = window.VANTA.RINGS({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          backgroundColor: hexToColor(effectOptions.backgroundColor),
+          color: hexToColor(effectOptions.color),
+          color2: hexToColor(effectOptions.color2),
+          size: effectOptions.size,
+          points: effectOptions.points,
+          maxDistance: effectOptions.maxDistance,
+          spacing: effectOptions.spacing,
+          showLines: effectOptions.showLines,
+          lineColor: hexToColor(effectOptions.lineColor),
+          pointColor: hexToColor(effectOptions.pointColor),
+        })
+        break
+
+      case 'trunk':
+        if (!window.VANTA?.TRUNK) {
+          return
+        }
+        vantaEffect = window.VANTA.TRUNK({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          backgroundColor: hexToColor(effectOptions.backgroundColor),
+          color: hexToColor(effectOptions.color),
+          color2: hexToColor(effectOptions.color2),
+          size: effectOptions.size,
+          points: effectOptions.points,
+          maxDistance: effectOptions.maxDistance,
+          spacing: effectOptions.spacing,
+          showLines: effectOptions.showLines,
+          lineColor: hexToColor(effectOptions.lineColor),
+          pointColor: hexToColor(effectOptions.pointColor),
+        })
+        break
+
+      default:
+        // Default to clouds2
+        if (!window.VANTA?.CLOUDS2) {
+          return
+        }
+        vantaEffect = window.VANTA.CLOUDS2({
+          el: vantaRef.value,
+          THREE: window.THREE,
+          mouseControls: effectOptions.mouseControls,
+          touchControls: effectOptions.touchControls,
+          gyroControls: effectOptions.gyroControls,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          skyColor: hexToColor(effectOptions.skyColor),
+          cloudColor: hexToColor(effectOptions.cloudColor),
+          lightColor: hexToColor(effectOptions.lightColor),
+          speed: effectOptions.reducedMotion ? 0.2 : effectOptions.speed,
+          cloudHeight: effectOptions.cloudHeight,
+          cloudDensity: effectOptions.cloudDensity,
+          cloudScale: effectOptions.cloudScale,
+          lightDirection: effectOptions.lightDirection,
+          lightIntensity: effectOptions.lightIntensity,
+        })
     }
 
-    // Initialize Vanta effect
-    vantaEffect = window.VANTA.CLOUDS2({
-      el: vantaRef.value,
-      THREE: window.THREE,
-      mouseControls: vantaOptions.value.mouseControls,
-      touchControls: vantaOptions.value.touchControls,
-      gyroControls: vantaOptions.value.gyroControls,
-      minHeight: 200.0,
-      minWidth: 200.0,
-      skyColor: hexToColor(vantaOptions.value.skyColor),
-      cloudColor: hexToColor(vantaOptions.value.cloudColor),
-      lightColor: hexToColor(vantaOptions.value.lightColor),
-      speed: vantaOptions.value.reducedMotion ? 0.2 : vantaOptions.value.speed,
-      cloudHeight: vantaOptions.value.cloudHeight,
-      cloudDensity: vantaOptions.value.cloudDensity,
-      cloudScale: vantaOptions.value.cloudScale,
-      lightDirection: vantaOptions.value.lightDirection,
-      lightIntensity: vantaOptions.value.lightIntensity,
-      // texturePath: '/vanta/gallery/noise.png'
-    })
+    // Set up resize handler for the effect
+    if (vantaEffect && vantaEffect.resize) {
+      vantaEffect.resize = debouncedResize
+    }
 
-    // console.log('Vanta CLOUDS2 initialized successfully')
   } catch (error) {
-    // console.error('Error initializing Vanta:', error)
+    // Handle initialization errors silently
   }
 }
 
 const onVantaUpdate = (opts: any) => {
   vantaEnabled.value = opts.enabled
-  vantaOptions.value = { ...vantaOptions.value, ...opts }
+
+  // Handle effect change
+  if (opts.selectedEffect && opts.selectedEffect !== currentEffect.value) {
+    currentEffect.value = opts.selectedEffect
+    nextTick(() => {
+      initVanta()
+    })
+    return
+  }
+
+  // Update the current effect's options
+  const effectOptions = getEffectOptions(currentEffect.value)
+  Object.assign(effectOptions, opts)
 
   if (vantaEffect && opts.enabled) {
-    // Update existing effect
+    // Update existing effect immediately
     try {
-      vantaEffect.setOptions({
-        speed: opts.reducedMotion ? 0.2 : opts.speed,
-        skyColor: hexToColor(opts.skyColor),
-        cloudColor: hexToColor(opts.cloudColor),
-        lightColor: hexToColor(opts.lightColor),
-        cloudHeight: opts.cloudHeight,
-        cloudDensity: opts.cloudDensity,
-        cloudScale: opts.cloudScale,
-        lightDirection: opts.lightDirection,
-        lightIntensity: opts.lightIntensity,
-        mouseControls: opts.mouseControls,
-        touchControls: opts.touchControls,
-        gyroControls: opts.gyroControls,
+      // Force immediate update by destroying and recreating
+      if (vantaEffect.destroy) {
+        vantaEffect.destroy()
+      }
+      nextTick(() => {
+        initVanta()
       })
     } catch (error) {
-      // console.warn('Error updating Vanta options:', error)
       // Reinitialize if update fails
-      initVanta()
+      nextTick(() => {
+        initVanta()
+      })
     }
+  } else if (opts.enabled) {
+    // Initialize if not enabled but should be
+    nextTick(() => {
+      initVanta()
+    })
   } else {
-    // Reinitialize
-    initVanta()
+    // Destroy if disabled
+    destroyVanta()
   }
 }
 
@@ -884,23 +1424,11 @@ const closeMobileMenu = () => {
 // Watch for vanta options changes
 watch(
   vantaOptions,
-  newOptions => {
+  () => {
     if (vantaEffect && vantaEnabled.value) {
       try {
-        vantaEffect.setOptions({
-          speed: newOptions.reducedMotion ? 0.2 : newOptions.speed,
-          skyColor: hexToColor(newOptions.skyColor),
-          cloudColor: hexToColor(newOptions.cloudColor),
-          lightColor: hexToColor(newOptions.lightColor),
-          cloudHeight: newOptions.cloudHeight,
-          cloudDensity: newOptions.cloudDensity,
-          cloudScale: newOptions.cloudScale,
-          lightDirection: newOptions.lightDirection,
-          lightIntensity: newOptions.lightIntensity,
-          mouseControls: newOptions.mouseControls,
-          touchControls: newOptions.touchControls,
-          gyroControls: newOptions.gyroControls,
-        })
+        const effectOptions = getEffectOptions(currentEffect.value)
+        vantaEffect.setOptions(effectOptions)
       } catch (error) {
         // console.warn('Error updating Vanta options from watch:', error)
       }
@@ -910,7 +1438,11 @@ watch(
 )
 
 onMounted(() => {
-  if (vantaOptions.value.reducedMotion) {
+  // Set appropriate effect for current route
+  currentEffect.value = getEffectForRoute(window.location.pathname)
+
+  const effectOptions = getEffectOptions(currentEffect.value)
+  if (effectOptions.reducedMotion) {
     vantaEnabled.value = false
   }
 
@@ -920,6 +1452,15 @@ onMounted(() => {
   }, 500)
 
   window.addEventListener('resize', debouncedResize)
+
+  // Watch for route changes to update effect
+  watch(() => window.location.pathname, (newPath) => {
+    const newEffect = getEffectForRoute(newPath)
+    if (newEffect !== currentEffect.value) {
+      currentEffect.value = newEffect
+      initVanta()
+    }
+  })
 })
 
 onBeforeUnmount(() => {
@@ -941,6 +1482,65 @@ const closeVantaControls = () => {
 const toggleBuildDropdown = () => toggleDropdown('build')
 const toggleAiDropdown = () => toggleDropdown('ai')
 const toggleOpsDropdown = () => toggleDropdown('ops')
+
+const getEffectForRoute = (route: string) => {
+  // Layout-only page - use clouds2 for best visibility
+  if (route.includes('/layout-only')) {
+    return 'clouds2'
+  }
+
+  // Debug pages - use dramatic effects
+  if (route.startsWith('/debug')) {
+    const debugEffects = ['net', 'topology', 'waves']
+    return debugEffects[Math.floor(Math.random() * debugEffects.length)]
+  }
+
+  // Training pages - use dynamic effects
+  if (route.includes('/train') || route.includes('/training')) {
+    return 'birds'
+  }
+
+  // LLM pages - use tech-focused effects
+  if (route.startsWith('/llm')) {
+    return 'net'
+  }
+
+  // Default to clouds2 for other pages
+  return 'clouds2'
+}
+
+const getEffectOptions = (effect: string): any => {
+  switch (effect) {
+    case 'clouds':
+      return vantaOptions.value.clouds
+    case 'net':
+      return vantaOptions.value.debug.net
+    case 'topology':
+      return vantaOptions.value.debug.topology
+    case 'waves':
+      return vantaOptions.value.debug.waves
+    case 'birds':
+      return vantaOptions.value.training.birds
+    case 'cells':
+      return vantaOptions.value.cells
+    case 'dots':
+      return vantaOptions.value.dots
+    case 'fog':
+      return vantaOptions.value.fog
+    case 'globe':
+      return vantaOptions.value.globe
+    case 'halo':
+      return vantaOptions.value.halo
+    case 'ripple':
+      return vantaOptions.value.ripple
+    case 'rings':
+      return vantaOptions.value.rings
+    case 'trunk':
+      return vantaOptions.value.trunk
+    default:
+      return vantaOptions.value.clouds2
+  }
+}
 </script>
 
 <style scoped>
@@ -953,6 +1553,34 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+  opacity: 2.0;
+  transition: opacity 0.8s ease-in-out, filter 0.8s ease-in-out, transform 0.8s ease-in-out;
+  filter: contrast(1.2) brightness(1.1);
+  transform: scale(1);
+}
+
+.vanta-bg.transitioning {
+  opacity: 0.3;
+  filter: contrast(0.8) brightness(0.8);
+  transform: scale(1.05);
+}
+
+/* Enhanced visibility for debug pages */
+.app-layout[data-route*="debug"] .vanta-bg {
+  opacity: 2.5;
+  filter: contrast(1.4) brightness(1.3);
+}
+
+/* Enhanced visibility for layout-only page */
+.app-layout[data-route*="layout-only"] .vanta-bg {
+  opacity: 2.2;
+  filter: contrast(1.3) brightness(1.2);
+}
+
+/* Enhanced visibility for training pages */
+.app-layout[data-route*="train"] .vanta-bg {
+  opacity: 1.8;
+  filter: contrast(1.2) brightness(1.1);
 }
 
 .vanta-noise {
@@ -1003,25 +1631,58 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(2px);
+  transition: background 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+/* More transparent background for debug pages */
+.app-layout[data-route*="debug"] {
+  background: rgba(255, 255, 255, 0.01);
+  backdrop-filter: blur(1px);
+}
+
+/* More transparent background for layout-only page */
+.app-layout[data-route*="layout-only"] {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(1px);
+}
+
+/* More transparent background for training pages */
+.app-layout[data-route*="train"] {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(2px);
 }
 
 .app-header {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.98) 0%,
-    rgba(248, 250, 252, 0.98) 100%
-  );
-  backdrop-filter: blur(25px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.85) 0%,
+      rgba(248, 250, 252, 0.85) 100%);
+  backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow:
-    0 4px 32px rgba(0, 0, 0, 0.08),
-    0 1px 0 rgba(255, 255, 255, 0.3) inset;
+    0 4px 32px rgba(0, 0, 0, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.2) inset;
   position: sticky;
   top: 0;
   z-index: 9998;
   transition: all 0.3s ease;
+}
+
+/* More transparent header for debug pages */
+.app-layout[data-route*="debug"] .app-header {
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.7) 0%,
+      rgba(248, 250, 252, 0.7) 100%);
+  backdrop-filter: blur(10px);
+}
+
+/* More transparent header for layout-only page */
+.app-layout[data-route*="layout-only"] .app-header {
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(248, 250, 252, 0.6) 100%);
+  backdrop-filter: blur(8px);
 }
 
 .app-header::before {
@@ -1031,12 +1692,10 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(102, 126, 234, 0.3) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(102, 126, 234, 0.3) 50%,
+      transparent 100%);
 }
 
 .header-content {
@@ -1076,11 +1735,9 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(102, 126, 234, 0.1) 0%,
-    rgba(118, 75, 162, 0.1) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(102, 126, 234, 0.1) 0%,
+      rgba(118, 75, 162, 0.1) 100%);
   border-radius: 12px;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -1111,11 +1768,9 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
   left: -2px;
   right: -2px;
   bottom: -2px;
-  background: linear-gradient(
-    135deg,
-    rgba(102, 126, 234, 0.1),
-    rgba(118, 75, 162, 0.1)
-  );
+  background: linear-gradient(135deg,
+      rgba(102, 126, 234, 0.1),
+      rgba(118, 75, 162, 0.1));
   border-radius: 14px;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -1151,16 +1806,20 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
 }
 
 @keyframes float {
+
   0%,
   100% {
     transform: translateY(0px) rotate(0deg);
   }
+
   25% {
     transform: translateY(-8px) rotate(2deg);
   }
+
   50% {
     transform: translateY(-12px) rotate(0deg);
   }
+
   75% {
     transform: translateY(-8px) rotate(-2deg);
   }
@@ -1224,12 +1883,10 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
   transform: translateY(-50%);
   width: 1px;
   height: 20px;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(0, 0, 0, 0.1) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(180deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.1) 50%,
+      transparent 100%);
 }
 
 .nav-group:last-child::after {
@@ -1264,12 +1921,10 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%);
   transition: left 0.5s ease;
 }
 
@@ -1278,11 +1933,9 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
 }
 
 .nav-link:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(102, 126, 234, 0.1) 0%,
-    rgba(118, 75, 162, 0.1) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(102, 126, 234, 0.1) 0%,
+      rgba(118, 75, 162, 0.1) 100%);
   color: rgba(0, 0, 0, 0.95);
   transform: translateY(-2px);
   box-shadow:
@@ -1333,11 +1986,9 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
 }
 
 .nav-dropdown-btn:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(102, 126, 234, 0.1) 0%,
-    rgba(118, 75, 162, 0.1) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(102, 126, 234, 0.1) 0%,
+      rgba(118, 75, 162, 0.1) 100%);
   color: rgba(0, 0, 0, 0.95);
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
@@ -1373,6 +2024,7 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1394,11 +2046,9 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
 }
 
 .dropdown-item:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(102, 126, 234, 0.1) 0%,
-    rgba(118, 75, 162, 0.1) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(102, 126, 234, 0.1) 0%,
+      rgba(118, 75, 162, 0.1) 100%);
   color: rgba(0, 0, 0, 0.95);
   border-color: rgba(102, 126, 234, 0.2);
   transform: translateX(4px);
@@ -1422,11 +2072,9 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
 }
 
 .mobile-menu-btn.v-btn {
-  background: linear-gradient(
-    135deg,
-    rgba(102, 126, 234, 0.1) 0%,
-    rgba(118, 75, 162, 0.1) 100%
-  ) !important;
+  background: linear-gradient(135deg,
+      rgba(102, 126, 234, 0.1) 0%,
+      rgba(118, 75, 162, 0.1) 100%) !important;
   border: 1px solid rgba(102, 126, 234, 0.2) !important;
   border-radius: 12px !important;
   color: rgba(0, 0, 0, 0.8) !important;
@@ -1437,14 +2085,37 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
 }
 
 .mobile-menu-btn.v-btn:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(102, 126, 234, 0.15) 0%,
-    rgba(118, 75, 162, 0.15) 100%
-  ) !important;
+  background: linear-gradient(135deg,
+      rgba(102, 126, 234, 0.15) 0%,
+      rgba(118, 75, 162, 0.15) 100%) !important;
   color: rgba(0, 0, 0, 0.95) !important;
   box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2) !important;
   transform: translateY(-1px) !important;
+}
+
+/* Ensure the menu icon is visible */
+.mobile-menu-btn .v-icon {
+  color: rgba(0, 0, 0, 0.8) !important;
+  font-size: 24px !important;
+}
+
+.mobile-menu-btn:hover .v-icon {
+  color: rgba(0, 0, 0, 0.95) !important;
+}
+
+/* Ensure button content is properly aligned */
+.mobile-menu-btn .v-btn__content {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Fix for button overlay and underlay */
+.mobile-menu-btn .v-btn__overlay,
+.mobile-menu-btn .v-btn__underlay {
+  border-radius: 12px !important;
 }
 
 /* Responsive Design */
@@ -1616,11 +2287,9 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
 
 .app-footer {
   position: relative;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(248, 250, 252, 0.95) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(248, 250, 252, 0.95) 100%);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.2);
   color: rgba(0, 0, 0, 0.8);
@@ -1636,12 +2305,10 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(102, 126, 234, 0.3) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(102, 126, 234, 0.3) 50%,
+      transparent 100%);
 }
 
 .footer-content {
@@ -2005,6 +2672,17 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
 
   .app-main {
     padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(2px);
+    border-radius: 8px;
+    margin: 1rem;
+    transition: background 0.3s ease, backdrop-filter 0.3s ease;
+  }
+
+  /* More transparent main content for debug pages */
+  .app-layout[data-route*="debug"] .app-main {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(1px);
   }
 
   .vanta-toggle-btn {
@@ -2155,16 +2833,60 @@ const toggleOpsDropdown = () => toggleDropdown('ops')
 
 /* Mobile-first responsive components */
 .app-layout :deep(.v-card) {
-  background: rgba(255, 255, 255, 0.98) !important;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
   border-radius: 12px !important;
 }
 
 .app-layout :deep(.v-sheet) {
-  background: rgba(255, 255, 255, 0.95) !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* More transparent components for debug pages */
+.app-layout[data-route*="debug"] :deep(.v-card) {
+  background: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.app-layout[data-route*="debug"] :deep(.v-sheet) {
+  background: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* Even more transparent debug navigation cards */
+.app-layout[data-route*="debug"] :deep(.debug-nav-card) {
+  background: rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(3px);
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  transition: all 0.3s ease !important;
+}
+
+.app-layout[data-route*="debug"] :deep(.debug-nav-card:hover) {
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(4px);
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Transparent debug console */
+.app-layout[data-route*="debug"] :deep(.debug-console) {
+  background: rgba(24, 24, 24, 0.8) !important;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.app-layout[data-route*="debug"] :deep(.debug-console .console-output) {
+  background: rgba(34, 34, 34, 0.9) !important;
+  backdrop-filter: blur(2px);
+}
+
+.app-layout[data-route*="debug"] :deep(.debug-console .console-input) {
+  background: rgba(34, 34, 34, 0.8) !important;
+  backdrop-filter: blur(2px);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
 .app-layout :deep(.v-btn) {

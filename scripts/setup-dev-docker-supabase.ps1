@@ -11,12 +11,12 @@ param(
     [switch]$WithRedis
 )
 
-# Colors for output
-$Red = [System.ConsoleColor]::Red
-$Green = [System.ConsoleColor]::Green
-$Yellow = [System.ConsoleColor]::Yellow
-$Blue = [System.ConsoleColor]::Blue
-$Cyan = [System.ConsoleColor]::Cyan
+# Colors for output (used in Write-Status function)
+$script:Red = [System.ConsoleColor]::Red
+$script:Green = [System.ConsoleColor]::Green
+$script:Yellow = [System.ConsoleColor]::Yellow
+$script:Blue = [System.ConsoleColor]::Blue
+$script:Cyan = [System.ConsoleColor]::Cyan
 
 function Write-Status {
     param(
@@ -52,7 +52,7 @@ function Test-Docker {
 }
 
 # Setup development environment file
-function Setup-DevelopmentEnvironment {
+function Initialize-DevelopmentEnvironment {
     Write-Status "info" "Setting up development environment configuration..."
     
     # Check if .env already exists
@@ -261,7 +261,7 @@ function Main {
     }
     
     # Setup environment
-    if (-not (Setup-DevelopmentEnvironment)) {
+    if (-not (Initialize-DevelopmentEnvironment)) {
         exit 1
     }
     

@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card class="bg-white">
     <v-card-title>Bot Details</v-card-title>
     <v-card-text>
       <v-alert type="info" class="mb-4">
@@ -30,8 +30,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useSupabase } from '~/composables/supabase'
+import { onMounted, ref } from 'vue';
+import { useSupabase } from '~/composables/supabase';
 
 const props = defineProps<{ botId: string }>()
 const supabase = useSupabase()

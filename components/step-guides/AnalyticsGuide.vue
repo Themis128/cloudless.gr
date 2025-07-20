@@ -2,19 +2,27 @@
   <v-alert
     type="info"
     border="start"
-    color="primary"
+    variant="tonal"
     class="mb-4"
   >
-    <strong>Step 7: Analytics & Debug</strong><br>
-    Use the dashboard and debug tools to monitor, analyze, and troubleshoot your project.<br>
-    <ul>
-      <li>Visit the <b>Dashboard</b> for analytics and system health.</li>
-      <li>Use <b>Debug</b> to inspect logs, test flows, and resolve issues.</li>
-      <li>Iterate and improve your project based on insights.</li>
-    </ul>
+    <template #title>
+      <strong>Analytics & Monitoring Guide</strong>
+    </template>
+    <div class="mt-2">
+      <p class="mb-2">
+        Monitor and analyze your system with the following tools:
+      </p>
+      <ul class="mb-0">
+        <li><strong>Dashboard:</strong> View analytics and system health metrics</li>
+        <li><strong>Debug Tools:</strong> Inspect logs and test system components</li>
+        <li><strong>Performance Monitoring:</strong> Track model and pipeline performance</li>
+        <li><strong>Error Analysis:</strong> Identify and resolve issues</li>
+        <li><strong>Iteration:</strong> Improve your project based on insights</li>
+      </ul>
+    </div>
   </v-alert>
 </template>
 
 <script setup lang="ts">
-// No logic needed for static guide
+// Analytics and monitoring guide component
 </script>

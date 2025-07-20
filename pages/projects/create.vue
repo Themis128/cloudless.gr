@@ -1,330 +1,193 @@
 <template>
   <div>
-    <v-btn icon to="/projects" class="mb-4">
-      <v-icon> mdi-arrow-left </v-icon>
-    </v-btn>
-
-    <div
-      v-if="wizard.current.value && wizard.current.value.description"
-      class="mb-4"
-    >
-      <v-alert
-        type="info"
-        border="start"
-        variant="tonal"
-        class="mb-4"
-      >
-        <div v-text="wizard.current.value.description" />
-      </v-alert>
-    </div>
     <ProjectGuide />
-    <!-- Onboarding Modal -->
-    <v-dialog v-model="showOnboarding" max-width="500" persistent>
-      <v-card>
-        <v-card-title>Welcome to the Project Wizard</v-card-title>
-        <v-card-text>
-          This wizard will guide you through creating and managing your project
-          step by step.<br>
-          <ul>
-            <li>Follow the steps below and use the navigation buttons.</li>
-            <li>
-              Click the help icon
-              <v-icon small color="primary">
-                mdi-help-circle
-              </v-icon> for more
-              info on each step.
-            </li>
-          </ul>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn color="primary" @click="handleOnboardingClose">
-            Get Started
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <VStepper
-      v-model="wizard.currentStep.value"
-      class="mb-6"
-      alt-labels
-      aria-label="Wizard steps"
-    >
-      <VStepperHeader>
-        <VStepperItem
-          v-for="(step, idx) in wizard.steps"
-          :key="step.title + idx"
-          :complete="wizard.currentStep.value > idx"
-          :value="idx"
-          :aria-current="wizard.currentStep.value === idx ? 'step' : undefined"
-          :tabindex="wizard.currentStep.value === idx ? 0 : -1"
-          :color="
-            wizard.currentStep.value === idx
-              ? 'primary'
-              : wizard.currentStep.value > idx
-                ? 'success'
-                : 'grey'
-          "
-          class="stepper-item"
-          @click="() => handleStepClick(idx)"
-        >
-          <template #icon>
-            <v-avatar
-              :color="
-                wizard.currentStep.value === idx
-                  ? 'primary'
-                  : wizard.currentStep.value > idx
-                    ? 'success'
-                    : 'grey'
-              "
-              size="24"
-            >
-              <span class="white--text">{{ idx + 1 }}</span>
-            </v-avatar>
-          </template>
-          <span>{{ step.title }}</span>
-          <v-tooltip activator="parent" location="top">
-            {{ step.subtitle }}
-          </v-tooltip>
-          <div class="text-caption text-secondary">
-            {{ step.subtitle }}
-          </div>
-        </VStepperItem>
-      </VStepperHeader>
-    </VStepper>
-    <div class="mb-2 text-right">
-      <span class="text-caption">
-        Step {{ wizard.currentStep.value + 1 }} of {{ wizard.stepCount }}
-      </span>
-    </div>
     <v-container>
-      <v-row justify="center">
-        <v-col cols="12" md="8" lg="6">
-          <v-card>
-            <v-card-title>
-              Create Project
+      <h1 class="mb-4">
+        <v-icon size="32" class="mr-3">
+          mdi-folder-plus
+        </v-icon>
+        Create Project
+      </h1>
+      
+      <v-card>
+        <v-card-title class="text-h6">
+          Project Details
+        </v-card-title>
+        <v-card-text>
+          <v-form class="create-form" @submit.prevent="createProject">
+            <v-text-field
+              v-model="form.name"
+              label="Project Name"
+              class="form-field"
+              required
+            />
+            <v-textarea
+              v-model="form.description"
+              label="Description"
+              class="form-field"
+              rows="3"
+            />
+            <v-select
+              v-model="form.type"
+              :items="projectTypes"
+              label="Project Type"
+              class="form-field"
+              required
+            />
+            <v-text-field
+              v-model="form.version"
+              label="Version"
+              class="form-field"
+              required
+            />
+            <v-select
+              v-model="form.visibility"
+              :items="visibilityOptions"
+              label="Visibility"
+              class="form-field"
+              required
+            />
+            
+            <div class="form-actions">
               <v-btn
-                icon
-                size="small"
-                class="ml-2"
-                aria-label="Help"
-                @click="handleHelpClick"
+                type="submit"
+                color="primary"
+                :loading="loading"
+                size="large"
               >
-                <v-icon>mdi-help-circle</v-icon>
+                <v-icon start>
+                  mdi-plus
+                </v-icon>
+                Create Project
               </v-btn>
-            </v-card-title>
-            <v-card-text>
-              <div class="mb-4">
-                <div>
-                  Use the template below to create a new project. Fill in the
-                  fields and click 'Create Project'.
-                </div>
-                <v-code>
-                  { "name": "MyProject", "description": "Project description" }
-                </v-code>
-              </div>
-              <v-form
-                ref="formRef"
-                aria-label="Project creation form"
-                @submit.prevent="onSubmit"
+              <v-btn
+                text
+                class="ml-2"
+                size="large"
+                @click="resetForm"
               >
-                <v-text-field
-                  v-model="name"
-                  label="Name"
-                  placeholder="e.g. MyProject"
-                  required
-                  class="mb-3"
-                  :error-messages="nameError ? [nameError] : []"
-                  autofocus
-                  aria-required="true"
-                  aria-describedby="name-desc"
-                />
-                <div id="name-desc" class="text-caption mb-2">
-                  Project name must be unique and descriptive.
-                </div>
-                <v-text-field
-                  v-model="description"
-                  label="Description"
-                  placeholder="Project description"
-                  class="mb-3"
-                  :error-messages="descError ? [descError] : []"
-                  aria-describedby="desc-desc"
-                />
-                <div id="desc-desc" class="text-caption mb-2">
-                  Describe the purpose of your project (optional).
-                </div>
-                <v-row class="mt-4">
-                  <v-col cols="6">
-                    <v-btn
-                      color="secondary"
-                      variant="outlined"
-                      :disabled="wizard.isFirstStep.value"
-                      @click="handleBackClick"
-                    >
-                      <v-icon start>
-                        mdi-arrow-left
-                      </v-icon> Back
-                    </v-btn>
-                  </v-col>
-                  <v-col cols="6" class="text-right">
-                    <v-btn
-                      color="primary"
-                      variant="elevated"
-                      :disabled="!canProceed"
-                      @click="handleNextClick"
-                    >
-                      <span v-if="!wizard.isLastStep">
-                        Next <v-icon end>mdi-arrow-right</v-icon>
-                      </span>
-                      <span v-else>Submit <v-icon end>mdi-check</v-icon></span>
-                    </v-btn>
-                  </v-col>
-                </v-row>
-              </v-form>
-              <v-snackbar
-                v-model="showSnackbar"
-                :color="snackbarColor"
-                :timeout="4000"
-              >
-                {{ snackbarMsg }}
-              </v-snackbar>
-              <v-dialog v-model="showHelp" max-width="400">
-                <v-card>
-                  <v-card-title>Help</v-card-title>
-                  <v-card-text>
-                    Enter a unique project name and (optionally) a description.
-                    Use the navigation buttons to move between steps. For more
-                    info, see the documentation.
-                  </v-card-text>
-                  <v-card-actions>
-                    <v-spacer />
-                    <v-btn color="primary" @click="handleHelpClose">
-                      Close
-                    </v-btn>
-                  </v-card-actions>
-                </v-card>
-              </v-dialog>
-              <v-alert
-                v-if="success"
-                type="success"
-                class="mt-3"
-                aria-live="polite"
-              >
-                Project created!
-              </v-alert>
-              <v-alert
-                v-if="error"
-                type="error"
-                class="mt-3"
-                aria-live="assertive"
-              >
-                {{ error }}
-              </v-alert>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-      <v-btn
-        icon
-        to="/"
-        class="mb-4"
-        aria-label="Back to home"
-      >
-        <v-icon>mdi-arrow-left</v-icon>
-      </v-btn>
+                <v-icon start>
+                  mdi-refresh
+                </v-icon>
+                Reset
+              </v-btn>
+            </div>
+          </v-form>
+          
+          <v-alert v-if="success" type="success" class="mt-4">
+            <v-icon start>
+              mdi-check-circle
+            </v-icon>
+            Project created successfully!
+          </v-alert>
+          <v-alert v-if="error" type="error" class="mt-4">
+            <v-icon start>
+              mdi-alert-circle
+            </v-icon>
+            {{ error }}
+          </v-alert>
+        </v-card-text>
+      </v-card>
     </v-container>
   </div>
 </template>
 
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { ref } from 'vue'
 import ProjectGuide from '~/components/step-guides/ProjectGuide.vue'
-import { useWizard } from '~/composables/useWizard'
-import { useProjectStore } from '~/stores/templateStore'
+import { useSupabase } from '~/composables/supabase'
 
-const formRef = ref()
-const projectStore = useProjectStore()
-const { name, description, success, error } = storeToRefs(projectStore)
+const supabase = useSupabase()
+const loading = ref(false)
+const success = ref(false)
+const error = ref<string | null>(null)
 
-// Wizard stepper integration
-const wizard = useWizard()
+const projectTypes = [
+  'Machine Learning',
+  'Data Science',
+  'Web Application',
+  'API Development',
+  'Research',
+  'Custom'
+]
 
-// Onboarding/help
-const showOnboarding = ref(true)
-const showHelp = ref(false)
+const visibilityOptions = ['public', 'private', 'team']
 
-// Inline validation
-const nameError = ref('')
-const descError = ref('')
-const showSnackbar = ref(false)
-const snackbarMsg = ref('')
-const snackbarColor = ref('success')
-
-const canProceed = computed(() => {
-  return name.value && !nameError.value
+const form = ref({
+  name: '',
+  description: '',
+  type: '',
+  version: '1.0.0',
+  visibility: 'private',
 })
 
-watch(name, val => {
-  if (!val) nameError.value = 'Project name is required.'
-  else if (val.length < 3)
-    nameError.value = 'Name must be at least 3 characters.'
-  else nameError.value = ''
-})
-
-watch(description, val => {
-  if (val && val.length > 200) descError.value = 'Description too long.'
-  else descError.value = ''
-})
-
-const handleOnboardingClose = () => {
-  showOnboarding.value = false
-}
-
-const handleStepClick = (idx: number) => {
-  wizard.goTo(idx)
-}
-
-const handleHelpClick = () => {
-  showHelp.value = true
-}
-
-const handleHelpClose = () => {
-  showHelp.value = false
-}
-
-const handleBackClick = () => {
-  wizard.prev()
-}
-
-const handleNextClick = () => {
-  if (wizard.isLastStep) {
-    onSubmit()
-  } else {
-    wizard.next
+const resetForm = () => {
+  form.value = {
+    name: '',
+    description: '',
+    type: '',
+    version: '1.0.0',
+    visibility: 'private',
   }
+  success.value = false
+  error.value = null
 }
 
-const onSubmit = () => {
-  if (!canProceed.value) {
-    showSnackbar.value = true
-    snackbarMsg.value = 'Please fix errors before continuing.'
-    snackbarColor.value = 'error'
-    return
+const createProject = async () => {
+  error.value = null
+  success.value = false
+  loading.value = true
+  
+  try {
+    const { error: err } = await supabase.from('projects').insert([
+      {
+        name: form.value.name,
+        description: form.value.description,
+        type: form.value.type,
+        version: form.value.version,
+        visibility: form.value.visibility,
+        created_at: new Date().toISOString(),
+        status: 'active',
+      },
+    ])
+    
+    if (err) {
+      error.value = err.message
+    } else {
+      success.value = true
+      resetForm()
+    }
+  } catch (err) {
+    error.value = 'An unexpected error occurred'
+  } finally {
+    loading.value = false
   }
-  projectStore.create({ name: name.value, description: description.value })
-  showSnackbar.value = true
-  snackbarMsg.value = 'Project submitted!'
-  snackbarColor.value = 'success'
 }
 </script>
 
 <style scoped>
-.mb-3 {
-  margin-bottom: 1rem;
+.create-form {
+  margin-bottom: 2rem;
 }
-.mt-3 {
-  margin-top: 1rem;
+
+.form-field {
+  margin-bottom: 1.5rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .form-actions .v-btn {
+    width: 100%;
+  }
 }
 </style>

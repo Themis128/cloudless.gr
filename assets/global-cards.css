@@ -1,0 +1,289 @@
+/* Global Card Styling System */
+/* This file ensures consistent card appearance across all pages */
+
+/* Base Card Styles */
+.v-card {
+  border-radius: 12px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.v-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* White Background Cards */
+.v-card.bg-white {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Card Title Styles */
+.v-card-title {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  padding: 1.5rem 1.5rem 0.75rem 1.5rem !important;
+  line-height: 1.4 !important;
+}
+
+.v-card-title.text-h6 {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+}
+
+/* Card Text Styles */
+.v-card-text {
+  color: #ffffff !important;
+  padding: 0.75rem 1.5rem 1.5rem 1.5rem !important;
+  line-height: 1.6 !important;
+  font-size: 0.95rem !important;
+}
+
+/* Card Subtitle Styles */
+.v-card-subtitle {
+  color: #ffffff !important;
+  font-size: 0.875rem !important;
+  padding: 0 1.5rem 0.75rem 1.5rem !important;
+}
+
+/* Card Actions Styles */
+.v-card-actions {
+  padding: 0.75rem 1.5rem 1.5rem 1.5rem !important;
+  gap: 0.75rem !important;
+}
+
+/* Quick Actions Section */
+.quick-actions-header {
+  margin-bottom: 1.5rem !important;
+}
+
+.quick-actions-title p {
+  color: #ffffff !important;
+  font-size: 0.95rem !important;
+  margin: 0 !important;
+  line-height: 1.5 !important;
+}
+
+.quick-actions-stats {
+  display: flex !important;
+  gap: 0.75rem !important;
+  align-items: center !important;
+}
+
+.quick-actions-buttons {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+  gap: 1rem !important;
+  align-items: center !important;
+}
+
+/* Action Buttons */
+.action-btn {
+  min-height: 48px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+  border-radius: 12px !important;
+  text-transform: none !important;
+  letter-spacing: 0.025em !important;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Stats Cards */
+.stats-card {
+  transition: transform 0.2s ease-in-out !important;
+  cursor: pointer !important;
+}
+
+.stats-card:hover {
+  transform: translateY(-4px) !important;
+}
+
+.stats-card .v-card-text {
+  text-align: center !important;
+  padding: 1.5rem !important;
+}
+
+.stats-card .text-h4 {
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.stats-card .text-body-2 {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+.stats-card .text-caption {
+  color: #ffffff !important;
+  font-size: 0.75rem !important;
+}
+
+/* List Items in Cards */
+.v-list-item {
+  border-radius: 8px !important;
+  margin-bottom: 0.5rem !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.v-list-item:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.v-list-item-title {
+  font-weight: 500 !important;
+  color: #ffffff !important;
+}
+
+.v-list-item-subtitle {
+  color: #ffffff !important;
+  font-size: 0.875rem !important;
+}
+
+/* Data Table in Cards */
+.v-data-table {
+  background: transparent !important;
+}
+
+.v-data-table .v-data-table-header {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+.v-data-table th {
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  font-size: 0.875rem !important;
+}
+
+.v-data-table td {
+  color: #ffffff !important;
+  font-size: 0.875rem !important;
+}
+
+/* Alert Styles in Cards */
+.v-alert {
+  border-radius: 8px !important;
+  margin: 0 !important;
+}
+
+/* Form Elements in Cards */
+.v-text-field,
+.v-select,
+.v-textarea {
+  margin-bottom: 1rem !important;
+}
+
+.v-text-field .v-field__input {
+  color: #ffffff !important;
+}
+
+.v-text-field .v-field__label {
+  color: #ffffff !important;
+}
+
+/* Chip Styles */
+.v-chip {
+  font-weight: 500 !important;
+  font-size: 0.75rem !important;
+}
+
+/* Icon Styles */
+.v-icon {
+  color: inherit !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .v-card-title {
+    padding: 1.25rem 1.25rem 0.5rem 1.25rem !important;
+    font-size: 1.125rem !important;
+  }
+  
+  .v-card-text {
+    padding: 0.5rem 1.25rem 1.25rem 1.25rem !important;
+  }
+  
+  .v-card-actions {
+    padding: 0.5rem 1.25rem 1.25rem 1.25rem !important;
+  }
+  
+  .quick-actions-buttons {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+  
+  .action-btn {
+    width: 100% !important;
+    min-height: 52px !important;
+  }
+  
+  .quick-actions-stats {
+    flex-wrap: wrap !important;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .v-card.bg-white {
+    background-color: #1e1e1e !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
+  
+  .v-card-title {
+    color: #ffffff !important;
+  }
+  
+  .v-card-text {
+    color: #ffffff !important;
+  }
+  
+  .v-card-subtitle {
+    color: #ffffff !important;
+  }
+  
+  .quick-actions-title p {
+    color: #ffffff !important;
+  }
+  
+  .stats-card .text-h4 {
+    color: #ffffff !important;
+  }
+  
+  .stats-card .text-body-2 {
+    color: #ffffff !important;
+  }
+  
+  .stats-card .text-caption {
+    color: #ffffff !important;
+  }
+  
+  .v-list-item:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+  }
+  
+  .v-list-item-title {
+    color: #ffffff !important;
+  }
+  
+  .v-list-item-subtitle {
+    color: #ffffff !important;
+  }
+  
+  .v-data-table .v-data-table-header {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+  }
+  
+  .v-data-table th {
+    color: #ffffff !important;
+  }
+  
+  .v-data-table td {
+    color: #ffffff !important;
+  }
+} 

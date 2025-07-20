@@ -1,7 +1,7 @@
 
 <template>
   <div>
-    <BackButton :to="`/debug/${type}`" />
+    <BackButton to="/debug" />
     <v-card>
       <v-card-title>Debug {{ type }} #{{ id }}</v-card-title>
       <v-card-text>
@@ -13,8 +13,8 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import BackButton from '~/components/ui/BackButton.vue'
 import DebugInspector from '~/components/debug/DebugInspector.vue'
+import BackButton from '~/components/ui/BackButton.vue'
 
 const route = useRoute()
 const type = Array.isArray(route.params.type) ? route.params.type[0] : route.params.type

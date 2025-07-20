@@ -209,6 +209,135 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_messages: {
+        Row: {
+          id: string
+          first_name: string
+          last_name: string
+          email: string
+          phone: string | null
+          company: string | null
+          job_title: string | null
+          subject: string
+          priority: string
+          message: string
+          newsletter_opt_in: boolean
+          marketing_opt_in: boolean
+          status: string
+          assigned_to: string | null
+          ip_address: unknown | null
+          user_agent: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          first_name: string
+          last_name: string
+          email: string
+          phone?: string | null
+          company?: string | null
+          job_title?: string | null
+          subject: string
+          priority?: string
+          message: string
+          newsletter_opt_in?: boolean
+          marketing_opt_in?: boolean
+          status?: string
+          assigned_to?: string | null
+          ip_address?: unknown | null
+          user_agent?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          first_name?: string
+          last_name?: string
+          email?: string
+          phone?: string | null
+          company?: string | null
+          job_title?: string | null
+          subject?: string
+          priority?: string
+          message?: string
+          newsletter_opt_in?: boolean
+          marketing_opt_in?: boolean
+          status?: string
+          assigned_to?: string | null
+          ip_address?: unknown | null
+          user_agent?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_messages_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      support_requests: {
+        Row: {
+          id: string
+          name: string
+          email: string
+          plan: string | null
+          priority: string
+          subject: string
+          description: string
+          attachments: Json | null
+          status: string
+          assigned_to: string | null
+          ip_address: unknown | null
+          user_agent: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          email: string
+          plan?: string | null
+          priority?: string
+          subject: string
+          description: string
+          attachments?: Json | null
+          status?: string
+          assigned_to?: string | null
+          ip_address?: unknown | null
+          user_agent?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string
+          plan?: string | null
+          priority?: string
+          description?: string
+          attachments?: Json | null
+          status?: string
+          assigned_to?: string | null
+          ip_address?: unknown | null
+          user_agent?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_requests_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       data_sources: {
         Row: {
           connection_config: Json

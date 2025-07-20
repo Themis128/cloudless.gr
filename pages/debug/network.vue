@@ -1,210 +1,233 @@
 <template>
-  <v-container>
-    <v-row>
-      <v-col cols="12">
-        <v-btn color="primary" to="/debug" class="mb-4">
-          <v-icon left>
-            mdi-arrow-left
-          </v-icon>
-          Back to Debug Home
+  <div>
+    <v-container>
+      <!-- Back to Debug Button -->
+      <div class="mb-4">
+        <v-btn
+          color="secondary"
+          variant="outlined"
+          prepend-icon="mdi-arrow-left"
+          @click="goBackToDebug"
+        >
+          Back to Debug
         </v-btn>
-      </v-col>
-    </v-row>
-    <v-row>
-      <v-col cols="12" md="7">
-        <v-card>
-          <v-card-title
-            class="text-h5 d-flex align-center justify-space-between"
-          >
-            Ping API Server
-            <v-btn
-              icon
-              :loading="loading"
-              :disabled="loading"
-              @click="ping"
-            >
-              <v-icon>mdi-refresh</v-icon>
-            </v-btn>
-          </v-card-title>
-          <v-card-text>
-            <DebugConsole :output="logs" title="Ping Log" />
-            <v-divider class="my-4" />
-            <v-row>
-              <v-col cols="12" md="6">
-                <v-card outlined>
-                  <v-card-title class="text-h6">
-                    Ping Metrics
-                  </v-card-title>
-                  <v-card-text>
-                    <v-list dense>
-                      <v-list-item>
-                        <v-list-item-title>Total Pings:</v-list-item-title>
-                        <v-list-item-subtitle>
-                          {{
-                            latencyHistory.length
-                          }}
-                        </v-list-item-subtitle>
-                      </v-list-item>
-                      <v-list-item>
-                        <v-list-item-title>Last Latency:</v-list-item-title>
-                        <v-list-item-subtitle>
-                          {{ lastLatency }} ms
-                        </v-list-item-subtitle>
-                      </v-list-item>
-                      <v-list-item>
-                        <v-list-item-title>Online Rate:</v-list-item-title>
-                        <v-list-item-subtitle>
-                          {{ onlineRate }}%
-                        </v-list-item-subtitle>
-                      </v-list-item>
-                    </v-list>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              <v-col cols="12" md="6">
-                <v-card outlined>
-                  <v-card-title class="text-h6">
-                    Latency History (ms)
-                  </v-card-title>
-                  <v-card-text>
-                    <client-only>
-                      <component
-                        :is="VChart"
-                        v-if="VChart"
-                        :option="chartOptions"
-                        autoresize
-                        style="height: 200px"
-                      />
-                    </client-only>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="5">
-        <v-card>
-          <v-card-title class="text-h6">
-            Network State
-          </v-card-title>
-          <v-card-text>
-            <DebugInspector :data="networkState" />
-          </v-card-text>
-        </v-card>
-        <v-card class="mt-4">
-          <v-card-title class="text-h6">
-            Diagnostics
-          </v-card-title>
-          <v-card-text>
-            <v-list dense>
-              <v-list-item>
-                <v-list-item-title>Status:</v-list-item-title>
-                <v-list-item-subtitle>
-                  {{
-                    diagnosticStatus
-                  }}
-                </v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Last Updated:</v-list-item-title>
-                <v-list-item-subtitle>{{ lastUpdated }}</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+      </div>
+      
+      <h1 class="mb-4">
+        Network Debug
+      </h1>
+      <v-form @submit.prevent="testNetwork">
+        <v-text-field
+          v-model="form.endpoint"
+          label="Endpoint URL"
+          class="mb-3"
+          required
+        />
+        <v-select
+          v-model="form.method"
+          :items="httpMethods"
+          label="HTTP Method"
+          class="mb-3"
+          required
+        />
+        <v-textarea
+          v-model="form.headers"
+          label="Headers (JSON)"
+          class="mb-3"
+          rows="3"
+        />
+        <v-textarea
+          v-model="form.body"
+          label="Request Body (JSON)"
+          class="mb-3"
+          rows="4"
+        />
+        <v-text-field
+          v-model.number="form.timeout"
+          label="Timeout (seconds)"
+          type="number"
+          min="1"
+          max="60"
+          class="mb-3"
+          required
+        />
+        <v-btn type="submit" color="primary" :loading="loading">
+          Test Network
+        </v-btn>
+        <v-btn text class="ml-2" @click="resetForm">
+          Reset
+        </v-btn>
+        <v-btn
+          color="secondary"
+          text
+          class="ml-2"
+          @click="pingHealth"
+        >
+          Ping Health Endpoint
+        </v-btn>
+      </v-form>
+      <v-alert v-if="success" type="success" class="mt-4">
+        Network test completed successfully!
+      </v-alert>
+      <v-alert v-if="error" type="error" class="mt-4">
+        {{ error }}
+      </v-alert>
+      <v-card v-if="networkInfo" class="mt-4">
+        <v-card-title>Network Information</v-card-title>
+        <v-card-text>
+          <v-list>
+            <v-list-item>
+              <v-list-item-title>Status</v-list-item-title>
+              <v-list-item-subtitle>{{ networkInfo.status }}</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title>Latency</v-list-item-title>
+              <v-list-item-subtitle>{{ networkInfo.latency }}</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title>Response Time</v-list-item-title>
+              <v-list-item-subtitle>{{ networkInfo.responseTime }}ms</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title>Last Updated</v-list-item-title>
+              <v-list-item-subtitle>{{ networkInfo.lastUpdated }}</v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+      </v-card>
+      <v-card v-if="testResults" class="mt-4">
+        <v-card-title>Test Results</v-card-title>
+        <v-card-text>
+          <v-list>
+            <v-list-item>
+              <v-list-item-title>Status Code</v-list-item-title>
+              <v-list-item-subtitle>{{ testResults.statusCode }}</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title>Response Time</v-list-item-title>
+              <v-list-item-subtitle>{{ testResults.responseTime }}ms</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title>Response Size</v-list-item-title>
+              <v-list-item-subtitle>{{ testResults.responseSize }} bytes</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title>Response Headers</v-list-item-title>
+              <v-list-item-subtitle>{{ testResults.responseHeaders }}</v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </v-container>
+  </div>
 </template>
 
 <script setup lang="ts">
-import type { EChartsOption } from 'echarts'
-import { computed, onMounted, ref } from 'vue'
-import DebugConsole from '~/components/debug/DebugConsole.vue'
-import DebugInspector from '~/components/debug/DebugInspector.vue'
-import { useDebugTools } from '~/composables/useDebugTools'
-const VChart = ref()
+import { ref } from 'vue'
 
-const networkState = ref<{ status: string; latency: string | null }>({
-  status: 'checking...',
-  latency: null,
-})
-const { logs } = useDebugTools()
 const loading = ref(false)
-const latencyHistory = ref<number[]>([])
-const onlineHistory = ref<boolean[]>([])
-const lastUpdated = computed(() => new Date().toLocaleString())
-const diagnosticStatus = computed(() => networkState.value.status)
+const success = ref(false)
+const error = ref<string | null>(null)
+const networkInfo = ref<any>(null)
+const testResults = ref<any>(null)
 
-const ping = async () => {
-  loading.value = true
-  const start = Date.now()
-  logs.value.push(`Pinging API server...`)
-  try {
-    await fetch('http://127.0.0.1:54321/health')
-    const latency = Date.now() - start
-    networkState.value = { status: 'online', latency: `${latency}ms` }
-    logs.value.push(`✅ Online (${latency}ms)`)
-    latencyHistory.value.push(latency)
-    onlineHistory.value.push(true)
-  } catch (error) {
-    networkState.value = { status: 'offline', latency: 'N/A' }
-    logs.value.push(`❌ Offline`)
-    latencyHistory.value.push(0)
-    onlineHistory.value.push(false)
+const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
+
+const form = ref({
+  endpoint: 'https://api.cloudless.gr/health',
+  method: 'GET',
+  headers: '{"Content-Type": "application/json"}',
+  body: '',
+  timeout: 10,
+})
+
+const resetForm = () => {
+  form.value = {
+    endpoint: 'https://api.cloudless.gr/health',
+    method: 'GET',
+    headers: '{"Content-Type": "application/json"}',
+    body: '',
+    timeout: 10,
   }
-  loading.value = false
+  success.value = false
+  error.value = null
+  testResults.value = null
 }
 
-onMounted(async () => {
-  const mod = await import('vue-echarts')
-  VChart.value = mod.default
-  ping()
-})
+const testNetwork = async () => {
+  error.value = null
+  success.value = false
+  loading.value = true
+  
+  try {
+    const startTime = Date.now()
+    
+    let headers = {}
+    try {
+      headers = JSON.parse(form.value.headers || '{}')
+    } catch (e) {
+      headers = { 'Content-Type': 'application/json' }
+    }
+    
+    let body = null
+    if (form.value.body && ['POST', 'PUT', 'PATCH'].includes(form.value.method)) {
+      try {
+        body = JSON.parse(form.value.body)
+      } catch (e) {
+        body = form.value.body
+      }
+    }
+    
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), form.value.timeout * 1000)
+    
+    const response = await fetch(form.value.endpoint, {
+      method: form.value.method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    })
+    
+    clearTimeout(timeoutId)
+    const responseTime = Date.now() - startTime
+    
+    const responseText = await response.text()
+    
+    testResults.value = {
+      statusCode: response.status,
+      responseTime,
+      responseSize: responseText.length,
+      responseHeaders: JSON.stringify(Object.fromEntries(response.headers.entries())),
+    }
+    
+    networkInfo.value = {
+      status: response.ok ? 'success' : 'error',
+      latency: `${responseTime}ms`,
+      responseTime,
+      lastUpdated: new Date().toLocaleString(),
+    }
+    
+    success.value = true
+  } catch (err: any) {
+    error.value = err.name === 'AbortError' ? 'Request timed out' : err.message
+    networkInfo.value = {
+      status: 'error',
+      latency: 'N/A',
+      responseTime: 0,
+      lastUpdated: new Date().toLocaleString(),
+    }
+  } finally {
+    loading.value = false
+  }
+}
 
-const lastLatency = computed(() => {
-  if (latencyHistory.value.length === 0) return 'N/A'
-  return latencyHistory.value[latencyHistory.value.length - 1]
-})
+const pingHealth = async () => {
+  form.value.endpoint = 'http://127.0.0.1:54321/health'
+  form.value.method = 'GET'
+  await testNetwork()
+}
 
-const onlineRate = computed(() => {
-  if (onlineHistory.value.length === 0) return 0
-  const onlineCount = onlineHistory.value.filter(Boolean).length
-  return ((onlineCount / onlineHistory.value.length) * 100).toFixed(0)
-})
-
-const chartOptions = computed<EChartsOption>(() => ({
-  backgroundColor: '#1e1e2f',
-  textStyle: {
-    color: '#ccc',
-  },
-  legend: {
-    textStyle: { color: '#fff' },
-  },
-  toolbox: {
-    feature: {
-      saveAsImage: {},
-    },
-  },
-  xAxis: {
-    type: 'category',
-    data: latencyHistory.value.map((_, i) => `${i + 1}`),
-  },
-  yAxis: {
-    type: 'value',
-    min: 0,
-    name: 'ms',
-  },
-  series: [
-    {
-      data: latencyHistory.value,
-      type: 'line',
-      smooth: true,
-      color: '#43a047',
-      name: 'Latency',
-    },
-  ],
-  tooltip: { trigger: 'axis' },
-}))
+const goBackToDebug = () => {
+  window.location.href = '/debug'
+}
 </script>

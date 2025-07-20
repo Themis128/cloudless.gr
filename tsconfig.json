@@ -31,8 +31,6 @@
     ".output",
     ".nuxt",
     "pages/debug/[type].vue/[id].vue",
-    "components/bots/BotWizard.vue",
-    "pages/bots/[id].vue",
-    "pages/bots/builder.vue"
+    "components/bots/BotWizard.vue"
   ]
 }

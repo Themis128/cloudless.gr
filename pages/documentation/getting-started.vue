@@ -1,142 +1,117 @@
 <template>
-  <div class="documentation-container">
-    <v-container max-width="1200">
-      <v-row>
-        <v-col cols="12">
-          <div class="doc-header">
-            <h1 class="doc-title">
-              <v-icon size="32" class="mr-3">
-                mdi-rocket-launch
-              </v-icon>
-              Getting Started
-            </h1>
-            <p class="doc-subtitle">
-              Quick setup guide to get you started with Cloudless Wizard
-            </p>
+  <div class="getting-started-page">
+    <div class="page-header">
+      <h1>
+        <v-icon size="32" class="mr-3">
+          mdi-rocket-launch
+        </v-icon>
+        Getting Started
+      </h1>
+      <p class="subtitle">
+        Quick setup guide to get you started with Cloudless Wizard
+      </p>
+    </div>
+
+    <div class="content-container">
+      <div class="getting-started-content">
+        <div class="overview-section">
+          <h2>
+            <v-icon class="mr-2">
+              mdi-information
+            </v-icon>
+            Overview
+          </h2>
+          <p class="overview-text">
+            Cloudless Wizard is a comprehensive platform for building AI-driven cloud solutions. 
+            Whether you're creating chatbots, training custom models, or building data pipelines, 
+            Cloudless Wizard provides the tools you need to bring your AI ideas to life.
+          </p>
+          
+          <div class="success-alert">
+            <v-icon size="24" color="success">
+              mdi-check-circle
+            </v-icon>
+            <div class="alert-content">
+              <strong>What you'll learn:</strong> This guide will walk you through creating your first project, 
+              building a simple bot, and deploying it to the cloud.
+            </div>
           </div>
-        </v-col>
-      </v-row>
+        </div>
 
-      <v-row>
-        <v-col cols="12" md="9" class="mx-auto">
-          <v-card class="doc-content-card">
-            <v-card-text>
-              <h2 class="text-h4 mb-4">
-                <v-icon class="mr-2">
-                  mdi-information
-                </v-icon>
-                Overview
-              </h2>
-              <p class="text-body-1 mb-4">
-                Cloudless Wizard is a comprehensive platform for building AI-driven cloud solutions. 
-                Whether you're creating chatbots, training custom models, or building data pipelines, 
-                Cloudless Wizard provides the tools you need to bring your AI ideas to life.
-              </p>
-              
-              <v-alert
-                type="success"
-                variant="tonal"
-                class="mb-6"
-              >
-                <template #prepend>
-                  <v-icon>mdi-check-circle</v-icon>
-                </template>
-                <strong>What you'll learn:</strong> This guide will walk you through creating your first project, 
-                building a simple bot, and deploying it to the cloud.
-              </v-alert>
-
-              <h2 class="text-h4 mb-4">
-                <v-icon class="mr-2">
-                  mdi-lightning-bolt
-                </v-icon>
-                Quick Start (5 minutes)
-              </h2>
-              
-              <v-timeline density="compact" class="mb-6">
-                <v-timeline-item
-                  v-for="(step, index) in quickStartSteps"
-                  :key="step.title"
-                  :dot-color="step.color"
-                  size="small"
+        <div class="quick-start-section">
+          <h2>
+            <v-icon class="mr-2">
+              mdi-lightning-bolt
+            </v-icon>
+            Quick Start (5 minutes)
+          </h2>
+          
+          <div class="steps-timeline">
+            <div
+              v-for="(step, index) in quickStartSteps"
+              :key="step.title"
+              class="step-item"
+            >
+              <div class="step-number">
+                {{ index + 1 }}
+              </div>
+              <div class="step-content">
+                <div class="step-header">
+                  <h3>{{ step.title }}</h3>
+                  <div class="step-color" :style="{ backgroundColor: getStepColor(step.color) }" />
+                </div>
+                <p>{{ step.description }}</p>
+                <NuxtLink
+                  v-if="step.action"
+                  :to="step.action.path"
+                  class="step-action-btn"
+                  :style="{ backgroundColor: getStepColor(step.action.color) }"
                 >
-                  <template #opposite>
-                    <div class="text-caption">
-                      {{ index + 1 }}
-                    </div>
-                  </template>
-                  <v-card>
-                    <v-card-title class="text-h6">
-                      {{ step.title }}
-                    </v-card-title>
-                    <v-card-text>
-                      <p class="text-body-2">
-                        {{ step.description }}
-                      </p>
-                      <v-btn
-                        v-if="step.action"
-                        :to="step.action.path"
-                        :color="step.action.color"
-                        variant="elevated"
-                        size="small"
-                        class="mt-2"
-                      >
-                        <v-icon start>
-                          {{ step.action.icon }}
-                        </v-icon>
-                        {{ step.action.text }}
-                      </v-btn>
-                    </v-card-text>
-                  </v-card>
-                </v-timeline-item>
-              </v-timeline>
+                  <v-icon size="16">
+                    {{ step.action.icon }}
+                  </v-icon>
+                  {{ step.action.text }}
+                </NuxtLink>
+              </div>
+            </div>
+          </div>
+        </div>
 
-              <h2 class="text-h4 mb-4">
-                <v-icon class="mr-2">
+        <div class="next-steps-section">
+          <h2>
+            <v-icon class="mr-2">
+              mdi-arrow-right
+            </v-icon>
+            Next Steps
+          </h2>
+          <p class="next-steps-intro">
+            Now that you've completed the quick start, here are some suggested next steps:
+          </p>
+          
+          <div class="next-steps-grid">
+            <div
+              v-for="nextStep in nextSteps"
+              :key="nextStep.title"
+              class="next-step-card"
+            >
+              <div class="next-step-header">
+                <v-icon size="24" color="primary">
+                  {{ nextStep.icon }}
+                </v-icon>
+                <h3>{{ nextStep.title }}</h3>
+              </div>
+              <p>{{ nextStep.description }}</p>
+              <NuxtLink :to="nextStep.link" class="next-step-link">
+                Learn More
+                <v-icon size="16">
                   mdi-arrow-right
                 </v-icon>
-                Next Steps
-              </h2>
-              <p class="text-body-1 mb-4">
-                Now that you've completed the quick start, here are some suggested next steps:
-              </p>
-              
-              <v-row>
-                <v-col
-                  v-for="nextStep in nextSteps"
-                  :key="nextStep.title"
-                  cols="12"
-                  sm="6"
-                  lg="4"
-                >
-                  <v-card class="next-step-card h-100" elevation="2">
-                    <v-card-title class="text-h6 d-flex align-center">
-                      <v-icon :icon="nextStep.icon" class="mr-2" color="primary" />
-                      {{ nextStep.title }}
-                    </v-card-title>
-                    <v-card-text>
-                      <p class="text-body-2 mb-3">
-                        {{ nextStep.description }}
-                      </p>
-                      <v-btn
-                        :to="nextStep.link"
-                        variant="text"
-                        color="primary"
-                        size="small"
-                      >
-                        Learn More
-                        <v-icon end>
-                          mdi-arrow-right
-                        </v-icon>
-                      </v-btn>
-                    </v-card-text>
-                  </v-card>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
+              </NuxtLink>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -203,71 +178,296 @@ const nextSteps = [
   },
   {
     title: 'Pipeline Creator',
-    description: 'Build complex data processing pipelines with our visual editor.',
+    description: 'Build complex data processing pipelines with our visual builder.',
     icon: 'mdi-timeline',
     link: '/documentation/pipelines'
+  },
+  {
+    title: 'Deployment Guide',
+    description: 'Learn how to deploy your AI solutions to production.',
+    icon: 'mdi-cloud-upload',
+    link: '/documentation/deployment'
+  },
+  {
+    title: 'API Reference',
+    description: 'Explore our comprehensive API documentation.',
+    icon: 'mdi-code-braces',
+    link: '/documentation/api'
+  },
+  {
+    title: 'Troubleshooting',
+    description: 'Find solutions to common issues and get help when you need it.',
+    icon: 'mdi-help-circle',
+    link: '/documentation/troubleshooting'
   }
 ]
+
+const getStepColor = (color: string) => {
+  const colors: Record<string, string> = {
+    primary: '#667eea',
+    secondary: '#764ba2',
+    success: '#4caf50',
+    info: '#2196f3',
+    warning: '#ff9800',
+    error: '#f44336'
+  }
+  return colors[color] || colors.primary
+}
 </script>
 
 <style scoped>
-.documentation-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding: 2rem 0;
+.getting-started-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
 }
 
-.doc-header {
+.page-header {
   text-align: center;
   margin-bottom: 3rem;
 }
 
-.doc-title {
+.page-header h1 {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #1a1a1a;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.doc-subtitle {
+.subtitle {
   font-size: 1.2rem;
-  color: #666;
-  max-width: 600px;
-  margin: 0 auto;
+  color: rgba(0, 0, 0, 0.7);
+  margin: 0;
 }
 
-.doc-content-card {
-  background: rgba(255, 255, 255, 0.95);
+.content-container {
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
-  min-height: 600px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 3rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.getting-started-content {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.overview-section,
+.quick-start-section,
+.next-steps-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.overview-section h2,
+.quick-start-section h2,
+.next-steps-section h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.overview-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: rgba(0, 0, 0, 0.7);
+  margin: 0;
+}
+
+.success-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.alert-content {
+  color: rgba(0, 0, 0, 0.8);
+  line-height: 1.6;
+}
+
+.steps-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.step-item {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.step-number {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.step-content:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.step-header h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
+  margin: 0;
+}
+
+.step-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.step-content p {
+  color: rgba(0, 0, 0, 0.7);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.step-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: opacity 0.3s ease;
+}
+
+.step-action-btn:hover {
+  opacity: 0.9;
+}
+
+.next-steps-intro {
+  font-size: 1.1rem;
+  color: rgba(0, 0, 0, 0.7);
+  margin: 0;
+}
+
+.next-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
 }
 
 .next-step-card {
   background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .next-step-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
+.next-step-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.next-step-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
+  margin: 0;
+}
+
+.next-step-card p {
+  color: rgba(0, 0, 0, 0.7);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.next-step-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.next-step-link:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 768px) {
-  .doc-title {
+  .getting-started-page {
+    padding: 1rem;
+  }
+
+  .content-container {
+    padding: 2rem;
+  }
+
+  .page-header h1 {
     font-size: 2rem;
   }
-  
-  .doc-subtitle {
-    font-size: 1rem;
+
+  .step-item {
+    flex-direction: column;
+    gap: 1rem;
   }
-  
-  .documentation-container {
-    padding: 1rem 0;
+
+  .next-steps-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style> 

@@ -1,51 +1,62 @@
 <template>
   <div>
-    <TrainGuide />
-    <v-container>
-      <h1 class="mb-4">
-        Train Model
-      </h1>
-      <v-form @submit.prevent="trainModel">
-        <v-text-field
-          v-model="form.modelName"
-          label="Model Name"
-          class="mb-3"
-          required
-        />
-        <v-text-field
-          v-model="form.datasetUrl"
-          label="Dataset URL"
-          class="mb-3"
-          required
-        />
-        <v-text-field
-          v-model.number="form.epochs"
-          label="Epochs"
-          type="number"
-          min="1"
-          class="mb-3"
-          required
-        />
-        <v-btn type="submit" color="primary" :loading="loading">
-          Train
-        </v-btn>
-        <v-btn text class="ml-2" @click="resetForm">
-          Reset
-        </v-btn>
-      </v-form>
-      <v-alert v-if="success" type="success" class="mt-4">
-        Training started successfully!
-      </v-alert>
-      <v-alert v-if="error" type="error" class="mt-4">
-        {{ error }}
-      </v-alert>
-    </v-container>
+    <PageStructure
+      title="Train Model"
+      subtitle="Train your AI models with data"
+      back-button-to="/models"
+      :has-sidebar="true"
+      :white-header="true"
+    >
+      <template #main>
+        <v-container>
+          <v-form @submit.prevent="trainModel">
+            <v-text-field
+              v-model="form.modelName"
+              label="Model Name"
+              class="mb-3"
+              required
+            />
+            <v-text-field
+              v-model="form.datasetUrl"
+              label="Dataset URL"
+              class="mb-3"
+              required
+            />
+            <v-text-field
+              v-model.number="form.epochs"
+              label="Epochs"
+              type="number"
+              min="1"
+              class="mb-3"
+              required
+            />
+            <v-btn type="submit" color="primary" :loading="loading">
+              Train
+            </v-btn>
+            <v-btn text class="ml-2" @click="resetForm">
+              Reset
+            </v-btn>
+          </v-form>
+          <v-alert v-if="success" type="success" class="mt-4">
+            Training started successfully!
+          </v-alert>
+          <v-alert v-if="error" type="error" class="mt-4">
+            {{ error }}
+          </v-alert>
+        </v-container>
+      </template>
+
+      <template #sidebar>
+        <ModelGuide page="train" />
+      </template>
+    </PageStructure>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import TrainGuide from '~/components/step-guides/TrainGuide.vue'
+import PageStructure from '~/components/layout/PageStructure.vue'
+import ModelGuide from '~/components/step-guides/ModelGuide.vue'
 import { useSupabase } from '~/composables/supabase'
 
 const supabase = useSupabase()

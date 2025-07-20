@@ -1,49 +1,60 @@
 <template>
   <div>
-    <AnalyticsGuide />
-    <v-container>
-      <h1 class="mb-4">
-        System Overview
-      </h1>
+    <PageStructure
+      title="System Overview"
+      subtitle="Monitor your AI infrastructure performance and metrics"
+      :show-back-button="false"
+    >
+      <template #main>
+        <v-row>
+          <!-- Metric Cards -->
+          <v-col
+            v-for="metric in metrics"
+            :key="metric.label"
+            cols="12"
+            sm="6"
+            md="3"
+          >
+            <v-card class="bg-white stats-card">
+              <v-card-title class="d-flex justify-space-between align-center">
+                <span>{{ metric.label }}</span>
+                <v-icon :color="metric.color">
+                  {{ metric.icon }}
+                </v-icon>
+              </v-card-title>
+              <v-card-text class="text-h5">
+                {{ metric.value }}
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
 
-      <v-row>
-        <!-- Metric Cards -->
-        <v-col
-          v-for="metric in metrics"
-          :key="metric.label"
-          cols="12"
-          sm="6"
-          md="3"
-        >
-          <v-card>
-            <v-card-title class="d-flex justify-space-between align-center">
-              <span>{{ metric.label }}</span>
-              <v-icon :color="metric.color">
-                {{ metric.icon }}
-              </v-icon>
-            </v-card-title>
-            <v-card-text class="text-h5">
-              {{ metric.value }}
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
+        <!-- Latency Chart -->
+        <v-card class="bg-white mt-6">
+          <v-card-title>
+            <v-icon start color="primary">
+              mdi-chart-line
+            </v-icon>
+            Latency History
+          </v-card-title>
+          <v-card-text>
+            <client-only>
+              <VChart :option="latencyChart" autoresize style="height: 300px" />
+            </client-only>
+          </v-card-text>
+        </v-card>
+      </template>
 
-      <!-- Latency Chart -->
-      <v-card class="mt-6">
-        <v-card-title>Latency History</v-card-title>
-        <v-card-text>
-          <client-only>
-            <VChart :option="latencyChart" autoresize style="height: 300px" />
-          </client-only>
-        </v-card-text>
-      </v-card>
-    </v-container>
+      <template #sidebar>
+        <AnalyticsGuide />
+      </template>
+    </PageStructure>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import PageStructure from '~/components/layout/PageStructure.vue'
 import AnalyticsGuide from '~/components/step-guides/AnalyticsGuide.vue'
 import { useSupabase } from '~/composables/supabase'
 import type { Database } from '~/types/database.types'
