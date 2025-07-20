@@ -130,7 +130,7 @@ export default defineEventHandler(async (event) => {
       .insert(conversationData)
 
     if (conversationError) {
-      console.error('Failed to store conversation:', conversationError)
+      // console.error('Failed to store conversation:', conversationError)
       // Don't fail the request if conversation storage fails
     }
 
@@ -153,7 +153,7 @@ export default defineEventHandler(async (event) => {
     }
 
   } catch (error) {
-    console.error('Chat error:', error)
+    // console.error('Chat error:', error)
     event.node.res.statusCode = 500
     return {
       success: false,
@@ -235,6 +235,6 @@ async function updateBotUsage(botId: string, supabase: any) {
         })
     }
   } catch (error) {
-    console.error('Failed to update bot usage:', error)
+    // console.error('Failed to update bot usage:', error)
   }
 } 

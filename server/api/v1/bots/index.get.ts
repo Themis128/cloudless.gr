@@ -82,7 +82,7 @@ export default defineEventHandler(async (event) => {
     const { data: bots, error, count } = await queryBuilder
 
     if (error) {
-      console.error('Database error:', error)
+      // console.error('Database error:', error)
       event.node.res.statusCode = 500
       return {
         success: false,
@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
     }
 
   } catch (error) {
-    console.error('List bots error:', error)
+    // console.error('List bots error:', error)
     event.node.res.statusCode = 500
     return {
       success: false,

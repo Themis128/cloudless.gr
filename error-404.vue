@@ -121,7 +121,6 @@ const quickLinks = [
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
     // You can implement search functionality here
-    console.log('Searching for:', searchQuery.value)
     // For now, just redirect to home
     router.push('/')
   }

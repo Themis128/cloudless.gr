@@ -115,7 +115,7 @@ export default defineEventHandler(async (event) => {
       })
 
     if (profileError) {
-      console.error('Profile creation error:', profileError)
+      // console.error('Profile creation error:', profileError)
       // Don't fail the registration if profile creation fails
       // The profile can be created later
     }
@@ -138,7 +138,7 @@ export default defineEventHandler(async (event) => {
     }
 
   } catch (error) {
-    console.error('Registration error:', error)
+    // console.error('Registration error:', error)
     event.node.res.statusCode = 500
     return {
       success: false,

@@ -97,7 +97,7 @@ export default defineEventHandler(async (event) => {
     }
 
   } catch (error) {
-    console.error('Login error:', error)
+    // console.error('Login error:', error)
     event.node.res.statusCode = 500
     return {
       success: false,

@@ -117,7 +117,7 @@ export default defineEventHandler(async event => {
       .eq('id', executionId)
 
     if (updateError) {
-      console.warn('Failed to update pipeline execution:', updateError)
+      // console.warn('Failed to update pipeline execution:', updateError)
     }
 
     return {

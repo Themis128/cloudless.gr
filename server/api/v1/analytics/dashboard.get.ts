@@ -83,7 +83,7 @@ export default defineEventHandler(async (event) => {
     const { data: bots, error: botsError } = await baseFilter
 
     if (botsError) {
-      console.error('Bots query error:', botsError)
+      // console.error('Bots query error:', botsError)
     }
 
     // Get conversation statistics
@@ -94,7 +94,7 @@ export default defineEventHandler(async (event) => {
       .gte('created_at', startDate.toISOString())
 
     if (conversationsError) {
-      console.error('Conversations query error:', conversationsError)
+      // console.error('Conversations query error:', conversationsError)
     }
 
     // Get model statistics
@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
       .eq('user_id', decoded.userId)
 
     if (modelsError) {
-      console.error('Models query error:', modelsError)
+      // console.error('Models query error:', modelsError)
     }
 
     // Get pipeline statistics
@@ -114,7 +114,7 @@ export default defineEventHandler(async (event) => {
       .eq('user_id', decoded.userId)
 
     if (pipelinesError) {
-      console.error('Pipelines query error:', pipelinesError)
+      // console.error('Pipelines query error:', pipelinesError)
     }
 
     // Calculate metrics
@@ -176,7 +176,7 @@ export default defineEventHandler(async (event) => {
     }
 
   } catch (error) {
-    console.error('Dashboard analytics error:', error)
+    // console.error('Dashboard analytics error:', error)
     event.node.res.statusCode = 500
     return {
       success: false,

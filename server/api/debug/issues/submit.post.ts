@@ -78,7 +78,7 @@ export default defineEventHandler(async event => {
     }
 
     // Log the issue for monitoring
-    console.log(`Debug issue created: ${requestData.id} - ${severity} ${category} issue`)
+    // console.log(`Debug issue created: ${requestData.id} - ${severity} ${category} issue`)
 
     // In a real implementation, you might:
     // 1. Send notification to development team

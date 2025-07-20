@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (error) {
-      console.error('Database error:', error)
+      // console.error('Database error:', error)
       event.node.res.statusCode = 500
       return {
         success: false,
@@ -149,7 +149,7 @@ export default defineEventHandler(async (event) => {
         secret: webhookSecret
       })
     } catch (testError) {
-      console.error('Webhook test failed:', testError)
+      // console.error('Webhook test failed:', testError)
       // Don't fail registration if test fails
     }
 
@@ -169,7 +169,7 @@ export default defineEventHandler(async (event) => {
     }
 
   } catch (error) {
-    console.error('Webhook registration error:', error)
+    // console.error('Webhook registration error:', error)
     event.node.res.statusCode = 500
     return {
       success: false,

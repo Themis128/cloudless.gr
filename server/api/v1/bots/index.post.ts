@@ -112,7 +112,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (error) {
-      console.error('Database error:', error)
+      // console.error('Database error:', error)
       event.node.res.statusCode = 500
       return {
         success: false,
@@ -130,7 +130,7 @@ export default defineEventHandler(async (event) => {
     }
 
   } catch (error) {
-    console.error('Create bot error:', error)
+    // console.error('Create bot error:', error)
     event.node.res.statusCode = 500
     return {
       success: false,

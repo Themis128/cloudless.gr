@@ -4,7 +4,7 @@ export interface FormField<T = any> {
   value: T
   error?: string
   required?: boolean
-  validator?: (val: T) => string | null
+  validator?: (value: T) => string | null
 }
 
 export interface FormState {
@@ -17,7 +17,7 @@ export const useForm = <T extends FormState>(initialState: T) => {
   const submitError = ref<string | null>(null)
 
   const isValid = computed(() => {
-    return Object.values(form.value).every(field => {
+    return Object.values(form.value).every((field: any) => {
       if (field.required && !field.value) return false
       if (field.error) return false
       return true

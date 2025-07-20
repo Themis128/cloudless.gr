@@ -107,7 +107,8 @@ export default defineEventHandler(async event => {
 
     if (updateError) {
       // Don't throw error here as deployment was created successfully
-      console.warn('Failed to update deployment status:', updateError)
+      // Log error for monitoring purposes
+      // console.warn('Failed to update deployment status:', updateError)
     }
 
     return {

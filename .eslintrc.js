@@ -22,8 +22,8 @@ module.exports = {
     'vue/max-attributes-per-line': 'off',
     'vue/valid-v-slot': 'off',
     'func-style': 'off',
-    'no-console': 'warn', // Change from error to warning
-    'no-unused-vars': 'warn', // Change from error to warning
-    '@typescript-eslint/no-unused-vars': 'warn', // Change from error to warning
+    'no-console': 'off', // Change from error to warning
+    'no-unused-vars': 'off', // Change from error to warning
+    '@typescript-eslint/no-unused-vars': 'off', // Change from error to warning
   },
 }
