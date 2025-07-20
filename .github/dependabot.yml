@@ -1,0 +1,119 @@
+# Dependabot configuration for cloudless.gr
+# This file configures how Dependabot handles dependency updates
+
+version: 2
+updates:
+  # Enable version updates for npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Themis128"
+    assignees:
+      - "Themis128"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+    ignore:
+      # Ignore major version updates for critical packages
+      - dependency-name: "@nuxt/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "nuxt"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vue"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Themis128"
+    assignees:
+      - "Themis128"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"
+
+  # Enable version updates for Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "Themis128"
+    assignees:
+      - "Themis128"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"
+
+# Global settings
+registries:
+  # Add any private registries if needed
+  # npm-registry:
+  #   type: npm-registry
+  #   url: https://registry.npmjs.org/
+  #   token: ${{ secrets.NPM_TOKEN }}
+
+# Group configuration for reducing PR noise
+groups:
+  # Group minor and patch updates for development dependencies
+  dev-dependencies:
+    patterns:
+      - "@types/*"
+      - "eslint*"
+      - "prettier*"
+      - "jest*"
+      - "vitest*"
+      - "playwright*"
+    update-types:
+      - "minor"
+      - "patch"
+    exclude-patterns:
+      - "@types/node"
+
+  # Group minor and patch updates for build tools
+  build-tools:
+    patterns:
+      - "vite*"
+      - "webpack*"
+      - "rollup*"
+      - "babel*"
+    update-types:
+      - "minor"
+      - "patch"
+
+  # Group minor and patch updates for UI libraries
+  ui-libraries:
+    patterns:
+      - "vuetify*"
+      - "@mdi/*"
+      - "vanta*"
+    update-types:
+      - "minor"
+      - "patch" 
