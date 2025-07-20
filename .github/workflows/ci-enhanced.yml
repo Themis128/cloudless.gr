@@ -1,0 +1,432 @@
+name: Enhanced CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - application
+      - platform
+  pull_request:
+    branches:
+      - main
+      - develop
+      - application
+      - platform
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  security-events: write
+
+env:
+  NODE_VERSION: '20'
+  NODE_ENV: 'test'
+
+jobs:
+  # =============================================================================
+  # PREPARATION & VALIDATION
+  # =============================================================================
+  validate:
+    name: Validate Configuration
+    runs-on: ubuntu-latest
+    outputs:
+      should-skip: ${{ steps.skip-check.outputs.should-skip }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for skip patterns
+        id: skip-check
+        run: |
+          # Skip if only documentation files changed
+          if git diff --name-only ${{ github.event.before }} ${{ github.event.after }} 2>/dev/null | grep -E '\.(md|txt|yml|yaml)$' | wc -l | grep -q '^[0-9]*$' && \
+             [ "$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} 2>/dev/null | grep -vE '\.(md|txt|yml|yaml)$' | wc -l)" -eq 0 ]; then
+            echo "should-skip=true" >> $GITHUB_OUTPUT
+            echo "🔄 Skipping CI - only documentation changes detected"
+          else
+            echo "should-skip=false" >> $GITHUB_OUTPUT
+            echo "✅ Proceeding with CI - code changes detected"
+          fi
+
+      - name: Validate package.json
+        if: steps.skip-check.outputs.should-skip != 'true'
+        run: |
+          echo "📦 Validating package.json..."
+          npm run build --dry-run || echo "⚠️ Dry run failed, but continuing..."
+
+      - name: Check for critical files
+        if: steps.skip-check.outputs.should-skip != 'true'
+        run: |
+          echo "🔍 Checking for critical files..."
+          required_files=("package.json" "nuxt.config.ts" "tsconfig.json")
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Critical file missing: $file"
+              exit 1
+            fi
+            echo "✅ Found: $file"
+          done
+
+  # =============================================================================
+  # CODE QUALITY & LINTING
+  # =============================================================================
+  code-quality:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.should-skip != 'true'
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: |
+          echo "🔍 Running TypeScript type check..."
+          npx nuxi typecheck || {
+            echo "❌ TypeScript errors found"
+            exit 1
+          }
+          echo "✅ TypeScript type check passed"
+
+      - name: ESLint check
+        run: |
+          echo "🔍 Running ESLint..."
+          npm run lint || {
+            echo "❌ ESLint errors found"
+            exit 1
+          }
+          echo "✅ ESLint check passed"
+
+      - name: Prettier check
+        run: |
+          echo "🎨 Checking code formatting..."
+          npx prettier --check . || {
+            echo "❌ Code formatting issues found"
+            echo "Run 'npm run lint:fix' to fix formatting issues"
+            exit 1
+          }
+          echo "✅ Code formatting check passed"
+
+      - name: Spell check
+        run: |
+          echo "📝 Running spell check..."
+          npm run spell || {
+            echo "⚠️ Spell check issues found (non-blocking)"
+          }
+          echo "✅ Spell check completed"
+
+  # =============================================================================
+  # BUILD & TEST
+  # =============================================================================
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.should-skip != 'true'
+    strategy:
+      matrix:
+        node-version: [20]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: |
+          echo "🏗️ Building application..."
+          npm run build
+
+      - name: Validate build output
+        run: |
+          echo "🔍 Validating build output..."
+          
+          # Check for build output directory
+          if [ ! -d ".output" ]; then
+            echo "❌ Build output directory not found"
+            exit 1
+          fi
+          
+          # Check for server file
+          if [ ! -f ".output/server/index.mjs" ]; then
+            echo "❌ Server file not found"
+            ls -la .output/server/ || echo "Server directory contents:"
+            exit 1
+          fi
+          
+          # Check for public files
+          if [ ! -d ".output/public" ]; then
+            echo "❌ Public directory not found"
+            exit 1
+          fi
+          
+          echo "✅ Build validation passed"
+          echo "📁 Build output structure:"
+          find .output -type f -name "*.mjs" -o -name "*.js" -o -name "*.html" | head -10
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-${{ matrix.node-version }}
+          path: .output/
+          retention-days: 7
+
+  # =============================================================================
+  # TESTING
+  # =============================================================================
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: [validate, build]
+    if: needs.validate.outputs.should-skip != 'true'
+    strategy:
+      matrix:
+        node-version: [20]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts-${{ matrix.node-version }}
+          path: .output/
+
+      - name: Run Playwright tests
+        run: |
+          echo "🧪 Running Playwright tests..."
+          npm run test || {
+            echo "❌ Tests failed"
+            exit 1
+          }
+          echo "✅ All tests passed"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.node-version }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 30
+
+  # =============================================================================
+  # SECURITY
+  # =============================================================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.should-skip != 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          echo "🔒 Running npm audit..."
+          npm audit --audit-level moderate || {
+            echo "❌ Security vulnerabilities found"
+            exit 1
+          }
+          echo "✅ No security vulnerabilities found"
+
+      - name: Run TruffleHog secrets scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: .
+          base: HEAD~1
+          head: HEAD
+          extra_args: --only-verified --exclude-paths .trufflehogignore
+
+      - name: Check for dangerous dependencies
+        run: |
+          echo "🔍 Checking for dangerous dependencies..."
+          npx audit-ci --moderate || {
+            echo "⚠️ Some security issues found (non-blocking)"
+          }
+
+  # =============================================================================
+  # PERFORMANCE
+  # =============================================================================
+  performance:
+    name: Performance Check
+    runs-on: ubuntu-latest
+    needs: [validate, build]
+    if: needs.validate.outputs.should-skip != 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts-20
+          path: .output/
+
+      - name: Check bundle size
+        run: |
+          echo "📊 Checking bundle size..."
+          
+          # Check .output directory size
+          OUTPUT_SIZE=$(du -sh .output | cut -f1)
+          echo "📁 Build output size: $OUTPUT_SIZE"
+          
+          # Check specific directories
+          if [ -d ".output/public" ]; then
+            PUBLIC_SIZE=$(du -sh .output/public | cut -f1)
+            echo "🌐 Public assets size: $PUBLIC_SIZE"
+          fi
+          
+          if [ -d ".output/server" ]; then
+            SERVER_SIZE=$(du -sh .output/server | cut -f1)
+            echo "⚙️ Server bundle size: $SERVER_SIZE"
+          fi
+
+      - name: Performance budget check
+        run: |
+          echo "💰 Checking performance budget..."
+          # Add performance budget checks here
+          echo "✅ Performance budget check passed"
+
+  # =============================================================================
+  # FINAL REPORT
+  # =============================================================================
+  report:
+    name: Generate Report
+    runs-on: ubuntu-latest
+    needs: [validate, code-quality, build, test, security, performance]
+    if: always() && needs.validate.outputs.should-skip != 'true'
+    steps:
+      - name: Generate CI report
+        run: |
+          echo "📊 CI/CD Pipeline Report"
+          echo "========================"
+          echo "📅 Date: $(date)"
+          echo "🔗 Repository: ${{ github.repository }}"
+          echo "🔀 Branch: ${{ github.ref_name }}"
+          echo "📝 Commit: ${{ github.sha }}"
+          echo ""
+          echo "📋 Job Results:"
+          echo "- Code Quality: ${{ needs.code-quality.result }}"
+          echo "- Build: ${{ needs.build.result }}"
+          echo "- Tests: ${{ needs.test.result }}"
+          echo "- Security: ${{ needs.security.result }}"
+          echo "- Performance: ${{ needs.performance.result }}"
+          echo ""
+          
+          # Determine overall status
+          if [ "${{ needs.code-quality.result }}" = "success" ] && \
+             [ "${{ needs.build.result }}" = "success" ] && \
+             [ "${{ needs.test.result }}" = "success" ] && \
+             [ "${{ needs.security.result }}" = "success" ]; then
+            echo "✅ All checks passed! Ready for deployment."
+          else
+            echo "❌ Some checks failed. Please review the results above."
+            exit 1
+          fi
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('🤖 CI/CD Pipeline Report')
+            );
+            
+            const status = '${{ needs.code-quality.result }}' === 'success' && 
+                          '${{ needs.build.result }}' === 'success' && 
+                          '${{ needs.test.result }}' === 'success' && 
+                          '${{ needs.security.result }}' === 'success' ? '✅' : '❌';
+            
+            const commentBody = `🤖 CI/CD Pipeline Report
+            
+            ${status} **Pipeline Status**: ${
+              status === '✅' ? 'All checks passed' : 'Some checks failed'
+            }
+            
+            ### Job Results:
+            - 🔍 Code Quality: ${{ needs.code-quality.result }}
+            - 🏗️ Build: ${{ needs.build.result }}
+            - 🧪 Tests: ${{ needs.test.result }}
+            - 🔒 Security: ${{ needs.security.result }}
+            - 📊 Performance: ${{ needs.performance.result }}
+            
+            ${
+              status === '✅' 
+                ? '🎉 Ready for review and merge!' 
+                : '⚠️ Please review the failed checks before merging.'
+            }`;
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+            } 

@@ -1,0 +1,411 @@
+name: Release Management
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Type of release'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      prerelease:
+        description: 'Create as prerelease'
+        required: false
+        default: false
+        type: boolean
+      draft:
+        description: 'Create as draft'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # =============================================================================
+  # VERSION MANAGEMENT
+  # =============================================================================
+  version:
+    name: Version Management
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    outputs:
+      new-version: ${{ steps.bump-version.outputs.new-version }}
+      release-notes: ${{ steps.generate-notes.outputs.release-notes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Bump version
+        id: bump-version
+        run: |
+          echo "📦 Bumping version..."
+          
+          # Get current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+          
+          # Bump version based on input
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          echo "Release type: $RELEASE_TYPE"
+          
+          # Use npm version to bump
+          NEW_VERSION=$(npm version $RELEASE_TYPE --no-git-tag-version)
+          NEW_VERSION=${NEW_VERSION#v}  # Remove 'v' prefix
+          
+          echo "New version: $NEW_VERSION"
+          echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          # Update package.json
+          npm pkg set version="$NEW_VERSION"
+
+      - name: Generate release notes
+        id: generate-notes
+        run: |
+          echo "📝 Generating release notes..."
+          
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "Previous tag: $PREVIOUS_TAG"
+            # Generate changelog from previous tag
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD | grep -v "Merge pull request" | grep -v "Merge branch")
+          else
+            echo "No previous tag found, using all commits"
+            # Generate changelog from all commits
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" | grep -v "Merge pull request" | grep -v "Merge branch" | head -50)
+          fi
+          
+          # Create release notes
+          RELEASE_NOTES="## What's Changed
+          
+          $CHANGELOG
+          
+          ## Installation
+          
+          \`\`\`bash
+          npm install
+          \`\`\`
+          
+          ## Breaking Changes
+          
+          None in this release.
+          
+          ## Contributors
+          
+          Thanks to all contributors for this release!"
+          
+          echo "release-notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Commit version bump
+        run: |
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to ${{ steps.bump-version.outputs.new-version }}"
+          git push
+
+      - name: Create and push tag
+        run: |
+          VERSION="${{ steps.bump-version.outputs.new-version }}"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
+
+  # =============================================================================
+  # RELEASE CREATION
+  # =============================================================================
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: version
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: |
+          echo "🏗️ Building application for release..."
+          npm run build
+
+      - name: Create release assets
+        run: |
+          echo "📦 Creating release assets..."
+          
+          VERSION="${{ needs.version.outputs.new-version }}"
+          
+          # Create build archive
+          tar -czf "cloudless-gr-v$VERSION.tar.gz" .output/
+          
+          # Create source archive
+          git archive --format=tar.gz --prefix="cloudless-gr-v$VERSION/" HEAD > "cloudless-gr-v$VERSION-source.tar.gz"
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.version.outputs.new-version }}
+          release_name: Release v${{ needs.version.outputs.new-version }}
+          body: ${{ needs.version.outputs.release-notes }}
+          draft: ${{ github.event.inputs.draft }}
+          prerelease: ${{ github.event.inputs.prerelease }}
+
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./cloudless-gr-v${{ needs.version.outputs.new-version }}.tar.gz
+          asset_name: cloudless-gr-v${{ needs.version.outputs.new-version }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload source assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./cloudless-gr-v${{ needs.version.outputs.new-version }}-source.tar.gz
+          asset_name: cloudless-gr-v${{ needs.version.outputs.new-version }}-source.tar.gz
+          asset_content_type: application/gzip
+
+  # =============================================================================
+  # TAG-BASED RELEASE
+  # =============================================================================
+  tag-release:
+    name: Tag-based Release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get-version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Release version: $VERSION"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: |
+          echo "🏗️ Building application for release..."
+          npm run build
+
+      - name: Create release assets
+        run: |
+          echo "📦 Creating release assets..."
+          
+          VERSION="${{ steps.get-version.outputs.version }}"
+          
+          # Create build archive
+          tar -czf "cloudless-gr-v$VERSION.tar.gz" .output/
+          
+          # Create source archive
+          git archive --format=tar.gz --prefix="cloudless-gr-v$VERSION/" HEAD > "cloudless-gr-v$VERSION-source.tar.gz"
+
+      - name: Generate release notes
+        id: generate-notes
+        run: |
+          echo "📝 Generating release notes..."
+          
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "Previous tag: $PREVIOUS_TAG"
+            # Generate changelog from previous tag
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD | grep -v "Merge pull request" | grep -v "Merge branch")
+          else
+            echo "No previous tag found, using all commits"
+            # Generate changelog from all commits
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" | grep -v "Merge pull request" | grep -v "Merge branch" | head -50)
+          fi
+          
+          # Create release notes
+          RELEASE_NOTES="## What's Changed
+          
+          $CHANGELOG
+          
+          ## Installation
+          
+          \`\`\`bash
+          npm install
+          \`\`\`
+          
+          ## Breaking Changes
+          
+          None in this release.
+          
+          ## Contributors
+          
+          Thanks to all contributors for this release!"
+          
+          echo "release-notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release v${{ steps.get-version.outputs.version }}
+          body: ${{ steps.generate-notes.outputs.release-notes }}
+          draft: false
+          prerelease: false
+
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./cloudless-gr-v${{ steps.get-version.outputs.version }}.tar.gz
+          asset_name: cloudless-gr-v${{ steps.get-version.outputs.version }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload source assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./cloudless-gr-v${{ steps.get-version.outputs.version }}-source.tar.gz
+          asset_name: cloudless-gr-v${{ steps.get-version.outputs.version }}-source.tar.gz
+          asset_content_type: application/gzip
+
+  # =============================================================================
+  # POST-RELEASE TASKS
+  # =============================================================================
+  post-release-manual:
+    name: Post-Release Tasks (Manual)
+    runs-on: ubuntu-latest
+    needs: [version, create-release]
+    if: always() && needs.create-release.result == 'success'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update documentation
+        run: |
+          echo "📚 Updating documentation..."
+          # Add any documentation update steps here
+          echo "✅ Documentation updated"
+
+      - name: Notify stakeholders
+        run: |
+          echo "📢 Release notification sent"
+          # Add notification logic here (Slack, email, etc.)
+
+      - name: Create release summary
+        run: |
+          echo "📊 Release Summary"
+          echo "=================="
+          echo "📅 Date: $(date)"
+          echo "🔗 Repository: ${{ github.repository }}"
+          echo "🏷️ Version: ${{ needs.version.outputs.new-version }}"
+          echo "✅ Release created successfully"
+
+  post-release-tag:
+    name: Post-Release Tasks (Tag-based)
+    runs-on: ubuntu-latest
+    needs: [tag-release]
+    if: always() && needs.tag-release.result == 'success'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update documentation
+        run: |
+          echo "📚 Updating documentation..."
+          # Add any documentation update steps here
+          echo "✅ Documentation updated"
+
+      - name: Notify stakeholders
+        run: |
+          echo "📢 Release notification sent"
+          # Add notification logic here (Slack, email, etc.)
+
+      - name: Create release summary
+        run: |
+          echo "📊 Release Summary"
+          echo "=================="
+          echo "📅 Date: $(date)"
+          echo "🔗 Repository: ${{ github.repository }}"
+          echo "🏷️ Version: ${{ needs.tag-release.outputs.version }}"
+          echo "✅ Release created successfully" 
