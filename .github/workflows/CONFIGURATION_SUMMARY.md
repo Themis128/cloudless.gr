@@ -6,18 +6,45 @@ This document provides a quick reference for all workflow configurations, requir
 
 | Workflow | File | Purpose | Triggers | Dependencies |
 |----------|------|---------|----------|--------------|
-| Enhanced CI/CD | `ci-enhanced.yml` | Main CI/CD pipeline | Push/PR to main branches | None |
-| Dependency Management | `dependency-management.yml` | Dependency updates | PRs + Manual | Dependabot |
-| Release Management | `release-management.yml` | Versioning & releases | Tags + Manual | CI/CD |
-| API Testing | `api-testing.yml` | API endpoint testing | Push/PR + Manual | None |
-| LLM Testing | `llm-model-testing.yml` | AI/ML functionality | Push/PR + Manual | None |
-| Pipeline Testing | `pipeline-testing.yml` | Data pipeline testing | Push/PR + Manual | None |
-| Bot Testing | `bot-testing.yml` | Bot functionality | Push/PR + Manual | None |
-| Security Scan | `security.yml` | Security assessment | Schedule + Push/PR + Manual | None |
-| Maintenance | `maintenance.yml` | Automated maintenance | Schedule + Manual | None |
-| Test Summary | `test-summary.yml` | Test reporting | Post-test completion | All test workflows |
-| Deploy | `deploy.yml` | Application deployment | Push + Manual | CI/CD |
-| Docker | `docker.yml` | Container management | Push/PR + Manual | None |
+| **Core CI/CD** | `ci-enhanced.yml` | Main CI/CD pipeline | Push/PR to main branches | None |
+| **Sequential System** | `workflow-launcher.yml` | Manual workflow launcher | Manual dispatch | None |
+| **Step 1** | `step-1-dependency-audit.yml` | Dependency auditing | Manual + Sequential | None |
+| **Step 2** | `step-2-security-scan.yml` | Security scanning | Manual + Sequential | Step 1 |
+| **Step 3** | `step-3-code-quality.yml` | Code quality checks | Manual + Sequential | Step 2 |
+| **Step 4** | `step-4-build-test.yml` | Build and test | Manual + Sequential | Step 3 |
+| **Production Deploy** | `deploy-production.yml` | Production deployment | Manual + Tags | CI/CD |
+| **Release Management** | `release-management.yml` | Versioning & releases | Tags + Manual | CI/CD |
+| **Specialized Testing** | | | | |
+| - API Testing | `api-testing.yml` | API endpoint testing | Manual + Sequential | Step 4 |
+| - Bot Testing | `bot-testing.yml` | Bot functionality | Manual + Sequential | Step 4 |
+| - Pipeline Testing | `pipeline-testing.yml` | Data pipeline testing | Manual + Sequential | Step 4 |
+| - LLM Testing | `llm-model-testing.yml` | AI/ML functionality | Manual + Sequential | Step 4 |
+| - Docker Testing | `docker.yml` | Container management | Manual + Sequential | Step 4 |
+
+## 🎯 **Workflow Cleanup Summary**
+
+### ✅ **Kept (Essential Workflows):**
+- **Core CI/CD**: `ci-enhanced.yml`
+- **Sequential System**: `workflow-launcher.yml` + 4 step workflows
+- **Production Deploy**: `deploy-production.yml`
+- **Release Management**: `release-management.yml`
+- **Specialized Testing**: 5 testing workflows
+
+### 🗑️ **Removed (Redundant Workflows):**
+- `security.yml` - Functionality covered by `step-2-security-scan.yml`
+- `deploy.yml` - Functionality covered by `deploy-production.yml`
+- `main-orchestrator.yml` - Functionality covered by `workflow-launcher.yml`
+- `sequential-testing.yml` - Functionality covered by individual step workflows
+- `dependency-management.yml` - Functionality covered by `step-1-dependency-audit.yml`
+- `test-summary.yml` - Not essential
+- `maintenance.yml` - Not essential
+- `release.yml` - Functionality covered by `release-management.yml`
+
+### 📊 **Results:**
+- **Before**: 20 workflow files
+- **After**: 14 workflow files
+- **Reduction**: 30% fewer workflows
+- **Improvement**: Cleaner, more maintainable CI/CD system
 
 ## 🔐 Required Secrets
 
