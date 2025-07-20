@@ -965,9 +965,64 @@ jobs:
           
       - name: Start application
         run: |
-          npm run build
-          npm run start &
-          sleep 30
+          echo "🔧 [DEBUG] Starting application for LLM model testing..."
+          echo "🔧 [DEBUG] Current directory: $(pwd)"
+          echo "🔧 [DEBUG] Node.js version: $(node --version)"
+          echo "🔧 [DEBUG] NPM version: $(npm --version)"
+          
+          echo "🔧 [DEBUG] Building application..."
+          npm run build || {
+            echo "❌ [ERROR] Build failed!"
+            exit 1
+          }
+          
+          echo "🔧 [DEBUG] Starting application in background..."
+          echo "🔧 [DEBUG] Available start scripts:"
+          npm run --silent 2>/dev/null | grep -E "(start|dev|preview)" || echo "No start scripts found"
+          
+          # Start the application in background with output capture
+          # Use preview for production build or dev for development
+          if [ -d ".output" ]; then
+            echo "🔧 [DEBUG] Using preview mode for production build..."
+            npm run preview > app.log 2>&1 &
+          else
+            echo "🔧 [DEBUG] Using dev mode for development..."
+            npm run dev > app.log 2>&1 &
+          fi
+          APP_PID=$!
+          echo "🔧 [DEBUG] Application started with PID: $APP_PID"
+          
+          # Wait for application to start
+          echo "🔧 [DEBUG] Waiting for application to start..."
+          for i in {1..60}; do
+            # Try multiple endpoints to check if app is ready
+            if curl -s http://localhost:3000/api/health > /dev/null 2>&1 || \
+               curl -s http://localhost:3000/api/v1 > /dev/null 2>&1 || \
+               curl -s http://localhost:3000/ > /dev/null 2>&1; then
+              echo "✅ [DEBUG] Application is responding on port 3000"
+              break
+            fi
+            echo "🔧 [DEBUG] Attempt $i/60: Application not ready yet..."
+            sleep 2
+          done
+          
+          # Check if application is running
+          if ! curl -s http://localhost:3000/api/health > /dev/null 2>&1 && \
+             ! curl -s http://localhost:3000/api/v1 > /dev/null 2>&1 && \
+             ! curl -s http://localhost:3000/ > /dev/null 2>&1; then
+            echo "❌ [ERROR] Application failed to start!"
+            echo "🔧 [DEBUG] Application log:"
+            cat app.log || echo "No log file found"
+            echo "🔧 [DEBUG] Process status:"
+            ps aux | grep node || echo "No node processes found"
+            echo "🔧 [DEBUG] Port 3000 status:"
+            netstat -tlnp | grep :3000 || echo "Port 3000 not in use"
+            exit 1
+          fi
+          
+          echo "✅ [DEBUG] Application started successfully"
+          echo "🔧 [DEBUG] Application log (last 20 lines):"
+          tail -20 app.log || echo "No log content"
           
       - name: Test LLM model endpoints
         run: |
