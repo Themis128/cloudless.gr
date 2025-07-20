@@ -76,7 +76,7 @@ export default defineNuxtConfig({
     enabled: false, // Disable devtools to prevent timer conflicts
   },
   routeRules: {
-    '/': { prerender: true },
+    '/': { prerender: process.env.NUXT_PRERENDER !== 'false' },
     '/models/**': { prerender: false },
     '/bots/**': { prerender: false },
     '/pipelines/**': { prerender: false },

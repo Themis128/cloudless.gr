@@ -41,7 +41,9 @@ COPY . .
 # Copy .env file if it exists (for build-time environment variables)
 COPY .env* ./
 
-# Build the application
+# Build the application with prerendering disabled
+ENV NITRO_PRESET=node
+ENV NUXT_PRERENDER=false
 RUN npm run build
 
 # Production runtime
