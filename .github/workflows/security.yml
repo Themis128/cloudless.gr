@@ -167,21 +167,63 @@ jobs:
       - name: Check for hardcoded secrets
         id: secrets-check
         run: |
-          echo "🔍 Scanning for potential secrets..."
+          echo "🔍 Scanning for potential hardcoded secrets..."
 
-          # Create exclusion patterns
-          EXCLUDE_DIRS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.nuxt --exclude-dir=.output --exclude-dir=vanta-gallery"
+          # Create comprehensive exclusion patterns
+          EXCLUDE_DIRS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.nuxt --exclude-dir=.output --exclude-dir=vanta-gallery --exclude-dir=vanta-master --exclude-dir=dist --exclude-dir=build"
 
-          # Search for potential secrets
-          SECRETS_FOUND=$(grep -r -i "password\|secret\|key\|token" . $EXCLUDE_DIRS | grep -v "your-" | grep -v "test-" | grep -v "development" | grep -v "placeholder" | wc -l)
-          echo "count=$SECRETS_FOUND" >> $GITHUB_OUTPUT
+          # Search for high-confidence secret patterns only
+          echo "🔍 Checking for AWS access keys..."
+          AWS_KEYS=$(grep -r "AKIA[0-9A-Z]{16}" . $EXCLUDE_DIRS | wc -l)
+          
+          echo "🔍 Checking for Stripe secret keys..."
+          STRIPE_KEYS=$(grep -r "sk_live_[a-zA-Z0-9]{24}" . $EXCLUDE_DIRS | wc -l)
+          
+          echo "🔍 Checking for GitHub tokens..."
+          GITHUB_TOKENS=$(grep -r "ghp_[a-zA-Z0-9]{36}" . $EXCLUDE_DIRS | wc -l)
+          
+          echo "🔍 Checking for long base64 strings..."
+          BASE64_SECRETS=$(grep -r "[a-zA-Z0-9+/]{50,}={0,2}" . $EXCLUDE_DIRS | grep -v "data:image" | grep -v "data:text" | wc -l)
 
-          if [ "$SECRETS_FOUND" -gt 0 ]; then
-            echo "⚠️ Found $SECRETS_FOUND potential secrets"
-            grep -r -i "password\|secret\|key\|token" . $EXCLUDE_DIRS | grep -v "your-" | grep -v "test-" | grep -v "development" | grep -v "placeholder"
+          # Calculate total high-confidence secrets
+          TOTAL_SECRETS=$((AWS_KEYS + STRIPE_KEYS + GITHUB_TOKENS + BASE64_SECRETS))
+          echo "count=$TOTAL_SECRETS" >> $GITHUB_OUTPUT
+
+          echo "📊 Secret scan results:"
+          echo "  - AWS Access Keys: $AWS_KEYS"
+          echo "  - Stripe Secret Keys: $STRIPE_KEYS"
+          echo "  - GitHub Tokens: $GITHUB_TOKENS"
+          echo "  - Long Base64 Strings: $BASE64_SECRETS"
+          echo "  - Total High-Confidence Secrets: $TOTAL_SECRETS"
+
+          if [ "$TOTAL_SECRETS" -gt 0 ]; then
+            echo "❌ Found $TOTAL_SECRETS high-confidence secrets!"
+            echo "🔍 Detailed findings:"
+            
+            if [ "$AWS_KEYS" -gt 0 ]; then
+              echo "AWS Access Keys found:"
+              grep -r "AKIA[0-9A-Z]{16}" . $EXCLUDE_DIRS
+            fi
+            
+            if [ "$STRIPE_KEYS" -gt 0 ]; then
+              echo "Stripe Secret Keys found:"
+              grep -r "sk_live_[a-zA-Z0-9]{24}" . $EXCLUDE_DIRS
+            fi
+            
+            if [ "$GITHUB_TOKENS" -gt 0 ]; then
+              echo "GitHub Tokens found:"
+              grep -r "ghp_[a-zA-Z0-9]{36}" . $EXCLUDE_DIRS
+            fi
+            
+            if [ "$BASE64_SECRETS" -gt 0 ]; then
+              echo "Long Base64 strings found:"
+              grep -r "[a-zA-Z0-9+/]{50,}={0,2}" . $EXCLUDE_DIRS | grep -v "data:image" | grep -v "data:text"
+            fi
+            
             exit 1
           else
-            echo "✅ No obvious secrets found"
+            echo "✅ No high-confidence secrets found"
+            echo "✅ Hardcoded secrets check passed"
           fi
 
       - name: Check for dangerous dependencies

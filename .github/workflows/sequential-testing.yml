@@ -62,18 +62,39 @@ jobs:
     - name: Check for exposed secrets
       run: |
         echo "🔍 Checking for exposed secrets..."
-        # Check for common secret patterns
-        if grep -r "AKIA[0-9A-Z]{16}" . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vanta-master; then
-          echo "⚠️ Potential AWS access key found"
-        else
-          echo "✅ No AWS access keys found"
-        fi
         
-        # Check for other common secrets
-        if grep -r "sk_live_" . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vanta-master; then
-          echo "⚠️ Potential Stripe secret key found"
+        # Create comprehensive exclusion patterns
+        EXCLUDE_DIRS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.nuxt --exclude-dir=.output --exclude-dir=vanta-gallery --exclude-dir=vanta-master --exclude-dir=dist --exclude-dir=build"
+        
+        # Check for high-confidence secret patterns only
+        echo "🔍 Checking for AWS access keys..."
+        AWS_KEYS=$(grep -r "AKIA[0-9A-Z]{16}" . $EXCLUDE_DIRS | wc -l)
+        
+        echo "🔍 Checking for Stripe secret keys..."
+        STRIPE_KEYS=$(grep -r "sk_live_[a-zA-Z0-9]{24}" . $EXCLUDE_DIRS | wc -l)
+        
+        echo "🔍 Checking for GitHub tokens..."
+        GITHUB_TOKENS=$(grep -r "ghp_[a-zA-Z0-9]{36}" . $EXCLUDE_DIRS | wc -l)
+        
+        echo "🔍 Checking for long base64 strings..."
+        BASE64_SECRETS=$(grep -r "[a-zA-Z0-9+/]{50,}={0,2}" . $EXCLUDE_DIRS | grep -v "data:image" | grep -v "data:text" | wc -l)
+
+        # Calculate total high-confidence secrets
+        TOTAL_SECRETS=$((AWS_KEYS + STRIPE_KEYS + GITHUB_TOKENS + BASE64_SECRETS))
+        
+        echo "📊 Secret scan results:"
+        echo "  - AWS Access Keys: $AWS_KEYS"
+        echo "  - Stripe Secret Keys: $STRIPE_KEYS"
+        echo "  - GitHub Tokens: $GITHUB_TOKENS"
+        echo "  - Long Base64 Strings: $BASE64_SECRETS"
+        echo "  - Total High-Confidence Secrets: $TOTAL_SECRETS"
+
+        if [ "$TOTAL_SECRETS" -gt 0 ]; then
+          echo "❌ Found $TOTAL_SECRETS high-confidence secrets!"
+          exit 1
         else
-          echo "✅ No Stripe secret keys found"
+          echo "✅ No high-confidence secrets found"
+          echo "✅ Secrets check passed"
         fi
         
     - name: Step 2 Complete
