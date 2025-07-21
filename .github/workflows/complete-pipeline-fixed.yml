@@ -70,7 +70,7 @@ env:
 
 # Optimized concurrency to prevent conflicts
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: self-hosted-pipeline-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -212,7 +212,7 @@ jobs:
   # =============================================================================
   security-quality:
     name: 🔒 Security & Quality
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, docker, dev]
     needs: [validate, dependencies]
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 15
@@ -263,8 +263,7 @@ jobs:
   # =============================================================================
   build-test:
     name: 🏗️ Build & Test (Fixed)
-    # FIXED: Use GitHub-hosted runner as fallback to prevent hanging
-    runs-on: ${{ github.event.inputs.use_github_runner == 'true' && 'ubuntu-latest' || '[self-hosted, containerized, dev]' }}
+    runs-on: [self-hosted, windows, docker, dev]
     needs: [validate, security-quality]
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 45  # Increased timeout for Docker builds
@@ -387,7 +386,7 @@ jobs:
   # =============================================================================
   integration-tests:
     name: 🔄 Integration Tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, docker, dev]
     needs: [validate, build-test]
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
     timeout-minutes: 20
@@ -471,7 +470,7 @@ jobs:
   # =============================================================================
   deploy-staging:
     name: 🚀 Deploy to Staging
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, docker, dev]
     needs: [validate, build-test]
     if: |
       needs.validate.outputs.should-skip != 'true' &&
@@ -520,7 +519,7 @@ jobs:
 
   deploy-production:
     name: 🚀 Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, docker, dev]
     needs: [validate, build-test]
     if: |
       needs.validate.outputs.should-skip != 'true' &&
@@ -587,7 +586,7 @@ jobs:
   # =============================================================================
   post-deployment:
     name: 📊 Post-Deployment
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, docker, dev]
     needs: [deploy-staging, deploy-production]
     if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
     timeout-minutes: 10
@@ -610,7 +609,7 @@ jobs:
   # =============================================================================
   summary:
     name: 📋 Pipeline Summary
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, docker, dev]
     needs: [
       validate,
       dependencies,
