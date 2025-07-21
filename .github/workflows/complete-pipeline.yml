@@ -363,8 +363,8 @@ jobs:
           source .github/scripts/workflow-helpers.sh
           log_info "Running intelligent secrets scan..."
           echo "🔍 Scanning for hardcoded secrets with false positive filtering..."
-          chmod +x .github/scripts/custom-secrets-scan.sh
-          ./.github/scripts/custom-secrets-scan.sh || {
+          chmod +x scripts/security/run-secrets-scan.sh
+          ./scripts/security/run-secrets-scan.sh || {
             log_error "Secrets scan found potential hardcoded secrets"
             echo "Please review the findings above and fix any real secrets"
             exit 1
