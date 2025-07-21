@@ -1,4 +1,4 @@
-name: '🚀 Native Runner Optimized CI/CD Pipeline'
+name: '🚀 Local Runner Service CI/CD Pipeline'
 
 on:
   push:
@@ -53,14 +53,14 @@ env:
   NPM_CONFIG_FUND: 'false'
   NPM_CONFIG_UPDATE_NOTIFIER: 'false'
 
-# Optimized concurrency for native runner
+# Optimized concurrency for local runner service
 concurrency:
-  group: native-runner-${{ github.ref }}
+  group: local-runner-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validate:
-    name: 🔍 Validate Configuration (Native)
+    name: 🔍 Validate Configuration (Local Runner)
     runs-on: self-hosted
     timeout-minutes: 3
     outputs:
@@ -133,7 +133,7 @@ jobs:
           Write-Host "✅ All critical files found"
 
   dependencies:
-    name: 📦 Dependency Management (Native)
+    name: 📦 Dependency Management (Local Runner)
     runs-on: self-hosted
     needs: validate
     if: needs.validate.outputs.should-skip != 'true'
@@ -169,7 +169,7 @@ jobs:
           key: ${{ needs.validate.outputs.cache-key }}
 
   security-quality:
-    name: 🔒 Security & Quality (Native)
+    name: 🔒 Security & Quality (Local Runner)
     runs-on: self-hosted
     needs: [validate, dependencies]
     if: needs.validate.outputs.should-skip != 'true'
@@ -184,51 +184,36 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Setup PATH for native runner
+      - name: Setup PATH for local runner service
         run: |
-          Write-Host "🔧 Setting up PATH for native runner..."
+          Write-Host "🔧 Setting up PATH for local runner service..."
           
-          # Get npm bin directory safely
-          try {
-              $npmBin = npm bin 2>$null
-              if ($LASTEXITCODE -eq 0 -and $npmBin) {
-                  $env:PATH = "$npmBin;$env:PATH"
-                  Write-Host "✅ Added npm bin to PATH: $npmBin"
-              } else {
-                  Write-Host "⚠️ npm bin command failed, using npx instead"
-              }
-          } catch {
-              Write-Host "⚠️ Error getting npm bin: $($_.Exception.Message)"
-          }
-          
-          # Alternative: Add node_modules/.bin to PATH
+          # Add node_modules/.bin to PATH if it exists
           if (Test-Path "node_modules\.bin") {
               $nodeModulesBin = (Resolve-Path "node_modules\.bin").Path
               $env:PATH = "$nodeModulesBin;$env:PATH"
               Write-Host "✅ Added node_modules/.bin to PATH: $nodeModulesBin"
           }
           
-          Write-Host "Current PATH: $env:PATH"
-          
-          # Check for tools without failing the step
+          # Check for development tools (non-blocking)
           Write-Host "🔍 Checking for development tools..."
           
-          # Simple check without using where.exe
-          if (Get-Command eslint -ErrorAction SilentlyContinue) {
+          $eslintFound = Get-Command eslint -ErrorAction SilentlyContinue
+          $tscFound = Get-Command tsc -ErrorAction SilentlyContinue
+          
+          if ($eslintFound) {
               Write-Host "✅ ESLint found in PATH"
           } else {
-              Write-Host "⚠️ ESLint not found in PATH"
+              Write-Host "⚠️ ESLint not found in PATH (will use npx)"
           }
           
-          if (Get-Command tsc -ErrorAction SilentlyContinue) {
+          if ($tscFound) {
               Write-Host "✅ TypeScript found in PATH"
           } else {
-              Write-Host "⚠️ TypeScript not found in PATH"
+              Write-Host "⚠️ TypeScript not found in PATH (will use npx)"
           }
           
-          # Always succeed this step
-          Write-Host "✅ PATH setup completed (non-blocking)"
-          exit 0
+          Write-Host "✅ PATH setup completed successfully"
 
       - name: Restore dependencies
         uses: actions/cache@v4
@@ -241,21 +226,20 @@ jobs:
             ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}-
             ${{ runner.os }}-node-
 
-      - name: Run linting (Native)
+      - name: Run linting (Local Runner)
         run: |
-          Write-Host "🔍 Running linting checks..."
-          Write-Host "Current PATH: $env:PATH"
+          Write-Host "🔍 Running linting checks with local runner service..."
           
-          # Try multiple approaches for linting
+          # Try npx first, then direct path, then skip
           try {
               Write-Host "Trying npx eslint..."
-              npx eslint . --ext .vue,.ts,.js
+              npx eslint . --ext .vue,.ts,.js --max-warnings 0
               Write-Host "✅ Linting completed successfully"
           } catch {
               Write-Host "⚠️ npx eslint failed, trying direct path..."
               try {
                   if (Test-Path "node_modules\.bin\eslint.cmd") {
-                      .\node_modules\.bin\eslint.cmd . --ext .vue,.ts,.js
+                      .\node_modules\.bin\eslint.cmd . --ext .vue,.ts,.js --max-warnings 0
                       Write-Host "✅ Linting completed with direct path"
                   } else {
                       Write-Host "⚠️ eslint not found, skipping linting"
@@ -265,23 +249,22 @@ jobs:
               }
           }
           
-          # Always continue even if linting fails
-          Write-Host "✅ Linting step completed (non-blocking)"
+          Write-Host "✅ Linting step completed"
 
-      - name: Type checking (Native)
+      - name: Type checking (Local Runner)
         run: |
-          Write-Host "🔍 Running type checking..."
+          Write-Host "🔍 Running type checking with local runner service..."
           
-          # Try multiple approaches for type checking
+          # Try npx first, then direct path, then skip
           try {
               Write-Host "Trying npx tsc..."
-              npx tsc --noEmit
+              npx tsc --noEmit --skipLibCheck
               Write-Host "✅ Type checking completed successfully"
           } catch {
               Write-Host "⚠️ npx tsc failed, trying direct path..."
               try {
                   if (Test-Path "node_modules\.bin\tsc.cmd") {
-                      .\node_modules\.bin\tsc.cmd --noEmit
+                      .\node_modules\.bin\tsc.cmd --noEmit --skipLibCheck
                       Write-Host "✅ Type checking completed with direct path"
                   } else {
                       Write-Host "⚠️ tsc not found, skipping type checking"
@@ -291,16 +274,15 @@ jobs:
               }
           }
           
-          # Always continue even if type checking fails
-          Write-Host "✅ Type checking step completed (non-blocking)"
+          Write-Host "✅ Type checking step completed"
 
-      - name: Security scan (Native)
+      - name: Security scan (Local Runner)
         run: |
-          Write-Host "🔒 Running security scan..."
+          Write-Host "🔒 Running security scan with local runner service..."
           npm audit --audit-level=high || Write-Host "⚠️ Security issues found (non-blocking)"
 
   build-test:
-    name: 🏗️ Build & Test (Native)
+    name: 🏗️ Build & Test (Local Runner)
     runs-on: self-hosted
     needs: [validate, dependencies, security-quality]
     if: needs.validate.outputs.should-skip != 'true'
@@ -315,35 +297,18 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Setup PATH for native runner
+      - name: Setup PATH for local runner service
         run: |
-          Write-Host "🔧 Setting up PATH for native runner..."
+          Write-Host "🔧 Setting up PATH for local runner service..."
           
-          # Get npm bin directory safely
-          try {
-              $npmBin = npm bin 2>$null
-              if ($LASTEXITCODE -eq 0 -and $npmBin) {
-                  $env:PATH = "$npmBin;$env:PATH"
-                  Write-Host "✅ Added npm bin to PATH: $npmBin"
-              } else {
-                  Write-Host "⚠️ npm bin command failed, using npx instead"
-              }
-          } catch {
-              Write-Host "⚠️ Error getting npm bin: $($_.Exception.Message)"
-          }
-          
-          # Alternative: Add node_modules/.bin to PATH
+          # Add node_modules/.bin to PATH if it exists
           if (Test-Path "node_modules\.bin") {
               $nodeModulesBin = (Resolve-Path "node_modules\.bin").Path
               $env:PATH = "$nodeModulesBin;$env:PATH"
               Write-Host "✅ Added node_modules/.bin to PATH: $nodeModulesBin"
           }
           
-          Write-Host "Current PATH: $env:PATH"
-          
-          # Always succeed this step
-          Write-Host "✅ PATH setup completed (non-blocking)"
-          exit 0
+          Write-Host "✅ PATH setup completed successfully"
 
       - name: Restore dependencies
         uses: actions/cache@v4
@@ -356,15 +321,15 @@ jobs:
             ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}-
             ${{ runner.os }}-node-
 
-      - name: Build application (Native)
+      - name: Build application (Local Runner)
         run: |
-          Write-Host "🏗️ Building application with native runner..."
+          Write-Host "🏗️ Building application with local runner service..."
           npm run build
           Write-Host "✅ Build completed successfully"
 
-      - name: Run tests (Native)
+      - name: Run tests (Local Runner)
         run: |
-          Write-Host "🧪 Running tests with native runner..."
+          Write-Host "🧪 Running tests with local runner service..."
           npm run test || Write-Host "⚠️ Some tests failed (non-blocking)"
 
       - name: Cache build artifacts
@@ -380,7 +345,7 @@ jobs:
             build-${{ runner.os }}-node-
 
   integration-tests:
-    name: 🔄 Integration Tests (Native)
+    name: 🔄 Integration Tests (Local Runner)
     runs-on: self-hosted
     needs: [validate, dependencies, security-quality, build-test]
     if: needs.validate.outputs.should-skip != 'true'
@@ -409,13 +374,13 @@ jobs:
             build-${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}-
             build-${{ runner.os }}-node-
 
-      - name: Run integration tests (Native)
+      - name: Run integration tests (Local Runner)
         run: |
-          Write-Host "🔄 Running integration tests with native runner..."
+          Write-Host "🔄 Running integration tests with local runner service..."
           npm run test:integration || Write-Host "⚠️ Integration tests failed (non-blocking)"
 
   start-dev-containers:
-    name: 🚀 Start Local Dev Containers (Native)
+    name: 🚀 Start Local Dev Containers (Local Runner)
     runs-on: self-hosted
     needs: [validate, dependencies, security-quality, build-test, integration-tests]
     if: |
@@ -431,9 +396,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Start dev containers (Native)
+      - name: Start dev containers (Local Runner)
         run: |
-          Write-Host "🚀 Starting dev containers with native runner..."
+          Write-Host "🚀 Starting dev containers with local runner service..."
           if (Test-Path "docker-compose.yml") {
             docker-compose up -d
             Write-Host "✅ Dev containers started successfully"
@@ -448,7 +413,7 @@ jobs:
           docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
   summary:
-    name: 📋 Pipeline Summary (Native)
+    name: 📋 Pipeline Summary (Local Runner)
     runs-on: self-hosted
     needs: [validate, dependencies, security-quality, build-test, integration-tests, start-dev-containers]
     if: always()
@@ -456,8 +421,8 @@ jobs:
     steps:
       - name: Pipeline Summary
         run: |
-          Write-Host "🎉 Native Runner Pipeline Summary" -ForegroundColor Green
-          Write-Host "=================================" -ForegroundColor Green
+          Write-Host "🎉 Local Runner Service Pipeline Summary" -ForegroundColor Green
+          Write-Host "=========================================" -ForegroundColor Green
           Write-Host ""
           Write-Host "✅ Benefits Achieved:" -ForegroundColor Cyan
           Write-Host "   • Better Performance - Direct access to system resources" -ForegroundColor Green
@@ -474,7 +439,7 @@ jobs:
           Write-Host "   • Integration: ${{ needs.integration-tests.result }}"
           Write-Host "   • Dev Containers: ${{ needs.start-dev-containers.result }}"
           Write-Host ""
-          Write-Host "🚀 Native Runner Performance:" -ForegroundColor Cyan
+          Write-Host "🚀 Local Runner Service Performance:" -ForegroundColor Cyan
           Write-Host "   • Direct system resource access" -ForegroundColor Green
           Write-Host "   • Optimized caching strategies" -ForegroundColor Green
           Write-Host "   • No virtualization overhead" -ForegroundColor Green
