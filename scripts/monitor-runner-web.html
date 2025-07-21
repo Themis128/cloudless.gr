@@ -250,7 +250,7 @@
         </div>
 
         <div class="refresh-indicator" id="refreshIndicator">
-            Auto-refreshing every 30 seconds
+            Auto-refreshing every 5 seconds
         </div>
 
         <div class="log-container hidden" id="logContainer">
@@ -433,7 +433,7 @@
 
         function startAutoRefresh() {
             if (refreshInterval) clearInterval(refreshInterval);
-            refreshInterval = setInterval(refreshData, 30000); // 30 seconds
+            refreshInterval = setInterval(refreshData, 5000); // 5 seconds
         }
 
         function stopAutoRefresh() {
