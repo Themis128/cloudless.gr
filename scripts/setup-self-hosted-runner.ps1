@@ -104,7 +104,7 @@ function Get-GitHubToken {
     }
     
     try {
-        $response = Invoke-RestMethod -Uri "https://api.github.com/repos/$RepoOwner/$RepoName" -Headers $headers
+        $null = Invoke-RestMethod -Uri "https://api.github.com/repos/$RepoOwner/$RepoName" -Headers $headers
         Write-Success "GitHub token is valid"
     } catch {
         Write-Error "Invalid GitHub token or insufficient permissions"
@@ -115,7 +115,7 @@ function Get-GitHubToken {
 }
 
 # Function to setup Docker-based runner
-function Setup-DockerRunner {
+function Initialize-DockerRunner {
     Write-Status "Setting up Docker-based runner..."
     
     # Create runner directory
@@ -177,7 +177,7 @@ services:
 }
 
 # Function to setup native runner
-function Setup-NativeRunner {
+function Initialize-NativeRunner {
     Write-Status "Setting up native runner..."
     
     # Create runner directory
@@ -218,7 +218,7 @@ function Setup-NativeRunner {
 }
 
 # Function to setup monitoring
-function Setup-Monitoring {
+function Initialize-Monitoring {
     Write-Status "Setting up monitoring..."
     
     # Create monitoring script
@@ -290,7 +290,7 @@ function Main {
     Test-Prerequisites
     
     # Get GitHub token
-    $GitHubToken = Get-GitHubToken
+    $null = Get-GitHubToken
     
     # Determine runner type
     if ([string]::IsNullOrEmpty($RunnerType)) {
@@ -312,10 +312,10 @@ function Main {
     # Setup runner based on type
     switch ($RunnerType.ToLower()) {
         "docker" {
-            Setup-DockerRunner
+            Initialize-DockerRunner
         }
         "native" {
-            Setup-NativeRunner
+            Initialize-NativeRunner
         }
         default {
             Write-Error "Invalid runner type: $RunnerType"
@@ -324,7 +324,7 @@ function Main {
     }
     
     # Setup monitoring
-    Setup-Monitoring
+    Initialize-Monitoring
     
     # Display information
     Show-SetupInfo
