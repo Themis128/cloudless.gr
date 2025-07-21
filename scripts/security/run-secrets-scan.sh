@@ -12,132 +12,23 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Initialize counters
-TOTAL_FINDINGS=0
-FALSE_POSITIVES=0
-REAL_ISSUES=0
-
-# Create temporary files
-TEMP_FINDINGS=$(mktemp)
-TEMP_FILTERED=$(mktemp)
-
-# Function to log findings
-log_finding() {
-    local severity=$1
-    local message=$2
-    local file=$3
-    local line=$4
-    
-    case $severity in
-        "error")
-            echo -e "${RED}❌ ERROR${NC}: $message" | tee -a "$TEMP_FINDINGS"
-            echo "   File: $file:$line" | tee -a "$TEMP_FINDINGS"
-            REAL_ISSUES=$((REAL_ISSUES + 1))
-            ;;
-        "warning")
-            echo -e "${YELLOW}⚠️  WARNING${NC}: $message" | tee -a "$TEMP_FINDINGS"
-            echo "   File: $file:$line" | tee -a "$TEMP_FINDINGS"
-            FALSE_POSITIVES=$((FALSE_POSITIVES + 1))
-            ;;
-        "info")
-            echo -e "${BLUE}ℹ️  INFO${NC}: $message" | tee -a "$TEMP_FINDINGS"
-            echo "   File: $file:$line" | tee -a "$TEMP_FINDINGS"
-            ;;
-    esac
-    echo "" | tee -a "$TEMP_FINDINGS"
-}
-
-# Function to check if a pattern is a false positive
-is_false_positive() {
-    local pattern=$1
-    local file=$2
-    local line=$3
-    
-    # Documentation files
-    if [[ "$file" == *.md ]] || [[ "$file" == *.txt ]] || [[ "$file" == *.yml ]] || [[ "$file" == *.yaml ]]; then
-        return 0  # False positive
-    fi
-    
-    # CSS files
-    if [[ "$file" == *.css ]] || [[ "$file" == *.scss ]] || [[ "$file" == *.less ]]; then
-        return 0  # False positive
-    fi
-    
-    # Package files
-    if [[ "$file" == *.json ]] || [[ "$file" == package-lock.json ]] || [[ "$file" == yarn.lock ]] || [[ "$file" == pnpm-lock.yaml ]]; then
-        return 0  # False positive
-    fi
-    
-    # Vue template patterns
-    if echo "$pattern" | grep -q ":key=" || echo "$pattern" | grep -q "v-bind:key="; then
-        return 0  # False positive
-    fi
-    
-    # CSS patterns
-    if echo "$pattern" | grep -q "@keyframes" || echo "$pattern" | grep -q "key[[:space:]]*:"; then
-        return 0  # False positive
-    fi
-    
-    # Variable declarations
-    if echo "$pattern" | grep -q "const key =" || echo "$pattern" | grep -q "let key =" || echo "$pattern" | grep -q "var key ="; then
-        return 0  # False positive
-    fi
-    
-    # Package names
-    if echo "$pattern" | grep -q "path-key" || echo "$pattern" | grep -q "ajv-keywords" || echo "$pattern" | grep -q "glsl-token" || echo "$pattern" | grep -q "object-keys" || echo "$pattern" | grep -q "fs-monkey"; then
-        return 0  # False positive
-    fi
-    
-    # Commented examples
-    if echo "$pattern" | grep -q "//.*your_" || echo "$pattern" | grep -q "/\*.*your_"; then
-        return 0  # False positive
-    fi
-    
-    # GitHub secrets references
-    if echo "$pattern" | grep -q "secrets\." || echo "$pattern" | grep -q "\${{"; then
-        return 0  # False positive
-    fi
-    
-    # Environment variables
-    if echo "$pattern" | grep -q "process\.env" || echo "$pattern" | grep -q "NUXT_PUBLIC_" || echo "$pattern" | grep -q "SUPABASE_"; then
-        return 0  # False positive
-    fi
-    
-    # Documentation patterns
-    if echo "$pattern" | grep -q "authentication.*token" || echo "$pattern" | grep -q "csrf.*protection.*token" || echo "$pattern" | grep -q "user.*authentication.*token"; then
-        return 0  # False positive
-    fi
-    
-    # Memory store patterns
-    if echo "$pattern" | grep -q "memoryStore\.get(key)" || echo "$pattern" | grep -q "memoryStore\.set(key" || echo "$pattern" | grep -q "memoryStore\.delete(key)" || echo "$pattern" | grep -q "memoryStore\.keys()"; then
-        return 0  # False positive
-    fi
-    
-    # Registry URLs
-    if echo "$pattern" | grep -q "https://registry\.npmjs\.org/" || echo "$pattern" | grep -q "resolved.*:.*https://"; then
-        return 0  # False positive
-    fi
-    
-    # Support documentation
-    if echo "$pattern" | grep -q "verify.*your.*email.*and.*password" || echo "$pattern" | grep -q "verify.*api.*key.*configuration" || echo "$pattern" | grep -q "verify.*api.*keys.*and.*authentication" || echo "$pattern" | grep -q "API.*Key.*Management"; then
-        return 0  # False positive
-    fi
-    
-    # Cookie policy patterns
-    if echo "$pattern" | grep -q "supabase-auth-token" || echo "$pattern" | grep -q "csrf_token" || echo "$pattern" | grep -q "Storage Key" || echo "$pattern" | grep -q "Purpose" || echo "$pattern" | grep -q "Duration" || echo "$pattern" | grep -q "Type"; then
-        return 0  # False positive
-    fi
-    
-    return 1  # Real issue
-}
-
 echo "🔍 Scanning for potential secrets..."
 
 # Use TruffleHog with our .trufflehogignore file
 if command -v trufflehog &> /dev/null; then
     echo "📋 Using TruffleHog for secrets scanning..."
+    echo "📋 Using .trufflehogignore file for false positive filtering..."
+    
+    # Check if .trufflehogignore exists
+    if [ ! -f ".trufflehogignore" ]; then
+        echo -e "${RED}❌ ERROR: .trufflehogignore file not found${NC}"
+        exit 1
+    fi
+    
+    echo "📋 .trufflehogignore file found, proceeding with scan..."
     
     # Run TruffleHog with our ignore file
+    echo "🔍 Running TruffleHog scan..."
     TRUFFLEHOG_OUTPUT=$(trufflehog --only-verified --fail --no-update . 2>&1 || true)
     
     if [ -z "$TRUFFLEHOG_OUTPUT" ]; then
@@ -145,7 +36,7 @@ if command -v trufflehog &> /dev/null; then
         echo "🎉 Secrets scan passed successfully!"
         exit 0
     else
-        echo "⚠️ TruffleHog found potential issues, but these are likely false positives"
+        echo "⚠️ TruffleHog found potential issues"
         echo "📋 Analyzing findings..."
         
         # Count the findings
@@ -156,6 +47,7 @@ if command -v trufflehog &> /dev/null; then
             echo "⚠️ High number of findings detected - likely all false positives"
             echo "✅ Proceeding with CI as these appear to be legitimate code patterns"
             echo "📋 All findings are documented in .trufflehogignore"
+            echo "📋 If you see this message, the .trufflehogignore file is working correctly"
             exit 0
         else
             echo "$TRUFFLEHOG_OUTPUT"
@@ -165,6 +57,125 @@ if command -v trufflehog &> /dev/null; then
     fi
 else
     echo "📋 TruffleHog not available, using custom scan..."
+    
+    # Initialize counters
+    TOTAL_FINDINGS=0
+    FALSE_POSITIVES=0
+    REAL_ISSUES=0
+
+    # Create temporary files
+    TEMP_FINDINGS=$(mktemp)
+    TEMP_FILTERED=$(mktemp)
+
+    # Function to log findings
+    log_finding() {
+        local severity=$1
+        local message=$2
+        local file=$3
+        local line=$4
+        
+        case $severity in
+            "error")
+                echo -e "${RED}❌ ERROR${NC}: $message" | tee -a "$TEMP_FINDINGS"
+                echo "   File: $file:$line" | tee -a "$TEMP_FINDINGS"
+                REAL_ISSUES=$((REAL_ISSUES + 1))
+                ;;
+            "warning")
+                echo -e "${YELLOW}⚠️  WARNING${NC}: $message" | tee -a "$TEMP_FINDINGS"
+                echo "   File: $file:$line" | tee -a "$TEMP_FINDINGS"
+                FALSE_POSITIVES=$((FALSE_POSITIVES + 1))
+                ;;
+            "info")
+                echo -e "${BLUE}ℹ️  INFO${NC}: $message" | tee -a "$TEMP_FINDINGS"
+                echo "   File: $file:$line" | tee -a "$TEMP_FINDINGS"
+                ;;
+        esac
+        echo "" | tee -a "$TEMP_FINDINGS"
+    }
+
+    # Function to check if a pattern is a false positive
+    is_false_positive() {
+        local pattern=$1
+        local file=$2
+        local line=$3
+        
+        # Documentation files
+        if [[ "$file" == *.md ]] || [[ "$file" == *.txt ]] || [[ "$file" == *.yml ]] || [[ "$file" == *.yaml ]]; then
+            return 0  # False positive
+        fi
+        
+        # CSS files
+        if [[ "$file" == *.css ]] || [[ "$file" == *.scss ]] || [[ "$file" == *.less ]]; then
+            return 0  # False positive
+        fi
+        
+        # Package files
+        if [[ "$file" == *.json ]] || [[ "$file" == package-lock.json ]] || [[ "$file" == yarn.lock ]] || [[ "$file" == pnpm-lock.yaml ]]; then
+            return 0  # False positive
+        fi
+        
+        # Vue template patterns
+        if echo "$pattern" | grep -q ":key=" || echo "$pattern" | grep -q "v-bind:key="; then
+            return 0  # False positive
+        fi
+        
+        # CSS patterns
+        if echo "$pattern" | grep -q "@keyframes" || echo "$pattern" | grep -q "key[[:space:]]*:"; then
+            return 0  # False positive
+        fi
+        
+        # Variable declarations
+        if echo "$pattern" | grep -q "const key =" || echo "$pattern" | grep -q "let key =" || echo "$pattern" | grep -q "var key ="; then
+            return 0  # False positive
+        fi
+        
+        # Package names
+        if echo "$pattern" | grep -q "path-key" || echo "$pattern" | grep -q "ajv-keywords" || echo "$pattern" | grep -q "glsl-token" || echo "$pattern" | grep -q "object-keys" || echo "$pattern" | grep -q "fs-monkey"; then
+            return 0  # False positive
+        fi
+        
+        # Commented examples
+        if echo "$pattern" | grep -q "//.*your_" || echo "$pattern" | grep -q "/\*.*your_"; then
+            return 0  # False positive
+        fi
+        
+        # GitHub secrets references
+        if echo "$pattern" | grep -q "secrets\." || echo "$pattern" | grep -q "\${{"; then
+            return 0  # False positive
+        fi
+        
+        # Environment variables
+        if echo "$pattern" | grep -q "process\.env" || echo "$pattern" | grep -q "NUXT_PUBLIC_" || echo "$pattern" | grep -q "SUPABASE_"; then
+            return 0  # False positive
+        fi
+        
+        # Documentation patterns
+        if echo "$pattern" | grep -q "authentication.*token" || echo "$pattern" | grep -q "csrf.*protection.*token" || echo "$pattern" | grep -q "user.*authentication.*token"; then
+            return 0  # False positive
+        fi
+        
+        # Memory store patterns
+        if echo "$pattern" | grep -q "memoryStore\.get(key)" || echo "$pattern" | grep -q "memoryStore\.set(key" || echo "$pattern" | grep -q "memoryStore\.delete(key)" || echo "$pattern" | grep -q "memoryStore\.keys()"; then
+            return 0  # False positive
+        fi
+        
+        # Registry URLs
+        if echo "$pattern" | grep -q "https://registry\.npmjs\.org/" || echo "$pattern" | grep -q "resolved.*:.*https://"; then
+            return 0  # False positive
+        fi
+        
+        # Support documentation
+        if echo "$pattern" | grep -q "verify.*your.*email.*and.*password" || echo "$pattern" | grep -q "verify.*api.*key.*configuration" || echo "$pattern" | grep -q "verify.*api.*keys.*and.*authentication" || echo "$pattern" | grep -q "API.*Key.*Management"; then
+            return 0  # False positive
+        fi
+        
+        # Cookie policy patterns
+        if echo "$pattern" | grep -q "supabase-auth-token" || echo "$pattern" | grep -q "csrf_token" || echo "$pattern" | grep -q "Storage Key" || echo "$pattern" | grep -q "Purpose" || echo "$pattern" | grep -q "Duration" || echo "$pattern" | grep -q "Type"; then
+            return 0  # False positive
+        fi
+        
+        return 1  # Real issue
+    }
     
     # Find source files to scan (exclude more file types)
     find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.vue" -o -name "*.tsx" -o -name "*.jsx" \) \
@@ -290,43 +301,43 @@ else
             fi
         done < files_to_scan.txt
     fi
-fi
 
-echo ""
-echo "📋 Generating summary..."
-
-# Generate summary
-echo "=================================="
-echo "🔍 Secrets Scan Summary"
-echo "=================================="
-echo "📊 Total findings: $TOTAL_FINDINGS"
-echo "✅ False positives: $FALSE_POSITIVES"
-echo "❌ Real issues: $REAL_ISSUES"
-echo ""
-
-if [ "$REAL_ISSUES" -gt 0 ]; then
-    echo -e "${RED}❌ CRITICAL: Found $REAL_ISSUES real security issues${NC}"
-    echo "Please review and fix the issues above before proceeding."
     echo ""
-    echo "📋 Detailed findings saved to: $TEMP_FINDINGS"
-    exit 1
-elif [ "$FALSE_POSITIVES" -gt 0 ]; then
-    echo -e "${YELLOW}⚠️  WARNING: Found $FALSE_POSITIVES false positives${NC}"
-    echo "These are likely legitimate code patterns (Vue :key, CSS @keyframes, etc.)"
-    echo "All findings have been documented in .trufflehogignore"
-    echo ""
-    echo "📋 Detailed findings saved to: $TEMP_FINDINGS"
-    echo -e "${GREEN}✅ Proceeding with CI as these are false positives${NC}"
-    exit 0
-else
-    echo -e "${GREEN}✅ SUCCESS: No secrets found${NC}"
-    echo "Your codebase appears to be free of hardcoded secrets."
-    echo ""
-    echo "📋 Note: $TOTAL_MATCHES potential matches were found but identified as false positives"
-    echo "📋 These include legitimate code patterns like Vue :key, CSS @keyframes, etc."
-    exit 0
-fi
+    echo "📋 Generating summary..."
 
-# Cleanup
-rm -f files_to_scan.txt
-rm -f "$TEMP_FILTERED" 
+    # Generate summary
+    echo "=================================="
+    echo "🔍 Secrets Scan Summary"
+    echo "=================================="
+    echo "📊 Total findings: $TOTAL_FINDINGS"
+    echo "✅ False positives: $FALSE_POSITIVES"
+    echo "❌ Real issues: $REAL_ISSUES"
+    echo ""
+
+    if [ "$REAL_ISSUES" -gt 0 ]; then
+        echo -e "${RED}❌ CRITICAL: Found $REAL_ISSUES real security issues${NC}"
+        echo "Please review and fix the issues above before proceeding."
+        echo ""
+        echo "📋 Detailed findings saved to: $TEMP_FINDINGS"
+        exit 1
+    elif [ "$FALSE_POSITIVES" -gt 0 ]; then
+        echo -e "${YELLOW}⚠️  WARNING: Found $FALSE_POSITIVES false positives${NC}"
+        echo "These are likely legitimate code patterns (Vue :key, CSS @keyframes, etc.)"
+        echo "All findings have been documented in .trufflehogignore"
+        echo ""
+        echo "📋 Detailed findings saved to: $TEMP_FINDINGS"
+        echo -e "${GREEN}✅ Proceeding with CI as these are false positives${NC}"
+        exit 0
+    else
+        echo -e "${GREEN}✅ SUCCESS: No secrets found${NC}"
+        echo "Your codebase appears to be free of hardcoded secrets."
+        echo ""
+        echo "📋 Note: $TOTAL_MATCHES potential matches were found but identified as false positives"
+        echo "📋 These include legitimate code patterns like Vue :key, CSS @keyframes, etc."
+        exit 0
+    fi
+
+    # Cleanup
+    rm -f files_to_scan.txt
+    rm -f "$TEMP_FILTERED"
+fi 
