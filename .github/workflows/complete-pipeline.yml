@@ -145,7 +145,7 @@ jobs:
           fi
 
 
-          echo "🔧 [DEBUG] Skip check result: ${{ steps.skip-check.outputs.should-skip }}"
+          echo "🔧 [DEBUG] Skip check completed"
 
       - name: Check for changes
         id: changes-check
