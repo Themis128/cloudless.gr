@@ -184,6 +184,15 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
+      - name: Setup PATH for native runner
+        run: |
+          Write-Host "🔧 Setting up PATH for native runner..."
+          $npmBin = npm bin
+          $env:PATH = "$npmBin;$env:PATH"
+          Write-Host "Updated PATH: $env:PATH"
+          Write-Host "ESLint location: $(where.exe eslint 2>$null || echo 'Not found in PATH')"
+          Write-Host "TypeScript location: $(where.exe tsc 2>$null || echo 'Not found in PATH')"
+
       - name: Restore dependencies
         uses: actions/cache@v4
         with:
@@ -195,12 +204,16 @@ jobs:
       - name: Run linting (Native)
         run: |
           Write-Host "🔍 Running linting checks..."
-          npm run lint || Write-Host "⚠️ Linting issues found (non-blocking)"
+          Write-Host "Current PATH: $env:PATH"
+          Write-Host "Node modules path: $(npm bin)"
+          Write-Host "Using npx for linting..."
+          npx eslint . --ext .vue,.ts,.js || Write-Host "⚠️ Linting issues found (non-blocking)"
 
       - name: Type checking (Native)
         run: |
           Write-Host "🔍 Running type checking..."
-          npm run type-check || Write-Host "⚠️ Type checking issues found (non-blocking)"
+          Write-Host "Using npx for type checking..."
+          npx tsc --noEmit || Write-Host "⚠️ Type checking issues found (non-blocking)"
 
       - name: Security scan (Native)
         run: |
@@ -222,6 +235,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+
+      - name: Setup PATH for native runner
+        run: |
+          Write-Host "🔧 Setting up PATH for native runner..."
+          $npmBin = npm bin
+          $env:PATH = "$npmBin;$env:PATH"
+          Write-Host "Updated PATH: $env:PATH"
 
       - name: Restore dependencies
         uses: actions/cache@v4
