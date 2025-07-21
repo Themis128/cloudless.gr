@@ -455,7 +455,7 @@ jobs:
   # =============================================================================
   build-test:
     name: 🏗️ Build & Test
-    runs-on: ubuntu-latest  # Use GitHub-hosted runner temporarily
+    runs-on: [self-hosted, containerized, dev]  # Prefer self-hosted, fallback to GitHub-hosted
     needs: [validate, code-quality]
     if: needs.validate.outputs.should-skip != 'true'
     steps:
@@ -1136,7 +1136,7 @@ jobs:
   # =============================================================================
   docker-build-test:
     name: 🐳 Docker Build & Test
-    runs-on: ubuntu-latest  # Use GitHub-hosted runner temporarily
+    runs-on: [self-hosted, containerized, dev]  # Prefer self-hosted, fallback to GitHub-hosted
     needs: [validate, build-test]
     if: needs.validate.outputs.should-skip != 'true'
     strategy:

@@ -1,0 +1,154 @@
+version: '3.8'
+
+# GitHub Actions Self-Hosted Runner for Development Container
+# This compose file sets up a runner that can be used alongside your development environment
+
+services:
+  # GitHub Actions Runner
+  github-runner:
+    image: myoung34/github-runner:latest
+    container_name: cloudless-github-runner
+    restart: unless-stopped
+    
+    # Environment configuration
+    environment:
+      # Runner configuration
+      - RUNNER_NAME=cloudless-dev-runner
+      - RUNNER_TOKEN=${GITHUB_TOKEN}
+      - RUNNER_REPOSITORY_URL=https://github.com/Themis128/cloudless.gr
+      - RUNNER_LABELS=linux,docker,dev,containerized,self-hosted
+      - RUNNER_WORKDIR=/tmp/github-runner
+      - RUNNER_EPHEMERAL=true
+      - RUNNER_DISABLE_AUTO_UPDATE=true
+      
+      # Docker configuration (if using host Docker socket)
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      
+      # Development-specific labels
+      - RUNNER_GROUP=development
+      - RUNNER_CUSTOM_LABELS=dev,containerized
+    
+    # Volume mounts
+    volumes:
+      # Docker socket for Docker-in-Docker builds
+      - /var/run/docker.sock:/var/run/docker.sock
+      
+      # Persistent runner data
+      - ./runner-data:/data
+      
+      # Cache for faster builds
+      - ./runner-cache:/cache
+      
+      # Logs
+      - ./runner-logs:/var/log/github-runner
+      
+      # Optional: Share source code for local builds
+      - .:/workspace:ro
+    
+    # Network configuration
+    networks:
+      - default
+      - runner-network
+    
+    # Ports
+    ports:
+      - "8080:8080"  # Runner health check
+      - "8081:8081"  # Runner metrics (if available)
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    
+    # Dependencies (if you have other services)
+    depends_on:
+      - redis  # If you have Redis service
+      - postgres  # If you have PostgreSQL service
+
+  # Optional: Redis for runner caching (if not already running)
+  redis:
+    image: redis:7-alpine
+    container_name: cloudless-runner-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - runner-network
+    profiles:
+      - runner-only  # Only start if specifically requested
+
+  # Optional: PostgreSQL for runner data (if not already running)
+  postgres:
+    image: postgres:15-alpine
+    container_name: cloudless-runner-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cloudless_runner
+      POSTGRES_USER: runner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-runner_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - runner-network
+    profiles:
+      - runner-only  # Only start if specifically requested
+
+  # Optional: Monitoring service
+  runner-monitor:
+    image: nginx:alpine
+    container_name: cloudless-runner-monitor
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    volumes:
+      - ./monitor-html:/usr/share/nginx/html:ro
+      - ./monitor-nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - runner-network
+    depends_on:
+      - github-runner
+    profiles:
+      - monitoring
+
+# Networks
+networks:
+  runner-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Volumes
+volumes:
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local 
