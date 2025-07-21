@@ -65,7 +65,6 @@ env:
   SHOW_TIMESTAMPS: 'true'
   NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://default.supabase.url' }}
   NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'default-anon-key' }}
-  skip-check: ${{ env.skip-check || 'false' }}
 
 jobs:
   # =============================================================================

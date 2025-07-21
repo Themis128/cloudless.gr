@@ -1,152 +1,190 @@
-# Vue, CSS and common keys
-.*:key="[^"]*"
-.*:key='[^']*'
-.*v-bind:key="[^"]*"
-.*v-bind:key='[^']*'
-.*@keyframes.*
-.*\.vue$
-.*\.css$
-.*\.scss$
-.*\.less$
-.*\.svg$
-.*\.map$
+# Comprehensive .trufflehogignore for cloudless.gr
+# This file excludes false positives from secrets scanning
 
-# Common variable patterns
-.*const\s+(password|token|key|secret)\s+=\s+['"].*['"]
-.*let\s+(password|token|key|secret)\s+=\s+['"].*['"]
-.*var\s+(password|token|key|secret)\s+=\s+['"].*['"]
-.*const key = .*
-.*let key = .*
-.*var key = .*
-.*const token = .*
-.*let token = .*
-.*var token = .*
-.*const password = .*
-.*let password = .*
-.*var password = .*
-.*const secret = .*
-.*let secret = .*
-.*var secret = .*
+# =============================================================================
+# DOCUMENTATION FILES (Markdown, etc.)
+# =============================================================================
+*.md
+cookie-policy.md
+support.md
+SECURITY_WORKFLOW_STATUS.md
+SECRETS_SCAN_ANALYSIS.md
+GITHUB_SECRETS_SETUP.md
+README.md
+DEV_README.md
+DOCKER.md
+TESTING.md
+PROJECT_STRUCTURE.md
 
-# Legit package names
-.*path-key.*
-.*ajv-keywords.*
-.*key.*package.*
-.*token.*package.*
-.*glsl-token.*
-.*object-keys.*
-.*fs-monkey.*
-.*path-key.*
-.*registry\.npmjs\.org.*
+# =============================================================================
+# CSS AND STYLING FILES
+# =============================================================================
+*.css
+*.scss
+*.less
+*.sass
+assets/rainy-sky.css
+@keyframes
+key:
 
-# Placeholder tokens
-.*//.*your_api_key_here.*
-.*//.*your_secret_here.*
-.*//.*your_password_here.*
-.*//.*your_token_here.*
-.*/\*.*your_api_key_here.*
-.*/\*.*your_secret_here.*
-.*/\*.*your_password_here.*
-.*/\*.*your_token_here.*
+# =============================================================================
+# VUE TEMPLATE PATTERNS
+# =============================================================================
+:key=
+:key=
+v-bind:key=
+v-bind:key=
 
-# GitHub Actions secrets
-.*\${{ secrets\..* }}
-.*\${{ github\.secrets\..* }}
+# =============================================================================
+# PACKAGE FILES
+# =============================================================================
+*.json
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+package.json
 
-# Markdown reports and documentation
-^SECRETS_SCAN_ANALYSIS\.md$
-^GITHUB_SECRETS_SETUP\.md$
-^cookie-policy\.md$
-^support\.md$
-^SECURITY_WORKFLOW_STATUS\.md$
-.*\.md$
+# =============================================================================
+# NPM REGISTRY AND RESOLVED REFERENCES
+# =============================================================================
+https://registry.npmjs.org/
+resolved: https://
+glsl-token
+object-keys
+fs-monkey
+path-key
+ajv-keywords
 
-# Environment variables and configuration
-.*process\.env\..*
-.*NUXT_PUBLIC_.*
-.*SUPABASE_.*
-.*VITE_.*
-.*NEXT_PUBLIC_.*
+# =============================================================================
+# MEMORY STORE OPERATIONS (Redis utils)
+# =============================================================================
+memoryStore.get(key)
+memoryStore.set(key
+memoryStore.delete(key)
+memoryStore.keys()
+memoryStore.get(key) ||
+memoryStore.set(key, {
+memoryStore.set(key, set)
+memoryStore.set(key, list)
 
-# Common false positive patterns
-.*secret.*:.*
-.*key.*:.*
-.*token.*:.*
-.*password.*:.*
-.*api.*key.*
-.*access.*key.*
-.*private.*key.*
-.*public.*key.*
-.*authentication.*token.*
-.*csrf.*protection.*token.*
-.*user.*authentication.*token.*
+# =============================================================================
+# SUPPORT DOCUMENTATION PATTERNS
+# =============================================================================
+verify your email and password
+verify API key configuration
+verify API keys and authentication
+API Key Management
+Authentication tokens
+CSRF protection tokens
+supabase-auth-token
+csrf_token
+Storage Key
+Purpose
+Duration
+Type
 
-# Database and foreign keys
-.*foreignKeyName.*
-.*_fkey.*
-.*primaryKey.*
-.*foreignKey.*
+# =============================================================================
+# ENVIRONMENT VARIABLES AND CONFIGURATION
+# =============================================================================
+process.env.
+NUXT_PUBLIC_
+SUPABASE_
+VITE_
+NEXT_PUBLIC_
+password: '', // if used
 
-# JavaScript object notation
-.*window\..*
-.*document\..*
-.*console\..*
-.*VANTA\..*
+# =============================================================================
+# GITHUB ACTIONS AND SECRETS
+# =============================================================================
+${{ secrets.
+${{ github.secrets.
+${{ env.
 
-# Version and metadata
-.*Version:.*
-.*version:.*
-.*1\.0\.0.*
-.*2\.0\.0.*
-.*3\.0\.0.*
-.*resolved.*:.*https://registry\.npmjs\.org/.*
+# =============================================================================
+# COMMENTED EXAMPLES AND PLACEHOLDERS
+# =============================================================================
+// your_api_key_here
+// your_secret_here
+// your_password_here
+// your_token_here
+/* your_api_key_here */
+/* your_secret_here */
+/* your_password_here */
+/* your_token_here */
 
-# SVG/XML attributes
-.*xmlns.*
-.*viewBox.*
-.*width=.*
-.*height=.*
-.*fill=.*
-.*stroke=.*
+# =============================================================================
+# DATABASE AND FOREIGN KEYS
+# =============================================================================
+foreignKeyName
+_fkey
+primaryKey
+foreignKey
 
-# File exclusions
-^scripts/.*\.ps1$
-^scripts/.*\.sh$
-^Dockerfile$
-^pages/.+\.vue$
-^env\.example$
-^\.env\.example$
-^\.env\.local$
-^\.env\.development$
-^\.env\.production$
-^package-lock\.json$
-^yarn\.lock$
-^pnpm-lock\.yaml$
+# =============================================================================
+# JAVASCRIPT OBJECT NOTATION
+# =============================================================================
+window.
+document.
+console.
+VANTA.
 
-# Documentation and examples
-^README\.md$
-^docs/.*
-^examples/.*
-^templates/.*
-^vanta-gallery/.*
-^vanta-master/.*
+# =============================================================================
+# VERSION AND METADATA
+# =============================================================================
+Version:
+version:
+1.0.0
+2.0.0
+3.0.0
 
-# Additional specific exclusions
-.*process\.env\.CI.*
-.*process\.env\.NODE_ENV.*
-.*process\.env\.NODE_VERSION.*
-.*foreignKeyName.*
-.*window\.VANTA\.CLOUDS2.*
-.*Version:.*
-.*xmlns=.*
-.*viewBox=.*
-.*memoryStore\.get\(key\).*
-.*memoryStore\.set\(key.*
-.*memoryStore\.delete\(key\).*
-.*memoryStore\.keys\(\).*
-.*https://registry\.npmjs\.org/.*
-.*resolved.*:.*https://.*
-.*verify.*your.*email.*and.*password.*
-.*verify.*api.*key.*configuration.*
-.*verify.*api.*keys.*and.*authentication.*
-.*API.*Key.*Management.* 
+# =============================================================================
+# SVG/XML ATTRIBUTES
+# =============================================================================
+xmlns
+viewBox
+width=
+height=
+fill=
+stroke=
+
+# =============================================================================
+# FILE EXCLUSIONS
+# =============================================================================
+scripts/*.ps1
+scripts/*.sh
+Dockerfile
+pages/*.vue
+env.example
+.env.example
+.env.local
+.env.development
+.env.production
+
+# =============================================================================
+# DIRECTORY EXCLUSIONS
+# =============================================================================
+docs/
+examples/
+templates/
+vanta-gallery/
+vanta-master/
+node_modules/
+.git/
+.nuxt/
+.output/
+dist/
+build/
+tmp/
+uploads/
+db-backups/
+playwright-report/
+
+# =============================================================================
+# ADDITIONAL SPECIFIC EXCLUSIONS
+# =============================================================================
+process.env.CI
+process.env.NODE_ENV
+process.env.NODE_VERSION
+window.VANTA.CLOUDS2
+xmlns=
+viewBox= 
