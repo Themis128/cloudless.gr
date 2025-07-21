@@ -527,6 +527,12 @@ jobs:
           echo "🔧 [DEBUG] Build output contents:"
           ls -la .output/ 2>/dev/null | head -10 || echo "No .output directory found"
           
+      - name: Generate build attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: "cloudless.gr"
+          subject-digest: "sha256:${{ hashFiles('.output/**') }}"
+          
       - name: Run tests
         run: |
           source .github/scripts/workflow-helpers.sh
@@ -1190,6 +1196,13 @@ jobs:
           
           echo "✅ [DEBUG] Docker build completed successfully"
           echo "🔧 [DEBUG] Built image size: $(docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag }}-test --format '{{.Size}}' 2>/dev/null || echo 'unknown')"
+          
+      - name: Generate Docker build attestation
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag }}-test"
+          subject-digest: "sha256:$(docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag }}-test --format '{{.ID}}' 2>/dev/null | cut -d: -f2 || echo 'unknown')"
 
       - name: Test Docker image
         if: steps.check-dockerfile.outputs.exists == 'true'
