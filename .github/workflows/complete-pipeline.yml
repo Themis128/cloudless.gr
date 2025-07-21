@@ -1064,10 +1064,12 @@ jobs:
           echo "🔧 [DEBUG] Build context: ."
           echo "🔧 [DEBUG] Dockerfile: ${{ matrix.dockerfile }}"
           echo "🔧 [DEBUG] Target: ${{ matrix.target }}"
+          echo "🔧 [DEBUG] Start time: $(date)"
 
           echo "🔧 [DEBUG] Tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag }}-test"
 
           # Build with detailed output and caching
+          echo "🐳 [BUILD] Starting Docker build process..."
           docker build \
             --file ./${{ matrix.dockerfile }} \
             --target ${{ matrix.target }} \
@@ -1089,7 +1091,7 @@ jobs:
             }
 
           echo "✅ [DEBUG] Docker build completed successfully"
-
+          echo "🔧 [DEBUG] End time: $(date)"
           echo "🔧 [DEBUG] Built image size: $(docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag }}-test --format '{{.Size}}' 2>/dev/null || echo 'unknown')"
 
       - name: Generate Docker build attestation

@@ -17,7 +17,16 @@ export default defineEventHandler(async (event) => {
     }
 
     const token = authHeader.substring(7)
-    const jwtSecret = process.env.JWT_SECRET || 'your-secret-key'
+    const jwtSecret = process.env.JWT_SECRET
+    
+    if (!jwtSecret) {
+      event.node.res.statusCode = 500
+      return {
+        success: false,
+        error: 'JWT secret not configured',
+        code: 'CONFIGURATION_ERROR'
+      }
+    }
 
     // Verify JWT token
     let decoded

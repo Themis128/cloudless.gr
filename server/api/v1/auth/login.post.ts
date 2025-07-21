@@ -59,7 +59,16 @@ export default defineEventHandler(async (event) => {
     }
 
     // Generate JWT token
-    const jwtSecret = process.env.JWT_SECRET || 'your-secret-key'
+    const jwtSecret = process.env.JWT_SECRET
+    
+    if (!jwtSecret) {
+      event.node.res.statusCode = 500
+      return {
+        success: false,
+        error: 'JWT secret not configured',
+        code: 'CONFIGURATION_ERROR'
+      }
+    }
     const token = jwt.sign(
       {
         userId: authData.user.id,

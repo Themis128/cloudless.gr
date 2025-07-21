@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-Hosted Runner Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .timestamp {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-content {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .status.online {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.3s ease;
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, #ffc107, #fd7e14);
+        }
+
+        .progress-fill.danger {
+            background: linear-gradient(90deg, #dc3545, #e83e8c);
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .btn.primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn.success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .refresh-indicator {
+            text-align: center;
+            color: white;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Self-Hosted Runner Monitor</h1>
+            <div class="timestamp" id="timestamp"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn primary" onclick="refreshData()">🔄 Refresh Now</button>
+            <button class="btn success" onclick="toggleAutoRefresh()" id="autoRefreshBtn">⏸️ Pause Auto-Refresh</button>
+            <button class="btn warning" onclick="showLogs()" id="logsBtn">📋 Show Logs</button>
+        </div>
+
+        <div class="dashboard">
+            <div class="card">
+                <h2>📊 System Resources</h2>
+                <div class="card-content" id="systemResources">
+                    <div>Loading...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🌐 Network Connectivity</h2>
+                <div class="card-content" id="networkStatus">
+                    <div>Loading...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🐳 Docker Status</h2>
+                <div class="card-content" id="dockerStatus">
+                    <div>Loading...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🔨 Active Builds</h2>
+                <div class="card-content" id="dockerBuilds">
+                    <div>Loading...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🤖 Runner Status</h2>
+                <div class="card-content" id="runnerStatus">
+                    <div>Loading...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🏥 Health Check</h2>
+                <div class="card-content" id="healthStatus">
+                    <div>Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="refresh-indicator" id="refreshIndicator">
+            Auto-refreshing every 30 seconds
+        </div>
+
+        <div class="log-container hidden" id="logContainer">
+            <div>📋 Monitoring Logs</div>
+            <div id="logContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let autoRefresh = true;
+        let refreshInterval;
+        let logs = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTimestamp();
+            refreshData();
+            startAutoRefresh();
+        });
+
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('timestamp').textContent = now.toLocaleString();
+        }
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logs.unshift(`[${timestamp}] ${message}`);
+            logs = logs.slice(0, 100); // Keep last 100 logs
+            
+            const logContent = document.getElementById('logContent');
+            if (logContent) {
+                logContent.innerHTML = logs.map(log => `<div>${log}</div>`).join('');
+            }
+        }
+
+        function refreshData() {
+            log('Refreshing monitoring data...');
+            updateTimestamp();
+            
+            // Simulate API calls (replace with actual API endpoints)
+            fetchSystemResources();
+            fetchNetworkStatus();
+            fetchDockerStatus();
+            fetchRunnerStatus();
+            fetchHealthStatus();
+        }
+
+        function fetchSystemResources() {
+            // Simulate system resource data
+            const cpu = Math.floor(Math.random() * 100);
+            const memory = Math.floor(Math.random() * 100);
+            const disk = Math.floor(Math.random() * 100);
+            
+            const cpuClass = cpu > 80 ? 'danger' : cpu > 60 ? 'warning' : '';
+            const memoryClass = memory > 80 ? 'danger' : memory > 60 ? 'warning' : '';
+            const diskClass = disk > 80 ? 'danger' : disk > 60 ? 'warning' : '';
+            
+            document.getElementById('systemResources').innerHTML = `
+                <div>
+                    <strong>CPU Usage:</strong> ${cpu}%
+                    <div class="progress-bar">
+                        <div class="progress-fill ${cpuClass}" style="width: ${cpu}%"></div>
+                    </div>
+                </div>
+                <div>
+                    <strong>Memory Usage:</strong> ${memory}%
+                    <div class="progress-bar">
+                        <div class="progress-fill ${memoryClass}" style="width: ${memory}%"></div>
+                    </div>
+                </div>
+                <div>
+                    <strong>Disk Usage:</strong> ${disk}%
+                    <div class="progress-bar">
+                        <div class="progress-fill ${diskClass}" style="width: ${disk}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function fetchNetworkStatus() {
+            const services = [
+                { name: 'GitHub.com', status: Math.random() > 0.1 },
+                { name: 'Docker Hub', status: Math.random() > 0.1 },
+                { name: 'GitHub Container Registry', status: Math.random() > 0.1 }
+            ];
+            
+            const html = services.map(service => `
+                <div class="status ${service.status ? 'online' : 'offline'}">
+                    ${service.name}: ${service.status ? '✅ Online' : '❌ Offline'}
+                </div>
+            `).join('');
+            
+            document.getElementById('networkStatus').innerHTML = html;
+        }
+
+        function fetchDockerStatus() {
+            const dockerRunning = Math.random() > 0.1;
+            const builds = dockerRunning ? Math.floor(Math.random() * 3) : 0;
+            
+            document.getElementById('dockerStatus').innerHTML = `
+                <div class="status ${dockerRunning ? 'online' : 'offline'}">
+                    Docker: ${dockerRunning ? '✅ Running' : '❌ Stopped'}
+                </div>
+                <div style="margin-top: 10px;">
+                    <strong>Active Builds:</strong> ${builds}
+                </div>
+            `;
+        }
+
+        function fetchDockerBuilds() {
+            const builds = [
+                { id: 'abc123', image: 'ghcr.io/themis128/cloudless.gr:dev', status: 'Building', progress: '75%' },
+                { id: 'def456', image: 'ghcr.io/themis128/cloudless.gr:runner', status: 'Completed', progress: '100%' }
+            ];
+            
+            if (builds.length === 0) {
+                document.getElementById('dockerBuilds').innerHTML = '<div>No active builds</div>';
+            } else {
+                const html = builds.map(build => `
+                    <div style="margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <strong>${build.image}</strong><br>
+                        Status: ${build.status}<br>
+                        Progress: ${build.progress}
+                    </div>
+                `).join('');
+                document.getElementById('dockerBuilds').innerHTML = html;
+            }
+        }
+
+        function fetchRunnerStatus() {
+            const runnerRunning = Math.random() > 0.1;
+            const jobs = runnerRunning ? Math.floor(Math.random() * 2) : 0;
+            
+            document.getElementById('runnerStatus').innerHTML = `
+                <div class="status ${runnerRunning ? 'online' : 'offline'}">
+                    Runner: ${runnerRunning ? '✅ Active' : '❌ Inactive'}
+                </div>
+                <div style="margin-top: 10px;">
+                    <strong>Active Jobs:</strong> ${jobs}
+                </div>
+            `;
+        }
+
+        function fetchHealthStatus() {
+            const issues = [];
+            if (Math.random() > 0.7) issues.push('High CPU usage detected');
+            if (Math.random() > 0.8) issues.push('Low disk space warning');
+            if (Math.random() > 0.9) issues.push('Network connectivity issues');
+            
+            if (issues.length === 0) {
+                document.getElementById('healthStatus').innerHTML = `
+                    <div class="status online">✅ All systems healthy!</div>
+                `;
+            } else {
+                const html = `
+                    <div class="status warning">⚠️ Issues detected:</div>
+                    ${issues.map(issue => `<div style="margin: 5px 0; color: #856404;">• ${issue}</div>`).join('')}
+                `;
+                document.getElementById('healthStatus').innerHTML = html;
+            }
+        }
+
+        function toggleAutoRefresh() {
+            autoRefresh = !autoRefresh;
+            const btn = document.getElementById('autoRefreshBtn');
+            
+            if (autoRefresh) {
+                btn.textContent = '⏸️ Pause Auto-Refresh';
+                btn.className = 'btn success';
+                startAutoRefresh();
+                log('Auto-refresh resumed');
+            } else {
+                btn.textContent = '▶️ Resume Auto-Refresh';
+                btn.className = 'btn warning';
+                stopAutoRefresh();
+                log('Auto-refresh paused');
+            }
+        }
+
+        function startAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(refreshData, 30000); // 30 seconds
+        }
+
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+
+        function showLogs() {
+            const container = document.getElementById('logContainer');
+            const btn = document.getElementById('logsBtn');
+            
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                btn.textContent = '📋 Hide Logs';
+                log('Logs displayed');
+            } else {
+                container.classList.add('hidden');
+                btn.textContent = '📋 Show Logs';
+                log('Logs hidden');
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            stopAutoRefresh();
+        });
+    </script>
+</body>
+</html> 
