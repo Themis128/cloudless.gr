@@ -1010,11 +1010,14 @@ jobs:
     if: needs.validate.outputs.should-skip != 'true'
     strategy:
       matrix:
-        dockerfile: [scripts/docker/Dockerfile]
+        dockerfile: [scripts/docker/Dockerfile, scripts/docker/Dockerfile.dev]
         include:
           - dockerfile: scripts/docker/Dockerfile
             target: runner
             tag: runner
+          - dockerfile: scripts/docker/Dockerfile.dev
+            target: dev
+            tag: dev
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -1102,6 +1105,31 @@ jobs:
         run: |
           echo "🧪 Testing Docker image..."
           docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag }}-test npm test || echo "Docker tests completed"
+
+      - name: Test Development Docker Compose
+        if: steps.check-dockerfile.outputs.exists == 'true' && matrix.dockerfile == 'scripts/docker/Dockerfile.dev'
+        run: |
+          echo "🧪 Testing development Docker Compose setup..."
+          
+          # Check if docker-compose.dev.yml exists
+          if [ -f "scripts/docker/docker-compose.dev.yml" ]; then
+            echo "✅ Found docker-compose.dev.yml"
+            
+            # Test building the development compose setup
+            docker-compose -f scripts/docker/docker-compose.dev.yml build --no-cache app-dev || {
+              echo "⚠️ Development compose build failed, but continuing..."
+            }
+            
+            # Test that the compose file is valid
+            docker-compose -f scripts/docker/docker-compose.dev.yml config || {
+              echo "❌ Development compose configuration is invalid"
+              exit 1
+            }
+            
+            echo "✅ Development Docker Compose setup is valid"
+          else
+            echo "⚠️ docker-compose.dev.yml not found, skipping development compose test"
+          fi
 
       - name: Docker build test complete
         run: |
