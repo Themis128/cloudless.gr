@@ -1,0 +1,541 @@
+# Optimized Dependabot Configuration for cloudless.gr
+# Enhanced with priority ordering, auto-merge rules, and improved security management
+
+version: 2
+updates:
+  # =============================================================================
+  # NPM DEPENDENCIES (Enhanced with priority and auto-merge)
+  # =============================================================================
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Themis128"
+    assignees:
+      - "Themis128"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    versioning-strategy: "auto"
+    
+    # Enhanced security grouping with priority ordering
+    groups:
+      # 🔴 CRITICAL SECURITY (Priority 1 - Immediate attention)
+      critical-security:
+        patterns:
+          - "webpack*"
+          - "body-parser"
+          - "braces*"
+          - "cookie"
+          - "cross-spawn"
+          - "semver"
+          - "ws"
+          - "path-to-regexp"
+          - "loader-utils"
+          - "minimist"
+          - "tough-cookie"
+          - "follow-redirects"
+          - "axios"
+          - "lodash*"
+          - "node-forge"
+          - "word-wrap"
+          - "tunnel"
+          - "tough-cookie"
+        labels:
+          - "dependencies"
+          - "security"
+          - "critical"
+          - "automated"
+        priority: 1
+
+      # 🟠 HIGH-PRIORITY SECURITY (Priority 2 - High attention)
+      high-priority-security:
+        patterns:
+          - "crypto-js"
+          - "jsonwebtoken"
+          - "bcrypt*"
+          - "helmet"
+          - "cors"
+          - "express-rate-limit"
+          - "express-validator"
+          - "passport*"
+          - "oauth*"
+          - "jose"
+          - "node-jose"
+        labels:
+          - "dependencies"
+          - "security"
+          - "high-priority"
+          - "automated"
+        priority: 2
+
+      # 🟡 GENERAL SECURITY (Priority 3 - Standard attention)
+      general-security:
+        patterns:
+          - "dotenv"
+          - "validator"
+          - "sanitize-html"
+          - "xss"
+          - "sql-injection"
+          - "csrf"
+          - "rate-limit*"
+        labels:
+          - "dependencies"
+          - "security"
+          - "automated"
+        priority: 3
+
+      # 🔵 FRAMEWORK GROUPS (Priority 4 - Coordinated updates)
+      nuxt-ecosystem:
+        patterns:
+          - "@nuxt/*"
+          - "nuxt"
+          - "nuxt-*"
+        labels:
+          - "dependencies"
+          - "nuxt"
+          - "framework"
+          - "breaking-changes"
+          - "automated"
+        priority: 4
+
+      vue-ecosystem:
+        patterns:
+          - "vue"
+          - "vue-*"
+          - "@vue/*"
+        labels:
+          - "dependencies"
+          - "vue"
+          - "framework"
+          - "breaking-changes"
+          - "automated"
+        priority: 4
+
+      # 🟢 FUNCTIONAL GROUPS (Priority 5 - Feature-based)
+      ui-styling:
+        patterns:
+          - "vuetify*"
+          - "@mdi/*"
+          - "echarts*"
+          - "chart*"
+          - "d3*"
+          - "leaflet*"
+          - "mapbox*"
+        labels:
+          - "dependencies"
+          - "ui"
+          - "styling"
+          - "automated"
+        priority: 5
+
+      dev-build-tools:
+        patterns:
+          - "vite*"
+          - "webpack*"
+          - "@babel/*"
+          - "babel*"
+          - "rollup*"
+          - "esbuild*"
+          - "swc*"
+        labels:
+          - "dependencies"
+          - "build"
+          - "dev-tools"
+          - "automated"
+        priority: 5
+
+      testing-quality:
+        patterns:
+          - "jest*"
+          - "@jest/*"
+          - "eslint*"
+          - "@eslint/*"
+          - "prettier*"
+          - "husky*"
+          - "lint-staged*"
+          - "cypress*"
+          - "playwright*"
+          - "@types/*"
+        labels:
+          - "dependencies"
+          - "testing"
+          - "quality"
+          - "automated"
+        priority: 5
+
+      backend-tools:
+        patterns:
+          - "@supabase/*"
+          - "supabase*"
+          - "redis*"
+          - "prisma*"
+          - "@prisma/*"
+          - "sequelize*"
+          - "mongoose*"
+          - "typeorm*"
+        labels:
+          - "dependencies"
+          - "backend"
+          - "database"
+          - "automated"
+        priority: 5
+
+      utilities:
+        patterns:
+          - "lodash*"
+          - "date-fns*"
+          - "uuid*"
+          - "nanoid*"
+          - "ramda*"
+          - "fp-ts*"
+          - "immer*"
+          - "zod*"
+          - "joi*"
+          - "yup*"
+        labels:
+          - "dependencies"
+          - "utilities"
+          - "automated"
+        priority: 5
+
+      http-networking:
+        patterns:
+          - "axios*"
+          - "fetch*"
+          - "got*"
+          - "node-fetch*"
+          - "undici*"
+          - "ky*"
+          - "superagent*"
+        labels:
+          - "dependencies"
+          - "networking"
+          - "http"
+          - "automated"
+        priority: 5
+
+      file-processing:
+        patterns:
+          - "sharp*"
+          - "multer*"
+          - "imagemin*"
+          - "file-type*"
+          - "mime-types*"
+          - "formidable*"
+          - "busboy*"
+        labels:
+          - "dependencies"
+          - "file-processing"
+          - "media"
+          - "automated"
+        priority: 5
+
+      auth-security:
+        patterns:
+          - "passport*"
+          - "oauth*"
+          - "openid*"
+          - "saml*"
+          - "ldap*"
+          - "keycloak*"
+          - "auth0*"
+        labels:
+          - "dependencies"
+          - "auth"
+          - "security"
+          - "automated"
+        priority: 5
+
+      monitoring-logging:
+        patterns:
+          - "winston*"
+          - "sentry*"
+          - "log4js*"
+          - "pino*"
+          - "bunyan*"
+          - "morgan*"
+          - "helmet*"
+        labels:
+          - "dependencies"
+          - "monitoring"
+          - "logging"
+          - "automated"
+        priority: 5
+
+      performance:
+        patterns:
+          - "compression*"
+          - "cache*"
+          - "redis*"
+          - "memcached*"
+          - "lru-cache*"
+          - "fastify*"
+          - "express-rate-limit*"
+        labels:
+          - "dependencies"
+          - "performance"
+          - "caching"
+          - "automated"
+        priority: 5
+
+      dev-experience:
+        patterns:
+          - "storybook*"
+          - "@storybook/*"
+          - "typedoc*"
+          - "jsdoc*"
+          - "esdoc*"
+          - "compodoc*"
+          - "styleguidist*"
+        labels:
+          - "dependencies"
+          - "dev-experience"
+          - "documentation"
+          - "automated"
+        priority: 5
+
+    # Enhanced ignore patterns for better stability
+    ignore:
+      # Framework major versions (require manual review)
+      - dependency-name: "@nuxt/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "nuxt"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vue"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vuetify"
+        update-types: ["version-update:semver-major"]
+      
+      # TypeScript major versions
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/*"
+        update-types: ["version-update:semver-major"]
+      
+      # Build tools major versions
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "webpack"
+        update-types: ["version-update:semver-major"]
+      
+      # Testing framework major versions
+      - dependency-name: "jest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "cypress"
+        update-types: ["version-update:semver-major"]
+      
+      # Database major versions
+      - dependency-name: "prisma"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@prisma/*"
+        update-types: ["version-update:semver-major"]
+
+    # Auto-merge rules for safe updates
+    auto-merge:
+      # Auto-merge patch security updates
+      - match:
+          dependency_type: "direct"
+          update_type: "security:patch"
+          groups: ["critical-security", "high-priority-security"]
+      
+      # Auto-merge patch updates for utilities
+      - match:
+          dependency_type: "direct"
+          update_type: "patch"
+          groups: ["utilities", "dev-experience"]
+      
+      # Auto-merge minor updates for dev dependencies
+      - match:
+          dependency_type: "development"
+          update_type: "minor"
+          groups: ["testing-quality", "dev-build-tools"]
+
+    # Enhanced exclude patterns
+    exclude-patterns:
+      - "@types/node"  # Already handled in testing group
+      - "eslint-config-*"  # Specific configs can be excluded
+      - "babel-preset-*"  # Specific presets can be excluded
+      - "webpack-*"  # Specific webpack plugins can be excluded
+
+  # =============================================================================
+  # GITHUB ACTIONS (Enhanced with security focus)
+  # =============================================================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Themis128"
+    assignees:
+      - "Themis128"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    
+    # Security-focused grouping for Actions
+    groups:
+      # 🔴 CRITICAL ACTIONS SECURITY
+      critical-actions-security:
+        patterns:
+          - "actions/checkout"
+          - "actions/setup-node"
+          - "actions/upload-artifact"
+          - "actions/download-artifact"
+          - "actions/cache"
+        labels:
+          - "dependencies"
+          - "github-actions"
+          - "security"
+          - "critical"
+          - "automated"
+        priority: 1
+
+      # 🟠 BUILD & TEST ACTIONS
+      build-test-actions:
+        patterns:
+          - "actions/setup-*"
+          - "docker/*"
+          - "softprops/action-gh-release"
+          - "actions/create-release"
+          - "actions/upload-release-asset"
+        labels:
+          - "dependencies"
+          - "github-actions"
+          - "build"
+          - "testing"
+          - "automated"
+        priority: 2
+
+      # 🟡 UTILITY ACTIONS
+      utility-actions:
+        patterns:
+          - "actions/*"
+          - "*-action"
+          - "*-actions"
+        labels:
+          - "dependencies"
+          - "github-actions"
+          - "utilities"
+          - "automated"
+        priority: 3
+
+    # Auto-merge for safe action updates
+    auto-merge:
+      - match:
+          update_type: "patch"
+          groups: ["critical-actions-security"]
+
+  # =============================================================================
+  # DOCKER (Enhanced with base image security)
+  # =============================================================================
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "Themis128"
+    assignees:
+      - "Themis128"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    
+    # Docker-specific grouping
+    groups:
+      # 🔴 CRITICAL DOCKER SECURITY
+      critical-docker-security:
+        patterns:
+          - "node:*"
+          - "alpine:*"
+          - "ubuntu:*"
+          - "debian:*"
+        labels:
+          - "dependencies"
+          - "docker"
+          - "security"
+          - "critical"
+          - "automated"
+        priority: 1
+
+      # 🟠 APPLICATION IMAGES
+      application-images:
+        patterns:
+          - "redis:*"
+          - "postgres:*"
+          - "mysql:*"
+          - "mongo:*"
+        labels:
+          - "dependencies"
+          - "docker"
+          - "database"
+          - "automated"
+        priority: 2
+
+    # Auto-merge for patch updates
+    auto-merge:
+      - match:
+          update_type: "patch"
+          groups: ["critical-docker-security"]
+
+# =============================================================================
+# REGISTRY CONFIGURATION (Ready for private registries)
+# =============================================================================
+registries:
+  # npm-registry:
+  #   type: npm-registry
+  #   url: https://registry.npmjs.org/
+  #   token: ${{ secrets.NPM_TOKEN }}
+  
+  # github-container-registry:
+  #   type: docker-registry
+  #   url: ghcr.io
+  #   username: ${{ github.actor }}
+  #   password: ${{ secrets.GITHUB_TOKEN }}
+
+# =============================================================================
+# GLOBAL CONFIGURATION
+# =============================================================================
+# Global settings that apply to all ecosystems
+global:
+  # Enhanced commit message format
+  commit-message:
+    prefix: "chore"
+    include: "scope"
+    prefix-development: "ci"
+  
+  # Enhanced PR titles
+  pull-request-branch-name:
+    separator: "/"
+  
+  # Enhanced labels
+  labels:
+    - "dependencies"
+    - "automated"
+  
+  # Enhanced reviewers
+  reviewers:
+    - "Themis128"
+  
+  # Enhanced assignees
+  assignees:
+    - "Themis128"
+  
+  # Enhanced milestone assignment (optional)
+  # milestone: "Dependency Updates"
+  
+  # Enhanced target branch
+  target-branch: "main" 

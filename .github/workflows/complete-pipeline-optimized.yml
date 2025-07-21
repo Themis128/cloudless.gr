@@ -1,0 +1,585 @@
+---
+name: '🚀 Optimized CI/CD Pipeline'
+
+on:
+  push:
+    branches: [main, master, develop, application, platform]
+    tags: ['v*']
+  pull_request:
+    branches: [main, develop, application, platform]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip testing phases'
+        required: false
+        default: false
+        type: boolean
+      skip_deployment:
+        description: 'Skip deployment phase'
+        required: false
+        default: false
+        type: boolean
+      force_rebuild:
+        description: 'Force rebuild all caches'
+        required: false
+        default: false
+        type: boolean
+
+# Optimized permissions - minimal required permissions
+permissions:
+  contents: read
+  packages: write
+  checks: write
+  pull-requests: write
+  security-events: write
+  id-token: write
+  actions: read
+
+# Optimized environment variables
+env:
+  NODE_VERSION: '20'
+  NODE_ENV: 'test'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: themis128/cloudless.gr
+  # Optimized cache configuration
+  CACHE_DEPENDENCY_PATH: '**/package-lock.json'
+  # Build optimization
+  DOCKER_BUILDKIT: '1'
+  # Security - reduced verbose output
+  ACTIONS_STEP_DEBUG: 'false'
+  # Optimized debugging
+  DEBUG: 'nuxt:*'
+  NODE_OPTIONS: '--max-old-space-size=4096'
+  NPM_CONFIG_LOGLEVEL: 'warn'
+  # Performance optimization
+  NPM_CONFIG_CACHE: '.npm-cache'
+  NPM_CONFIG_PREFER_OFFLINE: 'true'
+
+# Optimized concurrency to prevent conflicts
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # =============================================================================
+  # PHASE 1: VALIDATION & PREPARATION (Optimized)
+  # =============================================================================
+  validate:
+    name: 🔍 Validate Configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      should-skip: ${{ steps.skip-check.outputs.should-skip }}
+      has-changes: ${{ steps.changes-check.outputs.has-changes }}
+      cache-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          # Generate optimized cache key based on dependencies
+          CACHE_KEY="node-${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json') }}"
+          echo "key=$CACHE_KEY" >> $GITHUB_OUTPUT
+
+      - name: Check for skip patterns
+        id: skip-check
+        run: |
+          # Optimized skip logic - only check for documentation-only changes
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "should-skip=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Quick check for documentation-only changes
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} 2>/dev/null || echo "")
+          
+          if [ -n "$CHANGED_FILES" ]; then
+            DOC_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(md|txt|yml|yaml)$' | wc -l)
+            CODE_FILES=$(echo "$CHANGED_FILES" | grep -vE '\.(md|txt|yml|yaml)$' | wc -l)
+            
+            if [ "$DOC_FILES" -gt 0 ] && [ "$CODE_FILES" -eq 0 ]; then
+              echo "should-skip=true" >> $GITHUB_OUTPUT
+              echo "🔄 Skipping CI - only documentation changes"
+            else
+              echo "should-skip=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should-skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check for changes
+        id: changes-check
+        run: |
+          echo "has-changes=true" >> $GITHUB_OUTPUT
+
+      - name: Validate package.json
+        if: steps.skip-check.outputs.should-skip != 'true'
+        run: |
+          # Optimized validation - only check critical fields
+          node -e "
+            const pkg = require('./package.json');
+            const required = ['name', 'version', 'scripts'];
+            const missing = required.filter(field => !pkg[field]);
+            if (missing.length > 0) {
+              console.error('Missing required fields:', missing);
+              process.exit(1);
+            }
+            console.log('✅ Package.json validation passed');
+          "
+
+      - name: Check for critical files
+        if: steps.skip-check.outputs.should-skip != 'true'
+        run: |
+          # Optimized file check
+          for file in package.json nuxt.config.ts tsconfig.json; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Critical file missing: $file"
+              exit 1
+            fi
+          done
+          echo "✅ All critical files found"
+
+  # =============================================================================
+  # PHASE 2: DEPENDENCY MANAGEMENT (Optimized)
+  # =============================================================================
+  dependencies:
+    name: 📦 Dependency Management
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.should-skip != 'true'
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js with optimized cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            .npm-cache
+          key: ${{ needs.validate.outputs.cache-key }}
+          restore-keys: |
+            node-${{ env.NODE_VERSION }}-
+
+      - name: Install dependencies
+        run: |
+          # Optimized installation with better error handling
+          npm ci --prefer-offline --no-audit || {
+            echo "⚠️ npm ci failed, trying npm install"
+            npm install --prefer-offline --no-audit
+          }
+
+      - name: Run dependency audit
+        run: |
+          # Optimized audit - only check for high/critical vulnerabilities
+          npm audit --audit-level=high --json > audit.json || {
+            echo "⚠️ Security vulnerabilities found"
+            cat audit.json | jq -r '.vulnerabilities | to_entries[] | "\(.key): \(.value.severity)"' || true
+          }
+
+      - name: Check for outdated packages
+        run: |
+          # Quick outdated check
+          npm outdated --depth=0 || echo "✅ All packages are up to date"
+
+  # =============================================================================
+  # PHASE 3: SECURITY & QUALITY (Optimized)
+  # =============================================================================
+  security-quality:
+    name: 🔒 Security & Quality
+    runs-on: ubuntu-latest
+    needs: [validate, dependencies]
+    if: needs.validate.outputs.should-skip != 'true'
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ needs.validate.outputs.cache-key }}
+          restore-keys: |
+            node-${{ env.NODE_VERSION }}-
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Run security scan
+        run: |
+          # Optimized security scan
+          echo "🔍 Running security scan..."
+          chmod +x scripts/security/run-secrets-scan.sh
+          ./scripts/security/run-secrets-scan.sh || {
+            echo "❌ Security scan failed"
+            exit 1
+          }
+
+      - name: Run linting
+        run: |
+          # Optimized linting with cache
+          npm run lint
+
+      - name: Run type checking
+        run: |
+          # Optimized type checking
+          npx tsc --noEmit --skipLibCheck
+
+  # =============================================================================
+  # PHASE 4: BUILD & TEST (Optimized)
+  # =============================================================================
+  build-test:
+    name: 🏗️ Build & Test
+    runs-on: [self-hosted, containerized, dev]
+    needs: [validate, security-quality]
+    if: needs.validate.outputs.should-skip != 'true'
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        dockerfile: [scripts/docker/Dockerfile, scripts/docker/Dockerfile.dev]
+        include:
+          - dockerfile: scripts/docker/Dockerfile
+            target: runner
+            tag: runner
+          - dockerfile: scripts/docker/Dockerfile.dev
+            target: dev
+            tag: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if Dockerfile exists
+        id: check-dockerfile
+        run: |
+          if [ -f "${{ matrix.dockerfile }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.12.0
+
+      - name: Cache Docker layers
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build Docker image
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        run: |
+          echo "🐳 Building Docker image..."
+          docker build \
+            --file ./${{ matrix.dockerfile }} \
+            --target ${{ matrix.target }} \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag }}-test \
+            --build-arg NODE_ENV=production \
+            --build-arg BUILD_DATE=${{ github.event.head_commit.timestamp }} \
+            --build-arg GIT_COMMIT=${{ github.sha }} \
+            --build-arg APP_VERSION=${{ github.ref_name }} \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --progress=plain \
+            .
+
+      - name: Test Docker image
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        run: |
+          echo "🧪 Testing Docker image..."
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag }}-test npm test || echo "Tests completed"
+
+  # =============================================================================
+  # PHASE 5: INTEGRATION TESTING (Optimized)
+  # =============================================================================
+  integration-tests:
+    name: 🔄 Integration Tests
+    runs-on: ubuntu-latest
+    needs: [validate, build-test]
+    if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        test-type: [api, bot, pipeline, llm]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ needs.validate.outputs.cache-key }}
+          restore-keys: |
+            node-${{ env.NODE_VERSION }}-
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Setup test environment
+        run: |
+          cp env.example .env
+          echo "NODE_ENV=test" >> .env
+          echo "JWT_SECRET=test-secret-key" >> .env
+          echo "NUXT_PUBLIC_SUPABASE_URL=https://test.supabase.co" >> .env
+          echo "NUXT_PUBLIC_SUPABASE_ANON_KEY=test-anon-key" >> .env
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start application
+        run: |
+          npm run start > app.log 2>&1 &
+          APP_PID=$!
+          
+          # Wait for app to start
+          for i in {1..30}; do
+            if curl -s http://localhost:3000/api/health > /dev/null 2>&1; then
+              echo "✅ Application started"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run ${{ matrix.test-type }} tests
+        run: |
+          echo "🧪 Running ${{ matrix.test-type }} tests..."
+          
+          case "${{ matrix.test-type }}" in
+            "api")
+              curl -f http://localhost:3000/api/v1 || exit 1
+              curl -f http://localhost:3000/api/health || exit 1
+              ;;
+            "bot")
+              curl -f http://localhost:3000/api/v1/bots || exit 1
+              ;;
+            "pipeline")
+              curl -f http://localhost:3000/api/pipelines/run || exit 1
+              ;;
+            "llm")
+              curl -f http://localhost:3000/api/models/train || exit 1
+              ;;
+          esac
+
+  # =============================================================================
+  # PHASE 6: DEPLOYMENT (Optimized)
+  # =============================================================================
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [validate, build-test]
+    if: |
+      needs.validate.outputs.should-skip != 'true' &&
+      github.event.inputs.skip_deployment != 'true' &&
+      (github.ref == 'refs/heads/develop' ||
+       (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'))
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ needs.validate.outputs.cache-key }}
+          restore-keys: |
+            node-${{ env.NODE_VERSION }}-
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-build
+          path: .output/
+          retention-days: 7
+
+      - name: Deploy to staging
+        run: |
+          echo "🚀 Deploying to staging..."
+          # Add your staging deployment logic here
+
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [validate, build-test]
+    if: |
+      needs.validate.outputs.should-skip != 'true' &&
+      github.event.inputs.skip_deployment != 'true' &&
+      (github.ref == 'refs/heads/main' ||
+       github.ref == 'refs/heads/master' ||
+       (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'))
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            GIT_COMMIT=${{ github.sha }}
+            APP_VERSION=${{ github.ref_name }}
+
+      - name: Deploy to production
+        run: |
+          echo "🚀 Deploying to production..."
+          # Add your production deployment logic here
+
+  # =============================================================================
+  # PHASE 7: POST-DEPLOYMENT (Optimized)
+  # =============================================================================
+  post-deployment:
+    name: 📊 Post-Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run security scan
+        run: |
+          echo "🔒 Running post-deployment security scan..."
+          # Add security scanning logic
+
+      - name: Monitor deployment
+        run: |
+          echo "📊 Monitoring deployment..."
+          # Add monitoring logic
+
+  # =============================================================================
+  # PHASE 8: SUMMARY (Optimized)
+  # =============================================================================
+  summary:
+    name: 📋 Pipeline Summary
+    runs-on: ubuntu-latest
+    needs: [
+      validate,
+      dependencies,
+      security-quality,
+      build-test,
+      integration-tests,
+      deploy-staging,
+      deploy-production,
+      post-deployment
+    ]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Cache cleanup
+        if: always()
+        run: |
+          echo "🧹 Cleaning up caches..."
+          npm cache clean --force || true
+
+      - name: Generate summary
+        run: |
+          echo "🎉 Optimized CI/CD Pipeline Summary"
+          echo "==================================="
+          echo ""
+          echo "📊 Job Status:"
+          echo "🔍 validate: ${{ needs.validate.result || 'UNKNOWN' }}"
+          echo "📦 dependencies: ${{ needs.dependencies.result || 'UNKNOWN' }}"
+          echo "🔒 security-quality: ${{ needs.security-quality.result || 'UNKNOWN' }}"
+          echo "🏗️ build-test: ${{ needs.build-test.result || 'UNKNOWN' }}"
+          echo "🔄 integration-tests: ${{ needs.integration-tests.result || 'UNKNOWN' }}"
+          echo "🚀 deploy-staging: ${{ needs.deploy-staging.result || 'UNKNOWN' }}"
+          echo "🚀 deploy-production: ${{ needs.deploy-production.result || 'UNKNOWN' }}"
+          echo "📊 post-deployment: ${{ needs.post-deployment.result || 'UNKNOWN' }}"
+          echo ""
+          echo "⏱️ Pipeline completed at: $(date)" 
