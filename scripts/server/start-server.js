@@ -44,9 +44,9 @@ const startServer = async () => {
   try {
     // Set default environment variables
     process.env.NODE_ENV = process.env.NODE_ENV || 'production'
-    process.env.NUXT_HOST = process.env.NUXT_HOST || '0.0.0.0'
+    process.env.NUXT_HOST = process.env.NUXT_HOST || '192.168.0.23'
     process.env.NUXT_PORT = process.env.NUXT_PORT || '3000'
-    process.env.NITRO_HOST = process.env.NITRO_HOST || '0.0.0.0'
+    process.env.NITRO_HOST = process.env.NITRO_HOST || '192.168.0.23'
     process.env.NITRO_PORT = process.env.NITRO_PORT || '3000'
 
     // Import and start the server
@@ -55,7 +55,7 @@ const startServer = async () => {
     if (serverModule.listener) {
       const { createServer } = await import('node:http')
       const port = parseInt(process.env.NUXT_PORT) || 3000
-      const host = process.env.NUXT_HOST || '0.0.0.0'
+      const host = process.env.NUXT_HOST || '192.168.0.23'
 
       const server = createServer(serverModule.listener)
 

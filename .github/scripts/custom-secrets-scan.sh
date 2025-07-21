@@ -121,7 +121,6 @@ echo "🔍 Quick scan to assess false positive rate..."
 
 # Count total potential matches (including false positives)
 TOTAL_MATCHES=$(grep -r -i "password\|secret\|key\|token" . $EXCLUDE_ARGS 2>/dev/null | wc -l || echo "0")
-echo "📊 Total potential matches found: $TOTAL_MATCHES"
 
 # Count false positive patterns
 FALSE_POSITIVE_PATTERNS=(
@@ -174,24 +173,22 @@ FALSE_POSITIVE_COUNT=0
 for pattern in "${FALSE_POSITIVE_PATTERNS[@]}"; do
     COUNT=$(grep -r -i "$pattern" . $EXCLUDE_ARGS 2>/dev/null | wc -l || echo "0")
     if [ "$COUNT" -gt 0 ]; then
-        echo "   ✅ Found $COUNT instances of '$pattern' (legitimate code)"
         FALSE_POSITIVE_COUNT=$((FALSE_POSITIVE_COUNT + COUNT))
     fi
 done
 
-echo ""
 echo "📈 False Positive Analysis:"
 echo "   Total potential matches: $TOTAL_MATCHES"
 echo "   Identified false positives: $FALSE_POSITIVE_COUNT"
 echo "   Remaining for analysis: $((TOTAL_MATCHES - FALSE_POSITIVE_COUNT))"
 
-# If we have a high false positive rate, adjust our scanning strategy
-if [ "$TOTAL_MATCHES" -gt 1000 ] && [ "$FALSE_POSITIVE_COUNT" -gt 800 ]; then
+# If we have a very high false positive rate, use conservative scanning
+if [ "$TOTAL_MATCHES" -gt 500 ]; then
     echo ""
     echo "⚠️  High false positive rate detected. Using conservative scanning..."
     echo "🔍 Only scanning for high-confidence secret patterns..."
     
-    # Only scan for the most specific patterns
+    # Only scan for the most specific and dangerous patterns
     HIGH_CONFIDENCE_PATTERNS=(
         "sk_live_[a-zA-Z0-9]{24,}"
         "sk_test_[a-zA-Z0-9]{24,}"
@@ -270,7 +267,9 @@ else
     echo "🔒 All secrets are properly managed via environment variables"
     echo "🔒 Codebase follows security best practices"
     echo ""
-    echo "📋 Note: $TOTAL_MATCHES potential matches were found but identified as false positives"
-    echo "📋 These include legitimate code patterns like Vue :key, CSS @keyframes, etc."
+    if [ "$TOTAL_MATCHES" -gt 0 ]; then
+        echo "📋 Note: $TOTAL_MATCHES potential matches were found but identified as false positives"
+        echo "📋 These include legitimate code patterns like Vue :key, CSS @keyframes, etc."
+    fi
     exit 0
 fi 

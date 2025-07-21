@@ -8,6 +8,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
+    "start": "node scripts/server/start-server.js",
     "postinstall": "nuxt prepare",
     "test": "playwright test",
     "test:integration": "node test-integration.js",

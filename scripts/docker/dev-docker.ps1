@@ -140,7 +140,7 @@ function Start-Development {
         Write-ColorOutput "✅ Development environment started successfully!" $Green
         Write-ColorOutput ""
         Write-ColorOutput "🌐 Application URLs:" $Cyan
-        Write-ColorOutput "   Main App: http://localhost:3000" $Green
+        Write-ColorOutput "   Main App: http://192.168.0.23:3000" $Green
         Write-ColorOutput "   Debugger: http://localhost:9229" $Green
         
         if ($Database) {

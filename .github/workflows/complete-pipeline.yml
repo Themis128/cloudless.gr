@@ -41,6 +41,15 @@ env:
   NODE_ENV: 'test'
   REGISTRY: ghcr.io
   IMAGE_NAME: themis128/cloudless.gr
+  # Application URL configuration - Consistent with dev Docker container
+  APP_HOST: '192.168.0.23'
+  APP_PORT: '3000'
+  APP_URL: 'http://192.168.0.23:3000'
+  # Development container consistency
+  NUXT_HOST: '192.168.0.23'
+  NUXT_PORT: '3000'
+  NITRO_HOST: '192.168.0.23'
+  NITRO_PORT: '3000'
   # Cache configuration
   CACHE_DEPENDENCY_PATH: '**/package-lock.json'
   # Build optimization
@@ -54,6 +63,9 @@ env:
   # Verbose output
   VERBOSE: 'true'
   SHOW_TIMESTAMPS: 'true'
+  NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://default.supabase.url' }}
+  NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'default-anon-key' }}
+  skip-check: ${{ env.skip-check || 'false' }}
 
 jobs:
   # =============================================================================
@@ -350,13 +362,15 @@ jobs:
       - name: Run custom secrets scan
         run: |
           source .github/scripts/workflow-helpers.sh
-          log_info "Running custom secrets scan..."
+          log_info "Running intelligent secrets scan..."
+          echo "🔍 Scanning for hardcoded secrets with false positive filtering..."
           chmod +x .github/scripts/custom-secrets-scan.sh
           ./.github/scripts/custom-secrets-scan.sh || {
-            log_error "Custom secrets scan failed"
+            log_error "Secrets scan found potential hardcoded secrets"
+            echo "Please review the findings above and fix any real secrets"
             exit 1
           }
-          log_success "Custom secrets scan completed"
+          log_success "Secrets scan completed - no hardcoded secrets found"
           
       - name: Security scan complete
         run: |
@@ -606,13 +620,13 @@ jobs:
       - name: Setup environment
         run: |
           cp env.example .env
-          echo "NUXT_HOST=localhost" >> .env
-          echo "NUXT_PORT=3000" >> .env
+          echo "NUXT_HOST=${{ env.APP_HOST }}" >> .env
+          echo "NUXT_PORT=${{ env.APP_PORT }}" >> .env
           echo "JWT_SECRET=test-secret-key" >> .env
           echo "SESSION_SECRET=test-session-secret" >> .env
           echo "NODE_ENV=test" >> .env
-          echo "NITRO_HOST=0.0.0.0" >> .env
-          echo "NITRO_PORT=3000" >> .env
+          echo "NITRO_HOST=${{ env.APP_HOST }}" >> .env
+          echo "NITRO_PORT=${{ env.APP_PORT }}" >> .env
           
           # Mock Supabase configuration for testing
           echo "NUXT_PUBLIC_SUPABASE_URL=https://test.supabase.co" >> .env
@@ -655,10 +669,10 @@ jobs:
           npm run --silent 2>/dev/null | grep -E "(start|dev)" || echo "No start scripts found"
           
           # Start the application in background with output capture
-          # Use preview for production build or dev for development
+          # Use start for production build or dev for development
           if [ -d ".output" ]; then
-            echo "🔧 [DEBUG] Using preview mode for production build..."
-            npm run preview > app.log 2>&1 &
+            echo "🔧 [DEBUG] Using start mode for production build..."
+            npm run start > app.log 2>&1 &
           else
             echo "🔧 [DEBUG] Using dev mode for development..."
             npm run dev > app.log 2>&1 &
@@ -670,9 +684,9 @@ jobs:
           echo "🔧 [DEBUG] Waiting for application to start..."
           for i in {1..60}; do
             # Try multiple endpoints to check if app is ready
-            if curl -s http://localhost:3000/api/health > /dev/null 2>&1 || \
-               curl -s http://localhost:3000/api/v1 > /dev/null 2>&1 || \
-               curl -s http://localhost:3000/ > /dev/null 2>&1; then
+            if curl -s ${{ env.APP_URL }}/api/health > /dev/null 2>&1 || \
+               curl -s ${{ env.APP_URL }}/api/v1 > /dev/null 2>&1 || \
+               curl -s ${{ env.APP_URL }}/ > /dev/null 2>&1; then
               echo "✅ [DEBUG] Application is responding on port 3000"
               break
             fi
@@ -681,9 +695,9 @@ jobs:
           done
           
           # Check if application is running
-          if ! curl -s http://localhost:3000/api/health > /dev/null 2>&1 && \
-             ! curl -s http://localhost:3000/api/v1 > /dev/null 2>&1 && \
-             ! curl -s http://localhost:3000/ > /dev/null 2>&1; then
+          if ! curl -s ${{ env.APP_URL }}/api/health > /dev/null 2>&1 && \
+             ! curl -s ${{ env.APP_URL }}/api/v1 > /dev/null 2>&1 && \
+             ! curl -s ${{ env.APP_URL }}/ > /dev/null 2>&1; then
             echo "❌ [ERROR] Application failed to start!"
             echo "🔧 [DEBUG] Application log:"
             cat app.log || echo "No log file found"
@@ -702,21 +716,21 @@ jobs:
         run: |
           # Test API index
           echo "Testing API index..."
-          curl -f http://localhost:3000/api/v1 || exit 1
+          curl -f ${{ env.APP_URL }}/api/v1 || exit 1
           
           # Test health endpoint
           echo "Testing health endpoint..."
-          curl -f http://localhost:3000/api/health || exit 1
+          curl -f ${{ env.APP_URL }}/api/health || exit 1
           
           # Test API documentation
           echo "Testing API documentation..."
-          curl -f http://localhost:3000/api/v1/docs || exit 1
+          curl -f ${{ env.APP_URL }}/api/v1/docs || exit 1
           
       - name: Test authentication endpoints
         run: |
           # Test registration endpoint
           echo "Testing registration endpoint..."
-          REGISTER_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/auth/register \
+          REGISTER_RESPONSE=$(curl -s -X POST ${{ env.APP_URL }}/api/v1/auth/register \
             -H "Content-Type: application/json" \
             -d '{
               "email": "test@example.com",
@@ -729,7 +743,7 @@ jobs:
           
           # Test login endpoint
           echo "Testing login endpoint..."
-          LOGIN_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/auth/login \
+          LOGIN_RESPONSE=$(curl -s -X POST ${{ env.APP_URL }}/api/v1/auth/login \
             -H "Content-Type: application/json" \
             -d '{
               "email": "test@example.com",
@@ -787,10 +801,10 @@ jobs:
           npm run --silent 2>/dev/null | grep -E "(start|dev|preview)" || echo "No start scripts found"
           
           # Start the application in background with output capture
-          # Use preview for production build or dev for development
+          # Use start for production build or dev for development
           if [ -d ".output" ]; then
-            echo "🔧 [DEBUG] Using preview mode for production build..."
-            npm run preview > app.log 2>&1 &
+            echo "🔧 [DEBUG] Using start mode for production build..."
+            npm run start > app.log 2>&1 &
           else
             echo "🔧 [DEBUG] Using dev mode for development..."
             npm run dev > app.log 2>&1 &
@@ -802,9 +816,9 @@ jobs:
           echo "🔧 [DEBUG] Waiting for application to start..."
           for i in {1..60}; do
             # Try multiple endpoints to check if app is ready
-            if curl -s http://localhost:3000/api/health > /dev/null 2>&1 || \
-               curl -s http://localhost:3000/api/v1 > /dev/null 2>&1 || \
-               curl -s http://localhost:3000/ > /dev/null 2>&1; then
+            if curl -s ${{ env.APP_URL }}/api/health > /dev/null 2>&1 || \
+               curl -s ${{ env.APP_URL }}/api/v1 > /dev/null 2>&1 || \
+               curl -s ${{ env.APP_URL }}/ > /dev/null 2>&1; then
               echo "✅ [DEBUG] Application is responding on port 3000"
               break
             fi
@@ -813,9 +827,9 @@ jobs:
           done
           
           # Check if application is running
-          if ! curl -s http://localhost:3000/api/health > /dev/null 2>&1 && \
-             ! curl -s http://localhost:3000/api/v1 > /dev/null 2>&1 && \
-             ! curl -s http://localhost:3000/ > /dev/null 2>&1; then
+          if ! curl -s ${{ env.APP_URL }}/api/health > /dev/null 2>&1 && \
+             ! curl -s ${{ env.APP_URL }}/api/v1 > /dev/null 2>&1 && \
+             ! curl -s ${{ env.APP_URL }}/ > /dev/null 2>&1; then
             echo "❌ [ERROR] Application failed to start!"
             echo "🔧 [DEBUG] Application log:"
             cat app.log || echo "No log file found"
@@ -836,7 +850,7 @@ jobs:
           
           # Test bot creation
           echo "Testing bot creation..."
-          BOT_CREATE_RESPONSE=$(curl -s -X POST http://localhost:3000/api/v1/bots \
+          BOT_CREATE_RESPONSE=$(curl -s -X POST ${{ env.APP_URL }}/api/v1/bots \
             -H "Content-Type: application/json" \
             -d '{
               "name": "Test Bot",
@@ -848,7 +862,7 @@ jobs:
           
           # Test bot listing
           echo "Testing bot listing..."
-          curl -f http://localhost:3000/api/v1/bots || exit 1
+          curl -f ${{ env.APP_URL }}/api/v1/bots || exit 1
           
       - name: Bot testing complete
         run: |
@@ -900,10 +914,10 @@ jobs:
           npm run --silent 2>/dev/null | grep -E "(start|dev|preview)" || echo "No start scripts found"
           
           # Start the application in background with output capture
-          # Use preview for production build or dev for development
+          # Use start for production build or dev for development
           if [ -d ".output" ]; then
-            echo "🔧 [DEBUG] Using preview mode for production build..."
-            npm run preview > app.log 2>&1 &
+            echo "🔧 [DEBUG] Using start mode for production build..."
+            npm run start > app.log 2>&1 &
           else
             echo "🔧 [DEBUG] Using dev mode for development..."
             npm run dev > app.log 2>&1 &
@@ -915,9 +929,9 @@ jobs:
           echo "🔧 [DEBUG] Waiting for application to start..."
           for i in {1..60}; do
             # Try multiple endpoints to check if app is ready
-            if curl -s http://localhost:3000/api/health > /dev/null 2>&1 || \
-               curl -s http://localhost:3000/api/v1 > /dev/null 2>&1 || \
-               curl -s http://localhost:3000/ > /dev/null 2>&1; then
+            if curl -s ${{ env.APP_URL }}/api/health > /dev/null 2>&1 || \
+               curl -s ${{ env.APP_URL }}/api/v1 > /dev/null 2>&1 || \
+               curl -s ${{ env.APP_URL }}/ > /dev/null 2>&1; then
               echo "✅ [DEBUG] Application is responding on port 3000"
               break
             fi
@@ -926,9 +940,9 @@ jobs:
           done
           
           # Check if application is running
-          if ! curl -s http://localhost:3000/api/health > /dev/null 2>&1 && \
-             ! curl -s http://localhost:3000/api/v1 > /dev/null 2>&1 && \
-             ! curl -s http://localhost:3000/ > /dev/null 2>&1; then
+          if ! curl -s ${{ env.APP_URL }}/api/health > /dev/null 2>&1 && \
+             ! curl -s ${{ env.APP_URL }}/api/v1 > /dev/null 2>&1 && \
+             ! curl -s ${{ env.APP_URL }}/ > /dev/null 2>&1; then
             echo "❌ [ERROR] Application failed to start!"
             echo "🔧 [DEBUG] Application log:"
             cat app.log || echo "No log file found"
@@ -949,7 +963,7 @@ jobs:
           
           # Test pipeline creation
           echo "Testing pipeline creation..."
-          PIPELINE_CREATE_RESPONSE=$(curl -s -X POST http://localhost:3000/api/pipelines/run \
+          PIPELINE_CREATE_RESPONSE=$(curl -s -X POST ${{ env.APP_URL }}/api/pipelines/run \
             -H "Content-Type: application/json" \
             -d '{
               "name": "Test Pipeline",
@@ -1008,10 +1022,10 @@ jobs:
           npm run --silent 2>/dev/null | grep -E "(start|dev|preview)" || echo "No start scripts found"
           
           # Start the application in background with output capture
-          # Use preview for production build or dev for development
+          # Use start for production build or dev for development
           if [ -d ".output" ]; then
-            echo "🔧 [DEBUG] Using preview mode for production build..."
-            npm run preview > app.log 2>&1 &
+            echo "🔧 [DEBUG] Using start mode for production build..."
+            npm run start > app.log 2>&1 &
           else
             echo "🔧 [DEBUG] Using dev mode for development..."
             npm run dev > app.log 2>&1 &
@@ -1023,9 +1037,9 @@ jobs:
           echo "🔧 [DEBUG] Waiting for application to start..."
           for i in {1..60}; do
             # Try multiple endpoints to check if app is ready
-            if curl -s http://localhost:3000/api/health > /dev/null 2>&1 || \
-               curl -s http://localhost:3000/api/v1 > /dev/null 2>&1 || \
-               curl -s http://localhost:3000/ > /dev/null 2>&1; then
+            if curl -s ${{ env.APP_URL }}/api/health > /dev/null 2>&1 || \
+               curl -s ${{ env.APP_URL }}/api/v1 > /dev/null 2>&1 || \
+               curl -s ${{ env.APP_URL }}/ > /dev/null 2>&1; then
               echo "✅ [DEBUG] Application is responding on port 3000"
               break
             fi
@@ -1034,9 +1048,9 @@ jobs:
           done
           
           # Check if application is running
-          if ! curl -s http://localhost:3000/api/health > /dev/null 2>&1 && \
-             ! curl -s http://localhost:3000/api/v1 > /dev/null 2>&1 && \
-             ! curl -s http://localhost:3000/ > /dev/null 2>&1; then
+          if ! curl -s ${{ env.APP_URL }}/api/health > /dev/null 2>&1 && \
+             ! curl -s ${{ env.APP_URL }}/api/v1 > /dev/null 2>&1 && \
+             ! curl -s ${{ env.APP_URL }}/ > /dev/null 2>&1; then
             echo "❌ [ERROR] Application failed to start!"
             echo "🔧 [DEBUG] Application log:"
             cat app.log || echo "No log file found"
@@ -1057,7 +1071,7 @@ jobs:
           
           # Test model training
           echo "Testing model training..."
-          MODEL_TRAIN_RESPONSE=$(curl -s -X POST http://localhost:3000/api/models/train \
+          MODEL_TRAIN_RESPONSE=$(curl -s -X POST ${{ env.APP_URL }}/api/models/train \
             -H "Content-Type: application/json" \
             -d '{
               "name": "Test Model",

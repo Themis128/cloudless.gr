@@ -46,7 +46,7 @@ export default defineNuxtConfig({
     sourceMap: true,
   },
   devServer: {
-    host: process.env.NUXT_HOST || '0.0.0.0', // Use environment variable or default
+    host: process.env.NUXT_HOST || '192.168.0.23', // Use environment variable or default to specific IP
     port: parseInt(process.env.NUXT_PORT || '3000'),
   },
   imports: {

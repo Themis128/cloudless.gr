@@ -136,7 +136,9 @@
     "absolute",
     "materialdesignicons",
     "overfitting",
-    "chatbots"
+    "chatbots",
+    "LOGLEVEL",
+    "tlnp"
   ],
   "ignorePaths": [
     "node_modules/**",
