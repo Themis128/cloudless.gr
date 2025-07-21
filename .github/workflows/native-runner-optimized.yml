@@ -209,11 +209,33 @@ jobs:
           }
           
           Write-Host "Current PATH: $env:PATH"
-          Write-Host "ESLint location: $(where.exe eslint 2>$null || echo 'Not found in PATH')"
-          Write-Host "TypeScript location: $(where.exe tsc 2>$null || echo 'Not found in PATH')"
           
-          # Don't fail the job if PATH setup has issues
+          # Check for tools without failing the step
+          try {
+              $eslintPath = where.exe eslint 2>$null
+              if ($eslintPath) {
+                  Write-Host "✅ ESLint found: $eslintPath"
+              } else {
+                  Write-Host "⚠️ ESLint not found in PATH"
+              }
+          } catch {
+              Write-Host "⚠️ ESLint not found in PATH"
+          }
+          
+          try {
+              $tscPath = where.exe tsc 2>$null
+              if ($tscPath) {
+                  Write-Host "✅ TypeScript found: $tscPath"
+              } else {
+                  Write-Host "⚠️ TypeScript not found in PATH"
+              }
+          } catch {
+              Write-Host "⚠️ TypeScript not found in PATH"
+          }
+          
+          # Always succeed this step
           Write-Host "✅ PATH setup completed (non-blocking)"
+          exit 0
 
       - name: Restore dependencies
         uses: actions/cache@v4
@@ -326,8 +348,9 @@ jobs:
           
           Write-Host "Current PATH: $env:PATH"
           
-          # Don't fail the job if PATH setup has issues
+          # Always succeed this step
           Write-Host "✅ PATH setup completed (non-blocking)"
+          exit 0
 
       - name: Restore dependencies
         uses: actions/cache@v4
