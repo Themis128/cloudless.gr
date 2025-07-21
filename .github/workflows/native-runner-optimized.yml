@@ -439,12 +439,12 @@ jobs:
           Write-Host "   • No Monthly Limits - Completely bypasses GitHub Actions billing" -ForegroundColor Green
           Write-Host ""
           Write-Host "📊 Job Results:" -ForegroundColor Cyan
-          Write-Host "   • Validate: ${{ needs.validate.result }}" -ForegroundColor $(if (${{ needs.validate.result }} -eq 'success') { 'Green' } else { 'Red' })
-          Write-Host "   • Dependencies: ${{ needs.dependencies.result }}" -ForegroundColor $(if (${{ needs.dependencies.result }} -eq 'success') { 'Green' } else { 'Red' })
-          Write-Host "   • Security: ${{ needs.security-quality.result }}" -ForegroundColor $(if (${{ needs.security-quality.result }} -eq 'success') { 'Green' } else { 'Red' })
-          Write-Host "   • Build: ${{ needs.build-test.result }}" -ForegroundColor $(if (${{ needs.build-test.result }} -eq 'success') { 'Green' } else { 'Red' })
-          Write-Host "   • Integration: ${{ needs.integration-tests.result }}" -ForegroundColor $(if (${{ needs.integration-tests.result }} -eq 'success') { 'Green' } else { 'Red' })
-          Write-Host "   • Dev Containers: ${{ needs.start-dev-containers.result }}" -ForegroundColor $(if (${{ needs.start-dev-containers.result }} -eq 'success') { 'Green' } else { 'Red' })
+          Write-Host "   • Validate: ${{ needs.validate.result }}"
+          Write-Host "   • Dependencies: ${{ needs.dependencies.result }}"
+          Write-Host "   • Security: ${{ needs.security-quality.result }}"
+          Write-Host "   • Build: ${{ needs.build-test.result }}"
+          Write-Host "   • Integration: ${{ needs.integration-tests.result }}"
+          Write-Host "   • Dev Containers: ${{ needs.start-dev-containers.result }}"
           Write-Host ""
           Write-Host "🚀 Native Runner Performance:" -ForegroundColor Cyan
           Write-Host "   • Direct system resource access" -ForegroundColor Green
