@@ -1552,6 +1552,38 @@ jobs:
     if: always()
 
     steps:
+      - name: Cache cleanup and optimization
+        if: always()
+        run: |
+          source .github/scripts/workflow-helpers.sh
+          log_info "Cleaning up caches and optimizing storage..."
+          
+          echo "🧹 Cleaning up old caches..."
+          
+          # Clear npm cache
+          npm cache clean --force || true
+          
+          # Remove temporary files
+          find . -name "*.tmp" -delete 2>/dev/null || true
+          find . -name "*.log" -delete 2>/dev/null || true
+          
+          # Clear any build artifacts that shouldn't be cached
+          if [ -d ".nuxt" ]; then
+            echo "Removing .nuxt build cache..."
+            rm -rf .nuxt
+          fi
+          
+          if [ -d ".output" ]; then
+            echo "Removing .output build cache..."
+            rm -rf .output
+          fi
+          
+          echo "📊 Cache usage statistics:"
+          echo "  - Node modules: $(du -sh node_modules 2>/dev/null | cut -f1 || echo 'N/A')"
+          echo "  - Total disk usage: $(df -h . | tail -1)"
+          
+          log_success "Cache cleanup completed"
+
       - name: Load helper functions
         run: |
           source .github/scripts/workflow-helpers.sh
