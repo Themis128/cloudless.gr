@@ -5,7 +5,7 @@ import type { Pipeline, PipelineConfig } from '~/types/Pipeline'
 import type { Json } from '~/types/database.types'
 
 export const usePipelineStore = defineStore('pipeline', () => {
-  const pipelines = ref<Pipeline[]>([])
+  const pipelines = ref<any[]>([])
   const currentPipeline = ref<Pipeline | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -75,10 +75,12 @@ export const usePipelineStore = defineStore('pipeline', () => {
 
       if (err) throw err
 
-      pipelines.value = (data || []).map((p: any) => ({
-        ...p,
-        config: p.config as PipelineConfig,
-      })) as Pipeline[]
+      pipelines.value = (data || []).map((p: any) => {
+        return {
+          ...p,
+          config: p.config as PipelineConfig,
+        }
+      })
 
       return { success: true, data }
     } catch (err: any) {

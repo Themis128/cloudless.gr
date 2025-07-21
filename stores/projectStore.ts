@@ -6,8 +6,8 @@ import type { Tables } from '~/types/database.types'
 type Project = Tables<'projects'>
 
 export const useProjectStore = defineStore('project', () => {
-  const projects = ref<Project[]>([])
-  const currentProject = ref<Project | null>(null)
+  const projects = ref<any[]>([])
+  const currentProject = ref<any | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const supabase = useSupabase()
