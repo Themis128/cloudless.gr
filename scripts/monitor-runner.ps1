@@ -1,301 +1,358 @@
 #!/usr/bin/env pwsh
 
-# Self-Hosted Runner Monitoring Script
-# Provides real-time monitoring of GitHub Actions runner status and Docker builds
+# 📊 Optimized Runner Monitoring
+# Monitors runner performance, health, and resource usage
 
 param(
-    [switch]$Continuous,
-    [int]$Interval = 5,
-    [switch]$DockerOnly,
-    [switch]$RunnerOnly,
-    [switch]$Health
+    [ValidateSet("status", "health", "performance", "logs", "metrics", "watch")]
+    [string]$Action = "status",
+    [int]$Duration = 60,
+    [switch]$Continuous = $false
 )
 
-# Colors for output
-$Red = "`e[31m"
-$Green = "`e[32m"
-$Yellow = "`e[33m"
-$Blue = "`e[34m"
-$Magenta = "`e[35m"
-$Cyan = "`e[36m"
-$Reset = "`e[0m"
+Write-Host "📊 Optimized Runner Monitoring" -ForegroundColor Green
+Write-Host "=============================" -ForegroundColor Green
+Write-Host ""
 
-# Function to write colored output
-function Write-ColorOutput {
-    param(
-        [string]$Message,
-        [string]$Color = $Reset
-    )
-    Write-Host "$Color$Message$Reset"
-}
+# Configuration
+$RunnerContainer = "cloudless-github-runner-optimized"
+$HealthUrl = "http://localhost:8080/health"
+$LogFile = ".\runner-logs\runner-monitor.log"
 
-# Function to get current timestamp
-function Get-Timestamp {
-    return Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-}
-
-# Function to check if Docker is running
-function Test-DockerStatus {
-    try {
-        $dockerVersion = docker --version 2>$null
-        if ($dockerVersion) {
-            return $true
-        }
-        return $false
-    }
-    catch {
-        return $false
-    }
-}
-
-# Function to get Docker build processes
-function Get-DockerBuilds {
-    try {
-        $builds = docker ps --filter "ancestor=ghcr.io/themis128/cloudless.gr" --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}" 2>$null
-        if ($builds) {
-            return $builds
-        }
-        return "No active Docker builds found"
-    }
-    catch {
-        return "Error checking Docker builds: $($_.Exception.Message)"
-    }
-}
-
-# Function to get Docker images
-function Get-DockerImages {
-    try {
-        $images = docker images "ghcr.io/themis128/cloudless.gr*" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" 2>$null
-        if ($images) {
-            return $images
-        }
-        return "No cloudless.gr images found"
-    }
-    catch {
-        return "Error checking Docker images: $($_.Exception.Message)"
-    }
-}
-
-# Function to check GitHub Actions runner status
+# Function to get runner status
 function Get-RunnerStatus {
-    try {
-        # Check if runner service is running
-        $runnerService = Get-Service -Name "actions.runner.*" -ErrorAction SilentlyContinue
-        if ($runnerService) {
-            return $runnerService | ForEach-Object {
-                [PSCustomObject]@{
-                    Name = $_.Name
-                    Status = $_.Status
-                    StartType = $_.StartType
-                }
-            }
-        }
-        
-        # Check for runner processes
-        $runnerProcesses = Get-Process -Name "*runner*" -ErrorAction SilentlyContinue
-        if ($runnerProcesses) {
-            return $runnerProcesses | ForEach-Object {
-                [PSCustomObject]@{
-                    Name = $_.ProcessName
-                    Id = $_.Id
-                    CPU = $_.CPU
-                    WorkingSet = [math]::Round($_.WorkingSet / 1MB, 2)
-                }
-            }
-        }
-        
-        return "No runner processes found"
-    }
-    catch {
-        return "Error checking runner status: $($_.Exception.Message)"
-    }
-}
-
-# Function to check system resources
-function Get-SystemResources {
-    try {
-        $cpu = Get-Counter "\Processor(_Total)\% Processor Time" | Select-Object -ExpandProperty CounterSamples | Select-Object -ExpandProperty CookedValue
-        $memory = Get-Counter "\Memory\Available MBytes" | Select-Object -ExpandProperty CounterSamples | Select-Object -ExpandProperty CookedValue
-        $disk = Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='C:'" | Select-Object @{Name="FreeGB";Expression={[math]::Round($_.FreeSpace/1GB,2)}}, @{Name="TotalGB";Expression={[math]::Round($_.Size/1GB,2)}}
-        
-        return [PSCustomObject]@{
-            CPU = [math]::Round($cpu, 1)
-            MemoryAvailableMB = [math]::Round($memory, 1)
-            DiskFreeGB = $disk.FreeGB
-            DiskTotalGB = $disk.TotalGB
-        }
-    }
-    catch {
-        return "Error checking system resources: $($_.Exception.Message)"
-    }
-}
-
-# Function to check network connectivity
-function Test-NetworkConnectivity {
-    $tests = @(
-        @{ Name = "GitHub.com"; Host = "github.com" },
-        @{ Name = "Docker Hub"; Host = "registry-1.docker.io" },
-        @{ Name = "GitHub Container Registry"; Host = "ghcr.io" }
-    )
+    Write-Host "🔍 Runner Status" -ForegroundColor Cyan
+    Write-Host "===============" -ForegroundColor Cyan
     
-    $results = @()
-    foreach ($test in $tests) {
+    try {
+        # Container status
+        $containerInfo = docker ps --filter "name=$RunnerContainer" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Size}}"
+        if ($containerInfo) {
+            Write-Host "🐳 Container Status:" -ForegroundColor White
+            Write-Host $containerInfo -ForegroundColor Gray
+        } else {
+            Write-Host "❌ Runner container not found" -ForegroundColor Red
+            return $false
+        }
+        
+        # Health check
         try {
-            $ping = Test-Connection -ComputerName $test.Host -Count 1 -Quiet
-            $results += [PSCustomObject]@{
-                Service = $test.Name
-                Host = $test.Host
-                Status = if ($ping) { "✅ Online" } else { "❌ Offline" }
+            $healthResponse = Invoke-WebRequest -Uri $HealthUrl -TimeoutSec 5
+            if ($healthResponse.StatusCode -eq 200) {
+                Write-Host "✅ Health Check: PASSED" -ForegroundColor Green
+            } else {
+                Write-Host "⚠️ Health Check: UNKNOWN (Status: $($healthResponse.StatusCode))" -ForegroundColor Yellow
             }
+        } catch {
+            Write-Host "❌ Health Check: FAILED" -ForegroundColor Red
         }
-        catch {
-            $results += [PSCustomObject]@{
-                Service = $test.Name
-                Host = $test.Host
-                Status = "❌ Error: $($_.Exception.Message)"
-            }
-        }
+        
+        return $true
+        
+    } catch {
+        Write-Host "❌ Could not get runner status: $($_.Exception.Message)" -ForegroundColor Red
+        return $false
     }
-    return $results
 }
 
-# Function to display monitoring dashboard
-function Show-MonitoringDashboard {
-    $timestamp = Get-Timestamp
+# Function to check runner health
+function Test-RunnerHealth {
+    Write-Host "🏥 Runner Health Check" -ForegroundColor Cyan
+    Write-Host "=====================" -ForegroundColor Cyan
     
-    Write-ColorOutput "`n$Cyan╔══════════════════════════════════════════════════════════════════════════════╗$Reset"
-    Write-ColorOutput "$Cyan║                    Self-Hosted Runner Monitoring Dashboard                    ║$Reset"
-    Write-ColorOutput "$Cyan║                              $timestamp                                    ║$Reset"
-    Write-ColorOutput "$Cyan╚══════════════════════════════════════════════════════════════════════════════╝$Reset"
-    
-    # System Resources
-    Write-ColorOutput "`n$Yellow📊 SYSTEM RESOURCES$Reset"
-    Write-ColorOutput "$Blue" + "=" * 50$Reset"
-    $resources = Get-SystemResources
-    if ($resources -is [PSCustomObject]) {
-        Write-ColorOutput "CPU Usage: $($resources.CPU)%"
-        Write-ColorOutput "Available Memory: $($resources.MemoryAvailableMB) MB"
-        Write-ColorOutput "Disk Space: $($resources.DiskFreeGB) GB / $($resources.DiskTotalGB) GB"
-    } else {
-        Write-ColorOutput $resources
+    $healthChecks = @{
+        "Container Running" = $false
+        "Health Endpoint" = $false
+        "Docker Socket" = $false
+        "Resource Usage" = $false
+        "Network Connectivity" = $false
     }
     
-    # Network Connectivity
-    Write-ColorOutput "`n$Yellow🌐 NETWORK CONNECTIVITY$Reset"
-    Write-ColorOutput "$Blue" + "=" * 50$Reset"
-    $network = Test-NetworkConnectivity
-    foreach ($test in $network) {
-        Write-ColorOutput "$($test.Service): $($test.Status)"
-    }
-    
-    # Docker Status
-    Write-ColorOutput "`n$Yellow🐳 DOCKER STATUS$Reset"
-    Write-ColorOutput "$Blue" + "=" * 50$Reset"
-    $dockerRunning = Test-DockerStatus
-    if ($dockerRunning) {
-        Write-ColorOutput "✅ Docker is running" $Green
-    } else {
-        Write-ColorOutput "❌ Docker is not running" $Red
-    }
-    
-    # Docker Builds
-    Write-ColorOutput "`n$Yellow🔨 ACTIVE DOCKER BUILDS$Reset"
-    Write-ColorOutput "$Blue" + "=" * 50$Reset"
-    $builds = Get-DockerBuilds
-    Write-ColorOutput $builds
-    
-    # Docker Images
-    Write-ColorOutput "`n$Yellow📦 DOCKER IMAGES$Reset"
-    Write-ColorOutput "$Blue" + "=" * 50$Reset
-    $images = Get-DockerImages
-    Write-ColorOutput $images
-    
-    # Runner Status
-    Write-ColorOutput "`n$Yellow🤖 RUNNER STATUS$Reset"
-    Write-ColorOutput "$Blue" + "=" * 50$Reset"
-    $runner = Get-RunnerStatus
-    if ($runner -is [array]) {
-        foreach ($r in $runner) {
-            Write-ColorOutput "Service: $($r.Name) - Status: $($r.Status)"
+    # Check if container is running
+    try {
+        $containerStatus = docker ps --filter "name=$RunnerContainer" --format "{{.Status}}"
+        if ($containerStatus -and $containerStatus -like "*Up*") {
+            $healthChecks["Container Running"] = $true
+            Write-Host "✅ Container Running" -ForegroundColor Green
+        } else {
+            Write-Host "❌ Container Not Running" -ForegroundColor Red
         }
-    } else {
-        Write-ColorOutput $runner
+    } catch {
+        Write-Host "❌ Container Check Failed" -ForegroundColor Red
     }
     
-    Write-ColorOutput "`n$Cyan" + "=" * 70$Reset
+    # Check health endpoint
+    try {
+        $healthResponse = Invoke-WebRequest -Uri $HealthUrl -TimeoutSec 5
+        if ($healthResponse.StatusCode -eq 200) {
+            $healthChecks["Health Endpoint"] = $true
+            Write-Host "✅ Health Endpoint" -ForegroundColor Green
+        } else {
+            Write-Host "❌ Health Endpoint (Status: $($healthResponse.StatusCode))" -ForegroundColor Red
+        }
+    } catch {
+        Write-Host "❌ Health Endpoint Failed" -ForegroundColor Red
+    }
+    
+    # Check Docker socket access
+    try {
+        docker version | Out-Null
+        $healthChecks["Docker Socket"] = $true
+        Write-Host "✅ Docker Socket" -ForegroundColor Green
+    } catch {
+        Write-Host "❌ Docker Socket Failed" -ForegroundColor Red
+    }
+    
+    # Check resource usage
+    try {
+        $stats = docker stats --no-stream --format "{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" $RunnerContainer
+        if ($stats) {
+            $healthChecks["Resource Usage"] = $true
+            Write-Host "✅ Resource Usage" -ForegroundColor Green
+            Write-Host "  📊 $stats" -ForegroundColor Gray
+        } else {
+            Write-Host "❌ Resource Usage Check Failed" -ForegroundColor Red
+        }
+    } catch {
+        Write-Host "❌ Resource Usage Check Failed" -ForegroundColor Red
+    }
+    
+    # Check network connectivity
+    try {
+        $pingResult = Test-NetConnection -ComputerName "github.com" -Port 443 -InformationLevel Quiet
+        if ($pingResult) {
+            $healthChecks["Network Connectivity"] = $true
+            Write-Host "✅ Network Connectivity" -ForegroundColor Green
+        } else {
+            Write-Host "❌ Network Connectivity Failed" -ForegroundColor Red
+        }
+    } catch {
+        Write-Host "❌ Network Connectivity Check Failed" -ForegroundColor Red
+    }
+    
+    # Overall health score
+    $passedChecks = ($healthChecks.Values | Where-Object { $_ -eq $true }).Count
+    $totalChecks = $healthChecks.Count
+    $healthScore = [math]::Round(($passedChecks / $totalChecks) * 100, 1)
+    
+    Write-Host ""
+    Write-Host "📈 Health Score: $healthScore% ($passedChecks/$totalChecks checks passed)" -ForegroundColor Cyan
+    
+    if ($healthScore -eq 100) {
+        Write-Host "🎉 Runner is healthy!" -ForegroundColor Green
+    } elseif ($healthScore -ge 80) {
+        Write-Host "⚠️ Runner has minor issues" -ForegroundColor Yellow
+    } else {
+        Write-Host "❌ Runner has significant issues" -ForegroundColor Red
+    }
+    
+    return $healthScore
 }
 
-# Function to show health check
-function Show-HealthCheck {
-    Write-ColorOutput "`n$Yellow🏥 RUNNER HEALTH CHECK$Reset"
-    Write-ColorOutput "$Blue" + "=" * 50$Reset"
+# Function to get performance metrics
+function Get-PerformanceMetrics {
+    Write-Host "⚡ Performance Metrics" -ForegroundColor Cyan
+    Write-Host "=====================" -ForegroundColor Cyan
     
-    $issues = @()
-    
-    # Check Docker
-    if (-not (Test-DockerStatus)) {
-        $issues += "Docker is not running"
+    try {
+        # Get container stats
+        $stats = docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.NetIO}}\t{{.BlockIO}}"
+        Write-Host "📊 Container Stats:" -ForegroundColor White
+        Write-Host $stats -ForegroundColor Gray
+        
+        # Get system resources
+        Write-Host ""
+        Write-Host "💻 System Resources:" -ForegroundColor White
+        
+        # CPU usage
+        $cpuUsage = Get-Counter "\Processor(_Total)\% Processor Time" -SampleInterval 1 -MaxSamples 1
+        $cpuPercent = [math]::Round($cpuUsage.CounterSamples[0].CookedValue, 1)
+        Write-Host "  • CPU Usage: ${cpuPercent}%" -ForegroundColor Gray
+        
+        # Memory usage
+        $memory = Get-Counter "\Memory\Available MBytes" -SampleInterval 1 -MaxSamples 1
+        $availableMB = [math]::Round($memory.CounterSamples[0].CookedValue, 0)
+        $totalMemory = [math]::Round((Get-WmiObject -Class Win32_ComputerSystem).TotalPhysicalMemory / 1MB, 0)
+        $usedMemory = $totalMemory - $availableMB
+        $memoryPercent = [math]::Round(($usedMemory / $totalMemory) * 100, 1)
+        Write-Host "  • Memory Usage: ${memoryPercent}% (${usedMemory}MB / ${totalMemory}MB)" -ForegroundColor Gray
+        
+        # Disk usage
+        $disk = Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='C:'"
+        $diskPercent = [math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 1)
+        $freeGB = [math]::Round($disk.FreeSpace / 1GB, 1)
+        Write-Host "  • Disk Usage: ${diskPercent}% (${freeGB}GB free)" -ForegroundColor Gray
+        
+        # Network usage
+        $network = Get-Counter "\Network Interface(*)\Bytes Total/sec" -SampleInterval 1 -MaxSamples 1
+        $networkBytes = $network.CounterSamples | Where-Object { $_.InstanceName -notlike "*isatap*" } | Measure-Object -Property CookedValue -Sum
+        $networkMB = [math]::Round($networkBytes.Sum / 1MB, 2)
+        Write-Host "  • Network: ${networkMB}MB/s" -ForegroundColor Gray
+        
+    } catch {
+        Write-Host "❌ Could not get performance metrics: $($_.Exception.Message)" -ForegroundColor Red
     }
+}
+
+# Function to show recent logs
+function Show-RunnerLogs {
+    Write-Host "📋 Recent Runner Logs" -ForegroundColor Cyan
+    Write-Host "====================" -ForegroundColor Cyan
     
-    # Check system resources
-    $resources = Get-SystemResources
-    if ($resources -is [PSCustomObject]) {
-        if ($resources.CPU -gt 90) {
-            $issues += "High CPU usage: $($resources.CPU)%"
+    try {
+        # Get container logs
+        $logs = docker logs --tail 20 $RunnerContainer 2>&1
+        if ($logs) {
+            Write-Host $logs -ForegroundColor Gray
+        } else {
+            Write-Host "No recent logs found" -ForegroundColor Yellow
         }
-        if ($resources.MemoryAvailableMB -lt 1000) {
-            $issues += "Low available memory: $($resources.MemoryAvailableMB) MB"
+        
+        # Check log file if exists
+        if (Test-Path $LogFile) {
+            Write-Host ""
+            Write-Host "📄 Log File (last 10 lines):" -ForegroundColor White
+            $fileLogs = Get-Content $LogFile -Tail 10
+            Write-Host $fileLogs -ForegroundColor Gray
         }
-        if ($resources.DiskFreeGB -lt 10) {
-            $issues += "Low disk space: $($resources.DiskFreeGB) GB"
-        }
+        
+    } catch {
+        Write-Host "❌ Could not get logs: $($_.Exception.Message)" -ForegroundColor Red
     }
+}
+
+# Function to get detailed metrics
+function Get-DetailedMetrics {
+    Write-Host "📈 Detailed Metrics" -ForegroundColor Cyan
+    Write-Host "==================" -ForegroundColor Cyan
     
-    # Check network
-    $network = Test-NetworkConnectivity
-    foreach ($test in $network) {
-        if ($test.Status -like "*❌*") {
-            $issues += "Network issue: $($test.Service) is not reachable"
+    try {
+        # Container metrics
+        $containerMetrics = docker stats --no-stream --format "json" $RunnerContainer | ConvertFrom-Json
+        Write-Host "🐳 Container Metrics:" -ForegroundColor White
+        Write-Host "  • CPU: $($containerMetrics.CPUPerc)" -ForegroundColor Gray
+        Write-Host "  • Memory: $($containerMetrics.MemUsage) ($($containerMetrics.MemPerc))" -ForegroundColor Gray
+        Write-Host "  • Network I/O: $($containerMetrics.NetIO)" -ForegroundColor Gray
+        Write-Host "  • Block I/O: $($containerMetrics.BlockIO)" -ForegroundColor Gray
+        
+        # Cache metrics
+        $cacheDir = ".\runner-cache"
+        if (Test-Path $cacheDir) {
+            $cacheSize = (Get-ChildItem $cacheDir -Recurse -File | Measure-Object -Property Length -Sum).Sum
+            $cacheSizeMB = [math]::Round($cacheSize / 1MB, 2)
+            Write-Host ""
+            Write-Host "💾 Cache Metrics:" -ForegroundColor White
+            Write-Host "  • Total Size: ${cacheSizeMB}MB" -ForegroundColor Gray
+            
+            # Cache breakdown
+            $cacheTypes = @("npm", "docker", "nuxt", "playwright", "build")
+            foreach ($type in $cacheTypes) {
+                $typePath = Join-Path $cacheDir $type
+                if (Test-Path $typePath) {
+                    $typeSize = (Get-ChildItem $typePath -Recurse -File | Measure-Object -Property Length -Sum).Sum
+                    $typeSizeMB = [math]::Round($typeSize / 1MB, 2)
+                    Write-Host "  • $type`: ${typeSizeMB}MB" -ForegroundColor Gray
+                }
+            }
         }
+        
+        # Process metrics
+        Write-Host ""
+        Write-Host "🔄 Process Metrics:" -ForegroundColor White
+        $dockerProcesses = Get-Process | Where-Object { $_.ProcessName -like "*docker*" -or $_.ProcessName -like "*runner*" }
+        foreach ($process in $dockerProcesses | Select-Object -First 5) {
+            $memoryMB = [math]::Round($process.WorkingSet / 1MB, 1)
+            Write-Host "  • $($process.ProcessName): ${memoryMB}MB" -ForegroundColor Gray
+        }
+        
+    } catch {
+        Write-Host "❌ Could not get detailed metrics: $($_.Exception.Message)" -ForegroundColor Red
     }
+}
+
+# Function to watch runner continuously
+function Watch-Runner {
+    Write-Host "👀 Watching Runner (Press Ctrl+C to stop)" -ForegroundColor Cyan
+    Write-Host "=======================================" -ForegroundColor Cyan
     
-    if ($issues.Count -eq 0) {
-        Write-ColorOutput "✅ All systems healthy!" $Green
-    } else {
-        Write-ColorOutput "❌ Issues detected:" $Red
-        foreach ($issue in $issues) {
-            Write-ColorOutput "  • $issue" $Red
+    $startTime = Get-Date
+    $iteration = 0
+    
+    try {
+        while ($true) {
+            $iteration++
+            $elapsed = (Get-Date) - $startTime
+            
+            Clear-Host
+            Write-Host "📊 Runner Monitor - Iteration $iteration" -ForegroundColor Green
+            Write-Host "Elapsed: $($elapsed.ToString('hh\:mm\:ss'))" -ForegroundColor Gray
+            Write-Host "Time: $(Get-Date -Format 'HH:mm:ss')" -ForegroundColor Gray
+            Write-Host ""
+            
+            # Get quick status
+            $isRunning = docker ps --filter "name=$RunnerContainer" --format "{{.Status}}" | Out-String
+            if ($isRunning.Trim()) {
+                Write-Host "✅ Runner Status: $($isRunning.Trim())" -ForegroundColor Green
+            } else {
+                Write-Host "❌ Runner Status: Not Running" -ForegroundColor Red
+            }
+            
+            # Get resource usage
+            $stats = docker stats --no-stream --format "{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" $RunnerContainer 2>$null
+            if ($stats) {
+                $cpu, $mem, $memPercent = $stats -split "`t"
+                Write-Host "📈 Resources: CPU $cpu, Memory $mem ($memPercent)" -ForegroundColor Cyan
+            }
+            
+            # Health check
+            try {
+                $healthResponse = Invoke-WebRequest -Uri $HealthUrl -TimeoutSec 2 -ErrorAction Stop
+                Write-Host "🏥 Health: ✅ OK" -ForegroundColor Green
+            } catch {
+                Write-Host "🏥 Health: ❌ FAILED" -ForegroundColor Red
+            }
+            
+            Write-Host ""
+            Write-Host "Press Ctrl+C to stop monitoring..." -ForegroundColor Yellow
+            
+            Start-Sleep -Seconds 5
         }
+    } catch {
+        Write-Host ""
+        Write-Host "👋 Monitoring stopped" -ForegroundColor Green
     }
 }
 
 # Main execution
-if ($Health) {
-    Show-HealthCheck
-} elseif ($DockerOnly) {
-    Write-ColorOutput "`n$Yellow🐳 DOCKER MONITORING$Reset"
-    Write-ColorOutput "$Blue" + "=" * 50$Reset
-    $builds = Get-DockerBuilds
-    Write-ColorOutput $builds
-    $images = Get-DockerImages
-    Write-ColorOutput $images
-} elseif ($RunnerOnly) {
-    Write-ColorOutput "`n$Yellow🤖 RUNNER MONITORING$Reset"
-    Write-ColorOutput "$Blue" + "=" * 50$Reset
-    $runner = Get-RunnerStatus
-    Write-ColorOutput $runner
-} else {
-    Show-MonitoringDashboard
+try {
+    switch ($Action.ToLower()) {
+        "status" {
+            Get-RunnerStatus
+        }
+        "health" {
+            Test-RunnerHealth
+        }
+        "performance" {
+            Get-PerformanceMetrics
+        }
+        "logs" {
+            Show-RunnerLogs
+        }
+        "metrics" {
+            Get-DetailedMetrics
+        }
+        "watch" {
+            Watch-Runner
+        }
+        default {
+            Write-Host "❌ Invalid action: $Action" -ForegroundColor Red
+            Write-Host "Valid actions: status, health, performance, logs, metrics, watch" -ForegroundColor Yellow
+        }
+    }
+} catch {
+    Write-Host "❌ Monitoring failed: $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
 }
 
-# Continuous monitoring
-if ($Continuous) {
-    Write-ColorOutput "`n$Cyan🔄 Starting continuous monitoring (refresh every $Interval seconds)...$Reset"
-    Write-ColorOutput "$YellowPress Ctrl+C to stop$Reset"
-    
-    while ($true) {
-        Start-Sleep -Seconds $Interval
-        Clear-Host
-        Show-MonitoringDashboard
-    }
-} 
+Write-Host ""
+Write-Host "🎯 Monitoring completed!" -ForegroundColor Green 
