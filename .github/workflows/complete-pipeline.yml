@@ -1,4 +1,5 @@
-name: Complete CI/CD Pipeline
+---
+name: 'Complete CI/CD Pipeline'
 
 on:
   push:
@@ -53,7 +54,7 @@ env:
   # Cache configuration
   CACHE_DEPENDENCY_PATH: '**/package-lock.json'
   # Build optimization
-  DOCKER_BUILDKIT: 1
+  DOCKER_BUILDKIT: '1'
   # Security
   ACTIONS_STEP_DEBUG: ${{ secrets.ACTIONS_STEP_DEBUG || 'false' }}
   # Debugging and logging
@@ -85,7 +86,7 @@ jobs:
           echo "🔧 [DEBUG] Current directory: $(pwd)"
           echo "🔧 [DEBUG] Files in .github/scripts/:"
           ls -la .github/scripts/ || echo "❌ [ERROR] Cannot list scripts directory"
-          
+
           if [ -f ".github/scripts/workflow-helpers.sh" ]; then
             echo "✅ [DEBUG] Helper script found"
             source .github/scripts/workflow-helpers.sh
@@ -97,7 +98,7 @@ jobs:
             find .github -name "*.sh" 2>/dev/null || echo "No shell scripts found"
             exit 1
           fi
-          
+
           echo "🔧 [DEBUG] Testing helper functions..."
           log_info "Testing info logging"
           log_success "Testing success logging"
@@ -113,23 +114,23 @@ jobs:
           echo "🔧 [DEBUG] Before commit: ${{ github.event.before }}"
           echo "🔧 [DEBUG] After commit: ${{ github.event.after }}"
           echo "🔧 [DEBUG] Current ref: ${{ github.ref }}"
-          
+
           # Check if we can get git diff
           if [ -n "${{ github.event.before }}" ] && [ -n "${{ github.event.after }}" ]; then
             echo "🔧 [DEBUG] Getting changed files..."
             CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} 2>/dev/null || echo "ERROR_GETTING_CHANGES")
             echo "🔧 [DEBUG] Changed files: $CHANGED_FILES"
-            
+
             if [ "$CHANGED_FILES" = "ERROR_GETTING_CHANGES" ]; then
               echo "⚠️ [WARNING] Could not get changed files, proceeding with CI"
               echo "should-skip=false" >> $GITHUB_OUTPUT
             else
               DOC_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(md|txt|yml|yaml)$' | wc -l)
               CODE_FILES=$(echo "$CHANGED_FILES" | grep -vE '\.(md|txt|yml|yaml)$' | wc -l)
-              
+
               echo "🔧 [DEBUG] Documentation files changed: $DOC_FILES"
               echo "🔧 [DEBUG] Code files changed: $CODE_FILES"
-              
+
               if [ "$DOC_FILES" -gt 0 ] && [ "$CODE_FILES" -eq 0 ]; then
                 echo "should-skip=true" >> $GITHUB_OUTPUT
                 echo "🔄 Skipping CI - only documentation changes detected"
@@ -142,7 +143,8 @@ jobs:
             echo "🔧 [DEBUG] No before/after commits available, proceeding with CI"
             echo "should-skip=false" >> $GITHUB_OUTPUT
           fi
-          
+
+
           echo "🔧 [DEBUG] Skip check result: ${{ steps.skip-check.outputs.should-skip }}"
 
       - name: Check for changes
@@ -161,19 +163,19 @@ jobs:
           echo "🔧 [DEBUG] Current directory: $(pwd)"
           echo "🔧 [DEBUG] Files in current directory:"
           ls -la | head -20 || echo "❌ [ERROR] Cannot list directory"
-          
+
           if [ ! -f "package.json" ]; then
             echo "❌ [ERROR] package.json not found!"
             echo "🔧 [DEBUG] Searching for package.json..."
             find . -name "package.json" 2>/dev/null || echo "No package.json found anywhere"
             exit 1
           fi
-          
+
           echo "✅ [DEBUG] package.json found"
           echo "🔧 [DEBUG] package.json size: $(wc -c < package.json) bytes"
           echo "🔧 [DEBUG] package.json first 10 lines:"
           head -10 package.json || echo "❌ [ERROR] Cannot read package.json"
-          
+
           echo "🔧 [DEBUG] Validating JSON syntax..."
           if node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8')); console.log('JSON is valid')" 2>/dev/null; then
             echo "✅ [DEBUG] JSON syntax is valid"
@@ -183,7 +185,7 @@ jobs:
             node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8'))" 2>&1 || true
             exit 1
           fi
-          
+
           echo "🔧 [DEBUG] Checking required fields..."
           REQUIRED_FIELDS=("name" "version" "scripts")
           for field in "${REQUIRED_FIELDS[@]}"; do
@@ -194,7 +196,7 @@ jobs:
               exit 1
             fi
           done
-          
+
           echo "✅ [DEBUG] Package.json validation completed successfully"
 
       - name: Check for critical files
@@ -202,16 +204,16 @@ jobs:
         run: |
           echo "🔧 [DEBUG] Checking for critical files..."
           echo "🔧 [DEBUG] Current directory: $(pwd)"
-          
+
           required_files=("package.json" "nuxt.config.ts" "tsconfig.json")
           missing_files=()
-          
+
           for file in "${required_files[@]}"; do
             echo "🔧 [DEBUG] Checking for: $file"
             if [ ! -f "$file" ]; then
               echo "❌ [ERROR] Critical file missing: $file"
               missing_files+=("$file")
-              
+
               # Try to find similar files
               echo "🔧 [DEBUG] Searching for similar files..."
               find . -name "*$file*" 2>/dev/null | head -5 || echo "No similar files found"
@@ -221,14 +223,14 @@ jobs:
               echo "🔧 [DEBUG] File permissions: $(ls -la "$file")"
             fi
           done
-          
+
           if [ ${#missing_files[@]} -gt 0 ]; then
             echo "❌ [ERROR] Missing critical files: ${missing_files[*]}"
             echo "🔧 [DEBUG] Available files in current directory:"
             ls -la | head -20 || echo "Cannot list directory"
             exit 1
           fi
-          
+
           echo "✅ [DEBUG] All critical files found"
 
   # =============================================================================
@@ -247,24 +249,24 @@ jobs:
         run: |
           source .github/scripts/workflow-helpers.sh
           log_info "Starting dependency audit phase"
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
-          
+
       - name: Install dependencies
         run: |
           source .github/scripts/workflow-helpers.sh
           log_info "Installing dependencies for dependency audit..."
-          
+
           echo "🔧 [DEBUG] Node.js version: $(node --version)"
           echo "🔧 [DEBUG] NPM version: $(npm --version)"
           echo "🔧 [DEBUG] Current directory: $(pwd)"
           echo "🔧 [DEBUG] Available disk space: $(df -h . | tail -1)"
-          
+
           echo "🔧 [DEBUG] Running npm ci with verbose output..."
           npm ci --verbose || {
             echo "❌ [ERROR] npm ci failed!"
@@ -273,29 +275,32 @@ jobs:
             echo "🔧 [DEBUG] Checking package-lock.json..."
             if [ -f "package-lock.json" ]; then
               echo "✅ [DEBUG] package-lock.json exists"
+
               echo "🔧 [DEBUG] package-lock.json size: $(wc -c < package-lock.json) bytes"
             else
               echo "❌ [ERROR] package-lock.json missing!"
             fi
             exit 1
           }
-          
+
           echo "✅ [DEBUG] Dependencies installed successfully"
+
           echo "🔧 [DEBUG] node_modules size: $(du -sh node_modules 2>/dev/null | cut -f1 || echo 'unknown')"
+
           echo "🔧 [DEBUG] Number of installed packages: $(npm list --depth=0 2>/dev/null | wc -l || echo 'unknown')"
-        
+
       - name: Run dependency audit
         run: |
           source .github/scripts/workflow-helpers.sh
           log_info "Running dependency audit..."
-          
+
           echo "🔧 [DEBUG] Starting npm audit..."
           echo "🔧 [DEBUG] Audit level: moderate"
           echo "🔧 [DEBUG] Current working directory: $(pwd)"
-          
+
           # Run audit with detailed output
           AUDIT_OUTPUT=$(npm audit --audit-level=moderate --json 2>&1 || echo "AUDIT_FAILED")
-          
+
           if [ "$AUDIT_OUTPUT" = "AUDIT_FAILED" ]; then
             echo "⚠️ [WARNING] npm audit failed or found vulnerabilities"
             echo "🔧 [DEBUG] Running audit without JSON output for details..."
@@ -307,15 +312,16 @@ jobs:
           else
             echo "✅ [DEBUG] npm audit completed successfully"
             echo "🔧 [DEBUG] Audit output summary:"
+
             echo "$AUDIT_OUTPUT" | jq -r '.metadata.vulnerabilities | to_entries[] | "\(.key): \(.value)"' 2>/dev/null || echo "Could not parse audit output"
           fi
-          
+
       - name: Check for outdated packages
         run: |
           source .github/scripts/workflow-helpers.sh
           log_info "Checking for outdated packages..."
           npm outdated || log_success "All packages are up to date"
-          
+
       - name: Dependency audit complete
         run: |
           source .github/scripts/workflow-helpers.sh
@@ -337,17 +343,17 @@ jobs:
         run: |
           source .github/scripts/workflow-helpers.sh
           log_info "Starting security scan phase"
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Run npm security audit
         run: |
           source .github/scripts/workflow-helpers.sh
@@ -356,7 +362,7 @@ jobs:
             log_warning "Security audit completed with warnings"
             echo "Security warnings are non-blocking"
           }
-          
+
       - name: Run custom secrets scan
         run: |
           source .github/scripts/workflow-helpers.sh
@@ -369,7 +375,7 @@ jobs:
             exit 1
           }
           log_success "Secrets scan completed - no hardcoded secrets found"
-          
+
       - name: Security scan complete
         run: |
           echo "✅ Security scan completed successfully!"
@@ -382,9 +388,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate, security-scan]
     if: needs.validate.outputs.should-skip != 'true'
-    strategy:
-      matrix:
-        node-version: [20, 22]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -392,29 +395,31 @@ jobs:
       - name: Load helper functions
         run: |
           source .github/scripts/workflow-helpers.sh
-          log_info "Starting code quality phase for Node.js ${{ matrix.node-version }}"
+          log_info "Starting code quality phase"
 
-      - name: Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
 
       - name: Install dependencies
         run: |
-          echo "🔧 [DEBUG] Installing dependencies for Node.js ${{ matrix.node-version }}..."
+
+          echo "🔧 [DEBUG] Installing dependencies..."
           echo "🔧 [DEBUG] Node.js version: $(node --version)"
           echo "🔧 [DEBUG] NPM version: $(npm --version)"
           echo "🔧 [DEBUG] Current directory: $(pwd)"
+
           echo "🔧 [DEBUG] Package.json exists: $(test -f package.json && echo 'Yes' || echo 'No')"
-          
+
           echo "🔧 [DEBUG] Checking package.json for engine requirements..."
           if [ -f package.json ]; then
             echo "🔧 [DEBUG] Engine requirements:"
             node -e "const pkg = require('./package.json'); console.log('Engines:', JSON.stringify(pkg.engines, null, 2))" 2>/dev/null || echo "No engines field found"
           fi
-          
+
           echo "🔧 [DEBUG] Running npm ci with verbose output..."
           npm ci --verbose || {
             echo "❌ [ERROR] npm ci failed!"
@@ -427,7 +432,7 @@ jobs:
               npm install --verbose || exit 1
             }
           }
-          
+
           echo "✅ [DEBUG] Dependencies installed successfully"
 
       - name: Run linting
@@ -435,12 +440,12 @@ jobs:
           echo "🔍 Running ESLint..."
           npm run lint
           echo "✅ Linting completed successfully"
-          
+
       - name: Run type checking
         run: |
           echo "📝 Running TypeScript type checking..."
           npx tsc --noEmit || echo "Type checking completed"
-          
+
       - name: Code quality complete
         run: |
           echo "✅ Code quality checks completed successfully!"
@@ -461,21 +466,21 @@ jobs:
         run: |
           source .github/scripts/workflow-helpers.sh
           log_info "Starting build and test phase"
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
-          
+
       - name: Install dependencies
         run: |
           echo "🔧 [DEBUG] Installing dependencies for build-test..."
           echo "🔧 [DEBUG] Node.js version: $(node --version)"
           echo "🔧 [DEBUG] NPM version: $(npm --version)"
           echo "🔧 [DEBUG] Current directory: $(pwd)"
-          
+
           echo "🔧 [DEBUG] Running npm ci with verbose output..."
           npm ci --verbose || {
             echo "❌ [ERROR] npm ci failed!"
@@ -488,27 +493,27 @@ jobs:
               npm install --verbose || exit 1
             }
           }
-          
+
           echo "✅ [DEBUG] Dependencies installed successfully"
-        
+
       - name: Build application
         run: |
           source .github/scripts/workflow-helpers.sh
           log_info "Building application..."
-          
+
           echo "🔧 [DEBUG] Starting application build..."
           echo "🔧 [DEBUG] Node.js version: $(node --version)"
           echo "🔧 [DEBUG] NPM version: $(npm --version)"
           echo "🔧 [DEBUG] Current directory: $(pwd)"
           echo "🔧 [DEBUG] Available disk space: $(df -h . | tail -1)"
-          
+
           echo "🔧 [DEBUG] Checking build script in package.json..."
           if npm run --silent build --dry-run 2>/dev/null; then
             echo "✅ [DEBUG] Build script exists and is valid"
           else
             echo "⚠️ [WARNING] Could not validate build script"
           fi
-          
+
           echo "🔧 [DEBUG] Running build with verbose output..."
           npm run build --verbose || {
             echo "❌ [ERROR] Build failed!"
@@ -521,35 +526,36 @@ jobs:
             cat nuxt.config.ts 2>/dev/null | head -10 || echo "nuxt.config.ts not found or unreadable"
             exit 1
           }
-          
+
           echo "✅ [DEBUG] Application built successfully"
+
           echo "🔧 [DEBUG] Build output size: $(du -sh .output 2>/dev/null | cut -f1 || echo 'unknown')"
           echo "🔧 [DEBUG] Build output contents:"
           ls -la .output/ 2>/dev/null | head -10 || echo "No .output directory found"
-          
+
       - name: Generate build attestation
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: "cloudless.gr"
           subject-digest: "sha256:${{ hashFiles('.output/**') }}"
-          
+
       - name: Run tests
         run: |
           source .github/scripts/workflow-helpers.sh
           log_info "Running tests..."
-          
+
           echo "🔧 [DEBUG] Starting test execution..."
           echo "🔧 [DEBUG] Current directory: $(pwd)"
           echo "🔧 [DEBUG] Available test scripts:"
           npm run --silent 2>/dev/null | grep -E "(test|spec)" || echo "No test scripts found"
-          
+
           echo "🔧 [DEBUG] Checking test script in package.json..."
           if npm run --silent test --dry-run 2>/dev/null; then
             echo "✅ [DEBUG] Test script exists and is valid"
           else
             echo "⚠️ [WARNING] Could not validate test script"
           fi
-          
+
           echo "🔧 [DEBUG] Running tests with verbose output..."
           npm test --verbose || {
             echo "⚠️ [WARNING] Tests completed with warnings or failures"
@@ -561,9 +567,9 @@ jobs:
             log_warning "Tests completed with warnings"
             echo "🔧 [DEBUG] Test warnings are non-blocking"
           }
-          
+
           echo "✅ [DEBUG] Test execution completed"
-          
+
       - name: Generate performance report
         run: |
           source .github/scripts/workflow-helpers.sh
@@ -573,7 +579,7 @@ jobs:
           echo "Build size: $(du -sh .output | cut -f1)"
           echo "Node modules size: $(du -sh node_modules | cut -f1)"
           echo "Total dependencies: $(npm list --depth=0 | wc -l)"
-          
+
       - name: Build test complete
         run: |
           source .github/scripts/workflow-helpers.sh
@@ -586,33 +592,36 @@ jobs:
     name: 🌐 API Testing
     runs-on: ubuntu-latest
     needs: [validate, build-test]
+
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
-    
+
     env:
       # Use localhost for CI testing
       APP_URL: 'http://localhost:3000'
+
       NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
       NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
-    
+
     strategy:
       matrix:
         node-version: [20, 22]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: |
+
           echo "🔧 [DEBUG] Installing dependencies for API testing (Node.js ${{ matrix.node-version }})..."
           echo "🔧 [DEBUG] Node.js version: $(node --version)"
           echo "🔧 [DEBUG] NPM version: $(npm --version)"
-          
+
           echo "🔧 [DEBUG] Running npm ci with verbose output..."
           npm ci --verbose || {
             echo "❌ [ERROR] npm ci failed!"
@@ -625,9 +634,9 @@ jobs:
               npm install --verbose || exit 1
             }
           }
-          
+
           echo "✅ [DEBUG] Dependencies installed successfully"
-        
+
       - name: Setup environment
         run: |
           cp env.example .env
@@ -638,47 +647,47 @@ jobs:
           echo "NODE_ENV=test" >> .env
           echo "NITRO_HOST=${{ env.APP_HOST }}" >> .env
           echo "NITRO_PORT=${{ env.APP_PORT }}" >> .env
-          
+
           # Mock Supabase configuration for testing
           echo "NUXT_PUBLIC_SUPABASE_URL=https://test.supabase.co" >> .env
           echo "NUXT_PUBLIC_SUPABASE_ANON_KEY=test-anon-key" >> .env
           echo "SUPABASE_SERVICE_ROLE_KEY=test-service-role-key" >> .env
-          
+
           # Mock database configuration for testing
           echo "DATABASE_URL=postgresql://test:test@localhost:5432/test" >> .env
-          
+
           # Mock Redis configuration for testing
           echo "REDIS_URL=redis://localhost:6379" >> .env
-          
+
           # Mock API keys for testing
           echo "OPENAI_API_KEY=test-openai-key" >> .env
           echo "ANTHROPIC_API_KEY=test-anthropic-key" >> .env
-          
+
           # Logging configuration
           echo "LOG_LEVEL=debug" >> .env
           echo "DEBUG=*" >> .env
-          
+
           echo "🔧 [DEBUG] Environment setup completed"
           echo "🔧 [DEBUG] .env file contents (first 10 lines):"
           head -10 .env || echo "Cannot read .env file"
-          
+
       - name: Start application
         run: |
           echo "🔧 [DEBUG] Starting application for API testing..."
           echo "🔧 [DEBUG] Current directory: $(pwd)"
           echo "🔧 [DEBUG] Node.js version: $(node --version)"
           echo "🔧 [DEBUG] NPM version: $(npm --version)"
-          
+
           echo "🔧 [DEBUG] Building application..."
           npm run build || {
             echo "❌ [ERROR] Build failed!"
             exit 1
           }
-          
+
           echo "🔧 [DEBUG] Starting application in background..."
           echo "🔧 [DEBUG] Available start scripts:"
           npm run --silent 2>/dev/null | grep -E "(start|dev)" || echo "No start scripts found"
-          
+
           # Start the application in background with output capture
           # Use start for production build or dev for development
           if [ -d ".output" ]; then
@@ -690,7 +699,7 @@ jobs:
           fi
           APP_PID=$!
           echo "🔧 [DEBUG] Application started with PID: $APP_PID"
-          
+
           # Wait for application to start
           echo "🔧 [DEBUG] Waiting for application to start..."
           for i in {1..60}; do
@@ -704,7 +713,7 @@ jobs:
             echo "🔧 [DEBUG] Attempt $i/60: Application not ready yet..."
             sleep 2
           done
-          
+
           # Check if application is running
           if ! curl -s ${{ env.APP_URL }}/api/health > /dev/null 2>&1 && \
              ! curl -s ${{ env.APP_URL }}/api/v1 > /dev/null 2>&1 && \
@@ -718,25 +727,25 @@ jobs:
             netstat -tlnp | grep :3000 || echo "Port 3000 not in use"
             exit 1
           fi
-          
+
           echo "✅ [DEBUG] Application started successfully"
           echo "🔧 [DEBUG] Application log (last 20 lines):"
           tail -20 app.log || echo "No log content"
-          
+
       - name: Test API endpoints
         run: |
           # Test API index
           echo "Testing API index..."
           curl -f ${{ env.APP_URL }}/api/v1 || exit 1
-          
+
           # Test health endpoint
           echo "Testing health endpoint..."
           curl -f ${{ env.APP_URL }}/api/health || exit 1
-          
+
           # Test API documentation
           echo "Testing API documentation..."
           curl -f ${{ env.APP_URL }}/api/v1/docs || exit 1
-          
+
       - name: Test authentication endpoints
         run: |
           # Test registration endpoint
@@ -751,7 +760,7 @@ jobs:
               "company": "Test Company"
             }')
           echo "Registration response: $REGISTER_RESPONSE"
-          
+
           # Test login endpoint
           echo "Testing login endpoint..."
           LOGIN_RESPONSE=$(curl -s -X POST ${{ env.APP_URL }}/api/v1/auth/login \
@@ -761,7 +770,7 @@ jobs:
               "password": "test-password-123"
             }')
           echo "Login response: $LOGIN_RESPONSE"
-          
+
       - name: API testing complete
         run: |
           echo "✅ API testing completed successfully!"
@@ -773,51 +782,53 @@ jobs:
     name: 🤖 Bot Testing
     runs-on: ubuntu-latest
     needs: [validate, build-test]
+
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
-    
+
     env:
       # Use localhost for CI testing
       APP_URL: 'http://localhost:3000'
+
       NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
       NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Setup test environment
         run: |
           cp env.example .env
           echo "NUXT_HOST=localhost" >> .env
           echo "NUXT_PORT=3000" >> .env
           echo "JWT_SECRET=test-secret-key" >> .env
-          
+
       - name: Start application
         run: |
           echo "🔧 [DEBUG] Starting application for bot testing..."
           echo "🔧 [DEBUG] Current directory: $(pwd)"
           echo "🔧 [DEBUG] Node.js version: $(node --version)"
           echo "🔧 [DEBUG] NPM version: $(npm --version)"
-          
+
           echo "🔧 [DEBUG] Building application..."
           npm run build || {
             echo "❌ [ERROR] Build failed!"
             exit 1
           }
-          
+
           echo "🔧 [DEBUG] Starting application in background..."
           echo "🔧 [DEBUG] Available start scripts:"
           npm run --silent 2>/dev/null | grep -E "(start|dev|preview)" || echo "No start scripts found"
-          
+
           # Start the application in background with output capture
           # Use start for production build or dev for development
           if [ -d ".output" ]; then
@@ -829,7 +840,7 @@ jobs:
           fi
           APP_PID=$!
           echo "🔧 [DEBUG] Application started with PID: $APP_PID"
-          
+
           # Wait for application to start
           echo "🔧 [DEBUG] Waiting for application to start..."
           for i in {1..60}; do
@@ -843,7 +854,7 @@ jobs:
             echo "🔧 [DEBUG] Attempt $i/60: Application not ready yet..."
             sleep 2
           done
-          
+
           # Check if application is running
           if ! curl -s ${{ env.APP_URL }}/api/health > /dev/null 2>&1 && \
              ! curl -s ${{ env.APP_URL }}/api/v1 > /dev/null 2>&1 && \
@@ -857,15 +868,15 @@ jobs:
             netstat -tlnp | grep :3000 || echo "Port 3000 not in use"
             exit 1
           fi
-          
+
           echo "✅ [DEBUG] Application started successfully"
           echo "🔧 [DEBUG] Application log (last 20 lines):"
           tail -20 app.log || echo "No log content"
-          
+
       - name: Test bot endpoints
         run: |
           echo "🤖 Testing bot endpoints..."
-          
+
           # Test bot creation
           echo "Testing bot creation..."
           BOT_CREATE_RESPONSE=$(curl -s -X POST ${{ env.APP_URL }}/api/v1/bots \
@@ -877,11 +888,11 @@ jobs:
               "prompt": "You are a helpful assistant."
             }')
           echo "Bot creation response: $BOT_CREATE_RESPONSE"
-          
+
           # Test bot listing
           echo "Testing bot listing..."
           curl -f ${{ env.APP_URL }}/api/v1/bots || exit 1
-          
+
       - name: Bot testing complete
         run: |
           echo "✅ Bot testing completed successfully!"
@@ -893,51 +904,53 @@ jobs:
     name: 🔄 Pipeline Testing
     runs-on: ubuntu-latest
     needs: [validate, build-test]
+
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
-    
+
     env:
       # Use localhost for CI testing
       APP_URL: 'http://localhost:3000'
+
       NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
       NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Setup test environment
         run: |
           cp env.example .env
           echo "NUXT_HOST=localhost" >> .env
           echo "NUXT_PORT=3000" >> .env
           echo "JWT_SECRET=test-secret-key" >> .env
-          
+
       - name: Start application
         run: |
           echo "🔧 [DEBUG] Starting application for pipeline testing..."
           echo "🔧 [DEBUG] Current directory: $(pwd)"
           echo "🔧 [DEBUG] Node.js version: $(node --version)"
           echo "🔧 [DEBUG] NPM version: $(npm --version)"
-          
+
           echo "🔧 [DEBUG] Building application..."
           npm run build || {
             echo "❌ [ERROR] Build failed!"
             exit 1
           }
-          
+
           echo "🔧 [DEBUG] Starting application in background..."
           echo "🔧 [DEBUG] Available start scripts:"
           npm run --silent 2>/dev/null | grep -E "(start|dev|preview)" || echo "No start scripts found"
-          
+
           # Start the application in background with output capture
           # Use start for production build or dev for development
           if [ -d ".output" ]; then
@@ -949,7 +962,7 @@ jobs:
           fi
           APP_PID=$!
           echo "🔧 [DEBUG] Application started with PID: $APP_PID"
-          
+
           # Wait for application to start
           echo "🔧 [DEBUG] Waiting for application to start..."
           for i in {1..60}; do
@@ -963,7 +976,7 @@ jobs:
             echo "🔧 [DEBUG] Attempt $i/60: Application not ready yet..."
             sleep 2
           done
-          
+
           # Check if application is running
           if ! curl -s ${{ env.APP_URL }}/api/health > /dev/null 2>&1 && \
              ! curl -s ${{ env.APP_URL }}/api/v1 > /dev/null 2>&1 && \
@@ -977,15 +990,15 @@ jobs:
             netstat -tlnp | grep :3000 || echo "Port 3000 not in use"
             exit 1
           fi
-          
+
           echo "✅ [DEBUG] Application started successfully"
           echo "🔧 [DEBUG] Application log (last 20 lines):"
           tail -20 app.log || echo "No log content"
-          
+
       - name: Test pipeline endpoints
         run: |
           echo "🔄 Testing pipeline endpoints..."
-          
+
           # Test pipeline creation
           echo "Testing pipeline creation..."
           PIPELINE_CREATE_RESPONSE=$(curl -s -X POST ${{ env.APP_URL }}/api/pipelines/run \
@@ -996,7 +1009,7 @@ jobs:
               "steps": ["input", "process", "output"]
             }')
           echo "Pipeline creation response: $PIPELINE_CREATE_RESPONSE"
-          
+
       - name: Pipeline testing complete
         run: |
           echo "✅ Pipeline testing completed successfully!"
@@ -1008,51 +1021,53 @@ jobs:
     name: 🧠 LLM Model Testing
     runs-on: ubuntu-latest
     needs: [validate, build-test]
+
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
-    
+
     env:
       # Use localhost for CI testing
       APP_URL: 'http://localhost:3000'
+
       NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
       NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Setup test environment
         run: |
           cp env.example .env
           echo "NUXT_HOST=localhost" >> .env
           echo "NUXT_PORT=3000" >> .env
           echo "JWT_SECRET=test-secret-key" >> .env
-          
+
       - name: Start application
         run: |
           echo "🔧 [DEBUG] Starting application for LLM model testing..."
           echo "🔧 [DEBUG] Current directory: $(pwd)"
           echo "🔧 [DEBUG] Node.js version: $(node --version)"
           echo "🔧 [DEBUG] NPM version: $(npm --version)"
-          
+
           echo "🔧 [DEBUG] Building application..."
           npm run build || {
             echo "❌ [ERROR] Build failed!"
             exit 1
           }
-          
+
           echo "🔧 [DEBUG] Starting application in background..."
           echo "🔧 [DEBUG] Available start scripts:"
           npm run --silent 2>/dev/null | grep -E "(start|dev|preview)" || echo "No start scripts found"
-          
+
           # Start the application in background with output capture
           # Use start for production build or dev for development
           if [ -d ".output" ]; then
@@ -1064,7 +1079,7 @@ jobs:
           fi
           APP_PID=$!
           echo "🔧 [DEBUG] Application started with PID: $APP_PID"
-          
+
           # Wait for application to start
           echo "🔧 [DEBUG] Waiting for application to start..."
           for i in {1..60}; do
@@ -1078,7 +1093,7 @@ jobs:
             echo "🔧 [DEBUG] Attempt $i/60: Application not ready yet..."
             sleep 2
           done
-          
+
           # Check if application is running
           if ! curl -s ${{ env.APP_URL }}/api/health > /dev/null 2>&1 && \
              ! curl -s ${{ env.APP_URL }}/api/v1 > /dev/null 2>&1 && \
@@ -1092,15 +1107,15 @@ jobs:
             netstat -tlnp | grep :3000 || echo "Port 3000 not in use"
             exit 1
           fi
-          
+
           echo "✅ [DEBUG] Application started successfully"
           echo "🔧 [DEBUG] Application log (last 20 lines):"
           tail -20 app.log || echo "No log content"
-          
+
       - name: Test LLM model endpoints
         run: |
           echo "🧠 Testing LLM model endpoints..."
-          
+
           # Test model training
           echo "Testing model training..."
           MODEL_TRAIN_RESPONSE=$(curl -s -X POST ${{ env.APP_URL }}/api/models/train \
@@ -1111,7 +1126,7 @@ jobs:
               "type": "text-classification"
             }')
           echo "Model training response: $MODEL_TRAIN_RESPONSE"
-          
+
       - name: LLM model testing complete
         run: |
           echo "✅ LLM model testing completed successfully!"
@@ -1143,10 +1158,11 @@ jobs:
           echo "🔧 [DEBUG] Looking for: ${{ matrix.dockerfile }}"
           echo "🔧 [DEBUG] Available files:"
           ls -la | grep -i docker || echo "No Docker files found"
-          
+
           if [ -f "${{ matrix.dockerfile }}" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "✅ [DEBUG] ${{ matrix.dockerfile }} exists"
+
             echo "🔧 [DEBUG] Dockerfile size: $(wc -c < "${{ matrix.dockerfile }}") bytes"
             echo "🔧 [DEBUG] Dockerfile first 10 lines:"
             head -10 "${{ matrix.dockerfile }}" || echo "Cannot read Dockerfile"
@@ -1173,8 +1189,9 @@ jobs:
           echo "🔧 [DEBUG] Build context: ."
           echo "🔧 [DEBUG] Dockerfile: ${{ matrix.dockerfile }}"
           echo "🔧 [DEBUG] Target: ${{ matrix.target }}"
+
           echo "🔧 [DEBUG] Tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag }}-test"
-          
+
           # Build with detailed output
           docker build \
             --file ./${{ matrix.dockerfile }} \
@@ -1193,15 +1210,17 @@ jobs:
               ls -la | head -10 || echo "Cannot list directory"
               exit 1
             }
-          
+
           echo "✅ [DEBUG] Docker build completed successfully"
+
           echo "🔧 [DEBUG] Built image size: $(docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag }}-test --format '{{.Size}}' 2>/dev/null || echo 'unknown')"
-          
+
       - name: Generate Docker build attestation
         if: steps.check-dockerfile.outputs.exists == 'true'
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag }}-test"
+
           subject-digest: "sha256:$(docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tag }}-test --format '{{.ID}}' 2>/dev/null | cut -d: -f2 || echo 'unknown')"
 
       - name: Test Docker image
@@ -1222,12 +1241,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate, docker-build-test]
     if: |
-      needs.validate.outputs.should-skip != 'true' && 
+      needs.validate.outputs.should-skip != 'true' &&
       github.event.inputs.skip_deployment != 'true' &&
-      (github.ref == 'refs/heads/develop' || 
+      (github.ref == 'refs/heads/develop' ||
        (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'))
 
     env:
+
       NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
       NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
 
@@ -1285,7 +1305,7 @@ jobs:
           # Here you would typically deploy to your staging server
           # For now, we'll just simulate the deployment
           log_success "Staging deployment completed successfully"
-          
+
       - name: Generate deployment summary
         run: |
           source .github/scripts/workflow-helpers.sh
@@ -1296,10 +1316,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate, docker-build-test]
     if: |
-      needs.validate.outputs.should-skip != 'true' && 
+      needs.validate.outputs.should-skip != 'true' &&
       github.event.inputs.skip_deployment != 'true' &&
-      (github.ref == 'refs/heads/main' || 
-       github.ref == 'refs/heads/master' || 
+      (github.ref == 'refs/heads/main' ||
+       github.ref == 'refs/heads/master' ||
        (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'))
 
     permissions:
@@ -1308,7 +1328,7 @@ jobs:
       id-token: write
 
     environment: production
-    
+
     env:
       # Build variables
       REGISTRY: ghcr.io
@@ -1318,6 +1338,7 @@ jobs:
       GIT_COMMIT: ${{ github.sha }}
       BUILD_DATE: ${{ github.event.head_commit.timestamp }}
       # Supabase Configuration
+
       NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
       NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
 
@@ -1373,19 +1394,19 @@ jobs:
         run: |
           source .github/scripts/workflow-helpers.sh
           log_info "Validating production environment variables..."
-          
+
           REQUIRED_VARS=(
             "NUXT_PUBLIC_SUPABASE_URL"
             "NUXT_PUBLIC_SUPABASE_ANON_KEY"
             "SUPABASE_SERVICE_ROLE_KEY"
           )
-          
+
           validate_env_vars "${REQUIRED_VARS[@]}" || {
             log_error "Missing required environment variables"
             log_info "Please set these variables in your GitHub repository's production environment settings"
             exit 1
           }
-          
+
           log_success "All required environment variables validated"
 
       - name: Set deployment variables
@@ -1455,6 +1476,7 @@ jobs:
           echo "📋 Deployment steps to complete manually:"
           echo "1. Copy .env.production to your production server"
           echo "2. Pull the new image: docker pull ${{ steps.meta.outputs.tags }}"
+
           echo "3. Restart containers: docker-compose -f docker-compose.prod.yml up -d"
           echo "4. Check health: curl http://your-domain/api/health"
 
@@ -1570,31 +1592,32 @@ jobs:
         run: |
           source .github/scripts/workflow-helpers.sh
           log_info "Cleaning up caches and optimizing storage..."
-          
+
           echo "🧹 Cleaning up old caches..."
-          
+
           # Clear npm cache
           npm cache clean --force || true
-          
+
           # Remove temporary files
           find . -name "*.tmp" -delete 2>/dev/null || true
           find . -name "*.log" -delete 2>/dev/null || true
-          
+
           # Clear any build artifacts that shouldn't be cached
           if [ -d ".nuxt" ]; then
             echo "Removing .nuxt build cache..."
             rm -rf .nuxt
           fi
-          
+
           if [ -d ".output" ]; then
             echo "Removing .output build cache..."
             rm -rf .output
           fi
-          
+
           echo "📊 Cache usage statistics:"
+
           echo "  - Node modules: $(du -sh node_modules 2>/dev/null | cut -f1 || echo 'N/A')"
           echo "  - Total disk usage: $(df -h . | tail -1)"
-          
+
           log_success "Cache cleanup completed"
 
       - name: Load helper functions
@@ -1610,7 +1633,7 @@ jobs:
           echo ""
           echo "📊 Job Status Summary:"
           echo "======================"
-          
+
           # Define job status with emojis
           declare -A job_emojis=(
             ["validate"]="🔍"
@@ -1628,7 +1651,7 @@ jobs:
             ["security-scan-post"]="🔒"
             ["monitor-deployment"]="📊"
           )
-          
+
           # Display job status with emojis
           log_success "🔍 validate: ${{ needs.validate.result || 'UNKNOWN' }}"
           log_success "📦 dependency-audit: ${{ needs.dependency-audit.result || 'UNKNOWN' }}"
@@ -1644,7 +1667,7 @@ jobs:
           log_success "🚀 build-and-deploy-production: ${{ needs.build-and-deploy-production.result || 'UNKNOWN' }}"
           log_success "🔒 security-scan-post: ${{ needs.security-scan-post.result || 'UNKNOWN' }}"
           log_success "📊 monitor-deployment: ${{ needs.monitor-deployment.result || 'UNKNOWN' }}"
-          
+
           echo ""
           echo "🚀 Deployment Status:"
           echo "====================="
@@ -1655,7 +1678,7 @@ jobs:
           else
             echo "❌ Deployment: FAILED"
           fi
-          
+
           echo ""
           echo "📈 Next Steps:"
           echo "=============="
@@ -1663,10 +1686,10 @@ jobs:
           echo "2. Check error logs"
           echo "3. Verify all features are working"
           echo "4. Update documentation if needed"
-          
+
           echo ""
           echo "🎯 Pipeline completed at: $(date)"
-          
+
       - name: Debug Information (if failed)
         if: failure()
         run: |
@@ -1682,4 +1705,4 @@ jobs:
           echo "  - CPU: $(nproc) cores"
           echo "🔧 [DEBUG] Recent logs:"
           echo "  - Last 20 lines of current log"
-          echo "🔧 [DEBUG] Please check the logs above for specific error details" 
+          echo "🔧 [DEBUG] Please check the logs above for specific error details"
