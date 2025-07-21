@@ -451,139 +451,8 @@ jobs:
           echo "✅ Code quality checks completed successfully!"
 
   # =============================================================================
-  # PHASE 5: BUILD & TEST
+  # PHASE 5: BUILD & TEST (REMOVED - Redundant with Docker Build & Test)
   # =============================================================================
-  build-test:
-    name: 🏗️ Build & Test
-    runs-on: [self-hosted, containerized, dev]  # Prefer self-hosted, fallback to GitHub-hosted
-    needs: [validate, code-quality]
-    if: needs.validate.outputs.should-skip != 'true'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Load helper functions
-        run: |
-          source .github/scripts/workflow-helpers.sh
-          log_info "Starting build and test phase"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
-
-      - name: Install dependencies
-        run: |
-          echo "🔧 [DEBUG] Installing dependencies for build-test..."
-          echo "🔧 [DEBUG] Node.js version: $(node --version)"
-          echo "🔧 [DEBUG] NPM version: $(npm --version)"
-          echo "🔧 [DEBUG] Current directory: $(pwd)"
-
-          echo "🔧 [DEBUG] Running npm ci with verbose output..."
-          npm ci --verbose || {
-            echo "❌ [ERROR] npm ci failed!"
-            echo "🔧 [DEBUG] Trying to reinstall oxc-parser specifically..."
-            npm install oxc-parser@latest --verbose || echo "oxc-parser reinstall failed"
-            echo "🔧 [DEBUG] Retrying npm ci..."
-            npm ci --verbose || {
-              echo "❌ [ERROR] npm ci failed again!"
-              echo "🔧 [DEBUG] Trying npm install as fallback..."
-              npm install --verbose || exit 1
-            }
-          }
-
-          echo "✅ [DEBUG] Dependencies installed successfully"
-
-      - name: Build application
-        run: |
-          source .github/scripts/workflow-helpers.sh
-          log_info "Building application..."
-
-          echo "🔧 [DEBUG] Starting application build..."
-          echo "🔧 [DEBUG] Node.js version: $(node --version)"
-          echo "🔧 [DEBUG] NPM version: $(npm --version)"
-          echo "🔧 [DEBUG] Current directory: $(pwd)"
-          echo "🔧 [DEBUG] Available disk space: $(df -h . | tail -1)"
-
-          echo "🔧 [DEBUG] Checking build script in package.json..."
-          if npm run --silent build --dry-run 2>/dev/null; then
-            echo "✅ [DEBUG] Build script exists and is valid"
-          else
-            echo "⚠️ [WARNING] Could not validate build script"
-          fi
-
-          echo "🔧 [DEBUG] Running build with verbose output..."
-          npm run build --verbose || {
-            echo "❌ [ERROR] Build failed!"
-            echo "🔧 [DEBUG] Build error details:"
-            npm run build 2>&1 || true
-            echo "🔧 [DEBUG] Checking for common build issues..."
-            echo "🔧 [DEBUG] TypeScript config:"
-            cat tsconfig.json 2>/dev/null | head -10 || echo "tsconfig.json not found or unreadable"
-            echo "🔧 [DEBUG] Nuxt config:"
-            cat nuxt.config.ts 2>/dev/null | head -10 || echo "nuxt.config.ts not found or unreadable"
-            exit 1
-          }
-
-          echo "✅ [DEBUG] Application built successfully"
-
-          echo "🔧 [DEBUG] Build output size: $(du -sh .output 2>/dev/null | cut -f1 || echo 'unknown')"
-          echo "🔧 [DEBUG] Build output contents:"
-          ls -la .output/ 2>/dev/null | head -10 || echo "No .output directory found"
-
-      - name: Generate build attestation
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: "cloudless.gr"
-          subject-digest: "sha256:${{ hashFiles('.output/**') }}"
-
-      - name: Run tests
-        run: |
-          source .github/scripts/workflow-helpers.sh
-          log_info "Running tests..."
-
-          echo "🔧 [DEBUG] Starting test execution..."
-          echo "🔧 [DEBUG] Current directory: $(pwd)"
-          echo "🔧 [DEBUG] Available test scripts:"
-          npm run --silent 2>/dev/null | grep -E "(test|spec)" || echo "No test scripts found"
-
-          echo "🔧 [DEBUG] Checking test script in package.json..."
-          if npm run --silent test --dry-run 2>/dev/null; then
-            echo "✅ [DEBUG] Test script exists and is valid"
-          else
-            echo "⚠️ [WARNING] Could not validate test script"
-          fi
-
-          echo "🔧 [DEBUG] Running tests with verbose output..."
-          npm test --verbose || {
-            echo "⚠️ [WARNING] Tests completed with warnings or failures"
-            echo "🔧 [DEBUG] Test error details:"
-            npm test 2>&1 || true
-            echo "🔧 [DEBUG] Test exit code: $?"
-            echo "🔧 [DEBUG] Checking for test files..."
-            find . -name "*.test.*" -o -name "*.spec.*" 2>/dev/null | head -10 || echo "No test files found"
-            log_warning "Tests completed with warnings"
-            echo "🔧 [DEBUG] Test warnings are non-blocking"
-          }
-
-          echo "✅ [DEBUG] Test execution completed"
-
-      - name: Generate performance report
-        run: |
-          source .github/scripts/workflow-helpers.sh
-          log_info "Generating performance report..."
-          echo "📊 Build Performance Report"
-          echo "========================"
-          echo "Build size: $(du -sh .output | cut -f1)"
-          echo "Node modules size: $(du -sh node_modules | cut -f1)"
-          echo "Total dependencies: $(npm list --depth=0 | wc -l)"
-
-      - name: Build test complete
-        run: |
-          source .github/scripts/workflow-helpers.sh
-          log_success "Build and Test completed successfully!"
 
   # =============================================================================
   # PHASE 6: API TESTING
@@ -591,7 +460,7 @@ jobs:
   api-testing:
     name: 🌐 API Testing
     runs-on: ubuntu-latest
-    needs: [validate, build-test]
+    needs: [validate, docker-build-test]
 
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
 
@@ -781,7 +650,7 @@ jobs:
   bot-testing:
     name: 🤖 Bot Testing
     runs-on: ubuntu-latest
-    needs: [validate, build-test]
+    needs: [validate, docker-build-test]
 
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
 
@@ -903,7 +772,7 @@ jobs:
   pipeline-testing:
     name: 🔄 Pipeline Testing
     runs-on: ubuntu-latest
-    needs: [validate, build-test]
+    needs: [validate, docker-build-test]
 
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
 
@@ -1020,7 +889,7 @@ jobs:
   llm-model-testing:
     name: 🧠 LLM Model Testing
     runs-on: ubuntu-latest
-    needs: [validate, build-test]
+    needs: [validate, docker-build-test]
 
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
 
@@ -1137,7 +1006,7 @@ jobs:
   docker-build-test:
     name: 🐳 Docker Build & Test
     runs-on: [self-hosted, containerized, dev]  # Prefer self-hosted, fallback to GitHub-hosted
-    needs: [validate, build-test]
+    needs: [validate, code-quality]
     if: needs.validate.outputs.should-skip != 'true'
     strategy:
       matrix:
@@ -1573,7 +1442,6 @@ jobs:
       dependency-audit,
       security-scan,
       code-quality,
-      build-test,
       api-testing,
       bot-testing,
       pipeline-testing,
@@ -1640,7 +1508,6 @@ jobs:
             ["dependency-audit"]="📦"
             ["security-scan"]="🔒"
             ["code-quality"]="🔍"
-            ["build-test"]="🏗️"
             ["api-testing"]="🌐"
             ["bot-testing"]="🤖"
             ["pipeline-testing"]="🔄"
@@ -1657,7 +1524,6 @@ jobs:
           log_success "📦 dependency-audit: ${{ needs.dependency-audit.result || 'UNKNOWN' }}"
           log_success "🔒 security-scan: ${{ needs.security-scan.result || 'UNKNOWN' }}"
           log_success "🔍 code-quality: ${{ needs.code-quality.result || 'UNKNOWN' }}"
-          log_success "🏗️ build-test: ${{ needs.build-test.result || 'UNKNOWN' }}"
           log_success "🌐 api-testing: ${{ needs.api-testing.result || 'UNKNOWN' }}"
           log_success "🤖 bot-testing: ${{ needs.bot-testing.result || 'UNKNOWN' }}"
           log_success "🔄 pipeline-testing: ${{ needs.pipeline-testing.result || 'UNKNOWN' }}"
