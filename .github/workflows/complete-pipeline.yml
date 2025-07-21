@@ -63,8 +63,6 @@ env:
   # Verbose output
   VERBOSE: 'true'
   SHOW_TIMESTAMPS: 'true'
-  NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://default.supabase.url' }}
-  NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'default-anon-key' }}
 
 jobs:
   # =============================================================================
@@ -1187,6 +1185,10 @@ jobs:
       (github.ref == 'refs/heads/develop' || 
        (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'))
 
+    env:
+      NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -1226,8 +1228,6 @@ jobs:
           log_success "Application built successfully"
         env:
           NODE_ENV: production
-          NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -1275,6 +1275,9 @@ jobs:
       APP_VERSION: ${{ github.ref_name }}
       GIT_COMMIT: ${{ github.sha }}
       BUILD_DATE: ${{ github.event.head_commit.timestamp }}
+      # Supabase Configuration
+      NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
 
     steps:
       - name: Checkout code
