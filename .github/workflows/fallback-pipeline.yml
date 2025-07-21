@@ -56,7 +56,7 @@ env:
   NPM_CONFIG_PREFER_OFFLINE: 'true'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: self-hosted-pipeline-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -65,7 +65,7 @@ jobs:
   # =============================================================================
   validate:
     name: 🔍 Validate Configuration
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, docker, dev]
     timeout-minutes: 5
     outputs:
       should-skip: ${{ steps.skip-check.outputs.should-skip }}
@@ -142,7 +142,7 @@ jobs:
   # =============================================================================
   dependencies:
     name: 📦 Dependency Management
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, docker, dev]
     needs: validate
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 10
@@ -190,7 +190,7 @@ jobs:
   # =============================================================================
   security-quality:
     name: 🔒 Security & Quality
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, docker, dev]
     needs: [validate, dependencies]
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 15
@@ -234,8 +234,8 @@ jobs:
   # BUILD & TEST (GitHub-hosted)
   # =============================================================================
   build-test:
-    name: 🏗️ Build & Test (GitHub-hosted)
-    runs-on: ubuntu-latest
+    name: 🏗️ Build & Test
+    runs-on: [self-hosted, windows, docker, dev]
     needs: [validate, security-quality]
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 30
@@ -285,7 +285,7 @@ jobs:
   # =============================================================================
   summary:
     name: 📋 Pipeline Summary
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, docker, dev]
     needs: [
       validate,
       dependencies,

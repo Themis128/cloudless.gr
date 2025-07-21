@@ -79,7 +79,7 @@ jobs:
   # =============================================================================
   validate:
     name: 🔍 Validate Configuration
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, docker, dev]
     timeout-minutes: 5
     outputs:
       should-skip: ${{ steps.skip-check.outputs.should-skip }}
@@ -161,7 +161,7 @@ jobs:
   # =============================================================================
   dependencies:
     name: 📦 Dependency Management
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, docker, dev]
     needs: validate
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 10
