@@ -211,25 +211,18 @@ jobs:
           Write-Host "Current PATH: $env:PATH"
           
           # Check for tools without failing the step
-          try {
-              $eslintPath = where.exe eslint 2>$null
-              if ($eslintPath) {
-                  Write-Host "✅ ESLint found: $eslintPath"
-              } else {
-                  Write-Host "⚠️ ESLint not found in PATH"
-              }
-          } catch {
+          Write-Host "🔍 Checking for development tools..."
+          
+          # Simple check without using where.exe
+          if (Get-Command eslint -ErrorAction SilentlyContinue) {
+              Write-Host "✅ ESLint found in PATH"
+          } else {
               Write-Host "⚠️ ESLint not found in PATH"
           }
           
-          try {
-              $tscPath = where.exe tsc 2>$null
-              if ($tscPath) {
-                  Write-Host "✅ TypeScript found: $tscPath"
-              } else {
-                  Write-Host "⚠️ TypeScript not found in PATH"
-              }
-          } catch {
+          if (Get-Command tsc -ErrorAction SilentlyContinue) {
+              Write-Host "✅ TypeScript found in PATH"
+          } else {
               Write-Host "⚠️ TypeScript not found in PATH"
           }
           
