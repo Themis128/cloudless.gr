@@ -137,17 +137,11 @@ export const createEnhancedRateLimit = (
       }
 
       // Increment counters
-      const multi = redis.multi()
-
-      // Increment main counter
-      multi.incr(key)
-      multi.expire(key, Math.ceil(finalConfig.windowMs / 1000))
-
-      // Increment burst counter
-      multi.incr(burstKey)
-      multi.expire(burstKey, 60) // 1 minute TTL for burst
-
-      await multi.exec()
+      // Use individual Redis commands instead of multi
+      await redis.incr(key)
+      await redis.expire(key, Math.ceil(finalConfig.windowMs / 1000))
+      await redis.incr(burstKey)
+      await redis.expire(burstKey, 60) // 1 minute TTL for burst
 
       // Track successful request
       if (finalConfig.trackAnalytics) {

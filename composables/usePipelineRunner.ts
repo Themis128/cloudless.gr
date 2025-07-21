@@ -42,21 +42,21 @@ export const usePipelineRunner = () => {
     }
   }
 
-  const handleInputProcessing = async () => {
+  const handleInputProcessing = async (step: any) => {
     // Implement input processing logic based on step.config
     // const { extract_code_context, identify_language } = step.config
     await new Promise(resolve => setTimeout(resolve, 1000)) // Simulated delay
     return { processed: true }
   }
 
-  const handleLLMProcessing = async () => {
+  const handleLLMProcessing = async (step: any) => {
     // Implement LLM processing logic based on step.config
     // const { temperature, max_tokens, include_code_blocks, format } = step.config
     await new Promise(resolve => setTimeout(resolve, 1000)) // Simulated delay
     return { processed: true }
   }
 
-  const handleOutputProcessing = async () => {
+  const handleOutputProcessing = async (step: any) => {
     // Implement output processing logic based on step.config
     // const { highlight_code, add_explanations, format_markdown } = step.config
     await new Promise(resolve => setTimeout(resolve, 1000)) // Simulated delay

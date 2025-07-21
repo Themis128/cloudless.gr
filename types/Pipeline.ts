@@ -205,6 +205,12 @@ export interface PipelineStep {
 
 export type PipelineStepType = 'input_processor' | 'llm_processor' | 'output_processor' | 'data_transformer' | 'validator'
 
+export interface PipelineConfig {
+  steps: PipelineStep[]
+  model?: ModelConfig
+  settings?: AdvancedSettings
+}
+
 export interface Pipeline {
   id?: string
   name: string

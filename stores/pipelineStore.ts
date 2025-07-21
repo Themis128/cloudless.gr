@@ -75,9 +75,9 @@ export const usePipelineStore = defineStore('pipeline', () => {
 
       if (err) throw err
 
-      pipelines.value = (data || []).map(p => ({
+      pipelines.value = (data || []).map((p: any) => ({
         ...p,
-        config: p.config as unknown as PipelineConfig,
+        config: p.config as PipelineConfig,
       })) as Pipeline[]
 
       return { success: true, data }

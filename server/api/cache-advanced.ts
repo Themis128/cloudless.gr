@@ -48,26 +48,21 @@ export default defineEventHandler(async event => {
 
       // List operations
       list_ops: {
-        lpush: await redis.lpush('demo:list', 'item1', 'item2', 'item3'),
+        lpush: await redis.lpush('demo:list', 'item1'),
         lrange: await redis.lrange('demo:list', 0, -1),
-        llen: await redis.llen('demo:list'),
+        llen: await redis.lpush('demo:list', 'item2'),
       },
 
       // Hash operations
       hash_ops: {
-        hset: await redis.hset('demo:hash', {
-          name: 'Cloudless LLM Dev Agent',
-          version: '1.0.0',
-          features: 'Redis, Rate Limiting, Sessions',
-        }),
+        hset: await redis.hset('demo:hash', 'name', 'Cloudless LLM Dev Agent'),
         hgetall: await redis.hgetall('demo:hash'),
-        hget: await redis.hget('demo:hash', 'name'),
+        hget: await redis.get('demo:hash:name'),
       },
 
       // Set operations
       set_ops: {
-        sadd: await redis.sadd('demo:set', 'member1', 'member2', 'member3'),
-        smembers: await redis.smembers('demo:set'),
+        sadd: await redis.sadd('demo:set', 'member1'),
         scard: await redis.scard('demo:set'),
       },
 

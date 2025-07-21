@@ -198,7 +198,7 @@ export class Analytics {
 
     // Track response times
     const responseTimeKey = `${this.metricsPrefix}response_time:${endpoint}:${this.getHourKey()}`
-    await redis.lpush(responseTimeKey, duration)
+    await redis.lpush(responseTimeKey, duration.toString())
     await redis.ltrim(responseTimeKey, 0, 999) // Keep last 1000 requests
     await redis.expire(responseTimeKey, 86400 * 7)
   }
