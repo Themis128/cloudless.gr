@@ -50,9 +50,10 @@ env:
   NPM_CONFIG_CACHE: '.npm-cache'
   NPM_CONFIG_PREFER_OFFLINE: 'true'
 
-concurrency:
-  group: local-runner-pipeline-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# Concurrency disabled to prevent conflicts
+# concurrency:
+#   group: local-runner-${{ github.ref }}
+#   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validate:

@@ -68,10 +68,10 @@ env:
   NPM_CONFIG_CACHE: '.npm-cache'
   NPM_CONFIG_PREFER_OFFLINE: 'true'
 
-# Optimized concurrency to prevent conflicts
-concurrency:
-  group: self-hosted-pipeline-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# Concurrency disabled to prevent conflicts
+# concurrency:
+#   group: complete-pipeline-fixed-${{ github.ref }}
+#   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # =============================================================================

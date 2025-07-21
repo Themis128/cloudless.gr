@@ -33,7 +33,7 @@ permissions:
 
 # Optimized concurrency
 concurrency:
-  group: self-hosted-pipeline-${{ github.ref }}
+  group: cache-optimization-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:

@@ -63,7 +63,7 @@ env:
 
 # Optimized concurrency with better conflict resolution
 concurrency:
-  group: self-hosted-pipeline-${{ github.ref }}
+  group: release-management-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

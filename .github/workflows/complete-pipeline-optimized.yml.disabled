@@ -65,7 +65,7 @@ env:
 
 # Optimized concurrency to prevent conflicts
 concurrency:
-  group: self-hosted-pipeline-${{ github.ref }}
+  group: complete-pipeline-optimized-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
