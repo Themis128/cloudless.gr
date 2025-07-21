@@ -65,7 +65,7 @@ jobs:
   # =============================================================================
   validate:
     name: 🔍 Validate Configuration
-    runs-on: [self-hosted, containerized, dev]
+    runs-on: [self-hosted, windows, docker, dev]
     timeout-minutes: 5
     outputs:
       should-skip: ${{ steps.skip-check.outputs.should-skip }}
