@@ -52,6 +52,8 @@ env:
   NPM_CONFIG_AUDIT_LEVEL: 'moderate'
   NPM_CONFIG_FUND: 'false'
   NPM_CONFIG_UPDATE_NOTIFIER: 'false'
+  # Windows-specific cache settings
+  ACTIONS_CACHE_RESTORE_KEY: 'windows-node-${{ hashFiles(''**/package-lock.json'') }}'
 
 # Optimized concurrency for native runner
 concurrency:
@@ -219,6 +221,9 @@ jobs:
             node_modules
             C:\npm-cache
           key: ${{ needs.validate.outputs.cache-key }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-node-
 
       - name: Run linting (Native)
         run: |
@@ -321,6 +326,9 @@ jobs:
             node_modules
             C:\npm-cache
           key: ${{ needs.validate.outputs.cache-key }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-node-
 
       - name: Build application (Native)
         run: |
@@ -341,6 +349,9 @@ jobs:
             .output
             dist
           key: build-${{ needs.validate.outputs.cache-key }}
+          restore-keys: |
+            build-${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}-
+            build-${{ runner.os }}-node-
 
   integration-tests:
     name: 🔄 Integration Tests (Native)
@@ -368,6 +379,9 @@ jobs:
             .output
             dist
           key: build-${{ needs.validate.outputs.cache-key }}
+          restore-keys: |
+            build-${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}-
+            build-${{ runner.os }}-node-
 
       - name: Run integration tests (Native)
         run: |
