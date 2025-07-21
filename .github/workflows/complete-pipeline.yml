@@ -42,13 +42,13 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: themis128/cloudless.gr
   # Application URL configuration - Consistent with dev Docker container
-  APP_HOST: '192.168.0.23'
+  APP_HOST: 'localhost'
   APP_PORT: '3000'
   APP_URL: 'http://localhost:3000'
   # Development container consistency
-  NUXT_HOST: '192.168.0.23'
+  NUXT_HOST: 'localhost'
   NUXT_PORT: '3000'
-  NITRO_HOST: '192.168.0.23'
+  NITRO_HOST: 'localhost'
   NITRO_PORT: '3000'
   # Cache configuration
   CACHE_DEPENDENCY_PATH: '**/package-lock.json'
