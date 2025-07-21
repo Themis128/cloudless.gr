@@ -1,240 +1,122 @@
 #!/usr/bin/env pwsh
-# Optimized Development Docker Startup Script
-# This script provides fast development container startup with optimized settings
+# Ultra-Optimized Development Docker Script
+# Fast startup with minimal resource usage
 
 param(
-    [switch]$Build,
-    [switch]$Clean,
-    [switch]$Logs,
-    [switch]$Stop,
-    [switch]$Restart,
-    [switch]$Database,
-    [switch]$Email,
-    [switch]$Fast,
-    [switch]$Help
+    [Parameter(Position=0)]
+    [ValidateSet("start", "stop", "restart", "logs", "shell", "status", "build", "clean")]
+    [string]$Action = "start"
 )
 
-# Colors for output
-$Red = "`e[31m"
-$Green = "`e[32m"
-$Yellow = "`e[33m"
-$Blue = "`e[34m"
-$Magenta = "`e[35m"
-$Cyan = "`e[36m"
-$Reset = "`e[0m"
+$ComposeFile = "docker-compose.dev.yml"
+$ProjectName = "cloudlessgr"
 
-# Function to print colored output
-function Write-ColorOutput {
-    param([string]$Message, [string]$Color = $Reset)
-    Write-Host "$Color$Message$Reset"
+function Write-Status {
+    param([string]$Message, [string]$Color = "Green")
+    Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $Message" -ForegroundColor $Color
 }
 
-# Function to show help
-function Show-Help {
-    Write-ColorOutput "🚀 Optimized Development Docker Commands" $Cyan
-    Write-ColorOutput "========================================" $Cyan
-    Write-ColorOutput ""
-    Write-ColorOutput "Usage: .\scripts\dev-docker.ps1 [options]" $Yellow
-    Write-ColorOutput ""
-    Write-ColorOutput "Options:" $Yellow
-    Write-ColorOutput "  -Build     Build/rebuild the development container" $Green
-    Write-ColorOutput "  -Clean     Clean up containers, volumes, and images" $Red
-    Write-ColorOutput "  -Logs      Show container logs" $Blue
-    Write-ColorOutput "  -Stop      Stop all development containers" $Red
-    Write-ColorOutput "  -Restart   Restart development containers" $Yellow
-    Write-ColorOutput "  -Database  Start with PostgreSQL database" $Magenta
-    Write-ColorOutput "  -Email     Start with Mailhog email testing" $Magenta
-    Write-ColorOutput "  -Fast      Skip building if image already exists" $Yellow
-    Write-ColorOutput "  -Help      Show this help message" $Cyan
-    Write-ColorOutput ""
-    Write-ColorOutput "Examples:" $Yellow
-    Write-ColorOutput "  .\scripts\dev-docker.ps1 -Build" $Green
-    Write-ColorOutput "  .\scripts\dev-docker.ps1 -Database" $Green
-    Write-ColorOutput "  .\scripts\dev-docker.ps1 -Logs" $Green
-    Write-ColorOutput "  .\scripts\dev-docker.ps1 -Clean" $Green
-}
-
-# Function to check if Docker is running
-function Test-DockerRunning {
-    try {
-        docker info | Out-Null
-        return $true
-    }
-    catch {
-        Write-ColorOutput "❌ Docker is not running. Please start Docker Desktop first." $Red
-        return $false
-    }
-}
-
-# Function to enable BuildKit for faster builds
-function Enable-BuildKit {
-    Write-ColorOutput "🔧 Enabling BuildKit for faster builds..." $Blue
+function Start-DevEnvironment {
+    Write-Status "🚀 Starting ultra-optimized development environment..." "Cyan"
+    
+    # Stop any existing containers first
+    Write-Status "🛑 Stopping existing containers..." "Yellow"
+    docker compose -f $ComposeFile down --remove-orphans 2>$null
+    
+    # Build with BuildKit for faster builds
+    Write-Status "🔨 Building optimized development image..." "Yellow"
     $env:DOCKER_BUILDKIT = "1"
-    $env:COMPOSE_DOCKER_CLI_BUILD = "1"
+    docker compose -f $ComposeFile build --no-cache --parallel
+    
+    # Start services
+    Write-Status "⚡ Starting services..." "Yellow"
+    docker compose -f $ComposeFile up -d
+    
+    # Wait for services to be ready
+    Write-Status "⏳ Waiting for services to be ready..." "Yellow"
+    Start-Sleep -Seconds 10
+    
+    # Show status
+    Show-Status
+    
+    Write-Status "✅ Development environment started!" "Green"
+    Write-Status "🌐 Main Application: http://192.168.0.23:3000" "Cyan"
+    Write-Status "🔧 Redis Commander: http://192.168.0.23:8081" "Cyan"
+    Write-Status "🐛 Node.js Debugger: http://192.168.0.23:9229" "Cyan"
+    Write-Status "📊 Monitor with: .\scripts\docker\dev-docker.ps1 logs" "Cyan"
 }
 
-# Function to build/rebuild containers
-function Start-Build {
-    Write-ColorOutput "🏗️  Building optimized development containers..." $Blue
-    
-    # Enable BuildKit
-    Enable-BuildKit
-    
-    # Build with optimized settings
-    $composeArgs = @("-f", "docker-compose.dev.yml", "build", "--no-cache", "--parallel")
-    
-    if ($Database) {
-        $composeArgs += "--profile", "database"
-    }
-    if ($Email) {
-        $composeArgs += "--profile", "email"
-    }
-    
-    docker compose @composeArgs
-    
-    if ($LASTEXITCODE -eq 0) {
-        Write-ColorOutput "✅ Build completed successfully!" $Green
-    }
-    else {
-        Write-ColorOutput "❌ Build failed!" $Red
-        exit 1
-    }
+function Stop-DevEnvironment {
+    Write-Status "🛑 Stopping development environment..." "Yellow"
+    docker compose -f $ComposeFile down --remove-orphans
+    Write-Status "✅ Development environment stopped!" "Green"
 }
 
-# Function to check if development image exists
-function Test-DevImageExists {
-    $imageExists = docker images --format "table {{.Repository}}:{{.Tag}}" | Select-String "cloudlessgr-app-dev:latest"
-    return $null -ne $imageExists
-}
-
-# Function to start development environment
-function Start-Development {
-    Write-ColorOutput "🚀 Starting optimized development environment..." $Blue
-    
-    # Enable BuildKit
-    Enable-BuildKit
-    
-    # Check if we should skip building
-    if ($Fast -and (Test-DevImageExists)) {
-        Write-ColorOutput "⚡ Fast mode: Using existing image (skipping build)" $Yellow
-    }
-    else {
-        Write-ColorOutput "🔨 Building development image..." $Blue
-        Start-Build
-    }
-    
-    # Prepare compose arguments
-    $composeArgs = @("-f", "docker-compose.dev.yml", "up", "-d")
-    
-    if ($Database) {
-        $composeArgs += "--profile", "database"
-    }
-    if ($Email) {
-        $composeArgs += "--profile", "email"
-    }
-    
-    # Start containers
-    docker compose @composeArgs
-    
-    if ($LASTEXITCODE -eq 0) {
-        Write-ColorOutput "✅ Development environment started successfully!" $Green
-        Write-ColorOutput ""
-        Write-ColorOutput "🌐 Application URLs:" $Cyan
-        Write-ColorOutput "   Main App: http://192.168.0.23:3000" $Green
-        Write-ColorOutput "   Debugger: http://localhost:9229" $Green
-        
-        if ($Database) {
-            Write-ColorOutput "   Adminer: http://localhost:8080" $Green
-            Write-ColorOutput "   PostgreSQL: localhost:5432" $Green
-        }
-        
-        if ($Email) {
-            Write-ColorOutput "   Mailhog: http://localhost:8025" $Green
-        }
-        
-        Write-ColorOutput "   Redis Commander: http://localhost:8081" $Green
-        Write-ColorOutput ""
-        Write-ColorOutput "📝 Useful commands:" $Cyan
-        Write-ColorOutput "   View logs: .\scripts\dev-docker.ps1 -Logs" $Yellow
-        Write-ColorOutput "   Stop containers: .\scripts\dev-docker.ps1 -Stop" $Yellow
-        Write-ColorOutput "   Restart: .\scripts\dev-docker.ps1 -Restart" $Yellow
-        Write-ColorOutput "   Fast start: .\scripts\dev-docker.ps1 -Fast" $Yellow
-    }
-    else {
-        Write-ColorOutput "❌ Failed to start development environment!" $Red
-        exit 1
-    }
-}
-
-# Function to show logs
-function Show-Logs {
-    Write-ColorOutput "📋 Showing development container logs..." $Blue
-    docker compose -f docker-compose.dev.yml logs -f app-dev
-}
-
-# Function to stop containers
-function Stop-Containers {
-    Write-ColorOutput "🛑 Stopping development containers..." $Yellow
-    docker compose -f docker-compose.dev.yml down
-    Write-ColorOutput "✅ Containers stopped!" $Green
-}
-
-# Function to restart containers
-function Restart-Containers {
-    Write-ColorOutput "🔄 Restarting development containers..." $Yellow
-    Stop-Containers
+function Restart-DevEnvironment {
+    Write-Status "🔄 Restarting development environment..." "Yellow"
+    Stop-DevEnvironment
     Start-Sleep -Seconds 2
-    Start-Development
+    Start-DevEnvironment
 }
 
-# Function to clean up everything
-function Remove-Environment {
-    Write-ColorOutput "🧹 Cleaning up development environment..." $Yellow
+function Show-Logs {
+    Write-Status "📊 Showing development logs..." "Cyan"
+    docker compose -f $ComposeFile logs -f --tail=50
+}
+
+function Enter-Shell {
+    Write-Status "🐚 Entering development container shell..." "Cyan"
+    docker compose -f $ComposeFile exec app-dev sh
+}
+
+function Show-Status {
+    Write-Status "📊 Development environment status:" "Cyan"
+    docker compose -f $ComposeFile ps
+    
+    Write-Status "📈 Container resource usage:" "Cyan"
+    docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}"
+}
+
+function Build-DevEnvironment {
+    Write-Status "🔨 Building development environment..." "Yellow"
+    $env:DOCKER_BUILDKIT = "1"
+    docker compose -f $ComposeFile build --no-cache --parallel
+    Write-Status "✅ Build completed!" "Green"
+}
+
+function Clean-DevEnvironment {
+    Write-Status "🧹 Cleaning development environment..." "Yellow"
     
     # Stop and remove containers
-    docker compose -f docker-compose.dev.yml down -v
+    docker compose -f $ComposeFile down --remove-orphans --volumes
     
-    # Remove development images
+    # Remove images
     docker rmi cloudlessgr-app-dev:latest 2>$null
     
     # Clean up unused resources
     docker system prune -f
     
-    # Clean up volumes
-    docker volume prune -f
-    
-    Write-ColorOutput "✅ Cleanup completed!" $Green
+    Write-Status "✅ Cleanup completed!" "Green"
 }
 
-# Main script logic
-if ($Help) {
-    Show-Help
-    exit 0
+# Main execution
+try {
+    switch ($Action.ToLower()) {
+        "start" { Start-DevEnvironment }
+        "stop" { Stop-DevEnvironment }
+        "restart" { Restart-DevEnvironment }
+        "logs" { Show-Logs }
+        "shell" { Enter-Shell }
+        "status" { Show-Status }
+        "build" { Build-DevEnvironment }
+        "clean" { Clean-DevEnvironment }
+        default {
+            Write-Status "❌ Unknown action: $Action" "Red"
+            Write-Status "Available actions: start, stop, restart, logs, shell, status, build, clean" "Yellow"
+        }
+    }
 }
-
-# Check if Docker is running
-if (-not (Test-DockerRunning)) {
+catch {
+    Write-Status "❌ Error: $($_.Exception.Message)" "Red"
     exit 1
-}
-
-# Handle different commands
-if ($Clean) {
-    Remove-Environment
-}
-elseif ($Stop) {
-    Stop-Containers
-}
-elseif ($Restart) {
-    Restart-Containers
-}
-elseif ($Logs) {
-    Show-Logs
-}
-elseif ($Build) {
-    Start-Build
-    Start-Development
-}
-else {
-    # Default: start development environment
-    Start-Development
 } 

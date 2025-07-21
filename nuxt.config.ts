@@ -34,7 +34,7 @@ export default defineNuxtConfig({
   },
   // To set host and port, use environment variables NUXT_HOST and NUXT_PORT or pass them via CLI
   nitro: {
-    compatibilityDate: '2025-07-18',
+    compatibilityDate: '2025-07-21',
     logLevel: 'warn', // Reduce log level to minimize timer conflicts
     experimental: {
       wasm: true,
@@ -46,7 +46,7 @@ export default defineNuxtConfig({
     sourceMap: true,
   },
   devServer: {
-    host: process.env.NUXT_HOST || '192.168.0.23', // Use environment variable or default to specific IP
+    host: '0.0.0.0', // Bind to all interfaces in container
     port: parseInt(process.env.NUXT_PORT || '3000'),
   },
   imports: {
