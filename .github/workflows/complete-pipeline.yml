@@ -44,7 +44,7 @@ env:
   # Application URL configuration - Consistent with dev Docker container
   APP_HOST: '192.168.0.23'
   APP_PORT: '3000'
-  APP_URL: 'http://192.168.0.23:3000'
+  APP_URL: 'http://localhost:3000'
   # Development container consistency
   NUXT_HOST: '192.168.0.23'
   NUXT_PORT: '3000'
@@ -580,6 +580,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate, build-test]
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
+    
+    env:
+      # Use localhost for CI testing
+      APP_URL: 'http://localhost:3000'
+      NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+    
     strategy:
       matrix:
         node-version: [20, 22]
@@ -760,6 +767,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate, build-test]
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
+    
+    env:
+      # Use localhost for CI testing
+      APP_URL: 'http://localhost:3000'
+      NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -873,6 +887,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate, build-test]
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
+    
+    env:
+      # Use localhost for CI testing
+      APP_URL: 'http://localhost:3000'
+      NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -981,6 +1002,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate, build-test]
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
+    
+    env:
+      # Use localhost for CI testing
+      APP_URL: 'http://localhost:3000'
+      NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
