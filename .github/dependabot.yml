@@ -10,7 +10,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     reviewers:
       - "Themis128"
     assignees:
@@ -21,6 +21,7 @@ updates:
     labels:
       - "dependencies"
       - "automated"
+      - "security"
     ignore:
       # Ignore major version updates for critical packages
       - dependency-name: "@nuxt/*"
@@ -31,6 +32,10 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "pinia"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vuetify"
+        update-types: ["version-update:semver-major"]
 
   # Enable version updates for GitHub Actions
   - package-ecosystem: "github-actions"
@@ -39,7 +44,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     reviewers:
       - "Themis128"
     assignees:
@@ -59,7 +64,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
     reviewers:
       - "Themis128"
     assignees:
@@ -82,8 +87,90 @@ registries:
 
 # Group configuration for reducing PR noise
 groups:
-  # Group minor and patch updates for development dependencies
-  dev-dependencies:
+  # Group critical security updates together
+  critical-security:
+    patterns:
+      - "webpack*"
+      - "body-parser"
+      - "braces*"
+      - "cookie"
+      - "cross-spawn"
+      - "semver"
+      - "ws"
+      - "path-to-regexp"
+      - "loader-utils"
+      - "minimist"
+      - "tough-cookie"
+      - "follow-redirects"
+    update-types:
+      - "minor"
+      - "patch"
+    dependency-type: "direct"
+    labels:
+      - "security"
+      - "critical"
+
+  # Group Nuxt ecosystem updates
+  nuxt-ecosystem:
+    patterns:
+      - "@nuxt/*"
+      - "nuxt"
+      - "nitropack"
+      - "nuxi"
+    update-types:
+      - "minor"
+      - "patch"
+    labels:
+      - "nuxt"
+      - "framework"
+
+  # Group Vue ecosystem updates
+  vue-ecosystem:
+    patterns:
+      - "vue*"
+      - "@vue/*"
+      - "pinia"
+      - "vue-router"
+    update-types:
+      - "minor"
+      - "patch"
+    labels:
+      - "vue"
+      - "frontend"
+
+  # Group UI and styling updates
+  ui-styling:
+    patterns:
+      - "vuetify*"
+      - "@mdi/*"
+      - "vanta*"
+      - "echarts"
+      - "vue-echarts"
+    update-types:
+      - "minor"
+      - "patch"
+    labels:
+      - "ui"
+      - "styling"
+
+  # Group development and build tools
+  dev-build-tools:
+    patterns:
+      - "vite*"
+      - "webpack*"
+      - "rollup*"
+      - "babel*"
+      - "esbuild*"
+      - "terser*"
+    update-types:
+      - "minor"
+      - "patch"
+    labels:
+      - "build"
+      - "dev-tools"
+
+  # Group testing and quality tools
+  testing-quality:
     patterns:
       - "@types/*"
       - "eslint*"
@@ -91,29 +178,45 @@ groups:
       - "jest*"
       - "vitest*"
       - "playwright*"
+      - "husky"
+      - "lint-staged"
     update-types:
       - "minor"
       - "patch"
     exclude-patterns:
       - "@types/node"
+    labels:
+      - "testing"
+      - "quality"
 
-  # Group minor and patch updates for build tools
-  build-tools:
+  # Group utility and helper libraries
+  utilities:
     patterns:
-      - "vite*"
-      - "webpack*"
-      - "rollup*"
-      - "babel*"
+      - "lodash*"
+      - "date-fns"
+      - "axios"
+      - "uuid"
+      - "crypto-js"
+      - "js-cookie"
+      - "qs"
     update-types:
       - "minor"
       - "patch"
+    labels:
+      - "utilities"
+      - "helpers"
 
-  # Group minor and patch updates for UI libraries
-  ui-libraries:
+  # Group database and backend tools
+  backend-tools:
     patterns:
-      - "vuetify*"
-      - "@mdi/*"
-      - "vanta*"
+      - "@supabase/*"
+      - "supabase"
+      - "redis*"
+      - "pg*"
+      - "postgres*"
     update-types:
       - "minor"
-      - "patch" 
+      - "patch"
+    labels:
+      - "backend"
+      - "database" 
