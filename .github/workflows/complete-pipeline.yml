@@ -56,7 +56,7 @@ env:
   NPM_CONFIG_PREFER_OFFLINE: 'true'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: github-hosted-pipeline-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
