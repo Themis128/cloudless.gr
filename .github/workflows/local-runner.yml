@@ -58,7 +58,7 @@ env:
 jobs:
   validate:
     name: 🔍 Validate Configuration
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     timeout-minutes: 5
     outputs:
       should-skip: ${{ steps.skip-check.outputs.should-skip }}
@@ -132,7 +132,7 @@ jobs:
 
   dependencies:
     name: 📦 Dependency Management
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: validate
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 10
@@ -158,7 +158,7 @@ jobs:
 
   security-quality:
     name: 🔒 Security & Quality
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: [validate, dependencies]
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 15
@@ -189,7 +189,7 @@ jobs:
 
   build-test:
     name: 🏗️ Build & Test
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: [validate, dependencies, security-quality]
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 20
@@ -217,7 +217,7 @@ jobs:
 
   integration-tests:
     name: 🔄 Integration Tests
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: [validate, dependencies, security-quality, build-test]
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 15
@@ -240,7 +240,7 @@ jobs:
 
   start-dev-containers:
     name: 🚀 Start Local Dev Containers
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: [validate, dependencies, security-quality, build-test, integration-tests]
     if: |
       always() &&
@@ -358,7 +358,7 @@ jobs:
 
   summary:
     name: 📋 Pipeline Summary
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: [validate, dependencies, security-quality, build-test, integration-tests, start-dev-containers]
     if: always()
     timeout-minutes: 5

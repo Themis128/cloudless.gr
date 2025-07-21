@@ -79,7 +79,7 @@ jobs:
   # =============================================================================
   validate:
     name: 🔍 Validate Configuration
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     timeout-minutes: 5
     outputs:
       should-skip: ${{ steps.skip-check.outputs.should-skip }}
@@ -161,7 +161,7 @@ jobs:
   # =============================================================================
   dependencies:
     name: 📦 Dependency Management
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: validate
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 10
@@ -212,7 +212,7 @@ jobs:
   # =============================================================================
   security-quality:
     name: 🔒 Security & Quality
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: [validate, dependencies]
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 15
@@ -263,7 +263,7 @@ jobs:
   # =============================================================================
   build-test:
     name: 🏗️ Build & Test (Fixed)
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: [validate, security-quality]
     if: needs.validate.outputs.should-skip != 'true'
     timeout-minutes: 45  # Increased timeout for Docker builds
@@ -386,7 +386,7 @@ jobs:
   # =============================================================================
   integration-tests:
     name: 🔄 Integration Tests
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: [validate, build-test]
     if: needs.validate.outputs.should-skip != 'true' && github.event.inputs.skip_tests != 'true'
     timeout-minutes: 20
@@ -470,7 +470,7 @@ jobs:
   # =============================================================================
   deploy-staging:
     name: 🚀 Deploy to Staging
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: [validate, build-test]
     if: |
       needs.validate.outputs.should-skip != 'true' &&
@@ -519,7 +519,7 @@ jobs:
 
   deploy-production:
     name: 🚀 Deploy to Production
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: [validate, build-test]
     if: |
       needs.validate.outputs.should-skip != 'true' &&
@@ -586,7 +586,7 @@ jobs:
   # =============================================================================
   post-deployment:
     name: 📊 Post-Deployment
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: [deploy-staging, deploy-production]
     if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
     timeout-minutes: 10
@@ -609,7 +609,7 @@ jobs:
   # =============================================================================
   summary:
     name: 📋 Pipeline Summary
-    runs-on: [self-hosted, windows, dev]
+    runs-on: self-hosted
     needs: [
       validate,
       dependencies,
