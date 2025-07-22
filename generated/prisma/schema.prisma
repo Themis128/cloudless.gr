@@ -1,0 +1,405 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Profile {
+  id                        String                @id @default(cuid())
+  email                     String?               @unique
+  username                  String?               @unique
+  first_name                String?
+  last_name                 String?
+  full_name                 String?
+  avatar_url                String?
+  bio                       String?
+  location                  String?
+  website                   String?
+  role                      String                @default("user")
+  is_active                 Boolean?              @default(true)
+  email_verified            Boolean?              @default(false)
+  email_confirmed           Boolean?              @default(false)
+  email_verification_token  String?
+  reset_token               String?
+  reset_token_expires       DateTime?
+  failed_login_attempts     Int?                  @default(0)
+  locked_until              DateTime?
+  last_login                DateTime?
+  last_sign_in_at           DateTime?
+  preferences               Json?
+  created_at                DateTime?             @default(now())
+  updated_at                DateTime?             @updatedAt
+  audit_logs                AuditLog[]
+  contact_messages_assigned ContactMessage[]      @relation("ContactMessageAssignedTo")
+  project_collaborations    ProjectCollaborator[]
+  owned_projects            Project[]             @relation("ProjectOwner")
+
+  @@map("profiles")
+}
+
+model UserProfile {
+  id          String    @id @default(cuid())
+  full_name   String?
+  avatar_url  String?
+  preferences Json?
+  role        String?
+  created_at  DateTime? @default(now())
+  updated_at  DateTime? @updatedAt
+
+  @@map("user_profiles")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  token      String    @unique
+  user_id    String
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime? @default(now())
+
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  user_id     String
+  new_email   String?
+  expires_at  DateTime
+  verified_at DateTime?
+  created_at  DateTime? @default(now())
+
+  @@map("email_verification_tokens")
+}
+
+model Project {
+  id                  String                @id @default(cuid())
+  name                String
+  description         String?
+  type                ProjectType?
+  framework           String?
+  status              ProjectStatus?        @default(draft)
+  config              Json?
+  owner_id            String?
+  created_at          DateTime?             @default(now())
+  updated_at          DateTime?             @updatedAt
+  analytics_pipelines AnalyticsPipeline[]
+  model_versions      ModelVersion[]
+  pipelines           Pipeline[]
+  collaborators       ProjectCollaborator[]
+  owner               Profile?              @relation("ProjectOwner", fields: [owner_id], references: [id])
+  training_sessions   TrainingSession[]
+
+  @@map("projects")
+}
+
+model ProjectCollaborator {
+  id          String    @id @default(cuid())
+  project_id  String
+  user_id     String
+  role        String?   @default("viewer")
+  invited_by  String?
+  invited_at  DateTime?
+  accepted_at DateTime?
+  Project     Project   @relation(fields: [project_id], references: [id])
+  project     Profile   @relation(fields: [user_id], references: [id])
+
+  @@unique([project_id, user_id])
+  @@map("project_collaborators")
+}
+
+model Model {
+  id         String    @id @default(cuid())
+  name       String
+  created_at DateTime? @default(now())
+
+  @@map("models")
+}
+
+model TrainingSession {
+  id             String          @id @default(cuid())
+  name           String
+  project_id     String?
+  status         TrainingStatus?
+  config         Json?
+  metrics        Json?
+  logs           String?
+  started_at     DateTime?
+  completed_at   DateTime?
+  created_at     DateTime?       @default(now())
+  updated_at     DateTime?       @updatedAt
+  model_versions ModelVersion[]
+  project        Project?        @relation(fields: [project_id], references: [id])
+
+  @@map("training_sessions")
+}
+
+model ModelVersion {
+  id                  String           @id @default(cuid())
+  version             String
+  project_id          String?
+  training_session_id String?
+  model_path          String?
+  metrics             Json?
+  is_deployed         Boolean?         @default(false)
+  created_at          DateTime?        @default(now())
+  updated_at          DateTime?        @updatedAt
+  deployments         Deployment[]
+  project             Project?         @relation(fields: [project_id], references: [id])
+  training_session    TrainingSession? @relation(fields: [training_session_id], references: [id])
+
+  @@map("model_versions")
+}
+
+model Deployment {
+  id                 String             @id @default(cuid())
+  name               String
+  model_version_id   String?
+  status             DeploymentStatus?
+  config             Json?
+  endpoint_url       String?
+  created_at         DateTime?          @default(now())
+  updated_at         DateTime?          @updatedAt
+  deployment_metrics DeploymentMetric[]
+  model_version      ModelVersion?      @relation(fields: [model_version_id], references: [id])
+
+  @@map("deployments")
+}
+
+model DeploymentMetric {
+  id            String     @id @default(cuid())
+  deployment_id String
+  metrics       Json?
+  collected_at  DateTime?
+  deployment    Deployment @relation(fields: [deployment_id], references: [id])
+
+  @@map("deployment_metrics")
+}
+
+model AnalyticsPipeline {
+  id          String               @id @default(cuid())
+  name        String
+  description String?
+  owner_id    String
+  project_id  String?
+  config      Json                 @default("{}")
+  status      String?
+  version     String?
+  created_at  DateTime?            @default(now())
+  updated_at  DateTime?            @updatedAt
+  executions  AnalyticsExecution[]
+  project     Project?             @relation(fields: [project_id], references: [id])
+  steps       AnalyticsStep[]
+
+  @@map("analytics_pipelines")
+}
+
+model AnalyticsStep {
+  id          String            @id @default(cuid())
+  pipeline_id String
+  step_type   String
+  order_index Int
+  config      Json              @default("{}")
+  created_at  DateTime?         @default(now())
+  updated_at  DateTime?         @updatedAt
+  pipeline    AnalyticsPipeline @relation(fields: [pipeline_id], references: [id])
+
+  @@map("analytics_steps")
+}
+
+model AnalyticsExecution {
+  id            String            @id @default(cuid())
+  pipeline_id   String
+  status        String?
+  results       Json?
+  error_message String?
+  started_at    DateTime?
+  completed_at  DateTime?
+  created_at    DateTime?         @default(now())
+  pipeline      AnalyticsPipeline @relation(fields: [pipeline_id], references: [id])
+
+  @@map("analytics_executions")
+}
+
+model Pipeline {
+  id         String         @id @default(cuid())
+  name       String
+  project_id String?
+  config     Json           @default("{}")
+  status     String?
+  created_at DateTime?      @default(now())
+  updated_at DateTime?      @updatedAt
+  steps      PipelineStep[]
+  project    Project?       @relation(fields: [project_id], references: [id])
+
+  @@map("pipelines")
+}
+
+model PipelineStep {
+  id               String           @id @default(cuid())
+  pipeline_id      String
+  name             String
+  step_type        String
+  config           Json             @default("{}")
+  order_index      Int
+  created_at       DateTime?        @default(now())
+  updated_at       DateTime?        @updatedAt
+  pipeline         Pipeline         @relation(fields: [pipeline_id], references: [id])
+  validation_rules ValidationRule[]
+
+  @@map("pipeline_steps")
+}
+
+model ValidationRule {
+  id          String        @id @default(cuid())
+  step_id     String?
+  rule_type   String
+  field_name  String?
+  rule_config Json          @default("{}")
+  is_active   Boolean?      @default(true)
+  created_at  DateTime?     @default(now())
+  step        PipelineStep? @relation(fields: [step_id], references: [id])
+
+  @@map("validation_rules")
+}
+
+model Bot {
+  id         String    @id @default(cuid())
+  name       String
+  model      String?
+  prompt     String?
+  tools      String?
+  memory     String?
+  created_at DateTime? @default(now())
+
+  @@map("bots")
+}
+
+model ContactMessage {
+  id                String    @id @default(cuid())
+  first_name        String
+  last_name         String
+  email             String
+  phone             String?
+  company           String?
+  job_title         String?
+  subject           String
+  message           String
+  priority          String    @default("medium")
+  status            String    @default("new")
+  newsletter_opt_in Boolean   @default(false)
+  marketing_opt_in  Boolean   @default(false)
+  assigned_to       String?
+  ip_address        String?
+  user_agent        String?
+  created_at        DateTime? @default(now())
+  updated_at        DateTime? @updatedAt
+  assigned_user     Profile?  @relation("ContactMessageAssignedTo", fields: [assigned_to], references: [id])
+
+  @@map("contact_messages")
+}
+
+model SupportRequest {
+  id          String    @id @default(cuid())
+  name        String
+  email       String
+  plan        String?
+  priority    String    @default("medium")
+  subject     String
+  description String
+  attachments Json?
+  status      String    @default("open")
+  assigned_to String?
+  ip_address  String?
+  user_agent  String?
+  created_at  DateTime? @default(now())
+  updated_at  DateTime? @updatedAt
+
+  @@map("support_requests")
+}
+
+model AuditLog {
+  id            String    @id @default(cuid())
+  user_id       String?
+  action        String
+  resource_type String?
+  resource_id   String?
+  old_values    Json?
+  new_values    Json?
+  ip_address    String?
+  user_agent    String?
+  created_at    DateTime? @default(now())
+  user          Profile?  @relation(fields: [user_id], references: [id])
+
+  @@map("audit_logs")
+}
+
+model NetworkLog {
+  id         String   @id @default(cuid())
+  latency    Float
+  created_at DateTime @default(now())
+
+  @@map("network_logs")
+}
+
+model Todo {
+  id          String   @id @default(cuid())
+  title       String
+  is_complete Boolean  @default(false)
+  created_at  DateTime @default(now())
+
+  @@map("todos")
+}
+
+enum ProjectStatus {
+  draft
+  active
+  training
+  deployed
+  completed
+  error
+  archived
+  paused
+
+  @@map("project_status")
+}
+
+enum ProjectType {
+  classification
+  regression
+  clustering
+  nlp
+  cv
+  recommendation
+  time_series    @map("time-series")
+  custom
+
+  @@map("project_type")
+}
+
+enum TrainingStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+  stopped
+
+  @@map("training_status")
+}
+
+enum DeploymentStatus {
+  pending
+  deploying
+  active
+  inactive
+  failed
+  terminated
+
+  @@map("deployment_status")
+}
