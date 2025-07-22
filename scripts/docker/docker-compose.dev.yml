@@ -15,8 +15,8 @@ services:
     container_name: cloudlessgr-app-dev
     restart: unless-stopped
     ports:
-      - '0.0.0.0:3000:3000'  # Main app port - accessible from network
-      - '0.0.0.0:9229:9229'  # Node.js debugger - accessible from network
+      - '0.0.0.0:3000:3000' # Main app port - accessible from network
+      - '0.0.0.0:9229:9229' # Node.js debugger - accessible from network
       - '0.0.0.0:24678:24678' # Vite HMR port - accessible from network
     environment:
       # Core environment variables for external IP binding
@@ -26,59 +26,55 @@ services:
       NUXT_HOST: 0.0.0.0
       NUXT_PORT: 3000
       HOST: 0.0.0.0
-      
+
       # Ultra-optimized file watching for instant hot reload
       CHOKIDAR_USEPOLLING: 'true'
-      CHOKIDAR_INTERVAL: '50'  # Reduced for faster response
+      CHOKIDAR_INTERVAL: '50' # Reduced for faster response
       CHOKIDAR_IGNORED: '**/node_modules/**,**/.git/**,**/.nuxt/**,**/.output/**,**/dist/**,**/coverage/**,**/tmp/**,**/logs/**,**/*.log,**/.vite/**'
       WATCHPACK_POLLING: 'true'
-      WATCHPACK_AGGREGATE_TIMEOUT: '50'  # Reduced for faster response
-      WATCHPACK_POLL: '500'  # Reduced for faster response
-      
+      WATCHPACK_AGGREGATE_TIMEOUT: '50' # Reduced for faster response
+      WATCHPACK_POLL: '500' # Reduced for faster response
+
       # Vite optimizations for hot reload
       VITE_HMR_PORT: '24678'
-      VITE_HMR_HOST: '0.0.0.0'  # Bind HMR to all interfaces for network access
+      VITE_HMR_HOST: '0.0.0.0' # Bind HMR to all interfaces for network access
       VITE_HMR_OVERLAY: 'false'
       VITE_OPTIMIZE_DEPS_INCLUDE: 'vuetify,echarts,vue-echarts'
       VITE_OPTIMIZE_DEPS_EXCLUDE: 'vue-demi'
-      
+
       # Development debugging (reduced for better performance)
-      NITRO_DEBUG: '0'  # Disabled for better performance
-      DEBUG: 'nuxt:*'  # Reduced debug output
-      
+      NITRO_DEBUG: '0' # Disabled for better performance
+      DEBUG: 'nuxt:*' # Reduced debug output
+
       # Performance optimizations for hot reload
       NODE_OPTIONS: '--max-old-space-size=5120 --enable-source-maps --inspect=0.0.0.0:9229 --max-semi-space-size=512'
-      
+
       # Hot reload optimizations
       NUXT_DEV_SERVER_WATCH_OPTIONS: 'usePolling:true,interval:50,followSymlinks:false,ignored:["**/node_modules/**","**/.git/**","**/.nuxt/**","**/.output/**"]'
       NUXT_DEV_SERVER_HMR_OPTIONS: 'port:24678,host:0.0.0.0,overlay:false,timeout:30000'
-      
+
       # Timezone
       TZ: Europe/Athens
-      
+
       # Service connections
       REDIS_URL: redis://redis-dev:6379
-      DATABASE_URL: postgresql://cloudless:development@postgres-dev:5432/cloudless_dev
-      
-      # Supabase configuration (loaded from .env file)
-      NUXT_PUBLIC_SUPABASE_URL: ${NUXT_PUBLIC_SUPABASE_URL:-}
-      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${NUXT_PUBLIC_SUPABASE_ANON_KEY:-}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
-      
-              # External URL for proper binding (loaded from .env file)
-    
+      DATABASE_URL:
+        postgresql://cloudless:development@postgres-dev:5432/cloudless_dev
+
+        # External URL for proper binding (loaded from .env file)
+
     # Additional performance optimizations (set in Dockerfile or runtime)
     # NUXT_TELEMETRY_DISABLED: '1'
     # NITRO_PRESET: 'node'
     # NITRO_COMPRESSION: 'false'
     # NITRO_MINIFY: 'false'
-    
+
     # Build speed optimizations (these will be set in the Dockerfile or runtime)
     # NITRO_BUILD_CACHE: 'true'
     # NITRO_BUILD_PARALLEL: 'true'
     # NITRO_BUILD_WORKERS: '4'
     # NITRO_BUILD_TIMEOUT: '300000'
-    
+
     # Vite build optimizations (these will be set in the Dockerfile or runtime)
     # VITE_BUILD_SOURCEMAP: 'false'
     # VITE_BUILD_MINIFY: 'false'
@@ -86,7 +82,7 @@ services:
     volumes:
       # Source code with optimized mounting for hot reload
       - ../../:/app:cached
-      
+
       # Exclude heavy directories for better performance
       - /app/node_modules
       - /app/.nuxt
@@ -97,11 +93,11 @@ services:
       - /app/.vite
       - /app/playwright-report
       - /app/coverage
-      
+
       # Development directories
       - ../../logs:/app/logs:cached
       - ../../tmp:/app/tmp:cached
-      
+
       # Optimized cache volumes for hot reload
       - npm_cache:/root/.npm
       - nuxt_cache:/app/.nuxt
@@ -131,11 +127,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G    # Balanced for development
-          cpus: '3.0'   # Balanced for development
+          memory: 4G # Balanced for development
+          cpus: '3.0' # Balanced for development
         reservations:
-          memory: 1G    # Balanced reservation
-          cpus: '1.0'   # Balanced reservation
+          memory: 1G # Balanced reservation
+          cpus: '1.0' # Balanced reservation
     # Enable BuildKit features
     init: true
     # Security options
@@ -147,7 +143,7 @@ services:
         soft: 65536
         hard: 65536
     # Startup optimization
-    shm_size: '512mb'  # Balanced shared memory for development
+    shm_size: '512mb' # Balanced shared memory for development
 
   # Ultra-Optimized Redis for development
   redis-dev:
@@ -155,7 +151,7 @@ services:
     container_name: cloudlessgr-redis-dev
     restart: unless-stopped
     command: >
-      redis-server 
+      redis-server
       --appendonly no
       --maxmemory 128mb
       --maxmemory-policy allkeys-lru
@@ -179,11 +175,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M  # Reduced for dev
-          cpus: '0.25'  # Reduced for dev
+          memory: 256M # Reduced for dev
+          cpus: '0.25' # Reduced for dev
         reservations:
-          memory: 128M  # Reduced for faster startup
-          cpus: '0.1'   # Reduced for faster startup
+          memory: 128M # Reduced for faster startup
+          cpus: '0.1' # Reduced for faster startup
 
   # Optimized PostgreSQL for development
   postgres-dev:
@@ -213,10 +209,7 @@ services:
       - cloudless-dev-network
     healthcheck:
       test:
-        [
-          'CMD-SHELL',
-          'pg_isready -U ${POSTGRES_USER:-cloudless} -d ${POSTGRES_DB:-cloudless_dev}',
-        ]
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-cloudless} -d ${POSTGRES_DB:-cloudless_dev}']
       interval: 10s
       timeout: 5s
       retries: 3
@@ -281,7 +274,7 @@ services:
     container_name: cloudlessgr-redis-commander
     restart: unless-stopped
     ports:
-      - '0.0.0.0:8081:8081'  # Redis Commander - accessible from network
+      - '0.0.0.0:8081:8081' # Redis Commander - accessible from network
     environment:
       REDIS_HOSTS: 'local:redis-dev:6379'
       HTTP_USER: admin

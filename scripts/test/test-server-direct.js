@@ -25,7 +25,7 @@ console.log('🔧 Environment variables set:');
 console.log('  NODE_ENV:', process.env.NODE_ENV);
 console.log('  NUXT_HOST:', process.env.NUXT_HOST);
 console.log('  NUXT_PORT:', process.env.NUXT_PORT);
-console.log('  NUXT_PUBLIC_SUPABASE_URL:', process.env.NUXT_PUBLIC_SUPABASE_URL);
+// Removed Supabase configuration - using Prisma instead
 
 // Test 1: Try to import the server file directly
 console.log('\n🧪 Test 1: Direct import test...');

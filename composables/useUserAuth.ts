@@ -1,6 +1,17 @@
 // Authentication composable for user management
-import { ref, onMounted } from 'vue';
-import type { User, UserAuth, LoginCredentials, SignupCredentials, AuthError } from '~/types/user';
+import { onMounted, ref } from 'vue';
+import type { User } from '~/types/user';
+
+// API response types
+interface AuthApiResponse {
+  user: User;
+  token: string;
+}
+
+interface VerifyApiResponse {
+  authenticated: boolean;
+  user: User;
+}
 
 export const useUserAuth = () => {
   const isLoggedIn = ref(false);
@@ -20,10 +31,10 @@ export const useUserAuth = () => {
   // Verify authentication with the server
   const checkAuthStatus = async () => {
     try {
-      const { data } = await useFetch<{authenticated: boolean, user: User}>('/api/auth/verify');
-      
-      if (data.value && data.value.authenticated && data.value.user) {
-        currentUser.value = data.value.user;
+      const data = await $fetch<VerifyApiResponse>('/api/auth/verify');
+
+      if (data && data.authenticated && data.user) {
+        currentUser.value = data.user;
         isLoggedIn.value = true;
       } else {
         // Clear any local state if server says we're not authenticated
@@ -36,7 +47,7 @@ export const useUserAuth = () => {
       currentUser.value = null;
       isLoggedIn.value = false;
     }
-    
+
     return isLoggedIn.value;
   };
 
@@ -47,30 +58,25 @@ export const useUserAuth = () => {
 
     try {
       // Use the API endpoint for authentication
-      const { data, error } = await useFetch('/api/auth/user', {
+      const data = await $fetch<AuthApiResponse>('/api/auth/user', {
         method: 'POST',
         body: {
           action: 'login',
           email,
-          password
-        }
+          password,
+        },
       });
 
-      if (error.value) {
-        loginError.value = error.value.statusMessage || 'An error occurred during login';
-        return false;
-      }
-
-      if (data.value && data.value.user) {
+      if (data && data.user) {
         // Store user data
-        currentUser.value = data.value.user;
+        currentUser.value = data.user;
         isLoggedIn.value = true;
-        
+
         // If we receive a token in the response, store it as a backup
-        if (data.value.token) {
-          localStorage.setItem('auth_token', data.value.token);
+        if (data.token) {
+          localStorage.setItem('auth_token', data.token);
         }
-        
+
         return true;
       } else {
         loginError.value = 'Invalid credentials';
@@ -92,31 +98,26 @@ export const useUserAuth = () => {
 
     try {
       // Use the API endpoint for user registration
-      const { data, error } = await useFetch('/api/auth/user', {
+      const data = await $fetch<AuthApiResponse>('/api/auth/user', {
         method: 'POST',
         body: {
           action: 'signup',
           email,
           password,
-          name
-        }
+          name,
+        },
       });
 
-      if (error.value) {
-        loginError.value = error.value.statusMessage || 'An error occurred during signup';
-        return false;
-      }
-
-      if (data.value && data.value.user) {
+      if (data && data.user) {
         // Store user data
-        currentUser.value = data.value.user;
+        currentUser.value = data.user;
         isLoggedIn.value = true;
-        
+
         // If we receive a token in the response, store it as a backup
-        if (data.value.token) {
-          localStorage.setItem('auth_token', data.value.token);
+        if (data.token) {
+          localStorage.setItem('auth_token', data.token);
         }
-        
+
         return true;
       } else {
         loginError.value = 'Failed to create account';
@@ -135,8 +136,8 @@ export const useUserAuth = () => {
   const logout = async () => {
     try {
       // Call the logout API to invalidate the session/cookie
-      await useFetch('/api/auth/logout', {
-        method: 'POST'
+      await $fetch('/api/auth/logout', {
+        method: 'POST',
       });
     } catch (err) {
       console.error('Logout error:', err);
@@ -157,6 +158,6 @@ export const useUserAuth = () => {
     signup,
     logout,
     checkAuthStatus,
-    authInitialized
+    authInitialized,
   };
 };

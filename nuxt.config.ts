@@ -4,7 +4,6 @@ export default defineNuxtConfig({
     '@nuxtjs/color-mode',
     '@vueuse/nuxt',
     '@nuxt/image-edge',
-    '@nuxt/content',
     '@pinia/nuxt',
     'nuxt-llms',
     '@nuxtjs/tailwindcss', // ✅ Tailwind CSS module
@@ -16,7 +15,7 @@ export default defineNuxtConfig({
   // Nitro configuration
   nitro: {
     // Adding the recommended compatibility date
-    compatibilityDate: '2025-05-21',
+    compatibilityDate: '2025-07-22',
     prerender: {
       routes: ['/', '/about', '/contact'],
     },
@@ -73,15 +72,6 @@ export default defineNuxtConfig({
           href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap',
         },
       ],
-    },
-  },
-
-  content: {
-    // @ts-ignore: enable content debug panel
-    debug: true,
-    documentDriven: true,
-    highlight: {
-      routes: ['/', '/about', '/contact'],
     },
   },
 

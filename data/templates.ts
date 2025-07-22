@@ -1,4 +1,4 @@
-import type { ProjectTemplate } from '~/types/project';
+import type { ProjectTemplate } from '~/types/projects';
 
 export const mockTemplates: ProjectTemplate[] = [
   {
@@ -78,8 +78,8 @@ export const mockTemplates: ProjectTemplate[] = [
       },
     },
   },
-{
-  id: 'image-classifier',
+  {
+    id: 'image-classifier',
     name: 'Image Classifier',
     category: 'Computer Vision',
     description: 'Train a CNN model to classify images into categories.',
@@ -93,18 +93,33 @@ export const mockTemplates: ProjectTemplate[] = [
       'Image data loader',
       'CNN architecture (MobileNetV2)',
       'Training/validation split',
-      'Accuracy/loss monitoring'
+      'Accuracy/loss monitoring',
     ],
     config: {
       type: 'cv',
       framework: 'tensorflow',
       nodes: [
-        { id: 'data-loader', type: 'data-loader', label: 'Data Loader', config: { format: 'images' }},
-        { id: 'preprocessing', type: 'preprocessing', label: 'Preprocessing', config: { resize: [224, 224], normalize: true }},
-        { id: 'model', type: 'model', label: 'Model', config: { architecture: 'mobilenet_v2' }},
-        { id: 'training', type: 'training', label: 'Training', config: { epochs: 10, batch_size: 32 }}
-      ]
-    }
+        {
+          id: 'data-loader',
+          type: 'data-loader',
+          label: 'Data Loader',
+          config: { format: 'images' },
+        },
+        {
+          id: 'preprocessing',
+          type: 'preprocessing',
+          label: 'Preprocessing',
+          config: { resize: [224, 224], normalize: true },
+        },
+        { id: 'model', type: 'model', label: 'Model', config: { architecture: 'mobilenet_v2' } },
+        {
+          id: 'training',
+          type: 'training',
+          label: 'Training',
+          config: { epochs: 10, batch_size: 32 },
+        },
+      ],
+    },
   },
   {
     id: 'text-classification',
@@ -121,18 +136,33 @@ export const mockTemplates: ProjectTemplate[] = [
       'Tokenizer (BERT)',
       'Transformer encoder',
       'Softmax output head',
-      'Validation set scoring'
+      'Validation set scoring',
     ],
     config: {
       type: 'nlp',
       framework: 'pytorch',
       nodes: [
-        { id: 'data-loader', type: 'data-loader', label: 'Data Loader', config: { format: 'text' }},
-        { id: 'tokenizer', type: 'tokenizer', label: 'Tokenizer', config: { model: 'bert-base-uncased' }},
-        { id: 'model', type: 'model', label: 'Model', config: { architecture: 'bert' }},
-        { id: 'training', type: 'training', label: 'Training', config: { epochs: 3, learning_rate: 2e-5 }}
-      ]
-    }
+        {
+          id: 'data-loader',
+          type: 'data-loader',
+          label: 'Data Loader',
+          config: { format: 'text' },
+        },
+        {
+          id: 'tokenizer',
+          type: 'tokenizer',
+          label: 'Tokenizer',
+          config: { model: 'bert-base-uncased' },
+        },
+        { id: 'model', type: 'model', label: 'Model', config: { architecture: 'bert' } },
+        {
+          id: 'training',
+          type: 'training',
+          label: 'Training',
+          config: { epochs: 3, learning_rate: 2e-5 },
+        },
+      ],
+    },
   },
   {
     id: 'regression-analysis',
@@ -149,17 +179,32 @@ export const mockTemplates: ProjectTemplate[] = [
       'Tabular data loader',
       'Feature normalization',
       'XGBoost regressor',
-      'MSE & R2 metrics'
+      'MSE & R2 metrics',
     ],
     config: {
       type: 'regression',
       framework: 'sklearn',
       nodes: [
-        { id: 'data-loader', type: 'data-loader', label: 'Data Loader', config: { format: 'tabular' }},
-        { id: 'feature-engineering', type: 'feature-engineering', label: 'Feature Engineering', config: { scaling: 'standard' }},
-        { id: 'model', type: 'model', label: 'Model', config: { algorithm: 'xgboost' }},
-        { id: 'evaluation', type: 'evaluation', label: 'Evaluation', config: { metrics: ['mse', 'r2'] }}
-      ]
-    }
-  }
+        {
+          id: 'data-loader',
+          type: 'data-loader',
+          label: 'Data Loader',
+          config: { format: 'tabular' },
+        },
+        {
+          id: 'feature-engineering',
+          type: 'feature-engineering',
+          label: 'Feature Engineering',
+          config: { scaling: 'standard' },
+        },
+        { id: 'model', type: 'model', label: 'Model', config: { algorithm: 'xgboost' } },
+        {
+          id: 'evaluation',
+          type: 'evaluation',
+          label: 'Evaluation',
+          config: { metrics: ['mse', 'r2'] },
+        },
+      ],
+    },
+  },
 ];

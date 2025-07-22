@@ -1,5 +1,5 @@
 import { defineEventHandler } from 'h3';
-import prisma from '~/lib/prisma';
+import prisma from '../utils/prisma';
 
 /**
  * Test API route to demonstrate @prisma/nuxt module usage

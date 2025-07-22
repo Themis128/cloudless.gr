@@ -25,7 +25,7 @@ console.log('🔧 Environment variables set:');
 console.log('  NODE_ENV:', process.env.NODE_ENV);
 console.log('  NUXT_HOST:', process.env.NUXT_HOST);
 console.log('  NUXT_PORT:', process.env.NUXT_PORT);
-console.log('  NUXT_PUBLIC_SUPABASE_URL:', process.env.NUXT_PUBLIC_SUPABASE_URL);
+// Removed Supabase configuration - using Prisma instead
 
 // Test 1: Try with explicit ES module flags
 console.log('\n🧪 Test 1: ES Module execution...');
@@ -107,8 +107,7 @@ const require = createRequire(import.meta.url);
 process.env.NODE_ENV = 'production';
 process.env.NUXT_HOST = '0.0.0.0';
 process.env.NUXT_PORT = '3000';
-process.env.NUXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
-process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY = 'test-key-123456789';
+    // Removed Supabase test configuration - using Prisma instead
 
 console.log('🔧 Wrapper: Environment set');
 console.log('🔧 Wrapper: Attempting to import server...');

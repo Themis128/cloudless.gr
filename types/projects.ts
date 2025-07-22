@@ -1,5 +1,18 @@
-// Project-related types for the application
-import { Ref } from 'vue';
+// Project types and interfaces for the portfolio management system
+import type { Ref } from 'vue';
+
+export interface ProjectTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  icon: string;
+  features: string[];
+  technologies: string[];
+  techStack: string[];
+  difficulty: string;
+  // Add other properties based on usage
+}
 
 export interface Project {
   id: number;
@@ -24,7 +37,7 @@ export interface Project {
   relatedProjects?: number[]; // IDs of related projects
   createdAt: string;
   updatedAt: string;
-};
+}
 
 export type ProjectImage = {
   img_name: string;
@@ -43,7 +56,7 @@ export type ProjectTag = {
 
 export type ProjectStatus = 'draft' | 'published' | 'archived' | 'featured';
 
-export type ProjectCategory = 
+export type ProjectCategory =
   | 'web-development'
   | 'mobile-app'
   | 'design'

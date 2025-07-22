@@ -4,15 +4,15 @@ This guide explains how to set up production environment variables using GitHub 
 
 ## Overview
 
-The production environment uses GitHub secrets to securely store sensitive configuration values like API keys, database credentials, and Supabase configuration. This ensures that sensitive data is never exposed in the codebase or logs.
+The production environment uses GitHub secrets to securely store sensitive configuration values like API keys and database credentials. This ensures that sensitive data is never exposed in the codebase or logs.
 
 ## Required GitHub Secrets
 
-### Supabase Configuration
+### Application Configuration
 
-- `NUXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
-- `NUXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key
+- `NODE_ENV` - Production environment setting
+- `NUXT_HOST` - Host configuration (0.0.0.0)
+- `NUXT_PORT` - Port configuration (3000)
 
 ### Database Configuration
 
@@ -143,10 +143,8 @@ NITRO_PORT=3000
 NUXT_HOST=0.0.0.0
 NUXT_PORT=3000
 
-# Supabase Configuration
-NUXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NUXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# Database Configuration
+DATABASE_URL=postgresql://username:password@localhost:5432/database_name
 
 # Database Configuration
 DATABASE_URL=postgresql://username:password@host:port/database
@@ -216,12 +214,11 @@ BUILD_DATE=2024-01-01T00:00:00Z
    docker-compose -f docker-compose.prod.yml config
    ```
 
-2. **Supabase connection issues:**
+2. **Database connection issues:**
 
    ```bash
-   # Test Supabase connection
-   curl -X GET "https://your-project.supabase.co/rest/v1/" \
-     -H "apikey: your-anon-key"
+   # Test database connection
+   npx prisma db push
    ```
 
 3. **Redis connection issues:**
@@ -245,7 +242,7 @@ BUILD_DATE=2024-01-01T00:00:00Z
 
 ```bash
 # Check environment variables in container
-docker exec cloudlessgr-app-prod env | grep -E "(SUPABASE|DATABASE|REDIS)"
+docker exec cloudlessgr-app-prod env | grep -E "(DATABASE|REDIS)"
 
 # Check application logs
 docker-compose -f docker-compose.prod.yml logs -f app
@@ -281,7 +278,7 @@ If you encounter issues with the production setup:
 1. Check the troubleshooting section above
 2. Review the application logs
 3. Verify all environment variables are set correctly
-4. Test individual services (Supabase, Redis, etc.)
+4. Test individual services (database, Redis, etc.)
 5. Check the GitHub Actions workflow logs
 
 For additional help, refer to the main documentation or create an issue in the repository.

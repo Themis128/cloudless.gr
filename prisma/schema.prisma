@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../node_modules/.prisma/client"
@@ -14,17 +8,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String
+  password    String
+  role        String    @default("user")
+  avatar      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLogin   DateTime?
+  bio         String?
+  website     String?
+  company     String?
+  position    String?
+  location    String?
+  phone       String?
+  socialLinks String?
+  preferences String?
+}
+
 model ContactSubmission {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String
-  subject   String
-  message   String
-  createdAt DateTime @default(now())
-  // Status can be used to track if the submission has been read, replied to, etc.
-  status    String   @default("new") // "new", "read", "replied", "archived"
-  // Optional notes field for admins to add additional information
-  notes     String?
-  // Metadata field for storing submission details like IP, user agent, etc.
-  metadata  String?
+  id          Int      @id @default(autoincrement())
+  name        String
+  email       String
+  subject     String
+  message     String
+  createdAt   DateTime @default(now())
+  status      String   @default("new")
+  notes       String?
+  metadata    String?
+  assignedTo  String?
+  budget      String?
+  company     String?
+  heardFrom   String?
+  ipAddress   String?
+  newsletter  Boolean? @default(false)
+  phone       String?
+  projectType String?
+  timeline    String?
+  userAgent   String?
 }

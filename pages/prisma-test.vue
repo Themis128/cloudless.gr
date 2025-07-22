@@ -37,7 +37,7 @@
         <div>
           <h3 class="font-semibold">1. In API Routes:</h3>
           <pre class="bg-white p-2 rounded text-sm">
-import prisma from '~/lib/prisma'
+import prisma from '~/server/utils/prisma'
 const users = await prisma.user.findMany()</pre
           >
         </div>
