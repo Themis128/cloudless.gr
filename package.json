@@ -47,6 +47,7 @@
     "dev:docker:restart": "bash scripts/docker/dev-docker.sh restart",
     "dev:docker:clean": "bash scripts/docker/dev-docker.sh clean",
     "dev:docker:status": "bash scripts/docker/dev-docker.sh status",
+    "dev:network-info": "bash scripts/get-network-info.sh",
     "dev:debug": "docker compose -f docker-compose.dev.yml exec app-dev node --inspect=0.0.0.0:9229 .output/server/index.mjs"
   },
   "dependencies": {

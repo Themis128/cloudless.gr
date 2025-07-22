@@ -46,11 +46,20 @@ start_dev_environment() {
     # Show status
     show_status
     
+    # Get the host IP address
+    HOST_IP=$(hostname -I | awk '{print $1}')
+    
     write_status "✅ Development environment started!" "$GREEN"
-    write_status "🌐 Main Application: http://localhost:3000" "$CYAN"
-    write_status "🔧 Redis Commander: http://localhost:8081 (admin/admin)" "$CYAN"
-    write_status "📧 Mailhog: http://localhost:8025" "$CYAN"
-    write_status "🐛 Node.js Debugger: http://localhost:9229" "$CYAN"
+    write_status "" 
+    write_status "🌐 Access from ANY device on your network:" "$CYAN"
+    write_status "   Main Application: http://$HOST_IP:3000" "$CYAN"
+    write_status "   Or via localhost: http://localhost:3000" "$CYAN"
+    write_status ""
+    write_status "🔧 Development Tools:" "$CYAN"
+    write_status "   Redis Commander: http://$HOST_IP:8081 (admin/admin)" "$CYAN"
+    write_status "   Mailhog: http://$HOST_IP:8025" "$CYAN"
+    write_status "   Node.js Debugger: $HOST_IP:9229" "$CYAN"
+    write_status ""
     write_status "📊 Monitor with: ./scripts/docker/dev-docker.sh logs" "$CYAN"
 }
 

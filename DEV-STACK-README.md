@@ -48,29 +48,35 @@ npm run dev:docker
 
 ### 2. Access Your Services
 
-Once started, access your services at:
+Once started, access your services from **ANY device on your network**:
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| 🌐 **Main App** | http://localhost:3000 | - |
-| 🔧 **Redis Commander** | http://localhost:8081 | admin/admin |
-| 📧 **Mailhog** | http://localhost:8025 | - |
-| 🐛 **Node Debugger** | http://localhost:9229 | - |
-| 🏥 **Health Check** | http://localhost:3000/api/health | - |
+| Service | Network URL | Local URL | Credentials |
+|---------|-------------|-----------|-------------|
+| 🌐 **Main App** | http://YOUR_IP:3000 | http://localhost:3000 | - |
+| 🔧 **Redis Commander** | http://YOUR_IP:8081 | http://localhost:8081 | admin/admin |
+| 📧 **Mailhog** | http://YOUR_IP:8025 | http://localhost:8025 | - |
+| 🐛 **Node Debugger** | YOUR_IP:9229 | localhost:9229 | - |
+| 🏥 **Health Check** | http://YOUR_IP:3000/api/health | http://localhost:3000/api/health | - |
+
+**Note**: Replace `YOUR_IP` with your development machine's IP address. The startup script will show you the exact URLs.
 
 ### 3. Database Connection
 
-Connect to your PostgreSQL database:
+Connect to your PostgreSQL database from **any device on your network**:
 ```bash
-Host: localhost
+Host: YOUR_IP (or localhost from development machine)
 Port: 5432
 Database: cloudless_dev
 Username: cloudless
 Password: development
 ```
 
-Or use the connection string:
-```
+Connection strings:
+```bash
+# From network devices
+postgresql://cloudless:development@YOUR_IP:5432/cloudless_dev
+
+# From development machine
 postgresql://cloudless:development@localhost:5432/cloudless_dev
 ```
 
@@ -121,6 +127,52 @@ npm run dev:docker:restart   # Restart
 npm run dev:docker:clean     # Clean up
 npm run dev:docker:status    # Show status
 ```
+
+## 🌐 Network Access
+
+### Accessing from Other Devices
+
+Your development stack is configured to be accessible from **any device on your network**:
+
+1. **Find Your IP Address**: The startup script automatically detects and displays your IP
+2. **Mobile Testing**: Access your app from phones/tablets on the same WiFi
+3. **Team Development**: Share your development environment with team members
+4. **Cross-Device Testing**: Test responsive design on real devices
+
+### Firewall Configuration
+
+If you can't access from other devices, you may need to configure your firewall:
+
+**Ubuntu/Debian:**
+```bash
+# Allow specific ports
+sudo ufw allow 3000  # Main app
+sudo ufw allow 8081  # Redis Commander
+sudo ufw allow 8025  # Mailhog
+sudo ufw allow 5432  # PostgreSQL
+sudo ufw allow 6379  # Redis
+
+# Or allow all traffic from your local network (replace with your network range)
+sudo ufw allow from 192.168.1.0/24
+```
+
+**CentOS/RHEL/Fedora:**
+```bash
+# Allow specific ports
+sudo firewall-cmd --permanent --add-port=3000/tcp
+sudo firewall-cmd --permanent --add-port=8081/tcp
+sudo firewall-cmd --permanent --add-port=8025/tcp
+sudo firewall-cmd --permanent --add-port=5432/tcp
+sudo firewall-cmd --permanent --add-port=6379/tcp
+sudo firewall-cmd --reload
+```
+
+### Security Notes
+
+- ⚠️ **Development Only**: This configuration is for development environments only
+- 🔒 **Production**: Never expose development databases/tools in production
+- 🛡️ **Network Security**: Only use on trusted networks
+- 🔐 **Passwords**: Default passwords are weak - change them for sensitive data
 
 ## 🔧 Configuration
 
