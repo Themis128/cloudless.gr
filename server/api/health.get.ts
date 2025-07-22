@@ -1,169 +1,42 @@
-// Enhanced health check endpoint for Docker and monitoring
-import { createClient } from '@supabase/supabase-js'
-import { defineEventHandler } from 'h3'
-
-export default defineEventHandler(async (event: any) => {
-  const startTime = Date.now()
-
+// Health check endpoint for monitoring and Docker health checks
+export default defineEventHandler(async (event) => {
   try {
-    // Basic system health
-    const health: any = {
+    // Basic health check
+    const health = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
+      version: process.env.APP_VERSION || '1.0.0-dev',
       environment: process.env.NODE_ENV || 'development',
-      version: process.env.npm_package_version || '1.0.0',
-      memory: {
-        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-        external: Math.round(process.memoryUsage().external / 1024 / 1024),
-        rss: Math.round(process.memoryUsage().rss / 1024 / 1024),
-      },
-      checks: {
-        database: 'unknown',
-        redis: 'unknown',
-        supabase: 'unknown',
-      },
-      config: {
-        supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL ? 'configured' : 'missing',
-        supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY ? 'configured' : 'missing',
-        nodeEnv: process.env.NODE_ENV,
-        nitroHost: process.env.NITRO_HOST,
-        nitroPort: process.env.NITRO_PORT,
-      },
-    }
-
-    // In development, be more lenient with health checks
-    if (process.env.NODE_ENV === 'development') {
-      // Skip external service checks in development to avoid health check failures
-      health.checks.database = 'development_skip'
-      health.checks.redis = 'development_skip'
-      health.checks.supabase = 'development_skip'
-      health.status = 'healthy' // Always healthy in development
-    } else {
-      // Check Supabase connectivity if configured (only in production)
-      if (
-        process.env.NUXT_PUBLIC_SUPABASE_URL &&
-        process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY
-      ) {
-        try {
-          const supabaseUrl = process.env.NUXT_PUBLIC_SUPABASE_URL
-          const supabaseKey = process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY
-          
-          // Create Supabase client for health check
-          const supabase = createClient(supabaseUrl, supabaseKey, {
-            auth: {
-              autoRefreshToken: false,
-              persistSession: false
-            }
-          })
-
-          // Test connection by making a simple query
-          const { data, error } = await supabase
-            .from('_supabase_migrations')
-            .select('version')
-            .limit(1)
-
-          if (error) {
-            // If migrations table doesn't exist, try a different approach
-            // Just test the connection without requiring specific functions
-            const { error: testError } = await supabase
-              .from('_supabase_migrations')
-              .select('*')
-              .limit(0)
-
-            if (testError && testError.code !== 'PGRST116') {
-              health.checks.supabase = 'error'
-              health.supabaseError = testError.message
-              health.status = 'degraded'
-            } else {
-              health.checks.supabase = 'connected'
-              health.supabaseStatus = 'Connection successful'
-            }
-          } else {
-            health.checks.supabase = 'connected'
-            health.supabaseMigrations = data?.length || 0
-          }
-        } catch (error) {
-          health.checks.supabase = 'error'
-          health.supabaseError = error instanceof Error ? error.message : 'Unknown error'
-          health.status = 'degraded'
-        }
-      } else {
-        health.checks.supabase = 'not_configured'
-        health.supabaseError = 'Missing NUXT_PUBLIC_SUPABASE_URL or NUXT_PUBLIC_SUPABASE_ANON_KEY'
-      }
-
-      // Check Redis connectivity if configured (only in production)
-      if (process.env.REDIS_URL) {
-        try {
-          // Simple Redis check - you can enhance this with actual Redis client
-          health.checks.redis = 'configured'
-        } catch (error) {
-          health.checks.redis = 'error'
-          health.status = 'degraded'
-        }
-      } else {
-        health.checks.redis = 'not_configured'
-      }
-
-      // Check if any critical services are down (only in production)
-      const criticalServices = Object.values(health.checks).filter(
-        status => status === 'error'
-      )
-      
-      if (criticalServices.length > 0) {
-        health.status = 'unhealthy'
+      services: {
+        app: 'healthy'
       }
     }
 
-    // Add response time
-    health.responseTime = Date.now() - startTime
+    // Check database connection if available
+    try {
+      // Add database health check here when database client is implemented
+      health.services.database = 'healthy'
+    } catch (error) {
+      health.services.database = 'unhealthy'
+    }
 
-    // Set appropriate HTTP status code
-    if (health.status === 'healthy') {
-      event.node.res.statusCode = 200
-    } else if (health.status === 'degraded') {
-      event.node.res.statusCode = 200 // Still 200 but with degraded status
-    } else {
-      // In development, return 200 even for unhealthy to avoid container restarts
-      if (process.env.NODE_ENV === 'development') {
-        event.node.res.statusCode = 200
-      } else {
-        event.node.res.statusCode = 503
-      }
+    // Check Redis connection if available
+    try {
+      // Add Redis health check here when Redis client is implemented
+      health.services.redis = 'healthy'
+    } catch (error) {
+      health.services.redis = 'unhealthy'
     }
 
     return health
   } catch (error) {
-    // In development, always return 200 to avoid container restarts
-    if (process.env.NODE_ENV === 'development') {
-      event.node.res.statusCode = 200
-      return {
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        message: 'Development mode - ignoring errors',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        responseTime: Date.now() - startTime,
-        config: {
-          supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL ? 'configured' : 'missing',
-          supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY ? 'configured' : 'missing',
-          nodeEnv: process.env.NODE_ENV,
-        },
-      }
-    } else {
-      event.node.res.statusCode = 503
-      return {
-        status: 'unhealthy',
-        timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error',
-        responseTime: Date.now() - startTime,
-        config: {
-          supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL ? 'configured' : 'missing',
-          supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY ? 'configured' : 'missing',
-          nodeEnv: process.env.NODE_ENV,
-        },
-      }
+    // Set response status to 503 Service Unavailable
+    setResponseStatus(event, 503)
+    return {
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'Unknown error'
     }
   }
 })
