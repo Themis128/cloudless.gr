@@ -9,6 +9,7 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+<<<<<<< Updated upstream
 model Profile {
   id                        String                @id @default(cuid())
   email                     String?               @unique
@@ -402,4 +403,193 @@ enum DeploymentStatus {
   terminated
 
   @@map("deployment_status")
+=======
+model User {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  password    String
+  name        String
+  role        String   @default("user") // "user", "admin"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  projects    Project[]
+  bots        Bot[]
+  models      Model[]
+  pipelines   Pipeline[]
+}
+
+model Project {
+  id              Int      @id @default(autoincrement())
+  project_name    String
+  slug            String   @unique
+  overview        String
+  description     String
+  isFavorite      Boolean  @default(false)
+  live_url        String?
+  github_url      String?
+  status          String   @default("draft") // "draft", "published", "archived", "featured"
+  category        String   @default("other") // "web-development", "mobile-app", etc.
+  client          String?
+  clientLogo      String?
+  featured        Boolean  @default(false)
+  completionDate  String?
+  duration        String?
+  teamSize        Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags            ProjectTag[]
+  images          ProjectImage[]
+  testimonials    Testimonial[]
+}
+
+model ProjectTag {
+  id          Int     @id @default(autoincrement())
+  tag_name    String
+  is_primary  Boolean @default(false)
+  color       String?
+
+  // Relations
+  projectId   Int
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ProjectImage {
+  id           Int     @id @default(autoincrement())
+  img_name     String
+  img_url      String
+  is_thumbnail Boolean @default(false)
+  alt          String?
+  caption      String?
+  order        Int     @default(0)
+
+  // Relations
+  projectId    Int
+  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Testimonial {
+  id        Int     @id @default(autoincrement())
+  quote     String
+  author    String
+  position  String?
+  company   String?
+  avatar    String?
+  rating    Int?    // 1-5
+
+  // Relations
+  projectId Int
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Bot {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  config      String   // JSON configuration
+  status      String   @default("draft") // "draft", "active", "paused"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deployments BotDeployment[]
+}
+
+model BotDeployment {
+  id          Int      @id @default(autoincrement())
+  name        String
+  environment String   @default("development") // "development", "staging", "production"
+  status      String   @default("stopped") // "running", "stopped", "error"
+  config      String   // JSON deployment configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  botId       Int
+  bot         Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+}
+
+model Model {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  type        String   // "text-classification", "generation", etc.
+  config      String   // JSON configuration
+  status      String   @default("draft") // "draft", "training", "ready", "deployed"
+  accuracy    Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainings   ModelTraining[]
+}
+
+model ModelTraining {
+  id          Int      @id @default(autoincrement())
+  status      String   @default("pending") // "pending", "running", "completed", "failed"
+  config      String   // JSON training configuration
+  logs        String?  // Training logs
+  metrics     String?  // JSON training metrics
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  modelId     Int
+  model       Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+}
+
+model Pipeline {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  config      String   // JSON pipeline configuration
+  status      String   @default("draft") // "draft", "active", "paused"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs        PipelineRun[]
+}
+
+model PipelineRun {
+  id          Int      @id @default(autoincrement())
+  status      String   @default("pending") // "pending", "running", "completed", "failed"
+  config      String   // JSON run configuration
+  logs        String?  // Execution logs
+  results     String?  // JSON results
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  pipelineId  Int
+  pipeline    Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+}
+
+model ContactSubmission {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  subject   String
+  message   String
+  createdAt DateTime @default(now())
+  // Status can be used to track if the submission has been read, replied to, etc.
+  status    String   @default("new") // "new", "read", "replied", "archived"
+  // Optional notes field for admins to add additional information
+  notes     String?
+  // Metadata field for storing submission details like IP, user agent, etc.
+  metadata  String?
+>>>>>>> Stashed changes
 }
