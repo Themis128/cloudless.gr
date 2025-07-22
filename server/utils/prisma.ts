@@ -1,5 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 
+declare global {
+  var prisma: PrismaClient | undefined;
+}
+
 // Create a singleton instance of the PrismaClient
 // This ensures we don't exhaust database connections by creating multiple clients
 let prisma: PrismaClient;

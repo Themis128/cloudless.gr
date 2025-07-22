@@ -1,5 +1,15 @@
-// Project-related types for the application
-import { Ref } from 'vue';
+// Project types and interfaces for the portfolio management system
+import type { Ref } from 'vue';
+
+export interface ProjectTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  icon: string;
+  features: string[];
+  // Add other properties based on usage
+}
 
 export interface Project {
   id: number;

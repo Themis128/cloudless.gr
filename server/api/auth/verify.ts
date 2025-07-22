@@ -2,8 +2,8 @@
 import { createError, defineEventHandler, getCookie } from 'h3'
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production'
-const COOKIE_NAME = 'auth_token'
+const JWT_SECRET = process.env.NUXT_JWT_SECRET || 'your-secret-key-change-this-in-production'
+const COOKIE_NAME = process.env.NUXT_AUTH_COOKIE_NAME || 'auth_token'
 
 export default defineEventHandler(async (event) => {
   try {

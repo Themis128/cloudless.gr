@@ -48,15 +48,24 @@ export default defineEventHandler((event) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     
-    // Add user info to event context for use in API handlers
-    event.context.auth = decoded;
-    
-    // Check if admin access is required but user is not an admin
-    if (requiresAdmin && (decoded.role !== 'admin')) {
+    // Type guard to check if decoded is an object with role property
+    if (typeof decoded !== 'string' && decoded && typeof decoded === 'object' && 'role' in decoded) {
+      // Add user info to event context for use in API handlers
+      event.context.auth = decoded;
+      
+      // Check if admin access is required but user is not an admin
+      if (requiresAdmin && (decoded.role !== 'admin')) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Forbidden',
+          message: 'Admin access required',
+        });
+      }
+    } else {
       throw createError({
-        statusCode: 403,
-        statusMessage: 'Forbidden',
-        message: 'Admin access required',
+        statusCode: 401,
+        statusMessage: 'Unauthorized',
+        message: 'Invalid token format',
       });
     }
   } catch (error) {

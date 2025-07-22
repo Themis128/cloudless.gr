@@ -1,6 +1,7 @@
-// API endpoint to refresh JWT token
-import { createError, defineEventHandler, getCookie, setCookie } from 'h3'
-import jwt, { SignOptions, Secret } from 'jsonwebtoken'
+// API endpoint for handling JWT token refresh
+import { defineEventHandler, readBody, setCookie, getCookie, createError } from 'h3'
+import jwt from 'jsonwebtoken'
+import type { SignOptions, Secret } from 'jsonwebtoken'
 
 // Load environment variables
 const JWT_SECRET = process.env.NUXT_JWT_SECRET || 'your-secret-key-change-this-in-production'

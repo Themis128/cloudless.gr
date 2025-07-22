@@ -13,20 +13,32 @@ export interface ContactFormData {
   heardFrom?: string;
 }
 
-export interface ContactSubmission extends ContactFormData {
-  id: string;
-  createdAt: Date | string;
+export interface ContactSubmission {
+  id: number; // Changed from string to number to match Prisma auto-increment
+  name: string;
+  email: string;
+  phone?: string | null;
+  company?: string | null;
+  subject: string;
+  message: string;
+  newsletter?: boolean | null;
+  projectType?: string | null; // 'web' | 'mobile' | 'design' | 'consulting' | 'other'
+  budget?: string | null;
+  timeline?: string | null;
+  heardFrom?: string | null;
+  createdAt: Date;
   status: 'new' | 'read' | 'responded' | 'archived' | 'spam';
-  assignedTo?: string;
-  notes?: string;
-  ipAddress?: string;
-  userAgent?: string;
+  notes?: string | null;
+  assignedTo?: string | null; // User ID of admin assigned to handle this submission
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  metadata?: string | null;
 }
 
 export interface ContactFormResponse {
   success: boolean;
   message: string;
-  submissionId?: string;
+  submissionId?: number; // Changed from string to number
   error?: ContactFormError;
 }
 

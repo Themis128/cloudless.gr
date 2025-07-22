@@ -2,6 +2,7 @@
 import { createError, defineEventHandler, readBody, setCookie, getCookie } from 'h3'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
+import prisma from '../../utils/prisma'
 
 // Load environment variables
 const JWT_SECRET = process.env.NUXT_JWT_SECRET || 'your-secret-key-change-this-in-production'
@@ -28,27 +29,6 @@ function generateToken(user: any): string {
   return jwt.sign(userWithoutPassword, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })
 }
 
-// Simple in-memory storage for demo purposes
-// In a real app, you would use a database
-const users = [
-  {
-    id: '1',
-    email: 'demo@example.com',
-    password: hashPassword('password'), // Store hashed password
-    name: 'Demo User',
-    createdAt: '2025-05-23T12:00:00Z',
-    role: 'user'
-  },
-  {
-    id: '2',
-    email: 'test@example.com',
-    password: hashPassword('Password123!'), // Store hashed password
-    name: 'Test User',
-    createdAt: '2025-05-24T10:30:00Z',
-    role: 'user'
-  }
-]
-
 // Login handler
 export default defineEventHandler(async (event) => {
   // Get request method
@@ -69,14 +49,26 @@ export default defineEventHandler(async (event) => {
       if (action === 'login') {
         // Hash the incoming password to compare with stored hash
         const hashedPassword = hashPassword(password)
-        const user = users.find(u => u.email === email && u.password === hashedPassword)
         
-        if (!user) {
+        // Find user in database
+        const user = await prisma.user.findUnique({
+          where: { 
+            email: email
+          }
+        })
+        
+        if (!user || user.password !== hashedPassword) {
           return createError({
             statusCode: 401,
             message: 'Invalid credentials'
           })
         }
+
+        // Update last login time
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLogin: new Date() }
+        })
 
         // Generate JWT token
         const token = generateToken(user)
@@ -101,7 +93,11 @@ export default defineEventHandler(async (event) => {
       // Signup action
       else if (action === 'signup') {
         // Check if user already exists
-        if (users.find(u => u.email === email)) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: email }
+        })
+        
+        if (existingUser) {
           return createError({
             statusCode: 409,
             message: 'Email already exists'
@@ -117,16 +113,14 @@ export default defineEventHandler(async (event) => {
         }
 
         // Create new user with hashed password
-        const newUser = {
-          id: String(users.length + 1),
-          email,
-          password: hashPassword(password), // Store hashed password
-          name: name || email.split('@')[0],
-          createdAt: new Date().toISOString(),
-          role: 'user' // Default role
-        }
-
-        users.push(newUser)
+        const newUser = await prisma.user.create({
+          data: {
+            email,
+            password: hashPassword(password), // Store hashed password
+            name: name || email.split('@')[0],
+            role: 'user' // Default role
+          }
+        })
         
         // Generate JWT token
         const token = generateToken(newUser)
@@ -153,6 +147,7 @@ export default defineEventHandler(async (event) => {
         message: 'Invalid action'
       })
     } catch (error) {
+      console.error('Auth error:', error)
       return createError({
         statusCode: 500,
         message: 'Internal server error'
