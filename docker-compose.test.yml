@@ -1,0 +1,124 @@
+# Test Docker Compose for Cloudless.gr
+# Optimized for running tests in isolation
+
+services:
+  app-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        NODE_ENV: test
+    image: cloudlessgr-app-test:latest
+    container_name: cloudlessgr-app-test
+    environment:
+      # Test Configuration
+      NODE_ENV: test
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+      NUXT_HOST: 0.0.0.0
+      NUXT_PORT: 3000
+      
+      # Test Database
+      DATABASE_URL: postgresql://test:test@postgres-test:5432/cloudless_test
+      
+      # Test Redis
+      REDIS_URL: redis://redis-test:6379
+      
+      # Test Supabase (use test project)
+      NUXT_PUBLIC_SUPABASE_URL: ${TEST_SUPABASE_URL}
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${TEST_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${TEST_SUPABASE_SERVICE_ROLE_KEY}
+      
+      # Test API Keys
+      OPENAI_API_KEY: ${TEST_OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${TEST_ANTHROPIC_API_KEY}
+      
+      # Test Security
+      SESSION_SECRET: test-session-secret
+      JWT_SECRET: test-jwt-secret
+      
+      # Test Monitoring
+      SENTRY_DSN: ${TEST_SENTRY_DSN}
+      LOG_LEVEL: debug
+      
+      # Test Configuration
+      TEST_MODE: true
+      CI: true
+    volumes:
+      - .:/app:cached
+      - /app/node_modules
+      - /app/.nuxt
+      - /app/.output
+      - /app/dist
+      - /app/coverage
+      - /app/.vite
+      - /app/playwright-report
+    networks:
+      - cloudless-test-network
+    depends_on:
+      - postgres-test
+      - redis-test
+    command: ["npm", "run", "test"]
+
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: cloudlessgr-postgres-test
+    environment:
+      POSTGRES_DB: cloudless_test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    networks:
+      - cloudless-test-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U test -d cloudless_test']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: cloudlessgr-redis-test
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_test_data:/data
+    networks:
+      - cloudless-test-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--raw', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Playwright browser container for E2E tests
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.40.0-focal
+    container_name: cloudlessgr-playwright
+    environment:
+      # Browser configuration
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 0
+    volumes:
+      - .:/app:cached
+      - /app/node_modules
+      - /app/playwright-report
+    networks:
+      - cloudless-test-network
+    depends_on:
+      - app-test
+    command: ["npx", "playwright", "test", "--reporter=html"]
+
+volumes:
+  postgres_test_data:
+    driver: local
+  redis_test_data:
+    driver: local
+
+networks:
+  cloudless-test-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16 

@@ -1,0 +1,81 @@
+{
+  "name": "Cloudless.gr Development",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app-dev",
+  "workspaceFolder": "/app",
+  
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-typescript-next",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-eslint",
+        "Vue.volar",
+        "Vue.vscode-typescript-vue-plugin",
+        "ms-vscode.vscode-json",
+        "ms-vscode.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "ms-vscode-remote.remote-containers",
+        "formulahendry.auto-rename-tag",
+        "christian-kohler.path-intellisense",
+        "ms-vscode.vscode-npm-script",
+        "ms-vscode.vscode-node-debug2",
+        "ms-vscode.vscode-js-debug"
+      ],
+      "settings": {
+        "typescript.preferences.includePackageJsonAutoImports": "on",
+        "typescript.suggest.autoImports": true,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "files.watcherExclude": {
+          "**/node_modules/**": true,
+          "**/.nuxt/**": true,
+          "**/.output/**": true,
+          "**/dist/**": true
+        },
+        "search.exclude": {
+          "**/node_modules": true,
+          "**/.nuxt": true,
+          "**/.output": true,
+          "**/dist": true,
+          "**/coverage": true
+        }
+      }
+    }
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "forwardPorts": [3000, 9229, 24678, 8081, 6379, 5432],
+  "portsAttributes": {
+    "3000": {
+      "label": "Nuxt App",
+      "onAutoForward": "openBrowser"
+    },
+    "8081": {
+      "label": "Redis Commander"
+    },
+    "9229": {
+      "label": "Node.js Debugger"
+    },
+    "24678": {
+      "label": "Vite HMR"
+    }
+  },
+
+  "postCreateCommand": "npm install",
+  "postStartCommand": "echo 'Dev container started! Access your app at http://localhost:3000'",
+  
+  "remoteUser": "nuxtjs",
+  "shutdownAction": "stopCompose"
+} 

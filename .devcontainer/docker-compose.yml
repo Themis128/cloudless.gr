@@ -1,0 +1,259 @@
+version: '3.8'
+
+services:
+  app-dev:
+    build:
+      context: ..
+      dockerfile: Dockerfile.dev
+    image: cloudlessgr-app-dev:latest
+    container_name: cloudlessgr-app-dev-container
+    restart: unless-stopped
+    
+    # Development ports
+    ports:
+      - "3000:3000"      # Main app
+      - "9229:9229"      # Node.js debugger
+      - "24678:24678"    # Vite HMR
+    
+    # Environment variables
+    environment:
+      # Core settings
+      NODE_ENV: development
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+      NUXT_HOST: 0.0.0.0
+      NUXT_PORT: 3000
+      HOST: 0.0.0.0
+      
+      # File watching optimizations
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '50'
+      CHOKIDAR_IGNORED: '**/node_modules/**,**/.git/**,**/.nuxt/**,**/.output/**,**/dist/**,**/coverage/**,**/tmp/**,**/logs/**,**/*.log,**/.vite/**'
+      WATCHPACK_POLLING: 'true'
+      WATCHPACK_AGGREGATE_TIMEOUT: '50'
+      WATCHPACK_POLL: '500'
+      
+      # Vite optimizations
+      VITE_HMR_PORT: '24678'
+      VITE_HMR_HOST: '0.0.0.0'
+      VITE_HMR_OVERLAY: 'false'
+      VITE_OPTIMIZE_DEPS_INCLUDE: 'vuetify,echarts,vue-echarts'
+      VITE_OPTIMIZE_DEPS_EXCLUDE: 'vue-demi'
+      
+      # Node.js optimizations
+      NODE_OPTIONS: '--max-old-space-size=4096 --enable-source-maps --inspect=0.0.0.0:9229'
+      
+      # Hot reload
+      NUXT_DEV_SERVER_WATCH_OPTIONS: 'usePolling:true,interval:50,followSymlinks:false,ignored:["**/node_modules/**","**/.git/**","**/.nuxt/**","**/.output/**"]'
+      NUXT_DEV_SERVER_HMR_OPTIONS: 'port:24678,host:0.0.0.0,overlay:false,timeout:30000'
+      
+      # Timezone
+      TZ: Europe/Athens
+      
+      # Service connections
+      REDIS_URL: redis://redis-dev:6379
+      DATABASE_URL: postgresql://cloudless:development@postgres-dev:5432/cloudless_dev
+      
+      # Supabase (from .env)
+      NUXT_PUBLIC_SUPABASE_URL: ${NUXT_PUBLIC_SUPABASE_URL:-}
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${NUXT_PUBLIC_SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      
+      # External API Keys (from .env)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-disabled}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      
+      # Security (from .env)
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      
+      # Monitoring (from .env)
+      SENTRY_DSN: ${SENTRY_DSN:-disabled}
+      LOG_LEVEL: debug
+    
+    # Volume mounts
+    volumes:
+      - ..:/app:cached
+      - /app/node_modules
+      - /app/.nuxt
+      - /app/.output
+      - /app/dist
+      - /app/coverage
+      - /app/.vite
+      - /app/playwright-report
+      
+      # Cache volumes
+      - npm_cache:/root/.npm
+      - nuxt_cache:/app/.nuxt
+      - vite_cache:/app/.vite
+      - esbuild_cache:/app/.esbuild
+      - typescript_cache:/app/.tsbuildinfo
+    
+    # Network
+    networks:
+      - cloudless-dev-network
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    
+    # Dependencies
+    depends_on:
+      redis-dev:
+        condition: service_healthy
+    
+    # Resources
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '3.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+    
+    # Development features
+    stdin_open: true
+    tty: true
+    init: true
+    
+    # Security
+    security_opt:
+      - no-new-privileges:true
+    
+    # Performance
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    shm_size: '512mb'
+
+  # Redis for development
+  redis-dev:
+    image: redis:7-alpine
+    container_name: cloudlessgr-redis-dev-container
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly no
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --loglevel warning
+      --tcp-keepalive 300
+      --timeout 0
+      --tcp-backlog 511
+      --databases 16
+      --maxclients 10000
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - cloudless-dev-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--raw', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+  # Redis Commander for management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: cloudlessgr-redis-commander-container
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: 'local:redis-dev:6379'
+      HTTP_USER: admin
+      HTTP_PASSWORD: admin
+      REDIS_COMMANDER_HTTP_USER: admin
+      REDIS_COMMANDER_HTTP_PASSWORD: admin
+    networks:
+      - cloudless-dev-network
+    depends_on:
+      redis-dev:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+
+  # PostgreSQL for development (optional)
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: cloudlessgr-postgres-dev-container
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cloudless_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-cloudless}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-development}
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
+      TZ: Europe/Athens
+      POSTGRES_SHARED_BUFFERS: 256MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
+      POSTGRES_WORK_MEM: 4MB
+      POSTGRES_MAINTENANCE_WORK_MEM: 64MB
+      POSTGRES_WAL_BUFFERS: 16MB
+      POSTGRES_CHECKPOINT_SEGMENTS: 32
+      POSTGRES_CHECKPOINT_COMPLETION_TARGET: 0.9
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - cloudless-dev-network
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-cloudless} -d ${POSTGRES_DB:-cloudless_dev}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - database
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+networks:
+  cloudless-dev-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+
+volumes:
+  redis_dev_data:
+    driver: local
+  postgres_dev_data:
+    driver: local
+  npm_cache:
+    driver: local
+  nuxt_cache:
+    driver: local
+  vite_cache:
+    driver: local
+  esbuild_cache:
+    driver: local
+  typescript_cache:
+    driver: local 
