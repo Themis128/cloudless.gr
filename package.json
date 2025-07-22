@@ -48,7 +48,12 @@
     "dev:docker:clean": "bash scripts/docker/dev-docker.sh clean",
     "dev:docker:status": "bash scripts/docker/dev-docker.sh status",
     "dev:network-info": "bash scripts/get-network-info.sh",
-    "dev:debug": "docker compose -f docker-compose.dev.yml exec app-dev node --inspect=0.0.0.0:9229 .output/server/index.mjs"
+    "dev:debug": "docker compose -f docker-compose.dev.yml exec app-dev node --inspect=0.0.0.0:9229 .output/server/index.mjs",
+    "prod:deploy": "bash scripts/deploy-production.sh deploy",
+    "prod:stop": "bash scripts/deploy-production.sh stop",
+    "prod:logs": "bash scripts/deploy-production.sh logs",
+    "prod:status": "bash scripts/deploy-production.sh status",
+    "prod:health": "bash scripts/deploy-production.sh health"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",

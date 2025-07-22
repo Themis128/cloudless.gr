@@ -1,0 +1,161 @@
+name: 🚀 Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deployment even if tests fail'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: 🧪 Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '21'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Run linting
+        run: npm run lint
+
+      - name: ✅ Run tests
+        run: npm test
+
+      - name: 🏗️ Test build
+        run: npm run build
+
+  deploy:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: test
+    if: success() || github.event.inputs.force_deploy == 'true'
+    environment: 
+      name: production
+      url: https://cloudless.gr
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '21'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build application
+        run: npm run build
+        env:
+          # Use GitHub environment variables
+          NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL }}
+          NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: 🐳 Build Docker image
+        run: |
+          docker build -f scripts/docker/Dockerfile \
+            --build-arg VERSION=${{ github.sha }} \
+            --build-arg GIT_COMMIT=${{ github.sha }} \
+            --build-arg GIT_BRANCH=${{ github.ref_name }} \
+            --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+            -t cloudlessgr-app:${{ github.sha }} \
+            -t cloudlessgr-app:latest .
+
+      - name: 🧪 Test Docker image
+        run: |
+          # Test that the image starts correctly
+          docker run -d --name test-container \
+            -e NUXT_PUBLIC_SUPABASE_URL="${{ secrets.NUXT_PUBLIC_SUPABASE_URL }}" \
+            -e NUXT_PUBLIC_SUPABASE_ANON_KEY="${{ secrets.NUXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -e NODE_ENV=production \
+            -p 3001:3000 \
+            cloudlessgr-app:${{ github.sha }}
+          
+          # Wait for container to start
+          sleep 30
+          
+          # Test health endpoint
+          curl -f http://localhost:3001/api/health || exit 1
+          
+          # Cleanup
+          docker stop test-container
+          docker rm test-container
+
+      - name: 🏷️ Tag Docker image
+        run: |
+          docker tag cloudlessgr-app:${{ github.sha }} cloudlessgr-app:production
+          docker tag cloudlessgr-app:${{ github.sha }} cloudlessgr-app:$(date +%Y%m%d-%H%M%S)
+
+      - name: 💾 Save Docker image
+        run: |
+          mkdir -p ./docker-artifacts
+          docker save cloudlessgr-app:${{ github.sha }} | gzip > ./docker-artifacts/cloudlessgr-app-${{ github.sha }}.tar.gz
+
+      - name: 📤 Upload Docker artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ github.sha }}
+          path: ./docker-artifacts/
+          retention-days: 7
+
+      - name: 📋 Create deployment summary
+        run: |
+          echo "## 🚀 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | Production |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Image** | \`cloudlessgr-app:${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build Date** | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🌐 Network Access" >> $GITHUB_STEP_SUMMARY
+          echo "The application is configured for network-wide access:" >> $GITHUB_STEP_SUMMARY
+          echo "- Binds to \`0.0.0.0:3000\` for external access" >> $GITHUB_STEP_SUMMARY
+          echo "- Health check available at \`/api/health\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Ready for load balancer integration" >> $GITHUB_STEP_SUMMARY
+
+  notify:
+    name: 📢 Notify Deployment
+    runs-on: ubuntu-latest
+    needs: [test, deploy]
+    if: always()
+    steps:
+      - name: 📢 Deployment notification
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "✅ Production deployment successful!"
+            echo "🌐 Application available at: https://cloudless.gr"
+            echo "🏥 Health check: https://cloudless.gr/api/health"
+          else
+            echo "❌ Production deployment failed!"
+            echo "🔍 Check the logs above for details"
+            exit 1
+          fi

@@ -1,0 +1,143 @@
+# Production Docker Compose Configuration
+# Uses environment variables from GitHub secrets or .env file
+# Configured for network-wide access
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: scripts/docker/Dockerfile
+      args:
+        VERSION: ${VERSION:-latest}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+        GIT_BRANCH: ${GIT_BRANCH:-main}
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+    image: cloudlessgr-app:${VERSION:-latest}
+    container_name: cloudlessgr-app-prod
+    restart: unless-stopped
+    ports:
+      - '0.0.0.0:3000:3000'  # Network-wide access
+    environment:
+      # Application configuration
+      - NODE_ENV=production
+      - NITRO_HOST=0.0.0.0
+      - NITRO_PORT=3000
+      - NUXT_HOST=0.0.0.0
+      - NUXT_PORT=3000
+      - NITRO_LOG_LEVEL=info
+      
+      # Database and external services (from GitHub secrets)
+      - NUXT_PUBLIC_SUPABASE_URL=${NUXT_PUBLIC_SUPABASE_URL}
+      - NUXT_PUBLIC_SUPABASE_ANON_KEY=${NUXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      
+      # External API keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      
+      # Security
+      - SESSION_SECRET=${SESSION_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      
+      # Application metadata
+      - APP_VERSION=${VERSION:-latest}
+      - GIT_COMMIT=${GIT_COMMIT:-unknown}
+      - BUILD_DATE=${BUILD_DATE:-unknown}
+    
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    volumes:
+      - ./logs/prod:/app/logs
+      - ./uploads:/app/uploads
+    
+    networks:
+      - cloudless-prod-network
+
+  # Optional: Redis for production (if not using external Redis)
+  redis:
+    image: redis:7-alpine
+    container_name: cloudlessgr-redis-prod
+    restart: unless-stopped
+    ports:
+      - '0.0.0.0:6379:6379'  # Network access if needed
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-production}
+    command: redis-server --requirepass ${REDIS_PASSWORD:-production} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_prod_data:/data
+      - ./logs/redis-prod:/var/log/redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-production}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - cloudless-prod-network
+    profiles:
+      - redis  # Only start if redis profile is enabled
+
+  # Nginx reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    container_name: cloudlessgr-nginx-prod
+    restart: unless-stopped
+    ports:
+      - '0.0.0.0:80:80'     # HTTP access from network
+      - '0.0.0.0:443:443'   # HTTPS access from network
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx-prod:/var/log/nginx
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - cloudless-prod-network
+
+  # Optional: PostgreSQL for production (if not using external database)
+  postgres:
+    image: postgres:16-alpine
+    container_name: cloudlessgr-postgres-prod
+    restart: unless-stopped
+    ports:
+      - '0.0.0.0:5432:5432'  # Network access if needed
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-cloudless_prod}
+      - POSTGRES_USER=${POSTGRES_USER:-cloudless}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./scripts/database/init-prod.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./logs/postgres-prod:/var/log/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cloudless} -d ${POSTGRES_DB:-cloudless_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - cloudless-prod-network
+    profiles:
+      - database  # Only start if database profile is enabled
+
+networks:
+  cloudless-prod-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+volumes:
+  postgres_prod_data:
+    driver: local
+  redis_prod_data:
+    driver: local
