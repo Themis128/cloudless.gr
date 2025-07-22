@@ -1,7 +1,8 @@
 // API endpoint for admin authentication
-import { createError, defineEventHandler, readBody, setCookie } from 'h3'
+import { defineEventHandler, readBody, setCookie, createError } from 'h3'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
+import type { SignOptions } from 'jsonwebtoken'
 
 // Load environment variables
 const JWT_SECRET = process.env.NUXT_JWT_SECRET || 'your-secret-key-change-this-in-production'
@@ -13,10 +14,10 @@ function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex')
 }
 
-// Function to generate JWT token
+// Function to generate JWT token  
 function generateToken(user: any): string {
   const { password, ...userWithoutPassword } = user
-  return jwt.sign(userWithoutPassword, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })
+  return jwt.sign(userWithoutPassword, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 // Admin credentials (in real production, this would be in a database)

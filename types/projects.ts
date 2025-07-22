@@ -8,6 +8,9 @@ export interface ProjectTemplate {
   category: string;
   icon: string;
   features: string[];
+  technologies: string[];
+  techStack: string[];
+  difficulty: string;
   // Add other properties based on usage
 }
 

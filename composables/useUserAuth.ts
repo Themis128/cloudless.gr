@@ -31,7 +31,7 @@ export const useUserAuth = () => {
   // Verify authentication with the server
   const checkAuthStatus = async () => {
     try {
-      const { data } = await $fetch<VerifyApiResponse>('/api/auth/verify');
+      const data = await $fetch<VerifyApiResponse>('/api/auth/verify');
       
       if (data && data.authenticated && data.user) {
         currentUser.value = data.user;

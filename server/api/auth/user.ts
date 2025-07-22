@@ -2,6 +2,7 @@
 import { createError, defineEventHandler, readBody, setCookie, getCookie } from 'h3'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
+import type { SignOptions } from 'jsonwebtoken'
 import prisma from '../../utils/prisma'
 
 // Load environment variables
@@ -26,7 +27,7 @@ function validateToken(token: string): any {
 // Function to generate JWT token
 function generateToken(user: any): string {
   const { password, ...userWithoutPassword } = user
-  return jwt.sign(userWithoutPassword, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })
+  return jwt.sign(userWithoutPassword, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 // Login handler
