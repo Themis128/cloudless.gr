@@ -1,0 +1,336 @@
+# Ultra-Optimized Development Docker Compose Configuration
+# Optimized for maximum speed, minimal resource usage, and instant hot reload
+# Enhanced with advanced caching, performance tuning, and startup optimization
+# Updated with improved environment handling and network broadcasting
+
+services:
+  app-dev:
+    build:
+      context: ../..
+      dockerfile: scripts/docker/Dockerfile.dev
+      target: dev
+      args:
+        NODE_ENV: development
+    image: cloudlessgr-app-dev:latest
+    container_name: cloudlessgr-app-dev
+    restart: unless-stopped
+    ports:
+      - '0.0.0.0:3000:3000'  # Main app port - accessible from network
+      - '0.0.0.0:9229:9229'  # Node.js debugger - accessible from network
+      - '0.0.0.0:24678:24678' # Vite HMR port - accessible from network
+    environment:
+      # Core environment variables for external IP binding
+      NODE_ENV: development
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+      NUXT_HOST: 0.0.0.0
+      NUXT_PORT: 3000
+      HOST: 0.0.0.0
+      
+      # Ultra-optimized file watching for instant hot reload
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '50'  # Reduced for faster response
+      CHOKIDAR_IGNORED: '**/node_modules/**,**/.git/**,**/.nuxt/**,**/.output/**,**/dist/**,**/coverage/**,**/tmp/**,**/logs/**,**/*.log,**/.vite/**'
+      WATCHPACK_POLLING: 'true'
+      WATCHPACK_AGGREGATE_TIMEOUT: '50'  # Reduced for faster response
+      WATCHPACK_POLL: '500'  # Reduced for faster response
+      
+      # Vite optimizations for hot reload
+      VITE_HMR_PORT: '24678'
+      VITE_HMR_HOST: '0.0.0.0'  # Bind HMR to all interfaces for network access
+      VITE_HMR_OVERLAY: 'false'
+      VITE_OPTIMIZE_DEPS_INCLUDE: 'vuetify,echarts,vue-echarts'
+      VITE_OPTIMIZE_DEPS_EXCLUDE: 'vue-demi'
+      
+      # Development debugging (reduced for better performance)
+      NITRO_DEBUG: '0'  # Disabled for better performance
+      DEBUG: 'nuxt:*'  # Reduced debug output
+      
+      # Performance optimizations for hot reload
+      NODE_OPTIONS: '--max-old-space-size=5120 --enable-source-maps --inspect=0.0.0.0:9229 --max-semi-space-size=512'
+      
+      # Hot reload optimizations
+      NUXT_DEV_SERVER_WATCH_OPTIONS: 'usePolling:true,interval:50,followSymlinks:false,ignored:["**/node_modules/**","**/.git/**","**/.nuxt/**","**/.output/**"]'
+      NUXT_DEV_SERVER_HMR_OPTIONS: 'port:24678,host:0.0.0.0,overlay:false,timeout:30000'
+      
+      # Timezone
+      TZ: Europe/Athens
+      
+      # Service connections
+      REDIS_URL: redis://redis-dev:6379
+      DATABASE_URL: postgresql://cloudless:development@postgres-dev:5432/cloudless_dev
+      
+      # Supabase configuration (loaded from .env file)
+      NUXT_PUBLIC_SUPABASE_URL: ${NUXT_PUBLIC_SUPABASE_URL:-}
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${NUXT_PUBLIC_SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      
+              # External URL for proper binding (loaded from .env file)
+    
+    # Additional performance optimizations (set in Dockerfile or runtime)
+    # NUXT_TELEMETRY_DISABLED: '1'
+    # NITRO_PRESET: 'node'
+    # NITRO_COMPRESSION: 'false'
+    # NITRO_MINIFY: 'false'
+    
+    # Build speed optimizations (these will be set in the Dockerfile or runtime)
+    # NITRO_BUILD_CACHE: 'true'
+    # NITRO_BUILD_PARALLEL: 'true'
+    # NITRO_BUILD_WORKERS: '4'
+    # NITRO_BUILD_TIMEOUT: '300000'
+    
+    # Vite build optimizations (these will be set in the Dockerfile or runtime)
+    # VITE_BUILD_SOURCEMAP: 'false'
+    # VITE_BUILD_MINIFY: 'false'
+    # VITE_BUILD_ROLLUP_OPTIONS: 'treeshake:false'
+    volumes:
+      # Source code with optimized mounting for hot reload
+      - ../../:/app:cached
+      
+      # Exclude heavy directories for better performance
+      - /app/node_modules
+      - /app/.nuxt
+      - /app/.output
+      - /app/dist
+      - /app/coverage
+      - /app/.nyc_output
+      - /app/.vite
+      - /app/playwright-report
+      - /app/coverage
+      
+      # Development directories
+      - ../../logs:/app/logs:cached
+      - ../../tmp:/app/tmp:cached
+      
+      # Optimized cache volumes for hot reload
+      - npm_cache:/root/.npm
+      - nuxt_cache:/app/.nuxt
+      - yarn_cache:/usr/local/share/.cache/yarn
+      - pnpm_cache:/root/.pnpm-store
+      - vite_cache:/app/.vite
+      - esbuild_cache:/app/.esbuild
+      - typescript_cache:/app/.tsbuildinfo
+    working_dir: /app
+    command: npm run dev
+    networks:
+      - cloudless-dev-network
+    # Development features
+    stdin_open: true
+    tty: true
+    # Optimized health check with better startup handling
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    depends_on:
+      redis-dev:
+        condition: service_healthy
+    # Resource optimization (balanced for development)
+    deploy:
+      resources:
+        limits:
+          memory: 4G    # Balanced for development
+          cpus: '3.0'   # Balanced for development
+        reservations:
+          memory: 1G    # Balanced reservation
+          cpus: '1.0'   # Balanced reservation
+    # Enable BuildKit features
+    init: true
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    # Performance optimizations
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    # Startup optimization
+    shm_size: '512mb'  # Balanced shared memory for development
+
+  # Ultra-Optimized Redis for development
+  redis-dev:
+    image: redis:7-alpine
+    container_name: cloudlessgr-redis-dev
+    restart: unless-stopped
+    command: >
+      redis-server 
+      --appendonly no
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --loglevel warning
+      --tcp-keepalive 300
+      --timeout 0
+      --tcp-backlog 511
+      --databases 16
+      --maxclients 10000
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - cloudless-dev-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--raw', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Resource limits (optimized for dev)
+    deploy:
+      resources:
+        limits:
+          memory: 256M  # Reduced for dev
+          cpus: '0.25'  # Reduced for dev
+        reservations:
+          memory: 128M  # Reduced for faster startup
+          cpus: '0.1'   # Reduced for faster startup
+
+  # Optimized PostgreSQL for development
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: cloudlessgr-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cloudless_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-cloudless}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-development}
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
+      TZ: Europe/Athens
+      # Performance optimizations
+      POSTGRES_SHARED_BUFFERS: 256MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
+      POSTGRES_WORK_MEM: 4MB
+      POSTGRES_MAINTENANCE_WORK_MEM: 64MB
+      POSTGRES_WAL_BUFFERS: 16MB
+      POSTGRES_CHECKPOINT_SEGMENTS: 32
+      POSTGRES_CHECKPOINT_COMPLETION_TARGET: 0.9
+    ports:
+      - '192.168.0.23:5432:5432'
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ../../init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - cloudless-dev-network
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-cloudless} -d ${POSTGRES_DB:-cloudless_dev}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - database
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Mailhog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: cloudlessgr-mailhog
+    restart: unless-stopped
+    ports:
+      - '192.168.0.23:1025:1025' # SMTP
+      - '192.168.0.23:8025:8025' # Web UI
+    networks:
+      - cloudless-dev-network
+    profiles:
+      - email
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+
+  # Adminer for database management
+  adminer:
+    image: adminer:latest
+    container_name: cloudlessgr-adminer
+    restart: unless-stopped
+    ports:
+      - '192.168.0.23:8080:8080'
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres-dev
+      ADMINER_DESIGN: pepa-linha-dark
+    networks:
+      - cloudless-dev-network
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+    profiles:
+      - database
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+
+  # Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: cloudlessgr-redis-commander
+    restart: unless-stopped
+    ports:
+      - '0.0.0.0:8081:8081'  # Redis Commander - accessible from network
+    environment:
+      REDIS_HOSTS: 'local:redis-dev:6379'
+      HTTP_USER: admin
+      HTTP_PASSWORD: admin
+      REDIS_COMMANDER_HTTP_USER: admin
+      REDIS_COMMANDER_HTTP_PASSWORD: admin
+    networks:
+      - cloudless-dev-network
+    depends_on:
+      redis-dev:
+        condition: service_healthy
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+
+networks:
+  cloudless-dev-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+
+volumes:
+  redis_dev_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ../../data/redis
+  postgres_dev_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ../../data/postgres
+  npm_cache:
+    driver: local
+  nuxt_cache:
+    driver: local
+  yarn_cache:
+    driver: local
+  pnpm_cache:
+    driver: local
+  vite_cache:
+    driver: local
+  esbuild_cache:
+    driver: local
+  typescript_cache:
+    driver: local
