@@ -1,5 +1,5 @@
+import { defineEventHandler, getQuery, readBody, createError } from 'h3';
 import { PrismaClient } from '@prisma/client';
-import { createError, defineEventHandler, getQuery, readBody } from 'h3';
 
 const prisma = new PrismaClient();
 
@@ -13,45 +13,36 @@ export default defineEventHandler(async (event) => {
       const page = Number(query.page) || 1;
       const limit = Number(query.limit) || 10;
       const skip = (page - 1) * limit;
-
+      
       // Build filter conditions
       const where: any = {};
-
+      
       if (query.category) {
         where.category = query.category;
       }
-
+      
       if (query.status) {
         where.status = query.status;
       }
-
-      if (query.featured !== undefined) {
-        where.featured = query.featured === 'true';
+      
+      if (query.featured === 'true') {
+        where.featured = true;
       }
-
+      
       if (query.search) {
-        const searchTerm = query.search.toString();
         where.OR = [
-          { project_name: { contains: searchTerm, mode: 'insensitive' } },
-          { description: { contains: searchTerm, mode: 'insensitive' } },
-          { overview: { contains: searchTerm, mode: 'insensitive' } },
+          { project_name: { contains: query.search as string, mode: 'insensitive' } },
+          { description: { contains: query.search as string, mode: 'insensitive' } },
+          { overview: { contains: query.search as string, mode: 'insensitive' } }
         ];
       }
 
-      // Determine sort order
-      let orderBy = {};
-      switch (query.sortBy) {
-        case 'newest':
-          orderBy = { createdAt: 'desc' };
-          break;
-        case 'oldest':
-          orderBy = { createdAt: 'asc' };
-          break;
-        case 'name':
-          orderBy = { project_name: 'asc' };
-          break;
-        default:
-          orderBy = { updatedAt: 'desc' };
+      // Build sort conditions
+      const orderBy: any = {};
+      if (query.sortBy) {
+        orderBy[query.sortBy as string] = query.sortOrder || 'desc';
+      } else {
+        orderBy.updatedAt = 'desc';
       }
 
       const [projects, total] = await Promise.all([
@@ -68,12 +59,12 @@ export default defineEventHandler(async (event) => {
               select: {
                 id: true,
                 name: true,
-                email: true,
-              },
-            },
-          },
+                email: true
+              }
+            }
+          }
         }),
-        prisma.project.count({ where }),
+        prisma.project.count({ where })
       ]);
 
       return {
@@ -90,27 +81,34 @@ export default defineEventHandler(async (event) => {
     // POST - Create new project
     if (method === 'POST') {
       const body = await readBody(event);
-
-      if (!body.project_name || !body.description || !body.userId) {
+      
+      // Validate required fields
+      if (!body.project_name || !body.slug || !body.overview || !body.description) {
         throw createError({
           statusCode: 400,
-          statusMessage: 'Missing required fields: project_name, description, userId',
+          statusMessage: 'Missing required fields: project_name, slug, overview, description'
         });
       }
 
-      // Generate slug from project name
-      const slug = body.project_name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)+/g, '');
+      // Check if slug already exists
+      const existingProject = await prisma.project.findUnique({
+        where: { slug: body.slug }
+      });
 
+      if (existingProject) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Project with this slug already exists'
+        });
+      }
+
+      // Create project
       const project = await prisma.project.create({
         data: {
           project_name: body.project_name,
-          slug,
-          overview: body.overview || '',
+          slug: body.slug,
+          overview: body.overview,
           description: body.description,
-          isFavorite: body.isFavorite || false,
           live_url: body.live_url,
           github_url: body.github_url,
           status: body.status || 'draft',
@@ -121,26 +119,7 @@ export default defineEventHandler(async (event) => {
           completionDate: body.completionDate,
           duration: body.duration,
           teamSize: body.teamSize,
-          userId: body.userId,
-          tags: {
-            create:
-              body.tags?.map((tag: any) => ({
-                tag_name: tag.tag_name,
-                is_primary: tag.is_primary || false,
-                color: tag.color,
-              })) || [],
-          },
-          images: {
-            create:
-              body.images?.map((image: any) => ({
-                img_name: image.img_name,
-                img_url: image.img_url,
-                is_thumbnail: image.is_thumbnail || false,
-                alt: image.alt,
-                caption: image.caption,
-                order: image.order || 0,
-              })) || [],
-          },
+          userId: body.userId || 1, // Default to user ID 1 for now
         },
         include: {
           tags: true,
@@ -150,47 +129,57 @@ export default defineEventHandler(async (event) => {
             select: {
               id: true,
               name: true,
-              email: true,
-            },
-          },
-        },
+              email: true
+            }
+          }
+        }
       });
 
-      return { project };
+      return project;
     }
 
-    // PUT - Update existing project
+    // PUT - Update project
     if (method === 'PUT') {
       const body = await readBody(event);
-
+      
       if (!body.id) {
         throw createError({
           statusCode: 400,
-          statusMessage: 'Project ID is required',
+          statusMessage: 'Project ID is required'
         });
       }
 
-      const updateData: any = {};
+      // Check if project exists
+      const existingProject = await prisma.project.findUnique({
+        where: { id: Number(body.id) }
+      });
 
-      // Update only provided fields
-      if (body.project_name) updateData.project_name = body.project_name;
-      if (body.overview !== undefined) updateData.overview = body.overview;
-      if (body.description !== undefined) updateData.description = body.description;
-      if (body.isFavorite !== undefined) updateData.isFavorite = body.isFavorite;
-      if (body.live_url !== undefined) updateData.live_url = body.live_url;
-      if (body.github_url !== undefined) updateData.github_url = body.github_url;
-      if (body.status) updateData.status = body.status;
-      if (body.category) updateData.category = body.category;
-      if (body.client !== undefined) updateData.client = body.client;
-      if (body.clientLogo !== undefined) updateData.clientLogo = body.clientLogo;
-      if (body.featured !== undefined) updateData.featured = body.featured;
-      if (body.completionDate !== undefined) updateData.completionDate = body.completionDate;
-      if (body.duration !== undefined) updateData.duration = body.duration;
-      if (body.teamSize !== undefined) updateData.teamSize = body.teamSize;
+      if (!existingProject) {
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Project not found'
+        });
+      }
 
+      // Update project
       const project = await prisma.project.update({
         where: { id: Number(body.id) },
-        data: updateData,
+        data: {
+          project_name: body.project_name,
+          slug: body.slug,
+          overview: body.overview,
+          description: body.description,
+          live_url: body.live_url,
+          github_url: body.github_url,
+          status: body.status,
+          category: body.category,
+          client: body.client,
+          clientLogo: body.clientLogo,
+          featured: body.featured,
+          completionDate: body.completionDate,
+          duration: body.duration,
+          teamSize: body.teamSize,
+        },
         include: {
           tags: true,
           images: true,
@@ -199,46 +188,62 @@ export default defineEventHandler(async (event) => {
             select: {
               id: true,
               name: true,
-              email: true,
-            },
-          },
-        },
+              email: true
+            }
+          }
+        }
       });
 
-      return { project };
+      return project;
     }
 
     // DELETE - Delete project
     if (method === 'DELETE') {
-      const body = await readBody(event);
-
-      if (!body.id) {
+      const query = getQuery(event);
+      
+      if (!query.id) {
         throw createError({
           statusCode: 400,
-          statusMessage: 'Project ID is required',
+          statusMessage: 'Project ID is required'
         });
       }
 
+      // Check if project exists
+      const existingProject = await prisma.project.findUnique({
+        where: { id: Number(query.id) }
+      });
+
+      if (!existingProject) {
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Project not found'
+        });
+      }
+
+      // Delete project (this will cascade delete related records)
       await prisma.project.delete({
-        where: { id: Number(body.id) },
+        where: { id: Number(query.id) }
       });
 
       return { message: 'Project deleted successfully' };
     }
 
+    // Method not allowed
     throw createError({
       statusCode: 405,
-      statusMessage: 'Method not allowed',
+      statusMessage: 'Method not allowed'
     });
-  } catch (error) {
+
+  } catch (error: any) {
+    console.error('Projects API error:', error);
+    
     if (error.statusCode) {
       throw error;
     }
-
-    console.error('Projects API error:', error);
+    
     throw createError({
       statusCode: 500,
-      statusMessage: 'Internal server error',
+      statusMessage: 'Internal server error'
     });
   }
 });

@@ -1,7 +1,8 @@
 // API v1 Authentication - Login endpoint
 import { defineEventHandler, readBody } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { prisma } from '~/lib/prisma'
 import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -18,73 +19,50 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = process.env.NUXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseKey) {
-      event.node.res.statusCode = 500
-      return {
-        success: false,
-        error: 'Authentication service not configured',
-        code: 'SERVICE_UNAVAILABLE'
-      }
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey)
-
-    // Authenticate with Supabase
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email }
     })
 
-    if (authError) {
+    if (!user) {
       event.node.res.statusCode = 401
       return {
         success: false,
         error: 'Invalid credentials',
-        code: 'INVALID_CREDENTIALS',
-        details: authError.message
+        code: 'INVALID_CREDENTIALS'
       }
     }
 
-    if (!authData.user) {
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password)
+    
+    if (!isValidPassword) {
       event.node.res.statusCode = 401
       return {
         success: false,
-        error: 'Authentication failed',
-        code: 'AUTH_FAILED'
+        error: 'Invalid credentials',
+        code: 'INVALID_CREDENTIALS'
       }
     }
 
     // Generate JWT token
-    const jwtSecret = process.env.JWT_SECRET
+    const jwtSecret = process.env.JWT_SECRET || 'fallback-secret'
     
-    if (!jwtSecret) {
-      event.node.res.statusCode = 500
-      return {
-        success: false,
-        error: 'JWT secret not configured',
-        code: 'CONFIGURATION_ERROR'
-      }
-    }
     const token = jwt.sign(
       {
-        userId: authData.user.id,
-        email: authData.user.email,
-        role: authData.user.role || 'user'
+        userId: user.id,
+        email: user.email,
+        role: user.role
       },
       jwtSecret,
       { expiresIn: '24h' }
     )
 
-    // Get user profile from database
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authData.user.id)
-      .single()
+    // Update last login time
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { updatedAt: new Date() }
+    })
 
     // Return success response
     return {
@@ -92,12 +70,12 @@ export default defineEventHandler(async (event) => {
       data: {
         token,
         user: {
-          id: authData.user.id,
-          email: authData.user.email,
-          emailConfirmed: authData.user.email_confirmed_at ? true : false,
-          createdAt: authData.user.created_at,
-          lastSignIn: authData.user.last_sign_in_at,
-          profile: profile || null
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
         },
         expiresIn: '24h',
         tokenType: 'Bearer'
@@ -106,7 +84,7 @@ export default defineEventHandler(async (event) => {
     }
 
   } catch (error) {
-    // console.error('Login error:', error)
+    console.error('Login error:', error)
     event.node.res.statusCode = 500
     return {
       success: false,

@@ -1,22 +1,19 @@
-import { PrismaClient } from '@prisma/client';
-import type { Project, ProjectImage, ProjectTag } from '../types/projects';
+import { prisma } from '~/lib/prisma'
 
-const prisma = new PrismaClient();
-
-export function findThumbnailImage(images: ProjectImage[]): ProjectImage | undefined {
-  return images.find((image) => image.is_thumbnail);
+export function findThumbnailImage(images: any[]): any | undefined {
+  return images.find(image => image.is_thumbnail)
 }
 
-export function findPrimaryTags(tags: ProjectTag[]): ProjectTag[] | undefined {
-  return tags.filter((tag) => tag.is_primary);
+export function findPrimaryTags(tags: any[]): any[] {
+  return tags.filter(tag => tag.is_primary)
 }
 
-export function findFavoriteProjects(projects: Project[]): Project[] {
-  return projects.filter((project) => project.isFavorite);
+export function findFavoriteProjects(projects: any[]): any[] {
+  return projects.filter(project => project.isFavorite)
 }
 
 // Fetch all published projects from database
-export async function getAllProjects(): Promise<Project[]> {
+export async function getAllProjects(): Promise<any[]> {
   try {
     const projects = await prisma.project.findMany({
       where: { status: 'published' },
@@ -33,22 +30,17 @@ export async function getAllProjects(): Promise<Project[]> {
         },
       },
       orderBy: { updatedAt: 'desc' },
-    });
+    })
 
-    return projects.map((project) => ({
-      ...project,
-      tech_tags: project.tags,
-      createdAt: project.createdAt.toISOString(),
-      updatedAt: project.updatedAt.toISOString(),
-    }));
+    return projects
   } catch (error) {
-    console.error('Error fetching projects:', error);
-    return [];
+    console.error('Error fetching projects:', error)
+    return []
   }
 }
 
 // Fetch featured projects from database
-export async function getFeaturedProjects(): Promise<Project[]> {
+export async function getFeaturedProjects(): Promise<any[]> {
   try {
     const projects = await prisma.project.findMany({
       where: {
@@ -69,24 +61,19 @@ export async function getFeaturedProjects(): Promise<Project[]> {
       },
       orderBy: { updatedAt: 'desc' },
       take: 6,
-    });
+    })
 
-    return projects.map((project) => ({
-      ...project,
-      tech_tags: project.tags,
-      createdAt: project.createdAt.toISOString(),
-      updatedAt: project.updatedAt.toISOString(),
-    }));
+    return projects
   } catch (error) {
-    console.error('Error fetching featured projects:', error);
-    return [];
+    console.error('Error fetching featured projects:', error)
+    return []
   }
 }
 
 // Seed initial projects if none exist
 export async function seedInitialProjects(userId: number): Promise<void> {
   try {
-    const existingProjects = await prisma.project.count();
+    const existingProjects = await prisma.project.count()
 
     if (existingProjects === 0) {
       const sampleProjects = [
@@ -135,7 +122,8 @@ export async function seedInitialProjects(userId: number): Promise<void> {
           testimonials: {
             create: [
               {
-                quote: 'Outstanding work! The AI features really make this portfolio stand out.',
+                quote:
+                  'Outstanding work! The AI features really make this portfolio stand out.',
                 author: 'Sarah Johnson',
                 position: 'Design Director',
                 company: 'TechCorp',
@@ -184,7 +172,8 @@ export async function seedInitialProjects(userId: number): Promise<void> {
         {
           project_name: 'E-Commerce Analytics Dashboard',
           slug: 'ecommerce-analytics-dashboard',
-          overview: 'Real-time analytics and insights for e-commerce businesses',
+          overview:
+            'Real-time analytics and insights for e-commerce businesses',
           description:
             'A comprehensive dashboard providing real-time analytics, sales tracking, and business intelligence for e-commerce platforms.',
           isFavorite: false,
@@ -217,17 +206,17 @@ export async function seedInitialProjects(userId: number): Promise<void> {
             ],
           },
         },
-      ];
+      ]
 
       for (const projectData of sampleProjects) {
         await prisma.project.create({
           data: projectData,
-        });
+        })
       }
 
-      console.log('Sample projects seeded successfully');
+      console.log('Sample projects seeded successfully')
     }
   } catch (error) {
-    console.error('Error seeding projects:', error);
+    console.error('Error seeding projects:', error)
   }
 }

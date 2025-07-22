@@ -1,57 +1,81 @@
 <template>
   <div class="components-container">
-    <div class="components-header">
+    <div class="header">
       <h1>Component Library</h1>
-      <p>Browse and explore our collection of reusable UI components with live examples and code snippets.</p>
+      <p>Browse generated components and see the code behind them.</p>
+    </div>
+
+    <div class="filters">
+      <div class="search-box">
+        <input 
+          v-model="searchTerm" 
+          type="text" 
+          placeholder="Search components..."
+          class="search-input"
+        />
+      </div>
+      <div class="filter-buttons">
+        <button 
+          v-for="category in categories" 
+          :key="category"
+          @click="toggleCategory(category)"
+          :class="['filter-btn', { active: selectedCategories.includes(category) }]"
+        >
+          {{ category }}
+        </button>
+      </div>
     </div>
 
     <div class="components-grid">
-      <div v-for="component in components" :key="component.id" class="component-card">
+      <div 
+        v-for="component in filteredComponents" 
+        :key="component.id"
+        class="component-card"
+      >
         <div class="component-preview">
-          <component :is="component.component" v-bind="component.props" />
-        </div>
-        
-        <div class="component-info">
-          <h3>{{ component.name }}</h3>
-          <p>{{ component.description }}</p>
-          
-          <div class="component-tags">
-            <span v-for="tag in component.tags" :key="tag" class="tag">{{ tag }}</span>
+          <div class="preview-header">
+            <h3>{{ component.name }}</h3>
+            <span class="component-type">{{ component.type }}</span>
           </div>
-          
+          <div class="preview-content" v-html="component.preview"></div>
+        </div>
+        <div class="component-info">
+          <p class="component-description">{{ component.description }}</p>
+          <div class="component-tags">
+            <span 
+              v-for="tag in component.tags" 
+              :key="tag"
+              class="tag"
+            >
+              {{ tag }}
+            </span>
+          </div>
           <div class="component-actions">
-            <button @click="viewCode(component)" class="view-code-btn">View Code</button>
-            <button @click="copyCode(component)" class="copy-btn">Copy</button>
+            <button @click="viewCode(component)" class="action-btn">
+              View Code
+            </button>
+            <button @click="copyCode(component)" class="action-btn secondary">
+              Copy Code
+            </button>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Code Modal -->
-    <div v-if="showCodeModal" class="modal-backdrop" @click="closeCodeModal">
+    <div v-if="showCodeModal" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>{{ selectedComponent?.name }} - Code</h3>
-          <button @click="closeCodeModal" class="close-btn">&times;</button>
+          <h2>{{ selectedComponent?.name }}</h2>
+          <button @click="closeModal" class="close-btn">&times;</button>
         </div>
-        
-        <div class="code-container">
-          <div class="code-tabs">
-            <button 
-              v-for="tab in codeTabs" 
-              :key="tab.id"
-              @click="activeTab = tab.id"
-              :class="['tab-btn', { active: activeTab === tab.id }]"
-            >
-              {{ tab.label }}
-            </button>
-          </div>
-          
-          <div class="code-content">
-            <pre v-if="activeTab === 'vue'" class="code-block">{{ selectedComponent?.vueCode }}</pre>
-            <pre v-else-if="activeTab === 'typescript'" class="code-block">{{ selectedComponent?.typescriptCode }}</pre>
-            <pre v-else-if="activeTab === 'css'" class="code-block">{{ selectedComponent?.cssCode }}</pre>
-          </div>
+        <div class="modal-body">
+          <pre class="code-display">{{ selectedComponent?.code }}</pre>
+        </div>
+        <div class="modal-footer">
+          <button @click="copyCode(selectedComponent)" class="copy-btn">
+            Copy to Clipboard
+          </button>
         </div>
       </div>
     </div>
@@ -59,25 +83,32 @@
 </template>
 
 <script setup lang="ts">
-// Page meta
+import { ref, computed } from 'vue'
+
 definePageMeta({
   title: 'Component Library'
 })
 
-// Sample components data
+const searchTerm = ref('')
+const selectedCategories = ref(['all'])
+const showCodeModal = ref(false)
+const selectedComponent = ref(null)
+
+const categories = ['all', 'UI', 'Form', 'Layout', 'Navigation', 'Data Display']
+
 const components = ref([
   {
     id: 1,
     name: 'Button',
+    type: 'UI',
     description: 'A versatile button component with multiple variants and states.',
-    tags: ['Vue 3', 'TypeScript', 'Tailwind'],
-    component: 'ButtonComponent',
-    props: { variant: 'primary', size: 'md', children: 'Click me' },
-    vueCode: `<template>
+    tags: ['Vue', 'TypeScript', 'Responsive'],
+    preview: '<button class="btn btn-primary">Click me</button>',
+    code: `<template>
   <button 
     :class="buttonClasses" 
     :disabled="disabled"
-    @click="$emit('click')"
+    @click="$emit('click', $event)"
   >
     <slot />
   </button>
@@ -85,99 +116,40 @@ const components = ref([
 
 <script setup lang="ts">
 interface Props {
-  variant?: 'primary' | 'secondary' | 'outline'
-  size?: 'sm' | 'md' | 'lg'
+  variant?: 'primary' | 'secondary' | 'danger'
+  size?: 'small' | 'medium' | 'large'
   disabled?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   variant: 'primary',
-  size: 'md',
+  size: 'medium',
   disabled: false
 })
 
 const buttonClasses = computed(() => [
-  'px-4 py-2 rounded font-medium transition-colors',
-  {
-    'bg-blue-600 text-white hover:bg-blue-700': props.variant === 'primary',
-    'bg-gray-200 text-gray-800 hover:bg-gray-300': props.variant === 'secondary',
-    'border border-blue-600 text-blue-600 hover:bg-blue-50': props.variant === 'outline',
-    'opacity-50 cursor-not-allowed': props.disabled
-  }
+  'btn',
+  \`btn-\${props.variant}\`,
+  \`btn-\${props.size}\`,
+  { 'btn-disabled': props.disabled }
 ])
-</script>`,
-    typescriptCode: `interface ButtonProps {
-  variant?: 'primary' | 'secondary' | 'outline'
-  size?: 'sm' | 'md' | 'lg'
-  disabled?: boolean
-  onClick?: () => void
-}
-
-interface ButtonEmits {
-  click: []
-}`,
-    cssCode: `.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.button--primary {
-  background-color: #2563eb;
-  color: white;
-}
-
-.button--primary:hover:not(:disabled) {
-  background-color: #1d4ed8;
-}
-
-.button--secondary {
-  background-color: #e5e7eb;
-  color: #374151;
-}
-
-.button--secondary:hover:not(:disabled) {
-  background-color: #d1d5db;
-}
-
-.button--outline {
-  border: 1px solid #2563eb;
-  color: #2563eb;
-  background-color: transparent;
-}
-
-.button--outline:hover:not(:disabled) {
-  background-color: #eff6ff;
-}`
+</script>`
   },
   {
     id: 2,
     name: 'Card',
+    type: 'Layout',
     description: 'A flexible card component for displaying content in containers.',
-    tags: ['Vue 3', 'CSS Grid', 'Responsive'],
-    component: 'CardComponent',
-    props: { title: 'Card Title', children: 'Card content goes here...' },
-    vueCode: `<template>
-  <div class="card">
-    <div v-if="$slots.header || title" class="card-header">
-      <slot name="header">
-        <h3 class="card-title">{{ title }}</h3>
-      </slot>
+    tags: ['Vue', 'CSS Grid', 'Flexbox'],
+    preview: '<div class="card"><h3>Card Title</h3><p>Card content goes here...</p></div>',
+    code: `<template>
+  <div :class="cardClasses">
+    <div v-if="$slots.header" class="card-header">
+      <slot name="header" />
     </div>
-    
     <div class="card-body">
       <slot />
     </div>
-    
     <div v-if="$slots.footer" class="card-footer">
       <slot name="footer" />
     </div>
@@ -186,185 +158,122 @@ interface ButtonEmits {
 
 <script setup lang="ts">
 interface Props {
-  title?: string
+  padding?: 'none' | 'small' | 'medium' | 'large'
+  shadow?: boolean
 }
 
-defineProps<Props>()
-</script>`,
-    typescriptCode: `interface CardProps {
-  title?: string
-}
+const props = withDefaults(defineProps<Props>(), {
+  padding: 'medium',
+  shadow: true
+})
 
-interface CardSlots {
-  default: []
-  header?: []
-  footer?: []
-}`,
-    cssCode: `.card {
-  background: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.card-header {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.card-title {
-  margin: 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.card-body {
-  padding: 1.5rem;
-}
-
-.card-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
-  background-color: #f9fafb;
-}`
+const cardClasses = computed(() => [
+  'card',
+  \`card-padding-\${props.padding}\`,
+  { 'card-shadow': props.shadow }
+])
+</script>`
   },
   {
     id: 3,
-    name: 'Modal',
-    description: 'A modal dialog component with backdrop and animations.',
-    tags: ['Vue 3', 'Teleport', 'Transitions'],
-    component: 'ModalComponent',
-    props: { isOpen: true, title: 'Modal Title', children: 'Modal content...' },
-    vueCode: `<template>
-  <Teleport to="body">
-    <Transition name="modal">
-      <div v-if="isOpen" class="modal-backdrop" @click="close">
-        <div class="modal-content" @click.stop>
-          <div class="modal-header">
-            <h3>{{ title }}</h3>
-            <button @click="close" class="close-btn">&times;</button>
-          </div>
-          
-          <div class="modal-body">
-            <slot />
-          </div>
-          
-          <div v-if="$slots.footer" class="modal-footer">
-            <slot name="footer" />
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
+    name: 'Input',
+    type: 'Form',
+    description: 'A form input component with validation and error states.',
+    tags: ['Vue', 'Form', 'Validation'],
+    preview: '<input type="text" placeholder="Enter text..." class="form-input" />',
+    code: `<template>
+  <div class="input-wrapper">
+    <label v-if="label" :for="id" class="input-label">
+      {{ label }}
+    </label>
+    <input
+      :id="id"
+      :type="type"
+      :value="modelValue"
+      :placeholder="placeholder"
+      :disabled="disabled"
+      :class="inputClasses"
+      @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+      @blur="$emit('blur', $event)"
+    />
+    <div v-if="error" class="input-error">
+      {{ error }}
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 interface Props {
-  isOpen: boolean
-  title?: string
+  modelValue: string
+  label?: string
+  type?: string
+  placeholder?: string
+  disabled?: boolean
+  error?: string
+  id?: string
 }
 
-const props = defineProps<Props>()
-const emit = defineEmits<{ close: [] }>()
+const props = withDefaults(defineProps<Props>(), {
+  type: 'text',
+  disabled: false
+})
 
-const close = () => emit('close')
-</script>`,
-    typescriptCode: `interface ModalProps {
-  isOpen: boolean
-  title?: string
-}
+const inputClasses = computed(() => [
+  'form-input',
+  { 'input-error': props.error, 'input-disabled': props.disabled }
+])
 
-interface ModalEmits {
-  close: []
-}
-
-interface ModalSlots {
-  default: []
-  footer?: []
-}`,
-    cssCode: `.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 0.5rem;
-  max-width: 90vw;
-  max-height: 90vh;
-  overflow: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.modal-body {
-  padding: 1.5rem;
-}
-
-.modal-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
-  background-color: #f9fafb;
-}
-
-/* Transitions */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}`
+defineEmits(['update:modelValue', 'blur'])
+</script>`
   }
 ])
 
-// Modal state
-const showCodeModal = ref(false)
-const selectedComponent = ref<any>(null)
-const activeTab = ref('vue')
+const filteredComponents = computed(() => {
+  return components.value.filter(component => {
+    const matchesSearch = component.name.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+                         component.description.toLowerCase().includes(searchTerm.value.toLowerCase())
+    
+    const matchesCategory = selectedCategories.value.includes('all') || 
+                           selectedCategories.value.includes(component.type)
+    
+    return matchesSearch && matchesCategory
+  })
+})
 
-const codeTabs = [
-  { id: 'vue', label: 'Vue Template' },
-  { id: 'typescript', label: 'TypeScript' },
-  { id: 'css', label: 'CSS' }
-]
+const toggleCategory = (category: string) => {
+  if (category === 'all') {
+    selectedCategories.value = ['all']
+  } else {
+    const index = selectedCategories.value.indexOf(category)
+    if (index > -1) {
+      selectedCategories.value.splice(index, 1)
+      if (selectedCategories.value.length === 0) {
+        selectedCategories.value = ['all']
+      }
+    } else {
+      selectedCategories.value = selectedCategories.value.filter(c => c !== 'all')
+      selectedCategories.value.push(category)
+    }
+  }
+}
 
-// Methods
 const viewCode = (component: any) => {
   selectedComponent.value = component
   showCodeModal.value = true
-  activeTab.value = 'vue'
 }
 
-const closeCodeModal = () => {
+const closeModal = () => {
   showCodeModal.value = false
   selectedComponent.value = null
 }
 
 const copyCode = async (component: any) => {
-  const code = component.vueCode
   try {
-    await navigator.clipboard.writeText(code)
+    await navigator.clipboard.writeText(component.code)
     alert('Code copied to clipboard!')
   } catch (error) {
-    console.error('Failed to copy:', error)
+    console.error('Failed to copy code:', error)
+    alert('Failed to copy code')
   }
 }
 </script>
@@ -376,60 +285,135 @@ const copyCode = async (component: any) => {
   padding: 2rem 1rem;
 }
 
-.components-header {
+.header {
   text-align: center;
   margin-bottom: 3rem;
 }
 
-.components-header h1 {
+.header h1 {
   font-size: 2.5rem;
   font-weight: 700;
   color: #1e40af;
   margin-bottom: 1rem;
 }
 
-.components-header p {
+.header p {
   font-size: 1.1rem;
   color: #64748b;
   max-width: 600px;
   margin: 0 auto;
 }
 
+.filters {
+  margin-bottom: 2rem;
+}
+
+.search-box {
+  margin-bottom: 1rem;
+}
+
+.search-input {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #1e40af;
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 0.5rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.375rem;
+  background: white;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  border-color: #1e40af;
+  color: #1e40af;
+}
+
+.filter-btn.active {
+  background: #1e40af;
+  border-color: #1e40af;
+  color: white;
+}
+
 .components-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 2rem;
 }
 
 .component-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border-radius: 8px;
-  padding: 1.5rem;
-  border: 1px solid rgba(219, 234, 254, 0.6);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: all 0.2s;
 }
 
 .component-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: #1e40af;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.1);
 }
 
 .component-preview {
-  margin-bottom: 1rem;
-  padding: 1rem;
+  padding: 1.5rem;
   background: #f8fafc;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border-bottom: 2px solid #e5e7eb;
 }
 
-.component-info h3 {
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.preview-header h3 {
+  margin: 0;
   color: #1e40af;
-  margin-bottom: 0.5rem;
   font-size: 1.25rem;
 }
 
-.component-info p {
+.component-type {
+  padding: 0.25rem 0.5rem;
+  background: #1e40af;
+  color: white;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.preview-content {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.component-info {
+  padding: 1.5rem;
+}
+
+.component-description {
   color: #64748b;
   margin-bottom: 1rem;
   line-height: 1.5;
@@ -437,16 +421,16 @@ const copyCode = async (component: any) => {
 
 .component-tags {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 
 .tag {
-  background: #dbeafe;
-  color: #1e40af;
   padding: 0.25rem 0.5rem;
-  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #475569;
+  border-radius: 0.25rem;
   font-size: 0.75rem;
   font-weight: 500;
 }
@@ -456,67 +440,67 @@ const copyCode = async (component: any) => {
   gap: 0.5rem;
 }
 
-.view-code-btn,
-.copy-btn {
+.action-btn {
   padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
+  border: 2px solid #1e40af;
+  border-radius: 0.375rem;
+  background: #1e40af;
+  color: white;
+  font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  flex: 1;
 }
 
-.view-code-btn {
-  background: #2563eb;
-  color: white;
+.action-btn:hover {
+  background: #1e3a8a;
+  border-color: #1e3a8a;
 }
 
-.view-code-btn:hover {
-  background: #1d4ed8;
+.action-btn.secondary {
+  background: white;
+  color: #1e40af;
 }
 
-.copy-btn {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.copy-btn:hover {
-  background: #e5e7eb;
+.action-btn.secondary:hover {
+  background: #f8fafc;
 }
 
 /* Modal Styles */
-.modal-backdrop {
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   z-index: 1000;
 }
 
 .modal-content {
   background: white;
-  border-radius: 8px;
-  width: 90%;
+  border-radius: 0.5rem;
   max-width: 800px;
-  max-height: 90vh;
+  width: 90%;
+  max-height: 80vh;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 1.5rem;
+  border-bottom: 2px solid #e5e7eb;
 }
 
-.modal-header h3 {
+.modal-header h2 {
   margin: 0;
   color: #1e40af;
 }
@@ -527,67 +511,75 @@ const copyCode = async (component: any) => {
   font-size: 1.5rem;
   cursor: pointer;
   color: #64748b;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .close-btn:hover {
   color: #374151;
 }
 
-.code-container {
-  max-height: 70vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.code-tabs {
-  display: flex;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.tab-btn {
-  padding: 0.75rem 1rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.tab-btn.active {
-  color: #1e40af;
-  border-bottom-color: #1e40af;
-}
-
-.code-content {
+.modal-body {
   flex: 1;
   overflow: auto;
+  padding: 1.5rem;
 }
 
-.code-block {
-  margin: 0;
+.code-display {
+  background: #1f2937;
+  color: #f9fafb;
   padding: 1rem;
-  background: #1e293b;
-  color: #e2e8f0;
+  border-radius: 0.375rem;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   line-height: 1.5;
   overflow-x: auto;
   white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.modal-footer {
+  padding: 1.5rem;
+  border-top: 2px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.copy-btn {
+  padding: 0.75rem 1.5rem;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.copy-btn:hover {
+  background: #059669;
 }
 
 @media (max-width: 768px) {
+  .header h1 {
+    font-size: 2rem;
+  }
+  
   .components-grid {
     grid-template-columns: 1fr;
   }
   
-  .components-header h1 {
-    font-size: 2rem;
+  .filter-buttons {
+    justify-content: center;
   }
   
   .modal-content {
     width: 95%;
+    margin: 1rem;
   }
 }
 </style> 

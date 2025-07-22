@@ -5,8 +5,8 @@ export default defineNuxtConfig({
   modules: ['@pinia/nuxt', '@nuxt/image'],
   runtimeConfig: {
     public: {
-      supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL,
-      supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY,
+      // Database configuration
+      databaseUrl: process.env.DATABASE_URL,
     },
   },
   vite: {
@@ -34,7 +34,7 @@ export default defineNuxtConfig({
   },
   // To set host and port, use environment variables NUXT_HOST and NUXT_PORT or pass them via CLI
   nitro: {
-    compatibilityDate: '2025-07-21',
+    compatibilityDate: '2025-07-22',
     logLevel: 'warn', // Reduce log level to minimize timer conflicts
     experimental: {
       wasm: true,

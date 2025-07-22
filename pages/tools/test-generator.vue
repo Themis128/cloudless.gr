@@ -1,86 +1,75 @@
 <template>
   <div class="test-generator-container">
-    <div class="tool-header">
+    <div class="header">
       <h1>Test Generator</h1>
-      <p>
-        Generate comprehensive unit tests, integration tests, and end-to-end test suites for your
-        applications.
-      </p>
+      <p>Generate comprehensive unit tests, integration tests, and end-to-end test suites for your applications.</p>
     </div>
 
-    <div class="tool-content">
+    <div class="main-content">
       <div class="input-section">
-        <h2>Code Input</h2>
-        <div class="code-input-container">
+        <div class="form-group">
+          <label for="code-input">Code to Test</label>
           <textarea
+            id="code-input"
             v-model="codeInput"
             placeholder="Paste your code here to generate tests..."
+            rows="10"
             class="code-textarea"
-            rows="15"
           ></textarea>
         </div>
 
-        <div class="options-section">
-          <h3>Test Options</h3>
-          <div class="options-grid">
-            <div class="option-group">
-              <label>Test Framework</label>
-              <select v-model="testFramework" class="form-select">
-                <option value="jest">Jest</option>
-                <option value="vitest">Vitest</option>
-                <option value="mocha">Mocha</option>
-                <option value="cypress">Cypress</option>
-                <option value="playwright">Playwright</option>
-              </select>
-            </div>
-
-            <div class="option-group">
-              <label>Test Type</label>
-              <div class="checkbox-group">
-                <label class="checkbox-label">
-                  <input type="checkbox" v-model="testTypes.unit" />
-                  Unit Tests
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" v-model="testTypes.integration" />
-                  Integration Tests
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" v-model="testTypes.e2e" />
-                  E2E Tests
-                </label>
-              </div>
-            </div>
-
-            <div class="option-group">
-              <label>Language</label>
-              <select v-model="language" class="form-select">
-                <option value="javascript">JavaScript</option>
-                <option value="typescript">TypeScript</option>
-                <option value="python">Python</option>
-                <option value="java">Java</option>
-                <option value="csharp">C#</option>
-              </select>
-            </div>
-          </div>
+        <div class="form-group">
+          <label for="test-type">Test Type</label>
+          <select v-model="testType" class="test-type-select">
+            <option value="unit">Unit Tests</option>
+            <option value="integration">Integration Tests</option>
+            <option value="e2e">End-to-End Tests</option>
+            <option value="all">All Test Types</option>
+          </select>
         </div>
 
-        <button @click="generateTests" :disabled="isGenerating" class="generate-button">
+        <div class="form-group">
+          <label for="framework">Testing Framework</label>
+          <select v-model="framework" class="framework-select">
+            <option value="jest">Jest</option>
+            <option value="vitest">Vitest</option>
+            <option value="mocha">Mocha</option>
+            <option value="cypress">Cypress (E2E)</option>
+            <option value="playwright">Playwright (E2E)</option>
+          </select>
+        </div>
+
+        <button @click="generateTests" :disabled="isGenerating" class="generate-btn">
           {{ isGenerating ? 'Generating...' : 'Generate Tests' }}
         </button>
       </div>
 
       <div class="output-section">
-        <h2>Generated Tests</h2>
-        <div v-if="generatedTests" class="test-output">
-          <div class="output-header">
-            <h3>{{ testFramework }} Tests</h3>
-            <button @click="copyToClipboard" class="copy-button">Copy</button>
-          </div>
-          <pre class="code-output">{{ generatedTests }}</pre>
+        <div class="output-header">
+          <h3>Generated Tests</h3>
+          <button @click="copyToClipboard" class="copy-btn">Copy to Clipboard</button>
         </div>
-        <div v-else class="placeholder-output">
+        <pre v-if="generatedTests" class="test-output">{{ generatedTests }}</pre>
+        <div v-else class="placeholder">
           <p>Generated tests will appear here...</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="examples-section">
+      <h2>Examples</h2>
+      <div class="examples-grid">
+        <div class="example-card" @click="loadExample('react-component')">
+          <h4>React Component</h4>
+          <p>Generate tests for a React functional component</p>
+        </div>
+        <div class="example-card" @click="loadExample('api-endpoint')">
+          <h4>API Endpoint</h4>
+          <p>Test an Express.js API endpoint</p>
+        </div>
+        <div class="example-card" @click="loadExample('utility-function')">
+          <h4>Utility Function</h4>
+          <p>Test a pure JavaScript utility function</p>
         </div>
       </div>
     </div>
@@ -88,207 +77,220 @@
 </template>
 
 <script setup lang="ts">
-// Page meta
+import { ref } from 'vue'
+
 definePageMeta({
-  title: 'Test Generator',
-});
+  title: 'Test Generator'
+})
 
-// Reactive state
-const codeInput = ref('');
-const testFramework = ref('jest');
-const language = ref('javascript');
-const testTypes = reactive({
-  unit: true,
-  integration: false,
-  e2e: false,
-});
-const isGenerating = ref(false);
-const generatedTests = ref('');
+const codeInput = ref('')
+const testType = ref('unit')
+const framework = ref('jest')
+const isGenerating = ref(false)
+const generatedTests = ref('')
 
-// Generate tests using LLM
+const examples = {
+  'react-component': `import React from 'react';
+
+const Button = ({ onClick, children, disabled = false }) => {
+  return (
+    <button 
+      onClick={onClick} 
+      disabled={disabled}
+      className="btn"
+    >
+      {children}
+    </button>
+  );
+};
+
+export default Button;`,
+  'api-endpoint': `app.get('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});`,
+  'utility-function': `function formatCurrency(amount, currency = 'USD') {
+  if (typeof amount !== 'number' || amount < 0) {
+    throw new Error('Amount must be a positive number');
+  }
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency
+  }).format(amount);
+}`
+}
+
+const loadExample = (exampleKey: string) => {
+  codeInput.value = examples[exampleKey as keyof typeof examples]
+}
+
 const generateTests = async () => {
   if (!codeInput.value.trim()) {
-    alert('Please enter some code to generate tests for.');
-    return;
+    alert('Please enter some code to test')
+    return
   }
 
-  isGenerating.value = true;
+  isGenerating.value = true
+  generatedTests.value = ''
 
   try {
-    const prompt = `Generate ${testFramework.value} tests for the following ${language.value} code.
-    Include ${Object.entries(testTypes)
-      .filter(([_, enabled]) => enabled)
-      .map(([type]) => type)
-      .join(', ')} tests.
+    const prompt = `Generate ${testType.value} tests using ${framework.value} for the following code:
 
-    Code:
-    ${codeInput.value}
+${codeInput.value}
 
-    Please provide comprehensive test coverage with proper assertions and edge cases.`;
+Please provide comprehensive test cases that cover:
+- Happy path scenarios
+- Edge cases
+- Error conditions
+- Input validation
 
-    const response = (await $fetch('/api/generate', {
+Format the response as clean, runnable test code.`
+
+    const response = await $fetch('/api/generate', {
       method: 'POST',
-      body: { prompt },
-    })) as any;
+      body: { prompt }
+    }) as any
 
-    generatedTests.value = response?.response || response || 'No response received';
+    generatedTests.value = response?.response || response || 'Failed to generate tests'
   } catch (error) {
-    console.error('Error generating tests:', error);
-    alert('Failed to generate tests. Please try again.');
+    console.error('Error generating tests:', error)
+    generatedTests.value = 'Error generating tests. Please try again.'
   } finally {
-    isGenerating.value = false;
+    isGenerating.value = false
   }
-};
+}
 
-// Copy to clipboard
 const copyToClipboard = async () => {
+  if (!generatedTests.value) return
+  
   try {
-    await navigator.clipboard.writeText(generatedTests.value);
-    alert('Tests copied to clipboard!');
+    await navigator.clipboard.writeText(generatedTests.value)
+    alert('Tests copied to clipboard!')
   } catch (error) {
-    console.error('Failed to copy:', error);
+    console.error('Failed to copy:', error)
+    alert('Failed to copy to clipboard')
   }
-};
+}
 </script>
 
 <style scoped>
 .test-generator-container {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 1rem;
 }
 
-.tool-header {
+.header {
   text-align: center;
   margin-bottom: 3rem;
 }
 
-.tool-header h1 {
+.header h1 {
   font-size: 2.5rem;
   font-weight: 700;
   color: #1e40af;
   margin-bottom: 1rem;
 }
 
-.tool-header p {
+.header p {
   font-size: 1.1rem;
   color: #64748b;
   max-width: 600px;
   margin: 0 auto;
 }
 
-.tool-content {
+.main-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
+  margin-bottom: 3rem;
 }
 
-.input-section,
-.output-section {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border-radius: 8px;
-  padding: 1.5rem;
-  border: 1px solid rgba(219, 234, 254, 0.6);
+.input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.input-section h2,
-.output-section h2 {
-  color: #1e40af;
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.code-input-container {
-  margin-bottom: 1.5rem;
+.form-group label {
+  font-weight: 600;
+  color: #374151;
 }
 
 .code-textarea {
   width: 100%;
   padding: 1rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   line-height: 1.5;
   resize: vertical;
-  background: #f8fafc;
+  min-height: 200px;
 }
 
-.options-section {
-  margin-bottom: 1.5rem;
+.code-textarea:focus {
+  outline: none;
+  border-color: #1e40af;
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
 }
 
-.options-section h3 {
-  color: #334155;
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-}
-
-.options-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.option-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.option-group label {
-  font-weight: 500;
-  color: #334155;
-}
-
-.form-select {
-  padding: 0.5rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: white;
-}
-
-.checkbox-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-}
-
-.checkbox-label input[type='checkbox'] {
-  margin: 0;
-}
-
-.generate-button {
-  width: 100%;
+.test-type-select,
+.framework-select {
   padding: 0.75rem;
-  background-color: #2563eb;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  background-color: white;
+}
+
+.test-type-select:focus,
+.framework-select:focus {
+  outline: none;
+  border-color: #1e40af;
+}
+
+.generate-btn {
+  padding: 1rem 2rem;
+  background-color: #1e40af;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 0.5rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
-.generate-button:hover:not(:disabled) {
-  background-color: #1d4ed8;
+.generate-btn:hover:not(:disabled) {
+  background-color: #1e3a8a;
 }
 
-.generate-button:disabled {
-  background-color: #94a3b8;
+.generate-btn:disabled {
+  background-color: #9ca3af;
   cursor: not-allowed;
 }
 
-.test-output {
-  background: #1e293b;
-  border-radius: 6px;
+.output-section {
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
   overflow: hidden;
 }
 
@@ -296,55 +298,103 @@ const copyToClipboard = async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
-  background: #334155;
-  color: white;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
 }
 
 .output-header h3 {
   margin: 0;
-  font-size: 1rem;
+  color: #374151;
 }
 
-.copy-button {
-  padding: 0.25rem 0.75rem;
-  background: #475569;
+.copy-btn {
+  padding: 0.5rem 1rem;
+  background-color: #10b981;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  font-size: 0.8rem;
+  transition: background-color 0.2s;
 }
 
-.copy-button:hover {
-  background: #64748b;
+.copy-btn:hover {
+  background-color: #059669;
 }
 
-.code-output {
+.test-output {
   padding: 1rem;
-  margin: 0;
-  color: #e2e8f0;
+  background-color: #1f2937;
+  color: #f9fafb;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   line-height: 1.5;
   overflow-x: auto;
   white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 500px;
+  overflow-y: auto;
 }
 
-.placeholder-output {
+.placeholder {
+  padding: 2rem;
   text-align: center;
-  padding: 3rem 1rem;
+  color: #9ca3af;
+}
+
+.examples-section {
+  margin-top: 3rem;
+}
+
+.examples-section h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #374151;
+}
+
+.examples-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.example-card {
+  padding: 1.5rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.example-card:hover {
+  border-color: #1e40af;
+  background-color: #f8fafc;
+}
+
+.example-card h4 {
+  margin: 0 0 0.5rem 0;
+  color: #1e40af;
+}
+
+.example-card p {
+  margin: 0;
   color: #64748b;
-  font-style: italic;
+  font-size: 0.875rem;
 }
 
 @media (max-width: 768px) {
-  .tool-content {
+  .main-content {
     grid-template-columns: 1fr;
   }
-
-  .tool-header h1 {
+  
+  .header h1 {
     font-size: 2rem;
+  }
+  
+  .examples-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

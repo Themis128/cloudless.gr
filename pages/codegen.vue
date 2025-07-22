@@ -3,8 +3,9 @@
     <div class="codegen-header">
       <h1>Code Generation Tools</h1>
       <p class="header-description">
-        Powerful AI-assisted code generation tools to accelerate your development workflow and boost
-        productivity with intelligent code suggestions and automation.
+        Powerful AI-assisted code generation tools to accelerate your
+        development workflow and boost productivity with intelligent code
+        suggestions and automation.
       </p>
     </div>
 
@@ -18,8 +19,9 @@
           </div>
         </div>
         <p class="tool-description">
-          Intelligent code completion and generation powered by advanced language models. Get
-          context-aware suggestions for functions, components, and entire modules.
+          Intelligent code completion and generation powered by advanced
+          language models. Get context-aware suggestions for functions,
+          components, and entire modules.
         </p>
         <div class="tool-features">
           <span class="feature">Multi-language support</span>
@@ -38,8 +40,8 @@
           </div>
         </div>
         <p class="tool-description">
-          Generate Vue.js, React, and other framework components with proper structure, styling, and
-          functionality based on your specifications.
+          Generate Vue.js, React, and other framework components with proper
+          structure, styling, and functionality based on your specifications.
         </p>
         <div class="tool-features">
           <span class="feature">Vue.js Components</span>
@@ -58,8 +60,8 @@
           </div>
         </div>
         <p class="tool-description">
-          Automatically generate REST API endpoints, database models, and documentation from schemas
-          or existing database structures.
+          Automatically generate REST API endpoints, database models, and
+          documentation from schemas or existing database structures.
         </p>
         <div class="tool-features">
           <span class="feature">REST APIs</span>
@@ -78,8 +80,8 @@
           </div>
         </div>
         <p class="tool-description">
-          Generate optimized CSS styles, animations, and responsive layouts with modern design
-          patterns and best practices.
+          Generate optimized CSS styles, animations, and responsive layouts with
+          modern design patterns and best practices.
         </p>
         <div class="tool-features">
           <span class="feature">Tailwind CSS</span>
@@ -98,15 +100,17 @@
           </div>
         </div>
         <p class="tool-description">
-          Automatically generate comprehensive unit tests, integration tests, and end-to-end test
-          suites for your applications.
+          Automatically generate comprehensive unit tests, integration tests,
+          and end-to-end test suites for your applications.
         </p>
         <div class="tool-features">
           <span class="feature">Unit Tests</span>
           <span class="feature">Integration Tests</span>
           <span class="feature">E2E Tests</span>
         </div>
-        <button class="tool-button" @click="openTestGenerator">Generate Tests</button>
+        <button class="tool-button" @click="openTestGenerator">
+          Generate Tests
+        </button>
       </div>
 
       <div class="tool-card">
@@ -118,21 +122,26 @@
           </div>
         </div>
         <p class="tool-description">
-          Generate comprehensive documentation from your code comments, API definitions, and project
-          structure automatically.
+          Generate comprehensive documentation from your code comments, API
+          definitions, and project structure automatically.
         </p>
         <div class="tool-features">
           <span class="feature">API Docs</span>
           <span class="feature">Code Comments</span>
           <span class="feature">Interactive Docs</span>
         </div>
-        <button class="tool-button" @click="openDocGenerator">Generate Docs</button>
+        <button class="tool-button" @click="openDocGenerator">
+          Generate Docs
+        </button>
       </div>
     </div>
 
     <div class="demo-section">
       <h2>See it in Action</h2>
-      <p>Experience our code generation tools with live examples and interactive demos.</p>
+      <p>
+        Experience our code generation tools with live examples and interactive
+        demos.
+      </p>
 
       <div class="demo-grid">
         <div class="demo-card">
@@ -144,13 +153,17 @@
         <div class="demo-card">
           <h3>Component Library</h3>
           <p>Browse generated components and see the code behind them.</p>
-          <NuxtLink to="/components" class="demo-link"> Browse Components → </NuxtLink>
+          <NuxtLink to="/components" class="demo-link">
+            Browse Components →
+          </NuxtLink>
         </div>
 
         <div class="demo-card">
           <h3>API Playground</h3>
           <p>Test generated APIs and explore their capabilities.</p>
-          <NuxtLink to="/api-playground" class="demo-link"> Try API Playground → </NuxtLink>
+          <NuxtLink to="/api-playground" class="demo-link">
+            Try API Playground →
+          </NuxtLink>
         </div>
       </div>
     </div>
@@ -200,12 +213,14 @@
     <div class="cta-section">
       <h2>Ready to Boost Your Productivity?</h2>
       <p>
-        Join thousands of developers who are already using our code generation tools to build better
-        software faster.
+        Join thousands of developers who are already using our code generation
+        tools to build better software faster.
       </p>
       <div class="cta-buttons">
         <button class="cta-button primary">Start Free Trial</button>
-        <NuxtLink to="/contact" class="cta-button secondary"> Contact Sales </NuxtLink>
+        <NuxtLink to="/contact" class="cta-button secondary">
+          Contact Sales
+        </NuxtLink>
       </div>
     </div>
   </div>
@@ -214,25 +229,26 @@
 <script setup lang="ts">
 // Page meta
 definePageMeta({
+  layout: 'default',
   title: 'Code Generation Tools',
-});
+})
 
 // Methods for tool interactions
 const openTestGenerator = () => {
   // Navigate to test generator tool
-  navigateTo('/tools/test-generator');
-};
+  navigateTo('/tools/test-generator')
+}
 
 const openDocGenerator = () => {
   // Navigate to documentation generator tool
-  navigateTo('/tools/doc-generator');
-};
+  navigateTo('/tools/doc-generator')
+}
 
 // Optional: Track tool usage for analytics
 const trackToolUsage = (toolName: string) => {
   // Analytics tracking would go here
-  console.log(`User accessed ${toolName}`);
-};
+  console.log(`User accessed ${toolName}`)
+}
 </script>
 
 <style scoped>
