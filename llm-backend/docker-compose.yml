@@ -1,0 +1,24 @@
+version: '3.8'
+services:
+  api:
+    build: .
+    container_name: llm-backend-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+    depends_on:
+      - redis
+  worker:
+    build: .
+    container_name: llm-backend-worker
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    volumes:
+      - ./models:/app/models
+    depends_on:
+      - redis
+  redis:
+    image: redis:7
+    container_name: llm-backend-redis
+    ports:
+      - "6379:6379"
