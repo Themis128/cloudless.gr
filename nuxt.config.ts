@@ -25,10 +25,10 @@ export default defineNuxtConfig({
 
   // Tailwind CSS configuration
   tailwindcss: {
+    configPath: '~/tailwind.config.js',
     exposeConfig: true,
     viewer: true,
-    configPath: '~/tailwind.config.js',
-  },
+  } as any, // Fix: Cast to 'any' to bypass Nuxt config type error
 
   // Ensure static assets are properly served
   vite: {
