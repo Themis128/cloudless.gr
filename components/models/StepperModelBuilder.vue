@@ -148,13 +148,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useSupabase } from '~/composables/supabase';
+import { usePrismaStore } from '~/stores/usePrismaStore'
 
 const emit = defineEmits<{
   'created': []
 }>()
 
-const supabase = useSupabase()
+const { createModel } = usePrismaStore()
 
 const currentStep = ref(1)
 const error = ref<string | null>(null)
@@ -262,22 +262,18 @@ const submit = async () => {
   try {
     form.value.config = parsedConfig.value
 
-    const { error: err } = await supabase
-      .from('models')
-      .insert([{
-        name: form.value.name,
-        description: form.value.description,
-        type: form.value.type,
+    await createModel({
+      name: form.value.name,
+      description: form.value.description,
+      type: form.value.type,
+      config: {
         framework: form.value.framework,
         version: form.value.version,
-        config: form.value.config,
-        status: 'draft',
-        created_at: new Date().toISOString()
-      }])
-      .select()
-      .single()
-
-    if (err) throw err
+        ...form.value.config
+      },
+      status: 'draft',
+      userId: 1 // Default user ID for now
+    })
 
     emit('created')
   } catch (err: any) {

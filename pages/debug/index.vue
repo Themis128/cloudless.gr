@@ -5,6 +5,44 @@
         Debug Dashboard
       </h1>
       
+      <!-- Instructions Section -->
+      <DebugInstructions
+        :purpose="'The Debug Dashboard provides comprehensive tools for testing, monitoring, and troubleshooting your application. Use these tools to diagnose issues, test functionality, and monitor system performance.'"
+        :prerequisites="[
+          'Ensure your development server is running',
+          'Have access to the application with proper permissions',
+          'Familiarize yourself with the specific area you want to debug'
+        ]"
+        :steps="[
+          'Select the appropriate debug tool from the navigation cards below',
+          'Read the specific instructions for each tool before using it',
+          'Follow the step-by-step process to test or diagnose issues',
+          'Review the results and logs for any errors or warnings',
+          'Use the troubleshooting guides if you encounter problems'
+        ]"
+        :tips="[
+          'Start with the Network Testing tool to ensure connectivity',
+          'Use the Log Management tool to monitor system activity',
+          'Test authentication before debugging other features',
+          'Keep the debug console open to monitor real-time logs',
+          'Export logs for detailed analysis if needed'
+        ]"
+        :troubleshooting="[
+          {
+            problem: 'Debug tools not loading or responding',
+            solution: 'Check if the development server is running and refresh the page. Ensure you have proper network connectivity.'
+          },
+          {
+            problem: 'Authentication tests failing',
+            solution: 'Verify your credentials are correct and the authentication service is running. Check the network connectivity to auth endpoints.'
+          },
+          {
+            problem: 'Model or pipeline tests timing out',
+            solution: 'Check if the model service is running and has sufficient resources. Review the logs for specific error messages.'
+          }
+        ]"
+      />
+      
       <!-- Debug Navigation Menu -->
       <v-row class="mb-6">
         <v-col cols="12">
@@ -50,6 +88,69 @@
         </v-col>
       </v-row>
 
+      <!-- Quick Actions -->
+      <v-row class="mb-6">
+        <v-col cols="12">
+          <v-card>
+            <v-card-title class="text-h6">
+              Quick Debug Actions
+            </v-card-title>
+            <v-card-text>
+              <v-row>
+                <v-col cols="12" sm="6" md="3">
+                  <v-btn
+                    block
+                    color="primary"
+                    variant="outlined"
+                    prepend-icon="mdi-wifi"
+                    @click="testNetwork"
+                    :loading="networkLoading"
+                  >
+                    Test Network
+                  </v-btn>
+                </v-col>
+                <v-col cols="12" sm="6" md="3">
+                  <v-btn
+                    block
+                    color="success"
+                    variant="outlined"
+                    prepend-icon="mdi-database"
+                    @click="checkDatabase"
+                    :loading="dbLoading"
+                  >
+                    Check Database
+                  </v-btn>
+                </v-col>
+                <v-col cols="12" sm="6" md="3">
+                  <v-btn
+                    block
+                    color="warning"
+                    variant="outlined"
+                    prepend-icon="mdi-redis"
+                    @click="checkRedis"
+                    :loading="redisLoading"
+                  >
+                    Check Redis
+                  </v-btn>
+                </v-col>
+                <v-col cols="12" sm="6" md="3">
+                  <v-btn
+                    block
+                    color="info"
+                    variant="outlined"
+                    prepend-icon="mdi-file-document"
+                    @click="exportLogs"
+                    :loading="exportLoading"
+                  >
+                    Export Logs
+                  </v-btn>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+
       <!-- Debug Console -->
       <v-row>
         <v-col cols="12">
@@ -72,10 +173,18 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import DebugConsole from '~/components/debug/DebugConsole.vue'
+import DebugInstructions from '~/components/debug/DebugInstructions.vue'
 import { useDebugTools } from '~/composables/useDebugTools'
 
 const { logs, handleCommand } = useDebugTools()
+
+// Loading states for quick actions
+const networkLoading = ref(false)
+const dbLoading = ref(false)
+const redisLoading = ref(false)
+const exportLoading = ref(false)
 
 const debugPages = [
   {
@@ -114,6 +223,49 @@ const debugPages = [
     color: 'secondary'
   }
 ]
+
+// Quick action functions
+const testNetwork = async () => {
+  networkLoading.value = true
+  try {
+    window.location.href = '/debug/network'
+  } finally {
+    networkLoading.value = false
+  }
+}
+
+const checkDatabase = async () => {
+  dbLoading.value = true
+  try {
+    const response = await $fetch('/api/prisma/health')
+    console.log('Database health check:', response)
+  } catch (error) {
+    console.error('Database check failed:', error)
+  } finally {
+    dbLoading.value = false
+  }
+}
+
+const checkRedis = async () => {
+  redisLoading.value = true
+  try {
+    const response = await $fetch('/api/admin/redis-status')
+    console.log('Redis status:', response)
+  } catch (error) {
+    console.error('Redis check failed:', error)
+  } finally {
+    redisLoading.value = false
+  }
+}
+
+const exportLogs = async () => {
+  exportLoading.value = true
+  try {
+    window.location.href = '/debug/logs'
+  } finally {
+    exportLoading.value = false
+  }
+}
 </script>
 
 <style scoped>

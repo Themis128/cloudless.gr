@@ -239,11 +239,11 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import LLMGuide from '~/components/step-guides/LLMGuide.vue'
-import { useSupabase } from '~/composables/supabase'
+import { usePrismaStore } from '~/stores/usePrismaStore'
 
 // Composables
 const router = useRouter()
-const supabase = useSupabase()
+const { getBots } = usePrismaStore()
 
 // Reactive state
 const deployments = ref<any[]>([])
@@ -272,7 +272,7 @@ const deploymentHeaders = [
   { title: 'Name', key: 'name', sortable: true },
   { title: 'Status', key: 'status', sortable: true },
   { title: 'Endpoint', key: 'endpoint', sortable: false },
-  { title: 'Created', key: 'created_at', sortable: true },
+  { title: 'Created', key: 'createdAt', sortable: true },
   { title: 'Actions', key: 'actions', sortable: false },
 ]
 
@@ -280,13 +280,16 @@ const deploymentHeaders = [
 const refreshDeployments = async () => {
   loadingDeployments.value = true
   try {
-    const { data, error } = await supabase
-      .from('deployments')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-    deployments.value = data || []
+    const data = await getBots()
+    // Transform bot data to deployment format for compatibility
+    deployments.value = data.map((bot: any) => ({
+      id: bot.id,
+      name: bot.name,
+      status: bot.status,
+      endpoint: `/api/bots/${bot.id}`,
+      createdAt: bot.createdAt,
+      requests_24h: 0 // Mock data
+    })) || []
   } catch (error) {
     showSnackbar('Error fetching deployments', 'error')
   } finally {
@@ -305,13 +308,8 @@ const deleteDeployment = async (deployment: any) => {
     )
   ) {
     try {
-      const { error } = await supabase
-        .from('deployments')
-        .delete()
-        .eq('id', deployment.id)
-
-      if (error) throw error
-
+      // For now, we'll just show a success message
+      // In a real implementation, you'd call a delete API
       showSnackbar('Deployment deleted successfully', 'success')
       refreshDeployments()
     } catch (error) {

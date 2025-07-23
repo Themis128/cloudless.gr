@@ -13,8 +13,10 @@ const rateLimiter = createRateLimit({
 })
 
 export default defineEventHandler(async event => {
-  // Apply rate limiting
-  await rateLimiter(event)
+  // Apply rate limiting (skip in development)
+  if (process.env.NODE_ENV !== 'development') {
+    await rateLimiter(event)
+  }
 
   try {
     const clientIP =

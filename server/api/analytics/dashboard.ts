@@ -4,8 +4,10 @@ import { apiRateLimit } from '~/server/middleware/rate-limit-enhanced'
 import { analytics } from '~/server/utils/analytics'
 
 export default defineEventHandler(async event => {
-  // Apply rate limiting to analytics endpoint
-  await apiRateLimit(event)
+  // Apply rate limiting to analytics endpoint (skip in development)
+  if (process.env.NODE_ENV !== 'development') {
+    await apiRateLimit(event)
+  }
 
   try {
     const query = getQuery(event)

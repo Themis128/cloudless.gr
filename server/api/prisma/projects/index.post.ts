@@ -1,43 +1,40 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { projectService } from '~/lib/database'
-import { ProjectType, ProjectStatus } from '~/generated/prisma'
+import { databaseService } from '~/lib/database'
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-
+    
     // Validate required fields
-    const { name, description, type, framework, owner_id } = body
-
-    if (!name || !owner_id) {
+    if (!body.project_name || !body.description) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Missing required fields: name, owner_id'
+        statusMessage: 'Project name and description are required'
       })
     }
 
-    // Validate project type if provided
-    if (type && !Object.values(ProjectType).includes(type)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid project type'
-      })
-    }
-
-    // Create project data
-    const projectData = {
-      name,
-      description,
-      type: type as ProjectType,
-      framework,
-      status: ProjectStatus.draft,
-      owner: owner_id ? {
-        connect: { id: owner_id }
-      } : undefined,
-      config: body.config || {}
-    }
-
-    const project = await projectService.createProject(projectData)
+    // Create project in database
+    const project = await databaseService.prisma.project.create({
+      data: {
+        project_name: body.project_name,
+        description: body.description,
+        slug: body.project_name.toLowerCase().replace(/\s+/g, '-'),
+        overview: body.description,
+        status: body.status || 'draft',
+        category: body.category || 'other',
+        featured: body.featured || false,
+        userId: 1 // Default to first user for now
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    })
 
     return {
       success: true,
@@ -47,21 +44,6 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     if (error.statusCode) {
       throw error
-    }
-
-    // Handle Prisma errors
-    if (error.code === 'P2002') {
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'A project with this name already exists'
-      })
-    }
-
-    if (error.code === 'P2025') {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Owner not found'
-      })
     }
 
     throw createError({

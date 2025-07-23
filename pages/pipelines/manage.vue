@@ -160,7 +160,7 @@
                   <div class="d-flex align-center">
                     <v-avatar color="primary" size="32" class="mr-3">
                       <v-icon color="white" size="16">
-                        {{ getPipelineIcon(item.type) }}
+                        {{ getPipelineIcon(item) }}
                       </v-icon>
                     </v-avatar>
                     <div>
@@ -188,8 +188,8 @@
                   <span class="font-weight-medium">{{ stepsCount(item) }}</span>
                 </template>
 
-                <template #item.created_at="{ item }">
-                  {{ formatDate(item.created_at) }}
+                <template #item.createdAt="{ item }">
+                  {{ formatDate(item.createdAt) }}
                 </template>
 
                 <template #item.actions="{ item }">
@@ -257,20 +257,26 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import PageStructure from '~/components/layout/PageStructure.vue'
 import PipelineGuide from '~/components/step-guides/PipelineGuide.vue'
-import { useSupabase } from '~/composables/supabase'
 
 interface Pipeline {
-  id: string
+  id: number
   name: string
-  type?: string
-  status?: string
   description?: string
-  created_at: string
-  config?: any
+  config: string
+  status: string
+  createdAt: Date
+  updatedAt: Date
+  user: {
+    id: number
+    name: string
+    email: string
+  }
 }
 
-const supabase = useSupabase()
+const router = useRouter()
 const loading = ref(false)
 const pipelines = ref<Pipeline[]>([])
 const selectedPipelines = ref<Pipeline[]>([])
@@ -279,6 +285,7 @@ const selectedStatus = ref('')
 const showConfirmDialog = ref(false)
 const confirmMessage = ref('')
 const pendingAction = ref<string | null>(null)
+const error = ref<string | null>(null)
 
 const statusOptions = [
   'active',
@@ -291,7 +298,7 @@ const headers = [
   { title: 'Name', key: 'name' },
   { title: 'Status', key: 'status' },
   { title: 'Steps', key: 'steps' },
-  { title: 'Created', key: 'created_at' },
+  { title: 'Created', key: 'createdAt' },
   { title: 'Actions', key: 'actions', sortable: false }
 ]
 
@@ -313,8 +320,20 @@ const filteredPipelines = computed(() => {
   return pipelines.value
 })
 
-const getPipelineIcon = (type?: string) => {
-  switch (type || '') {
+// Helper function to extract pipeline type from config
+const getPipelineType = (pipeline: Pipeline): string => {
+  try {
+    const config = JSON.parse(pipeline.config)
+    return config.type || 'Custom'
+  } catch {
+    return 'Custom'
+  }
+}
+
+// Updated to fix TypeScript errors - now accepts Pipeline object instead of string
+const getPipelineIcon = (pipeline: Pipeline) => {
+  const type = getPipelineType(pipeline)
+  switch (type) {
     case 'Data Processing': return 'mdi-database'
     case 'Model Training': return 'mdi-brain'
     case 'Inference': return 'mdi-lightning-bolt'
@@ -333,12 +352,15 @@ const getStatusColor = (status?: string) => {
 }
 
 const stepsCount = (pipeline: Pipeline) => {
-  return pipeline.config && pipeline.config.steps && Array.isArray(pipeline.config.steps)
-    ? pipeline.config.steps.length
-    : 0
+  try {
+    const config = JSON.parse(pipeline.config)
+    return config.steps && Array.isArray(config.steps) ? config.steps.length : 0
+  } catch {
+    return 0
+  }
 }
 
-const formatDate = (date: string) => {
+const formatDate = (date: Date | string) => {
   return new Date(date).toLocaleDateString()
 }
 
@@ -358,46 +380,92 @@ const deleteSelected = () => {
   pendingAction.value = 'deleteSelected'
 }
 
-const confirmAction = () => {
-  // Implement action logic here
-      // Executing bulk action for selected pipelines
-  showConfirmDialog.value = false
-  selectedPipelines.value = []
-  selectedStatus.value = ''
+const confirmAction = async () => {
+  try {
+    if (pendingAction.value === 'updateStatus') {
+      // Update status for selected pipelines
+      for (const pipeline of selectedPipelines.value) {
+        await $fetch(`/api/prisma/pipelines/${pipeline.id}`, {
+          method: 'PUT',
+          body: { status: selectedStatus.value }
+        })
+      }
+    } else if (pendingAction.value === 'deleteSelected') {
+      // Delete selected pipelines
+      for (const pipeline of selectedPipelines.value) {
+        await $fetch(`/api/prisma/pipelines/${pipeline.id}`, {
+          method: 'DELETE'
+        })
+      }
+    } else if (pendingAction.value === 'delete') {
+      // Delete single pipeline
+      const pipeline = selectedPipelines.value[0]
+      if (pipeline) {
+        await $fetch(`/api/prisma/pipelines/${pipeline.id}`, {
+          method: 'DELETE'
+        })
+      }
+    }
+    
+    // Refresh the list
+    await loadPipelines()
+  } catch (err: any) {
+    console.error('Error executing action:', err)
+    error.value = err.message || 'Failed to execute action'
+  } finally {
+    showConfirmDialog.value = false
+    selectedPipelines.value = []
+    selectedStatus.value = ''
+  }
 }
 
 const cancelAction = () => {
   showConfirmDialog.value = false
 }
 
-const refreshPipelines = () => {
-  // Implement refresh logic here
-      // Refreshing pipelines...
+const refreshPipelines = async () => {
+  await loadPipelines()
 }
 
 const editPipeline = (pipeline: Pipeline) => {
-      // Editing pipeline
+  // Navigate to edit page
+  router.push(`/pipelines/${pipeline.id}/edit`)
 }
 
 const testPipeline = (pipeline: Pipeline) => {
-      // Testing pipeline
+  // Navigate to test page
+  router.push(`/pipelines/test?id=${pipeline.id}`)
 }
 
 const deletePipeline = (pipeline: Pipeline) => {
+  selectedPipelines.value = [pipeline]
   confirmMessage.value = `Are you sure you want to delete "${pipeline.name}"?`
   showConfirmDialog.value = true
   pendingAction.value = 'delete'
 }
 
-onMounted(async () => {
-  loading.value = true
-  const { data, error } = await supabase.from('pipelines').select('*')
-  if (error) {
-          // Error loading pipelines
-  } else {
-    pipelines.value = data || []
+const loadPipelines = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    const response = await $fetch<{ success: boolean; data: Pipeline[]; message?: string }>('/api/prisma/pipelines')
+    
+    if (response.success) {
+      pipelines.value = response.data || []
+    } else {
+      error.value = response.message || 'Failed to load pipelines'
+    }
+  } catch (err: any) {
+    console.error('Error loading pipelines:', err)
+    error.value = err.message || 'Failed to load pipelines'
+  } finally {
+    loading.value = false
   }
-  loading.value = false
+}
+
+onMounted(() => {
+  loadPipelines()
 })
 </script>
 

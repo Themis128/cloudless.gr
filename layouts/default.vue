@@ -202,6 +202,38 @@
               </div>
             </div>
 
+            <div v-if="isAdmin" class="nav-dropdown">
+              <button class="nav-dropdown-btn" @click="toggleAdminDropdown">
+                <v-icon size="16">
+                  mdi-shield-crown
+                </v-icon>
+                <span>Admin</span>
+                <v-icon size="14" class="dropdown-arrow">
+                  mdi-chevron-down
+                </v-icon>
+              </button>
+              <div v-show="activeDropdown === 'admin'" class="nav-dropdown-menu">
+                <NuxtLink to="/admin/users" class="dropdown-item">
+                  <v-icon size="16">
+                    mdi-account-group
+                  </v-icon>
+                  <span>Users</span>
+                </NuxtLink>
+                <NuxtLink to="/admin/roles" class="dropdown-item">
+                  <v-icon size="16">
+                    mdi-shield-account
+                  </v-icon>
+                  <span>Roles</span>
+                </NuxtLink>
+                <NuxtLink to="/admin/redis-analytics" class="dropdown-item">
+                  <v-icon size="16">
+                    mdi-chart-line
+                  </v-icon>
+                  <span>Analytics</span>
+                </NuxtLink>
+              </div>
+            </div>
+
             <NuxtLink to="/documentation" class="nav-link" title="Documentation">
               <v-icon size="16">
                 mdi-book-open-variant
@@ -220,6 +252,51 @@
               @click="toggleMobileMenu"
             >
               <v-icon>{{ showMobileMenu ? 'mdi-close' : 'mdi-menu' }}</v-icon>
+            </v-btn>
+          </div>
+
+          <!-- Login Status Indicator -->
+          <div class="login-status-container">
+            <div 
+              class="login-status-indicator"
+              :class="{ 'logged-in': isAuthenticated, 'logged-out': !isAuthenticated }"
+              :title="isAuthenticated ? 'Logged In' : 'Not Logged In'"
+            >
+              <div class="status-dot"></div>
+              <span v-if="isAuthenticated" class="status-text">Online</span>
+            </div>
+          </div>
+
+          <!-- Auth Button -->
+          <div class="auth-button-container">
+            <v-btn
+              v-if="isAuthenticated"
+              @click="handleLogout"
+              :loading="authLoading"
+              variant="outlined"
+              color="error"
+              size="small"
+              class="auth-btn logout-btn"
+              :title="`Logout ${user?.name || user?.email}`"
+            >
+              <v-icon size="16" class="mr-1">
+                mdi-logout
+              </v-icon>
+              <span class="auth-btn-text">Logout</span>
+            </v-btn>
+            <v-btn
+              v-else
+              @click="handleLogin"
+              variant="elevated"
+              color="primary"
+              size="small"
+              class="auth-btn login-btn"
+              title="Login to your account"
+            >
+              <v-icon size="16" class="mr-1">
+                mdi-login
+              </v-icon>
+              <span class="auth-btn-text">Login</span>
             </v-btn>
           </div>
         </div>
@@ -316,6 +393,28 @@
             </NuxtLink>
           </div>
 
+          <div v-if="isAdmin" class="mobile-nav-group">
+            <span class="mobile-nav-group-title">Administration</span>
+            <NuxtLink to="/admin/users" class="mobile-nav-link" @click="closeMobileMenu">
+              <v-icon size="20">
+                mdi-account-group
+              </v-icon>
+              Users
+            </NuxtLink>
+            <NuxtLink to="/admin/roles" class="mobile-nav-link" @click="closeMobileMenu">
+              <v-icon size="20">
+                mdi-shield-account
+              </v-icon>
+              Roles
+            </NuxtLink>
+            <NuxtLink to="/admin/redis-analytics" class="mobile-nav-link" @click="closeMobileMenu">
+              <v-icon size="20">
+                mdi-chart-line
+              </v-icon>
+              Analytics
+            </NuxtLink>
+          </div>
+
           <div class="mobile-nav-group">
             <span class="mobile-nav-group-title">Resources</span>
             <NuxtLink to="/documentation" class="mobile-nav-link" @click="closeMobileMenu">
@@ -348,6 +447,57 @@
               </v-icon>
               Community
             </NuxtLink>
+          </div>
+
+          <!-- Mobile Auth Section -->
+          <div class="mobile-nav-group">
+            <span class="mobile-nav-group-title">Account</span>
+            <div v-if="isAuthenticated" class="mobile-auth-info">
+              <div class="mobile-user-info">
+                <v-icon size="20" color="success">
+                  mdi-account-circle
+                </v-icon>
+                <div class="mobile-user-details">
+                  <span class="mobile-user-name">{{ user?.name || 'User' }}</span>
+                  <span class="mobile-user-email">{{ user?.email }}</span>
+                </div>
+              </div>
+              <v-btn
+                @click="handleLogout"
+                :loading="authLoading"
+                variant="outlined"
+                color="error"
+                size="small"
+                class="mobile-logout-btn"
+                block
+              >
+                <v-icon size="16" class="mr-2">
+                  mdi-logout
+                </v-icon>
+                Logout
+              </v-btn>
+            </div>
+            <div v-else class="mobile-auth-actions">
+              <v-btn
+                @click="handleLogin"
+                variant="elevated"
+                color="primary"
+                size="small"
+                class="mobile-login-btn"
+                block
+              >
+                <v-icon size="16" class="mr-2">
+                  mdi-login
+                </v-icon>
+                Login
+              </v-btn>
+              <NuxtLink to="/auth/register" class="mobile-nav-link" @click="closeMobileMenu">
+                <v-icon size="20">
+                  mdi-account-plus
+                </v-icon>
+                Create Account
+              </NuxtLink>
+            </div>
           </div>
         </div>
       </header>
@@ -681,6 +831,7 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import VantaControls from '~/components/ui/VantaControls.vue'
 
 // Accessibility: detect prefers-reduced-motion
@@ -1482,6 +1633,29 @@ const closeVantaControls = () => {
 const toggleBuildDropdown = () => toggleDropdown('build')
 const toggleAiDropdown = () => toggleDropdown('ai')
 const toggleOpsDropdown = () => toggleDropdown('ops')
+const toggleAdminDropdown = () => toggleDropdown('admin')
+
+// RBAC integration
+import { useRBAC } from '~/composables/useRBAC'
+const { isAdmin } = useRBAC()
+
+// Authentication integration
+import { useAuth } from '~/composables/useAuth'
+const { isAuthenticated, user, logout, isLoading: authLoading } = useAuth()
+
+// Auth button handlers
+const handleLogout = async () => {
+  try {
+    await logout()
+  } catch (error) {
+    console.error('Logout error:', error)
+  }
+}
+
+const handleLogin = () => {
+  const router = useRouter()
+  router.push('/auth/login')
+}
 
 const getEffectForRoute = (route: string) => {
   // Layout-only page - use clouds2 for best visibility
@@ -1963,6 +2137,173 @@ const getEffectOptions = (effect: string): any => {
   margin-left: auto;
 }
 
+/* Login Status Indicator Styles */
+.login-status-container {
+  margin-left: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.login-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.login-status-indicator:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.logged-in .status-dot {
+  background: #10B981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  animation: pulse 2s infinite;
+}
+
+.logged-out .status-dot {
+  background: #6B7280;
+  box-shadow: 0 0 4px rgba(107, 114, 128, 0.3);
+}
+
+.status-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  }
+}
+
+/* Mobile responsive styles for login indicator */
+@media (max-width: 768px) {
+  .login-status-container {
+    margin-left: 0.5rem;
+  }
+  
+  .login-status-indicator {
+    padding: 0.375rem 0.5rem;
+  }
+  
+  .status-text {
+    display: none;
+  }
+}
+
+/* Auth Button Styles */
+.auth-button-container {
+  margin-left: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.auth-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  text-transform: none;
+  letter-spacing: 0.025em;
+  min-height: 36px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.auth-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.logout-btn {
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+}
+
+.logout-btn:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+.login-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+.login-btn:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.auth-btn-text {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Mobile responsive styles for auth button */
+@media (max-width: 768px) {
+  .auth-button-container {
+    margin-left: 0.5rem;
+  }
+  
+  .auth-btn {
+    padding: 0.375rem 0.75rem;
+    min-height: 32px;
+    font-size: 0.8rem;
+  }
+  
+  .auth-btn-text {
+    display: none;
+  }
+  
+  .auth-btn .v-icon {
+    margin-right: 0 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-button-container {
+    margin-left: 0.25rem;
+  }
+  
+  .auth-btn {
+    padding: 0.25rem 0.5rem;
+    min-height: 28px;
+    font-size: 0.75rem;
+  }
+}
+
 .nav-dropdown {
   position: relative;
 }
@@ -2272,6 +2613,67 @@ const getEffectOptions = (effect: string): any => {
   background: rgba(0, 0, 0, 0.1);
   color: rgba(0, 0, 0, 1);
   border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile Auth Styles */
+.mobile-auth-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.mobile-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mobile-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mobile-user-name {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.9);
+  font-size: 0.9rem;
+}
+
+.mobile-user-email {
+  font-size: 0.8rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.mobile-logout-btn {
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.mobile-logout-btn:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.mobile-auth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mobile-login-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+.mobile-login-btn:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
 }
 
 .wizard-body {

@@ -262,16 +262,16 @@
 import { computed, onMounted, ref } from 'vue'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import ModelGuide from '~/components/step-guides/ModelGuide.vue'
-import { useSupabase } from '~/composables/supabase'
 
 interface Model {
-  id: string
+  id: number
   name: string
-  type?: string
-  status?: string
-  version?: string
-  framework?: string
-  config?: any
+  type: string
+  status: string
+  description?: string
+  config: string
+  createdAt: Date
+  updatedAt: Date
 }
 
 interface TestResult {
@@ -283,10 +283,8 @@ interface TestResult {
   timestamp: string
 }
 
-const supabase = useSupabase()
-
 const availableModels = ref<Model[]>([])
-const selectedModel = ref<string>('')
+const selectedModel = ref<number | null>(null)
 const testInput = ref('')
 const maxTokens = ref(100)
 const temperature = ref(0.7)
@@ -425,19 +423,16 @@ const loadModels = async () => {
   error.value = null
   
   try {
-    const { data, error: err } = await supabase
-      .from('models')
-      .select('*')
-      .eq('status', 'ready')
-      .order('created_at', { ascending: false })
+    const response = await $fetch<{ success: boolean; data: Model[]; message?: string }>('/api/prisma/models?status=ready')
     
-    if (err) {
-      error.value = err.message
+    if (response.success) {
+      availableModels.value = response.data || []
     } else {
-      availableModels.value = data || []
+      error.value = response.message || 'Failed to load models'
     }
-  } catch (err) {
-    error.value = 'Failed to load models'
+  } catch (err: any) {
+    console.error('Error loading models:', err)
+    error.value = err.message || 'Failed to load models'
   } finally {
     loadingModels.value = false
   }

@@ -30,13 +30,13 @@
                   <template #prepend>
                     <v-avatar color="primary" size="32">
                       <v-icon color="white">
-                        {{ getBotIcon(item.raw.type) }}
+                        {{ getBotIcon(getBotTypeForDisplay(item.raw)) }}
                       </v-icon>
                     </v-avatar>
                   </template>
                   <v-list-item-title>{{ item.raw.name }}</v-list-item-title>
                   <v-list-item-subtitle>
-                    {{ item.raw.type }} • {{ item.raw.status }}
+                    {{ getBotTypeForDisplay(item.raw) }} • {{ item.raw.status }}
                   </v-list-item-subtitle>
                 </v-list-item>
               </template>
@@ -48,7 +48,7 @@
               variant="tonal"
               class="mb-3"
             >
-              <strong>Bot Info:</strong> {{ selectedBotInfo.type }} bot with {{ selectedBotInfo.status }} status
+              <strong>Bot Info:</strong> {{ getBotTypeForDisplay(selectedBotInfo) }} bot with {{ selectedBotInfo.status }} status
             </v-alert>
           </v-card-text>
         </v-card>
@@ -274,15 +274,15 @@
 import { computed, onMounted, ref } from 'vue'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import BotGuide from '~/components/step-guides/BotGuide.vue'
-import { useSupabase } from '~/composables/supabase'
 
 interface Bot {
-  id: string
+  id: number
   name: string
-  type?: string
-  status?: string
   description?: string
-  config?: any
+  config: string
+  status: string
+  createdAt: Date
+  updatedAt: Date
 }
 
 interface TestScenario {
@@ -293,7 +293,7 @@ interface TestScenario {
 }
 
 interface TestResult {
-  botId: string
+  botId: number
   botName: string
   scenario: string
   conversation: Array<{ role: 'user' | 'bot'; content: string }>
@@ -303,10 +303,8 @@ interface TestResult {
   timestamp: string
 }
 
-const supabase = useSupabase()
-
 const availableBots = ref<Bot[]>([])
-const selectedBot = ref<string>('')
+const selectedBot = ref<number | null>(null)
 const testScenario = ref<string>('')
 const customMessage = ref('')
 const maxTokens = ref(150)
@@ -370,6 +368,34 @@ const getBotIcon = (type?: string) => {
   return icons[type || ''] || 'mdi-robot'
 }
 
+// Helper function to extract bot type from config
+const getBotType = (bot: Bot): string => {
+  try {
+    const config = JSON.parse(bot.config)
+    return config.model || config.type || 'General'
+  } catch {
+    return 'General'
+  }
+}
+
+// Helper function to get bot type for display
+const getBotTypeForDisplay = (bot: Bot): string => {
+  const type = getBotType(bot)
+  const typeMap: Record<string, string> = {
+    'gpt-4': 'AI Assistant',
+    'gpt-3.5-turbo': 'AI Assistant',
+    'claude-3-opus': 'AI Assistant',
+    'claude-3-sonnet': 'AI Assistant',
+    'claude-3-haiku': 'AI Assistant',
+    'Customer Support': 'Customer Support',
+    'Developer Assistant': 'Developer Assistant',
+    'Data Analyst': 'Data Analyst',
+    'Content Writer': 'Content Writer',
+    'General': 'General'
+  }
+  return typeMap[type] || 'General'
+}
+
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -414,7 +440,7 @@ const startTest = async () => {
         conversation.push({ role: 'user', content: message })
         
         // Generate bot response
-        const botResponse = generateBotResponse(message, bot.type)
+        const botResponse = generateBotResponse(message, getBotTypeForDisplay(bot))
         conversation.push({ role: 'bot', content: botResponse })
         
         // Small delay between messages
@@ -449,7 +475,7 @@ const startTest = async () => {
   }
 }
 
-const generateBotResponse = (userMessage: string, botType?: string): string => {
+const generateBotResponse = (userMessage: string, botName: string): string => {
   const responses: Record<string, string[]> = {
     'Customer Support': [
       'I\'m here to help! How can I assist you today?',
@@ -483,7 +509,7 @@ const generateBotResponse = (userMessage: string, botType?: string): string => {
     ]
   }
   
-  const botResponses = responses[botType || 'General'] || responses['General']
+  const botResponses = responses[botName] || responses['General']
   return botResponses[Math.floor(Math.random() * botResponses.length)]
 }
 
@@ -499,19 +525,16 @@ const loadBots = async () => {
   error.value = null
   
   try {
-    const { data, error: err } = await supabase
-      .from('bots')
-      .select('*')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
+    const response = await $fetch<{ success: boolean; data: Bot[]; message?: string }>('/api/prisma/bots')
     
-    if (err) {
-      error.value = err.message
+    if (response.success) {
+      availableBots.value = response.data || []
     } else {
-      availableBots.value = data || []
+      error.value = response.message || 'Failed to load bots'
     }
-  } catch (err) {
-    error.value = 'Failed to load bots'
+  } catch (err: any) {
+    console.error('Error loading bots:', err)
+    error.value = err.message || 'Failed to load bots'
   } finally {
     loadingBots.value = false
   }

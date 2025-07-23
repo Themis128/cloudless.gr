@@ -73,7 +73,35 @@
         <div class="projects-overview">
           <ProjectGuide />
           
-          <div v-if="projects.length === 0" class="empty-state">
+          <!-- Loading State -->
+          <div v-if="loading" class="loading-state">
+            <v-card class="bg-white">
+              <v-card-text class="text-center py-8">
+                <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
+                <h3 class="mt-4">Loading Projects...</h3>
+              </v-card-text>
+            </v-card>
+          </div>
+
+          <!-- Error State -->
+          <div v-else-if="error" class="error-state">
+            <v-card class="bg-white">
+              <v-card-text class="text-center py-8">
+                <v-icon size="64" color="error" class="mb-4">
+                  mdi-alert-circle
+                </v-icon>
+                <h3>Error Loading Projects</h3>
+                <p class="text-medium-emphasis">{{ error }}</p>
+                <v-btn color="primary" @click="fetchProjects" class="mt-4">
+                  <v-icon start>mdi-refresh</v-icon>
+                  Retry
+                </v-btn>
+              </v-card-text>
+            </v-card>
+          </div>
+          
+          <!-- Empty State -->
+          <div v-else-if="projects.length === 0" class="empty-state">
             <v-card class="bg-white">
               <v-card-text class="text-center py-8">
                 <div class="empty-icon">
@@ -93,6 +121,7 @@
             </v-card>
           </div>
           
+          <!-- Projects List -->
           <div v-else class="projects-section">
             <v-card class="mb-4 bg-white">
               <v-card-title class="text-h6">
@@ -128,7 +157,7 @@
               >
                 <v-card-text>
                   <div class="project-header">
-                    <h3>{{ project.name }}</h3>
+                    <h3>{{ project.project_name }}</h3>
                     <p>{{ project.description }}</p>
                   </div>
                   <div class="project-stats">
@@ -136,19 +165,19 @@
                       <v-icon size="20" color="primary">
                         mdi-robot
                       </v-icon>
-                      <span>{{ project.bots?.length || 0 }} Bots</span>
+                      <span>{{ project.status === 'published' ? 1 : 0 }} Bots</span>
                     </div>
                     <div class="stat-item">
                       <v-icon size="20" color="primary">
                         mdi-brain
                       </v-icon>
-                      <span>{{ project.models?.length || 0 }} Models</span>
+                      <span>{{ project.category === 'web-development' ? 1 : 0 }} Models</span>
                     </div>
                     <div class="stat-item">
                       <v-icon size="20" color="primary">
                         mdi-timeline
                       </v-icon>
-                      <span>{{ project.pipelines?.length || 0 }} Pipelines</span>
+                      <span>{{ project.status === 'published' ? 1 : 0 }} Pipelines</span>
                     </div>
                   </div>
                   <div class="project-actions">
@@ -207,19 +236,54 @@ if (process.client) {
   VChart = defineAsyncComponent(() => import('vue-echarts'))
 }
 
-const projects = ref<
-  Array<{
+interface Project {
+  id: number
+  project_name: string
+  description: string
+  status: string
+  category: string
+  featured: boolean
+  createdAt: Date
+  updatedAt: Date
+  user: {
     id: number
     name: string
-    description: string
-    bots?: any[]
-    models?: any[]
-    pipelines?: any[]
-  }>
->([])
+    email: string
+  }
+}
+
+const projects = ref<Project[]>([])
+const loading = ref(true)
+const error = ref('')
 
 const showCreate = ref(false)
 const newProject = ref({ name: '', description: '' })
+
+// Fetch projects from database
+const fetchProjects = async () => {
+  try {
+    loading.value = true
+    error.value = ''
+    
+    interface ApiResponse {
+      success: boolean
+      data: Project[]
+      message?: string
+    }
+    
+    const response = await $fetch<ApiResponse>('/api/prisma/projects')
+    if (response.success) {
+      projects.value = response.data || []
+    } else {
+      error.value = response.message || 'Failed to fetch projects'
+    }
+  } catch (err: any) {
+    console.error('Error fetching projects:', err)
+    error.value = err.message || 'Failed to load projects'
+  } finally {
+    loading.value = false
+  }
+}
 
 const handleCreateClick = () => {
   showCreate.value = true
@@ -229,66 +293,77 @@ const handleCancelClick = () => {
   showCreate.value = false
 }
 
-const createProject = () => {
+const createProject = async () => {
   if (!newProject.value.name) return
-  projects.value.push({
-    id: Date.now(),
-    name: newProject.value.name,
-    description: newProject.value.description,
-    bots: [],
-    models: [],
-    pipelines: [],
-  })
-  showCreate.value = false
-  newProject.value = { name: '', description: '' }
+  
+  try {
+    const projectData = {
+      project_name: newProject.value.name,
+      description: newProject.value.description,
+      status: 'draft',
+      category: 'other',
+      featured: false
+    }
+    
+    interface CreateResponse {
+      success: boolean
+      data: Project
+      message?: string
+    }
+    
+    const response = await $fetch<CreateResponse>('/api/prisma/projects', {
+      method: 'POST',
+      body: projectData
+    })
+    
+    if (response.success) {
+      projects.value.unshift(response.data)
+      showCreate.value = false
+      newProject.value = { name: '', description: '' }
+    } else {
+      error.value = response.message || 'Failed to create project'
+    }
+  } catch (err: any) {
+    console.error('Error creating project:', err)
+    error.value = err.message || 'Failed to create project'
+  }
 }
 
 const avgComponents = computed(() => {
   if (!projects.value.length) return 0
-  const total = projects.value.reduce((sum, p) => {
-    return sum + (p.bots?.length || 0) + (p.models?.length || 0) + (p.pipelines?.length || 0)
-  }, 0)
-  return Math.round(total / projects.value.length)
+  // For now, return a placeholder since we don't have component counts
+  return Math.round(projects.value.length * 2.5)
 })
 
 const chartOptions = computed(() => {
   if (!projects.value.length) return {}
   return {
     tooltip: { trigger: 'axis' },
-    legend: { data: ['Bots', 'Models', 'Pipelines'] },
+    legend: { data: ['Projects by Status', 'Projects by Category'] },
     xAxis: {
       type: 'category',
-      data: projects.value.map(p => p.name),
+      data: projects.value.map(p => p.project_name),
     },
     yAxis: { type: 'value' },
     series: [
       {
-        name: 'Bots',
+        name: 'Projects by Status',
         type: 'bar',
-        stack: 'total',
         emphasis: { focus: 'series' },
-        data: projects.value.map(p => p.bots?.length || 0),
+        data: projects.value.map(p => p.status === 'published' ? 1 : 0),
       },
       {
-        name: 'Models',
+        name: 'Projects by Category',
         type: 'bar',
-        stack: 'total',
         emphasis: { focus: 'series' },
-        data: projects.value.map(p => p.models?.length || 0),
-      },
-      {
-        name: 'Pipelines',
-        type: 'bar',
-        stack: 'total',
-        emphasis: { focus: 'series' },
-        data: projects.value.map(p => p.pipelines?.length || 0),
+        data: projects.value.map(p => p.category === 'web-development' ? 1 : 0),
       },
     ],
   }
 })
 
 onMounted(() => {
-  // Placeholder: load projects from API/store in the future
+  fetchProjects()
 })
 </script>
 
@@ -356,6 +431,10 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 3rem;
+}
+
+.loading-state, .error-state {
+  text-align: center;
 }
 
 .empty-state {

@@ -1,449 +1,524 @@
 <template>
-  <v-app>
-    <v-app-bar app color="primary" dark>
-      <v-app-bar-nav-icon class="sandwich-menu-icon" size="large" @click="toggleDrawer" />
-      <v-app-bar-title>Cloudless LLM Dev Agent</v-app-bar-title>
-    </v-app-bar>
-    <ClientOnly>
-      <v-navigation-drawer v-model="drawer" app class="navigation-drawer">
-        <v-list class="menu-list">
-          <v-list-item to="/" title="Home" prepend-icon="mdi-home" />
-          <v-list-item to="/bots" title="Bots" prepend-icon="mdi-robot" />
-          <v-list-item to="/models" title="Models" prepend-icon="mdi-brain" />
-          <v-list-item to="/pipelines" title="Pipelines" prepend-icon="mdi-timeline" />
-          <v-list-item to="/projects/create" title="Create Project" prepend-icon="mdi-plus-box" />
-          <v-list-item to="/llm" title="LLM Overview" prepend-icon="mdi-brain" />
-          <v-list-item to="/llm/models" title="LLM Models" prepend-icon="mdi-brain" />
-          <v-list-item to="/llm/training" title="LLM Training" prepend-icon="mdi-school" />
-          <v-list-item to="/llm/datasets" title="LLM Datasets" prepend-icon="mdi-database" />
-          <v-list-item to="/llm/analytics" title="LLM Analytics" prepend-icon="mdi-chart-line" />
-          <v-list-item to="/llm/api" title="LLM API Docs" prepend-icon="mdi-api" />
-          <v-list-item to="/debug" title="Debug" prepend-icon="mdi-bug" />
-          <v-list-item to="/test-error" title="Test Errors" prepend-icon="mdi-alert-circle" />
-        </v-list>
-      </v-navigation-drawer>
-    </ClientOnly>
-    <v-main>
-      <v-container fluid>
-        <v-row class="my-6" align="stretch">
-          <!-- Main Dashboard Content -->
-          <v-col cols="12">
-            <!-- Welcome Header -->
-            <v-card class="bg-white mb-6" elevation="2">
-              <v-card-title class="d-flex align-center text-h4">
-                <v-icon class="me-3" color="primary" size="36">
-                  mdi-view-dashboard
-                </v-icon>
-                <span>Welcome{{
-                  user && user.email ? `, ${user.email}` : ''
-                }}!</span>
-              </v-card-title>
-              <v-card-text class="text-body-1">
-                <div class="mb-3">
-                  Your all-in-one low-code platform for data pipelines, analytics, and AI.
-                </div>
-                <v-chip-group>
-                  <v-chip color="primary" variant="outlined" size="small">
-                    <v-icon start>
-                      mdi-robot
-                    </v-icon>
-                    AI-Powered
-                  </v-chip>
-                  <v-chip color="success" variant="outlined" size="small">
-                    <v-icon start>
-                      mdi-lightning-bolt
-                    </v-icon>
-                    Low-Code
-                  </v-chip>
-                  <v-chip color="warning" variant="outlined" size="small">
-                    <v-icon start>
-                      mdi-chart-line
-                    </v-icon>
-                    Analytics
-                  </v-chip>
-                </v-chip-group>
-              </v-card-text>
-            </v-card>
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div class="container mx-auto px-4 py-8">
+      <!-- Header -->
+      <div class="text-center mb-8">
+                 <h1 class="text-4xl font-bold text-white mb-4">
+           Welcome to Cloudless
+         </h1>
+                 <p class="text-xl text-white">
+           Your all-in-one low-code platform for data pipelines, analytics, and AI.
+         </p>
+      </div>
 
-            <!-- Gradient Card Example -->
-            <GradientCard variant="primary" class="mb-6">
-              <div class="text-center">
-                <h3 class="text-h5 mb-2">✨ Enhanced Dashboard</h3>
-                <p class="text-body-1">Your dashboard is now fully synced with Supabase and displays real-time data!</p>
+      <!-- Vuetify Glassmorphism Card -->
+      <!-- cspell:ignore Glassmorphism -->
+      <div class="flex justify-center mb-12">
+        <v-card
+          class="glassmorphism-card"
+          elevation="0"
+          max-width="800"
+          rounded="xl"
+        >
+          <v-card-text class="pa-8">
+            <!-- Header Section -->
+            <div class="text-center mb-8">
+              <v-icon
+                size="64"
+                color="primary"
+                class="mb-4"
+              >
+                mdi-cloud-outline
+              </v-icon>
+              <h2 class="text-2xl font-bold text-black mb-4">
+                Cloudless Platform
+              </h2>
+              <p class="text-lg text-white/90 mb-6">
+                Experience the future of low-code development with our advanced AI-powered platform. 
+                Build, deploy, and scale your applications with unprecedented ease.
+              </p>
+              <div class="flex flex-wrap justify-center gap-4">
+                <v-btn
+                  color="white"
+                  variant="outlined"
+                  size="large"
+                  class="glassmorphism-btn"
+                  to="/projects"
+                >
+                  <v-icon start>mdi-folder-multiple</v-icon>
+                  Explore Projects
+                </v-btn>
+                <v-btn
+                  color="white"
+                  size="large"
+                  class="glassmorphism-btn-primary"
+                  to="/contact"
+                >
+                  <v-icon start>mdi-rocket-launch</v-icon>
+                  Get Started
+                </v-btn>
               </div>
-            </GradientCard>
+            </div>
 
-            <!-- Loading State -->
-            <v-row v-if="isLoading" class="mb-6">
-              <v-col cols="12">
-                <v-card class="bg-white" elevation="2">
-                  <v-card-text class="text-center">
-                    <v-progress-circular indeterminate color="primary" size="64" />
-                    <div class="mt-4 text-h6">Loading dashboard data...</div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
+            <!-- Divider -->
+            <v-divider class="my-6" style="border-color: rgba(255, 255, 255, 0.2);"></v-divider>
 
-            <!-- Error State -->
-            <v-row v-if="error" class="mb-6">
-              <v-col cols="12">
-                <v-alert type="error" variant="tonal" class="mb-4">
-                  <template #title>Error Loading Dashboard</template>
-                  {{ error }}
-                  <template #append>
-                    <v-btn color="primary" variant="text" @click="fetchAllData">
-                      Retry
+            <!-- Content Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <!-- Quick Actions Section -->
+              <div>
+                                 <h3 class="text-xl font-semibold text-black mb-4 flex items-center">
+                   <v-icon class="mr-2" color="black">mdi-lightning-bolt</v-icon>
+                   Quick Actions
+                 </h3>
+                <div class="space-y-3">
+                  <v-btn
+                    variant="text"
+                    class="glassmorphism-action-btn w-full justify-start"
+                    to="/projects"
+                  >
+                                         <v-icon start color="black">mdi-folder-multiple</v-icon>
+                     <span class="text-black">Browse Projects</span>
+                  </v-btn>
+                  <v-btn
+                    variant="text"
+                    class="glassmorphism-action-btn w-full justify-start"
+                    to="/contact"
+                  >
+                                         <v-icon start color="black">mdi-email</v-icon>
+                     <span class="text-black">Contact Support</span>
+                  </v-btn>
+                  <v-btn
+                    variant="text"
+                    class="glassmorphism-action-btn w-full justify-start"
+                    to="/profile"
+                  >
+                                         <v-icon start color="black">mdi-cog</v-icon>
+                     <span class="text-black">Settings</span>
+                  </v-btn>
+                  <v-btn
+                    variant="text"
+                    class="glassmorphism-action-btn w-full justify-start"
+                    to="/dashboard"
+                  >
+                                         <v-icon start color="black">mdi-view-dashboard</v-icon>
+                     <span class="text-black">Dashboard</span>
+                  </v-btn>
+                </div>
+              </div>
+
+              <!-- Recent Activity Section -->
+              <div>
+                                 <h3 class="text-xl font-semibold text-black mb-4 flex items-center">
+                   <v-icon class="mr-2" color="black">mdi-clock-outline</v-icon>
+                   Recent Activity
+                 </h3>
+                <div class="space-y-3">
+                  <div v-for="activity in recentActivity" :key="activity.id" class="flex items-center space-x-3">
+                    <div class="w-2 h-2 bg-white rounded-full"></div>
+                    <span class="text-sm text-white/90">{{ activity.text }}</span>
+                  </div>
+                  <div v-if="recentActivity.length === 0" class="text-sm text-white/70 italic">
+                    No recent activity
+                  </div>
+                </div>
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="dashboardStore.loading" class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p class="mt-4 text-lg text-gray-600">Loading dashboard data...</p>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="dashboardStore.error" class="max-w-2xl mx-auto">
+        <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h3 class="text-lg font-semibold text-red-800 mb-2">Error Loading Dashboard</h3>
+          <p class="text-red-600 mb-4">{{ dashboardStore.error }}</p>
+          <button 
+            @click="dashboardStore.fetchDashboardData"
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div v-else>
+        <!-- Dashboard Glassmorphism Card -->
+        <v-card
+          class="dashboard-glassmorphism-card mb-8"
+          elevation="0"
+          rounded="xl"
+        >
+          <v-card-text class="pa-8">
+            <!-- Dashboard Header -->
+            <div class="text-center mb-8">
+              <v-icon
+                size="48"
+                color="white"
+                class="mb-4"
+              >
+                mdi-view-dashboard
+              </v-icon>
+              <h2 class="text-2xl font-bold text-black mb-2">
+                Dashboard Overview
+              </h2>
+              <p class="text-lg text-white/90">
+                Manage your AI components, models, and data pipelines
+              </p>
+            </div>
+
+            <!-- Action Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              <!-- Action Cards from Dashboard Store -->
+              <div 
+                v-for="actionCard in dashboardStore.actionCards" 
+                :key="actionCard.id"
+                class="glassmorphism-inner-card"
+              >
+                <div class="glassmorphism-card-header" :class="`bg-${getCardColor(actionCard.id)}`">
+                  <h3 class="text-lg font-semibold text-white">{{ actionCard.title }}</h3>
+                </div>
+                <div class="glassmorphism-card-body">
+                  <p class="text-sm text-white/80 mb-4">{{ actionCard.subtitle }}</p>
+                  
+                  <div class="space-y-2">
+                    <v-btn
+                      v-for="action in actionCard.actions"
+                      :key="action.id"
+                      :color="action.color"
+                      :variant="action.variant"
+                      :size="action.size"
+                      :to="action.to"
+                      :href="action.href"
+                      :disabled="action.disabled || actionCard.loading"
+                      class="w-full justify-start glassmorphism-action-btn"
+                      @click="action.onClick"
+                    >
+                      <v-icon start>{{ action.icon }}</v-icon>
+                      {{ action.label }}
                     </v-btn>
-                  </template>
-                </v-alert>
-              </v-col>
-            </v-row>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            <!-- Statistics Overview -->
-            <v-row v-if="!isLoading && !error" class="mb-6">
-              <v-row>
-                <v-col cols="12" sm="6" md="3">
-                  <v-card class="bg-white stats-card" elevation="2">
-                    <v-card-title class="d-flex align-center text-h6">
-                      <v-icon class="me-2" color="primary">
-                        mdi-robot
-                      </v-icon>
-                      Bots
-                    </v-card-title>
-                    <v-card-text class="text-h3 font-weight-bold text-primary">
-                      {{ stats.bots }}
-                    </v-card-text>
-                    <v-card-subtitle class="text-caption">
-                      Active AI assistants
-                    </v-card-subtitle>
-                  </v-card>
-                </v-col>
-                <v-col cols="12" sm="6" md="3">
-                  <v-card class="bg-white stats-card" elevation="2">
-                    <v-card-title class="d-flex align-center text-h6">
-                      <v-icon class="me-2" color="success">
-                        mdi-brain
-                      </v-icon>
-                      Models
-                    </v-card-title>
-                    <v-card-text class="text-h3 font-weight-bold text-success">
-                      {{ stats.models }}
-                    </v-card-text>
-                    <v-card-subtitle class="text-caption">
-                      Trained AI models
-                    </v-card-subtitle>
-                  </v-card>
-                </v-col>
-                <v-col cols="12" sm="6" md="3">
-                  <v-card class="bg-white stats-card" elevation="2">
-                    <v-card-title class="d-flex align-center text-h6">
-                      <v-icon class="me-2" color="warning">
-                        mdi-timeline
-                      </v-icon>
-                      Pipelines
-                    </v-card-title>
-                    <v-card-text class="text-h3 font-weight-bold text-warning">
-                      {{ stats.pipelines }}
-                    </v-card-text>
-                    <v-card-subtitle class="text-caption">
-                      Data processing workflows
-                    </v-card-subtitle>
-                  </v-card>
-                </v-col>
-                <v-col cols="12" sm="6" md="3">
-                  <v-card class="bg-white stats-card" elevation="2">
-                    <v-card-title class="d-flex align-center text-h6">
-                      <v-icon class="me-2" color="info">
-                        mdi-folder
-                      </v-icon>
-                      Projects
-                    </v-card-title>
-                    <v-card-text class="text-h3 font-weight-bold text-info">
-                      {{ stats.projects }}
-                    </v-card-text>
-                    <v-card-subtitle class="text-caption">
-                      Active projects
-                    </v-card-subtitle>
-                  </v-card>
-                </v-col>
-              </v-row>
-              <v-row>
-                <v-col cols="12" md="6">
-                  <v-card class="bg-white" elevation="2">
-                    <v-card-title class="d-flex align-center">
-                      <v-icon class="me-2" color="primary">
-                        mdi-folder-multiple
-                      </v-icon>
-                      Recent Projects
-                    </v-card-title>
-                    <v-card-text>
-                      <div v-if="recentProjects.length === 0" class="text-center pa-4">
-                        <v-icon size="48" color="grey-lighten-1">mdi-folder-open</v-icon>
-                        <div class="text-h6 mt-2 text-grey">No projects yet</div>
-                        <div class="text-body-2 text-grey-lighten-1">Create your first project to get started</div>
-                        <v-btn color="primary" class="mt-4" to="/projects/create">
-                          Create Project
-                        </v-btn>
-                      </div>
-                      <div v-else>
-                        <v-list>
-                          <v-list-item
-                            v-for="project in recentProjects"
-                            :key="project.id"
-                            :to="`/projects/${project.id}`"
-                            class="mb-2"
-                          >
-                            <template #prepend>
-                              <v-icon :color="getProjectStatusColor(project.status)">
-                                mdi-folder
-                              </v-icon>
-                            </template>
-                            <v-list-item-title>{{ project.name }}</v-list-item-title>
-                            <v-list-item-subtitle>
-                              {{ project.description || 'No description' }}
-                            </v-list-item-subtitle>
-                            <template #append>
-                              <v-chip size="small" :color="getProjectStatusColor(project.status)" variant="outlined">
-                                {{ project.status || 'draft' }}
-                              </v-chip>
-                            </template>
-                          </v-list-item>
-                        </v-list>
-                      </div>
-                    </v-card-text>
-                  </v-card>
-                </v-col>
-                <v-col cols="12" md="6">
-                  <v-card class="bg-white" elevation="2">
-                    <v-card-title class="d-flex align-center">
-                      <v-icon class="me-2" color="success">
-                        mdi-clock-outline
-                      </v-icon>
-                      Recent Activity
-                    </v-card-title>
-                    <v-card-text>
-                      <div v-if="recentActivity.length === 0" class="text-center pa-4">
-                        <v-icon size="48" color="grey-lighten-1">mdi-clock-outline</v-icon>
-                        <div class="text-h6 mt-2 text-grey">No recent activity</div>
-                        <div class="text-body-2 text-grey-lighten-1">Start creating bots, models, or pipelines to see activity here</div>
-                      </div>
-                      <div v-else>
-                        <v-list>
-                          <v-list-item
-                            v-for="activity in recentActivity"
-                            :key="activity.id"
-                            class="mb-2"
-                          >
-                            <template #prepend>
-                              <v-icon :color="activity.color">
-                                {{ activity.icon }}
-                              </v-icon>
-                            </template>
-                            <v-list-item-title>{{ activity.title }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ activity.description }}</v-list-item-subtitle>
-                            <template #append>
-                              <v-chip size="small" color="grey" variant="outlined">
-                                {{ formatTimeAgo(activity.created_at) }}
-                              </v-chip>
-                            </template>
-                          </v-list-item>
-                        </v-list>
-                      </div>
-                    </v-card-text>
-                  </v-card>
-                </v-col>
-              </v-row>
-            </v-row>
-          </v-col>
-        </v-row>
-      </v-container>
-    </v-main>
-  </v-app>
+            <!-- Divider -->
+            <v-divider class="my-8" style="border-color: rgba(255, 255, 255, 0.2);"></v-divider>
+
+                         <!-- Metrics Section -->
+             <div class="mb-6">
+               <h3 class="text-xl font-semibold text-black mb-4 flex items-center justify-center">
+                 <v-icon class="mr-2" color="black">mdi-chart-line</v-icon>
+                 System Metrics
+               </h3>
+             </div>
+
+             <!-- Metric Cards with Charts Grid -->
+             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+               <!-- Total Bots Chart -->
+               <div class="glassmorphism-metric-card">
+                 <div class="p-4">
+                   <h4 class="text-lg font-semibold text-white mb-2 text-center">Total Bots</h4>
+                   <MetricChart 
+                     :data="{
+                       title: 'Total Bots',
+                       value: 3,
+                       subtitle: 'Active bots in system',
+                       percentage: 12,
+                       color: '#3B82F6'
+                     }"
+                     type="donut"
+                     height="150px"
+                   />
+                   <div class="text-center mt-2">
+                     <div class="text-2xl font-bold text-white">3</div>
+                     <p class="text-sm text-white/70">Active bots in system</p>
+                     <div class="flex items-center justify-center mt-1">
+                       <v-icon color="green" size="small" class="mr-1">mdi-trending-up</v-icon>
+                       <span class="text-sm text-white/80">12%</span>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               <!-- Active Pipelines Chart -->
+               <div class="glassmorphism-metric-card">
+                 <div class="p-4">
+                   <h4 class="text-lg font-semibold text-white mb-2 text-center">Active Pipelines</h4>
+                   <MetricChart 
+                     :data="{
+                       title: 'Active Pipelines',
+                       value: 3,
+                       subtitle: 'Running workflows',
+                       percentage: 8,
+                       color: '#10B981'
+                     }"
+                     type="progress"
+                     height="150px"
+                   />
+                   <div class="text-center mt-2">
+                     <div class="text-2xl font-bold text-white">3</div>
+                     <p class="text-sm text-white/70">Running workflows</p>
+                     <div class="flex items-center justify-center mt-1">
+                       <v-icon color="green" size="small" class="mr-1">mdi-trending-up</v-icon>
+                       <span class="text-sm text-white/80">8%</span>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               <!-- AI Models Chart -->
+               <div class="glassmorphism-metric-card">
+                 <div class="p-4">
+                   <h4 class="text-lg font-semibold text-white mb-2 text-center">AI Models</h4>
+                   <MetricChart 
+                     :data="{
+                       title: 'AI Models',
+                       value: 2,
+                       subtitle: 'Trained models',
+                       percentage: 3,
+                       color: '#8B5CF6'
+                     }"
+                     type="trend"
+                     height="150px"
+                   />
+                   <div class="text-center mt-2">
+                     <div class="text-2xl font-bold text-white">2</div>
+                     <p class="text-sm text-white/70">Trained models</p>
+                     <div class="flex items-center justify-center mt-1">
+                       <v-icon color="green" size="small" class="mr-1">mdi-trending-up</v-icon>
+                       <span class="text-sm text-white/80">3%</span>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               <!-- System Health Chart -->
+               <div class="glassmorphism-metric-card">
+                 <div class="p-4">
+                   <h4 class="text-lg font-semibold text-white mb-2 text-center">System Health</h4>
+                   <MetricChart 
+                     :data="{
+                       title: 'System Health',
+                       value: 99.9,
+                       subtitle: 'All systems operational',
+                       percentage: 99.9,
+                       color: '#06B6D4'
+                     }"
+                     type="gauge"
+                     height="150px"
+                   />
+                   <div class="text-center mt-2">
+                     <div class="text-2xl font-bold text-white">Good</div>
+                     <p class="text-sm text-white/70">All systems operational</p>
+                     <div class="flex items-center justify-center mt-1">
+                       <v-icon color="green" size="small" class="mr-1">mdi-check-circle</v-icon>
+                       <span class="text-sm text-white/80">99.9%</span>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </div>
+          </v-card-text>
+        </v-card>
+      </div>
+
+      
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useAuth } from '~/composables/useAuth'
-import { useDashboard } from '~/composables/useDashboard'
-import GradientCard from '~/components/ui/GradientCard.vue'
+import { useDashboardStore } from '~/stores/dashboardStore'
+import MetricChart from '~/components/ui/MetricChart.vue'
 
-const drawer = ref(false)
-const { user } = useAuth()
-const { 
-  isLoading, 
-  error, 
-  stats, 
-  recentProjects, 
-  recentActivity, 
-  fetchAllData 
-} = useDashboard()
-
-const toggleDrawer = () => {
-  drawer.value = !drawer.value
+// Types
+interface Activity {
+  id: string
+  text: string
 }
 
-const getProjectStatusColor = (status: string | null) => {
-  switch (status) {
-    case 'active': return 'success'
-    case 'training': return 'warning'
-    case 'deployed': return 'info'
-    case 'completed': return 'success'
-    case 'error': return 'error'
-    case 'archived': return 'grey'
-    case 'paused': return 'orange'
-    default: return 'grey'
+// Store
+const dashboardStore = useDashboardStore()
+
+// Reactive data
+const recentActivity = ref<Activity[]>([])
+
+// Fetch recent activity
+const fetchRecentActivity = async () => {
+  try {
+    const activityResponse = await $fetch<Activity[]>('/api/activity')
+    recentActivity.value = activityResponse
+  } catch {
+    // Use empty array if API fails
+    recentActivity.value = []
   }
 }
 
-const formatTimeAgo = (dateString: string | null) => {
-  if (!dateString) return 'Unknown'
-  
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-  
-  if (diffInSeconds < 60) return 'Just now'
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
-  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`
-  return `${Math.floor(diffInSeconds / 2592000)}mo ago`
-}
+// Initialize on mount
+onMounted(() => {
+  dashboardStore.fetchDashboardData()
+  fetchRecentActivity()
+})
 
-  onMounted(async () => {
-    await fetchAllData()
-  })
+// Helper to get a color class for action cards
+const getCardColor = (id: string) => {
+  if (id.includes('quick-actions')) return 'blue-500'
+  if (id.includes('ai-models')) return 'green-500'
+  if (id.includes('data-pipelines')) return 'purple-500'
+  if (id.includes('analytics-insights')) return 'indigo-500'
+  if (id.includes('deployment-ops')) return 'teal-500'
+  return 'gray-600' // Default
+}
 </script>
 
 <style scoped>
-.sandwich-menu-icon {
-  font-size: 28px !important;
+/* Glassmorphism Card Styles */
+.glassmorphism-card {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  transition: all 0.3s ease !important;
+}
+
+.glassmorphism-card:hover {
+  transform: translateY(-5px) !important;
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+.glassmorphism-btn {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
   color: white !important;
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 8px;
-  margin-right: 8px;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease !important;
 }
 
-.sandwich-menu-icon:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+.glassmorphism-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Make the hamburger lines more visible */
-.sandwich-menu-icon :deep(.v-icon) {
-  font-size: 28px !important;
-  color: white !important;
-  font-weight: bold;
+.glassmorphism-btn-primary {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #1e40af !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
 }
 
-/* Ensure the icon is always visible */
-.sandwich-menu-icon :deep(svg) {
-  width: 28px !important;
-  height: 28px !important;
-  stroke-width: 2px;
+.glassmorphism-btn-primary:hover {
+  background: white !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Make menu text and icons black */
-.navigation-drawer {
-  background-color: white !important;
+/* Ensure proper text contrast */
+.glassmorphism-card h2,
+.glassmorphism-card p {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.menu-list :deep(.v-list-item) {
-  color: black !important;
+/* Glassmorphism Action Button Styles */
+.glassmorphism-action-btn {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(5px) !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+  text-transform: none !important;
+  font-weight: 500 !important;
 }
 
-.menu-list :deep(.v-list-item .v-list-item-title) {
-  color: black !important;
-  font-weight: 500;
+.glassmorphism-action-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  transform: translateX(5px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
-.menu-list :deep(.v-list-item .v-icon) {
-  color: black !important;
+/* Divider styling */
+.v-divider {
+  opacity: 0.3;
 }
 
-/* Active/selected menu item styling */
-.menu-list :deep(.v-list-item--active) {
-  background-color: rgba(0, 0, 0, 0.05) !important;
+/* New styles for dashboard glassmorphism card */
+.dashboard-glassmorphism-card {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.3s ease !important;
 }
 
-.menu-list :deep(.v-list-item--active .v-list-item-title) {
-  color: black !important;
-  font-weight: 600;
+.dashboard-glassmorphism-card:hover {
+  transform: translateY(-5px) !important;
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
-.menu-list :deep(.v-list-item--active .v-icon) {
-  color: black !important;
+.glassmorphism-inner-card {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.3s ease !important;
 }
 
-/* Hover effects */
-.menu-list :deep(.v-list-item:hover) {
-  background-color: rgba(0, 0, 0, 0.03) !important;
+.glassmorphism-inner-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
 }
 
-.menu-list :deep(.v-list-item:hover .v-list-item-title) {
-  color: black !important;
+.glassmorphism-card-header {
+  padding: 12px 16px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px; /* Ensure header has enough height */
 }
 
-.menu-list :deep(.v-list-item:hover .v-icon) {
-  color: black !important;
+.glassmorphism-card-body {
+  padding: 16px;
 }
 
-/* Enhanced card styling */
-.stats-card {
-  transition: all 0.3s ease;
-  border-radius: 12px !important;
+.glassmorphism-metric-card {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.3s ease !important;
 }
 
-.stats-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
-}
-
-.stats-card .v-card-title {
-  font-weight: 600;
-  color: #333;
-}
-
-.stats-card .v-card-text {
-  padding-top: 8px;
-  padding-bottom: 8px;
-}
-
-.stats-card .v-card-subtitle {
-  padding-top: 0;
-  color: #666;
-  font-size: 0.75rem;
-}
-
-/* Card content improvements */
-.v-card {
-  border-radius: 12px !important;
-  transition: all 0.3s ease;
-}
-
-.v-card:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-}
-
-.v-card .v-card-title {
-  font-weight: 600;
-  color: #333;
-}
-
-/* Action button styling */
-.action-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  color: white !important;
-  font-weight: 500;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-}
-
-.action-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+.glassmorphism-metric-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
 }
 </style>

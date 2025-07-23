@@ -1,12 +1,11 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
-import { projectService } from '~/lib/database'
+import { databaseService } from '~/lib/database'
 
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event)
     const page = parseInt(query.page as string) || 1
     const limit = parseInt(query.limit as string) || 10
-    const ownerId = query.ownerId as string
 
     // Validate pagination parameters
     if (page < 1 || limit < 1 || limit > 100) {
@@ -16,12 +15,33 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const result = await projectService.listProjects(ownerId, page, limit)
+    // Get projects from database
+    const projects = await databaseService.prisma.project.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    // Simple pagination
+    const startIndex = (page - 1) * limit
+    const endIndex = startIndex + limit
+    const paginatedProjects = projects.slice(startIndex, endIndex)
 
     return {
       success: true,
-      data: result,
-      message: 'Projects retrieved successfully'
+      data: paginatedProjects,
+      total: projects.length,
+      page,
+      pages: Math.ceil(projects.length / limit)
     }
   } catch (error: any) {
     if (error.statusCode) {

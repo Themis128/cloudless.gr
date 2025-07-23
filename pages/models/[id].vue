@@ -45,7 +45,7 @@
                       {{ model.status || 'draft' }}
                     </v-chip>
                     <span class="text-body-2 text-medium-emphasis">
-                      v{{ model.version || '1.0.0' }}
+                      v1.0.0
                     </span>
                   </div>
                 </div>
@@ -104,13 +104,13 @@
                     <v-list-item>
                       <v-list-item-title>Framework</v-list-item-title>
                       <v-list-item-subtitle>
-                        {{ model.framework || 'Not specified' }}
+                        Not specified
                       </v-list-item-subtitle>
                     </v-list-item>
                     <v-list-item>
                       <v-list-item-title>Created</v-list-item-title>
                       <v-list-item-subtitle>
-                        {{ formatDate(model.created_at) }}
+                        {{ formatDate(model.createdAt) }}
                       </v-list-item-subtitle>
                     </v-list-item>
                   </v-list>
@@ -131,13 +131,13 @@
                     <v-list-item>
                       <v-list-item-title>Version</v-list-item-title>
                       <v-list-item-subtitle>
-                        {{ model.version || '1.0.0' }}
+                        1.0.0
                       </v-list-item-subtitle>
                     </v-list-item>
                     <v-list-item>
                       <v-list-item-title>Last Updated</v-list-item-title>
                       <v-list-item-subtitle>
-                        {{ formatDate(model.updated_at || model.created_at) }}
+                        {{ formatDate(model.updatedAt || model.createdAt) }}
                       </v-list-item-subtitle>
                     </v-list-item>
                   </v-list>
@@ -154,7 +154,7 @@
               <v-alert v-if="!model.config" type="info" variant="tonal">
                 No configuration details available for this model.
               </v-alert>
-              <pre v-else class="config-json">{{ JSON.stringify(model.config, null, 2) }}</pre>
+              <pre v-else class="config-json">{{ JSON.stringify(JSON.parse(model.config), null, 2) }}</pre>
             </v-card-text>
           </v-card>
 
@@ -163,26 +163,9 @@
             <v-card-title>Performance Metrics</v-card-title>
             <v-divider />
             <v-card-text>
-              <v-alert v-if="!model.metrics" type="info" variant="tonal">
+              <v-alert type="info" variant="tonal">
                 No performance metrics available for this model.
               </v-alert>
-              <div v-else class="metrics-grid">
-                <v-card
-                  v-for="(metric, key) in model.metrics"
-                  :key="key"
-                  variant="outlined"
-                  class="metric-card"
-                >
-                  <v-card-text class="text-center">
-                    <div class="text-h6 font-weight-bold">
-                      {{ metric.value }}
-                    </div>
-                    <div class="text-body-2 text-medium-emphasis">
-                      {{ key }}
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </div>
             </v-card-text>
           </v-card>
 
@@ -293,20 +276,21 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import ModelGuide from '~/components/step-guides/ModelGuide.vue'
-import { useSupabase } from '~/composables/supabase'
 
 interface Model {
-  id: string
+  id: number
   name: string
-  type?: string
-  status?: string
-  version?: string
-  created_at: string
-  updated_at?: string
+  type: string
+  status: string
   description?: string
-  framework?: string
-  config?: any
-  metrics?: Record<string, any>
+  config: string
+  createdAt: Date
+  updatedAt: Date
+  user: {
+    id: number
+    name: string
+    email: string
+  }
 }
 
 interface ModelHistoryEvent {
@@ -318,7 +302,6 @@ interface ModelHistoryEvent {
 
 const router = useRouter()
 const route = useRoute()
-const supabase = useSupabase()
 
 const model = ref<Model | null>(null)
 const loading = ref(true)
@@ -370,7 +353,7 @@ const getTimelineIcon = (type: string) => {
   return icons[type] || 'mdi-circle'
 }
 
-const formatDate = (dateString: string) => {
+const formatDate = (dateString: string | Date) => {
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -402,18 +385,18 @@ const trainModel = () => {
 const deleteModel = async () => {
   if (model.value && confirm(`Are you sure you want to delete "${model.value.name}"?`)) {
     try {
-      const { error: err } = await supabase
-        .from('models')
-        .delete()
-        .eq('id', model.value.id)
+      const response = await $fetch<{ success: boolean; message?: string }>(`/api/prisma/models/${model.value.id}`, {
+        method: 'DELETE'
+      })
       
-      if (err) {
-        error.value = err.message
-      } else {
+      if (response.success) {
         router.push('/models')
+      } else {
+        error.value = response.message || 'Failed to delete model'
       }
-    } catch (err) {
-      error.value = 'Failed to delete model'
+    } catch (err: any) {
+      console.error('Error deleting model:', err)
+      error.value = err.message || 'Failed to delete model'
     }
   }
 }
@@ -428,21 +411,21 @@ const loadModel = async () => {
   }
 
   try {
-    const { data, error: err } = await supabase
-      .from('models')
-      .select('*')
-      .eq('id', modelId)
-      .single()
+    loading.value = true
+    error.value = ''
     
-    if (err) {
-      error.value = err.message
-    } else {
-      model.value = data
+    const response = await $fetch<{ success: boolean; data: Model; message?: string }>(`/api/prisma/models/${modelId}`)
+    
+    if (response.success) {
+      model.value = response.data
       // Generate mock history for demonstration
       generateModelHistory()
+    } else {
+      error.value = response.message || 'Failed to load model details'
     }
-  } catch (err) {
-    error.value = 'Failed to load model details'
+  } catch (err: any) {
+    console.error('Error loading model:', err)
+    error.value = err.message || 'Failed to load model details'
   } finally {
     loading.value = false
   }
@@ -456,7 +439,7 @@ const generateModelHistory = () => {
       type: 'created',
       title: 'Model Created',
       description: `Model "${model.value.name}" was created`,
-      timestamp: model.value.created_at
+      timestamp: model.value.createdAt.toISOString()
     }
   ]
 
@@ -465,7 +448,7 @@ const generateModelHistory = () => {
       type: 'trained',
       title: 'Training Completed',
       description: 'Model training was completed successfully',
-      timestamp: model.value.updated_at || model.value.created_at
+      timestamp: model.value.updatedAt.toISOString()
     })
   }
 
@@ -474,7 +457,7 @@ const generateModelHistory = () => {
       type: 'deployed',
       title: 'Model Deployed',
       description: 'Model was deployed to production',
-      timestamp: model.value.updated_at || model.value.created_at
+      timestamp: model.value.updatedAt.toISOString()
     })
   }
 

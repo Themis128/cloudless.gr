@@ -1,0 +1,33 @@
+import { defineEventHandler, createError } from 'h3'
+import { requireAuth } from '~/server/middleware/auth'
+import prisma from '~/server/utils/database'
+
+export default defineEventHandler(async (event) => {
+  // Require authentication
+  const authUser = await requireAuth(event)
+  
+  // Get full user details from database
+  const user = await prisma.user.findUnique({
+    where: { id: parseInt(authUser.id) },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      createdAt: true,
+      updatedAt: true
+    }
+  })
+  
+  if (!user) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'User not found'
+    })
+  }
+  
+  return {
+    success: true,
+    data: user
+  }
+}) 

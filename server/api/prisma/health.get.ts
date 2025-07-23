@@ -1,20 +1,39 @@
 import { defineEventHandler, createError } from 'h3'
-import { dbUtils } from '~/lib/database'
+import { databaseService } from '~/lib/database'
 
 export default defineEventHandler(async (event) => {
   try {
-    const health = await dbUtils.healthCheck()
+    const health = await databaseService.healthCheck()
     
-    return {
-      success: true,
-      data: health,
-      message: 'Prisma database connection is healthy'
+    if (health.connected) {
+      return {
+        success: true,
+        data: {
+          ...health,
+          timestamp: new Date().toISOString()
+        },
+        message: 'Prisma database connection is healthy'
+      }
+    } else {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Database health check failed',
+        data: { 
+          ...health,
+          timestamp: new Date().toISOString()
+        }
+      })
     }
   } catch (error: any) {
     throw createError({
       statusCode: 500,
       statusMessage: 'Database health check failed',
-      data: { error: error.message }
+      data: { 
+        status: 'unhealthy',
+        connected: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      }
     })
   }
 })

@@ -225,7 +225,9 @@ import { ref, computed, onMounted } from 'vue'
 
 // Nuxt.js composables are auto-imported
 definePageMeta({
-  title: 'Project Management'
+  title: 'Project Management',
+  layout: 'default',
+  middleware: 'admin'
 })
 
 interface Project {

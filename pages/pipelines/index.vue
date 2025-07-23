@@ -111,7 +111,7 @@
                 </v-card-title>
                 <v-card-subtitle>
                   {{
-                    formatDate(pipeline.created_at)
+                    formatDate(pipeline.createdAt)
                   }}
                 </v-card-subtitle>
                 <v-card-text>
@@ -164,37 +164,61 @@
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import PipelineGuide from '~/components/step-guides/PipelineGuide.vue'
-import { useSupabase } from '~/composables/supabase'
 
 // Lazy load VChart component for client-side only
 const VChart = defineAsyncComponent(() =>
   import('vue-echarts').then(mod => mod.default)
 )
 
-type PipelineRow = {
-  config: any
-  created_at: string | null
-  description: string | null
-  id: string
-  is_active: boolean | null
+interface Pipeline {
+  id: number
   name: string
-  owner_id: string
-  project_id: string
-  updated_at: string | null
-  version: number | null
+  description?: string
+  config: string
+  status: string
+  createdAt: Date
+  updatedAt: Date
+  user: {
+    id: number
+    name: string
+    email: string
+  }
 }
-const pipelines = ref<PipelineRow[]>([])
+
+const pipelines = ref<Pipeline[]>([])
 const error = ref<string | null>(null)
 const loading = ref<boolean>(true)
 
-// Ensure consistent hydration by using process.client check
-const isClient = process.client
-const supabase = useSupabase()
+// Fetch pipelines from database
+const fetchPipelines = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    interface ApiResponse {
+      success: boolean
+      data: Pipeline[]
+      message?: string
+    }
+    
+    const response = await $fetch<ApiResponse>('/api/prisma/pipelines')
+    if (response.success) {
+      pipelines.value = response.data || []
+    } else {
+      error.value = response.message || 'Failed to fetch pipelines'
+    }
+  } catch (err: any) {
+    console.error('Error fetching pipelines:', err)
+    error.value = err.message || 'Failed to load pipelines'
+  } finally {
+    loading.value = false
+  }
+}
 
 const avgSteps = computed(() => {
   if (!pipelines.value.length) return 0
   const total = pipelines.value.reduce(
-    (sum: number, p: PipelineRow) => sum + stepsCount(p),
+    (sum: number, p: Pipeline) => sum + stepsCount(p),
     0
   )
   return Math.round(total / pipelines.value.length)
@@ -203,7 +227,7 @@ const avgSteps = computed(() => {
 const chartOption = computed(() => {
   if (!pipelines.value.length) return null
 
-  const data = pipelines.value.map((p: PipelineRow) => ({
+  const data = pipelines.value.map((p: Pipeline) => ({
     name: p.name,
     value: stepsCount(p),
   }))
@@ -229,34 +253,23 @@ const chartOption = computed(() => {
   }
 })
 
-const formatDate = (date: string | null) => {
-  if (!date) return ''
+const formatDate = (date: Date) => {
   return new Date(date).toLocaleString()
 }
 
-const stepsCount = (pipeline: any) => {
-  return pipeline.config &&
-    pipeline.config.steps &&
-    Array.isArray(pipeline.config.steps)
-    ? pipeline.config.steps.length
-    : 0
+const stepsCount = (pipeline: Pipeline) => {
+  try {
+    const config = JSON.parse(pipeline.config)
+    return config.steps && Array.isArray(config.steps)
+      ? config.steps.length
+      : 0
+  } catch {
+    return 0
+  }
 }
 
-onMounted(async () => {
-  if (isClient) {
-    loading.value = true
-    const { data, error: err } = await supabase
-      .from('pipelines')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (err) {
-      error.value = err.message
-    } else {
-      pipelines.value = data || []
-    }
-    loading.value = false
-  }
+onMounted(() => {
+  fetchPipelines()
 })
 </script>
 

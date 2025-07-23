@@ -16,6 +16,67 @@
       <h1 class="mb-4">
         Logs Debug
       </h1>
+
+      <!-- Instructions Section -->
+      <v-card class="mb-6">
+        <v-card-title class="d-flex align-center">
+          <v-icon icon="mdi-information" class="mr-2" color="info" />
+          How to Use Log Management
+          <v-spacer />
+          <v-btn
+            icon="mdi-chevron-up"
+            variant="text"
+            size="small"
+            @click="instructionsExpanded = !instructionsExpanded"
+          />
+        </v-card-title>
+        
+        <v-expand-transition>
+          <div v-show="instructionsExpanded">
+            <v-card-text>
+              <div class="mb-4">
+                <h4 class="text-h6 mb-2">
+                  <v-icon icon="mdi-target" size="20" class="mr-1" />
+                  Purpose
+                </h4>
+                <p class="text-body-2">
+                  The Log Management tool helps you view, manage, and export system logs for debugging purposes. Use this tool to monitor application activity and diagnose issues.
+                </p>
+              </div>
+
+              <div class="mb-4">
+                <h4 class="text-h6 mb-2">
+                  <v-icon icon="mdi-playlist-edit" size="20" class="mr-1" />
+                  How to Use
+                </h4>
+                <ol class="text-body-2">
+                  <li class="mb-2">Enter a log level (INFO, WARN, ERROR, DEBUG) to filter logs</li>
+                  <li class="mb-2">Add custom log messages to test logging functionality</li>
+                  <li class="mb-2">Select the log source (application, database, network, etc.)</li>
+                  <li class="mb-2">Set the maximum number of logs to display</li>
+                  <li class="mb-2">Use "Add Log Entry" to create test log entries</li>
+                  <li class="mb-2">Use "Clear Logs" to remove old log entries</li>
+                  <li class="mb-2">Use "Export Logs" to download logs for analysis</li>
+                </ol>
+              </div>
+
+              <div class="mb-4">
+                <h4 class="text-h6 mb-2">
+                  <v-icon icon="mdi-lightbulb" size="20" class="mr-1" />
+                  Tips
+                </h4>
+                <ul class="text-body-2">
+                  <li>Use different log levels to categorize the importance of messages</li>
+                  <li>Export logs regularly for backup and analysis</li>
+                  <li>Monitor log statistics to identify patterns or issues</li>
+                  <li>Clear old logs periodically to maintain performance</li>
+                </ul>
+              </div>
+            </v-card-text>
+          </div>
+        </v-expand-transition>
+      </v-card>
+
       <v-form @submit.prevent="manageLogs">
         <v-text-field
           v-model="form.logLevel"
@@ -98,14 +159,19 @@
           </v-list>
         </v-card-text>
       </v-card>
-      <v-card v-if="recentLogs.length > 0" class="mt-4">
+      <v-card v-if="logs.length > 0" class="mt-4">
         <v-card-title>Recent Logs</v-card-title>
         <v-card-text>
           <v-list>
-            <v-list-item v-for="(log, index) in recentLogs" :key="index">
-              <v-list-item-title>{{ log.level }} - {{ log.source }}</v-list-item-title>
-              <v-list-item-subtitle>{{ log.message }}</v-list-item-subtitle>
-              <v-list-item-subtitle>{{ log.timestamp }}</v-list-item-subtitle>
+            <v-list-item
+              v-for="log in logs"
+              :key="log.id"
+              :class="`log-level-${log.level.toLowerCase()}`"
+            >
+              <v-list-item-title>{{ log.message }}</v-list-item-title>
+              <v-list-item-subtitle>
+                {{ log.timestamp }} - {{ log.source }} ({{ log.level }})
+              </v-list-item-subtitle>
             </v-list-item>
           </v-list>
         </v-card-text>
@@ -115,147 +181,151 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
 const loading = ref(false)
 const success = ref(false)
 const error = ref<string | null>(null)
 const logStats = ref<any>(null)
-const recentLogs = ref<any[]>([])
+const logs = ref<any[]>([])
+const instructionsExpanded = ref(true)
 
-const logSources = [
-  'system',
-  'application',
-  'database',
-  'api',
-  'auth',
-  'model',
-  'pipeline',
-  'bot'
-]
+const logSources = ['application', 'database', 'network', 'authentication', 'system']
 
 const form = ref({
   logLevel: 'INFO',
   message: '',
-  source: 'system',
-  maxLogs: 100,
+  source: 'application',
+  maxLogs: 100
 })
 
 const resetForm = () => {
   form.value = {
     logLevel: 'INFO',
     message: '',
-    source: 'system',
-    maxLogs: 100,
+    source: 'application',
+    maxLogs: 100
   }
   success.value = false
   error.value = null
 }
 
+const goBackToDebug = () => {
+  window.location.href = '/debug'
+}
+
 const manageLogs = async () => {
-  error.value = null
-  success.value = false
   loading.value = true
+  success.value = false
+  error.value = null
   
   try {
-    // Simulate adding a log entry
+    // Simulate log management
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
     const newLog = {
+      id: Date.now(),
       level: form.value.logLevel,
       message: form.value.message,
       source: form.value.source,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toLocaleString()
     }
     
-    recentLogs.value.unshift(newLog)
+    logs.value.unshift(newLog)
     
-    // Keep only the specified number of logs
-    if (recentLogs.value.length > form.value.maxLogs) {
-      recentLogs.value = recentLogs.value.slice(0, form.value.maxLogs)
+    // Update stats
+    logStats.value = {
+      totalLogs: logs.value.length,
+      lastLogTime: new Date().toLocaleString(),
+      levelDistribution: `${form.value.logLevel}: ${logs.value.filter(l => l.level === form.value.logLevel).length}`,
+      storageUsed: `${logs.value.length * 100} bytes`
     }
-    
-    // Update log statistics
-    updateLogStats()
     
     success.value = true
-    form.value.message = '' // Clear message after adding
-  } catch (err) {
-    error.value = 'An unexpected error occurred while managing logs'
+    console.log('Log entry added:', newLog)
+  } catch (err: any) {
+    error.value = err.message || 'Log operation failed'
+    console.error('Log operation error:', err)
   } finally {
     loading.value = false
   }
 }
 
 const clearLogs = async () => {
-  if (confirm('Are you sure you want to clear all logs?')) {
-    recentLogs.value = []
-    updateLogStats()
+  try {
+    logs.value = []
+    logStats.value = {
+      totalLogs: 0,
+      lastLogTime: 'N/A',
+      levelDistribution: 'N/A',
+      storageUsed: '0 bytes'
+    }
     success.value = true
+    console.log('Logs cleared')
+  } catch (err: any) {
+    error.value = err.message || 'Failed to clear logs'
   }
 }
 
 const exportLogs = async () => {
   try {
-    const logData = recentLogs.value.map(log => 
-      `${log.timestamp} [${log.level}] ${log.source}: ${log.message}`
-    ).join('\n')
-    
-    const blob = new Blob([logData], { type: 'text/plain' })
+    const logData = JSON.stringify(logs.value, null, 2)
+    const blob = new Blob([logData], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `logs-${new Date().toISOString().split('T')[0]}.txt`
-    document.body.appendChild(a)
+    a.download = `logs-${new Date().toISOString().split('T')[0]}.json`
     a.click()
-    document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    
     success.value = true
-  } catch (err) {
-    error.value = 'Failed to export logs'
+    console.log('Logs exported')
+  } catch (err: any) {
+    error.value = err.message || 'Failed to export logs'
   }
 }
 
-const updateLogStats = () => {
-  const levelCounts = recentLogs.value.reduce((acc, log) => {
-    acc[log.level] = (acc[log.level] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+onMounted(() => {
+  // Initialize with some sample logs
+  logs.value = [
+    {
+      id: 1,
+      level: 'INFO',
+      message: 'Application started successfully',
+      source: 'application',
+      timestamp: new Date().toLocaleString()
+    },
+    {
+      id: 2,
+      level: 'DEBUG',
+      message: 'Database connection established',
+      source: 'database',
+      timestamp: new Date().toLocaleString()
+    }
+  ]
   
   logStats.value = {
-    totalLogs: recentLogs.value.length,
-    lastLogTime: recentLogs.value[0]?.timestamp || 'N/A',
-    levelDistribution: Object.entries(levelCounts)
-      .map(([level, count]) => `${level}: ${count}`)
-      .join(', '),
-    storageUsed: `${(JSON.stringify(recentLogs.value).length / 1024).toFixed(2)} KB`,
+    totalLogs: logs.value.length,
+    lastLogTime: new Date().toLocaleString(),
+    levelDistribution: 'INFO: 1, DEBUG: 1',
+    storageUsed: '200 bytes'
   }
-}
-
-// Initialize with some sample logs
-recentLogs.value = [
-  {
-    level: 'INFO',
-    message: 'System initialized successfully',
-    source: 'system',
-    timestamp: new Date(Date.now() - 60000).toISOString(),
-  },
-  {
-    level: 'WARN',
-    message: 'Database connection slow',
-    source: 'database',
-    timestamp: new Date(Date.now() - 30000).toISOString(),
-  },
-  {
-    level: 'ERROR',
-    message: 'API endpoint not found',
-    source: 'api',
-    timestamp: new Date(Date.now() - 10000).toISOString(),
-  },
-]
-
-updateLogStats()
-
-const goBackToDebug = () => {
-  window.location.href = '/debug'
-}
+})
 </script>
+
+<style scoped>
+.log-level-error {
+  border-left: 4px solid #f44336;
+}
+
+.log-level-warn {
+  border-left: 4px solid #ff9800;
+}
+
+.log-level-info {
+  border-left: 4px solid #2196f3;
+}
+
+.log-level-debug {
+  border-left: 4px solid #4caf50;
+}
+</style>

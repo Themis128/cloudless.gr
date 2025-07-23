@@ -154,7 +154,7 @@
                       </span>
                       <span class="d-flex align-center">
                         <v-icon size="16" class="mr-1">mdi-calendar</v-icon>
-                        {{ formatDate(model.created_at) }}
+                        {{ formatDate(model.createdAt) }}
                       </span>
                       <span class="d-flex align-center">
                         <v-icon size="16" class="mr-1">mdi-code-tags</v-icon>
@@ -242,24 +242,60 @@
 import { computed, onMounted, ref } from 'vue'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import ModelGuide from '~/components/step-guides/ModelGuide.vue'
-import { useSupabase } from '~/composables/supabase'
 
 interface Model {
-  id: string
+  id: number
   name: string
-  type?: string
-  status?: string
-  version?: string
-  created_at: string
   description?: string
-  framework?: string
+  type: string
+  config: string
+  status: string
+  accuracy?: number
+  version?: string
+  createdAt: Date
+  updatedAt: Date
+  user: {
+    id: number
+    name: string
+    email: string
+  }
 }
 
-const supabase = useSupabase()
 const loading = ref(false)
 const models = ref<Model[]>([])
 const searchQuery = ref('')
 const error = ref<string | null>(null)
+
+interface DeleteResponse {
+  success: boolean
+  message?: string
+}
+
+interface ApiResponse {
+  success: boolean
+  data: Model[]
+  message?: string
+}
+
+// Fetch models from database
+const fetchModels = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    const response = await $fetch<ApiResponse>('/api/prisma/models')
+    if (response.success) {
+      models.value = response.data || []
+    } else {
+      error.value = response.message || 'Failed to fetch models'
+    }
+  } catch (err: any) {
+    console.error('Error fetching models:', err)
+    error.value = err.message || 'Failed to load models'
+  } finally {
+    loading.value = false
+  }
+}
 
 const filteredModels = computed(() => {
   if (!searchQuery.value) return models.value
@@ -267,11 +303,11 @@ const filteredModels = computed(() => {
   return models.value.filter(model => 
     model.name.toLowerCase().includes(query) ||
     (model.description && model.description.toLowerCase().includes(query)) ||
-    (model.type && model.type.toLowerCase().includes(query))
+    model.type.toLowerCase().includes(query)
   )
 })
 
-const getModelIcon = (type?: string) => {
+const getModelIcon = (type: string) => {
   switch (type) {
     case 'text-classification': return 'mdi-text'
     case 'image-classification': return 'mdi-image'
@@ -283,56 +319,61 @@ const getModelIcon = (type?: string) => {
   }
 }
 
-const getStatusColor = (status?: string) => {
+const getStatusColor = (status: string) => {
   switch (status) {
-    case 'active': return 'success'
+    case 'ready': return 'success'
     case 'draft': return 'warning'
     case 'training': return 'info'
-    case 'error': return 'error'
+    case 'deployed': return 'primary'
     default: return 'grey'
   }
 }
 
-const formatDate = (date: string) => {
+const formatDate = (date: Date) => {
   return new Date(date).toLocaleDateString()
 }
 
 const viewModel = (model: Model) => {
   // Navigate to model details page
-      // Viewing model
+  console.log('Viewing model:', model.name)
 }
 
 const editModel = (model: Model) => {
   // Navigate to model edit page
-      // Editing model
+  console.log('Editing model:', model.name)
 }
 
 const testModel = (model: Model) => {
   // Navigate to model test page
-      // Testing model
+  console.log('Testing model:', model.name)
 }
 
 const deployModel = (model: Model) => {
   // Navigate to model deploy page
-      // Deploying model
+  console.log('Deploying model:', model.name)
 }
 
-const deleteModel = (model: Model) => {
+const deleteModel = async (model: Model) => {
   // Delete model confirmation
   if (confirm(`Are you sure you want to delete "${model.name}"?`)) {
-    // Deleting model
+    try {
+      const response = await $fetch<DeleteResponse>(`/api/prisma/models/${model.id}`, {
+        method: 'DELETE'
+      })
+      if (response.success) {
+        models.value = models.value.filter(m => m.id !== model.id)
+      } else {
+        error.value = response.message || 'Failed to delete model'
+      }
+    } catch (err: any) {
+      console.error('Error deleting model:', err)
+      error.value = err.message || 'Failed to delete model'
+    }
   }
 }
 
-onMounted(async () => {
-  loading.value = true
-  const { data, error: err } = await supabase.from('models').select('*')
-  if (err) {
-    error.value = err.message
-  } else {
-    models.value = data || []
-  }
-  loading.value = false
+onMounted(() => {
+  fetchModels()
 })
 </script>
 

@@ -19,6 +19,7 @@
               v-model="form.name"
               label="Pipeline Name"
               class="form-field"
+              :rules="[rules.required, rules.minLength(3)]"
               required
             />
             <v-textarea
@@ -32,12 +33,14 @@
               :items="pipelineTypes"
               label="Pipeline Type"
               class="form-field"
+              :rules="[rules.required]"
               required
             />
             <v-text-field
               v-model="form.version"
               label="Version"
               class="form-field"
+              :rules="[rules.required]"
               required
             />
             <v-select
@@ -45,6 +48,7 @@
               :items="inputTypes"
               label="Input Type"
               class="form-field"
+              :rules="[rules.required]"
               required
             />
             <v-select
@@ -52,6 +56,7 @@
               :items="outputTypes"
               label="Output Type"
               class="form-field"
+              :rules="[rules.required]"
               required
             />
             
@@ -102,12 +107,24 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import PipelineGuide from '~/components/step-guides/PipelineGuide.vue'
-import { useSupabase } from '~/composables/supabase'
 
-const supabase = useSupabase()
+interface Pipeline {
+  name: string
+  description?: string
+  config: string
+  status: string
+}
+
 const loading = ref(false)
 const success = ref(false)
 const error = ref<string | null>(null)
+
+// Form validation rules
+const rules = {
+  required: (v: string) => !!v || 'This field is required',
+  minLength: (min: number) => (v: string) => v.length >= min || `Minimum ${min} characters required`,
+  maxLength: (max: number) => (v: string) => v.length <= max || `Maximum ${max} characters allowed`,
+}
 
 const pipelineTypes = [
   'Data Processing',
@@ -165,27 +182,37 @@ const createPipeline = async () => {
   loading.value = true
   
   try {
-    const { error: err } = await supabase.from('pipelines').insert([
-      {
-        name: form.value.name,
-        description: form.value.description,
+    const pipelineData = {
+      name: form.value.name,
+      description: form.value.description,
+      config: JSON.stringify({
         type: form.value.type,
         version: form.value.version,
-        input_type: form.value.inputType,
-        output_type: form.value.outputType,
-        created_at: new Date().toISOString(),
-        status: 'draft',
-      },
-    ])
-    
-    if (err) {
-      error.value = err.message
-    } else {
-      success.value = true
-      resetForm()
+        inputType: form.value.inputType,
+        outputType: form.value.outputType,
+        steps: []
+      }),
+      status: 'draft'
     }
-  } catch (err) {
-    error.value = 'An unexpected error occurred'
+    
+    const response = await $fetch<{ success: boolean; data: Pipeline; message?: string }>('/api/prisma/pipelines', {
+      method: 'POST',
+      body: pipelineData
+    })
+    
+    if (response.success) {
+      success.value = true
+      // Don't reset form immediately to show success message
+      // Reset form after a delay to allow user to see success message
+      setTimeout(() => {
+        resetForm()
+      }, 3000)
+    } else {
+      error.value = response.message || 'Failed to create pipeline'
+    }
+  } catch (err: any) {
+    console.error('Error creating pipeline:', err)
+    error.value = err.message || 'An unexpected error occurred'
   } finally {
     loading.value = false
   }

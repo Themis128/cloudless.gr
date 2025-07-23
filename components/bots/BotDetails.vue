@@ -20,33 +20,64 @@
       </div>
       <div v-else>
         <div><strong>Name:</strong> {{ bot?.name }}</div>
-        <div><strong>Prompt:</strong> {{ bot?.prompt }}</div>
-        <div><strong>Model:</strong> {{ bot?.model }}</div>
-        <div><strong>Memory:</strong> {{ bot?.memory }}</div>
-        <div><strong>Tools:</strong> {{ bot?.tools }}</div>
+        <div><strong>Description:</strong> {{ bot?.description }}</div>
+        <div><strong>Status:</strong> {{ bot?.status }}</div>
+        <div><strong>Config:</strong> {{ bot?.config }}</div>
+        <div><strong>Created:</strong> {{ formatDate(bot?.createdAt) }}</div>
       </div>
     </v-card-text>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { useSupabase } from '~/composables/supabase';
+import { onMounted, ref } from 'vue'
+
+interface Bot {
+  id: number
+  name: string
+  description?: string
+  config: string
+  status: string
+  createdAt: Date
+  updatedAt: Date
+  user: {
+    id: number
+    name: string
+    email: string
+  }
+}
 
 const props = defineProps<{ botId: string }>()
-const supabase = useSupabase()
-const bot = ref<any>(null)
+const bot = ref<Bot | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
-onMounted(async () => {
-  loading.value = true
-  const { data, error: err } = await supabase.from('bots').select('*').eq('id', props.botId).single()
-  if (err) {
-    error.value = err.message
-  } else {
-    bot.value = data
+const fetchBot = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    const response = await $fetch<{ success: boolean; data: Bot; message?: string }>(`/api/prisma/bots/${props.botId}`)
+    
+    if (response.success) {
+      bot.value = response.data
+    } else {
+      error.value = response.message || 'Failed to fetch bot details'
+    }
+  } catch (err: any) {
+    console.error('Error fetching bot:', err)
+    error.value = err.message || 'Failed to load bot details'
+  } finally {
+    loading.value = false
   }
-  loading.value = false
+}
+
+const formatDate = (date: Date | string | undefined): string => {
+  if (!date) return 'N/A'
+  return new Date(date).toLocaleDateString()
+}
+
+onMounted(() => {
+  fetchBot()
 })
 </script>

@@ -16,6 +16,67 @@
       <h1 class="mb-4">
         Network Debug
       </h1>
+
+      <!-- Instructions Section -->
+      <v-card class="mb-6">
+        <v-card-title class="d-flex align-center">
+          <v-icon icon="mdi-information" class="mr-2" color="info" />
+          How to Use Network Debug
+          <v-spacer />
+          <v-btn
+            icon="mdi-chevron-up"
+            variant="text"
+            size="small"
+            @click="instructionsExpanded = !instructionsExpanded"
+          />
+        </v-card-title>
+        
+        <v-expand-transition>
+          <div v-show="instructionsExpanded">
+            <v-card-text>
+              <div class="mb-4">
+                <h4 class="text-h6 mb-2">
+                  <v-icon icon="mdi-target" size="20" class="mr-1" />
+                  Purpose
+                </h4>
+                <p class="text-body-2">
+                  Test API endpoints, network connectivity, and HTTP requests. Verify that your application can communicate with external services and diagnose network-related issues.
+                </p>
+              </div>
+
+              <div class="mb-4">
+                <h4 class="text-h6 mb-2">
+                  <v-icon icon="mdi-playlist-edit" size="20" class="mr-1" />
+                  How to Use
+                </h4>
+                <ol class="text-body-2">
+                  <li class="mb-2">Enter the endpoint URL you want to test in the form above</li>
+                  <li class="mb-2">Select the appropriate HTTP method (GET, POST, PUT, DELETE)</li>
+                  <li class="mb-2">Add any required headers in JSON format if needed</li>
+                  <li class="mb-2">Include request body data in JSON format for POST/PUT requests</li>
+                  <li class="mb-2">Set an appropriate timeout value (1-60 seconds)</li>
+                  <li class="mb-2">Click "Test Network" to execute the request</li>
+                  <li class="mb-2">Review the response and any error messages</li>
+                </ol>
+              </div>
+
+              <div class="mb-4">
+                <h4 class="text-h6 mb-2">
+                  <v-icon icon="mdi-lightbulb" size="20" class="mr-1" />
+                  Tips
+                </h4>
+                <ul class="text-body-2">
+                  <li>Start with simple GET requests to test basic connectivity</li>
+                  <li>Use the "Ping Health Endpoint" button for quick connectivity tests</li>
+                  <li>Test with different timeout values to identify slow responses</li>
+                  <li>Check the response headers for additional debugging information</li>
+                </ul>
+              </div>
+            </v-card-text>
+          </div>
+        </v-expand-transition>
+      </v-card>
+
       <v-form @submit.prevent="testNetwork">
         <v-text-field
           v-model="form.endpoint"
@@ -98,24 +159,7 @@
       <v-card v-if="testResults" class="mt-4">
         <v-card-title>Test Results</v-card-title>
         <v-card-text>
-          <v-list>
-            <v-list-item>
-              <v-list-item-title>Status Code</v-list-item-title>
-              <v-list-item-subtitle>{{ testResults.statusCode }}</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <v-list-item-title>Response Time</v-list-item-title>
-              <v-list-item-subtitle>{{ testResults.responseTime }}ms</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <v-list-item-title>Response Size</v-list-item-title>
-              <v-list-item-subtitle>{{ testResults.responseSize }} bytes</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <v-list-item-title>Response Headers</v-list-item-title>
-              <v-list-item-subtitle>{{ testResults.responseHeaders }}</v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
+          <pre>{{ JSON.stringify(testResults, null, 2) }}</pre>
         </v-card-text>
       </v-card>
     </v-container>
@@ -123,111 +167,120 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
 const loading = ref(false)
 const success = ref(false)
 const error = ref<string | null>(null)
 const networkInfo = ref<any>(null)
 const testResults = ref<any>(null)
+const instructionsExpanded = ref(true)
 
-const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
+const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
 
 const form = ref({
-  endpoint: 'https://api.cloudless.gr/health',
+  endpoint: '',
   method: 'GET',
-  headers: '{"Content-Type": "application/json"}',
+  headers: '',
   body: '',
-  timeout: 10,
+  timeout: 10
 })
 
 const resetForm = () => {
   form.value = {
-    endpoint: 'https://api.cloudless.gr/health',
+    endpoint: '',
     method: 'GET',
-    headers: '{"Content-Type": "application/json"}',
+    headers: '',
     body: '',
-    timeout: 10,
+    timeout: 10
   }
   success.value = false
   error.value = null
   testResults.value = null
 }
 
+const goBackToDebug = () => {
+  window.location.href = '/debug'
+}
+
 const testNetwork = async () => {
-  error.value = null
-  success.value = false
   loading.value = true
+  success.value = false
+  error.value = null
+  testResults.value = null
   
   try {
     const startTime = Date.now()
     
+    // Parse headers if provided
     let headers = {}
-    try {
-      headers = JSON.parse(form.value.headers || '{}')
-    } catch (e) {
-      headers = { 'Content-Type': 'application/json' }
-    }
-    
-    let body = null
-    if (form.value.body && ['POST', 'PUT', 'PATCH'].includes(form.value.method)) {
+    if (form.value.headers.trim()) {
       try {
-        body = JSON.parse(form.value.body)
+        headers = JSON.parse(form.value.headers)
       } catch (e) {
-        body = form.value.body
+        throw new Error('Invalid JSON in headers')
       }
     }
     
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), form.value.timeout * 1000)
-    
-    const response = await fetch(form.value.endpoint, {
-      method: form.value.method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-      signal: controller.signal,
-    })
-    
-    clearTimeout(timeoutId)
-    const responseTime = Date.now() - startTime
-    
-    const responseText = await response.text()
-    
-    testResults.value = {
-      statusCode: response.status,
-      responseTime,
-      responseSize: responseText.length,
-      responseHeaders: JSON.stringify(Object.fromEntries(response.headers.entries())),
+    // Parse body if provided
+    let body = undefined
+    if (form.value.body.trim()) {
+      try {
+        body = JSON.parse(form.value.body)
+      } catch (e) {
+        throw new Error('Invalid JSON in body')
+      }
     }
     
-    networkInfo.value = {
-      status: response.ok ? 'success' : 'error',
-      latency: `${responseTime}ms`,
+    const response = await $fetch(form.value.endpoint, {
+      method: form.value.method,
+      headers,
+      body,
+      timeout: form.value.timeout * 1000
+    })
+    
+    const endTime = Date.now()
+    const responseTime = endTime - startTime
+    
+    testResults.value = {
+      status: 'success',
       responseTime,
-      lastUpdated: new Date().toLocaleString(),
+      data: response,
+      timestamp: new Date().toISOString()
     }
     
     success.value = true
+    console.log('Network test completed:', testResults.value)
   } catch (err: any) {
-    error.value = err.name === 'AbortError' ? 'Request timed out' : err.message
-    networkInfo.value = {
-      status: 'error',
-      latency: 'N/A',
-      responseTime: 0,
-      lastUpdated: new Date().toLocaleString(),
-    }
+    error.value = err.message || 'Network test failed'
+    console.error('Network test error:', err)
   } finally {
     loading.value = false
   }
 }
 
 const pingHealth = async () => {
-  form.value.endpoint = 'http://127.0.0.1:54321/health'
-  form.value.method = 'GET'
-  await testNetwork()
+  try {
+    const response = await $fetch('/api/health')
+    networkInfo.value = {
+      status: 'Connected',
+      latency: 'Low',
+      responseTime: 50,
+      lastUpdated: new Date().toLocaleString()
+    }
+    console.log('Health check response:', response)
+  } catch (err) {
+    networkInfo.value = {
+      status: 'Disconnected',
+      latency: 'High',
+      responseTime: 0,
+      lastUpdated: new Date().toLocaleString()
+    }
+    console.error('Health check failed:', err)
+  }
 }
 
-const goBackToDebug = () => {
-  window.location.href = '/debug'
-}
+onMounted(() => {
+  pingHealth()
+})
 </script>

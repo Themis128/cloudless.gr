@@ -1,10 +1,8 @@
 // API endpoint for handling user authentication
-import { PrismaClient } from '@prisma/client'
 import crypto from 'crypto'
 import { createError, defineEventHandler, readBody, setCookie } from 'h3'
 import jwt from 'jsonwebtoken'
-
-const prisma = new PrismaClient()
+import { prisma } from '~/lib/prisma'
 
 // Load environment variables
 const JWT_SECRET =

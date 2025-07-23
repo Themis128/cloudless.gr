@@ -1,8 +1,8 @@
 <template>
   <div class="contact-page">
     <div class="page-header">
-      <h1>Contact Us</h1>
-      <p class="subtitle">
+      <h1 class="text-white">Contact Us</h1>
+      <p class="subtitle text-white">
         Get in touch with our team for support, partnerships, or general inquiries
       </p>
     </div>

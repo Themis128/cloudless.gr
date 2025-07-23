@@ -241,11 +241,11 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BackButton from '~/components/ui/BackButton.vue'
-import { useSupabase } from '~/composables/supabase'
+import { usePrismaStore } from '~/stores/usePrismaStore'
 
 const route = useRoute()
 const router = useRouter()
-const supabase = useSupabase()
+const { getBot, updateBot } = usePrismaStore()
 
 const deployment = ref<any>(null)
 const loading = ref(false)
@@ -270,17 +270,9 @@ onMounted(async () => {
 
 const fetchDeployment = async () => {
   try {
-    const { data, error } = await supabase
-      .from('deployments')
-      .select('*')
-      .eq('id', String(route.params.id))
-      .single()
-
-    if (error) throw error
+    const data = await getBot(Number(route.params.id))
     deployment.value = data
   } catch (error) {
-    // Error fetching deployment - could be logged to a proper logging service
-    // console.error('Error fetching deployment:', error)
     showSnackbar('Error loading deployment details', 'error')
   }
 }
@@ -302,18 +294,13 @@ const fetchDeploymentLogs = async () => {
 const stopDeployment = async () => {
   loading.value = true
   try {
-    const { error } = await supabase
-      .from('deployments')
-      .update({ status: 'inactive', updated_at: new Date().toISOString() })
-      .eq('id', String(route.params.id))
-
-    if (error) throw error
-
+    await updateBot(Number(route.params.id), {
+      ...deployment.value,
+      status: 'inactive',
+    })
     deployment.value.status = 'inactive'
     showSnackbar('Deployment stopped successfully', 'success')
   } catch (error) {
-    // Error stopping deployment - could be logged to a proper logging service
-    // console.error('Error stopping deployment:', error)
     showSnackbar('Error stopping deployment', 'error')
   } finally {
     loading.value = false
@@ -323,18 +310,13 @@ const stopDeployment = async () => {
 const startDeployment = async () => {
   loading.value = true
   try {
-    const { error } = await supabase
-      .from('deployments')
-      .update({ status: 'active', updated_at: new Date().toISOString() })
-      .eq('id', String(route.params.id))
-
-    if (error) throw error
-
+    await updateBot(Number(route.params.id), {
+      ...deployment.value,
+      status: 'active',
+    })
     deployment.value.status = 'active'
     showSnackbar('Deployment started successfully', 'success')
   } catch (error) {
-    // Error starting deployment - could be logged to a proper logging service
-    // console.error('Error starting deployment:', error)
     showSnackbar('Error starting deployment', 'error')
   } finally {
     loading.value = false
@@ -346,15 +328,19 @@ const deleteDeployment = async () => {
 
   loading.value = true
   try {
-    const { error } = await supabase
-      .from('deployments')
-      .delete()
-      .eq('id', String(route.params.id))
+    // This part of the logic needs to be updated to use Prisma for deletion
+    // For now, we'll just show a snackbar and redirect
+    showSnackbar('Deployment deletion is not yet implemented with Prisma', 'info')
+    // Example of how it would look with Prisma:
+    // await supabase
+    //   .from('deployments')
+    //   .delete()
+    //   .eq('id', String(route.params.id))
 
-    if (error) throw error
+    // if (error) throw error
 
-    showSnackbar('Deployment deleted successfully', 'success')
-    router.push('/llm')
+    // showSnackbar('Deployment deleted successfully', 'success')
+    // router.push('/llm')
   } catch (error) {
     // Error deleting deployment - could be logged to a proper logging service
     // console.error('Error deleting deployment:', error)

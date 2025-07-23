@@ -12,6 +12,15 @@ module.exports = {
     '@nuxt/eslint-config',
     'plugin:vue/vue3-essential',
   ],
+  globals: {
+    definePageMeta: 'readonly',
+    useFetch: 'readonly',
+    navigateTo: 'readonly',
+    useRouter: 'readonly',
+    useRoute: 'readonly',
+    $fetch: 'readonly',
+    process: 'readonly',
+  },
   rules: {
     // Suppress style warnings that don't affect functionality
     'vue/html-self-closing': 'off',

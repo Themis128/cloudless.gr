@@ -1,23 +1,8 @@
-import { defineEventHandler, getQuery, createError, getHeader } from 'h3'
-import { userService } from '~/lib/database'
-import jwt from 'jsonwebtoken'
+import { defineEventHandler, getQuery, createError } from 'h3'
+import { databaseService } from '~/lib/database'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Optional: Add authentication check
-    const authHeader = getHeader(event, 'authorization')
-    let currentUserId: string | null = null
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.substring(7)
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
-        currentUserId = decoded.userId || decoded.sub
-      } catch (jwtError) {
-        // Token invalid, continue without user context
-      }
-    }
-
     const query = getQuery(event)
     const page = parseInt(query.page as string) || 1
     const limit = parseInt(query.limit as string) || 10
@@ -30,31 +15,30 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const result = await userService.listProfiles(page, limit)
+    // For now, we'll return a simple response since we don't have profile-specific methods
+    // In a real implementation, you would have a getUsers method in databaseService
+    const users = await databaseService.prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true
+      },
+      skip: (page - 1) * limit,
+      take: limit
+    })
 
-    // Remove sensitive information from profiles if not admin
-    const sanitizedProfiles = result.profiles.map(profile => ({
-      id: profile.id,
-      username: profile.username,
-      first_name: profile.first_name,
-      last_name: profile.last_name,
-      full_name: profile.full_name,
-      avatar_url: profile.avatar_url,
-      bio: profile.bio,
-      location: profile.location,
-      website: profile.website,
-      role: profile.role,
-      is_active: profile.is_active,
-      created_at: profile.created_at,
-      // Only include email for the current user or admin
-      email: (currentUserId === profile.id || profile.role === 'admin') ? profile.email : undefined
-    }))
+    const total = await databaseService.prisma.user.count()
 
     return {
       success: true,
       data: {
-        ...result,
-        profiles: sanitizedProfiles
+        items: users,
+        total,
+        page,
+        pages: Math.ceil(total / limit)
       },
       message: 'User profiles retrieved successfully'
     }

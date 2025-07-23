@@ -1,50 +1,67 @@
 # Production Docker Compose Configuration
-# Uses environment variables from GitHub secrets or .env file
-# Configured for network-wide access
+# Optimized for production deployment with excellent performance
+
+version: '3.8'
 
 services:
   app:
     build:
       context: .
-      dockerfile: scripts/docker/Dockerfile
+      dockerfile: Dockerfile
+      target: production
+      cache_from:
+        - cloudlessgr-app:latest
+        - cloudlessgr-app:builder
       args:
         VERSION: ${VERSION:-latest}
         GIT_COMMIT: ${GIT_COMMIT:-unknown}
-        GIT_BRANCH: ${GIT_BRANCH:-main}
         BUILD_DATE: ${BUILD_DATE:-unknown}
     image: cloudlessgr-app:${VERSION:-latest}
     container_name: cloudlessgr-app-prod
     restart: unless-stopped
     ports:
-      - '0.0.0.0:3000:3000'  # Network-wide access
+      - '${APP_PORT:-3000}:3000'
     environment:
-      # Application configuration
-      - NODE_ENV=production
-      - NITRO_HOST=0.0.0.0
-      - NITRO_PORT=3000
-      - NUXT_HOST=0.0.0.0
-      - NUXT_PORT=3000
-      - NITRO_LOG_LEVEL=info
+      # Production environment
+      NODE_ENV: production
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+      NUXT_HOST: 0.0.0.0
+      NUXT_PORT: 3000
       
-      # Database and external services (from GitHub secrets)
-      - NUXT_PUBLIC_SUPABASE_URL=${NUXT_PUBLIC_SUPABASE_URL}
-      - NUXT_PUBLIC_SUPABASE_ANON_KEY=${NUXT_PUBLIC_SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
+      # Performance optimizations
+      NITRO_PRESET: node
+      NITRO_COMPRESSION: true
+      NITRO_MINIFY: true
+      NODE_OPTIONS: '--max-old-space-size=3072 --optimize-for-size --gc-interval=100'
       
-      # External API keys
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # Supabase Configuration
+      NUXT_PUBLIC_SUPABASE_URL: ${NUXT_PUBLIC_SUPABASE_URL}
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${NUXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      
+      # Database Configuration
+      DATABASE_URL: ${DATABASE_URL}
+      
+      # Redis Configuration
+      REDIS_URL: ${REDIS_URL}
+      
+      # External API Keys
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       
       # Security
-      - SESSION_SECRET=${SESSION_SECRET}
-      - JWT_SECRET=${JWT_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      
+      # Monitoring
+      SENTRY_DSN: ${SENTRY_DSN}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
       
       # Application metadata
-      - APP_VERSION=${VERSION:-latest}
-      - GIT_COMMIT=${GIT_COMMIT:-unknown}
-      - BUILD_DATE=${BUILD_DATE:-unknown}
+      APP_VERSION: ${VERSION:-latest}
+      GIT_COMMIT: ${GIT_COMMIT:-unknown}
+      BUILD_DATE: ${BUILD_DATE:-unknown}
     
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]

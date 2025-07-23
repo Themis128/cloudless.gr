@@ -48,22 +48,13 @@ services:
     image: redis:7-alpine
     container_name: cloudlessgr-redis-dev
     restart: unless-stopped
-    command: >
-      redis-server 
-      --appendonly yes
-      --maxmemory 256mb
-      --maxmemory-policy allkeys-lru
-      --save "900 1 300 10 60 10000"
-      --loglevel notice
-      --tcp-keepalive 300
-      --timeout 0
-      --tcp-backlog 511
-      --databases 16
-      --maxclients 10000
+    command: redis-server /usr/local/etc/redis/redis.conf
     ports:
       - "6379:6379"
     volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - redis_dev_data:/data
+      - redis_logs:/var/log/redis
     networks:
       - cloudless-db-network
     healthcheck:
@@ -129,6 +120,8 @@ volumes:
   postgres_dev_data:
     driver: local
   redis_dev_data:
+    driver: local
+  redis_logs:
     driver: local
   pgadmin_data:
     driver: local

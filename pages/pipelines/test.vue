@@ -309,15 +309,15 @@
 import { computed, onMounted, ref } from 'vue'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import PipelineGuide from '~/components/step-guides/PipelineGuide.vue'
-import { useSupabase } from '~/composables/supabase'
+import { usePrismaStore } from '~/stores/usePrismaStore'
 
 interface Pipeline {
-  id: string
+  id: number
   name: string
   type?: string
   status?: string
   description?: string
-  config?: any
+  config?: string
 }
 
 interface TestScenario {
@@ -336,7 +336,7 @@ interface PipelineStep {
 }
 
 interface TestResult {
-  pipelineId: string
+  pipelineId: number
   pipelineName: string
   scenario: string
   steps: PipelineStep[]
@@ -347,7 +347,7 @@ interface TestResult {
   batchSize: number
 }
 
-const supabase = useSupabase()
+const { getPipelines } = usePrismaStore()
 
 const availablePipelines = ref<Pipeline[]>([])
 const selectedPipeline = ref<string>('')
@@ -616,17 +616,10 @@ const loadPipelines = async () => {
   error.value = null
   
   try {
-    const { data, error: err } = await supabase
-      .from('pipelines')
-      .select('*')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
+    const data = await getPipelines()
     
-    if (err) {
-      error.value = err.message
-    } else {
-      availablePipelines.value = data || []
-    }
+    // Filter for active pipelines
+    availablePipelines.value = data.filter((pipeline: any) => pipeline.status === 'active') || []
   } catch (err) {
     error.value = 'Failed to load pipelines'
   } finally {

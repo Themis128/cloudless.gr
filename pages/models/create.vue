@@ -14,6 +14,7 @@
               v-model="form.name"
               label="Model Name"
               class="mb-3"
+              :rules="[rules.required, rules.minLength(3)]"
               required
             />
             <v-select
@@ -21,6 +22,7 @@
               :items="modelTypes"
               label="Model Type"
               class="mb-3"
+              :rules="[rules.required]"
               required
             />
             <v-textarea
@@ -33,12 +35,14 @@
               v-model="form.version"
               label="Version"
               class="mb-3"
+              :rules="[rules.required]"
               required
             />
             <v-text-field
               v-model="form.framework"
               label="Framework"
               class="mb-3"
+              :rules="[rules.required]"
               required
             />
             <v-btn type="submit" color="primary" :loading="loading">
@@ -68,12 +72,25 @@
 import { ref } from 'vue'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import ModelGuide from '~/components/step-guides/ModelGuide.vue'
-import { useSupabase } from '~/composables/supabase'
 
-const supabase = useSupabase()
+interface Model {
+  name: string
+  type: string
+  description?: string
+  config: string
+  status: string
+}
+
 const loading = ref(false)
 const success = ref(false)
 const error = ref<string | null>(null)
+
+// Form validation rules
+const rules = {
+  required: (v: string) => !!v || 'This field is required',
+  minLength: (min: number) => (v: string) => v.length >= min || `Minimum ${min} characters required`,
+  maxLength: (max: number) => (v: string) => v.length <= max || `Maximum ${max} characters allowed`,
+}
 
 const modelTypes = [
   'Classification',
@@ -109,26 +126,36 @@ const createModel = async () => {
   loading.value = true
   
   try {
-    const { error: err } = await supabase.from('models').insert([
-      {
-        name: form.value.name,
-        type: form.value.type,
-        description: form.value.description,
+    const modelData = {
+      name: form.value.name,
+      type: form.value.type.toLowerCase().replace(/\s+/g, '-'),
+      description: form.value.description,
+      config: JSON.stringify({
         version: form.value.version,
         framework: form.value.framework,
-        created_at: new Date().toISOString(),
-        status: 'draft',
-      },
-    ])
-    
-    if (err) {
-      error.value = err.message
-    } else {
-      success.value = true
-      resetForm()
+        architecture: form.value.type
+      }),
+      status: 'draft'
     }
-  } catch (err) {
-    error.value = 'An unexpected error occurred'
+    
+    const response = await $fetch<{ success: boolean; data: Model; message?: string }>('/api/prisma/models', {
+      method: 'POST',
+      body: modelData
+    })
+    
+    if (response.success) {
+      success.value = true
+      // Don't reset form immediately to show success message
+      // Reset form after a delay to allow user to see success message
+      setTimeout(() => {
+        resetForm()
+      }, 3000)
+    } else {
+      error.value = response.message || 'Failed to create model'
+    }
+  } catch (err: any) {
+    console.error('Error creating model:', err)
+    error.value = err.message || 'An unexpected error occurred'
   } finally {
     loading.value = false
   }

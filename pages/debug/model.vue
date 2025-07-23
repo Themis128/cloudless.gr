@@ -115,9 +115,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useSupabase } from '~/composables/supabase'
+import { usePrismaStore } from '~/stores/usePrismaStore'
 
-const supabase = useSupabase()
+const { getModel } = usePrismaStore()
 const loading = ref(false)
 const success = ref(false)
 const error = ref<string | null>(null)
@@ -186,21 +186,17 @@ const loadModelInfo = async () => {
   }
   
   try {
-    const { data, error: err } = await supabase
-      .from('models')
-      .select('*')
-      .eq('id', form.value.modelId)
-      .single()
+    const data = await getModel(Number(form.value.modelId))
     
-    if (err) {
-      error.value = err.message
-    } else {
+    if (data) {
       modelInfo.value = {
         id: data.id,
         status: data.status || 'unknown',
-        version: data.version || '1.0.0',
+        version: '1.0.0', // Default version since it's not in the schema
         lastUpdated: new Date().toLocaleString(),
       }
+    } else {
+      error.value = 'Model not found'
     }
   } catch (err) {
     error.value = 'Failed to load model information'

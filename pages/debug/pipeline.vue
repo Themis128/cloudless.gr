@@ -81,7 +81,7 @@
             </v-list-item>
             <v-list-item>
               <v-list-item-title>Type</v-list-item-title>
-              <v-list-item-subtitle>{{ pipelineInfo.type }}</v-list-item-subtitle>
+              <v-list-item-subtitle>Custom</v-list-item-subtitle>
             </v-list-item>
             <v-list-item>
               <v-list-item-title>Last Updated</v-list-item-title>
@@ -119,9 +119,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useSupabase } from '~/composables/supabase'
+import { usePrismaStore } from '~/stores/usePrismaStore'
 
-const supabase = useSupabase()
+const { getPipeline } = usePrismaStore()
 const loading = ref(false)
 const success = ref(false)
 const error = ref<string | null>(null)
@@ -190,21 +190,17 @@ const loadPipelineInfo = async () => {
   }
   
   try {
-    const { data, error: err } = await supabase
-      .from('pipelines')
-      .select('*')
-      .eq('id', form.value.pipelineId)
-      .single()
+    const data = await getPipeline(Number(form.value.pipelineId))
     
-    if (err) {
-      error.value = err.message
-    } else {
+    if (data) {
       pipelineInfo.value = {
         id: data.id,
         status: data.status || 'unknown',
-        type: data.type || 'unknown',
+        type: 'Custom', // fallback value
         lastUpdated: new Date().toLocaleString(),
       }
+    } else {
+      error.value = 'Pipeline not found'
     }
   } catch (err) {
     error.value = 'Failed to load pipeline information'

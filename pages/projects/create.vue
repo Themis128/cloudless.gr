@@ -19,6 +19,7 @@
               v-model="form.name"
               label="Project Name"
               class="form-field"
+              :rules="[rules.required, rules.minLength(3)]"
               required
             />
             <v-textarea
@@ -32,12 +33,14 @@
               :items="projectTypes"
               label="Project Type"
               class="form-field"
+              :rules="[rules.required]"
               required
             />
             <v-text-field
               v-model="form.version"
               label="Version"
               class="form-field"
+              :rules="[rules.required]"
               required
             />
             <v-select
@@ -45,6 +48,7 @@
               :items="visibilityOptions"
               label="Visibility"
               class="form-field"
+              :rules="[rules.required]"
               required
             />
             
@@ -95,12 +99,25 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import ProjectGuide from '~/components/step-guides/ProjectGuide.vue'
-import { useSupabase } from '~/composables/supabase'
 
-const supabase = useSupabase()
+interface Project {
+  project_name: string
+  description: string
+  category: string
+  status: string
+  featured: boolean
+}
+
 const loading = ref(false)
 const success = ref(false)
 const error = ref<string | null>(null)
+
+// Form validation rules
+const rules = {
+  required: (v: string) => !!v || 'This field is required',
+  minLength: (min: number) => (v: string) => v.length >= min || `Minimum ${min} characters required`,
+  maxLength: (max: number) => (v: string) => v.length <= max || `Maximum ${max} characters allowed`,
+}
 
 const projectTypes = [
   'Machine Learning',
@@ -139,26 +156,34 @@ const createProject = async () => {
   loading.value = true
   
   try {
-    const { error: err } = await supabase.from('projects').insert([
-      {
-        name: form.value.name,
-        description: form.value.description,
-        type: form.value.type,
-        version: form.value.version,
-        visibility: form.value.visibility,
-        created_at: new Date().toISOString(),
-        status: 'active',
-      },
-    ])
-    
-    if (err) {
-      error.value = err.message
-    } else {
-      success.value = true
-      resetForm()
+    const projectData = {
+      project_name: form.value.name,
+      slug: form.value.name.toLowerCase().replace(/\s+/g, '-'),
+      overview: form.value.description,
+      description: form.value.description,
+      category: form.value.type.toLowerCase().replace(/\s+/g, '-'),
+      status: 'draft',
+      featured: false
     }
-  } catch (err) {
-    error.value = 'An unexpected error occurred'
+    
+    const response = await $fetch<{ success: boolean; data: Project; message?: string }>('/api/prisma/projects', {
+      method: 'POST',
+      body: projectData
+    })
+    
+    if (response.success) {
+      success.value = true
+      // Don't reset form immediately to show success message
+      // Reset form after a delay to allow user to see success message
+      setTimeout(() => {
+        resetForm()
+      }, 3000)
+    } else {
+      error.value = response.message || 'Failed to create project'
+    }
+  } catch (err: any) {
+    console.error('Error creating project:', err)
+    error.value = err.message || 'An unexpected error occurred'
   } finally {
     loading.value = false
   }

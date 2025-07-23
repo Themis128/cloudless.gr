@@ -23,7 +23,7 @@
 .v-card-title {
   font-size: 1.25rem !important;
   font-weight: 600 !important;
-  color: #ffffff !important;
+  color: #000000 !important;
   padding: 1.5rem 1.5rem 0.75rem 1.5rem !important;
   line-height: 1.4 !important;
 }
@@ -35,7 +35,7 @@
 
 /* Card Text Styles */
 .v-card-text {
-  color: #ffffff !important;
+  color: #000000 !important;
   padding: 0.75rem 1.5rem 1.5rem 1.5rem !important;
   line-height: 1.6 !important;
   font-size: 0.95rem !important;
@@ -43,7 +43,7 @@
 
 /* Card Subtitle Styles */
 .v-card-subtitle {
-  color: #ffffff !important;
+  color: #000000 !important;
   font-size: 0.875rem !important;
   padding: 0 1.5rem 0.75rem 1.5rem !important;
 }
@@ -60,7 +60,7 @@
 }
 
 .quick-actions-title p {
-  color: #ffffff !important;
+  color: #000000 !important;
   font-size: 0.95rem !important;
   margin: 0 !important;
   line-height: 1.5 !important;
@@ -111,17 +111,17 @@
 
 .stats-card .text-h4 {
   font-weight: 700 !important;
-  color: #ffffff !important;
+  color: #000000 !important;
   margin-bottom: 0.5rem !important;
 }
 
 .stats-card .text-body-2 {
-  color: #ffffff !important;
+  color: #000000 !important;
   font-weight: 500 !important;
 }
 
 .stats-card .text-caption {
-  color: #ffffff !important;
+  color: #000000 !important;
   font-size: 0.75rem !important;
 }
 
@@ -138,11 +138,11 @@
 
 .v-list-item-title {
   font-weight: 500 !important;
-  color: #ffffff !important;
+  color: #000000 !important;
 }
 
 .v-list-item-subtitle {
-  color: #ffffff !important;
+  color: #000000 !important;
   font-size: 0.875rem !important;
 }
 
@@ -157,12 +157,12 @@
 
 .v-data-table th {
   font-weight: 600 !important;
-  color: #ffffff !important;
+  color: #000000 !important;
   font-size: 0.875rem !important;
 }
 
 .v-data-table td {
-  color: #ffffff !important;
+  color: #000000 !important;
   font-size: 0.875rem !important;
 }
 
@@ -180,11 +180,11 @@
 }
 
 .v-text-field .v-field__input {
-  color: #ffffff !important;
+  color: #000000 !important;
 }
 
 .v-text-field .v-field__label {
-  color: #ffffff !important;
+  color: #000000 !important;
 }
 
 /* Chip Styles */
@@ -236,31 +236,31 @@
   }
   
   .v-card-title {
-    color: #ffffff !important;
+    color: #000000 !important;
   }
   
   .v-card-text {
-    color: #ffffff !important;
+    color: #000000 !important;
   }
   
   .v-card-subtitle {
-    color: #ffffff !important;
+    color: #000000 !important;
   }
   
   .quick-actions-title p {
-    color: #ffffff !important;
+    color: #000000 !important;
   }
   
   .stats-card .text-h4 {
-    color: #ffffff !important;
+    color: #000000 !important;
   }
   
   .stats-card .text-body-2 {
-    color: #ffffff !important;
+    color: #000000 !important;
   }
   
   .stats-card .text-caption {
-    color: #ffffff !important;
+    color: #000000 !important;
   }
   
   .v-list-item:hover {
@@ -268,11 +268,11 @@
   }
   
   .v-list-item-title {
-    color: #ffffff !important;
+    color: #000000 !important;
   }
   
   .v-list-item-subtitle {
-    color: #ffffff !important;
+    color: #000000 !important;
   }
   
   .v-data-table .v-data-table-header {
@@ -280,10 +280,10 @@
   }
   
   .v-data-table th {
-    color: #ffffff !important;
+    color: #000000 !important;
   }
   
   .v-data-table td {
-    color: #ffffff !important;
+    color: #000000 !important;
   }
 } 

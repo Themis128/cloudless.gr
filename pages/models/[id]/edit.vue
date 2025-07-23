@@ -358,13 +358,13 @@
                 <v-list-item-title class="text-caption">
                   Created
                 </v-list-item-title>
-                <v-list-item-subtitle>{{ formatDate(model?.created_at) }}</v-list-item-subtitle>
+                <v-list-item-subtitle>{{ formatDate(model?.createdAt) }}</v-list-item-subtitle>
               </v-list-item>
               <v-list-item>
                 <v-list-item-title class="text-caption">
                   Last Updated
                 </v-list-item-title>
-                <v-list-item-subtitle>{{ formatDate(model?.updated_at || model?.created_at) }}</v-list-item-subtitle>
+                <v-list-item-subtitle>{{ formatDate(model?.updatedAt || model?.createdAt) }}</v-list-item-subtitle>
               </v-list-item>
               <v-list-item>
                 <v-list-item-title class="text-caption">
@@ -395,24 +395,24 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import ModelGuide from '~/components/step-guides/ModelGuide.vue'
-import { useSupabase } from '~/composables/supabase'
+import { usePrismaStore } from '~/stores/usePrismaStore'
 
 interface Model {
-  id: string
+  id: number
   name: string
   type?: string
   status?: string
-  version?: string
-  created_at: string
-  updated_at?: string
-  description?: string
-  framework?: string
-  config?: any
+  description?: string | null
+  config?: string | null
+  createdAt: Date
+  updatedAt?: Date
+  user?: any
+  trainings?: any[]
 }
 
 const router = useRouter()
 const route = useRoute()
-const supabase = useSupabase()
+const prismaStore = usePrismaStore()
 
 const model = ref<Model | null>(null)
 const loading = ref(true)
@@ -426,8 +426,6 @@ const formData = reactive({
   name: '',
   type: '',
   description: '',
-  version: '',
-  framework: '',
   config: {
     learning_rate: 0.001,
     batch_size: 32,
@@ -484,7 +482,7 @@ const getStatusColor = (status?: string) => {
   return colors[status || 'draft']
 }
 
-const formatDate = (dateString?: string) => {
+const formatDate = (dateString?: Date) => {
   if (!dateString) return 'N/A'
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -498,40 +496,32 @@ const formatDate = (dateString?: string) => {
 // Action handlers
 const saveModel = async () => {
   if (!form.value?.validate()) return
+  
+  const { valid } = await form.value.validate()
+  if (!valid) return
 
   saving.value = true
   error.value = null
 
   try {
-    const { error: err } = await supabase
-      .from('models')
-      .update({
+    await prismaStore.updateModel(Number(model.value?.id), {
+      name: formData.name,
+      type: formData.type,
+      description: formData.description,
+      config: formData.config,
+      status: model.value?.status || 'draft'
+    })
+    
+    showSuccess.value = true
+    // Update local model data
+    if (model.value) {
+      Object.assign(model.value, {
         name: formData.name,
         type: formData.type,
         description: formData.description,
-        version: formData.version,
-        framework: formData.framework,
-        config: formData.config,
-        updated_at: new Date().toISOString()
+        config: JSON.stringify(formData.config),
+        updatedAt: new Date()
       })
-      .eq('id', model.value?.id)
-    
-    if (err) {
-      error.value = err.message
-    } else {
-      showSuccess.value = true
-      // Update local model data
-      if (model.value) {
-        Object.assign(model.value, {
-          name: formData.name,
-          type: formData.type,
-          description: formData.description,
-          version: formData.version,
-          framework: formData.framework,
-          config: formData.config,
-          updated_at: new Date().toISOString()
-        })
-      }
     }
   } catch (err) {
     error.value = 'Failed to update model'
@@ -554,26 +544,21 @@ const loadModel = async () => {
   }
 
   try {
-    const { data, error: err } = await supabase
-      .from('models')
-      .select('*')
-      .eq('id', modelId)
-      .single()
+    const data = await prismaStore.getModel(Number(modelId))
     
-    if (err) {
-      error.value = err.message
-    } else {
+    if (data) {
       model.value = data
       // Populate form data
       formData.name = data.name || ''
       formData.type = data.type || ''
       formData.description = data.description || ''
-      formData.version = data.version || ''
-      formData.framework = data.framework || ''
       
       if (data.config) {
-        Object.assign(formData.config, data.config)
+        const config = JSON.parse(data.config)
+        Object.assign(formData.config, config)
       }
+    } else {
+      error.value = 'Model not found'
     }
   } catch (err) {
     error.value = 'Failed to load model details'

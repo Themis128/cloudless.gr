@@ -310,11 +310,11 @@ import { computed, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import LLMGuide from '~/components/step-guides/LLMGuide.vue'
-import { useSupabase } from '~/composables/supabase'
+import { usePrismaStore } from '~/stores/usePrismaStore'
 
 // Composables
 const router = useRouter()
-const supabase = useSupabase()
+const { createTrainingSession, updateTrainingSession } = usePrismaStore()
 // const trainingStore = useTrainingStore()
 
 // Form reference
@@ -439,27 +439,16 @@ const startTraining = async () => {
   
   try {
     // Create training session record
-    const { data: userData } = await supabase.auth.getUser()
-    const userId = userData?.user?.id
-
     const trainingSession = {
       name: form.value.name,
-      base_model: form.value.baseModel,
-      training_type: form.value.trainingType,
+      baseModel: form.value.baseModel,
+      trainingType: form.value.trainingType,
       description: form.value.description,
       parameters: form.value.parameters,
-      status: 'pending',
-      owner_id: userId,
-      created_at: new Date().toISOString()
+      status: 'pending'
     }
 
-    const { data, error } = await supabase
-      .from('training_sessions')
-      .insert([trainingSession])
-      .select()
-      .single()
-
-    if (error) throw error
+    const data = await createTrainingSession(trainingSession)
 
     currentTrainingJob.value = data
     totalEpochs.value = form.value.parameters.epochs
@@ -473,7 +462,6 @@ const startTraining = async () => {
     showSnackbar('Training started successfully!', 'success')
     
   } catch (error) {
-    // console.error('Error starting training:', error)
     showSnackbar('Error starting training. Please try again.', 'error')
   } finally {
     loading.value = false
@@ -539,14 +527,10 @@ const updateTrainingStatus = async (status: string) => {
   if (!currentTrainingJob.value) return
   
   try {
-    await supabase
-      .from('training_sessions')
-      .update({ 
-        status,
-        progress: trainingProgress.value,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', currentTrainingJob.value.id)
+    await updateTrainingSession(currentTrainingJob.value.id, {
+      status,
+      logs: trainingLogs.value
+    })
   } catch (error) {
     // console.error('Error updating training status:', error)
   }

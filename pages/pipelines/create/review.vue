@@ -117,7 +117,7 @@
                 color="primary"
                 :loading="loading"
                 :disabled="!isValid"
-                @click="createPipeline"
+                @click="createPipelineData"
               >
                 Create Pipeline
               </v-btn>
@@ -132,12 +132,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useSupabase } from '~/composables/supabase'
+import { usePrismaStore } from '~/stores/usePrismaStore'
 import type { ModelConfig, PipelineDetails, PipelineStep, PipelineStepType } from '~/types/Pipeline'
-import type { Database } from '~/types/database.types'
 
 const router = useRouter()
-const supabase = useSupabase()
+const { createPipeline } = usePrismaStore()
 const loading = ref(false)
 
 const pipelineDetails = ref<PipelineDetails | null>(null)
@@ -186,29 +185,27 @@ const resetPipeline = () => {
   router.push('/pipelines/create/details')
 }
 
-const createPipeline = async () => {
+const createPipelineData = async () => {
   if (!isValid.value || !pipelineDetails.value || !modelConfig.value || !pipelineSteps.value) return
   
   loading.value = true
   try {
-    const { data: userData } = await supabase.auth.getUser()
-    const ownerId = userData?.user?.id
+    // For now, we'll use a default user ID since we don't have auth context
+    // In a real app, you'd get this from the auth system
+    const userId = 1 // Default user ID
 
-    const pipeline: Database['public']['Tables']['pipelines']['Insert'] = {
+    const pipelineData = {
       name: pipelineDetails.value.name,
       description: pipelineDetails.value.description,
-      owner_id: ownerId || '',
-      project_id: '', // Required by the database schema
-      model: modelConfig.value.modelId,
-      is_active: pipelineDetails.value.isActive,
       config: {
         model: modelConfig.value,
         steps: pipelineSteps.value
-      }
+      },
+      status: pipelineDetails.value.isActive ? 'active' : 'draft',
+      userId: userId
     }
 
-    const { error } = await supabase.from('pipelines').insert([pipeline])
-    if (error) throw error
+    await createPipeline(pipelineData)
 
     // Clear localStorage
     resetPipeline()

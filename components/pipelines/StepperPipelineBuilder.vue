@@ -127,7 +127,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useSupabase } from '~/composables/supabase';
+import { usePrismaStore } from '~/stores/usePrismaStore';
 import { usePipelineStore } from '~/stores/pipelineStore';
 // import type { PipelineConfig } from '~/types/Pipeline';
 
@@ -139,7 +139,7 @@ const emit = defineEmits<{
   'created': []
 }>()
 
-const supabase = useSupabase()
+const { getModels } = usePrismaStore()
 const pipelineStore = usePipelineStore()
 
 const currentStep = ref(1)
@@ -264,13 +264,14 @@ const submit = async () => {
 
 onMounted(async () => {
   // Fetch available models
-  const { data, error: err } = await supabase
-    .from('models')
-    .select('id, name')
-    .order('created_at', { ascending: false })
-  
-  if (!err && data) {
-    modelOptions.value = data
+  try {
+    const data = await getModels()
+    modelOptions.value = data.map((model: any) => ({
+      id: model.id.toString(),
+      name: model.name
+    }))
+  } catch (err) {
+    console.error('Error loading models:', err)
   }
 })
 </script>

@@ -57,9 +57,17 @@
 import { ref } from 'vue'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import ModelGuide from '~/components/step-guides/ModelGuide.vue'
-import { useSupabase } from '~/composables/supabase'
 
-const supabase = useSupabase()
+interface TrainingSession {
+  id: number
+  name: string
+  datasetUrl: string
+  epochs: number
+  status: string
+  createdAt: Date
+  updatedAt: Date
+}
+
 const loading = ref(false)
 const success = ref(false)
 const error = ref<string | null>(null)
@@ -80,22 +88,31 @@ const trainModel = async () => {
   error.value = null
   success.value = false
   loading.value = true
-  // Example: Insert a training job into a table
-  const { error: err } = await supabase.from('training_sessions').insert([
-    {
+  
+  try {
+    const trainingData = {
       name: form.value.modelName,
-      dataset_url: form.value.datasetUrl,
+      datasetUrl: form.value.datasetUrl,
       epochs: form.value.epochs,
-      created_at: new Date().toISOString(),
-      status: 'pending',
-    },
-  ])
-  loading.value = false
-  if (err) {
-    error.value = err.message
-  } else {
-    success.value = true
-    resetForm()
+      status: 'pending'
+    }
+    
+    const response = await $fetch<{ success: boolean; data: TrainingSession; message?: string }>('/api/prisma/training-sessions', {
+      method: 'POST',
+      body: trainingData
+    })
+    
+    if (response.success) {
+      success.value = true
+      resetForm()
+    } else {
+      error.value = response.message || 'Failed to start training'
+    }
+  } catch (err: any) {
+    console.error('Error starting training:', err)
+    error.value = err.message || 'Failed to start training'
+  } finally {
+    loading.value = false
   }
 }
 </script>

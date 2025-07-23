@@ -188,11 +188,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useSupabase } from '~/composables/supabase'
+import { usePrismaStore } from '~/stores/usePrismaStore'
 import type { CustomModel, Model, ModelConfig, ModelParams } from '~/types/Pipeline'
 
 const router = useRouter()
-const supabase = useSupabase()
+const { getModels } = usePrismaStore()
 const loading = ref(false)
 const loadingModels = ref(false)
 
@@ -235,13 +235,11 @@ const isValid = computed(() => {
 onMounted(async () => {
   loadingModels.value = true
   try {
-    const { data, error } = await supabase
-      .from('models')
-      .select('id, name, created_at')
-      .order('created_at', { ascending: false })
-    
-    if (error) throw error
-    availableModels.value = data || []
+    const data = await getModels()
+    modelOptions.value = data.map((model: any) => ({
+      id: model.id.toString(),
+      name: model.name
+    }))
   } catch (error) {
     // console.error('Error loading models:', error)
   } finally {

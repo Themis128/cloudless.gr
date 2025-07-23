@@ -1,9 +1,11 @@
-import { PrismaClient } from '@prisma/client';
-import { createError, defineEventHandler, getQuery, readBody } from 'h3';
-
-const prisma = new PrismaClient();
+import { defineEventHandler, readBody, getQuery, createError } from 'h3'
+import { prisma } from '~/lib/prisma'
+import { requireAuth } from '~/server/middleware/auth'
 
 export default defineEventHandler(async (event) => {
+  // Require admin authentication
+  await requireAuth(event, 'admin')
+  
   const { method } = event;
 
   try {

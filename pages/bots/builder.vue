@@ -96,9 +96,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import BotGuide from '~/components/step-guides/BotGuide.vue'
-import { useSupabase } from '~/composables/supabase'
 
-const supabase = useSupabase()
+interface Bot {
+  name: string
+  description?: string
+  config: string
+  status: string
+}
+
 const loading = ref(false)
 const success = ref(false)
 const error = ref<string | null>(null)
@@ -137,26 +142,31 @@ const createBot = async () => {
   loading.value = true
   
   try {
-    const { error: err } = await supabase.from('bots').insert([
-      {
-        name: form.value.botName,
-        description: form.value.description,
-        model_type: form.value.modelType,
-        api_key: form.value.apiKey,
-        system_prompt: form.value.systemPrompt,
-        created_at: new Date().toISOString(),
-        status: 'active',
-      },
-    ])
+    const botData = {
+      name: form.value.botName,
+      description: form.value.description,
+      config: JSON.stringify({
+        model: form.value.modelType,
+        apiKey: form.value.apiKey,
+        systemPrompt: form.value.systemPrompt
+      }),
+      status: 'draft'
+    }
     
-    if (err) {
-      error.value = err.message
-    } else {
+    const response = await $fetch<{ success: boolean; data: Bot; message?: string }>('/api/prisma/bots', {
+      method: 'POST',
+      body: botData
+    })
+    
+    if (response.success) {
       success.value = true
       resetForm()
+    } else {
+      error.value = response.message || 'Failed to create bot'
     }
-  } catch (err) {
-    error.value = 'An unexpected error occurred'
+  } catch (err: any) {
+    console.error('Error creating bot:', err)
+    error.value = err.message || 'An unexpected error occurred'
   } finally {
     loading.value = false
   }

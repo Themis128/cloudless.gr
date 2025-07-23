@@ -85,21 +85,33 @@
 import { onMounted, ref } from 'vue'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import ModelGuide from '~/components/step-guides/ModelGuide.vue'
-import { useSupabase } from '~/composables/supabase'
 
-const supabase = useSupabase()
+interface Model {
+  id: number
+  name: string
+  type: string
+  status: string
+  config: string
+}
+
+interface Deployment {
+  id: number
+  modelId: number
+  name: string
+  environment: string
+  instanceType: string
+  replicas: number
+  status: string
+  endpoint?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
 const loading = ref(false)
 const deploying = ref(false)
 const success = ref(false)
 const error = ref<string | null>(null)
 const deploymentEndpoint = ref<string | null>(null)
-
-interface Model {
-  id: string
-  name: string
-  type: string
-  version: string
-}
 
 const environments = ['development', 'staging', 'production']
 const models = ref<Model[]>([])
@@ -128,18 +140,16 @@ const resetForm = () => {
 const loadModels = async () => {
   loading.value = true
   try {
-    const { data, error: err } = await supabase
-      .from('models')
-      .select('id, name, type, version')
-      .eq('status', 'ready')
+    const response = await $fetch<{ success: boolean; data: Model[]; message?: string }>('/api/prisma/models?status=ready')
     
-    if (err) {
-      error.value = err.message
+    if (response.success) {
+      models.value = response.data || []
     } else {
-      models.value = data || []
+      error.value = response.message || 'Failed to load models'
     }
-  } catch (err) {
-    error.value = 'Failed to load models'
+  } catch (err: any) {
+    console.error('Error loading models:', err)
+    error.value = err.message || 'Failed to load models'
   } finally {
     loading.value = false
   }
@@ -153,27 +163,30 @@ const deployModel = async () => {
   deploying.value = true
   
   try {
-    const { error: err } = await supabase.from('deployments').insert([
-      {
-        model_id: form.value.selectedModel.id,
-        name: form.value.deploymentName,
-        environment: form.value.environment,
-        instance_type: form.value.instanceType,
-        replicas: form.value.replicas,
-        status: 'deploying',
-        created_at: new Date().toISOString(),
-      },
-    ])
+    const deploymentData = {
+      modelId: form.value.selectedModel.id,
+      name: form.value.deploymentName,
+      environment: form.value.environment,
+      instanceType: form.value.instanceType,
+      replicas: form.value.replicas,
+      status: 'deploying'
+    }
     
-    if (err) {
-      error.value = err.message
-    } else {
+    const response = await $fetch<{ success: boolean; data: Deployment; message?: string }>('/api/prisma/deployments', {
+      method: 'POST',
+      body: deploymentData
+    })
+    
+    if (response.success) {
       success.value = true
       deploymentEndpoint.value = `https://api.cloudless.gr/models/${form.value.selectedModel.id}`
       resetForm()
+    } else {
+      error.value = response.message || 'Failed to deploy model'
     }
-  } catch (err) {
-    error.value = 'An unexpected error occurred'
+  } catch (err: any) {
+    console.error('Error deploying model:', err)
+    error.value = err.message || 'An unexpected error occurred'
   } finally {
     deploying.value = false
   }

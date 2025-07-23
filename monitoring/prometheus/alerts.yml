@@ -1,0 +1,132 @@
+groups:
+  - name: node_alerts
+    interval: 30s
+    rules:
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% (current value: {{ $value }}%)"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85% (current value: {{ $value }}%)"
+
+      # Out of Memory Alert
+      - alert: OutOfMemory
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 10
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Host out of memory"
+          description: "Node memory is filling up (< 10% left)"
+
+      # Disk Space Alert
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is below 20% (current value: {{ $value }}%)"
+
+  - name: container_alerts
+    interval: 30s
+    rules:
+      # Container High CPU
+      - alert: ContainerHighCPU
+        expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (name) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high CPU usage"
+          description: "Container CPU usage is above 80% (current value: {{ $value }}%)"
+
+      # Container High Memory
+      - alert: ContainerHighMemory
+        expr: (sum(container_memory_usage_bytes) by (name) / sum(container_spec_memory_limit_bytes) by (name)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high memory usage"
+          description: "Container memory usage is above 80% (current value: {{ $value }}%)"
+
+  - name: application_alerts
+    interval: 30s
+    rules:
+      # Application Down
+      - alert: ApplicationDown
+        expr: up{job="nuxt-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Application is down"
+          description: "The Nuxt.js application is not responding"
+
+      # High Response Time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, http_request_duration_seconds_bucket) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High application response time"
+          description: "95th percentile response time is above 2 seconds"
+
+      # JavaScript Heap Memory Alert (specific to your issue)
+      - alert: JavaScriptHeapMemoryHigh
+        expr: nodejs_heap_size_used_bytes / nodejs_heap_size_total_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "JavaScript heap memory usage is high"
+          description: "Node.js heap usage is above 85% (current value: {{ $value }}%)"
+
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # PostgreSQL Down
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database is not responding"
+
+      # Redis Down
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis cache is not responding"
+
+      # High Database Connections
+      - alert: HighDatabaseConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connection usage"
+          description: "PostgreSQL connection usage is above 80%" 

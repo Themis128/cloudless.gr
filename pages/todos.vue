@@ -44,28 +44,57 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useSupabase } from '~/composables/supabase'
 
-const todos = ref<any[]>([])
-const supabase = useSupabase()
+interface Todo {
+  id: number
+  title: string
+  is_complete: boolean
+  created_at: string
+  updated_at: string
+}
+
+const todos = ref<Todo[]>([])
+const loading = ref(true)
+const error = ref('')
 
 const getTodos = async () => {
-  const { data, error } = await supabase.from('todos' as any).select()
-  if (error) {
-    // Error handling without console.log
-  } else {
-    todos.value = data || []
+  try {
+    loading.value = true
+    error.value = ''
+    
+    const response = await $fetch<{ success: boolean; data: Todo[]; message?: string }>('/api/prisma/todos')
+    
+    if (response.success) {
+      todos.value = response.data || []
+    } else {
+      error.value = response.message || 'Failed to fetch todos'
+    }
+  } catch (err: any) {
+    console.error('Error fetching todos:', err)
+    error.value = err.message || 'Failed to load todos'
+  } finally {
+    loading.value = false
   }
 }
 
-const updateTodo = async (todo: any) => {
-  const { error } = await supabase
-    .from('todos')
-    .update({ is_complete: todo.is_complete })
-    .eq('id', todo.id)
-  
-  if (error) {
-    // Error handling
+const updateTodo = async (todo: Todo) => {
+  try {
+    const response = await $fetch<{ success: boolean; data: Todo; message?: string }>(`/api/prisma/todos/${todo.id}`, {
+      method: 'PUT',
+      body: { is_complete: todo.is_complete }
+    })
+    
+    if (response.success) {
+      // Update the local todo with the response data
+      const index = todos.value.findIndex(t => t.id === todo.id)
+      if (index !== -1) {
+        todos.value[index] = response.data
+      }
+    } else {
+      console.error('Failed to update todo:', response.message)
+    }
+  } catch (err: any) {
+    console.error('Error updating todo:', err)
   }
 }
 
@@ -75,17 +104,6 @@ const formatDate = (date: string) => {
 
 onMounted(() => {
   getTodos()
-  // Subscribe to real-time updates
-  supabase
-    .channel('public:todos')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'todos' },
-      () => {
-        getTodos()
-      }
-    )
-    .subscribe()
 })
 </script>
 

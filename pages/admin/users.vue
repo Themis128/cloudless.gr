@@ -125,7 +125,21 @@
             <select v-model="userForm.role" id="role" class="form-select">
               <option value="user">User</option>
               <option value="admin">Admin</option>
+              <option value="developer">Developer</option>
             </select>
+          </div>
+          <div v-if="canManageRoles" class="form-group">
+            <label>Additional Roles</label>
+            <div class="role-checkboxes">
+              <label v-for="role in availableRoles" :key="role.id" class="role-checkbox">
+                <input 
+                  type="checkbox" 
+                  :value="role.id" 
+                  v-model="userForm.additionalRoles"
+                />
+                {{ role.name }}
+              </label>
+            </div>
           </div>
           <div class="form-actions">
             <button type="button" @click="closeModal" class="cancel-btn">
@@ -165,9 +179,22 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRBAC } from '~/composables/useRBAC'
 
 definePageMeta({
-  title: 'User Management'
+  title: 'User Management',
+  layout: 'default',
+  middleware: 'admin'
+})
+
+// RBAC integration
+const { canManageUsers, canManageRoles, isAdmin } = useRBAC()
+
+// Check permissions on mount
+onMounted(() => {
+  if (!canManageUsers.value) {
+    navigateTo('/dashboard')
+  }
 })
 
 interface User {
@@ -183,22 +210,47 @@ interface User {
     bots: number
     models: number
   }
+  userRoles?: Array<{
+    id: number
+    role: {
+      id: number
+      name: string
+      description: string
+    }
+    assignedAt: string
+    expiresAt?: string
+    isActive: boolean
+  }>
+}
+
+interface Role {
+  id: number
+  name: string
+  description: string
 }
 
 // Fetch users from API
 const users = ref<User[]>([])
+const availableRoles = ref<Role[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 
-// Fetch users on component mount
+// Fetch users and roles on component mount
 onMounted(async () => {
   try {
     isLoading.value = true
-          const response = await $fetch('/api/admin/users') as any
-      users.value = response.data || []
+    
+    // Fetch users
+    const response = await $fetch('/api/admin/users') as any
+    users.value = response.data || []
+    
+    // Fetch available roles
+    const rolesResponse = await $fetch('/api/admin/roles') as any
+    availableRoles.value = rolesResponse.data || []
+    
   } catch (err) {
-    console.error('Error fetching users:', err)
-    error.value = 'Failed to load users'
+    console.error('Error fetching data:', err)
+    error.value = 'Failed to load data'
     // Fallback to sample data for demo
     users.value = [
       {
@@ -209,7 +261,15 @@ onMounted(async () => {
         status: 'active',
         createdAt: '2024-01-15T10:30:00Z',
         updatedAt: '2024-01-15T10:30:00Z',
-        _count: { projects: 5, bots: 2, models: 1 }
+        _count: { projects: 5, bots: 2, models: 1 },
+        userRoles: [
+          {
+            id: 1,
+            role: { id: 1, name: 'admin', description: 'Full system administrator' },
+            assignedAt: '2024-01-15T10:30:00Z',
+            isActive: true
+          }
+        ]
       },
       {
         id: 2,
@@ -219,17 +279,15 @@ onMounted(async () => {
         status: 'active',
         createdAt: '2024-01-20T14:45:00Z',
         updatedAt: '2024-01-20T14:45:00Z',
-        _count: { projects: 3, bots: 1, models: 0 }
-      },
-      {
-        id: 3,
-        name: 'Bob Johnson',
-        email: 'bob@example.com',
-        role: 'user',
-        status: 'inactive',
-        createdAt: '2024-01-25T09:15:00Z',
-        updatedAt: '2024-01-25T09:15:00Z',
-        _count: { projects: 1, bots: 0, models: 0 }
+        _count: { projects: 3, bots: 1, models: 0 },
+        userRoles: [
+          {
+            id: 2,
+            role: { id: 2, name: 'user', description: 'Standard user' },
+            assignedAt: '2024-01-20T14:45:00Z',
+            isActive: true
+          }
+        ]
       }
     ]
   } finally {
@@ -296,11 +354,13 @@ const userForm = ref<{
   email: string
   password: string
   role: string
+  additionalRoles: number[]
 }>({
   name: '',
   email: '',
   password: '',
-  role: 'user'
+  role: 'user',
+  additionalRoles: []
 })
 
 const editUser = (user: User) => {
@@ -308,7 +368,8 @@ const editUser = (user: User) => {
     name: user.name,
     email: user.email,
     password: '',
-    role: user.role
+    role: user.role,
+    additionalRoles: user.userRoles?.map(ur => ur.role.id) || []
   }
   showEditUserModal.value = true
 }
@@ -327,7 +388,8 @@ const closeModal = () => {
     name: '',
     email: '',
     password: '',
-    role: 'user'
+    role: 'user',
+    additionalRoles: []
   }
 }
 

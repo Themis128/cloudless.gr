@@ -523,6 +523,45 @@
     
     <div class="controls-section">
       <v-btn 
+        color="success" 
+        variant="elevated" 
+        block
+        prepend-icon="mdi-content-save"
+        @click="savePreferences"
+        :loading="saving"
+      >
+        Save Preferences
+      </v-btn>
+      
+      <v-alert
+        v-if="showSuccessMessage"
+        type="success"
+        variant="tonal"
+        class="mt-2"
+        closable
+        @click:close="showSuccessMessage = false"
+      >
+        <template #prepend>
+          <v-icon>mdi-check-circle</v-icon>
+        </template>
+        Preferences saved successfully!
+      </v-alert>
+    </div>
+    
+    <div class="controls-section">
+      <v-btn 
+        color="info" 
+        variant="outlined" 
+        block
+        prepend-icon="mdi-folder-open"
+        @click="loadSavedPreferences"
+      >
+        Load Saved Preferences
+      </v-btn>
+    </div>
+    
+    <div class="controls-section">
+      <v-btn 
         variant="outlined" 
         color="primary" 
         block
@@ -535,7 +574,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, ref, watch, onMounted } from 'vue'
 
 const props = defineProps({
   initial: {
@@ -544,6 +583,9 @@ const props = defineProps({
   }
 })
 const emit = defineEmits(['update', 'close'])
+
+const saving = ref(false)
+const showSuccessMessage = ref(false)
 
 const enabled = ref(true)
 const selectedEffect = ref(props.initial?.selectedEffect || 'clouds2')
@@ -615,6 +657,160 @@ const effectOptions = ref([
 
 const handleClose = () => {
   emit('close')
+}
+
+const savePreferences = async () => {
+  saving.value = true
+  
+  try {
+    // Collect all current preferences
+    const preferences = {
+      enabled: enabled.value,
+      selectedEffect: selectedEffect.value,
+      speed: speed.value,
+      cloudHeight: cloudHeight.value,
+      cloudDensity: cloudDensity.value,
+      cloudScale: cloudScale.value,
+      lightDirection: lightDirection.value,
+      lightIntensity: lightIntensity.value,
+      skyColor: skyColor.value,
+      cloudColor: cloudColor.value,
+      lightColor: lightColor.value,
+      backgroundColor: backgroundColor.value,
+      lineColor: lineColor.value,
+      pointColor: pointColor.value,
+      waveColor: waveColor.value,
+      color1: color1.value,
+      color2: color2.value,
+      points: points.value,
+      maxDistance: maxDistance.value,
+      spacing: spacing.value,
+      waveHeight: waveHeight.value,
+      waveSpeed: waveSpeed.value,
+      shininess: shininess.value,
+      birdSize: birdSize.value,
+      quantity: quantity.value,
+      speedLimit: speedLimit.value,
+      mouseControls: mouseControls.value,
+      touchControls: touchControls.value,
+      gyroControls: gyroControls.value,
+      reducedMotion: reducedMotion.value,
+      quality: quality.value,
+      cellSize: cellSize.value,
+      cellSpeed: cellSpeed.value,
+      dotSize: dotSize.value,
+      dotSpeed: dotSpeed.value,
+      fogSpeed: fogSpeed.value,
+      fogDensity: fogDensity.value,
+      globeSize: globeSize.value,
+      globeSpeed: globeSpeed.value,
+      haloSize: haloSize.value,
+      haloSpeed: haloSpeed.value,
+      rippleSize: rippleSize.value,
+      rippleSpeed: rippleSpeed.value,
+      ringSize: ringSize.value,
+      ringSpeed: ringSpeed.value,
+      trunkSize: trunkSize.value,
+      trunkSpeed: trunkSpeed.value,
+      elementColor: elementColor.value,
+      timestamp: new Date().toISOString()
+    }
+    
+    // Save to localStorage
+    if (process.client) {
+      localStorage.setItem('vanta-preferences', JSON.stringify(preferences))
+      
+      // Show success feedback
+      console.log('✅ Vanta preferences saved successfully!')
+      showSuccessMessage.value = true
+      
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        showSuccessMessage.value = false
+      }, 3000)
+      
+      // Optional: Show a toast notification
+      // You can integrate with your notification system here
+    }
+    
+    // Small delay to show loading state
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+  } catch (error) {
+    console.error('❌ Failed to save preferences:', error)
+  } finally {
+    saving.value = false
+  }
+}
+
+const loadSavedPreferences = () => {
+  if (process.client) {
+    try {
+      const saved = localStorage.getItem('vanta-preferences')
+      if (saved) {
+        const preferences = JSON.parse(saved)
+        
+        // Load all saved preferences
+        enabled.value = preferences.enabled ?? enabled.value
+        selectedEffect.value = preferences.selectedEffect ?? selectedEffect.value
+        speed.value = preferences.speed ?? speed.value
+        cloudHeight.value = preferences.cloudHeight ?? cloudHeight.value
+        cloudDensity.value = preferences.cloudDensity ?? cloudDensity.value
+        cloudScale.value = preferences.cloudScale ?? cloudScale.value
+        lightDirection.value = preferences.lightDirection ?? lightDirection.value
+        lightIntensity.value = preferences.lightIntensity ?? lightIntensity.value
+        skyColor.value = preferences.skyColor ?? skyColor.value
+        cloudColor.value = preferences.cloudColor ?? cloudColor.value
+        lightColor.value = preferences.lightColor ?? lightColor.value
+        backgroundColor.value = preferences.backgroundColor ?? backgroundColor.value
+        lineColor.value = preferences.lineColor ?? lineColor.value
+        pointColor.value = preferences.pointColor ?? pointColor.value
+        waveColor.value = preferences.waveColor ?? waveColor.value
+        color1.value = preferences.color1 ?? color1.value
+        color2.value = preferences.color2 ?? color2.value
+        points.value = preferences.points ?? points.value
+        maxDistance.value = preferences.maxDistance ?? maxDistance.value
+        spacing.value = preferences.spacing ?? spacing.value
+        waveHeight.value = preferences.waveHeight ?? waveHeight.value
+        waveSpeed.value = preferences.waveSpeed ?? waveSpeed.value
+        shininess.value = preferences.shininess ?? shininess.value
+        birdSize.value = preferences.birdSize ?? birdSize.value
+        quantity.value = preferences.quantity ?? quantity.value
+        speedLimit.value = preferences.speedLimit ?? speedLimit.value
+        mouseControls.value = preferences.mouseControls ?? mouseControls.value
+        touchControls.value = preferences.touchControls ?? touchControls.value
+        gyroControls.value = preferences.gyroControls ?? gyroControls.value
+        reducedMotion.value = preferences.reducedMotion ?? reducedMotion.value
+        quality.value = preferences.quality ?? quality.value
+        cellSize.value = preferences.cellSize ?? cellSize.value
+        cellSpeed.value = preferences.cellSpeed ?? cellSpeed.value
+        dotSize.value = preferences.dotSize ?? dotSize.value
+        dotSpeed.value = preferences.dotSpeed ?? dotSpeed.value
+        fogSpeed.value = preferences.fogSpeed ?? fogSpeed.value
+        fogDensity.value = preferences.fogDensity ?? fogDensity.value
+        globeSize.value = preferences.globeSize ?? globeSize.value
+        globeSpeed.value = preferences.globeSpeed ?? globeSpeed.value
+        haloSize.value = preferences.haloSize ?? haloSize.value
+        haloSpeed.value = preferences.haloSpeed ?? haloSpeed.value
+        rippleSize.value = preferences.rippleSize ?? rippleSize.value
+        rippleSpeed.value = preferences.rippleSpeed ?? rippleSpeed.value
+        ringSize.value = preferences.ringSize ?? ringSize.value
+        ringSpeed.value = preferences.ringSpeed ?? ringSpeed.value
+        trunkSize.value = preferences.trunkSize ?? trunkSize.value
+        trunkSpeed.value = preferences.trunkSpeed ?? trunkSpeed.value
+        elementColor.value = preferences.elementColor ?? elementColor.value
+        
+        console.log('✅ Loaded saved Vanta preferences')
+        
+        // Emit the loaded preferences
+        nextTick(() => {
+          emitUpdate()
+        })
+      }
+    } catch (error) {
+      console.error('❌ Failed to load saved preferences:', error)
+    }
+  }
 }
 
 const onEffectChange = (effect: string) => {
@@ -851,6 +1047,10 @@ watch([
 ], () => {
   emitUpdate()
 }, { flush: 'post' })
+
+onMounted(() => {
+  loadSavedPreferences()
+})
 </script>
 
 <style scoped>

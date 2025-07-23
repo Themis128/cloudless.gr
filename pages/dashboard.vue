@@ -6,26 +6,55 @@
       :show-back-button="false"
     >
       <template #main>
+        <!-- Action Cards from Store -->
+        <ActionCard
+          v-for="card in dashboardStore.actionCards"
+          :key="card.id"
+          :title="card.title"
+          :subtitle="card.subtitle"
+          :loading="card.loading"
+          :actions="card.actions"
+        />
+
+        <!-- Error Alert -->
+        <v-alert
+          v-if="dashboardStore.error"
+          type="error"
+          variant="flat"
+          class="mt-4"
+          :text="dashboardStore.error"
+        >
+          <template v-slot:append>
+            <v-btn
+              color="error"
+              variant="text"
+              @click="dashboardStore.fetchDashboardData"
+              prepend-icon="mdi-refresh"
+            >
+              Retry
+            </v-btn>
+          </template>
+        </v-alert>
+
+        <!-- Metric Cards from Store -->
         <v-row>
-          <!-- Metric Cards -->
           <v-col
-            v-for="metric in metrics"
-            :key="metric.label"
+            v-for="metric in dashboardStore.metricCards"
+            :key="metric.id"
             cols="12"
             sm="6"
             md="3"
           >
-            <v-card class="bg-white stats-card">
-              <v-card-title class="d-flex justify-space-between align-center">
-                <span>{{ metric.label }}</span>
-                <v-icon :color="metric.color">
-                  {{ metric.icon }}
-                </v-icon>
-              </v-card-title>
-              <v-card-text class="text-h5">
-                {{ metric.value }}
-              </v-card-text>
-            </v-card>
+            <MetricCard
+              :title="metric.title"
+              :value="metric.value"
+              :subtitle="metric.subtitle"
+              :icon="metric.icon"
+              :icon-color="metric.iconColor"
+              :value-color="metric.valueColor"
+              :loading="metric.loading"
+              :trend="metric.trend"
+            />
           </v-col>
         </v-row>
 
@@ -43,6 +72,29 @@
             </client-only>
           </v-card-text>
         </v-card>
+
+        <!-- Redis Analytics Section -->
+        <v-card class="bg-white mt-6">
+          <v-card-title class="d-flex justify-space-between align-center">
+            <div class="d-flex align-center">
+              <v-icon start color="primary">
+                mdi-database
+              </v-icon>
+              Redis Analytics
+            </div>
+            <v-btn
+              color="primary"
+              variant="outlined"
+              size="small"
+              to="/admin/redis-analytics"
+            >
+              View Full Analytics
+            </v-btn>
+          </v-card-title>
+          <v-card-text>
+            <RedisAnalytics />
+          </v-card-text>
+        </v-card>
       </template>
 
       <template #sidebar>
@@ -53,107 +105,84 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, defineAsyncComponent } from 'vue'
+import { useDashboardStore } from '~/stores/dashboardStore'
 import PageStructure from '~/components/layout/PageStructure.vue'
 import AnalyticsGuide from '~/components/step-guides/AnalyticsGuide.vue'
-import { useSupabase } from '~/composables/supabase'
-import type { Database } from '~/types/database.types'
+import RedisAnalytics from '~/components/admin/RedisAnalytics.vue'
+import ActionCard from '~/components/ui/ActionCard.vue'
+import MetricCard from '~/components/ui/MetricCard.vue'
 
-const supabase = useSupabase()
+// Client-side only import for VChart
+const VChart = defineAsyncComponent(() => import('vue-echarts'))
 
-const bots = ref(0)
-const pipelines = ref(0)
-const models = ref(0)
+// Store
+const dashboardStore = useDashboardStore()
+
+// Latency data
 const latencyHistory = ref<number[]>([])
 
-// 📊 Fetch metrics
-onMounted(async () => {
-  // Bots count
-  const { count: botCount } = await supabase
-    .from('bots')
-    .select('*', { count: 'exact', head: true })
-  bots.value = botCount || 0
-
-  // Pipelines count (active)
-  const { count: activePipes } = await supabase
-    .from('pipelines')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_active', true)
-  pipelines.value = activePipes || 0
-
-  // Models count
-  const { count: modelCount } = await supabase
-    .from('models')
-    .select('*', { count: 'exact', head: true })
-  models.value = modelCount || 0
-
-  // Latency logs
-  const { data: latencyLogs } = await supabase
-    .from('network_logs')
-    .select('latency')
-    .order('created_at', { ascending: false })
-    .limit(10)
-  latencyHistory.value =
-    (
-      latencyLogs as
-        | Database['public']['Tables']['network_logs']['Row'][]
-        | null
-    )?.map(log => log.latency) || []
-})
-
-const avgLatency = computed(() => {
-  const sum = latencyHistory.value.reduce((a, b) => a + b, 0)
-  return latencyHistory.value.length
-    ? Math.round(sum / latencyHistory.value.length)
-    : 0
-})
-
-const metrics = computed(() => [
-  {
-    label: 'Total Bots',
-    value: bots.value,
-    icon: 'mdi-robot',
-    color: 'primary',
-  },
-  {
-    label: 'Active Pipelines',
-    value: pipelines.value,
-    icon: 'mdi-timeline',
-    color: 'success',
-  },
-  {
-    label: 'LLMs Trained',
-    value: models.value,
-    icon: 'mdi-brain',
-    color: 'info',
-  },
-  {
-    label: 'Latency (avg)',
-    value: avgLatency.value + ' ms',
-    icon: 'mdi-speedometer',
-    color: 'warning',
-  },
-])
-
+// 📊 Latency chart configuration
 const latencyChart = computed(() => ({
+  title: {
+    text: 'Response Time (ms)',
+    left: 'center',
+    textStyle: {
+      fontSize: 14,
+      fontWeight: 'normal'
+    }
+  },
+  tooltip: {
+    trigger: 'axis'
+  },
   xAxis: {
     type: 'category',
-    data: latencyHistory.value.map(
-      (_, i) => `T-${latencyHistory.value.length - i}`
-    ),
+    data: Array.from({ length: latencyHistory.value.length }, (_, i) => i + 1)
   },
   yAxis: {
     type: 'value',
-    name: 'ms',
+    name: 'ms'
   },
-  series: [
-    {
-      data: latencyHistory.value,
-      type: 'line',
-      smooth: true,
-      areaStyle: {},
-    },
-  ],
-  tooltip: { trigger: 'axis' },
+  series: [{
+    data: latencyHistory.value,
+    type: 'line',
+    smooth: true,
+    color: '#1976d2',
+    areaStyle: {
+      color: {
+        type: 'linear',
+        x: 0,
+        y: 0,
+        x2: 0,
+        y2: 1,
+        colorStops: [{
+          offset: 0, color: 'rgba(25, 118, 210, 0.3)'
+        }, {
+          offset: 1, color: 'rgba(25, 118, 210, 0.1)'
+        }]
+      }
+    }
+  }]
 }))
+
+// 🚀 Initialize
+onMounted(async () => {
+  // Fetch dashboard data from store
+  await dashboardStore.fetchDashboardData()
+  
+  // Simulate latency data
+  latencyHistory.value = Array.from({ length: 20 }, () => 
+    Math.random() * 100 + 50
+  )
+})
 </script>
+
+<style scoped>
+.stats-card {
+  transition: transform 0.2s ease-in-out;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+}
+</style>

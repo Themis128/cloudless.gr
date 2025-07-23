@@ -5,8 +5,8 @@ export default defineNuxtConfig({
   modules: ['@pinia/nuxt', '@nuxt/image'],
   runtimeConfig: {
     public: {
-      // Database configuration
-      databaseUrl: process.env.DATABASE_URL,
+      supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL,
+      supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY,
     },
   },
   vite: {
@@ -17,6 +17,12 @@ export default defineNuxtConfig({
     // Development optimizations
     optimizeDeps: {
       include: ['vue', 'vue-router', '@vue/runtime-core'],
+    },
+    // Handle Prisma client imports
+    resolve: {
+      alias: {
+        '.prisma': './node_modules/.prisma/client/index.js'
+      }
     },
     // Faster builds in development
     build: {
@@ -34,7 +40,7 @@ export default defineNuxtConfig({
   },
   // To set host and port, use environment variables NUXT_HOST and NUXT_PORT or pass them via CLI
   nitro: {
-    compatibilityDate: '2025-07-22',
+    compatibilityDate: '2025-07-21',
     logLevel: 'warn', // Reduce log level to minimize timer conflicts
     experimental: {
       wasm: true,
@@ -44,10 +50,25 @@ export default defineNuxtConfig({
     // Faster development builds
     minify: false,
     sourceMap: true,
+
+    // Security headers
+    routeRules: {
+      '/**': {
+        headers: {
+          'X-Content-Type-Options': 'nosniff',
+          'X-Frame-Options': 'DENY',
+          'X-XSS-Protection': '1; mode=block',
+          'Referrer-Policy': 'strict-origin-when-cross-origin',
+          'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+          'Content-Security-Policy': "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; font-src 'self' https: data:; connect-src 'self' https: wss: ws: http://localhost:* http://127.0.0.1:* http://0.0.0.0:*; frame-ancestors 'none';",
+          'Strict-Transport-Security': process.env.NODE_ENV === 'production' ? 'max-age=31536000; includeSubDomains' : ''
+        }
+      }
+    }
   },
   devServer: {
     host: '0.0.0.0', // Bind to all interfaces in container
-    port: parseInt(process.env.NUXT_PORT || '3000'),
+    port: parseInt(process.env.NUXT_PORT || '3001'),
   },
   imports: {
     dirs: ['composables', 'stores', 'components'],
@@ -57,7 +78,7 @@ export default defineNuxtConfig({
     // Development optimizations
     analyze: false,
   },
-  css: ['@mdi/font/css/materialdesignicons.css', 'vuetify/styles', '~/assets/global-cards.css', '~/assets/gradient-utils.css'],
+  css: ['@mdi/font/css/materialdesignicons.css', 'vuetify/styles', '~/assets/global-cards.css', '~/assets/gradient-utils.css', '~/assets/mobile-responsive.css'],
   app: {
     head: {
       title: 'Cloudless',

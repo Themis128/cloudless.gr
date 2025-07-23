@@ -121,20 +121,35 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
-definePageMeta({
-  title: 'API Playground'
-})
+interface Endpoint {
+  path: string
+  method: string
+  description: string
+}
+
+interface Response {
+  status: number
+  statusText: string
+  headers: Record<string, string>
+  data: string
+  time: number
+}
+
+interface RequestHeader {
+  key: string
+  value: string
+}
 
 const baseUrl = ref('http://localhost:3000')
-const selectedEndpoint = ref(null)
+const selectedEndpoint = ref<Endpoint | null>(null)
 const requestBody = ref('')
-const requestHeaders = ref([
+const requestHeaders = ref<RequestHeader[]>([
   { key: 'Content-Type', value: 'application/json' }
 ])
-const response = ref(null)
+const response = ref<Response | null>(null)
 const isLoading = ref(false)
 
-const endpoints = ref([
+const endpoints = ref<Endpoint[]>([
   {
     path: '/api/projects',
     method: 'GET',
@@ -167,7 +182,7 @@ const endpoints = ref([
   }
 ])
 
-const selectEndpoint = (endpoint: any) => {
+const selectEndpoint = (endpoint: Endpoint) => {
   selectedEndpoint.value = endpoint
   response.value = null
   
@@ -240,7 +255,7 @@ const sendRequest = async () => {
       data: data,
       time: responseTime
     }
-  } catch (error) {
+  } catch (error: any) {
     const endTime = Date.now()
     const responseTime = endTime - startTime
 
@@ -248,7 +263,7 @@ const sendRequest = async () => {
       status: 0,
       statusText: 'Network Error',
       headers: {},
-      data: error.message,
+      data: error.message || 'Unknown error',
       time: responseTime
     }
   } finally {

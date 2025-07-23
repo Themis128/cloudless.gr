@@ -1,0 +1,230 @@
+# Monitoring Stack for Cloudless.gr
+# Comprehensive monitoring, analytics, and observability services
+
+version: '3.8'
+
+services:
+  # Application Performance Monitoring with Sentry
+  sentry:
+    image: getsentry/sentry:latest
+    container_name: cloudlessgr-sentry
+    restart: unless-stopped
+    environment:
+      SENTRY_SECRET_KEY: ${SENTRY_SECRET_KEY}
+      SENTRY_POSTGRES_HOST: sentry-postgres
+      SENTRY_DB_USER: sentry
+      SENTRY_DB_PASSWORD: ${SENTRY_DB_PASSWORD}
+      SENTRY_REDIS_HOST: sentry-redis
+    ports:
+      - '9000:9000'
+    networks:
+      - cloudless-monitoring
+    depends_on:
+      - sentry-postgres
+      - sentry-redis
+    volumes:
+      - sentry-data:/var/lib/sentry/files
+
+  sentry-postgres:
+    image: postgres:14-alpine
+    container_name: cloudlessgr-sentry-postgres
+    environment:
+      POSTGRES_USER: sentry
+      POSTGRES_PASSWORD: ${SENTRY_DB_PASSWORD}
+      POSTGRES_DB: sentry
+    volumes:
+      - sentry-postgres-data:/var/lib/postgresql/data
+    networks:
+      - cloudless-monitoring
+
+  sentry-redis:
+    image: redis:7-alpine
+    container_name: cloudlessgr-sentry-redis
+    networks:
+      - cloudless-monitoring
+
+  # Prometheus with Node Exporter for system metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cloudlessgr-prometheus
+    restart: unless-stopped
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    networks:
+      - cloudless-monitoring
+      - cloudless-prod-network
+
+  # Node Exporter for system metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: cloudlessgr-node-exporter
+    restart: unless-stopped
+    ports:
+      - '9100:9100'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - cloudless-monitoring
+
+  # cAdvisor for container metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cloudlessgr-cadvisor
+    restart: unless-stopped
+    ports:
+      - '8080:8080'
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - cloudless-monitoring
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cloudlessgr-grafana
+    restart: unless-stopped
+    ports:
+      - '3001:3000'
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_INSTALL_PLUGINS: 'grafana-piechart-panel,grafana-worldmap-panel,redis-datasource'
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - cloudless-monitoring
+    depends_on:
+      - prometheus
+
+  # Loki for log aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: cloudlessgr-loki
+    restart: unless-stopped
+    ports:
+      - '3100:3100'
+    volumes:
+      - ./monitoring/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - cloudless-monitoring
+
+  # Promtail for log collection
+  promtail:
+    image: grafana/promtail:latest
+    container_name: cloudlessgr-promtail
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/promtail/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - ./logs:/app/logs:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - cloudless-monitoring
+    depends_on:
+      - loki
+
+  # AlertManager for alerts
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: cloudlessgr-alertmanager
+    restart: unless-stopped
+    ports:
+      - '9093:9093'
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - cloudless-monitoring
+
+  # Jaeger for distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: cloudlessgr-jaeger
+    restart: unless-stopped
+    ports:
+      - '5775:5775/udp'
+      - '6831:6831/udp'
+      - '6832:6832/udp'
+      - '5778:5778'
+      - '16686:16686'  # Jaeger UI
+      - '14268:14268'
+      - '14250:14250'
+      - '9411:9411'
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: ':9411'
+      COLLECTOR_OTLP_ENABLED: 'true'
+    networks:
+      - cloudless-monitoring
+
+  # Redis Exporter for Redis metrics
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: cloudlessgr-redis-exporter
+    restart: unless-stopped
+    ports:
+      - '9121:9121'
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-production}
+    networks:
+      - cloudless-monitoring
+      - cloudless-prod-network
+
+  # Postgres Exporter for PostgreSQL metrics
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: cloudlessgr-postgres-exporter
+    restart: unless-stopped
+    ports:
+      - '9187:9187'
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-cloudless}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cloudless_prod}?sslmode=disable
+    networks:
+      - cloudless-monitoring
+      - cloudless-prod-network
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  alertmanager_data:
+  sentry-data:
+  sentry-postgres-data:
+
+networks:
+  cloudless-monitoring:
+    driver: bridge
+  cloudless-prod-network:
+    external: true 

@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import { createError, defineEventHandler, getRouterParam } from 'h3';
-
-const prisma = new PrismaClient();
+import { defineEventHandler, getRouterParam, createError } from 'h3'
+import { prisma } from '~/lib/prisma'
 
 export default defineEventHandler(async (event) => {
   const { method } = event;
@@ -86,7 +84,7 @@ export default defineEventHandler(async (event) => {
       statusMessage: 'Method not allowed',
     });
   } catch (error) {
-    if (error.statusCode) {
+    if ((error as any).statusCode) {
       throw error;
     }
 

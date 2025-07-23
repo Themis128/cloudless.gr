@@ -1,5 +1,5 @@
 import { defineEventHandler, getRouterParam, createError } from 'h3'
-import { projectService } from '~/lib/database'
+import { databaseService } from '~/lib/database'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -12,7 +12,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const project = await projectService.getProject(id)
+    const projectId = parseInt(id)
+    if (isNaN(projectId)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid project ID format'
+      })
+    }
+
+    const project = await databaseService.getProjectById(projectId)
 
     if (!project) {
       throw createError({

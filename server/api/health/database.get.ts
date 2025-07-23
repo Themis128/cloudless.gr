@@ -1,47 +1,59 @@
-import { defineEventHandler } from 'h3'
-import { usePrisma } from '~/composables/usePrisma'
+import { defineEventHandler, createError } from 'h3'
+import { prisma } from '~/lib/prisma'
 
 export default defineEventHandler(async (event) => {
   try {
-    const prisma = usePrisma()
-    
     // Test database connection
     const startTime = Date.now()
-    await prisma.$queryRaw`SELECT 1`
+    
+    // Simple query to test connection
+    const result = await prisma.$queryRaw`SELECT 1 as test`
     const responseTime = Date.now() - startTime
-
-    // Get some basic stats
-    const botCount = await prisma.bot.count()
+    
+    // Get database statistics
+    const userCount = await prisma.user.count()
     const projectCount = await prisma.project.count()
-    const userCount = await prisma.profile.count()
-
-    return {
-      success: true,
-      data: {
-        status: 'healthy',
-        database: 'postgresql',
-        connected: true,
-        responseTime: `${responseTime}ms`,
-        stats: {
-          bots: botCount,
-          projects: projectCount,
-          users: userCount
-        },
-        timestamp: new Date().toISOString()
-      }
-    }
-
-  } catch (error: any) {
-    console.error('Database health check failed:', error)
+    const sessionCount = await prisma.session.count()
+    
+    // Check if database is healthy based on response time
+    const isHealthy = responseTime < 1000 // Less than 1 second
     
     return {
-      success: false,
-      data: {
-        status: 'unhealthy',
-        database: 'postgresql',
-        connected: false,
-        error: error?.message || 'Unknown database error',
-        timestamp: new Date().toISOString()
+      status: isHealthy ? 'healthy' : 'warning',
+      timestamp: new Date().toISOString(),
+      connection: {
+        status: 'connected',
+        responseTime: `${responseTime}ms`,
+        isHealthy
+      },
+      statistics: {
+        users: userCount,
+        projects: projectCount,
+        sessions: sessionCount
+      },
+      database: {
+        provider: 'sqlite', // Based on your Prisma schema
+        url: process.env.DATABASE_URL ? 'configured' : 'not configured'
+      }
+    }
+    
+  } catch (error) {
+    console.error('Database health check failed:', error)
+    return {
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      connection: {
+        status: 'disconnected',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      },
+      statistics: {
+        users: 0,
+        projects: 0,
+        sessions: 0
+      },
+      database: {
+        provider: 'sqlite',
+        url: process.env.DATABASE_URL ? 'configured' : 'not configured'
       }
     }
   }

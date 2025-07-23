@@ -26,7 +26,21 @@
       </div>
     </div>
 
-    <div class="components-grid">
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading components...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="error-state">
+      <h3>Error Loading Components</h3>
+      <p>{{ error }}</p>
+      <button @click="fetchComponents" class="retry-button">Retry</button>
+    </div>
+
+    <!-- Components Grid -->
+    <div v-else class="components-grid">
       <div 
         v-for="component in filteredComponents" 
         :key="component.id"
@@ -83,150 +97,58 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
-definePageMeta({
-  title: 'Component Library'
-})
+interface Component {
+  id: number
+  name: string
+  type: string
+  description: string
+  tags: string[]
+  preview: string
+  code: string
+  createdAt: Date
+  updatedAt: Date
+}
 
 const searchTerm = ref('')
 const selectedCategories = ref(['all'])
 const showCodeModal = ref(false)
-const selectedComponent = ref(null)
+const selectedComponent = ref<Component | null>(null)
+const loading = ref(true)
+const error = ref('')
+const components = ref<Component[]>([])
 
 const categories = ['all', 'UI', 'Form', 'Layout', 'Navigation', 'Data Display']
 
-const components = ref([
-  {
-    id: 1,
-    name: 'Button',
-    type: 'UI',
-    description: 'A versatile button component with multiple variants and states.',
-    tags: ['Vue', 'TypeScript', 'Responsive'],
-    preview: '<button class="btn btn-primary">Click me</button>',
-    code: `<template>
-  <button 
-    :class="buttonClasses" 
-    :disabled="disabled"
-    @click="$emit('click', $event)"
-  >
-    <slot />
-  </button>
-</template>
-
-<script setup lang="ts">
-interface Props {
-  variant?: 'primary' | 'secondary' | 'danger'
-  size?: 'small' | 'medium' | 'large'
-  disabled?: boolean
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  variant: 'primary',
-  size: 'medium',
-  disabled: false
-})
-
-const buttonClasses = computed(() => [
-  'btn',
-  \`btn-\${props.variant}\`,
-  \`btn-\${props.size}\`,
-  { 'btn-disabled': props.disabled }
-])
-</script>`
-  },
-  {
-    id: 2,
-    name: 'Card',
-    type: 'Layout',
-    description: 'A flexible card component for displaying content in containers.',
-    tags: ['Vue', 'CSS Grid', 'Flexbox'],
-    preview: '<div class="card"><h3>Card Title</h3><p>Card content goes here...</p></div>',
-    code: `<template>
-  <div :class="cardClasses">
-    <div v-if="$slots.header" class="card-header">
-      <slot name="header" />
-    </div>
-    <div class="card-body">
-      <slot />
-    </div>
-    <div v-if="$slots.footer" class="card-footer">
-      <slot name="footer" />
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-interface Props {
-  padding?: 'none' | 'small' | 'medium' | 'large'
-  shadow?: boolean
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  padding: 'medium',
-  shadow: true
-})
-
-const cardClasses = computed(() => [
-  'card',
-  \`card-padding-\${props.padding}\`,
-  { 'card-shadow': props.shadow }
-])
-</script>`
-  },
-  {
-    id: 3,
-    name: 'Input',
-    type: 'Form',
-    description: 'A form input component with validation and error states.',
-    tags: ['Vue', 'Form', 'Validation'],
-    preview: '<input type="text" placeholder="Enter text..." class="form-input" />',
-    code: `<template>
-  <div class="input-wrapper">
-    <label v-if="label" :for="id" class="input-label">
-      {{ label }}
-    </label>
-    <input
-      :id="id"
-      :type="type"
-      :value="modelValue"
-      :placeholder="placeholder"
-      :disabled="disabled"
-      :class="inputClasses"
-      @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
-      @blur="$emit('blur', $event)"
-    />
-    <div v-if="error" class="input-error">
-      {{ error }}
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-interface Props {
-  modelValue: string
-  label?: string
-  type?: string
-  placeholder?: string
-  disabled?: boolean
-  error?: string
-  id?: string
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  type: 'text',
-  disabled: false
-})
-
-const inputClasses = computed(() => [
-  'form-input',
-  { 'input-error': props.error, 'input-disabled': props.disabled }
-])
-
-defineEmits(['update:modelValue', 'blur'])
-</script>`
+// Fetch components from database
+const fetchComponents = async () => {
+  try {
+    loading.value = true
+    error.value = ''
+    
+    interface ApiResponse {
+      success: boolean
+      data: Component[]
+      message?: string
+      total: number
+      page: number
+      pages: number
+    }
+    
+    const response = await $fetch<ApiResponse>('/api/prisma/components')
+    if (response.success) {
+      components.value = response.data || []
+    } else {
+      error.value = response.message || 'Failed to fetch components'
+    }
+  } catch (err: any) {
+    console.error('Error fetching components:', err)
+    error.value = err.message || 'Failed to load components'
+  } finally {
+    loading.value = false
   }
-])
+}
 
 const filteredComponents = computed(() => {
   return components.value.filter(component => {
@@ -257,7 +179,7 @@ const toggleCategory = (category: string) => {
   }
 }
 
-const viewCode = (component: any) => {
+const viewCode = (component: Component) => {
   selectedComponent.value = component
   showCodeModal.value = true
 }
@@ -267,7 +189,9 @@ const closeModal = () => {
   selectedComponent.value = null
 }
 
-const copyCode = async (component: any) => {
+const copyCode = async (component: Component | null) => {
+  if (!component) return
+  
   try {
     await navigator.clipboard.writeText(component.code)
     alert('Code copied to clipboard!')
@@ -276,6 +200,11 @@ const copyCode = async (component: any) => {
     alert('Failed to copy code')
   }
 }
+
+// Initialize on mount
+onMounted(() => {
+  fetchComponents()
+})
 </script>
 
 <style scoped>
@@ -354,6 +283,54 @@ const copyCode = async (component: any) => {
   background: #1e40af;
   border-color: #1e40af;
   color: white;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 3rem;
+}
+
+.spinner {
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-state {
+  text-align: center;
+  padding: 2rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.error-state h3 {
+  color: #dc2626;
+  margin-bottom: 0.5rem;
+}
+
+.retry-button {
+  background-color: #3b82f6;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.retry-button:hover {
+  background-color: #2563eb;
 }
 
 .components-grid {
