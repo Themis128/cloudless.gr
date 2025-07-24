@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Deploy Model"
       subtitle="Deploy your models to production"
       back-button-to="/models"
@@ -77,7 +77,7 @@
       <template #sidebar>
         <ModelGuide page="deploy" />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

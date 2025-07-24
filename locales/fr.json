@@ -1,0 +1,58 @@
+{
+  "bots": {
+    "create": "Créer un Bot",
+    "manage": "Gérer les Bots",
+    "test": "Tester le Bot",
+    "delete": "Supprimer le Bot",
+    "edit": "Modifier le Bot",
+    "view": "Voir les Détails",
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "training": "En Formation"
+    },
+    "actions": {
+      "create": "Créer un Nouveau Bot",
+      "test": "Tester le Bot",
+      "manage": "Gérer les Bots",
+      "export": "Exporter les Données",
+      "import": "Importer un Bot"
+    },
+    "messages": {
+      "noBots": "Aucun bot pour le moment",
+      "createFirst": "Créez votre premier bot pour commencer",
+      "loading": "Chargement des bots...",
+      "error": "Échec du chargement des bots",
+      "retry": "Réessayer",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce bot ?",
+      "created": "Bot créé avec succès",
+      "updated": "Bot mis à jour avec succès",
+      "deleted": "Bot supprimé avec succès"
+    },
+    "stats": {
+      "total": "Total des Bots",
+      "active": "Bots Actifs",
+      "training": "En Formation"
+    },
+    "sidebar": {
+      "quickActions": "Actions Rapides",
+      "botStatus": "Statut du Bot",
+      "recentActivity": "Activité Récente",
+      "helpResources": "Aide et Ressources"
+    }
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "view": "Voir",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "close": "Fermer"
+  }
+} 

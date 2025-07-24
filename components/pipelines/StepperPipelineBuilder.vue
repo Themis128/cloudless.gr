@@ -19,6 +19,25 @@
         <v-stepper-window-item :value="1">
           <v-card class="mb-4">
             <v-card-text>
+              <!-- Pipeline Basic Info Guide -->
+              <v-card class="mb-4" variant="outlined">
+                <v-card-title class="text-subtitle-2 font-weight-bold">
+                  📖 Read the Pipeline Basic Info Guide
+                </v-card-title>
+                <v-card-text>
+                  <div class="text-body-2">
+                    <p class="mb-2"><strong>Define your pipeline's basic information:</strong></p>
+                    <ul class="mb-3">
+                      <li><strong>Pipeline Name:</strong> Choose a descriptive name that clearly identifies your pipeline's purpose</li>
+                      <li><strong>Description:</strong> Provide a brief overview of what your pipeline does and its workflow</li>
+                    </ul>
+                    <v-alert type="info" variant="tonal" class="mb-2">
+                      <strong>💡 Tip:</strong> Use clear, specific names and detailed descriptions to help others understand your pipeline's workflow.
+                    </v-alert>
+                  </div>
+                </v-card-text>
+              </v-card>
+              
               <v-form @submit.prevent>
                 <v-text-field
                   v-model="form.name"
@@ -40,6 +59,26 @@
         <v-stepper-window-item :value="2">
           <v-card class="mb-4">
             <v-card-text>
+              <!-- Model Selection Guide -->
+              <v-card class="mb-4" variant="outlined">
+                <v-card-title class="text-subtitle-2 font-weight-bold">
+                  📖 Read the Model Selection Guide
+                </v-card-title>
+                <v-card-text>
+                  <div class="text-body-2">
+                    <p class="mb-2"><strong>Select a model for your pipeline (optional):</strong></p>
+                    <ul class="mb-3">
+                      <li><strong>Model Integration:</strong> Choose a model to integrate with your pipeline</li>
+                      <li><strong>Optional Selection:</strong> You can create a pipeline without a specific model</li>
+                      <li><strong>Compatibility:</strong> Ensure the model is compatible with your pipeline's requirements</li>
+                    </ul>
+                    <v-alert type="info" variant="tonal" class="mb-2">
+                      <strong>💡 Tip:</strong> Select a model that aligns with your pipeline's purpose and data processing requirements.
+                    </v-alert>
+                  </div>
+                </v-card-text>
+              </v-card>
+              
               <v-select
                 v-model="form.model"
                 :items="modelOptions"
@@ -56,6 +95,26 @@
         <v-stepper-window-item :value="3">
           <v-card class="mb-4">
             <v-card-text>
+              <!-- Pipeline Configuration Guide -->
+              <v-card class="mb-4" variant="outlined">
+                <v-card-title class="text-subtitle-2 font-weight-bold">
+                  📖 Read the Pipeline Configuration Guide
+                </v-card-title>
+                <v-card-text>
+                  <div class="text-body-2">
+                    <p class="mb-2"><strong>Configure your pipeline's workflow and settings:</strong></p>
+                    <ul class="mb-3">
+                      <li><strong>JSON Configuration:</strong> Define pipeline steps, data flow, and processing rules</li>
+                      <li><strong>Validation:</strong> Ensure your JSON is properly formatted and valid</li>
+                      <li><strong>Workflow Design:</strong> Design the sequence of operations and data transformations</li>
+                    </ul>
+                    <v-alert type="info" variant="tonal" class="mb-2">
+                      <strong>💡 Tip:</strong> Use valid JSON format and design a clear workflow that defines how data flows through your pipeline.
+                    </v-alert>
+                  </div>
+                </v-card-text>
+              </v-card>
+              
               <v-textarea
                 v-model="jsonConfig"
                 label="Pipeline Configuration (JSON)"
@@ -74,27 +133,54 @@
         <v-stepper-window-item :value="4">
           <v-card class="mb-4">
             <v-card-text>
-              <h3>Pipeline Summary</h3>
-              <v-list>
-                <v-list-item>
-                  <v-list-item-title>Name</v-list-item-title>
-                  <v-list-item-subtitle>{{ form.name }}</v-list-item-subtitle>
-                </v-list-item>
-                <v-list-item v-if="form.description">
-                  <v-list-item-title>Description</v-list-item-title>
-                  <v-list-item-subtitle>{{ form.description }}</v-list-item-subtitle>
-                </v-list-item>
-                <v-list-item v-if="form.model">
-                  <v-list-item-title>Model</v-list-item-title>
-                  <v-list-item-subtitle>{{ getModelName(form.model) }}</v-list-item-subtitle>
-                </v-list-item>
-                <v-list-item>
-                  <v-list-item-title>Configuration</v-list-item-title>
-                  <v-list-item-subtitle>
-                    <pre>{{ JSON.stringify(parsedConfig, null, 2) }}</pre>
-                  </v-list-item-subtitle>
-                </v-list-item>
-              </v-list>
+              <!-- Review & Create Guide -->
+              <v-card class="mb-4" variant="outlined">
+                <v-card-title class="text-subtitle-2 font-weight-bold">
+                  📖 Read the Review & Create Guide
+                </v-card-title>
+                <v-card-text>
+                  <div class="text-body-2">
+                    <p class="mb-2"><strong>Review your pipeline configuration before creating:</strong></p>
+                    <ul class="mb-3">
+                      <li>Verify all information is correct and complete</li>
+                      <li>Check that the pipeline name and description are clear</li>
+                      <li>Review the configuration for accuracy and completeness</li>
+                      <li>Confirm model selection (if any) is appropriate</li>
+                    </ul>
+                    <v-alert type="success" variant="tonal" class="mb-2">
+                      <strong>✅ Ready to Create:</strong> Your pipeline will be created with the specified configuration. You can deploy and test it after creation.
+                    </v-alert>
+                  </div>
+                </v-card-text>
+              </v-card>
+              
+              <v-card variant="outlined">
+                <v-card-title class="text-subtitle-2 font-weight-bold">
+                  📋 Pipeline Configuration Summary
+                </v-card-title>
+                <v-card-text>
+                  <v-list>
+                    <v-list-item>
+                      <v-list-item-title>Name</v-list-item-title>
+                      <v-list-item-subtitle>{{ form.name }}</v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item v-if="form.description">
+                      <v-list-item-title>Description</v-list-item-title>
+                      <v-list-item-subtitle>{{ form.description }}</v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item v-if="form.model">
+                      <v-list-item-title>Model</v-list-item-title>
+                      <v-list-item-subtitle>{{ getModelName(form.model) }}</v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item>
+                      <v-list-item-title>Configuration</v-list-item-title>
+                      <v-list-item-subtitle>
+                        <pre>{{ JSON.stringify(parsedConfig, null, 2) }}</pre>
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </v-card-text>
+              </v-card>
             </v-card-text>
           </v-card>
         </v-stepper-window-item>
@@ -127,8 +213,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { usePrismaStore } from '~/stores/usePrismaStore';
 import { usePipelineStore } from '~/stores/pipelineStore';
+import { useModelStore } from '~/stores/modelStore';
 // import type { PipelineConfig } from '~/types/Pipeline';
 
 const props = defineProps<{
@@ -139,8 +225,8 @@ const emit = defineEmits<{
   'created': []
 }>()
 
-const { getModels } = usePrismaStore()
 const pipelineStore = usePipelineStore()
+const modelStore = useModelStore()
 
 const currentStep = ref(1)
 const error = ref<string | null>(null)
@@ -244,34 +330,33 @@ const submit = async () => {
   try {
     form.value.config = parsedConfig.value
 
-    const result = await pipelineStore.create({
+    await pipelineStore.createPipeline({
       name: form.value.name,
       description: form.value.description,
-      model: form.value.model,
-      config: form.value.config,
-      project_id: props.projectId
+      config: JSON.stringify(form.value.config),
+      status: 'draft',
+      userId: 1 // Default user ID for now
     })
-
-    if (!result.success) {
-      throw new Error(result.error)
-    }
 
     emit('created')
   } catch (err: any) {
-    error.value = err.message
+    error.value = err.message || 'Failed to create pipeline'
   }
 }
 
 onMounted(async () => {
-  // Fetch available models
-  try {
-    const data = await getModels()
-    modelOptions.value = data.map((model: any) => ({
-      id: model.id.toString(),
-      name: model.name
-    }))
-  } catch (err) {
-    console.error('Error loading models:', err)
+  // Reset store state when component mounts
+  pipelineStore.resetBuilder()
+  
+  // Fetch models for selection
+  if (modelStore.allModels.length === 0) {
+    await modelStore.fetchAll()
   }
+  
+  // Populate model options
+  modelOptions.value = modelStore.allModels.map(model => ({
+    id: model.id.toString(),
+    name: model.name
+  }))
 })
 </script>

@@ -7,7 +7,12 @@ export default defineEventHandler((event) => {
       name: 'Cloudless',
       description: 'AI-powered low-code platform',
       version: '1.0.0',
-      type: 'web-application'
+      type: 'web-application',
+      // Add Chrome DevTools specific fields
+      devtools: {
+        enabled: true,
+        version: '1.0.0'
+      }
     }
   }
   
@@ -15,6 +20,7 @@ export default defineEventHandler((event) => {
   return {
     status: 'ok',
     message: 'Well-known endpoint accessed',
-    path: path
+    path: path,
+    timestamp: new Date().toISOString()
   }
 }) 

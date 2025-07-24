@@ -6,7 +6,7 @@
         Interact with your bot below. Send a message and view its response.
       </v-alert>
       <v-list>
-        <v-list-item v-for="msg in messages" :key="msg.id">
+        <v-list-item v-for="msg in botStore.testMessages" :key="msg.id">
           <template v-if="msg.role === 'user'" #prepend>
             <v-icon icon="mdi-account" class="me-2" />
           </template>
@@ -24,22 +24,22 @@
         </v-list-item>
       </v-list>
       <v-text-field
-        v-model="input"
+        v-model="botStore.testInput"
         label="Type your message..."
         append-inner-icon="mdi-send"
-        :disabled="loading"
+        :disabled="botStore.loading"
         @keyup.enter="sendMessage"
         @click:append-inner="sendMessage"
       />
-      <div v-if="steps.length" class="mt-6">
+      <div v-if="botStore.testSteps.length" class="mt-6">
         <v-progress-linear
-          :value="progress"
+          :value="botStore.testProgress"
           color="primary"
           height="8"
           rounded
         />
         <v-list class="mt-2">
-          <v-list-item v-for="(step, idx) in steps" :key="step.name">
+          <v-list-item v-for="(step, idx) in botStore.testSteps" :key="step.name">
             <v-list-item-title
               :class="[
                 step.status === 'running'
@@ -65,18 +65,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useBotTest } from '~/composables/useBotTest'
+import { useBotStore } from '~/stores/botStore'
 
 const props = defineProps<{ botId?: string }>()
 const route = useRoute()
 let botId = props.botId || route.params.id
 if (Array.isArray(botId)) botId = botId[0]
 
-const loading = ref(false)
+const botStore = useBotStore()
 
-const { input, messages, steps, progress, sendMessage } = useBotTest(botId)
+const sendMessage = async () => {
+  if (!botStore.testInput.trim()) return
+  await botStore.sendTestMessage(parseInt(botId), botStore.testInput)
+}
 </script>
 
 <style scoped>

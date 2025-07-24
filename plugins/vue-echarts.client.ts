@@ -2,10 +2,10 @@ import { defineNuxtPlugin } from 'nuxt/app'
 import VueECharts from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent, TitleComponent } from 'echarts/components'
+import { BarChart, LineChart, PieChart, GaugeChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, TitleComponent, LegendComponent } from 'echarts/components'
 
-use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, TitleComponent])
+use([CanvasRenderer, BarChart, LineChart, PieChart, GaugeChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent])
 
 import type { NuxtApp } from 'nuxt/app'
 

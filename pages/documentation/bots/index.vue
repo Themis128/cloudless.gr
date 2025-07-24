@@ -1,6 +1,6 @@
 <template>
   <div class="documentation-page">
-    <PageStructure
+    <LayoutPageStructure
       title="Bot Builder Documentation"
       subtitle="Complete guide to creating AI-powered bots with Cloudless.gr"
       :show-back-button="true"
@@ -397,7 +397,7 @@
           </div>
         </div>
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

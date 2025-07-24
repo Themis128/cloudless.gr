@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Train LLM Model"
       subtitle="Create and train a new language model with your custom data"
       back-button-to="/llm"
@@ -206,7 +206,7 @@
       <template #sidebar>
         <LLMGuide page="train" />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
 
     <!-- Training Progress Dialog -->
     <v-dialog

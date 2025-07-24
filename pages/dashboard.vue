@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="System Overview"
       subtitle="Monitor your AI infrastructure performance and metrics"
       :show-back-button="false"
@@ -100,7 +100,7 @@
       <template #sidebar>
         <AnalyticsGuide />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

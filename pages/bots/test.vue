@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Test Bot"
       subtitle="Test your trained bots with conversation scenarios"
       back-button-to="/bots"
@@ -266,7 +266,7 @@
           </v-card-text>
         </v-card>
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

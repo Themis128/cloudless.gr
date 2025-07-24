@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Models"
       subtitle="Manage and deploy your trained AI models"
       back-button-to="/"
@@ -21,360 +21,208 @@
                 </p>
               </div>
             </div>
-            <div class="quick-actions-buttons">
-              <v-btn
-                to="/models/create"
-                color="primary"
-                prepend-icon="mdi-plus"
-                variant="elevated"
-                class="action-btn"
-                size="large"
-              >
-                Create Model
-              </v-btn>
-              <v-btn
-                to="/models/train"
-                color="secondary"
-                prepend-icon="mdi-school"
-                variant="outlined"
-                class="action-btn"
-                size="large"
-              >
-                Train Model
-              </v-btn>
-              <v-btn
-                to="/models/deploy"
-                color="success"
-                prepend-icon="mdi-rocket-launch"
-                variant="outlined"
-                class="action-btn"
-                size="large"
-              >
-                Deploy Model
-              </v-btn>
-              <v-btn
-                to="/models/test"
-                color="info"
-                prepend-icon="mdi-play-circle"
-                variant="outlined"
-                class="action-btn"
-                size="large"
-              >
-                Test Model
-              </v-btn>
-            </div>
-          </v-card-text>
-        </v-card>
-
-        <!-- Models List -->
-        <v-card class="bg-white">
-          <v-card-title class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center">
-              <v-icon start color="primary">
-                mdi-brain
-              </v-icon>
-              Available Models
-              <v-chip
-                v-if="models.length > 0"
-                class="ml-2"
-                color="primary"
-                size="small"
-              >
-                {{ models.length }}
-              </v-chip>
-            </div>
-            <v-text-field
-              v-model="searchQuery"
-              prepend-inner-icon="mdi-magnify"
-              placeholder="Search models..."
-              density="compact"
-              variant="outlined"
-              hide-details
-              class="search-field"
-              style="max-width: 300px;"
-            />
-          </v-card-title>
-          
-          <v-card-text>
-            <!-- Loading State -->
-            <div v-if="loading" class="text-center py-8">
-              <v-progress-circular indeterminate color="primary" />
-              <p class="mt-2 text-body-2">
-                Loading models...
-              </p>
-            </div>
-
-            <!-- Empty State -->
-            <div v-else-if="filteredModels.length === 0" class="text-center py-8">
-              <v-icon size="64" color="grey-lighten-1" class="mb-4">
-                mdi-brain-off
-              </v-icon>
-              <h3 class="text-h6 mb-2">
-                No models found
-              </h3>
-              <p class="text-body-2 text-medium-emphasis mb-4">
-                {{ searchQuery ? 'No models match your search.' : 'Get started by creating your first model.' }}
-              </p>
-              <v-btn
-                v-if="!searchQuery"
-                to="/models/create"
-                color="primary"
-                prepend-icon="mdi-plus"
-              >
-                Create Your First Model
-              </v-btn>
-            </div>
-
-            <!-- Models List -->
-            <div v-else>
-              <v-list class="models-list">
-                <v-list-item
-                  v-for="model in filteredModels"
-                  :key="model.id"
-                  class="model-item mb-3"
-                  rounded="lg"
+            <v-row>
+              <v-col cols="12" sm="6" md="3">
+                <v-btn
+                  to="/models/create"
+                  color="primary"
+                  prepend-icon="mdi-plus"
+                  variant="elevated"
+                  class="action-btn w-100"
+                  size="large"
+                  height="80"
                 >
-                  <template #prepend>
-                    <v-avatar color="primary" size="40">
-                      <v-icon color="white">
-                        {{ getModelIcon(model.type) }}
-                      </v-icon>
-                    </v-avatar>
-                  </template>
-
-                  <v-list-item-title class="text-h6 font-weight-medium">
-                    {{ model.name }}
-                  </v-list-item-title>
-                  
-                  <v-list-item-subtitle class="mt-1">
-                    <div class="d-flex align-center gap-4">
-                      <span class="d-flex align-center">
-                        <v-icon size="16" class="mr-1">mdi-tag</v-icon>
-                        {{ model.type || 'Unknown Type' }}
-                      </span>
-                      <span class="d-flex align-center">
-                        <v-icon size="16" class="mr-1">mdi-calendar</v-icon>
-                        {{ formatDate(model.createdAt) }}
-                      </span>
-                      <span class="d-flex align-center">
-                        <v-icon size="16" class="mr-1">mdi-code-tags</v-icon>
-                        v{{ model.version || '1.0.0' }}
-                      </span>
-                    </div>
-                  </v-list-item-subtitle>
-
-                  <template #append>
-                    <div class="d-flex align-center gap-2">
-                      <!-- Status Chip -->
-                      <v-chip
-                        :color="getStatusColor(model.status)"
-                        size="small"
-                        variant="tonal"
-                      >
-                        {{ model.status || 'draft' }}
-                      </v-chip>
-                      
-                      <!-- Action Menu -->
-                      <v-menu>
-                        <template #activator="{ props }">
-                          <v-btn
-                            v-bind="props"
-                            icon="mdi-dots-vertical"
-                            variant="text"
-                            size="small"
-                          />
-                        </template>
-                        <v-list>
-                          <v-list-item
-                            prepend-icon="mdi-eye"
-                            @click="() => viewModel(model)"
-                          >
-                            View Details
-                          </v-list-item>
-                          <v-list-item
-                            prepend-icon="mdi-pencil"
-                            @click="() => editModel(model)"
-                          >
-                            Edit Model
-                          </v-list-item>
-                          <v-list-item
-                            prepend-icon="mdi-play-circle"
-                            @click="() => testModel(model)"
-                          >
-                            Test Model
-                          </v-list-item>
-                          <v-list-item
-                            prepend-icon="mdi-rocket-launch"
-                            @click="() => deployModel(model)"
-                          >
-                            Deploy Model
-                          </v-list-item>
-                          <v-list-item
-                            prepend-icon="mdi-delete"
-                            @click="() => deleteModel(model)"
-                          >
-                            Delete Model
-                          </v-list-item>
-                        </v-list>
-                      </v-menu>
-                    </div>
-                  </template>
-                </v-list-item>
-              </v-list>
-            </div>
+                  <div class="d-flex flex-column align-center">
+                    <span class="text-h6">Create Model</span>
+                    <span class="text-caption">Build new AI models</span>
+                  </div>
+                </v-btn>
+              </v-col>
+              <v-col cols="12" sm="6" md="3">
+                <v-btn
+                  to="/models/train"
+                  color="secondary"
+                  prepend-icon="mdi-school"
+                  variant="elevated"
+                  class="action-btn w-100"
+                  size="large"
+                  height="80"
+                >
+                  <div class="d-flex flex-column align-center">
+                    <span class="text-h6">Train Model</span>
+                    <span class="text-caption">Train existing models</span>
+                  </div>
+                </v-btn>
+              </v-col>
+              <v-col cols="12" sm="6" md="3">
+                <v-btn
+                  to="/models/deploy"
+                  color="success"
+                  prepend-icon="mdi-rocket-launch"
+                  variant="elevated"
+                  class="action-btn w-100"
+                  size="large"
+                  height="80"
+                >
+                  <div class="d-flex flex-column align-center">
+                    <span class="text-h6">Deploy Model</span>
+                    <span class="text-caption">Deploy to production</span>
+                  </div>
+                </v-btn>
+              </v-col>
+              <v-col cols="12" sm="6" md="3">
+                <v-btn
+                  to="/models/test"
+                  color="info"
+                  prepend-icon="mdi-play-circle"
+                  variant="elevated"
+                  class="action-btn w-100"
+                  size="large"
+                  height="80"
+                >
+                  <div class="d-flex flex-column align-center">
+                    <span class="text-h6">Test Model</span>
+                    <span class="text-caption">Test model performance</span>
+                  </div>
+                </v-btn>
+              </v-col>
+            </v-row>
           </v-card-text>
         </v-card>
+
+        <!-- Model Analytics -->
+        <ModelsModelAnalytics class="mb-4" />
+
+        <!-- Enhanced Models List -->
+        <ModelsModelListEnhanced />
 
         <!-- Error Alert -->
-        <v-alert v-if="error" type="error" class="mt-4">
-          {{ error }}
+        <v-alert 
+          v-if="modelStore.hasError" 
+          type="error" 
+          class="mt-4"
+          role="alert"
+          aria-live="polite"
+        >
+          <template #prepend>
+            <v-icon>mdi-alert-circle</v-icon>
+          </template>
+          {{ modelStore.error }}
+        </v-alert>
+
+        <!-- Success Alert -->
+        <v-alert 
+          v-if="modelStore.hasSuccess" 
+          type="success" 
+          class="mt-4"
+          role="alert"
+          aria-live="polite"
+        >
+          <template #prepend>
+            <v-icon>mdi-check-circle</v-icon>
+          </template>
+          {{ modelStore.success }}
         </v-alert>
       </template>
 
       <template #sidebar>
         <ModelGuide />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import PageStructure from '~/components/layout/PageStructure.vue'
-import ModelGuide from '~/components/step-guides/ModelGuide.vue'
+import { onMounted, computed, watch } from 'vue'
+import { useModelStore } from '~/stores/modelStore'
 
+// SEO Meta Tags
+useHead({
+  title: 'AI Models - Cloudless',
+  meta: [
+    { name: 'description', content: 'Manage and deploy your trained AI models with our comprehensive platform.' },
+    { property: 'og:title', content: 'AI Models - Cloudless' },
+    { property: 'og:description', content: 'Manage and deploy your trained AI models' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: 'AI Models - Cloudless' },
+    { name: 'twitter:description', content: 'Manage and deploy your trained AI models' }
+  ]
+})
+
+// Page Meta
+definePageMeta({
+  title: 'AI Models',
+  description: 'Manage and deploy your trained AI models'
+})
+
+// Types
 interface Model {
   id: number
   name: string
   description?: string
-  type: string
-  config: string
   status: string
-  accuracy?: number
-  version?: string
+  type: string
   createdAt: Date
   updatedAt: Date
-  user: {
-    id: number
-    name: string
-    email: string
-  }
 }
 
-const loading = ref(false)
-const models = ref<Model[]>([])
-const searchQuery = ref('')
-const error = ref<string | null>(null)
-
-interface DeleteResponse {
+interface ApiResponse<T> {
   success: boolean
-  message?: string
+  data: T
+  message: string
 }
 
-interface ApiResponse {
-  success: boolean
-  data: Model[]
-  message?: string
-}
-
-// Fetch models from database
-const fetchModels = async () => {
-  try {
-    loading.value = true
-    error.value = null
-    
-    const response = await $fetch<ApiResponse>('/api/prisma/models')
-    if (response.success) {
-      models.value = response.data || []
-    } else {
-      error.value = response.message || 'Failed to fetch models'
-    }
-  } catch (err: any) {
-    console.error('Error fetching models:', err)
-    error.value = err.message || 'Failed to load models'
-  } finally {
-    loading.value = false
+// Server-side data fetching
+const { data: modelsData, error: modelsError, pending, refresh } = await useFetch<ApiResponse<Model[]>>('/api/models', {
+  default: () => ({ success: true, data: [], message: '' }),
+  transform: (response: ApiResponse<Model[]>) => response.data,
+  onResponseError({ response }: { response: { _data: any } }) {
+    console.error('Models fetch error:', response._data)
   }
-}
-
-const filteredModels = computed(() => {
-  if (!searchQuery.value) return models.value
-  const query = searchQuery.value.toLowerCase()
-  return models.value.filter(model => 
-    model.name.toLowerCase().includes(query) ||
-    (model.description && model.description.toLowerCase().includes(query)) ||
-    model.type.toLowerCase().includes(query)
-  )
 })
 
-const getModelIcon = (type: string) => {
-  switch (type) {
-    case 'text-classification': return 'mdi-text'
-    case 'image-classification': return 'mdi-image'
-    case 'object-detection': return 'mdi-target'
-    case 'sentiment-analysis': return 'mdi-emoticon'
-    case 'translation': return 'mdi-translate'
-    case 'summarization': return 'mdi-text-box'
-    default: return 'mdi-brain'
-  }
+// Error handling
+if (modelsError.value) {
+  throw createError({
+    statusCode: 500,
+    statusMessage: 'Failed to load models data'
+  })
 }
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'ready': return 'success'
-    case 'draft': return 'warning'
-    case 'training': return 'info'
-    case 'deployed': return 'primary'
-    default: return 'grey'
-  }
-}
+// Store integration
+const modelStore = useModelStore()
 
-const formatDate = (date: Date) => {
-  return new Date(date).toLocaleDateString()
-}
+// Computed properties
+const hasModelsData = computed(() => !!modelsData.value?.length)
+const isLoading = computed(() => pending.value || modelStore.loading)
 
-const viewModel = (model: Model) => {
-  // Navigate to model details page
-  console.log('Viewing model:', model.name)
-}
-
-const editModel = (model: Model) => {
-  // Navigate to model edit page
-  console.log('Editing model:', model.name)
-}
-
-const testModel = (model: Model) => {
-  // Navigate to model test page
-  console.log('Testing model:', model.name)
-}
-
-const deployModel = (model: Model) => {
-  // Navigate to model deploy page
-  console.log('Deploying model:', model.name)
-}
-
-const deleteModel = async (model: Model) => {
-  // Delete model confirmation
-  if (confirm(`Are you sure you want to delete "${model.name}"?`)) {
-    try {
-      const response = await $fetch<DeleteResponse>(`/api/prisma/models/${model.id}`, {
-        method: 'DELETE'
-      })
-      if (response.success) {
-        models.value = models.value.filter(m => m.id !== model.id)
-      } else {
-        error.value = response.message || 'Failed to delete model'
-      }
-    } catch (err: any) {
-      console.error('Error deleting model:', err)
-      error.value = err.message || 'Failed to delete model'
-    }
-  }
-}
-
+// Client-side initialization (fallback)
 onMounted(() => {
-  fetchModels()
+  if (!hasModelsData.value) {
+    modelStore.fetchAll()
+  }
 })
+
+// Watch for store changes
+watch(() => modelStore.error, (error) => {
+  if (error) {
+    console.error('Model store error:', error)
+  }
+})
+
+watch(() => modelStore.success, (success) => {
+  if (success) {
+    console.log('Model store success:', success)
+  }
+})
+
+// Watch for data changes
+watch(modelsData, (newData) => {
+  if (newData && newData.length > 0) {
+    console.log('Models data updated:', newData.length, 'models')
+  }
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -387,6 +235,21 @@ onMounted(() => {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
   align-items: center;
+}
+
+/* Vuetify 3 responsive improvements */
+@media (max-width: 600px) {
+  .action-btn {
+    height: 60px !important;
+  }
+  
+  .action-btn .text-h6 {
+    font-size: 1rem !important;
+  }
+  
+  .action-btn .text-caption {
+    font-size: 0.75rem !important;
+  }
 }
 
 .action-btn {

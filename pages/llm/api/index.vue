@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="API Documentation"
       subtitle="Integrate with your LLM models via REST API"
       back-button-to="/llm"
@@ -278,7 +278,7 @@
       <template #sidebar>
         <LLMGuide page="api" />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

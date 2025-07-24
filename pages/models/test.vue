@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Test Model"
       subtitle="Test your trained models with sample data"
       back-button-to="/models"
@@ -254,7 +254,7 @@
           </v-card-text>
         </v-card>
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

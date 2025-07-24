@@ -19,6 +19,26 @@
         <v-stepper-window-item :value="1">
           <v-card class="mb-4">
             <v-card-text>
+              <!-- LLM Basic Info Guide -->
+              <v-card class="mb-4" variant="outlined">
+                <v-card-title class="text-subtitle-2 font-weight-bold">
+                  📖 Read the LLM Basic Info Guide
+                </v-card-title>
+                <v-card-text>
+                  <div class="text-body-2">
+                    <p class="mb-2"><strong>Define your LLM's basic information:</strong></p>
+                    <ul class="mb-3">
+                      <li><strong>LLM Name:</strong> Choose a descriptive name that clearly identifies your language model's purpose</li>
+                      <li><strong>Description:</strong> Provide a brief overview of what your LLM does and its capabilities</li>
+                      <li><strong>Base Model:</strong> Select the foundation model you'll be fine-tuning or training from</li>
+                    </ul>
+                    <v-alert type="info" variant="tonal" class="mb-2">
+                      <strong>💡 Tip:</strong> Use clear, specific names and detailed descriptions to help others understand your LLM's purpose and capabilities.
+                    </v-alert>
+                  </div>
+                </v-card-text>
+              </v-card>
+              
               <v-form @submit.prevent>
                 <v-text-field
                   v-model="form.name"
@@ -47,6 +67,27 @@
         <v-stepper-window-item :value="2">
           <v-card class="mb-4">
             <v-card-text>
+              <!-- Training Configuration Guide -->
+              <v-card class="mb-4" variant="outlined">
+                <v-card-title class="text-subtitle-2 font-weight-bold">
+                  📖 Read the Training Configuration Guide
+                </v-card-title>
+                <v-card-text>
+                  <div class="text-body-2">
+                    <p class="mb-2"><strong>Configure your LLM training parameters:</strong></p>
+                    <ul class="mb-3">
+                      <li><strong>Training Type:</strong> Choose the type of training (fine-tuning, full training, etc.)</li>
+                      <li><strong>Epochs:</strong> Number of complete passes through the training dataset</li>
+                      <li><strong>Batch Size:</strong> Number of samples processed before updating the model</li>
+                      <li><strong>Learning Rate:</strong> Step size for updating model weights during training</li>
+                    </ul>
+                    <v-alert type="info" variant="tonal" class="mb-2">
+                      <strong>💡 Tip:</strong> Start with conservative values and adjust based on your data size and computational resources.
+                    </v-alert>
+                  </div>
+                </v-card-text>
+              </v-card>
+              
               <v-select
                 v-model="form.trainingType"
                 :items="trainingTypes"
@@ -90,6 +131,26 @@
         <v-stepper-window-item :value="3">
           <v-card class="mb-4">
             <v-card-text>
+              <!-- Data Configuration Guide -->
+              <v-card class="mb-4" variant="outlined">
+                <v-card-title class="text-subtitle-2 font-weight-bold">
+                  📖 Read the Data Configuration Guide
+                </v-card-title>
+                <v-card-text>
+                  <div class="text-body-2">
+                    <p class="mb-2"><strong>Configure your training data and processing:</strong></p>
+                    <ul class="mb-3">
+                      <li><strong>Training Data:</strong> Upload your dataset in supported formats (JSON, CSV, TXT)</li>
+                      <li><strong>Data Configuration:</strong> Define how your data should be processed and formatted</li>
+                      <li><strong>Data Validation:</strong> Ensure your data is properly structured and formatted</li>
+                    </ul>
+                    <v-alert type="info" variant="tonal" class="mb-2">
+                      <strong>💡 Tip:</strong> Ensure your training data is clean, well-formatted, and appropriate for your LLM's intended use case.
+                    </v-alert>
+                  </div>
+                </v-card-text>
+              </v-card>
+              
               <v-file-input
                 v-model="trainingData"
                 label="Training Data"
@@ -116,41 +177,68 @@
         <v-stepper-window-item :value="4">
           <v-card class="mb-4">
             <v-card-text>
-              <h3>LLM Training Summary</h3>
-              <v-list>
-                <v-list-item>
-                  <v-list-item-title>Name</v-list-item-title>
-                  <v-list-item-subtitle>{{ form.name }}</v-list-item-subtitle>
-                </v-list-item>
-                <v-list-item v-if="form.description">
-                  <v-list-item-title>Description</v-list-item-title>
-                  <v-list-item-subtitle>{{ form.description }}</v-list-item-subtitle>
-                </v-list-item>
-                <v-list-item>
-                  <v-list-item-title>Base Model</v-list-item-title>
-                  <v-list-item-subtitle>{{ form.baseModel }}</v-list-item-subtitle>
-                </v-list-item>
-                <v-list-item>
-                  <v-list-item-title>Training Type</v-list-item-title>
-                  <v-list-item-subtitle>{{ form.trainingType }}</v-list-item-subtitle>
-                </v-list-item>
-                <v-list-item>
-                  <v-list-item-title>Epochs</v-list-item-title>
-                  <v-list-item-subtitle>{{ form.epochs }}</v-list-item-subtitle>
-                </v-list-item>
-                <v-list-item>
-                  <v-list-item-title>Batch Size</v-list-item-title>
-                  <v-list-item-subtitle>{{ form.batchSize }}</v-list-item-subtitle>
-                </v-list-item>
-                <v-list-item>
-                  <v-list-item-title>Learning Rate</v-list-item-title>
-                  <v-list-item-subtitle>{{ form.learningRate }}</v-list-item-subtitle>
-                </v-list-item>
-                <v-list-item v-if="trainingData">
-                  <v-list-item-title>Training Data</v-list-item-title>
-                  <v-list-item-subtitle>{{ trainingData.name }}</v-list-item-subtitle>
-                </v-list-item>
-              </v-list>
+              <!-- Review & Start Training Guide -->
+              <v-card class="mb-4" variant="outlined">
+                <v-card-title class="text-subtitle-2 font-weight-bold">
+                  📖 Read the Review & Start Training Guide
+                </v-card-title>
+                <v-card-text>
+                  <div class="text-body-2">
+                    <p class="mb-2"><strong>Review your LLM training configuration before starting:</strong></p>
+                    <ul class="mb-3">
+                      <li>Verify all information is correct and complete</li>
+                      <li>Check that the LLM name and description are clear</li>
+                      <li>Review training parameters for appropriateness</li>
+                      <li>Confirm data configuration and training data are ready</li>
+                    </ul>
+                    <v-alert type="success" variant="tonal" class="mb-2">
+                      <strong>✅ Ready to Train:</strong> Your LLM training will start with the specified configuration. Monitor progress and adjust as needed.
+                    </v-alert>
+                  </div>
+                </v-card-text>
+              </v-card>
+              
+              <v-card variant="outlined">
+                <v-card-title class="text-subtitle-2 font-weight-bold">
+                  📋 LLM Training Configuration Summary
+                </v-card-title>
+                <v-card-text>
+                  <v-list>
+                    <v-list-item>
+                      <v-list-item-title>Name</v-list-item-title>
+                      <v-list-item-subtitle>{{ form.name }}</v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item v-if="form.description">
+                      <v-list-item-title>Description</v-list-item-title>
+                      <v-list-item-subtitle>{{ form.description }}</v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item>
+                      <v-list-item-title>Base Model</v-list-item-title>
+                      <v-list-item-subtitle>{{ form.baseModel }}</v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item>
+                      <v-list-item-title>Training Type</v-list-item-title>
+                      <v-list-item-subtitle>{{ form.trainingType }}</v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item>
+                      <v-list-item-title>Epochs</v-list-item-title>
+                      <v-list-item-subtitle>{{ form.epochs }}</v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item>
+                      <v-list-item-title>Batch Size</v-list-item-title>
+                      <v-list-item-subtitle>{{ form.batchSize }}</v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item>
+                      <v-list-item-title>Learning Rate</v-list-item-title>
+                      <v-list-item-subtitle>{{ form.learningRate }}</v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item v-if="trainingData">
+                      <v-list-item-title>Training Data</v-list-item-title>
+                      <v-list-item-subtitle>{{ trainingData.name }}</v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </v-card-text>
+              </v-card>
             </v-card-text>
           </v-card>
         </v-stepper-window-item>

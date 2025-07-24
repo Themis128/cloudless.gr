@@ -1,6 +1,6 @@
 <template>
   <div class="api-documentation-page">
-    <PageStructure
+    <LayoutPageStructure
       title="API Reference"
       subtitle="Complete API documentation for Cloudless.gr platform"
       :show-back-button="true"
@@ -374,7 +374,7 @@ fetch('https://api.cloudless.gr/v1/bots', {
           </div>
         </div>
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

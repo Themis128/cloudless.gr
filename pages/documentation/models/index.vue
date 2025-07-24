@@ -1,6 +1,6 @@
 <template>
   <div class="models-documentation-page">
-    <PageStructure
+    <LayoutPageStructure
       title="Model Training Documentation"
       subtitle="Learn to train and deploy custom AI models"
       :show-back-button="true"
@@ -156,7 +156,7 @@
           </v-card>
         </div>
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

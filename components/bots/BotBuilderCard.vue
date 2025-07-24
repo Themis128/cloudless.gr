@@ -5,37 +5,64 @@
     </v-snackbar>
 
     <v-progress-linear
-      :value="progressValue"
+      :value="botStore.builderProgress"
       color="primary"
       height="6"
       class="mb-2"
     />
 
     <v-card-text>
-      <div v-if="step === 0">
+      <!-- Step Guide Component -->
+      <StepGuide
+        :guide-content="currentGuide?.content"
+        :full-guide-content="currentGuide?.fullContent"
+        :template-info="currentTemplate"
+        :step-number="botStore.builderStep + 1"
+        :step-name="currentGuide?.title || `Step ${botStore.builderStep + 1}`"
+        @load-template="handleLoadTemplate"
+      />
+
+      <div v-if="botStore.builderStep === 0">
         <StepBotDetails
-          :form="form"
-          :name-error="nameError ? [nameError] : []"
-          :prompt-error="promptError ? [promptError] : []"
-          :validate-name="validateName"
-          :validate-prompt="validatePrompt"
-          :description="steps[0]?.description || ''"
+          :name-error="botStore.validationErrors.name ? [botStore.validationErrors.name] : []"
+          :prompt-error="botStore.validationErrors.prompt ? [botStore.validationErrors.prompt] : []"
+          :validate-name="() => botStore.validateField('name')"
+          :validate-prompt="() => botStore.validateField('prompt')"
+          :description="botStore.currentBuilderStep?.description || ''"
         />
         <div class="mt-4">
-          <v-btn color="primary" @click="handleNextStep">
+          <v-btn 
+            color="primary" 
+            @click="handleNextStep"
+            :disabled="!botStore.canProceedToNextStep"
+          >
             Continue
           </v-btn>
         </div>
       </div>
-      <div v-else-if="step === 1">
+      <div v-else-if="botStore.builderStep === 1">
         <StepModelSelect
-          :form="form"
-          :model-error="modelError ? [modelError] : []"
-          :validate-model="validateModel"
-          :description="steps[1]?.description || ''"
+          :model-error="botStore.validationErrors.model ? [botStore.validationErrors.model] : []"
+          :validate-model="() => botStore.validateField('model')"
+          :description="botStore.currentBuilderStep?.description || ''"
         />
         <div class="mt-4">
-          <v-btn class="me-2" @click="prevStep">
+          <v-btn class="me-2" @click="botStore.prevBuilderStep">
+            Back
+          </v-btn>
+          <v-btn 
+            color="primary" 
+            @click="handleNextStep"
+            :disabled="!botStore.canProceedToNextStep"
+          >
+            Continue
+          </v-btn>
+        </div>
+      </div>
+      <div v-else-if="botStore.builderStep === 2">
+        <StepSettings :description="botStore.currentBuilderStep?.description || ''" />
+        <div class="mt-4">
+          <v-btn class="me-2" @click="botStore.prevBuilderStep">
             Back
           </v-btn>
           <v-btn color="primary" @click="handleNextStep">
@@ -43,34 +70,28 @@
           </v-btn>
         </div>
       </div>
-      <div v-else-if="step === 2">
-        <StepSettings :form="form" :description="steps[2]?.description || ''" />
+      <div v-else-if="botStore.builderStep === 3">
+        <StepSummary />
         <div class="mt-4">
-          <v-btn class="me-2" @click="prevStep">
+          <v-btn class="me-2" @click="botStore.prevBuilderStep">
             Back
           </v-btn>
-          <v-btn color="primary" @click="handleNextStep">
-            Continue
-          </v-btn>
-        </div>
-      </div>
-      <div v-else-if="step === 3">
-        <StepSummary :form="form" />
-        <div class="mt-4">
-          <v-btn class="me-2" @click="prevStep">
-            Back
-          </v-btn>
-          <v-btn color="success" :loading="loading" @click="handleSubmit">
+          <v-btn 
+            success 
+            :loading="botStore.loading" 
+            @click="handleSubmit"
+            :disabled="botStore.hasValidationErrors"
+          >
             Create Bot
           </v-btn>
         </div>
       </div>
     </v-card-text>
 
-    <v-alert v-if="error" type="error" class="mt-2">
-      {{ error }}
+    <v-alert v-if="botStore.error" type="error" class="mt-2">
+      {{ botStore.error }}
     </v-alert>
-    <v-alert v-if="success" type="success" class="mt-2">
+    <v-alert v-if="botStore.success" type="success" class="mt-2">
       Bot created successfully!
     </v-alert>
   </v-card>
@@ -81,75 +102,49 @@ import StepBotDetails from '~/components/bots/steps/StepBotDetails.vue'
 import StepModelSelect from '~/components/bots/steps/StepModelSelect.vue'
 import StepSettings from '~/components/bots/steps/StepSettings.vue'
 import StepSummary from '~/components/bots/steps/StepSummary.vue'
+import StepGuide from '~/components/ui/StepGuide.vue'
 
-import { storeToRefs } from 'pinia'
-import { computed, ref } from 'vue'
-import { useBotBuilder } from '~/composables/useBotBuilder'
-import { useBotFormValidation } from '~/composables/useBotFormValidation'
+import { computed, ref, watch } from 'vue'
 import { useBotStore } from '~/stores/botStore'
+import { useStepGuides } from '~/composables/useStepGuides'
 
 const props = defineProps<{ template?: any }>()
 const emit = defineEmits(['created'])
-// Use the composable for all stepper state and logic
 
-const {
-  form,
-  step: stepRef,
-  steps,
-  progressValue,
-  nextStep,
-  prevStep,
-  submitBot,
-} = useBotBuilder(props.template)
-
-const step = computed({
-  get: () => Number(stepRef.value),
-  set: v => {
-    stepRef.value = Number(v)
-  },
-})
-
-const {
-  nameError,
-  promptError,
-  modelError,
-  validateName,
-  validatePrompt,
-  validateModel,
-} = useBotFormValidation(form)
-
+// Use the enhanced bot store
 const botStore = useBotStore()
-const { loading, success, error } = storeToRefs(botStore)
+
+// Step guides integration
+const { currentGuide, currentTemplate } = useStepGuides('bot', botStore.builderStep)
 
 const showIncompleteWarning = ref(false)
 
-const validateStep = (idx: number) => {
-  // Always run validation before checking errors
-  if (idx === 0) {
-    validateName()
-    validatePrompt()
-    return !nameError.value && !promptError.value
-  }
-  if (idx === 1) {
-    validateModel()
-    return !modelError.value
-  }
-  return true
-}
+// Watch for step changes to update progress
+watch(() => botStore.builderStep, () => {
+  // Progress is automatically calculated in the store getter
+})
 
 const handleNextStep = () => {
-  const valid = validateStep(step.value)
-  if (!valid) {
+  if (!botStore.canProceedToNextStep) {
     showIncompleteWarning.value = true
     return
   }
-  nextStep()
+  botStore.nextBuilderStep()
 }
 
 const handleSubmit = async () => {
-  const result = await submitBot()
-  if (result) {
+  const success = await botStore.submitBuilder()
+  if (success) {
     emit('created')
   }
+}
+
+const handleLoadTemplate = (template: any) => {
+  // Update store with template data
+  if (template.name) botStore.updateBuilderForm('name', template.name)
+  if (template.prompt) botStore.updateBuilderForm('prompt', template.prompt)
+  if (template.model) botStore.updateBuilderForm('model', template.model)
+  if (template.memory) botStore.updateBuilderForm('memory', template.memory)
+  if (template.tools) botStore.updateBuilderForm('tools', template.tools)
 }
 </script>

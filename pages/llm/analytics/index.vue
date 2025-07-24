@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Analytics Dashboard"
       subtitle="Monitor LLM performance and usage insights"
       back-button-to="/llm"
@@ -307,7 +307,7 @@
       <template #sidebar>
         <LLMGuide page="analytics" />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

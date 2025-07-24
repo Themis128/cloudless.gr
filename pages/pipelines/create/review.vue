@@ -205,7 +205,7 @@ const createPipelineData = async () => {
       userId: userId
     }
 
-    await createPipeline(pipelineData)
+    await pipelineStore.createPipeline(pipelineData)
 
     // Clear localStorage
     resetPipeline()

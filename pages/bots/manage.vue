@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Manage Bots"
       subtitle="Bulk operations and advanced bot management"
       back-button-to="/bots"
@@ -282,7 +282,7 @@
       <template #sidebar>
         <BotGuide />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

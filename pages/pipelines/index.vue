@@ -1,323 +1,401 @@
 <template>
   <div>
-    <PageStructure
-      title="Pipelines"
-      subtitle="Create and manage your AI processing pipelines"
+    <LayoutPageStructure
+      title="Pipeline Management"
+      subtitle="Create, manage, and execute AI processing pipelines"
       back-button-to="/"
       :has-sidebar="true"
-      :white-header="true"
     >
       <template #main>
+        <!-- Loading State -->
+        <div v-if="isLoading" class="text-center py-8">
+          <v-progress-circular indeterminate size="64" color="primary"></v-progress-circular>
+          <div class="mt-4 text-h6">Loading pipelines...</div>
+        </div>
+
+        <!-- Main Content -->
+        <div v-else>
+          <!-- Welcome Header -->
+          <v-card class="mb-6 bg-gradient-primary">
+            <v-card-text class="text-center py-8">
+              <v-icon size="64" color="white" class="mb-4">
+                mdi-pipe
+              </v-icon>
+              <h1 class="text-h3 font-weight-bold text-white mb-4">
+                AI Pipeline Management
+              </h1>
+              <p class="text-h6 text-white/90 mb-6">
+                Create, configure, and deploy intelligent AI processing pipelines for your applications
+              </p>
+              
+              <!-- Quick Stats -->
+              <v-row class="justify-center">
+                <v-col cols="6" md="3">
+                  <v-card class="text-center bg-transparent" elevation="0">
+                    <v-card-text class="pa-4">
+                      <div class="text-h4 font-weight-bold text-white mb-1">{{ pipelineStats.total }}</div>
+                      <div class="text-white/80 text-body-2">Total Pipelines</div>
+                      <v-icon color="white" class="mt-2" size="24">mdi-pipe</v-icon>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                <v-col cols="6" md="3">
+                  <v-card class="text-center bg-transparent" elevation="0">
+                    <v-card-text class="pa-4">
+                      <div class="text-h4 font-weight-bold text-white mb-1">{{ pipelineStats.active }}</div>
+                      <div class="text-white/80 text-body-2">Active Pipelines</div>
+                      <v-icon color="white" class="mt-2" size="24">mdi-play-circle</v-icon>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                <v-col cols="6" md="3">
+                  <v-card class="text-center bg-transparent" elevation="0">
+                    <v-card-text class="pa-4">
+                      <div class="text-h4 font-weight-bold text-white mb-1">{{ pipelineStats.running }}</div>
+                      <div class="text-white/80 text-body-2">Running</div>
+                      <v-icon color="white" class="mt-2" size="24">mdi-sync</v-icon>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                <v-col cols="6" md="3">
+                  <v-card class="text-center bg-transparent" elevation="0">
+                    <v-card-text class="pa-4">
+                      <div class="text-h4 font-weight-bold text-white mb-1">{{ performanceTrends.averageExecutionTime.toFixed(1) }}s</div>
+                      <div class="text-white/80 text-body-2">Avg Execution</div>
+                      <v-icon color="white" class="mt-2" size="24">mdi-timer</v-icon>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+
+          <!-- Pipeline Limit Component -->
+          <PipelinesPipelineLimit />
+
+          <!-- Pipeline Analytics Dashboard -->
+          <PipelinesPipelineAnalytics />
+
+          <!-- Pipeline List -->
+          <PipelinesPipelineList @create-pipeline="showCreateDialog = true" />
+
+          <!-- Create Pipeline Dialog -->
+          <PipelinesStepperPipelineBuilder
+            v-model="showCreateDialog"
+            @pipeline-created="handlePipelineCreated"
+          />
+        </div>
+
+        <!-- Success/Error Messages -->
+        <v-snackbar
+          v-model="showSuccess"
+          color="success"
+          timeout="3000"
+          location="top"
+          rounded="lg"
+        >
+          <template #prepend>
+            <v-icon>mdi-check-circle</v-icon>
+          </template>
+          {{ successMessage }}
+        </v-snackbar>
+
+        <v-snackbar
+          v-model="showError"
+          color="error"
+          timeout="5000"
+          location="top"
+          rounded="lg"
+        >
+          <template #prepend>
+            <v-icon>mdi-alert-circle</v-icon>
+          </template>
+          {{ errorMessage }}
+        </v-snackbar>
+      </template>
+
+      <template #sidebar>
         <!-- Quick Actions -->
-        <v-card class="mb-4 bg-white">
-          <v-card-title class="text-h6">
+        <v-card class="mb-4">
+          <v-card-title class="text-subtitle-1 font-weight-bold">
+            <v-icon class="mr-2">mdi-lightning-bolt</v-icon>
             Quick Actions
           </v-card-title>
           <v-card-text>
-            <div class="quick-actions-header">
-              <div class="quick-actions-title">
-                <p class="text-body-2 text-medium-emphasis">
-                  Create, test, or manage pipelines
-                </p>
-              </div>
-              <div class="quick-actions-stats">
-                <client-only>
-                  <v-chip color="primary" class="mr-2">
-                    Total: {{ pipelines.length }}
-                  </v-chip>
-                  <v-chip color="info">
-                    Avg Steps: {{ avgSteps }}
-                  </v-chip>
-                </client-only>
-              </div>
+            <v-btn
+              block
+              color="primary"
+              prepend-icon="mdi-plus"
+              @click="showCreateDialog = true"
+              class="mb-2"
+              :loading="pipelineStore.loading"
+              :disabled="pipelineStore.loading"
+            >
+              Create Pipeline
+            </v-btn>
+            <v-btn
+              block
+              variant="outlined"
+              prepend-icon="mdi-import"
+              @click="importPipelines"
+              class="mb-2"
+            >
+              Import Pipelines
+            </v-btn>
+            <v-btn
+              block
+              variant="outlined"
+              prepend-icon="mdi-download"
+              @click="exportAllPipelines"
+            >
+              Export All
+            </v-btn>
+          </v-card-text>
+        </v-card>
+
+        <!-- Pipeline Status Overview -->
+        <v-card class="mb-4">
+          <v-card-title class="text-subtitle-1 font-weight-bold">
+            <v-icon class="mr-2">mdi-chart-pie</v-icon>
+            Pipeline Status
+          </v-card-title>
+          <v-card-text>
+            <div class="d-flex align-center justify-space-between mb-2">
+              <span class="text-caption">Active</span>
+              <v-chip size="small" color="success" variant="tonal">
+                {{ pipelineStats.active }}
+              </v-chip>
             </div>
-            <div class="quick-actions-buttons">
-              <v-btn
-                to="/pipelines/create"
-                color="primary"
-                prepend-icon="mdi-plus"
-                variant="elevated"
-                class="action-btn"
-                size="large"
-              >
-                Create Pipeline
-              </v-btn>
-              <v-btn
-                to="/pipelines/test"
-                color="info"
-                prepend-icon="mdi-play-circle"
-                variant="outlined"
-                class="action-btn"
-                size="large"
-              >
-                Test Pipeline
-              </v-btn>
-              <v-btn
-                to="/pipelines/manage"
-                color="secondary"
-                prepend-icon="mdi-pipe"
-                variant="outlined"
-                class="action-btn"
-                size="large"
-              >
-                Manage Pipelines
-              </v-btn>
+            <div class="d-flex align-center justify-space-between mb-2">
+              <span class="text-caption">Inactive</span>
+              <v-chip size="small" color="warning" variant="tonal">
+                {{ pipelineStats.inactive }}
+              </v-chip>
+            </div>
+            <div class="d-flex align-center justify-space-between">
+              <span class="text-caption">Running</span>
+              <v-chip size="small" color="info" variant="tonal">
+                {{ pipelineStats.running }}
+              </v-chip>
             </div>
           </v-card-text>
         </v-card>
 
-        <client-only>
-          <v-row>
-            <v-col
-              v-if="pipelines.length > 0"
-              cols="12"
-              class="mb-6"
+        <!-- Recent Activity -->
+        <v-card class="mb-4">
+          <v-card-title class="text-subtitle-1 font-weight-bold">
+            <v-icon class="mr-2">mdi-clock-outline</v-icon>
+            Recent Activity
+          </v-card-title>
+          <v-card-text>
+            <div v-for="activity in recentActivity.slice(0, 5)" :key="activity.id" class="d-flex align-center mb-2">
+              <v-avatar size="24" class="mr-2">
+                <v-icon size="16" color="primary">mdi-circle</v-icon>
+              </v-avatar>
+              <div class="flex-grow-1">
+                <div class="text-caption font-weight-medium">{{ activity.text }}</div>
+                <div class="text-caption text-medium-emphasis">
+                  {{ formatPipelineDate(activity.timestamp) }}
+                </div>
+              </div>
+            </div>
+            <div v-if="recentActivity.length === 0" class="text-center py-2">
+              <div class="text-caption text-medium-emphasis">No recent activity</div>
+            </div>
+          </v-card-text>
+        </v-card>
+
+        <!-- Help & Resources -->
+        <v-card>
+          <v-card-title class="text-subtitle-1 font-weight-bold">
+            <v-icon class="mr-2">mdi-help-circle</v-icon>
+            Help & Resources
+          </v-card-title>
+          <v-card-text>
+            <v-btn
+              block
+              variant="text"
+              prepend-icon="mdi-book-open"
+              to="/documentation/pipelines"
+              class="mb-2"
             >
-              <v-card class="mb-4 bg-white">
-                <v-card-title class="text-h6">
-                  <v-icon start color="primary">
-                    mdi-chart-bar
-                  </v-icon>
-                  Pipeline Steps Distribution
-                </v-card-title>
-                <v-card-text>
-                  <client-only>
-                    <VChart
-                      v-if="chartOption"
-                      :option="chartOption"
-                      autoresize
-                      style="height: 300px"
-                    />
-                    <v-skeleton-loader v-else type="image" height="300" />
-                  </client-only>
-                </v-card-text>
-              </v-card>
-            </v-col>
-          </v-row>
-        </client-only>
-
-        <client-only>
-          <v-row>
-            <v-col
-              v-for="pipeline in pipelines"
-              :key="pipeline.id"
-              cols="12"
-              md="6"
-              lg="4"
+              Documentation
+            </v-btn>
+            <v-btn
+              block
+              variant="text"
+              prepend-icon="mdi-video"
+              to="/tutorials"
+              class="mb-2"
             >
-              <v-card class="pipeline-card bg-white" elevation="2" hover>
-                <v-card-title class="text-h6">
-                  {{ pipeline.name }}
-                </v-card-title>
-                <v-card-subtitle>
-                  {{
-                    formatDate(pipeline.createdAt)
-                  }}
-                </v-card-subtitle>
-                <v-card-text>
-                  <strong>Steps:</strong> {{ stepsCount(pipeline) }}<br>
-                  <span v-if="pipeline.description">{{
-                    pipeline.description
-                  }}</span>
-                </v-card-text>
-                <v-card-actions>
-                  <v-btn text :to="`/pipelines/${pipeline.id}`">
-                    View
-                  </v-btn>
-                </v-card-actions>
-              </v-card>
-            </v-col>
-          </v-row>
-
-          <client-only>
-            <v-row>
-              <v-col cols="12">
-                <v-alert
-                  v-if="pipelines.length === 0 && !error && !loading"
-                  type="info"
-                >
-                  No pipelines found. Click "Create Pipeline" to get started.
-                </v-alert>
-                <v-alert v-if="error" type="error" class="mt-3">
-                  {{ error }}
-                </v-alert>
-                <v-progress-linear
-                  v-if="loading"
-                  indeterminate
-                  color="primary"
-                  class="mt-3"
-                />
-              </v-col>
-            </v-row>
-          </client-only>
-        </client-only>
+              Tutorials
+            </v-btn>
+            <v-btn
+              block
+              variant="text"
+              prepend-icon="mdi-forum"
+              to="/support"
+            >
+              Support
+            </v-btn>
+          </v-card-text>
+        </v-card>
       </template>
-
-      <template #sidebar>
-        <PipelineGuide />
-      </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
-import PageStructure from '~/components/layout/PageStructure.vue'
-import PipelineGuide from '~/components/step-guides/PipelineGuide.vue'
+import { ref, onMounted, watch, computed } from 'vue'
+import { usePipelineStore } from '~/stores/pipelineStore'
+import { usePipelineAnalytics } from '~/composables/usePipelineAnalytics'
+import { usePipelineExecution } from '~/composables/usePipelineExecution'
+import { formatPipelineDate, exportPipelineData } from '~/utils/pipelineHelpers'
 
-// Lazy load VChart component for client-side only
-const VChart = defineAsyncComponent(() =>
-  import('vue-echarts').then(mod => mod.default)
-)
+// SEO Meta Tags
+import { useHead } from 'nuxt/app'
 
+// TypeScript declaration for Nuxt global functions
+declare const definePageMeta: (meta: any) => void
+
+useHead({
+  title: 'Pipeline Management - Cloudless',
+  meta: [
+    { name: 'description', content: 'Create, manage, and execute AI processing pipelines with our comprehensive platform.' },
+    { property: 'og:title', content: 'Pipeline Management - Cloudless' },
+    { property: 'og:description', content: 'Create, manage, and execute AI processing pipelines' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: 'Pipeline Management - Cloudless' },
+    { name: 'twitter:description', content: 'Create, manage, and execute AI processing pipelines' }
+  ]
+})
+
+definePageMeta({
+  layout: 'default'
+})
+
+// Types
 interface Pipeline {
   id: number
   name: string
   description?: string
-  config: string
   status: string
+  config: string
   createdAt: Date
   updatedAt: Date
-  user: {
-    id: number
-    name: string
-    email: string
-  }
 }
 
-const pipelines = ref<Pipeline[]>([])
-const error = ref<string | null>(null)
-const loading = ref<boolean>(true)
+// Store integration
+const pipelineStore = usePipelineStore()
+const { pipelineStats, performanceTrends, recentActivity } = usePipelineAnalytics()
+const { isAnyExecuting, executingCount } = usePipelineExecution()
 
-// Fetch pipelines from database
-const fetchPipelines = async () => {
+// Computed properties
+const isLoading = computed(() => pipelineStore.loading)
+
+// Reactive state
+const showCreateDialog = ref(false)
+const showSuccess = ref(false)
+const showError = ref(false)
+const successMessage = ref('')
+const errorMessage = ref('')
+
+// Methods
+const handlePipelineCreated = (pipeline: Pipeline) => {
+  showSuccess.value = true
+  successMessage.value = `Pipeline "${pipeline.name}" created successfully!`
+  // Refresh data after creation
+  pipelineStore.fetchAll()
+}
+
+const exportAllPipelines = async () => {
   try {
-    loading.value = true
-    error.value = null
+    const data = exportPipelineData(pipelineStore.pipelines)
+    const blob = new Blob([data], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `all-pipelines-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
     
-    interface ApiResponse {
-      success: boolean
-      data: Pipeline[]
-      message?: string
-    }
-    
-    const response = await $fetch<ApiResponse>('/api/prisma/pipelines')
-    if (response.success) {
-      pipelines.value = response.data || []
-    } else {
-      error.value = response.message || 'Failed to fetch pipelines'
-    }
-  } catch (err: any) {
-    console.error('Error fetching pipelines:', err)
-    error.value = err.message || 'Failed to load pipelines'
-  } finally {
-    loading.value = false
+    showSuccess.value = true
+    successMessage.value = `Exported ${pipelineStore.pipelines.length} pipelines successfully!`
+  } catch (error) {
+    showError.value = true
+    errorMessage.value = 'Failed to export pipelines'
+    console.error('Export failed:', error)
   }
 }
 
-const avgSteps = computed(() => {
-  if (!pipelines.value.length) return 0
-  const total = pipelines.value.reduce(
-    (sum: number, p: Pipeline) => sum + stepsCount(p),
-    0
-  )
-  return Math.round(total / pipelines.value.length)
+const importPipelines = () => {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.json'
+  input.onchange = async (event) => {
+    const file = (event.target as HTMLInputElement).files?.[0]
+    if (file) {
+      try {
+        const text = await file.text()
+        const pipelines = JSON.parse(text)
+        
+        // Validate and import pipelines
+        for (const pipeline of pipelines) {
+          await pipelineStore.createPipeline(pipeline)
+        }
+        
+        showSuccess.value = true
+        successMessage.value = `Imported ${pipelines.length} pipelines successfully!`
+        // Refresh data after import
+        pipelineStore.fetchAll()
+      } catch (error) {
+        showError.value = true
+        errorMessage.value = 'Failed to import pipelines. Please check the file format.'
+        console.error('Import failed:', error)
+      }
+    }
+  }
+  input.click()
+}
+
+// Client-side initialization
+onMounted(async () => {
+  try {
+    await pipelineStore.fetchAll()
+  } catch (error) {
+    console.error('Failed to fetch pipelines:', error)
+    showError.value = true
+    errorMessage.value = 'Failed to load pipelines data'
+  }
 })
 
-const chartOption = computed(() => {
-  if (!pipelines.value.length) return null
-
-  const data = pipelines.value.map((p: Pipeline) => ({
-    name: p.name,
-    value: stepsCount(p),
-  }))
-  return {
-    tooltip: { trigger: 'item' },
-    xAxis: {
-      type: 'category',
-      data: data.map((d: { name: string; value: number }) => d.name),
-      axisLabel: {
-        interval: 0,
-        rotate: 45,
-      },
-    },
-    yAxis: { type: 'value' },
-    series: [
-      {
-        data: data.map((d: { name: string; value: number }) => d.value),
-        type: 'bar',
-        itemStyle: { color: '#1976d2' },
-      },
-    ],
-    grid: { left: 40, right: 20, top: 40, bottom: 80 },
+// Watch for store changes
+watch(() => pipelineStore.error, (error) => {
+  if (error) {
+    showError.value = true
+    errorMessage.value = error
   }
 })
 
-const formatDate = (date: Date) => {
-  return new Date(date).toLocaleString()
-}
-
-const stepsCount = (pipeline: Pipeline) => {
-  try {
-    const config = JSON.parse(pipeline.config)
-    return config.steps && Array.isArray(config.steps)
-      ? config.steps.length
-      : 0
-  } catch {
-    return 0
+watch(() => pipelineStore.success, (success) => {
+  if (success) {
+    showSuccess.value = true
+    successMessage.value = success
   }
-}
+})
 
-onMounted(() => {
-  fetchPipelines()
+// Expose methods for sidebar
+defineExpose({
+  exportAllPipelines,
+  importPipelines
 })
 </script>
 
 <style scoped>
-.quick-actions-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.quick-actions-buttons {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  align-items: center;
-}
-
-.action-btn {
-  min-height: 48px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  border-radius: 12px;
-}
-
-.action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.pipeline-card {
-  transition: transform 0.2s ease-in-out;
-  cursor: pointer;
-}
-
-.pipeline-card:hover {
-  transform: translateY(-4px);
-}
-
-@media (max-width: 768px) {
-  .quick-actions-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-  
-  .quick-actions-buttons {
-    grid-template-columns: 1fr;
-  }
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 </style>

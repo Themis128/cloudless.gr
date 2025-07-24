@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Datasets"
       subtitle="Manage and organize your training datasets"
       back-button-to="/llm"
@@ -323,7 +323,7 @@
       <template #sidebar>
         <LLMGuide page="datasets" />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

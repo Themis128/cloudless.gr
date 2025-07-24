@@ -235,7 +235,8 @@ const isValid = computed(() => {
 onMounted(async () => {
   loadingModels.value = true
   try {
-    const data = await getModels()
+    await modelStore.fetchAll()
+    const data = modelStore.allModels
     modelOptions.value = data.map((model: any) => ({
       id: model.id.toString(),
       name: model.name

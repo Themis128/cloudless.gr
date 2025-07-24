@@ -1,6 +1,6 @@
 <template>
   <div class="pipelines-quick-start-page">
-    <PageStructure
+    <LayoutPageStructure
       title="Pipeline Builder Quick Start"
       subtitle="Create your first data pipeline in 5 minutes"
       :show-back-button="true"
@@ -417,7 +417,7 @@
           </v-card>
         </div>
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

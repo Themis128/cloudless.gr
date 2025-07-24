@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Manage Projects"
       subtitle="Bulk operations and advanced project management"
       back-button-to="/projects"
@@ -268,7 +268,7 @@
       <template #sidebar>
         <ProjectGuide />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

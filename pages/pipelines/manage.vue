@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Manage Pipelines"
       subtitle="Administrative tools for pipeline oversight and management"
       back-button-to="/pipelines"
@@ -251,14 +251,13 @@
       <template #sidebar>
         <PipelineGuide />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import PageStructure from '~/components/layout/PageStructure.vue'
+import { usePipelineStore } from '~/stores/pipelineStore'
 import PipelineGuide from '~/components/step-guides/PipelineGuide.vue'
 
 interface Pipeline {
@@ -269,153 +268,154 @@ interface Pipeline {
   status: string
   createdAt: Date
   updatedAt: Date
-  user: {
-    id: number
-    name: string
-    email: string
-  }
 }
 
-const router = useRouter()
-const loading = ref(false)
-const pipelines = ref<Pipeline[]>([])
+const pipelineStore = usePipelineStore()
+
 const selectedPipelines = ref<Pipeline[]>([])
-const searchQuery = ref('')
 const selectedStatus = ref('')
 const showConfirmDialog = ref(false)
 const confirmMessage = ref('')
-const pendingAction = ref<string | null>(null)
+const pendingAction = ref('')
+const loading = ref(false)
 const error = ref<string | null>(null)
 
-const statusOptions = [
-  'active',
-  'draft',
-  'archived',
-  'deleted'
-]
+// Computed properties
+const pipelines = computed(() => pipelineStore.allPipelines)
 
-const headers = [
-  { title: 'Name', key: 'name' },
-  { title: 'Status', key: 'status' },
-  { title: 'Steps', key: 'steps' },
-  { title: 'Created', key: 'createdAt' },
-  { title: 'Actions', key: 'actions', sortable: false }
-]
+const activePipelines = computed(() => {
+  return pipelines.value.filter(p => p.status === 'active').length
+})
 
-const activePipelines = computed(() => 
-  pipelines.value.filter(p => p.status === 'active').length
-)
-
-const draftPipelines = computed(() => 
-  pipelines.value.filter(p => p.status === 'draft').length
-)
+const draftPipelines = computed(() => {
+  return pipelines.value.filter(p => p.status === 'draft').length
+})
 
 const avgSteps = computed(() => {
   if (!pipelines.value.length) return 0
-  const total = pipelines.value.reduce((sum, p) => sum + stepsCount(p), 0)
+  const total = pipelines.value.reduce((sum, p) => {
+    try {
+      const config = JSON.parse(p.config)
+      return sum + (config.steps?.length || 0)
+    } catch {
+      return sum
+    }
+  }, 0)
   return Math.round(total / pipelines.value.length)
 })
 
-const filteredPipelines = computed(() => {
-  return pipelines.value
-})
+const statusOptions = [
+  { title: 'Active', value: 'active' },
+  { title: 'Draft', value: 'draft' },
+  { title: 'Inactive', value: 'inactive' },
+  { title: 'Archived', value: 'archived' }
+]
 
-// Helper function to extract pipeline type from config
-const getPipelineType = (pipeline: Pipeline): string => {
-  try {
-    const config = JSON.parse(pipeline.config)
-    return config.type || 'Custom'
-  } catch {
-    return 'Custom'
+const actionOptions = [
+  { title: 'Update Status', value: 'updateStatus' },
+  { title: 'Delete Selected', value: 'deleteSelected' },
+  { title: 'Export Selected', value: 'exportSelected' }
+]
+
+// Methods
+const selectPipeline = (pipeline: Pipeline) => {
+  const index = selectedPipelines.value.findIndex(p => p.id === pipeline.id)
+  if (index > -1) {
+    selectedPipelines.value.splice(index, 1)
+  } else {
+    selectedPipelines.value.push(pipeline)
   }
 }
 
-// Updated to fix TypeScript errors - now accepts Pipeline object instead of string
-const getPipelineIcon = (pipeline: Pipeline) => {
-  const type = getPipelineType(pipeline)
-  switch (type) {
-    case 'Data Processing': return 'mdi-database'
-    case 'Model Training': return 'mdi-brain'
-    case 'Inference': return 'mdi-lightning-bolt'
-    default: return 'mdi-pipe'
+const selectAllPipelines = () => {
+  if (selectedPipelines.value.length === pipelines.value.length) {
+    selectedPipelines.value = []
+  } else {
+    selectedPipelines.value = [...pipelines.value]
   }
 }
 
-const getStatusColor = (status?: string) => {
-  switch (status || 'draft') {
-    case 'active': return 'success'
-    case 'draft': return 'warning'
-    case 'archived': return 'info'
-    case 'deleted': return 'error'
-    default: return 'grey'
-  }
-}
-
-const stepsCount = (pipeline: Pipeline) => {
-  try {
-    const config = JSON.parse(pipeline.config)
-    return config.steps && Array.isArray(config.steps) ? config.steps.length : 0
-  } catch {
-    return 0
-  }
-}
-
-const formatDate = (date: Date | string) => {
-  return new Date(date).toLocaleDateString()
-}
-
-const updateStatus = () => {
-  if (!selectedStatus.value || !selectedPipelines.value.length) return
+const updateStatus = async () => {
+  if (!selectedStatus.value || selectedPipelines.value.length === 0) return
   
-  confirmMessage.value = `Are you sure you want to update the status to "${selectedStatus.value}" for ${selectedPipelines.value.length} pipeline(s)?`
-  showConfirmDialog.value = true
-  pendingAction.value = 'updateStatus'
+  try {
+    for (const pipeline of selectedPipelines.value) {
+      await pipelineStore.updatePipeline(pipeline.id, { status: selectedStatus.value })
+    }
+    
+    selectedPipelines.value = []
+    selectedStatus.value = ''
+  } catch (error: any) {
+    console.error('Error updating status:', error)
+  }
 }
 
-const deleteSelected = () => {
-  if (!selectedPipelines.value.length) return
+const deleteSelectedPipelines = async () => {
+  if (selectedPipelines.value.length === 0) return
   
-  confirmMessage.value = `Are you sure you want to delete ${selectedPipelines.value.length} pipeline(s)?`
-  showConfirmDialog.value = true
-  pendingAction.value = 'deleteSelected'
+  try {
+    for (const pipeline of selectedPipelines.value) {
+      await pipelineStore.deletePipeline(pipeline.id)
+    }
+    
+    selectedPipelines.value = []
+  } catch (error: any) {
+    console.error('Error deleting pipelines:', error)
+  }
 }
 
-const confirmAction = async () => {
+const exportSelectedPipelines = () => {
+  if (selectedPipelines.value.length === 0) return
+  
+  const data = JSON.stringify(selectedPipelines.value, null, 2)
+  const blob = new Blob([data], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `pipelines-export-${new Date().toISOString().split('T')[0]}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+const confirmAction = (action: string) => {
+  pendingAction.value = action
+  
+  switch (action) {
+    case 'updateStatus':
+      confirmMessage.value = `Update status to "${selectedStatus.value}" for ${selectedPipelines.value.length} pipeline(s)?`
+      break
+    case 'deleteSelected':
+      confirmMessage.value = `Delete ${selectedPipelines.value.length} selected pipeline(s)? This action cannot be undone.`
+      break
+    case 'delete':
+      const pipeline = selectedPipelines.value[0]
+      confirmMessage.value = `Are you sure you want to delete "${pipeline?.name}"?`
+      break
+  }
+  
+  showConfirmDialog.value = true
+}
+
+const executeAction = async () => {
   try {
     if (pendingAction.value === 'updateStatus') {
-      // Update status for selected pipelines
-      for (const pipeline of selectedPipelines.value) {
-        await $fetch(`/api/prisma/pipelines/${pipeline.id}`, {
-          method: 'PUT',
-          body: { status: selectedStatus.value }
-        })
-      }
+      await updateStatus()
     } else if (pendingAction.value === 'deleteSelected') {
-      // Delete selected pipelines
-      for (const pipeline of selectedPipelines.value) {
-        await $fetch(`/api/prisma/pipelines/${pipeline.id}`, {
-          method: 'DELETE'
-        })
-      }
+      await deleteSelectedPipelines()
     } else if (pendingAction.value === 'delete') {
-      // Delete single pipeline
       const pipeline = selectedPipelines.value[0]
       if (pipeline) {
-        await $fetch(`/api/prisma/pipelines/${pipeline.id}`, {
-          method: 'DELETE'
-        })
+        await pipelineStore.deletePipeline(pipeline.id)
       }
     }
     
-    // Refresh the list
-    await loadPipelines()
+    selectedPipelines.value = []
+    selectedStatus.value = ''
   } catch (err: any) {
     console.error('Error executing action:', err)
     error.value = err.message || 'Failed to execute action'
   } finally {
     showConfirmDialog.value = false
-    selectedPipelines.value = []
-    selectedStatus.value = ''
   }
 }
 
@@ -424,17 +424,17 @@ const cancelAction = () => {
 }
 
 const refreshPipelines = async () => {
-  await loadPipelines()
+  await pipelineStore.fetchAll()
 }
 
 const editPipeline = (pipeline: Pipeline) => {
   // Navigate to edit page
-  router.push(`/pipelines/${pipeline.id}/edit`)
+  navigateTo(`/pipelines/${pipeline.id}/edit`)
 }
 
 const testPipeline = (pipeline: Pipeline) => {
   // Navigate to test page
-  router.push(`/pipelines/test?id=${pipeline.id}`)
+  navigateTo(`/pipelines/test?id=${pipeline.id}`)
 }
 
 const deletePipeline = (pipeline: Pipeline) => {
@@ -444,28 +444,10 @@ const deletePipeline = (pipeline: Pipeline) => {
   pendingAction.value = 'delete'
 }
 
-const loadPipelines = async () => {
-  try {
-    loading.value = true
-    error.value = null
-    
-    const response = await $fetch<{ success: boolean; data: Pipeline[]; message?: string }>('/api/prisma/pipelines')
-    
-    if (response.success) {
-      pipelines.value = response.data || []
-    } else {
-      error.value = response.message || 'Failed to load pipelines'
-    }
-  } catch (err: any) {
-    console.error('Error loading pipelines:', err)
-    error.value = err.message || 'Failed to load pipelines'
-  } finally {
-    loading.value = false
-  }
-}
-
 onMounted(() => {
-  loadPipelines()
+  if (pipelineStore.allPipelines.length === 0) {
+    pipelineStore.fetchAll()
+  }
 })
 </script>
 
@@ -482,4 +464,4 @@ onMounted(() => {
 .gap-1 {
   gap: 0.25rem;
 }
-</style> 
+</style>

@@ -1,118 +1,178 @@
 <template>
   <div class="error-page">
-    <!-- Spotlight Background -->
-    <div class="spotlight"></div>
-    
-    <!-- Main Content -->
-    <div class="error-content">
-      <GradientCard variant="primary" class="error-card">
-        <div class="text-center">
-          <!-- Error Icon -->
-          <div class="error-icon">
-            <v-icon size="120" color="error">
-              {{ errorIcon }}
-            </v-icon>
-          </div>
-          
-          <!-- Error Code -->
-          <h1 class="error-code">
-            {{ error.statusCode }}
-          </h1>
-          
-          <!-- Error Message -->
-          <h2 class="error-title">
-            {{ error.statusMessage }}
-          </h2>
-          
-          <!-- Error Description -->
-          <p class="error-description">
-            {{ error.message || 'Something went wrong. Please try again.' }}
-          </p>
-          
-          <!-- Action Buttons -->
-          <div class="error-actions">
-            <v-btn
-              color="primary"
-              size="large"
-              variant="elevated"
-              @click="handleError"
-              class="mr-4"
-            >
-              <v-icon start>mdi-refresh</v-icon>
-              Try Again
-            </v-btn>
-            
-            <v-btn
-              color="secondary"
-              size="large"
-              variant="outlined"
-              to="/"
-            >
-              <v-icon start>mdi-home</v-icon>
-              Go Home
-            </v-btn>
-          </div>
-          
-          <!-- Development Stack Trace -->
-          <div v-if="showStack" class="error-stack">
-            <v-expansion-panels>
-              <v-expansion-panel>
-                <v-expansion-panel-title>
-                  <v-icon start>mdi-bug</v-icon>
-                  Technical Details
-                </v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <pre class="stack-trace">{{ error.stack }}</pre>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
-          </div>
-        </div>
-      </GradientCard>
+    <div class="error-container">
+      <!-- Error Icon -->
+      <div class="error-icon">
+        <v-icon 
+          :icon="getErrorIcon()" 
+          size="120" 
+          :color="getErrorColor()"
+        />
+      </div>
+      
+      <!-- Error Title -->
+      <h1 class="error-title">
+        {{ getErrorTitle() }}
+      </h1>
+      
+      <!-- Error Message -->
+      <p class="error-message">
+        {{ error.message || 'Something went wrong' }}
+      </p>
+      
+      <!-- Error Details for Development -->
+      <div v-if="isDev" class="error-details">
+        <v-card variant="outlined" class="mt-4">
+          <v-card-title class="text-subtitle-2">
+            Error Details (Development Only)
+          </v-card-title>
+          <v-card-text>
+            <div class="text-caption">
+              <strong>Status:</strong> {{ error.statusCode }}
+            </div>
+            <div class="text-caption">
+              <strong>Path:</strong> {{ error.url }}
+            </div>
+            <div v-if="error.stack" class="text-caption mt-2">
+              <strong>Stack:</strong>
+              <pre class="error-stack">{{ error.stack }}</pre>
+            </div>
+          </v-card-text>
+        </v-card>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div class="error-actions">
+        <v-btn
+          color="primary"
+          size="large"
+          @click="handleError"
+          class="mr-4"
+        >
+          <v-icon start>mdi-home</v-icon>
+          Go Home
+        </v-btn>
+        
+        <v-btn
+          variant="outlined"
+          size="large"
+          @click="goBack"
+          class="mr-4"
+        >
+          <v-icon start>mdi-arrow-left</v-icon>
+          Go Back
+        </v-btn>
+        
+        <v-btn
+          variant="text"
+          size="large"
+          @click="refresh"
+        >
+          <v-icon start>mdi-refresh</v-icon>
+          Refresh
+        </v-btn>
+      </div>
+      
+      <!-- Pipeline-specific Help -->
+      <div v-if="isPipelineError()" class="pipeline-help">
+        <v-card variant="tonal" color="info" class="mt-6">
+          <v-card-title class="text-subtitle-2">
+            <v-icon start>mdi-help-circle</v-icon>
+            Pipeline Help
+          </v-card-title>
+          <v-card-text>
+            <ul class="help-list">
+              <li>Check if the pipeline exists and you have access to it</li>
+              <li>Verify your pipeline configuration is valid</li>
+              <li>Ensure you haven't exceeded your pipeline limits</li>
+              <li>Contact support if the issue persists</li>
+            </ul>
+          </v-card-text>
+        </v-card>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { clearError } from '#app'
-import GradientCard from '~/components/ui/GradientCard.vue'
+const error = useError()
+const isDev = process.env.NODE_ENV === 'development'
 
-interface ErrorProps {
-  error: {
-    statusCode?: number
-    statusMessage?: string
-    message?: string
-    stack?: string
+const getErrorIcon = () => {
+  const statusCode = error.value?.statusCode
+  
+  switch (statusCode) {
+    case 404:
+      return 'mdi-file-question'
+    case 403:
+      return 'mdi-lock'
+    case 401:
+      return 'mdi-login'
+    case 429:
+      return 'mdi-timer-sand'
+    case 500:
+      return 'mdi-alert-circle'
+    default:
+      return 'mdi-alert'
   }
 }
 
-const props = defineProps<ErrorProps>()
-
-// Computed properties
-const errorIcon = computed(() => {
-  const code = props.error.statusCode
-  switch (code) {
+const getErrorColor = () => {
+  const statusCode = error.value?.statusCode
+  
+  switch (statusCode) {
     case 404:
-      return 'mdi-map-marker-question'
+      return 'warning'
     case 403:
-      return 'mdi-lock-alert'
+    case 401:
+      return 'error'
+    case 429:
+      return 'warning'
     case 500:
-      return 'mdi-server-off'
-    case 503:
-      return 'mdi-wrench'
+      return 'error'
     default:
-      return 'mdi-alert-circle'
+      return 'grey'
   }
-})
+}
 
-const showStack = computed(() => {
-  return process.dev && props.error.stack
-})
+const getErrorTitle = () => {
+  const statusCode = error.value?.statusCode
+  
+  switch (statusCode) {
+    case 404:
+      return 'Page Not Found'
+    case 403:
+      return 'Access Denied'
+    case 401:
+      return 'Authentication Required'
+    case 429:
+      return 'Too Many Requests'
+    case 500:
+      return 'Server Error'
+    default:
+      return 'Something Went Wrong'
+  }
+}
 
-// Methods
+const isPipelineError = () => {
+  const url = error.value?.url || ''
+  return url.includes('/pipelines/')
+}
+
 const handleError = () => {
   clearError({ redirect: '/' })
+}
+
+const goBack = () => {
+  if (process.client) {
+    window.history.back()
+  }
+}
+
+const refresh = () => {
+  if (process.client) {
+    window.location.reload()
+  }
 }
 </script>
 
@@ -122,110 +182,83 @@ const handleError = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 2rem;
-  position: relative;
-  overflow: hidden;
 }
 
-.error-content {
+.error-container {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem;
+  text-align: center;
   max-width: 600px;
   width: 100%;
-  z-index: 20;
-}
-
-.error-card {
-  padding: 3rem 2rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
 .error-icon {
   margin-bottom: 2rem;
 }
 
-.error-code {
-  font-size: 6rem;
-  font-weight: 700;
-  color: var(--v-error-base);
-  margin: 0;
-  line-height: 1;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-}
-
 .error-title {
-  font-size: 2rem;
-  font-weight: 600;
-  color: var(--v-text-primary);
-  margin: 1rem 0;
-  line-height: 1.2;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 1rem;
 }
 
-.error-description {
-  font-size: 1.1rem;
-  color: var(--v-text-secondary);
-  margin: 1.5rem 0;
+.error-message {
+  font-size: 1.125rem;
+  color: #6c757d;
+  margin-bottom: 2rem;
   line-height: 1.6;
-  max-width: 400px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .error-actions {
-  margin: 2rem 0;
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  flex-wrap: wrap;
+  margin-bottom: 2rem;
 }
 
-.error-stack {
-  margin-top: 2rem;
+.error-details {
   text-align: left;
 }
 
-.stack-trace {
-  background: rgba(0, 0, 0, 0.05);
+.error-stack {
+  background: #f8f9fa;
   padding: 1rem;
-  border-radius: 0.5rem;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.875rem;
-  line-height: 1.5;
+  border-radius: 8px;
+  font-size: 0.75rem;
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-/* Responsive Design */
+.help-list {
+  text-align: left;
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.help-list li {
+  margin-bottom: 0.5rem;
+  color: #495057;
+}
+
 @media (max-width: 768px) {
-  .error-page {
-    padding: 1rem;
-  }
-  
-  .error-card {
-    padding: 2rem 1rem;
-  }
-  
-  .error-code {
-    font-size: 4rem;
+  .error-container {
+    padding: 2rem;
   }
   
   .error-title {
-    font-size: 1.5rem;
+    font-size: 2rem;
   }
   
   .error-actions {
     flex-direction: column;
-    align-items: center;
+    gap: 1rem;
   }
   
   .error-actions .v-btn {
     width: 100%;
-    max-width: 300px;
-  }
-}
-
-/* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
-  .stack-trace {
-    background: rgba(255, 255, 255, 0.05);
   }
 }
 </style> 

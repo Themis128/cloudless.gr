@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import { useCharts, type ChartData } from '~/composables/useCharts'
 
 interface Props {
@@ -53,6 +53,11 @@ const createChart = () => {
   // Only run on client side
   if (!process.client) return
   
+  // Don't create charts if component is being unmounted
+  if (!chartElement.value && !document.getElementById(props.chartId)) {
+    return
+  }
+  
   try {
     // Use the ref directly if available, otherwise fall back to getElementById
     let element = chartElement.value
@@ -62,7 +67,9 @@ const createChart = () => {
     }
     
     if (!element) {
-      console.warn('Chart element not found for:', props.chartId)
+      // Don't log warnings for chart elements that might not be ready yet
+      // This is normal during component mounting/unmounting
+      // Return silently to avoid console warnings
       return
     }
     
@@ -120,23 +127,34 @@ const createChart = () => {
 // Watch for data changes
 watch(() => props.data, () => {
   if (process.client) {
-    createChart()
+    nextTick(() => {
+      createChart()
+    })
   }
 }, { deep: true })
 
 // Watch for type changes
 watch(() => props.type, () => {
   if (process.client) {
-    createChart()
+    nextTick(() => {
+      createChart()
+    })
   }
 })
 
 onMounted(() => {
   if (process.client) {
     nextTick(() => {
-      // Wait for DOM to be fully ready
+      // Wait for DOM to be fully ready and ensure element exists
       setTimeout(() => {
-        createChart()
+        if (chartElement.value || document.getElementById(props.chartId)) {
+          createChart()
+        } else {
+          // If element still doesn't exist, try again after a longer delay
+          setTimeout(() => {
+            createChart()
+          }, 200)
+        }
       }, 100)
     })
   }

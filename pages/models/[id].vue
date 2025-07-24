@@ -1,504 +1,292 @@
 <template>
   <div>
-    <PageStructure
-      :title="model?.name || 'Model Details'"
-      subtitle="View detailed information about your model"
+    <LayoutPageStructure
+      :title="`Model: ${model?.name || 'Loading...'}`"
+      subtitle="Model details and management"
       back-button-to="/models"
       :has-sidebar="true"
       :white-header="true"
     >
       <template #main>
-        <!-- Loading State -->
-        <div v-if="loading" class="text-center py-8">
+        <div v-if="modelStore.isLoading" class="text-center py-8">
           <v-progress-circular indeterminate color="primary" />
-          <p class="mt-2 text-body-2">
-            Loading model details...
-          </p>
+          <p class="mt-2 text-body-2">Loading model...</p>
         </div>
-
-        <!-- Error State -->
-        <v-alert v-else-if="error" type="error" class="mb-4">
-          {{ error }}
-        </v-alert>
-
-        <!-- Model Details -->
-        <div v-else-if="model" class="model-details">
-          <!-- Model Overview Card -->
-          <v-card class="mb-4">
+        
+        <div v-else-if="!model" class="text-center py-8">
+          <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-alert-circle</v-icon>
+          <h3 class="text-h6 mb-2">Model not found</h3>
+          <p class="text-body-2 text-medium-emphasis mb-4">The requested model could not be found.</p>
+          <v-btn to="/models" color="primary">Back to Models</v-btn>
+        </div>
+        
+        <div v-else>
+          <!-- Model Header -->
+          <v-card class="mb-4 bg-white">
             <v-card-title class="d-flex align-center justify-space-between">
               <div class="d-flex align-center">
-                <v-avatar color="primary" size="40" class="mr-3">
-                  <v-icon color="white">
-                    {{ getModelIcon(model.type) }}
-                  </v-icon>
+                <v-avatar color="primary" size="48" class="mr-3">
+                  <v-icon color="white" size="24">{{ getModelIcon(model.type) }}</v-icon>
                 </v-avatar>
                 <div>
-                  <h2 class="text-h5 mb-1">
-                    {{ model.name }}
-                  </h2>
-                  <div class="d-flex align-center gap-2">
-                    <v-chip
-                      :color="getStatusColor(model.status)"
-                      size="small"
-                      variant="tonal"
-                    >
-                      {{ model.status || 'draft' }}
-                    </v-chip>
-                    <span class="text-body-2 text-medium-emphasis">
-                      v1.0.0
-                    </span>
-                  </div>
+                  <h2 class="text-h5">{{ model.name }}</h2>
+                  <p class="text-body-2 text-medium-emphasis">{{ model.type }}</p>
                 </div>
               </div>
               <div class="d-flex gap-2">
                 <v-btn
+                  v-if="model.status === 'ready'"
+                  to="`/models/${model.id}/test`"
                   color="primary"
-                  variant="outlined"
-                  prepend-icon="mdi-pencil"
-                  @click="editModel"
+                  prepend-icon="mdi-play-circle"
                 >
-                  Edit Model
-                </v-btn>
-                <v-btn
-                  color="error"
-                  variant="outlined"
-                  prepend-icon="mdi-delete"
-                  @click="deleteModel"
-                >
-                  Delete Model
+                  Test Model
                 </v-btn>
                 <v-btn
                   v-if="model.status === 'ready'"
-                  color="success"
-                  variant="elevated"
-                  prepend-icon="mdi-rocket-launch"
                   @click="deployModel"
+                  color="success"
+                  prepend-icon="mdi-rocket-launch"
                 >
                   Deploy
                 </v-btn>
                 <v-btn
                   v-if="model.status === 'draft'"
-                  color="secondary"
-                  variant="elevated"
+                  @click="startTraining"
+                  color="info"
                   prepend-icon="mdi-school"
-                  @click="trainModel"
                 >
-                  Train
+                  Start Training
                 </v-btn>
+                <v-menu>
+                  <template #activator="{ props }">
+                    <v-btn
+                      v-bind="props"
+                      icon="mdi-dots-vertical"
+                      variant="text"
+                    />
+                  </template>
+                  <v-list>
+                    <v-list-item
+                      prepend-icon="mdi-pencil"
+                      @click="editModel"
+                    >
+                      Edit Model
+                    </v-list-item>
+                    <v-list-item
+                      prepend-icon="mdi-delete"
+                      @click="deleteModel"
+                    >
+                      Delete Model
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
               </div>
             </v-card-title>
-            <v-divider />
+            
             <v-card-text>
-              <p v-if="model.description" class="text-body-1 mb-4">
-                {{ model.description }}
-              </p>
               <v-row>
-                <v-col cols="12" md="6">
-                  <v-list>
-                    <v-list-item>
-                      <v-list-item-title>Model Type</v-list-item-title>
-                      <v-list-item-subtitle>
-                        {{ model.type || 'Custom' }}
-                      </v-list-item-subtitle>
-                    </v-list-item>
-                    <v-list-item>
-                      <v-list-item-title>Framework</v-list-item-title>
-                      <v-list-item-subtitle>
-                        Not specified
-                      </v-list-item-subtitle>
-                    </v-list-item>
-                    <v-list-item>
-                      <v-list-item-title>Created</v-list-item-title>
-                      <v-list-item-subtitle>
-                        {{ formatDate(model.createdAt) }}
-                      </v-list-item-subtitle>
-                    </v-list-item>
-                  </v-list>
+                <v-col cols="12" md="8">
+                  <p v-if="model.description" class="text-body-1 mb-4">
+                    {{ model.description }}
+                  </p>
+                  
+                  <div class="d-flex flex-wrap gap-4 mb-4">
+                    <v-chip :color="getStatusColor(model.status)" size="large">
+                      {{ model.status }}
+                    </v-chip>
+                    <v-chip v-if="model.accuracy" color="success" size="large">
+                      {{ (model.accuracy * 100).toFixed(1) }}% Accuracy
+                    </v-chip>
+                    <v-chip color="info" size="large">
+                      Created {{ formatDate(model.createdAt) }}
+                    </v-chip>
+                  </div>
                 </v-col>
-                <v-col cols="12" md="6">
-                  <v-list>
-                    <v-list-item>
-                      <v-list-item-title>Status</v-list-item-title>
-                      <v-list-item-subtitle>
-                        <v-chip
-                          :color="getStatusColor(model.status)"
-                          size="small"
-                        >
-                          {{ model.status || 'draft' }}
+                
+                <v-col cols="12" md="4">
+                  <v-card variant="outlined">
+                    <v-card-title>Quick Stats</v-card-title>
+                    <v-card-text>
+                      <div class="d-flex justify-space-between mb-2">
+                        <span>Status:</span>
+                        <v-chip :color="getStatusColor(model.status)" size="small">
+                          {{ model.status }}
                         </v-chip>
-                      </v-list-item-subtitle>
-                    </v-list-item>
-                    <v-list-item>
-                      <v-list-item-title>Version</v-list-item-title>
-                      <v-list-item-subtitle>
-                        1.0.0
-                      </v-list-item-subtitle>
-                    </v-list-item>
-                    <v-list-item>
-                      <v-list-item-title>Last Updated</v-list-item-title>
-                      <v-list-item-subtitle>
-                        {{ formatDate(model.updatedAt || model.createdAt) }}
-                      </v-list-item-subtitle>
-                    </v-list-item>
-                  </v-list>
+                      </div>
+                      <div class="d-flex justify-space-between mb-2">
+                        <span>Type:</span>
+                        <span>{{ model.type }}</span>
+                      </div>
+                      <div v-if="model.accuracy" class="d-flex justify-space-between mb-2">
+                        <span>Accuracy:</span>
+                        <span>{{ (model.accuracy * 100).toFixed(1) }}%</span>
+                      </div>
+                      <div class="d-flex justify-space-between">
+                        <span>Last Updated:</span>
+                        <span>{{ formatDate(model.updatedAt) }}</span>
+                      </div>
+                    </v-card-text>
+                  </v-card>
                 </v-col>
               </v-row>
             </v-card-text>
           </v-card>
-
+          
           <!-- Model Configuration -->
-          <v-card class="mb-4">
+          <v-card class="mb-4 bg-white">
             <v-card-title>Configuration</v-card-title>
-            <v-divider />
             <v-card-text>
-              <v-alert v-if="!model.config" type="info" variant="tonal">
-                No configuration details available for this model.
-              </v-alert>
-              <pre v-else class="config-json">{{ JSON.stringify(JSON.parse(model.config), null, 2) }}</pre>
+              <v-textarea
+                :model-value="model.config"
+                label="Model Configuration (JSON)"
+                variant="outlined"
+                rows="8"
+                readonly
+              />
             </v-card-text>
           </v-card>
-
-          <!-- Model Performance -->
-          <v-card class="mb-4">
-            <v-card-title>Performance Metrics</v-card-title>
-            <v-divider />
+          
+          <!-- Training History -->
+          <v-card v-if="model.trainings && model.trainings.length > 0" class="mb-4 bg-white">
+            <v-card-title>Training History</v-card-title>
             <v-card-text>
-              <v-alert type="info" variant="tonal">
-                No performance metrics available for this model.
-              </v-alert>
-            </v-card-text>
-          </v-card>
-
-          <!-- Model History -->
-          <v-card>
-            <v-card-title>Model History</v-card-title>
-            <v-divider />
-            <v-card-text>
-              <v-timeline>
-                <v-timeline-item
-                  v-for="(event, index) in modelHistory"
-                  :key="index"
-                  :dot-color="getTimelineColor(event.type)"
-                  size="small"
+              <v-list>
+                <v-list-item
+                  v-for="training in model.trainings"
+                  :key="training.id"
+                  class="mb-2"
+                  rounded="lg"
+                  variant="outlined"
                 >
-                  <template #opposite>
-                    <div class="text-caption">
-                      {{ formatDate(event.timestamp) }}
-                    </div>
+                  <template #prepend>
+                    <v-avatar color="info" size="32">
+                      <v-icon color="white" size="16">mdi-school</v-icon>
+                    </v-avatar>
                   </template>
-                  <v-card variant="outlined">
-                    <v-card-text>
-                      <div class="d-flex align-center">
-                        <v-icon
-                          :color="getTimelineColor(event.type)"
-                          class="mr-2"
-                        >
-                          {{ getTimelineIcon(event.type) }}
-                        </v-icon>
-                        <div>
-                          <div class="font-weight-medium">
-                            {{ event.title }}
-                          </div>
-                          <div class="text-body-2 text-medium-emphasis">
-                            {{ event.description }}
-                          </div>
-                        </div>
-                      </div>
-                    </v-card-text>
-                  </v-card>
-                </v-timeline-item>
-              </v-timeline>
+                  
+                  <v-list-item-title class="text-body-1">
+                    Training Session #{{ training.id }}
+                  </v-list-item-title>
+                  
+                  <v-list-item-subtitle class="text-caption">
+                    {{ formatDate(training.createdAt) }} - {{ training.status }}
+                  </v-list-item-subtitle>
+                  
+                  <template #append>
+                    <v-chip
+                      :color="getTrainingStatusColor(training.status)"
+                      size="small"
+                      variant="tonal"
+                    >
+                      {{ training.status }}
+                    </v-chip>
+                  </template>
+                </v-list-item>
+              </v-list>
             </v-card-text>
           </v-card>
         </div>
       </template>
 
       <template #sidebar>
-        <ModelGuide page="details" />
-        
-        <v-card class="mb-4">
-          <v-btn
-            v-if="model?.status === 'ready'"
-            color="success"
-            variant="elevated"
-            block
-            class="mb-2"
-            prepend-icon="mdi-rocket-launch"
-            @click="deployModel"
-          >
-            Deploy Model
-          </v-btn>
-          <v-btn
-            v-if="model?.status === 'draft'"
-            color="secondary"
-            variant="elevated"
-            block
-            class="mb-2"
-            prepend-icon="mdi-school"
-            @click="trainModel"
-          >
-            Train Model
-          </v-btn>
-        </v-card>
-
-        <v-card>
-          <v-card-title>Model Information</v-card-title>
-          <v-card-text>
-            <v-list density="compact">
-              <v-list-item>
-                <v-list-item-title class="text-caption">
-                  ID
-                </v-list-item-title>
-                <v-list-item-subtitle>{{ model?.id }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title class="text-caption">
-                  Type
-                </v-list-item-title>
-                <v-list-item-subtitle>{{ model?.type || 'Custom' }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title class="text-caption">
-                  Framework
-                </v-list-item-title>
-                <v-list-item-subtitle>{{ model?.framework || 'Not specified' }}</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
+        <ModelGuide />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import PageStructure from '~/components/layout/PageStructure.vue'
+import LayoutPageStructure from '~/components/layout/LayoutPageStructure.vue'
 import ModelGuide from '~/components/step-guides/ModelGuide.vue'
+import { useModelStore } from '~/stores/modelStore'
 
-interface Model {
-  id: number
-  name: string
-  type: string
-  status: string
-  description?: string
-  config: string
-  createdAt: Date
-  updatedAt: Date
-  user: {
-    id: number
-    name: string
-    email: string
-  }
-}
-
-interface ModelHistoryEvent {
-  type: 'created' | 'trained' | 'deployed' | 'updated' | 'error'
-  title: string
-  description: string
-  timestamp: string
-}
-
-const router = useRouter()
 const route = useRoute()
+const router = useRouter()
+const modelStore = useModelStore()
 
-const model = ref<Model | null>(null)
-const loading = ref(true)
-const error = ref<string | null>(null)
-const modelHistory = ref<ModelHistoryEvent[]>([])
+const modelId = computed(() => parseInt(route.params.id as string))
+const model = computed(() => modelStore.modelById(modelId.value))
 
-// Helper functions
-const getModelIcon = (type?: string) => {
-  const icons: Record<string, string> = {
-    'Classification': 'mdi-tag-multiple',
-    'Regression': 'mdi-chart-line',
-    'Neural Network': 'mdi-brain',
-    'Transformer': 'mdi-transformer',
-    'Custom': 'mdi-cog'
+const getModelIcon = (type: string) => {
+  switch (type) {
+    case 'text-classification': return 'mdi-text'
+    case 'image-classification': return 'mdi-image'
+    case 'object-detection': return 'mdi-target'
+    case 'sentiment-analysis': return 'mdi-emoticon'
+    case 'translation': return 'mdi-translate'
+    case 'summarization': return 'mdi-text-box'
+    case 'regression': return 'mdi-chart-line'
+    case 'clustering': return 'mdi-chart-bubble'
+    default: return 'mdi-brain'
   }
-  return icons[type || ''] || 'mdi-brain'
 }
 
-const getStatusColor = (status?: string) => {
-  const colors: Record<string, string> = {
-    'draft': 'grey',
-    'training': 'orange',
-    'ready': 'green',
-    'deployed': 'blue',
-    'error': 'red'
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'ready': return 'success'
+    case 'draft': return 'warning'
+    case 'training': return 'info'
+    case 'deployed': return 'primary'
+    case 'error': return 'error'
+    default: return 'grey'
   }
-  return colors[status || 'draft']
 }
 
-const getTimelineColor = (type: string) => {
-  const colors: Record<string, string> = {
-    'created': 'primary',
-    'trained': 'success',
-    'deployed': 'info',
-    'updated': 'warning',
-    'error': 'error'
+const getTrainingStatusColor = (status: string) => {
+  switch (status) {
+    case 'completed': return 'success'
+    case 'running': return 'info'
+    case 'pending': return 'warning'
+    case 'failed': return 'error'
+    default: return 'grey'
   }
-  return colors[type] || 'grey'
 }
 
-const getTimelineIcon = (type: string) => {
-  const icons: Record<string, string> = {
-    'created': 'mdi-plus',
-    'trained': 'mdi-school',
-    'deployed': 'mdi-rocket-launch',
-    'updated': 'mdi-pencil',
-    'error': 'mdi-alert'
-  }
-  return icons[type] || 'mdi-circle'
+const formatDate = (date: Date) => {
+  return new Date(date).toLocaleDateString()
 }
 
-const formatDate = (dateString: string | Date) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-// Action handlers
 const editModel = () => {
-  if (model.value) {
-    router.push(`/models/${model.value.id}/edit`)
-  }
-}
-
-const deployModel = () => {
-  if (model.value) {
-    router.push(`/models/deploy?model=${model.value.id}`)
-  }
-}
-
-const trainModel = () => {
-  if (model.value) {
-    router.push(`/models/train?model=${model.value.id}`)
-  }
+  router.push(`/models/${modelId.value}/edit`)
 }
 
 const deleteModel = async () => {
-  if (model.value && confirm(`Are you sure you want to delete "${model.value.name}"?`)) {
-    try {
-      const response = await $fetch<{ success: boolean; message?: string }>(`/api/prisma/models/${model.value.id}`, {
-        method: 'DELETE'
-      })
-      
-      if (response.success) {
-        router.push('/models')
-      } else {
-        error.value = response.message || 'Failed to delete model'
-      }
-    } catch (err: any) {
-      console.error('Error deleting model:', err)
-      error.value = err.message || 'Failed to delete model'
+  if (confirm(`Are you sure you want to delete "${model.value?.name}"?`)) {
+    const success = await modelStore.deleteModel(modelId.value)
+    if (success) {
+      router.push('/models')
     }
   }
 }
 
-// Load model details
-const loadModel = async () => {
-  const modelId = route.params.id as string
-  if (!modelId) {
-    error.value = 'Model ID is required'
-    loading.value = false
-    return
-  }
-
-  try {
-    loading.value = true
-    error.value = ''
-    
-    const response = await $fetch<{ success: boolean; data: Model; message?: string }>(`/api/prisma/models/${modelId}`)
-    
-    if (response.success) {
-      model.value = response.data
-      // Generate mock history for demonstration
-      generateModelHistory()
-    } else {
-      error.value = response.message || 'Failed to load model details'
-    }
-  } catch (err: any) {
-    console.error('Error loading model:', err)
-    error.value = err.message || 'Failed to load model details'
-  } finally {
-    loading.value = false
+const deployModel = async () => {
+  const success = await modelStore.deployModel(modelId.value)
+  if (success) {
+    // Show success message or navigate
   }
 }
 
-const generateModelHistory = () => {
-  if (!model.value) return
-
-  const history: ModelHistoryEvent[] = [
-    {
-      type: 'created',
-      title: 'Model Created',
-      description: `Model "${model.value.name}" was created`,
-      timestamp: model.value.createdAt.toISOString()
-    }
-  ]
-
-  if (model.value.status === 'ready') {
-    history.push({
-      type: 'trained',
-      title: 'Training Completed',
-      description: 'Model training was completed successfully',
-      timestamp: model.value.updatedAt.toISOString()
-    })
-  }
-
-  if (model.value.status === 'deployed') {
-    history.push({
-      type: 'deployed',
-      title: 'Model Deployed',
-      description: 'Model was deployed to production',
-      timestamp: model.value.updatedAt.toISOString()
-    })
-  }
-
-  modelHistory.value = history.sort((a, b) => 
-    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  )
+const startTraining = async () => {
+  await modelStore.startTraining(modelId.value)
 }
 
 onMounted(() => {
-  loadModel()
+  // Fetch models if not already loaded
+  if (modelStore.allModels.length === 0) {
+    modelStore.fetchAll()
+  }
 })
 </script>
 
 <style scoped>
-.model-details {
-  max-width: 100%;
-}
-
-.config-json {
-  background: rgba(0, 0, 0, 0.05);
-  padding: 1rem;
-  border-radius: 8px;
-  font-family: 'Courier New', monospace;
-  font-size: 0.875rem;
-  overflow-x: auto;
-}
-
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+.gap-4 {
   gap: 1rem;
 }
 
-.metric-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-}
-
-@media (max-width: 768px) {
-  .metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.gap-2 {
+  gap: 0.5rem;
 }
 </style> 

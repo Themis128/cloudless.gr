@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Test Pipeline"
       subtitle="Test your data processing pipelines with sample data"
       back-button-to="/pipelines"
@@ -30,13 +30,13 @@
                   <template #prepend>
                     <v-avatar color="primary" size="32">
                       <v-icon color="white">
-                        {{ getPipelineIcon(item.raw.type) }}
+                        mdi-pipe
                       </v-icon>
                     </v-avatar>
                   </template>
                   <v-list-item-title>{{ item.raw.name }}</v-list-item-title>
                   <v-list-item-subtitle>
-                    {{ item.raw.type }} • {{ item.raw.status }}
+                    {{ item.raw.status }}
                   </v-list-item-subtitle>
                 </v-list-item>
               </template>
@@ -48,7 +48,7 @@
               variant="tonal"
               class="mb-3"
             >
-              <strong>Pipeline Info:</strong> {{ selectedPipelineInfo.type }} pipeline with {{ selectedPipelineInfo.status }} status
+              <strong>Pipeline Info:</strong> Pipeline with {{ selectedPipelineInfo.status }} status
             </v-alert>
           </v-card-text>
         </v-card>
@@ -110,9 +110,9 @@
                 variant="elevated"
                 prepend-icon="mdi-play"
                 :loading="testing"
-                :disabled="!selectedPipeline || !testScenario"
+                :disabled="!canRunTest"
                 size="large"
-                @click="startTest"
+                @click="runTest"
               >
                 Start Test
               </v-btn>
@@ -122,9 +122,19 @@
                 prepend-icon="mdi-refresh"
                 :disabled="testing"
                 size="large"
-                @click="clearTest"
+                @click="clearResults"
               >
                 Clear Test
+              </v-btn>
+              <v-btn
+                color="info"
+                variant="outlined"
+                prepend-icon="mdi-download"
+                :disabled="testResults.length === 0"
+                size="large"
+                @click="exportResults"
+              >
+                Export Results
               </v-btn>
             </div>
           </v-card-text>
@@ -301,15 +311,14 @@
           </v-card-text>
         </v-card>
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import PageStructure from '~/components/layout/PageStructure.vue'
+import { usePipelineStore } from '~/stores/pipelineStore'
 import PipelineGuide from '~/components/step-guides/PipelineGuide.vue'
-import { usePrismaStore } from '~/stores/usePrismaStore'
 
 interface Pipeline {
   id: number
@@ -347,9 +356,8 @@ interface TestResult {
   batchSize: number
 }
 
-const { getPipelines } = usePrismaStore()
+const pipelineStore = usePipelineStore()
 
-const availablePipelines = ref<Pipeline[]>([])
 const selectedPipeline = ref<string>('')
 const testScenario = ref<string>('')
 const customInput = ref('')
@@ -398,9 +406,11 @@ const testScenarios = ref<TestScenario[]>([
     name: 'ML Inference',
     description: 'Run machine learning model inference',
     inputData: {
-      features: [0.1, 0.2, 0.3, 0.4, 0.5],
-      model_type: 'classification',
-      threshold: 0.5
+      model_input: [1, 2, 3, 4, 5],
+      parameters: {
+        temperature: 0.7,
+        max_tokens: 100
+      }
     }
   },
   {
@@ -412,12 +422,17 @@ const testScenarios = ref<TestScenario[]>([
 ])
 
 // Computed properties
+const availablePipelines = computed(() => pipelineStore.allPipelines)
 const selectedPipelineInfo = computed(() => {
-  return availablePipelines.value.find(pipeline => pipeline.id === selectedPipeline.value)
+  return availablePipelines.value.find(pipeline => pipeline.id === parseInt(selectedPipeline.value))
 })
 
 const currentScenario = computed(() => {
   return testScenarios.value.find(scenario => scenario.id === testScenario.value)
+})
+
+const canRunTest = computed(() => {
+  return selectedPipeline.value && (testScenario.value || customInput.value.trim())
 })
 
 // Helper functions
@@ -462,89 +477,46 @@ const formatDate = (dateString: string) => {
 }
 
 // Action handlers
-const startTest = async () => {
-  if (!selectedPipeline.value || !testScenario.value) return
+const runTest = async () => {
+  if (!canRunTest.value) return
   
   testing.value = true
   error.value = null
   
-  const startTime = Date.now()
-  
   try {
-    const pipeline = selectedPipelineInfo.value
-    const scenario = currentScenario.value
+    const pipelineId = parseInt(selectedPipeline.value)
+    const input = customInput.value.trim() || JSON.stringify(currentScenario.value?.inputData)
     
-    if (!pipeline || !scenario) {
-      throw new Error('Invalid pipeline or scenario selection')
-    }
+    const result = await pipelineStore.testPipeline(pipelineId, input)
     
-    // Simulate pipeline testing
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000))
-    
-    const duration = Date.now() - startTime
-    
-    // Generate pipeline steps based on scenario
-    const steps: PipelineStep[] = []
-    let success = true
-    let testError: string | undefined = undefined
-    
-    if (Math.random() > 0.1) { // 90% success rate
-      const stepNames = generatePipelineSteps(pipeline.type, scenario.id)
-      
-      for (let i = 0; i < stepNames.length; i++) {
-        const stepName = stepNames[i]
-        
-        // Simulate step processing
-        await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 500))
-        
-        const stepSuccess = Math.random() > 0.05 // 95% step success rate
-        
-        if (stepSuccess) {
-          steps.push({
-            name: stepName,
-            status: 'complete',
-            result: generateStepResult(stepName),
-            duration: Math.floor(Math.random() * 300) + 100
-          })
-        } else {
-          steps.push({
-            name: stepName,
-            status: 'error',
-            error: `Failed to process ${stepName}: Internal error`,
-            duration: Math.floor(Math.random() * 200) + 50
-          })
-          success = false
-          break
+    const testResult: TestResult = {
+      pipelineId,
+      pipelineName: pipelineStore.pipelineById(pipelineId)?.name || 'Unknown',
+      scenario: testScenario.value || 'custom',
+      steps: [
+        {
+          name: 'Input Processing',
+          status: 'complete',
+          result: 'Input processed successfully',
+          duration: 100
+        },
+        {
+          name: 'Pipeline Execution',
+          status: 'complete',
+          result: result.output,
+          duration: result.processingTime
         }
-      }
-    } else {
-      success = false
-      testError = 'Pipeline execution failed: Resource timeout'
-      steps.push({
-        name: 'Initialization',
-        status: 'error',
-        error: testError
-      })
-    }
-    
-    const result: TestResult = {
-      pipelineId: pipeline.id,
-      pipelineName: pipeline.name,
-      scenario: scenario.name,
-      steps,
-      success,
-      error: testError,
-      duration,
+      ],
+      success: result.status === 'success',
+      error: result.error,
+      duration: result.processingTime,
       timestamp: new Date().toISOString(),
       batchSize: batchSize.value
     }
     
-    testResults.value.unshift(result)
-    
-    // Clear custom input for next test
-    customInput.value = ''
-    
-  } catch (err) {
+    testResults.value.unshift(testResult)
+  } catch (error: any) {
+    console.error('Test failed:', error)
     error.value = 'Failed to test pipeline'
   } finally {
     testing.value = false
@@ -604,10 +576,21 @@ const generateStepResult = (stepName: string): string => {
   return results[stepName] || `Step "${stepName}" completed successfully`
 }
 
-const clearTest = () => {
+const clearResults = () => {
   testResults.value = []
   error.value = null
   customInput.value = ''
+}
+
+const exportResults = () => {
+  const data = JSON.stringify(testResults.value, null, 2)
+  const blob = new Blob([data], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `pipeline-test-results-${new Date().toISOString().split('T')[0]}.json`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 // Load available pipelines
@@ -616,10 +599,7 @@ const loadPipelines = async () => {
   error.value = null
   
   try {
-    const data = await getPipelines()
-    
-    // Filter for active pipelines
-    availablePipelines.value = data.filter((pipeline: any) => pipeline.status === 'active') || []
+    await pipelineStore.fetchAll()
   } catch (err) {
     error.value = 'Failed to load pipelines'
   } finally {

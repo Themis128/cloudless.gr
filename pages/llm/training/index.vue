@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Training Sessions"
       subtitle="Monitor and manage your model training jobs"
       back-button-to="/llm"
@@ -261,7 +261,7 @@
       <template #sidebar>
         <LLMGuide page="training" />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

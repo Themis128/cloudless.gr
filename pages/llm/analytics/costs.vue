@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Cost Analysis"
       subtitle="Track and analyze your LLM usage costs"
       back-button-to="/llm/analytics"
@@ -331,7 +331,7 @@
       <template #sidebar>
         <LLMGuide page="analytics" />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

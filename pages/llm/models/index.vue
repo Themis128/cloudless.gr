@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="LLM Models"
       subtitle="Manage and monitor your trained language models"
       back-button-to="/llm"
@@ -263,7 +263,7 @@
       <template #sidebar>
         <LLMGuide page="models" />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

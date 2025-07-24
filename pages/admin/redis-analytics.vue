@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Redis Analytics"
       subtitle="Monitor and analyze Redis performance, memory usage, and system health"
       :show-back-button="true"
@@ -251,7 +251,7 @@
           </v-card-text>
         </v-card>
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
 
     <!-- Settings Dialog -->
     <v-dialog v-model="showSettings" max-width="600">

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Model Deployments"
       subtitle="Manage and monitor your deployed language models"
       back-button-to="/llm"
@@ -230,7 +230,7 @@
       <template #sidebar>
         <LLMGuide page="deploy" />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

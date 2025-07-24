@@ -1,32 +1,41 @@
 <template>
   <v-app>
+    <client-only>
+      <div
+        v-show="vantaEnabled"
+        id="vanta-bg"
+        ref="vantaRef"
+        class="vanta-bg"
+      />
+    </client-only>
+    <!-- Fallback background when Vanta is disabled -->
     <div
-      v-show="vantaEnabled"
-      id="vanta-bg"
-      ref="vantaRef"
-      class="vanta-bg"
+      v-show="!vantaEnabled"
+      class="fallback-bg"
     />
-    <button class="vanta-toggle-btn" aria-label="Toggle Vanta Controls" @click="toggleVantaControls">
-      <svg
-        width="28"
-        height="28"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <rect
-          x="3"
-          y="3"
-          width="18"
-          height="18"
-          rx="4"
-        />
-        <path d="M9 9h.01M15 9h.01M9 15h.01M15 15h.01" />
-      </svg>
-    </button>
+    <client-only>
+      <button class="vanta-toggle-btn" aria-label="Toggle Vanta Controls" @click="toggleVantaControls">
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect
+            x="3"
+            y="3"
+            width="18"
+            height="18"
+            rx="4"
+          />
+          <path d="M9 9h.01M15 9h.01M9 15h.01M15 15h.01" />
+        </svg>
+      </button>
+    </client-only>
     <client-only>
       <VantaControls
         v-if="showVantaControls"
@@ -256,49 +265,53 @@
           </div>
 
           <!-- Login Status Indicator -->
-          <div class="login-status-container">
-            <div 
-              class="login-status-indicator"
-              :class="{ 'logged-in': isAuthenticated, 'logged-out': !isAuthenticated }"
-              :title="isAuthenticated ? 'Logged In' : 'Not Logged In'"
-            >
-              <div class="status-dot"></div>
-              <span v-if="isAuthenticated" class="status-text">Online</span>
+          <client-only>
+            <div class="login-status-container">
+              <div 
+                class="login-status-indicator"
+                :class="{ 'logged-in': isAuthenticated, 'logged-out': !isAuthenticated }"
+                :title="isAuthenticated ? 'Logged In' : 'Not Logged In'"
+              >
+                <div class="status-dot"></div>
+                <span v-if="isAuthenticated" class="status-text">Online</span>
+              </div>
             </div>
-          </div>
+          </client-only>
 
           <!-- Auth Button -->
-          <div class="auth-button-container">
-            <v-btn
-              v-if="isAuthenticated"
-              @click="handleLogout"
-              :loading="authLoading"
-              variant="outlined"
-              color="error"
-              size="small"
-              class="auth-btn logout-btn"
-              :title="`Logout ${user?.name || user?.email}`"
-            >
-              <v-icon size="16" class="mr-1">
-                mdi-logout
-              </v-icon>
-              <span class="auth-btn-text">Logout</span>
-            </v-btn>
-            <v-btn
-              v-else
-              @click="handleLogin"
-              variant="elevated"
-              color="primary"
-              size="small"
-              class="auth-btn login-btn"
-              title="Login to your account"
-            >
-              <v-icon size="16" class="mr-1">
-                mdi-login
-              </v-icon>
-              <span class="auth-btn-text">Login</span>
-            </v-btn>
-          </div>
+          <client-only>
+            <div class="auth-button-container">
+              <v-btn
+                v-if="isAuthenticated"
+                @click="handleLogout"
+                :loading="authLoading"
+                variant="outlined"
+                color="error"
+                size="small"
+                class="auth-btn logout-btn"
+                :title="`Logout ${user?.name || user?.email}`"
+              >
+                <v-icon size="16" class="mr-1">
+                  mdi-logout
+                </v-icon>
+                <span class="auth-btn-text">Logout</span>
+              </v-btn>
+              <v-btn
+                v-else
+                @click="handleLogin"
+                variant="elevated"
+                color="primary"
+                size="small"
+                class="auth-btn login-btn"
+                title="Login to your account"
+              >
+                <v-icon size="16" class="mr-1">
+                  mdi-login
+                </v-icon>
+                <span class="auth-btn-text">Login</span>
+              </v-btn>
+            </div>
+          </client-only>
         </div>
 
         <!-- Mobile menu overlay -->
@@ -503,7 +516,7 @@
       </header>
       <div class="wizard-body">
         <main class="app-main">
-          <slot />
+          <NuxtPage />
         </main>
       </div>
       <footer class="app-footer">
@@ -845,7 +858,7 @@ const showMobileMenu = ref(false)
 const activeDropdown = ref<string | null>(null)
 const vantaRef = ref<HTMLElement | null>(null)
 let vantaEffect: any = null
-const vantaEnabled = ref(true)
+const vantaEnabled = ref(false) // Start as false to prevent hydration issues
 const currentEffect = ref('clouds2')
 const vantaOptions = ref({
   // Clouds2 effect (default) - Optimal settings from vanta-master
@@ -1589,6 +1602,9 @@ watch(
 )
 
 onMounted(() => {
+  // Enable Vanta after component is mounted to prevent hydration issues
+  vantaEnabled.value = true
+  
   // Set appropriate effect for current route
   currentEffect.value = getEffectForRoute(window.location.pathname)
 
@@ -3402,5 +3418,17 @@ const getEffectOptions = (effect: string): any => {
     padding: 6px 12px 12px !important;
     font-size: 0.875rem !important;
   }
+}
+
+/* Fallback background when Vanta is disabled */
+.fallback-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  z-index: -1;
+  opacity: 0.8;
 }
 </style>

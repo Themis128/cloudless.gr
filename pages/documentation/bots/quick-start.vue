@@ -1,6 +1,6 @@
 <template>
   <div class="quick-start-page">
-    <PageStructure
+    <LayoutPageStructure
       title="Bot Builder Quick Start"
       subtitle="Get up and running with your first AI bot in 5 minutes"
       :show-back-button="true"
@@ -436,7 +436,7 @@
           </v-card>
         </div>
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

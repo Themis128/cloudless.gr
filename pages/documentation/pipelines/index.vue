@@ -1,6 +1,6 @@
 <template>
   <div class="pipelines-documentation-page">
-    <PageStructure
+    <LayoutPageStructure
       title="Pipeline Builder Documentation"
       subtitle="Build powerful data processing pipelines with our visual builder"
       :show-back-button="true"
@@ -246,7 +246,7 @@
           </div>
         </div>
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

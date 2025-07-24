@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Test Projects"
       subtitle="Validate and test your project configurations and workflows"
       back-button-to="/projects"
@@ -224,7 +224,7 @@
       <template #sidebar>
         <ProjectGuide />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

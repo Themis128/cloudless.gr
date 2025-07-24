@@ -1,6 +1,6 @@
 <template>
   <div class="models-quick-start-page">
-    <PageStructure
+    <LayoutPageStructure
       title="Model Training Quick Start"
       subtitle="Coming Soon - AI Model Training Made Simple"
       :show-back-button="true"
@@ -172,7 +172,7 @@
           </v-card>
         </div>
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 

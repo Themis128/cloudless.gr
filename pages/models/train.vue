@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageStructure
+    <LayoutPageStructure
       title="Train Model"
       subtitle="Train your AI models with data"
       back-button-to="/models"
@@ -49,7 +49,7 @@
       <template #sidebar>
         <ModelGuide page="train" />
       </template>
-    </PageStructure>
+    </LayoutPageStructure>
   </div>
 </template>
 
