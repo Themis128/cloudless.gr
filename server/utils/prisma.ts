@@ -10,8 +10,4 @@ export function getPrismaClient(): PrismaClient {
   return prisma;
 }
 
-<<<<<<< Current (Your changes)
-export default prisma;
-=======
 export default getPrismaClient();
->>>>>>> Incoming (Background Agent changes)
