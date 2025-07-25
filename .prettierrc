@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "semi": false,
   "singleQuote": true,
   "tabWidth": 2,
@@ -8,12 +7,4 @@
   "bracketSpacing": true,
   "arrowParens": "avoid",
   "endOfLine": "lf"
-} 
-=======
-  "semi": true,
-  "singleQuote": true,
-  "printWidth": 100,
-  "tabWidth": 2,
-  "trailingComma": "es5"
 }
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
