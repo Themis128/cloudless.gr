@@ -57,6 +57,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useRoute, definePageMeta, useSeoMeta } from '#imports'
 
 // Get the slug from the route
 const route = useRoute();

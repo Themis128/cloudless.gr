@@ -6,16 +6,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { Project } from '@/types/projects';
 import { defineProps } from 'vue';
 
-const props = defineProps<{ project: Project }>();
-const isFavorite = computed(() => props.project.isFavorite);
+const props = defineProps<{ project: any }>();
+const localProject = ref({ ...props.project });
+const isFavorite = computed(() => localProject.value.isFavorite);
 
 function toggleFavorite() {
   // placeholder: emit an event or update state
-  props.project.isFavorite = !props.project.isFavorite;
+  localProject.value.isFavorite = !localProject.value.isFavorite;
 }
 </script>
 

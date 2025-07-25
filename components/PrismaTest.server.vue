@@ -26,7 +26,8 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { usePrismaClient } from '~/composables/usePrismaClient'
 // This is a server component that uses the usePrismaClient composable
 const prisma = usePrismaClient();
 

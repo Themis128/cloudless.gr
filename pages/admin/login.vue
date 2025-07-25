@@ -39,6 +39,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { navigateTo } from '#app';
 
 // State management
 const username = ref<string>('');

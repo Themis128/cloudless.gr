@@ -72,6 +72,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useUserAuth } from '~/composables/useUserAuth';
+import { useRouter } from 'vue-router';
 
 const { isLoggedIn, logout } = useUserAuth();
 

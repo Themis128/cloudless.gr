@@ -56,7 +56,7 @@ export function useContactUs() {
   const isAutoSaving = ref(false);
 
   // Auto-save timer
-  let autoSaveTimeout: NodeJS.Timeout | null = null;
+  const autoSaveTimeout: NodeJS.Timeout | null = null;
 
   // Validation
   const errors = reactive<FormErrors>({

@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'nuxt/app';
+import { navigateTo } from '#app'
 
 const router = useRouter();
 

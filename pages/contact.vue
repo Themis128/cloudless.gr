@@ -162,6 +162,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useContactUs } from '~/composables/useContactUs';
+import { definePageMeta } from '#imports'
 
 // Use the contact form composable
 const contactForm = useContactUs();

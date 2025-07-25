@@ -17,6 +17,7 @@
 
 <script setup lang="ts">
 import { useUserAuth } from '~/composables/useUserAuth';
+import { navigateTo } from '#app'
 
 const { isLoggedIn } = useUserAuth();
 

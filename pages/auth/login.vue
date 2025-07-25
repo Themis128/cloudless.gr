@@ -44,6 +44,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useUserAuth } from '~/composables/useUserAuth';
+import { useRoute, definePageMeta } from '#imports'
+import { navigateTo } from '#app'
 
 const { login, loginError, isLoading, isLoggedIn } = useUserAuth();
 

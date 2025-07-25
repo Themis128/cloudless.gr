@@ -52,6 +52,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useUserAuth } from '~/composables/useUserAuth';
+import { navigateTo } from '#app'
+import { definePageMeta } from '#imports'
 
 const { currentUser, logout, isLoggedIn } = useUserAuth();
 

@@ -46,6 +46,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useRoute, definePageMeta } from '#imports'
 
 // Form state
 const password = ref<string>('');

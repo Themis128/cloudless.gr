@@ -44,6 +44,8 @@
 </template>
 
 <script setup lang="ts">
+import { navigateTo } from '#app'
+import { definePageMeta, useSeoMeta } from '#imports'
 // Project data interface
 interface ProjectLink {
   label: string;

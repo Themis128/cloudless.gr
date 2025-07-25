@@ -58,6 +58,8 @@
 
 <script setup lang="ts">
 import { useUserAuth } from '~/composables/useUserAuth';
+import { navigateTo } from '#app'
+import { definePageMeta } from '#imports'
 
 const { currentUser, isLoggedIn } = useUserAuth();
 
