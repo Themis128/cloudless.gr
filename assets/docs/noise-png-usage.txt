@@ -1,0 +1,20 @@
+// This file explains where to reference the noise.png file correctly.
+
+When using the noise.png file in your application, make sure to:
+
+1. Reference it as a static asset, NOT as a route.
+
+CORRECT:
+- `<img src="/gallery/noise.png" alt="Noise texture" />`
+- `background-image: url('/gallery/noise.png')`
+
+INCORRECT:
+- `<NuxtLink to="/gallery/noise.png">Link</NuxtLink>`
+- `router.push('/gallery/noise.png')`
+
+2. Move the file to the public directory for proper static asset handling.
+
+The recommended location is:
+- `/public/gallery/noise.png`
+
+This ensures Nuxt serves it correctly as a static file rather than trying to match it as a route.

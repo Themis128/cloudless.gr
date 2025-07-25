@@ -20,4 +20,8 @@ class InferRequest(BaseModel):
 class JobStatus(BaseModel):
     job_id: str
     status: str
+<<<<<<< HEAD
     result: Optional[Dict] = None 
+=======
+    result: Optional[Dict] = None
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

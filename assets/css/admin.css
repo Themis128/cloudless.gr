@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -69,3 +70,63 @@
 .admin-stat-card-value {
   @apply mt-1 text-3xl font-semibold text-gray-900;
 } 
+=======
+/* Admin styles to override defaults */
+.admin-layout-wrapper .layout-root {
+  position: relative;
+}
+
+.admin-layout-wrapper .main-content-transparent {
+  position: static !important;
+  z-index: 1 !important;
+  background: transparent !important;
+}
+
+/* Make the background elements appear on top */
+.admin-layout-wrapper [data-vanta],
+.admin-layout-wrapper .vanta-canvas {
+  z-index: 5 !important;
+  opacity: 0.8 !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Ensure text is readable */
+.admin-layout-wrapper .admin-content {
+  color: white;
+  text-shadow: 0px 0px 4px rgba(0, 0, 0, 0.7);
+}
+
+/* Make links and buttons stand out */
+.admin-layout-wrapper .admin-content a:not(.nav-link) {
+  color: #38bdf8;
+  text-decoration: underline;
+}
+
+/* Table styling for admin interfaces */
+.admin-layout-wrapper table {
+  background-color: rgba(15, 23, 42, 0.7);
+  border-radius: 6px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+
+.admin-layout-wrapper th {
+  background-color: rgba(30, 64, 175, 0.8);
+  color: white;
+  padding: 10px;
+  text-align: left;
+}
+
+.admin-layout-wrapper td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-layout-wrapper tr:hover td {
+  background-color: rgba(30, 64, 175, 0.3);
+}
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

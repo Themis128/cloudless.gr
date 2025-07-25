@@ -1,0 +1,27 @@
+{
+  "recommendations": [
+    "vue.volar", // Vue Language Features (Volar)
+    "vue.vscode-typescript-vue-plugin", // TypeScript Vue Plugin (Volar)
+    "esbenp.prettier-vscode", // Prettier - Code formatter
+    "dbaeumer.vscode-eslint", // ESLint
+    "bradlc.vscode-tailwindcss", // Tailwind CSS IntelliSense
+    "prisma.prisma", // Prisma
+    "steoates.autoimport", // Auto Import
+    "formulahendry.auto-close-tag", // Auto Close Tag
+    "formulahendry.auto-rename-tag", // Auto Rename Tag
+    "streetsidesoftware.code-spell-checker", // Code Spell Checker
+    "naumovs.color-highlight", // Color Highlight
+    "mikestead.dotenv", // DotENV
+    "usernamehw.errorlens", // Error Lens
+    "github.copilot", // GitHub Copilot
+    "eamodio.gitlens", // GitLens
+    "wayou.vscode-todo-highlight", // TODO Highlight
+    "gruntfuggly.todo-tree", // Todo Tree
+    "csstools.postcss", // PostCSS Language Support
+    "bradlc.vscode-tailwindcss", // Tailwind CSS IntelliSense
+    "yoavbls.pretty-ts-errors", // Pretty TypeScript Errors
+    "redhat.vscode-yaml", // YAML for better docker-compose files
+    "ms-azuretools.vscode-docker", // Docker
+    "rangav.vscode-thunder-client" // Thunder Client for API Testing
+  ]
+}

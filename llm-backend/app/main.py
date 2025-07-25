@@ -155,4 +155,8 @@ def metrics():
     for owner in user_job_counts:
         usage = user_disk_usage_mb(owner)
         lines.append(f"llm_user_disk_mb{{owner=\"{owner}\"}} {usage}")
+<<<<<<< HEAD
     return "\n".join(lines) 
+=======
+    return "\n".join(lines)
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

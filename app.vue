@@ -5,6 +5,7 @@
 </template>
 
 <script setup lang="ts">
+<<<<<<< HEAD
 // Main app component - no additional logic needed
 </script>
 
@@ -220,5 +221,19 @@ p, span, div {
   padding: 2rem !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
+=======
+// Nothing needed here unless injecting global logic
+</script>
+
+<style>
+/* Apply global resets and fallback background */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  overflow-x: hidden;
+  background-color: #7ec0ee; /* fallback sky-blue if Vanta fails */
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
 }
 </style>

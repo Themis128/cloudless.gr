@@ -13,4 +13,8 @@ EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # To run the Celery worker, use:
+<<<<<<< HEAD
 # docker run --rm llm-backend celery -A app.tasks.celery_app worker --loglevel=info 
+=======
+# docker run --rm llm-backend celery -A app.tasks.celery_app worker --loglevel=info
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

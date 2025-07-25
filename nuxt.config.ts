@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Nuxt config - Optimized for Development
 import { defineNuxtConfig } from 'nuxt/config'
 
@@ -184,6 +185,45 @@ export default defineNuxtConfig({
         }
       }
     }
+=======
+// https://nuxt.com/docs/api/configuration/nuxt-config
+export default defineNuxtConfig({
+  modules: [
+    '@nuxtjs/color-mode',
+    '@vueuse/nuxt',
+    '@nuxt/image-edge',
+    '@pinia/nuxt',
+    'nuxt-llms',
+    '@nuxtjs/tailwindcss', // ✅ Tailwind CSS module
+  ],
+  experimental: {
+    headNext: true,
+  },
+
+  // Nitro configuration
+  nitro: {
+    // Adding the recommended compatibility date
+    compatibilityDate: '2025-07-22',
+    prerender: {
+      routes: ['/', '/about', '/contact'],
+    },
+  },
+
+  // Tailwind CSS configuration
+  tailwindcss: {
+    exposeConfig: true,
+    viewer: true,
+    configPath: '~/tailwind.config.js',
+  },
+
+  // Ensure static assets are properly served
+  vite: {
+    server: {
+      fs: {
+        strict: false,
+      },
+    },
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
   },
 
   // PostCSS configuration
@@ -195,13 +235,27 @@ export default defineNuxtConfig({
     },
   },
 
+<<<<<<< HEAD
   css: [
     '@/assets/css/main.css',
     '@/assets/css/admin.css',
+=======
+  devtools: {
+    enabled: true,
+    timeline: {
+      enabled: true,
+    },
+  },
+
+  css: [
+    '@/assets/css/main.css', // ✅ Should include Tailwind directives
+    '@/assets/css/admin.css', // Admin styles
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
   ],
 
   app: {
     head: {
+<<<<<<< HEAD
       title: 'Cloudless - AI Pipeline Management',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
@@ -211,6 +265,12 @@ export default defineNuxtConfig({
         { property: 'og:description', content: 'Create, manage, and execute AI processing pipelines' },
         { property: 'og:type', content: 'website' },
         { name: 'twitter:card', content: 'summary_large_image' },
+=======
+      title: 'Cloudless App',
+      meta: [
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'description', content: 'A modern app built with Nuxt 3.' },
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
@@ -221,4 +281,12 @@ export default defineNuxtConfig({
       ],
     },
   },
+<<<<<<< HEAD
 })
+=======
+
+  llms: {
+    domain: 'http://localhost:3000',
+  },
+});
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

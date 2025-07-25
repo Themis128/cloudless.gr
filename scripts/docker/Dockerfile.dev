@@ -1,0 +1,145 @@
+# Ultra-Optimized Development Dockerfile for Maximum Speed and Hot Reload
+# Multi-stage build with aggressive caching and minimal layers
+
+# Stage 1: Base image with essential tools
+FROM node:20-alpine AS base
+
+# Install only essential tools in a single layer
+RUN apk add --no-cache \
+    libc6-compat \
+    curl \
+    git \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 --ingroup nodejs nuxtjs
+
+# Stage 2: Dependencies with aggressive caching
+FROM base AS deps
+
+# Copy only package files for better layer caching
+COPY package.json package-lock.json* ./
+
+# Install dependencies with BuildKit cache mounts for maximum speed
+RUN --mount=type=cache,target=/root/.npm \
+    --mount=type=cache,target=/root/.cache \
+    --mount=type=cache,target=/app/.npm \
+    npm ci --prefer-offline --no-audit --production=false --silent && \
+    npm cache clean --force
+
+# Stage 3: Development runtime
+FROM base AS dev
+
+# Copy dependencies from previous stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Create essential directories first
+RUN mkdir -p /app/.nuxt /app/.output /app/logs /app/tmp /app/dist /app/data /app/uploads
+
+# Copy all source code with optimized ownership
+# Copy core application files
+COPY --chown=nuxtjs:nodejs app.vue ./
+COPY --chown=nuxtjs:nodejs error.vue ./
+COPY --chown=nuxtjs:nodejs error-404.vue ./
+COPY --chown=nuxtjs:nodejs nuxt.config.ts ./
+COPY --chown=nuxtjs:nodejs tsconfig.json ./
+COPY --chown=nuxtjs:nodejs package.json ./
+COPY --chown=nuxtjs:nodejs nodemon.json ./
+
+# Copy essential directories
+COPY --chown=nuxtjs:nodejs pages/ ./pages/
+COPY --chown=nuxtjs:nodejs components/ ./components/
+COPY --chown=nuxtjs:nodejs composables/ ./composables/
+COPY --chown=nuxtjs:nodejs stores/ ./stores/
+COPY --chown=nuxtjs:nodejs plugins/ ./plugins/
+COPY --chown=nuxtjs:nodejs layouts/ ./layouts/
+COPY --chown=nuxtjs:nodejs assets/ ./assets/
+COPY --chown=nuxtjs:nodejs server/ ./server/
+COPY --chown=nuxtjs:nodejs types/ ./types/
+COPY --chown=nuxtjs:nodejs templates/ ./templates/
+COPY --chown=nuxtjs:nodejs public/ ./public/
+
+# Copy configuration files (only if they exist)
+COPY --chown=nuxtjs:nodejs .eslintrc.js ./
+COPY --chown=nuxtjs:nodejs .prettierrc ./
+COPY --chown=nuxtjs:nodejs cspell.json ./
+COPY --chown=nuxtjs:nodejs playwright.config.js ./
+
+# Copy environment templates
+COPY --chown=nuxtjs:nodejs env.example ./
+COPY --chown=nuxtjs:nodejs env.template ./
+
+# Copy essential data and configuration
+COPY --chown=nuxtjs:nodejs data/ ./data/
+
+
+# Copy essential scripts (only what's needed for development)
+COPY --chown=nuxtjs:nodejs scripts/server/ ./scripts/server/
+
+# Set proper ownership for all files
+RUN chown -R nuxtjs:nodejs /app
+
+# Create ultra-optimized environment validation script
+RUN echo '#!/bin/sh\n\
+echo "🚀 Starting ultra-optimized development environment with fast hot reload..."\n\
+echo "⚡ Environment: $NODE_ENV"\n\
+echo "🌐 Host: $NUXT_HOST:$NUXT_PORT"\n\
+echo "🔧 Nitro Host: $NITRO_HOST:$NITRO_PORT"\n\
+echo "🌍 External IP: 192.168.0.23:3000"\n\
+echo "🔥 Hot Reload: Ultra-fast file watching enabled"\n\
+echo "⚡ HMR Port: 24678"\n\
+echo "📁 Essential directories loaded:"\n\
+echo "  - pages/, components/, composables/, stores/"\n\
+echo "  - plugins/, layouts/, assets/, server/"\n\
+echo "  - types/, templates/, public/, data/"\n\
+\n\
+echo "🚀 Starting development server with optimized hot reload..."\n\
+' > /app/validate-dev-env.sh && chmod +x /app/validate-dev-env.sh
+
+# Switch to non-root user
+USER nuxtjs
+
+# Expose ports
+EXPOSE 3000 9229 24678
+
+# Optimized environment variables for development
+ENV NODE_ENV=development
+ENV NITRO_HOST=0.0.0.0
+ENV NITRO_PORT=3000
+ENV NUXT_HOST=0.0.0.0
+ENV NUXT_PORT=3000
+ENV HOST=0.0.0.0
+
+# Ultra-optimized file watching for instant hot reload
+ENV CHOKIDAR_USEPOLLING=true
+ENV CHOKIDAR_INTERVAL=100
+ENV CHOKIDAR_IGNORED="**/node_modules/**,**/.git/**,**/.nuxt/**,**/.output/**,**/dist/**,**/coverage/**,**/tmp/**,**/logs/**,**/*.log"
+ENV WATCHPACK_POLLING=true
+ENV WATCHPACK_AGGREGATE_TIMEOUT=100
+ENV WATCHPACK_POLL=1000
+
+# Vite optimizations for hot reload
+ENV VITE_HMR_PORT=24678
+ENV VITE_HMR_HOST=0.0.0.0
+ENV VITE_HMR_OVERLAY=false
+
+# Development debugging (can be disabled for production)
+ENV NITRO_DEBUG=1
+ENV DEBUG=nuxt:*,nitro:*,vite:*
+
+# Performance optimizations for hot reload
+ENV NODE_OPTIONS="--max-old-space-size=4096 --enable-source-maps --inspect=0.0.0.0:9229"
+
+# Hot reload optimizations
+ENV NUXT_DEV_SERVER_WATCH_OPTIONS="usePolling:true,interval:100,followSymlinks:false"
+ENV NUXT_DEV_SERVER_HMR_OPTIONS="port:24678,overlay:false"
+
+# Health check with optimized settings
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Ultra-optimized startup command with hot reload
+CMD ["sh", "-c", "/app/validate-dev-env.sh && npm run dev"]

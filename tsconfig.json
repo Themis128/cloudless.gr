@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
@@ -33,4 +34,8 @@
     "pages/debug/[type].vue/[id].vue",
     "components/bots/BotWizard.vue"
   ]
+=======
+  // https://nuxt.com/docs/guide/concepts/typescript
+  "extends": "./.nuxt/tsconfig.json"
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
 }

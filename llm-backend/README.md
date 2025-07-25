@@ -5,8 +5,11 @@ This service provides local LLM (Large Language Model) management for the platfo
 - Training and fine-tuning jobs (with queueing)
 - Inference API
 - Job status tracking
+<<<<<<< HEAD
 - Resource limits and quotas
 - Monitoring endpoints
+=======
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
 
 ## Stack
 - FastAPI (REST API)
@@ -23,12 +26,15 @@ This service provides local LLM (Large Language Model) management for the platfo
 - `celery_worker.py` — Celery worker entrypoint
 - `requirements.txt` — Python dependencies
 
+<<<<<<< HEAD
 ## Features
 - **Resource Limits**: Per-user job limits (max 2 concurrent) and disk quotas (2GB)
 - **Error Handling**: Comprehensive error handling with clear messages
 - **Monitoring**: Prometheus-compatible metrics endpoint at `/metrics`
 - **Job Queueing**: Background processing with status tracking
 
+=======
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
 ## Usage
 - Start FastAPI server for API
 - Start Celery worker for background jobs
@@ -67,6 +73,7 @@ docker-compose up --build
 - All models and job data are persisted in the `models/` directory (mounted as a volume).
 - Adjust `API_BASE` in your frontend if running on a different host/port.
 
+<<<<<<< HEAD
 ## API Endpoints
 
 - `POST /llms/upload` — Upload a model file
@@ -82,3 +89,9 @@ docker-compose up --build
 - Add more advanced resource limits and quotas
 - Extend model backend support (e.g., llama.cpp)
 - Add job progress tracking and real-time updates 
+=======
+## TODO
+- Implement user authentication and per-user model isolation
+- Add resource limits and quotas
+- Extend model backend support (e.g., llama.cpp)
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
