@@ -393,7 +393,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import PageStructure from '~/components/layout/PageStructure.vue'
+import PageStructure from '~/components/layout/LayoutPageStructure.vue'
 import ModelGuide from '~/components/step-guides/ModelGuide.vue'
 import { usePrismaStore } from '~/stores/usePrismaStore'
 

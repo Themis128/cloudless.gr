@@ -1,6 +1,6 @@
 import { defineEventHandler, createError } from 'h3'
 import { requireAuth } from '~/server/middleware/auth'
-import prisma from '~/server/utils/database'
+import prisma from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event) => {
   // Require authentication

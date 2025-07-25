@@ -55,7 +55,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import PageStructure from '~/components/layout/PageStructure.vue'
+import PageStructure from '~/components/layout/LayoutPageStructure.vue'
 import ModelGuide from '~/components/step-guides/ModelGuide.vue'
 
 interface TrainingSession {

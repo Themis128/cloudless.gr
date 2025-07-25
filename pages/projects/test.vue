@@ -230,7 +230,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import PageStructure from '~/components/layout/PageStructure.vue'
+import PageStructure from '~/components/layout/LayoutPageStructure.vue'
 import ProjectGuide from '~/components/step-guides/ProjectGuide.vue'
 
 interface Project {

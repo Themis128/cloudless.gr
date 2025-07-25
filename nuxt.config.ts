@@ -31,7 +31,7 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/color-mode',
     '@vueuse/nuxt',
-    '@nuxt/image',
+    '@nuxt/image-edge',
     '@nuxt/content',
     '@pinia/nuxt',
     ['nuxt-llms', {
@@ -66,7 +66,7 @@ export default defineNuxtConfig({
 
   // Nitro configuration with caching and storage
   nitro: {
-    compatibilityDate: '2025-07-24',
+    compatibilityDate: '2025-07-25',
     prerender: {
       routes: ['/', '/about', '/contact'],
     },

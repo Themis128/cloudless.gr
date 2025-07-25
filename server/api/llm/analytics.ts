@@ -1,5 +1,5 @@
 import { defineEventHandler } from 'h3'
-import { getPrismaClient } from '~/server/utils/database'
+import { getPrismaClient } from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event) => {
   const prisma = await getPrismaClient()

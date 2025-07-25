@@ -334,7 +334,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import PageStructure from '~/components/layout/PageStructure.vue'
+import PageStructure from '~/components/layout/LayoutPageStructure.vue'
 import ProjectGuide from '~/components/step-guides/ProjectGuide.vue'
 
 const route = useRoute()
