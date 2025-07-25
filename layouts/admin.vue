@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { navigateTo } from '#app'
+import { useRouter } from 'vue-router'
 
 const router = useRouter();
 

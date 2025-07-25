@@ -1,6 +1,5 @@
 // CSRF protection middleware for authentication endpoints
 import { defineEventHandler, getHeader, createError, getCookie, getMethod } from 'h3'
-import crypto from 'crypto'
 
 const CSRF_COOKIE_NAME = 'csrf_token'
 const CSRF_HEADER_NAME = 'x-csrf-token'

@@ -14,15 +14,6 @@ function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Function to validate JWT token
-function validateToken(token: string): any {
-  try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch (error) {
-    return null;
-  }
-}
-
 // Function to generate JWT token
 function generateToken(user: any): string {
   const { password, ...userWithoutPassword } = user;

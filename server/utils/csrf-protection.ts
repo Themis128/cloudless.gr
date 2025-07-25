@@ -3,7 +3,8 @@
  * Provides functions to generate and validate CSRF tokens for form submissions
  */
 
-import { createHash } from 'crypto';
+import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
@@ -82,7 +83,7 @@ export function generateCsrfToken(sessionId: string): string {
   let token;
   try {
     // Try using a more secure hashing method
-    token = createHash('sha256').update(tokenBase).digest('base64');
+    token = crypto.createHash('sha256').update(tokenBase).digest('base64');
   } catch (error) {
     // Fall back to basic encoding if crypto is not available
     console.warn('Crypto module not available, using fallback token generation');

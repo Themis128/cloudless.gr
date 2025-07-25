@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
       const absDir = join(cwd, dir);
       const found = await walk(absDir, ext, cwd);
       files = files.concat(found);
-    } catch (e) {
+    } catch {
       // ignore missing dirs
     }
   }

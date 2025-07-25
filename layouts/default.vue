@@ -36,7 +36,6 @@ import SmallNav from '@/components/Layout/Navigation/SmallNav.vue';
 import { useBreakpoints } from '@vueuse/core';
 import { computed } from 'vue';
 
-const year = computed(() => new Date().getFullYear());
 const breakpoints = useBreakpoints({ md: 768 });
 const isDesktop = breakpoints.greaterOrEqual('md');
 </script>

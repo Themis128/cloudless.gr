@@ -1,5 +1,5 @@
 // This is a test script to verify Prisma initialization
-const { PrismaClient } = require('@prisma/client')
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient()
 

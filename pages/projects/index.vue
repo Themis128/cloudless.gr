@@ -47,11 +47,6 @@
 import { navigateTo } from '#app'
 import { definePageMeta, useSeoMeta } from '#imports'
 // Project data interface
-interface ProjectLink {
-  label: string;
-  url: string;
-}
-
 interface Project {
   id: string;
   slug: string;

@@ -65,7 +65,10 @@ const data = await prisma.model.findMany()</pre
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { ref } from 'vue'
+import { $fetch } from '#app'
+
 const loading = ref(false);
 const apiResult = ref(null);
 

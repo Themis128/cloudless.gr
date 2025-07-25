@@ -32,6 +32,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { definePageMeta } from '#imports'
 
 // Form state
 const email = ref<string>('');
