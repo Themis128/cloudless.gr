@@ -1,0 +1,328 @@
+# Development Docker Compose for Cloudless.gr
+# Optimized for fast development, debugging, and monitoring
+
+version: '3.8'
+
+services:
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        NODE_ENV: development
+    image: cloudlessgr-app-dev:latest
+    container_name: cloudlessgr-app-dev
+    restart: unless-stopped
+
+    # Network ports - accessible from all interfaces
+    ports:
+      - '3000:3000' # Main app
+      - '9229:9229' # Node.js debugger
+      - '24678:24678' # Vite HMR
+      - '9323:9323' # Prometheus metrics (if enabled)
+
+    # Environment variables for optimal development
+    environment:
+      # Core settings
+      NODE_ENV: development
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+      NUXT_HOST: 0.0.0.0
+      NUXT_PORT: 3000
+      HOST: 0.0.0.0
+
+      # Ultra-fast file watching optimizations
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '50'
+      CHOKIDAR_IGNORED: '**/node_modules/**,**/.git/**,**/.nuxt/**,**/.output/**,**/dist/**,**/coverage/**,**/tmp/**,**/logs/**,**/*.log,**/.vite/**,**/playwright-report/**'
+      WATCHPACK_POLLING: 'true'
+      WATCHPACK_AGGREGATE_TIMEOUT: '50'
+      WATCHPACK_POLL: '500'
+
+      # Vite optimizations for instant hot reload
+      VITE_HMR_PORT: '24678'
+      VITE_HMR_HOST: '0.0.0.0'
+      VITE_HMR_OVERLAY: 'false'
+      VITE_OPTIMIZE_DEPS_INCLUDE: 'vuetify,echarts,vue-echarts,@mdi/font'
+      VITE_OPTIMIZE_DEPS_EXCLUDE: 'vue-demi'
+      VITE_DEV_SERVER_WATCH_OPTIONS: 'usePolling:true,interval:50'
+
+      # Node.js optimizations for development
+      NODE_OPTIONS: '--max-old-space-size=4096 --enable-source-maps --inspect=0.0.0.0:9229 --experimental-loader'
+
+      # Hot reload with enhanced debugging
+      NUXT_DEV_SERVER_WATCH_OPTIONS: 'usePolling:true,interval:50,followSymlinks:false,ignored:["**/node_modules/**","**/.git/**","**/.nuxt/**","**/.output/**","**/playwright-report/**"]'
+      NUXT_DEV_SERVER_HMR_OPTIONS: 'port:24678,host:0.0.0.0,overlay:false,timeout:30000'
+
+      # Development debugging
+      NITRO_DEBUG: '1'
+      DEBUG: 'nuxt:*,nitro:*,vite:*'
+
+      # Timezone
+      TZ: Europe/Athens
+
+      # Service connections (use environment variables with fallbacks)
+      REDIS_URL: ${REDIS_URL:-redis://redis-dev:6379}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://cloudless:development@postgres-dev:5432/cloudless_dev}
+
+      # External URL for proper binding
+      NUXT_PUBLIC_SITE_URL: ${NUXT_PUBLIC_SITE_URL:-http://localhost:3000}
+
+      # Redis Configuration
+      REDIS_MAX_MEMORY: ${REDIS_MAX_MEMORY:-256mb}
+
+      # External API Keys (from environment)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-disabled}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+
+      # Security (from environment with defaults)
+      SESSION_SECRET: ${SESSION_SECRET:-dev-session-secret-change-in-production}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-in-production}
+
+      # Monitoring (from environment)
+      SENTRY_DSN: ${SENTRY_DSN:-disabled}
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+
+      # Development features
+      NUXT_TELEMETRY_DISABLED: '1'
+      NITRO_PRESET: 'node'
+      NITRO_COMPRESSION: 'false' # Disable compression in dev for speed
+      NITRO_MINIFY: 'false' # Disable minification in dev for speed
+
+    # Volume mounts for development
+    volumes:
+      - .:/app:cached
+      - /app/node_modules
+      - /app/.nuxt
+      - /app/.output
+      - /app/dist
+      - /app/coverage
+      - /app/.vite
+      - /app/playwright-report
+
+      # Cache volumes for faster builds
+      - npm_cache:/root/.npm
+      - nuxt_cache:/app/.nuxt
+      - vite_cache:/app/.vite
+      - esbuild_cache:/app/.esbuild
+      - typescript_cache:/app/.tsbuildinfo
+      - yarn_cache:/usr/local/share/.cache/yarn
+
+    # Network
+    networks:
+      - cloudless-dev-network
+
+    # Health check with better monitoring
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+
+    # Dependencies
+    depends_on:
+      redis-dev:
+        condition: service_healthy
+
+    # Resources for optimal development performance
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '3.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+
+    # Development features
+    stdin_open: true
+    tty: true
+    init: true
+
+    # Security
+    security_opt:
+      - no-new-privileges:true
+
+    # Performance optimizations
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    shm_size: '512mb'
+
+  # Redis for development with optimizations
+  redis-dev:
+    image: redis:7-alpine
+    container_name: cloudlessgr-redis-dev
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly no
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --loglevel warning
+      --tcp-keepalive 300
+      --timeout 0
+      --tcp-backlog 511
+      --databases 16
+      --maxclients 10000
+      --notify-keyspace-events "Ex"
+      --slowlog-log-slower-than 10000
+      --slowlog-max-len 128
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - cloudless-dev-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--raw', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+  # Redis Commander for management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: cloudlessgr-redis-commander
+    restart: unless-stopped
+    ports:
+      - '8081:8081'
+    environment:
+      REDIS_HOSTS: 'local:redis-dev:6379'
+      HTTP_USER: admin
+      HTTP_PASSWORD: admin
+      REDIS_COMMANDER_HTTP_USER: admin
+      REDIS_COMMANDER_HTTP_PASSWORD: admin
+      REDIS_COMMANDER_PORT: 8081
+      REDIS_COMMANDER_HOST: 0.0.0.0
+    networks:
+      - cloudless-dev-network
+    depends_on:
+      redis-dev:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+
+  # PostgreSQL for development (optional)
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: cloudlessgr-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cloudless_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-cloudless}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-development}
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
+      TZ: Europe/Athens
+      POSTGRES_SHARED_BUFFERS: 256MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
+      POSTGRES_WORK_MEM: 4MB
+      POSTGRES_MAINTENANCE_WORK_MEM: 64MB
+      POSTGRES_WAL_BUFFERS: 16MB
+      POSTGRES_CHECKPOINT_SEGMENTS: 32
+      POSTGRES_CHECKPOINT_COMPLETION_TARGET: 0.9
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - cloudless-dev-network
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-cloudless} -d ${POSTGRES_DB:-cloudless_dev}']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - database
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # pgAdmin for PostgreSQL management (optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: cloudlessgr-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@cloudless.gr}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - '8080:80'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - cloudless-dev-network
+    depends_on:
+      - postgres-dev
+    profiles:
+      - database
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+
+  # MailHog for email testing (optional)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: cloudlessgr-mailhog
+    restart: unless-stopped
+    ports:
+      - '1025:1025' # SMTP
+      - '8025:8025' # Web UI
+    networks:
+      - cloudless-dev-network
+    profiles:
+      - email
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+
+networks:
+  cloudless-dev-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+
+volumes:
+  redis_dev_data:
+    driver: local
+  postgres_dev_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  npm_cache:
+    driver: local
+  nuxt_cache:
+    driver: local
+  vite_cache:
+    driver: local
+  esbuild_cache:
+    driver: local
+  typescript_cache:
+    driver: local
+  yarn_cache:
+    driver: local

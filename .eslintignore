@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Third-party libraries
 vanta-gallery/**/*
 vanta-master/**/*
@@ -36,3 +37,6 @@ pnpm-lock.yaml
 # Generated type files
 types/database.types.ts
 types/*.types.ts 
+=======
+public/vanta/*.js
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

@@ -1,0 +1,86 @@
+# Docker Compose Override for Local Development
+# This file is automatically loaded by docker-compose
+
+services:
+  app-dev:
+    # Override for local development
+    environment:
+      # Local development overrides
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      NITRO_DEBUG: 1
+      
+      # Local file watching
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '50'
+      WATCHPACK_POLLING: 'true'
+      
+      # Development ports
+      VITE_HMR_PORT: '24678'
+      VITE_HMR_HOST: '0.0.0.0'
+      
+    # Development volumes
+    volumes:
+      - .:/app:cached
+      - /app/node_modules
+      - /app/.nuxt
+      - /app/.output
+      - /app/dist
+      - /app/coverage
+      - /app/.vite
+      - /app/playwright-report
+      
+      # Cache volumes
+      - npm_cache:/root/.npm
+      - nuxt_cache:/app/.nuxt
+      - vite_cache:/app/.vite
+      - esbuild_cache:/app/.esbuild
+      - typescript_cache:/app/.tsbuildinfo
+    
+    # Development features
+    stdin_open: true
+    tty: true
+    init: true
+    
+    # Performance optimizations
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    shm_size: '512mb'
+
+  redis-dev:
+    # Local Redis configuration
+    command: >
+      redis-server 
+      --appendonly no
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --loglevel warning
+      --tcp-keepalive 300
+      --timeout 0
+      --tcp-backlog 511
+      --databases 16
+      --maxclients 10000
+
+  redis-commander:
+    # Local Redis Commander configuration
+    environment:
+      REDIS_HOSTS: 'local:redis-dev:6379'
+      HTTP_USER: admin
+      HTTP_PASSWORD: admin
+      REDIS_COMMANDER_HTTP_USER: admin
+      REDIS_COMMANDER_HTTP_PASSWORD: admin
+
+volumes:
+  npm_cache:
+    driver: local
+  nuxt_cache:
+    driver: local
+  vite_cache:
+    driver: local
+  esbuild_cache:
+    driver: local
+  typescript_cache:
+    driver: local 

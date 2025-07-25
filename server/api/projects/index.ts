@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { defineEventHandler, getQuery, readBody, createError } from 'h3';
 import { prisma } from '~/lib/prisma';
 
@@ -245,3 +246,6 @@ export default defineEventHandler(async (event) => {
     });
   }
 });
+=======
+// Sample project API handler
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

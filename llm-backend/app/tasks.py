@@ -67,4 +67,8 @@ def infer_task(model_name, prompt, owner):
         return {'status': 'completed', 'output': result}
     except Exception as e:
         logger.error(f"Inference failed for {owner}/{model_name}: {e}", exc_info=True)
+<<<<<<< HEAD
         return {'status': 'failed', 'error': str(e)} 
+=======
+        return {'status': 'failed', 'error': str(e)}
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

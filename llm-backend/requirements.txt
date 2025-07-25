@@ -4,5 +4,9 @@ celery
 redis
 pydantic
 python-multipart
+<<<<<<< HEAD
 transformers
 torch 
+=======
+transformers
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

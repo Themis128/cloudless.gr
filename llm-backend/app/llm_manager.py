@@ -35,4 +35,8 @@ def load_model_path(owner: str, model_name: str) -> str:
     for m in models:
         if m["name"] == model_name:
             return m["path"]
+<<<<<<< HEAD
     raise FileNotFoundError(f"Model {model_name} not found for user {owner}") 
+=======
+    raise FileNotFoundError(f"Model {model_name} not found for user {owner}")
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

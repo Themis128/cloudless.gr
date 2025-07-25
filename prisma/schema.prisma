@@ -9,6 +9,7 @@ datasource db {
 }
 
 model User {
+<<<<<<< HEAD
   id         Int         @id @default(autoincrement())
   email      String      @unique
   password   String
@@ -330,4 +331,45 @@ model UserRole {
 
   @@unique([userId, roleId])
   @@map("user_roles")
+=======
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String
+  password    String
+  role        String    @default("user")
+  avatar      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLogin   DateTime?
+  bio         String?
+  website     String?
+  company     String?
+  position    String?
+  location    String?
+  phone       String?
+  socialLinks String?
+  preferences String?
+}
+
+model ContactSubmission {
+  id          Int      @id @default(autoincrement())
+  name        String
+  email       String
+  subject     String
+  message     String
+  createdAt   DateTime @default(now())
+  status      String   @default("new")
+  notes       String?
+  metadata    String?
+  assignedTo  String?
+  budget      String?
+  company     String?
+  heardFrom   String?
+  ipAddress   String?
+  newsletter  Boolean? @default(false)
+  phone       String?
+  projectType String?
+  timeline    String?
+  userAgent   String?
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
 }

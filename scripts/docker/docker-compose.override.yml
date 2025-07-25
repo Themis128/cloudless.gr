@@ -1,0 +1,34 @@
+# Local Development Overrides
+# This file is automatically loaded by docker-compose
+# Add your local development customizations here
+
+services:
+  app-dev:
+    # Ensure we're running in development mode
+    command: npm run dev
+    # Local development volumes for hot reloading
+    volumes:
+      - .:/app
+      - /app/node_modules # Preserve container node_modules
+      - /app/.nuxt # Preserve container .nuxt
+      - /app/.output # Preserve container .output
+      - ./logs:/app/logs # Local logs directory
+      - ./tmp:/app/tmp # Local temp directory
+    # Development-specific environment
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: 'true'
+      WATCHPACK_POLLING: 'true'
+    # Enable interactive mode for debugging
+    stdin_open: true
+    tty: true
+
+  # Optional: Enable database services for local development
+  # Uncomment if you need PostgreSQL locally
+  # postgres-dev:
+  #   profiles: []
+
+  # Optional: Enable email testing for local development
+  # Uncomment if you need Mailhog locally
+  # mailhog:
+  #   profiles: []

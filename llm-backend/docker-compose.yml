@@ -21,4 +21,8 @@ services:
     image: redis:7
     container_name: llm-backend-redis
     ports:
+<<<<<<< HEAD
       - "6379:6379" 
+=======
+      - "6379:6379"
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

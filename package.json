@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "cloudless-gr",
   "version": "1.0.0",
   "description": "Cloudless LLM Dev Agent - Low-code platform for data pipelines, analytics, and AI",
@@ -101,10 +102,56 @@
     "chart.js": "^4.5.0",
     "echarts": "^5.6.0",
     "ioredis": "^5.6.1",
+=======
+  "name": "nuxt-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "dev:test": "pwsh -File .\\scripts\\Run-DevServerForTests.ps1",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "prepare": "husky install",
+    "stylelint": "stylelint '**/*.{css,vue}'",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --fix",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
+    "cypress:contact": "pwsh -File .\\scripts\\Run-CypressTests.ps1",
+    "cypress:contact:ui": "pwsh -File .\\scripts\\Run-CypressTests.ps1 -Mode open",
+    "cypress:only": "pwsh -File .\\scripts\\Run-CypressOnly.ps1",
+    "cypress:only:ui": "pwsh -File .\\scripts\\Run-CypressOnly.ps1 -Mode open",
+    "lighthouse": "lighthouse http://localhost:3000 --view --output-path=./lighthouse-report.html",
+    "test:all": "bash ./scripts/run-all-tests.sh",
+    "test:all:win": "pwsh -File .\\scripts\\run-all-tests.ps1"
+  },
+  "dependencies": {
+    "@nuxt/content": "^3.5.1",
+    "@nuxt/fonts": "^0.11.3",
+    "@nuxt/icon": "^1.12.0",
+    "@nuxt/image": "^1.10.0",
+    "@nuxt/image-edge": "^1.3.0-28493895.369b747",
+    "@nuxt/scripts": "^0.11.6",
+    "@nuxt/test-utils": "^3.18.0",
+    "@nuxt/ui": "^2.22.0",
+    "@nuxtjs/seo": "^3.0.3",
+    "@prisma/client": "^6.8.2",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@unhead/vue": "^2.0.8",
+    "@vueuse/core": "^13.2.0",
+    "@vueuse/nuxt": "^13.1.0",
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
     "jsonwebtoken": "^9.0.2",
     "node-fetch": "^3.3.2",
     "nuxt-llms": "^0.1.2",
     "pinia": "^3.0.2",
+<<<<<<< HEAD
     "redis": "^5.6.1",
     "three": "^0.176.0",
     "vanta": "^0.5.24",
@@ -124,6 +171,29 @@
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-vue": "^10.3.0",
+=======
+    "prisma": "^6.8.2",
+    "three": "^0.176.0",
+    "vanta": "^0.5.24",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.26.0",
+    "@nuxtjs/tailwindcss": "^6.12.0",
+    "@pinia/nuxt": "^0.11.0",
+    "@testing-library/vue": "^8.1.0",
+    "@types/three": "^0.176.0",
+    "@typescript-eslint/eslint-plugin": "^8.32.1",
+    "@typescript-eslint/parser": "^8.32.1",
+    "@vue/test-utils": "^2.4.6",
+    "autoprefixer": "^10.4.21",
+    "cypress": "^14.4.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-vue": "^10.1.0",
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
     "globals": "^16.1.0",
     "happy-dom": "^17.4.7",
     "husky": "^8.0.0",
@@ -133,7 +203,10 @@
     "nuxt": "^3.17.3",
     "postcss": "^8.4.35",
     "prettier": "^3.5.3",
+<<<<<<< HEAD
     "prisma": "^6.12.0",
+=======
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
     "stylelint": "^16.19.1",
     "stylelint-config-recommended": "^16.0.0",
     "stylelint-config-standard": "^38.0.0",
@@ -155,5 +228,11 @@
     "*.{css,scss,html}": [
       "prettier --write"
     ]
+<<<<<<< HEAD
+=======
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+>>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
   }
 }

@@ -1,0 +1,56 @@
+// cypress/support/commands.ts
+// ***********************************************
+// Custom commands for Cypress tests
+// ***********************************************
+
+// Custom command to fill out the contact form
+Cypress.Commands.add(
+  'fillContactForm',
+  (name: string, email: string, subject: string, message: string) => {
+    if (name) cy.get('#name').type(name);
+    if (email) cy.get('#email').type(email);
+    if (subject) cy.get('#subject').type(subject);
+    if (message) cy.get('#message').type(message);
+  }
+);
+
+// Custom command to check if form has validation errors
+Cypress.Commands.add('hasFormErrors', () => {
+  cy.get('.error-message').should('be.visible');
+});
+
+// Custom command to check if submission was successful
+Cypress.Commands.add('hasSuccessMessage', () => {
+  cy.contains('Thank you for contacting us').should('be.visible');
+});
+
+// Custom command to setup saved form data
+Cypress.Commands.add('setupSavedFormData', (data: any) => {
+  cy.window().then((win) => {
+    const formData = {
+      name: data.name || '',
+      email: data.email || '',
+      subject: data.subject || '',
+      message: data.message || '',
+      timestamp: data.timestamp || Date.now(),
+    };
+    win.localStorage.setItem('contact_form_draft', JSON.stringify(formData));
+  });
+});
+
+// Add TypeScript definitions
+declare global {
+  namespace Cypress {
+    interface Chainable {
+      fillContactForm(
+        name: string,
+        email: string,
+        subject: string,
+        message: string
+      ): Chainable<Element>;
+      hasFormErrors(): Chainable<Element>;
+      hasSuccessMessage(): Chainable<Element>;
+      setupSavedFormData(data: any): Chainable<Element>;
+    }
+  }
+}
