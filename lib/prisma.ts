@@ -1,13 +1,13 @@
-import { PrismaClient } from '@prisma/client'
+import { getPrismaClient } from '~/server/utils/prisma'
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
+// Lazy initialization to avoid calling getPrismaClient at module load time
+let _prisma: ReturnType<typeof getPrismaClient> | undefined
+
+export const prisma = () => {
+  if (!_prisma) {
+    _prisma = getPrismaClient()
+  }
+  return _prisma
 }
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-})
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 export default prisma

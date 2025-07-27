@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { getPrismaClient } from './prisma'
 
 export interface Permission {
   id: number
@@ -35,6 +33,7 @@ export class RBACService {
     action: string
   ): Promise<boolean> {
     try {
+      const prisma = getPrismaClient();
       const userPermissions = await this.getUserPermissions(userId)
       return userPermissions.some(
         p => p.resource === resource && p.action === action
@@ -90,6 +89,7 @@ export class RBACService {
   // Get all permissions for a user
   async getUserPermissions(userId: number): Promise<Permission[]> {
     try {
+      const prisma = getPrismaClient();
       const userRoles = await prisma.userRole.findMany({
         where: {
           userId,
@@ -129,6 +129,7 @@ export class RBACService {
   // Get all roles for a user
   async getUserRoles(userId: number): Promise<UserRole[]> {
     try {
+      const prisma = getPrismaClient();
       const userRoles = await prisma.userRole.findMany({
         where: {
           userId,
@@ -182,6 +183,7 @@ export class RBACService {
     expiresAt?: Date | null
   ): Promise<boolean> {
     try {
+      const prisma = getPrismaClient();
       // Check if role exists and is active
       const role = await prisma.role.findFirst({
         where: { id: roleId, isActive: true },
@@ -226,6 +228,7 @@ export class RBACService {
   // Remove role from user
   async removeRole(userId: number, roleId: number): Promise<boolean> {
     try {
+      const prisma = getPrismaClient();
       await prisma.userRole.updateMany({
         where: { userId, roleId },
         data: { isActive: false },
@@ -244,6 +247,7 @@ export class RBACService {
     permissionIds?: number[]
   ): Promise<number | null> {
     try {
+      const prisma = getPrismaClient();
       const role = await prisma.role.create({
         data: {
           name,
@@ -269,6 +273,7 @@ export class RBACService {
     description?: string
   ): Promise<boolean> {
     try {
+      const prisma = getPrismaClient();
       await prisma.role.update({
         where: { id: roleId },
         data: {
@@ -286,6 +291,7 @@ export class RBACService {
   // Delete role
   async deleteRole(roleId: number): Promise<boolean> {
     try {
+      const prisma = getPrismaClient();
       await prisma.role.update({
         where: { id: roleId },
         data: { isActive: false },
@@ -305,6 +311,7 @@ export class RBACService {
     description?: string
   ): Promise<number | null> {
     try {
+      const prisma = getPrismaClient();
       const permission = await prisma.permission.create({
         data: {
           name,
@@ -326,6 +333,7 @@ export class RBACService {
     permissionIds: number[]
   ): Promise<boolean> {
     try {
+      const prisma = getPrismaClient();
       for (const permissionId of permissionIds) {
         try {
           await prisma.rolePermission.create({
@@ -355,6 +363,7 @@ export class RBACService {
     permissionIds: number[]
   ): Promise<boolean> {
     try {
+      const prisma = getPrismaClient();
       await prisma.rolePermission.deleteMany({
         where: {
           roleId,
@@ -371,6 +380,7 @@ export class RBACService {
   // Get all roles
   async getAllRoles(): Promise<Role[]> {
     try {
+      const prisma = getPrismaClient();
       const roles = await prisma.role.findMany({
         where: { isActive: true },
         include: {
@@ -404,6 +414,7 @@ export class RBACService {
   // Get all permissions
   async getAllPermissions(): Promise<Permission[]> {
     try {
+      const prisma = getPrismaClient();
       return await prisma.permission.findMany({
         where: { isActive: true },
       })
@@ -416,6 +427,7 @@ export class RBACService {
   // Initialize default roles and permissions
   async initializeDefaultRBAC(): Promise<void> {
     try {
+      const prisma = getPrismaClient();
       // Create default permissions
       const permissions = [
         // User permissions

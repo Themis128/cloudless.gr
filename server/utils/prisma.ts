@@ -32,8 +32,5 @@ export function getPrismaClient(): PrismaClient {
   return prisma
 }
 
-// Export a default instance
-export default getPrismaClient()
-
 // Export the PrismaClient type for type safety
 export type { PrismaClient }

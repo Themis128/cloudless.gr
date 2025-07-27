@@ -1,0 +1,56 @@
+/* Vuetify base styles */
+/* Global custom styles for Vuetify 3 application */
+
+/* Import Vuetify styles */
+@import 'vuetify/lib/styles/main.sass';
+
+/* Global custom styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+  background-color: #f5f5f5;
+}
+
+/* Vuetify theme compatibility */
+.v-application {
+  font-family: 'Inter', 'Roboto', sans-serif !important;
+}
+
+/* Basic focus style for accessibility */
+:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
+/* Touch-action support for all interactive elements */
+a,
+area,
+button,
+input,
+label,
+select,
+summary,
+textarea,
+[tabindex] {
+  touch-action: manipulation;
+}
+
+/* Custom glassmorphism and cloud effects can be added here */
+.cloudless-container {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
