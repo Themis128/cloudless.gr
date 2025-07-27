@@ -1,0 +1,34 @@
+{
+  "name": "Cloudless DevContainer",
+  "dockerFile": "../Dockerfile.dev",
+  "context": "..",
+  "workspaceFolder": "/workspace",
+  "runArgs": ["--init"],
+  "forwardPorts": [3000, 9229, 24678, 5432, 6379],
+  "postCreateCommand": "pnpm install && pnpm exec prisma generate && npx playwright install --with-deps",
+  "remoteUser": "nuxtjs",
+  "features": {},
+  "mounts": [
+    "source=${localWorkspaceFolder}/node_modules,target=/workspace/node_modules,type=volume"
+  ],
+  "composeFile": [
+    "../docker-compose.dev.yml"
+  ],
+  "service": "app",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "Prisma.prisma",
+        "Vue.volar",
+        "ms-playwright.playwright",
+        "ms-azuretools.vscode-docker",
+        "ms-vscode.powershell"
+      ],
+      "settings": {
+        "editor.formatOnSave": true
+      }
+    }
+  }
+}

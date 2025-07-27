@@ -3,7 +3,7 @@
 
 FROM node:20-alpine
 
-# Install system dependencies for development
+# Install system dependencies for development, Playwright, and Cypress
 RUN apk add --no-cache \
     curl \
     git \
@@ -14,6 +14,16 @@ RUN apk add --no-cache \
     vim \
     htop \
     procps \
+    powershell \
+    udev \
+    ttf-freefont \
+    nss \
+    chromium \
+    xvfb \
+    libnss3 \
+    freetype \
+    harfbuzz \
+    ca-certificates \
     && rm -rf /var/cache/apk/*
 
 # Set working directory
@@ -23,22 +33,17 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nuxtjs -u 1001 -G nodejs
 
-# Install global development tools
-RUN npm install -g \
-    nodemon \
-    @nuxt/cli \
-    typescript \
-    ts-node \
-    && npm cache clean --force
+# Install pnpm and global development tools
+RUN npm install -g pnpm prisma
 
 # Copy package files for better caching
 COPY package*.json ./
+COPY pnpm-lock.yaml ./
 COPY nuxt.config.ts ./
 COPY tsconfig.json ./
 
-# Install dependencies with development optimizations
-RUN npm ci --include=dev && \
-    npm cache clean --force
+# Install dependencies with pnpm
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -58,4 +63,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=10 \
     CMD curl -f http://localhost:3000/api/health || exit 1
 
 # Development command with enhanced debugging
-CMD ["npm", "run", "dev:ultra"] 
+CMD ["pnpm", "dev"] 
