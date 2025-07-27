@@ -1,12 +1,13 @@
 import { defineEventHandler, createError } from 'h3'
 import { requireAuth } from '~/server/middleware/auth'
-import prisma from '~/server/utils/prisma'
+import { getPrismaClient } from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event) => {
   // Require authentication
   const authUser = await requireAuth(event)
   
   // Get full user details from database
+  const prisma = getPrismaClient()
   const user = await prisma.user.findUnique({
     where: { id: parseInt(authUser.id) },
     select: {

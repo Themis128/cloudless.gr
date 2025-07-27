@@ -1,5 +1,5 @@
 import { defineEventHandler } from 'h3';
-import prisma from '../utils/prisma';
+import { getPrismaClient } from '../utils/prisma';
 
 /**
  * Test API route to demonstrate @prisma/nuxt module usage
@@ -7,6 +7,8 @@ import prisma from '../utils/prisma';
  */
 export default defineEventHandler(async (event) => {
   try {
+    const prisma = getPrismaClient()
+    
     // Get all contact submissions
     const submissions = await prisma.contactSubmission.findMany({
       take: 5,

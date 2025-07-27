@@ -1,5 +1,6 @@
 // Health check endpoint for monitoring and Docker health checks
 import { defineEventHandler, getQuery, setResponseStatus } from 'h3'
+import { getPrismaClient } from '~/server/utils/prisma'
 
 // Cache health check results for 60 seconds to improve performance
 let healthCache: any = null
@@ -79,7 +80,6 @@ export default defineEventHandler(async (event: any) => {
 })
 
 async function checkDatabase() {
-  const { getPrismaClient } = await import('~/server/utils/prisma')
   const prisma = getPrismaClient()
 
   // Use a shorter timeout to prevent hanging
