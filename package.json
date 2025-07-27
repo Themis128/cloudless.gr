@@ -193,6 +193,7 @@
     "postcss-preset-env": "^10.2.4",
     "prettier": "^3.5.3",
     "prisma": "^6.12.0",
+    "sass-embedded": "^1.89.2",
     "stylelint": "^16.19.1",
     "stylelint-config-recommended": "^16.0.0",
     "stylelint-config-standard": "^38.0.0",
@@ -203,7 +204,12 @@
     "vue-tsc": "^3.0.4"
   },
   "lint-staged": {
-    "*.{js,ts,vue}": ["eslint --fix", "prettier --write"],
-    "*.{css,scss,html}": ["prettier --write"]
+    "*.{js,ts,vue}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,scss,html}": [
+      "prettier --write"
+    ]
   }
 }
