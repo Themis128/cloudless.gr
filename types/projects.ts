@@ -11,7 +11,9 @@ export interface ProjectTemplate {
   technologies: string[];
   techStack: string[];
   difficulty: string;
-  // Add other properties based on usage
+  estimatedTime: string;
+  includes: string[];
+  config?: any; // Add config property for pipeline configuration
 }
 
 export interface Project {

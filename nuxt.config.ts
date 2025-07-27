@@ -6,7 +6,7 @@ export default defineNuxtConfig({
     '@nuxt/image-edge',
     '@pinia/nuxt',
     'nuxt-llms',
-    '@nuxtjs/tailwindcss', // ✅ Tailwind CSS module
+    'vuetify-nuxt-module', // Using Vuetify3 instead of Tailwind
   ],
   experimental: {
     headNext: true,
@@ -21,12 +21,7 @@ export default defineNuxtConfig({
     },
   },
 
-  // Tailwind CSS configuration
-  tailwindcss: {
-    exposeConfig: true,
-    viewer: true,
-    configPath: '~/tailwind.config.js',
-  },
+  // Vuetify configuration will be handled by the module
 
   // Ensure static assets are properly served
   vite: {
@@ -40,8 +35,6 @@ export default defineNuxtConfig({
   // PostCSS configuration
   postcss: {
     plugins: {
-      'tailwindcss/nesting': {},
-      tailwindcss: {},
       autoprefixer: {},
     },
   },
@@ -54,7 +47,7 @@ export default defineNuxtConfig({
   },
 
   css: [
-    '@/assets/css/main.css', // ✅ Should include Tailwind directives
+    '@/assets/css/main.css', // Main styles (without Tailwind)
     '@/assets/css/admin.css', // Admin styles
   ],
 

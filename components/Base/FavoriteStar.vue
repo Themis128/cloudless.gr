@@ -13,9 +13,11 @@ import { defineProps } from 'vue';
 const props = defineProps<{ project: Project }>();
 const isFavorite = computed(() => props.project.isFavorite);
 
+const emit = defineEmits(['toggle-favorite']);
+
 function toggleFavorite() {
-  // placeholder: emit an event or update state
-  props.project.isFavorite = !props.project.isFavorite;
+  // emit an event instead of mutating the prop directly
+  emit('toggle-favorite', props.project);
 }
 </script>
 

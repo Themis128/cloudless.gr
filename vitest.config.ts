@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue() as any],
   test: {
     globals: true,
     environment: 'happy-dom',

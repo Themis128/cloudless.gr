@@ -1,7 +1,7 @@
 // API endpoint for handling user authentication
 import crypto from 'crypto';
 import { createError, defineEventHandler, readBody, setCookie } from 'h3';
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import prisma from '../../utils/prisma';
 
 // Load environment variables
@@ -26,7 +26,9 @@ function validateToken(token: string): any {
 // Function to generate JWT token
 function generateToken(user: any): string {
   const { password, ...userWithoutPassword } = user;
-  return jwt.sign(userWithoutPassword, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  const secret = JWT_SECRET as string;
+  const options: SignOptions = { expiresIn: JWT_EXPIRES_IN as any };
+  return jwt.sign(userWithoutPassword, secret, options);
 }
 
 // Login handler
