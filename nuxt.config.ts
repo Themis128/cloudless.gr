@@ -2,11 +2,13 @@
 import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
+  compatibilityDate: '2025-07-28',
+  
   // Only the most essential modules
   modules: ['@pinia/nuxt'],
 
   // Only essential Vuetify plugin
-  plugins: ['~/plugins/vuetify.ts'],
+  plugins: ['~/plugins/vuetify.client.ts'],
 
   // Disable all non-essential features
   devtools: false,
