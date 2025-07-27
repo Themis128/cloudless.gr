@@ -1,10 +1,9 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { getPrismaClient } from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event) => {
   try {
+    const prisma = getPrismaClient()
     const query = getQuery(event)
     const page = parseInt(query.page as string) || 1
     const limit = parseInt(query.limit as string) || 10

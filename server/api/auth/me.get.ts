@@ -6,8 +6,6 @@ export default defineEventHandler(async (event) => {
   // Require authentication
   const authUser = await requireAuth(event)
   
-  const prisma = getPrismaClient();
-  
   // Get full user details from database
   const prisma = getPrismaClient()
   const user = await prisma.user.findUnique({
