@@ -1,87 +1,177 @@
 <template>
-  <div class="test-generator-container">
-    <div class="header">
-      <h1>Test Generator</h1>
-      <p>Generate comprehensive unit tests, integration tests, and end-to-end test suites for your applications.</p>
+  <v-container class="test-generator-container">
+    <div class="text-center mb-8">
+      <h1 class="text-h3 font-weight-bold mb-4">Test Generator</h1>
+      <p class="text-body-1 text-medium-emphasis">
+        Generate comprehensive unit tests, integration tests, and end-to-end
+        test suites for your applications.
+      </p>
     </div>
 
-    <div class="main-content">
-      <div class="input-section">
-        <div class="form-group">
-          <label for="code-input">Code to Test</label>
-          <textarea
-            id="code-input"
-            v-model="codeInput"
-            placeholder="Paste your code here to generate tests..."
-            rows="10"
-            class="code-textarea"
-          ></textarea>
-        </div>
+    <v-row>
+      <v-col cols="12" lg="6">
+        <v-card class="pa-6">
+          <v-card-title class="text-h5 mb-4">Input</v-card-title>
 
-        <div class="form-group">
-          <label for="test-type">Test Type</label>
-          <select v-model="testType" class="test-type-select">
-            <option value="unit">Unit Tests</option>
-            <option value="integration">Integration Tests</option>
-            <option value="e2e">End-to-End Tests</option>
-            <option value="all">All Test Types</option>
-          </select>
-        </div>
+          <v-form @submit.prevent="generateTests">
+            <v-textarea
+              v-model="codeInput"
+              label="Code to Test"
+              placeholder="Paste your code here to generate tests..."
+              rows="10"
+              variant="outlined"
+              class="mb-4"
+              auto-grow
+            ></v-textarea>
 
-        <div class="form-group">
-          <label for="framework">Testing Framework</label>
-          <select v-model="framework" class="framework-select">
-            <option value="jest">Jest</option>
-            <option value="vitest">Vitest</option>
-            <option value="mocha">Mocha</option>
-            <option value="cypress">Cypress (E2E)</option>
-            <option value="playwright">Playwright (E2E)</option>
-          </select>
-        </div>
+            <v-select
+              v-model="testType"
+              label="Test Type"
+              :items="[
+                { title: 'Unit Tests', value: 'unit' },
+                { title: 'Integration Tests', value: 'integration' },
+                { title: 'End-to-End Tests', value: 'e2e' },
+                { title: 'All Test Types', value: 'all' },
+              ]"
+              variant="outlined"
+              class="mb-4"
+            ></v-select>
 
-        <button @click="generateTests" :disabled="isGenerating" class="generate-btn">
-          {{ isGenerating ? 'Generating...' : 'Generate Tests' }}
-        </button>
-      </div>
+            <v-select
+              v-model="framework"
+              label="Testing Framework"
+              :items="[
+                { title: 'Jest', value: 'jest' },
+                { title: 'Vitest', value: 'vitest' },
+                { title: 'Mocha', value: 'mocha' },
+                { title: 'Cypress (E2E)', value: 'cypress' },
+                { title: 'Playwright (E2E)', value: 'playwright' },
+              ]"
+              variant="outlined"
+              class="mb-4"
+            ></v-select>
 
-      <div class="output-section">
-        <div class="output-header">
-          <h3>Generated Tests</h3>
-          <button @click="copyToClipboard" class="copy-btn">Copy to Clipboard</button>
-        </div>
-        <pre v-if="generatedTests" class="test-output">{{ generatedTests }}</pre>
-        <div v-else class="placeholder">
-          <p>Generated tests will appear here...</p>
-        </div>
-      </div>
-    </div>
+            <v-btn
+              color="primary"
+              size="large"
+              block
+              :loading="isGenerating"
+              :disabled="!codeInput.trim()"
+              @click="generateTests"
+            >
+              {{ isGenerating ? 'Generating...' : 'Generate Tests' }}
+            </v-btn>
+          </v-form>
+        </v-card>
+      </v-col>
 
-    <div class="examples-section">
-      <h2>Examples</h2>
-      <div class="examples-grid">
-        <div class="example-card" @click="loadExample('react-component')">
-          <h4>React Component</h4>
-          <p>Generate tests for a React functional component</p>
-        </div>
-        <div class="example-card" @click="loadExample('api-endpoint')">
-          <h4>API Endpoint</h4>
-          <p>Test an Express.js API endpoint</p>
-        </div>
-        <div class="example-card" @click="loadExample('utility-function')">
-          <h4>Utility Function</h4>
-          <p>Test a pure JavaScript utility function</p>
-        </div>
-      </div>
-    </div>
-  </div>
+      <v-col cols="12" lg="6">
+        <v-card class="pa-6">
+          <v-card-title class="d-flex align-center justify-space-between">
+            <span class="text-h5">Generated Tests</span>
+            <v-btn
+              color="success"
+              variant="outlined"
+              size="small"
+              @click="copyToClipboard"
+              :disabled="!generatedTests"
+            >
+              Copy to Clipboard
+            </v-btn>
+          </v-card-title>
+
+          <v-card-text>
+            <v-textarea
+              v-if="generatedTests"
+              :model-value="generatedTests"
+              readonly
+              variant="outlined"
+              rows="20"
+              class="font-family-monospace"
+              bg-color="grey-lighten-4"
+            ></v-textarea>
+            <div v-else class="text-center text-medium-emphasis pa-8">
+              <v-icon size="64" color="grey-lighten-1" class="mb-4"
+                >mdi-code-braces</v-icon
+              >
+              <p>Generated tests will appear here...</p>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-row class="mt-8">
+      <v-col cols="12">
+        <h2 class="text-h4 text-center mb-6">Examples</h2>
+        <v-row>
+          <v-col cols="12" md="4">
+            <v-card
+              class="example-card"
+              @click="loadExample('react-component')"
+              hover
+            >
+              <v-card-text class="text-center">
+                <v-icon size="48" color="primary" class="mb-4"
+                  >mdi-react</v-icon
+                >
+                <h4 class="text-h6 mb-2">React Component</h4>
+                <p class="text-body-2 text-medium-emphasis">
+                  Generate tests for a React functional component
+                </p>
+              </v-card-text>
+            </v-card>
+          </v-col>
+
+          <v-col cols="12" md="4">
+            <v-card
+              class="example-card"
+              @click="loadExample('api-endpoint')"
+              hover
+            >
+              <v-card-text class="text-center">
+                <v-icon size="48" color="primary" class="mb-4">mdi-api</v-icon>
+                <h4 class="text-h6 mb-2">API Endpoint</h4>
+                <p class="text-body-2 text-medium-emphasis">
+                  Test an Express.js API endpoint
+                </p>
+              </v-card-text>
+            </v-card>
+          </v-col>
+
+          <v-col cols="12" md="4">
+            <v-card
+              class="example-card"
+              @click="loadExample('utility-function')"
+              hover
+            >
+              <v-card-text class="text-center">
+                <v-icon size="48" color="primary" class="mb-4"
+                  >mdi-function</v-icon
+                >
+                <h4 class="text-h6 mb-2">Utility Function</h4>
+                <p class="text-body-2 text-medium-emphasis">
+                  Test a pure JavaScript utility function
+                </p>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useToolsStore } from '~/stores/toolsStore'
 
 definePageMeta({
-  title: 'Test Generator'
+  title: 'Test Generator',
 })
+
+// Use tools store
+const toolsStore = useToolsStore()
 
 const codeInput = ref('')
 const testType = ref('unit')
@@ -94,8 +184,8 @@ const examples = {
 
 const Button = ({ onClick, children, disabled = false }) => {
   return (
-    <button 
-      onClick={onClick} 
+    <button
+      onClick={onClick}
       disabled={disabled}
       className="btn"
     >
@@ -109,11 +199,11 @@ export default Button;`,
   try {
     const { id } = req.params;
     const user = await User.findById(id);
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
@@ -123,17 +213,22 @@ export default Button;`,
   if (typeof amount !== 'number' || amount < 0) {
     throw new Error('Amount must be a positive number');
   }
-  
+
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency
   }).format(amount);
-}`
+}`,
 }
 
 const loadExample = (exampleKey: string) => {
   codeInput.value = examples[exampleKey as keyof typeof examples]
 }
+
+// Record tool usage on mount
+onMounted(() => {
+  toolsStore.recordToolUsage('test-generator')
+})
 
 const generateTests = async () => {
   if (!codeInput.value.trim()) {
@@ -143,6 +238,8 @@ const generateTests = async () => {
 
   isGenerating.value = true
   generatedTests.value = ''
+
+  const startTime = Date.now()
 
   try {
     const prompt = `Generate ${testType.value} tests using ${framework.value} for the following code:
@@ -157,12 +254,17 @@ Please provide comprehensive test cases that cover:
 
 Format the response as clean, runnable test code.`
 
-    const response = await $fetch('/api/generate', {
+    const response = (await $fetch('/api/generate', {
       method: 'POST',
-      body: { prompt }
-    }) as any
+      body: { prompt },
+    })) as any
 
-    generatedTests.value = response?.response || response || 'Failed to generate tests'
+    generatedTests.value =
+      response?.response || response || 'Failed to generate tests'
+    
+    // Record tool usage
+    const duration = Date.now() - startTime
+    toolsStore.recordToolUsage('test-generator', true, duration)
   } catch (error) {
     console.error('Error generating tests:', error)
     generatedTests.value = 'Error generating tests. Please try again.'
@@ -173,7 +275,7 @@ Format the response as clean, runnable test code.`
 
 const copyToClipboard = async () => {
   if (!generatedTests.value) return
-  
+
   try {
     await navigator.clipboard.writeText(generatedTests.value)
     alert('Tests copied to clipboard!')
@@ -188,213 +290,18 @@ const copyToClipboard = async () => {
 .test-generator-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem 1rem;
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 3rem;
-}
-
-.header h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #1e40af;
-  margin-bottom: 1rem;
-}
-
-.header p {
-  font-size: 1.1rem;
-  color: #64748b;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.main-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  margin-bottom: 3rem;
-}
-
-.input-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-group label {
-  font-weight: 600;
-  color: #374151;
-}
-
-.code-textarea {
-  width: 100%;
-  padding: 1rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.5rem;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  resize: vertical;
-  min-height: 200px;
-}
-
-.code-textarea:focus {
-  outline: none;
-  border-color: #1e40af;
-  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
-}
-
-.test-type-select,
-.framework-select {
-  padding: 0.75rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  background-color: white;
-}
-
-.test-type-select:focus,
-.framework-select:focus {
-  outline: none;
-  border-color: #1e40af;
-}
-
-.generate-btn {
-  padding: 1rem 2rem;
-  background-color: #1e40af;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.generate-btn:hover:not(:disabled) {
-  background-color: #1e3a8a;
-}
-
-.generate-btn:disabled {
-  background-color: #9ca3af;
-  cursor: not-allowed;
-}
-
-.output-section {
-  border: 2px solid #e5e7eb;
-  border-radius: 0.5rem;
-  overflow: hidden;
-}
-
-.output-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background-color: #f9fafb;
-  border-bottom: 2px solid #e5e7eb;
-}
-
-.output-header h3 {
-  margin: 0;
-  color: #374151;
-}
-
-.copy-btn {
-  padding: 0.5rem 1rem;
-  background-color: #10b981;
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.copy-btn:hover {
-  background-color: #059669;
-}
-
-.test-output {
-  padding: 1rem;
-  background-color: #1f2937;
-  color: #f9fafb;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-.placeholder {
-  padding: 2rem;
-  text-align: center;
-  color: #9ca3af;
-}
-
-.examples-section {
-  margin-top: 3rem;
-}
-
-.examples-section h2 {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: #374151;
-}
-
-.examples-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
 }
 
 .example-card {
-  padding: 1.5rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.5rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.2s ease;
 }
 
 .example-card:hover {
-  border-color: #1e40af;
-  background-color: #f8fafc;
+  transform: translateY(-2px);
 }
 
-.example-card h4 {
-  margin: 0 0 0.5rem 0;
-  color: #1e40af;
-}
-
-.example-card p {
-  margin: 0;
-  color: #64748b;
-  font-size: 0.875rem;
-}
-
-@media (max-width: 768px) {
-  .main-content {
-    grid-template-columns: 1fr;
-  }
-  
-  .header h1 {
-    font-size: 2rem;
-  }
-  
-  .examples-grid {
-    grid-template-columns: 1fr;
-  }
+.font-family-monospace {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 </style>

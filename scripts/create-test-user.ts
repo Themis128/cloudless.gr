@@ -7,7 +7,7 @@ async function createTestUser() {
   try {
     // Check if test user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email: 'admin@cloudless.gr' }
+      where: { email: 'admin@cloudless.gr' },
     })
 
     if (existingUser) {
@@ -26,21 +26,20 @@ async function createTestUser() {
         name: 'Admin User',
         role: 'admin',
         isActive: true,
-        isVerified: true
-      }
+        isVerified: true,
+      },
     })
 
     console.log('Test user created successfully:', {
       id: user.id,
       email: user.email,
       role: user.role,
-      status: user.status
+      isActive: user.isActive,
     })
 
     console.log('Login credentials:')
     console.log('Email: admin@cloudless.gr')
     console.log('Password: admin123')
-
   } catch (error) {
     console.error('Error creating test user:', error)
   } finally {
@@ -48,4 +47,4 @@ async function createTestUser() {
   }
 }
 
-createTestUser() 
+createTestUser()

@@ -1,6 +1,6 @@
 // server/api/admin/redis-status.get.ts
 import { defineEventHandler } from 'h3'
-import redis, { isRedisAvailable, getRedisStatus, testRedisConnection } from '~/server/utils/redis'
+import { getRedisClient } from '~/server/utils/redis'
 
 interface RedisStatus {
   available: boolean
@@ -12,23 +12,24 @@ interface RedisStatus {
 }
 
 export default defineEventHandler(async (event): Promise<RedisStatus> => {
-  const available = isRedisAvailable()
-  const status = getRedisStatus()
-  const connected = await testRedisConnection()
-  
+  const redis = getRedisClient()
+  const available = !!redis
+  const status = available ? 'available' : 'unavailable'
+  const connected = available
+
   const result: RedisStatus = {
     available,
     status,
     connected,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   }
-  
+
   // If Redis is available and connected, get some basic info
   if (available && connected && redis) {
     try {
       const info = await redis.info()
       const lines = info.split('\n')
-      
+
       for (const line of lines) {
         if (line.startsWith('redis_version:')) {
           result.version = line.split(':')[1]?.trim()
@@ -42,6 +43,6 @@ export default defineEventHandler(async (event): Promise<RedisStatus> => {
       console.warn('Could not fetch Redis info:', error)
     }
   }
-  
+
   return result
-}) 
+})

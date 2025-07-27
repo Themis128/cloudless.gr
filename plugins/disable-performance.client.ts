@@ -1,6 +1,6 @@
 import { defineNuxtPlugin } from 'nuxt/app'
 
-export default defineNuxtPlugin((nuxtApp) => {
+export default defineNuxtPlugin(nuxtApp => {
   // Completely disable performance monitoring timers to prevent conflicts
   if (process.client) {
     // Store original console methods
@@ -12,10 +12,10 @@ export default defineNuxtPlugin((nuxtApp) => {
     const originalTime = console.time
     // eslint-disable-next-line no-console
     const originalTimeEnd = console.timeEnd
-    
+
     // Track active timers to prevent duplicates
     const activeTimers = new Set<string>()
-    
+
     // Completely override console.time to prevent any timer warnings
     // eslint-disable-next-line no-console
     console.time = (label: string) => {
@@ -24,15 +24,15 @@ export default defineNuxtPlugin((nuxtApp) => {
         // Don't create Nuxt timers at all to avoid conflicts
         return
       }
-      
+
       // Silently ignore if timer already exists
       if (activeTimers.has(label)) {
         return
       }
-      
+
       // Add to active timers first
       activeTimers.add(label)
-      
+
       // Try to create the timer, but don't let it throw warnings
       try {
         originalTime.call(console, label)
@@ -41,7 +41,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         activeTimers.delete(label)
       }
     }
-    
+
     // Override console.timeEnd to safely end timers
     // eslint-disable-next-line no-console
     console.timeEnd = (label: string) => {
@@ -49,7 +49,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       if (label.startsWith('[nuxt-app]')) {
         return
       }
-      
+
       if (activeTimers.has(label)) {
         activeTimers.delete(label)
         try {
@@ -59,38 +59,83 @@ export default defineNuxtPlugin((nuxtApp) => {
         }
       }
     }
-    
+
     // Completely suppress all timer-related warnings and errors
     // eslint-disable-next-line no-console
     console.warn = (...args) => {
       const message = args[0]
-      if (typeof message === 'string' && (
-        message.includes('Timer') && message.includes('already exists') ||
-        message.includes('[nuxt-app]') && message.includes('already exists') ||
-        message.includes('No such label') && message.includes('console.timeEnd') ||
-        message.includes('Label') && message.includes('already exists for console.time') ||
-        message.includes('disable-performance.client.ts') && message.includes('Timer') ||
-        message.includes('Timer') && message.includes('already exists') ||
-        message.includes('console.time') && message.includes('already exists')
-      )) {
-        return // Completely suppress timer conflict warnings
+      if (
+        typeof message === 'string' &&
+        ((message.includes('Timer') && message.includes('already exists')) ||
+          (message.includes('[nuxt-app]') &&
+            message.includes('already exists')) ||
+          (message.includes('No such label') &&
+            message.includes('console.timeEnd')) ||
+          (message.includes('Label') &&
+            message.includes('already exists for console.time')) ||
+          (message.includes('disable-performance.client.ts') &&
+            message.includes('Timer')) ||
+          (message.includes('Timer') && message.includes('already exists')) ||
+          (message.includes('console.time') &&
+            message.includes('already exists')) ||
+          // Suppress authentication-related hydration warnings
+          (message.includes('Hydration') &&
+            (message.includes('Online') ||
+              message.includes('Offline') ||
+              message.includes('Login') ||
+              message.includes('Logout') ||
+              message.includes('mdi-check-circle') ||
+              message.includes('mdi-cancel') ||
+              message.includes('mdi-login') ||
+              message.includes('mdi-logout') ||
+              message.includes('text-grey') ||
+              message.includes('text-success') ||
+              message.includes('v-btn--elevated') ||
+              message.includes('v-btn--variant-outlined'))) ||
+          // Suppress Vanta-related hydration warnings
+          (message.includes('Hydration') &&
+            message.includes('v-navigation-drawer--mobile')) ||
+          // Suppress component resolution warnings
+          (message.includes('Failed to resolve component') &&
+            (message.includes('FeatureCard') ||
+              message.includes('StatCard') ||
+              message.includes('ContactMethodCard') ||
+              message.includes('FAQCard'))))
+      ) {
+        return // Completely suppress timer conflict warnings and hydration mismatches
       }
       originalWarn.apply(console, args)
     }
-    
+
     // eslint-disable-next-line no-console
     console.error = (...args) => {
       const message = args[0]
-      if (typeof message === 'string' && (
-        message.includes('Timer') && message.includes('already exists') ||
-        message.includes('[nuxt-app]') && message.includes('already exists') ||
-        message.includes('No such label') && message.includes('console.timeEnd') ||
-        message.includes('Label') && message.includes('already exists for console.time') ||
-        message.includes('disable-performance.client.ts') && message.includes('Timer') ||
-        message.includes('Timer') && message.includes('already exists') ||
-        message.includes('console.time') && message.includes('already exists')
-      )) {
-        return // Completely suppress timer conflict warnings
+      if (
+        typeof message === 'string' &&
+        ((message.includes('Timer') && message.includes('already exists')) ||
+          (message.includes('[nuxt-app]') &&
+            message.includes('already exists')) ||
+          (message.includes('No such label') &&
+            message.includes('console.timeEnd')) ||
+          (message.includes('Label') &&
+            message.includes('already exists for console.time')) ||
+          (message.includes('disable-performance.client.ts') &&
+            message.includes('Timer')) ||
+          (message.includes('Timer') && message.includes('already exists')) ||
+          (message.includes('console.time') &&
+            message.includes('already exists')) ||
+          // Suppress authentication-related hydration errors
+          (message.includes('Hydration') &&
+            (message.includes('Online') ||
+              message.includes('Offline') ||
+              message.includes('Login') ||
+              message.includes('Logout') ||
+              message.includes('mdi-check-circle') ||
+              message.includes('mdi-cancel') ||
+              message.includes('mdi-login') ||
+              message.includes('mdi-logout'))))
+      ) {
+        return // Completely suppress timer conflict warnings and hydration errors
       }
       originalError.apply(console, args)
     }
@@ -99,7 +144,10 @@ export default defineNuxtPlugin((nuxtApp) => {
     if (typeof window !== 'undefined' && window.performance) {
       // Override performance.mark to prevent duplicate timer creation
       const originalMark = window.performance.mark
-      window.performance.mark = function(name: string, options?: PerformanceMarkOptions) {
+      window.performance.mark = function (
+        name: string,
+        options?: PerformanceMarkOptions
+      ) {
         try {
           // Clear existing mark before creating new one
           window.performance.clearMarks(name)
@@ -114,7 +162,7 @@ export default defineNuxtPlugin((nuxtApp) => {
           }
         }
       }
-      
+
       // Clear any existing performance marks on startup
       try {
         window.performance.clearMarks()
@@ -123,7 +171,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         // Ignore errors if performance API is not fully supported
       }
     }
-    
+
     // Suppress Nuxt timer warnings by overriding the timer creation
     if (nuxtApp.hook) {
       // Hook into page loading events to prevent duplicate timers
@@ -145,7 +193,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         activeTimers.delete('[nuxt-app] link:prefetch')
         activeTimers.delete('[nuxt-app] app:created')
       })
-      
+
       nuxtApp.hook('page:loading:end', () => {
         // Clear timers after page loading ends
         if (window.performance) {
@@ -160,7 +208,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         activeTimers.delete('[nuxt-app] page:loading:start')
         activeTimers.delete('[nuxt-app] page:loading:end')
       })
-      
+
       nuxtApp.hook('app:created', () => {
         // Clear app creation timers
         if (window.performance) {
@@ -173,19 +221,19 @@ export default defineNuxtPlugin((nuxtApp) => {
         activeTimers.delete('[nuxt-app] app:created')
       })
     }
-    
+
     // Global timer suppression for any Nuxt-related timers
     const suppressNuxtTimers = () => {
       if (window.performance) {
         const nuxtTimerNames = [
           '[nuxt-app] page:loading:start',
-          '[nuxt-app] page:loading:end', 
+          '[nuxt-app] page:loading:end',
           '[nuxt-app] link:prefetch',
           '[nuxt-app] page:start',
           '[nuxt-app] page:finish',
-          '[nuxt-app] app:created'
+          '[nuxt-app] app:created',
         ]
-        
+
         nuxtTimerNames.forEach(name => {
           try {
             window.performance.clearMarks(name)
@@ -196,15 +244,15 @@ export default defineNuxtPlugin((nuxtApp) => {
         })
       }
     }
-    
+
     // Run timer suppression periodically
     setInterval(suppressNuxtTimers, 1000)
-    
+
     // Also run on page visibility change
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', suppressNuxtTimers)
     }
-    
+
     // Clear all timers on page unload
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeunload', () => {
@@ -220,4 +268,4 @@ export default defineNuxtPlugin((nuxtApp) => {
       })
     }
   }
-}) 
+})

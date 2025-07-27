@@ -1,71 +1,57 @@
-import { ref } from 'vue';
-import { generateLLMResponse } from '@/utils/codeLlama';
+import { computed } from 'vue'
 
 interface LLMOptions {
-  endpoint?: string;
+  endpoint?: string
 }
 
+// Composable that uses the Pinia store
 export function useLLMAndFileViewer(
   llmOptions: LLMOptions = {},
   defaultFilePath = 'components/CodegenWidget.vue'
 ) {
-  // LLM logic
-  const response = ref('');
-  const loading = ref(false);
-  const error = ref('');
-  const endpoint = llmOptions.endpoint;
+  const llmFileViewerStore = useLLMFileViewerStore()
 
-  async function sendPrompt(prompt: string, onData: (data: string) => void) {
-    loading.value = true;
-    error.value = '';
-    response.value = '';
-    try {
-      response.value = await generateLLMResponse(prompt, onData, endpoint);
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : String(e);
-    } finally {
-      loading.value = false;
-    }
-    return response.value;
-  }
+  // Initialize with options
+  llmFileViewerStore.setLLMOptions(llmOptions)
+  llmFileViewerStore.setDefaultFilePath(defaultFilePath)
 
-  // File viewer logic
-  const filePath = ref(defaultFilePath);
-  const fileContent = ref('');
-  const fileLoading = ref(false);
-  const fileError = ref('');
-
-  async function loadFile(path?: string) {
-    fileLoading.value = true;
-    fileError.value = '';
-    fileContent.value = '';
-    if (path) filePath.value = path;
-    try {
-      const res = await fetch(`/api/load-file?path=${encodeURIComponent(filePath.value)}`);
-      const data = await res.json();
-      if (data.error) {
-        fileError.value = data.error;
-      } else {
-        fileContent.value = data;
-      }
-    } catch (e) {
-      fileError.value = 'Failed to load file.';
-    } finally {
-      fileLoading.value = false;
-    }
-  }
-
+  // Return readonly state and computed properties for backward compatibility
   return {
-    // LLM
-    response,
-    loading,
-    error,
-    sendPrompt,
-    // File viewer
-    filePath,
-    fileContent,
-    fileLoading,
-    fileError,
-    loadFile,
-  };
+    // LLM (readonly for backward compatibility)
+    response: computed(() => llmFileViewerStore.llmResponse),
+    loading: computed(() => llmFileViewerStore.llmLoading),
+    error: computed(() => llmFileViewerStore.llmError),
+    endpoint: computed(() => llmFileViewerStore.llmEndpoint),
+
+    // File viewer (readonly for backward compatibility)
+    filePath: computed(() => llmFileViewerStore.filePath),
+    fileContent: computed(() => llmFileViewerStore.fileContent),
+    fileLoading: computed(() => llmFileViewerStore.fileLoading),
+    fileError: computed(() => llmFileViewerStore.fileError),
+
+    // Methods (delegate to store)
+    sendPrompt: llmFileViewerStore.sendPrompt,
+    loadFile: llmFileViewerStore.loadFile,
+
+    // Additional store methods
+    setLLMOptions: llmFileViewerStore.setLLMOptions,
+    setDefaultFilePath: llmFileViewerStore.setDefaultFilePath,
+    clearLLMResponse: llmFileViewerStore.clearLLMResponse,
+    clearFileContent: llmFileViewerStore.clearFileContent,
+    clearAll: llmFileViewerStore.clearAll,
+    setLLMError: llmFileViewerStore.setLLMError,
+    setFileError: llmFileViewerStore.setFileError,
+    updateFileContent: llmFileViewerStore.updateFileContent,
+    updateLLMResponse: llmFileViewerStore.updateLLMResponse,
+    getFileInfo: llmFileViewerStore.getFileInfo,
+    getLLMInfo: llmFileViewerStore.getLLMInfo,
+
+    // Additional computed properties from store
+    hasLLMResponse: computed(() => llmFileViewerStore.hasLLMResponse),
+    hasFileContent: computed(() => llmFileViewerStore.hasFileContent),
+    hasLLMError: computed(() => llmFileViewerStore.hasLLMError),
+    hasFileError: computed(() => llmFileViewerStore.hasFileError),
+    isLLMReady: computed(() => llmFileViewerStore.isLLMReady),
+    isFileReady: computed(() => llmFileViewerStore.isFileReady),
+  }
 }

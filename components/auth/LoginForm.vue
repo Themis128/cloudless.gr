@@ -12,18 +12,8 @@
               xmlns="http://www.w3.org/2000/svg"
               class="logo"
             >
-              <rect
-                width="48"
-                height="48"
-                rx="12"
-                fill="#23232b"
-              />
-              <circle
-                cx="24"
-                cy="24"
-                r="14"
-                fill="#fff"
-              />
+              <rect width="48" height="48" rx="12" fill="#23232b" />
+              <circle cx="24" cy="24" r="14" fill="#fff" />
               <text
                 x="24"
                 y="28"
@@ -117,11 +107,19 @@
         </div>
 
         <div class="social-login">
-          <button type="button" class="social-button google" @click="handleGoogleLogin">
+          <button
+            type="button"
+            class="social-button google"
+            @click="handleGoogleLogin"
+          >
             <v-icon>mdi-google</v-icon>
             <span>Continue with Google</span>
           </button>
-          <button type="button" class="social-button github" @click="handleGithubLogin">
+          <button
+            type="button"
+            class="social-button github"
+            @click="handleGithubLogin"
+          >
             <v-icon>mdi-github</v-icon>
             <span>Continue with GitHub</span>
           </button>
@@ -137,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 interface LoginForm {
   email: string
@@ -154,7 +152,7 @@ const emit = defineEmits<{
 const form = ref<LoginForm>({
   email: '',
   password: '',
-  rememberMe: false
+  rememberMe: false,
 })
 
 const showPassword = ref(false)
@@ -166,7 +164,9 @@ const authStore = useAuthStore()
 
 // Computed
 const isFormValid = computed(() => {
-  return form.value.email && form.value.password && form.value.email.includes('@')
+  return (
+    form.value.email && form.value.password && form.value.email.includes('@')
+  )
 })
 
 // Methods
@@ -179,24 +179,18 @@ const handleLogin = async () => {
 
     const result = await authStore.login({
       email: form.value.email,
-      password: form.value.password
+      password: form.value.password,
     })
 
     if (result.success) {
-      emit('success', authStore.user)
-      
-      // Redirect based on user role
-      if (authStore.isAdmin) {
-        await navigateTo('/admin/users')
-      } else {
-        await navigateTo('/dashboard')
-      }
+      emit('success', result.user)
+      // Navigation will be handled by the parent component
     } else {
       error.value = result.error || 'Login failed'
       emit('error', error.value)
     }
   } catch (err: any) {
-    console.error('Login error:', err)
+    console.error('💥 Login error:', err)
     error.value = err.message || 'An unexpected error occurred'
     emit('error', error.value)
   } finally {
@@ -208,7 +202,7 @@ const handleGoogleLogin = async () => {
   try {
     isLoading.value = true
     error.value = null
-    
+
     // Implement Google OAuth login
     console.log('Google login not implemented yet')
     error.value = 'Google login not implemented yet'
@@ -224,7 +218,7 @@ const handleGithubLogin = async () => {
   try {
     isLoading.value = true
     error.value = null
-    
+
     // Implement GitHub OAuth login
     console.log('GitHub login not implemented yet')
     error.value = 'GitHub login not implemented yet'
@@ -248,22 +242,28 @@ onMounted(() => {
 })
 
 // Watch for remember me changes
-watch(() => form.value.rememberMe, (remember) => {
-  if (process.client) {
-    if (remember && form.value.email) {
-      localStorage.setItem('remembered_email', form.value.email)
-    } else {
-      localStorage.removeItem('remembered_email')
+watch(
+  () => form.value.rememberMe,
+  remember => {
+    if (process.client) {
+      if (remember && form.value.email) {
+        localStorage.setItem('remembered_email', form.value.email)
+      } else {
+        localStorage.removeItem('remembered_email')
+      }
     }
   }
-})
+)
 
 // Watch for email changes when remember me is checked
-watch(() => form.value.email, (email) => {
-  if (process.client && form.value.rememberMe && email) {
-    localStorage.setItem('remembered_email', email)
+watch(
+  () => form.value.email,
+  email => {
+    if (process.client && form.value.rememberMe && email) {
+      localStorage.setItem('remembered_email', email)
+    }
   }
-})
+)
 </script>
 
 <style scoped>
@@ -273,7 +273,11 @@ watch(() => form.value.email, (email) => {
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.01) 0%, rgba(248, 250, 252, 0.01) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.01) 0%,
+    rgba(248, 250, 252, 0.01) 100%
+  );
   backdrop-filter: blur(6.5px);
 }
 
@@ -497,7 +501,12 @@ watch(() => form.value.email, (email) => {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
   transition: left 0.5s ease;
 }
 
@@ -522,8 +531,12 @@ watch(() => form.value.email, (email) => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .divider {
@@ -610,22 +623,22 @@ watch(() => form.value.email, (email) => {
   .login-form-container {
     padding: 1rem;
   }
-  
+
   .login-form-card {
     padding: 2rem 1.5rem;
   }
-  
+
   .login-title {
     font-size: 1.75rem;
   }
-  
+
   .social-login {
     gap: 0.5rem;
   }
-  
+
   .social-button {
     padding: 0.625rem 1rem;
     font-size: 0.8rem;
   }
 }
-</style> 
+</style>

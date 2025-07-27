@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 export interface ActionCard {
   id: string
@@ -48,7 +48,22 @@ export const useDashboardStore = defineStore('dashboard', () => {
     active: 0,
     bots: 0,
     models: 0,
-    pipelines: 0
+    pipelines: 0,
+  })
+
+  // Missing properties that useDashboard.ts expects
+  const recentActivity = ref([])
+  const quickStats = ref({
+    totalProjects: 0,
+    activeUsers: 0,
+    runningPipelines: 0,
+    completedTasks: 0,
+  })
+  const systemStatus = ref({
+    database: 'healthy',
+    redis: 'healthy',
+    api: 'healthy',
+    overall: 'healthy',
   })
 
   // Action Cards - Consistent styling and structure
@@ -66,7 +81,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'primary',
           variant: 'elevated',
           size: 'large',
-          to: '/bots/create'
+          to: '/bots/create',
         },
         {
           id: 'test-bot',
@@ -75,7 +90,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'info',
           variant: 'outlined',
           size: 'large',
-          to: '/bots/test'
+          to: '/bots/test',
         },
         {
           id: 'manage-bots',
@@ -84,9 +99,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'secondary',
           variant: 'outlined',
           size: 'large',
-          to: '/bots'
-        }
-      ]
+          to: '/bots',
+        },
+      ],
     },
     {
       id: 'ai-models',
@@ -101,7 +116,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'success',
           variant: 'elevated',
           size: 'large',
-          to: '/models/create'
+          to: '/models/create',
         },
         {
           id: 'training-sessions',
@@ -110,7 +125,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'warning',
           variant: 'outlined',
           size: 'large',
-          to: '/llm/training'
+          to: '/llm/training',
         },
         {
           id: 'view-models',
@@ -119,9 +134,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'info',
           variant: 'outlined',
           size: 'large',
-          to: '/models'
-        }
-      ]
+          to: '/models',
+        },
+      ],
     },
     {
       id: 'data-pipelines',
@@ -136,7 +151,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'purple',
           variant: 'elevated',
           size: 'large',
-          to: '/pipelines/create'
+          to: '/pipelines/create',
         },
         {
           id: 'manage-pipelines',
@@ -145,7 +160,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'orange',
           variant: 'outlined',
           size: 'large',
-          to: '/pipelines'
+          to: '/pipelines',
         },
         {
           id: 'datasets',
@@ -154,9 +169,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'teal',
           variant: 'outlined',
           size: 'large',
-          to: '/llm/datasets'
-        }
-      ]
+          to: '/llm/datasets',
+        },
+      ],
     },
     {
       id: 'analytics-insights',
@@ -171,7 +186,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'indigo',
           variant: 'elevated',
           size: 'large',
-          to: '/llm/analytics'
+          to: '/llm/analytics',
         },
         {
           id: 'cost-analysis',
@@ -180,7 +195,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'amber',
           variant: 'outlined',
           size: 'large',
-          to: '/llm/analytics/costs'
+          to: '/llm/analytics/costs',
         },
         {
           id: 'api-docs',
@@ -189,9 +204,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'deep-purple',
           variant: 'outlined',
           size: 'large',
-          to: '/llm/api'
-        }
-      ]
+          to: '/llm/api',
+        },
+      ],
     },
     {
       id: 'deployment-ops',
@@ -206,7 +221,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'green',
           variant: 'elevated',
           size: 'large',
-          to: '/deploy'
+          to: '/deploy',
         },
         {
           id: 'debug-tools',
@@ -215,7 +230,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'red',
           variant: 'outlined',
           size: 'large',
-          to: '/debug'
+          to: '/debug',
         },
         {
           id: 'system-health',
@@ -224,10 +239,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
           color: 'pink',
           variant: 'outlined',
           size: 'large',
-          to: '/admin/health'
-        }
-      ]
-    }
+          to: '/admin/health',
+        },
+      ],
+    },
   ])
 
   // Metric Cards - Consistent styling with trends
@@ -244,8 +259,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
       trend: {
         value: 12,
         direction: 'up',
-        color: 'success'
-      }
+        color: 'success',
+      },
     },
     {
       id: 'active-pipelines',
@@ -259,8 +274,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
       trend: {
         value: 8,
         direction: 'up',
-        color: 'success'
-      }
+        color: 'success',
+      },
     },
     {
       id: 'ai-models',
@@ -274,8 +289,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
       trend: {
         value: 3,
         direction: 'up',
-        color: 'success'
-      }
+        color: 'success',
+      },
     },
     {
       id: 'system-health',
@@ -289,9 +304,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
       trend: {
         value: 99.9,
         direction: 'neutral',
-        color: 'success'
-      }
-    }
+        color: 'success',
+      },
+    },
   ])
 
   // Actions
@@ -299,28 +314,27 @@ export const useDashboardStore = defineStore('dashboard', () => {
     try {
       loading.value = true
       error.value = ''
-      
+
       // Fetch stats from API
       const statsResponse = await $fetch<{
         projects: number
         users: number
         active: number
       }>('/api/stats/dashboard')
-      
+
       // Update stats
       stats.value = {
         projects: statsResponse.projects || 0,
         users: statsResponse.users || 0,
         active: statsResponse.active || 0,
         bots: statsResponse.projects || 0, // Map projects to bots for now
-        models: statsResponse.users || 0,  // Map users to models for now
-        pipelines: statsResponse.active || 0
+        models: statsResponse.users || 0, // Map users to models for now
+        pipelines: statsResponse.active || 0,
       }
-      
     } catch (err: any) {
       console.error('Error fetching dashboard stats:', err)
       error.value = err.message || 'Failed to load dashboard data'
-      
+
       // Set default values on error
       stats.value = {
         projects: 0,
@@ -328,7 +342,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
         active: 0,
         bots: 0,
         models: 0,
-        pipelines: 0
+        pipelines: 0,
       }
     } finally {
       loading.value = false
@@ -359,8 +373,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
         to: action.to,
         href: action.href,
         disabled: action.disabled || false,
-        onClick: action.onClick
-      }))
+        onClick: action.onClick,
+      })),
     }
     actionCards.value.push(normalizedCard)
   }
@@ -383,6 +397,11 @@ export const useDashboardStore = defineStore('dashboard', () => {
     error.value = ''
   }
 
+  // Add missing method that useDashboard.ts expects
+  const refreshDashboardData = async () => {
+    return await fetchDashboardData()
+  }
+
   // Helper function to create consistent action cards
   const createActionCard = (
     id: string,
@@ -398,8 +417,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
       actions: actions.map(action => ({
         ...action,
         size: action.size || 'large',
-        disabled: action.disabled || false
-      }))
+        disabled: action.disabled || false,
+      })),
     }
   }
 
@@ -410,14 +429,18 @@ export const useDashboardStore = defineStore('dashboard', () => {
     stats,
     actionCards,
     metricCards,
-    
+    recentActivity,
+    quickStats,
+    systemStatus,
+
     // Actions
     fetchDashboardData,
+    refreshDashboardData,
     updateActionCardLoading,
     addActionCard,
     removeActionCard,
     updateActionCard,
     clearError,
-    createActionCard
+    createActionCard,
   }
-}) 
+})

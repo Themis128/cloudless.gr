@@ -1,0 +1,11 @@
+ignoredBuiltDependencies:
+  - '@parcel/watcher'
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - esbuild
+  - prisma
+  - sharp
+  - unrs-resolver
+  - vue-demi

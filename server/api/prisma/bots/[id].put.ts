@@ -1,5 +1,5 @@
 import { defineEventHandler, getRouterParam, readBody, createError } from 'h3'
-import { databaseService } from '~/lib/database'
+import { getPrismaClient } from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -13,17 +13,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const botId = parseInt(id)
-    if (isNaN(botId)) {
+    const prisma = await getPrismaClient()
+    if (!prisma) {
       throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid bot ID format'
+        statusCode: 500,
+        message: 'Database service unavailable'
       })
     }
 
     // Check if bot exists
-    const existingBot = await databaseService.prisma.bot.findUnique({
-      where: { id: botId }
+    const existingBot = await prisma.bot.findUnique({
+      where: { id: String(id) }
     })
 
     if (!existingBot) {
@@ -34,15 +34,13 @@ export default defineEventHandler(async (event) => {
     }
 
     // Update bot
-    const updatedBot = await databaseService.prisma.bot.update({
-      where: { id: botId },
+    const updatedBot = await prisma.bot.update({
+      where: { id: String(id) },
       data: {
         name: body.name,
         description: body.description,
         status: body.status,
-        config: body.config,
-        model_id: body.model_id,
-        pipeline_id: body.pipeline_id
+        config: body.config
       },
       include: {
         user: {
@@ -50,20 +48,6 @@ export default defineEventHandler(async (event) => {
             id: true,
             name: true,
             email: true
-          }
-        },
-        model: {
-          select: {
-            id: true,
-            name: true,
-            version: true
-          }
-        },
-        pipeline: {
-          select: {
-            id: true,
-            name: true,
-            status: true
           }
         }
       }

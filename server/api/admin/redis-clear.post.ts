@@ -1,21 +1,15 @@
 // server/api/admin/redis-clear.post.ts
 import { defineEventHandler, createError } from 'h3'
-import redis, { isRedisAvailable } from '~/server/utils/redis'
+import { getRedisClient } from '~/server/utils/redis'
 
 export default defineEventHandler(async (event) => {
   try {
     // Check if Redis is available
-    if (!isRedisAvailable()) {
-      throw createError({
-        statusCode: 503,
-        statusMessage: 'Redis is not available',
-      })
-    }
-
+    const redis = getRedisClient()
     if (!redis) {
       throw createError({
         statusCode: 503,
-        statusMessage: 'Redis connection not established',
+        statusMessage: 'Redis is not available',
       })
     }
     

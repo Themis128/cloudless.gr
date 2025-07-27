@@ -3,14 +3,9 @@
     <div class="codegen-header">
       <h1>Code Generation Tools</h1>
       <p class="header-description">
-<<<<<<< HEAD
         Powerful AI-assisted code generation tools to accelerate your
         development workflow and boost productivity with intelligent code
         suggestions and automation.
-=======
-        Powerful AI-assisted code generation tools to accelerate your development workflow 
-        and boost productivity with intelligent code suggestions and automation.
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
       </p>
     </div>
 
@@ -24,27 +19,18 @@
           </div>
         </div>
         <p class="tool-description">
-<<<<<<< HEAD
           Intelligent code completion and generation powered by advanced
           language models. Get context-aware suggestions for functions,
           components, and entire modules.
-=======
-          Intelligent code completion and generation powered by advanced language models. 
-          Get context-aware suggestions for functions, components, and entire modules.
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
         </p>
         <div class="tool-features">
           <span class="feature">Multi-language support</span>
           <span class="feature">Context-aware</span>
           <span class="feature">Real-time suggestions</span>
         </div>
-<<<<<<< HEAD
-        <button class="tool-button primary">Try AI Assistant</button>
-=======
         <button class="tool-button primary">
           Try AI Assistant
         </button>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
       </div>
 
       <div class="tool-card">
@@ -56,26 +42,17 @@
           </div>
         </div>
         <p class="tool-description">
-<<<<<<< HEAD
           Generate Vue.js, React, and other framework components with proper
           structure, styling, and functionality based on your specifications.
-=======
-          Generate Vue.js, React, and other framework components with proper structure, 
-          styling, and functionality based on your specifications.
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
         </p>
         <div class="tool-features">
           <span class="feature">Vue.js Components</span>
           <span class="feature">React Components</span>
           <span class="feature">Custom Templates</span>
         </div>
-<<<<<<< HEAD
-        <button class="tool-button">Generate Components</button>
-=======
         <button class="tool-button">
           Generate Components
         </button>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
       </div>
 
       <div class="tool-card">
@@ -87,26 +64,17 @@
           </div>
         </div>
         <p class="tool-description">
-<<<<<<< HEAD
           Automatically generate REST API endpoints, database models, and
           documentation from schemas or existing database structures.
-=======
-          Automatically generate REST API endpoints, database models, and documentation 
-          from schemas or existing database structures.
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
         </p>
         <div class="tool-features">
           <span class="feature">REST APIs</span>
           <span class="feature">Database Models</span>
           <span class="feature">Auto Documentation</span>
         </div>
-<<<<<<< HEAD
-        <button class="tool-button">Create APIs</button>
-=======
         <button class="tool-button">
           Create APIs
         </button>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
       </div>
 
       <div class="tool-card">
@@ -118,11 +86,7 @@
           </div>
         </div>
         <p class="tool-description">
-<<<<<<< HEAD
           Generate optimized CSS styles, animations, and responsive layouts with
-=======
-          Generate optimized CSS styles, animations, and responsive layouts with 
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
           modern design patterns and best practices.
         </p>
         <div class="tool-features">
@@ -130,13 +94,9 @@
           <span class="feature">CSS Animations</span>
           <span class="feature">Responsive Design</span>
         </div>
-<<<<<<< HEAD
-        <button class="tool-button">Style Generator</button>
-=======
         <button class="tool-button">
           Style Generator
         </button>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
       </div>
 
       <div class="tool-card">
@@ -144,19 +104,11 @@
           <div class="tool-icon">🧪</div>
           <div class="tool-info">
             <h3>Test Generator</h3>
-<<<<<<< HEAD
             <span class="tool-status">Available</span>
           </div>
         </div>
         <p class="tool-description">
           Automatically generate comprehensive unit tests, integration tests,
-=======
-            <span class="tool-status">Coming Soon</span>
-          </div>
-        </div>
-        <p class="tool-description">
-          Automatically generate comprehensive unit tests, integration tests, 
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
           and end-to-end test suites for your applications.
         </p>
         <div class="tool-features">
@@ -164,13 +116,8 @@
           <span class="feature">Integration Tests</span>
           <span class="feature">E2E Tests</span>
         </div>
-<<<<<<< HEAD
         <button class="tool-button" @click="openTestGenerator">
           Generate Tests
-=======
-        <button class="tool-button disabled" disabled>
-          Coming Soon
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
         </button>
       </div>
 
@@ -179,56 +126,36 @@
           <div class="tool-icon">📚</div>
           <div class="tool-info">
             <h3>Documentation Generator</h3>
-<<<<<<< HEAD
             <span class="tool-status">Available</span>
           </div>
         </div>
         <p class="tool-description">
-          Generate comprehensive documentation from your code comments, API
-          definitions, and project structure automatically.
-=======
-            <span class="tool-status">Coming Soon</span>
-          </div>
-        </div>
-        <p class="tool-description">
-          Generate comprehensive documentation from your code comments, 
+          Generate comprehensive documentation from your code comments,
           API definitions, and project structure automatically.
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
         </p>
         <div class="tool-features">
           <span class="feature">API Docs</span>
           <span class="feature">Code Comments</span>
           <span class="feature">Interactive Docs</span>
         </div>
-<<<<<<< HEAD
         <button class="tool-button" @click="openDocGenerator">
           Generate Docs
-=======
-        <button class="tool-button disabled" disabled>
-          Coming Soon
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
         </button>
       </div>
     </div>
 
     <div class="demo-section">
       <h2>See it in Action</h2>
-<<<<<<< HEAD
       <p>
         Experience our code generation tools with live examples and interactive
         demos.
       </p>
 
-=======
-      <p>Experience our code generation tools with live examples and interactive demos.</p>
-      
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
       <div class="demo-grid">
         <div class="demo-card">
           <h3>Interactive Code Demo</h3>
           <p>Try our AI code assistant in a live coding environment.</p>
-<<<<<<< HEAD
-          <NuxtLink to="/responsive-demo" class="demo-link"> View Demo → </NuxtLink>
+          <NuxtLink to="/responsive-demo" class="demo-link">View Demo →</NuxtLink>
         </div>
 
         <div class="demo-card">
@@ -245,27 +172,6 @@
           <NuxtLink to="/api-playground" class="demo-link">
             Try API Playground →
           </NuxtLink>
-=======
-          <NuxtLink to="/responsive-demo" class="demo-link">
-            View Demo →
-          </NuxtLink>
-        </div>
-        
-        <div class="demo-card">
-          <h3>Component Library</h3>
-          <p>Browse generated components and see the code behind them.</p>
-          <button class="demo-link" disabled>
-            Coming Soon
-          </button>
-        </div>
-        
-        <div class="demo-card">
-          <h3>API Playground</h3>
-          <p>Test generated APIs and explore their capabilities.</p>
-          <button class="demo-link" disabled>
-            Coming Soon
-          </button>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
         </div>
       </div>
     </div>
@@ -282,17 +188,9 @@
             <li>✅ Community support</li>
             <li>❌ Advanced AI features</li>
           </ul>
-<<<<<<< HEAD
           <button class="pricing-button">Get Started</button>
         </div>
 
-=======
-          <button class="pricing-button">
-            Get Started
-          </button>
-        </div>
-        
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
         <div class="pricing-card featured">
           <div class="featured-badge">Most Popular</div>
           <h3>Pro</h3>
@@ -303,17 +201,9 @@
             <li>✅ Custom templates</li>
             <li>✅ Priority support</li>
           </ul>
-<<<<<<< HEAD
           <button class="pricing-button primary">Start Free Trial</button>
         </div>
 
-=======
-          <button class="pricing-button primary">
-            Start Free Trial
-          </button>
-        </div>
-        
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
         <div class="pricing-card">
           <h3>Team</h3>
           <div class="price">$99<span>/month</span></div>
@@ -323,33 +213,21 @@
             <li>✅ Custom integrations</li>
             <li>✅ Dedicated support</li>
           </ul>
-<<<<<<< HEAD
           <button class="pricing-button">Contact Sales</button>
-=======
-          <button class="pricing-button">
-            Contact Sales
-          </button>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
         </div>
       </div>
     </div>
 
     <div class="cta-section">
       <h2>Ready to Boost Your Productivity?</h2>
-<<<<<<< HEAD
       <p>
         Join thousands of developers who are already using our code generation
         tools to build better software faster.
       </p>
       <div class="cta-buttons">
-        <button class="cta-button primary">Start Free Trial</button>
-=======
-      <p>Join thousands of developers who are already using our code generation tools to build better software faster.</p>
-      <div class="cta-buttons">
         <button class="cta-button primary">
           Start Free Trial
         </button>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
         <NuxtLink to="/contact" class="cta-button secondary">
           Contact Sales
         </NuxtLink>
@@ -359,7 +237,6 @@
 </template>
 
 <script setup lang="ts">
-<<<<<<< HEAD
 // Page meta
 definePageMeta({
   layout: 'default',
@@ -382,13 +259,6 @@ const trackToolUsage = (toolName: string) => {
   // Analytics tracking would go here
   console.log(`User accessed ${toolName}`)
 }
-=======
-import { definePageMeta } from '#imports'
-// Set page meta
-definePageMeta({
-  layout: 'default'
-});
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
 </script>
 
 <style scoped>
@@ -432,13 +302,7 @@ definePageMeta({
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.3);
   padding: 2rem;
-<<<<<<< HEAD
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
-=======
   transition: transform 0.3s ease, box-shadow 0.3s ease;
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
 }
 
 .tool-card:hover {
@@ -452,11 +316,7 @@ definePageMeta({
 }
 
 .tool-card.featured::before {
-<<<<<<< HEAD
-  content: 'Featured';
-=======
   content: "Featured";
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
   position: absolute;
   top: -10px;
   left: 1rem;
@@ -791,18 +651,13 @@ definePageMeta({
   .codegen-header h1 {
     font-size: 2.5rem;
   }
-<<<<<<< HEAD
-
-=======
   
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
   .tools-grid,
   .demo-grid,
   .pricing-grid {
     grid-template-columns: 1fr;
   }
-<<<<<<< HEAD
-
+  
   .pricing-card.featured {
     transform: none;
   }
@@ -811,17 +666,6 @@ definePageMeta({
     flex-direction: column;
   }
 
-=======
-  
-  .pricing-card.featured {
-    transform: none;
-  }
-  
-  .cta-buttons {
-    flex-direction: column;
-  }
-  
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
   .cta-button {
     width: 100%;
     max-width: 300px;

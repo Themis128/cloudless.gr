@@ -1,73 +1,59 @@
-import { ref } from 'vue'
+import { computed } from 'vue'
 
-// Prisma API composable for database operations
+// Composable that uses the Pinia store
 export const usePrismaApi = () => {
-  const isLoading = ref(false)
-  const error = ref<string | null>(null)
+  const prismaStore = usePrismaStore()
 
-  // Generic API call function
-  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-    isLoading.value = true
-    error.value = null
-
-    try {
-      const response = await $fetch(endpoint, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-      })
-      return response
-    } catch (err: any) {
-      error.value = err.message || 'An error occurred'
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Project operations
-  const getProjects = () => apiCall('/api/projects')
-  
-  const getProject = (id: number) => apiCall(`/api/projects/${id}`)
-  
-  const createProject = (projectData: any) => 
-    apiCall('/api/projects', {
-      method: 'POST',
-      body: projectData
-    })
-
-  // User operations
-  const getUsers = () => apiCall('/api/users')
-  
-  const getUser = (id: number) => apiCall(`/api/users/${id}`)
-  
-  const createUser = (userData: any) => 
-    apiCall('/api/users', {
-      method: 'POST',
-      body: userData
-    })
-
-  // Contact operations
-  const createContactSubmission = (contactData: any) => 
-    apiCall('/api/contact', {
-      method: 'POST',
-      body: contactData
-    })
-
-  const getContactSubmissions = () => apiCall('/api/contact-submissions')
-
+  // Return readonly state and computed properties for backward compatibility
   return {
-    isLoading,
-    error,
-    getProjects,
-    getProject,
-    createProject,
-    getUsers,
-    getUser,
-    createUser,
-    createContactSubmission,
-    getContactSubmissions
+    // State (readonly for backward compatibility)
+    isLoading: computed(() => prismaStore.isLoading),
+    error: computed(() => prismaStore.error),
+
+    // Project operations (delegate to store)
+    getProjects: prismaStore.getProjects,
+    getProject: prismaStore.getProject,
+    createProject: prismaStore.createProject,
+
+    // User operations (delegate to store)
+    getUsers: prismaStore.getUsers,
+    getUser: prismaStore.getUser,
+    createUser: prismaStore.createUser,
+
+    // Contact operations (delegate to store)
+    createContactSubmission: prismaStore.createContactSubmission,
+    getContactSubmissions: prismaStore.getContactSubmissions,
+
+    // Additional store methods
+    // Bot operations
+    getBots: prismaStore.getBots,
+    getBot: prismaStore.getBot,
+    createBot: prismaStore.createBot,
+    updateBot: prismaStore.updateBot,
+    deleteBot: prismaStore.deleteBot,
+
+    // Model operations
+    getModels: prismaStore.getModels,
+    getModel: prismaStore.getModel,
+    createModel: prismaStore.createModel,
+    updateModel: prismaStore.updateModel,
+    deleteModel: prismaStore.deleteModel,
+
+    // Pipeline operations
+    getPipelines: prismaStore.getPipelines,
+    getPipeline: prismaStore.getPipeline,
+    createPipeline: prismaStore.createPipeline,
+    updatePipeline: prismaStore.updatePipeline,
+    deletePipeline: prismaStore.deletePipeline,
+
+    // Training operations
+    getTrainingSessions: prismaStore.getTrainingSessions,
+    getTrainingSession: prismaStore.getTrainingSession,
+    createTrainingSession: prismaStore.createTrainingSession,
+    updateTrainingSession: prismaStore.updateTrainingSession,
+    deleteTrainingSession: prismaStore.deleteTrainingSession,
+
+    // Generic API call
+    apiCall: prismaStore.apiCall,
   }
 }

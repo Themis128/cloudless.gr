@@ -1,6 +1,8 @@
 // This file handles the generation of a robots.txt for search engine crawlers
 // For Nuxt 3, place this in the server/routes directory
 
+import { defineEventHandler, setResponseHeader } from 'h3'
+
 export default defineEventHandler((event) => {
   // Set the appropriate content type
   setResponseHeader(event, 'Content-Type', 'text/plain');

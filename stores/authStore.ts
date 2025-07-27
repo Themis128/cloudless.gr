@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 
 interface User {
   id: number
@@ -48,17 +48,20 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Computed properties
   const isAuthenticated = computed(() => !!token.value && !!user.value)
-  const isAdmin = computed(() => 
-    user.value?.role === 'admin' || 
-    user.value?.userRoles?.some(ur => ur.role.name === 'admin' && ur.isActive)
+  const isAdmin = computed(
+    () =>
+      user.value?.role === 'admin' ||
+      user.value?.userRoles?.some(ur => ur.role.name === 'admin' && ur.isActive)
   )
-  const isDeveloper = computed(() => 
-    user.value?.role === 'developer' || 
-    user.value?.userRoles?.some(ur => ur.role.name === 'developer' && ur.isActive)
+  const isDeveloper = computed(
+    () =>
+      user.value?.role === 'developer' ||
+      user.value?.userRoles?.some(ur => ur.role.name === 'developer' && ur.isActive)
   )
-  const isUser = computed(() => 
-    user.value?.role === 'user' || 
-    user.value?.userRoles?.some(ur => ur.role.name === 'user' && ur.isActive)
+  const isUser = computed(
+    () =>
+      user.value?.role === 'user' ||
+      user.value?.userRoles?.some(ur => ur.role.name === 'user' && ur.isActive)
   )
 
   // Permission checking
@@ -66,45 +69,82 @@ export const useAuthStore = defineStore('auth', () => {
     return permissions.value.some(p => p.resource === resource && p.action === action)
   })
 
-  const hasAnyPermission = computed(() => (permissionList: Array<{ resource: string, action: string }>) => {
-    return permissionList.some(({ resource, action }) => 
-      permissions.value.some(p => p.resource === resource && p.action === action)
-    )
-  })
+  const hasAnyPermission = computed(
+    () => (permissionList: Array<{ resource: string; action: string }>) => {
+      return permissionList.some(({ resource, action }) =>
+        permissions.value.some(p => p.resource === resource && p.action === action)
+      )
+    }
+  )
 
-  const hasAllPermissions = computed(() => (permissionList: Array<{ resource: string, action: string }>) => {
-    return permissionList.every(({ resource, action }) => 
-      permissions.value.some(p => p.resource === resource && p.action === action)
-    )
-  })
+  const hasAllPermissions = computed(
+    () => (permissionList: Array<{ resource: string; action: string }>) => {
+      return permissionList.every(({ resource, action }) =>
+        permissions.value.some(p => p.resource === resource && p.action === action)
+      )
+    }
+  )
 
   // Common permission checks
   const canManageUsers = computed(() => hasPermission.value('admin', 'users') || isAdmin.value)
   const canManageRoles = computed(() => hasPermission.value('admin', 'roles') || isAdmin.value)
-  const canManageBots = computed(() => hasPermission.value('bot', 'create') || hasPermission.value('bot', 'update') || hasPermission.value('bot', 'delete'))
+  const canManageBots = computed(
+    () =>
+      hasPermission.value('bot', 'create') ||
+      hasPermission.value('bot', 'update') ||
+      hasPermission.value('bot', 'delete')
+  )
   const canCreateBots = computed(() => hasPermission.value('bot', 'create'))
   const canUpdateBots = computed(() => hasPermission.value('bot', 'update'))
   const canDeleteBots = computed(() => hasPermission.value('bot', 'delete'))
   const canDeployBots = computed(() => hasPermission.value('bot', 'deploy'))
-  const canManageModels = computed(() => hasPermission.value('model', 'create') || hasPermission.value('model', 'update') || hasPermission.value('model', 'delete'))
+  const canManageModels = computed(
+    () =>
+      hasPermission.value('model', 'create') ||
+      hasPermission.value('model', 'update') ||
+      hasPermission.value('model', 'delete')
+  )
   const canCreateModels = computed(() => hasPermission.value('model', 'create'))
   const canUpdateModels = computed(() => hasPermission.value('model', 'update'))
   const canDeleteModels = computed(() => hasPermission.value('model', 'delete'))
   const canTrainModels = computed(() => hasPermission.value('model', 'train'))
-  const canManagePipelines = computed(() => hasPermission.value('pipeline', 'create') || hasPermission.value('pipeline', 'update') || hasPermission.value('pipeline', 'delete'))
+  const canManagePipelines = computed(
+    () =>
+      hasPermission.value('pipeline', 'create') ||
+      hasPermission.value('pipeline', 'update') ||
+      hasPermission.value('pipeline', 'delete')
+  )
   const canCreatePipelines = computed(() => hasPermission.value('pipeline', 'create'))
   const canUpdatePipelines = computed(() => hasPermission.value('pipeline', 'update'))
   const canDeletePipelines = computed(() => hasPermission.value('pipeline', 'delete'))
   const canExecutePipelines = computed(() => hasPermission.value('pipeline', 'execute'))
-  const canAccessAnalytics = computed(() => hasPermission.value('admin', 'analytics') || isAdmin.value)
+  const canAccessAnalytics = computed(
+    () => hasPermission.value('admin', 'analytics') || isAdmin.value
+  )
 
   // Actions
   const setUser = (newUser: User | null) => {
     user.value = newUser
+    // Update localStorage
+    if (process.client) {
+      if (newUser) {
+        localStorage.setItem('auth_user', JSON.stringify(newUser))
+      } else {
+        localStorage.removeItem('auth_user')
+      }
+    }
   }
 
   const setToken = (newToken: string | null) => {
     token.value = newToken
+    // Update localStorage
+    if (process.client) {
+      if (newToken) {
+        localStorage.setItem('auth_token', newToken)
+      } else {
+        localStorage.removeItem('auth_token')
+      }
+    }
   }
 
   const setPermissions = (newPermissions: Permission[]) => {
@@ -128,25 +168,25 @@ export const useAuthStore = defineStore('auth', () => {
       setLoading(true)
       setError(null)
 
-      const response = await $fetch('/api/auth/login', {
+      const response = (await $fetch('/api/auth/login', {
         method: 'POST',
-        body: credentials
-      }) as any
+        body: credentials,
+      })) as any
 
       if (response.success) {
         setToken(response.token)
         setUser(response.user)
-        
+
         // Store in localStorage
         if (process.client) {
           localStorage.setItem('auth_token', response.token)
           localStorage.setItem('auth_user', JSON.stringify(response.user))
         }
-        
+
         // Fetch permissions and roles
         await fetchUserPermissions()
         await fetchUserRoles()
-        
+
         return { success: true }
       } else {
         setError(response.message || 'Login failed')
@@ -161,7 +201,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const register = async (data: { name: string; email: string; password: string; confirmPassword: string }) => {
+  const register = async (data: {
+    name: string
+    email: string
+    password: string
+    confirmPassword: string
+  }) => {
     try {
       setLoading(true)
       setError(null)
@@ -171,29 +216,29 @@ export const useAuthStore = defineStore('auth', () => {
         return { success: false, error: error.value }
       }
 
-      const response = await $fetch('/api/auth/register', {
+      const response = (await $fetch('/api/auth/register', {
         method: 'POST',
         body: {
           name: data.name,
           email: data.email,
-          password: data.password
-        }
-      }) as any
+          password: data.password,
+        },
+      })) as any
 
       if (response.success) {
         setToken(response.token)
         setUser(response.user)
-        
+
         // Store in localStorage
         if (process.client) {
           localStorage.setItem('auth_token', response.token)
           localStorage.setItem('auth_user', JSON.stringify(response.user))
         }
-        
+
         // Fetch permissions and roles
         await fetchUserPermissions()
         await fetchUserRoles()
-        
+
         return { success: true }
       } else {
         setError(response.message || 'Registration failed')
@@ -215,8 +260,8 @@ export const useAuthStore = defineStore('auth', () => {
         await $fetch('/api/auth/logout', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token.value}`
-          }
+            Authorization: `Bearer ${token.value}`,
+          },
         }).catch(() => {
           // Ignore errors on logout
         })
@@ -225,6 +270,14 @@ export const useAuthStore = defineStore('auth', () => {
       console.error('Logout error:', err)
     } finally {
       clearAuth()
+
+      // Navigate to login page
+      if (process.client) {
+        const router = useRouter()
+        if (router) {
+          router.push('/auth/login')
+        }
+      }
     }
   }
 
@@ -234,7 +287,7 @@ export const useAuthStore = defineStore('auth', () => {
     setPermissions([])
     setRoles([])
     setError(null)
-    
+
     if (process.client) {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_user')
@@ -245,11 +298,11 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value) return
 
     try {
-      const response = await $fetch('/api/auth/permissions', {
+      const response = (await $fetch('/api/auth/permissions', {
         headers: {
-          'Authorization': `Bearer ${token.value}`
-        }
-      }) as any
+          Authorization: `Bearer ${token.value}`,
+        },
+      })) as any
 
       if (response.success) {
         setPermissions(response.permissions || [])
@@ -263,11 +316,11 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value) return
 
     try {
-      const response = await $fetch('/api/auth/roles', {
+      const response = (await $fetch('/api/auth/roles', {
         headers: {
-          'Authorization': `Bearer ${token.value}`
-        }
-      }) as any
+          Authorization: `Bearer ${token.value}`,
+        },
+      })) as any
 
       if (response.success) {
         setRoles(response.roles || [])
@@ -281,20 +334,20 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value) return
 
     try {
-      const response = await $fetch('/api/auth/user', {
+      const response = (await $fetch('/api/auth/user', {
         headers: {
-          'Authorization': `Bearer ${token.value}`
-        }
-      }) as any
+          Authorization: `Bearer ${token.value}`,
+        },
+      })) as any
 
       if (response.success) {
         setUser(response.user)
-        
+
         // Update localStorage
         if (process.client) {
           localStorage.setItem('auth_user', JSON.stringify(response.user))
         }
-        
+
         // Refresh permissions and roles
         await fetchUserPermissions()
         await fetchUserRoles()
@@ -313,22 +366,22 @@ export const useAuthStore = defineStore('auth', () => {
       setLoading(true)
       setError(null)
 
-      const response = await $fetch('/api/auth/profile', {
+      const response = (await $fetch('/api/auth/profile', {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token.value}`
+          Authorization: `Bearer ${token.value}`,
         },
-        body: profileData
-      }) as any
+        body: profileData,
+      })) as any
 
       if (response.success) {
         setUser(response.user)
-        
+
         // Update localStorage
         if (process.client) {
           localStorage.setItem('auth_user', JSON.stringify(response.user))
         }
-        
+
         return { success: true }
       } else {
         setError(response.message || 'Profile update failed')
@@ -350,16 +403,16 @@ export const useAuthStore = defineStore('auth', () => {
       setLoading(true)
       setError(null)
 
-      const response = await $fetch('/api/auth/change-password', {
+      const response = (await $fetch('/api/auth/change-password', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token.value}`
+          Authorization: `Bearer ${token.value}`,
         },
         body: {
           currentPassword,
-          newPassword
-        }
-      }) as any
+          newPassword,
+        },
+      })) as any
 
       if (response.success) {
         return { success: true }
@@ -381,10 +434,10 @@ export const useAuthStore = defineStore('auth', () => {
       setLoading(true)
       setError(null)
 
-      const response = await $fetch('/api/auth/forgot-password', {
+      const response = (await $fetch('/api/auth/forgot-password', {
         method: 'POST',
-        body: { email }
-      }) as any
+        body: { email },
+      })) as any
 
       if (response.success) {
         return { success: true }
@@ -406,13 +459,13 @@ export const useAuthStore = defineStore('auth', () => {
       setLoading(true)
       setError(null)
 
-      const response = await $fetch('/api/auth/reset-password', {
+      const response = (await $fetch('/api/auth/reset-password', {
         method: 'POST',
         body: {
           token: resetToken,
-          newPassword
-        }
-      }) as any
+          newPassword,
+        },
+      })) as any
 
       if (response.success) {
         return { success: true }
@@ -429,23 +482,122 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Get redirect path based on user role
+  const getRedirectPath = (user: User) => {
+    // Check if user is admin
+    const isUserAdmin =
+      user.role === 'admin' || user.userRoles?.some(ur => ur.role.name === 'admin' && ur.isActive)
+
+    if (isUserAdmin) {
+      return '/admin'
+    }
+
+    // Check if user is developer
+    const isUserDeveloper =
+      user.role === 'developer' ||
+      user.userRoles?.some(ur => ur.role.name === 'developer' && ur.isActive)
+
+    if (isUserDeveloper) {
+      return '/dashboard'
+    }
+
+    // Default redirect for regular users
+    return '/dashboard'
+  }
+
+  // Fetch user data (alias for refreshUser for compatibility)
+  const fetchUser = async () => {
+    // If no token, try to initialize from localStorage first
+    if (!token.value && process.client) {
+      initializeAuth()
+    }
+
+    // If still no token after initialization, return early
+    if (!token.value) {
+      console.log('No auth token found, skipping user fetch')
+      return
+    }
+
+    return await refreshUser()
+  }
+
+  // Check if user has specific permission (async version for API calls)
+  const checkPermission = async (resource: string, action: string) => {
+    if (!isAuthenticated.value) return false
+
+    try {
+      const response = (await $fetch('/api/auth/permissions', {
+        headers: {
+          Authorization: `Bearer ${token.value}`,
+        },
+      })) as any
+
+      if (response.success) {
+        const permissions = response.permissions || []
+        return permissions.some((p: any) => p.resource === resource && p.action === action)
+      }
+      return false
+    } catch (err) {
+      console.error('Error checking permission:', err)
+      return false
+    }
+  }
+
+  // Get user permissions (async version for API calls)
+  const getUserPermissions = async () => {
+    if (!isAuthenticated.value) return []
+
+    try {
+      const response = (await $fetch('/api/auth/permissions', {
+        headers: {
+          Authorization: `Bearer ${token.value}`,
+        },
+      })) as any
+
+      return response.success ? response.permissions || [] : []
+    } catch (err) {
+      console.error('Error getting permissions:', err)
+      return []
+    }
+  }
+
+  // Get user roles (async version for API calls)
+  const getUserRoles = async () => {
+    if (!isAuthenticated.value) return []
+
+    try {
+      const response = (await $fetch('/api/auth/roles', {
+        headers: {
+          Authorization: `Bearer ${token.value}`,
+        },
+      })) as any
+
+      return response.success ? response.roles || [] : []
+    } catch (err) {
+      console.error('Error getting roles:', err)
+      return []
+    }
+  }
+
   const initializeAuth = () => {
     if (process.client) {
-      const storedToken = localStorage.getItem('auth_token')
-      const storedUser = localStorage.getItem('auth_user')
-      
-      if (storedToken && storedUser) {
-        try {
+      try {
+        const storedToken = localStorage.getItem('auth_token')
+        const storedUser = localStorage.getItem('auth_user')
+
+        if (storedToken && storedUser) {
           setToken(storedToken)
           setUser(JSON.parse(storedUser))
-          
-          // Fetch permissions and roles
-          fetchUserPermissions()
-          fetchUserRoles()
-        } catch (err) {
-          console.error('Error parsing stored auth data:', err)
-          clearAuth()
+
+          // Fetch permissions and roles asynchronously
+          nextTick(() => {
+            fetchUserPermissions()
+            fetchUserRoles()
+          })
         }
+      } catch (err) {
+        console.error('Error initializing auth:', err)
+        clearAuth()
       }
     }
   }
@@ -458,7 +610,7 @@ export const useAuthStore = defineStore('auth', () => {
     roles,
     isLoading,
     error,
-    
+
     // Computed
     isAuthenticated,
     isAdmin,
@@ -485,7 +637,7 @@ export const useAuthStore = defineStore('auth', () => {
     canDeletePipelines,
     canExecutePipelines,
     canAccessAnalytics,
-    
+
     // Actions
     setUser,
     setToken,
@@ -504,6 +656,11 @@ export const useAuthStore = defineStore('auth', () => {
     changePassword,
     requestPasswordReset,
     resetPassword,
-    initializeAuth
+    initializeAuth,
+    getRedirectPath,
+    fetchUser,
+    checkPermission,
+    getUserPermissions,
+    getUserRoles,
   }
-}) 
+})

@@ -17,7 +17,7 @@
 </template>
 
 <script setup>
-import { useLLMAndFileViewer } from '@/composables/useLLMAndFileViewer';
+import { useLLMAndFileViewer } from '~/composables/useLLMAndFileViewer';
 
 const {
   filePath,

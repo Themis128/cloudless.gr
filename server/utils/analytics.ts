@@ -1,5 +1,5 @@
 // server/utils/analytics.ts
-import redis from './redis'
+import { redis } from './redis'
 
 interface AnalyticsEvent {
   event: string
@@ -28,38 +28,47 @@ export class Analytics {
    * Track an analytics event
    */
   async trackEvent(event: Omit<AnalyticsEvent, 'timestamp'>): Promise<void> {
-    const fullEvent: AnalyticsEvent = {
-      ...event,
-      timestamp: new Date().toISOString(),
+    if (!redis) {
+      console.warn('Redis not available for analytics tracking')
+      return
     }
 
-    const eventKey = `${this.eventsPrefix}${event.event}:${Date.now()}`
-    const hourKey = `${this.metricsPrefix}${event.event}:hour:${this.getHourKey()}`
-    const dayKey = `${this.metricsPrefix}${event.event}:day:${this.getDayKey()}`
+    try {
+      const fullEvent: AnalyticsEvent = {
+        ...event,
+        timestamp: new Date().toISOString(),
+      }
 
-    // Store event details
-    await redis.setex(eventKey, 86400 * 7, JSON.stringify(fullEvent)) // 7 days TTL
+      const eventKey = `${this.eventsPrefix}${event.event}:${Date.now()}`
+      const hourKey = `${this.metricsPrefix}${event.event}:hour:${this.getHourKey()}`
+      const dayKey = `${this.metricsPrefix}${event.event}:day:${this.getDayKey()}`
 
-    // Increment hourly counter
-    await redis.incr(hourKey)
-    await redis.expire(hourKey, 86400 * 30) // 30 days TTL
+      // Store event details
+      await redis.setex(eventKey, 86400 * 7, JSON.stringify(fullEvent)) // 7 days TTL
 
-    // Increment daily counter
-    await redis.incr(dayKey)
-    await redis.expire(dayKey, 86400 * 365) // 1 year TTL
+      // Increment hourly counter
+      await redis.incr(hourKey)
+      await redis.expire(hourKey, 86400 * 30) // 30 days TTL
 
-    // Track unique users (if userId provided)
-    if (event.userId) {
-      const uniqueKey = `${this.metricsPrefix}${event.event}:unique:${this.getDayKey()}`
-      await redis.sadd(uniqueKey, event.userId)
-      await redis.expire(uniqueKey, 86400 * 30)
-    }
+      // Increment daily counter
+      await redis.incr(dayKey)
+      await redis.expire(dayKey, 86400 * 365) // 1 year TTL
 
-    // Track IP addresses for security
-    if (event.ip) {
-      const ipKey = `${this.metricsPrefix}${event.event}:ips:${this.getDayKey()}`
-      await redis.sadd(ipKey, event.ip)
-      await redis.expire(ipKey, 86400 * 7)
+      // Track unique users (if userId provided)
+      if (event.userId) {
+        const uniqueKey = `${this.metricsPrefix}${event.event}:unique:${this.getDayKey()}`
+        await redis.sadd(uniqueKey, event.userId)
+        await redis.expire(uniqueKey, 86400 * 30)
+      }
+
+      // Track IP addresses for security
+      if (event.ip) {
+        const ipKey = `${this.metricsPrefix}${event.event}:ips:${this.getDayKey()}`
+        await redis.sadd(ipKey, event.ip)
+        await redis.expire(ipKey, 86400 * 7)
+      }
+    } catch (error) {
+      console.error('Error tracking analytics event:', error)
     }
   }
 
@@ -70,46 +79,56 @@ export class Analytics {
     eventName: string,
     timeRange: 'hour' | 'day' | 'week' = 'day'
   ): Promise<MetricData> {
-    const now = new Date()
-    const metrics: MetricData = {
-      count: 0,
-      uniqueUsers: 0,
-      lastUpdated: now.toISOString(),
+    if (!redis) {
+      console.warn('Redis not available for analytics metrics')
+      return { count: 0, uniqueUsers: 0, lastUpdated: new Date().toISOString() }
     }
 
-    if (timeRange === 'hour') {
-      const hourKey = `${this.metricsPrefix}${eventName}:hour:${this.getHourKey()}`
-      const count = await redis.get(hourKey)
-      metrics.count = count ? parseInt(count) : 0
-    } else if (timeRange === 'day') {
-      const dayKey = `${this.metricsPrefix}${eventName}:day:${this.getDayKey()}`
-      const count = await redis.get(dayKey)
-      metrics.count = count ? parseInt(count) : 0
-
-      // Get unique users for today
-      const uniqueKey = `${this.metricsPrefix}${eventName}:unique:${this.getDayKey()}`
-      metrics.uniqueUsers = await redis.scard(uniqueKey)
-    } else if (timeRange === 'week') {
-      // Aggregate last 7 days
-      const counts = []
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(now.getTime() - i * 86400 * 1000)
-        const dayKey = `${this.metricsPrefix}${eventName}:day:${this.formatDate(date)}`
-        const count = await redis.get(dayKey)
-        counts.push(count ? parseInt(count) : 0)
+    try {
+      const now = new Date()
+      const metrics: MetricData = {
+        count: 0,
+        uniqueUsers: 0,
+        lastUpdated: now.toISOString(),
       }
-      metrics.count = counts.reduce((sum, count) => sum + count, 0)
-      metrics.daily = Object.fromEntries(
-        counts
-          .map((count, i) => {
-            const date = new Date(now.getTime() - i * 86400 * 1000)
-            return [this.formatDate(date), count]
-          })
-          .reverse()
-      )
-    }
 
-    return metrics
+      if (timeRange === 'hour') {
+        const hourKey = `${this.metricsPrefix}${eventName}:hour:${this.getHourKey()}`
+        const count = await redis.get(hourKey)
+        metrics.count = count ? parseInt(count) : 0
+      } else if (timeRange === 'day') {
+        const dayKey = `${this.metricsPrefix}${eventName}:day:${this.getDayKey()}`
+        const count = await redis.get(dayKey)
+        metrics.count = count ? parseInt(count) : 0
+
+        // Get unique users for today
+        const uniqueKey = `${this.metricsPrefix}${eventName}:unique:${this.getDayKey()}`
+        metrics.uniqueUsers = await redis.scard(uniqueKey)
+      } else if (timeRange === 'week') {
+        // Aggregate last 7 days
+        const counts = []
+        for (let i = 0; i < 7; i++) {
+          const date = new Date(now.getTime() - i * 86400 * 1000)
+          const dayKey = `${this.metricsPrefix}${eventName}:day:${this.formatDate(date)}`
+          const count = await redis.get(dayKey)
+          counts.push(count ? parseInt(count) : 0)
+        }
+        metrics.count = counts.reduce((sum, count) => sum + count, 0)
+        metrics.daily = Object.fromEntries(
+          counts
+            .map((count, i) => {
+              const date = new Date(now.getTime() - i * 86400 * 1000)
+              return [this.formatDate(date), count]
+            })
+            .reverse()
+        )
+      }
+
+      return metrics
+    } catch (error) {
+      console.error('Error getting analytics metrics:', error)
+      return { count: 0, uniqueUsers: 0, lastUpdated: new Date().toISOString() }
+    }
   }
 
   /**
@@ -126,55 +145,77 @@ export class Analytics {
       uptime: number
     }
   }> {
-    // Get all event keys
-    const eventKeys = await redis.keys(`${this.eventsPrefix}*`)
-    const totalEvents = eventKeys.length
-
-    // Get active users (unique users in last 24 hours)
-    const activeUsersKey = `${this.metricsPrefix}active_users:${this.getDayKey()}`
-    const activeUsers = await redis.scard(activeUsersKey)
-
-    // Get top events
-    const metricKeys = await redis.keys(
-      `${this.metricsPrefix}*:day:${this.getDayKey()}`
-    )
-    const topEvents = []
-    for (const key of metricKeys.slice(0, 10)) {
-      const eventName = key.split(':')[1]
-      const count = await redis.get(key)
-      if (count) {
-        topEvents.push({ event: eventName, count: parseInt(count) })
-      }
-    }
-    topEvents.sort((a, b) => b.count - a.count)
-
-    // Get recent activity (last 10 events)
-    const recentEvents = []
-    const recentKeys = eventKeys.slice(-10).reverse()
-    for (const key of recentKeys) {
-      const eventData = await redis.get(key)
-      if (eventData) {
-        recentEvents.push(JSON.parse(eventData))
+    if (!redis) {
+      console.warn('Redis not available for system health check')
+      return {
+        totalEvents: 0,
+        activeUsers: 0,
+        topEvents: [],
+        recentActivity: [],
+        systemHealth: { redisMemory: 0, totalKeys: 0, uptime: 0 },
       }
     }
 
-    // System health
-    const memoryInfo = await redis.info('memory')
-    const memoryMatch = memoryInfo.match(/used_memory_human:(\d+)/)
-    const redisMemory = memoryMatch ? parseInt(memoryMatch[1]) : 0
-    const totalKeys = await redis.dbsize()
-    const uptime = process.uptime()
+    try {
+      // Get all event keys
+      const eventKeys = await redis.keys(`${this.eventsPrefix}*`)
+      const totalEvents = eventKeys.length
 
-    return {
-      totalEvents,
-      activeUsers,
-      topEvents,
-      recentActivity: recentEvents,
-      systemHealth: {
-        redisMemory,
-        totalKeys,
-        uptime,
-      },
+      // Get active users (unique users in last 24 hours)
+      const activeUsersKey = `${this.metricsPrefix}active_users:${this.getDayKey()}`
+      const activeUsers = await redis.scard(activeUsersKey)
+
+      // Get top events
+      const metricKeys = await redis.keys(
+        `${this.metricsPrefix}*:day:${this.getDayKey()}`
+      )
+      const topEvents = []
+      for (const key of metricKeys.slice(0, 10)) {
+        const eventName = key.split(':')[1]
+        const count = await redis.get(key)
+        if (count) {
+          topEvents.push({ event: eventName, count: parseInt(count) })
+        }
+      }
+      topEvents.sort((a, b) => b.count - a.count)
+
+      // Get recent activity (last 10 events)
+      const recentEvents = []
+      const recentKeys = eventKeys.slice(-10).reverse()
+      for (const key of recentKeys) {
+        const eventData = await redis.get(key)
+        if (eventData) {
+          recentEvents.push(JSON.parse(eventData))
+        }
+      }
+
+      // System health
+      const memoryInfo = await redis.info('memory')
+      const memoryMatch = memoryInfo.match(/used_memory_human:(\d+)/)
+      const redisMemory = memoryMatch ? parseInt(memoryMatch[1]) : 0
+      const totalKeys = await redis.dbsize()
+      const uptime = process.uptime()
+
+      return {
+        totalEvents,
+        activeUsers,
+        topEvents,
+        recentActivity: recentEvents,
+        systemHealth: {
+          redisMemory,
+          totalKeys,
+          uptime,
+        },
+      }
+    } catch (error) {
+      console.error('Error getting system health:', error)
+      return {
+        totalEvents: 0,
+        activeUsers: 0,
+        topEvents: [],
+        recentActivity: [],
+        systemHealth: { redisMemory: 0, totalKeys: 0, uptime: 0 },
+      }
     }
   }
 
@@ -186,21 +227,30 @@ export class Analytics {
     duration: number,
     statusCode: number
   ): Promise<void> {
-    await this.trackEvent({
-      event: 'api_request',
-      metadata: {
-        endpoint,
-        duration,
-        statusCode,
-        success: statusCode < 400,
-      },
-    })
+    if (!redis) {
+      console.warn('Redis not available for response time tracking')
+      return
+    }
 
-    // Track response times
-    const responseTimeKey = `${this.metricsPrefix}response_time:${endpoint}:${this.getHourKey()}`
-    await redis.lpush(responseTimeKey, duration.toString())
-    await redis.ltrim(responseTimeKey, 0, 999) // Keep last 1000 requests
-    await redis.expire(responseTimeKey, 86400 * 7)
+    try {
+      await this.trackEvent({
+        event: 'api_request',
+        metadata: {
+          endpoint,
+          duration,
+          statusCode,
+          success: statusCode < 400,
+        },
+      })
+
+      // Track response times
+      const responseTimeKey = `${this.metricsPrefix}response_time:${endpoint}:${this.getHourKey()}`
+      await redis.lpush(responseTimeKey, duration.toString())
+      await redis.ltrim(responseTimeKey, 0, 999) // Keep last 1000 requests
+      await redis.expire(responseTimeKey, 86400 * 7)
+    } catch (error) {
+      console.error('Error tracking response time:', error)
+    }
   }
 
   /**
@@ -212,11 +262,8 @@ export class Analytics {
     errorRate: number
     p95ResponseTime: number
   }> {
-    const responseTimeKey = `${this.metricsPrefix}response_time:${endpoint}:${this.getHourKey()}`
-    const responseTimes = await redis.lrange(responseTimeKey, 0, -1)
-    const times = responseTimes.map(t => parseFloat(t)).filter(t => !isNaN(t))
-
-    if (times.length === 0) {
+    if (!redis) {
+      console.warn('Redis not available for response time stats')
       return {
         avgResponseTime: 0,
         totalRequests: 0,
@@ -225,25 +272,48 @@ export class Analytics {
       }
     }
 
-    const avgResponseTime =
-      times.reduce((sum, time) => sum + time, 0) / times.length
-    const sortedTimes = times.sort((a, b) => a - b)
-    const p95Index = Math.floor(times.length * 0.95)
-    const p95ResponseTime = sortedTimes[p95Index]
+    try {
+      const responseTimeKey = `${this.metricsPrefix}response_time:${endpoint}:${this.getHourKey()}`
+      const responseTimes = await redis.lrange(responseTimeKey, 0, -1)
+      const times = responseTimes.map(t => parseFloat(t)).filter(t => !isNaN(t))
 
-    // Get error rate from recent events
-    const errorKey = `${this.metricsPrefix}api_request:errors:${this.getHourKey()}`
-    const totalKey = `${this.metricsPrefix}api_request:total:${this.getHourKey()}`
-    const errors = (await redis.get(errorKey)) || '0'
-    const total = (await redis.get(totalKey)) || '0'
-    const errorRate =
-      parseInt(total) > 0 ? (parseInt(errors) / parseInt(total)) * 100 : 0
+      if (times.length === 0) {
+        return {
+          avgResponseTime: 0,
+          totalRequests: 0,
+          errorRate: 0,
+          p95ResponseTime: 0,
+        }
+      }
 
-    return {
-      avgResponseTime,
-      totalRequests: times.length,
-      errorRate,
-      p95ResponseTime,
+      const avgResponseTime =
+        times.reduce((sum, time) => sum + time, 0) / times.length
+      const sortedTimes = times.sort((a, b) => a - b)
+      const p95Index = Math.floor(times.length * 0.95)
+      const p95ResponseTime = sortedTimes[p95Index]
+
+      // Get error rate from recent events
+      const errorKey = `${this.metricsPrefix}api_request:errors:${this.getHourKey()}`
+      const totalKey = `${this.metricsPrefix}api_request:total:${this.getHourKey()}`
+      const errors = (await redis.get(errorKey)) || '0'
+      const total = (await redis.get(totalKey)) || '0'
+      const errorRate =
+        parseInt(total) > 0 ? (parseInt(errors) / parseInt(total)) * 100 : 0
+
+      return {
+        avgResponseTime,
+        totalRequests: times.length,
+        errorRate,
+        p95ResponseTime,
+      }
+    } catch (error) {
+      console.error('Error getting response time stats:', error)
+      return {
+        avgResponseTime: 0,
+        totalRequests: 0,
+        errorRate: 0,
+        p95ResponseTime: 0,
+      }
     }
   }
 

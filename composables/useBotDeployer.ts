@@ -1,6 +1,7 @@
-import { ref } from 'vue'
+import { computed } from 'vue'
 
-interface DeploymentResponse {
+// Re-export types for backward compatibility
+export interface DeploymentResponse {
   success: boolean
   data?: {
     deploymentId: string
@@ -11,7 +12,7 @@ interface DeploymentResponse {
   message?: string
 }
 
-interface DebugStateResponse {
+export interface DebugStateResponse {
   success: boolean
   data: {
     id: string
@@ -23,72 +24,35 @@ interface DebugStateResponse {
   }
 }
 
+// Composable that uses the Pinia store
 export const useBotDeployer = () => {
-  const loading = ref(false)
-  const success = ref(false)
-  const error = ref<string | null>(null)
-  const deploymentStatus = ref<string>('idle')
+  const botDeploymentStore = useBotDeploymentStore()
 
-  const deployBot = async (botId: string, deploymentConfig: {
-    deploymentName: string
-    environment: string
-    instanceType: string
-    replicas?: number
-  }) => {
-    loading.value = true
-    success.value = false
-    error.value = null
-    deploymentStatus.value = 'deploying'
-
-    try {
-      const response = await $fetch<DeploymentResponse>('/api/bots/deploy', {
-        method: 'POST',
-        body: {
-          botId,
-          ...deploymentConfig,
-        },
-      })
-
-      if (response.success) {
-        success.value = true
-        deploymentStatus.value = 'deployed'
-        return response.data
-      } else {
-        throw new Error(response.message || 'Deployment failed')
-      }
-    } catch (err: any) {
-      error.value = err.message || 'Failed to deploy bot'
-      deploymentStatus.value = 'failed'
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const getDeploymentStatus = async (deploymentId: string) => {
-    try {
-      const response = await $fetch<DebugStateResponse>(`/api/debug/state/deployment/${deploymentId}`)
-      return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to get deployment status'
-      throw err
-    }
-  }
-
-  const reset = () => {
-    loading.value = false
-    success.value = false
-    error.value = null
-    deploymentStatus.value = 'idle'
-  }
-
+  // Return readonly state and computed properties for backward compatibility
   return {
-    loading,
-    success,
-    error,
-    deploymentStatus,
-    deployBot,
-    getDeploymentStatus,
-    reset,
+    // State (readonly for backward compatibility)
+    loading: computed(() => botDeploymentStore.loading),
+    success: computed(() => botDeploymentStore.success),
+    error: computed(() => botDeploymentStore.error),
+    deploymentStatus: computed(() => botDeploymentStore.deploymentStatus),
+
+    // Methods (delegate to store)
+    deployBot: botDeploymentStore.deployBot,
+    getDeploymentStatus: botDeploymentStore.getDeploymentStatus,
+    reset: botDeploymentStore.reset,
+    
+    // Additional store methods
+    getBotDeployment: botDeploymentStore.getBotDeployment,
+    getDeploymentHistory: botDeploymentStore.getDeploymentHistory,
+    clearDeploymentHistory: botDeploymentStore.clearDeploymentHistory,
+    removeDeployment: botDeploymentStore.removeDeployment,
+    clearError: botDeploymentStore.clearError,
+    clearSuccess: botDeploymentStore.clearSuccess,
+    
+    // Computed properties from store
+    isDeploying: computed(() => botDeploymentStore.isDeploying),
+    isDeployed: computed(() => botDeploymentStore.isDeployed),
+    hasFailed: computed(() => botDeploymentStore.hasFailed),
+    canDeploy: computed(() => botDeploymentStore.canDeploy),
   }
 }

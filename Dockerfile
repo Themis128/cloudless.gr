@@ -18,7 +18,7 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Install pnpm for better package management
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.13.1 --activate
 
 # Development stage
 FROM base AS development
@@ -28,6 +28,10 @@ RUN apk add --no-cache \
     bash \
     vim \
     && rm -rf /var/cache/apk/*
+
+# Create non-root user for development
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nuxtjs -u 1001 -G nodejs
 
 # Copy package files
 COPY package*.json pnpm-lock.yaml* ./
@@ -39,6 +43,14 @@ RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
+
+# Fix permissions for node_modules and cache directories
+RUN chown -R nuxtjs:nodejs /app && \
+    mkdir -p /app/node_modules/.cache && \
+    chown -R nuxtjs:nodejs /app/node_modules/.cache
+
+# Switch to non-root user
+USER nuxtjs
 
 # Expose ports for development
 EXPOSE 3000 24678
@@ -146,4 +158,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application
-CMD ["node", ".output/server/index.mjs"] 
+CMD ["node", ".output/server/index.mjs"]

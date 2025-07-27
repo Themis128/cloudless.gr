@@ -1,14 +1,85 @@
 import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
 import 'vuetify/styles'
-import '@mdi/font/css/materialdesignicons.css'
 import { defineNuxtPlugin } from 'nuxt/app'
 
-export default defineNuxtPlugin((nuxtApp) => {
+// Import only essential components to reduce loading time
+import {
+  VApp,
+  VMain,
+  VContainer,
+  VRow,
+  VCol,
+  VCard,
+  VCardTitle,
+  VCardText,
+  VBtn,
+  VTextField,
+  VSelect,
+  VTextarea,
+  VAlert,
+  VSnackbar,
+  VDialog,
+  VToolbar,
+  VToolbarTitle,
+  VNavigationDrawer,
+  VList,
+  VListItem,
+  VListItemTitle,
+  VDivider,
+  VSpacer,
+  VIcon,
+  VProgressLinear,
+  VSheet,
+  VGrid,
+  VFlex,
+  VLayout,
+} from 'vuetify/components'
+
+// Import only essential directives
+import { Ripple, Resize } from 'vuetify/directives'
+
+export default defineNuxtPlugin(nuxtApp => {
+  // Prevent duplicate Vuetify initialization
+  if (nuxtApp.vueApp._context.provides['vuetify']) {
+    return
+  }
+
   const vuetify = createVuetify({
-    components,
-    directives,
+    components: {
+      VApp,
+      VMain,
+      VContainer,
+      VRow,
+      VCol,
+      VCard,
+      VCardTitle,
+      VCardText,
+      VBtn,
+      VTextField,
+      VSelect,
+      VTextarea,
+      VAlert,
+      VSnackbar,
+      VDialog,
+      VToolbar,
+      VToolbarTitle,
+      VNavigationDrawer,
+      VList,
+      VListItem,
+      VListItemTitle,
+      VDivider,
+      VSpacer,
+      VIcon,
+      VProgressLinear,
+      VSheet,
+      VGrid,
+      VFlex,
+      VLayout,
+    },
+    directives: {
+      Ripple,
+      Resize,
+    },
     icons: {
       defaultSet: 'mdi',
     },
@@ -87,6 +158,6 @@ export default defineNuxtPlugin((nuxtApp) => {
       },
     },
   })
-  
+
   nuxtApp.vueApp.use(vuetify)
 })

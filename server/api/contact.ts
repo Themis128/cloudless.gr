@@ -1,7 +1,14 @@
-import { defineEventHandler, getCookie, getRequestIP, readBody } from 'h3';
-import { invalidateToken, validateCsrfToken } from '../utils/csrf-protection';
-import prisma from '../utils/prisma';
-import { checkRateLimit, getRemainingSubmissions, getTimeUntilReset } from '../utils/rate-limiter';
+import { defineEventHandler, getCookie, getRequestIP, readBody } from 'h3'
+import { invalidateToken, validateCsrfToken } from '../utils/csrf-protection'
+import {
+  createAppError,
+  createValidationError,
+  ErrorCodes,
+  generateRequestId,
+  handleApiError,
+} from '../utils/errorHandler'
+import { getPrismaClient } from '../utils/prisma'
+import { checkRateLimit, getTimeUntilReset } from '../utils/rate-limiter'
 
 /**
  * API endpoint to handle contact form submissions
@@ -9,136 +16,126 @@ import { checkRateLimit, getRemainingSubmissions, getTimeUntilReset } from '../u
  * Includes rate limiting to prevent spam submissions
  * Implements CSRF protection
  */
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async event => {
+  // Generate request ID for tracking
+  const requestId = generateRequestId()
+  event.context.requestId = requestId
+
   try {
     // Add a slight delay to slow down automated submissions
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     // Validate CSRF token
-    const csrfToken = getCookie(event, 'csrf_token') || '';
-    const requestBody = await readBody(event);
+    const csrfToken = getCookie(event, 'csrf_token') || ''
+    const requestBody = await readBody(event)
 
     // Check for honeypot field - if it's filled, it's likely a bot
     if (requestBody.website) {
-      console.log('Spam submission detected (honeypot field filled)');
+      console.log('Spam submission detected (honeypot field filled)')
 
       // Return success to avoid tipping off the bot
       return {
         status: 'success',
         message: 'Your message has been sent successfully',
         submissionId: Math.floor(Math.random() * 1000) + 1000,
-      };
+      }
     }
 
-    // Log the tokens to help with debugging
-    console.log('CSRF token from cookie:', csrfToken);
-    console.log('CSRF token from request body:', requestBody.csrfToken); // In development mode, be more lenient with CSRF validation
+    // CSRF validation
     if (process.env.NODE_ENV !== 'production') {
-      // Only check if any token exists
+      // Development mode - more lenient
       if (!csrfToken && !requestBody.csrfToken) {
-        console.log('CSRF token missing in development mode');
-        return {
-          status: 'error',
-          message: 'CSRF token is required. Please refresh the page and try again.',
-        };
+        throw createAppError(
+          'CSRF token is required. Please refresh the page and try again.',
+          ErrorCodes.VALIDATION_ERROR,
+          400,
+          { requestId }
+        )
       }
     } else {
-      // In production, do strict validation
+      // Production mode - strict validation
       if (!validateCsrfToken(csrfToken)) {
-        console.log('CSRF token validation failed - invalid or expired token');
-        return {
-          status: 'error',
-          message:
-            'Your session has expired or is invalid. Please click the "Refresh Session" button below and try again.',
-          errorCode: 'CSRF_VALIDATION_FAILED',
-        };
+        throw createAppError(
+          'Your session has expired or is invalid. Please refresh the page and try again.',
+          ErrorCodes.UNAUTHORIZED,
+          401,
+          { requestId }
+        )
       }
     }
 
     // Invalidate the token after use to prevent replay attacks
-    invalidateToken(csrfToken);
+    invalidateToken(csrfToken)
 
     // Get IP address for rate limiting
-    const ip = getRequestIP(event, { xForwardedFor: true }) || 'unknown';
+    const ip = getRequestIP(event, { xForwardedFor: true }) || 'unknown'
 
     // Check rate limit
     if (!checkRateLimit(ip)) {
-      const resetTimeMs = getTimeUntilReset(ip);
-      const resetTimeMinutes = Math.ceil(resetTimeMs / 60000);
+      const resetTimeMs = getTimeUntilReset(ip)
+      const resetTimeMinutes = Math.ceil(resetTimeMs / 60000)
 
-      return {
-        status: 'error',
-        message: `Rate limit exceeded. Please try again in ${resetTimeMinutes} minute${resetTimeMinutes === 1 ? '' : 's'}.`,
-        rateLimit: {
-          exceeded: true,
+      throw createAppError(
+        `Rate limit exceeded. Please try again in ${resetTimeMinutes} minute${resetTimeMinutes === 1 ? '' : 's'}.`,
+        ErrorCodes.RATE_LIMITED,
+        429,
+        {
           resetTime: resetTimeMs,
-        },
-      };
+          requestId,
+        }
+      )
     }
 
     // Extract form data from the request body
-    const body = requestBody;
+    const body = requestBody
 
-    // Basic validation
-    if (!body.name || !body.email || !body.subject || !body.message) {
-      return {
-        status: 'error',
-        message: 'All fields are required',
-      };
+    // Enhanced validation with specific error messages
+    if (!body.name?.trim()) {
+      throw createValidationError('name', 'Name is required')
+    }
+    if (!body.email?.trim()) {
+      throw createValidationError('email', 'Email is required')
+    }
+    if (!body.subject?.trim()) {
+      throw createValidationError('subject', 'Subject is required')
+    }
+    if (!body.message?.trim()) {
+      throw createValidationError('message', 'Message is required')
     }
 
     // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(body.email)) {
-      return {
-        status: 'error',
-        message: 'Please provide a valid email address',
-      };
-    } // Store the submission in the database
+      throw createValidationError('email', 'Please provide a valid email address')
+    }
+
+    // Store the submission in the database
+    const prisma = getPrismaClient()
     const submission = await prisma.contactSubmission.create({
       data: {
-        name: body.name,
-        email: body.email,
-        phone: body.phone || null,
-        company: body.company || null,
-        subject: body.subject,
-        message: body.message,
-        newsletter: body.newsletter || false,
-        projectType: body.projectType || null,
-        budget: body.budget || null,
-        timeline: body.timeline || null,
-        heardFrom: body.heardFrom || null,
+        name: body.name.trim(),
+        email: body.email.trim().toLowerCase(),
+        subject: body.subject.trim(),
+        message: body.message.trim(),
         ipAddress: ip,
-        userAgent: event.node.req.headers['user-agent'] || 'unknown',
-        metadata: JSON.stringify({
-          referrer: event.node.req.headers['referer'] || 'direct',
-          submissionTime: new Date().toISOString(),
-        }),
+        userAgent: event.headers.get('user-agent') || 'unknown',
+        source: 'contact-form',
+        status: 'new',
       },
-    });
+    })
 
-    // Log the submission
-    console.log('Contact form submission received:', {
-      id: submission.id,
-      name: body.name,
-      email: body.email,
-      subject: body.subject,
-    }); // Return success response
+    // Return success response
     return {
-      status: 'success',
-      message: 'Your message has been sent successfully',
-      submissionId: submission.id,
-      rateLimit: {
-        remaining: getRemainingSubmissions(ip),
+      success: true,
+      data: {
+        submissionId: submission.id,
+        message: 'Your message has been sent successfully',
+        timestamp: submission.createdAt,
       },
-    };
+      requestId,
+    }
   } catch (error) {
-    console.error('Contact form submission error:', error);
-
-    // Return error response
-    return {
-      status: 'error',
-      message: 'An error occurred while processing your request',
-    };
+    // Use enhanced error handling
+    return handleApiError(error, event)
   }
-});
+})

@@ -78,7 +78,7 @@ export interface Deployment {
   updatedAt: Date
 }
 
-export interface Dataset {
+export interface LLMDataset {
   id: string
   name: string
   description?: string
@@ -142,7 +142,7 @@ interface LLMState {
   models: LLMModel[]
   trainingSessions: TrainingSession[]
   deployments: Deployment[]
-  datasets: Dataset[]
+  datasets: LLMDataset[]
   analytics: LLMAnalytics | null
   
   // Loading states
@@ -611,7 +611,7 @@ export const useLLMStore = defineStore('llm', {
       this.error = null
       
       try {
-        const response = await $fetch<ApiResponse<Dataset[]>>('/api/llm/datasets')
+        const response = await $fetch<ApiResponse<LLMDataset[]>>('/api/llm/datasets')
         if (response.success) {
           this.datasets = response.data
         } else {
@@ -718,7 +718,7 @@ export const useLLMStore = defineStore('llm', {
     },
 
     clearValidationError(field: keyof LLMForm) {
-      this.validationErrors[field] = ''
+      this.validationErrors[field as keyof typeof this.validationErrors] = ''
     },
 
     clearAllValidationErrors() {

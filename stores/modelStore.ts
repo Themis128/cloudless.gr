@@ -65,7 +65,7 @@ interface ModelState {
   loading: boolean
   error: string | null
   success: string | null
-  
+
   // Builder state
   builderForm: ModelForm
   builderStep: number
@@ -75,7 +75,7 @@ interface ModelState {
     icon: string
     description: string
   }>
-  
+
   // Validation state
   validationErrors: {
     name: string
@@ -83,14 +83,14 @@ interface ModelState {
     type: string
     config: string
   }
-  
+
   // Test state
   testResults: ModelTestResult[]
   testInput: string
   testLoading: boolean
-  
+
   // Training state
-  trainingModels: Set<number>
+  trainingModelIds: Set<number>
   trainingProgress: Record<number, number>
 }
 
@@ -101,7 +101,7 @@ export const useModelStore = defineStore('model', {
     loading: false,
     error: null,
     success: null,
-    
+
     // Builder state
     builderForm: {
       name: '',
@@ -112,8 +112,8 @@ export const useModelStore = defineStore('model', {
         learningRate: 0.001,
         batchSize: 32,
         epochs: 10,
-        optimizer: 'adam'
-      }
+        optimizer: 'adam',
+      },
     },
     builderStep: 0,
     builderSteps: [
@@ -121,80 +121,83 @@ export const useModelStore = defineStore('model', {
         title: 'Basic Info',
         subtitle: 'Model name & description',
         icon: 'mdi-information',
-        description: 'Enter the basic information about your model including name, description, and type.'
+        description:
+          'Enter the basic information about your model including name, description, and type.',
       },
       {
         title: 'Configuration',
         subtitle: 'Model architecture & config',
         icon: 'mdi-cog',
-        description: 'Configure the model architecture and parameters.'
+        description: 'Configure the model architecture and parameters.',
       },
       {
         title: 'Hyperparameters',
         subtitle: 'Training parameters',
         icon: 'mdi-tune',
-        description: 'Set the training hyperparameters for optimal performance.'
+        description: 'Set the training hyperparameters for optimal performance.',
       },
       {
         title: 'Review',
         subtitle: 'Review & create',
         icon: 'mdi-check',
-        description: 'Review your model configuration before creation.'
-      }
+        description: 'Review your model configuration before creation.',
+      },
     ],
-    
+
     // Validation state
     validationErrors: {
       name: '',
       description: '',
       type: '',
-      config: ''
+      config: '',
     },
-    
+
     // Test state
     testResults: [],
     testInput: '',
     testLoading: false,
-    
+
     // Training state
-    trainingModels: new Set(),
-    trainingProgress: {}
+    trainingModelIds: new Set(),
+    trainingProgress: {},
   }),
 
   getters: {
     // Core model getters
-    allModels: (state) => state.models,
-    modelById: (state) => (id: number) => state.models.find(m => m.id === id),
-    modelsByType: (state) => (type: string) => state.models.filter(m => m.type === type),
-    readyModels: (state) => state.models.filter(m => m.status === 'ready'),
-    trainingModels: (state) => state.models.filter(m => m.status === 'training'),
-    draftModels: (state) => state.models.filter(m => m.status === 'draft'),
-    deployedModels: (state) => state.models.filter(m => m.status === 'deployed'),
-    isLoading: (state) => state.loading,
-    hasError: (state) => state.error !== null,
-    hasSuccess: (state) => state.success !== null,
-    
+    allModels: state => state.models,
+    modelById: state => (id: number) => state.models.find(m => m.id === id),
+    modelsByType: state => (type: string) => state.models.filter(m => m.type === type),
+    readyModels: state => state.models.filter(m => m.status === 'ready'),
+    modelsInTraining: state => state.models.filter(m => m.status === 'training'),
+    draftModels: state => state.models.filter(m => m.status === 'draft'),
+    deployedModels: state => state.models.filter(m => m.status === 'deployed'),
+    isLoading: state => state.loading,
+    hasError: state => state.error !== null,
+    hasSuccess: state => state.success !== null,
+
     // Builder getters
-    builderProgress: (state) => ((state.builderStep + 1) / state.builderSteps.length) * 100,
-    currentBuilderStep: (state) => state.builderSteps[state.builderStep],
-    isBuilderStepComplete: (state) => (stepIndex: number) => stepIndex < state.builderStep,
-    canProceedToNextStep: (state) => {
+    builderProgress: state => ((state.builderStep + 1) / state.builderSteps.length) * 100,
+    currentBuilderStep: state => state.builderSteps[state.builderStep],
+    isBuilderStepComplete: state => (stepIndex: number) => stepIndex < state.builderStep,
+    canProceedToNextStep: state => {
       const currentStep = state.builderStep
-      if (currentStep === 0) return state.builderForm.name.trim() !== '' && state.builderForm.description.trim() !== ''
-      if (currentStep === 1) return state.builderForm.type.trim() !== '' && state.builderForm.config.trim() !== ''
+      if (currentStep === 0)
+        return state.builderForm.name.trim() !== '' && state.builderForm.description.trim() !== ''
+      if (currentStep === 1)
+        return state.builderForm.type.trim() !== '' && state.builderForm.config.trim() !== ''
       return true
     },
-    
+
     // Validation getters
-    hasValidationErrors: (state) => Object.values(state.validationErrors).some(error => error !== ''),
-    
+    hasValidationErrors: state => Object.values(state.validationErrors).some(error => error !== ''),
+
     // Test getters
-    hasTestResults: (state) => state.testResults.length > 0,
-    lastTestResult: (state) => state.testResults[state.testResults.length - 1],
-    
+    hasTestResults: state => state.testResults.length > 0,
+    lastTestResult: state => state.testResults[state.testResults.length - 1],
+
     // Training getters
-    isTraining: (state) => (modelId: number) => state.trainingModels.has(modelId),
-    getTrainingProgress: (state) => (modelId: number) => state.trainingProgress[modelId] || 0
+    isTraining: state => (modelId: number) => state.trainingModelIds.has(modelId),
+    getTrainingProgress: state => (modelId: number) => state.trainingProgress[modelId] || 0,
   },
 
   actions: {
@@ -202,7 +205,7 @@ export const useModelStore = defineStore('model', {
     async fetchAll() {
       this.loading = true
       this.error = null
-      
+
       try {
         const response = await $fetch<ApiResponse<Model[]>>('/api/prisma/models')
         if (response.success) {
@@ -222,13 +225,13 @@ export const useModelStore = defineStore('model', {
       this.loading = true
       this.error = null
       this.success = null
-      
+
       try {
         const response = await $fetch<ApiResponse<Model>>('/api/prisma/models', {
           method: 'POST',
-          body: modelData
+          body: modelData,
         })
-        
+
         if (response.success) {
           this.models.unshift(response.data)
           this.success = 'Model created successfully'
@@ -250,13 +253,13 @@ export const useModelStore = defineStore('model', {
       this.loading = true
       this.error = null
       this.success = null
-      
+
       try {
         const response = await $fetch<ApiResponse<Model>>(`/api/prisma/models/${id}`, {
           method: 'PUT',
-          body: modelData
+          body: modelData,
         })
-        
+
         if (response.success) {
           const index = this.models.findIndex(m => m.id === id)
           if (index >= 0) {
@@ -281,12 +284,12 @@ export const useModelStore = defineStore('model', {
       this.loading = true
       this.error = null
       this.success = null
-      
+
       try {
         const response = await $fetch<ApiResponse<boolean>>(`/api/prisma/models/${id}`, {
-          method: 'DELETE'
+          method: 'DELETE',
         })
-        
+
         if (response.success) {
           const index = this.models.findIndex(m => m.id === id)
           if (index >= 0) {
@@ -312,7 +315,7 @@ export const useModelStore = defineStore('model', {
       if (field === 'hyperparameters') {
         this.builderForm.hyperparameters = { ...this.builderForm.hyperparameters, ...value }
       } else {
-        (this.builderForm as any)[field] = value
+        ;(this.builderForm as any)[field] = value
       }
       this.validateField(field)
     },
@@ -345,8 +348,8 @@ export const useModelStore = defineStore('model', {
           learningRate: 0.001,
           batchSize: 32,
           epochs: 10,
-          optimizer: 'adam'
-        }
+          optimizer: 'adam',
+        },
       }
       this.builderStep = 0
       this.clearValidationErrors()
@@ -365,9 +368,9 @@ export const useModelStore = defineStore('model', {
           type: this.builderForm.type,
           config: JSON.stringify({
             ...JSON.parse(this.builderForm.config),
-            hyperparameters: this.builderForm.hyperparameters
+            hyperparameters: this.builderForm.hyperparameters,
           }),
-          status: 'draft'
+          status: 'draft',
         }
 
         const result = await this.createModel(modelData)
@@ -389,13 +392,15 @@ export const useModelStore = defineStore('model', {
           this.validationErrors.name = this.builderForm.name.trim() === '' ? 'Name is required' : ''
           break
         case 'description':
-          this.validationErrors.description = this.builderForm.description.trim() === '' ? 'Description is required' : ''
+          this.validationErrors.description =
+            this.builderForm.description.trim() === '' ? 'Description is required' : ''
           break
         case 'type':
           this.validationErrors.type = this.builderForm.type.trim() === '' ? 'Type is required' : ''
           break
         case 'config':
-          this.validationErrors.config = this.builderForm.config.trim() === '' ? 'Configuration is required' : ''
+          this.validationErrors.config =
+            this.builderForm.config.trim() === '' ? 'Configuration is required' : ''
           break
       }
     },
@@ -412,7 +417,7 @@ export const useModelStore = defineStore('model', {
         name: '',
         description: '',
         type: '',
-        config: ''
+        config: '',
       }
     },
 
@@ -421,11 +426,11 @@ export const useModelStore = defineStore('model', {
       if (!input.trim()) return
 
       this.testLoading = true
-      
+
       try {
         const response = await $fetch<ApiResponse<ModelTestResult>>(`/api/models/${modelId}/test`, {
           method: 'POST',
-          body: { input }
+          body: { input },
         })
 
         if (response.success) {
@@ -453,12 +458,12 @@ export const useModelStore = defineStore('model', {
 
     // Training actions
     async startTraining(modelId: number) {
-      this.trainingModels.add(modelId)
+      this.trainingModelIds.add(modelId)
       this.trainingProgress[modelId] = 0
-      
+
       try {
         const response = await $fetch<ApiResponse<ModelTraining>>(`/api/models/${modelId}/train`, {
-          method: 'POST'
+          method: 'POST',
         })
 
         if (response.success) {
@@ -467,17 +472,17 @@ export const useModelStore = defineStore('model', {
           if (model) {
             model.status = 'training'
           }
-          
+
           // Simulate training progress
           this.simulateTrainingProgress(modelId)
         } else {
           this.error = response.message || 'Failed to start training'
-          this.trainingModels.delete(modelId)
+          this.trainingModelIds.delete(modelId)
         }
       } catch (error: any) {
         this.error = error.message || 'Failed to start training'
         console.error('Error starting training:', error)
-        this.trainingModels.delete(modelId)
+        this.trainingModelIds.delete(modelId)
       }
     },
 
@@ -488,8 +493,8 @@ export const useModelStore = defineStore('model', {
         if (progress >= 100) {
           progress = 100
           clearInterval(interval)
-          this.trainingModels.delete(modelId)
-          
+          this.trainingModelIds.delete(modelId)
+
           // Update model status to ready
           const model = this.models.find(m => m.id === modelId)
           if (model) {
@@ -503,7 +508,7 @@ export const useModelStore = defineStore('model', {
     async deployModel(modelId: number) {
       try {
         const response = await $fetch<ApiResponse<Model>>(`/api/models/${modelId}/deploy`, {
-          method: 'POST'
+          method: 'POST',
         })
 
         if (response.success) {
@@ -531,6 +536,6 @@ export const useModelStore = defineStore('model', {
 
     clearSuccess() {
       this.success = null
-    }
-  }
-}) 
+    },
+  },
+})

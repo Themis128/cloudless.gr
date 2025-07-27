@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { useLLMAndFileViewer } from '@/composables/useLLMAndFileViewer';
+import { useLLMAndFileViewer } from '~/composables/useLLMAndFileViewer';
 import { ref } from 'vue';
 
 const prompt = ref('');

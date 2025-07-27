@@ -337,7 +337,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import PageStructure from '~/components/layout/PageStructure.vue'
+import LayoutPageStructure from '~/components/layout/LayoutPageStructure.vue'
 import LLMGuide from '~/components/step-guides/LLMGuide.vue'
 
 // Cost metrics

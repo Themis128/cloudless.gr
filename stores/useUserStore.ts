@@ -1,10 +1,8 @@
 import { defineStore } from 'pinia'
+import type { User } from '~/types/common'
 
-export interface User {
-  id: number
-  email: string
-  name: string
-  role: string
+// Extend the User interface for this store's specific needs
+interface StoreUser extends Omit<User, 'createdAt' | 'updatedAt'> {
   createdAt: Date
   updatedAt: Date
 }
@@ -27,7 +25,7 @@ interface ApiResponse<T> {
 }
 
 interface UserState {
-  user: User | null
+  user: StoreUser | null
   loading: boolean
   error: string | null
   isAuthenticated: boolean
@@ -38,24 +36,27 @@ export const useUserStore = defineStore('user', {
     user: null,
     loading: false,
     error: null,
-    isAuthenticated: false
+    isAuthenticated: false,
   }),
 
   getters: {
-    currentUser: (state) => state.user,
-    isLoggedIn: (state) => state.isAuthenticated && state.user !== null,
-    isAdmin: (state) => state.user?.role === 'admin',
-    isLoading: (state) => state.loading,
-    hasError: (state) => state.error !== null
+    currentUser: state => state.user,
+    isLoggedIn: state => state.isAuthenticated && state.user !== null,
+    isAdmin: state => state.user?.role === 'admin',
+    isLoading: state => state.loading,
+    hasError: state => state.error !== null,
   },
 
   actions: {
     async fetchUser() {
       this.loading = true
       this.error = null
-      
+
       try {
-        const response = await $fetch<ApiResponse<{ user: User | null }>>('/api/auth/user')
+        const response =
+          await $fetch<ApiResponse<{ user: StoreUser | null }>>(
+            '/api/auth/user'
+          )
         if (response.success && response.data?.user) {
           this.user = response.data.user
           this.isAuthenticated = true
@@ -76,22 +77,24 @@ export const useUserStore = defineStore('user', {
     async login(loginData: LoginData) {
       this.loading = true
       this.error = null
-      
+
       try {
-        const response = await $fetch<ApiResponse<{ user: User; token: string }>>('/api/auth/login', {
+        const response = await $fetch<
+          ApiResponse<{ user: StoreUser; token: string }>
+        >('/api/auth/login', {
           method: 'POST',
-          body: loginData
+          body: loginData,
         })
-        
+
         if (response.success) {
           this.user = response.data.user
           this.isAuthenticated = true
-          
+
           // Store token in localStorage
           if (process.client) {
             localStorage.setItem('authToken', response.data.token)
           }
-          
+
           return true
         } else {
           this.error = response.message || 'Login failed'
@@ -109,22 +112,24 @@ export const useUserStore = defineStore('user', {
     async register(registerData: RegisterData) {
       this.loading = true
       this.error = null
-      
+
       try {
-        const response = await $fetch<ApiResponse<{ user: User; token: string }>>('/api/auth/register', {
+        const response = await $fetch<
+          ApiResponse<{ user: StoreUser; token: string }>
+        >('/api/auth/register', {
           method: 'POST',
-          body: registerData
+          body: registerData,
         })
-        
+
         if (response.success) {
           this.user = response.data.user
           this.isAuthenticated = true
-          
+
           // Store token in localStorage
           if (process.client) {
             localStorage.setItem('authToken', response.data.token)
           }
-          
+
           return true
         } else {
           this.error = response.message || 'Registration failed'
@@ -141,7 +146,7 @@ export const useUserStore = defineStore('user', {
 
     async logout() {
       this.loading = true
-      
+
       try {
         await $fetch('/api/auth/logout', { method: 'POST' })
       } catch (error) {
@@ -151,7 +156,7 @@ export const useUserStore = defineStore('user', {
         this.user = null
         this.isAuthenticated = false
         this.loading = false
-        
+
         // Remove token from localStorage
         if (process.client) {
           localStorage.removeItem('authToken')
@@ -163,7 +168,7 @@ export const useUserStore = defineStore('user', {
       this.error = null
     },
 
-    setUser(user: User) {
+    setUser(user: StoreUser) {
       this.user = user
       this.isAuthenticated = true
     },
@@ -176,6 +181,6 @@ export const useUserStore = defineStore('user', {
           await this.fetchUser()
         }
       }
-    }
-  }
-}) 
+    },
+  },
+})

@@ -44,13 +44,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // Create the training session
-    const trainingSession = await prisma.trainingSession.create({
+    const trainingSession = await prisma.modelTraining.create({
       data: {
-        name: name.trim(),
-        datasetUrl: datasetUrl.trim(),
-        epochs: epochs,
-        status: status,
-        userId: 1 // Default user ID - in a real app, this would come from authentication
+        modelId: 'default-model-id', // You'll need to provide a valid model ID
+        status: status.trim(),
+        progress: 0
       }
     })
 

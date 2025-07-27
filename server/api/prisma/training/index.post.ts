@@ -6,15 +6,11 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     
     // Create a new training session
-    const training = await prisma.trainingSession.create({
+    const training = await prisma.modelTraining.create({
       data: {
-        modelName: body.modelName,
-        datasetPath: body.datasetPath,
-        status: 'PENDING',
-        userId: body.userId || '1', // Default user ID for now
-        parameters: body.parameters || {},
-        createdAt: new Date(),
-        updatedAt: new Date()
+        modelId: body.modelId || 'default-model-id',
+        status: 'pending',
+        progress: 0
       }
     })
 

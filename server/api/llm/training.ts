@@ -1,4 +1,4 @@
-import { defineEventHandler, getQuery, readBody } from 'h3'
+import { defineEventHandler, getQuery, readBody, createError, getMethod } from 'h3'
 import { getPrismaClient } from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event) => {
@@ -39,7 +39,7 @@ async function handleGet(event: any, prisma: any) {
 
   if (id) {
     // Get single training session
-    const training = await prisma.trainingSession.findUnique({
+    const training = await prisma.modelTraining.findUnique({
       where: { id: String(id) },
       include: {
         model: {
@@ -66,7 +66,7 @@ async function handleGet(event: any, prisma: any) {
     }
   } else {
     // Get all training sessions
-    const trainingSessions = await prisma.trainingSession.findMany({
+    const trainingSessions = await prisma.modelTraining.findMany({
       include: {
         model: {
           select: {
@@ -101,7 +101,7 @@ async function handlePost(event: any, prisma: any) {
   }
 
   // Verify model exists
-  const model = await prisma.llmModel.findUnique({
+  const model = await prisma.model.findUnique({
     where: { id: body.modelId }
   })
 
@@ -112,23 +112,11 @@ async function handlePost(event: any, prisma: any) {
     })
   }
 
-  const trainingSession = await prisma.trainingSession.create({
+  const trainingSession = await prisma.modelTraining.create({
     data: {
-      name: body.name,
       modelId: body.modelId,
       status: body.status || 'pending',
-      progress: body.progress || 0,
-      config: body.config || {
-        epochs: 10,
-        batchSize: 32,
-        learningRate: 0.001,
-        optimizer: 'adam',
-        dataset: 'default'
-      },
-      logs: body.logs || [],
-      metrics: body.metrics || {},
-      startedAt: body.startedAt ? new Date(body.startedAt) : null,
-      completedAt: body.completedAt ? new Date(body.completedAt) : null
+      progress: body.progress || 0
     },
     include: {
       model: {
@@ -142,7 +130,7 @@ async function handlePost(event: any, prisma: any) {
   })
 
   // Update model status to training
-  await prisma.llmModel.update({
+  await prisma.model.update({
     where: { id: body.modelId },
     data: { status: 'training' }
   })

@@ -5,7 +5,7 @@ const prisma = new PrismaClient()
 export interface Permission {
   id: number
   name: string
-  description?: string
+  description?: string | null
   resource: string
   action: string
 }
@@ -13,7 +13,7 @@ export interface Permission {
 export interface Role {
   id: number
   name: string
-  description?: string
+  description?: string | null
   permissions: Permission[]
 }
 
@@ -23,16 +23,22 @@ export interface UserRole {
   roleId: number
   role: Role
   assignedAt: Date
-  expiresAt?: Date
+  expiresAt?: Date | null
   isActive: boolean
 }
 
 export class RBACService {
   // Check if user has permission
-  async hasPermission(userId: number, resource: string, action: string): Promise<boolean> {
+  async hasPermission(
+    userId: number,
+    resource: string,
+    action: string
+  ): Promise<boolean> {
     try {
       const userPermissions = await this.getUserPermissions(userId)
-      return userPermissions.some(p => p.resource === resource && p.action === action)
+      return userPermissions.some(
+        p => p.resource === resource && p.action === action
+      )
     } catch (error) {
       console.error('Permission check error:', error)
       return false
@@ -40,13 +46,18 @@ export class RBACService {
   }
 
   // Check if user has any of the given permissions
-  async hasAnyPermission(userId: number, permissions: Array<{ resource: string; action: string }>): Promise<boolean> {
+  async hasAnyPermission(
+    userId: number,
+    permissions: Array<{ resource: string; action: string }>
+  ): Promise<boolean> {
     try {
       const userPermissions = await this.getUserPermissions(userId)
-      
-      return permissions.some(required => 
-        userPermissions.some(userPerm => 
-          userPerm.resource === required.resource && userPerm.action === required.action
+
+      return permissions.some(required =>
+        userPermissions.some(
+          userPerm =>
+            userPerm.resource === required.resource &&
+            userPerm.action === required.action
         )
       )
     } catch (error) {
@@ -56,13 +67,18 @@ export class RBACService {
   }
 
   // Check if user has all of the given permissions
-  async hasAllPermissions(userId: number, permissions: Array<{ resource: string; action: string }>): Promise<boolean> {
+  async hasAllPermissions(
+    userId: number,
+    permissions: Array<{ resource: string; action: string }>
+  ): Promise<boolean> {
     try {
       const userPermissions = await this.getUserPermissions(userId)
-      
-      return permissions.every(required => 
-        userPermissions.some(userPerm => 
-          userPerm.resource === required.resource && userPerm.action === required.action
+
+      return permissions.every(required =>
+        userPermissions.some(
+          userPerm =>
+            userPerm.resource === required.resource &&
+            userPerm.action === required.action
         )
       )
     } catch (error) {
@@ -78,26 +94,23 @@ export class RBACService {
         where: {
           userId,
           isActive: true,
-          OR: [
-            { expiresAt: null },
-            { expiresAt: { gt: new Date() } }
-          ]
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
         },
         include: {
           role: {
             include: {
               rolePermissions: {
                 include: {
-                  permission: true
-                }
-              }
-            }
-          }
-        }
+                  permission: true,
+                },
+              },
+            },
+          },
+        },
       })
 
       const permissions = new Map<number, Permission>()
-      
+
       userRoles.forEach(userRole => {
         userRole.role.rolePermissions.forEach(rp => {
           if (rp.permission.isActive) {
@@ -116,34 +129,46 @@ export class RBACService {
   // Get all roles for a user
   async getUserRoles(userId: number): Promise<UserRole[]> {
     try {
-      return await prisma.userRole.findMany({
+      const userRoles = await prisma.userRole.findMany({
         where: {
           userId,
           isActive: true,
-          OR: [
-            { expiresAt: null },
-            { expiresAt: { gt: new Date() } }
-          ]
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
         },
         include: {
           role: {
             include: {
               rolePermissions: {
                 include: {
-                  permission: true
-                }
-              }
-            }
+                  permission: true,
+                },
+              },
+            },
           },
-          assigner: {
-            select: {
-              id: true,
-              email: true,
-              name: true
-            }
-          }
-        }
+        },
       })
+
+      // Transform the data to match the UserRole interface
+      return userRoles.map(userRole => ({
+        id: userRole.id,
+        userId: userRole.userId,
+        roleId: userRole.roleId,
+        role: {
+          id: userRole.role.id,
+          name: userRole.role.name,
+          description: userRole.role.description,
+          permissions: userRole.role.rolePermissions.map(rp => ({
+            id: rp.permission.id,
+            name: rp.permission.name,
+            description: rp.permission.description,
+            resource: rp.permission.resource,
+            action: rp.permission.action,
+          })),
+        },
+        assignedAt: userRole.assignedAt,
+        expiresAt: userRole.expiresAt,
+        isActive: userRole.isActive,
+      }))
     } catch (error) {
       console.error('Get user roles error:', error)
       return []
@@ -151,11 +176,15 @@ export class RBACService {
   }
 
   // Assign role to user
-  async assignRole(userId: number, roleId: number, assignedBy?: number, expiresAt?: Date): Promise<boolean> {
+  async assignRole(
+    userId: number,
+    roleId: number,
+    expiresAt?: Date | null
+  ): Promise<boolean> {
     try {
       // Check if role exists and is active
       const role = await prisma.role.findFirst({
-        where: { id: roleId, isActive: true }
+        where: { id: roleId, isActive: true },
       })
 
       if (!role) {
@@ -164,7 +193,7 @@ export class RBACService {
 
       // Check if user already has this role
       const existingRole = await prisma.userRole.findUnique({
-        where: { userId_roleId: { userId, roleId } }
+        where: { userId_roleId: { userId, roleId } },
       })
 
       if (existingRole) {
@@ -174,8 +203,7 @@ export class RBACService {
           data: {
             isActive: true,
             expiresAt,
-            assignedBy
-          }
+          },
         })
       } else {
         // Create new role assignment
@@ -183,9 +211,8 @@ export class RBACService {
           data: {
             userId,
             roleId,
-            assignedBy,
-            expiresAt
-          }
+            expiresAt,
+          },
         })
       }
 
@@ -201,7 +228,7 @@ export class RBACService {
     try {
       await prisma.userRole.updateMany({
         where: { userId, roleId },
-        data: { isActive: false }
+        data: { isActive: false },
       })
       return true
     } catch (error) {
@@ -211,13 +238,17 @@ export class RBACService {
   }
 
   // Create new role
-  async createRole(name: string, description?: string, permissionIds?: number[]): Promise<number | null> {
+  async createRole(
+    name: string,
+    description?: string,
+    permissionIds?: number[]
+  ): Promise<number | null> {
     try {
       const role = await prisma.role.create({
         data: {
           name,
-          description
-        }
+          description,
+        },
       })
 
       if (permissionIds && permissionIds.length > 0) {
@@ -232,14 +263,18 @@ export class RBACService {
   }
 
   // Update role
-  async updateRole(roleId: number, name?: string, description?: string): Promise<boolean> {
+  async updateRole(
+    roleId: number,
+    name?: string,
+    description?: string
+  ): Promise<boolean> {
     try {
       await prisma.role.update({
         where: { id: roleId },
         data: {
           ...(name && { name }),
-          ...(description && { description })
-        }
+          ...(description && { description }),
+        },
       })
       return true
     } catch (error) {
@@ -253,7 +288,7 @@ export class RBACService {
     try {
       await prisma.role.update({
         where: { id: roleId },
-        data: { isActive: false }
+        data: { isActive: false },
       })
       return true
     } catch (error) {
@@ -263,15 +298,20 @@ export class RBACService {
   }
 
   // Create new permission
-  async createPermission(name: string, resource: string, action: string, description?: string): Promise<number | null> {
+  async createPermission(
+    name: string,
+    resource: string,
+    action: string,
+    description?: string
+  ): Promise<number | null> {
     try {
       const permission = await prisma.permission.create({
         data: {
           name,
           resource,
           action,
-          description
-        }
+          description,
+        },
       })
       return permission.id
     } catch (error) {
@@ -281,15 +321,18 @@ export class RBACService {
   }
 
   // Assign permissions to role
-  async assignPermissionsToRole(roleId: number, permissionIds: number[]): Promise<boolean> {
+  async assignPermissionsToRole(
+    roleId: number,
+    permissionIds: number[]
+  ): Promise<boolean> {
     try {
       for (const permissionId of permissionIds) {
         try {
           await prisma.rolePermission.create({
             data: {
               roleId,
-              permissionId
-            }
+              permissionId,
+            },
           })
         } catch (error: any) {
           // Ignore unique constraint violations
@@ -307,13 +350,16 @@ export class RBACService {
   }
 
   // Remove permissions from role
-  async removePermissionsFromRole(roleId: number, permissionIds: number[]): Promise<boolean> {
+  async removePermissionsFromRole(
+    roleId: number,
+    permissionIds: number[]
+  ): Promise<boolean> {
     try {
       await prisma.rolePermission.deleteMany({
         where: {
           roleId,
-          permissionId: { in: permissionIds }
-        }
+          permissionId: { in: permissionIds },
+        },
       })
       return true
     } catch (error) {
@@ -325,16 +371,30 @@ export class RBACService {
   // Get all roles
   async getAllRoles(): Promise<Role[]> {
     try {
-      return await prisma.role.findMany({
+      const roles = await prisma.role.findMany({
         where: { isActive: true },
         include: {
           rolePermissions: {
             include: {
-              permission: true
-            }
-          }
-        }
+              permission: true,
+            },
+          },
+        },
       })
+
+      // Transform the data to match the Role interface
+      return roles.map(role => ({
+        id: role.id,
+        name: role.name,
+        description: role.description,
+        permissions: role.rolePermissions.map(rp => ({
+          id: rp.permission.id,
+          name: rp.permission.name,
+          description: rp.permission.description,
+          resource: rp.permission.resource,
+          action: rp.permission.action,
+        })),
+      }))
     } catch (error) {
       console.error('Get all roles error:', error)
       return []
@@ -345,7 +405,7 @@ export class RBACService {
   async getAllPermissions(): Promise<Permission[]> {
     try {
       return await prisma.permission.findMany({
-        where: { isActive: true }
+        where: { isActive: true },
       })
     } catch (error) {
       console.error('Get all permissions error:', error)
@@ -359,43 +419,165 @@ export class RBACService {
       // Create default permissions
       const permissions = [
         // User permissions
-        { name: 'user:read', resource: 'user', action: 'read', description: 'Read user information' },
-        { name: 'user:create', resource: 'user', action: 'create', description: 'Create new users' },
-        { name: 'user:update', resource: 'user', action: 'update', description: 'Update user information' },
-        { name: 'user:delete', resource: 'user', action: 'delete', description: 'Delete users' },
-        
+        {
+          name: 'user:read',
+          resource: 'user',
+          action: 'read',
+          description: 'Read user information',
+        },
+        {
+          name: 'user:create',
+          resource: 'user',
+          action: 'create',
+          description: 'Create new users',
+        },
+        {
+          name: 'user:update',
+          resource: 'user',
+          action: 'update',
+          description: 'Update user information',
+        },
+        {
+          name: 'user:delete',
+          resource: 'user',
+          action: 'delete',
+          description: 'Delete users',
+        },
+
         // Bot permissions
-        { name: 'bot:read', resource: 'bot', action: 'read', description: 'Read bot information' },
-        { name: 'bot:create', resource: 'bot', action: 'create', description: 'Create new bots' },
-        { name: 'bot:update', resource: 'bot', action: 'update', description: 'Update bot information' },
-        { name: 'bot:delete', resource: 'bot', action: 'delete', description: 'Delete bots' },
-        { name: 'bot:deploy', resource: 'bot', action: 'deploy', description: 'Deploy bots' },
-        
+        {
+          name: 'bot:read',
+          resource: 'bot',
+          action: 'read',
+          description: 'Read bot information',
+        },
+        {
+          name: 'bot:create',
+          resource: 'bot',
+          action: 'create',
+          description: 'Create new bots',
+        },
+        {
+          name: 'bot:update',
+          resource: 'bot',
+          action: 'update',
+          description: 'Update bot information',
+        },
+        {
+          name: 'bot:delete',
+          resource: 'bot',
+          action: 'delete',
+          description: 'Delete bots',
+        },
+        {
+          name: 'bot:deploy',
+          resource: 'bot',
+          action: 'deploy',
+          description: 'Deploy bots',
+        },
+
         // Model permissions
-        { name: 'model:read', resource: 'model', action: 'read', description: 'Read model information' },
-        { name: 'model:create', resource: 'model', action: 'create', description: 'Create new models' },
-        { name: 'model:update', resource: 'model', action: 'update', description: 'Update model information' },
-        { name: 'model:delete', resource: 'model', action: 'delete', description: 'Delete models' },
-        { name: 'model:train', resource: 'model', action: 'train', description: 'Train models' },
-        
+        {
+          name: 'model:read',
+          resource: 'model',
+          action: 'read',
+          description: 'Read model information',
+        },
+        {
+          name: 'model:create',
+          resource: 'model',
+          action: 'create',
+          description: 'Create new models',
+        },
+        {
+          name: 'model:update',
+          resource: 'model',
+          action: 'update',
+          description: 'Update model information',
+        },
+        {
+          name: 'model:delete',
+          resource: 'model',
+          action: 'delete',
+          description: 'Delete models',
+        },
+        {
+          name: 'model:train',
+          resource: 'model',
+          action: 'train',
+          description: 'Train models',
+        },
+
         // Pipeline permissions
-        { name: 'pipeline:read', resource: 'pipeline', action: 'read', description: 'Read pipeline information' },
-        { name: 'pipeline:create', resource: 'pipeline', action: 'create', description: 'Create new pipelines' },
-        { name: 'pipeline:update', resource: 'pipeline', action: 'update', description: 'Update pipeline information' },
-        { name: 'pipeline:delete', resource: 'pipeline', action: 'delete', description: 'Delete pipelines' },
-        { name: 'pipeline:execute', resource: 'pipeline', action: 'execute', description: 'Execute pipelines' },
-        
+        {
+          name: 'pipeline:read',
+          resource: 'pipeline',
+          action: 'read',
+          description: 'Read pipeline information',
+        },
+        {
+          name: 'pipeline:create',
+          resource: 'pipeline',
+          action: 'create',
+          description: 'Create new pipelines',
+        },
+        {
+          name: 'pipeline:update',
+          resource: 'pipeline',
+          action: 'update',
+          description: 'Update pipeline information',
+        },
+        {
+          name: 'pipeline:delete',
+          resource: 'pipeline',
+          action: 'delete',
+          description: 'Delete pipelines',
+        },
+        {
+          name: 'pipeline:execute',
+          resource: 'pipeline',
+          action: 'execute',
+          description: 'Execute pipelines',
+        },
+
         // Admin permissions
-        { name: 'admin:all', resource: 'admin', action: 'all', description: 'Full administrative access' },
-        { name: 'admin:users', resource: 'admin', action: 'users', description: 'Manage users' },
-        { name: 'admin:roles', resource: 'admin', action: 'roles', description: 'Manage roles and permissions' },
-        { name: 'admin:analytics', resource: 'admin', action: 'analytics', description: 'Access analytics' },
-        { name: 'admin:system', resource: 'admin', action: 'system', description: 'System administration' }
+        {
+          name: 'admin:all',
+          resource: 'admin',
+          action: 'all',
+          description: 'Full administrative access',
+        },
+        {
+          name: 'admin:users',
+          resource: 'admin',
+          action: 'users',
+          description: 'Manage users',
+        },
+        {
+          name: 'admin:roles',
+          resource: 'admin',
+          action: 'roles',
+          description: 'Manage roles and permissions',
+        },
+        {
+          name: 'admin:analytics',
+          resource: 'admin',
+          action: 'analytics',
+          description: 'Access analytics',
+        },
+        {
+          name: 'admin:system',
+          resource: 'admin',
+          action: 'system',
+          description: 'System administration',
+        },
       ]
 
       const createdPermissions = []
       for (const perm of permissions) {
-        const existing = await prisma.permission.findUnique({ where: { name: perm.name } })
+        const existing = await prisma.permission.findUnique({
+          where: { name: perm.name },
+        })
         if (!existing) {
           const created = await prisma.permission.create({ data: perm })
           createdPermissions.push(created)
@@ -409,34 +591,49 @@ export class RBACService {
         {
           name: 'admin',
           description: 'Full system administrator',
-          permissions: createdPermissions.map(p => p.id)
+          permissions: createdPermissions.map(p => p.id),
         },
         {
           name: 'user',
           description: 'Standard user',
           permissions: createdPermissions
-            .filter(p => ['user:read', 'bot:read', 'bot:create', 'bot:update', 'model:read', 'pipeline:read'].includes(p.name))
-            .map(p => p.id)
+            .filter(p =>
+              [
+                'user:read',
+                'bot:read',
+                'bot:create',
+                'bot:update',
+                'model:read',
+                'pipeline:read',
+              ].includes(p.name)
+            )
+            .map(p => p.id),
         },
         {
           name: 'developer',
           description: 'Developer with extended permissions',
           permissions: createdPermissions
-            .filter(p => !p.name.startsWith('admin:') && !p.name.startsWith('user:delete'))
-            .map(p => p.id)
-        }
+            .filter(
+              p =>
+                !p.name.startsWith('admin:') &&
+                !p.name.startsWith('user:delete')
+            )
+            .map(p => p.id),
+        },
       ]
 
       for (const roleData of roles) {
-        const existingRole = await prisma.role.findUnique({ where: { name: roleData.name } })
+        const existingRole = await prisma.role.findUnique({
+          where: { name: roleData.name },
+        })
         if (!existingRole) {
           const role = await prisma.role.create({
             data: {
               name: roleData.name,
-              description: roleData.description
-            }
+              description: roleData.description,
+            },
           })
-          
+
           if (roleData.permissions.length > 0) {
             await this.assignPermissionsToRole(role.id, roleData.permissions)
           }
@@ -450,4 +647,4 @@ export class RBACService {
   }
 }
 
-export const rbacService = new RBACService() 
+export const rbacService = new RBACService()

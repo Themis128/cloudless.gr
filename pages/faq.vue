@@ -1,412 +1,357 @@
 <template>
-  <div class="faq-container">
-    <h1 class="page-title">Frequently Asked Questions</h1>
-    
-    <div class="search-container">
-      <input
-        type="text"
-        v-model="searchQuery"
-        placeholder="Search FAQs..."
-        class="search-input"
-        @input="filterQuestions"
-      />
-    </div>
-    
-    <div class="faq-content">
-      <div v-if="filteredQuestions.length > 0">
-        <div 
-          v-for="(category, index) in uniqueCategories" 
-          :key="index"
-          class="faq-category"
+  <div>
+    <v-container class="faq-page">
+      <!-- Hero Section -->
+      <v-row justify="center" class="mb-12">
+        <v-col cols="12" md="8" lg="6" class="text-center">
+          <h1 class="text-h2 font-weight-bold mb-4">
+            Frequently Asked Questions
+          </h1>
+          <p class="text-h6 text-medium-emphasis">
+            Find answers to common questions about Cloudless Wizard
+          </p>
+        </v-col>
+      </v-row>
+
+      <!-- Search Section -->
+      <v-row justify="center" class="mb-8">
+        <v-col cols="12" md="6" lg="4">
+          <v-text-field
+            v-model="searchQuery"
+            placeholder="Search FAQs..."
+            variant="outlined"
+            prepend-inner-icon="mdi-magnify"
+            clearable
+            hide-details
+            @update:model-value="filterQuestions"
+            :ripple="false"
+          />
+        </v-col>
+      </v-row>
+
+      <!-- FAQ Categories -->
+      <v-row v-if="filteredQuestions.length > 0">
+        <v-col
+          v-for="category in uniqueCategories"
+          :key="category"
+          cols="12"
+          class="mb-8"
         >
-          <h2 class="category-title">{{ category }}</h2>
-          
-          <div class="faq-items">
-            <div 
-              v-for="question in getQuestionsByCategory(category)" 
-              :key="question.id"
-              class="faq-item"
-            >
-              <div 
-                class="faq-question"
-                @click="toggleQuestion(question.id)"
-                :class="{ 'active': expandedQuestions.includes(question.id) }"
+          <v-card class="category-card" elevation="4">
+            <v-card-title class="text-h4 mb-6">
+              {{ category }}
+            </v-card-title>
+
+            <v-card-text class="pa-0">
+              <v-expansion-panels variant="accordion">
+                <v-expansion-panel
+                  v-for="question in getQuestionsByCategory(category)"
+                  :key="question.id"
+                  class="faq-panel"
+                >
+                  <v-expansion-panel-title class="text-h6 font-weight-medium">
+                    {{ question.question }}
+                  </v-expansion-panel-title>
+                  <v-expansion-panel-text>
+                    <div class="faq-answer" v-html="question.answer"></div>
+                  </v-expansion-panel-text>
+                </v-expansion-panel>
+              </v-expansion-panels>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+
+      <!-- No Results -->
+      <v-row v-else-if="searchQuery" justify="center" class="mb-12">
+        <v-col cols="12" md="8" lg="6" class="text-center">
+          <v-card class="no-results-card" elevation="4">
+            <v-card-text class="pa-8">
+              <v-icon size="64" color="grey" class="mb-4">
+                mdi-magnify-close
+              </v-icon>
+              <h3 class="text-h5 font-weight-bold mb-4">No FAQs Found</h3>
+              <p class="text-body-1 text-medium-emphasis mb-6">
+                No FAQs found matching "{{ searchQuery }}"
+              </p>
+              <v-btn
+                color="primary"
+                variant="outlined"
+                @click="resetSearch"
+                :ripple="false"
               >
-                <h3>{{ question.question }}</h3>
-                <div class="icon">
-                  <span v-if="expandedQuestions.includes(question.id)">−</span>
-                  <span v-else>+</span>
-                </div>
+                <v-icon start>mdi-refresh</v-icon>
+                Reset Search
+              </v-btn>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+
+      <!-- Contact Support Section -->
+      <v-row justify="center" class="mb-12">
+        <v-col cols="12" md="8" lg="6">
+          <v-card class="contact-support-card" elevation="8" color="primary">
+            <v-card-text class="pa-8 text-center">
+              <v-icon size="64" color="white" class="mb-4">
+                mdi-headset
+              </v-icon>
+              <h2 class="text-h4 font-weight-bold mb-4 text-white">
+                Still have questions?
+              </h2>
+              <p class="text-h6 text-white mb-6">
+                Can't find what you're looking for? Our support team is here to
+                help.
+              </p>
+              <div class="d-flex flex-wrap justify-center">
+                <v-btn
+                  color="white"
+                  variant="outlined"
+                  size="large"
+                  class="mr-4"
+                  to="/contact"
+                  :ripple="false"
+                >
+                  <v-icon start>mdi-email</v-icon>
+                  Contact Support
+                </v-btn>
+                <v-btn color="white" size="large" to="/support" :ripple="false">
+                  <v-icon start>mdi-help-circle</v-icon>
+                  Support Center
+                </v-btn>
               </div>
-              
-              <div 
-                class="faq-answer"
-                :class="{ 'expanded': expandedQuestions.includes(question.id) }"
-              >
-                <p v-html="question.answer"></p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div v-else class="no-results">
-        <p>No FAQs found matching "{{ searchQuery }}"</p>
-        <button @click="resetSearch" class="reset-button">Reset Search</button>
-      </div>
-    </div>
-    
-    <div class="contact-support">
-      <h3>Still have questions?</h3>
-      <p>Can't find what you're looking for? Our support team is here to help.</p>
-      <NuxtLink to="/contact" class="contact-button">Contact Support</NuxtLink>
-    </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+    </v-container>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { useNotificationsStore } from '@/stores/useNotificationsStore'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+// Types
 interface FAQ {
-  id: number;
-  question: string;
-  answer: string;
-  category: string;
+  id: number
+  question: string
+  answer: string
+  category: string
 }
 
-const faqs = ref<FAQ[]>([
+// Composables
+const router = useRouter()
+const notificationsStore = useNotificationsStore()
+
+// Reactive state
+const searchQuery = ref('')
+const filteredQuestions = ref<FAQ[]>([])
+
+// FAQ data
+const faqs: FAQ[] = [
   {
     id: 1,
-    question: "What services does Cloudless provide?",
-    answer: "Cloudless offers a comprehensive suite of web development, cloud infrastructure, and DevOps services. Our expertise includes frontend and backend development, serverless architecture, cloud deployments, CI/CD pipeline setup, and performance optimization.",
-    category: "Services"
+    question: 'What services does Cloudless Wizard provide?',
+    answer:
+      'Cloudless Wizard offers a comprehensive suite of AI and machine learning services. Our expertise includes custom AI model development, data pipeline creation, bot building, cloud deployments, and performance optimization for AI applications.',
+    category: 'Services',
   },
   {
     id: 2,
-    question: "How do I request a quote for my project?",
-    answer: "You can request a quote by visiting our <a href='/contact' class='link'>Contact page</a> and filling out the form with details about your project requirements. Our team will review your request and get back to you within 1-2 business days with a customized quote.",
-    category: "Business"
+    question: 'How do I request a quote for my project?',
+    answer:
+      "You can request a quote by visiting our <a href='/contact' class='text-primary'>Contact page</a> and filling out the form with details about your project requirements. Our team will review your request and get back to you within 1-2 business days with a customized quote.",
+    category: 'Business',
   },
   {
     id: 3,
-    question: "Do you provide support after project completion?",
-    answer: "Yes, we offer ongoing support and maintenance packages for all completed projects. Our support packages include regular updates, security patches, performance monitoring, and technical assistance. You can choose a support plan that best fits your needs during the project discussion phase.",
-    category: "Services"
+    question: 'Do you provide support after project completion?',
+    answer:
+      'Yes, we offer ongoing support and maintenance packages for all completed projects. Our support packages include regular updates, security patches, performance monitoring, and technical assistance. You can choose a support plan that best fits your needs during the project discussion phase.',
+    category: 'Services',
   },
   {
     id: 4,
-    question: "What technologies do you specialize in?",
-    answer: "We specialize in modern web technologies including Vue.js, React, Node.js, TypeScript, GraphQL, and serverless architecture. We're also experts in cloud platforms like AWS, Google Cloud, and Azure, as well as containerization with Docker and Kubernetes.",
-    category: "Technical"
+    question: 'What AI technologies do you specialize in?',
+    answer:
+      "We specialize in modern AI technologies including machine learning, deep learning, natural language processing, computer vision, and large language models. We're also experts in cloud platforms like AWS, Google Cloud, and Azure, as well as containerization with Docker and Kubernetes for AI deployments.",
+    category: 'Technical',
   },
   {
     id: 5,
-    question: "How long does a typical project take to complete?",
-    answer: "Project timelines vary based on complexity, scope, and requirements. A simple website might take 2-4 weeks, while a complex web application could take 3-6 months. During our initial consultation, we'll provide you with a detailed timeline based on your specific project needs.",
-    category: "Business"
+    question: 'How long does a typical project take?',
+    answer:
+      'Project timelines vary depending on complexity and scope. Simple AI integrations can take 2-4 weeks, while complex custom AI solutions may take 3-6 months. We provide detailed timelines during the planning phase and keep you updated throughout the development process.',
+    category: 'Business',
   },
   {
     id: 6,
-    question: "Do you sign NDAs for client projects?",
-    answer: "Absolutely. We respect the confidentiality of your ideas and business information. We're happy to sign a Non-Disclosure Agreement (NDA) before discussing the details of your project.",
-    category: "Business"
+    question: 'Do you work with startups and small businesses?',
+    answer:
+      'Absolutely! We work with businesses of all sizes, from startups to enterprise companies. We offer flexible pricing models and can scale our services to meet your specific needs and budget constraints.',
+    category: 'Business',
   },
   {
     id: 7,
-    question: "What is your development process like?",
-    answer: "Our development process follows an agile methodology with iterative development cycles. We begin with a discovery phase to understand your requirements, followed by design, development, testing, deployment, and post-launch support. We maintain transparent communication throughout the project with regular updates and demonstrations.",
-    category: "Technical"
+    question: 'What is your pricing model?',
+    answer:
+      'We offer flexible pricing including project-based pricing, subscription plans, and custom enterprise solutions. Pricing depends on project scope, complexity, and ongoing support requirements. Contact us for a personalized quote.',
+    category: 'Business',
   },
   {
     id: 8,
-    question: "Can you help optimize my existing website or application?",
-    answer: "Yes, we offer optimization services for existing websites and applications. Our team can perform code reviews, performance audits, security assessments, and implement improvements to enhance speed, user experience, and overall functionality.",
-    category: "Services"
+    question: 'Do you provide training and documentation?',
+    answer:
+      'Yes, we provide comprehensive training, documentation, and ongoing support to ensure your team can effectively use our AI solutions. This includes user guides, API documentation, and hands-on training sessions.',
+    category: 'Services',
   },
   {
     id: 9,
-    question: "Do you offer hosting services?",
-    answer: "While we don't directly provide hosting services, we can help you set up, configure, and manage your hosting environment on cloud platforms like AWS, Google Cloud, or Azure. We can also recommend the best hosting solution based on your project requirements and budget.",
-    category: "Technical"
+    question: 'How do you ensure data security and privacy?',
+    answer:
+      'We implement enterprise-grade security measures including encryption at rest and in transit, secure API endpoints, and compliance with data protection regulations. We can also work with your existing security infrastructure and policies.',
+    category: 'Security',
   },
   {
     id: 10,
-    question: "What payment methods do you accept?",
-    answer: "We accept various payment methods including bank transfers, credit cards, and PayPal. For larger projects, we typically work with a milestone-based payment schedule, which will be outlined in our proposal and contract.",
-    category: "Business"
+    question: 'Can you integrate with our existing systems?',
+    answer:
+      'Yes, we specialize in integrating AI solutions with existing systems and workflows. We work with various APIs, databases, and third-party services to ensure seamless integration with your current infrastructure.',
+    category: 'Technical',
   },
   {
     id: 11,
-    question: "Can you help with SEO and digital marketing?",
-    answer: "Yes, we offer SEO optimization as part of our web development process. This includes technical SEO setup, metadata optimization, schema markup, and performance improvements. For comprehensive digital marketing campaigns, we collaborate with trusted marketing partners to provide a complete solution.",
-    category: "Services"
+    question: 'What kind of AI models can you develop?',
+    answer:
+      'We develop a wide range of AI models including natural language processing models, computer vision models, recommendation systems, predictive analytics models, and custom neural networks tailored to your specific use case.',
+    category: 'Technical',
   },
   {
     id: 12,
-    question: "How do you handle project changes and new requirements?",
-    answer: "We understand that requirements can evolve during a project. We handle changes through a formal change request process. New requirements are evaluated for impact on timeline, scope, and budget, then discussed with you before implementation. This ensures transparency and helps manage expectations effectively.",
-    category: "Business"
-  }
-]);
+    question: 'Do you offer maintenance and updates?',
+    answer:
+      'Yes, we offer comprehensive maintenance packages that include regular updates, model retraining, performance monitoring, and technical support. We can also provide ongoing development and feature enhancements.',
+    category: 'Services',
+  },
+]
 
-const searchQuery = ref('');
-const expandedQuestions = ref<number[]>([]);
-const filteredQuestions = ref<FAQ[]>([...faqs.value]);
-
+// Computed properties
 const uniqueCategories = computed(() => {
-  const categories = filteredQuestions.value.map(faq => faq.category);
-  return [...new Set(categories)];
-});
+  const categories = [...new Set(filteredQuestions.value.map(q => q.category))]
+  return categories.sort()
+})
 
-const filterQuestions = (): void => {
+// Methods
+const filterQuestions = () => {
   if (!searchQuery.value.trim()) {
-    filteredQuestions.value = [...faqs.value];
-    return;
+    filteredQuestions.value = faqs
+    return
   }
-  
-  const query = searchQuery.value.toLowerCase();
-  filteredQuestions.value = faqs.value.filter(faq => 
-    faq.question.toLowerCase().includes(query) || 
-    faq.answer.toLowerCase().includes(query) ||
-    faq.category.toLowerCase().includes(query)
-  );
-};
 
-const resetSearch = (): void => {
-  searchQuery.value = '';
-  filteredQuestions.value = [...faqs.value];
-};
+  const query = searchQuery.value.toLowerCase()
+  filteredQuestions.value = faqs.filter(
+    faq =>
+      faq.question.toLowerCase().includes(query) ||
+      faq.answer.toLowerCase().includes(query) ||
+      faq.category.toLowerCase().includes(query)
+  )
+}
 
-const toggleQuestion = (id: number): void => {
-  const index = expandedQuestions.value.indexOf(id);
-  if (index >= 0) {
-    expandedQuestions.value.splice(index, 1);
-  } else {
-    expandedQuestions.value.push(id);
-  }
-};
+const getQuestionsByCategory = (category: string) => {
+  return filteredQuestions.value.filter(q => q.category === category)
+}
 
-const getQuestionsByCategory = (category: string): FAQ[] => {
-  return filteredQuestions.value.filter(faq => faq.category === category);
-};
+const resetSearch = () => {
+  searchQuery.value = ''
+  filteredQuestions.value = faqs
+  notificationsStore.info('Search Reset', 'FAQ search has been reset')
+}
 
-onMounted(() => {
-  // Expand the first question by default for better UX
-  if (faqs.value.length > 0) {
-    expandedQuestions.value = [faqs.value[0].id];
-  }
-});
+// Initialize
+filteredQuestions.value = faqs
+
+// Meta
+definePageMeta({
+  title: 'Frequently Asked Questions - Cloudless Wizard',
+  description:
+    "Find answers to common questions about Cloudless Wizard's AI development services, pricing, and support options.",
+  layout: 'default',
+})
 </script>
 
 <style scoped>
-.faq-container {
-  max-width: 900px;
+.faq-page {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem 1rem;
 }
 
-.page-title {
-  font-size: 2.25rem;
-  margin-bottom: 2rem;
-  color: #1e40af;
-  text-align: center;
-  font-weight: 700;
+.category-card {
+  border-radius: 16px;
+  transition: all 0.3s ease-in-out;
 }
 
-.search-container {
-  margin-bottom: 2rem;
+.category-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
-.search-input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid rgba(203, 213, 225, 0.8);
-  border-radius: 8px;
-  background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(5px);
-  font-size: 1rem;
-  transition: all 0.3s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+.faq-panel {
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.08);
 }
 
-.search-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-}
-
-.faq-content {
-  margin-bottom: 3rem;
-}
-
-.faq-category {
-  margin-bottom: 2.5rem;
-}
-
-.category-title {
-  font-size: 1.5rem;
-  color: #1e40af;
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid rgba(219, 234, 254, 0.6);
-}
-
-.faq-item {
-  margin-bottom: 1rem;
-}
-
-.faq-question {
-  background-color: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  padding: 1rem 1.5rem;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid rgba(219, 234, 254, 0.6);
-  transition: all 0.3s;
-}
-
-.faq-question:hover {
-  background-color: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-}
-
-.faq-question.active {
-  background-color: rgba(219, 234, 254, 0.5);
-  border-color: rgba(96, 165, 250, 0.6);
-}
-
-.faq-question h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #1e293b;
-  flex: 1;
-}
-
-.icon {
-  font-size: 1.5rem;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  transition: transform 0.3s;
-}
-
-.faq-question.active .icon {
-  color: #2563eb;
+.faq-panel:last-child {
+  border-bottom: none;
 }
 
 .faq-answer {
-  background-color: rgba(255, 255, 255, 0.7);
-  margin-top: 2px;
-  padding: 0 1.5rem;
-  max-height: 0;
-  overflow: hidden;
-  transition: all 0.3s ease-out;
-  border-radius: 0 0 8px 8px;
-  opacity: 0;
-  border-left: 1px solid rgba(219, 234, 254, 0.6);
-  border-right: 1px solid rgba(219, 234, 254, 0.6);
+  line-height: 1.6;
+  color: var(--v-theme-on-surface-variant);
 }
 
-.faq-answer.expanded {
-  padding: 1rem 1.5rem;
-  max-height: 500px;
-  opacity: 1;
-  border-bottom: 1px solid rgba(219, 234, 254, 0.6);
-}
-
-.faq-answer p {
-  margin: 0;
-  line-height: 1.7;
-  color: #334155;
-}
-
-.contact-support {
-  background-color: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  padding: 2rem;
-  border-radius: 8px;
-  text-align: center;
-  border: 1px solid rgba(219, 234, 254, 0.6);
-}
-
-.contact-support h3 {
-  font-size: 1.5rem;
-  color: #1e40af;
-  margin-top: 0;
-  margin-bottom: 0.75rem;
-}
-
-.contact-support p {
-  color: #334155;
-  margin-bottom: 1.5rem;
-}
-
-.contact-button {
-  display: inline-block;
-  background-color: #2563eb;
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  font-weight: 600;
+.faq-answer :deep(a) {
+  color: var(--v-theme-primary);
   text-decoration: none;
-  transition: all 0.2s;
-}
-
-.contact-button:hover {
-  background-color: #1d4ed8;
-  transform: translateY(-1px);
-}
-
-.no-results {
-  background-color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  padding: 2rem;
-  border-radius: 8px;
-  text-align: center;
-  border: 1px solid rgba(219, 234, 254, 0.6);
-}
-
-.no-results p {
-  color: #64748b;
-  font-size: 1.1rem;
-  margin-bottom: 1rem;
-}
-
-.reset-button {
-  background-color: #e2e8f0;
-  color: #334155;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
   font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
 }
 
-.reset-button:hover {
-  background-color: #cbd5e1;
-}
-
-.link {
-  color: #2563eb;
+.faq-answer :deep(a:hover) {
   text-decoration: underline;
-  transition: color 0.2s;
 }
 
-.link:hover {
-  color: #1d4ed8;
+.no-results-card {
+  border-radius: 16px;
 }
 
-@media (max-width: 768px) {
-  .faq-question h3 {
-    font-size: 1rem;
+.contact-support-card {
+  background: linear-gradient(
+    135deg,
+    var(--v-theme-primary) 0%,
+    var(--v-theme-secondary) 100%
+  );
+  border-radius: 16px;
+}
+
+/* Responsive improvements */
+@media (max-width: 600px) {
+  .faq-page {
+    padding: 0 16px;
   }
+}
+
+/* Accessibility improvements */
+:focus-visible {
+  outline: 2px solid var(--v-theme-primary);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions */
+.v-card {
+  transition: all 0.3s ease-in-out;
+}
+
+.v-expansion-panel {
+  transition: all 0.3s ease-in-out;
 }
 </style>

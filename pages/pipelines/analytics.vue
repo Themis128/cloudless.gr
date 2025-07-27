@@ -1,194 +1,235 @@
 <template>
   <div class="pipeline-analytics">
-    <div class="container mx-auto px-4 py-8">
+    <v-container>
       <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Pipeline Analytics</h1>
-        <p class="text-gray-600">Monitor and analyze your pipeline performance</p>
-      </div>
+      <v-row class="mb-8">
+        <v-col cols="12">
+          <h1 class="text-h3 font-weight-bold mb-2">Pipeline Analytics</h1>
+          <p class="text-body-1 text-medium-emphasis">Monitor and analyze your pipeline performance</p>
+        </v-col>
+      </v-row>
 
       <!-- Analytics Overview Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="p-2 bg-blue-100 rounded-lg">
-              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-              </svg>
+      <v-row class="mb-8">
+        <v-col cols="12" md="6" lg="3">
+          <v-card class="pa-6">
+            <div class="d-flex align-center">
+              <v-avatar color="primary" size="48" class="mr-4">
+                <v-icon color="white">mdi-chart-bar</v-icon>
+              </v-avatar>
+              <div>
+                <p class="text-caption text-medium-emphasis">Total Pipelines</p>
+                <p class="text-h4 font-weight-bold">{{ analytics.totalPipelines }}</p>
+              </div>
             </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Total Pipelines</p>
-              <p class="text-2xl font-semibold text-gray-900">{{ analytics.totalPipelines }}</p>
-            </div>
-          </div>
-        </div>
+          </v-card>
+        </v-col>
 
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="p-2 bg-green-100 rounded-lg">
-              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
+        <v-col cols="12" md="6" lg="3">
+          <v-card class="pa-6">
+            <div class="d-flex align-center">
+              <v-avatar color="success" size="48" class="mr-4">
+                <v-icon color="white">mdi-check-circle</v-icon>
+              </v-avatar>
+              <div>
+                <p class="text-caption text-medium-emphasis">Active Pipelines</p>
+                <p class="text-h4 font-weight-bold">{{ analytics.activePipelines }}</p>
+              </div>
             </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Active Pipelines</p>
-              <p class="text-2xl font-semibold text-gray-900">{{ analytics.activePipelines }}</p>
-            </div>
-          </div>
-        </div>
+          </v-card>
+        </v-col>
 
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="p-2 bg-yellow-100 rounded-lg">
-              <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-              </svg>
+        <v-col cols="12" md="6" lg="3">
+          <v-card class="pa-6">
+            <div class="d-flex align-center">
+              <v-avatar color="warning" size="48" class="mr-4">
+                <v-icon color="white">mdi-lightning-bolt</v-icon>
+              </v-avatar>
+              <div>
+                <p class="text-caption text-medium-emphasis">Avg Execution Time</p>
+                <p class="text-h4 font-weight-bold">{{ analytics.avgExecutionTime }}s</p>
+              </div>
             </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Avg Execution Time</p>
-              <p class="text-2xl font-semibold text-gray-900">{{ analytics.avgExecutionTime }}s</p>
-            </div>
-          </div>
-        </div>
+          </v-card>
+        </v-col>
 
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="p-2 bg-purple-100 rounded-lg">
-              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-              </svg>
+        <v-col cols="12" md="6" lg="3">
+          <v-card class="pa-6">
+            <div class="d-flex align-center">
+              <v-avatar color="info" size="48" class="mr-4">
+                <v-icon color="white">mdi-percent</v-icon>
+              </v-avatar>
+              <div>
+                <p class="text-caption text-medium-emphasis">Success Rate</p>
+                <p class="text-h4 font-weight-bold">{{ analytics.successRate }}%</p>
+              </div>
             </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Success Rate</p>
-              <p class="text-2xl font-semibold text-gray-900">{{ analytics.successRate }}%</p>
-            </div>
-          </div>
-        </div>
-      </div>
+          </v-card>
+        </v-col>
+      </v-row>
 
       <!-- Charts Section -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <v-row class="mb-8">
         <!-- Execution Time Chart -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Execution Time Trends</h3>
-          <div class="h-64 flex items-center justify-center text-gray-500">
-            <p>Chart placeholder - Execution time over time</p>
-          </div>
-        </div>
+        <v-col cols="12" lg="6">
+          <v-card class="pa-6">
+            <h3 class="text-h5 font-weight-bold mb-4">Execution Time Trends</h3>
+            <div class="d-flex align-center justify-center" style="height: 256px;">
+              <p class="text-medium-emphasis">Chart placeholder - Execution time over time</p>
+            </div>
+          </v-card>
+        </v-col>
 
         <!-- Success Rate Chart -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Success Rate by Pipeline Type</h3>
-          <div class="h-64 flex items-center justify-center text-gray-500">
-            <p>Chart placeholder - Success rate breakdown</p>
-          </div>
-        </div>
-      </div>
+        <v-col cols="12" lg="6">
+          <v-card class="pa-6">
+            <h3 class="text-h5 font-weight-bold mb-4">Success Rate by Pipeline Type</h3>
+            <div class="d-flex align-center justify-center" style="height: 256px;">
+              <p class="text-medium-emphasis">Chart placeholder - Success rate breakdown</p>
+            </div>
+          </v-card>
+        </v-col>
+      </v-row>
 
       <!-- Recent Executions Table -->
-      <div class="bg-white rounded-lg shadow">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900">Recent Executions</h3>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pipeline</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Started</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="execution in recentExecutions" :key="execution.id">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900">{{ execution.pipelineName }}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span :class="getStatusClass(execution.status)" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full">
-                    {{ execution.status }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ execution.duration }}s</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(execution.startedAt) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button class="text-indigo-600 hover:text-indigo-900">View Details</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+      <v-card>
+        <v-card-title class="text-h5 font-weight-bold">
+          Recent Executions
+        </v-card-title>
+        <v-data-table
+          :headers="tableHeaders"
+          :items="recentExecutions"
+          :items-per-page="10"
+          class="elevation-1"
+        >
+          <template v-slot:item.status="{ item }">
+            <v-chip
+              :color="getStatusColor(item.status)"
+              size="small"
+              :text="item.status"
+            />
+          </template>
+          <template v-slot:item.duration="{ item }">
+            {{ item.duration }}s
+          </template>
+          <template v-slot:item.started="{ item }">
+            {{ formatDate(item.started) }}
+          </template>
+        </v-data-table>
+      </v-card>
+    </v-container>
   </div>
 </template>
 
 <script setup lang="ts">
-definePageMeta({
-  layout: 'default'
-})
+import { ref, onMounted } from 'vue'
 
-// Mock analytics data
-const analytics = ref({
+// Types
+interface Analytics {
+  totalPipelines: number
+  activePipelines: number
+  avgExecutionTime: number
+  successRate: number
+}
+
+interface Execution {
+  id: string
+  pipeline: string
+  status: 'success' | 'failed' | 'running' | 'pending'
+  duration: number
+  started: string
+}
+
+// Reactive state
+const analytics = ref<Analytics>({
   totalPipelines: 24,
   activePipelines: 8,
   avgExecutionTime: 45,
   successRate: 94
 })
 
-// Mock recent executions
-const recentExecutions = ref([
+const recentExecutions = ref<Execution[]>([
   {
-    id: 1,
-    pipelineName: 'Data Processing Pipeline',
-    status: 'completed',
-    duration: 32,
-    startedAt: new Date(Date.now() - 1000 * 60 * 30)
-  },
-  {
-    id: 2,
-    pipelineName: 'ML Training Pipeline',
-    status: 'running',
+    id: '1',
+    pipeline: 'Data Processing Pipeline',
+    status: 'success',
     duration: 120,
-    startedAt: new Date(Date.now() - 1000 * 60 * 60)
+    started: '2024-01-15T10:30:00Z'
   },
   {
-    id: 3,
-    pipelineName: 'ETL Pipeline',
+    id: '2',
+    pipeline: 'ML Training Pipeline',
+    status: 'running',
+    duration: 300,
+    started: '2024-01-15T09:15:00Z'
+  },
+  {
+    id: '3',
+    pipeline: 'ETL Pipeline',
     status: 'failed',
-    duration: 15,
-    startedAt: new Date(Date.now() - 1000 * 60 * 90)
+    duration: 45,
+    started: '2024-01-15T08:45:00Z'
+  },
+  {
+    id: '4',
+    pipeline: 'Analytics Pipeline',
+    status: 'success',
+    duration: 180,
+    started: '2024-01-15T07:30:00Z'
   }
 ])
 
-const getStatusClass = (status: string) => {
+const tableHeaders = [
+  { title: 'Pipeline', key: 'pipeline' },
+  { title: 'Status', key: 'status' },
+  { title: 'Duration', key: 'duration' },
+  { title: 'Started', key: 'started' }
+]
+
+// Methods
+const getStatusColor = (status: string): string => {
   switch (status) {
-    case 'completed':
-      return 'bg-green-100 text-green-800'
-    case 'running':
-      return 'bg-blue-100 text-blue-800'
+    case 'success':
+      return 'success'
     case 'failed':
-      return 'bg-red-100 text-red-800'
+      return 'error'
+    case 'running':
+      return 'warning'
+    case 'pending':
+      return 'info'
     default:
-      return 'bg-gray-100 text-gray-800'
+      return 'primary'
   }
 }
 
-const formatDate = (date: Date) => {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date)
+const formatDate = (dateString: string): string => {
+  return new Date(dateString).toLocaleString()
 }
+
+// Lifecycle
+onMounted(() => {
+  // Load analytics data
+  console.log('Loading pipeline analytics...')
+})
+
+// Meta
+definePageMeta({
+  title: 'Pipeline Analytics',
+  description: 'Monitor and analyze your pipeline performance',
+  layout: 'default'
+})
 </script>
 
 <style scoped>
 .pipeline-analytics {
-  min-height: 100vh;
-  background-color: #f9fafb;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Responsive improvements */
+@media (max-width: 600px) {
+  .pipeline-analytics {
+    padding: 0 16px;
+  }
 }
 </style> 

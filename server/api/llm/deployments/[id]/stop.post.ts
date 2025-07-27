@@ -1,4 +1,4 @@
-import { defineEventHandler, getRouterParam } from 'h3'
+import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { getPrismaClient } from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event) => {
@@ -21,10 +21,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // Find the deployment
-    const deployment = await prisma.deployment.findUnique({
+    const deployment = await prisma.botDeployment.findUnique({
       where: { id: String(id) },
       include: {
-        model: {
+        bot: {
           select: {
             id: true,
             name: true,
@@ -49,20 +49,13 @@ export default defineEventHandler(async (event) => {
     }
 
     // Update deployment status
-    const updatedDeployment = await prisma.deployment.update({
+    const updatedDeployment = await prisma.botDeployment.update({
       where: { id: String(id) },
       data: {
-        status: 'inactive',
-        metrics: {
-          requestsPerSecond: 0,
-          averageResponseTime: 0,
-          errorRate: 0,
-          cpuUsage: 0,
-          memoryUsage: 0
-        }
+        status: 'inactive'
       },
       include: {
-        model: {
+        bot: {
           select: {
             id: true,
             name: true,

@@ -1,30 +1,39 @@
-import { ref } from 'vue'
+import { computed } from 'vue'
 
+// Composable that uses the Pinia store
 export const usePipelineDebug = () => {
-  const pipelineStatus = ref({
-    step: 'Initializing',
-    complete: 0,
-    failed: 0,
-    steps: ['Ingest', 'Cleanse', 'Transform', 'Train', 'Deploy']
-  })
+  const pipelineDebugStore = usePipelineDebugStore()
 
-  const pipelineLogs = ref<string[]>([])
-
-  const simulateStep = (step: string) => {
-    pipelineLogs.value.push(`Starting ${step}...`)
-    setTimeout(() => {
-      pipelineStatus.value.complete++
-      pipelineLogs.value.push(`${step} complete.`)
-    }, 500)
-  }
-
-  const runAll = () => {
-    for (const step of pipelineStatus.value.steps) simulateStep(step)
-  }
-
+  // Return readonly state and computed properties for backward compatibility
   return {
-    pipelineStatus,
-    pipelineLogs,
-    runAll
+    // State (readonly for backward compatibility)
+    pipelineStatus: computed(() => pipelineDebugStore.pipelineStatus),
+    pipelineLogs: computed(() => pipelineDebugStore.pipelineLogs),
+
+    // Methods (delegate to store)
+    simulateStep: pipelineDebugStore.simulateStep,
+    runAll: pipelineDebugStore.runAll,
+
+    // Additional store methods
+    addLog: pipelineDebugStore.addLog,
+    clearLogs: pipelineDebugStore.clearLogs,
+    resetStatus: pipelineDebugStore.resetStatus,
+    stopExecution: pipelineDebugStore.stopExecution,
+    setDebugMode: pipelineDebugStore.setDebugMode,
+    setAutoRun: pipelineDebugStore.setAutoRun,
+    getStepDetails: pipelineDebugStore.getStepDetails,
+    getExecutionSummary: pipelineDebugStore.getExecutionSummary,
+    exportLogs: pipelineDebugStore.exportLogs,
+    importLogs: pipelineDebugStore.importLogs,
+
+    // Additional computed properties from store
+    progress: computed(() => pipelineDebugStore.progress),
+    isComplete: computed(() => pipelineDebugStore.isComplete),
+    hasErrors: computed(() => pipelineDebugStore.hasErrors),
+    currentStep: computed(() => pipelineDebugStore.currentStep),
+    stepProgress: computed(() => pipelineDebugStore.stepProgress),
+    debugMode: computed(() => pipelineDebugStore.debugMode),
+    autoRun: computed(() => pipelineDebugStore.autoRun),
+    stepDetails: computed(() => pipelineDebugStore.stepDetails),
   }
 }

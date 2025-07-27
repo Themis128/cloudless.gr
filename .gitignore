@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 node_modules/
 dist/
 *.tmp
@@ -29,8 +28,6 @@ dist/
 *.jar.metadata.efactory
 *.jar.metadata.xml
 
-=======
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
 # Nuxt dev/build outputs
 .output
 .data
@@ -42,7 +39,6 @@ dist
 # Node dependencies
 node_modules
 
-<<<<<<< HEAD
 # Cypress
 cypress/videos/
 cypress/screenshots/
@@ -286,7 +282,6 @@ docker/volumes/db/data/base/5/16742
 
 # Cursor IDE
 .cursor/
-=======
 # Logs
 logs
 *.log
@@ -300,4 +295,3 @@ logs
 .env
 .env.*
 !.env.example
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

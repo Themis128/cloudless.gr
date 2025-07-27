@@ -1,3 +1,4 @@
+import { defineEventHandler, getQuery, createError } from 'h3'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()

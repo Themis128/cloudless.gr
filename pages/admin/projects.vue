@@ -1,9 +1,11 @@
 <template>
   <div class="admin-projects-container">
-<<<<<<< HEAD
     <div class="header">
       <h1>Project Management</h1>
-      <p>Manage and organize your projects with full control over their lifecycle.</p>
+      <p>
+        Manage and organize your projects with full control over their
+        lifecycle.
+      </p>
     </div>
 
     <div class="controls">
@@ -43,8 +45,8 @@
     </div>
 
     <div v-else class="projects-grid">
-      <div 
-        v-for="project in filteredProjects" 
+      <div
+        v-for="project in filteredProjects"
         :key="project.id"
         class="project-card"
       >
@@ -54,10 +56,10 @@
             {{ project.status }}
           </span>
         </div>
-        
+
         <div class="project-content">
           <p class="project-overview">{{ project.overview }}</p>
-          
+
           <div class="project-meta">
             <div class="meta-item">
               <span class="meta-label">Category:</span>
@@ -65,7 +67,9 @@
             </div>
             <div class="meta-item">
               <span class="meta-label">Created:</span>
-              <span class="meta-value">{{ formatDate(project.createdAt) }}</span>
+              <span class="meta-value">{{
+                formatDate(project.createdAt)
+              }}</span>
             </div>
             <div v-if="project.featured" class="meta-item">
               <span class="featured-badge">Featured</span>
@@ -88,10 +92,16 @@
     </div>
 
     <!-- Add/Edit Project Modal -->
-    <div v-if="showAddProjectModal || showEditProjectModal" class="modal-overlay" @click="closeModal">
+    <div
+      v-if="showAddProjectModal || showEditProjectModal"
+      class="modal-overlay"
+      @click="closeModal"
+    >
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h2>{{ showEditProjectModal ? 'Edit Project' : 'Add New Project' }}</h2>
+          <h2>
+            {{ showEditProjectModal ? 'Edit Project' : 'Add New Project' }}
+          </h2>
           <button @click="closeModal" class="close-btn">&times;</button>
         </div>
         <form @submit.prevent="saveProject" class="project-form">
@@ -138,7 +148,11 @@
           <div class="form-row">
             <div class="form-group">
               <label for="category">Category</label>
-              <select v-model="projectForm.category" id="category" class="form-select">
+              <select
+                v-model="projectForm.category"
+                id="category"
+                class="form-select"
+              >
                 <option value="web-development">Web Development</option>
                 <option value="mobile-app">Mobile App</option>
                 <option value="design">Design</option>
@@ -147,7 +161,11 @@
             </div>
             <div class="form-group">
               <label for="status">Status</label>
-              <select v-model="projectForm.status" id="status" class="form-select">
+              <select
+                v-model="projectForm.status"
+                id="status"
+                class="form-select"
+              >
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
                 <option value="archived">Archived</option>
@@ -198,14 +216,24 @@
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
+    <div
+      v-if="showDeleteModal"
+      class="modal-overlay"
+      @click="showDeleteModal = false"
+    >
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h2>Confirm Delete</h2>
-          <button @click="showDeleteModal = false" class="close-btn">&times;</button>
+          <button @click="showDeleteModal = false" class="close-btn">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
-          <p>Are you sure you want to delete project "{{ projectToDelete?.project_name }}"?</p>
+          <p>
+            Are you sure you want to delete project "{{
+              projectToDelete?.project_name
+            }}"?
+          </p>
           <p>This action cannot be undone.</p>
         </div>
         <div class="modal-footer">
@@ -213,16 +241,40 @@
             Cancel
           </button>
           <button @click="deleteProject" class="delete-btn">
-=======
-    <h1 class="admin-title">Project Management</h1>
-    
+            Delete Project
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+// Project management logic
+</script>
+
+<style scoped>
+.admin-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.admin-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
     <div class="admin-panel">
       <div class="panel-actions">
         <button @click="showAddModal = true" class="add-project-button">
           Add New Project
         </button>
       </div>
-      
+
       <div class="projects-table-container">
         <table class="projects-table">
           <thead>
@@ -253,8 +305,8 @@
                 <button @click="editProject(project)" class="action-button edit-btn">
                   Edit
                 </button>
-                <button 
-                  @click="confirmDelete(project)" 
+                <button
+                  @click="confirmDelete(project)"
                   class="action-button delete-btn"
                 >
                   Delete
@@ -270,61 +322,57 @@
         </table>
       </div>
     </div>
-    
+
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteModal" class="modal-backdrop">
       <div class="modal-content">
         <h3>Confirm Delete</h3>
         <p>Are you sure you want to delete project "{{ selectedProject?.title }}"?</p>
         <p class="warning-text">This action cannot be undone.</p>
-        
+
         <div class="modal-actions">
           <button @click="cancelDelete" class="cancel-button">
             Cancel
           </button>
           <button @click="deleteProject" class="confirm-delete-button">
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
-            Delete Project
+Delete Project
           </button>
         </div>
       </div>
     </div>
-<<<<<<< HEAD
-=======
-    
-    <!-- Add/Edit Project Modal -->
+<!-- Add/Edit Project Modal -->
     <div v-if="showAddModal || showEditModal" class="modal-backdrop">
       <div class="modal-content project-form-modal">
         <h3>{{ showEditModal ? 'Edit Project' : 'Add New Project' }}</h3>
-        
+
         <form @submit.prevent="submitProjectForm" class="project-form">
           <div class="form-group">
             <label for="project-title">Title</label>
-            <input 
-              type="text" 
-              id="project-title" 
+            <input
+              type="text"
+              id="project-title"
               v-model="projectForm.title"
               required
               class="form-input"
             />
           </div>
-          
+
           <div class="form-group">
             <label for="project-slug">Slug</label>
-            <input 
-              type="text" 
-              id="project-slug" 
+            <input
+              type="text"
+              id="project-slug"
               v-model="projectForm.slug"
               required
               class="form-input"
             />
             <small class="form-help">Used in URL, e.g., /projects/my-project</small>
           </div>
-          
+
           <div class="form-group">
             <label for="project-category">Category</label>
-            <select 
-              id="project-category" 
+            <select
+              id="project-category"
               v-model="projectForm.category"
               required
               class="form-select"
@@ -336,32 +384,32 @@
               <option value="other">Other</option>
             </select>
           </div>
-          
+
           <div class="form-group">
             <label for="project-description">Description</label>
-            <textarea 
-              id="project-description" 
+            <textarea
+              id="project-description"
               v-model="projectForm.description"
               required
               class="form-textarea"
               rows="4"
             ></textarea>
           </div>
-          
+
           <div class="form-group">
             <label for="project-image">Featured Image URL</label>
-            <input 
-              type="text" 
-              id="project-image" 
+            <input
+              type="text"
+              id="project-image"
               v-model="projectForm.imageUrl"
               class="form-input"
             />
           </div>
-          
+
           <div class="form-group">
             <label for="project-status">Status</label>
-            <select 
-              id="project-status" 
+            <select
+              id="project-status"
               v-model="projectForm.status"
               required
               class="form-select"
@@ -371,17 +419,17 @@
               <option value="archived">Archived</option>
             </select>
           </div>
-          
+
           <div class="modal-actions">
-            <button 
-              type="button" 
-              @click="cancelProjectForm" 
+            <button
+              type="button"
+              @click="cancelProjectForm"
               class="cancel-button"
             >
               Cancel
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               class="submit-button"
             >
               {{ showEditModal ? 'Update Project' : 'Add Project' }}
@@ -390,12 +438,10 @@
         </form>
       </div>
     </div>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
-  </div>
+</div>
 </template>
 
 <script setup lang="ts">
-<<<<<<< HEAD
 import { ref, computed, onMounted } from 'vue'
 
 // Nuxt.js composables are auto-imported
@@ -605,11 +651,11 @@ const saveProject = async () => {
         body: projectForm.value
       })
     }
-    
+
     // Refresh projects list
     const { projects: projectsData } = await $fetch('/api/projects') as any
     projects.value = projectsData || []
-    
+
     closeModal()
   } catch (err) {
     console.error('Error saving project:', err)
@@ -624,10 +670,10 @@ const deleteProject = async () => {
     await $fetch(`/api/projects?id=${projectToDelete.value.id}`, {
       method: 'DELETE'
     })
-    
+
     // Remove project from list
     projects.value = projects.value.filter(project => project.id !== projectToDelete.value!.id)
-    
+
     closeModal()
   } catch (err) {
     console.error('Error deleting project:', err)
@@ -638,7 +684,6 @@ const deleteProject = async () => {
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString()
 }
-=======
 import { ref, reactive } from 'vue';
 
 interface Project {
@@ -719,7 +764,7 @@ const viewProject = (project: Project): void => {
 
 const editProject = (project: Project): void => {
   selectedProject.value = project;
-  
+
   // Populate the form
   projectForm.id = project.id;
   projectForm.title = project.title;
@@ -728,7 +773,7 @@ const editProject = (project: Project): void => {
   projectForm.category = project.category;
   projectForm.imageUrl = project.imageUrl || '';
   projectForm.status = project.status;
-  
+
   showEditModal.value = true;
 };
 
@@ -755,7 +800,7 @@ const cancelProjectForm = (): void => {
   showAddModal.value = false;
   showEditModal.value = false;
   selectedProject.value = null;
-  
+
   // Reset form
   projectForm.id = 0;
   projectForm.title = '';
@@ -775,15 +820,15 @@ const submitProjectForm = (): void => {
     description: projectForm.description,
     category: projectForm.category,
     status: projectForm.status,
-    createdAt: showEditModal.value ? 
-      (selectedProject.value?.createdAt || new Date().toISOString()) : 
+    createdAt: showEditModal.value ?
+      (selectedProject.value?.createdAt || new Date().toISOString()) :
       new Date().toISOString()
   };
-  
+
   if (projectForm.imageUrl) {
     projectData.imageUrl = projectForm.imageUrl;
   }
-  
+
   if (showEditModal.value) {
     // Update existing project
     const index = projects.value.findIndex(p => p.id === projectForm.id);
@@ -794,17 +839,15 @@ const submitProjectForm = (): void => {
     // Add new project
     projects.value.push(projectData);
   }
-  
+
   // Close modal and reset
   cancelProjectForm();
 };
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
 </script>
 
 <style scoped>
 .admin-projects-container {
-<<<<<<< HEAD
-  max-width: 1200px;
+max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 1rem;
 }
@@ -867,8 +910,7 @@ const submitProjectForm = (): void => {
   border: none;
   border-radius: 0.5rem;
   font-weight: 600;
-=======
-  width: 100%;
+width: 100%;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -902,12 +944,10 @@ const submitProjectForm = (): void => {
   border: none;
   border-radius: 4px;
   font-weight: 500;
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
-  cursor: pointer;
+cursor: pointer;
   transition: background-color 0.2s;
 }
 
-<<<<<<< HEAD
 .add-project-btn:hover {
   background: #059669;
 }
@@ -955,7 +995,6 @@ const submitProjectForm = (): void => {
   font-size: 1.25rem;
   flex: 1;
   margin-right: 1rem;
-=======
 .add-project-button:hover {
   background-color: #1d4ed8;
 }
@@ -986,13 +1025,11 @@ const submitProjectForm = (): void => {
 
 .projects-table tr:hover td {
   background-color: #f8fafc;
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
 }
 
 .status-badge {
   padding: 0.25rem 0.5rem;
-<<<<<<< HEAD
-  border-radius: 0.25rem;
+border-radius: 0.25rem;
   font-size: 0.75rem;
   font-weight: 500;
   text-transform: uppercase;
@@ -1106,8 +1143,7 @@ const submitProjectForm = (): void => {
 
 /* Modal Styles */
 .modal-overlay {
-=======
-  border-radius: 9999px;
+border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
   text-transform: capitalize;
@@ -1179,30 +1215,25 @@ const submitProjectForm = (): void => {
 
 /* Modal Styles */
 .modal-backdrop {
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
-  position: fixed;
+position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-<<<<<<< HEAD
-  background: rgba(0, 0, 0, 0.5);
+background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-=======
-  background-color: rgba(0, 0, 0, 0.5);
+background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
-  z-index: 1000;
+z-index: 1000;
 }
 
 .modal-content {
   background: white;
-<<<<<<< HEAD
-  border-radius: 0.5rem;
+border-radius: 0.5rem;
   max-width: 600px;
   width: 90%;
   max-height: 80vh;
@@ -1360,12 +1391,8 @@ const submitProjectForm = (): void => {
   border-radius: 0.375rem;
   padding: 0.75rem 1.5rem;
   font-weight: 500;
-=======
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
 .project-form-modal {
@@ -1406,12 +1433,10 @@ const submitProjectForm = (): void => {
   color: white;
   border: none;
   border-radius: 4px;
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
-<<<<<<< HEAD
 .delete-btn:hover {
   background: #dc2626;
 }
@@ -1421,84 +1446,25 @@ const submitProjectForm = (): void => {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .search-filters {
     flex-direction: column;
   }
-  
+
   .search-input {
     max-width: none;
   }
-  
+
   .projects-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .project-actions {
     flex-direction: column;
   }
 }
 </style>
-
-=======
-.confirm-delete-button:hover {
-  background-color: #dc2626;
-}
-
-.submit-button {
-  padding: 0.5rem 1rem;
-  background-color: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.submit-button:hover {
-  background-color: #1d4ed8;
-}
-
-/* Form Styles */
-.project-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-group label {
-  font-weight: 500;
-  color: #334155;
-}
-
-.form-input, 
-.form-select, 
-.form-textarea {
-  padding: 0.5rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  font-size: 0.95rem;
-}
-
-.form-help {
-  font-size: 0.75rem;
-  color: #64748b;
-}
-
-@media (max-width: 768px) {
-  .project-form-modal {
-    max-width: 90%;
-  }
-}
-</style>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

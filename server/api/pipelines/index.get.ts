@@ -1,61 +1,41 @@
-export default defineEventHandler(async (event) => {
+import { createError, defineEventHandler } from 'h3'
+import { getPrismaClient } from '~/server/utils/prisma'
+
+export default defineEventHandler(async event => {
   try {
-    const { $prisma } = event.context
-    
-    // Get user from session/token
-    const user = await getUserFromRequest(event)
-    if (!user) {
+    const prisma = await getPrismaClient()
+    if (!prisma) {
       throw createError({
-        statusCode: 401,
-        message: 'Unauthorized'
+        statusCode: 500,
+        message: 'Database service unavailable'
       })
     }
-    
-    // Fetch pipelines for the user
-    const pipelines = await $prisma.pipeline.findMany({
-      where: {
-        userId: user.id
-      },
+
+    const pipelines = await prisma.pipeline.findMany({
       include: {
+        runs: true,
         user: {
           select: {
             id: true,
             name: true,
-            email: true
-          }
-        },
-        runs: {
-          orderBy: {
-            createdAt: 'desc'
+            email: true,
           },
-          take: 5
-        }
+        },
       },
       orderBy: {
-        updatedAt: 'desc'
-      }
+        createdAt: 'desc',
+      },
     })
-    
-    // Cache the result
-    const cacheKey = `pipelines:${user.id}`
-    await $storage.setItem(cacheKey, pipelines, { ttl: 300 }) // 5 minutes
-    
+
     return {
       success: true,
       data: pipelines,
-      count: pipelines.length
+      message: 'Pipelines retrieved successfully',
     }
-  } catch (error) {
-    console.error('Error fetching pipelines:', error)
+  } catch (error: any) {
     throw createError({
       statusCode: 500,
-      message: 'Failed to fetch pipelines'
+      message: error.message || 'Failed to retrieve pipelines',
     })
   }
 })
-
-async function getUserFromRequest(event: any) {
-  // In a real app, this would extract user from JWT token or session
-  // For now, return a mock user
-  return { id: 1, name: 'Test User', email: 'test@example.com' }
-} 

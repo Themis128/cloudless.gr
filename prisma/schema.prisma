@@ -1,15 +1,15 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../node_modules/.prisma/client"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-<<<<<<< HEAD
   id         Int         @id @default(autoincrement())
   email      String      @unique
   password   String
@@ -22,7 +22,7 @@ model User {
   lockedUntil DateTime?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
-  
+
   // Relations
   bots       Bot[]
   components Component[]
@@ -34,7 +34,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
   userRoles  UserRole[]
-  roleAssignments UserRole[] @relation("RoleAssignments")
+  datasets   Dataset[]
 }
 
 // Session management for better security
@@ -102,14 +102,14 @@ model Project {
   slug           String         @unique
   overview       String
   description    String
-  isFavorite     Boolean        @default(false)
   live_url       String?
   github_url     String?
   status         String         @default("draft")
-  category       String         @default("other")
+  category       String?
   client         String?
   clientLogo     String?
   featured       Boolean        @default(false)
+  isFavorite     Boolean        @default(false)
   completionDate String?
   duration       String?
   teamSize       Int?
@@ -117,143 +117,164 @@ model Project {
   updatedAt      DateTime       @updatedAt
   userId         Int
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  images         ProjectImage[]
-  tags           ProjectTag[]
-  testimonials   Testimonial[]
+
+  // Relations
+  tags          ProjectTag[]
+  images        ProjectImage[]
+  testimonials  Testimonial[]
 }
 
 model ProjectTag {
-  id         Int     @id @default(autoincrement())
-  tag_name   String
-  is_primary Boolean @default(false)
-  color      String?
-  projectId  Int
-  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id          Int      @id @default(autoincrement())
+  name        String
+  color       String?
+  primary     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  projects    Project[]
 }
 
 model ProjectImage {
-  id           Int     @id @default(autoincrement())
-  img_name     String
-  img_url      String
+  id          Int      @id @default(autoincrement())
+  img_name    String
+  img_url     String
   is_thumbnail Boolean @default(false)
-  alt          String?
-  caption      String?
-  order        Int     @default(0)
-  projectId    Int
-  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  alt         String?
+  caption     String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  projectId   Int
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model Testimonial {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   quote     String
   author    String
   position  String?
   company   String?
-  avatar    String?
-  rating    Int?
+  rating    Int      @default(5)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
   projectId Int
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model Bot {
-  id          Int             @id @default(autoincrement())
+  id          String   @id @default(cuid())
   name        String
   description String?
-  config      String
-  status      String          @default("draft")
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  type        String   @default("chatbot")
+  status      String   @default("draft")
+  config      String?  // JSON configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   userId      Int
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
   deployments BotDeployment[]
 }
 
 model BotDeployment {
-  id          Int      @id @default(autoincrement())
-  name        String
-  environment String   @default("development")
-  status      String   @default("stopped")
-  config      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  botId       Int
-  bot         Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  botId     String
+  bot       Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+  status    String   @default("pending")
+  url       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Model {
-  id          Int             @id @default(autoincrement())
+  id          String   @id @default(cuid())
   name        String
   description String?
-  type        String
-  config      String
-  status      String          @default("draft")
-  accuracy    Float?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  type        String   @default("llm")
+  status      String   @default("draft")
+  config      String?  // JSON configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   userId      Int
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trainings   ModelTraining[]
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  trainings  ModelTraining[]
 }
 
 model ModelTraining {
-  id          Int       @id @default(autoincrement())
-  status      String    @default("pending")
-  config      String
-  logs        String?
-  metrics     String?
-  startedAt   DateTime?
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  modelId     Int
-  model       Model     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  modelId   String
+  model     Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  status    String   @default("pending")
+  progress  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Pipeline {
-  id          Int           @id @default(autoincrement())
+  id          String   @id @default(cuid())
   name        String
   description String?
-  config      String
-  status      String        @default("draft")
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  type        String   @default("data")
+  status      String   @default("draft")
+  config      String?  // JSON configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   userId      Int
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  runs        PipelineRun[]
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  runs       PipelineRun[]
 }
 
 model PipelineRun {
-  id          Int       @id @default(autoincrement())
-  status      String    @default("pending")
-  config      String
-  logs        String?
-  results     String?
-  startedAt   DateTime?
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  pipelineId  Int
-  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  pipelineId String
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  status     String   @default("pending")
+  progress   Int      @default(0)
+  result     String?  // JSON result
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model ContactSubmission {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String
-  subject   String
-  message   String
-  createdAt DateTime @default(now())
-  status    String   @default("new")
-  notes     String?
-  metadata  String?
+  id          Int      @id @default(autoincrement())
+  name        String
+  email       String
+  subject     String
+  message     String
+  createdAt   DateTime @default(now())
+  status      String   @default("new")
+  notes       String?
+  metadata    String?
+  assignedTo  String?
+  budget      String?
+  company     String?
+  heardFrom   String?
+  ipAddress   String?
+  newsletter  Boolean? @default(false)
+  phone       String?
+  projectType String?
+  timeline    String?
+  userAgent   String?
 }
 
 model Component {
-  id          Int      @id @default(autoincrement())
+  id          String   @id @default(cuid())
   name        String
-  type        String
-  description String
-  tags        String
-  preview     String
-  code        String
+  description String?
+  type        String   @default("ui")
+  status      String   @default("draft")
+  config      String?  // JSON configuration
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   userId      Int
@@ -261,15 +282,14 @@ model Component {
 }
 
 model Todo {
-  id          String   @id @default(cuid())
+  id          Int      @id @default(autoincrement())
   title       String
+  description String?
   is_complete Boolean  @default(false)
-  created_at  DateTime @default(now())
-
-  @@map("todos")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-// RBAC Tables
 model Role {
   id          Int      @id @default(autoincrement())
   name        String   @unique
@@ -316,60 +336,36 @@ model RolePermission {
 }
 
 model UserRole {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  roleId    Int
-  assignedBy Int?    // Who assigned this role
-  assignedAt DateTime @default(now())
-  expiresAt DateTime? // Optional expiration
-  isActive  Boolean  @default(true)
-
-  // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  assigner  User?    @relation("RoleAssignments", fields: [assignedBy], references: [id])
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  roleId      Int
+  assignedAt  DateTime @default(now())
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roleId])
   @@map("user_roles")
-=======
-  id          String    @id @default(cuid())
-  email       String    @unique
-  name        String
-  password    String
-  role        String    @default("user")
-  avatar      String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  lastLogin   DateTime?
-  bio         String?
-  website     String?
-  company     String?
-  position    String?
-  location    String?
-  phone       String?
-  socialLinks String?
-  preferences String?
 }
 
-model ContactSubmission {
-  id          Int      @id @default(autoincrement())
+// Dataset model for LLM training data
+model Dataset {
+  id          String   @id @default(cuid())
   name        String
-  email       String
-  subject     String
-  message     String
+  description String?
+  type        String   // text-generation, text-classification, question-answering, summarization
+  status      String   @default("uploading") // uploading, processing, ready, error
+  size        Int      @default(0)
+  format      String   // csv, json, txt, jsonl
+  samples     Int?
+  filePath    String?
+  userId      Int?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
-  status      String   @default("new")
-  notes       String?
-  metadata    String?
-  assignedTo  String?
-  budget      String?
-  company     String?
-  heardFrom   String?
-  ipAddress   String?
-  newsletter  Boolean? @default(false)
-  phone       String?
-  projectType String?
-  timeline    String?
-  userAgent   String?
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
 }

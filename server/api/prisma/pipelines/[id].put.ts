@@ -13,13 +13,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const pipelineId = parseInt(id)
-    if (isNaN(pipelineId)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid pipeline ID format'
-      })
-    }
+
 
     // Validate the update data
     const { name, description, config, status } = body
@@ -54,7 +48,7 @@ export default defineEventHandler(async (event) => {
 
     // Check if pipeline exists
     const existingPipeline = await prisma.pipeline.findUnique({
-      where: { id: pipelineId }
+      where: { id: String(id) }
     })
 
     if (!existingPipeline) {
@@ -66,7 +60,7 @@ export default defineEventHandler(async (event) => {
 
     // Update the pipeline
     const updatedPipeline = await prisma.pipeline.update({
-      where: { id: pipelineId },
+      where: { id: String(id) },
       data: {
         ...(name !== undefined && { name: name.trim() }),
         ...(description !== undefined && { description: description.trim() }),

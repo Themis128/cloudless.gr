@@ -1,18 +1,20 @@
 import { defineEventHandler } from 'h3'
-import { databaseService } from '~/lib/database'
+import { getPrismaClient } from '~/server/utils/prisma'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async event => {
   try {
+    const prisma = getPrismaClient()
+
     // Get basic stats from the database
     const [projects, users] = await Promise.all([
-      databaseService.prisma.project.count(),
-      databaseService.prisma.user.count()
+      prisma.project.count(),
+      prisma.user.count(),
     ])
 
     return {
       projects,
       users,
-      active: projects // For now, assume all projects are active
+      active: projects, // For now, assume all projects are active
     }
   } catch (error) {
     console.error('Error fetching stats:', error)
@@ -20,7 +22,7 @@ export default defineEventHandler(async (event) => {
     return {
       projects: 0,
       users: 0,
-      active: 0
+      active: 0,
     }
   }
-}) 
+})

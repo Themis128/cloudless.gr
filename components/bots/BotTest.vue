@@ -6,7 +6,7 @@
         Interact with your bot below. Send a message and view its response.
       </v-alert>
       <v-list>
-        <v-list-item v-for="msg in botStore.testMessages" :key="msg.id">
+        <v-list-item v-for="msg in messages" :key="msg.id">
           <template v-if="msg.role === 'user'" #prepend>
             <v-icon icon="mdi-account" class="me-2" />
           </template>
@@ -14,32 +14,31 @@
             <v-icon icon="mdi-robot" color="primary" class="me-2" />
           </template>
           <v-list-item-title>
-            <span
-              v-if="msg.role === 'user'"
-              class="font-weight-bold"
-            >You:</span>
+            <span v-if="msg.role === 'user'" class="font-weight-bold"
+              >You:</span
+            >
             <span v-else class="text-primary">Bot:</span>
             <span class="ml-2">{{ msg.text }}</span>
           </v-list-item-title>
         </v-list-item>
       </v-list>
       <v-text-field
-        v-model="botStore.testInput"
+        v-model="input"
         label="Type your message..."
         append-inner-icon="mdi-send"
-        :disabled="botStore.loading"
+        :disabled="isLoading"
         @keyup.enter="sendMessage"
         @click:append-inner="sendMessage"
       />
-      <div v-if="botStore.testSteps.length" class="mt-6">
+      <div v-if="hasSteps" class="mt-6">
         <v-progress-linear
-          :value="botStore.testProgress"
+          :value="progress"
           color="primary"
           height="8"
           rounded
         />
         <v-list class="mt-2">
-          <v-list-item v-for="(step, idx) in botStore.testSteps" :key="step.name">
+          <v-list-item v-for="(step, idx) in steps" :key="step.name">
             <v-list-item-title
               :class="[
                 step.status === 'running'
@@ -60,25 +59,36 @@
           </v-list-item>
         </v-list>
       </div>
+      <v-alert v-if="error" type="error" class="mt-4">
+        {{ error }}
+      </v-alert>
     </v-card-text>
   </v-card>
 </template>
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { useBotStore } from '~/stores/botStore'
 
 const props = defineProps<{ botId?: string }>()
 const route = useRoute()
 let botId = props.botId || route.params.id
 if (Array.isArray(botId)) botId = botId[0]
 
-const botStore = useBotStore()
-
-const sendMessage = async () => {
-  if (!botStore.testInput.trim()) return
-  await botStore.sendTestMessage(parseInt(botId), botStore.testInput)
-}
+// Use the new bot test composable
+const {
+  input,
+  messages,
+  steps,
+  progress,
+  isLoading,
+  error,
+  hasSteps,
+  sendMessage,
+  reset,
+  clearMessages,
+  clearSteps,
+  clearError,
+} = useBotTest(botId)
 </script>
 
 <style scoped>

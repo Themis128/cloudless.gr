@@ -1,7 +1,7 @@
 // server/middleware/rate-limit-enhanced.ts
 import { createError, defineEventHandler, getRequestHeader } from 'h3'
 import { analytics } from '~/server/utils/analytics'
-import redis from '~/server/utils/redis'
+import { redis } from '~/server/utils/redis'
 
 interface RateLimitConfig {
   windowMs: number
@@ -19,10 +19,20 @@ interface RateLimitConfig {
 
 const defaultConfig: RateLimitConfig = {
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: process.env.NODE_ENV === 'development' ? 1000 : (process.env.TESTING === 'true' ? 10000 : 100),
+  maxRequests:
+    process.env.NODE_ENV === 'development'
+      ? 1000
+      : process.env.TESTING === 'true'
+        ? 10000
+        : 100,
   keyPrefix: 'rate_limit:',
   message: 'Too many requests, please try again later.',
-  burstLimit: process.env.NODE_ENV === 'development' ? 500 : (process.env.TESTING === 'true' ? 5000 : 50),
+  burstLimit:
+    process.env.NODE_ENV === 'development'
+      ? 500
+      : process.env.TESTING === 'true'
+        ? 5000
+        : 50,
   slidingWindow: true,
   userBased: false,
   whitelist: [],
@@ -39,11 +49,13 @@ export const createEnhancedRateLimit = (
     const startTime = Date.now()
 
     // Skip rate limiting in test environment or for Playwright tests
-    if (process.env.NODE_ENV === 'test' || 
-        process.env.TESTING === 'true' ||
-        getRequestHeader(event, 'user-agent')?.includes('Playwright') ||
-        process.env.NODE_ENV === 'development' ||
-        event.path?.includes('/api/auth/login')) {
+    if (
+      process.env.NODE_ENV === 'test' ||
+      process.env.TESTING === 'true' ||
+      getRequestHeader(event, 'user-agent')?.includes('Playwright') ||
+      process.env.NODE_ENV === 'development' ||
+      event.path?.includes('/api/auth/login')
+    ) {
       return // Allow all requests during testing, development, and login endpoints
     }
 
@@ -82,12 +94,21 @@ export const createEnhancedRateLimit = (
 
       // Check burst limit first
       if (!redis) {
-        throw createError({
-          statusCode: 500,
-          statusMessage: 'Redis connection not available',
-        })
+        // If Redis is not available, skip rate limiting instead of throwing error
+        console.warn('Redis not available, skipping rate limiting')
+        return
       }
-      const burstCount = await redis.get(burstKey)
+      let burstCount: string | null = null
+      try {
+        burstCount = await redis.get(burstKey)
+      } catch (redisError) {
+        console.warn(
+          'Redis get operation failed, continuing without burst check:',
+          redisError
+        )
+        return
+      }
+
       if (
         burstCount &&
         parseInt(burstCount) >= (finalConfig.burstLimit || 10)
@@ -118,12 +139,29 @@ export const createEnhancedRateLimit = (
       }
 
       // Get current request count
-      const currentCount = await redis.get(key)
+      let currentCount: string | null = null
+      try {
+        currentCount = await redis.get(key)
+      } catch (redisError) {
+        console.warn(
+          'Redis get operation failed, continuing without rate limit check:',
+          redisError
+        )
+        return
+      }
       const count = currentCount ? parseInt(currentCount) : 0
 
       if (count >= finalConfig.maxRequests) {
         // Rate limit exceeded
-        const ttl = await redis.ttl(key)
+        let ttl = 60 // Default TTL
+        try {
+          ttl = await redis.ttl(key)
+        } catch (redisError) {
+          console.warn(
+            'Redis TTL operation failed, using default TTL:',
+            redisError
+          )
+        }
 
         if (finalConfig.trackAnalytics) {
           await analytics.trackEvent({
@@ -153,10 +191,18 @@ export const createEnhancedRateLimit = (
 
       // Increment counters
       // Use individual Redis commands instead of multi
-      await redis.incr(key)
-      await redis.expire(key, Math.ceil(finalConfig.windowMs / 1000))
-      await redis.incr(burstKey)
-      await redis.expire(burstKey, 60) // 1 minute TTL for burst
+      try {
+        await redis.incr(key)
+        await redis.expire(key, Math.ceil(finalConfig.windowMs / 1000))
+        await redis.incr(burstKey)
+        await redis.expire(burstKey, 60) // 1 minute TTL for burst
+      } catch (redisError) {
+        console.warn(
+          'Redis operation failed, continuing without rate limiting:',
+          redisError
+        )
+        return
+      }
 
       // Track successful request
       if (finalConfig.trackAnalytics) {

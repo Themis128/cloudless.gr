@@ -10,16 +10,12 @@
         <!-- Welcome Header -->
         <v-card class="mb-6 bg-gradient-primary">
           <v-card-text class="text-center py-8">
-            <v-icon size="64" color="white" class="mb-4">
-              mdi-robot
-            </v-icon>
-            <h1 class="text-h3 font-weight-bold text-white mb-4">
-              AI Bot Management
-            </h1>
+            <v-icon size="64" color="white" class="mb-4"> mdi-robot </v-icon>
+            <h1 class="text-h3 font-weight-bold text-white mb-4">AI Bot Management</h1>
             <p class="text-h6 text-white/90 mb-6">
               Create, configure, and deploy intelligent AI bots for your applications
             </p>
-            
+
             <!-- Quick Stats -->
             <v-row class="justify-center">
               <v-col cols="6" md="3">
@@ -34,7 +30,9 @@
               <v-col cols="6" md="3">
                 <v-card class="text-center bg-transparent" elevation="0">
                   <v-card-text class="pa-4">
-                    <div class="text-h4 font-weight-bold text-white mb-1">{{ botStats.active }}</div>
+                    <div class="text-h4 font-weight-bold text-white mb-1">
+                      {{ botStats.active }}
+                    </div>
                     <div class="text-white/80 text-body-2">Active Bots</div>
                     <v-icon color="white" class="mt-2" size="24">mdi-robot-outline</v-icon>
                   </v-card-text>
@@ -43,7 +41,9 @@
               <v-col cols="6" md="3">
                 <v-card class="text-center bg-transparent" elevation="0">
                   <v-card-text class="pa-4">
-                    <div class="text-h4 font-weight-bold text-white mb-1">{{ botStats.training }}</div>
+                    <div class="text-h4 font-weight-bold text-white mb-1">
+                      {{ botStats.training }}
+                    </div>
                     <div class="text-white/80 text-body-2">In Training</div>
                     <v-icon color="white" class="mt-2" size="24">mdi-school</v-icon>
                   </v-card-text>
@@ -52,7 +52,9 @@
               <v-col cols="6" md="3">
                 <v-card class="text-center bg-transparent" elevation="0">
                   <v-card-text class="pa-4">
-                    <div class="text-h4 font-weight-bold text-white mb-1">{{ performanceTrends.averageResponseTime.toFixed(1) }}ms</div>
+                    <div class="text-h4 font-weight-bold text-white mb-1">
+                      {{ performanceTrends.averageResponseTime.toFixed(1) }}ms
+                    </div>
                     <div class="text-white/80 text-body-2">Avg Response</div>
                     <v-icon color="white" class="mt-2" size="24">mdi-clock-outline</v-icon>
                   </v-card-text>
@@ -72,10 +74,7 @@
         <BotsBotList @create-bot="showCreateDialog = true" />
 
         <!-- Create Bot Dialog -->
-        <BotsBotBuilderDialog
-          v-model="showCreateDialog"
-          @bot-created="handleBotCreated"
-        />
+        <BotsBotBuilderDialog v-model="showCreateDialog" @bot-created="handleBotCreated" />
       </template>
 
       <template #sidebar>
@@ -190,199 +189,238 @@
             >
               Documentation
             </v-btn>
-            <v-btn
-              block
-              variant="text"
-              prepend-icon="mdi-video"
-              to="/tutorials"
-              class="mb-2"
-            >
+            <v-btn block variant="text" prepend-icon="mdi-video" to="/tutorials" class="mb-2">
               Tutorials
             </v-btn>
-            <v-btn
-              block
-              variant="text"
-              prepend-icon="mdi-forum"
-              to="/support"
-            >
-              Support
-            </v-btn>
+            <v-btn block variant="text" prepend-icon="mdi-forum" to="/support"> Support </v-btn>
           </v-card-text>
         </v-card>
       </template>
     </LayoutPageStructure>
 
     <!-- Success/Error Messages -->
-    <v-snackbar
-      v-model="showSuccess"
-      color="success"
-      timeout="3000"
-    >
+    <v-snackbar v-model="showSuccess" color="success" timeout="3000">
       {{ successMessage }}
     </v-snackbar>
 
-    <v-snackbar
-      v-model="showError"
-      color="error"
-      timeout="5000"
-    >
+    <v-snackbar v-model="showError" color="error" timeout="5000">
       {{ errorMessage }}
     </v-snackbar>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useBotStore } from '~/stores/botStore'
-import { useBotAnalytics } from '~/composables/useBotAnalytics'
-import { useBotDebug } from '~/composables/useBotDebug'
-import { formatBotDate, exportBotData } from '~/utils/botHelpers'
+  import { computed, onMounted, ref, watch } from 'vue'
+  import { useBotAnalyticsStore } from '~/stores/botAnalyticsStore'
+  import { useBotDebugStore } from '~/stores/botDebugStore'
+  import { useBotStore } from '~/stores/botStore'
+  import { exportBotData, formatBotDate } from '~/utils/botHelpers'
 
-// SEO Meta Tags
-import { useHead } from 'nuxt/app'
+  // SEO Meta Tags
+  import { useHead } from 'nuxt/app'
 
-// TypeScript declaration for Nuxt global functions
-declare const definePageMeta: (meta: any) => void
+  // TypeScript declaration for Nuxt global functions
+  declare const definePageMeta: (meta: any) => void
 
-useHead({
-  title: 'Bot Management - Cloudless',
-  meta: [
-    { name: 'description', content: 'Create, manage, and test your AI bots with our comprehensive platform.' },
-    { property: 'og:title', content: 'Bot Management - Cloudless' },
-    { property: 'og:description', content: 'Create, manage, and test your AI bots' },
-    { property: 'og:type', content: 'website' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: 'Bot Management - Cloudless' },
-    { name: 'twitter:description', content: 'Create, manage, and test your AI bots' }
-  ]
-})
+  useHead({
+    title: 'Bot Management - Cloudless',
+    meta: [
+      {
+        name: 'description',
+        content: 'Create, manage, and test your AI bots with our comprehensive platform.',
+      },
+      { property: 'og:title', content: 'Bot Management - Cloudless' },
+      { property: 'og:description', content: 'Create, manage, and test your AI bots' },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: 'Bot Management - Cloudless' },
+      { name: 'twitter:description', content: 'Create, manage, and test your AI bots' },
+    ],
+  })
 
-definePageMeta({
-  layout: 'default'
-})
+  definePageMeta({
+    layout: 'default',
+  })
 
-// Types
-interface Bot {
-  id: number
-  name: string
-  description?: string
-  status: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-// Store integration
-const botStore = useBotStore()
-const { botStats, performanceTrends, recentActivity } = useBotAnalytics()
-const { logBotAction } = useBotDebug()
-
-// Computed properties
-const isLoading = computed(() => botStore.loading)
-
-// Reactive state
-const showCreateDialog = ref(false)
-const exporting = ref(false)
-const showSuccess = ref(false)
-const showError = ref(false)
-const successMessage = ref('')
-const errorMessage = ref('')
-
-// Methods
-const handleBotCreated = (bot: Bot) => {
-  showSuccess.value = true
-  successMessage.value = `Bot "${bot.name}" created successfully!`
-  logBotAction('create', bot.id, { name: bot.name })
-  // Refresh data after creation
-  botStore.fetchAll()
-}
-
-const exportAllBots = async () => {
-  exporting.value = true
-  try {
-    const data = exportBotData(botStore.bots)
-    const blob = new Blob([data], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `all-bots-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    
-    showSuccess.value = true
-    successMessage.value = `Exported ${botStore.bots.length} bots successfully!`
-    logBotAction('export', 0, { count: botStore.bots.length })
-  } catch (error) {
-    showError.value = true
-    errorMessage.value = 'Failed to export bots'
-    console.error('Export failed:', error)
-  } finally {
-    exporting.value = false
+  // Types
+  interface Bot {
+    id: number
+    name: string
+    description?: string
+    status: string
+    createdAt: Date
+    updatedAt: Date
   }
-}
 
-const importBots = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = '.json'
-  input.onchange = async (event) => {
-    const file = (event.target as HTMLInputElement).files?.[0]
-    if (file) {
-      try {
-        const text = await file.text()
-        const bots = JSON.parse(text)
-        
-        // Validate and import bots
-        for (const bot of bots) {
-          await botStore.createBot(bot)
-        }
-        
-        showSuccess.value = true
-        successMessage.value = `Imported ${bots.length} bots successfully!`
-        logBotAction('import', 0, { count: bots.length })
-        // Refresh data after import
-        botStore.fetchAll()
-      } catch (error) {
-        showError.value = true
-        errorMessage.value = 'Failed to import bots. Please check the file format.'
-        console.error('Import failed:', error)
-      }
+  // Store integration
+  const botStore = useBotStore()
+  const botAnalyticsStore = useBotAnalyticsStore()
+  const botDebugStore = useBotDebugStore()
+
+  // Computed properties
+  const isLoading = computed(() => botStore.loading)
+
+  // Bot statistics
+  const botStats = computed(() => {
+    const bots = botStore.bots || []
+    return {
+      total: bots.length,
+      active: bots.filter(bot => bot.status === 'active').length,
+      inactive: bots.filter(bot => bot.status === 'inactive').length,
+      training: bots.filter(bot => bot.status === 'training').length,
+    }
+  })
+
+  // Performance trends
+  const performanceTrends = computed(() => {
+    return {
+      averageResponseTime: 125.5, // Mock data - replace with actual analytics
+    }
+  })
+
+  // Recent activity
+  const recentActivity = computed(() => {
+    const bots = botStore.bots || []
+    return bots
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 10)
+  })
+
+  // Reactive state
+  const showCreateDialog = ref(false)
+  const exporting = ref(false)
+  const showSuccess = ref(false)
+  const showError = ref(false)
+  const successMessage = ref('')
+  const errorMessage = ref('')
+
+  // Methods
+  const handleBotCreated = (bot: Bot) => {
+    showSuccess.value = true
+    successMessage.value = `Bot "${bot.name}" created successfully!`
+    botDebugStore.logBotAction({
+      botId: bot.id,
+      botName: bot.name,
+      action: 'create',
+      status: 'success',
+      details: `Bot "${bot.name}" created successfully`,
+    })
+    // Refresh data after creation
+    botStore.fetchAll()
+  }
+
+  const exportAllBots = async () => {
+    exporting.value = true
+    try {
+      const data = exportBotData(botStore.bots)
+      const blob = new Blob([data], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `all-bots-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      showSuccess.value = true
+      successMessage.value = `Exported ${botStore.bots.length} bots successfully!`
+      botDebugStore.logBotAction({
+        botId: '0',
+        botName: 'System',
+        action: 'export',
+        status: 'success',
+        details: `Exported ${botStore.bots.length} bots`,
+      })
+    } catch (error) {
+      showError.value = true
+      errorMessage.value = 'Failed to export bots'
+      console.error('Export failed:', error)
+    } finally {
+      exporting.value = false
     }
   }
-  input.click()
-}
 
-// Client-side initialization
-onMounted(async () => {
-  try {
-    await botStore.fetchAll()
-    logBotAction('page_view', 0, { page: 'bots_index' })
-  } catch (error) {
-    console.error('Failed to fetch bots:', error)
-    showError.value = true
-    errorMessage.value = 'Failed to load bots data'
-  }
-})
+  const importBots = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = async event => {
+      const file = (event.target as HTMLInputElement).files?.[0]
+      if (file) {
+        try {
+          const text = await file.text()
+          const bots = JSON.parse(text)
 
-// Watch for store changes
-watch(() => botStore.error, (error) => {
-  if (error) {
-    showError.value = true
-    errorMessage.value = error
-  }
-})
+          // Validate and import bots
+          for (const bot of bots) {
+            await botStore.createBot(bot)
+          }
 
-watch(() => botStore.success, (success) => {
-  if (success) {
-    showSuccess.value = true
-    successMessage.value = success
+          showSuccess.value = true
+          successMessage.value = `Imported ${bots.length} bots successfully!`
+          botDebugStore.logBotAction({
+            botId: '0',
+            botName: 'System',
+            action: 'import',
+            status: 'success',
+            details: `Imported ${bots.length} bots`,
+          })
+          // Refresh data after import
+          botStore.fetchAll()
+        } catch (error) {
+          showError.value = true
+          errorMessage.value = 'Failed to import bots. Please check the file format.'
+          console.error('Import failed:', error)
+        }
+      }
+    }
+    input.click()
   }
-})
+
+  // Client-side initialization
+  onMounted(async () => {
+    try {
+      await botStore.fetchAll()
+      // Log page view action
+      botDebugStore.logBotAction({
+        botId: '0',
+        botName: 'System',
+        action: 'page_view',
+        status: 'success',
+        details: 'Viewed bots index page',
+      })
+    } catch (error) {
+      console.error('Failed to fetch bots:', error)
+      showError.value = true
+      errorMessage.value = 'Failed to load bots data'
+    }
+  })
+
+  // Watch for store changes
+  watch(
+    () => botStore.error,
+    error => {
+      if (error) {
+        showError.value = true
+        errorMessage.value = error
+      }
+    }
+  )
+
+  watch(
+    () => botStore.success,
+    success => {
+      if (success) {
+        showSuccess.value = true
+        successMessage.value = success
+      }
+    }
+  )
 </script>
 
 <style scoped>
-.bg-gradient-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
 </style>

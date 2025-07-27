@@ -142,7 +142,7 @@
         <div class="form-group">
           <label class="checkbox-container">
             <input
-              v-model="form.acceptTerms"
+              v-model="form.agreeToTerms"
               type="checkbox"
               required
               class="checkbox"
@@ -210,15 +210,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 interface RegisterForm {
   name: string
   email: string
   password: string
   confirmPassword: string
-  acceptTerms: boolean
-  newsletter: boolean
+  agreeToTerms: boolean
 }
 
 const emit = defineEmits<{
@@ -232,8 +231,7 @@ const form = ref<RegisterForm>({
   email: '',
   password: '',
   confirmPassword: '',
-  acceptTerms: false,
-  newsletter: false
+  agreeToTerms: false
 })
 
 const showPassword = ref(false)
@@ -246,14 +244,16 @@ const authStore = useAuthStore()
 
 // Computed
 const isFormValid = computed(() => {
-  return form.value.name && 
-         form.value.email && 
-         form.value.email.includes('@') &&
-         form.value.password && 
-         form.value.confirmPassword &&
-         passwordsMatch.value &&
-         form.value.acceptTerms &&
-         passwordStrength.value >= 60
+  return (
+    form.value.name &&
+    form.value.email &&
+    form.value.password &&
+    form.value.confirmPassword &&
+    form.value.password === form.value.confirmPassword &&
+    form.value.email.includes('@') &&
+    form.value.password.length >= 8 &&
+    form.value.agreeToTerms
+  )
 })
 
 const passwordsMatch = computed(() => {
@@ -313,12 +313,9 @@ const handleRegister = async () => {
     if (result.success) {
       emit('success', authStore.user)
       
-      // Redirect based on user role
-      if (authStore.isAdmin) {
-        await navigateTo('/admin/users')
-      } else {
-        await navigateTo('/dashboard')
-      }
+      // Get redirect path based on user role using the store's logic
+      const redirectPath = authStore.getRedirectPath(authStore.user)
+      await navigateTo(redirectPath)
     } else {
       error.value = result.error || 'Registration failed'
       emit('error', error.value)

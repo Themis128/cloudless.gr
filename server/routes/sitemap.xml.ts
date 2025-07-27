@@ -1,6 +1,8 @@
 // This file handles the generation of a sitemap.xml for better SEO
 // For Nuxt 3, place this in the server/routes directory
 
+import { defineEventHandler, setResponseHeader } from 'h3'
+
 export default defineEventHandler(async (event) => {
   // Set the appropriate XML content type
   setResponseHeader(event, 'Content-Type', 'text/xml');

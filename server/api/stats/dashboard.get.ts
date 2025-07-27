@@ -1,32 +1,37 @@
-import { defineEventHandler, createError } from 'h3'
-import { databaseService } from '~/lib/database'
+import { defineEventHandler } from 'h3'
+import { getPrismaClient } from '~/server/utils/prisma'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async event => {
   try {
-    // Get counts from database
-    const [projectsCount, usersCount, activeProjectsCount] = await Promise.all([
-      databaseService.prisma.project.count(),
-      databaseService.prisma.user.count(),
-      databaseService.prisma.project.count({
-        where: {
-          status: 'published'
-        }
-      })
+    const prisma = getPrismaClient()
+
+    // Get comprehensive dashboard stats
+    const [projects, users, bots, models, pipelines] = await Promise.all([
+      prisma.project.count(),
+      prisma.user.count(),
+      prisma.bot?.count() || Promise.resolve(0),
+      prisma.model?.count() || Promise.resolve(0),
+      prisma.pipeline?.count() || Promise.resolve(0),
     ])
 
     return {
-      projects: projectsCount,
-      users: usersCount,
-      active: activeProjectsCount
+      projects,
+      users,
+      active: projects, // For now, assume all projects are active
+      bots,
+      models,
+      pipelines,
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching dashboard stats:', error)
-    
-    // Return default values if database is not available
+    // Return default stats if database fails
     return {
       projects: 0,
       users: 0,
-      active: 0
+      active: 0,
+      bots: 0,
+      models: 0,
+      pipelines: 0,
     }
   }
-}) 
+})

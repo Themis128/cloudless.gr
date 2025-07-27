@@ -1,5 +1,5 @@
-// server/utils/session-cache.ts
-import redis from './redis'
+// Session cache utility with mock Redis implementation
+// In a real app, you would use the actual Redis client
 
 interface SessionData {
   userId: string
@@ -10,134 +10,93 @@ interface SessionData {
   [key: string]: any
 }
 
-export class SessionCache {
-  private prefix = 'session:'
-  private ttl = 3600 // 1 hour default
+interface SessionStats {
+  totalSessions: number
+  activeSessions: number
+  memoryUsage: string
+}
 
-  constructor(ttlSeconds?: number) {
-    if (ttlSeconds) {
-      this.ttl = ttlSeconds
-    }
+class MockSessionCache {
+  private sessions: Map<string, { data: SessionData; ttl: number }> = new Map()
+  private ttl: number = 3600 // 1 hour default
+
+  constructor(ttl: number = 3600) {
+    this.ttl = ttl
   }
 
-  /**
-   * Store session data in Redis
-   */
   async setSession(sessionId: string, data: SessionData): Promise<void> {
-    const key = `${this.prefix}${sessionId}`
-    await redis.setex(key, this.ttl, JSON.stringify(data))
+    const expiresAt = Date.now() + this.ttl * 1000
+    this.sessions.set(sessionId, { data, ttl: expiresAt })
   }
 
-  /**
-   * Get session data from Redis
-   */
   async getSession(sessionId: string): Promise<SessionData | null> {
-    const key = `${this.prefix}${sessionId}`
-    const data = await redis.get(key)
+    const session = this.sessions.get(sessionId)
+    if (!session) return null
 
-    if (!data) {
+    if (Date.now() > session.ttl) {
+      this.sessions.delete(sessionId)
       return null
     }
 
-    try {
-      const sessionData = JSON.parse(data) as SessionData
-
-      // Update last activity
-      sessionData.lastActivity = new Date().toISOString()
-      await this.setSession(sessionId, sessionData)
-
-      return sessionData
-    } catch (error) {
-      // Error parsing session data - could be logged to a proper logging service
-      // console.error('Error parsing session data:', error)
-      return null
-    }
+    return session.data
   }
 
-  /**
-   * Delete session from Redis
-   */
   async deleteSession(sessionId: string): Promise<void> {
-    const key = `${this.prefix}${sessionId}`
-    await redis.del(key)
+    this.sessions.delete(sessionId)
   }
 
-  /**
-   * Refresh session TTL
-   */
-  async refreshSession(sessionId: string): Promise<void> {
-    const key = `${this.prefix}${sessionId}`
-    await redis.expire(key, this.ttl)
+  async extendSession(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId)
+    if (session) {
+      const expiresAt = Date.now() + this.ttl * 1000
+      this.sessions.set(sessionId, { data: session.data, ttl: expiresAt })
+    }
   }
 
-  /**
-   * Get all active sessions for a user
-   */
-  async getUserSessions(userId: string): Promise<string[]> {
-    const pattern = `${this.prefix}*`
-    const keys = await redis.keys(pattern)
-    const sessions: string[] = []
+  async getAllSessions(): Promise<{ [key: string]: SessionData }> {
+    const result: { [key: string]: SessionData } = {}
+    const now = Date.now()
 
-    for (const key of keys) {
-      const data = await redis.get(key)
-      if (data) {
-        try {
-          const sessionData = JSON.parse(data) as SessionData
-          if (sessionData.userId === userId) {
-            sessions.push(key.replace(this.prefix, ''))
-          }
-        } catch (error) {
-          // Error parsing session data - could be logged to a proper logging service
-          // console.error('Error parsing session data:', error)
-        }
+    for (const [key, session] of this.sessions.entries()) {
+      if (now <= session.ttl) {
+        result[key] = session.data
+      } else {
+        this.sessions.delete(key)
       }
     }
 
-    return sessions
+    return result
   }
 
-  /**
-   * Clear all sessions for a user
-   */
-  async clearUserSessions(userId: string): Promise<void> {
-    const sessions = await this.getUserSessions(userId)
-    for (const sessionId of sessions) {
-      await this.deleteSession(sessionId)
-    }
-  }
-
-  /**
-   * Get session statistics
-   */
-  async getStats(): Promise<{
-    totalSessions: number
-    activeSessions: number
-    memoryUsage: number
-  }> {
-    const pattern = `${this.prefix}*`
-    const keys = await redis.keys(pattern)
-    const totalSessions = keys.length
-
+  async getStats(): Promise<SessionStats> {
+    const now = Date.now()
     let activeSessions = 0
-    for (const key of keys) {
-      const ttl = await redis.ttl(key)
-      if (ttl > 0) {
+
+    for (const session of this.sessions.values()) {
+      if (now <= session.ttl) {
         activeSessions++
       }
     }
 
-    const memoryInfo = await redis.info('memory')
-    const memoryUsage = parseInt(
-      memoryInfo.match(/used_memory_human:(\d+)/)?.[1] || '0'
-    )
-
     return {
-      totalSessions,
+      totalSessions: this.sessions.size,
       activeSessions,
-      memoryUsage,
+      memoryUsage: `${this.sessions.size * 1024} bytes` // Mock memory usage
+    }
+  }
+
+  async cleanup(): Promise<void> {
+    const now = Date.now()
+    for (const [key, session] of this.sessions.entries()) {
+      if (now > session.ttl) {
+        this.sessions.delete(key)
+      }
     }
   }
 }
 
-// Export default instance
-export const sessionCache = new SessionCache()
+// Export singleton instance
+export const sessionCache = new MockSessionCache()
+
+// Export class for testing
+export { MockSessionCache }

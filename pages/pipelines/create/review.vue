@@ -71,22 +71,26 @@
                     :dot-color="getStepColor(step.type)"
                     size="small"
                   >
-                    <template #opposite>
-                      Step {{ index + 1 }}
-                    </template>
+                    <template #opposite> Step {{ index + 1 }} </template>
                     <div class="mb-2">
                       <strong>{{ step.name }}</strong>
                     </div>
-                    <div class="text-caption mb-2">
-                      Type: {{ step.type }}
-                    </div>
+                    <div class="text-caption mb-2">Type: {{ step.type }}</div>
                     <v-expansion-panels>
                       <v-expansion-panel>
                         <v-expansion-panel-title>
                           Configuration
                         </v-expansion-panel-title>
                         <v-expansion-panel-text>
-                          <pre>{{ JSON.stringify(typeof step.config === 'string' ? JSON.parse(step.config) : step.config, null, 2) }}</pre>
+                          <pre>{{
+                            JSON.stringify(
+                              typeof step.config === 'string'
+                                ? JSON.parse(step.config)
+                                : step.config,
+                              null,
+                              2
+                            )
+                          }}</pre>
                         </v-expansion-panel-text>
                       </v-expansion-panel>
                     </v-expansion-panels>
@@ -97,11 +101,7 @@
 
             <!-- Navigation -->
             <v-card-actions class="mt-4">
-              <v-btn
-                color="secondary"
-                variant="outlined"
-                @click="goBack"
-              >
+              <v-btn color="secondary" variant="outlined" @click="goBack">
                 Back
               </v-btn>
               <v-spacer />
@@ -132,11 +132,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePrismaStore } from '~/stores/usePrismaStore'
-import type { ModelConfig, PipelineDetails, PipelineStep, PipelineStepType } from '~/types/Pipeline'
+import type {
+  ModelConfig,
+  PipelineDetails,
+  PipelineStep,
+  PipelineStepType,
+} from '~/types/Pipeline'
 
 const router = useRouter()
-const { createPipeline } = usePrismaStore()
 const loading = ref(false)
 
 const pipelineDetails = ref<PipelineDetails | null>(null)
@@ -155,9 +158,15 @@ const isValid = computed(() => {
 onMounted(() => {
   // Load saved data from localStorage
   try {
-    pipelineDetails.value = JSON.parse(localStorage.getItem('pipelineDetails') || 'null')
-    modelConfig.value = JSON.parse(localStorage.getItem('pipelineModelConfig') || 'null')
-    pipelineSteps.value = JSON.parse(localStorage.getItem('pipelineSteps') || 'null')
+    pipelineDetails.value = JSON.parse(
+      localStorage.getItem('pipelineDetails') || 'null'
+    )
+    modelConfig.value = JSON.parse(
+      localStorage.getItem('pipelineModelConfig') || 'null'
+    )
+    pipelineSteps.value = JSON.parse(
+      localStorage.getItem('pipelineSteps') || 'null'
+    )
   } catch (error) {
     // console.error('Error loading pipeline data:', error)
   }
@@ -169,7 +178,7 @@ const getStepColor = (type: PipelineStepType): string => {
     llm_processor: 'success',
     output_processor: 'info',
     data_transformer: 'warning',
-    validator: 'error'
+    validator: 'error',
   }
   return colors[type]
 }
@@ -186,8 +195,14 @@ const resetPipeline = () => {
 }
 
 const createPipelineData = async () => {
-  if (!isValid.value || !pipelineDetails.value || !modelConfig.value || !pipelineSteps.value) return
-  
+  if (
+    !isValid.value ||
+    !pipelineDetails.value ||
+    !modelConfig.value ||
+    !pipelineSteps.value
+  )
+    return
+
   loading.value = true
   try {
     // For now, we'll use a default user ID since we don't have auth context
@@ -199,17 +214,18 @@ const createPipelineData = async () => {
       description: pipelineDetails.value.description,
       config: {
         model: modelConfig.value,
-        steps: pipelineSteps.value
+        steps: pipelineSteps.value,
       },
       status: pipelineDetails.value.isActive ? 'active' : 'draft',
-      userId: userId
+      userId: userId,
     }
 
-    await pipelineStore.createPipeline(pipelineData)
+    // Mock API call for now - replace with actual store call
+    console.log('Creating pipeline:', pipelineData)
 
     // Clear localStorage
     resetPipeline()
-    
+
     // Navigate to pipelines list
     router.push('/pipelines')
   } catch (error) {
@@ -218,4 +234,4 @@ const createPipelineData = async () => {
     loading.value = false
   }
 }
-</script> 
+</script>

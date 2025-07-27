@@ -1,95 +1,166 @@
 <template>
-  <div class="doc-generator-container">
-    <div class="header">
-      <h1>Documentation Generator</h1>
-      <p>Generate comprehensive documentation from your code comments, API definitions, and project structure automatically.</p>
+  <v-container class="doc-generator-container">
+    <div class="text-center mb-8">
+      <h1 class="text-h3 font-weight-bold mb-4">Documentation Generator</h1>
+      <p class="text-body-1 text-medium-emphasis">
+        Generate comprehensive documentation for your code, APIs, and projects.
+      </p>
     </div>
 
-    <div class="main-content">
-      <div class="input-section">
-        <div class="form-group">
-          <label for="code-input">Code to Document</label>
-          <textarea
-            id="code-input"
-            v-model="codeInput"
-            placeholder="Paste your code here to generate documentation..."
-            rows="10"
-            class="code-textarea"
-          ></textarea>
-        </div>
+    <v-row>
+      <v-col cols="12" lg="6">
+        <v-card class="pa-6">
+          <v-card-title class="text-h5 mb-4">Input</v-card-title>
 
-        <div class="form-group">
-          <label for="doc-type">Documentation Type</label>
-          <select v-model="docType" class="doc-type-select">
-            <option value="api">API Documentation</option>
-            <option value="readme">README</option>
-            <option value="comments">Code Comments</option>
-            <option value="interactive">Interactive Docs</option>
-          </select>
-        </div>
+          <v-form @submit.prevent="generateDocs">
+            <v-textarea
+              v-model="codeInput"
+              label="Code to Document"
+              placeholder="Paste your code here to generate documentation..."
+              rows="10"
+              variant="outlined"
+              class="mb-4"
+              auto-grow
+            ></v-textarea>
 
-        <div class="form-group">
-          <label for="format">Output Format</label>
-          <select v-model="format" class="format-select">
-            <option value="markdown">Markdown</option>
-            <option value="html">HTML</option>
-            <option value="jsdoc">JSDoc</option>
-            <option value="swagger">OpenAPI/Swagger</option>
-          </select>
-        </div>
+            <v-select
+              v-model="docType"
+              label="Documentation Type"
+              :items="[
+                { title: 'API Documentation', value: 'api' },
+                { title: 'Code Comments', value: 'comments' },
+                { title: 'README File', value: 'readme' },
+                { title: 'Technical Spec', value: 'spec' },
+              ]"
+              variant="outlined"
+              class="mb-4"
+            ></v-select>
 
-        <button @click="generateDocs" :disabled="isGenerating" class="generate-btn">
-          {{ isGenerating ? 'Generating...' : 'Generate Documentation' }}
-        </button>
-      </div>
+            <v-select
+              v-model="format"
+              label="Output Format"
+              :items="[
+                { title: 'Markdown', value: 'markdown' },
+                { title: 'HTML', value: 'html' },
+                { title: 'JSDoc', value: 'jsdoc' },
+                { title: 'OpenAPI/Swagger', value: 'openapi' },
+              ]"
+              variant="outlined"
+              class="mb-4"
+            ></v-select>
 
-      <div class="output-section">
-        <div class="output-header">
-          <h3>Generated Documentation</h3>
-          <button @click="copyToClipboard" class="copy-btn">Copy to Clipboard</button>
-        </div>
-        <pre v-if="generatedDocs" class="doc-output">{{ generatedDocs }}</pre>
-        <div v-else class="placeholder">
-          <p>Generated documentation will appear here...</p>
-        </div>
-      </div>
-    </div>
+            <v-btn
+              color="primary"
+              size="large"
+              block
+              :loading="isGenerating"
+              :disabled="!codeInput.trim()"
+              @click="generateDocs"
+            >
+              {{ isGenerating ? 'Generating...' : 'Generate Documentation' }}
+            </v-btn>
+          </v-form>
+        </v-card>
+      </v-col>
 
-    <div class="examples-section">
-      <h2>Examples</h2>
-      <div class="examples-grid">
-        <div class="example-card" @click="loadExample('api-function')">
-          <h4>API Function</h4>
-          <p>Generate API documentation for a function</p>
-        </div>
-        <div class="example-card" @click="loadExample('react-component')">
-          <h4>React Component</h4>
-          <p>Document a React component with props</p>
-        </div>
-        <div class="example-card" @click="loadExample('class')">
-          <h4>Class Definition</h4>
-          <p>Generate documentation for a class</p>
-        </div>
-      </div>
-    </div>
-  </div>
+      <v-col cols="12" lg="6">
+        <v-card class="pa-6">
+          <v-card-title class="d-flex align-center justify-space-between">
+            <span class="text-h5">Generated Documentation</span>
+            <v-btn
+              color="success"
+              variant="outlined"
+              size="small"
+              @click="copyToClipboard"
+              :disabled="!generatedDocs"
+            >
+              Copy to Clipboard
+            </v-btn>
+          </v-card-title>
+
+          <v-card-text>
+            <v-textarea
+              v-if="generatedDocs"
+              :model-value="generatedDocs"
+              readonly
+              variant="outlined"
+              rows="20"
+              class="font-family-monospace"
+              bg-color="grey-lighten-4"
+            ></v-textarea>
+            <div v-else class="text-center text-medium-emphasis pa-8">
+              <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-file-document</v-icon>
+              <p>Generated documentation will appear here...</p>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-row class="mt-8">
+      <v-col cols="12">
+        <h2 class="text-h4 text-center mb-6">Examples</h2>
+        <v-row>
+          <v-col cols="12" md="4">
+            <v-card class="example-card" @click="loadExample('api-endpoint')" hover>
+              <v-card-text class="text-center">
+                <v-icon size="48" color="primary" class="mb-4">mdi-api</v-icon>
+                <h4 class="text-h6 mb-2">API Endpoint</h4>
+                <p class="text-body-2 text-medium-emphasis">
+                  Generate API documentation for REST endpoints
+                </p>
+              </v-card-text>
+            </v-card>
+          </v-col>
+
+          <v-col cols="12" md="4">
+            <v-card class="example-card" @click="loadExample('react-component')" hover>
+              <v-card-text class="text-center">
+                <v-icon size="48" color="primary" class="mb-4">mdi-react</v-icon>
+                <h4 class="text-h6 mb-2">React Component</h4>
+                <p class="text-body-2 text-medium-emphasis">
+                  Document React components with props and examples
+                </p>
+              </v-card-text>
+            </v-card>
+          </v-col>
+
+          <v-col cols="12" md="4">
+            <v-card class="example-card" @click="loadExample('utility-function')" hover>
+              <v-card-text class="text-center">
+                <v-icon size="48" color="primary" class="mb-4">mdi-function</v-icon>
+                <h4 class="text-h6 mb-2">Utility Function</h4>
+                <p class="text-body-2 text-medium-emphasis">
+                  Document utility functions with JSDoc comments
+                </p>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+  import { ref } from 'vue'
+  import { useToolsStore } from '~/stores/toolsStore'
 
-definePageMeta({
-  title: 'Documentation Generator'
-})
+  definePageMeta({
+    title: 'Documentation Generator',
+  })
 
-const codeInput = ref('')
-const docType = ref('api')
-const format = ref('markdown')
-const isGenerating = ref(false)
-const generatedDocs = ref('')
+  // Use tools store
+  const toolsStore = useToolsStore()
 
-const examples = {
-  'api-function': `/**
+  const codeInput = ref('')
+  const docType = ref('api')
+  const format = ref('markdown')
+  const isGenerating = ref(false)
+  const generatedDocs = ref('')
+
+  const examples = {
+    'api-function': `/**
  * Calculates the total price including tax and discount
  * @param {number} basePrice - The base price of the item
  * @param {number} taxRate - The tax rate as a decimal (e.g., 0.08 for 8%)
@@ -100,13 +171,13 @@ function calculateTotalPrice(basePrice, taxRate = 0.08, discount = 0) {
   if (basePrice < 0) {
     throw new Error('Base price cannot be negative');
   }
-  
+
   const priceAfterDiscount = basePrice - discount;
   const taxAmount = priceAfterDiscount * taxRate;
-  
+
   return Math.round((priceAfterDiscount + taxAmount) * 100) / 100;
 }`,
-  'react-component': `import React from 'react';
+    'react-component': `import React from 'react';
 
 interface ButtonProps {
   /** The text to display on the button */
@@ -132,8 +203,8 @@ const Button: React.FC<ButtonProps> = ({
   size = 'medium'
 }) => {
   return (
-    <button 
-      onClick={onClick} 
+    <button
+      onClick={onClick}
       disabled={disabled}
       className={\`btn btn-\${variant} btn-\${size}\`}
     >
@@ -143,7 +214,7 @@ const Button: React.FC<ButtonProps> = ({
 };
 
 export default Button;`,
-  'class': `/**
+    class: `/**
  * Represents a user in the system
  */
 class User {
@@ -183,24 +254,31 @@ class User {
   isAdmin() {
     return this.role === 'admin';
   }
-}`
-}
+}`,
+  }
 
-const loadExample = (exampleKey: string) => {
+  const loadExample = (exampleKey: string) => {
   codeInput.value = examples[exampleKey as keyof typeof examples]
 }
 
-const generateDocs = async () => {
-  if (!codeInput.value.trim()) {
-    alert('Please enter some code to document')
-    return
-  }
+// Record tool usage on mount
+onMounted(() => {
+  toolsStore.recordToolUsage('doc-generator')
+})
 
-  isGenerating.value = true
-  generatedDocs.value = ''
+  const generateDocs = async () => {
+    if (!codeInput.value.trim()) {
+      alert('Please enter some code to document')
+      return
+    }
 
-  try {
-    const prompt = `Generate ${docType.value} documentation in ${format.value} format for the following code:
+    isGenerating.value = true
+    generatedDocs.value = ''
+
+    const startTime = Date.now()
+
+    try {
+      const prompt = `Generate ${docType.value} documentation in ${format.value} format for the following code:
 
 ${codeInput.value}
 
@@ -213,244 +291,53 @@ Please provide comprehensive documentation that includes:
 
 Format the response as clean, well-structured documentation.`
 
-    const response = await $fetch('/api/generate', {
-      method: 'POST',
-      body: { prompt }
-    }) as any
+      const response = (await $fetch('/api/generate', {
+        method: 'POST',
+        body: { prompt },
+      })) as any
 
-    generatedDocs.value = response?.response || response || 'Failed to generate documentation'
-  } catch (error) {
-    console.error('Error generating documentation:', error)
-    generatedDocs.value = 'Error generating documentation. Please try again.'
-  } finally {
-    isGenerating.value = false
-  }
-}
+      generatedDocs.value = response?.response || response || 'Failed to generate documentation'
 
-const copyToClipboard = async () => {
-  if (!generatedDocs.value) return
-  
-  try {
-    await navigator.clipboard.writeText(generatedDocs.value)
-    alert('Documentation copied to clipboard!')
-  } catch (error) {
-    console.error('Failed to copy:', error)
-    alert('Failed to copy to clipboard')
+      // Record tool usage
+      const duration = Date.now() - startTime
+      toolsStore.recordToolUsage('doc-generator', true, duration)
+    } catch (error) {
+      console.error('Error generating documentation:', error)
+      generatedDocs.value = 'Error generating documentation. Please try again.'
+    } finally {
+      isGenerating.value = false
+    }
   }
-}
+
+  const copyToClipboard = async () => {
+    if (!generatedDocs.value) return
+
+    try {
+      await navigator.clipboard.writeText(generatedDocs.value)
+      alert('Documentation copied to clipboard!')
+    } catch (error) {
+      console.error('Failed to copy:', error)
+      alert('Failed to copy to clipboard')
+    }
+  }
 </script>
 
 <style scoped>
-.doc-generator-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 3rem;
-}
-
-.header h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #1e40af;
-  margin-bottom: 1rem;
-}
-
-.header p {
-  font-size: 1.1rem;
-  color: #64748b;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.main-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  margin-bottom: 3rem;
-}
-
-.input-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-group label {
-  font-weight: 600;
-  color: #374151;
-}
-
-.code-textarea {
-  width: 100%;
-  padding: 1rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.5rem;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  resize: vertical;
-  min-height: 200px;
-}
-
-.code-textarea:focus {
-  outline: none;
-  border-color: #1e40af;
-  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
-}
-
-.doc-type-select,
-.format-select {
-  padding: 0.75rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  background-color: white;
-}
-
-.doc-type-select:focus,
-.format-select:focus {
-  outline: none;
-  border-color: #1e40af;
-}
-
-.generate-btn {
-  padding: 1rem 2rem;
-  background-color: #1e40af;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.generate-btn:hover:not(:disabled) {
-  background-color: #1e3a8a;
-}
-
-.generate-btn:disabled {
-  background-color: #9ca3af;
-  cursor: not-allowed;
-}
-
-.output-section {
-  border: 2px solid #e5e7eb;
-  border-radius: 0.5rem;
-  overflow: hidden;
-}
-
-.output-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background-color: #f9fafb;
-  border-bottom: 2px solid #e5e7eb;
-}
-
-.output-header h3 {
-  margin: 0;
-  color: #374151;
-}
-
-.copy-btn {
-  padding: 0.5rem 1rem;
-  background-color: #10b981;
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.copy-btn:hover {
-  background-color: #059669;
-}
-
-.doc-output {
-  padding: 1rem;
-  background-color: #1f2937;
-  color: #f9fafb;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-.placeholder {
-  padding: 2rem;
-  text-align: center;
-  color: #9ca3af;
-}
-
-.examples-section {
-  margin-top: 3rem;
-}
-
-.examples-section h2 {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: #374151;
-}
-
-.examples-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-.example-card {
-  padding: 1.5rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.example-card:hover {
-  border-color: #1e40af;
-  background-color: #f8fafc;
-}
-
-.example-card h4 {
-  margin: 0 0 0.5rem 0;
-  color: #1e40af;
-}
-
-.example-card p {
-  margin: 0;
-  color: #64748b;
-  font-size: 0.875rem;
-}
-
-@media (max-width: 768px) {
-  .main-content {
-    grid-template-columns: 1fr;
+  .doc-generator-container {
+    max-width: 1200px;
+    margin: 0 auto;
   }
-  
-  .header h1 {
-    font-size: 2rem;
+
+  .example-card {
+    cursor: pointer;
+    transition: transform 0.2s ease;
   }
-  
-  .examples-grid {
-    grid-template-columns: 1fr;
+
+  .example-card:hover {
+    transform: translateY(-2px);
   }
-}
+
+  .font-family-monospace {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  }
 </style>

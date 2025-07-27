@@ -4,9 +4,7 @@
     <v-expansion-panels v-model="expandedPanel">
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon start>
-            mdi-database-import
-          </v-icon>
+          <v-icon start> mdi-database-import </v-icon>
           Source Configuration
         </v-expansion-panel-title>
         <v-expansion-panel-text>
@@ -19,11 +17,7 @@
 
           <!-- Text Source Config -->
           <div v-if="config.source?.type === 'text' && sourceText">
-            <v-textarea
-              v-model="sourceText.content"
-              label="Text Content"
-              rows="4"
-            />
+            <v-textarea v-model="sourceText.content" label="Text Content" rows="4" />
             <v-select
               v-model="sourceText.encoding"
               :items="['utf8', 'ascii', 'base64']"
@@ -59,10 +53,7 @@
               placeholder=","
               hint="Character used to separate fields"
             />
-            <v-switch
-              v-model="sourceCsv.hasHeader"
-              label="Has Header Row"
-            />
+            <v-switch v-model="sourceCsv.hasHeader" label="Has Header Row" />
             <v-text-field
               v-model="columnsText"
               label="Column Names"
@@ -86,10 +77,7 @@
               label="Trim Fields"
               hint="Remove whitespace from field values"
             />
-            <v-switch
-              v-model="sourceCsv.skipEmptyLines"
-              label="Skip Empty Lines"
-            />
+            <v-switch v-model="sourceCsv.skipEmptyLines" label="Skip Empty Lines" />
             <v-text-field
               v-model="sourceCsv.commentChar"
               label="Comment Character"
@@ -112,7 +100,7 @@
               label="Sensor Type"
               @update:model-value="handleSensorTypeChange"
             />
-            
+
             <v-select
               v-model="sourceSensor.protocol"
               :items="['mqtt', 'http', 'websocket', 'modbus', 'serial']"
@@ -142,9 +130,7 @@
             <v-expansion-panels v-if="sourceSensor.range">
               <v-expansion-panel>
                 <v-expansion-panel-title>
-                  <v-icon start>
-                    mdi-chart-range
-                  </v-icon>
+                  <v-icon start> mdi-chart-range </v-icon>
                   Range Settings
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
@@ -164,9 +150,7 @@
               <!-- Connection Settings -->
               <v-expansion-panel v-if="sourceSensor.connection">
                 <v-expansion-panel-title>
-                  <v-icon start>
-                    mdi-connection
-                  </v-icon>
+                  <v-icon start> mdi-connection </v-icon>
                   Connection Settings
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
@@ -177,7 +161,9 @@
                   />
 
                   <!-- Protocol-specific settings -->
-                  <template v-if="sourceSensor.protocol === 'mqtt' && sourceSensor.connection.settings">
+                  <template
+                    v-if="sourceSensor.protocol === 'mqtt' && sourceSensor.connection.settings"
+                  >
                     <v-text-field
                       v-model="sourceSensor.connection.settings.topic"
                       label="MQTT Topic"
@@ -189,7 +175,9 @@
                     />
                   </template>
 
-                  <template v-if="sourceSensor.protocol === 'serial' && sourceSensor.connection.settings">
+                  <template
+                    v-if="sourceSensor.protocol === 'serial' && sourceSensor.connection.settings"
+                  >
                     <v-select
                       v-model="sourceSensor.connection.settings.baudRate"
                       :items="[9600, 19200, 38400, 57600, 115200]"
@@ -214,9 +202,7 @@
                   <!-- Credentials -->
                   <v-expansion-panel v-if="sourceSensor.connection.credentials">
                     <v-expansion-panel-title>
-                      <v-icon start>
-                        mdi-key
-                      </v-icon>
+                      <v-icon start> mdi-key </v-icon>
                       Credentials
                     </v-expansion-panel-title>
                     <v-expansion-panel-text>
@@ -242,9 +228,7 @@
               <!-- Preprocessing Settings -->
               <v-expansion-panel v-if="sourceSensor.preprocessing">
                 <v-expansion-panel-title>
-                  <v-icon start>
-                    mdi-tune
-                  </v-icon>
+                  <v-icon start> mdi-tune </v-icon>
                   Preprocessing Settings
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
@@ -252,7 +236,7 @@
                     v-model="sourceSensor.preprocessing.averaging"
                     label="Enable Rolling Average"
                   />
-                  
+
                   <v-text-field
                     v-if="sourceSensor.preprocessing.averaging"
                     v-model.number="sourceSensor.preprocessing.windowSize"
@@ -306,10 +290,7 @@
 
           <!-- API Source Config -->
           <div v-if="config.source?.type === 'api' && sourceApi">
-            <v-text-field
-              v-model="sourceApi.endpoint"
-              label="API Endpoint"
-            />
+            <v-text-field v-model="sourceApi.endpoint" label="API Endpoint" />
             <v-select
               v-model="sourceApi.method"
               :items="['GET', 'POST', 'PUT', 'DELETE']"
@@ -319,11 +300,7 @@
               <v-expansion-panel>
                 <v-expansion-panel-title>Headers</v-expansion-panel-title>
                 <v-expansion-panel-text>
-                  <v-textarea
-                    v-model="headersText"
-                    label="Headers (JSON)"
-                    @input="updateHeaders"
-                  />
+                  <v-textarea v-model="headersText" label="Headers (JSON)" @input="updateHeaders" />
                 </v-expansion-panel-text>
               </v-expansion-panel>
               <v-expansion-panel>
@@ -343,10 +320,7 @@
                       />
                     </template>
                     <template v-if="sourceApiAuth.type === 'basic'">
-                      <v-text-field
-                        v-model="sourceApiAuth.username"
-                        label="Username"
-                      />
+                      <v-text-field v-model="sourceApiAuth.username" label="Username" />
                       <v-text-field
                         v-model="sourceApiAuth.password"
                         label="Password"
@@ -354,11 +328,7 @@
                       />
                     </template>
                     <template v-if="sourceApiAuth.type === 'api_key'">
-                      <v-text-field
-                        v-model="sourceApiAuth.key"
-                        label="API Key"
-                        type="password"
-                      />
+                      <v-text-field v-model="sourceApiAuth.key" label="API Key" type="password" />
                     </template>
                   </template>
                 </v-expansion-panel-text>
@@ -378,11 +348,7 @@
               label="Connection String"
               type="password"
             />
-            <v-textarea
-              v-model="sourceDatabase.query"
-              label="Query"
-              rows="4"
-            />
+            <v-textarea v-model="sourceDatabase.query" label="Query" rows="4" />
             <v-textarea
               v-model="paramsText"
               label="Query Parameters (JSON)"
@@ -397,10 +363,7 @@
               :items="['websocket', 'sse', 'kafka']"
               label="Stream Type"
             />
-            <v-text-field
-              v-model="sourceStream.endpoint"
-              label="Stream Endpoint"
-            />
+            <v-text-field v-model="sourceStream.endpoint" label="Stream Endpoint" />
             <v-text-field
               v-model="sourceStream.topics"
               label="Topics"
@@ -418,28 +381,14 @@
       <!-- Preprocessing Options -->
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon start>
-            mdi-cog-transfer
-          </v-icon>
+          <v-icon start> mdi-cog-transfer </v-icon>
           Preprocessing Options
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <v-switch
-            v-model="config.preprocessing.cleanText"
-            label="Clean Text"
-          />
-          <v-switch
-            v-model="config.preprocessing.removeStopwords"
-            label="Remove Stopwords"
-          />
-          <v-switch
-            v-model="config.preprocessing.lowercase"
-            label="Convert to Lowercase"
-          />
-          <v-switch
-            v-model="config.preprocessing.trim"
-            label="Trim Whitespace"
-          />
+          <v-switch v-model="config.preprocessing.cleanText" label="Clean Text" />
+          <v-switch v-model="config.preprocessing.removeStopwords" label="Remove Stopwords" />
+          <v-switch v-model="config.preprocessing.lowercase" label="Convert to Lowercase" />
+          <v-switch v-model="config.preprocessing.trim" label="Trim Whitespace" />
           <v-switch
             v-model="config.preprocessing.normalizeWhitespace"
             label="Normalize Whitespace"
@@ -453,11 +402,7 @@
             <v-expansion-panel>
               <v-expansion-panel-title>Custom Replacements</v-expansion-panel-title>
               <v-expansion-panel-text>
-                <v-btn
-                  color="primary"
-                  size="small"
-                  @click="addCustomReplacement"
-                >
+                <v-btn color="primary" size="small" @click="addCustomReplacement">
                   Add Replacement
                 </v-btn>
                 <div
@@ -465,11 +410,7 @@
                   :key="index"
                   class="d-flex align-center gap-2 mt-2"
                 >
-                  <v-text-field
-                    v-model="replacement.pattern"
-                    label="Pattern"
-                    density="compact"
-                  />
+                  <v-text-field v-model="replacement.pattern" label="Pattern" density="compact" />
                   <v-text-field
                     v-model="replacement.replacement"
                     label="Replacement"
@@ -535,16 +476,11 @@
       <!-- Validation Rules -->
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon start>
-            mdi-check-circle
-          </v-icon>
+          <v-icon start> mdi-check-circle </v-icon>
           Validation Rules
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <v-switch
-            v-model="config.validation.required"
-            label="Required"
-          />
+          <v-switch v-model="config.validation.required" label="Required" />
           <v-text-field
             v-model.number="config.validation.minLength"
             label="Minimum Length"
@@ -555,10 +491,7 @@
             label="Maximum Length"
             type="number"
           />
-          <v-text-field
-            v-model="config.validation.pattern"
-            label="Validation Pattern (Regex)"
-          />
+          <v-text-field v-model="config.validation.pattern" label="Validation Pattern (Regex)" />
 
           <v-expansion-panels>
             <v-expansion-panel>
@@ -600,11 +533,7 @@
             <v-expansion-panel>
               <v-expansion-panel-title>Custom Validators</v-expansion-panel-title>
               <v-expansion-panel-text>
-                <v-btn
-                  color="primary"
-                  size="small"
-                  @click="addCustomValidator"
-                >
+                <v-btn color="primary" size="small" @click="addCustomValidator">
                   Add Validator
                 </v-btn>
                 <div
@@ -612,11 +541,7 @@
                   :key="index"
                   class="mt-2"
                 >
-                  <v-text-field
-                    v-model="validator.name"
-                    label="Validator Name"
-                    density="compact"
-                  />
+                  <v-text-field v-model="validator.name" label="Validator Name" density="compact" />
                   <v-textarea
                     v-model="validator.validator"
                     label="Validator Function"
@@ -646,9 +571,7 @@
       <!-- Advanced Settings -->
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon start>
-            mdi-tune
-          </v-icon>
+          <v-icon start> mdi-tune </v-icon>
           Advanced Settings
         </v-expansion-panel-title>
         <v-expansion-panel-text>
@@ -656,10 +579,7 @@
             <v-expansion-panel>
               <v-expansion-panel-title>Performance</v-expansion-panel-title>
               <v-expansion-panel-text>
-                <v-switch
-                  v-model="config.advanced.performance.caching"
-                  label="Enable Caching"
-                />
+                <v-switch v-model="config.advanced.performance.caching" label="Enable Caching" />
                 <v-text-field
                   v-model.number="config.advanced.performance.cacheTTL"
                   label="Cache TTL (seconds)"
@@ -695,10 +615,7 @@
                   v-model="config.advanced.errorHandling.continueOnError"
                   label="Continue on Error"
                 />
-                <v-switch
-                  v-model="config.advanced.errorHandling.logErrors"
-                  label="Log Errors"
-                />
+                <v-switch v-model="config.advanced.errorHandling.logErrors" label="Log Errors" />
                 <v-text-field
                   v-model.number="config.advanced.errorHandling.errorThreshold"
                   label="Error Threshold"
@@ -739,500 +656,312 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import type {
-    InputProcessorConfig,
-    SourceConfig
-} from '~/types/Pipeline';
+  import { computed, ref } from 'vue'
+  import type { InputProcessorConfig, SourceConfig } from '~/types/Pipeline'
 
-const props = defineProps<{
-  modelValue: InputProcessorConfig
-}>()
+  const props = defineProps<{
+    modelValue: InputProcessorConfig
+  }>()
 
-const emit = defineEmits<{
-  'update:modelValue': [value: InputProcessorConfig]
-}>()
+  const emit = defineEmits<{
+    'update:modelValue': [value: InputProcessorConfig]
+  }>()
 
-const expandedPanel = ref<number | null>(0)
-const sourceTypes = ['text', 'file', 'csv', 'api', 'database', 'stream', 'sensor']
-const sensorTypes = [
-  'temperature',
-  'humidity',
-  'pressure',
-  'motion',
-  'light',
-  'custom'
-]
+  const expandedPanel = ref<number | null>(0)
+  const sourceTypes = ['text', 'file', 'csv', 'api', 'database', 'stream', 'sensor']
+  const sensorTypes = ['temperature', 'humidity', 'pressure', 'motion', 'light', 'custom']
 
-const config = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
-})
+  const config = computed({
+    get: () => props.modelValue,
+    set: value => emit('update:modelValue', value),
+  })
 
-const headersText = ref('')
-const paramsText = ref('')
-const columnsText = ref('')
+  const headersText = ref('')
+  const paramsText = ref('')
+  const columnsText = ref('')
 
-// Computed properties
-const sourceText = computed(() => config.value?.source?.text)
-const sourceFile = computed(() => config.value?.source?.file)
-const sourceApi = computed(() => config.value?.source?.api)
-const sourceDatabase = computed(() => config.value?.source?.database)
-const sourceStream = computed(() => config.value?.source?.stream)
-const sourceCsv = computed(() => config.value?.source?.csv)
-const sourceSensor = computed(() => config.value?.source?.sensor)
+  // Computed properties
+  const sourceText = computed(() => config.value?.source?.text)
+  const sourceFile = computed(() => config.value?.source?.file)
+  const sourceApi = computed(() => config.value?.source?.api)
+  const sourceDatabase = computed(() => config.value?.source?.database)
+  const sourceStream = computed(() => config.value?.source?.stream)
+  const sourceCsv = computed(() => config.value?.source?.csv)
+  const sourceSensor = computed(() => config.value?.source?.sensor)
 
-const preprocessingTokenization = computed(() => config.value?.preprocessing?.tokenization)
-const preprocessingEncoding = computed(() => config.value?.preprocessing?.encoding)
-const validationDataType = computed(() => config.value?.validation?.dataType)
-const validationRange = computed(() => config.value?.validation?.range)
+  const preprocessingTokenization = computed(() => config.value?.preprocessing?.tokenization)
+  const preprocessingEncoding = computed(() => config.value?.preprocessing?.encoding)
+  const validationDataType = computed(() => config.value?.validation?.dataType)
+  const validationRange = computed(() => config.value?.validation?.range)
 
-// Add computed property for API authentication
-const sourceApiAuth = computed(() => sourceApi.value?.authentication)
+  // Add computed property for API authentication
+  const sourceApiAuth = computed(() => sourceApi.value?.authentication)
 
-// Helper functions
-const getUnitHint = (type: string): string => {
-  switch (type) {
-    case 'temperature':
-      return 'e.g., celsius, fahrenheit'
-    case 'humidity':
-      return 'e.g., percent'
-    case 'pressure':
-      return 'e.g., hPa, bar'
-    case 'light':
-      return 'e.g., lux'
-    default:
-      return 'Measurement unit'
+  // Helper functions
+  const getUnitHint = (type: string): string => {
+    switch (type) {
+      case 'temperature':
+        return 'e.g., celsius, fahrenheit'
+      case 'humidity':
+        return 'e.g., percent'
+      case 'pressure':
+        return 'e.g., hPa, bar'
+      case 'light':
+        return 'e.g., lux'
+      default:
+        return 'Measurement unit'
+    }
   }
-}
 
-const getAddressHint = (protocol: string): string => {
-  switch (protocol) {
-    case 'mqtt':
-      return 'Broker URL (e.g., mqtt://localhost:1883)'
-    case 'http':
-      return 'HTTP endpoint URL'
-    case 'websocket':
-      return 'WebSocket URL'
-    case 'modbus':
-      return 'IP address or serial port'
-    case 'serial':
-      return 'Serial port (e.g., COM1, /dev/ttyUSB0)'
-    default:
-      return 'Connection address'
+  const getAddressHint = (protocol: string): string => {
+    switch (protocol) {
+      case 'mqtt':
+        return 'Broker URL (e.g., mqtt://localhost:1883)'
+      case 'http':
+        return 'HTTP endpoint URL'
+      case 'websocket':
+        return 'WebSocket URL'
+      case 'modbus':
+        return 'IP address or serial port'
+      case 'serial':
+        return 'Serial port (e.g., COM1, /dev/ttyUSB0)'
+      default:
+        return 'Connection address'
+    }
   }
-}
 
-const handleSensorTypeChange = (type: string) => {
-  if (!sourceSensor.value) return
+  const handleSensorTypeChange = (type: string) => {
+    if (!sourceSensor.value) return
 
-  // Set default unit based on sensor type
-  switch (type) {
-    case 'temperature':
-      sourceSensor.value.unit = 'celsius'
-      break
-    case 'humidity':
-      sourceSensor.value.unit = 'percent'
-      break
-    case 'pressure':
-      sourceSensor.value.unit = 'hPa'
-      break
-    case 'light':
-      sourceSensor.value.unit = 'lux'
-      break
+    // Set default unit based on sensor type
+    switch (type) {
+      case 'temperature':
+        sourceSensor.value.unit = 'celsius'
+        break
+      case 'humidity':
+        sourceSensor.value.unit = 'percent'
+        break
+      case 'pressure':
+        sourceSensor.value.unit = 'hPa'
+        break
+      case 'light':
+        sourceSensor.value.unit = 'lux'
+        break
+    }
   }
-}
 
-// Helper functions for source type changes
-const handleSourceTypeChange = (type: string) => {
-  const newSource: SourceConfig = { type: type as any }
-  
-  switch (type) {
-    case 'text':
-      newSource.text = { content: '', encoding: 'utf8' }
-      break
-    case 'file':
-      newSource.file = { allowedTypes: [], maxSize: 10, concurrent: 1 }
-      break
-    case 'csv':
-      newSource.csv = {
-        delimiter: ',',
-        hasHeader: true,
-        skipRows: 0,
-        encoding: 'utf8',
-        trimFields: true,
-        skipEmptyLines: true,
-        chunkSize: 1000
-      }
-      break
-    case 'api':
-      newSource.api = {
-        endpoint: '',
-        method: 'GET',
-        headers: {},
-        authentication: { type: 'bearer' }
-      }
-      break
-    case 'database':
-      newSource.database = {
-        type: 'postgres',
-        connection: '',
-        query: '',
-        params: {}
-      }
-      break
-    case 'stream':
-      newSource.stream = {
-        type: 'websocket',
-        endpoint: '',
-        topics: [],
-        batchSize: 100
-      }
-      break
-    case 'sensor':
-      newSource.sensor = {
-        type: 'temperature',
-        protocol: 'mqtt',
-        deviceId: '',
-        interval: 1000,
-        unit: 'celsius',
-        range: {
-          min: 0,
-          max: 100
-        },
-        connection: {
-          address: '',
-          settings: {
-            timeout: 5000,
-            retries: 3
-          }
-        },
-        preprocessing: {
-          averaging: false,
-          windowSize: 10,
-          calibration: {
-            offset: 0,
-            scale: 1
-          },
-          thresholds: {
-            low: 0,
-            high: 100
-          },
-          filters: {
-            outliers: false,
-            smoothing: false
-          }
+  // Helper functions for source type changes
+  const handleSourceTypeChange = (type: string) => {
+    const newSource: SourceConfig = { type: type as any }
+
+    switch (type) {
+      case 'text':
+        newSource.text = { content: '', encoding: 'utf8' }
+        break
+      case 'file':
+        newSource.file = { allowedTypes: [], maxSize: 10, concurrent: 1 }
+        break
+      case 'csv':
+        newSource.csv = {
+          delimiter: ',',
+          hasHeader: true,
+          skipRows: 0,
+          encoding: 'utf8',
+          trimFields: true,
+          skipEmptyLines: true,
+          chunkSize: 1000,
         }
-      }
-      break
-  }
-
-  config.value = {
-    ...config.value,
-    source: newSource
-  }
-}
-
-// Helper function for updating CSV columns
-const updateColumns = (value: string) => {
-  if (sourceCsv.value && !sourceCsv.value.hasHeader) {
-    sourceCsv.value.columns = value.split(',').map(col => col.trim())
-  }
-}
-
-// Helper functions for custom replacements
-const addCustomReplacement = () => {
-  if (!config.value.preprocessing.customReplacements) {
-    config.value.preprocessing.customReplacements = []
-  }
-  config.value.preprocessing.customReplacements.push({
-    pattern: '',
-    replacement: ''
-  })
-}
-
-const removeCustomReplacement = (index: number) => {
-  config.value.preprocessing.customReplacements?.splice(index, 1)
-}
-
-// Helper functions for custom validators
-const addCustomValidator = () => {
-  if (!config.value.validation.custom) {
-    config.value.validation.custom = []
-  }
-  config.value.validation.custom.push({
-    name: '',
-    validator: '',
-    errorMessage: ''
-  })
-}
-
-const removeCustomValidator = (index: number) => {
-  config.value.validation.custom?.splice(index, 1)
-}
-
-// Helper functions for JSON handling
-const updateHeaders = () => {
-  try {
-    if (config.value?.source?.api?.headers) {
-      config.value.source.api.headers = JSON.parse(headersText.value)
+        break
+      case 'api':
+        newSource.api = {
+          endpoint: '',
+          method: 'GET',
+          headers: {},
+          authentication: { type: 'bearer' },
+        }
+        break
+      case 'database':
+        newSource.database = {
+          type: 'postgres',
+          connection: '',
+          query: '',
+          params: {},
+        }
+        break
+      case 'stream':
+        newSource.stream = {
+          type: 'websocket',
+          endpoint: '',
+          topics: [],
+          batchSize: 100,
+        }
+        break
+      case 'sensor':
+        newSource.sensor = {
+          type: 'temperature',
+          protocol: 'mqtt',
+          deviceId: '',
+          interval: 1000,
+          unit: 'celsius',
+          range: {
+            min: 0,
+            max: 100,
+          },
+          connection: {
+            address: '',
+            settings: {
+              timeout: 5000,
+              retries: 3,
+            },
+          },
+          preprocessing: {
+            averaging: false,
+            windowSize: 10,
+            calibration: {
+              offset: 0,
+              scale: 1,
+            },
+            thresholds: {
+              low: 0,
+              high: 100,
+            },
+            filters: {
+              outliers: false,
+              smoothing: false,
+            },
+          },
+        }
+        break
     }
-  } catch (e) {
-    // Handle invalid JSON
-  }
-}
 
-const updateParams = () => {
-  try {
-    if (config.value?.source?.database?.params) {
-      config.value.source.database.params = JSON.parse(paramsText.value)
-    }
-  } catch (e) {
-    // Handle invalid JSON
-  }
-}
-
-// Initialize with default values if not provided
-if (!config.value) {
-  config.value = {
-    source: {
-      type: 'text',
-      text: {
-        content: '',
-        encoding: 'utf8'
-      }
-    },
-    preprocessing: {
-      cleanText: true,
-      removeStopwords: false,
-      lowercase: true,
-      trim: true,
-      normalizeWhitespace: true,
-      removeSpecialChars: false,
-      tokenization: {
-        enabled: false,
-        method: 'word'
-      },
-      encoding: {
-        type: 'utf8',
-        handleErrors: 'replace'
-      }
-    },
-    validation: {
-      required: true,
-      dataType: {
-        type: 'string'
-      }
-    },
-    advanced: {
-      performance: {
-        caching: false,
-        cacheTTL: 3600,
-        batchSize: 100,
-        timeout: 30000,
-        retryAttempts: 3,
-        retryDelay: 1000
-      },
-      errorHandling: {
-        continueOnError: false,
-        logErrors: true,
-        errorThreshold: 10
-      },
-      monitoring: {
-        collectMetrics: true,
-        logLevel: 'info',
-        sampleRate: 1
-      }
+    config.value = {
+      ...config.value,
+      source: newSource,
     }
   }
-}
 
-// Add computed properties for type-safe access
-// const sourceText = computed(() => config.value?.source?.text)
-// const sourceFile = computed(() => config.value?.source?.file)
-// const sourceApi = computed(() => config.value?.source?.api)
-// const sourceDatabase = computed(() => config.value?.source?.database)
-// const sourceStream = computed(() => config.value?.source?.stream)
-// const sourceCsv = computed(() => config.value?.source?.csv)
-// const columnsText = ref('')
+  // Helper function for updating CSV columns
+  const updateColumns = (value: string) => {
+    if (sourceCsv.value && !sourceCsv.value.hasHeader) {
+      sourceCsv.value.columns = value.split(',').map(col => col.trim())
+    }
+  }
 
-// const preprocessingTokenization = computed(() => config.value?.preprocessing?.tokenization)
-// const preprocessingEncoding = computed(() => config.value?.preprocessing?.encoding)
-// const validationDataType = computed(() => config.value?.validation?.dataType)
-// const validationRange = computed(() => config.value?.validation?.range)
+  // Helper functions for custom replacements
+  const addCustomReplacement = () => {
+    if (!config.value.preprocessing.customReplacements) {
+      config.value.preprocessing.customReplacements = []
+    }
+    config.value.preprocessing.customReplacements.push({
+      pattern: '',
+      replacement: '',
+    })
+  }
 
-// Add computed property for API authentication
-// const sourceApiAuth = computed(() => sourceApi.value?.authentication)
+  const removeCustomReplacement = (index: number) => {
+    config.value.preprocessing.customReplacements?.splice(index, 1)
+  }
 
-// Add to script section after sourceTypes declaration
-// const sensorTypes = [
-//   'temperature',
-//   'humidity',
-//   'pressure',
-//   'motion',
-//   'light',
-//   'custom'
-// ]
+  // Helper functions for custom validators
+  const addCustomValidator = () => {
+    if (!config.value.validation.custom) {
+      config.value.validation.custom = []
+    }
+    config.value.validation.custom.push({
+      name: '',
+      validator: '',
+      errorMessage: '',
+    })
+  }
 
-// Add to computed properties section
-// const sourceSensor = computed(() => config.value?.source?.sensor)
+  const removeCustomValidator = (index: number) => {
+    config.value.validation.custom?.splice(index, 1)
+  }
 
-// Add helper functions before the existing handleSourceTypeChange function
-// function getUnitHint(type: string): string {
-//   switch (type) {
-//     case 'temperature':
-//       return 'e.g., celsius, fahrenheit'
-//     case 'humidity':
-//       return 'e.g., percent'
-//     case 'pressure':
-//       return 'e.g., hPa, bar'
-//     case 'light':
-//       return 'e.g., lux'
-//     default:
-//       return 'Measurement unit'
-//   }
-// }
+  // Helper functions for JSON handling
+  const updateHeaders = () => {
+    try {
+      if (config.value?.source?.api?.headers) {
+        config.value.source.api.headers = JSON.parse(headersText.value)
+      }
+    } catch (e) {
+      // Handle invalid JSON
+    }
+  }
 
-// function getAddressHint(protocol: string): string {
-//   switch (protocol) {
-//     case 'mqtt':
-//       return 'Broker URL (e.g., mqtt://localhost:1883)'
-//     case 'http':
-//       return 'HTTP endpoint URL'
-//     case 'websocket':
-//       return 'WebSocket URL'
-//     case 'modbus':
-//       return 'IP address or serial port'
-//     case 'serial':
-//       return 'Serial port (e.g., COM1, /dev/ttyUSB0)'
-//     default:
-//       return 'Connection address'
-//   }
-// }
+  const updateParams = () => {
+    try {
+      if (config.value?.source?.database?.params) {
+        config.value.source.database.params = JSON.parse(paramsText.value)
+      }
+    } catch (e) {
+      // Handle invalid JSON
+    }
+  }
 
-// function handleSensorTypeChange(type: string) {
-//   if (!sourceSensor.value) return
-
-//   // Set default unit based on sensor type
-//   switch (type) {
-//     case 'temperature':
-//       sourceSensor.value.unit = 'celsius'
-//       break
-//     case 'humidity':
-//       sourceSensor.value.unit = 'percent'
-//       break
-//     case 'pressure':
-//       sourceSensor.value.unit = 'hPa'
-//       break
-//     case 'light':
-//       sourceSensor.value.unit = 'lux'
-//       break
-//   }
-// }
-
-// Update sourceTypes array
-// const sourceTypes = ['text', 'file', 'csv', 'api', 'database', 'stream', 'sensor']
-
-// Update handleSourceTypeChange function
-// function handleSourceTypeChange(type: string) {
-//   const newSource: SourceConfig = { type: type as any }
-  
-//   switch (type) {
-//     case 'text':
-//       newSource.text = { content: '', encoding: 'utf8' }
-//       break
-//     case 'file':
-//       newSource.file = { allowedTypes: [], maxSize: 10, concurrent: 1 }
-//       break
-//     case 'csv':
-//       newSource.csv = {
-//         delimiter: ',',
-//         hasHeader: true,
-//         skipRows: 0,
-//         encoding: 'utf8',
-//         trimFields: true,
-//         skipEmptyLines: true,
-//         chunkSize: 1000
-//       }
-//       break
-//     case 'api':
-//       newSource.api = {
-//         endpoint: '',
-//         method: 'GET',
-//         headers: {},
-//         authentication: { type: 'bearer' }
-//       }
-//       break
-//     case 'database':
-//       newSource.database = {
-//         type: 'postgres',
-//         connection: '',
-//         query: '',
-//         params: {}
-//       }
-//       break
-//     case 'stream':
-//       newSource.stream = {
-//         type: 'websocket',
-//         endpoint: '',
-//         topics: [],
-//         batchSize: 100
-//       }
-//       break
-//     case 'sensor':
-//       newSource.sensor = {
-//         type: 'temperature',
-//         protocol: 'mqtt',
-//         deviceId: '',
-//         interval: 1000,
-//         unit: 'celsius',
-//         range: {
-//           min: 0,
-//           max: 100
-//         },
-//         connection: {
-//           address: '',
-//           settings: {
-//             timeout: 5000,
-//             retries: 3
-//           }
-//         },
-//         preprocessing: {
-//           averaging: false,
-//           windowSize: 10,
-//           calibration: {
-//             offset: 0,
-//             scale: 1
-//           },
-//           thresholds: {
-//             low: 0,
-//             high: 100
-//           },
-//           filters: {
-//             outliers: false,
-//             smoothing: false
-//           }
-//         }
-//       }
-//       break
-//   }
-
-//   config.value = {
-//     ...config.value,
-//     source: newSource
-//   }
-// }
-
-// Update template sections to use computed properties
+  // Initialize with default values if not provided
+  if (!config.value) {
+    config.value = {
+      source: {
+        type: 'text',
+        text: {
+          content: '',
+          encoding: 'utf8',
+        },
+      },
+      preprocessing: {
+        cleanText: true,
+        removeStopwords: false,
+        lowercase: true,
+        trim: true,
+        normalizeWhitespace: true,
+        removeSpecialChars: false,
+        tokenization: {
+          enabled: false,
+          method: 'word',
+        },
+        encoding: {
+          type: 'utf8',
+          handleErrors: 'replace',
+        },
+      },
+      validation: {
+        required: true,
+        dataType: {
+          type: 'string',
+        },
+      },
+      advanced: {
+        performance: {
+          caching: false,
+          cacheTTL: 3600,
+          batchSize: 100,
+          timeout: 30000,
+          retryAttempts: 3,
+          retryDelay: 1000,
+        },
+        errorHandling: {
+          continueOnError: false,
+          logErrors: true,
+          errorThreshold: 10,
+        },
+        monitoring: {
+          collectMetrics: true,
+          logLevel: 'info',
+          sampleRate: 1,
+        },
+      },
+    }
+  }
 </script>
 
 <style scoped>
-.input-processor-config {
-  max-width: 800px;
-  margin: 0 auto;
-}
+  .input-processor-config {
+    max-width: 800px;
+    margin: 0 auto;
+  }
 
-.v-expansion-panels {
-  margin-bottom: 1rem;
-}
-</style> 
+  .v-expansion-panels {
+    margin-bottom: 1rem;
+  }
+</style>

@@ -12,17 +12,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const modelId = parseInt(id)
-    if (isNaN(modelId)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid model ID format'
-      })
-    }
-
     // Check if model exists
     const existingModel = await prisma.model.findUnique({
-      where: { id: modelId }
+      where: { id: String(id) }
     })
 
     if (!existingModel) {
@@ -34,7 +26,7 @@ export default defineEventHandler(async (event) => {
 
     // Delete the model
     await prisma.model.delete({
-      where: { id: modelId }
+      where: { id: String(id) }
     })
 
     return {

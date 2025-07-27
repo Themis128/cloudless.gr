@@ -1,0 +1,83 @@
+# Production Dockerfile for Cloudless.gr
+# Optimized for performance, security, and minimal size
+
+# Stage 1: Base image with minimal dependencies
+FROM node:20-alpine AS base
+
+# Install only essential system dependencies
+RUN apk add --no-cache \
+    curl \
+    dumb-init \
+    && rm -rf /var/cache/apk/*
+
+# Set working directory
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nuxtjs -u 1001 -G nodejs
+
+# Stage 2: Dependencies installation
+FROM base AS deps
+
+# Copy package files
+COPY package*.json ./
+COPY nuxt.config.ts ./
+COPY tsconfig.json ./
+COPY prisma ./prisma/
+
+# Install production dependencies only
+RUN npm ci --only=production --prefer-offline --no-audit && \
+    npm cache clean --force
+
+# Stage 3: Build stage
+FROM base AS builder
+
+# Copy package files
+COPY package*.json ./
+COPY nuxt.config.ts ./
+COPY tsconfig.json ./
+COPY prisma ./prisma/
+
+# Install all dependencies for building
+RUN npm ci --prefer-offline --no-audit
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Build the application
+RUN npx nuxt build
+
+# Stage 4: Production runtime
+FROM base AS production
+
+# Copy dependencies
+COPY --from=deps --chown=nuxtjs:nodejs /app/node_modules ./node_modules
+COPY --from=deps --chown=nuxtjs:nodejs /app/package*.json ./
+
+# Copy built application
+COPY --from=builder --chown=nuxtjs:nodejs /app/.output ./.output
+COPY --from=builder --chown=nuxtjs:nodejs /app/.nuxt ./.nuxt
+
+# Copy Prisma schema and generate client
+COPY --chown=nuxtjs:nodejs prisma ./prisma
+RUN npx prisma generate
+
+# Create necessary directories
+RUN mkdir -p /app/logs && chown -R nuxtjs:nodejs /app
+
+# Switch to non-root user
+USER nuxtjs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Production command
+CMD ["dumb-init", "--", "node", ".output/server/index.mjs"]

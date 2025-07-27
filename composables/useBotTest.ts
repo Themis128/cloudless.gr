@@ -1,85 +1,39 @@
-import { ref } from 'vue'
+import { computed } from 'vue'
 
+// Composable that uses the Pinia store
 export const useBotTest = (botId: string | number) => {
-  const input = ref('')
-  const messages = ref<{ id: number; role: string; text: string }[]>([])
-  const steps = ref<any[]>([])
-  const progress = ref(0)
-  let msgId = 1
+  const botTestStore = useBotTestStore()
 
-  const sendMessage = async () => {
-    if (!input.value) return
-    const userMsg = input.value
-    messages.value.push({ id: msgId++, role: 'user', text: userMsg })
-    input.value = ''
-    steps.value = []
-    progress.value = 0
-    try {
-      const res = await fetch(`/api/bots/${botId}/test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg }),
-      })
-      const data = await res.json()
-      if (data.response) {
-        messages.value.push({ id: msgId++, role: 'bot', text: data.response })
-      } else {
-        messages.value.push({
-          id: msgId++,
-          role: 'bot',
-          text: data.error || 'No response from bot.',
-        })
-      }
-      if (Array.isArray(data.steps)) {
-        steps.value = data.steps.map((s: any) => ({ ...s }))
-        progress.value = 0
-        // Simulate real-time updates for each step
-        let current = 0
-        const updateStep = () => {
-          if (current > 0) {
-            steps.value[current - 1].status = 'complete'
-            steps.value[current - 1].result =
-              `Step '${steps.value[current - 1].name}' completed.`
-          }
-          if (current < steps.value.length) {
-            steps.value[current].status = 'running'
-            steps.value[current].result =
-              `Step '${steps.value[current].name}' started.`
-            progress.value = ((current + 1) / steps.value.length) * 100
-            current++
-            setTimeout(updateStep, 1200)
-          } else {
-            progress.value = 100
-          }
-        }
-        // Initialize all steps to pending except first
-        steps.value.forEach((s: any, idx: number) => {
-          s.status = idx === 0 ? 'running' : 'pending'
-          s.result =
-            idx === 0 ? `Step '${s.name}' started with input: ${userMsg}` : null
-        })
-        setTimeout(updateStep, 1200)
-      }
-    } catch (err) {
-      messages.value.push({
-        id: msgId++,
-        role: 'bot',
-        text: 'Error contacting bot API.',
-      })
-    }
-  }
+  // Set the bot ID when composable is initialized
+  botTestStore.setBotId(botId)
 
-  const reset = () => {
-    messages.value = []
-    msgId = 1
-  }
-
+  // Return readonly state and computed properties for backward compatibility
   return {
-    input,
-    messages,
-    steps,
-    progress,
-    sendMessage,
-    reset,
+    // State (readonly for backward compatibility)
+    input: computed({
+      get: () => botTestStore.input,
+      set: (value: string) => botTestStore.setInput(value)
+    }),
+    messages: computed(() => botTestStore.messages),
+    steps: computed(() => botTestStore.steps),
+    progress: computed(() => botTestStore.progress),
+
+    // Methods (delegate to store)
+    sendMessage: () => botTestStore.sendMessage(botId),
+    reset: botTestStore.reset,
+    
+    // Additional store methods
+    clearMessages: botTestStore.clearMessages,
+    clearSteps: botTestStore.clearSteps,
+    clearError: botTestStore.clearError,
+    setError: botTestStore.setError,
+    
+    // Computed properties from store
+    hasMessages: computed(() => botTestStore.hasMessages),
+    hasSteps: computed(() => botTestStore.hasSteps),
+    isTestComplete: computed(() => botTestStore.isTestComplete),
+    canSendMessage: computed(() => botTestStore.canSendMessage),
+    isLoading: computed(() => botTestStore.isLoading),
+    error: computed(() => botTestStore.error),
   }
 }

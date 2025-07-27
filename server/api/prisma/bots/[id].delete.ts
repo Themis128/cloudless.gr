@@ -1,56 +1,43 @@
-import { defineEventHandler, getRouterParam, createError } from 'h3'
-import { databaseService } from '~/lib/database'
+import { defineEventHandler, createError, getRouterParam } from 'h3'
 
 export default defineEventHandler(async (event) => {
   try {
-    const id = getRouterParam(event, 'id')
-
-    if (!id) {
+    const botId = getRouterParam(event, 'id')
+    
+    if (!botId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Bot ID is required'
+        message: 'Bot ID is required',
       })
     }
 
-    const botId = parseInt(id)
-    if (isNaN(botId)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid bot ID format'
-      })
-    }
+    const prisma = event.context.prisma
 
     // Check if bot exists
-    const existingBot = await databaseService.prisma.bot.findUnique({
+    const existingBot = await prisma.bot.findUnique({
       where: { id: botId }
     })
 
     if (!existingBot) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Bot not found'
+        message: 'Bot not found',
       })
     }
 
-    // Delete bot
-    await databaseService.prisma.bot.delete({
+    // Delete the bot
+    await prisma.bot.delete({
       where: { id: botId }
     })
 
     return {
       success: true,
-      data: true,
-      message: 'Bot deleted successfully'
+      message: 'Bot deleted successfully',
     }
   } catch (error: any) {
-    if (error.statusCode) {
-      throw error
-    }
-
     throw createError({
-      statusCode: 500,
-      statusMessage: 'Failed to delete bot',
-      data: { error: error.message }
+      statusCode: error.statusCode || 500,
+      message: error.message || 'Failed to delete bot',
     })
   }
 }) 

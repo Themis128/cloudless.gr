@@ -1,34 +1,50 @@
-import { computed, ref } from 'vue'
-import { useWizardSteps } from '~/composables/useWizardSteps'
+import { computed } from 'vue'
 
+// Composable that uses the Pinia store
 export const useWizard = () => {
-  const { steps } = useWizardSteps()
-  const currentStep = ref(0)
+  const wizardStore = useWizardStore()
 
-  const stepCount = computed(() => steps.length)
-  const isFirstStep = computed(() => currentStep.value === 0)
-  const isLastStep = computed(() => currentStep.value === steps.length - 1)
-  const current = computed(() => steps[currentStep.value])
-
-  const next = () => {
-    if (currentStep.value < steps.length - 1) currentStep.value++
-  }
-  const prev = () => {
-    if (currentStep.value > 0) currentStep.value--
-  }
-  const goTo = (index: number) => {
-    if (index >= 0 && index < steps.length) currentStep.value = index
-  }
-
+  // Return readonly state and computed properties for backward compatibility
   return {
-    steps,
-    currentStep,
-    stepCount,
-    isFirstStep,
-    isLastStep,
-    current,
-    next,
-    prev,
-    goTo
+    // State (readonly for backward compatibility)
+    currentStep: computed(() => wizardStore.currentStep),
+
+    // Computed properties
+    steps: computed(() => wizardStore.steps),
+    stepCount: computed(() => wizardStore.stepCount),
+    isFirstStep: computed(() => wizardStore.isFirstStep),
+    isLastStep: computed(() => wizardStore.isLastStep),
+    current: computed(() => wizardStore.current),
+
+    // Methods (delegate to store)
+    next: wizardStore.next,
+    prev: wizardStore.prev,
+    goTo: wizardStore.goTo,
+
+    // Additional wizard functionality from store
+    progress: computed(() => wizardStore.progress),
+    completedSteps: computed(() => wizardStore.completedSteps),
+    canProceed: computed(() => wizardStore.canProceed),
+    canGoBack: computed(() => wizardStore.canGoBack),
+    startWizard: wizardStore.startWizard,
+    goToStep: wizardStore.goToStep,
+    setStepData: wizardStore.setStepData,
+    getStepData: wizardStore.getStepData,
+    setStepValid: wizardStore.setStepValid,
+    setStepCompleted: wizardStore.setStepCompleted,
+    validateCurrentStep: wizardStore.validateCurrentStep,
+    skipStep: wizardStore.skipStep,
+    resetWizard: wizardStore.resetWizard,
+    getWizardSummary: wizardStore.getWizardSummary,
+    saveWizardState: wizardStore.saveWizardState,
+    loadWizardState: wizardStore.loadWizardState,
+    clearWizardState: wizardStore.clearWizardState,
+
+    // State management
+    isLoading: computed(() => wizardStore.isLoading),
+    error: computed(() => wizardStore.error),
+    setLoading: wizardStore.setLoading,
+    setError: wizardStore.setError,
+    clearError: wizardStore.clearError,
   }
 }

@@ -1,8 +1,6 @@
 # Production Docker Compose for Cloudless.gr
 # Optimized for production deployment with latest technologies
 
-version: '3.8'
-
 services:
   app:
     build:
@@ -30,28 +28,24 @@ services:
       NITRO_MINIFY: true
       NODE_OPTIONS: --max-old-space-size=2048 --enable-source-maps
 
-      # Supabase Configuration (from environment)
-      NUXT_PUBLIC_SUPABASE_URL: ${NUXT_PUBLIC_SUPABASE_URL}
-      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${NUXT_PUBLIC_SUPABASE_ANON_KEY}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-
       # Database Configuration (from environment)
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://cloudless:${POSTGRES_PASSWORD:-production}@postgres:5432/cloudless_prod}
+      PRISMA_DATABASE_URL: ${DATABASE_URL:-postgresql://cloudless:${POSTGRES_PASSWORD:-production}@postgres:5432/cloudless_prod}
 
       # Redis Configuration (from environment)
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       REDIS_MAX_MEMORY: ${REDIS_MAX_MEMORY:-512mb}
 
-      # External API Keys (from environment)
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # External API Keys (from environment with defaults)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-disabled}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-disabled}
 
-      # Security (from environment)
-      SESSION_SECRET: ${SESSION_SECRET}
-      JWT_SECRET: ${JWT_SECRET}
+      # Security (from environment with defaults)
+      SESSION_SECRET: ${SESSION_SECRET:-production-session-secret-change-in-production}
+      JWT_SECRET: ${JWT_SECRET:-production-jwt-secret-change-in-production}
 
-      # Monitoring (from environment)
-      SENTRY_DSN: ${SENTRY_DSN}
+      # Monitoring (from environment with defaults)
+      SENTRY_DSN: ${SENTRY_DSN:-disabled}
       LOG_LEVEL: ${LOG_LEVEL:-info}
 
       # Application Metadata
@@ -89,8 +83,6 @@ services:
     security_opt:
       - no-new-privileges:true
     read_only: true
-    tmpfs:
-      - /tmp:noexec,nosuid,size=100m
 
   redis:
     image: redis:7.2-alpine
@@ -167,7 +159,8 @@ services:
     networks:
       - cloudless-prod-network
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-cloudless} -d ${POSTGRES_DB:-cloudless_prod}']
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-cloudless} -d ${POSTGRES_DB:-cloudless_prod}']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -272,7 +265,7 @@ services:
   backup:
     image: postgres:16-alpine
     container_name: cloudlessgr-backup
-    restart: "no"
+    restart: 'no'
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-cloudless_prod}
       POSTGRES_USER: ${POSTGRES_USER:-cloudless}
@@ -287,7 +280,7 @@ services:
       - postgres
     profiles:
       - backup
-    command: ["/bin/sh", "/backup.sh"]
+    command: ['/bin/sh', '/backup.sh']
     deploy:
       resources:
         limits:
@@ -321,4 +314,4 @@ networks:
       config:
         - subnet: 172.20.0.0/16
     driver_opts:
-      com.docker.network.bridge.name: cloudless-prod-br0 
+      com.docker.network.bridge.name: cloudless-prod-br0

@@ -1,9 +1,9 @@
 <template>
   <div class="metric-chart-container">
     <ClientOnly>
-      <div 
+      <div
         ref="chartElement"
-        :id="chartId" 
+        :id="chartId"
         :class="chartClass"
         :style="{ width: width, height: height }"
       >
@@ -21,7 +21,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
-import { useCharts, type ChartData } from '~/composables/useCharts'
+import { useCharts } from '~/composables/useCharts'
+import type { ChartData } from '~/types/common'
 
 interface Props {
   data: ChartData
@@ -36,10 +37,17 @@ const props = withDefaults(defineProps<Props>(), {
   width: '100%',
   height: '200px',
   theme: 'dark',
-  chartId: () => `chart-${Math.random().toString(36).substr(2, 9)}`
+  chartId: () => `chart-${Math.random().toString(36).substr(2, 9)}`,
 })
 
-const { createDonutChart, createProgressChart, createGaugeChart, createTrendChart, addChart, removeChart } = useCharts()
+const {
+  createDonutChart,
+  createProgressChart,
+  createGaugeChart,
+  createTrendChart,
+  addChart,
+  removeChart,
+} = useCharts()
 
 const chartElement = ref<HTMLElement | null>(null)
 const chartInstance = ref<any>(null)
@@ -52,27 +60,27 @@ const chartClass = computed(() => {
 const createChart = () => {
   // Only run on client side
   if (!process.client) return
-  
+
   // Don't create charts if component is being unmounted
   if (!chartElement.value && !document.getElementById(props.chartId)) {
     return
   }
-  
+
   try {
     // Use the ref directly if available, otherwise fall back to getElementById
     let element = chartElement.value
-    
+
     if (!element) {
       element = document.getElementById(props.chartId)
     }
-    
+
     if (!element) {
       // Don't log warnings for chart elements that might not be ready yet
       // This is normal during component mounting/unmounting
       // Return silently to avoid console warnings
       return
     }
-    
+
     // Remove existing chart
     if (chartInstance.value) {
       removeChart(props.chartId)
@@ -84,28 +92,28 @@ const createChart = () => {
         chartInstance.value = createDonutChart(element, props.data, {
           width: props.width,
           height: props.height,
-          theme: props.theme
+          theme: props.theme,
         })
         break
       case 'progress':
         chartInstance.value = createProgressChart(element, props.data, {
           width: props.width,
           height: props.height,
-          theme: props.theme
+          theme: props.theme,
         })
         break
       case 'gauge':
         chartInstance.value = createGaugeChart(element, props.data, {
           width: props.width,
           height: props.height,
-          theme: props.theme
+          theme: props.theme,
         })
         break
       case 'trend':
         chartInstance.value = createTrendChart(element, props.data, {
           width: props.width,
           height: props.height,
-          theme: props.theme
+          theme: props.theme,
         })
         break
       default:
@@ -125,22 +133,29 @@ const createChart = () => {
 }
 
 // Watch for data changes
-watch(() => props.data, () => {
-  if (process.client) {
-    nextTick(() => {
-      createChart()
-    })
-  }
-}, { deep: true })
+watch(
+  () => props.data,
+  () => {
+    if (process.client) {
+      nextTick(() => {
+        createChart()
+      })
+    }
+  },
+  { deep: true }
+)
 
 // Watch for type changes
-watch(() => props.type, () => {
-  if (process.client) {
-    nextTick(() => {
-      createChart()
-    })
+watch(
+  () => props.type,
+  () => {
+    if (process.client) {
+      nextTick(() => {
+        createChart()
+      })
+    }
   }
-})
+)
 
 onMounted(() => {
   if (process.client) {
@@ -223,4 +238,4 @@ onUnmounted(() => {
   font-size: 0.875rem;
   opacity: 0.8;
 }
-</style> 
+</style>

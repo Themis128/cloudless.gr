@@ -10,9 +10,7 @@
       <template #main>
         <!-- Quick Actions -->
         <v-card class="mb-4 bg-white">
-          <v-card-title class="text-h6">
-            Quick Actions
-          </v-card-title>
+          <v-card-title class="text-h6"> Quick Actions </v-card-title>
           <v-card-text>
             <div class="quick-actions-header">
               <div class="quick-actions-title">
@@ -97,9 +95,9 @@
         <ModelsModelListEnhanced />
 
         <!-- Error Alert -->
-        <v-alert 
-          v-if="modelStore.hasError" 
-          type="error" 
+        <v-alert
+          v-if="modelStore.hasError"
+          type="error"
           class="mt-4"
           role="alert"
           aria-live="polite"
@@ -111,9 +109,9 @@
         </v-alert>
 
         <!-- Success Alert -->
-        <v-alert 
-          v-if="modelStore.hasSuccess" 
-          type="success" 
+        <v-alert
+          v-if="modelStore.hasSuccess"
+          type="success"
           class="mt-4"
           role="alert"
           aria-live="polite"
@@ -133,27 +131,37 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useModelStore } from '~/stores/modelStore'
 
 // SEO Meta Tags
 useHead({
   title: 'AI Models - Cloudless',
   meta: [
-    { name: 'description', content: 'Manage and deploy your trained AI models with our comprehensive platform.' },
+    {
+      name: 'description',
+      content:
+        'Manage and deploy your trained AI models with our comprehensive platform.',
+    },
     { property: 'og:title', content: 'AI Models - Cloudless' },
-    { property: 'og:description', content: 'Manage and deploy your trained AI models' },
+    {
+      property: 'og:description',
+      content: 'Manage and deploy your trained AI models',
+    },
     { property: 'og:type', content: 'website' },
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: 'AI Models - Cloudless' },
-    { name: 'twitter:description', content: 'Manage and deploy your trained AI models' }
-  ]
+    {
+      name: 'twitter:description',
+      content: 'Manage and deploy your trained AI models',
+    },
+  ],
 })
 
 // Page Meta
 definePageMeta({
   title: 'AI Models',
-  description: 'Manage and deploy your trained AI models'
+  description: 'Manage and deploy your trained AI models',
 })
 
 // Types
@@ -174,19 +182,24 @@ interface ApiResponse<T> {
 }
 
 // Server-side data fetching
-const { data: modelsData, error: modelsError, pending, refresh } = await useFetch<ApiResponse<Model[]>>('/api/models', {
+const {
+  data: modelsData,
+  error: modelsError,
+  pending,
+  refresh,
+} = useFetch<ApiResponse<Model[]>>('/api/models', {
   default: () => ({ success: true, data: [], message: '' }),
   transform: (response: ApiResponse<Model[]>) => response.data,
   onResponseError({ response }: { response: { _data: any } }) {
     console.error('Models fetch error:', response._data)
-  }
+  },
 })
 
 // Error handling
 if (modelsError.value) {
   throw createError({
     statusCode: 500,
-    statusMessage: 'Failed to load models data'
+    statusMessage: 'Failed to load models data',
   })
 }
 
@@ -205,24 +218,34 @@ onMounted(() => {
 })
 
 // Watch for store changes
-watch(() => modelStore.error, (error) => {
-  if (error) {
-    console.error('Model store error:', error)
+watch(
+  () => modelStore.error,
+  error => {
+    if (error) {
+      console.error('Model store error:', error)
+    }
   }
-})
+)
 
-watch(() => modelStore.success, (success) => {
-  if (success) {
-    console.log('Model store success:', success)
+watch(
+  () => modelStore.success,
+  success => {
+    if (success) {
+      console.log('Model store success:', success)
+    }
   }
-})
+)
 
 // Watch for data changes
-watch(modelsData, (newData) => {
-  if (newData && newData.length > 0) {
-    console.log('Models data updated:', newData.length, 'models')
-  }
-}, { immediate: true })
+watch(
+  modelsData,
+  newData => {
+    if (newData && newData.length > 0) {
+      console.log('Models data updated:', newData.length, 'models')
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -242,11 +265,11 @@ watch(modelsData, (newData) => {
   .action-btn {
     height: 60px !important;
   }
-  
+
   .action-btn .text-h6 {
     font-size: 1rem !important;
   }
-  
+
   .action-btn .text-caption {
     font-size: 0.75rem !important;
   }
@@ -278,19 +301,13 @@ watch(modelsData, (newData) => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.gap-4 {
-  gap: 1rem;
-}
 
-.gap-2 {
-  gap: 0.5rem;
-}
 
 @media (max-width: 768px) {
   .quick-actions-buttons {
     grid-template-columns: 1fr;
   }
-  
+
   .action-btn {
     width: 100%;
   }

@@ -10,7 +10,7 @@
       </div>
       
       <!-- Enhanced Search and Filters -->
-      <div class="d-flex align-center gap-4">
+      <div class="d-flex align-center">
         <v-text-field
           v-model="searchQuery"
           prepend-inner-icon="mdi-magnify"
@@ -18,7 +18,7 @@
           density="compact"
           variant="outlined"
           hide-details
-          class="search-field"
+          class="search-field mr-4"
           style="max-width: 250px;"
           @update:model-value="debouncedSearch"
         />
@@ -30,6 +30,7 @@
           density="compact"
           variant="outlined"
           hide-details
+          class="mr-4"
           style="max-width: 150px;"
           @update:model-value="refreshData"
         />
@@ -101,8 +102,8 @@
             </v-list-item-title>
             
             <v-list-item-subtitle class="mt-1">
-              <div class="d-flex align-center gap-4">
-                <span class="d-flex align-center">
+              <div class="d-flex align-center">
+                <span class="d-flex align-center mr-4">
                   <v-icon size="16" class="mr-1">mdi-tag</v-icon>
                   {{ model.type || 'Unknown Type' }}
                 </span>
@@ -118,12 +119,13 @@
             </v-list-item-subtitle>
 
             <template #append>
-              <div class="d-flex align-center gap-2">
+              <div class="d-flex align-center">
                 <!-- Status Chip -->
                 <v-chip
                   :color="getStatusColor(model.status)"
                   size="small"
                   variant="tonal"
+                  class="mr-2"
                 >
                   {{ model.status || 'draft' }}
                 </v-chip>
@@ -376,11 +378,5 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.gap-4 {
-  gap: 1rem;
-}
 
-.gap-2 {
-  gap: 0.5rem;
-}
 </style> 

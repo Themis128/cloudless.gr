@@ -11,23 +11,20 @@
         <!-- API Overview -->
         <v-card class="mb-4">
           <v-card-title class="text-h6">
-            <v-icon start color="primary">
-              mdi-api
-            </v-icon>
+            <v-icon start color="primary"> mdi-api </v-icon>
             API Overview
           </v-card-title>
           <v-card-text>
             <p class="mb-4">
-              Our LLM API provides RESTful endpoints for interacting with your trained models. 
-              All requests should be made to the base URL: <code class="bg-grey-lighten-3 px-2 py-1 rounded">https://api.cloudless.gr/v1</code>
+              Our LLM API provides RESTful endpoints for interacting with your
+              trained models. All requests should be made to the base URL:
+              <code class="bg-grey-lighten-3 px-2 py-1 rounded"
+                >https://api.cloudless.gr/v1</code
+              >
             </p>
-            <v-alert
-              type="info"
-              variant="tonal"
-              class="mb-4"
-            >
-              <strong>Base URL:</strong> https://api.cloudless.gr/v1<br>
-              <strong>Content-Type:</strong> application/json<br>
+            <v-alert type="info" variant="tonal" class="mb-4">
+              <strong>Base URL:</strong> https://api.cloudless.gr/v1<br />
+              <strong>Content-Type:</strong> application/json<br />
               <strong>Authentication:</strong> Bearer token required
             </v-alert>
           </v-card-text>
@@ -36,25 +33,18 @@
         <!-- Authentication -->
         <v-card class="mb-4">
           <v-card-title class="text-h6">
-            <v-icon start color="primary">
-              mdi-shield-key
-            </v-icon>
+            <v-icon start color="primary"> mdi-shield-key </v-icon>
             Authentication
           </v-card-title>
           <v-card-text>
             <p class="mb-4">
-              All API requests require authentication using a Bearer token. Include your API key in the Authorization header.
+              All API requests require authentication using a Bearer token.
+              Include your API key in the Authorization header.
             </p>
-            <v-code-block
-              :code="authExample"
-              language="bash"
-              class="mb-4"
-            />
-            <v-alert
-              type="warning"
-              variant="tonal"
-            >
-              <strong>Security Note:</strong> Keep your API keys secure and never expose them in client-side code.
+            <CodeBlock :code="authExample" language="bash" class="mb-4" />
+            <v-alert type="warning" variant="tonal">
+              <strong>Security Note:</strong> Keep your API keys secure and
+              never expose them in client-side code.
             </v-alert>
           </v-card-text>
         </v-card>
@@ -62,9 +52,7 @@
         <!-- Endpoints -->
         <v-card class="mb-4">
           <v-card-title class="text-h6">
-            <v-icon start color="primary">
-              mdi-link-variant
-            </v-icon>
+            <v-icon start color="primary"> mdi-link-variant </v-icon>
             Available Endpoints
           </v-card-title>
           <v-card-text>
@@ -122,7 +110,7 @@
                   </div>
                   <div class="mb-4">
                     <strong>Example Request:</strong>
-                    <v-code-block
+                    <CodeBlock
                       :code="endpoint.example"
                       :language="endpoint.language"
                       class="mt-2"
@@ -145,53 +133,36 @@
         <!-- Code Examples -->
         <v-card class="mb-4">
           <v-card-title class="text-h6">
-            <v-icon start color="primary">
-              mdi-code-tags
-            </v-icon>
+            <v-icon start color="primary"> mdi-code-tags </v-icon>
             Code Examples
           </v-card-title>
           <v-card-text>
             <v-tabs v-model="activeTab" color="primary">
               <v-tab value="javascript">
-                <v-icon start>
-                  mdi-language-javascript
-                </v-icon>
+                <v-icon start> mdi-language-javascript </v-icon>
                 JavaScript
               </v-tab>
               <v-tab value="python">
-                <v-icon start>
-                  mdi-language-python
-                </v-icon>
+                <v-icon start> mdi-language-python </v-icon>
                 Python
               </v-tab>
               <v-tab value="curl">
-                <v-icon start>
-                  mdi-console
-                </v-icon>
+                <v-icon start> mdi-console </v-icon>
                 cURL
               </v-tab>
             </v-tabs>
 
             <v-window v-model="activeTab" class="mt-4">
               <v-window-item value="javascript">
-                <v-code-block
-                  :code="javascriptExample"
-                  language="javascript"
-                />
+                <CodeBlock :code="javascriptExample" language="javascript" />
               </v-window-item>
 
               <v-window-item value="python">
-                <v-code-block
-                  :code="pythonExample"
-                  language="python"
-                />
+                <CodeBlock :code="pythonExample" language="python" />
               </v-window-item>
 
               <v-window-item value="curl">
-                <v-code-block
-                  :code="curlExample"
-                  language="bash"
-                />
+                <CodeBlock :code="curlExample" language="bash" />
               </v-window-item>
             </v-window>
           </v-card-text>
@@ -200,9 +171,7 @@
         <!-- Rate Limits -->
         <v-card class="mb-4">
           <v-card-title class="text-h6">
-            <v-icon start color="primary">
-              mdi-speedometer
-            </v-icon>
+            <v-icon start color="primary"> mdi-speedometer </v-icon>
             Rate Limits
           </v-card-title>
           <v-card-text>
@@ -234,10 +203,7 @@
                     <li>Custom models and support</li>
                   </ul>
                 </div>
-                <v-alert
-                  type="info"
-                  variant="tonal"
-                >
+                <v-alert type="info" variant="tonal">
                   Rate limit headers are included in all responses:
                   <code class="d-block mt-2">X-RateLimit-Remaining: 95</code>
                   <code class="d-block">X-RateLimit-Reset: 1640995200</code>
@@ -250,9 +216,7 @@
         <!-- Error Codes -->
         <v-card>
           <v-card-title class="text-h6">
-            <v-icon start color="primary">
-              mdi-alert-circle
-            </v-icon>
+            <v-icon start color="primary"> mdi-alert-circle </v-icon>
             Error Codes
           </v-card-title>
           <v-card-text>
@@ -284,8 +248,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import PageStructure from '~/components/layout/PageStructure.vue'
+import LayoutPageStructure from '~/components/layout/LayoutPageStructure.vue'
 import LLMGuide from '~/components/step-guides/LLMGuide.vue'
+import CodeBlock from '~/components/ui/CodeBlock.vue'
 
 const activeTab = ref('javascript')
 
@@ -311,17 +276,37 @@ const endpoints = [
       "status": "ready"
     }
   ]
-}`
+}`,
   },
   {
     method: 'POST',
     path: '/generate',
     description: 'Generate text using a model',
     parameters: [
-      { name: 'model', type: 'string', required: true, description: 'Model ID to use' },
-      { name: 'prompt', type: 'string', required: true, description: 'Input text prompt' },
-      { name: 'max_tokens', type: 'integer', required: false, description: 'Maximum tokens to generate' },
-      { name: 'temperature', type: 'float', required: false, description: 'Sampling temperature (0-2)' }
+      {
+        name: 'model',
+        type: 'string',
+        required: true,
+        description: 'Model ID to use',
+      },
+      {
+        name: 'prompt',
+        type: 'string',
+        required: true,
+        description: 'Input text prompt',
+      },
+      {
+        name: 'max_tokens',
+        type: 'integer',
+        required: false,
+        description: 'Maximum tokens to generate',
+      },
+      {
+        name: 'temperature',
+        type: 'float',
+        required: false,
+        description: 'Sampling temperature (0-2)',
+      },
     ],
     example: `curl -X POST \\
      -H "Authorization: Bearer YOUR_API_KEY" \\
@@ -343,15 +328,25 @@ const endpoints = [
     "completion_tokens": 15,
     "total_tokens": 20
   }
-}`
+}`,
   },
   {
     method: 'POST',
     path: '/classify',
     description: 'Classify text using a classification model',
     parameters: [
-      { name: 'model', type: 'string', required: true, description: 'Model ID to use' },
-      { name: 'text', type: 'string', required: true, description: 'Text to classify' }
+      {
+        name: 'model',
+        type: 'string',
+        required: true,
+        description: 'Model ID to use',
+      },
+      {
+        name: 'text',
+        type: 'string',
+        required: true,
+        description: 'Text to classify',
+      },
     ],
     example: `curl -X POST \\
      -H "Authorization: Bearer YOUR_API_KEY" \\
@@ -372,8 +367,8 @@ const endpoints = [
     "negative": 0.03,
     "neutral": 0.02
   }
-}`
-  }
+}`,
+  },
 ]
 
 const javascriptExample = `// Using fetch API
@@ -474,26 +469,55 @@ curl -X POST \\
 const errorHeaders = [
   { title: 'Code', key: 'code', sortable: true },
   { title: 'Message', key: 'message', sortable: true },
-  { title: 'Description', key: 'description', sortable: true }
+  { title: 'Description', key: 'description', sortable: true },
 ]
 
 const errorCodes = [
-  { code: 400, message: 'Bad Request', description: 'Invalid request parameters' },
-  { code: 401, message: 'Unauthorized', description: 'Invalid or missing API key' },
+  {
+    code: 400,
+    message: 'Bad Request',
+    description: 'Invalid request parameters',
+  },
+  {
+    code: 401,
+    message: 'Unauthorized',
+    description: 'Invalid or missing API key',
+  },
   { code: 403, message: 'Forbidden', description: 'Insufficient permissions' },
-  { code: 404, message: 'Not Found', description: 'Model or endpoint not found' },
-  { code: 429, message: 'Too Many Requests', description: 'Rate limit exceeded' },
-  { code: 500, message: 'Internal Server Error', description: 'Server error occurred' },
-  { code: 503, message: 'Service Unavailable', description: 'Model temporarily unavailable' }
+  {
+    code: 404,
+    message: 'Not Found',
+    description: 'Model or endpoint not found',
+  },
+  {
+    code: 429,
+    message: 'Too Many Requests',
+    description: 'Rate limit exceeded',
+  },
+  {
+    code: 500,
+    message: 'Internal Server Error',
+    description: 'Server error occurred',
+  },
+  {
+    code: 503,
+    message: 'Service Unavailable',
+    description: 'Model temporarily unavailable',
+  },
 ]
 
 const getMethodColor = (method: string) => {
   switch (method) {
-    case 'GET': return 'success'
-    case 'POST': return 'primary'
-    case 'PUT': return 'warning'
-    case 'DELETE': return 'error'
-    default: return 'grey'
+    case 'GET':
+      return 'success'
+    case 'POST':
+      return 'primary'
+    case 'PUT':
+      return 'warning'
+    case 'DELETE':
+      return 'error'
+    default:
+      return 'grey'
   }
 }
 
@@ -561,4 +585,4 @@ code {
   padding: 2px 4px;
   border-radius: 4px;
 }
-</style> 
+</style>

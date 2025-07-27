@@ -1,5 +1,4 @@
 <template>
-<<<<<<< HEAD
   <div class="admin-dashboard">
     <v-container>
       <!-- Header -->
@@ -244,15 +243,10 @@
         </v-col>
       </v-row>
     </v-container>
-=======
-  <div>
-    <p>Redirecting to admin dashboard...</p>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
   </div>
 </template>
 
 <script setup lang="ts">
-<<<<<<< HEAD
 import { ref, onMounted } from 'vue'
 
 // Define the layout
@@ -437,14 +431,4 @@ onMounted(() => {
 .admin-dashboard :deep(h3) {
   color: #000000 !important;
 }
-</style> 
-=======
-import { navigateTo } from '#app'
-import { onMounted } from 'vue';
-
-// Redirect to the admin dashboard
-onMounted(async (): Promise<void> => {
-  await navigateTo('/admin/dashboard');
-});
-</script>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
+</style>

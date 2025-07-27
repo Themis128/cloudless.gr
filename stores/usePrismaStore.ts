@@ -31,141 +31,150 @@ export const usePrismaStore = defineStore('prisma', () => {
   // User operations
   const getUsers = () => apiCall('/api/users')
   const getUser = (id: number) => apiCall(`/api/users/${id}`)
-  const createUser = (userData: any) => 
+  const createUser = (userData: any) =>
     apiCall('/api/users', {
       method: 'POST',
-      body: userData
+      body: userData,
     })
 
   // Project operations
   const getProjects = () => apiCall('/api/projects')
   const getProject = (id: number) => apiCall(`/api/projects/${id}`)
-  const createProject = (projectData: any) => 
+  const createProject = (projectData: any) =>
     apiCall('/api/projects', {
       method: 'POST',
-      body: projectData
+      body: projectData,
     })
 
   // Contact operations
-  const createContactSubmission = (contactData: any) => 
+  const createContactSubmission = (contactData: any) =>
     apiCall('/api/contact', {
       method: 'POST',
-      body: contactData
+      body: contactData,
     })
   const getContactSubmissions = () => apiCall('/api/contact-submissions')
 
   // Bot operations
   const getBots = () => apiCall('/api/bots')
   const getBot = (id: number) => apiCall(`/api/bots/${id}`)
-  const createBot = (botData: any) => 
+  const createBot = (botData: any) =>
     apiCall('/api/bots', {
       method: 'POST',
-      body: botData
+      body: botData,
     })
-  const updateBot = (id: number, botData: any) => 
+  const updateBot = (id: number, botData: any) =>
     apiCall(`/api/bots/${id}`, {
       method: 'PUT',
-      body: botData
+      body: botData,
     })
-  const deleteBot = (id: number) => 
+  const deleteBot = (id: number) =>
     apiCall(`/api/bots/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     })
 
   // Model operations
   const getModels = () => apiCall('/api/models')
   const getModel = (id: number) => apiCall(`/api/models/${id}`)
-  const createModel = (modelData: any) => 
+  const createModel = (modelData: any) =>
     apiCall('/api/models', {
       method: 'POST',
-      body: modelData
+      body: modelData,
     })
-  const updateModel = (id: number, modelData: any) => 
+  const updateModel = (id: number, modelData: any) =>
     apiCall(`/api/models/${id}`, {
       method: 'PUT',
-      body: modelData
+      body: modelData,
     })
-  const deleteModel = (id: number) => 
+  const deleteModel = (id: number) =>
     apiCall(`/api/models/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     })
 
   // Pipeline operations
   const getPipelines = () => apiCall('/api/pipelines')
   const getPipeline = (id: number) => apiCall(`/api/pipelines/${id}`)
-  const createPipeline = (pipelineData: any) => 
+  const createPipeline = (pipelineData: any) =>
     apiCall('/api/pipelines', {
       method: 'POST',
-      body: pipelineData
+      body: pipelineData,
     })
-  const updatePipeline = (id: number, pipelineData: any) => 
+  const updatePipeline = (id: number, pipelineData: any) =>
     apiCall(`/api/pipelines/${id}`, {
       method: 'PUT',
-      body: pipelineData
+      body: pipelineData,
     })
-  const deletePipeline = (id: number) => 
+  const deletePipeline = (id: number) =>
     apiCall(`/api/pipelines/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     })
 
   // Training session operations
   const getTrainingSessions = () => apiCall('/api/training-sessions')
-  const getTrainingSession = (id: number) => apiCall(`/api/training-sessions/${id}`)
-  const createTrainingSession = (trainingData: any) => 
+  const getTrainingSession = (id: number) =>
+    apiCall(`/api/training-sessions/${id}`)
+  const createTrainingSession = (trainingData: any) =>
     apiCall('/api/training-sessions', {
       method: 'POST',
-      body: trainingData
+      body: trainingData,
     })
-  const updateTrainingSession = (id: number, trainingData: any) => 
+  const updateTrainingSession = (id: number, trainingData: any) =>
     apiCall(`/api/training-sessions/${id}`, {
       method: 'PUT',
-      body: trainingData
+      body: trainingData,
+    })
+  const deleteTrainingSession = (id: number) =>
+    apiCall(`/api/training-sessions/${id}`, {
+      method: 'DELETE',
     })
 
   return {
     // State
     isLoading,
     error,
-    
+
     // User operations
     getUsers,
     getUser,
     createUser,
-    
+
     // Project operations
     getProjects,
     getProject,
     createProject,
-    
+
     // Contact operations
     createContactSubmission,
     getContactSubmissions,
-    
+
     // Bot operations
     getBots,
     getBot,
     createBot,
     updateBot,
     deleteBot,
-    
+
     // Model operations
     getModels,
     getModel,
     createModel,
     updateModel,
     deleteModel,
-    
+
     // Pipeline operations
     getPipelines,
     getPipeline,
     createPipeline,
     updatePipeline,
     deletePipeline,
-    
+
     // Training session operations
     getTrainingSessions,
     getTrainingSession,
     createTrainingSession,
-    updateTrainingSession
+    updateTrainingSession,
+    deleteTrainingSession,
+
+    // Generic API call
+    apiCall,
   }
-}) 
+})

@@ -1,0 +1,441 @@
+/* Glassmorphism Effects for All Cards */
+/* This file provides glassmorphism styling for all v-card components */
+
+/* Base Glassmorphism Variables */
+:root {
+  --glass-bg-light: rgba(255, 255, 255, 0.25);
+  --glass-bg-dark: rgba(0, 0, 0, 0.25);
+  --glass-border-light: rgba(255, 255, 255, 0.18);
+  --glass-border-dark: rgba(255, 255, 255, 0.1);
+  --glass-shadow-light: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  --glass-shadow-dark: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --glass-blur: blur(16px);
+  --glass-border-radius: 16px;
+}
+
+/* Global Glassmorphism Card Styles */
+.v-card {
+  /* Base glassmorphism properties */
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border-radius: var(--glass-border-radius) !important;
+  border: 1px solid var(--glass-border-light) !important;
+  box-shadow: var(--glass-shadow-light) !important;
+  background: var(--glass-bg-light) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Glassmorphism hover effects */
+.v-card:hover {
+  transform: translateY(-4px) scale(1.02) !important;
+  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.45) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Glassmorphism before pseudo-element for enhanced effect */
+.v-card::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  ) !important;
+  border-radius: var(--glass-border-radius) !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+}
+
+/* Ensure card content is above the pseudo-element */
+.v-card > * {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+/* Specific card type variations */
+.v-card.bg-white {
+  background: var(--glass-bg-light) !important;
+  border-color: var(--glass-border-light) !important;
+}
+
+.v-card.bg-gradient-primary {
+  background: linear-gradient(135deg, rgba(25, 118, 210, 0.2), rgba(156, 39, 176, 0.2)) !important;
+  border-color: rgba(25, 118, 210, 0.3) !important;
+}
+
+.v-card.bg-transparent {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Card content styling for better readability */
+.v-card-title {
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5) !important;
+  font-weight: 600 !important;
+}
+
+.v-card-text {
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+.v-card-subtitle {
+  color: rgba(0, 0, 0, 0.6) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Quick actions cards */
+.quick-actions-header p {
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Stats cards */
+.stats-card .text-h4 {
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5) !important;
+}
+
+.stats-card .text-body-2 {
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+/* List items in cards */
+.v-list-item {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  margin-bottom: 0.5rem !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.v-list-item:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: translateX(4px) !important;
+}
+
+.v-list-item-title {
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+.v-list-item-subtitle {
+  color: rgba(0, 0, 0, 0.6) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Data tables in cards */
+.v-data-table {
+  background: transparent !important;
+}
+
+.v-data-table .v-data-table-header {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-radius: 8px 8px 0 0 !important;
+}
+
+.v-data-table th {
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+  font-weight: 600 !important;
+}
+
+.v-data-table td {
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Form elements in cards */
+.v-text-field .v-field {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px !important;
+}
+
+.v-text-field .v-field__input {
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+.v-text-field .v-field__label {
+  color: rgba(0, 0, 0, 0.6) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+.v-select .v-field {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px !important;
+}
+
+.v-textarea .v-field {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px !important;
+}
+
+/* Buttons in cards */
+.action-btn {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Chips in cards */
+.v-chip {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Alerts in cards */
+.v-alert {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px !important;
+}
+
+/* Expansion panels in cards */
+.v-expansion-panel {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.v-expansion-panel-title {
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+.v-expansion-panel-text {
+  color: rgba(0, 0, 0, 0.87) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Progress bars in cards */
+.v-progress-linear {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 4px !important;
+  overflow: hidden !important;
+}
+
+.v-progress-linear .v-progress-linear__background {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .v-card {
+    background: var(--glass-bg-dark) !important;
+    border-color: var(--glass-border-dark) !important;
+    box-shadow: var(--glass-shadow-dark) !important;
+  }
+
+  .v-card:hover {
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .v-card::before {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ) !important;
+  }
+
+  .v-card-title,
+  .v-card-text,
+  .v-card-subtitle,
+  .quick-actions-header p,
+  .stats-card .text-h4,
+  .stats-card .text-body-2,
+  .v-list-item-title,
+  .v-list-item-subtitle,
+  .v-data-table th,
+  .v-data-table td,
+  .v-text-field .v-field__input,
+  .v-text-field .v-field__label,
+  .action-btn,
+  .v-chip,
+  .v-expansion-panel-title,
+  .v-expansion-panel-text {
+    color: rgba(255, 255, 255, 0.87) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  .v-list-item {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .v-list-item:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .v-data-table .v-data-table-header {
+    background: rgba(255, 255, 255, 0.05) !important;
+  }
+
+  .v-text-field .v-field,
+  .v-select .v-field,
+  .v-textarea .v-field {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .action-btn {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .action-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .v-chip {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .v-alert {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .v-expansion-panel {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .v-progress-linear {
+    background: rgba(255, 255, 255, 0.05) !important;
+  }
+
+  .v-progress-linear .v-progress-linear__background {
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .v-card {
+    border-radius: 12px !important;
+  }
+
+  .v-card:hover {
+    transform: translateY(-2px) scale(1.01) !important;
+  }
+}
+
+/* Animation for cards appearing */
+.v-card {
+  animation: cardFadeIn 0.6s ease-out !important;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Stagger animation for multiple cards */
+.v-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.v-card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.v-card:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.v-card:nth-child(4) {
+  animation-delay: 0.4s;
+}
+.v-card:nth-child(5) {
+  animation-delay: 0.5s;
+}
+.v-card:nth-child(6) {
+  animation-delay: 0.6s;
+}
+
+/* Enhanced glassmorphism for specific card types */
+.v-card.glassmorphism-enhanced {
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow:
+    0 8px 32px 0 rgba(31, 38, 135, 0.37),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+.v-card.glassmorphism-enhanced:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow:
+    0 12px 40px 0 rgba(31, 38, 135, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Dark mode for enhanced glassmorphism */
+@media (prefers-color-scheme: dark) {
+  .v-card.glassmorphism-enhanced {
+    background: rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow:
+      0 8px 32px 0 rgba(0, 0, 0, 0.37),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .v-card.glassmorphism-enhanced:hover {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    box-shadow:
+      0 12px 40px 0 rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  }
+}

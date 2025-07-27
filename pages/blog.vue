@@ -1,367 +1,399 @@
 <template>
-  <div class="blog-page">
-    <div class="page-header">
-      <h1>Blog</h1>
-      <p class="subtitle">
-        Insights, tutorials, and updates from the Cloudless Wizard team
-      </p>
-    </div>
+  <div>
+    <v-container class="blog-page">
+      <!-- Hero Section -->
+      <v-row justify="center" class="mb-12">
+        <v-col cols="12" md="8" lg="6" class="text-center">
+          <h1 class="text-h2 font-weight-bold mb-4">
+            Blog
+          </h1>
+          <p class="text-h6 text-medium-emphasis">
+            Insights, tutorials, and updates from the Cloudless Wizard team
+          </p>
+        </v-col>
+      </v-row>
 
-    <div class="content-container">
-      <div class="blog-content">
-        <div class="featured-section">
-          <h2>Featured Articles</h2>
-          <div class="featured-grid">
-            <div class="featured-card featured-main">
-              <div class="featured-image">
-                <v-icon size="80" color="primary">
-                  mdi-robot
-                </v-icon>
-              </div>
-              <div class="featured-content">
-                <div class="article-meta">
-                  <span class="category">AI & ML</span>
-                  <span class="date">March 15, 2025</span>
-                  <span class="read-time">8 min read</span>
-                </div>
-                <h3>Building Intelligent Chatbots with Cloudless Wizard</h3>
-                <p>
-                  Learn how to create sophisticated chatbots using our AI-powered bot builder. 
-                  We'll walk through the complete process from data preparation to deployment, 
-                  including best practices for training custom models and optimizing performance.
-                </p>
-                <div class="article-tags">
-                  <span class="tag">Chatbots</span>
-                  <span class="tag">AI</span>
-                  <span class="tag">Tutorial</span>
-                  <span class="tag">NLP</span>
-                </div>
-                <v-btn color="primary" variant="elevated" class="read-more">
-                  Read Full Article
-                  <v-icon right>
-                    mdi-arrow-right
-                  </v-icon>
-                </v-btn>
-              </div>
-            </div>
-          
-            <div class="featured-sidebar">
-              <div class="featured-card featured-side">
-                <div class="featured-image">
-                  <v-icon size="48" color="success">
-                    mdi-chart-line
-                  </v-icon>
-                </div>
-                <div class="featured-content">
-                  <div class="article-meta">
-                    <span class="category">Performance</span>
-                    <span class="date">March 12, 2025</span>
-                  </div>
-                  <h4>Optimizing Cloud Costs with AI</h4>
-                  <p>Discover how machine learning can help you reduce cloud infrastructure costs by up to 40%.</p>
-                  <v-btn color="primary" variant="text" class="read-more-small">
-                    Read More
-                  </v-btn>
-                </div>
-              </div>
-            
-              <div class="featured-card featured-side">
-                <div class="featured-image">
-                  <v-icon size="48" color="warning">
-                    mdi-rocket-launch
-                  </v-icon>
-                </div>
-                <div class="featured-content">
-                  <div class="article-meta">
-                    <span class="category">Deployment</span>
-                    <span class="date">March 10, 2025</span>
-                  </div>
-                  <h4>Zero-Downtime Deployments</h4>
-                  <p>Learn the strategies and tools for deploying applications without any service interruption.</p>
-                  <v-btn color="primary" variant="text" class="read-more-small">
-                    Read More
-                  </v-btn>
-                </div>
-              </div>
-            </div>
+      <!-- Featured Articles Section -->
+      <v-row class="mb-12">
+        <v-col cols="12">
+          <div class="text-center mb-8">
+            <h2 class="text-h3 font-weight-bold mb-4">
+              Featured Articles
+            </h2>
           </div>
-        </div>
 
-        <div class="articles-section">
-          <div class="section-header">
-            <h2>Latest Articles</h2>
-            <div class="filter-controls">
-              <v-select
-                v-model="selectedCategory"
-                :items="categories"
-                label="Filter by category"
-                variant="outlined"
-                density="compact"
-                hide-details
-                class="category-filter"
+          <v-row>
+            <!-- Main Featured Article -->
+            <v-col cols="12" lg="8" class="mb-6">
+              <BlogCard 
+                :article="featuredArticle" 
+                :featured="true"
+                @click="handleArticleClick(featuredArticle)"
               />
-              <v-text-field
-                v-model="searchQuery"
-                placeholder="Search articles..."
-                variant="outlined"
-                density="compact"
-                hide-details
-                class="search-filter"
-                prepend-inner-icon="mdi-magnify"
+            </v-col>
+
+            <!-- Sidebar Featured Articles -->
+            <v-col cols="12" lg="4">
+              <v-row>
+                <v-col 
+                  v-for="article in sidebarArticles" 
+                  :key="article.id"
+                  cols="12"
+                  class="mb-6"
+                >
+                  <BlogCard 
+                    :article="article" 
+                    :compact="true"
+                    @click="handleArticleClick(article)"
+                  />
+                </v-col>
+              </v-row>
+            </v-col>
+          </v-row>
+        </v-col>
+      </v-row>
+
+      <!-- Filter and Search Section -->
+      <v-row class="mb-8">
+        <v-col cols="12">
+          <v-card class="filter-card" elevation="2">
+            <v-card-text class="pa-6">
+              <v-row align="center">
+                <v-col cols="12" md="4">
+                  <v-select
+                    v-model="selectedCategory"
+                    :items="categories"
+                    label="Filter by category"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    clearable
+                    :ripple="false"
+                  />
+                </v-col>
+                <v-col cols="12" md="4">
+                  <v-select
+                    v-model="selectedTag"
+                    :items="tags"
+                    label="Filter by tag"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    clearable
+                    :ripple="false"
+                  />
+                </v-col>
+                <v-col cols="12" md="4">
+                  <v-text-field
+                    v-model="searchQuery"
+                    placeholder="Search articles..."
+                    variant="outlined"
+                    density="compact"
+                    prepend-inner-icon="mdi-magnify"
+                    clearable
+                    hide-details
+                    @update:model-value="filterArticles"
+                    :ripple="false"
+                  />
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+
+      <!-- Latest Articles Section -->
+      <v-row class="mb-12">
+        <v-col cols="12">
+          <div class="text-center mb-8">
+            <h2 class="text-h3 font-weight-bold mb-4">
+              Latest Articles
+            </h2>
+            <p class="text-body-1 text-medium-emphasis">
+              {{ filteredArticles.length }} articles found
+            </p>
+          </div>
+
+          <v-row>
+            <v-col 
+              v-for="article in filteredArticles" 
+              :key="article.id"
+              cols="12" 
+              md="6" 
+              lg="4"
+              class="mb-6"
+            >
+              <BlogCard 
+                :article="article"
+                @click="handleArticleClick(article)"
               />
-            </div>
-          </div>
+            </v-col>
+          </v-row>
 
-          <div class="articles-grid">
-            <div v-for="article in filteredArticles" :key="article.id" class="article-card">
-              <div class="article-image">
-                <v-icon size="48" :color="article.iconColor">
-                  {{ article.icon }}
-                </v-icon>
-              </div>
-              <div class="article-content">
-                <div class="article-meta">
-                  <span class="category">{{ article.category }}</span>
-                  <span class="date">{{ article.date }}</span>
-                  <span class="read-time">{{ article.readTime }}</span>
-                </div>
-                <h3>{{ article.title }}</h3>
-                <p>{{ article.excerpt }}</p>
-                <div class="article-tags">
-                  <span v-for="tag in article.tags" :key="tag" class="tag">{{ tag }}</span>
-                </div>
-                <div class="article-footer">
-                  <div class="author-info">
-                    <v-icon size="16" color="primary">
-                      mdi-account-circle
-                    </v-icon>
-                    <span>{{ article.author }}</span>
-                  </div>
-                  <v-btn color="primary" variant="text" class="read-more">
-                    Read More
-                    <v-icon right>
-                      mdi-arrow-right
-                    </v-icon>
-                  </v-btn>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="pagination-section">
-            <v-pagination
-              v-model="currentPage"
-              :length="totalPages"
-              :total-visible="7"
-              color="primary"
-            />
-          </div>
-        </div>
-
-        <div class="categories-section">
-          <h2>Browse by Category</h2>
-          <div class="categories-grid">
-            <div v-for="category in categoryStats" :key="category.name" class="category-card">
-              <div class="category-icon">
-                <v-icon size="32" :color="category.color">
-                  {{ category.icon }}
-                </v-icon>
-              </div>
-              <h3>{{ category.name }}</h3>
-              <p>{{ category.description }}</p>
-              <div class="category-stats">
-                <span>{{ category.articleCount }} articles</span>
-              </div>
-              <v-btn color="primary" variant="text" class="category-btn">
-                Browse {{ category.name }}
+          <!-- Load More Button -->
+          <v-row v-if="hasMoreArticles" justify="center" class="mt-8">
+            <v-col cols="12" sm="6" md="4" class="text-center">
+              <v-btn
+                color="primary"
+                variant="outlined"
+                size="large"
+                @click="loadMoreArticles"
+                :loading="loading"
+                :ripple="false"
+              >
+                <v-icon start>mdi-plus</v-icon>
+                Load More Articles
               </v-btn>
-            </div>
-          </div>
-        </div>
+            </v-col>
+          </v-row>
+        </v-col>
+      </v-row>
 
-        <div class="newsletter-section">
-          <div class="newsletter-card">
-            <div class="newsletter-content">
-              <h2>Stay Updated</h2>
-              <p>
-                Get the latest articles, tutorials, and product updates delivered to your inbox. 
-                No spam, just valuable content for developers building the future.
+      <!-- Newsletter Section -->
+      <v-row justify="center" class="mb-12">
+        <v-col cols="12" md="8" lg="6">
+          <v-card class="newsletter-card" elevation="8" color="primary">
+            <v-card-text class="pa-8 text-center">
+              <v-icon size="64" color="white" class="mb-4">
+                mdi-email-newsletter
+              </v-icon>
+              <h2 class="text-h4 font-weight-bold mb-4 text-white">
+                Stay Updated
+              </h2>
+              <p class="text-h6 text-white mb-6">
+                Get the latest insights and tutorials delivered to your inbox
               </p>
-              <div class="newsletter-features">
-                <div class="newsletter-feature">
-                  <v-icon size="20" color="success">
-                    mdi-check
-                  </v-icon>
-                  <span>Weekly curated content</span>
-                </div>
-                <div class="newsletter-feature">
-                  <v-icon size="20" color="success">
-                    mdi-check
-                  </v-icon>
-                  <span>Exclusive tutorials</span>
-                </div>
-                <div class="newsletter-feature">
-                  <v-icon size="20" color="success">
-                    mdi-check
-                  </v-icon>
-                  <span>Product announcements</span>
-                </div>
-              </div>
-              <div class="newsletter-form">
-                <v-text-field
-                  v-model="email"
-                  placeholder="Enter your email"
-                  variant="outlined"
-                  density="compact"
-                  class="email-input"
-                />
-                <v-btn color="primary" variant="elevated" class="subscribe-btn">
-                  Subscribe
-                </v-btn>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+              
+              <v-form @submit.prevent="subscribeNewsletter" ref="newsletterFormRef">
+                <v-row>
+                  <v-col cols="12" sm="8">
+                    <v-text-field
+                      v-model="newsletterEmail"
+                      placeholder="Enter your email address"
+                      variant="outlined"
+                      type="email"
+                      required
+                      :rules="[
+                        v => !!v || 'Email is required',
+                        v => /.+@.+\..+/.test(v) || 'Email must be valid'
+                      ]"
+                      :disabled="subscribing"
+                      hide-details
+                    />
+                  </v-col>
+                  <v-col cols="12" sm="4">
+                    <v-btn
+                      type="submit"
+                      color="white"
+                      size="large"
+                      :loading="subscribing"
+                      :disabled="subscribing"
+                      block
+                      :ripple="false"
+                    >
+                      Subscribe
+                    </v-btn>
+                  </v-col>
+                </v-row>
+              </v-form>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+    </v-container>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useNotificationsStore } from '@/stores/useNotificationsStore'
 
-const selectedCategory = ref('All')
+// Types
+interface Article {
+  id: string
+  title: string
+  excerpt: string
+  content: string
+  category: string
+  tags: string[]
+  author: string
+  publishDate: string
+  readTime: string
+  featured: boolean
+  image?: string
+}
+
+// Composables
+const router = useRouter()
+const notificationsStore = useNotificationsStore()
+
+// Form refs
+const newsletterFormRef = ref()
+
+// Reactive state
+const selectedCategory = ref('')
+const selectedTag = ref('')
 const searchQuery = ref('')
-const currentPage = ref(1)
-const email = ref('')
+const loading = ref(false)
+const subscribing = ref(false)
+const newsletterEmail = ref('')
 
-const categories = ['All', 'AI & ML', 'Tutorials', 'Product Updates', 'Performance', 'Deployment']
+// Blog data
+const featuredArticle: Article = {
+  id: 'building-intelligent-chatbots',
+  title: 'Building Intelligent Chatbots with Cloudless Wizard',
+  excerpt: 'Learn how to create sophisticated chatbots using our AI-powered bot builder. We\'ll walk through the complete process from data preparation to deployment.',
+  content: 'Full article content here...',
+  category: 'AI & ML',
+  tags: ['Chatbots', 'AI', 'Tutorial', 'NLP'],
+  author: 'Sarah Chen',
+  publishDate: 'March 15, 2025',
+  readTime: '8 min read',
+  featured: true,
+  image: '/blog/chatbots.jpg'
+}
 
-const articles = ref([
+const sidebarArticles: Article[] = [
   {
-    id: 1,
-    title: 'Getting Started with Cloudless Wizard',
-    excerpt: 'A comprehensive guide to building your first AI-powered application using our platform.',
-    category: 'Tutorials',
-    date: 'March 14, 2025',
-    readTime: '5 min read',
-    author: 'Sarah Chen',
-    icon: 'mdi-rocket-launch',
-    iconColor: 'primary',
-    tags: ['Getting Started', 'Tutorial', 'AI']
-  },
-  {
-    id: 2,
-    title: 'Understanding AI Model Training',
-    excerpt: 'Deep dive into the fundamentals of machine learning model training and optimization.',
-    category: 'AI & ML',
-    date: 'March 13, 2025',
-    readTime: '12 min read',
-    author: 'Dr. Michael Rodriguez',
-    icon: 'mdi-brain',
-    iconColor: 'purple',
-    tags: ['Machine Learning', 'Training', 'AI']
-  },
-  {
-    id: 3,
-    title: 'New Features: Enhanced Pipeline Builder',
-    excerpt: 'Discover the latest improvements to our pipeline builder with drag-and-drop functionality.',
-    category: 'Product Updates',
-    date: 'March 12, 2025',
-    readTime: '3 min read',
-    author: 'Alex Thompson',
-    icon: 'mdi-update',
-    iconColor: 'success',
-    tags: ['Product Update', 'Pipeline', 'Features']
-  },
-  {
-    id: 4,
-    title: 'Optimizing Model Performance',
-    excerpt: 'Best practices for improving the performance and accuracy of your AI models.',
+    id: 'optimizing-cloud-costs',
+    title: 'Optimizing Cloud Costs with AI',
+    excerpt: 'Discover how machine learning can help you reduce cloud infrastructure costs by up to 40%.',
+    content: 'Full article content here...',
     category: 'Performance',
-    date: 'March 11, 2025',
-    readTime: '8 min read',
-    author: 'Lisa Wang',
-    icon: 'mdi-speedometer',
-    iconColor: 'warning',
-    tags: ['Performance', 'Optimization', 'AI']
+    tags: ['Cloud', 'Cost Optimization', 'AI'],
+    author: 'Michael Rodriguez',
+    publishDate: 'March 12, 2025',
+    readTime: '5 min read',
+    featured: false,
+    image: '/blog/cloud-costs.jpg'
   },
   {
-    id: 5,
-    title: 'Deploying Models to Production',
-    excerpt: 'Step-by-step guide to deploying your trained models to production environments.',
+    id: 'zero-downtime-deployments',
+    title: 'Zero-Downtime Deployments',
+    excerpt: 'Learn the strategies and tools for deploying applications without any service interruption.',
+    content: 'Full article content here...',
     category: 'Deployment',
-    date: 'March 10, 2025',
-    readTime: '10 min read',
-    author: 'David Kim',
-    icon: 'mdi-server',
-    iconColor: 'info',
-    tags: ['Deployment', 'Production', 'DevOps']
-  },
-  {
-    id: 6,
-    title: 'Building Custom Chatbots',
-    excerpt: 'Learn how to create intelligent chatbots that can handle complex conversations.',
-    category: 'AI & ML',
-    date: 'March 9, 2025',
-    readTime: '15 min read',
-    author: 'Emma Wilson',
-    icon: 'mdi-chat',
-    iconColor: 'teal',
-    tags: ['Chatbots', 'NLP', 'AI']
+    tags: ['Deployment', 'DevOps', 'CI/CD'],
+    author: 'Emily Watson',
+    publishDate: 'March 10, 2025',
+    readTime: '6 min read',
+    featured: false,
+    image: '/blog/deployments.jpg'
   }
-])
+]
 
-const categoryStats = ref([
+const articles: Article[] = [
   {
-    name: 'AI & ML',
-    description: 'Articles about artificial intelligence and machine learning',
-    articleCount: 15,
-    icon: 'mdi-brain',
-    color: 'purple'
+    id: 'ai-model-optimization',
+    title: 'Advanced AI Model Optimization Techniques',
+    excerpt: 'Explore cutting-edge techniques for optimizing AI model performance and reducing inference time.',
+    content: 'Full article content here...',
+    category: 'AI & ML',
+    tags: ['AI', 'Optimization', 'Performance'],
+    author: 'Alex Johnson',
+    publishDate: 'March 8, 2025',
+    readTime: '10 min read',
+    featured: false
   },
   {
-    name: 'Tutorials',
-    description: 'Step-by-step guides and how-to articles',
-    articleCount: 12,
-    icon: 'mdi-school',
-    color: 'primary'
+    id: 'data-pipeline-design',
+    title: 'Designing Scalable Data Pipelines',
+    excerpt: 'Best practices for building robust and scalable data processing pipelines for AI applications.',
+    content: 'Full article content here...',
+    category: 'Data Engineering',
+    tags: ['Data Pipelines', 'Scalability', 'Architecture'],
+    author: 'David Kim',
+    publishDate: 'March 5, 2025',
+    readTime: '12 min read',
+    featured: false
   },
   {
-    name: 'Product Updates',
-    description: 'Latest features and platform improvements',
-    articleCount: 8,
-    icon: 'mdi-update',
-    color: 'success'
+    id: 'mlops-best-practices',
+    title: 'MLOps Best Practices for Production',
+    excerpt: 'Essential practices for managing machine learning models in production environments.',
+    content: 'Full article content here...',
+    category: 'MLOps',
+    tags: ['MLOps', 'Production', 'Best Practices'],
+    author: 'Lisa Wang',
+    publishDate: 'March 3, 2025',
+    readTime: '15 min read',
+    featured: false
   },
   {
-    name: 'Performance',
-    description: 'Tips and tricks for optimizing your applications',
-    articleCount: 6,
-    icon: 'mdi-speedometer',
-    color: 'warning'
+    id: 'ai-ethics-guidelines',
+    title: 'AI Ethics and Responsible Development',
+    excerpt: 'Guidelines for developing AI systems that are fair, transparent, and accountable.',
+    content: 'Full article content here...',
+    category: 'AI Ethics',
+    tags: ['AI Ethics', 'Responsible AI', 'Transparency'],
+    author: 'Sarah Chen',
+    publishDate: 'March 1, 2025',
+    readTime: '8 min read',
+    featured: false
   },
   {
-    name: 'Deployment',
-    description: 'Deployment strategies and best practices',
-    articleCount: 4,
-    icon: 'mdi-server',
-    color: 'info'
+    id: 'real-time-analytics',
+    title: 'Building Real-Time Analytics with AI',
+    excerpt: 'How to implement real-time analytics systems using AI and streaming data technologies.',
+    content: 'Full article content here...',
+    category: 'Analytics',
+    tags: ['Analytics', 'Real-time', 'Streaming'],
+    author: 'Michael Rodriguez',
+    publishDate: 'February 28, 2025',
+    readTime: '11 min read',
+    featured: false
+  },
+  {
+    id: 'ai-security-best-practices',
+    title: 'AI Security Best Practices',
+    excerpt: 'Protecting your AI systems from security threats and ensuring data privacy.',
+    content: 'Full article content here...',
+    category: 'Security',
+    tags: ['Security', 'AI', 'Privacy'],
+    author: 'Emily Watson',
+    publishDate: 'February 25, 2025',
+    readTime: '9 min read',
+    featured: false
   }
-])
+]
+
+// Computed properties
+const categories = computed(() => {
+  const allCategories = [
+    featuredArticle.category,
+    ...sidebarArticles.map(a => a.category),
+    ...articles.map(a => a.category)
+  ]
+  return [...new Set(allCategories)].sort()
+})
+
+const tags = computed(() => {
+  const allTags = [
+    ...featuredArticle.tags,
+    ...sidebarArticles.flatMap(a => a.tags),
+    ...articles.flatMap(a => a.tags)
+  ]
+  return [...new Set(allTags)].sort()
+})
 
 const filteredArticles = computed(() => {
-  let filtered = articles.value
+  let filtered = articles
 
-  if (selectedCategory.value !== 'All') {
+  if (selectedCategory.value) {
     filtered = filtered.filter(article => article.category === selectedCategory.value)
+  }
+
+  if (selectedTag.value) {
+    filtered = filtered.filter(article => article.tags.includes(selectedTag.value))
   }
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(article => 
+    filtered = filtered.filter(article =>
       article.title.toLowerCase().includes(query) ||
       article.excerpt.toLowerCase().includes(query) ||
+      article.content.toLowerCase().includes(query) ||
       article.tags.some(tag => tag.toLowerCase().includes(query))
     )
   }
@@ -369,456 +401,108 @@ const filteredArticles = computed(() => {
   return filtered
 })
 
-const totalPages = computed(() => Math.ceil(filteredArticles.value.length / 6))
+const hasMoreArticles = computed(() => {
+  // This would typically check against a pagination system
+  return false
+})
+
+// Methods
+const filterArticles = () => {
+  // The filtering is handled by computed properties
+  notificationsStore.info('Filter Applied', `Showing ${filteredArticles.value.length} articles`)
+}
+
+const handleArticleClick = (article: Article) => {
+  try {
+    router.push(`/blog/${article.id}`)
+    notificationsStore.info('Article', `Opening: ${article.title}`)
+  } catch (error) {
+    notificationsStore.error('Error', 'Failed to open article')
+  }
+}
+
+const loadMoreArticles = async () => {
+  loading.value = true
+  try {
+    // Simulate loading more articles
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    notificationsStore.success('Articles Loaded', 'More articles have been loaded')
+  } catch (error) {
+    notificationsStore.error('Error', 'Failed to load more articles')
+  } finally {
+    loading.value = false
+  }
+}
+
+const subscribeNewsletter = async () => {
+  const { valid } = await newsletterFormRef.value.validate()
+  
+  if (!valid) {
+    notificationsStore.error('Validation Error', 'Please enter a valid email address')
+    return
+  }
+
+  subscribing.value = true
+  try {
+    // Simulate newsletter subscription
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // Reset form
+    newsletterEmail.value = ''
+    newsletterFormRef.value.resetValidation()
+    
+    notificationsStore.success('Subscribed!', 'Thank you for subscribing to our newsletter')
+  } catch (error) {
+    notificationsStore.error('Error', 'Failed to subscribe to newsletter')
+  } finally {
+    subscribing.value = false
+  }
+}
+
+// Meta
+definePageMeta({
+  title: 'Blog - Cloudless Wizard',
+  description: 'Insights, tutorials, and updates from the Cloudless Wizard team. Learn about AI development, best practices, and industry trends.',
+  layout: 'default'
+})
 </script>
 
 <style scoped>
 .blog-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 3rem;
-}
-
-.page-header h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 1rem;
-}
-
-.subtitle {
-  font-size: 1.2rem;
-  color: rgba(0, 0, 0, 0.7);
-  margin: 0;
-}
-
-.content-container {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  padding: 3rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.blog-content {
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-.featured-section {
-  margin-bottom: 4rem;
-}
-
-.featured-section h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.9);
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
-.featured-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 2rem;
-}
-
-.featured-main {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(102, 126, 234, 0.1);
+.filter-card {
   border-radius: 16px;
-  padding: 2rem;
-  display: flex;
-  gap: 2rem;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.3s ease-in-out;
 }
 
-.featured-main:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-}
-
-.featured-image {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 120px;
-}
-
-.featured-content {
-  flex: 1;
-}
-
-.article-meta {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-
-.category {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.date, .read-time {
-  color: rgba(0, 0, 0, 0.6);
-  font-size: 0.8rem;
-}
-
-.featured-main h3 {
-  font-size: 1.8rem;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.9);
-  margin-bottom: 1rem;
-  line-height: 1.3;
-}
-
-.featured-main p {
-  color: rgba(0, 0, 0, 0.7);
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-}
-
-.article-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.tag {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.featured-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.featured-side {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(102, 126, 234, 0.1);
-  border-radius: 16px;
-  padding: 1.5rem;
-  display: flex;
-  gap: 1rem;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.featured-side:hover {
+.filter-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.featured-side .featured-image {
-  min-width: 60px;
-}
-
-.featured-side h4 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.9);
-  margin-bottom: 0.5rem;
-}
-
-.featured-side p {
-  color: rgba(0, 0, 0, 0.7);
-  font-size: 0.9rem;
-  line-height: 1.5;
-  margin-bottom: 1rem;
-}
-
-.read-more-small {
-  font-size: 0.8rem;
-  padding: 0;
-  min-width: auto;
-}
-
-.articles-section {
-  margin-bottom: 4rem;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.section-header h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.9);
-  margin: 0;
-}
-
-.filter-controls {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.category-filter {
-  min-width: 150px;
-}
-
-.search-filter {
-  min-width: 200px;
-}
-
-.articles-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 2rem;
-  margin-bottom: 3rem;
-}
-
-.article-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(102, 126, 234, 0.1);
-  border-radius: 16px;
-  padding: 2rem;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.article-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-}
-
-.article-image {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-}
-
-.article-content h3 {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.9);
-  margin-bottom: 1rem;
-  line-height: 1.4;
-}
-
-.article-content p {
-  color: rgba(0, 0, 0, 0.7);
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-}
-
-.article-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1.5rem;
-}
-
-.author-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: rgba(0, 0, 0, 0.6);
-  font-size: 0.9rem;
-}
-
-.pagination-section {
-  display: flex;
-  justify-content: center;
-  margin-top: 2rem;
-}
-
-.categories-section {
-  margin-bottom: 4rem;
-}
-
-.categories-section h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.9);
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
-.categories-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 2rem;
-}
-
-.category-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(102, 126, 234, 0.1);
-  border-radius: 16px;
-  padding: 2rem;
-  text-align: center;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.category-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-}
-
-.category-icon {
-  margin-bottom: 1rem;
-}
-
-.category-card h3 {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.9);
-  margin-bottom: 0.5rem;
-}
-
-.category-card p {
-  color: rgba(0, 0, 0, 0.7);
-  line-height: 1.5;
-  margin-bottom: 1rem;
-}
-
-.category-stats {
-  margin-bottom: 1.5rem;
-}
-
-.category-stats span {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.category-btn {
-  font-size: 0.9rem;
-}
-
-.newsletter-section {
-  margin-top: 4rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .newsletter-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
-  padding: 3rem;
-  text-align: center;
-  color: white;
+  background: linear-gradient(135deg, var(--v-theme-primary) 0%, var(--v-theme-secondary) 100%);
+  border-radius: 16px;
 }
 
-.newsletter-content h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-}
-
-.newsletter-content p {
-  font-size: 1.1rem;
-  margin-bottom: 2rem;
-  opacity: 0.9;
-  line-height: 1.6;
-}
-
-.newsletter-features {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-}
-
-.newsletter-feature {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.newsletter-form {
-  display: flex;
-  gap: 1rem;
-  max-width: 500px;
-  margin: 0 auto;
-  flex-wrap: wrap;
-}
-
-.email-input {
-  flex: 1;
-  min-width: 250px;
-}
-
-.subscribe-btn {
-  white-space: nowrap;
-}
-
-@media (max-width: 768px) {
+/* Responsive improvements */
+@media (max-width: 600px) {
   .blog-page {
-    padding: 1rem;
+    padding: 0 16px;
   }
-  
-  .content-container {
-    padding: 2rem;
-  }
-  
-  .featured-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .featured-main {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .articles-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .categories-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .newsletter-features {
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .newsletter-form {
-    flex-direction: column;
-  }
-  
-  .section-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .filter-controls {
-    flex-direction: column;
-  }
-  
-  .page-header h1 {
-    font-size: 2rem;
-  }
+}
+
+/* Accessibility improvements */
+:focus-visible {
+  outline: 2px solid var(--v-theme-primary);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions */
+.v-card {
+  transition: all 0.3s ease-in-out;
 }
 </style> 

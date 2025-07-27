@@ -52,8 +52,8 @@ export default defineEventHandler(async (event) => {
                 {
                   tags: {
                     some: {
-                      tag_name: {
-                        in: project.tags.map((tag) => tag.tag_name),
+                      name: {
+                        in: project.tags.map((tag) => tag.name),
                       },
                     },
                   },

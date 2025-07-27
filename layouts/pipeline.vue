@@ -1,46 +1,53 @@
 <template>
-  <div class="pipeline-layout">
-    <!-- Pipeline Sidebar -->
-    <aside class="pipeline-sidebar">
-      <div class="sidebar-header">
-        <h2 class="text-h6 font-weight-bold">
-          <v-icon start color="primary">mdi-pipe</v-icon>
-          Pipeline Management
-        </h2>
-      </div>
-      
-      <nav class="sidebar-nav">
-        <v-list>
-          <v-list-item
-            to="/pipelines"
-            prepend-icon="mdi-view-dashboard"
-            title="Overview"
-          />
-          <v-list-item
-            to="/pipelines/create"
-            prepend-icon="mdi-plus"
-            title="Create Pipeline"
-          />
-          <v-list-item
-            to="/pipelines/analytics"
-            prepend-icon="mdi-chart-line"
-            title="Analytics"
-          />
-          <v-list-item
-            to="/pipelines/templates"
-            prepend-icon="mdi-file-document"
-            title="Templates"
-          />
-          <v-list-item
-            to="/pipelines/settings"
-            prepend-icon="mdi-cog"
-            title="Settings"
-          />
-        </v-list>
-      </nav>
-      
+  <v-app>
+    <v-navigation-drawer
+      v-model="drawer"
+      permanent
+      class="pipeline-sidebar"
+      width="280"
+    >
+      <!-- Sidebar Header -->
+      <v-card-title class="text-h6 font-weight-bold pa-4">
+        <v-icon start color="primary" class="mr-2">mdi-pipe</v-icon>
+        Pipeline Management
+      </v-card-title>
+
+      <!-- Sidebar Navigation -->
+      <v-list class="pa-2">
+        <v-list-item
+          to="/pipelines"
+          prepend-icon="mdi-view-dashboard"
+          title="Overview"
+          variant="text"
+        />
+        <v-list-item
+          to="/pipelines/create"
+          prepend-icon="mdi-plus"
+          title="Create Pipeline"
+          variant="text"
+        />
+        <v-list-item
+          to="/pipelines/analytics"
+          prepend-icon="mdi-chart-line"
+          title="Analytics"
+          variant="text"
+        />
+        <v-list-item
+          to="/pipelines/templates"
+          prepend-icon="mdi-file-document"
+          title="Templates"
+          variant="text"
+        />
+        <v-list-item
+          to="/pipelines/settings"
+          prepend-icon="mdi-cog"
+          title="Settings"
+          variant="text"
+        />
+      </v-list>
+
       <!-- Quick Actions -->
-      <div class="sidebar-actions">
+      <v-card-actions class="pa-4">
         <v-btn
           block
           color="primary"
@@ -49,48 +56,74 @@
         >
           New Pipeline
         </v-btn>
-      </div>
-    </aside>
-    
+      </v-card-actions>
+    </v-navigation-drawer>
+
     <!-- Main Content -->
-    <main class="pipeline-main">
-      <slot />
-    </main>
-    
+    <v-main class="pipeline-main">
+      <v-container fluid class="pa-4">
+        <slot />
+      </v-container>
+    </v-main>
+
     <!-- Pipeline Status Bar -->
-    <div class="pipeline-status-bar">
-      <div class="status-indicators">
-        <div class="status-item">
-          <v-icon size="16" color="success">mdi-check-circle</v-icon>
-          <span class="status-text">{{ pipelineStats.active }} Active</span>
-        </div>
-        <div class="status-item">
-          <v-icon size="16" color="info">mdi-play-circle</v-icon>
-          <span class="status-text">{{ pipelineStats.running }} Running</span>
-        </div>
-        <div class="status-item">
-          <v-icon size="16" color="warning">mdi-pencil</v-icon>
-          <span class="status-text">{{ pipelineStats.draft }} Draft</span>
-        </div>
-      </div>
-      
-      <div class="execution-status" v-if="isAnyExecuting">
-        <v-progress-circular
-          indeterminate
-          size="20"
-          color="primary"
-          class="mr-2"
-        />
-        <span class="status-text">{{ executingCount }} executing</span>
-      </div>
-    </div>
-    
+    <v-footer class="pipeline-status-bar">
+      <v-container fluid>
+        <v-row align="center" justify="space-between" no-gutters>
+          <v-col cols="auto">
+            <v-row align="center" no-gutters>
+              <v-chip
+                color="success"
+                variant="outlined"
+                size="small"
+                class="mr-4"
+                prepend-icon="mdi-check-circle"
+              >
+                {{ pipelineStats.active }} Active
+              </v-chip>
+              <v-chip
+                color="info"
+                variant="outlined"
+                size="small"
+                class="mr-4"
+                prepend-icon="mdi-play-circle"
+              >
+                {{ pipelineStats.running }} Running
+              </v-chip>
+              <v-chip
+                color="warning"
+                variant="outlined"
+                size="small"
+                prepend-icon="mdi-pencil"
+              >
+                {{ pipelineStats.draft }} Draft
+              </v-chip>
+            </v-row>
+          </v-col>
+
+          <v-col cols="auto" v-if="isAnyExecuting">
+            <v-row align="center" no-gutters>
+              <v-progress-circular
+                indeterminate
+                size="20"
+                color="primary"
+                class="mr-2"
+              />
+              <v-chip color="primary" variant="outlined" size="small">
+                {{ executingCount }} executing
+              </v-chip>
+            </v-row>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-footer>
+
     <!-- Create Pipeline Dialog -->
     <PipelinesStepperPipelineBuilder
       v-model="showCreateDialog"
       @pipeline-created="handlePipelineCreated"
     />
-  </div>
+  </v-app>
 </template>
 
 <script setup lang="ts">
@@ -103,6 +136,7 @@ const pipelineStore = usePipelineStore()
 const { pipelineStats } = usePipelineAnalytics()
 const { isAnyExecuting, executingCount } = usePipelineExecution()
 
+const drawer = ref(true)
 const showCreateDialog = ref(false)
 
 const handlePipelineCreated = (pipeline: any) => {
@@ -113,118 +147,25 @@ const handlePipelineCreated = (pipeline: any) => {
 </script>
 
 <style scoped>
-.pipeline-layout {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  grid-template-rows: 1fr auto;
-  height: 100vh;
-  overflow: hidden;
-}
-
 .pipeline-sidebar {
-  grid-row: 1 / 3;
   background: #f8f9fa;
   border-right: 1px solid #e9ecef;
-  display: flex;
-  flex-direction: column;
-  padding: 1rem;
-}
-
-.sidebar-header {
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.sidebar-nav {
-  flex: 1;
-}
-
-.sidebar-actions {
-  margin-top: auto;
-  padding-top: 1rem;
-  border-top: 1px solid #e9ecef;
 }
 
 .pipeline-main {
-  grid-column: 2;
-  grid-row: 1;
-  overflow-y: auto;
-  padding: 2rem;
+  background: white;
 }
 
 .pipeline-status-bar {
-  grid-column: 2;
-  grid-row: 2;
   background: white;
   border-top: 1px solid #e9ecef;
-  padding: 0.75rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.875rem;
-}
-
-.status-indicators {
-  display: flex;
-  gap: 1.5rem;
-}
-
-.status-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.execution-status {
-  display: flex;
-  align-items: center;
-}
-
-.status-text {
-  color: #6c757d;
-  font-weight: 500;
+  height: 60px;
 }
 
 @media (max-width: 1024px) {
-  .pipeline-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr auto;
-  }
-  
   .pipeline-sidebar {
-    grid-column: 1;
-    grid-row: 1;
-    height: auto;
-    flex-direction: row;
-    align-items: center;
-    gap: 2rem;
-  }
-  
-  .sidebar-header {
-    margin-bottom: 0;
-    padding-bottom: 0;
-    border-bottom: none;
-  }
-  
-  .sidebar-nav {
-    flex: 1;
-  }
-  
-  .sidebar-actions {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
-  }
-  
-  .pipeline-main {
-    grid-column: 1;
-    grid-row: 2;
-  }
-  
-  .pipeline-status-bar {
-    grid-column: 1;
-    grid-row: 3;
+    position: fixed;
+    z-index: 1000;
   }
 }
-</style> 
+</style>

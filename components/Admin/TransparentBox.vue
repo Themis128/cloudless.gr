@@ -1,13 +1,16 @@
-<!-- White box for content overlay if needed later
-<div class="content-overlay">
-  <div class="content-inner">
-    <slot />
+<template>
+  <div class="content-overlay">
+    <div class="content-inner">
+      <slot />
+    </div>
   </div>
-</div>
--->
+</template>
+
+<script setup>
+// TransparentBox component for admin content overlay
+</script>
 
 <style>
-/* 
 .content-overlay {
   background-color: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(8px);
@@ -21,5 +24,4 @@
   position: relative;
   z-index: 1;
 }
-*/
 </style>

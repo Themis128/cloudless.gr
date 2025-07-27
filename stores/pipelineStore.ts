@@ -59,7 +59,7 @@ interface PipelineState {
   loading: boolean
   error: string | null
   success: string | null
-  
+
   // Builder state
   builderForm: PipelineForm
   builderStep: number
@@ -69,15 +69,15 @@ interface PipelineState {
     icon: string
     description: string
   }>
-  
+
   // Validation state
   validationErrors: Record<string, string>
-  
+
   // Test state
   testResults: PipelineTestResult[]
   testInput: string
   testLoading: boolean
-  
+
   // Run state
   runningPipelines: number[]
   runProgress: Record<number, number>
@@ -90,14 +90,14 @@ export const usePipelineStore = defineStore('pipeline', {
     loading: false,
     error: null,
     success: null,
-    
+
     // Builder state
     builderForm: {
       name: '',
       description: '',
       config: '',
       modelId: undefined,
-      steps: []
+      steps: [],
     },
     builderStep: 0,
     builderSteps: [
@@ -105,56 +105,59 @@ export const usePipelineStore = defineStore('pipeline', {
         title: 'Basic Information',
         subtitle: 'Pipeline name and description',
         icon: 'mdi-information',
-        description: 'Enter the basic information about your pipeline.'
+        description: 'Enter the basic information about your pipeline.',
       },
       {
         title: 'Model Selection',
         subtitle: 'Choose the model',
         icon: 'mdi-brain',
-        description: 'Select the model for your pipeline.'
+        description: 'Select the model for your pipeline.',
       },
       {
         title: 'Configuration',
         subtitle: 'Pipeline configuration',
         icon: 'mdi-cog',
-        description: 'Configure the pipeline steps and settings.'
+        description: 'Configure the pipeline steps and settings.',
       },
       {
         title: 'Review & Create',
         subtitle: 'Review and create pipeline',
         icon: 'mdi-check',
-        description: 'Review your pipeline configuration and create it.'
-      }
+        description: 'Review your pipeline configuration and create it.',
+      },
     ],
-    
+
     // Validation state
     validationErrors: {},
-    
+
     // Test state
     testResults: [],
     testInput: '',
     testLoading: false,
-    
+
     // Run state
     runningPipelines: [],
-    runProgress: {}
+    runProgress: {},
   }),
 
   getters: {
     // Core getters
-    allPipelines: (state) => state.pipelines,
-    pipelineById: (state) => (id: number) => state.pipelines.find(p => p.id === id),
-    pipelinesByStatus: (state) => (status: string) => state.pipelines.filter(p => p.status === status),
-    
+    allPipelines: state => state.pipelines,
+    pipelineById: state => (id: number) =>
+      state.pipelines.find(p => p.id === id),
+    pipelinesByStatus: state => (status: string) =>
+      state.pipelines.filter(p => p.status === status),
+
     // Loading and error states
-    isLoading: (state) => state.loading,
-    hasError: (state) => !!state.error,
-    hasSuccess: (state) => !!state.success,
-    
+    isLoading: state => state.loading,
+    hasError: state => !!state.error,
+    hasSuccess: state => !!state.success,
+
     // Builder getters
-    currentBuilderStep: (state) => state.builderSteps[state.builderStep],
-    builderProgress: (state) => ((state.builderStep + 1) / state.builderSteps.length) * 100,
-    canProceedToNextStep: (state) => {
+    currentBuilderStep: state => state.builderSteps[state.builderStep],
+    builderProgress: state =>
+      ((state.builderStep + 1) / state.builderSteps.length) * 100,
+    canProceedToNextStep: state => {
       const form = state.builderForm
       switch (state.builderStep) {
         case 0:
@@ -167,17 +170,18 @@ export const usePipelineStore = defineStore('pipeline', {
           return true
       }
     },
-    hasValidationErrors: (state) => Object.keys(state.validationErrors).length > 0,
-    
+    hasValidationErrors: state =>
+      Object.keys(state.validationErrors).length > 0,
+
     // Test getters
-    testResultsByPipeline: (state) => (pipelineId: number) => 
+    testResultsByPipeline: state => (pipelineId: number) =>
       state.testResults.filter(r => r.id === pipelineId),
-    
+
     // Run getters
-    isPipelineRunning: (state) => (pipelineId: number) => 
+    isPipelineRunning: state => (pipelineId: number) =>
       state.runningPipelines.includes(pipelineId),
-    pipelineProgress: (state) => (pipelineId: number) => 
-      state.runProgress[pipelineId] || 0
+    pipelineProgress: state => (pipelineId: number) =>
+      state.runProgress[pipelineId] || 0,
   },
 
   actions: {
@@ -185,9 +189,10 @@ export const usePipelineStore = defineStore('pipeline', {
     async fetchAll() {
       this.loading = true
       this.error = null
-      
+
       try {
-        const { data } = await $fetch('/api/pipelines')
+        const response = await $fetch('/api/pipelines')
+        const data = (response as any).data
         this.pipelines = data
         this.success = `Loaded ${data.length} pipelines`
       } catch (error: any) {
@@ -201,17 +206,18 @@ export const usePipelineStore = defineStore('pipeline', {
     async fetchPipeline(id: number) {
       this.loading = true
       this.error = null
-      
+
       try {
-        const { data } = await $fetch(`/api/pipelines/${id}`)
+        const response = await $fetch(`/api/pipelines/${id}`)
+        const data = (response as any).data
         const index = this.pipelines.findIndex(p => p.id === id)
-        
+
         if (index >= 0) {
           this.pipelines[index] = data
         } else {
           this.pipelines.push(data)
         }
-        
+
         return data
       } catch (error: any) {
         this.error = error.message || 'Failed to fetch pipeline'
@@ -225,16 +231,17 @@ export const usePipelineStore = defineStore('pipeline', {
     async createPipeline(pipelineData: Partial<Pipeline>) {
       this.loading = true
       this.error = null
-      
+
       try {
-        const { data } = await $fetch('/api/pipelines', {
+        const response = await $fetch('/api/pipelines', {
           method: 'POST',
-          body: pipelineData
+          body: pipelineData,
         })
-        
+        const data = (response as any).data
+
         this.pipelines.unshift(data)
         this.success = `Pipeline "${data.name}" created successfully`
-        
+
         return data
       } catch (error: any) {
         this.error = error.message || 'Failed to create pipeline'
@@ -248,18 +255,19 @@ export const usePipelineStore = defineStore('pipeline', {
     async updatePipeline(id: number, updates: Partial<Pipeline>) {
       this.loading = true
       this.error = null
-      
+
       try {
-        const { data } = await $fetch(`/api/pipelines/${id}`, {
-          method: 'PUT',
-          body: updates
+        const response = await $fetch(`/api/pipelines/${id}`, {
+          method: 'PUT' as any,
+          body: updates,
         })
-        
+        const data = (response as any).data
+
         const index = this.pipelines.findIndex(p => p.id === id)
         if (index >= 0) {
           this.pipelines[index] = data
         }
-        
+
         this.success = `Pipeline "${data.name}" updated successfully`
         return data
       } catch (error: any) {
@@ -274,12 +282,12 @@ export const usePipelineStore = defineStore('pipeline', {
     async deletePipeline(id: number) {
       this.loading = true
       this.error = null
-      
+
       try {
         await $fetch(`/api/pipelines/${id}`, {
-          method: 'DELETE'
+          method: 'DELETE' as any,
         })
-        
+
         const index = this.pipelines.findIndex(p => p.id === id)
         if (index >= 0) {
           const deletedPipeline = this.pipelines[index]
@@ -324,10 +332,14 @@ export const usePipelineStore = defineStore('pipeline', {
         description: '',
         config: '',
         modelId: undefined,
-        steps: []
+        steps: [],
       }
       this.builderStep = 0
       this.validationErrors = {}
+    },
+
+    resetBuilder() {
+      this.resetBuilderForm()
     },
 
     // Validation actions
@@ -347,16 +359,17 @@ export const usePipelineStore = defineStore('pipeline', {
     async testPipeline(pipelineId: number, input: string) {
       this.testLoading = true
       this.error = null
-      
+
       try {
-        const { data } = await $fetch(`/api/pipelines/${pipelineId}/test`, {
-          method: 'POST',
-          body: { input }
+        const response = await $fetch(`/api/pipelines/${pipelineId}/test`, {
+          method: 'POST' as any,
+          body: { input },
         })
-        
+        const data = (response as any).data
+
         this.testResults.unshift(data)
         this.success = 'Pipeline test completed successfully'
-        
+
         return data
       } catch (error: any) {
         this.error = error.message || 'Pipeline test failed'
@@ -372,16 +385,17 @@ export const usePipelineStore = defineStore('pipeline', {
       if (this.runningPipelines.includes(pipelineId)) {
         throw new Error('Pipeline is already running')
       }
-      
+
       this.runningPipelines.push(pipelineId)
       this.runProgress[pipelineId] = 0
-      
+
       try {
-        const { data } = await $fetch(`/api/pipelines/${pipelineId}/execute`, {
-          method: 'POST',
-          body: { input }
+        const response = await $fetch(`/api/pipelines/${pipelineId}/execute`, {
+          method: 'POST' as any,
+          body: { input },
         })
-        
+        const data = (response as any).data
+
         this.runProgress[pipelineId] = 100
         return data
       } catch (error: any) {
@@ -400,15 +414,15 @@ export const usePipelineStore = defineStore('pipeline', {
     async stopPipeline(pipelineId: number) {
       try {
         await $fetch(`/api/pipelines/${pipelineId}/stop`, {
-          method: 'POST'
+          method: 'POST' as any,
         })
-        
+
         const index = this.runningPipelines.indexOf(pipelineId)
         if (index >= 0) {
           this.runningPipelines.splice(index, 1)
         }
         delete this.runProgress[pipelineId]
-        
+
         this.success = 'Pipeline stopped successfully'
       } catch (error: any) {
         this.error = error.message || 'Failed to stop pipeline'
@@ -429,6 +443,6 @@ export const usePipelineStore = defineStore('pipeline', {
     clearMessages() {
       this.error = null
       this.success = null
-    }
-  }
-}) 
+    },
+  },
+})

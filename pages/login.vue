@@ -1,39 +1,40 @@
 <template>
   <div class="login-page">
-    <LoginForm 
-      @success="handleLoginSuccess"
-      @error="handleLoginError"
-    />
+    <LoginForm @success="handleLoginSuccess" @error="handleLoginError" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useAuthStore } from '~/stores/authStore'
 
 definePageMeta({
   title: 'Login',
-  layout: 'auth'
+  layout: 'auth',
 })
 
 // Auth store
 const authStore = useAuthStore()
 
+// Get redirect parameter from URL
+const route = useRoute()
+const redirectPath = route.query.redirect as string
+
 // Redirect if already authenticated
 onMounted(() => {
-  if (authStore.isAuthenticated) {
-    if (authStore.isAdmin) {
-      navigateTo('/admin/users')
-    } else {
-      navigateTo('/dashboard')
-    }
+  if (authStore.isAuthenticated && authStore.user) {
+    // Use redirect parameter if available, otherwise use role-based redirect
+    const targetPath = redirectPath || authStore.getRedirectPath(authStore.user)
+    navigateTo(targetPath)
   }
 })
 
 // Methods
 const handleLoginSuccess = (user: any) => {
   console.log('Login successful:', user)
-  // Success notification could be added here
+
+  // Use redirect parameter if available, otherwise use role-based redirect
+  const targetPath = redirectPath || authStore.getRedirectPath(user)
+  navigateTo(targetPath)
 }
 
 const handleLoginError = (error: string) => {
@@ -51,4 +52,4 @@ const handleLoginError = (error: string) => {
   justify-content: center;
   padding: 1rem;
 }
-</style> 
+</style>

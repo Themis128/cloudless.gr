@@ -1,9 +1,9 @@
 <template>
-  <div class="flex flex-wrap gap-8 justify-center items-start my-8">
+  <div class="d-flex flex-wrap justify-center align-start my-8">
     <div
       v-for="id in badgeIds"
       :key="id"
-      class="rounded-xl bg-white/80 shadow p-2 flex items-center justify-center"
+      class="rounded-xl bg-white/80 shadow pa-2 d-flex align-center justify-center mr-8 mb-8"
       :data-iframe-width="150"
       :data-iframe-height="270"
       :data-share-badge-id="id"

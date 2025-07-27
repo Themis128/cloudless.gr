@@ -11,7 +11,20 @@ export interface ProjectTemplate {
   technologies: string[];
   techStack: string[];
   difficulty: string;
-  // Add other properties based on usage
+  includes: string[];
+  config: {
+    type: string;
+    framework?: string;
+    algorithm?: string;
+    pipeline: {
+      nodes: Array<{
+        id: string;
+        type: string;
+        label: string;
+        config?: any;
+      }>;
+    };
+  };
 }
 
 export interface Project {

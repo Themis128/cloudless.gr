@@ -1,23 +1,20 @@
-export default defineNuxtRouteMiddleware(async (to) => {
-  // Skip middleware on server side - let client handle auth
-  if (process.server) {
-    return
+export default defineNuxtRouteMiddleware(async (to: any) => {
+  // Only run on client side
+  if (process.client) {
+    // Get auth state from store
+    const authStore = useAuthStore()
+
+    if (!authStore.isAuthenticated) {
+      // Redirect to login page with redirect parameter
+      return navigateTo(
+        `/auth/login?redirect=${encodeURIComponent(to.fullPath)}`
+      )
+    }
+
+    // Check if user is admin
+    if (!authStore.isAdmin) {
+      // Redirect to dashboard if not admin
+      return navigateTo('/dashboard')
+    }
   }
-  
-  const { isAuthenticated, isAdmin, initializeAuth } = useAuth()
-  
-  // First try to initialize auth state from localStorage
-  await initializeAuth()
-  
-  // Check if user is authenticated
-  if (!isAuthenticated.value) {
-    // Not authenticated, redirect to login
-    return navigateTo(`/auth/login?redirect=${encodeURIComponent(to.fullPath)}`)
-  }
-  
-  // Check if user has admin role
-  if (!isAdmin.value) {
-    // User is authenticated but not admin, redirect to dashboard
-    return navigateTo('/dashboard')
-  }
-}) 
+})

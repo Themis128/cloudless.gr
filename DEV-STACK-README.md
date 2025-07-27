@@ -1,384 +1,364 @@
-# 🚀 Cloudless Development Stack
+# Cloudless Development Stack
 
-A comprehensive, containerized development environment for the Cloudless LLM Dev Agent platform.
+## 🚀 Nuxt 3 Improvements & Best Practices
 
-## 📋 What's Included
+This document outlines the comprehensive Nuxt 3 improvements and optimizations implemented in the Cloudless platform.
 
-Your development stack includes:
+## 📋 Table of Contents
 
-### 🏗️ Core Application
-- **Nuxt.js 3** - Main application with hot reloading
-- **Node.js Debugger** - Remote debugging on port 9229
-- **Nuxt DevTools** - Development tools on port 24678
+- [Technology Stack](#technology-stack)
+- [Nuxt 3 Features](#nuxt-3-features)
+- [Performance Optimizations](#performance-optimizations)
+- [Development Experience](#development-experience)
+- [Code Quality](#code-quality)
+- [PWA Support](#pwa-support)
+- [Analytics & Monitoring](#analytics--monitoring)
+- [Build & Deployment](#build--deployment)
 
-### 🗄️ Database & Cache
-- **PostgreSQL 16** - Primary database with sample data
-- **Redis 7** - Caching and session storage
-- **Redis Commander** - Web-based Redis management tool
+## 🛠 Technology Stack
 
-### 🔧 Development Tools
-- **Mailhog** - Email testing and debugging
-- **Nginx** - Development proxy and load balancer
-- **Health Checks** - Monitoring endpoints for all services
+### Core Framework
+- **Nuxt 3.17.7+** - Full-stack Vue.js framework
+- **Vue 3** - Progressive JavaScript framework
+- **TypeScript** - Type-safe JavaScript
+- **Vuetify 3** - Material Design component library
+- **Pinia** - State management for Vue
 
-### 📊 Monitoring & Debugging
-- Container health monitoring
-- Centralized logging
-- Performance metrics
-- Database query monitoring
+### Development Tools
+- **Vite** - Fast build tool and dev server
+- **ESLint** - Code linting and quality
+- **Prettier** - Code formatting
+- **PostCSS** - CSS processing and optimization
 
-## 🚀 Quick Start
+### Additional Features
+- **PWA Support** - Progressive Web App capabilities
+- **Analytics Integration** - Google Analytics, Mixpanel
+- **Error Monitoring** - Sentry integration
+- **Redis** - Caching and session storage
+- **Prisma** - Database ORM
 
-### Prerequisites
+## ⚡ Nuxt 3 Features
 
-Ensure you have installed:
-- Docker Desktop or Docker Engine
-- Docker Compose v2.0+
-- Git
-
-### 1. Start Development Environment
-
-```bash
-# Start the entire development stack
-./scripts/docker/dev-docker.sh start
-
-# Or use the npm script
-npm run dev:docker
-```
-
-### 2. Access Your Services
-
-Once started, access your services from **ANY device on your network**:
-
-| Service | Network URL | Local URL | Credentials |
-|---------|-------------|-----------|-------------|
-| 🌐 **Main App** | http://YOUR_IP:3000 | http://localhost:3000 | - |
-| 🔧 **Redis Commander** | http://YOUR_IP:8081 | http://localhost:8081 | admin/admin |
-| 📧 **Mailhog** | http://YOUR_IP:8025 | http://localhost:8025 | - |
-| 🐛 **Node Debugger** | YOUR_IP:9229 | localhost:9229 | - |
-| 🏥 **Health Check** | http://YOUR_IP:3000/api/health | http://localhost:3000/api/health | - |
-
-**Note**: Replace `YOUR_IP` with your development machine's IP address. The startup script will show you the exact URLs.
-
-### 3. Database Connection
-
-Connect to your PostgreSQL database from **any device on your network**:
-```bash
-Host: YOUR_IP (or localhost from development machine)
-Port: 5432
-Database: cloudless_dev
-Username: cloudless
-Password: development
-```
-
-Connection strings:
-```bash
-# From network devices
-postgresql://cloudless:development@YOUR_IP:5432/cloudless_dev
-
-# From development machine
-postgresql://cloudless:development@localhost:5432/cloudless_dev
-```
-
-## 🛠️ Development Commands
-
-### Basic Operations
-```bash
-# Start development environment
-./scripts/docker/dev-docker.sh start
-
-# Stop development environment  
-./scripts/docker/dev-docker.sh stop
-
-# Restart development environment
-./scripts/docker/dev-docker.sh restart
-
-# View logs (all services)
-./scripts/docker/dev-docker.sh logs
-
-# Enter app container shell
-./scripts/docker/dev-docker.sh shell
-
-# Check status of all services
-./scripts/docker/dev-docker.sh status
-```
-
-### Advanced Operations
-```bash
-# Rebuild containers (after dependency changes)
-./scripts/docker/dev-docker.sh build
-
-# Clean everything (containers, volumes, images)
-./scripts/docker/dev-docker.sh clean
-
-# Show help
-./scripts/docker/dev-docker.sh help
-```
-
-### NPM Scripts Integration
-```bash
-# These npm scripts use the development stack
-npm run dev:docker          # Start development
-npm run dev:docker:build     # Build containers
-npm run dev:docker:down      # Stop development
-npm run dev:docker:logs      # View logs
-npm run dev:docker:shell     # Enter shell
-npm run dev:docker:restart   # Restart
-npm run dev:docker:clean     # Clean up
-npm run dev:docker:status    # Show status
-```
-
-## 🌐 Network Access
-
-### Accessing from Other Devices
-
-Your development stack is configured to be accessible from **any device on your network**:
-
-1. **Find Your IP Address**: The startup script automatically detects and displays your IP
-2. **Mobile Testing**: Access your app from phones/tablets on the same WiFi
-3. **Team Development**: Share your development environment with team members
-4. **Cross-Device Testing**: Test responsive design on real devices
-
-### Firewall Configuration
-
-If you can't access from other devices, you may need to configure your firewall:
-
-**Ubuntu/Debian:**
-```bash
-# Allow specific ports
-sudo ufw allow 3000  # Main app
-sudo ufw allow 8081  # Redis Commander
-sudo ufw allow 8025  # Mailhog
-sudo ufw allow 5432  # PostgreSQL
-sudo ufw allow 6379  # Redis
-
-# Or allow all traffic from your local network (replace with your network range)
-sudo ufw allow from 192.168.1.0/24
-```
-
-**CentOS/RHEL/Fedora:**
-```bash
-# Allow specific ports
-sudo firewall-cmd --permanent --add-port=3000/tcp
-sudo firewall-cmd --permanent --add-port=8081/tcp
-sudo firewall-cmd --permanent --add-port=8025/tcp
-sudo firewall-cmd --permanent --add-port=5432/tcp
-sudo firewall-cmd --permanent --add-port=6379/tcp
-sudo firewall-cmd --reload
-```
-
-### Security Notes
-
-- ⚠️ **Development Only**: This configuration is for development environments only
-- 🔒 **Production**: Never expose development databases/tools in production
-- 🛡️ **Network Security**: Only use on trusted networks
-- 🔐 **Passwords**: Default passwords are weak - change them for sensitive data
-
-## 🔧 Configuration
-
-### Environment Variables
-
-The development stack uses `.env.dev` for configuration:
-
-```bash
-# Copy and customize the development environment
-cp .env.dev .env.dev.local
-
-# Edit with your actual values
-nano .env.dev.local
-```
-
-**Important Variables to Configure:**
-```env
-# Supabase (replace with your development project)
-NUXT_PUBLIC_SUPABASE_URL=https://your-dev-project.supabase.co
-NUXT_PUBLIC_SUPABASE_ANON_KEY=your-dev-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-dev-service-role-key
-
-# External APIs (use development keys)
-OPENAI_API_KEY=your-dev-openai-key
-ANTHROPIC_API_KEY=your-dev-anthropic-key
-```
-
-### Database Schema
-
-The development database comes pre-configured with:
-- ✅ User management tables
-- ✅ Project and pipeline tables  
-- ✅ AI model configuration tables
-- ✅ Analytics dashboard tables
-- ✅ Execution logging tables
-- ✅ Sample development data
-
-### Hot Reloading
-
-The development environment supports:
-- ✅ **Vue/Nuxt files** - Instant hot reloading
-- ✅ **TypeScript files** - Automatic compilation
-- ✅ **CSS/SCSS files** - Live style updates
-- ✅ **Server API routes** - Auto-restart on changes
-- ✅ **Environment variables** - Restart required
-
-## 🐛 Debugging
-
-### Node.js Debugging
-1. Debugger runs on `localhost:9229`
-2. Use VS Code, Chrome DevTools, or your preferred debugger
-3. Attach to the running process
-
-### VS Code Configuration
-Add to `.vscode/launch.json`:
-```json
-{
-  "type": "node",
-  "request": "attach",
-  "name": "Attach to Docker",
-  "remoteRoot": "/app",
-  "localRoot": "${workspaceFolder}",
-  "port": 9229,
-  "host": "localhost"
+### Experimental Features Enabled
+```typescript
+experimental: {
+  headNext: true,
+  payloadExtraction: true,
+  inlineSSRStyles: true,
+  componentIslands: true,
+  viewTransition: true,
+  crossOriginPrefetch: true,
+  asyncContext: true,
+  treeShakeClientOnly: true,
+  renderJsonPayloads: true,
 }
 ```
 
-### Database Debugging
-```bash
-# Connect to PostgreSQL directly
-docker compose -f docker-compose.dev.yml exec postgres-dev psql -U cloudless -d cloudless_dev
+### Auto-Imports Configuration
+- **Composables**: `~/composables/**`
+- **Stores**: `~/stores/**`
+- **Utils**: `~/utils/**`
+- **Components**: Auto-imported from multiple directories
 
-# View database logs
-docker compose -f docker-compose.dev.yml logs postgres-dev
+### TypeScript Strict Mode
+- `strict: true`
+- `noImplicitAny: true`
+- `strictNullChecks: true`
+- `strictFunctionTypes: true`
+- `noUncheckedIndexedAccess: true`
+- `exactOptionalPropertyTypes: true`
+
+## 🚀 Performance Optimizations
+
+### Vite Configuration
+```typescript
+vite: {
+  optimizeDeps: {
+    include: ['vuetify', 'vue-echarts', 'echarts', '@mdi/font', 'pinia', '@vueuse/core'],
+    exclude: ['@nuxt/kit'],
+  },
+  ssr: {
+    noExternal: ['vuetify', 'vue-echarts', 'echarts', '@mdi/font', 'pinia', '@vueuse/core'],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router'],
+          'nuxt-vendor': ['nuxt/app', 'nuxt/head'],
+          'chart-vendor': ['vue-echarts', 'echarts'],
+          'vuetify-vendor': ['vuetify', 'vuetify/components', 'vuetify/directives'],
+          'ui-vendor': ['@mdi/font'],
+        },
+      },
+    },
+    sourcemap: process.env.NODE_ENV === 'development',
+    chunkSizeWarningLimit: 1000,
+  },
+}
 ```
 
-### Redis Debugging
-- Use Redis Commander at http://localhost:8081
-- Or connect via CLI: `docker compose -f docker-compose.dev.yml exec redis-dev redis-cli -a development`
+### Route Rules & Caching
+- **Static Pages**: Pre-rendered with long cache (3600s)
+- **Dynamic Content**: SWR caching (900-1800s)
+- **API Routes**: CORS enabled with appropriate headers
+- **Admin Pages**: No cache, noindex
 
-## 📊 Monitoring
-
-### Health Checks
-- **App Health**: http://localhost:3000/api/health
-- **Container Status**: `./scripts/docker/dev-docker.sh status`
-- **Resource Usage**: Included in status command
-
-### Logs
-```bash
-# All services
-./scripts/docker/dev-docker.sh logs
-
-# Specific service
-docker compose -f docker-compose.dev.yml logs -f app-dev
-docker compose -f docker-compose.dev.yml logs -f postgres-dev  
-docker compose -f docker-compose.dev.yml logs -f redis-dev
+### PostCSS Optimization
+```typescript
+postcss: {
+  plugins: {
+    autoprefixer: {},
+    'postcss-preset-env': {
+      stage: 3,
+      features: {
+        'nesting-rules': true,
+        'custom-media-queries': true,
+        'media-query-ranges': true,
+      },
+    },
+    'postcss-import': {},
+    'postcss-custom-properties': {
+      preserve: false,
+    },
+  },
+}
 ```
 
-## 🔄 Development Workflow
+## 🎯 Development Experience
 
-### 1. Daily Development
-```bash
-# Morning: Start your development environment
-./scripts/docker/dev-docker.sh start
-
-# Work on your code with hot reloading
-# All changes are automatically reflected
-
-# Evening: Stop the environment
-./scripts/docker/dev-docker.sh stop
+### Pinia Configuration
+```typescript
+pinia: {
+  autoImports: ['defineStore', 'acceptHMRUpdate'],
+  devtools: true,
+}
 ```
 
-### 2. After Package Changes
-```bash
-# Rebuild when package.json changes
-./scripts/docker/dev-docker.sh build
-./scripts/docker/dev-docker.sh restart
+### DevTools
+- **Nuxt DevTools**: Enabled with timeline
+- **Pinia DevTools**: Enabled for state debugging
+- **Vue DevTools**: Available in browser
+
+### Error Handling
+- **Global Error Page**: `error.vue` with user-friendly design
+- **Loading States**: `loading.vue` with progress indicators
+- **Development Details**: Error stack traces in dev mode
+
+## 📝 Code Quality
+
+### ESLint Configuration
+- **Vue 3 Rules**: Component naming, props, events
+- **TypeScript Rules**: Strict type checking, unused vars
+- **Import Rules**: Organized imports with alphabetical sorting
+- **Nuxt Rules**: Framework-specific best practices
+
+### Prettier Configuration
+- **Print Width**: 100 characters
+- **Single Quotes**: Consistent string formatting
+- **Vue Support**: Proper template and script formatting
+- **TypeScript Support**: Type-aware formatting
+
+### Type Safety
+- **Centralized Types**: `types/common.ts` for shared interfaces
+- **Strict Mode**: Comprehensive TypeScript configuration
+- **Auto-imports**: Type-safe composables and stores
+
+## 📱 PWA Support
+
+### Configuration
+```typescript
+pwa: {
+  registerType: 'autoUpdate',
+  workbox: {
+    navigateFallback: '/',
+    globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+  },
+  client: {
+    installPrompt: true,
+  },
+  manifest: {
+    name: 'Cloudless - AI Pipeline Management',
+    short_name: 'Cloudless',
+    theme_color: '#1976d2',
+    background_color: '#ffffff',
+    display: 'standalone',
+  },
+}
 ```
 
-### 3. Database Changes
-```bash
-# Apply new migrations or schema changes
-./scripts/docker/dev-docker.sh shell
-# Inside container: run your migration commands
+### Features
+- **Auto-update**: Service worker updates
+- **Offline Support**: Cached resources
+- **Install Prompt**: Native app installation
+- **Manifest**: App metadata and icons
 
-# Or reset database with clean
-./scripts/docker/dev-docker.sh clean
-./scripts/docker/dev-docker.sh start
+## 📊 Analytics & Monitoring
+
+### Runtime Configuration
+```typescript
+runtimeConfig: {
+  // Analytics
+  googleAnalyticsId: process.env.GOOGLE_ANALYTICS_ID,
+  mixpanelToken: process.env.MIXPANEL_TOKEN,
+
+  // Error Monitoring
+  sentryDsn: process.env.SENTRY_DSN,
+
+  public: {
+    analytics: {
+      enabled: process.env.NODE_ENV === 'production',
+      googleAnalyticsId: process.env.GOOGLE_ANALYTICS_ID,
+      mixpanelToken: process.env.MIXPANEL_TOKEN,
+    },
+    errorMonitoring: {
+      enabled: process.env.NODE_ENV === 'production',
+      sentryDsn: process.env.SENTRY_DSN,
+    },
+  },
+}
 ```
 
-## 🚨 Troubleshooting
+### Environment Variables
+```bash
+# Analytics
+GOOGLE_ANALYTICS_ID=your-ga-id
+MIXPANEL_TOKEN=your-mixpanel-token
+
+# Error Monitoring
+SENTRY_DSN=your-sentry-dsn
+
+# Build Analysis
+ANALYZE=true
+```
+
+## 🏗 Build & Deployment
+
+### Build Configuration
+```typescript
+build: {
+  analyze: process.env.ANALYZE === 'true',
+}
+
+nitro: {
+  compressPublicAssets: true,
+  minify: true,
+  sourceMap: process.env.NODE_ENV === 'development',
+}
+```
+
+### Bundle Analysis
+```bash
+# Analyze bundle size
+ANALYZE=true pnpm run build
+```
+
+### Production Optimizations
+- **Asset Compression**: Gzip/Brotli compression
+- **Tree Shaking**: Unused code elimination
+- **Code Splitting**: Dynamic imports and chunks
+- **Source Maps**: Development only
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+
+- pnpm (recommended) or npm
+- Redis (for caching)
+
+### Installation
+```bash
+# Install dependencies
+pnpm install
+
+# Start development server
+pnpm run dev
+
+# Build for production
+pnpm run build
+
+# Preview production build
+pnpm run preview
+```
+
+### Environment Setup
+```bash
+# Copy environment template
+cp .env.example .env
+
+# Configure your environment variables
+# See Analytics & Monitoring section above
+```
+
+## 📚 Best Practices
+
+### Component Development
+- Use `<script setup>` syntax
+- Implement proper TypeScript types
+- Follow Vue 3 composition API patterns
+- Use Vuetify 3 components consistently
+
+### State Management
+- Use Pinia stores for global state
+- Implement proper TypeScript interfaces
+- Use composables for reusable logic
+- Follow reactive patterns
+
+### Performance
+- Use `useAsyncData` and `useFetch` for data fetching
+- Implement proper caching strategies
+- Optimize images with `NuxtImg`
+- Use `NuxtIcon` for SVG icons
+
+### Code Quality
+- Run ESLint before commits
+- Use Prettier for consistent formatting
+- Write meaningful commit messages
+- Follow TypeScript strict mode
+
+## 🔧 Troubleshooting
 
 ### Common Issues
+1. **TypeScript Errors**: Ensure strict mode is properly configured
+2. **Build Failures**: Check for unused imports and variables
+3. **Performance Issues**: Analyze bundle with `ANALYZE=true`
+4. **PWA Issues**: Verify service worker registration
 
-**Port Conflicts:**
-```bash
-# Check what's using your ports
-sudo lsof -i :3000
-sudo lsof -i :5432
-sudo lsof -i :6379
+### Debug Tools
+- **Nuxt DevTools**: Press `Shift + Alt + D` in browser
+- **Vue DevTools**: Browser extension for Vue debugging
+- **Pinia DevTools**: State management debugging
+- **Network Tab**: Monitor API calls and caching
 
-# Stop conflicting services
-sudo systemctl stop postgresql
-sudo systemctl stop redis
-```
+## 📈 Future Improvements
 
-**Container Won't Start:**
-```bash
-# Check container logs
-./scripts/docker/dev-docker.sh logs
+### Planned Enhancements
+- [ ] Implement view transitions
+- [ ] Add more PWA features
+- [ ] Enhance error monitoring
+- [ ] Optimize bundle splitting
+- [ ] Add performance monitoring
+- [ ] Implement advanced caching strategies
 
-# Rebuild from scratch
-./scripts/docker/dev-docker.sh clean
-./scripts/docker/dev-docker.sh start
-```
-
-**Hot Reloading Not Working:**
-```bash
-# Restart the development container
-docker compose -f docker-compose.dev.yml restart app-dev
-
-# Or full restart
-./scripts/docker/dev-docker.sh restart
-```
-
-**Database Connection Issues:**
-```bash
-# Check PostgreSQL is running
-docker compose -f docker-compose.dev.yml ps postgres-dev
-
-# Check database logs
-docker compose -f docker-compose.dev.yml logs postgres-dev
-
-# Reset database
-docker compose -f docker-compose.dev.yml down -v
-./scripts/docker/dev-docker.sh start
-```
-
-### Getting Help
-
-**Check Service Status:**
-```bash
-./scripts/docker/dev-docker.sh status
-```
-
-**View All Logs:**
-```bash
-./scripts/docker/dev-docker.sh logs
-```
-
-**Reset Everything:**
-```bash
-./scripts/docker/dev-docker.sh clean
-./scripts/docker/dev-docker.sh start
-```
-
-## 🎯 Next Steps
-
-1. **Configure Environment**: Update `.env.dev` with your API keys
-2. **Start Developing**: Run `./scripts/docker/dev-docker.sh start`
-3. **Check Health**: Visit http://localhost:3000/api/health
-4. **Explore Tools**: Check out Redis Commander and Mailhog
-5. **Begin Coding**: Your changes will hot-reload automatically!
+### Monitoring & Analytics
+- [ ] Real-time performance metrics
+- [ ] User behavior analytics
+- [ ] Error tracking improvements
+- [ ] A/B testing framework
 
 ---
 
-**Happy Coding! 🚀**
+## 📄 License
 
-For more help, see the main [README.md](./README.md) or check the [docs/](./docs/) directory.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## 📞 Support
+
+For support and questions:
+- Create an issue in the repository
+- Check the documentation
+- Review the troubleshooting section above

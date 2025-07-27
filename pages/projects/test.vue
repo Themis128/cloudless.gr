@@ -11,9 +11,7 @@
         <!-- Project Selection -->
         <v-card class="mb-4">
           <v-card-title class="text-h6 test-page-title">
-            <v-icon start color="primary">
-              mdi-folder-multiple
-            </v-icon>
+            <v-icon start color="primary"> mdi-folder-multiple </v-icon>
             Select Project to Test
           </v-card-title>
           <v-card-text>
@@ -31,9 +29,7 @@
               <template #item="{ props, item }">
                 <v-list-item v-bind="props">
                   <template #prepend>
-                    <v-icon color="primary">
-                      mdi-folder
-                    </v-icon>
+                    <v-icon color="primary"> mdi-folder </v-icon>
                   </template>
                   <v-list-item-title>
                     {{ item.raw.name }}
@@ -44,14 +40,23 @@
                 </v-list-item>
               </template>
             </v-select>
-            
+
             <div v-if="selectedProject" class="mt-4">
               <v-alert type="info" variant="tonal">
                 <strong>Project Details:</strong>
                 <div class="mt-2">
-                  <div><strong>Bots:</strong> {{ selectedProjectData?.bots?.length || 0 }}</div>
-                  <div><strong>Models:</strong> {{ selectedProjectData?.models?.length || 0 }}</div>
-                  <div><strong>Pipelines:</strong> {{ selectedProjectData?.pipelines?.length || 0 }}</div>
+                  <div>
+                    <strong>Bots:</strong>
+                    {{ selectedProjectData?.bots?.length || 0 }}
+                  </div>
+                  <div>
+                    <strong>Models:</strong>
+                    {{ selectedProjectData?.models?.length || 0 }}
+                  </div>
+                  <div>
+                    <strong>Pipelines:</strong>
+                    {{ selectedProjectData?.pipelines?.length || 0 }}
+                  </div>
                 </div>
               </v-alert>
             </div>
@@ -61,9 +66,7 @@
         <!-- Test Configuration -->
         <v-card v-if="selectedProject" class="mb-4">
           <v-card-title class="text-h6">
-            <v-icon start color="primary">
-              mdi-cog
-            </v-icon>
+            <v-icon start color="primary"> mdi-cog </v-icon>
             Test Configuration
           </v-card-title>
           <v-card-text>
@@ -87,7 +90,7 @@
                 />
               </v-col>
             </v-row>
-            
+
             <v-row>
               <v-col cols="12">
                 <v-textarea
@@ -106,31 +109,29 @@
         <!-- Test Execution -->
         <v-card v-if="selectedProject" class="mb-4">
           <v-card-title class="text-h6">
-            <v-icon start color="primary">
-              mdi-play-circle
-            </v-icon>
+            <v-icon start color="primary"> mdi-play-circle </v-icon>
             Test Execution
           </v-card-title>
           <v-card-text>
             <div class="d-flex gap-3 mb-4">
               <v-btn
                 color="primary"
-                size="large"
                 :loading="testing"
-                :disabled="testing"
-                prepend-icon="mdi-play"
+                :disabled="testing || !selectedProject"
                 @click="runTest"
               >
-                Run Test
+                <v-icon start>mdi-play</v-icon>
+                Run Tests
               </v-btn>
+
               <v-btn
                 color="secondary"
-                size="large"
-                :disabled="!testResults.length"
-                prepend-icon="mdi-delete"
+                variant="outlined"
+                :disabled="testing || !selectedProject"
                 @click="clearResults"
               >
-                Clear Results
+                <v-icon start>mdi-refresh</v-icon>
+                Reset
               </v-btn>
             </div>
 
@@ -143,10 +144,10 @@
                 rounded
               />
               <div class="text-center mt-2">
-                <v-chip color="info" class="mr-2">
-                  {{ currentTestStep }}
-                </v-chip>
-                <span class="text-body-2">{{ testProgress }}% Complete</span>
+                <v-icon size="24" color="primary" class="mb-2">
+                  mdi-progress-clock
+                </v-icon>
+                <div class="text-body-2">{{ testProgress }}% Complete</div>
               </div>
             </div>
           </v-card-text>
@@ -155,14 +156,18 @@
         <!-- Test Results -->
         <v-card v-if="testResults.length > 0" class="mb-4">
           <v-card-title class="text-h6">
-            <v-icon start color="success">
-              mdi-check-circle
-            </v-icon>
+            <v-icon start color="success"> mdi-check-circle </v-icon>
             Test Results
           </v-card-title>
           <v-card-text>
             <v-alert
-              :type="overallStatus === 'success' ? 'success' : overallStatus === 'warning' ? 'warning' : 'error'"
+              :type="
+                overallStatus === 'success'
+                  ? 'success'
+                  : overallStatus === 'warning'
+                    ? 'warning'
+                    : 'error'
+              "
               variant="tonal"
               class="mb-4"
             >
@@ -177,12 +182,14 @@
                 <v-expansion-panel-title>
                   <div class="d-flex align-center">
                     <v-icon
-                      :color="result.status === 'success' ? 'success' : result.status === 'warning' ? 'warning' : 'error'"
+                      :color="getTestStatusColor(result.status)"
                       class="mr-2"
                     >
-                      {{ result.status === 'success' ? 'mdi-check-circle' : result.status === 'warning' ? 'mdi-alert' : 'mdi-close-circle' }}
+                      {{ getTestStatusIcon(result.status) }}
                     </v-icon>
-                    {{ result.name }}
+                    <span class="font-weight-medium">
+                      {{ result.name }}
+                    </span>
                   </div>
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
@@ -197,7 +204,9 @@
                   </div>
                   <div v-if="result.details" class="mb-2">
                     <strong>Details:</strong>
-                    <pre class="mt-1 pa-2 bg-grey-lighten-4 rounded">{{ JSON.stringify(result.details, null, 2) }}</pre>
+                    <pre class="mt-1 pa-2 bg-grey-lighten-4 rounded">{{
+                      JSON.stringify(result.details, null, 2)
+                    }}</pre>
                   </div>
                 </v-expansion-panel-text>
               </v-expansion-panel>
@@ -208,14 +217,12 @@
         <!-- No Project Selected -->
         <v-card v-if="!selectedProject" class="mb-4">
           <v-card-text class="text-center py-8">
-            <v-icon size="64" color="black" class="mb-4">
+            <v-icon size="64" color="grey-lighten-1" class="mb-4">
               mdi-folder-open
             </v-icon>
-            <h3 class="text-h6 mb-2">
-              No Project Selected
-            </h3>
+            <h3 class="text-h6 mb-2">No Project Selected</h3>
             <p class="text-body-2 text-medium-emphasis">
-              Please select a project from the dropdown above to begin testing.
+              Please select a project from the dropdown above to start testing.
             </p>
           </v-card-text>
         </v-card>
@@ -230,7 +237,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import PageStructure from '~/components/layout/LayoutPageStructure.vue'
 import ProjectGuide from '~/components/step-guides/ProjectGuide.vue'
 
 interface Project {
@@ -267,7 +273,7 @@ const availableProjects = ref<Project[]>([
     description: 'Customer service chatbot',
     bots: [1, 2],
     models: [1],
-    pipelines: [1]
+    pipelines: [1],
   },
   {
     id: '2',
@@ -275,8 +281,8 @@ const availableProjects = ref<Project[]>([
     description: 'ETL pipeline for analytics',
     bots: [],
     models: [2, 3],
-    pipelines: [2, 3]
-  }
+    pipelines: [2, 3],
+  },
 ])
 
 const testScenarios = [
@@ -284,26 +290,26 @@ const testScenarios = [
   'Performance Test',
   'Integration Test',
   'Stress Test',
-  'Custom Scenario'
+  'Custom Scenario',
 ]
 
 const testDepths = [
   'Quick Test',
   'Standard Test',
   'Comprehensive Test',
-  'Full Validation'
+  'Full Validation',
 ]
 
-const selectedProjectData = computed(() => 
+const selectedProjectData = computed(() =>
   availableProjects.value.find(p => p.id === selectedProject.value)
 )
 
 const overallStatus = computed(() => {
   if (!testResults.value.length) return 'pending'
-  
+
   const hasErrors = testResults.value.some(r => r.status === 'error')
   const hasWarnings = testResults.value.some(r => r.status === 'warning')
-  
+
   if (hasErrors) return 'error'
   if (hasWarnings) return 'warning'
   return 'success'
@@ -313,26 +319,40 @@ const runTest = async () => {
   testing.value = true
   testProgress.value = 0
   testResults.value = []
-  
-  const steps = ['Initializing', 'Testing Bots', 'Testing Models', 'Testing Pipelines', 'Validating Results']
-  
+
+  const steps = [
+    'Initializing',
+    'Testing Bots',
+    'Testing Models',
+    'Testing Pipelines',
+    'Validating Results',
+  ]
+
   for (let i = 0; i < steps.length; i++) {
     currentTestStep.value = steps[i]
     testProgress.value = (i / (steps.length - 1)) * 100
-    
+
     // Simulate test execution
     await new Promise(resolve => setTimeout(resolve, 1000))
-    
+
     // Add mock test results
     testResults.value.push({
       name: steps[i],
-      status: Math.random() > 0.2 ? 'success' : Math.random() > 0.5 ? 'warning' : 'error',
+      status:
+        Math.random() > 0.2
+          ? 'success'
+          : Math.random() > 0.5
+            ? 'warning'
+            : 'error',
       duration: Math.floor(Math.random() * 1000) + 100,
       message: Math.random() > 0.8 ? 'Test completed successfully' : undefined,
-      details: Math.random() > 0.7 ? { timestamp: new Date().toISOString() } : undefined
+      details:
+        Math.random() > 0.7
+          ? { timestamp: new Date().toISOString() }
+          : undefined,
     })
   }
-  
+
   testing.value = false
   testProgress.value = 100
   currentTestStep.value = 'Completed'
@@ -342,6 +362,32 @@ const clearResults = () => {
   testResults.value = []
   testProgress.value = 0
   currentTestStep.value = ''
+}
+
+const getTestStatusColor = (status: string) => {
+  switch (status) {
+    case 'success':
+      return 'success'
+    case 'warning':
+      return 'warning'
+    case 'error':
+      return 'error'
+    default:
+      return 'grey'
+  }
+}
+
+const getTestStatusIcon = (status: string) => {
+  switch (status) {
+    case 'success':
+      return 'mdi-check-circle'
+    case 'warning':
+      return 'mdi-alert'
+    case 'error':
+      return 'mdi-close-circle'
+    default:
+      return 'mdi-help-circle'
+  }
 }
 
 onMounted(() => {
@@ -354,10 +400,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.gap-3 {
-  gap: 1rem;
-}
-
 .test-page-title {
   color: black !important;
 }
@@ -382,4 +424,4 @@ onMounted(() => {
 :deep(.v-select .v-field__label) {
   color: rgba(0, 0, 0, 0.6) !important;
 }
-</style> 
+</style>

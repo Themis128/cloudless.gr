@@ -268,7 +268,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import PageStructure from '~/components/layout/PageStructure.vue'
+import LayoutPageStructure from '~/components/layout/LayoutPageStructure.vue'
 import LLMGuide from '~/components/step-guides/LLMGuide.vue'
 
 const router = useRouter()

@@ -1,4 +1,4 @@
-import { defineEventHandler, getQuery, readBody } from 'h3'
+import { defineEventHandler, getQuery, readBody, createError, getMethod } from 'h3'
 import { getPrismaClient } from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event) => {
@@ -39,7 +39,7 @@ async function handleGet(event: any, prisma: any) {
 
   if (id) {
     // Get single model
-    const model = await prisma.llmModel.findUnique({
+    const model = await prisma.model.findUnique({
       where: { id: String(id) },
       include: {
         user: {
@@ -66,7 +66,7 @@ async function handleGet(event: any, prisma: any) {
     }
   } else {
     // Get all models
-    const models = await prisma.llmModel.findMany({
+    const models = await prisma.model.findMany({
       include: {
         user: {
           select: {
@@ -103,18 +103,14 @@ async function handlePost(event: any, prisma: any) {
   // Get user from session (you'll need to implement authentication)
   const userId = '1' // Placeholder - replace with actual user ID from session
 
-  const model = await prisma.llmModel.create({
+  const model = await prisma.model.create({
     data: {
       name: body.name,
       description: body.description || '',
       type: body.type,
       status: body.status || 'draft',
-      framework: body.framework,
-      version: body.version,
-      config: body.config || {},
-      metrics: body.metrics || {},
-      userId: userId,
-      projectId: body.projectId
+      config: body.config || '{}',
+      userId: parseInt(userId)
     },
     include: {
       user: {

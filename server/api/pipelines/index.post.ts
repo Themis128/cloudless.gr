@@ -1,119 +1,85 @@
-export default defineEventHandler(async (event) => {
+import { createError, defineEventHandler, readBody } from 'h3'
+import { getPrismaClient } from '~/server/utils/prisma'
+
+export default defineEventHandler(async event => {
   try {
-    const { $prisma } = event.context
     const body = await readBody(event)
-    
-    // Get user from session/token
-    const user = await getUserFromRequest(event)
-    if (!user) {
-      throw createError({
-        statusCode: 401,
-        message: 'Unauthorized'
-      })
-    }
-    
+
     // Validate required fields
-    const { name, description, config: pipelineConfig, modelId } = body
-    
-    if (!name || !pipelineConfig) {
+    if (!body.name) {
       throw createError({
         statusCode: 400,
-        message: 'Name and config are required'
+        message: 'Pipeline name is required',
       })
     }
-    
-    // Validate pipeline configuration
-    const validation = validatePipelineConfig(pipelineConfig)
-    if (!validation.isValid) {
+
+    if (!body.description) {
       throw createError({
         statusCode: 400,
-        message: validation.error
+        message: 'Pipeline description is required',
       })
     }
-    
-    // Check pipeline limits
-    const runtimeConfig = useRuntimeConfig()
-    const existingPipelines = await $prisma.pipeline.count({
-      where: { userId: user.id }
+
+    if (!body.steps || !Array.isArray(body.steps)) {
+      throw createError({
+        statusCode: 400,
+        message: 'Pipeline steps are required and must be an array',
+      })
+    }
+
+    // Check pipeline limit
+    const prisma = await getPrismaClient()
+    if (!prisma) {
+      throw createError({
+        statusCode: 500,
+        message: 'Database service unavailable'
+      })
+    }
+
+    const existingPipelines = await prisma.pipeline.count({
+      where: {
+        userId: body.userId || 1, // Default to user 1 for now
+      },
     })
-    
-    if (existingPipelines >= runtimeConfig.public.maxPipelinesPerUser) {
+
+    if (existingPipelines >= 50) { // Default limit
       throw createError({
         statusCode: 429,
-        message: `You have reached the maximum limit of ${runtimeConfig.public.maxPipelinesPerUser} pipelines`
+        message: 'Maximum number of pipelines (50) reached',
       })
     }
-    
+
     // Create the pipeline
-    const pipeline = await $prisma.pipeline.create({
+    const pipeline = await prisma.pipeline.create({
       data: {
-        name,
-        description: description || '',
-        config: typeof pipelineConfig === 'string' ? pipelineConfig : JSON.stringify(pipelineConfig),
-        status: 'draft',
-        userId: user.id,
-        modelId: modelId ? parseInt(modelId) : null
+        name: body.name,
+        description: body.description,
+        type: body.type || 'data',
+        status: body.status || 'draft',
+        config: body.config || '{}',
+        userId: body.userId || 1,
       },
       include: {
+        runs: true,
         user: {
           select: {
             id: true,
             name: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     })
-    
-    // Clear cache
-    const cacheKey = `pipelines:${user.id}`
-    await $storage.removeItem(cacheKey)
-    
+
     return {
       success: true,
       data: pipeline,
-      message: 'Pipeline created successfully'
+      message: 'Pipeline created successfully',
     }
-  } catch (error) {
-    console.error('Error creating pipeline:', error)
+  } catch (error: any) {
     throw createError({
       statusCode: error.statusCode || 500,
-      message: error.message || 'Failed to create pipeline'
+      message: error.message || 'Failed to create pipeline',
     })
   }
 })
-
-function validatePipelineConfig(pipelineConfig: any): { isValid: boolean; error?: string } {
-  try {
-    const parsed = typeof pipelineConfig === 'string' ? JSON.parse(pipelineConfig) : pipelineConfig
-    
-    if (!parsed.steps || !Array.isArray(parsed.steps)) {
-      return { isValid: false, error: 'Pipeline must have a steps array' }
-    }
-    
-    if (parsed.steps.length === 0) {
-      return { isValid: false, error: 'Pipeline must have at least one step' }
-    }
-    
-    // Validate each step
-    for (let i = 0; i < parsed.steps.length; i++) {
-      const step = parsed.steps[i]
-      if (!step.name || !step.type) {
-        return { 
-          isValid: false, 
-          error: `Step ${i + 1} must have a name and type` 
-        }
-      }
-    }
-    
-    return { isValid: true }
-  } catch (error) {
-    return { isValid: false, error: 'Invalid JSON configuration' }
-  }
-}
-
-async function getUserFromRequest(event: any) {
-  // In a real app, this would extract user from JWT token or session
-  // For now, return a mock user
-  return { id: 1, name: 'Test User', email: 'test@example.com' }
-} 

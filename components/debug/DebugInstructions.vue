@@ -11,7 +11,7 @@
         @click="expanded = !expanded"
       />
     </v-card-title>
-    
+
     <v-expand-transition>
       <div v-show="expanded">
         <v-card-text>
@@ -28,7 +28,10 @@
             </div>
 
             <!-- Prerequisites Section -->
-            <div v-if="prerequisites && prerequisites.length > 0" class="instruction-section mb-4">
+            <div
+              v-if="prerequisites && prerequisites.length > 0"
+              class="instruction-section mb-4"
+            >
               <h4 class="text-h6 mb-2">
                 <v-icon icon="mdi-check-circle" size="20" class="mr-1" />
                 Prerequisites
@@ -54,7 +57,10 @@
             </div>
 
             <!-- Tips Section -->
-            <div v-if="tips && tips.length > 0" class="instruction-section mb-4">
+            <div
+              v-if="tips && tips.length > 0"
+              class="instruction-section mb-4"
+            >
               <h4 class="text-h6 mb-2">
                 <v-icon icon="mdi-lightbulb" size="20" class="mr-1" />
                 Tips & Best Practices
@@ -67,30 +73,41 @@
             </div>
 
             <!-- Troubleshooting Section -->
-            <div v-if="troubleshooting && troubleshooting.length > 0" class="instruction-section">
+            <div
+              v-if="troubleshooting && troubleshooting.length > 0"
+              class="instruction-section"
+            >
               <h4 class="text-h6 mb-2">
                 <v-icon icon="mdi-wrench" size="20" class="mr-1" />
                 Troubleshooting
               </h4>
-              <div v-for="(issue, index) in troubleshooting" :key="index" class="mb-3">
+              <div
+                v-for="(issue, index) in troubleshooting"
+                :key="index"
+                class="mb-3"
+              >
                 <strong class="text-body-2">{{ issue.problem }}</strong>
                 <p class="text-body-2 mt-1">{{ issue.solution }}</p>
               </div>
             </div>
 
             <!-- Related Tools -->
-            <div v-if="relatedTools && relatedTools.length > 0" class="instruction-section mt-4">
+            <div
+              v-if="relatedTools && relatedTools.length > 0"
+              class="instruction-section mt-4"
+            >
               <h4 class="text-h6 mb-2">
                 <v-icon icon="mdi-tools" size="20" class="mr-1" />
                 Related Debug Tools
               </h4>
-              <div class="d-flex flex-wrap gap-2">
+              <div class="d-flex flex-wrap">
                 <v-chip
                   v-for="tool in relatedTools"
                   :key="tool.name"
                   :color="tool.color"
                   variant="outlined"
                   size="small"
+                  class="mr-2 mb-2"
                   :to="tool.path"
                 >
                   <v-icon :icon="tool.icon" size="16" class="mr-1" />
@@ -157,4 +174,4 @@ const expanded = ref(true)
 .instruction-section li {
   margin-bottom: 4px;
 }
-</style> 
+</style>

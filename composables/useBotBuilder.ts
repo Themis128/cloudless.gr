@@ -1,118 +1,58 @@
-import { ref } from 'vue'
-import { useBotStore } from '~/stores/botStore'
+import { computed } from 'vue'
 import type { Bot } from '~/types/Bot'
 
+// Composable that uses the Pinia store
 export const useBotBuilder = (template?: Partial<Bot>) => {
-  const form = ref({
-    name: template?.name || '',
-    prompt:
-      template?.prompt ||
-      `You are a highly capable AI development assistant. Your role is to help with coding tasks, debugging, and development workflows.
+  const botBuilderStore = useBotBuilderStore()
 
-Key Responsibilities:
-1. Code Analysis & Generation
-   - Review and understand existing code
-   - Generate new code following best practices
-   - Suggest improvements and optimizations
-
-2. Problem Solving
-   - Debug issues systematically
-   - Propose solutions with explanations
-   - Consider edge cases and error handling
-
-3. Development Support
-   - Help with project setup and configuration
-   - Guide through development workflows
-   - Assist with testing and deployment
-
-4. Best Practices
-   - Follow language-specific conventions
-   - Implement security best practices
-   - Write maintainable and documented code
-
-5. Tool Usage
-   - Use appropriate development tools
-   - Leverage version control effectively
-   - Integrate with development workflows
-
-Always provide clear explanations and context for your actions. When making changes, ensure backward compatibility and document any assumptions or dependencies.`,
-    model: template?.model || '',
-    memory: template?.memory || '4000', // Default 4K context window
-    tools:
-      template?.tools ||
-      'file_search,codebase_search,read_file,edit_file,run_terminal_cmd,web_search,grep_search', // Default essential tools
-  })
-  const step = ref(0)
-  const steps = ref([
-    {
-      title: 'Details',
-      subtitle: 'Bot name & prompt',
-      icon: 'mdi-robot',
-      description:
-        'Enter the bot name and prompt.<br><br><strong>Default Prompt:</strong> Pre-configured with comprehensive development assistant instructions covering code analysis, problem solving, and best practices.',
-    },
-    {
-      title: 'Model',
-      subtitle: 'Select model',
-      icon: 'mdi-brain',
-      description: 'Choose the model for your bot.',
-    },
-    {
-      title: 'Settings',
-      subtitle: 'Memory & tools',
-      icon: 'mdi-cog',
-      description:
-        'Configure memory and tools settings.<br><br><strong>Memory Context:</strong> Default is 4000 tokens for optimal context retention.<br><strong>Tools:</strong> Pre-configured with essential development tools for code search, file operations, and web searches.',
-    },
-    {
-      title: 'Summary',
-      subtitle: 'Review',
-      icon: 'mdi-check',
-      description: 'Review your bot setup.',
-    },
-  ])
-  const progressValue = ref(((step.value + 1) / steps.value.length) * 100)
-
-  const botStore = useBotStore()
-
-  const nextStep = () => {
-    if (step.value < steps.value.length - 1) step.value++
-  }
-  const prevStep = () => {
-    if (step.value > 0) step.value--
-  }
-  const goToStep = (idx: number) => {
-    step.value = idx
-  }
-  const isStepComplete = (idx: number) => {
-    return idx < step.value
+  // Initialize with template if provided
+  if (template) {
+    botBuilderStore.loadBotTemplate(template)
   }
 
-  const submitBot = async () => {
-    try {
-      await botStore.create({
-        name: form.value.name,
-        prompt: form.value.prompt,
-        model: form.value.model,
-        memory: form.value.memory,
-        tools: form.value.tools,
-      })
-      return true
-    } catch (err) {
-      // console.error('Error creating bot:', err)
-      return false
-    }
-  }
-
+  // Return readonly state and computed properties for backward compatibility
   return {
-    form,
-    step,
-    steps,
-    progressValue,
-    nextStep,
-    prevStep,
-    goToStep,
-    isStepComplete,
-    submitBot,
+    // State (readonly for backward compatibility)
+    form: computed(() => botBuilderStore.botData),
+    step: computed(() => botBuilderStore.currentStep),
+    steps: computed(() => botBuilderStore.steps),
+    progressValue: computed(() => botBuilderStore.progressPercentage),
+
+    // Computed properties from store
+    currentStepData: computed(() => botBuilderStore.currentStepData),
+    isFirstStep: computed(() => botBuilderStore.isFirstStep),
+    isLastStep: computed(() => botBuilderStore.isLastStep),
+    completedSteps: computed(() => botBuilderStore.completedSteps),
+    canGoNext: computed(() => botBuilderStore.canGoNext),
+    canGoPrevious: computed(() => botBuilderStore.canGoPrevious),
+    canSubmit: computed(() => botBuilderStore.canSubmit),
+    isValid: computed(() => botBuilderStore.isValid),
+    isSubmitting: computed(() => botBuilderStore.isSubmitting),
+    error: computed(() => botBuilderStore.error),
+
+    // Methods (delegate to store)
+    nextStep: botBuilderStore.nextStep,
+    prevStep: botBuilderStore.previousStep,
+    goToStep: botBuilderStore.goToStep,
+    setCurrentStep: botBuilderStore.setCurrentStep,
+    updateStepCompletion: botBuilderStore.updateStepCompletion,
+    updateBotData: botBuilderStore.updateBotData,
+    updateBotSettings: botBuilderStore.updateBotSettings,
+    validateCurrentStep: botBuilderStore.validateCurrentStep,
+    createBot: botBuilderStore.createBot,
+    resetBotBuilder: botBuilderStore.resetBotBuilder,
+    loadBotTemplate: botBuilderStore.loadBotTemplate,
+    exportBotConfig: botBuilderStore.exportBotConfig,
+    importBotConfig: botBuilderStore.importBotConfig,
+    clearError: botBuilderStore.clearError,
+
+    // Legacy methods for backward compatibility
+    isStepComplete: (idx: number) => {
+      return idx < botBuilderStore.currentStep
+    },
+
+    submitBot: async () => {
+      return await botBuilderStore.createBot()
+    },
   }
 }

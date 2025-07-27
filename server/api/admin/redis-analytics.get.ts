@@ -1,28 +1,21 @@
 // server/api/admin/redis-analytics.get.ts
 import { defineEventHandler, createError } from 'h3'
-import redis, { isRedisAvailable, getRedisStatus } from '~/server/utils/redis'
+import { redis, getRedisClient } from '~/server/utils/redis'
 
 export default defineEventHandler(async (event) => {
   try {
     // Check if Redis is available
-    if (!isRedisAvailable()) {
-      const status = getRedisStatus()
+    const redisClient = getRedisClient()
+    if (!redisClient) {
       throw createError({
         statusCode: 503,
-        statusMessage: `Redis is not available. Status: ${status}`,
+        statusMessage: 'Redis is not available',
       })
     }
 
-    if (!redis) {
-      throw createError({
-        statusCode: 503,
-        statusMessage: 'Redis connection not established',
-      })
-    }
-    
     // Test Redis connection
     try {
-      await redis.ping()
+      await redisClient.ping()
     } catch (error) {
       throw createError({
         statusCode: 503,
@@ -31,9 +24,9 @@ export default defineEventHandler(async (event) => {
     }
     
     // Get Redis info
-    const info = await redis.info()
-    const memory = await redis.info('memory')
-    const stats = await redis.info('stats')
+    const info = await redisClient.info()
+    const memory = await redisClient.info('memory')
+    const stats = await redisClient.info('stats')
     
     // Parse memory info
     const memoryLines = memory.split('\r\n')

@@ -1,6 +1,6 @@
 <template>
   <div class="register-page">
-    <RegisterForm 
+    <RegisterForm
       @success="handleRegisterSuccess"
       @error="handleRegisterError"
     />
@@ -9,11 +9,10 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useAuthStore } from '~/stores/authStore'
 
 definePageMeta({
   title: 'Register',
-  layout: 'auth'
+  layout: 'auth',
 })
 
 // Auth store
@@ -21,12 +20,9 @@ const authStore = useAuthStore()
 
 // Redirect if already authenticated
 onMounted(() => {
-  if (authStore.isAuthenticated) {
-    if (authStore.isAdmin) {
-      navigateTo('/admin/users')
-    } else {
-      navigateTo('/dashboard')
-    }
+  if (authStore.isAuthenticated && authStore.user) {
+    const redirectPath = authStore.getRedirectPath(authStore.user)
+    navigateTo(redirectPath)
   }
 })
 
@@ -51,4 +47,4 @@ const handleRegisterError = (error: string) => {
   justify-content: center;
   padding: 1rem;
 }
-</style> 
+</style>

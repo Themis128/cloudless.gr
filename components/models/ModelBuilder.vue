@@ -2,20 +2,15 @@
   <v-card class="bg-white">
     <v-card-title class="d-flex align-center justify-space-between">
       <div class="d-flex align-center">
-        <v-icon start color="primary">
-          mdi-plus-circle
-        </v-icon>
+        <v-icon start color="primary"> mdi-plus-circle </v-icon>
         Model Builder
       </div>
-      <v-chip
-        color="primary"
-        variant="tonal"
-        size="small"
-      >
-        Step {{ modelStore.builderStep + 1 }} of {{ modelStore.builderSteps.length }}
+      <v-chip color="primary" variant="tonal" size="small">
+        Step {{ modelStore.builderStep + 1 }} of
+        {{ modelStore.builderSteps.length }}
       </v-chip>
     </v-card-title>
-    
+
     <v-card-text>
       <!-- Progress Bar -->
       <v-progress-linear
@@ -24,7 +19,7 @@
         height="4"
         class="mb-6"
       />
-      
+
       <!-- Step Content -->
       <div class="step-content">
         <!-- Step 0: Basic Info -->
@@ -40,18 +35,20 @@
               @input="modelStore.updateBuilderForm('name', $event.target.value)"
               required
             />
-            
+
             <v-textarea
               v-model="modelStore.builderForm.description"
               label="Description"
               placeholder="Describe your model's purpose and functionality"
               variant="outlined"
               :error-messages="modelStore.validationErrors.description"
-              @input="modelStore.updateBuilderForm('description', $event.target.value)"
+              @input="
+                modelStore.updateBuilderForm('description', $event.target.value)
+              "
               rows="3"
               required
             />
-            
+
             <v-select
               v-model="modelStore.builderForm.type"
               label="Model Type"
@@ -63,7 +60,7 @@
             />
           </v-form>
         </div>
-        
+
         <!-- Step 1: Configuration -->
         <div v-if="modelStore.builderStep === 1">
           <h3 class="text-h6 mb-4">Model Configuration</h3>
@@ -77,37 +74,41 @@
             rows="8"
             required
           />
-          <v-alert
-            type="info"
-            variant="tonal"
-            class="mt-4"
-          >
+          <v-alert type="info" variant="tonal" class="mt-4">
             <template #prepend>
               <v-icon>mdi-information</v-icon>
             </template>
-            Enter the model architecture configuration in JSON format. This defines the layers, activation functions, and other architectural details.
+            Enter the model architecture configuration in JSON format. This
+            defines the layers, activation functions, and other architectural
+            details.
           </v-alert>
         </div>
-        
+
         <!-- Step 2: Hyperparameters -->
         <div v-if="modelStore.builderStep === 2">
           <h3 class="text-h6 mb-4">Training Hyperparameters</h3>
           <v-row>
             <v-col cols="12" md="6">
               <v-text-field
-                v-model.number="modelStore.builderForm.hyperparameters.learningRate"
+                v-model.number="
+                  modelStore.builderForm.hyperparameters.learningRate
+                "
                 label="Learning Rate"
                 type="number"
                 step="0.001"
                 min="0.0001"
                 max="1"
                 variant="outlined"
-                @input="updateHyperparameter('learningRate', $event.target.value)"
+                @input="
+                  updateHyperparameter('learningRate', $event.target.value)
+                "
               />
             </v-col>
             <v-col cols="12" md="6">
               <v-text-field
-                v-model.number="modelStore.builderForm.hyperparameters.batchSize"
+                v-model.number="
+                  modelStore.builderForm.hyperparameters.batchSize
+                "
                 label="Batch Size"
                 type="number"
                 min="1"
@@ -138,7 +139,7 @@
             </v-col>
           </v-row>
         </div>
-        
+
         <!-- Step 3: Review -->
         <div v-if="modelStore.builderStep === 3">
           <h3 class="text-h6 mb-4">Review Configuration</h3>
@@ -151,56 +152,70 @@
                     <v-icon>mdi-tag</v-icon>
                   </template>
                   <v-list-item-title>Name</v-list-item-title>
-                  <v-list-item-subtitle>{{ modelStore.builderForm.name }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{
+                    modelStore.builderForm.name
+                  }}</v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item>
                   <template #prepend>
                     <v-icon>mdi-text</v-icon>
                   </template>
                   <v-list-item-title>Description</v-list-item-title>
-                  <v-list-item-subtitle>{{ modelStore.builderForm.description }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{
+                    modelStore.builderForm.description
+                  }}</v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item>
                   <template #prepend>
                     <v-icon>mdi-brain</v-icon>
                   </template>
                   <v-list-item-title>Type</v-list-item-title>
-                  <v-list-item-subtitle>{{ modelStore.builderForm.type }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{
+                    modelStore.builderForm.type
+                  }}</v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item>
                   <template #prepend>
                     <v-icon>mdi-tune</v-icon>
                   </template>
                   <v-list-item-title>Learning Rate</v-list-item-title>
-                  <v-list-item-subtitle>{{ modelStore.builderForm.hyperparameters.learningRate }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{
+                    modelStore.builderForm.hyperparameters.learningRate
+                  }}</v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item>
                   <template #prepend>
                     <v-icon>mdi-tune</v-icon>
                   </template>
                   <v-list-item-title>Batch Size</v-list-item-title>
-                  <v-list-item-subtitle>{{ modelStore.builderForm.hyperparameters.batchSize }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{
+                    modelStore.builderForm.hyperparameters.batchSize
+                  }}</v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item>
                   <template #prepend>
                     <v-icon>mdi-tune</v-icon>
                   </template>
                   <v-list-item-title>Epochs</v-list-item-title>
-                  <v-list-item-subtitle>{{ modelStore.builderForm.hyperparameters.epochs }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{
+                    modelStore.builderForm.hyperparameters.epochs
+                  }}</v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item>
                   <template #prepend>
                     <v-icon>mdi-tune</v-icon>
                   </template>
                   <v-list-item-title>Optimizer</v-list-item-title>
-                  <v-list-item-subtitle>{{ modelStore.builderForm.hyperparameters.optimizer }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{
+                    modelStore.builderForm.hyperparameters.optimizer
+                  }}</v-list-item-subtitle>
                 </v-list-item>
               </v-list>
             </v-card-text>
           </v-card>
         </div>
       </div>
-      
+
       <!-- Navigation Buttons -->
       <div class="d-flex justify-space-between mt-6">
         <v-btn
@@ -212,11 +227,12 @@
           Previous
         </v-btn>
         <div></div>
-        
-        <div class="d-flex gap-2">
+
+        <div class="d-flex">
           <v-btn
             v-if="modelStore.builderStep < modelStore.builderSteps.length - 1"
             color="primary"
+            class="mr-2"
             @click="nextStep"
             :disabled="!modelStore.canProceedToNextStep"
           >
@@ -252,16 +268,10 @@ const modelTypes = [
   { title: 'Translation', value: 'translation' },
   { title: 'Summarization', value: 'summarization' },
   { title: 'Regression', value: 'regression' },
-  { title: 'Clustering', value: 'clustering' }
+  { title: 'Clustering', value: 'clustering' },
 ]
 
-const optimizers = [
-  'adam',
-  'sgd',
-  'rmsprop',
-  'adagrad',
-  'adamax'
-]
+const optimizers = ['adam', 'sgd', 'rmsprop', 'adagrad', 'adamax']
 
 const nextStep = () => {
   modelStore.validateAllFields()
@@ -288,7 +298,5 @@ const createModel = async () => {
   min-height: 300px;
 }
 
-.gap-2 {
-  gap: 0.5rem;
-}
-</style> 
+
+</style>

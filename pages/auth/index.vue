@@ -65,12 +65,12 @@ useHead({
 })
 
 // Check if user is already authenticated
-const { isAuthenticated } = useAuth()
+const authStore = useAuthStore()
 const router = useRouter()
 
 // Redirect to dashboard if already authenticated
 onMounted(() => {
-  if (isAuthenticated.value) {
+  if (authStore.isAuthenticated) {
     router.push('/dashboard')
   }
 })

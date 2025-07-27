@@ -3,11 +3,7 @@
     <v-stepper v-model="currentStep" class="mb-6">
       <v-stepper-header>
         <template v-for="(step, i) in steps" :key="i">
-          <v-stepper-item
-            :value="i + 1"
-            :complete="currentStep > i + 1"
-            :title="step.title"
-          >
+          <v-stepper-item :value="i + 1" :complete="currentStep > i + 1" :title="step.title">
             {{ step.title }}
           </v-stepper-item>
           <v-divider v-if="i < steps.length - 1" />
@@ -28,16 +24,23 @@
                   <div class="text-body-2">
                     <p class="mb-2"><strong>Define your pipeline's basic information:</strong></p>
                     <ul class="mb-3">
-                      <li><strong>Pipeline Name:</strong> Choose a descriptive name that clearly identifies your pipeline's purpose</li>
-                      <li><strong>Description:</strong> Provide a brief overview of what your pipeline does and its workflow</li>
+                      <li>
+                        <strong>Pipeline Name:</strong> Choose a descriptive name that clearly
+                        identifies your pipeline's purpose
+                      </li>
+                      <li>
+                        <strong>Description:</strong> Provide a brief overview of what your pipeline
+                        does and its workflow
+                      </li>
                     </ul>
                     <v-alert type="info" variant="tonal" class="mb-2">
-                      <strong>💡 Tip:</strong> Use clear, specific names and detailed descriptions to help others understand your pipeline's workflow.
+                      <strong>💡 Tip:</strong> Use clear, specific names and detailed descriptions
+                      to help others understand your pipeline's workflow.
                     </v-alert>
                   </div>
                 </v-card-text>
               </v-card>
-              
+
               <v-form @submit.prevent>
                 <v-text-field
                   v-model="form.name"
@@ -45,11 +48,7 @@
                   required
                   :rules="[v => !!v || 'Name is required']"
                 />
-                <v-textarea
-                  v-model="form.description"
-                  label="Description"
-                  rows="3"
-                />
+                <v-textarea v-model="form.description" label="Description" rows="3" />
               </v-form>
             </v-card-text>
           </v-card>
@@ -66,19 +65,31 @@
                 </v-card-title>
                 <v-card-text>
                   <div class="text-body-2">
-                    <p class="mb-2"><strong>Select a model for your pipeline (optional):</strong></p>
+                    <p class="mb-2">
+                      <strong>Select a model for your pipeline (optional):</strong>
+                    </p>
                     <ul class="mb-3">
-                      <li><strong>Model Integration:</strong> Choose a model to integrate with your pipeline</li>
-                      <li><strong>Optional Selection:</strong> You can create a pipeline without a specific model</li>
-                      <li><strong>Compatibility:</strong> Ensure the model is compatible with your pipeline's requirements</li>
+                      <li>
+                        <strong>Model Integration:</strong> Choose a model to integrate with your
+                        pipeline
+                      </li>
+                      <li>
+                        <strong>Optional Selection:</strong> You can create a pipeline without a
+                        specific model
+                      </li>
+                      <li>
+                        <strong>Compatibility:</strong> Ensure the model is compatible with your
+                        pipeline's requirements
+                      </li>
                     </ul>
                     <v-alert type="info" variant="tonal" class="mb-2">
-                      <strong>💡 Tip:</strong> Select a model that aligns with your pipeline's purpose and data processing requirements.
+                      <strong>💡 Tip:</strong> Select a model that aligns with your pipeline's
+                      purpose and data processing requirements.
                     </v-alert>
                   </div>
                 </v-card-text>
               </v-card>
-              
+
               <v-select
                 v-model="form.model"
                 :items="modelOptions"
@@ -102,19 +113,31 @@
                 </v-card-title>
                 <v-card-text>
                   <div class="text-body-2">
-                    <p class="mb-2"><strong>Configure your pipeline's workflow and settings:</strong></p>
+                    <p class="mb-2">
+                      <strong>Configure your pipeline's workflow and settings:</strong>
+                    </p>
                     <ul class="mb-3">
-                      <li><strong>JSON Configuration:</strong> Define pipeline steps, data flow, and processing rules</li>
-                      <li><strong>Validation:</strong> Ensure your JSON is properly formatted and valid</li>
-                      <li><strong>Workflow Design:</strong> Design the sequence of operations and data transformations</li>
+                      <li>
+                        <strong>JSON Configuration:</strong> Define pipeline steps, data flow, and
+                        processing rules
+                      </li>
+                      <li>
+                        <strong>Validation:</strong> Ensure your JSON is properly formatted and
+                        valid
+                      </li>
+                      <li>
+                        <strong>Workflow Design:</strong> Design the sequence of operations and data
+                        transformations
+                      </li>
                     </ul>
                     <v-alert type="info" variant="tonal" class="mb-2">
-                      <strong>💡 Tip:</strong> Use valid JSON format and design a clear workflow that defines how data flows through your pipeline.
+                      <strong>💡 Tip:</strong> Use valid JSON format and design a clear workflow
+                      that defines how data flows through your pipeline.
                     </v-alert>
                   </div>
                 </v-card-text>
               </v-card>
-              
+
               <v-textarea
                 v-model="jsonConfig"
                 label="Pipeline Configuration (JSON)"
@@ -140,7 +163,9 @@
                 </v-card-title>
                 <v-card-text>
                   <div class="text-body-2">
-                    <p class="mb-2"><strong>Review your pipeline configuration before creating:</strong></p>
+                    <p class="mb-2">
+                      <strong>Review your pipeline configuration before creating:</strong>
+                    </p>
                     <ul class="mb-3">
                       <li>Verify all information is correct and complete</li>
                       <li>Check that the pipeline name and description are clear</li>
@@ -148,12 +173,13 @@
                       <li>Confirm model selection (if any) is appropriate</li>
                     </ul>
                     <v-alert type="success" variant="tonal" class="mb-2">
-                      <strong>✅ Ready to Create:</strong> Your pipeline will be created with the specified configuration. You can deploy and test it after creation.
+                      <strong>✅ Ready to Create:</strong> Your pipeline will be created with the
+                      specified configuration. You can deploy and test it after creation.
                     </v-alert>
                   </div>
                 </v-card-text>
               </v-card>
-              
+
               <v-card variant="outlined">
                 <v-card-title class="text-subtitle-2 font-weight-bold">
                   📋 Pipeline Configuration Summary
@@ -187,19 +213,10 @@
       </v-stepper-window>
 
       <div class="d-flex justify-space-between mt-4">
-        <v-btn
-          color="primary"
-          variant="outlined"
-          :disabled="currentStep === 1"
-          @click="goBack"
-        >
+        <v-btn color="primary" variant="outlined" :disabled="currentStep === 1" @click="goBack">
           Back
         </v-btn>
-        <v-btn
-          color="primary"
-          :disabled="!canProceed"
-          @click="handleNext"
-        >
+        <v-btn color="primary" :disabled="!canProceed" @click="handleNext">
           {{ currentStep === steps.length ? 'Create Pipeline' : 'Next' }}
         </v-btn>
       </div>
@@ -212,151 +229,151 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { usePipelineStore } from '~/stores/pipelineStore';
-import { useModelStore } from '~/stores/modelStore';
-// import type { PipelineConfig } from '~/types/Pipeline';
+  import { computed, onMounted, ref } from 'vue'
+  import { useModelStore } from '~/stores/modelStore'
+  import { usePipelineStore } from '~/stores/pipelineStore'
+  // import type { PipelineConfig } from '~/types/Pipeline';
 
-const props = defineProps<{
-  projectId: string
-}>()
+  const props = defineProps<{
+    projectId?: string
+  }>()
 
-const emit = defineEmits<{
-  'created': []
-}>()
+  const emit = defineEmits<{
+    created: []
+  }>()
 
-const pipelineStore = usePipelineStore()
-const modelStore = useModelStore()
+  const pipelineStore = usePipelineStore()
+  const modelStore = useModelStore()
 
-const currentStep = ref(1)
-const error = ref<string | null>(null)
-const jsonError = ref<string | null>(null)
-const modelOptions = ref<{ id: string; name: string }[]>([])
+  const currentStep = ref(1)
+  const error = ref<string | null>(null)
+  const jsonError = ref<string | null>(null)
+  const modelOptions = ref<{ id: string; name: string }[]>([])
 
-const steps = [
-  { title: 'Basic Info', subtitle: 'Name and description' },
-  { title: 'Model', subtitle: 'Select model' },
-  { title: 'Configuration', subtitle: 'Pipeline setup' },
-  { title: 'Review', subtitle: 'Verify details' }
-]
-
-const form = ref({
-  name: '',
-  description: '',
-  model: '',
-  config: {} as any
-})
-
-const defaultConfig = {
-  steps: [
-    {
-      name: 'Parse User Query',
-      type: 'input_processor',
-      config: {
-        extract_code_context: true,
-        identify_language: true
-      }
-    },
-    {
-      name: 'Generate Response',
-      type: 'llm_processor',
-      config: {
-        temperature: 0.7,
-        max_tokens: 1000,
-        include_code_blocks: true,
-        format: 'markdown'
-      }
-    },
-    {
-      name: 'Format Output',
-      type: 'output_processor',
-      config: {
-        highlight_code: true,
-        add_explanations: true,
-        format_markdown: true
-      }
-    }
+  const steps = [
+    { title: 'Basic Info', subtitle: 'Name and description' },
+    { title: 'Model', subtitle: 'Select model' },
+    { title: 'Configuration', subtitle: 'Pipeline setup' },
+    { title: 'Review', subtitle: 'Verify details' },
   ]
-}
 
-const jsonConfig = ref(JSON.stringify(defaultConfig, null, 2))
+  const form = ref({
+    name: '',
+    description: '',
+    model: '',
+    config: {} as any,
+  })
 
-const parsedConfig = computed(() => {
-  try {
-    return JSON.parse(jsonConfig.value)
-  } catch {
-    return null
+  const defaultConfig = {
+    steps: [
+      {
+        name: 'Parse User Query',
+        type: 'input_processor',
+        config: {
+          extract_code_context: true,
+          identify_language: true,
+        },
+      },
+      {
+        name: 'Generate Response',
+        type: 'llm_processor',
+        config: {
+          temperature: 0.7,
+          max_tokens: 1000,
+          include_code_blocks: true,
+          format: 'markdown',
+        },
+      },
+      {
+        name: 'Format Output',
+        type: 'output_processor',
+        config: {
+          highlight_code: true,
+          add_explanations: true,
+          format_markdown: true,
+        },
+      },
+    ],
   }
-})
 
-const canProceed = computed(() => {
-  if (currentStep.value === 1) {
-    return !!form.value.name
+  const jsonConfig = ref(JSON.stringify(defaultConfig, null, 2))
+
+  const parsedConfig = computed(() => {
+    try {
+      return JSON.parse(jsonConfig.value)
+    } catch {
+      return null
+    }
+  })
+
+  const canProceed = computed(() => {
+    if (currentStep.value === 1) {
+      return !!form.value.name
+    }
+    if (currentStep.value === 3) {
+      return !jsonError.value && !!parsedConfig.value
+    }
+    return true
+  })
+
+  const validateJson = () => {
+    try {
+      JSON.parse(jsonConfig.value)
+      jsonError.value = null
+    } catch (err: any) {
+      jsonError.value = 'Invalid JSON: ' + err.message
+    }
   }
-  if (currentStep.value === 3) {
-    return !jsonError.value && !!parsedConfig.value
+
+  const getModelName = (id: string) => {
+    return modelOptions.value.find(m => m.id === id)?.name || id
   }
-  return true
-})
 
-const validateJson = () => {
-  try {
-    JSON.parse(jsonConfig.value)
-    jsonError.value = null
-  } catch (err: any) {
-    jsonError.value = 'Invalid JSON: ' + err.message
+  const goBack = () => {
+    currentStep.value--
   }
-}
 
-const getModelName = (id: string) => {
-  return modelOptions.value.find(m => m.id === id)?.name || id
-}
-
-const goBack = () => {
-  currentStep.value--
-}
-
-const handleNext = () => {
-  if (currentStep.value === steps.length) {
-    submit()
-  } else {
-    currentStep.value++
+  const handleNext = () => {
+    if (currentStep.value === steps.length) {
+      submit()
+    } else {
+      currentStep.value++
+    }
   }
-}
 
-const submit = async () => {
-  error.value = null
-  
-  try {
-    form.value.config = parsedConfig.value
+  const submit = async () => {
+    error.value = null
 
-    await pipelineStore.createPipeline({
-      name: form.value.name,
-      description: form.value.description,
-      config: JSON.stringify(form.value.config),
-      status: 'draft',
-      userId: 1 // Default user ID for now
-    })
+    try {
+      form.value.config = parsedConfig.value
 
-    emit('created')
-  } catch (err: any) {
-    error.value = err.message || 'Failed to create pipeline'
+      await pipelineStore.createPipeline({
+        name: form.value.name,
+        description: form.value.description,
+        config: JSON.stringify(form.value.config),
+        status: 'draft',
+        userId: 1, // Default user ID for now
+      })
+
+      emit('created')
+    } catch (err: any) {
+      error.value = err.message || 'Failed to create pipeline'
+    }
   }
-}
 
-onMounted(async () => {
-  // Reset store state when component mounts
-  pipelineStore.resetBuilder()
-  
-  // Fetch models for selection
-  if (modelStore.allModels.length === 0) {
-    await modelStore.fetchAll()
-  }
-  
-  // Populate model options
-  modelOptions.value = modelStore.allModels.map(model => ({
-    id: model.id.toString(),
-    name: model.name
-  }))
-})
+  onMounted(async () => {
+    // Reset store state when component mounts
+    pipelineStore.resetBuilder()
+
+    // Fetch models for selection
+    if (modelStore.allModels.length === 0) {
+      await modelStore.fetchAll()
+    }
+
+    // Populate model options
+    modelOptions.value = modelStore.allModels.map(model => ({
+      id: model.id.toString(),
+      name: model.name,
+    }))
+  })
 </script>

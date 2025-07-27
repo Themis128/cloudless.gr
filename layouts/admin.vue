@@ -1,182 +1,143 @@
 <template>
-  <NuxtLayout name="default" class="admin-layout-wrapper">
-    <div class="admin-toolbar" role="navigation" aria-label="Admin Navigation">
-      <div class="admin-toolbar-content">
-        <div class="admin-branding">
-          <h2>Admin Dashboard</h2>
-        </div>        <nav class="admin-nav">
-          <NuxtLink to="/admin/dashboard" class="nav-link">
-            Dashboard
-          </NuxtLink>
-          <NuxtLink to="/admin/users" class="nav-link">
-            Users
-          </NuxtLink>
-          <NuxtLink to="/admin/projects" class="nav-link">
-            Projects
-          </NuxtLink>
-          <NuxtLink to="/admin/contact-submissions" class="nav-link">
-            Contact Submissions
-          </NuxtLink>
-          <button @click="logout" class="logout-button">Logout</button>
-        </nav>
-      </div>
-    </div>
-    
-    <div class="admin-content">
-      <slot />
-    </div>
-    
-    <div class="admin-footer">
-      <p>Admin area - For authorized users only</p>
-    </div>
+  <NuxtLayout name="default">
+    <v-container fluid class="pa-0">
+      <!-- Admin Toolbar -->
+      <v-card
+        class="mb-6 mx-4 mt-4"
+        color="primary"
+        variant="elevated"
+        style="backdrop-filter: blur(10px)"
+      >
+        <v-card-text class="py-4">
+          <v-row align="center" justify="space-between" no-gutters>
+            <v-col cols="auto">
+              <v-card-title class="text-h5 font-weight-bold text-white pa-0">
+                <v-icon start color="white" class="mr-2"
+                  >mdi-shield-crown</v-icon
+                >
+                Admin Dashboard
+              </v-card-title>
+            </v-col>
+
+            <v-col cols="auto">
+              <v-row align="center" no-gutters>
+                <v-btn
+                  to="/admin/dashboard"
+                  variant="text"
+                  color="white"
+                  prepend-icon="mdi-view-dashboard"
+                  class="mr-2"
+                >
+                  Dashboard
+                </v-btn>
+                <v-btn
+                  to="/admin/users"
+                  variant="text"
+                  color="white"
+                  prepend-icon="mdi-account-group"
+                  class="mr-2"
+                >
+                  Users
+                </v-btn>
+                <v-btn
+                  to="/admin/projects"
+                  variant="text"
+                  color="white"
+                  prepend-icon="mdi-folder-multiple"
+                  class="mr-2"
+                >
+                  Projects
+                </v-btn>
+                <v-btn
+                  to="/admin/contact-submissions"
+                  variant="text"
+                  color="white"
+                  prepend-icon="mdi-message-text"
+                  class="mr-4"
+                >
+                  Contact Submissions
+                </v-btn>
+                <v-btn
+                  color="error"
+                  variant="outlined"
+                  prepend-icon="mdi-logout"
+                  @click="handleLogout"
+                  :loading="authLoading"
+                >
+                  Logout
+                </v-btn>
+              </v-row>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
+
+      <!-- Admin Content -->
+      <v-container class="admin-content">
+        <slot />
+      </v-container>
+
+      <!-- Admin Footer -->
+      <v-footer class="admin-footer">
+        <v-container>
+          <v-row justify="center" align="center">
+            <v-col cols="auto">
+              <v-chip
+                color="primary"
+                variant="outlined"
+                prepend-icon="mdi-shield-check"
+                size="small"
+              >
+                Admin area - For authorized users only
+              </v-chip>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-footer>
+    </v-container>
   </NuxtLayout>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-
-const router = useRouter();
+// Authentication state - client-side only to prevent hydration mismatches
+const authLoading = ref(false)
 
 // Logout function
-const logout = async (): Promise<void> => {
-  // Clear authentication state
-  localStorage.removeItem('admin_authenticated');
-
-  // Redirect to login
-  await navigateTo('/admin/login');
-};
+const handleLogout = async (): Promise<void> => {
+  try {
+    authLoading.value = true
+    const authStore = useAuthStore()
+    await authStore.logout()
+    await navigateTo('/auth/login')
+  } catch (error) {
+    console.error('Logout error:', error)
+  } finally {
+    authLoading.value = false
+  }
+}
 </script>
 
 <style scoped>
-.admin-layout-wrapper :deep(.layout-root) {
-  position: relative;
-
-.admin-layout-wrapper :deep(.main-content-transparent) {
-  position: static;
-  z-index: 0;
-}
-
-.admin-layout-wrapper :deep(div[data-vanta]),
-.admin-layout-wrapper :deep(canvas.vanta-canvas) {
-  z-index: 5 !important;
-  opacity: 0.8 !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  pointer-events: none !important;
-}
-
-.admin-toolbar {
-  background-color: rgba(30, 64, 175, 0.9);
-  color: white;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  backdrop-filter: blur(10px);
-  position: relative;
-  z-index: 10;
-}
-
-.admin-toolbar-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.admin-branding h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0;
-  background: linear-gradient(90deg, #ffffff 0%, #e2e8f0 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.admin-nav {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.nav-link {
-  color: white;
-  text-decoration: none;
-  font-weight: 500;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  transition: all 0.2s;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.logout-button {
-  background-color: rgba(239, 68, 68, 0.2);
-  color: white;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.logout-button:hover {
-  background-color: rgba(239, 68, 68, 0.4);
-}
-
 .admin-content {
+  min-height: calc(100vh - 300px);
   position: relative;
   z-index: 1;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  color: white;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
 }
 
 .admin-footer {
   position: relative;
   z-index: 1;
-  text-align: center;
-  color: white;
-  font-size: 0.875rem;
-  margin-top: 1rem;
-  padding: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
-}
-}
-
-.admin-main {
-  flex: 1;
-}
-
-.footer-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  text-align: center;
-  color: #64748b;
-  font-size: 0.875rem;
 }
 
 @media (max-width: 768px) {
-  .header-content {
+  .v-row {
     flex-direction: column;
     gap: 1rem;
   }
 
-  .admin-nav {
+  .v-col {
     width: 100%;
-    justify-content: center;
   }
 }
 </style>

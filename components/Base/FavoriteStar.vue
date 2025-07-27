@@ -8,8 +8,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { Project } from '@/types/projects';
-import { defineProps } from 'vue';
-
 const props = defineProps<{ project: any }>();
 const localProject = ref({ ...props.project });
 const isFavorite = computed(() => localProject.value.isFavorite);

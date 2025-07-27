@@ -92,9 +92,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useAuth } from '~/composables/useAuth'
+import { useAuthStore } from '~/stores/authStore'
 
-const { register } = useAuth()
+const authStore = useAuthStore()
 const router = useRouter()
 
 const form = ref({
@@ -132,7 +132,12 @@ const handleRegister = async () => {
   error.value = null
   
   try {
-    const result = await register(form.value.email, form.value.password, form.value.name)
+    const result = await authStore.register({
+      name: form.value.name,
+      email: form.value.email,
+      password: form.value.password,
+      confirmPassword: form.value.confirmPassword
+    })
     
     if (result.success) {
       // Redirect to dashboard

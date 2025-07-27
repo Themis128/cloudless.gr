@@ -93,6 +93,47 @@
         </ul>
       </div>
       
+      <div v-else-if="page === 'datasets'" class="guide-section">
+        <h4 class="guide-section-title">
+          Dataset Management
+        </h4>
+        <p class="guide-text">
+          Manage your training datasets for language models. Upload, organize, and 
+          prepare data for model training and fine-tuning.
+        </p>
+        
+        <h4 class="guide-section-title">
+          Dataset Types
+        </h4>
+        <ul class="guide-list">
+          <li><strong>Text Generation:</strong> For language model training</li>
+          <li><strong>Text Classification:</strong> For sentiment analysis, categorization</li>
+          <li><strong>Question Answering:</strong> For QA model training</li>
+          <li><strong>Summarization:</strong> For document summarization models</li>
+        </ul>
+        
+        <h4 class="guide-section-title">
+          Best Practices
+        </h4>
+        <ul class="guide-list">
+          <li>Use high-quality, clean data</li>
+          <li>Ensure proper data formatting</li>
+          <li>Validate data before training</li>
+          <li>Keep datasets organized and labeled</li>
+          <li>Monitor dataset quality metrics</li>
+        </ul>
+        
+        <h4 class="guide-section-title">
+          File Formats
+        </h4>
+        <ul class="guide-list">
+          <li><strong>CSV:</strong> For structured data</li>
+          <li><strong>JSON:</strong> For complex data structures</li>
+          <li><strong>JSONL:</strong> For large datasets</li>
+          <li><strong>TXT:</strong> For simple text data</li>
+        </ul>
+      </div>
+      
       <div v-else class="guide-section">
         <h4 class="guide-section-title">
           LLM Management

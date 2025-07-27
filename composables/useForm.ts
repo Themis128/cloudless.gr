@@ -1,86 +1,130 @@
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
+import type { FormField, FormState } from '~/types/common'
 
-export interface FormField<T = any> {
-  value: T
-  error?: string
-  required?: boolean
-  validator?: (value: T) => string | null
-}
+// Composable that uses the Pinia store
+export const useForm = <T extends FormState>(
+  initialState: T,
+  formId?: string
+) => {
+  const formStore = useFormStore()
 
-export interface FormState {
-  [key: string]: FormField
-}
+  // Generate a unique form ID if not provided
+  const currentFormId =
+    formId || `form_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-export const useForm = <T extends FormState>(initialState: T) => {
-  const form = ref<T>(initialState)
-  const isSubmitting = ref(false)
-  const submitError = ref<string | null>(null)
+  // Create form in store if it doesn't exist
+  if (!formStore.getForm(currentFormId)) {
+    formStore.createForm(currentFormId, initialState)
+  }
 
-  const isValid = computed(() => {
-    return Object.values(form.value).every((field: any) => {
-      if (field.required && !field.value) return false
-      if (field.error) return false
-      return true
-    })
-  })
+  // Get form state from store
+  const form = computed(() => formStore.getForm(currentFormId))
 
+  // Computed properties
+  const isSubmitting = computed(() => formStore.getIsSubmitting(currentFormId))
+  const submitError = computed(() => formStore.getSubmitError(currentFormId))
+  const isValid = computed(() => formStore.isFormValid(currentFormId))
+  const isDirty = computed(() => formStore.isFormDirty(currentFormId))
+  const isTouched = computed(() => formStore.isFormTouched(currentFormId))
+
+  // Methods that delegate to store
   const validateField = (key: keyof T) => {
-    const field = form.value[key]
-    if (!field) return
-
-    if (field.required && !field.value) {
-      field.error = 'This field is required'
-      return
-    }
-
-    if (field.validator) {
-      const validationError = field.validator(field.value)
-      field.error = validationError || undefined
-    }
+    return formStore.validateField(currentFormId, key as string)
   }
 
   const validateForm = () => {
-    Object.keys(form.value).forEach(key => {
-      validateField(key as keyof T)
-    })
-    return isValid.value
+    return formStore.validateForm(currentFormId)
   }
 
   const resetForm = () => {
-    Object.keys(form.value).forEach(key => {
-      const field = form.value[key as keyof T]
-      if (field) {
-        field.value = initialState[key as keyof T].value
-        field.error = undefined
-      }
-    })
-    submitError.value = null
+    return formStore.resetForm(currentFormId)
   }
 
   const setFieldValue = (key: keyof T, value: any) => {
-    const field = form.value[key]
-    if (field) {
-      field.value = value
-      field.error = undefined
-    }
+    return formStore.setFieldValue(currentFormId, key as string, value)
   }
 
   const setFieldError = (key: keyof T, error: string) => {
-    const field = form.value[key]
-    if (field) {
-      field.error = error
-    }
+    return formStore.setFieldError(currentFormId, key as string, error)
+  }
+
+  const setFieldTouched = (key: keyof T, touched: boolean = true) => {
+    return formStore.setFieldTouched(currentFormId, key as string, touched)
+  }
+
+  const resetField = (key: keyof T) => {
+    return formStore.resetField(currentFormId, key as string)
+  }
+
+  const setSubmitting = (submitting: boolean) => {
+    return formStore.setSubmitting(currentFormId, submitting)
+  }
+
+  const setSubmitError = (error: string | null) => {
+    return formStore.setSubmitError(currentFormId, error)
+  }
+
+  const clearSubmitError = () => {
+    return formStore.clearSubmitError(currentFormId)
+  }
+
+  const getFormData = () => {
+    return formStore.getFormData(currentFormId)
+  }
+
+  const setFormData = (data: Record<string, any>) => {
+    return formStore.setFormData(currentFormId, data)
+  }
+
+  const getFormErrors = () => {
+    return formStore.getFormErrors(currentFormId)
+  }
+
+  const hasFormErrors = () => {
+    return formStore.hasFormErrors(currentFormId)
+  }
+
+  const clearFormErrors = () => {
+    return formStore.clearFormErrors(currentFormId)
+  }
+
+  const destroyForm = () => {
+    return formStore.destroyForm(currentFormId)
+  }
+
+  const getFormSummary = () => {
+    return formStore.getFormSummary(currentFormId)
   }
 
   return {
+    // Form state
     form,
     isSubmitting,
     submitError,
     isValid,
+    isDirty,
+    isTouched,
+
+    // Methods
     validateField,
     validateForm,
     resetForm,
     setFieldValue,
     setFieldError,
+    setFieldTouched,
+    resetField,
+    setSubmitting,
+    setSubmitError,
+    clearSubmitError,
+    getFormData,
+    setFormData,
+    getFormErrors,
+    hasFormErrors,
+    clearFormErrors,
+    destroyForm,
+    getFormSummary,
+
+    // Form ID for reference
+    formId: currentFormId,
   }
-} 
+}

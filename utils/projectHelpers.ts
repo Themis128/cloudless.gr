@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { prisma } from '~/lib/prisma'
 
 export function findThumbnailImage(images: any[]): any | undefined {
@@ -35,7 +34,7 @@ export async function getAllProjects(): Promise<any[]> {
 
     return projects
   } catch (error) {
-    console.error('Error fetching projects:', error)
+    // Error handled silently in production
     return []
   }
 }
@@ -66,7 +65,7 @@ export async function getFeaturedProjects(): Promise<any[]> {
 
     return projects
   } catch (error) {
-    console.error('Error fetching featured projects:', error)
+    // Error handled silently in production
     return []
   }
 }
@@ -96,10 +95,14 @@ export async function seedInitialProjects(userId: number): Promise<void> {
           userId,
           tags: {
             create: [
-              { tag_name: 'Nuxt 3', is_primary: true, color: '#00dc82' },
-              { tag_name: 'TypeScript', is_primary: true, color: '#3178c6' },
-              { tag_name: 'AI/ML', is_primary: false, color: '#ff6b6b' },
-              { tag_name: 'Prisma', is_primary: false, color: '#2d3748' },
+              { name: 'Nuxt 3', primary: true, color: '#00dc82' },
+              { name: 'TypeScript', primary: true, color: '#3178c6' },
+              {
+                name: 'AI Integration',
+                primary: false,
+                color: '#ff6b6b',
+              },
+              { name: 'Tailwind CSS', primary: false, color: '#06b6d4' },
             ],
           },
           images: {
@@ -108,73 +111,16 @@ export async function seedInitialProjects(userId: number): Promise<void> {
                 img_name: 'thumbnail',
                 img_url: '/images/portfolio-thumb.png',
                 is_thumbnail: true,
-                alt: 'Portfolio homepage screenshot',
-                order: 0,
-              },
-              {
-                img_name: 'projects-page',
-                img_url: '/images/portfolio-projects.png',
-                is_thumbnail: false,
-                alt: 'Projects page screenshot',
-                order: 1,
-              },
-            ],
-          },
-          testimonials: {
-            create: [
-              {
-                quote:
-                  'Outstanding work! The AI features really make this portfolio stand out.',
-                author: 'Sarah Johnson',
-                position: 'Design Director',
-                company: 'TechCorp',
-                rating: 5,
-              },
-            ],
-          },
-        },
-        {
-          project_name: 'LLM Development Platform',
-          slug: 'llm-development-platform',
-          overview: 'Comprehensive platform for LLM integration and deployment',
-          description:
-            'A full-stack application that enables developers to integrate, fine-tune, and deploy Large Language Models with an intuitive interface and robust API.',
-          isFavorite: true,
-          live_url: 'https://llm-platform.example.com',
-          github_url: 'https://github.com/example/llm-platform',
-          status: 'published',
-          category: 'machine-learning',
-          featured: true,
-          completionDate: '2024-02-28',
-          duration: '6 months',
-          teamSize: 4,
-          userId,
-          tags: {
-            create: [
-              { tag_name: 'Python', is_primary: true, color: '#3776ab' },
-              { tag_name: 'FastAPI', is_primary: true, color: '#009688' },
-              { tag_name: 'Docker', is_primary: false, color: '#2496ed' },
-              { tag_name: 'PostgreSQL', is_primary: false, color: '#336791' },
-              { tag_name: 'LLM', is_primary: true, color: '#ff6b6b' },
-            ],
-          },
-          images: {
-            create: [
-              {
-                img_name: 'thumbnail',
-                img_url: '/images/llm-platform-thumb.png',
-                is_thumbnail: true,
-                alt: 'LLM platform dashboard',
+                alt: 'AI Portfolio thumbnail',
                 order: 0,
               },
             ],
           },
         },
         {
-          project_name: 'E-Commerce Analytics Dashboard',
+          project_name: 'E-commerce Analytics Dashboard',
           slug: 'ecommerce-analytics-dashboard',
-          overview:
-            'Real-time analytics and insights for e-commerce businesses',
+          overview: 'Real-time analytics and insights for e-commerce businesses',
           description:
             'A comprehensive dashboard providing real-time analytics, sales tracking, and business intelligence for e-commerce platforms.',
           isFavorite: false,
@@ -189,10 +135,10 @@ export async function seedInitialProjects(userId: number): Promise<void> {
           userId,
           tags: {
             create: [
-              { tag_name: 'React', is_primary: true, color: '#61dafb' },
-              { tag_name: 'Node.js', is_primary: true, color: '#339933' },
-              { tag_name: 'MongoDB', is_primary: false, color: '#47a248' },
-              { tag_name: 'Chart.js', is_primary: false, color: '#ff6384' },
+              { name: 'React', primary: true, color: '#61dafb' },
+              { name: 'Node.js', primary: true, color: '#339933' },
+              { name: 'MongoDB', primary: false, color: '#47a248' },
+              { name: 'Chart.js', primary: false, color: '#ff6384' },
             ],
           },
           images: {
@@ -215,59 +161,9 @@ export async function seedInitialProjects(userId: number): Promise<void> {
         })
       }
 
-      console.log('Sample projects seeded successfully')
+      // Sample projects seeded successfully
     }
   } catch (error) {
-    console.error('Error seeding projects:', error)
+    // Error handled silently in production
   }
-=======
-import type { Project, ProjectImage, ProjectTag } from '../types/projects';
-
-export function findThumbnailImage(images: ProjectImage[]): ProjectImage | undefined {
-  return images.find((image) => image.is_thumbnail);
-}
-
-export function findPrimaryTags(tags: ProjectTag[]): ProjectTag[] | undefined {
-  return tags.filter((tag) => tag.is_primary);
-}
-
-export function findFavoriteProjects(projects: Project[]): Project[] {
-  return projects.filter((project) => project.isFavorite);
-}
-
-// Demo/mock data for projects
-export function getAllProjects() {
-  return [
-    {
-      id: 1,
-      project_name: 'Nuxt 3 Portfolio',
-      slug: 'nuxt-3-portfolio',
-      overview: 'A modern portfolio built with Nuxt 3.',
-      description: 'Showcase your work and skills with a blazing fast Nuxt 3 site.',
-      isFavorite: true,
-      live_url: 'https://portfolio.example.com',
-      github_url: 'https://github.com/example/nuxt3-portfolio',
-      tech_tags: [
-        { tag_name: 'Nuxt 3', is_primary: true },
-        { tag_name: 'TypeScript', is_primary: false },
-      ],
-      images: [{ img_name: 'thumb', img_url: '/images/portfolio-thumb.png', is_thumbnail: true }],
-    },
-    {
-      id: 2,
-      project_name: 'LLM Dev Agent',
-      slug: 'llm-dev-agent',
-      overview: 'Integrate LLMs into your dev workflow.',
-      description: 'A Nuxt 3 app for portable LLM integration and codegen.',
-      isFavorite: false,
-      live_url: '',
-      github_url: 'https://github.com/example/llm-dev-agent',
-      tech_tags: [
-        { tag_name: 'Nuxt 3', is_primary: true },
-        { tag_name: 'LLM', is_primary: true },
-      ],
-      images: [{ img_name: 'thumb', img_url: '/images/llm-thumb.png', is_thumbnail: true }],
-    },
-  ];
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
 }

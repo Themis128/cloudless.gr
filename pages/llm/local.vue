@@ -248,8 +248,4 @@ input, button {
   color: #388e3c;
   font-weight: bold;
 }
-<<<<<<< HEAD
 </style>
-=======
-</style>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

@@ -27,9 +27,9 @@
 </template>
 
 <script setup lang="ts">
-import { usePrismaClient } from '~/composables/usePrismaClient'
-// This is a server component that uses the usePrismaClient composable
-const prisma = usePrismaClient();
+import { usePrisma } from '~/composables/usePrisma'
+// This is a server component that uses the usePrisma composable
+const { prisma } = usePrisma();
 
 // Fetch data on the server side
 const totalCount = await prisma.contactSubmission.count();

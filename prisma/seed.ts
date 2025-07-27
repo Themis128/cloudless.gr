@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -17,23 +16,23 @@ async function main() {
   const adminUser = await prisma.user.create({
     data: {
       email: 'admin@cloudless.gr',
-      password: '$2b$10$054v88exyVJBfICxOwPN.uQ/ojSnONlIGuw93F/fiGFuwB/li0cA.', // admin123
+      password: '$2b$10$h1Acoo6qEPGFAu2Qf9p4uejUHTwBXfL1Pm3AH0vnO2ICQoFhMTF4.', // Admin123!
       name: 'Admin User',
       role: 'admin',
       isActive: true,
       isVerified: true,
-    }
+    },
   })
 
   const regularUser = await prisma.user.create({
     data: {
       email: 'user@cloudless.gr',
-      password: '$2b$10$054v88exyVJBfICxOwPN.uQ/ojSnONlIGuw93F/fiGFuwB/li0cA.', // admin123
+      password: '$2b$10$h1Acoo6qEPGFAu2Qf9p4uejUHTwBXfL1Pm3AH0vnO2ICQoFhMTF4.', // Admin123!
       name: 'Regular User',
       role: 'user',
       isActive: true,
       isVerified: true,
-    }
+    },
   })
 
   console.log('✅ Users created')
@@ -45,7 +44,8 @@ async function main() {
         project_name: 'E-Commerce Platform',
         slug: 'ecommerce-platform',
         overview: 'A modern e-commerce platform built with Vue.js and Node.js',
-        description: 'Full-stack e-commerce solution with payment integration, inventory management, and admin dashboard.',
+        description:
+          'Full-stack e-commerce solution with payment integration, inventory management, and admin dashboard.',
         status: 'published',
         category: 'web-development',
         live_url: 'https://ecommerce-demo.cloudless.gr',
@@ -55,14 +55,15 @@ async function main() {
         duration: '3 months',
         teamSize: 4,
         userId: adminUser.id,
-      }
+      },
     }),
     prisma.project.create({
       data: {
         project_name: 'Mobile Banking App',
         slug: 'mobile-banking-app',
         overview: 'Secure mobile banking application for iOS and Android',
-        description: 'Cross-platform mobile app with biometric authentication, real-time transactions, and financial analytics.',
+        description:
+          'Cross-platform mobile app with biometric authentication, real-time transactions, and financial analytics.',
         status: 'published',
         category: 'mobile-app',
         live_url: 'https://banking-app.cloudless.gr',
@@ -72,14 +73,15 @@ async function main() {
         duration: '6 months',
         teamSize: 6,
         userId: adminUser.id,
-      }
+      },
     }),
     prisma.project.create({
       data: {
         project_name: 'AI-Powered Chatbot',
         slug: 'ai-chatbot',
         overview: 'Intelligent chatbot using natural language processing',
-        description: 'Customer service chatbot with machine learning capabilities, multi-language support, and analytics dashboard.',
+        description:
+          'Customer service chatbot with machine learning capabilities, multi-language support, and analytics dashboard.',
         status: 'published',
         category: 'ai-ml',
         live_url: 'https://chatbot-demo.cloudless.gr',
@@ -89,8 +91,8 @@ async function main() {
         duration: '2 months',
         teamSize: 3,
         userId: regularUser.id,
-      }
-    })
+      },
+    }),
   ])
 
   console.log('✅ Projects created')
@@ -99,42 +101,71 @@ async function main() {
   const tags = [
     { name: 'Vue.js', color: '#4FC08D', primary: true },
     { name: 'Node.js', color: '#339933', primary: true },
+    { name: 'TypeScript', color: '#3178C6', primary: false },
     { name: 'React Native', color: '#61DAFB', primary: true },
     { name: 'Python', color: '#3776AB', primary: true },
-    { name: 'TypeScript', color: '#3178C6', primary: false },
-    { name: 'MongoDB', color: '#47A248', primary: false },
+    { name: 'TensorFlow', color: '#FF6F00', primary: false },
     { name: 'PostgreSQL', color: '#336791', primary: false },
+    { name: 'Redis', color: '#DC382D', primary: false },
     { name: 'Docker', color: '#2496ED', primary: false },
+    { name: 'AWS', color: '#FF9900', primary: false },
   ]
 
-  for (const project of projects) {
-    for (let i = 0; i < 3; i++) {
-      const tag = tags[Math.floor(Math.random() * tags.length)]
-      await prisma.projectTag.create({
-        data: {
-          tag_name: tag.name,
-          color: tag.color,
-          is_primary: tag.primary,
-          projectId: project.id,
-        }
-      })
-    }
+  for (const tag of tags) {
+    await prisma.projectTag.create({
+      data: tag,
+    })
   }
 
-  console.log('✅ Project tags created')
+  console.log('✅ Tags created')
 
   // Create project images
-  for (const project of projects) {
+  const images = [
+    {
+      projectId: projects[0].id,
+      img_name: 'E-commerce Dashboard',
+      img_url: '/images/ecommerce-dashboard.jpg',
+      is_thumbnail: true,
+      alt: 'E-commerce platform dashboard',
+      order: 0,
+    },
+    {
+      projectId: projects[0].id,
+      img_name: 'E-commerce Mobile',
+      img_url: '/images/ecommerce-mobile.jpg',
+      is_thumbnail: false,
+      alt: 'E-commerce mobile view',
+      order: 1,
+    },
+    {
+      projectId: projects[1].id,
+      img_name: 'Banking App Login',
+      img_url: '/images/banking-login.jpg',
+      is_thumbnail: true,
+      alt: 'Mobile banking app login screen',
+      order: 0,
+    },
+    {
+      projectId: projects[1].id,
+      img_name: 'Banking Dashboard',
+      img_url: '/images/banking-dashboard.jpg',
+      is_thumbnail: false,
+      alt: 'Banking app dashboard',
+      order: 1,
+    },
+    {
+      projectId: projects[2].id,
+      img_name: 'AI Chatbot Interface',
+      img_url: '/images/chatbot-interface.jpg',
+      is_thumbnail: true,
+      alt: 'AI chatbot conversation interface',
+      order: 0,
+    },
+  ]
+
+  for (const image of images) {
     await prisma.projectImage.create({
-      data: {
-        img_name: `${project.slug}-main`,
-        img_url: `/images/projects/${project.slug}.jpg`,
-        is_thumbnail: true,
-        alt: `${project.project_name} - Main Image`,
-        caption: `Screenshot of ${project.project_name}`,
-        order: 1,
-        projectId: project.id,
-      }
+      data: image,
     })
   }
 
@@ -143,30 +174,42 @@ async function main() {
   // Create testimonials
   const testimonials = [
     {
-      quote: 'Exceptional work quality and attention to detail. The team delivered beyond our expectations.',
+      quote:
+        'Exceptional work on our e-commerce platform. The team delivered exactly what we needed and more.',
       author: 'Sarah Johnson',
-      position: 'CTO',
-      company: 'TechCorp',
-      rating: 5
-    },
-    {
-      quote: 'Professional, reliable, and innovative. Highly recommended for any development project.',
-      author: 'Michael Chen',
-      position: 'Product Manager',
-      company: 'StartupXYZ',
-      rating: 5
-    },
-    {
-      quote: 'Outstanding communication and technical expertise. The project was completed on time and budget.',
-      author: 'Emily Rodriguez',
       position: 'CEO',
+      company: 'TechCorp',
+      rating: 5,
+    },
+    {
+      quote:
+        'The mobile banking app exceeded our expectations. Security and user experience are top-notch.',
+      author: 'Michael Chen',
+      position: 'CTO',
+      company: 'FinTech Solutions',
+      rating: 5,
+    },
+    {
+      quote:
+        'The AI chatbot has transformed our customer service. Response times improved by 80%.',
+      author: 'Emily Rodriguez',
+      position: 'Customer Success Manager',
+      company: 'ServicePro',
+      rating: 5,
+    },
+    {
+      quote:
+        'Professional, reliable, and innovative. Highly recommend for any tech project.',
+      author: 'David Kim',
+      position: 'Product Manager',
       company: 'InnovateLab',
-      rating: 5
-    }
+      rating: 5,
+    },
   ]
 
   for (const project of projects) {
-    const testimonial = testimonials[Math.floor(Math.random() * testimonials.length)]
+    const testimonial =
+      testimonials[Math.floor(Math.random() * testimonials.length)]
     await prisma.testimonial.create({
       data: {
         quote: testimonial.quote,
@@ -175,7 +218,7 @@ async function main() {
         company: testimonial.company,
         rating: testimonial.rating,
         projectId: project.id,
-      }
+      },
     })
   }
 
@@ -187,79 +230,19 @@ async function main() {
       { title: 'Buy groceries', is_complete: false },
       { title: 'Finish Nuxt project', is_complete: false },
       { title: 'Read Redis docs', is_complete: true },
-      { title: 'Update Prisma schema', is_complete: true }
-    ]
+      { title: 'Update Prisma schema', is_complete: true },
+    ],
   })
   console.log('✅ Todos created')
 
   console.log('🎉 Database seeding completed successfully!')
-=======
-import { PrismaClient } from '@prisma/client';
-import crypto from 'crypto';
-
-const prisma = new PrismaClient();
-
-// Function to hash passwords (same as in auth API)
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
-}
-
-async function main() {
-  console.log('Seeding database...');
-
-  // Create demo users
-  const demoUser = await prisma.user.upsert({
-    where: { email: 'demo@example.com' },
-    update: {},
-    create: {
-      email: 'demo@example.com',
-      name: 'Demo User',
-      password: hashPassword('password'),
-      role: 'user',
-    },
-  });
-
-  const testUser = await prisma.user.upsert({
-    where: { email: 'test@example.com' },
-    update: {},
-    create: {
-      email: 'test@example.com',
-      name: 'Test User',
-      password: hashPassword('Password123!'),
-      role: 'user',
-    },
-  });
-
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
-    update: {},
-    create: {
-      email: 'admin@example.com',
-      name: 'Admin User',
-      password: hashPassword('admin123'),
-      role: 'admin',
-    },
-  });
-
-  console.log('Seeding completed!');
-  console.log('Created users:', { demoUser, testUser, adminUser });
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
 }
 
 main()
-  .catch((e) => {
-<<<<<<< HEAD
+  .catch(e => {
     console.error('❌ Error during seeding:', e)
     process.exit(1)
   })
   .finally(async () => {
     await prisma.$disconnect()
   })
-=======
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

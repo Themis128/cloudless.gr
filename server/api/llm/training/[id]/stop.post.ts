@@ -1,4 +1,4 @@
-import { defineEventHandler, getRouterParam } from 'h3'
+import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { getPrismaClient } from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event) => {
@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Find the training session
-    const trainingSession = await prisma.trainingSession.findUnique({
+    const trainingSession = await prisma.modelTraining.findUnique({
       where: { id: String(id) },
       include: {
         model: {
@@ -49,11 +49,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // Update training session status
-    const updatedTrainingSession = await prisma.trainingSession.update({
+    const updatedTrainingSession = await prisma.modelTraining.update({
       where: { id: String(id) },
       data: {
-        status: 'stopped',
-        completedAt: new Date()
+        status: 'stopped'
       },
       include: {
         model: {
@@ -67,7 +66,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // Update model status back to ready
-    await prisma.llmModel.update({
+    await prisma.model.update({
       where: { id: trainingSession.modelId },
       data: { status: 'ready' }
     })

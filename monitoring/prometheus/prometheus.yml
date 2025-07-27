@@ -9,52 +9,53 @@ global:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: ['alertmanager:9093']
+        - targets:
+          # - alertmanager:9093
 
 # Load rules once and periodically evaluate them
 rule_files:
-  - "alerts.yml"
+  - 'alerts.yml'
 
 scrape_configs:
-  # Prometheus self-monitoring
+  # Prometheus itself
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
 
-  # Node Exporter - System metrics
-  - job_name: 'node'
+  # Cloudless.gr Application
+  - job_name: 'cloudlessgr-app'
     static_configs:
-      - targets: ['node-exporter:9100']
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        regex: '([^:]+):.*'
-        replacement: '${1}'
+      - targets: ['app-dev:3000']
+    metrics_path: '/api/metrics'
+    scrape_interval: 10s
 
-  # cAdvisor - Container metrics
-  - job_name: 'cadvisor'
+  # Node.js Application Metrics
+  - job_name: 'nodejs'
     static_configs:
-      - targets: ['cadvisor:8080']
+      - targets: ['app-dev:9323']
+    scrape_interval: 10s
 
-  # Redis Exporter
+  # Redis Metrics
   - job_name: 'redis'
     static_configs:
-      - targets: ['redis-exporter:9121']
+      - targets: ['redis-dev:6379']
+    scrape_interval: 10s
 
-  # PostgreSQL Exporter
-  - job_name: 'postgresql'
+  # PostgreSQL Metrics (if using postgres_exporter)
+  - job_name: 'postgres'
     static_configs:
-      - targets: ['postgres-exporter:9187']
-
-  # Nuxt.js Application Metrics
-  - job_name: 'nuxt-app'
-    static_configs:
-      - targets: ['app:3000']
-    metrics_path: '/api/metrics'
+      - targets: ['postgres-dev:5432']
     scrape_interval: 30s
 
-  # Nginx metrics (if nginx-prometheus-exporter is added)
-  - job_name: 'nginx'
+  # Docker Metrics
+  - job_name: 'docker'
     static_configs:
-      - targets: ['nginx:9113']
-    scrape_interval: 30s 
+      - targets: ['localhost:9323']
+    scrape_interval: 15s
+
+  # Health Checks
+  - job_name: 'health-checks'
+    static_configs:
+      - targets: ['app-dev:3000']
+    metrics_path: '/api/health'
+    scrape_interval: 30s

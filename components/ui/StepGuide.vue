@@ -51,12 +51,13 @@
       </div>
 
       <!-- Action Buttons -->
-      <div class="mt-4 d-flex gap-2">
+      <div class="mt-4 d-flex">
         <v-btn 
           v-if="guideContent"
           color="primary" 
           variant="outlined" 
           size="small"
+          class="mr-2"
           @click="showFullGuide = !showFullGuide"
         >
           <v-icon start>mdi-book-open</v-icon>

@@ -1,5 +1,4 @@
 <template>
-<<<<<<< HEAD
   <v-container fluid class="dashboard-container">
     <!-- Header Section -->
     <v-row>
@@ -10,7 +9,8 @@
             Dashboard
           </v-card-title>
           <v-card-subtitle class="text-body-1">
-            Welcome to your Cloudless Wizard dashboard. Monitor your projects, AI models, and system performance.
+            Welcome to your Cloudless Wizard dashboard. Monitor your projects,
+            AI models, and system performance.
           </v-card-subtitle>
         </v-card>
       </v-col>
@@ -31,17 +31,12 @@
     <!-- Error State -->
     <v-row v-else-if="error">
       <v-col cols="12">
-        <v-alert
-          type="error"
-          variant="tonal"
-          :text="error"
-          class="mb-4"
-        >
+        <v-alert type="error" variant="tonal" :text="error" class="mb-4">
           <template v-slot:append>
             <v-btn
               color="error"
               variant="text"
-              @click="fetchData"
+              @click="() => $fetch('/api/stats/dashboard')"
               prepend-icon="mdi-refresh"
             >
               Retry
@@ -57,9 +52,15 @@
       <v-col cols="12" md="4">
         <v-card class="stat-card" elevation="2">
           <v-card-text class="text-center">
-            <v-icon size="48" color="primary" class="mb-3">mdi-folder-multiple</v-icon>
-            <div class="text-h3 font-weight-bold text-primary">{{ stats.projects }}</div>
-            <div class="text-subtitle-1 text-medium-emphasis">Total Projects</div>
+            <v-icon size="48" color="primary" class="mb-3"
+              >mdi-folder-multiple</v-icon
+            >
+            <div class="text-h3 font-weight-bold text-primary">
+              {{ stats.projects }}
+            </div>
+            <div class="text-subtitle-1 text-medium-emphasis">
+              Total Projects
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -67,8 +68,12 @@
       <v-col cols="12" md="4">
         <v-card class="stat-card" elevation="2">
           <v-card-text class="text-center">
-            <v-icon size="48" color="success" class="mb-3">mdi-account-group</v-icon>
-            <div class="text-h3 font-weight-bold text-success">{{ stats.users }}</div>
+            <v-icon size="48" color="success" class="mb-3"
+              >mdi-account-group</v-icon
+            >
+            <div class="text-h3 font-weight-bold text-success">
+              {{ stats.users }}
+            </div>
             <div class="text-subtitle-1 text-medium-emphasis">Active Users</div>
           </v-card-text>
         </v-card>
@@ -78,8 +83,12 @@
         <v-card class="stat-card" elevation="2">
           <v-card-text class="text-center">
             <v-icon size="48" color="info" class="mb-3">mdi-chart-line</v-icon>
-            <div class="text-h3 font-weight-bold text-info">{{ stats.active }}</div>
-            <div class="text-subtitle-1 text-medium-emphasis">Active Projects</div>
+            <div class="text-h3 font-weight-bold text-info">
+              {{ stats.active }}
+            </div>
+            <div class="text-subtitle-1 text-medium-emphasis">
+              Active Projects
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -118,9 +127,13 @@
               </v-list-item>
             </v-list>
             <div v-else class="text-center py-8">
-              <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-inbox-outline</v-icon>
+              <v-icon size="64" color="grey-lighten-1" class="mb-4"
+                >mdi-inbox-outline</v-icon
+              >
               <div class="text-h6 text-grey">No recent activity</div>
-              <div class="text-body-2 text-grey-lighten-1">Start creating projects to see activity here</div>
+              <div class="text-body-2 text-grey-lighten-1">
+                Start creating projects to see activity here
+              </div>
             </div>
           </v-card-text>
         </v-card>
@@ -143,11 +156,7 @@
                 link
               >
                 <template v-slot:prepend>
-                  <v-avatar
-                    :color="action.color"
-                    size="40"
-                    class="mr-3"
-                  >
+                  <v-avatar :color="action.color" size="40" class="mr-3">
                     <v-icon size="20" color="white">
                       {{ action.icon }}
                     </v-icon>
@@ -169,7 +178,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 
 interface Stats {
   projects: number
@@ -203,55 +212,81 @@ const quickActions: QuickAction[] = [
     description: 'Start a new development project',
     icon: 'mdi-folder-plus',
     color: 'primary',
-    route: '/projects'
+    route: '/projects',
   },
   {
     title: 'Deploy Bot',
     description: 'Deploy an AI bot to production',
     icon: 'mdi-robot',
     color: 'success',
-    route: '/bots'
+    route: '/bots',
   },
   {
     title: 'Train Model',
     description: 'Train a new AI model',
     icon: 'mdi-brain',
     color: 'info',
-    route: '/models'
+    route: '/models',
   },
   {
     title: 'View Analytics',
     description: 'Check system performance',
     icon: 'mdi-chart-line',
     color: 'warning',
-    route: '/llm/analytics'
-  }
+    route: '/llm/analytics',
+  },
 ]
 
-const fetchData = async () => {
-  try {
-    isLoading.value = true
-    error.value = ''
-    
-    const statsResponse = await $fetch<Stats>('/api/stats/dashboard')
-    stats.value = statsResponse
-    
-    const activityResponse = await $fetch<Activity[]>('/api/activity/recent')
-    recentActivity.value = activityResponse
-  } catch (err: any) {
-    console.error('Error fetching dashboard data:', err)
-    error.value = err.message || 'Failed to load dashboard data'
-  } finally {
-    isLoading.value = false
+const { data: statsData, error: statsError } = await useFetch<Stats>(
+  '/api/stats/dashboard',
+  {
+    default: () => ({ totalUsers: 0, totalBots: 0, totalPipelines: 0 })
   }
-}
+)
+const { data: activityData, error: activityError } = await useFetch<Activity[]>(
+  '/api/activity/recent',
+  {
+    default: () => []
+  }
+)
+
+// Watch for data changes and update local refs
+watch(statsData, newStats => {
+  if (newStats) {
+    stats.value = newStats
+  }
+})
+
+watch(activityData, newActivity => {
+  if (newActivity) {
+    recentActivity.value = newActivity
+  }
+})
+
+// Watch for errors
+watch([statsError, activityError], ([statsErr, activityErr]) => {
+  if (statsErr || activityErr) {
+    error.value =
+      statsErr?.message ||
+      activityErr?.message ||
+      'Failed to load dashboard data'
+  }
+})
+
+// Update loading state based on pending state
+const { pending } = await useFetch('/api/stats/dashboard', {
+  default: () => ({ totalUsers: 0, totalBots: 0, totalPipelines: 0 })
+})
+watch(pending, isPending => {
+  isLoading.value = isPending
+})
 
 const getActivityColor = (type: string): string => {
   const colors = {
     project: 'primary',
     user: 'success',
     bot: 'info',
-    model: 'warning'
+    model: 'warning',
   }
   return colors[type as keyof typeof colors] || 'grey'
 }
@@ -261,7 +296,7 @@ const getActivityIcon = (type: string): string => {
     project: 'mdi-folder',
     user: 'mdi-account',
     bot: 'mdi-robot',
-    model: 'mdi-brain'
+    model: 'mdi-brain',
   }
   return icons[type as keyof typeof icons] || 'mdi-circle'
 }
@@ -270,7 +305,7 @@ const formatTimestamp = (timestamp: Date): string => {
   const date = new Date(timestamp)
   const now = new Date()
   const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
-  
+
   if (diffInHours < 1) {
     return 'Just now'
   } else if (diffInHours < 24) {
@@ -280,90 +315,11 @@ const formatTimestamp = (timestamp: Date): string => {
   }
 }
 
-onMounted(() => {
-  fetchData()
-})
-=======
-  <div class="dashboard-container">
-    <div class="dashboard-header">
-      <h1>Dashboard</h1>
-      <p class="welcome-message">Welcome back, {{ currentUser?.name || 'User' }}!</p>
-    </div>
-
-    <div class="dashboard-grid">
-      <div class="dashboard-card">
-        <h2>Your Activity</h2>
-        <div class="activity-stats">
-          <div class="stat-item">
-            <div class="stat-value">0</div>
-            <div class="stat-label">Projects Viewed</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">0</div>
-            <div class="stat-label">Comments</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">0</div>
-            <div class="stat-label">Likes</div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="dashboard-card">
-        <h2>Recent Updates</h2>
-        <div class="updates-list">
-          <p class="empty-state">No updates to display yet.</p>
-        </div>
-      </div>
-      
-      <div class="dashboard-card">
-        <h2>Your Favorites</h2>
-        <div class="favorites-list">
-          <p class="empty-state">You haven't saved any favorites yet.</p>
-        </div>
-      </div>
-      
-      <div class="dashboard-card">
-        <h2>Quick Actions</h2>
-        <div class="action-buttons">
-          <NuxtLink to="/profile" class="action-button">
-            Edit Profile
-          </NuxtLink>
-          <NuxtLink to="/projects" class="action-button">
-            Browse Projects
-          </NuxtLink>
-          <NuxtLink to="/contact" class="action-button">
-            Contact Support
-          </NuxtLink>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { useUserAuth } from '~/composables/useUserAuth';
-import { navigateTo } from '#app'
-import { definePageMeta } from '#imports'
-
-const { currentUser, isLoggedIn } = useUserAuth();
-
-// Redirect if not logged in
-if (process.client && !isLoggedIn.value) {
-  await navigateTo('/auth/login');
-}
-
-// Set page meta
-definePageMeta({
-  layout: 'default',
-  middleware: 'user-auth'
-});
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a
+// Data is automatically fetched by useFetch
 </script>
 
 <style scoped>
 .dashboard-container {
-<<<<<<< HEAD
   padding: 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
@@ -493,15 +449,15 @@ definePageMeta({
   .dashboard-container {
     padding: 16px;
   }
-  
+
   .dashboard-header-card .v-card-title {
     font-size: 1.5rem !important;
   }
-  
+
   .stat-card .v-card-text {
     padding: 16px !important;
   }
-  
+
   .stat-card .text-h3 {
     font-size: 2rem !important;
   }
@@ -511,132 +467,13 @@ definePageMeta({
   .dashboard-container {
     padding: 12px;
   }
-  
+
   .dashboard-header-card .v-card-title {
     font-size: 1.25rem !important;
   }
-  
+
   .stat-card .text-h3 {
     font-size: 1.5rem !important;
   }
 }
-</style> 
-=======
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
-
-.dashboard-header {
-  text-align: center;
-  margin-bottom: 3rem;
-}
-
-.dashboard-header h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #1e40af;
-  margin-bottom: 0.5rem;
-}
-
-.welcome-message {
-  font-size: 1.2rem;
-  color: #64748b;
-}
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-}
-
-.dashboard-card {
-  background-color: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  transition: transform 0.2s;
-}
-
-.dashboard-card:hover {
-  transform: translateY(-2px);
-}
-
-.dashboard-card h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1e40af;
-  margin-bottom: 1.5rem;
-  border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 0.5rem;
-}
-
-.activity-stats {
-  display: flex;
-  justify-content: space-around;
-  text-align: center;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.stat-value {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1e40af;
-}
-
-.stat-label {
-  font-size: 0.875rem;
-  color: #64748b;
-}
-
-.empty-state {
-  text-align: center;
-  color: #94a3b8;
-  font-style: italic;
-  padding: 2rem 0;
-}
-
-.action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.action-button {
-  background-color: #1e40af;
-  color: white;
-  text-decoration: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.375rem;
-  text-align: center;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.action-button:hover {
-  background-color: #1e3a8a;
-}
-
-@media (max-width: 768px) {
-  .dashboard-header h1 {
-    font-size: 2rem;
-  }
-  
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .activity-stats {
-    flex-direction: column;
-    gap: 1rem;
-  }
-}
 </style>
->>>>>>> cursor/fix-prisma-module-for-successful-build-b32a

@@ -12,16 +12,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const modelId = parseInt(id)
-    if (isNaN(modelId)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid model ID format'
-      })
-    }
-
     const model = await prisma.model.findUnique({
-      where: { id: modelId },
+      where: { id: String(id) },
       include: {
         user: {
           select: {

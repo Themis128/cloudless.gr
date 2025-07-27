@@ -1,4 +1,5 @@
 // server/api/load-file.ts
+import { defineEventHandler, getQuery } from 'h3'
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 

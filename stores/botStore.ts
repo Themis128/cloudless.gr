@@ -412,18 +412,19 @@ Always provide clear explanations and context for your actions. When making chan
           body: { message }
         })
 
-        if (response.response) {
+        const responseData = response as any
+        if (responseData.response) {
           const botMessage: BotTestMessage = {
             id: Date.now() + 1,
             role: 'bot',
-            text: response.response,
+            text: responseData.response,
             timestamp: new Date()
           }
           this.testMessages.push(botMessage)
         }
 
-        if (Array.isArray(response.steps)) {
-          this.testSteps = response.steps.map((step: any) => ({
+        if (Array.isArray(responseData.steps)) {
+          this.testSteps = responseData.steps.map((step: any) => ({
             name: step.name,
             status: 'pending' as const,
             result: undefined

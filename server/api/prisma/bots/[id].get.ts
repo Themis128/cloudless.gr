@@ -12,16 +12,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const botId = parseInt(id)
-    if (isNaN(botId)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid bot ID format'
-      })
-    }
-
     const bot = await prisma.bot.findUnique({
-      where: { id: botId },
+      where: { id: String(id) },
       include: {
         user: {
           select: {
