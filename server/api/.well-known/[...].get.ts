@@ -1,3 +1,5 @@
+import { defineEventHandler, getRequestPath } from 'h3'
+
 export default defineEventHandler((event) => {
   const path = getRequestPath(event)
   

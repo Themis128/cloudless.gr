@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
   const prisma = getPrismaClient();
   
   // Get full user details from database
+  const prisma = getPrismaClient()
   const user = await prisma.user.findUnique({
     where: { id: parseInt(authUser.id) },
     select: {

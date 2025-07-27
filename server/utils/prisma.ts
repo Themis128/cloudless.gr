@@ -32,5 +32,8 @@ export function getPrismaClient(): PrismaClient {
   return prisma
 }
 
+// Export the getter function as default for lazy initialization
+export default getPrismaClient
+
 // Export the PrismaClient type for type safety
 export type { PrismaClient }
