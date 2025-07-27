@@ -1,4 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { createVuetify } from 'vuetify'
+import vuetify from 'vite-plugin-vuetify'
+
 export default defineNuxtConfig({
   modules: [
     '@nuxtjs/color-mode',
@@ -6,7 +9,6 @@ export default defineNuxtConfig({
     '@nuxt/image-edge',
     '@pinia/nuxt',
     'nuxt-llms',
-    '@nuxtjs/tailwindcss', // ✅ Tailwind CSS module
   ],
   experimental: {
     headNext: true,
@@ -21,29 +23,26 @@ export default defineNuxtConfig({
     },
   },
 
-  // Tailwind CSS configuration
-  tailwindcss: {
-    exposeConfig: true,
-    viewer: true,
-    configPath: '~/tailwind.config.js',
-  },
-
-  // Ensure static assets are properly served
+  // Vuetify configuration via Vite plugin
   vite: {
+    plugins: [
+      vuetify({
+        autoImport: true,
+      }),
+    ],
     server: {
       fs: {
         strict: false,
       },
     },
+    ssr: {
+      noExternal: ['vuetify'],
+    },
   },
 
-  // PostCSS configuration
-  postcss: {
-    plugins: {
-      'tailwindcss/nesting': {},
-      tailwindcss: {},
-      autoprefixer: {},
-    },
+  // Build configuration for Vuetify
+  build: {
+    transpile: ['vuetify'],
   },
 
   devtools: {
@@ -54,8 +53,10 @@ export default defineNuxtConfig({
   },
 
   css: [
-    '@/assets/css/main.css', // ✅ Should include Tailwind directives
-    '@/assets/css/admin.css', // Admin styles
+    'vuetify/lib/styles/main.sass',
+    '@mdi/font/css/materialdesignicons.css',
+    '@/assets/css/main.css',
+    '@/assets/css/admin.css',
   ],
 
   app: {

@@ -1,39 +1,35 @@
-/* Tailwind CSS directives */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Vuetify base styles */
+/* Global custom styles for Vuetify 3 application */
 
 /* Global custom styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-@layer base {
-  *,
-  *::before,
-  *::after {
-    box-sizing: border-box;
-  }
+html {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  text-size-adjust: 100%;
+}
 
-  html {
-    font-family: inter, sans-serif;
-    text-size-adjust: 100%; /* For modern browsers: Chrome 54+, Edge 79+, Firefox, Safari, Android */
+body {
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+  background-color: rgb(var(--v-theme-surface));
+}
 
-    /* Consider setting a base font size here */
+/* Vuetify theme compatibility */
+.v-application {
+  font-family: 'Inter', 'Roboto', sans-serif !important;
+}
 
-    /* font-size: 16px; */
-  }
-
-  body {
-    margin: 0;
-    padding: 0;
-    line-height: 1.5; /* Example line height */
-    color: #333; /* Example default text color */
-    background-color: #fff; /* Example default background color */
-  }
-
-  /* Add a basic focus style for accessibility */
-  :focus-visible {
-    outline: 2px solid blue; /* Customize as needed */
-    outline-offset: 2px;
-  }
+/* Basic focus style for accessibility */
+:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: 2px;
 }
 
 /* Touch-action support for all interactive elements */
@@ -46,6 +42,13 @@ select,
 summary,
 textarea,
 [tabindex] {
-  /* IE/Edge legacy */
-  touch-action: manipulation; /* Modern browsers: Firefox 52+, Safari 13+, Chrome, Edge */
+  touch-action: manipulation;
+}
+
+/* Custom glassmorphism and cloud effects can be added here */
+.cloudless-container {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
