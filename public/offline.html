@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal Lost - Cloudless</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: 'Courier New', 'Courier', monospace;
+            background-color: #0a0a0f;
+            color: #00fff5;
+            overflow: hidden;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Scan lines overlay effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 245, 0.03) 0px,
+                rgba(0, 255, 245, 0.03) 2px,
+                transparent 2px,
+                transparent 4px
+            );
+            z-index: 2;
+            animation: scanlines 8s linear infinite;
+        }
+
+        @keyframes scanlines {
+            0% {
+                transform: translateY(0);
+            }
+            100% {
+                transform: translateY(10px);
+            }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 2rem;
+            max-width: 600px;
+        }
+
+        .heading {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            letter-spacing: 0.15em;
+            animation: glitch 2.5s infinite;
+            position: relative;
+        }
+
+        @keyframes glitch {
+            0%, 100% {
+                text-shadow: -2px 0 #ff00ff, 2px 0 #00ffff;
+                transform: translate(0);
+            }
+            20% {
+                text-shadow: -2px 0 #ff00ff, 2px 0 #00ffff;
+                transform: translate(-2px, 2px);
+            }
+            40% {
+                text-shadow: -2px 0 #00ffff, 2px 0 #ff00ff;
+                transform: translate(-2px, -2px);
+            }
+            60% {
+                text-shadow: -2px 0 #ff00ff, 2px 0 #00ffff;
+                transform: translate(2px, 2px);
+            }
+            80% {
+                text-shadow: -2px 0 #00ffff, 2px 0 #ff00ff;
+                transform: translate(2px, -2px);
+            }
+        }
+
+        .message {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+            color: #00fff5;
+            opacity: 0.9;
+        }
+
+        .status-code {
+            font-size: 0.9rem;
+            color: #00fff5;
+            opacity: 0.6;
+            margin-bottom: 2rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .button {
+            padding: 0.75rem 2rem;
+            font-family: 'Courier New', 'Courier', monospace;
+            font-size: 1rem;
+            color: #0a0a0f;
+            background-color: #00fff5;
+            border: 2px solid #00fff5;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background-color: #0a0a0f;
+            z-index: -1;
+            transition: left 0.3s ease;
+        }
+
+        .button:hover {
+            color: #00fff5;
+            box-shadow: 0 0 20px rgba(0, 255, 245, 0.5);
+        }
+
+        .button:hover::before {
+            left: 0;
+        }
+
+        .button-secondary {
+            color: #00fff5;
+            background-color: transparent;
+            border-color: #00fff5;
+        }
+
+        .button-secondary:hover {
+            background-color: #00fff5;
+            color: #0a0a0f;
+        }
+
+        .info-text {
+            margin-top: 3rem;
+            font-size: 0.9rem;
+            color: #00fff5;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 600px) {
+            .heading {
+                font-size: 2.5rem;
+            }
+
+            .message {
+                font-size: 1rem;
+            }
+
+            .button {
+                padding: 0.6rem 1.5rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="heading">SIGNAL LOST</h1>
+        <div class="status-code">ERROR 0x000000</div>
+        <p class="message">
+            The connection to our servers has been lost. You are currently offline or the network is unavailable.
+        </p>
+        <div class="button-container">
+            <button class="button" onclick="window.location.reload();">Retry Connection</button>
+            <button class="button button-secondary" onclick="goHome();">Go Home</button>
+        </div>
+        <p class="info-text">Some content may be available while offline. Try refreshing the page.</p>
+    </div>
+
+    <script>
+        function goHome() {
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

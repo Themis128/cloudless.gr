@@ -1,0 +1,95 @@
+@keyframes matrixFall {
+  0% {
+    transform: translateY(-100%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+.matrixColumn {
+  top: 0;
+  animation: matrixFall 3s linear infinite;
+  writing-mode: vertical-rl;
+}
+
+/* Column positions (left offsets across viewport width) */
+.column0 {
+  left: 0%;
+}
+.column1 {
+  left: 5%;
+}
+.column2 {
+  left: 10%;
+}
+.column3 {
+  left: 15%;
+}
+.column4 {
+  left: 20%;
+}
+.column5 {
+  left: 25%;
+}
+.column6 {
+  left: 30%;
+}
+.column7 {
+  left: 35%;
+}
+.column8 {
+  left: 40%;
+}
+.column9 {
+  left: 45%;
+}
+.column10 {
+  left: 50%;
+}
+.column11 {
+  left: 55%;
+}
+.column12 {
+  left: 60%;
+}
+.column13 {
+  left: 65%;
+}
+.column14 {
+  left: 70%;
+}
+.column15 {
+  left: 75%;
+}
+.column16 {
+  left: 80%;
+}
+.column17 {
+  left: 85%;
+}
+.column18 {
+  left: 90%;
+}
+.column19 {
+  left: 95%;
+}
+
+/* Animation delay variants */
+.timing0 {
+  animation-delay: 0s;
+}
+.timing1 {
+  animation-delay: 0.6s;
+}
+.timing2 {
+  animation-delay: 1.2s;
+}
+.timing3 {
+  animation-delay: 1.8s;
+}
+.timing4 {
+  animation-delay: 2.4s;
+}

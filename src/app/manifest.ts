@@ -1,0 +1,54 @@
+import type { MetadataRoute } from "next";
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "Cloudless — Cloud Computing, Serverless & AI Marketing",
+    short_name: "Cloudless",
+    description:
+      "Cloud architecture, serverless development, data analytics, and AI-powered marketing for startups and SMBs.",
+    start_url: "/",
+    display: "standalone",
+    background_color: "#0a0a0f",
+    theme_color: "#0a0a0f",
+    orientation: "portrait-primary",
+    categories: ["business", "technology"],
+    icons: [
+      {
+        src: "/icons/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        src: "/icons/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
+      {
+        src: "/icons/icon-512-maskable.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
+    ],
+    shortcuts: [
+      {
+        name: "Contact Us",
+        short_name: "Contact",
+        url: "/contact",
+        description: "Book a free 30-minute cloud audit",
+      },
+      {
+        name: "Our Services",
+        short_name: "Services",
+        url: "/services",
+        description: "Cloud, serverless, analytics & AI marketing",
+      },
+      {
+        name: "Read Blog",
+        short_name: "Blog",
+        url: "/blog",
+        description: "Tech insights and guides",
+      },
+    ],
+  };
+}
