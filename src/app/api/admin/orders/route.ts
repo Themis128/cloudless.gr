@@ -42,7 +42,7 @@ export async function GET(request: Request) {
         amount: (sub.items.data[0]?.price?.unit_amount ?? 0) / 100,
         currency: (sub.items.data[0]?.price?.currency ?? "eur").toUpperCase(),
         interval: sub.items.data[0]?.price?.recurring?.interval ?? "month",
-        currentPeriodEnd: new Date((sub.current_period_end ?? 0) * 1000).toISOString(),
+        currentPeriodEnd: new Date(((sub as any).current_period_end ?? 0) * 1000).toISOString(),
         cancelAtPeriodEnd: sub.cancel_at_period_end,
         created: new Date((sub.created ?? 0) * 1000).toISOString(),
       })),

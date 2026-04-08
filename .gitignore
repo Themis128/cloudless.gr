@@ -46,3 +46,6 @@ playwright-report
 
 # Ignore insiders AI rules
 .github/instructions/codacy.instructions.md
+
+# HubSpot config file
+hubspot.config.yml

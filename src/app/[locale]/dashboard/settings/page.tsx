@@ -92,7 +92,7 @@ export default function SettingsPage() {
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => setTheme(opt.value)}
+                    onClick={() => setTheme(opt.value as "system" | "dark" | "light")}
                     className={`min-h-[36px] rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
                       theme === opt.value
                         ? "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 border"
@@ -113,7 +113,7 @@ export default function SettingsPage() {
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => setLanguage(opt.value)}
+                    onClick={() => setLanguage(opt.value as "en" | "el" | "fr")}
                     className={`min-h-[36px] rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
                       language === opt.value
                         ? "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 border"

@@ -64,8 +64,7 @@ export async function POST(request: NextRequest) {
         slackOrderNotify({
           sessionId: session.id,
           email: session.customer_email ?? "N/A",
-          amount: (session.amount_total ?? 0) / 100,
-          currency: (session.currency ?? "EUR").toUpperCase(),
+          amount: String((session.amount_total ?? 0) / 100),
         }).catch(() => {});
         break;
       }

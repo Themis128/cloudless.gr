@@ -9,8 +9,9 @@ export async function GET(
   const { slug } = await params;
 
   if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) {
-    const { blogPosts } = await import("@/lib/blog");
-    const post = blogPosts.find((p) => p.slug === slug);
+    const blogModule = await import("@/lib/blog");
+    const blogPosts = blogModule.posts;
+    const post = blogPosts.find((p: { slug: string }) => p.slug === slug);
     if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
     return NextResponse.json({ post, source: "static" });
   }

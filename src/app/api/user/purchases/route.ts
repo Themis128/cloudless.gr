@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
       subscriptions: subscriptions.data.map((sub) => ({
         id: sub.id,
         status: sub.status,
-        currentPeriodEnd: new Date((sub as Record<string, unknown>).current_period_end as number * 1000).toISOString(),
+        currentPeriodEnd: new Date(((sub as any).current_period_end ?? 0) * 1000).toISOString(),
         items: sub.items.data.map((item) => ({
           name: item.price?.product
             ? typeof item.price.product === "string"
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-function mapSession(s: Record<string, unknown>) {
+function mapSession(s: any) {
   const session = s as {
     id: string;
     payment_status: string;

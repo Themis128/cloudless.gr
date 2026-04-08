@@ -5,7 +5,8 @@ import { isConfigured } from "@/lib/integrations";
 export async function GET() {
   if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) {
     // Fall back to static blog data when Notion is not configured
-    const { blogPosts } = await import("@/lib/blog");
+    const blogModule = await import("@/lib/blog");
+    const blogPosts = blogModule.posts;
     return NextResponse.json({ posts: blogPosts, source: "static" });
   }
 
@@ -17,7 +18,8 @@ export async function GET() {
     );
   } catch (err) {
     console.error("[Blog] Fetch error:", err);
-    const { blogPosts } = await import("@/lib/blog");
+    const blogModule = await import("@/lib/blog");
+    const blogPosts = blogModule.posts;
     return NextResponse.json({ posts: blogPosts, source: "static" });
   }
 }

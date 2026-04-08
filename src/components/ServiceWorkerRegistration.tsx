@@ -9,6 +9,8 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+let hasRegisteredServiceWorker = false;
+
 export default function ServiceWorkerRegistration() {
   const [locale] = useCurrentLocale();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -16,7 +18,8 @@ export default function ServiceWorkerRegistration() {
 
   useEffect(() => {
     // Register service worker
-    if ("serviceWorker" in navigator) {
+    if ("serviceWorker" in navigator && !hasRegisteredServiceWorker) {
+      hasRegisteredServiceWorker = true;
       navigator.serviceWorker
         .register("/sw.js")
         .then((reg) => {
