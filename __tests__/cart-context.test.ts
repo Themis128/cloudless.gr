@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { cartReducer } from "@/context/CartContext";
-import type { StoreProduct } from "@/lib/store-products";
+import type { StoreProduct } from "@/lib/store-products-client";
 
 const mockProduct: StoreProduct = {
   id: "test-1",

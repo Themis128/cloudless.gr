@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getStripe } from "@/lib/stripe";
-import { getProductById } from "@/lib/store-products";
+import { getProductById } from "@/lib/store-products-client";
 
 interface CheckoutItem {
   id: string;

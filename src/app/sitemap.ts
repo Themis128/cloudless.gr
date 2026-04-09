@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { posts } from "@/lib/blog";
-import { demoProducts } from "@/lib/store-products";
+import { demoProducts } from "@/lib/store-products-client";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://cloudless.gr";

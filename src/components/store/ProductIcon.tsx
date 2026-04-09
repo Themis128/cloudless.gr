@@ -1,6 +1,6 @@
 "use client";
 
-import type { ProductCategory } from "@/lib/store-products";
+import type { ProductCategory } from "@/lib/store-products-client";
 
 const accentColors: Record<ProductCategory, string> = {
   service: "#00fff5",

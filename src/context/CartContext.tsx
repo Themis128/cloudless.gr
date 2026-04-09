@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useReducer, type ReactNode } from "react";
-import type { StoreProduct } from "@/lib/store-products";
+import type { StoreProduct } from "@/lib/store-products-client";
 
 // --- Types ---
 export interface CartItem {

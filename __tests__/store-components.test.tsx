@@ -5,7 +5,7 @@ import ProductIcon from "@/components/store/ProductIcon";
 import AddToCartButton from "@/components/store/AddToCartButton";
 import CartSlideOver from "@/components/store/CartSlideOver";
 import StoreGrid from "@/components/store/StoreGrid";
-import type { StoreProduct } from "@/lib/store-products";
+import type { StoreProduct } from "@/lib/store-products-client";
 
 afterEach(cleanup);
 

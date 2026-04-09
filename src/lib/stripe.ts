@@ -1,3 +1,12 @@
+"use server";
+
+/**
+ * Server-side Stripe operations.
+ * 
+ * NOTE: Only async functions are allowed in "use server" files.
+ * For formatPrice (sync), import directly from @/lib/format-price
+ */
+
 import Stripe from "stripe";
 import { getConfig } from "./ssm-config";
 
@@ -59,67 +68,76 @@ export async function listRecentCheckoutSessions(
 }
 
 // ---------------------------------------------------------------------------
-// Products — fetch live products from Stripe
+// Products
 // ---------------------------------------------------------------------------
+
+// Type for the expanded price object returned by Stripe
+interface StripePrice {
+  id: string;
+  unit_amount: number | null;
+  currency: string;
+  recurring?: {
+    interval: "day" | "month" | "year";
+    interval_count: number;
+  };
+}
 
 export interface StripeProduct {
   id: string;
   name: string;
   description: string | null;
-  active: boolean;
   images: string[];
   metadata: Record<string, string>;
   defaultPrice: {
     id: string;
     unitAmount: number | null;
     currency: string;
-    recurring: { interval: string; intervalCount: number } | null;
-  } | null;
+    recurring?: {
+      interval: "day" | "month" | "year";
+      intervalCount: number;
+    };
+  };
 }
 
 /**
- * Fetch active products from Stripe with their default prices.
- * Returns null if Stripe is not configured (caller should fall back to demo data).
+ * Fetch all active products from Stripe.
+ * Returns formatted StripeProduct data for use in store-products.ts.
  */
-export async function listStripeProducts(): Promise<StripeProduct[] | null> {
-  try {
-    const stripe = await getStripe();
+export async function listStripeProducts(): Promise<StripeProduct[]> {
+  const stripe = await getStripe();
 
+  try {
     const products = await stripe.products.list({
       active: true,
       limit: 100,
       expand: ["data.default_price"],
     });
 
-    return products.data.map((p) => {
-      const price = p.default_price as Stripe.Price | null;
-      return {
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        active: p.active,
-        images: p.images,
-        metadata: p.metadata as Record<string, string>,
-        defaultPrice: price
-          ? {
-              id: price.id,
-              unitAmount: price.unit_amount,
-              currency: (price.currency ?? "eur").toUpperCase(),
-              recurring: price.recurring
-                ? {
-                    interval: price.recurring.interval,
-                    intervalCount: price.recurring.interval_count,
-                  }
-                : null,
-            }
-          : null,
-      };
-    });
+    return products.data
+      .filter((p) => p.default_price && typeof p.default_price !== "string")
+      .map((p) => {
+        const price = p.default_price as StripePrice;
+        return {
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          images: p.images || [],
+          metadata: p.metadata || {},
+          defaultPrice: {
+            id: price.id,
+            unitAmount: price.unit_amount,
+            currency: price.currency,
+            recurring: price.recurring
+              ? {
+                  interval: price.recurring.interval,
+                  intervalCount: price.recurring.interval_count,
+                }
+              : undefined,
+          },
+        };
+      });
   } catch (err) {
-    console.error("[Stripe] Failed to fetch products:", err);
-    return null;
+    console.error("Failed to list Stripe products:", err);
+    return [];
   }
 }
-
-// Re-export for server-side callers; client components should import from '@/lib/format-price'
-export { formatPrice } from "./format-price";

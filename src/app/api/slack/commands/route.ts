@@ -12,7 +12,8 @@
  */
 
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
-import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
+import { listRecentCheckoutSessions } from "@/lib/stripe";
+import { formatPrice } from "@/lib/format-price";
 
 // ---------------------------------------------------------------------------
 // Types

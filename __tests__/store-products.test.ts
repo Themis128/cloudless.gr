@@ -5,7 +5,7 @@ import {
   getProductsByCategory,
   categoryLabels,
   categoryColors,
-} from "@/lib/store-products";
+} from "@/lib/store-products-client";
 
 describe("demoProducts catalog", () => {
   it("contains products in all three categories", () => {

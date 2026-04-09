@@ -1,10 +1,12 @@
+"use server";
+
 import { GetParametersByPathCommand, SSMClient } from "@aws-sdk/client-ssm";
 
 const SSM_PREFIX = process.env.SSM_PREFIX ?? "/cloudless/production";
 const REGION = process.env.AWS_REGION ?? "us-east-1";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-interface AppConfig {
+export interface AppConfig {
   SES_FROM_EMAIL: string;
   SES_TO_EMAIL: string;
   AWS_SES_REGION: string;
@@ -18,79 +20,88 @@ interface AppConfig {
   HUBSPOT_API_KEY: string;
   NOTION_API_KEY: string;
   NOTION_BLOG_DB_ID: string;
-  GOOGLE_CLIENT_EMAIL: string;
+  GOOGLE_SERVICE_ACCOUNT_EMAIL: string;
   GOOGLE_PRIVATE_KEY: string;
   GOOGLE_CALENDAR_ID: string;
   AHREFS_API_KEY: string;
+  SENTRY_AUTH_TOKEN: string;
+  SENTRY_ORG: string;
+  SENTRY_PROJECT: string;
 }
 
-let cached: AppConfig | null = null;
-let cachedAt = 0;
+let configCache: { config: AppConfig; fetchedAt: number } | null = null;
 
 /**
- * Fetches all /cloudless/production/* parameters from SSM.
- * Cache expires after 5 minutes to pick up rotated secrets without redeploy.
+ * Fetch app config from AWS SSM Parameter Store.
+ * Falls back to environment variables.
  */
 export async function getConfig(): Promise<AppConfig> {
-  if (cached && Date.now() - cachedAt < CACHE_TTL_MS) return cached;
-
-  const ssm = new SSMClient({ region: REGION });
-  const params = new Map<string, string>();
-
-  let nextToken: string | undefined;
-  do {
-    const res = await ssm.send(
-      new GetParametersByPathCommand({
-        Path: SSM_PREFIX,
-        WithDecryption: true,
-        NextToken: nextToken,
-      }),
-    );
-
-    for (const p of res.Parameters ?? []) {
-      const key = p.Name?.replace(`${SSM_PREFIX}/`, "") ?? "";
-      if (key && p.Value) params.set(key, p.Value);
-    }
-
-    nextToken = res.NextToken;
-  } while (nextToken);
-
-  const required = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"] as const;
-  for (const key of required) {
-    if (!params.get(key)) {
-      throw new Error(`Missing required SSM parameter: ${SSM_PREFIX}/${key}`);
-    }
+  // Return cache if fresh
+  if (configCache && Date.now() - configCache.fetchedAt < CACHE_TTL_MS) {
+    return configCache.config;
   }
 
-  const sesFrom = params.get("SES_FROM_EMAIL") || "noreply@cloudless.gr";
-  const sesTo = params.get("SES_TO_EMAIL") || "tbaltzakis@cloudless.gr";
-  const sesRegion = params.get("AWS_SES_REGION") || "us-east-1";
+  type ConfigRecord = Record<string, string | undefined>;
+  const ssmConfig: ConfigRecord = {};
 
-  if (!sesFrom.includes("@") || !sesTo.includes("@")) {
-    console.warn(
-      `[SSM] SES email addresses look invalid — FROM: ${sesFrom}, TO: ${sesTo}. Using defaults.`,
-    );
+  try {
+    const client = new SSMClient({ region: REGION });
+    const cmd = new GetParametersByPathCommand({
+      Path: SSM_PREFIX,
+      Recursive: true,
+      WithDecryption: true,
+    });
+
+    const response = await client.send(cmd);
+    if (response.Parameters) {
+      response.Parameters.forEach((param) => {
+        if (param.Name && param.Value) {
+          const key = param.Name.split("/").pop();
+          if (key) ssmConfig[key] = param.Value;
+        }
+      });
+    }
+    client.destroy();
+  } catch (err) {
+    // Fall through to env vars
+    console.warn("Could not fetch from SSM:", err);
   }
 
-  cached = {
-    SES_FROM_EMAIL: sesFrom,
-    SES_TO_EMAIL: sesTo,
-    AWS_SES_REGION: sesRegion,
-    STRIPE_SECRET_KEY: params.get("STRIPE_SECRET_KEY")!,
-    STRIPE_PUBLISHABLE_KEY: params.get("STRIPE_PUBLISHABLE_KEY") ?? "",
-    STRIPE_WEBHOOK_SECRET: params.get("STRIPE_WEBHOOK_SECRET")!,
-    COGNITO_USER_POOL_ID: params.get("COGNITO_USER_POOL_ID") ?? "",
-    COGNITO_CLIENT_ID: params.get("COGNITO_CLIENT_ID") ?? "",
-    SLACK_WEBHOOK_URL: params.get("SLACK_WEBHOOK_URL") ?? "",
-    HUBSPOT_API_KEY: params.get("HUBSPOT_API_KEY") ?? "",
-    NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
-    NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
-    GOOGLE_CLIENT_EMAIL: params.get("GOOGLE_CLIENT_EMAIL") ?? "",
-    GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n"),
-    GOOGLE_CALENDAR_ID: params.get("GOOGLE_CALENDAR_ID") ?? "",
-    AHREFS_API_KEY: params.get("AHREFS_API_KEY") ?? "",
+  // Build config with env var fallbacks
+  const config: AppConfig = {
+    SES_FROM_EMAIL: ssmConfig.SES_FROM_EMAIL ?? process.env.SES_FROM_EMAIL ?? "",
+    SES_TO_EMAIL: ssmConfig.SES_TO_EMAIL ?? process.env.SES_TO_EMAIL ?? "",
+    AWS_SES_REGION: ssmConfig.AWS_SES_REGION ?? process.env.AWS_SES_REGION ?? "",
+    STRIPE_SECRET_KEY: ssmConfig.STRIPE_SECRET_KEY ?? process.env.STRIPE_SECRET_KEY ?? "",
+    STRIPE_PUBLISHABLE_KEY:
+      ssmConfig.STRIPE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
+    STRIPE_WEBHOOK_SECRET:
+      ssmConfig.STRIPE_WEBHOOK_SECRET ?? process.env.STRIPE_WEBHOOK_SECRET ?? "",
+    COGNITO_USER_POOL_ID:
+      ssmConfig.COGNITO_USER_POOL_ID ?? process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "",
+    COGNITO_CLIENT_ID:
+      ssmConfig.COGNITO_CLIENT_ID ?? process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "",
+    SLACK_WEBHOOK_URL: ssmConfig.SLACK_WEBHOOK_URL ?? process.env.SLACK_WEBHOOK_URL ?? "",
+    HUBSPOT_API_KEY: ssmConfig.HUBSPOT_API_KEY ?? process.env.HUBSPOT_API_KEY ?? "",
+    NOTION_API_KEY: ssmConfig.NOTION_API_KEY ?? process.env.NOTION_API_KEY ?? "",
+    NOTION_BLOG_DB_ID: ssmConfig.NOTION_BLOG_DB_ID ?? process.env.NOTION_BLOG_DB_ID ?? "",
+    GOOGLE_SERVICE_ACCOUNT_EMAIL:
+      ssmConfig.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? "",
+    GOOGLE_PRIVATE_KEY: ssmConfig.GOOGLE_PRIVATE_KEY ?? process.env.GOOGLE_PRIVATE_KEY ?? "",
+    GOOGLE_CALENDAR_ID: ssmConfig.GOOGLE_CALENDAR_ID ?? process.env.GOOGLE_CALENDAR_ID ?? "",
+    AHREFS_API_KEY: ssmConfig.AHREFS_API_KEY ?? process.env.AHREFS_API_KEY ?? "",
+    SENTRY_AUTH_TOKEN: ssmConfig.SENTRY_AUTH_TOKEN ?? process.env.SENTRY_AUTH_TOKEN ?? "",
+    SENTRY_ORG: ssmConfig.SENTRY_ORG ?? process.env.SENTRY_ORG ?? "",
+    SENTRY_PROJECT: ssmConfig.SENTRY_PROJECT ?? process.env.SENTRY_PROJECT ?? "",
   };
-  cachedAt = Date.now();
 
-  return cached;
+  // Validate required fields
+  if (!config.SES_FROM_EMAIL || !config.SES_TO_EMAIL) {
+    throw new Error(
+      "Missing required SES config: SES_FROM_EMAIL and SES_TO_EMAIL must be set",
+    );
+  }
+
+  configCache = { config, fetchedAt: Date.now() };
+  return config;
 }

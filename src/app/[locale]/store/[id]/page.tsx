@@ -7,7 +7,7 @@ import {
   getProductsByCategory,
   categoryLabels,
   categoryColors,
-} from "@/lib/store-products";
+} from "@/lib/store-products-client";
 import AddToCartButton from "@/components/store/AddToCartButton";
 import ProductIcon from "@/components/store/ProductIcon";
 import JsonLd from "@/components/JsonLd";
