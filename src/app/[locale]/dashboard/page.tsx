@@ -25,7 +25,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user?.email) {
-      setLoading(false);
       return;
     }
 

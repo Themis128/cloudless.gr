@@ -1,5 +1,3 @@
-import { NextRequest } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
 import { NextResponse } from "next/server";
 import { getSeoSnapshot, getTopKeywords } from "@/lib/ahrefs";
 import { isConfigured } from "@/lib/integrations";

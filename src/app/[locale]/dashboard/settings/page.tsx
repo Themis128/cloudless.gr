@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
@@ -193,9 +194,9 @@ export default function SettingsPage() {
           </div>
           <p className="mt-3 font-mono text-[10px] text-slate-600">
             To update your name, company, or phone, visit your{" "}
-            <a href="/dashboard/profile" className="text-neon-cyan hover:underline">
+            <Link href="/dashboard/profile" className="text-neon-cyan hover:underline">
               Profile
-            </a>
+            </Link>
             .
           </p>
         </div>

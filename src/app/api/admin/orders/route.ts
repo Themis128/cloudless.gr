@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 
 export async function GET(request: NextRequest) {
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
         })) ?? [],
         created: new Date((s.created ?? 0) * 1000).toISOString(),
       })),
-      subscriptions: subscriptions.data.map((sub) => ({
+      subscriptions: subscriptions.data.map((sub: Stripe.Subscription) => ({
         id: sub.id,
         customer: sub.customer,
         status: sub.status,
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
         amount: (sub.items.data[0]?.price?.unit_amount ?? 0) / 100,
         currency: (sub.items.data[0]?.price?.currency ?? "eur").toUpperCase(),
         interval: sub.items.data[0]?.price?.recurring?.interval ?? "month",
-        currentPeriodEnd: new Date(((sub as any).current_period_end ?? 0) * 1000).toISOString(),
+        currentPeriodEnd: new Date(((sub as unknown as Record<string, number>).current_period_end ?? 0) * 1000).toISOString(),
         cancelAtPeriodEnd: sub.cancel_at_period_end,
         created: new Date((sub.created ?? 0) * 1000).toISOString(),
       })),

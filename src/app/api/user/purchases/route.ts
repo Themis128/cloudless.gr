@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isConfigured } from "@/lib/integrations";
+import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { requireAuth } from "@/lib/api-auth";
 
@@ -65,10 +66,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       purchases: sessions.data.map(mapSession),
-      subscriptions: subscriptions.data.map((sub) => ({
+      subscriptions: subscriptions.data.map((sub: Stripe.Subscription) => ({
         id: sub.id,
         status: sub.status,
-        currentPeriodEnd: new Date(((sub as any).current_period_end ?? 0) * 1000).toISOString(),
+        currentPeriodEnd: new Date(((sub as unknown as Record<string, number>).current_period_end ?? 0) * 1000).toISOString(),
         items: sub.items.data.map((item) => ({
           name: item.price?.product
             ? typeof item.price.product === "string"
@@ -88,7 +89,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-function mapSession(s: any) {
+function mapSession(s: Stripe.Checkout.Session) {
   const session = s as {
     id: string;
     payment_status: string;

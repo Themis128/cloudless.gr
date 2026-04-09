@@ -1,5 +1,3 @@
-import { NextRequest } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
 import { NextResponse } from "next/server";
 import { getWebAnalytics } from "@/lib/ahrefs";
 import { isConfigured } from "@/lib/integrations";

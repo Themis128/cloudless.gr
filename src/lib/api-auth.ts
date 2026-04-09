@@ -4,9 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import * as jwt from "jsonwebtoken";
 
-interface DecodedToken {
+export interface DecodedToken {
   sub: string;
   email?: string;
   "cognito:username"?: string;
@@ -16,6 +15,10 @@ interface DecodedToken {
   iat: number;
   exp: number;
 }
+
+type AuthSuccess = { ok: true; user: DecodedToken };
+type AuthError = { ok: false; response: NextResponse };
+export type AuthResult = AuthSuccess | AuthError;
 
 /**
  * Extract JWT token from Authorization header
@@ -36,15 +39,19 @@ export function getTokenFromHeader(request: NextRequest): string | null {
  */
 export function decodeToken(token: string): DecodedToken | null {
   try {
-    const decoded = jwt.decode(token, { complete: true });
-    if (!decoded || typeof decoded.payload !== "object") return null;
-    const payload = decoded.payload as DecodedToken;
-    
+    // Decode JWT manually without external library
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+
+    const payload = JSON.parse(
+      Buffer.from(parts[1], "base64").toString("utf-8")
+    ) as DecodedToken;
+
     // Check expiry
     if (payload.exp && Date.now() >= payload.exp * 1000) {
       return null;
     }
-    
+
     return payload;
   } catch {
     return null;
@@ -54,7 +61,7 @@ export function decodeToken(token: string): DecodedToken | null {
 /**
  * Check if user is in admin group
  */
-export function isAdmin(decoded: DecodedToken | null): boolean {
+export function isAdmin(decoded: DecodedToken | undefined | null): boolean {
   return decoded?.["cognito:groups"]?.includes("admin") ?? false;
 }
 
@@ -62,9 +69,9 @@ export function isAdmin(decoded: DecodedToken | null): boolean {
  * Require authentication on an API route
  * Usage: const auth = requireAuth(request);
  *        if (!auth.ok) return auth.response;
- *        // access auth.user
+ *        const user = auth.user; // user is typed as DecodedToken
  */
-export function requireAuth(request: NextRequest) {
+export function requireAuth(request: NextRequest): AuthResult {
   const token = getTokenFromHeader(request);
   if (!token) {
     return {
@@ -87,7 +94,7 @@ export function requireAuth(request: NextRequest) {
 /**
  * Require admin authentication on an API route
  */
-export function requireAdmin(request: NextRequest) {
+export function requireAdmin(request: NextRequest): AuthResult {
   const auth = requireAuth(request);
   if (!auth.ok) return auth;
 

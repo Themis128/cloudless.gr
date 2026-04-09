@@ -1,33 +1,33 @@
 /**
- * Fetch helper that automatically adds JWT authentication header
- * for protected API routes
+ * Fetch wrapper that automatically adds JWT token from Cognito
+ * For use on the client side in authenticated pages
  */
 
 import { fetchAuthSession } from "aws-amplify/auth";
 
 export async function fetchWithAuth(
   url: string,
-  options: RequestInit = {}
+  init?: RequestInit
 ): Promise<Response> {
   try {
     const session = await fetchAuthSession();
-    const idToken = session?.tokens?.idToken?.toString();
-
-    const headers: HeadersInit = {
-      ...options.headers,
-    };
-
-    if (idToken) {
-      headers["Authorization"] = `Bearer ${idToken}`;
+    const idToken = session.tokens?.idToken?.toString();
+    
+    if (!idToken) {
+      throw new Error("No ID token available");
     }
 
+    const headers: Record<string, string> = {
+      ...((init?.headers as Record<string, string>) || {}),
+      "Authorization": `Bearer ${idToken}`,
+    };
+
     return fetch(url, {
-      ...options,
+      ...init,
       headers,
     });
-  } catch (err) {
-    console.error("Failed to get auth session:", err);
-    // Fallback to unauthenticated request
-    return fetch(url, options);
+  } catch (error) {
+    console.error("fetchWithAuth error:", error);
+    throw error;
   }
 }
