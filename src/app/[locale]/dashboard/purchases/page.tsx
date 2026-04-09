@@ -1,4 +1,5 @@
 "use client";
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -54,7 +55,7 @@ export default function PurchasesPage() {
 
     async function fetchData() {
       try {
-        const res = await fetch(`/api/user/purchases?email=${encodeURIComponent(user!.email!)}`);
+        const res = await fetchWithAuth("/api/user/purchases");
         if (!res.ok) {
           if (res.status === 503) throw new Error("Stripe not configured");
           throw new Error(`HTTP ${res.status}`);

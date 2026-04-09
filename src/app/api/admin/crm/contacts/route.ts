@@ -1,8 +1,12 @@
+import { NextRequest } from "next/server";
+import { requireAdmin } from "@/lib/api-auth";
 import { NextResponse } from "next/server";
 import { isConfigured } from "@/lib/integrations";
 import { listContacts } from "@/lib/hubspot";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const auth = requireAdmin(request);
+  if (!auth.ok) return auth.response;
   if (!isConfigured("HUBSPOT_API_KEY")) {
     return NextResponse.json({ error: "HubSpot not configured." }, { status: 503 });
   }

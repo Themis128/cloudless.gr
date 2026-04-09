@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isConfigured } from "@/lib/integrations";
+import { requireAuth } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/user/consultations?email=user@example.com
- * Returns booked consultations for the user from Google Calendar.
+ * GET /api/user/consultations
+ * Returns booked consultations for the authenticated user from Google Calendar.
+ * 
+ * Requires: Authorization: Bearer <JWT token>
  */
 export async function GET(req: NextRequest) {
-  const email = req.nextUrl.searchParams.get("email");
+  // Verify JWT authentication
+  const auth = requireAuth(req);
+  if (!auth.ok) return auth.response;
+
+  const email = auth.user.email;
   if (!email) {
-    return NextResponse.json({ error: "email parameter required" }, { status: 400 });
+    return NextResponse.json({ error: "No email in token" }, { status: 400 });
   }
 
   if (

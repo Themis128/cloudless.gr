@@ -1,4 +1,5 @@
 "use client";
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -32,7 +33,7 @@ export default function DashboardPage() {
       const email = encodeURIComponent(user!.email!);
       const [purchasesRes, consultationsRes] = await Promise.allSettled([
         fetch(`/api/user/purchases?email=${email}`),
-        fetch(`/api/user/consultations?email=${email}`),
+        fetchWithAuth("/api/user/consultations"),
       ]);
 
       let totalOrders = 0;

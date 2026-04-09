@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState, useCallback } from "react";
 
 interface CognitoUser {
@@ -47,7 +48,7 @@ export default function AdminUsersPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("/api/admin/users?limit=60");
+      const res = await fetchWithAuth("/api/admin/users?limit=60");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setUsers(data.users ?? []);
@@ -76,7 +77,7 @@ export default function AdminUsersPage() {
     setActionMsg(null);
 
     try {
-      const res = await fetch("/api/admin/users", {
+      const res = await fetchWithAuth("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, username }),

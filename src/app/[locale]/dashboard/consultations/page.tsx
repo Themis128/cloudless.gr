@@ -1,4 +1,5 @@
 "use client";
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -37,9 +38,7 @@ export default function ConsultationsPage() {
 
     async function fetchData() {
       try {
-        const res = await fetch(
-          `/api/user/consultations?email=${encodeURIComponent(user!.email!)}`,
-        );
+        const res = await fetchWithAuth("/api/user/consultations");
         if (!res.ok) {
           setLoading(false);
           return;

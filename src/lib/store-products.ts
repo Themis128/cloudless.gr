@@ -1,6 +1,11 @@
-// Fallback product data for when Stripe products aren't set up yet.
-// Once you create products in Stripe Dashboard, the store will fetch them live.
-// These are used as placeholder/demo data.
+/**
+ * Store product catalog.
+ *
+ * Fetches live products from Stripe when configured.
+ * Falls back to local demo data when Stripe products aren't set up yet.
+ */
+
+import { listStripeProducts, type StripeProduct } from "@/lib/stripe";
 
 export type ProductCategory = "digital" | "physical" | "service";
 
@@ -16,6 +21,107 @@ export interface StoreProduct {
   recurring?: boolean;
   interval?: "month" | "year";
 }
+
+// ---------------------------------------------------------------------------
+// Live product fetching from Stripe
+// ---------------------------------------------------------------------------
+
+/** Cache for Stripe products (refreshed every 5 minutes) */
+let productCache: { products: StoreProduct[]; fetchedAt: number } | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * Map a Stripe product to the store product format.
+ * Uses product metadata for category, image, and features.
+ *
+ * Expected Stripe product metadata keys:
+ *   - category: "service" | "digital" | "physical" (default: "service")
+ *   - image: URL or path (default: /store/default.svg)
+ *   - features: comma-separated list
+ */
+function mapStripeProduct(sp: StripeProduct): StoreProduct {
+  const category = (sp.metadata.category as ProductCategory) || "service";
+  const image = sp.metadata.image || sp.images[0] || "/store/default.svg";
+  const features = sp.metadata.features
+    ? sp.metadata.features.split(",").map((f) => f.trim())
+    : undefined;
+
+  return {
+    id: sp.id,
+    name: sp.name,
+    description: sp.description ?? "",
+    price: sp.defaultPrice?.unitAmount ?? 0,
+    currency: (sp.defaultPrice?.currency ?? "EUR").toLowerCase(),
+    category,
+    image,
+    features,
+    recurring: sp.defaultPrice?.recurring != null,
+    interval: sp.defaultPrice?.recurring?.interval as "month" | "year" | undefined,
+  };
+}
+
+/**
+ * Get all store products. Tries Stripe first, falls back to demo data.
+ * Results are cached for 5 minutes.
+ */
+export async function getProducts(): Promise<StoreProduct[]> {
+  // Return cache if fresh
+  if (productCache && Date.now() - productCache.fetchedAt < CACHE_TTL_MS) {
+    return productCache.products;
+  }
+
+  // Try fetching from Stripe
+  const stripeProducts = await listStripeProducts();
+
+  if (stripeProducts && stripeProducts.length > 0) {
+    const mapped = stripeProducts.map(mapStripeProduct);
+    productCache = { products: mapped, fetchedAt: Date.now() };
+    return mapped;
+  }
+
+  // Fall back to demo data
+  productCache = { products: demoProducts, fetchedAt: Date.now() };
+  return demoProducts;
+}
+
+// ---------------------------------------------------------------------------
+// Product lookups (use live data when available)
+// ---------------------------------------------------------------------------
+
+export async function getProductByIdAsync(id: string): Promise<StoreProduct | undefined> {
+  const products = await getProducts();
+  return products.find((p) => p.id === id);
+}
+
+export async function getProductsByCategoryAsync(
+  category: ProductCategory,
+): Promise<StoreProduct[]> {
+  const products = await getProducts();
+  return products.filter((p) => p.category === category);
+}
+
+// ---------------------------------------------------------------------------
+// Synchronous lookups (demo data only — used by checkout for validation)
+// ---------------------------------------------------------------------------
+
+export function getProductById(id: string): StoreProduct | undefined {
+  // Check cache first (includes Stripe products if previously fetched)
+  if (productCache) {
+    return productCache.products.find((p) => p.id === id);
+  }
+  return demoProducts.find((p) => p.id === id);
+}
+
+export function getProductsByCategory(category: ProductCategory): StoreProduct[] {
+  if (productCache) {
+    return productCache.products.filter((p) => p.category === category);
+  }
+  return demoProducts.filter((p) => p.category === category);
+}
+
+// ---------------------------------------------------------------------------
+// Demo / fallback product catalog
+// ---------------------------------------------------------------------------
 
 export const demoProducts: StoreProduct[] = [
   // --- Services ---
@@ -176,14 +282,6 @@ export const demoProducts: StoreProduct[] = [
     ],
   },
 ];
-
-export function getProductById(id: string): StoreProduct | undefined {
-  return demoProducts.find((p) => p.id === id);
-}
-
-export function getProductsByCategory(category: ProductCategory): StoreProduct[] {
-  return demoProducts.filter((p) => p.category === category);
-}
 
 export const categoryLabels: Record<ProductCategory, string> = {
   service: "Services",

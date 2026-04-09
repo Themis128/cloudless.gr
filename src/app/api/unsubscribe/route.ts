@@ -1,16 +1,13 @@
 import { isValidEmail } from "@/lib/validation";
 import { notifyTeam } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
+import { addToSuppressionList } from "@/lib/ses-suppression";
 
 /**
  * Newsletter unsubscribe endpoint.
- * Since we don't have a dedicated mailing list DB yet, this:
- *   1. Validates the email
- *   2. Notifies the team to remove the subscriber
- *   3. Returns a confirmation
  *
- * When a proper email platform (SES lists, Mailchimp, etc.) is added,
- * this should call the platform's unsubscribe API directly.
+ * Uses the SES account-level suppression list to prevent future emails.
+ * Also notifies the team for audit purposes.
  */
 export async function POST(request: Request) {
   try {
@@ -20,17 +17,17 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid email address." }, { status: 400 });
     }
 
-    await notifyTeam(
-      `[Newsletter] Unsubscribe request: ${email.slice(0, 80)}`,
-      `<h2>Newsletter unsubscribe request</h2>
+    // Add to SES suppression list — this prevents all future SES sends to this address
+    const suppressed = await addToSuppressionList(email);
+
+    // Notify team for audit trail (fire-and-forget)
+    notifyTeam(
+      `[Newsletter] Unsubscribe: ${email.slice(0, 80)}`,
+      `<h2>Newsletter unsubscribe</h2>
       <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-      <p><strong>Date:</strong> ${new Date().toISOString()}</p>
-      <hr />
-      <p style="color: #666; font-size: 12px;">
-        Please remove this email from your mailing list.
-        This request was submitted via the cloudless.gr unsubscribe endpoint.
-      </p>`,
-    );
+      <p><strong>SES suppressed:</strong> ${suppressed ? "Yes" : "Failed (manual removal needed)"}</p>
+      <p><strong>Date:</strong> ${new Date().toISOString()}</p>`,
+    ).catch(() => {});
 
     return Response.json({ success: true, message: "You have been unsubscribed." });
   } catch (error) {
@@ -55,12 +52,16 @@ export async function GET(request: Request) {
   }
 
   try {
-    await notifyTeam(
-      `[Newsletter] Unsubscribe request: ${email.slice(0, 80)}`,
-      `<h2>Newsletter unsubscribe request (via email link)</h2>
+    const suppressed = await addToSuppressionList(email);
+
+    // Notify team (fire-and-forget)
+    notifyTeam(
+      `[Newsletter] Unsubscribe (via link): ${email.slice(0, 80)}`,
+      `<h2>Newsletter unsubscribe (via email link)</h2>
       <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+      <p><strong>SES suppressed:</strong> ${suppressed ? "Yes" : "Failed"}</p>
       <p><strong>Date:</strong> ${new Date().toISOString()}</p>`,
-    );
+    ).catch(() => {});
 
     return new Response(unsubscribePage(email, true), {
       headers: { "Content-Type": "text/html; charset=utf-8" },

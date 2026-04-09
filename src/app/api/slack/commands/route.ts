@@ -3,7 +3,7 @@
  *
  * Handles:
  *   /cloudless-status  — app health + version
- *   /cloudless-orders  — recent store activity summary
+ *   /cloudless-orders  — recent store activity from Stripe
  *
  * Slack delivers slash command payloads as application/x-www-form-urlencoded.
  * Slack app setup:
@@ -12,6 +12,7 @@
  */
 
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
+import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -104,51 +105,107 @@ function handleStatus(_payload: SlashCommandPayload): Response {
   });
 }
 
-function handleOrders(payload: SlashCommandPayload): Response {
-  // In a production implementation, query Stripe or your order database here.
-  // This returns a placeholder Block Kit message with an action button.
-  return slackResponse({
-    response_type: "ephemeral",
-    blocks: [
-      {
-        type: "header",
-        text: { type: "plain_text", text: ":receipt: Recent Orders", emoji: true },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text:
-            "Live order data requires connecting to Stripe. " +
-            "Click the button below to open the Stripe Dashboard.",
+async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
+  try {
+    const limit = parseInt(payload.text, 10) || 5;
+    const count = Math.min(Math.max(limit, 1), 20);
+
+    const { orders, hasMore } = await listRecentCheckoutSessions(count);
+
+    if (orders.length === 0) {
+      return slackResponse({
+        response_type: "ephemeral",
+        blocks: [
+          {
+            type: "header",
+            text: { type: "plain_text", text: ":receipt: Recent Orders", emoji: true },
+          },
+          {
+            type: "section",
+            text: { type: "mrkdwn", text: "No checkout sessions found in Stripe." },
+          },
+          {
+            type: "context",
+            elements: [
+              { type: "mrkdwn", text: `Requested by <@${payload.user_id}>` },
+            ],
+          },
+        ],
+      });
+    }
+
+    // Build summary stats
+    const completedOrders = orders.filter((o) => o.paymentStatus === "paid");
+    const totalRevenue = completedOrders.reduce((sum, o) => sum + o.amount, 0);
+    const currency = orders[0]?.currency ?? "EUR";
+
+    const orderLines = orders.map((o) => {
+      const status =
+        o.paymentStatus === "paid"
+          ? ":white_check_mark:"
+          : o.paymentStatus === "unpaid"
+            ? ":hourglass:"
+            : ":x:";
+      const date = `<!date^${o.created}^{date_short_pretty} {time}|${new Date(o.created * 1000).toISOString()}>`;
+      const amount = formatPrice(o.amount, o.currency);
+      const email = o.email ?? "N/A";
+      const mode = o.mode === "subscription" ? " :repeat:" : "";
+      return `${status} ${date} — *${amount}*${mode} — ${email}`;
+    });
+
+    return slackResponse({
+      response_type: "ephemeral",
+      blocks: [
+        {
+          type: "header",
+          text: { type: "plain_text", text: ":receipt: Recent Orders", emoji: true },
         },
-      },
-      {
-        type: "actions",
-        elements: [
-          {
-            type: "button",
-            text: { type: "plain_text", text: "Open Stripe Dashboard", emoji: true },
-            url: "https://dashboard.stripe.com/payments",
-            action_id: "open_stripe_dashboard",
-            style: "primary",
-          },
-          {
-            type: "button",
-            text: { type: "plain_text", text: "View Store", emoji: true },
-            url: "https://cloudless.gr/store",
-            action_id: "open_store",
-          },
-        ],
-      },
-      {
-        type: "context",
-        elements: [
-          { type: "mrkdwn", text: `Requested by <@${payload.user_id}>` },
-        ],
-      },
-    ],
-  });
+        {
+          type: "section",
+          fields: [
+            { type: "mrkdwn", text: `*Showing*\n${orders.length} order${orders.length === 1 ? "" : "s"}${hasMore ? " (more available)" : ""}` },
+            { type: "mrkdwn", text: `*Paid Revenue*\n${formatPrice(totalRevenue, currency)}` },
+          ],
+        },
+        { type: "divider" },
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: orderLines.join("\n") },
+        },
+        { type: "divider" },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: { type: "plain_text", text: "Open Stripe Dashboard", emoji: true },
+              url: "https://dashboard.stripe.com/payments",
+              action_id: "open_stripe_dashboard",
+              style: "primary",
+            },
+            {
+              type: "button",
+              text: { type: "plain_text", text: "View Store", emoji: true },
+              url: "https://cloudless.gr/store",
+              action_id: "open_store",
+            },
+          ],
+        },
+        {
+          type: "context",
+          elements: [
+            { type: "mrkdwn", text: `Requested by <@${payload.user_id}> | Tip: \`/cloudless-orders 10\` to show more` },
+          ],
+        },
+      ],
+    });
+  } catch (err) {
+    console.error("[Slack Commands] /cloudless-orders error:", err);
+    return slackResponse({
+      response_type: "ephemeral",
+      text: ":warning: Failed to fetch orders from Stripe. Check that STRIPE_SECRET_KEY is configured in SSM.",
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

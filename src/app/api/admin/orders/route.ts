@@ -1,7 +1,11 @@
+import { NextRequest } from "next/server";
+import { requireAdmin } from "@/lib/api-auth";
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const auth = requireAdmin(request);
+  if (!auth.ok) return auth.response;
   try {
     const stripe = await getStripe();
     const { searchParams } = new URL(request.url);

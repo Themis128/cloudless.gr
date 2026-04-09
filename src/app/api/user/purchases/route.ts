@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isConfigured } from "@/lib/integrations";
 import { getStripe } from "@/lib/stripe";
+import { requireAuth } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/user/purchases?email=user@example.com
- * Returns checkout sessions for a given customer email.
+ * GET /api/user/purchases
+ * Returns checkout sessions for the authenticated user (from JWT).
+ * 
+ * Requires: Authorization: Bearer <JWT token>
  */
 export async function GET(req: NextRequest) {
-  const email = req.nextUrl.searchParams.get("email");
+  // Verify JWT authentication
+  const auth = requireAuth(req);
+  if (!auth.ok) return auth.response;
+
+  const email = auth.user.email;
   if (!email) {
-    return NextResponse.json({ error: "email parameter required" }, { status: 400 });
+    return NextResponse.json({ error: "No email in token" }, { status: 400 });
   }
 
   if (!isConfigured("STRIPE_SECRET_KEY")) {

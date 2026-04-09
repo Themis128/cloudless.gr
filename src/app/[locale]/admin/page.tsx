@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -75,10 +76,10 @@ export default function AdminDashboard() {
     async function fetchStats() {
       try {
         const [ordersRes, contactsRes, errorsRes, healthRes] = await Promise.allSettled([
-          fetch("/api/admin/orders?limit=50"),
-          fetch("/api/admin/crm/contacts?limit=1"),
-          fetch("/api/admin/ops/errors"),
-          fetch("/api/health"),
+          fetchWithAuth("/api/admin/orders?limit=50"),
+          fetchWithAuth("/api/admin/crm/contacts?limit=1"),
+          fetchWithAuth("/api/admin/ops/errors"),
+          fetchWithAuth("/api/health"),
         ]);
 
         const orders =

@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/api-auth";
 import {
   CognitoIdentityProviderClient,
   ListUsersCommand,
@@ -26,7 +27,11 @@ function getAttr(
   return attrs?.find((a) => a.Name === name)?.Value ?? "";
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  // Verify admin authentication
+  const auth = requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   try {
     if (!USER_POOL_ID) {
       return NextResponse.json(
@@ -68,38 +73,29 @@ export async function GET(request: Request) {
         }
 
         return {
-          username: u.Username ?? "",
+          username: u.Username,
           email: getAttr(u.Attributes, "email"),
           name: getAttr(u.Attributes, "name"),
-          company: getAttr(u.Attributes, "custom:company"),
-          phone: getAttr(u.Attributes, "phone_number"),
-          status: u.Enabled ? "active" : "disabled",
-          emailVerified: getAttr(u.Attributes, "email_verified") === "true",
-          userStatus: u.UserStatus ?? "UNKNOWN",
-          role: isAdmin ? "admin" : "user",
-          created: u.UserCreateDate?.toISOString() ?? "",
-          lastModified: u.UserLastModifiedDate?.toISOString() ?? "",
+          status: u.UserStatus,
+          created: u.UserCreateDate?.toISOString(),
+          updated: u.UserLastModifiedDate?.toISOString(),
+          isAdmin,
         };
       }),
     );
 
-    return NextResponse.json({
-      users,
-      total: users.length,
-    });
+    return NextResponse.json({ users, count: users.length });
   } catch (err) {
-    console.error("[Admin Users] Error:", err);
-    return NextResponse.json(
-      {
-        error:
-          err instanceof Error ? err.message : "Failed to fetch users",
-      },
-      { status: 500 },
-    );
+    console.error("Failed to list users:", err);
+    return NextResponse.json({ error: "Failed to list users" }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Verify admin authentication
+  const auth = requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   try {
     if (!USER_POOL_ID) {
       return NextResponse.json(
@@ -108,80 +104,65 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
-    const { action, username } = body as {
-      action: string;
-      username: string;
-    };
+    const { action, username, groupName } = await request.json();
 
     if (!action || !username) {
       return NextResponse.json(
-        { error: "Missing action or username" },
+        { error: "action and username required" },
         { status: 400 },
       );
     }
 
     const client = getClient();
 
-    switch (action) {
-      case "disable":
-        await client.send(
-          new AdminDisableUserCommand({
-            UserPoolId: USER_POOL_ID,
-            Username: username,
-          }),
-        );
-        return NextResponse.json({ success: true, message: "User disabled" });
-
-      case "enable":
-        await client.send(
-          new AdminEnableUserCommand({
-            UserPoolId: USER_POOL_ID,
-            Username: username,
-          }),
-        );
-        return NextResponse.json({ success: true, message: "User enabled" });
-
-      case "promote":
-        await client.send(
-          new AdminAddUserToGroupCommand({
-            UserPoolId: USER_POOL_ID,
-            Username: username,
-            GroupName: "admin",
-          }),
-        );
-        return NextResponse.json({
-          success: true,
-          message: "User promoted to admin",
-        });
-
-      case "demote":
-        await client.send(
-          new AdminRemoveUserFromGroupCommand({
-            UserPoolId: USER_POOL_ID,
-            Username: username,
-            GroupName: "admin",
-          }),
-        );
-        return NextResponse.json({
-          success: true,
-          message: "User removed from admin group",
-        });
-
-      default:
-        return NextResponse.json(
-          { error: `Unknown action: ${action}` },
-          { status: 400 },
-        );
+    if (action === "disable") {
+      await client.send(
+        new AdminDisableUserCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+        }),
+      );
+      return NextResponse.json({ success: true, message: "User disabled" });
     }
-  } catch (err) {
-    console.error("[Admin Users] Action error:", err);
+
+    if (action === "enable") {
+      await client.send(
+        new AdminEnableUserCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+        }),
+      );
+      return NextResponse.json({ success: true, message: "User enabled" });
+    }
+
+    if (action === "promote" && groupName === "admin") {
+      await client.send(
+        new AdminAddUserToGroupCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+          GroupName: groupName,
+        }),
+      );
+      return NextResponse.json({ success: true, message: "User promoted to admin" });
+    }
+
+    if (action === "demote" && groupName === "admin") {
+      await client.send(
+        new AdminRemoveUserFromGroupCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+          GroupName: groupName,
+        }),
+      );
+      return NextResponse.json({ success: true, message: "User removed from admin group" });
+    }
+
     return NextResponse.json(
-      {
-        error:
-          err instanceof Error ? err.message : "Action failed",
-      },
-      { status: 500 },
+      { error: "Unknown action" },
+      { status: 400 },
     );
+  } catch (err) {
+    console.error("Failed to modify user:", err);
+    return NextResponse.json({ error: "Failed to modify user" }, { status: 500 });
   }
 }

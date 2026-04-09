@@ -2,9 +2,8 @@
  * Slack interactions endpoint.
  *
  * Handles interactive components from Block Kit messages:
- *   - button clicks
+ *   - button clicks (URL buttons, action buttons)
  *   - overflow menus
- *   - modal submissions (view_submission)
  *
  * Slack delivers payloads as application/x-www-form-urlencoded with a
  * JSON-encoded `payload` field.
@@ -15,6 +14,7 @@
  */
 
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
+import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 
 // ---------------------------------------------------------------------------
 // Types (subset of Slack interaction payloads)
@@ -28,14 +28,9 @@ interface BlockAction {
 }
 
 interface SlackInteractionPayload {
-  type: "block_actions" | "view_submission" | "view_closed" | "shortcut" | string;
+  type: "block_actions" | "shortcut" | string;
   user: { id: string; username: string };
   actions?: BlockAction[];
-  view?: {
-    id: string;
-    callback_id: string;
-    state?: { values: Record<string, Record<string, { value?: string; selected_option?: { value: string } }>> };
-  };
   response_url?: string;
   trigger_id?: string;
   callback_id?: string;
@@ -67,9 +62,6 @@ export async function POST(request: Request): Promise<Response> {
     case "block_actions":
       return handleBlockActions(payload);
 
-    case "view_submission":
-      return handleViewSubmission(payload);
-
     default:
       console.warn(`[Slack Interactions] Unhandled interaction type: ${payload.type}`);
       return new Response(null, { status: 200 });
@@ -89,8 +81,17 @@ async function handleBlockActions(payload: SlackInteractionPayload): Promise<Res
       case "open_store":
         // URL buttons — Slack handles the navigation client-side.
         // Acknowledge the action; no server-side work needed.
-        console.warn(`[Slack] Button clicked: ${action.action_id} by ${payload.user.username}`);
         break;
+
+      case "refresh_orders": {
+        // Post updated order data to the response_url
+        if (payload.response_url) {
+          refreshOrdersAsync(payload.response_url).catch((err) =>
+            console.error("[Slack Interactions] refresh_orders failed:", err),
+          );
+        }
+        break;
+      }
 
       default:
         console.warn(`[Slack Interactions] Unhandled action_id: ${action.action_id}`);
@@ -98,22 +99,46 @@ async function handleBlockActions(payload: SlackInteractionPayload): Promise<Res
   }
 
   // Slack requires a 200 response within 3 seconds.
-  // For more complex actions, respond here and post to response_url asynchronously.
   return new Response(null, { status: 200 });
 }
 
-function handleViewSubmission(payload: SlackInteractionPayload): Response {
-  const callbackId = payload.view?.callback_id ?? "";
+// ---------------------------------------------------------------------------
+// Async responders (posted to response_url after acknowledging)
+// ---------------------------------------------------------------------------
 
-  switch (callbackId) {
-    // Add modal submission handlers here as you create modals.
-    // Example:
-    // case "contact_form_modal":
-    //   await processContactFormModal(payload);
-    //   return Response.json({ response_action: "clear" });
+async function refreshOrdersAsync(responseUrl: string): Promise<void> {
+  try {
+    const { orders } = await listRecentCheckoutSessions(5);
+    const lines = orders.map((o) => {
+      const status = o.paymentStatus === "paid" ? ":white_check_mark:" : ":hourglass:";
+      const amount = formatPrice(o.amount, o.currency);
+      return `${status} *${amount}* — ${o.email ?? "N/A"}`;
+    });
 
-    default:
-      console.warn(`[Slack Interactions] Unhandled view callback_id: ${callbackId}`);
-      return new Response(null, { status: 200 });
+    await fetch(responseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        replace_original: true,
+        blocks: [
+          {
+            type: "header",
+            text: { type: "plain_text", text: ":receipt: Recent Orders (Refreshed)", emoji: true },
+          },
+          {
+            type: "section",
+            text: { type: "mrkdwn", text: lines.length > 0 ? lines.join("\n") : "No orders found." },
+          },
+          {
+            type: "context",
+            elements: [
+              { type: "mrkdwn", text: `Updated <!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|now>` },
+            ],
+          },
+        ],
+      }),
+    });
+  } catch (err) {
+    console.error("[Slack Interactions] refreshOrdersAsync error:", err);
   }
 }
