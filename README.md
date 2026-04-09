@@ -20,6 +20,33 @@ Translation dictionaries live in `src/locales/en.json` and `src/locales/el.json`
 
 ## Authentication
 
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant App as Next.js Client
+    participant Cognito as AWS Cognito
+
+    U->>App: Enter email + password
+    App->>Cognito: signIn(email, password)
+    alt FORCE_CHANGE_PASSWORD
+        Cognito-->>App: Challenge
+        App->>U: Show new password form
+        U->>App: Submit new password
+        App->>Cognito: confirmSignIn(newPassword)
+    end
+    alt Unverified user
+        Cognito-->>App: UserNotConfirmedException
+        App->>U: Redirect to verify page
+    end
+    Cognito-->>App: JWT tokens
+    App->>App: Decode JWT, check cognito:groups
+    alt Admin group
+        App->>U: Show admin panel
+    else Regular user
+        App->>U: Show dashboard
+    end
+```
+
 User authentication is powered by **AWS Cognito** via **Amplify v6**. The `AuthProvider` in `src/context/AuthContext.tsx` wraps the entire app and exposes sign-in, sign-up, sign-out, password reset, and admin detection through the `useAuth()` hook.
 
 Key features of the auth system:
@@ -32,6 +59,58 @@ Key features of the auth system:
 - Route protection is client-side via layout guards in `/dashboard` and `/admin`.
 
 ## Architecture
+
+```mermaid
+graph TB
+    subgraph Client["Browser / Mobile"]
+        UI["Next.js App&lt;br/&gt;React 19 + Tailwind 4"]
+        SW["Service Worker PWA"]
+    end
+    subgraph Routes["API Routes"]
+        Contact["/api/contact"]
+        Checkout["/api/checkout"]
+        Subscribe["/api/subscribe"]
+        StripeWH["/api/webhooks/stripe"]
+        SlackEvt["/api/slack/events"]
+        SlackCmd["/api/slack/commands"]
+        SlackInt["/api/slack/interactions"]
+        CalAvail["/api/calendar/availability"]
+        CalBook["/api/calendar/book"]
+        Blog["/api/blog/posts"]
+        Health["/api/health"]
+    end
+
+    subgraph AWS["AWS"]
+        Cognito["Cognito Auth"]
+        SES["SES Email"]
+        SSM["SSM Parameter Store"]
+    end
+    subgraph External["External Services"]
+        Stripe["Stripe Payments"]
+        Slack["Slack Notifications"]
+        HubSpot["HubSpot CRM"]
+        GCal["Google Calendar"]
+        Notion["Notion Blog CMS"]
+    end
+
+    UI --> Routes
+    UI --> Cognito
+    Routes --> SSM
+    Contact --> SES
+    Contact --> Slack
+    Contact --> HubSpot
+    Subscribe --> SES
+    Subscribe --> Slack
+    Checkout --> Stripe
+    StripeWH --> SES
+    StripeWH --> Slack
+    CalAvail --> GCal
+    CalBook --> GCal
+    CalBook --> Slack
+    Blog --> Notion
+    SlackEvt --> Slack
+    SlackCmd --> Slack
+```
 
 The app uses the Next.js App Router with the following structure:
 
@@ -84,6 +163,29 @@ src/
 
 ## Slack Integration
 
+```mermaid
+graph LR
+    subgraph Outbound["cloudless.gr to Slack"]
+        ContactForm["Contact Form"] -->|slackContactNotify| Ch["Slack Channel"]
+        SubForm["Subscribe Form"] -->|slackSubscriberNotify| Ch
+        StripeHook["Stripe Webhook"] -->|slackOrderNotify| Ch
+        ErrHandler["Error Handler"] -->|slackErrorNotify| Ch
+        CICD["CI/CD Pipeline"] -->|slackDeployNotify| Ch
+    end
+
+    subgraph Inbound["Slack to cloudless.gr"]
+        Slack2["Slack"] -->|mention or DM| Events["/api/slack/events"]
+        Slack2 -->|slash commands| Commands["/api/slack/commands"]
+        Slack2 -->|button clicks| Interactions["/api/slack/interactions"]
+    end
+
+    subgraph Security["Verification"]
+        Events --> Verify["HMAC-SHA256 Signing Secret"]
+        Commands --> Verify
+        Interactions --> Verify
+    end
+```
+
 The app has a full two-way Slack integration. Last verified 2026-04-09 (56 unit tests, 12 integration tests — all pass).
 
 **Outbound notifications** (cloudless.gr → Slack):
@@ -111,6 +213,23 @@ Required env vars (see `.env.local` for details):
 Full setup instructions, ngrok local testing guide, and slash command reference: **[docs/SLACK.md](docs/SLACK.md)**
 
 ## Secrets Management
+
+```mermaid
+graph LR
+    subgraph Dev["Local Development"]
+        EnvFile[".env.local"] --> NextJS["Next.js Server"]
+    end
+
+    subgraph Prod["Production AWS"]
+        SSM["SSM Parameter Store"] --> GetConfig["getConfig()"]
+        GetConfig --> APIRoutes["API Routes"]
+    end
+
+    SSM -->|SecureString| STRIPE_KEY["STRIPE_SECRET_KEY"]
+    SSM -->|SecureString| SLACK_TOKEN["SLACK_BOT_TOKEN"]
+    SSM -->|SecureString| SES_CREDS["SES_FROM_EMAIL"]
+    SSM -->|String| APP_CONFIG["APP_VERSION etc"]
+```
 
 This project uses **no `.env` files** in production. All secrets are stored in **AWS SSM Parameter Store** under the path prefix `/cloudless/production/` and fetched at runtime via `src/lib/ssm-config.ts`.
 

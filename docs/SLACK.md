@@ -8,21 +8,38 @@ cloudless.gr uses a Slack app for two-way communication: outbound notifications 
 
 ## Architecture
 
-```
-Outbound (cloudless.gr → Slack)
-  slackContactNotify()      ← called from /api/contact (fire-and-forget)
-  slackSubscriberNotify()   ← called from /api/subscribe
-  slackOrderNotify()        ← called from /api/webhooks/stripe
-  slackErrorNotify()        ← call from any route on unexpected errors
-  slackDeployNotify()       ← call from CI/CD pipeline
+```mermaid
+graph TB
+    subgraph Outbound["Outbound: cloudless.gr to Slack"]
+        direction LR
+        C_API["/api/contact"] -->|fire-and-forget| SCN["slackContactNotify()"]
+        S_API["/api/subscribe"] -->|parallel| SSN["slackSubscriberNotify()"]
+        W_API["/api/webhooks/stripe"] -->|fire-and-forget| SON["slackOrderNotify()"]
+        ANY["Any route"] -->|catch block| SEN["slackErrorNotify()"]
+        CI["GitHub Actions"] -->|post-deploy| SDN["slackDeployNotify()"]
+    end
+    subgraph Transport["SlackClient Transport"]
+        SCN --> SC["SlackClient"]
+        SSN --> SC
+        SON --> SC
+        SEN --> SC
+        SDN --> SC
+        SC -->|bot token| API["chat.postMessage"]
+        SC -->|webhook URL| WH["Incoming Webhook"]
+    end
 
-Inbound (Slack → cloudless.gr)
-  /api/slack/events         ← Events API (mentions, DMs)
-  /api/slack/commands       ← Slash commands
-  /api/slack/interactions   ← Button clicks, modal submissions
+    subgraph Inbound["Inbound: Slack to cloudless.gr"]
+        direction LR
+        SL["Slack Platform"] -->|Events API| EVT["/api/slack/events"]
+        SL -->|Slash Commands| CMD["/api/slack/commands"]
+        SL -->|Block Kit| INT["/api/slack/interactions"]
+    end
 
-Signature verification (every inbound request)
-  src/lib/slack-verify.ts   ← HMAC-SHA256, 5-minute replay window
+    subgraph Verify["Request Verification"]
+        EVT --> V["verifySlackRequest HMAC-SHA256"]
+        CMD --> V
+        INT --> V
+    end
 ```
 
 **Key files:**
@@ -135,6 +152,32 @@ Copy the **Bot User OAuth Token** (`xoxb-...`) into `SLACK_BOT_TOKEN`.
 
 ## Slash Commands Reference
 
+```mermaid
+sequenceDiagram
+    participant User as Slack User
+    participant Slack as Slack Platform
+    participant Cmd as /api/slack/commands
+    participant Verify as verifySlackRequest()
+
+    User->>Slack: /cloudless-status or /cloudless-orders
+    Slack->>Cmd: POST with signed payload
+    Cmd->>Verify: HMAC-SHA256 check
+    alt Invalid signature
+        Verify-->>Cmd: ok: false
+        Cmd-->>Slack: 401 Unauthorized
+    else Valid
+        Verify-->>Cmd: ok: true, body
+        Cmd->>Cmd: Parse command from URL-encoded body
+        alt /cloudless-status
+            Cmd-->>Slack: 3 Block Kit blocks in_channel
+        else /cloudless-orders
+            Cmd-->>Slack: 4 Block Kit blocks ephemeral
+        else Unknown command
+            Cmd-->>Slack: ephemeral unknown command message
+        end
+    end
+```
+
 ### `/cloudless-status`
 
 Returns app health in the channel (visible to everyone — `response_type: in_channel`).
@@ -159,6 +202,31 @@ Returns an ephemeral message (visible only to the user — `response_type: ephem
 
 ## Events Handled
 
+```mermaid
+sequenceDiagram
+    participant Slack as Slack Platform
+    participant Evt as /api/slack/events
+    participant Verify as verifySlackRequest()
+    participant Bot as SlackClient
+
+    Slack->>Evt: POST event_callback
+    Evt->>Verify: HMAC-SHA256 check
+    Verify-->>Evt: ok: true
+
+    alt type: url_verification
+        Evt-->>Slack: Return challenge string
+    else type: event_callback
+        Evt->>Evt: Check bot_id to prevent loops
+        alt app_mention
+            Evt->>Evt: Parse text for status/help/greeting
+            Evt->>Bot: Post reply to thread
+        else message.im
+            Evt->>Bot: Post DM acknowledgment
+        end
+        Evt-->>Slack: 200 OK immediately
+    end
+```
+
 ### `app_mention`
 
 Triggered when someone @mentions the bot in a channel.
@@ -178,6 +246,33 @@ Bot messages (identified by `bot_id`) are always ignored to prevent feedback loo
 ---
 
 ## Outbound Notifications
+
+```mermaid
+sequenceDiagram
+    participant Route as API Route
+    participant Notifier as slackXxxNotify()
+    participant SC as SlackClient
+    participant SlackAPI as Slack API
+
+    Route->>Notifier: Call with payload
+    Notifier->>Notifier: Build Block Kit blocks
+    Notifier->>SC: post(channel, blocks)
+    SC->>SC: Select transport bot token or webhook
+
+    loop Retry up to 3 attempts
+        SC->>SlackAPI: POST message
+        alt 200 OK
+            SlackAPI-->>SC: Success
+            SC-->>Notifier: Resolved
+        else Rate limited
+            SlackAPI-->>SC: 429
+            SC->>SC: Backoff 500ms, 1s, 2s
+        else Other error
+            SlackAPI-->>SC: Error
+            SC-->>Notifier: Reject immediately
+        end
+    end
+```
 
 All outbound notifications use the `SlackClient` class, which automatically selects bot token or webhook transport and retries with exponential backoff.
 
@@ -247,6 +342,23 @@ Status values: `"started"` | `"succeeded"` | `"failed"`
 ---
 
 ## SlackClient Internals
+
+```mermaid
+graph TB
+    Call["slackXxxNotify()"] --> SC["SlackClient.post()"]
+    SC --> Check{"Config check"}
+    Check -->|SLACK_BOT_TOKEN set| BotPath["chat.postMessage API"]
+    Check -->|SLACK_WEBHOOK_URL set| WHPath["Incoming Webhook POST"]
+    Check -->|Neither configured| Skip["Log warning, skip silently"]
+
+    BotPath --> Retry["Retry Logic"]
+    WHPath --> Retry
+    Retry -->|Attempt 1| Send["POST to Slack"]
+    Send -->|429 Rate Limited| Backoff["Exponential Backoff"]
+    Backoff -->|500ms / 1s / 2s| Send
+    Send -->|200 OK| Done["Resolved"]
+    Send -->|Other Error| Fail["Reject immediately"]
+```
 
 The `SlackClient` class (in `src/lib/slack-notify.ts`) selects the transport automatically:
 

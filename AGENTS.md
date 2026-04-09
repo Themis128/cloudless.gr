@@ -190,6 +190,45 @@ __tests__/
 
 ## Authentication (Cognito + Amplify v6)
 
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant App as Next.js Client
+    participant Auth as AuthProvider
+    participant Cognito as AWS Cognito
+
+    App->>Auth: configureAmplify() on mount
+    Auth->>Auth: Check NEXT_PUBLIC_COGNITO_* env vars
+    alt Missing env vars
+        Auth-->>App: Set configError state
+    end
+
+    U->>App: Navigate to /dashboard
+    App->>Auth: useAuth() hook check
+    alt Not authenticated
+        Auth-->>App: Redirect to /auth/login
+    end
+
+    U->>App: Submit credentials
+    App->>Cognito: signIn(email, password)
+    alt FORCE_CHANGE_PASSWORD
+        Cognito-->>App: Challenge
+        App->>U: New password form
+        U->>App: Submit new password
+        App->>Cognito: confirmSignIn(newPassword)
+    end    alt UserNotConfirmed
+        Cognito-->>App: UserNotConfirmedException
+        App->>U: Redirect /auth/signup?verify=email
+    end
+    Cognito-->>App: JWT tokens
+    App->>App: Decode JWT cognito:groups
+    alt admin group
+        App->>U: Show /admin panel
+    else regular user
+        App->>U: Show /dashboard
+    end
+```
+
 - **User Pool:** `us-east-1_JQWwFbO9a` with App Client `2qq6i24oc48391cmuv4kfl1rm2`
 - **Env vars required:** `NEXT_PUBLIC_COGNITO_USER_POOL_ID` + `NEXT_PUBLIC_COGNITO_CLIENT_ID` (set in `.env.local`)
 - **Admin group:** `admin` — checked via JWT `cognito:groups` claim
@@ -243,6 +282,31 @@ __tests__/
 
 ## Security
 
+```mermaid
+graph TB
+    subgraph Edge["Request Pipeline"]
+        Req["Incoming Request"] --> RL["Rate Limiter proxy.ts"]
+        RL --> CORS["CORS Check"]
+        CORS --> Headers["Security Headers"]
+    end
+    subgraph Validation["Route-Level Security"]
+        Headers --> Checkout["Checkout: server-side price lookup"]
+        Headers --> Stripe["Stripe WH: signature verification"]
+        Headers --> SlackV["Slack: HMAC-SHA256 verification"]
+        Headers --> Auth["Auth: JWT + Cognito groups"]
+    end
+
+    subgraph Secrets["Secret Management"]
+        SSM["SSM Parameter Store"] -->|getConfig| Routes["API Routes"]
+        SSM -->|throws on missing| Required["STRIPE_SECRET_KEY etc"]
+        Amplify["configureAmplify()"] -->|throws on missing| CogVars["COGNITO env vars"]
+    end
+
+    subgraph Output["Output Security"]
+        Routes --> Escape["escapeHtml() for email bodies"]
+    end
+```
+
 - **Rate limiting:** Centralized in `proxy.ts` (IP-based, per endpoint). Do not add per-route rate limiters.
 - **CORS:** Restricted to `cloudless.gr` in production, localhost in dev.
 - **Headers:** X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, Strict-Transport-Security (HSTS with preload).
@@ -277,6 +341,30 @@ __tests__/
 
 ## Optional Integrations
 
+```mermaid
+graph TB
+    subgraph Config["Configuration Layer"]
+        Env[".env.local / SSM"] --> IL["integrations.ts"]
+        IL --> IC{"isConfigured()"}
+    end
+
+    subgraph Integrations["Integration Services"]
+        IC -->|SLACK_WEBHOOK_URL| Slack["slack-notify.ts"]
+        IC -->|HUBSPOT_API_KEY| HS["hubspot.ts"]
+        IC -->|NOTION_API_KEY + DB| Notion["notion-blog.ts"]
+        IC -->|GOOGLE_* keys| GCal["google-calendar.ts"]
+        IC -->|AHREFS_API_KEY| Ahrefs["ahrefs.ts"]
+        IC -->|SENTRY_* keys| Sentry["Sentry inline"]
+    end
+
+    subgraph Patterns["Degradation Patterns"]
+        Slack -->|not configured| SkipS["Skip silently"]
+        HS -->|not configured| SkipH["Skip silently"]
+        Notion -->|not configured| Fallback["Static blog data"]
+        GCal -->|not configured| S503["503 response"]
+    end
+```
+
 All integrations are optional and degrade gracefully. Config is centralized in `src/lib/integrations.ts` which reads env vars and provides `isConfigured(...keys)` to check availability. Every API route and lib that depends on an integration checks `isConfigured()` first and returns a 503 or null/empty result when not configured.
 
 **Required env vars per integration:**
@@ -296,6 +384,32 @@ All integrations are optional and degrade gracefully. Config is centralized in `
 - **Cache:** Calendar availability is cached 5 minutes; Google OAuth tokens cached until expiry
 
 ## Webhook Fulfillment
+
+```mermaid
+sequenceDiagram
+    participant Stripe as Stripe
+    participant WH as /api/webhooks/stripe
+    participant Email as email.ts SES
+    participant Slack as slackOrderNotify
+    participant Team as notifyTeam
+
+    Stripe->>WH: POST signed event
+    WH->>WH: Verify Stripe signature
+
+    alt checkout.session.completed
+        WH->>Email: sendOrderConfirmation to customer
+        WH->>Team: notifyTeam internal email
+        WH->>Slack: slackOrderNotify fire-and-forget
+    else subscription.created/updated/deleted
+        WH->>Team: notifyTeam with details
+    else invoice.payment_failed
+        WH->>Email: sendPaymentFailureNotice to customer
+        WH->>Team: notifyTeam alert
+    else invoice.payment_succeeded
+        WH->>WH: Log payment, no email
+    end
+    WH-->>Stripe: 200 OK
+```
 
 The Stripe webhook handler (`api/webhooks/stripe/route.ts`) processes these events:
 
