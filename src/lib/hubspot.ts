@@ -1,4 +1,5 @@
 import { getIntegrations } from "@/lib/integrations";
+import { getConfig } from "@/lib/ssm-config";
 
 const HUBSPOT_API = "https://api.hubapi.com";
 
@@ -12,15 +13,29 @@ interface HubSpotContact {
   lead_source?: string;
 }
 
+/**
+ * Resolve HubSpot token: try process.env first, fall back to SSM.
+ * In Lambda, env vars aren't set for HUBSPOT_API_KEY — SSM is the source of truth.
+ */
+async function getHubSpotToken(): Promise<string> {
+  const envToken = getIntegrations().HUBSPOT_API_KEY;
+  if (envToken) return envToken;
+
+  const config = await getConfig();
+  const ssmToken = config.HUBSPOT_API_KEY;
+  if (ssmToken) return ssmToken;
+
+  throw new Error("HubSpot not configured (no token in env or SSM)");
+}
+
 async function hubspotFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  const { HUBSPOT_API_KEY } = getIntegrations();
-  if (!HUBSPOT_API_KEY) throw new Error("HubSpot not configured");
+  const token = await getHubSpotToken();
 
   return fetch(`${HUBSPOT_API}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+      Authorization: `Bearer ${token}`,
       ...options.headers,
     },
   });
@@ -29,11 +44,17 @@ async function hubspotFetch(path: string, options: RequestInit = {}): Promise<Re
 /**
  * Create or update a HubSpot contact.
  * Uses the email as the unique identifier.
- * Silently returns null if HUBSPOT_API_KEY is not set.
+ * Silently returns null if no HubSpot token is available.
  */
 export async function upsertContact(contact: HubSpotContact): Promise<string | null> {
-  const { HUBSPOT_API_KEY } = getIntegrations();
-  if (!HUBSPOT_API_KEY) return null;
+  let token: string;
+  try {
+    token = await getHubSpotToken();
+  } catch {
+    return null;
+  }
+  // token is resolved — proceed (hubspotFetch will also resolve it, but it's cached in SSM)
+  void token;
 
   try {
     const createRes = await hubspotFetch("/crm/v3/objects/contacts", {
@@ -128,8 +149,13 @@ export async function createTicket(
   data: TicketData,
   contactId?: string,
 ): Promise<{ id: string } | null> {
-  const { HUBSPOT_API_KEY } = getIntegrations();
-  if (!HUBSPOT_API_KEY) return null;
+  let token: string;
+  try {
+    token = await getHubSpotToken();
+  } catch {
+    return null;
+  }
+  void token;
 
   const properties: Record<string, string> = {
     subject: data.subject,
