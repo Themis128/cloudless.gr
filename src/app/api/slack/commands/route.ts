@@ -204,7 +204,35 @@ async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
     console.error("[Slack Commands] /cloudless-orders error:", err);
     return slackResponse({
       response_type: "ephemeral",
-      text: ":warning: Failed to fetch orders from Stripe. Check that STRIPE_SECRET_KEY is configured in SSM.",
+      blocks: [
+        {
+          type: "header",
+          text: { type: "plain_text", text: ":warning: Orders unavailable", emoji: true },
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: "Could not fetch recent orders from Stripe right now. You can still open Stripe Dashboard directly.",
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: { type: "plain_text", text: "Open Stripe Dashboard", emoji: true },
+              url: "https://dashboard.stripe.com/payments",
+              action_id: "open_stripe_dashboard",
+              style: "primary",
+            },
+          ],
+        },
+        {
+          type: "context",
+          elements: [{ type: "mrkdwn", text: `Requested by <@${payload.user_id}>` }],
+        },
+      ],
     });
   }
 }

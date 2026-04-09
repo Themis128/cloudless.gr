@@ -31,6 +31,33 @@ export interface AppConfig {
 
 let configCache: { config: AppConfig; fetchedAt: number } | null = null;
 
+function buildConfigFrom(record: Record<string, string | undefined>): AppConfig {
+  return {
+    SES_FROM_EMAIL: record.SES_FROM_EMAIL ?? process.env.SES_FROM_EMAIL ?? "",
+    SES_TO_EMAIL: record.SES_TO_EMAIL ?? process.env.SES_TO_EMAIL ?? "",
+    AWS_SES_REGION: record.AWS_SES_REGION ?? process.env.AWS_SES_REGION ?? "",
+    STRIPE_SECRET_KEY: record.STRIPE_SECRET_KEY ?? process.env.STRIPE_SECRET_KEY ?? "",
+    STRIPE_PUBLISHABLE_KEY:
+      record.STRIPE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
+    STRIPE_WEBHOOK_SECRET: record.STRIPE_WEBHOOK_SECRET ?? process.env.STRIPE_WEBHOOK_SECRET ?? "",
+    COGNITO_USER_POOL_ID:
+      record.COGNITO_USER_POOL_ID ?? process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "",
+    COGNITO_CLIENT_ID: record.COGNITO_CLIENT_ID ?? process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "",
+    SLACK_WEBHOOK_URL: record.SLACK_WEBHOOK_URL ?? process.env.SLACK_WEBHOOK_URL ?? "",
+    HUBSPOT_API_KEY: record.HUBSPOT_API_KEY ?? process.env.HUBSPOT_API_KEY ?? "",
+    NOTION_API_KEY: record.NOTION_API_KEY ?? process.env.NOTION_API_KEY ?? "",
+    NOTION_BLOG_DB_ID: record.NOTION_BLOG_DB_ID ?? process.env.NOTION_BLOG_DB_ID ?? "",
+    GOOGLE_SERVICE_ACCOUNT_EMAIL:
+      record.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? "",
+    GOOGLE_PRIVATE_KEY: record.GOOGLE_PRIVATE_KEY ?? process.env.GOOGLE_PRIVATE_KEY ?? "",
+    GOOGLE_CALENDAR_ID: record.GOOGLE_CALENDAR_ID ?? process.env.GOOGLE_CALENDAR_ID ?? "",
+    AHREFS_API_KEY: record.AHREFS_API_KEY ?? process.env.AHREFS_API_KEY ?? "",
+    SENTRY_AUTH_TOKEN: record.SENTRY_AUTH_TOKEN ?? process.env.SENTRY_AUTH_TOKEN ?? "",
+    SENTRY_ORG: record.SENTRY_ORG ?? process.env.SENTRY_ORG ?? "",
+    SENTRY_PROJECT: record.SENTRY_PROJECT ?? process.env.SENTRY_PROJECT ?? "",
+  };
+}
+
 /**
  * Fetch app config from AWS SSM Parameter Store.
  * Falls back to environment variables.
@@ -39,6 +66,13 @@ export async function getConfig(): Promise<AppConfig> {
   // Return cache if fresh
   if (configCache && Date.now() - configCache.fetchedAt < CACHE_TTL_MS) {
     return configCache.config;
+  }
+
+  // Keep tests deterministic and avoid SSM/AWS credential lookups.
+  if (process.env.NODE_ENV === "test" || process.env.VITEST === "true") {
+    const config = buildConfigFrom({});
+    configCache = { config, fetchedAt: Date.now() };
+    return config;
   }
 
   type ConfigRecord = Record<string, string | undefined>;
@@ -68,40 +102,17 @@ export async function getConfig(): Promise<AppConfig> {
   }
 
   // Build config with env var fallbacks
-  const config: AppConfig = {
-    SES_FROM_EMAIL: ssmConfig.SES_FROM_EMAIL ?? process.env.SES_FROM_EMAIL ?? "",
-    SES_TO_EMAIL: ssmConfig.SES_TO_EMAIL ?? process.env.SES_TO_EMAIL ?? "",
-    AWS_SES_REGION: ssmConfig.AWS_SES_REGION ?? process.env.AWS_SES_REGION ?? "",
-    STRIPE_SECRET_KEY: ssmConfig.STRIPE_SECRET_KEY ?? process.env.STRIPE_SECRET_KEY ?? "",
-    STRIPE_PUBLISHABLE_KEY:
-      ssmConfig.STRIPE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
-    STRIPE_WEBHOOK_SECRET:
-      ssmConfig.STRIPE_WEBHOOK_SECRET ?? process.env.STRIPE_WEBHOOK_SECRET ?? "",
-    COGNITO_USER_POOL_ID:
-      ssmConfig.COGNITO_USER_POOL_ID ?? process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "",
-    COGNITO_CLIENT_ID:
-      ssmConfig.COGNITO_CLIENT_ID ?? process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "",
-    SLACK_WEBHOOK_URL: ssmConfig.SLACK_WEBHOOK_URL ?? process.env.SLACK_WEBHOOK_URL ?? "",
-    HUBSPOT_API_KEY: ssmConfig.HUBSPOT_API_KEY ?? process.env.HUBSPOT_API_KEY ?? "",
-    NOTION_API_KEY: ssmConfig.NOTION_API_KEY ?? process.env.NOTION_API_KEY ?? "",
-    NOTION_BLOG_DB_ID: ssmConfig.NOTION_BLOG_DB_ID ?? process.env.NOTION_BLOG_DB_ID ?? "",
-    GOOGLE_SERVICE_ACCOUNT_EMAIL:
-      ssmConfig.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? "",
-    GOOGLE_PRIVATE_KEY: ssmConfig.GOOGLE_PRIVATE_KEY ?? process.env.GOOGLE_PRIVATE_KEY ?? "",
-    GOOGLE_CALENDAR_ID: ssmConfig.GOOGLE_CALENDAR_ID ?? process.env.GOOGLE_CALENDAR_ID ?? "",
-    AHREFS_API_KEY: ssmConfig.AHREFS_API_KEY ?? process.env.AHREFS_API_KEY ?? "",
-    SENTRY_AUTH_TOKEN: ssmConfig.SENTRY_AUTH_TOKEN ?? process.env.SENTRY_AUTH_TOKEN ?? "",
-    SENTRY_ORG: ssmConfig.SENTRY_ORG ?? process.env.SENTRY_ORG ?? "",
-    SENTRY_PROJECT: ssmConfig.SENTRY_PROJECT ?? process.env.SENTRY_PROJECT ?? "",
-  };
-
-  // Validate required fields
-  if (!config.SES_FROM_EMAIL || !config.SES_TO_EMAIL) {
-    throw new Error(
-      "Missing required SES config: SES_FROM_EMAIL and SES_TO_EMAIL must be set",
-    );
-  }
+  const config = buildConfigFrom(ssmConfig);
 
   configCache = { config, fetchedAt: Date.now() };
   return config;
+}
+
+export function requireSesConfig(config: AppConfig): void {
+  if (!config.SES_FROM_EMAIL || !config.SES_TO_EMAIL) {
+    throw new Error("Missing required SES config: SES_FROM_EMAIL and SES_TO_EMAIL must be set");
+  }
+  if (!config.AWS_SES_REGION) {
+    throw new Error("Missing required SES config: AWS_SES_REGION must be set");
+  }
 }

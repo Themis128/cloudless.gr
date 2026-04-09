@@ -25,7 +25,7 @@ export interface StoreProduct {
 export const categoryLabels: Record<ProductCategory, string> = {
   service: "Services",
   digital: "Digital Products",
-  physical: "Physical Merch",
+  physical: "Merch & Physical",
 };
 
 export const categoryColors: Record<ProductCategory, string> = {
@@ -113,10 +113,10 @@ export const demoProducts: StoreProduct[] = [
 
   // --- Digital Products ---
   {
-    id: "dig-playbook",
-    name: "AWS Cloud Migration Playbook",
+    id: "dig-cloud-playbook",
+    name: "Cloud Migration Playbook",
     description:
-      "250-page step-by-step guide for migrating enterprise workloads to AWS. Includes real battle-tested strategies and checklists.",
+      "250-page step-by-step guide for migrating enterprise workloads to AWS. Includes battle-tested strategies and checklists.",
     price: 4900,
     currency: "eur",
     category: "digital",
@@ -130,10 +130,26 @@ export const demoProducts: StoreProduct[] = [
     ],
   },
   {
-    id: "dig-course-serverless",
-    name: "Serverless Architecture Masterclass",
+    id: "dig-analytics-templates",
+    name: "Analytics Dashboard Templates",
     description:
-      "Video course: 8 hours + 40 hands-on labs. Learn full serverless stack (AWS Lambda, API Gateway, DynamoDB, etc.).",
+      "Production-ready analytics dashboard templates and KPI packs for modern SaaS and e-commerce teams.",
+    price: 5900,
+    currency: "eur",
+    category: "digital",
+    image: "/store/analytics-templates.svg",
+    features: [
+      "Figma + dashboard JSON packs",
+      "KPI starter set",
+      "Executive summary templates",
+      "Lifetime updates",
+    ],
+  },
+  {
+    id: "dig-serverless-course",
+    name: "Serverless Masterclass",
+    description:
+      "Video course with hands-on labs. Learn full serverless architecture patterns end-to-end.",
     price: 14900,
     currency: "eur",
     category: "digital",
@@ -146,80 +162,29 @@ export const demoProducts: StoreProduct[] = [
       "Certificate",
     ],
   },
-  {
-    id: "dig-course-terraform",
-    name: "Terraform for AWS",
-    description:
-      "Video course: 6 hours + 25 labs. Master infrastructure-as-code with Terraform, from basics to production patterns.",
-    price: 9900,
-    currency: "eur",
-    category: "digital",
-    image: "/store/terraform-course.svg",
-    features: [
-      "6 hours of video",
-      "25 hands-on labs",
-      "Module templates",
-      "Best practices guide",
-      "Lifetime access",
-    ],
-  },
-  {
-    id: "dig-template-nextjs",
-    name: "Next.js SaaS Starter",
-    description:
-      "Production-ready Next.js + Stripe + Auth0 boilerplate. Includes payments, emails, analytics, and deployment guides.",
-    price: 7900,
-    currency: "eur",
-    category: "digital",
-    image: "/store/nextjs-saas.svg",
-    features: [
-      "Full source code",
-      "Stripe integration",
-      "Auth0 setup",
-      "Email templates",
-      "Deployment guides",
-    ],
-  },
 
   // --- Physical Merch ---
   {
-    id: "phys-tshirt",
-    name: "Cloudless T-Shirt (Organic Cotton)",
+    id: "phy-dev-kit",
+    name: "Cloudless Developer Kit",
     description:
-      "Premium organic cotton t-shirt with embroidered Cloudless logo. Available in S, M, L, XL, XXL. Ships within 5 days.",
-    price: 1990,
+      "Limited-edition desk kit with notebook, sticker set, and architecture cheatsheet.",
+    price: 3500,
+    currency: "eur",
+    category: "physical",
+    image: "/store/dev-kit.svg",
+    features: ["Notebook", "Sticker pack", "Architecture cheatsheet", "Free shipping EU"],
+  },
+  {
+    id: "phy-tshirt",
+    name: "Cloudless T-Shirt",
+    description:
+      "Premium organic cotton t-shirt with embroidered Cloudless logo. Available in S, M, L, XL, XXL.",
+    price: 2500,
     currency: "eur",
     category: "physical",
     image: "/store/tshirt.svg",
     features: ["100% organic cotton", "Embroidered logo", "All sizes", "Free shipping EU"],
-  },
-  {
-    id: "phys-hoodie",
-    name: "Cloudless Hoodie",
-    description:
-      "Cozy hoodie perfect for architecture discussions. Available in black and navy. Ships within 5 days.",
-    price: 3990,
-    currency: "eur",
-    category: "physical",
-    image: "/store/hoodie.svg",
-    features: ["80% cotton / 20% poly", "Embroidered logo", "All sizes", "Free shipping EU"],
-  },
-  {
-    id: "phys-mug",
-    name: "Cloudless Developer Mug",
-    description:
-      "Ceramic mug that keeps your coffee warm while you architekt. Microwave and dishwasher safe.",
-    price: 1290,
-    currency: "eur",
-    category: "physical",
-    image: "/store/mug.svg",
-    features: [
-      "Ceramic",
-      "Microwave safe",
-      "Dishwasher safe",
-      "11 oz capacity",
-      "Free shipping EU",
-    ],
   },
 ];
 
