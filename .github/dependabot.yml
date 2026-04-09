@@ -1,0 +1,46 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Athens
+    open-pull-requests-limit: 5
+    reviewers:
+      - Themis128
+    labels:
+      - dependencies
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+        patterns:
+          - '*'
+        exclude-patterns:
+          - next
+          - sst
+          - typescript
+          - eslint
+      major:
+        update-types:
+          - major
+    ignore:
+      # SST and Next.js majors need careful testing
+      - dependency-name: sst
+        update-types: ['version-update:semver-major']
+      - dependency-name: next
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Athens
+    open-pull-requests-limit: 3
+    labels:
+      - ci

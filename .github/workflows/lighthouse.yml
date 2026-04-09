@@ -1,0 +1,46 @@
+name: Lighthouse Audit
+
+on:
+  workflow_run:
+    workflows: ['Deploy to Production']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to audit'
+        default: 'https://cloudless.gr'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Performance Audit
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Lighthouse
+        id: lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: |
+            ${{ github.event.inputs.url || 'https://cloudless.gr' }}
+            ${{ github.event.inputs.url || 'https://cloudless.gr/en' }}
+          budgetPath: .github/lighthouse-budget.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: Check thresholds
+        run: |
+          echo "## Lighthouse Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Metric | Score |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Performance | ${{ fromJSON(steps.lighthouse.outputs.manifest)[0].summary.performance }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Accessibility | ${{ fromJSON(steps.lighthouse.outputs.manifest)[0].summary.accessibility }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Best Practices | ${{ fromJSON(steps.lighthouse.outputs.manifest)[0].summary['best-practices'] }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SEO | ${{ fromJSON(steps.lighthouse.outputs.manifest)[0].summary.seo }} |" >> "$GITHUB_STEP_SUMMARY"
