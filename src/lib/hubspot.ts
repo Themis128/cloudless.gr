@@ -109,3 +109,94 @@ export async function listContacts(limit = 10): Promise<unknown[]> {
     return [];
   }
 }
+
+/* ─── Ticket support (requires 'tickets' scope) ─────────────────── */
+
+interface TicketData {
+  subject: string;
+  content: string;
+  hs_pipeline?: string;
+  hs_pipeline_stage?: string;
+  hs_ticket_priority?: string;
+}
+
+/**
+ * Create a HubSpot support ticket.
+ * Optionally associate it with an existing contact.
+ */
+export async function createTicket(
+  data: TicketData,
+  contactId?: string,
+): Promise<{ id: string } | null> {
+  const { HUBSPOT_API_KEY } = getIntegrations();
+  if (!HUBSPOT_API_KEY) return null;
+
+  const properties: Record<string, string> = {
+    subject: data.subject,
+    content: data.content,
+    hs_pipeline: data.hs_pipeline || '0',
+    hs_pipeline_stage: data.hs_pipeline_stage || '1',
+    hs_ticket_priority: data.hs_ticket_priority || 'MEDIUM',
+  };
+
+  const body: Record<string, unknown> = { properties };
+
+  if (contactId) {
+    body.associations = [
+      {
+        to: { id: contactId },
+        types: [
+          {
+            associationCategory: 'HUBSPOT_DEFINED',
+            associationTypeId: 16,
+          },
+        ],
+      },
+    ];
+  }
+
+  const res = await hubspotFetch('/crm/v3/objects/tickets', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      `HubSpot API error ${res.status}: ${JSON.stringify(err)}`,
+    );
+  }
+
+  const ticket = await res.json();
+  return { id: ticket.id };
+}
+
+/**
+ * Search contacts by a property (e.g. email).
+ */
+export async function searchContacts(
+  propertyName: string,
+  value: string,
+): Promise<{ total: number; results: Array<{ id: string; properties: Record<string, string> }> }> {
+  const res = await hubspotFetch('/crm/v3/objects/contacts/search', {
+    method: 'POST',
+    body: JSON.stringify({
+      filterGroups: [
+        {
+          filters: [
+            { propertyName, operator: 'EQ', value },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      `HubSpot API error ${res.status}: ${JSON.stringify(err)}`,
+    );
+  }
+
+  return res.json();
+}
