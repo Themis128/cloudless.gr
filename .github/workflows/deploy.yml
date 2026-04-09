@@ -50,4 +50,4 @@ jobs:
           aws-region: us-east-1
 
       - name: Deploy with SST
-        run: pnpm deploy
+        run: pnpm run deploy
