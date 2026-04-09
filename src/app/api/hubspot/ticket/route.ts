@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[HubSpot] Ticket created:', ticket.id);
+    console.warn('[HubSpot] Ticket created:', ticket.id);
 
     return NextResponse.json({
       success: true,
