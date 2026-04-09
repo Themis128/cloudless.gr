@@ -84,10 +84,12 @@ src/
 
 ## Slack Integration
 
-The app has a full two-way Slack integration:
+The app has a full two-way Slack integration. Last verified 2026-04-09 (56 unit tests, 12 integration tests — all pass).
 
 **Outbound notifications** (cloudless.gr → Slack):
+- `slackContactNotify` — fires on every contact form submission (fire-and-forget, parallel with HubSpot CRM upsert)
 - `slackSubscriberNotify` — fires on every newsletter sign-up, in parallel with the SES email
+- `slackOrderNotify` — fires on Stripe checkout completion with amount and session ID
 - `slackErrorNotify` — surface unexpected API errors to your Slack channel
 - `slackDeployNotify` — post deploy status from CI/CD
 
