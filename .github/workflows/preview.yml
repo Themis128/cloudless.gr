@@ -1,5 +1,8 @@
 name: Preview Deploy
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   pull_request:
     branches: [main]
@@ -27,19 +30,31 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        id: awscreds
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::278585680617:role/GitHubActionsOIDC
+          role-session-name: gha-preview-${{ github.run_id }}
           aws-region: us-east-1
+          audience: sts.amazonaws.com
+
+      - name: Fail with OIDC trust-policy guidance
+        if: steps.awscreds.outcome == 'failure'
+        run: |
+          echo "OIDC assume role failed for PR preview."
+          echo "If this is from a fork, GitHub will not grant OIDC tokens by default."
+          echo "If this is an internal PR, allow sub claim repo:Themis128/cloudless.gr:pull_request in the IAM trust policy."
+          exit 1
 
       - name: Deploy staging
         id: deploy

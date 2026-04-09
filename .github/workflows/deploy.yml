@@ -1,5 +1,8 @@
 name: Deploy to Production
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   push:
     branches: [main]
@@ -35,13 +38,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
@@ -58,11 +61,32 @@ jobs:
       - name: Unit tests
         run: pnpm test:ci
 
+      - name: Show OIDC token claims
+        run: |
+          set -euo pipefail
+          TOKEN_JSON=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")
+          OIDC_TOKEN=$(echo "$TOKEN_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')
+          PAYLOAD=$(echo "$OIDC_TOKEN" | cut -d '.' -f2)
+          PAYLOAD="$PAYLOAD" python3 -c 'import base64,json,os; p=os.environ["PAYLOAD"]; p += "=" * (-len(p)%4); d=json.loads(base64.urlsafe_b64decode(p).decode()); print(f"OIDC sub: {d.get(\"sub\",\"\")}"); print(f"OIDC aud: {d.get(\"aud\",\"\")}"); print(f"OIDC repository: {d.get(\"repository\",\"\")}"); print(f"OIDC ref: {d.get(\"ref\",\"\")}")'
+
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        id: awscreds
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::278585680617:role/GitHubActionsOIDC
+          role-session-name: gha-deploy-${{ github.run_id }}
           aws-region: us-east-1
+          audience: sts.amazonaws.com
+
+      - name: Fail with OIDC trust-policy guidance
+        if: steps.awscreds.outcome == 'failure'
+        run: |
+          echo "OIDC assume role failed. Update IAM trust policy for arn:aws:iam::278585680617:role/GitHubActionsOIDC."
+          echo "Provider: token.actions.githubusercontent.com"
+          echo "Audience: sts.amazonaws.com"
+          echo "Expected deploy subject: repo:Themis128/cloudless.gr:ref:refs/heads/main"
+          exit 1
 
       - name: Deploy with SST
         run: pnpm run deploy
