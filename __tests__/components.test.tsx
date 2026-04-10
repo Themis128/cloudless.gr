@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { AbstractIntlMessages } from "next-intl";
@@ -183,8 +183,22 @@ describe("ScrollReveal", () => {
 // ──────────────────────────────────────────
 
 describe("Navbar", () => {
+  let preventLinkNavigation: (e: MouseEvent) => void;
+
   beforeEach(() => {
     document.cookie = `NEXT_LOCALE=en; path=/`;    document.documentElement.lang = "en";
+    // Prevent jsdom "Not implemented: navigation to another Document" on anchor clicks
+    preventLinkNavigation = (e: MouseEvent) => {
+      const target = e.target as Element | null;
+      if (target instanceof HTMLAnchorElement || target?.closest?.("a")) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("click", preventLinkNavigation, true);
+  });
+
+  afterEach(() => {
+    document.removeEventListener("click", preventLinkNavigation, true);
   });
 
   function renderNavbar() {
