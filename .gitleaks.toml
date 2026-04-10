@@ -1,0 +1,6 @@
+# Gitleaks configuration to exclude false positives
+
+[[allowlist]]
+paths = ["assets/docs/", "docs/"]
+regexes = ["REDACTED", "placeholder", "<token>", "<key>", "<secret>"]
+description = "Exclude documented examples with placeholder values"
