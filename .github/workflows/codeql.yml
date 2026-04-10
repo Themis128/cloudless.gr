@@ -41,7 +41,9 @@ jobs:
         uses: github/codeql-action/autobuild@v3
 
       - name: Perform CodeQL Analysis
-        continue-on-error: true  # SARIF upload requires "Code scanning" enabled in repo Settings → Security
+        # Note: Code scanning must be enabled in repo Settings → Security for SARIF upload
+        # This step may fail in forked repositories or when code scanning is disabled
         uses: github/codeql-action/analyze@v3
+        continue-on-error: true
         with:
           category: '/language:${{ matrix.language }}'
