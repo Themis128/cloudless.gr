@@ -78,7 +78,7 @@ export default function BlogPage() {
                       {formatDate(post.date)}
                     </time>
                     <span className="text-neon-cyan inline-flex items-center gap-1 font-mono text-sm font-semibold transition-all group-hover:gap-2">
-                      Read more
+                      Read: {post.title}
                       <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 7h8M7 3l4 4-4 4" />
                       </svg>
