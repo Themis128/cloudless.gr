@@ -16,21 +16,17 @@ export default function ServiceWorkerRegistration() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
 
+  const isE2E = process.env.NEXT_PUBLIC_E2E === "1";
+
   useEffect(() => {
-    // Register service worker
+    if (isE2E) return;
     if ("serviceWorker" in navigator && !hasRegisteredServiceWorker) {
       hasRegisteredServiceWorker = true;
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((reg) => {
-          console.warn("[SW] Registered:", reg.scope);
-        })
-        .catch((err) => {
-          console.warn("[SW] Registration failed:", err);
-        });
+      navigator.serviceWorker.register("/sw.js").catch(() => {
+        // Intentionally silent: SW registration is an enhancement, not a hard requirement.
+      });
     }
 
-    // Listen for install prompt
     const handler = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e as BeforeInstallPromptEvent);
@@ -39,7 +35,7 @@ export default function ServiceWorkerRegistration() {
 
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
+  }, [isE2E]);
 
   async function handleInstall() {
     if (!installPrompt) return;
@@ -51,7 +47,7 @@ export default function ServiceWorkerRegistration() {
     setInstallPrompt(null);
   }
 
-  if (!showBanner) return null;
+  if (isE2E || !showBanner) return null;
 
   return (
     <div className="animate-fade-in-up fixed right-4 bottom-4 left-4 z-50 md:right-6 md:left-auto md:max-w-sm">
