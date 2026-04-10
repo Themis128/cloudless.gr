@@ -126,6 +126,18 @@ async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
             text: { type: "mrkdwn", text: "No checkout sessions found in Stripe." },
           },
           {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: { type: "plain_text", text: "Open Stripe Dashboard", emoji: true },
+                url: "https://dashboard.stripe.com/payments",
+                action_id: "open_stripe_dashboard",
+                style: "primary",
+              },
+            ],
+          },
+          {
             type: "context",
             elements: [
               { type: "mrkdwn", text: `Requested by <@${payload.user_id}>` },

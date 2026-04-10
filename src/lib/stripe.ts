@@ -42,29 +42,42 @@ export interface RecentOrder {
 /**
  * Fetch the most recent completed checkout sessions from Stripe.
  * Used by the /cloudless-orders slash command and admin dashboard.
+ * Returns empty result when Stripe is not configured or unavailable.
  */
 export async function listRecentCheckoutSessions(
   limit: number = 10,
 ): Promise<{ orders: RecentOrder[]; hasMore: boolean }> {
-  const stripe = await getStripe();
+  try {
+    const config = await getConfig();
+    if (!config.STRIPE_SECRET_KEY) {
+      return { orders: [], hasMore: false };
+    }
 
-  const sessions = await stripe.checkout.sessions.list({
-    limit,
-    expand: ["data.line_items"],
-  });
+    if (!stripeInstance) {
+      stripeInstance = new Stripe(config.STRIPE_SECRET_KEY);
+    }
 
-  const orders: RecentOrder[] = sessions.data.map((s) => ({
-    id: s.id,
-    email: s.customer_email ?? s.customer_details?.email ?? null,
-    amount: s.amount_total ?? 0,
-    currency: (s.currency ?? "eur").toUpperCase(),
-    status: s.status ?? "unknown",
-    created: s.created,
-    paymentStatus: s.payment_status,
-    mode: s.mode ?? "payment",
-  }));
+    const sessions = await stripeInstance.checkout.sessions.list({
+      limit,
+      expand: ["data.line_items"],
+    });
 
-  return { orders, hasMore: sessions.has_more };
+    const orders: RecentOrder[] = sessions.data.map((s) => ({
+      id: s.id,
+      email: s.customer_email ?? s.customer_details?.email ?? null,
+      amount: s.amount_total ?? 0,
+      currency: (s.currency ?? "eur").toUpperCase(),
+      status: s.status ?? "unknown",
+      created: s.created,
+      paymentStatus: s.payment_status,
+      mode: s.mode ?? "payment",
+    }));
+
+    return { orders, hasMore: sessions.has_more };
+  } catch (err) {
+    console.error("Failed to list recent checkout sessions:", err);
+    return { orders: [], hasMore: false };
+  }
 }
 
 // ---------------------------------------------------------------------------
