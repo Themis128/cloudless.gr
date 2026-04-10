@@ -76,7 +76,6 @@ jobs:
 
       - name: Configure AWS credentials
         id: awscreds
-        continue-on-error: true
         uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::278585680617:role/GitHubActionsOIDC
