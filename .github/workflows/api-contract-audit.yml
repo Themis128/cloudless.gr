@@ -1,0 +1,30 @@
+name: API Contract Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/api/**'
+      - '__tests__/*api.test.ts'
+      - '__tests__/stripe-webhook-api.test.ts'
+      - '__tests__/health-api.test.ts'
+      - '__tests__/subscribe-api.test.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-tests:
+    name: API Contract Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:ci -- __tests__/contact-api.test.ts __tests__/checkout-api.test.ts __tests__/health-api.test.ts __tests__/subscribe-api.test.ts __tests__/stripe-webhook-api.test.ts

@@ -267,7 +267,7 @@ export default function CookieConsent() {
                     href="/cookies"
                     className="text-neon-cyan hover:underline"
                   >
-                    {t("cookies.learnMore", "Learn more")}
+                    {t("cookies.learnMore", "Read our cookie policy")}
                   </Link>
                 </p>
               </div>

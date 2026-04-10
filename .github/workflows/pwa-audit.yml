@@ -1,0 +1,30 @@
+name: PWA Runtime Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'public/sw.js'
+      - 'public/offline.html'
+      - 'src/components/ServiceWorkerRegistration.tsx'
+      - '__tests__/sw-runtime.test.ts'
+      - '__tests__/service-worker.test.tsx'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pwa:
+    name: Service Worker Runtime Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:ci -- __tests__/sw-runtime.test.ts __tests__/service-worker.test.tsx

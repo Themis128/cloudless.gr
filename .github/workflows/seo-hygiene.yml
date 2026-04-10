@@ -1,0 +1,32 @@
+name: SEO Hygiene Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'src/locales/**'
+      - 'scripts/audit/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seo:
+    name: Link Text and SEO Baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Check descriptive link text
+        run: node scripts/audit/check-generic-link-text.mjs
+      - name: Validate robots and sitemap presence
+        run: |
+          test -f src/app/robots.ts
+          test -f src/app/sitemap.ts
+          echo "robots.ts and sitemap.ts found"

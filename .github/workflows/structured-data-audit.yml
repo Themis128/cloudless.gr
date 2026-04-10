@@ -1,0 +1,29 @@
+name: Structured Data Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/lib/structured-data.ts'
+      - 'src/components/JsonLd.tsx'
+      - '__tests__/structured-data.test.ts'
+      - 'src/app/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schema:
+    name: JSON-LD Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:ci -- __tests__/structured-data.test.ts
