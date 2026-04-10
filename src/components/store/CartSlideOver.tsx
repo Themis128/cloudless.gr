@@ -59,7 +59,10 @@ export default function CartSlideOver() {
           <div className="border-neon-cyan/10 flex items-center justify-between border-b px-6 py-4">
             <h2 className="font-mono text-lg font-bold text-white">Cart ({totalItems})</h2>
             <button
+              type="button"
               onClick={closeCart}
+              aria-label="Close cart"
+              title="Close cart"
               className="hover:text-neon-cyan active:text-neon-cyan flex min-h-[44px] min-w-[44px] items-center justify-center p-2 text-slate-500 transition-colors"
             >
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">

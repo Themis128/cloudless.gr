@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Instrument_Sans, Work_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -21,6 +21,15 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+// ── Viewport (must be a separate export per Next.js 13+) ──────────────────
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#0a0a0f",
+  colorScheme: "dark",
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://cloudless.gr"),
   title: {
@@ -39,6 +48,18 @@ export const metadata: Metadata = {
     "Greece",
   ],
   authors: [{ name: "Cloudless" }],
+  // ── iOS PWA ────────────────────────────────────────────────────────────
+  appleWebApp: {
+    capable: true,
+    title: "Cloudless",
+    statusBarStyle: "black-translucent",
+  },
+  // Prevent iOS from auto-linking phone number strings
+  formatDetection: { telephone: false },
+  // Apple touch icon
+  icons: {
+    apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+  },
   openGraph: {
     title: "Cloudless — Cloud Computing, Serverless & AI Marketing",
     description:

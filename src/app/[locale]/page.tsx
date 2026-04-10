@@ -275,7 +275,7 @@ export default async function Home() {
                 <div className="bg-void-light/30 hover:border-neon-cyan/30 flex items-start gap-4 rounded-xl border border-slate-800 p-5 transition-colors">
                   <span className="mt-0.5 text-2xl">{g.icon}</span>
                   <div>
-                    <h3 className="font-mono text-sm font-semibold text-white">{g.title}</h3>
+                    <p className="font-mono text-sm font-semibold text-white">{g.title}</p>
                     <p className="mt-1 text-xs leading-relaxed text-slate-400">{g.desc}</p>
                   </div>
                 </div>
