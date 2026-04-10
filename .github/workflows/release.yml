@@ -34,6 +34,7 @@ jobs:
             const tag = '${{ steps.version.outputs.tag }}';
             const runUrl = '${{ github.event.workflow_run.html_url }}';
             const sha = '${{ github.event.workflow_run.head_sha }}';
+            
             await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
