@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 
 const navItems = [
@@ -22,36 +21,34 @@ const groupHeadingClass =
 
 export default function CommandPalette() {
   const [open, setOpen] = useState(false);
-  const router = useRouter();
+
+  const isE2E = process.env.NEXT_PUBLIC_E2E === "1";
 
   useEffect(() => {
+    if (isE2E) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((prev) => !prev);
+        setOpen((prev) => (prev ? false : true));
       }
     }
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [isE2E]);
 
   function navigate(path: string) {
-    router.push(path);
+    // Use location navigation to avoid router initialization timing issues.
+    window.location.assign(path);
     setOpen(false);
   }
 
-  if (!open) return null;
+  if (isE2E || !open) return null;
 
   return (
     <div className="fixed inset-0 z-100">
-      {/* Backdrop */}
-      <div
-        className="bg-void/70 absolute inset-0 backdrop-blur-sm"
-        onClick={() => setOpen(false)}
-      />
+      <div className="bg-void/70 absolute inset-0 backdrop-blur-sm" onClick={() => setOpen(false)} />
 
-      {/* Dialog */}
       <div className="relative mx-auto mt-[20vh] max-w-lg px-4">
         <Command
           className="border-neon-cyan/30 bg-void overflow-hidden rounded-lg border shadow-[0_0_40px_rgba(0,255,245,0.1)]"

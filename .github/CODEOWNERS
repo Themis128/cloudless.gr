@@ -1,0 +1,5 @@
+# Global owner — reviews are auto-requested on every PR
+* @Themis128
+
+# GitHub Actions workflows — require explicit review
+.github/workflows/ @Themis128

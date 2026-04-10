@@ -77,11 +77,30 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:ci
 
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [lint, typecheck, format, test]
+    env:
+      NEXT_PUBLIC_COGNITO_USER_POOL_ID: us-east-1_JQWwFbO9a
+      NEXT_PUBLIC_COGNITO_CLIENT_ID: 2qq6i24oc48391cmuv4kfl1rm2
+      NEXT_PUBLIC_HUBSPOT_PORTAL_ID: "147639927"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [lint, typecheck, format, test]
+    needs: [build]
     env:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: us-east-1_JQWwFbO9a
       NEXT_PUBLIC_COGNITO_CLIENT_ID: 2qq6i24oc48391cmuv4kfl1rm2
@@ -98,10 +117,10 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Run E2E tests
         run: pnpm test:e2e
-      - name: Upload test results
-        if: failure()
+      - name: Upload Playwright report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ github.run_id }}
           path: playwright-report/
-          retention-days: 7
+          retention-days: 14

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import StoreGrid from "@/components/store/StoreGrid";
 import JsonLd from "@/components/JsonLd";
+import StoreGrid from "@/components/store/StoreGrid";
 import { getFAQSchema } from "@/lib/structured-data";
+import { getProducts } from "@/lib/store-products";
 
 export const metadata: Metadata = {
   title: "Store",
@@ -66,12 +67,13 @@ const testimonials = [
   },
 ];
 
-export default function StorePage() {
+export default async function StorePage() {
+  const products = await getProducts();
+
   return (
     <>
       <JsonLd data={getFAQSchema(storeFAQs)} />
 
-      {/* Header */}
       <section className="bg-void scanlines relative py-16 text-white md:py-20">
         <div className="cyber-grid absolute inset-0 opacity-30" />
         <div className="relative z-10 mx-auto max-w-6xl px-6">
@@ -91,14 +93,12 @@ export default function StorePage() {
         </div>
       </section>
 
-      {/* Product Grid */}
       <section className="bg-void dot-matrix py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-6">
-          <StoreGrid />
+          <StoreGrid products={products} />
         </div>
       </section>
 
-      {/* Testimonials */}
       <section className="bg-void border-t border-slate-800 py-16 md:py-20">
         <div className="mx-auto max-w-6xl px-6">
           <p className="text-neon-cyan mb-2 font-mono text-xs font-medium tracking-[0.3em]">
@@ -109,20 +109,20 @@ export default function StorePage() {
           </h2>
 
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {testimonials.map((t) => (
+            {testimonials.map((testimonial) => (
               <div
-                key={t.name}
+                key={testimonial.name}
                 className="bg-void-light/50 hover:border-neon-cyan/30 rounded-xl border border-slate-800 p-6 transition-colors"
               >
                 <div className="text-neon-cyan/40 mb-3 font-serif text-3xl">&ldquo;</div>
-                <p className="text-sm leading-relaxed text-slate-300">{t.quote}</p>
+                <p className="text-sm leading-relaxed text-slate-300">{testimonial.quote}</p>
                 <div className="mt-6 flex items-center gap-3">
                   <div className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan flex h-8 w-8 items-center justify-center rounded-full border font-mono text-xs font-bold">
-                    {t.name.charAt(0)}
+                    {testimonial.name.charAt(0)}
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">{t.name}</p>
-                    <p className="font-mono text-[10px] text-slate-500">{t.role}</p>
+                    <p className="text-xs font-semibold text-white">{testimonial.name}</p>
+                    <p className="font-mono text-[10px] text-slate-500">{testimonial.role}</p>
                   </div>
                 </div>
               </div>
@@ -131,7 +131,6 @@ export default function StorePage() {
         </div>
       </section>
 
-      {/* Store FAQ */}
       <section className="bg-void border-t border-slate-800 py-16 md:py-20">
         <div className="mx-auto max-w-5xl px-6">
           <p className="text-neon-cyan mb-2 font-mono text-xs font-medium tracking-[0.3em]">
