@@ -67,7 +67,8 @@ jobs:
           TOKEN_JSON=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")
           OIDC_TOKEN=$(echo "$TOKEN_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')
           PAYLOAD=$(echo "$OIDC_TOKEN" | cut -d '.' -f2)
-          PAYLOAD="$PAYLOAD" python3 -c 'import base64,json,os; p=os.environ["PAYLOAD"]; p += "=" * (-len(p)%4); d=json.loads(base64.urlsafe_b64decode(p).decode()); print(f"OIDC sub: {d.get(\"sub\",\"\")}"); print(f"OIDC aud: {d.get(\"aud\",\"\")}"); print(f"OIDC repository: {d.get(\"repository\",\"\")}"); print(f"OIDC ref: {d.get(\"ref\",\"\")}")'
+          PAYLOAD="$PAYLOAD" python3 -c \
+            'import base64,json,os; p=os.environ["PAYLOAD"]; p+="="*(-len(p)%4); d=json.loads(base64.urlsafe_b64decode(p).decode()); print("OIDC sub: "+d.get("sub","")); print("OIDC aud: "+str(d.get("aud",""))); print("OIDC repository: "+d.get("repository","")); print("OIDC ref: "+d.get("ref",""))'
 
       - name: Configure AWS credentials
         id: awscreds
