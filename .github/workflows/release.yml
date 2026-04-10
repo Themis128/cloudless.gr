@@ -7,6 +7,7 @@ on:
     branches: [main]
 
 permissions:
+  releases: write
   contents: write
 
 jobs:
