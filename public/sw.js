@@ -1,12 +1,15 @@
 /* global Response, URL, caches, fetch, self */
 
 // Bump CACHE_VERSION on each deploy to invalidate stale caches
-const CACHE_VERSION = "4";
+const CACHE_VERSION = "5";
 const CACHE_NAME = `cloudless-v${CACHE_VERSION}`;
 const STATIC_CACHE = `cloudless-static-v${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `cloudless-dynamic-v${CACHE_VERSION}`;
 
 const STATIC_ASSETS = ["/", "/offline.html", "/manifest.webmanifest"];
+
+// Max entries in the dynamic cache to prevent unbounded growth
+const DYNAMIC_CACHE_MAX = 50;
 
 const STATIC_EXTENSIONS = [
   ".png",
@@ -60,16 +63,37 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Helper: clone and cache a response safely
+// Message handler — supports SKIP_WAITING for a controlled update flow
+self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
+// Helper: clone and cache a response safely, then trim the dynamic cache
 function cacheResponse(cacheName, request, response) {
   try {
     const cloned = response.clone();
     caches.open(cacheName).then((cache) => {
-      cache.put(request, cloned);
+      cache.put(request, cloned).then(() => {
+        if (cacheName === DYNAMIC_CACHE) trimDynamicCache();
+      });
     });
   } catch {
     // Response body already consumed — skip caching
   }
+}
+
+// Evict the oldest entries when DYNAMIC_CACHE exceeds the size limit
+function trimDynamicCache() {
+  caches.open(DYNAMIC_CACHE).then((cache) => {
+    cache.keys().then((keys) => {
+      const excess = keys.length - DYNAMIC_CACHE_MAX;
+      if (excess > 0) {
+        Promise.all(keys.slice(0, excess).map((k) => cache.delete(k)));
+      }
+    });
+  });
 }
 
 function handleApiRequest(request) {
@@ -103,17 +127,19 @@ function handleNavigationRequest(event) {
     });
 }
 
+// Stale-while-revalidate: serve from cache immediately, update in background
 function handleStaticAssetRequest(request) {
-  return caches.match(request).then((cached) => {
-    if (cached) {
-      return cached;
-    }
-
-    return fetch(request).then((response) => {
-      if (response.ok) {
-        cacheResponse(STATIC_CACHE, request, response);
-      }
-      return response;
+  return caches.open(STATIC_CACHE).then((cache) => {
+    return cache.match(request).then((cached) => {
+      // Always kick off a background revalidation
+      const networkFetch = fetch(request)
+        .then((response) => {
+          if (response.ok) cache.put(request, response.clone());
+          return response;
+        })
+        .catch(() => null);
+      // Return cached immediately; fall back to network if not cached yet
+      return cached || networkFetch;
     });
   });
 }
@@ -156,7 +182,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for static assets
+  // Stale-while-revalidate for static assets
   const isStaticAsset = STATIC_EXTENSIONS.some((ext) =>
     url.pathname.endsWith(ext),
   );
@@ -172,9 +198,12 @@ self.addEventListener("fetch", (event) => {
 
 // Push notification handler
 self.addEventListener("push", (event) => {
-  const data = event.data
-    ? event.data.json()
-    : { title: "Cloudless", body: "New notification" };
+  let data = { title: "Cloudless", body: "New notification", url: undefined };
+  try {
+    if (event.data) data = event.data.json();
+  } catch {
+    // Malformed push payload — use defaults
+  }
 
   event.waitUntil(
     self.registration.showNotification(data.title, {

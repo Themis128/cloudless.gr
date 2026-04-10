@@ -272,7 +272,10 @@
     "pushTitle": "Restez Informé",
     "pushDesc": "Recevez des notifications sur les nouvelles fonctionnalités et mises à jour.",
     "enable": "Activer les Notifications",
-    "maybeLater": "Plus Tard"
+    "maybeLater": "Plus Tard",
+    "updateTitle": "Mise à jour disponible",
+    "updateDesc": "Une nouvelle version de Cloudless est prête.",
+    "reload": "Recharger"
   },
   "legal": {
     "legalDocument": "DOCUMENT JURIDIQUE",

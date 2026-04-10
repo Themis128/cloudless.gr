@@ -272,7 +272,10 @@
     "pushTitle": "Stay Updated",
     "pushDesc": "Get notified about new features and updates.",
     "enable": "Enable Notifications",
-    "maybeLater": "Maybe Later"
+    "maybeLater": "Maybe Later",
+    "updateTitle": "Update available",
+    "updateDesc": "A new version of Cloudless is ready.",
+    "reload": "Reload"
   },
   "legal": {
     "legalDocument": "LEGAL DOCUMENT",

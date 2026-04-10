@@ -35,10 +35,24 @@ const mockRegister = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockRegister.mockResolvedValue({ scope: "/" });
+
+  const mockRegistration = {
+    scope: "/",
+    waiting: null,
+    installing: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  };
+  mockRegister.mockResolvedValue(mockRegistration);
 
   Object.defineProperty(navigator, "serviceWorker", {
-    value: { register: mockRegister },
+    value: {
+      register: mockRegister,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      ready: Promise.resolve(mockRegistration),
+      controller: null,
+    },
     writable: true,
     configurable: true,
   });

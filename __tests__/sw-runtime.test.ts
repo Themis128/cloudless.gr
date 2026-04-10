@@ -30,12 +30,17 @@ function loadServiceWorker() {
 
   const dynamicPut = vi.fn(async () => undefined);
   const staticPut = vi.fn(async () => undefined);
+  const cacheMatch = vi.fn(async () => undefined as Response | undefined);
+  const cacheKeys = vi.fn(async () => [] as Request[]);
 
   const cachesMock = {
     open: vi.fn(async (cacheName: string) => ({
       addAll: vi.fn(async () => undefined),
       add: vi.fn(async () => undefined),
       put: cacheName.includes("static") ? staticPut : dynamicPut,
+      match: cacheMatch,
+      keys: cacheKeys,
+      delete: vi.fn(async () => true),
     })),
     keys: vi.fn(async () => [] as string[]),
     delete: vi.fn(async () => true),
@@ -77,6 +82,8 @@ function loadServiceWorker() {
     selfMock,
     dynamicPut,
     staticPut,
+    cacheMatch,
+    cacheKeys,
   };
 }
 
@@ -125,20 +132,24 @@ describe("service worker runtime", () => {
     expect(await response?.text()).toContain("API unavailable offline");
   });
 
-  it("serves cached static assets without hitting network", async () => {
-    const { listeners, cachesMock, fetchMock } = loadServiceWorker();
+  it("serves cached static assets via stale-while-revalidate", async () => {
+    const { listeners, fetchMock, cacheMatch } = loadServiceWorker();
     const handler = listeners.get("fetch");
     expect(handler).toBeTruthy();
 
     const cached = new Response("cached-js", { status: 200 });
-    cachesMock.match.mockResolvedValueOnce(cached);
+    cacheMatch.mockResolvedValueOnce(cached);
+    // SWR fires background revalidation — provide a network response so fetch doesn't throw
+    fetchMock.mockResolvedValue(new Response("fresh-js", { status: 200 }));
 
     const event = createFetchEvent(new Request("http://localhost:4000/app.js"));
     handler?.(event as unknown as FetchEvent);
 
     const response = await event.getResponse();
+    // Cached version returned immediately
     expect(response).toBe(cached);
-    expect(fetchMock).not.toHaveBeenCalled();
+    // Background revalidation fetch was fired
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("caches successful navigation responses in dynamic cache", async () => {
