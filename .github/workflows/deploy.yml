@@ -24,12 +24,16 @@ concurrency:
 permissions:
   id-token: write
   contents: read
+  deployments: write
 
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment:
+      name: production
+      url: https://cloudless.gr
 
     env:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: us-east-1_JQWwFbO9a
