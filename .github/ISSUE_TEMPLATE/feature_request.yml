@@ -1,0 +1,64 @@
+name: Feature Request
+description: Suggest an improvement or new capability
+labels: [enhancement]
+assignees: [Themis128]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! Please describe what you'd like to see and why.
+
+  - type: input
+    id: title
+    attributes:
+      label: Feature summary
+      placeholder: "e.g. Add Greek bank transfer as a payment option in checkout"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What existing pain point does this solve?
+      placeholder: "Currently users can only pay by card. Greek SMBs often prefer bank transfer."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches you explored?
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Frontend / UI
+        - API / Backend
+        - Authentication
+        - Store / Payments
+        - Performance
+        - Internationalisation
+        - DevOps / CI
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this hasn't been requested yet
+          required: true
