@@ -1,0 +1,49 @@
+{
+  "name": "cloudless.gr",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+
+  "features": {
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-typescript-next",
+        "vitest.explorer",
+        "ms-playwright.playwright",
+        "amazonwebservices.aws-toolkit-vscode",
+        "github.copilot",
+        "github.vscode-pull-request-github",
+        "streetsidesoftware.code-spell-checker"
+      ],
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    }
+  },
+
+  "postCreateCommand": "corepack enable && pnpm install",
+
+  "remoteEnv": {
+    "NEXT_PUBLIC_COGNITO_USER_POOL_ID": "${localEnv:NEXT_PUBLIC_COGNITO_USER_POOL_ID}",
+    "NEXT_PUBLIC_COGNITO_CLIENT_ID": "${localEnv:NEXT_PUBLIC_COGNITO_CLIENT_ID}"
+  },
+
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js dev server",
+      "onAutoForward": "openPreview"
+    }
+  }
+}

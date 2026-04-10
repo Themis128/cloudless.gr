@@ -25,7 +25,6 @@ permissions:
   id-token: write
   contents: read
   deployments: write
-  deployments: write
 
 jobs:
   deploy:
