@@ -1,5 +1,1 @@
-import { permanentRedirect } from "next/navigation";
-
-export default function ServicesPage() {
-  permanentRedirect("/en/services");
-}
+export { default } from "../[locale]/services/page";
