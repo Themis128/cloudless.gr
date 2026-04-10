@@ -42,10 +42,10 @@ export default function NewsletterForm() {
 
   return (
     <div>
-      <h4 className="text-neon-cyan/70 mb-4 font-mono text-[10px] font-medium tracking-[0.3em]">
+      <p className="text-neon-cyan/80 mb-4 font-mono text-[10px] font-medium tracking-[0.3em]">
         {translate(locale, "newsletter.title", "NEWSLETTER")}
-      </h4>
-      <p className="mb-3 text-xs text-slate-500">
+      </p>
+      <p className="mb-3 text-xs text-slate-400">
         {translate(
           locale,
           "newsletter.subtitle",
@@ -71,13 +71,13 @@ export default function NewsletterForm() {
             : translate(locale, "newsletter.cta", "Subscribe")}
         </button>
       </form>
-      <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+      <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
         {translate(
           locale,
           "newsletter.consent",
           "By subscribing, you agree to receive our newsletter and accept our",
         )}{" "}
-        <Link href="/privacy" className="text-neon-cyan/60 hover:underline">
+        <Link href="/privacy" className="text-neon-cyan underline decoration-neon-cyan/60 underline-offset-2 hover:text-white">
           {translate(locale, "legal.privacyTitle", "Privacy Policy")}
         </Link>
         {". "}

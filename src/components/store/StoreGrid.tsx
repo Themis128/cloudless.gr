@@ -60,7 +60,7 @@ function ProductCard({ product }: { product: StoreProduct }) {
                 </li>
               ))}
               {product.features.length > 4 && (
-                <li className="font-mono text-xs text-slate-500">
+                <li className="font-mono text-xs text-slate-400">
                   +{product.features.length - 4} more
                 </li>
               )}
