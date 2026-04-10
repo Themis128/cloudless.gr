@@ -1,4 +1,3 @@
-"use server";
 
 import { GetParametersByPathCommand, SSMClient } from "@aws-sdk/client-ssm";
 

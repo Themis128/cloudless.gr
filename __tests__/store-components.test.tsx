@@ -5,7 +5,7 @@ import ProductIcon from "@/components/store/ProductIcon";
 import AddToCartButton from "@/components/store/AddToCartButton";
 import CartSlideOver from "@/components/store/CartSlideOver";
 import StoreGrid from "@/components/store/StoreGrid";
-import type { StoreProduct } from "@/lib/store-products-client";
+import { demoProducts, type StoreProduct } from "@/lib/store-products-client";
 
 afterEach(cleanup);
 
@@ -306,7 +306,7 @@ describe("StoreGrid", () => {
   it("renders all product cards by default", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
     const view = within(container);
@@ -320,7 +320,7 @@ describe("StoreGrid", () => {
   it("renders category filter buttons with count badges", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
 
@@ -336,7 +336,7 @@ describe("StoreGrid", () => {
   it("renders a search input", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
 
@@ -348,7 +348,7 @@ describe("StoreGrid", () => {
   it("renders a sort dropdown", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
 
@@ -359,7 +359,7 @@ describe("StoreGrid", () => {
   it("filters products by search query", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
     const view = within(container);
@@ -375,7 +375,7 @@ describe("StoreGrid", () => {
   it("shows empty state when search has no results", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
     const view = within(container);
@@ -390,7 +390,7 @@ describe("StoreGrid", () => {
   it("sorts products by price ascending", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
     const select = container.querySelector("select")!;
@@ -405,7 +405,7 @@ describe("StoreGrid", () => {
   it("filters products by category when a filter is clicked", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
     const view = within(container);
@@ -423,7 +423,7 @@ describe("StoreGrid", () => {
   it("shows all products again when 'All Products' is clicked", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
     const view = within(container);
@@ -439,7 +439,7 @@ describe("StoreGrid", () => {
   it("renders product links pointing to /store/{id}", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
 
@@ -450,7 +450,7 @@ describe("StoreGrid", () => {
   it("renders Add to Cart and Subscribe buttons on cards", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
     const view = within(container);
@@ -464,7 +464,7 @@ describe("StoreGrid", () => {
   it("renders ProductIcon SVGs inside cards", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
 
@@ -476,7 +476,7 @@ describe("StoreGrid", () => {
   it("has 44px minimum touch targets on filter buttons", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
 
@@ -495,7 +495,7 @@ describe("StoreGrid", () => {
   it("has 44px minimum touch targets on Add to Cart buttons in cards", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
 
@@ -511,7 +511,7 @@ describe("StoreGrid", () => {
   it("has active: states on Add to Cart buttons for mobile tap feedback", () => {
     const { container } = render(
       <Wrapper>
-        <StoreGrid />
+        <StoreGrid products={demoProducts} />
       </Wrapper>
     );
 

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
+import { getProductByIdAsync } from "@/lib/store-products";
 import { getStripe } from "@/lib/stripe";
-import { getProductById } from "@/lib/store-products-client";
 
 interface CheckoutItem {
   id: string;
@@ -17,14 +17,19 @@ export async function POST(request: NextRequest) {
 
     const origin = request.headers.get("origin") || "https://cloudless.gr";
 
-    // Validate each item against the server-side catalog
-    const resolvedProducts = items.map((item) => {
-      const product = getProductById(item.id);
-      if (!product) {
-        throw new Error(`Unknown product: ${item.id}`);
-      }
-      return { product, quantity: Math.max(1, Math.min(item.quantity || 1, 99)) };
-    });
+    const resolvedProducts = await Promise.all(
+      items.map(async (item) => {
+        const product = await getProductByIdAsync(item.id);
+        if (!product) {
+          throw new Error(`Unknown product: ${item.id}`);
+        }
+
+        return {
+          product,
+          quantity: Math.max(1, Math.min(item.quantity || 1, 99)),
+        };
+      }),
+    );
 
     const lineItems = resolvedProducts.map(({ product, quantity }) => {
       const priceData: Record<string, unknown> = {

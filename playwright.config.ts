@@ -39,7 +39,7 @@ export default defineConfig({
 
   /* Start the dev server before tests run */
   webServer: {
-    command: "pnpm dev",
+    command: "NEXT_PUBLIC_E2E=1 pnpm dev",
     url: "http://localhost:4000",
     reuseExistingServer: !isCi,
     timeout: 120_000,
