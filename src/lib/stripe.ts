@@ -1,4 +1,3 @@
-"use server";
 
 /**
  * Server-side Stripe operations.

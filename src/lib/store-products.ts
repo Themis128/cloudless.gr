@@ -1,42 +1,29 @@
-"use server";
-
 /**
  * Server-side store product functions.
- * Fetches live products from Stripe when configured.
- * 
- * For client-safe types and demo data, import from store-products-client.ts
- * For sync product lookups, also import directly from store-products-client.ts
+ * Loads live products from Stripe and caches results for a short window.
  */
 
 import { listStripeProducts, type StripeProduct } from "@/lib/stripe";
-import {
-  type ProductCategory,
-  type StoreProduct,
-  demoProducts,
-} from "@/lib/store-products-client";
+import type { ProductCategory, StoreProduct } from "@/lib/store-products-client";
 
-// ---------------------------------------------------------------------------
-// Live product fetching from Stripe (server-only)
-// ---------------------------------------------------------------------------
-
-/** Cache for Stripe products (refreshed every 5 minutes) */
 let productCache: { products: StoreProduct[]; fetchedAt: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-/**
- * Map a Stripe product to the store product format.
- * Uses product metadata for category, image, and features.
- *
- * Expected Stripe product metadata keys:
- *   - category: "service" | "digital" | "physical" (default: "service")
- *   - image: URL or path (default: /store/default.svg)
- *   - features: comma-separated list
- */
+function normalizeCategory(category: string | undefined): ProductCategory {
+  if (category === "digital" || category === "physical" || category === "service") {
+    return category;
+  }
+  return "service";
+}
+
 function mapStripeProduct(sp: StripeProduct): StoreProduct {
-  const category = (sp.metadata.category as ProductCategory) || "service";
+  const category = normalizeCategory(sp.metadata.category);
   const image = sp.metadata.image || sp.images[0] || "/store/default.svg";
   const features = sp.metadata.features
-    ? sp.metadata.features.split(",").map((f) => f.trim())
+    ? sp.metadata.features
+        .split(",")
+        .map((feature) => feature.trim())
+        .filter(Boolean)
     : undefined;
 
   return {
@@ -53,55 +40,39 @@ function mapStripeProduct(sp: StripeProduct): StoreProduct {
   };
 }
 
-/**
- * Get all store products. Tries Stripe first, falls back to demo data.
- * Results are cached for 5 minutes.
- * SERVER-ONLY function.
- */
 export async function getProducts(): Promise<StoreProduct[]> {
-  // Return cache if fresh
   if (productCache && Date.now() - productCache.fetchedAt < CACHE_TTL_MS) {
     return productCache.products;
   }
 
-  // Try fetching from Stripe
-  const stripeProducts = await listStripeProducts();
+  try {
+    const stripeProducts = await listStripeProducts();
+    const mappedProducts = stripeProducts.map(mapStripeProduct);
 
-  if (stripeProducts && stripeProducts.length > 0) {
-    const mapped = stripeProducts.map(mapStripeProduct);
-    productCache = { products: mapped, fetchedAt: Date.now() };
-    return mapped;
+    productCache = { products: mappedProducts, fetchedAt: Date.now() };
+    return mappedProducts;
+  } catch (error) {
+    // Missing Stripe credentials in local/dev should not flood logs or break rendering.
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const isMissingStripeKey = message.includes("STRIPE_SECRET_KEY is not set");
+
+    if (!isMissingStripeKey && process.env.NODE_ENV !== "test") {
+      console.warn("[Store] Failed to load products from Stripe.", error);
+    }
+
+    productCache = { products: [], fetchedAt: Date.now() };
+    return [];
   }
-
-  // Fall back to demo data
-  productCache = { products: demoProducts, fetchedAt: Date.now() };
-  return demoProducts;
 }
 
-// ---------------------------------------------------------------------------
-// Product lookups (use live data when available)
-// ---------------------------------------------------------------------------
-
-/**
- * Get a product by ID, checking cache first.
- * SERVER-ONLY function.
- */
 export async function getProductByIdAsync(id: string): Promise<StoreProduct | undefined> {
   const products = await getProducts();
-  return products.find((p) => p.id === id);
+  return products.find((product) => product.id === id);
 }
 
-/**
- * Get products by category, checking cache first.
- * SERVER-ONLY function.
- */
 export async function getProductsByCategoryAsync(
   category: ProductCategory,
 ): Promise<StoreProduct[]> {
   const products = await getProducts();
-  return products.filter((p) => p.category === category);
+  return products.filter((product) => product.category === category);
 }
-
-// NOTE: For client-safe exports (types, demo data, sync functions),
-// import directly from @/lib/store-products-client
-// Re-exports of non-async functions are not allowed in "use server" files

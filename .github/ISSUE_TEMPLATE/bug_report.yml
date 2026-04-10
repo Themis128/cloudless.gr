@@ -1,0 +1,96 @@
+name: Bug Report
+description: Something is broken or not working as expected
+labels: [bug]
+assignees: [Themis128]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in as much detail as possible.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One-line description of the problem
+      placeholder: "e.g. Store page crashes on mobile when filtering by category"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How do we trigger the bug?
+      placeholder: |
+        1. Go to /en/store
+        2. Open the category filter
+        3. Select "Maintenance"
+        4. Page crashes
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      placeholder: The page should filter products without crashing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      placeholder: A white screen appears with no error message.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical (site down / data loss)
+        - High (major feature broken)
+        - Medium (feature degraded)
+        - Low (cosmetic / minor)
+    validations:
+      required: true
+
+  - type: input
+    id: url
+    attributes:
+      label: Affected URL
+      placeholder: "https://cloudless.gr/en/store"
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device type
+      options:
+        - Desktop
+        - Mobile
+        - Both
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser / OS
+      placeholder: "Chrome 124 / macOS 14"
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors (if any)
+      render: text
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this hasn't been reported yet
+          required: true
+        - label: This is not a security vulnerability (those go to private advisories)
+          required: true
