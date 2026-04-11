@@ -19,7 +19,9 @@
     "test:e2e:headed": "playwright test --headed",
     "deploy": "sst deploy --stage production",
     "deploy:staging": "sst deploy --stage staging",
-    "sst:dev": "sst dev"
+    "sst:dev": "sst dev",
+    "devcontainer:preflight": "bash -lc 'if ! command -v docker >/dev/null 2>&1; then echo \"Docker CLI not found in this WSL distro. Enable Docker Desktop WSL integration for this distro.\"; exit 1; fi; if ! docker version >/dev/null 2>&1; then echo \"Docker daemon not reachable from WSL. Start Docker Desktop and wait for Engine running.\"; exit 1; fi; if command -v wsl.exe >/dev/null 2>&1; then wsl.exe -l -v; fi; echo \"Docker is ready for Dev Containers.\"'",
+    "devcontainer:doctor": "bash scripts/devcontainer-doctor.sh"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1028.0",
