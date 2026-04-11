@@ -13,7 +13,8 @@ let hasRegisteredServiceWorker = false;
 
 export default function ServiceWorkerRegistration() {
   const [locale] = useCurrentLocale();
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installPrompt, setInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const refreshingRef = useRef(false);
@@ -70,13 +71,19 @@ export default function ServiceWorkerRegistration() {
       window.location.reload();
     };
     if (typeof navigator.serviceWorker.addEventListener === "function") {
-      navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        onControllerChange,
+      );
     }
 
     return () => {
       window.removeEventListener("beforeinstallprompt", onInstallPrompt);
       if (typeof navigator.serviceWorker.removeEventListener === "function") {
-        navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+        navigator.serviceWorker.removeEventListener(
+          "controllerchange",
+          onControllerChange,
+        );
       }
     };
   }, [isE2E]);

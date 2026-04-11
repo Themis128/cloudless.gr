@@ -14,7 +14,10 @@ export async function POST(request: Request) {
     const { email } = await request.json();
 
     if (!isValidEmail(email)) {
-      return Response.json({ error: "Invalid email address." }, { status: 400 });
+      return Response.json(
+        { error: "Invalid email address." },
+        { status: 400 },
+      );
     }
 
     // Add to SES suppression list — this prevents all future SES sends to this address
@@ -29,7 +32,10 @@ export async function POST(request: Request) {
       <p><strong>Date:</strong> ${new Date().toISOString()}</p>`,
     ).catch(() => {});
 
-    return Response.json({ success: true, message: "You have been unsubscribed." });
+    return Response.json({
+      success: true,
+      message: "You have been unsubscribed.",
+    });
   } catch (error) {
     console.error("Unsubscribe error:", error);
     return Response.json(
@@ -45,10 +51,13 @@ export async function GET(request: Request) {
   const email = searchParams.get("email");
 
   if (!email || !isValidEmail(email)) {
-    return new Response(unsubscribePage("Invalid or missing email address.", false), {
-      status: 400,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
+    return new Response(
+      unsubscribePage("Invalid or missing email address.", false),
+      {
+        status: 400,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      },
+    );
   }
 
   try {
@@ -67,10 +76,13 @@ export async function GET(request: Request) {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   } catch {
-    return new Response(unsubscribePage("Something went wrong. Please try again.", false), {
-      status: 500,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
+    return new Response(
+      unsubscribePage("Something went wrong. Please try again.", false),
+      {
+        status: 500,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      },
+    );
   }
 }
 

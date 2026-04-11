@@ -80,10 +80,10 @@ function SignUpForm() {
           <p className="font-body mt-2 text-slate-400">
             {step === "signup"
               ? t("auth.signupDesc", "Join Cloudless to access your dashboard")
-              : t("auth.verifyDesc", "Enter the verification code sent to {email}").replace(
-                  "{email}",
-                  email,
-                )}
+              : t(
+                  "auth.verifyDesc",
+                  "Enter the verification code sent to {email}",
+                ).replace("{email}", email)}
           </p>
         </div>
 
@@ -102,7 +102,9 @@ function SignUpForm() {
                   className="mb-2 block font-mono text-sm text-slate-400"
                 >
                   {t("auth.fullName", "Full Name")}
-                  <span className="ml-1 text-slate-600">({t("auth.optional", "optional")})</span>
+                  <span className="ml-1 text-slate-600">
+                    ({t("auth.optional", "optional")})
+                  </span>
                 </label>
                 <input
                   id="signup-name"

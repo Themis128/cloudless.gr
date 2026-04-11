@@ -170,7 +170,10 @@ h6 {
 
 /* ── Dot matrix ── */
 .dot-matrix {
-  background-image: radial-gradient(rgba(0, 255, 245, 0.08) 1px, transparent 1px);
+  background-image: radial-gradient(
+    rgba(0, 255, 245, 0.08) 1px,
+    transparent 1px
+  );
   background-size: 16px 16px;
 }
 

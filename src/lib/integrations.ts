@@ -35,7 +35,9 @@ export function getIntegrations(): IntegrationConfig {
     NOTION_API_KEY: process.env.NOTION_API_KEY,
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID,
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
-    GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL,
+    GOOGLE_SERVICE_ACCOUNT_EMAIL:
+      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
+      process.env.GOOGLE_CLIENT_EMAIL,
     GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID,
     AHREFS_API_KEY: process.env.AHREFS_API_KEY,
@@ -49,9 +51,7 @@ export function getIntegrations(): IntegrationConfig {
 }
 
 /** Check if a specific integration is configured */
-export function isConfigured(
-  ...keys: (keyof IntegrationConfig)[]
-): boolean {
+export function isConfigured(...keys: (keyof IntegrationConfig)[]): boolean {
   const config = getIntegrations();
   return keys.every((k) => Boolean(config[k]));
 }
@@ -87,7 +87,11 @@ export function getSlackConfig(): SlackConfig {
     );
   }
 
-  cachedSlack = { SLACK_BOT_TOKEN: token, SLACK_SIGNING_SECRET: signingSecret, SLACK_WEBHOOK_URL: webhookUrl };
+  cachedSlack = {
+    SLACK_BOT_TOKEN: token,
+    SLACK_SIGNING_SECRET: signingSecret,
+    SLACK_WEBHOOK_URL: webhookUrl,
+  };
   return cachedSlack;
 }
 

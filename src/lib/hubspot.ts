@@ -28,7 +28,10 @@ async function getHubSpotToken(): Promise<string> {
   throw new Error("HubSpot not configured (no token in env or SSM)");
 }
 
-async function hubspotFetch(path: string, options: RequestInit = {}): Promise<Response> {
+async function hubspotFetch(
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
   const token = await getHubSpotToken();
 
   return fetch(`${HUBSPOT_API}${path}`, {
@@ -46,7 +49,9 @@ async function hubspotFetch(path: string, options: RequestInit = {}): Promise<Re
  * Uses the email as the unique identifier.
  * Silently returns null if no HubSpot token is available.
  */
-export async function upsertContact(contact: HubSpotContact): Promise<string | null> {
+export async function upsertContact(
+  contact: HubSpotContact,
+): Promise<string | null> {
   let token: string;
   try {
     token = await getHubSpotToken();
@@ -67,7 +72,9 @@ export async function upsertContact(contact: HubSpotContact): Promise<string | n
           company: contact.company ?? "",
           hs_lead_status: "NEW",
           lifecyclestage: "lead",
-          ...(contact.service_interest && { service_interest: contact.service_interest }),
+          ...(contact.service_interest && {
+            service_interest: contact.service_interest,
+          }),
           ...(contact.message && { message: contact.message }),
           lead_source: contact.lead_source ?? "website_contact_form",
         },
@@ -84,9 +91,13 @@ export async function upsertContact(contact: HubSpotContact): Promise<string | n
       const searchRes = await hubspotFetch("/crm/v3/objects/contacts/search", {
         method: "POST",
         body: JSON.stringify({
-          filterGroups: [{
-            filters: [{ propertyName: "email", operator: "EQ", value: contact.email }],
-          }],
+          filterGroups: [
+            {
+              filters: [
+                { propertyName: "email", operator: "EQ", value: contact.email },
+              ],
+            },
+          ],
         }),
       });
 
@@ -99,7 +110,9 @@ export async function upsertContact(contact: HubSpotContact): Promise<string | n
             body: JSON.stringify({
               properties: {
                 ...(contact.company && { company: contact.company }),
-                ...(contact.service_interest && { service_interest: contact.service_interest }),
+                ...(contact.service_interest && {
+                  service_interest: contact.service_interest,
+                }),
                 ...(contact.message && { message: contact.message }),
               },
             }),
@@ -160,9 +173,9 @@ export async function createTicket(
   const properties: Record<string, string> = {
     subject: data.subject,
     content: data.content,
-    hs_pipeline: data.hs_pipeline || '0',
-    hs_pipeline_stage: data.hs_pipeline_stage || '1',
-    hs_ticket_priority: data.hs_ticket_priority || 'MEDIUM',
+    hs_pipeline: data.hs_pipeline || "0",
+    hs_pipeline_stage: data.hs_pipeline_stage || "1",
+    hs_ticket_priority: data.hs_ticket_priority || "MEDIUM",
   };
 
   const body: Record<string, unknown> = { properties };
@@ -173,7 +186,7 @@ export async function createTicket(
         to: { id: contactId },
         types: [
           {
-            associationCategory: 'HUBSPOT_DEFINED',
+            associationCategory: "HUBSPOT_DEFINED",
             associationTypeId: 16,
           },
         ],
@@ -181,16 +194,14 @@ export async function createTicket(
     ];
   }
 
-  const res = await hubspotFetch('/crm/v3/objects/tickets', {
-    method: 'POST',
+  const res = await hubspotFetch("/crm/v3/objects/tickets", {
+    method: "POST",
     body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(
-      `HubSpot API error ${res.status}: ${JSON.stringify(err)}`,
-    );
+    throw new Error(`HubSpot API error ${res.status}: ${JSON.stringify(err)}`);
   }
 
   const ticket = await res.json();
@@ -203,15 +214,16 @@ export async function createTicket(
 export async function searchContacts(
   propertyName: string,
   value: string,
-): Promise<{ total: number; results: Array<{ id: string; properties: Record<string, string> }> }> {
-  const res = await hubspotFetch('/crm/v3/objects/contacts/search', {
-    method: 'POST',
+): Promise<{
+  total: number;
+  results: Array<{ id: string; properties: Record<string, string> }>;
+}> {
+  const res = await hubspotFetch("/crm/v3/objects/contacts/search", {
+    method: "POST",
     body: JSON.stringify({
       filterGroups: [
         {
-          filters: [
-            { propertyName, operator: 'EQ', value },
-          ],
+          filters: [{ propertyName, operator: "EQ", value }],
         },
       ],
     }),
@@ -219,9 +231,7 @@ export async function searchContacts(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(
-      `HubSpot API error ${res.status}: ${JSON.stringify(err)}`,
-    );
+    throw new Error(`HubSpot API error ${res.status}: ${JSON.stringify(err)}`);
   }
 
   return res.json();

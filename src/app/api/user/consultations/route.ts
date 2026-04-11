@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/user/consultations
  * Returns booked consultations for the authenticated user from Google Calendar.
- * 
+ *
  * Requires: Authorization: Bearer <JWT token>
  */
 export async function GET(req: NextRequest) {
@@ -38,6 +38,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ consultations, configured: true });
   } catch (err) {
     console.error("Failed to fetch consultations:", err);
-    return NextResponse.json({ error: "Failed to fetch consultations" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch consultations" },
+      { status: 500 },
+    );
   }
 }

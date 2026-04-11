@@ -17,10 +17,17 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       { slots },
-      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60" } },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
+        },
+      },
     );
   } catch (err) {
     console.error("[Calendar] Availability error:", err);
-    return NextResponse.json({ error: "Failed to fetch availability." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch availability." },
+      { status: 500 },
+    );
   }
 }

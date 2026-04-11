@@ -5,8 +5,12 @@ import { useState } from "react";
 export default function AdminNotificationsPage() {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
-  const [history, setHistory] = useState<{ time: string; message: string; ok: boolean }[]>([]);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(
+    null,
+  );
+  const [history, setHistory] = useState<
+    { time: string; message: string; ok: boolean }[]
+  >([]);
 
   async function sendTest(e: React.FormEvent) {
     e.preventDefault();
@@ -26,10 +30,16 @@ export default function AdminNotificationsPage() {
       const ok = res.ok;
       setResult({
         ok,
-        text: ok ? "Notification sent to Slack!" : data.error ?? "Failed to send",
+        text: ok
+          ? "Notification sent to Slack!"
+          : (data.error ?? "Failed to send"),
       });
       setHistory((prev) => [
-        { time: new Date().toLocaleTimeString("en-IE"), message: message.trim(), ok },
+        {
+          time: new Date().toLocaleTimeString("en-IE"),
+          message: message.trim(),
+          ok,
+        },
         ...prev,
       ]);
       if (ok) setMessage("");
@@ -41,10 +51,22 @@ export default function AdminNotificationsPage() {
   }
 
   const presets = [
-    { label: "Deploy complete", text: "✅ Deployment to production completed successfully." },
-    { label: "Maintenance start", text: "🔧 Scheduled maintenance starting now. ETA: 30 minutes." },
-    { label: "Issue resolved", text: "✅ The reported issue has been resolved. All systems operational." },
-    { label: "New feature", text: "🚀 New feature deployed: check the admin dashboard for details." },
+    {
+      label: "Deploy complete",
+      text: "✅ Deployment to production completed successfully.",
+    },
+    {
+      label: "Maintenance start",
+      text: "🔧 Scheduled maintenance starting now. ETA: 30 minutes.",
+    },
+    {
+      label: "Issue resolved",
+      text: "✅ The reported issue has been resolved. All systems operational.",
+    },
+    {
+      label: "New feature",
+      text: "🚀 New feature deployed: check the admin dashboard for details.",
+    },
   ];
 
   return (
@@ -52,9 +74,13 @@ export default function AdminNotificationsPage() {
       <div className="mb-8">
         <div className="bg-neon-magenta/10 border-neon-magenta/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
-          <span className="text-neon-magenta font-mono text-xs">NOTIFICATIONS</span>
+          <span className="text-neon-magenta font-mono text-xs">
+            NOTIFICATIONS
+          </span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">Slack Notifications</h1>
+        <h1 className="font-heading text-2xl font-bold text-white">
+          Slack Notifications
+        </h1>
         <p className="font-body mt-1 text-slate-400">
           Send test messages and announcements to your team Slack channel.
         </p>
@@ -76,7 +102,9 @@ export default function AdminNotificationsPage() {
       {/* Send form */}
       <form onSubmit={sendTest} className="mb-8">
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
-          <label className="mb-2 block font-mono text-xs text-slate-500">Message</label>
+          <label className="mb-2 block font-mono text-xs text-slate-500">
+            Message
+          </label>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -108,7 +136,9 @@ export default function AdminNotificationsPage() {
       {/* Send history */}
       {history.length > 0 && (
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
-          <h3 className="font-heading mb-3 text-sm font-semibold text-white">Session History</h3>
+          <h3 className="font-heading mb-3 text-sm font-semibold text-white">
+            Session History
+          </h3>
           <div className="space-y-2">
             {history.map((h, i) => (
               <div
@@ -119,9 +149,13 @@ export default function AdminNotificationsPage() {
                   className={`mt-1 h-2 w-2 shrink-0 rounded-full ${h.ok ? "bg-neon-green" : "bg-red-400"}`}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-mono text-xs text-slate-300">{h.message}</p>
+                  <p className="truncate font-mono text-xs text-slate-300">
+                    {h.message}
+                  </p>
                 </div>
-                <span className="shrink-0 font-mono text-[10px] text-slate-600">{h.time}</span>
+                <span className="shrink-0 font-mono text-[10px] text-slate-600">
+                  {h.time}
+                </span>
               </div>
             ))}
           </div>

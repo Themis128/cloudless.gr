@@ -44,7 +44,7 @@ export function decodeToken(token: string): DecodedToken | null {
     if (parts.length !== 3) return null;
 
     const payload = JSON.parse(
-      Buffer.from(parts[1], "base64").toString("utf-8")
+      Buffer.from(parts[1], "base64").toString("utf-8"),
     ) as DecodedToken;
 
     // Check expiry
@@ -76,7 +76,10 @@ export function requireAuth(request: NextRequest): AuthResult {
   if (!token) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Missing authorization token" }, { status: 401 }),
+      response: NextResponse.json(
+        { error: "Missing authorization token" },
+        { status: 401 },
+      ),
     };
   }
 
@@ -84,7 +87,10 @@ export function requireAuth(request: NextRequest): AuthResult {
   if (!decoded) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Invalid or expired token" }, { status: 401 }),
+      response: NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 },
+      ),
     };
   }
 
@@ -101,7 +107,10 @@ export function requireAdmin(request: NextRequest): AuthResult {
   if (!isAdmin(auth.user)) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Admin access required" }, { status: 403 }),
+      response: NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
+      ),
     };
   }
 

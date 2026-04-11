@@ -53,7 +53,10 @@ async function getAccessToken(): Promise<string> {
   return cachedToken.token;
 }
 
-async function calendarFetch(path: string, options: RequestInit = {}): Promise<Response> {
+async function calendarFetch(
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
   const token = await getAccessToken();
   return fetch(`${CALENDAR_API}${path}`, {
     ...options,
@@ -97,7 +100,8 @@ export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
 
   if (!freeBusyRes.ok) return [];
   const freeBusyData = await freeBusyRes.json();
-  const busySlots: TimeSlot[] = freeBusyData.calendars?.[calendarId]?.busy ?? [];
+  const busySlots: TimeSlot[] =
+    freeBusyData.calendars?.[calendarId]?.busy ?? [];
 
   // Generate 30-min slots during business hours (09:00-17:00 UTC+3 Athens)
   const slots: TimeSlot[] = [];
@@ -113,7 +117,10 @@ export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
         const slotStart = new Date(day);
         slotStart.setUTCHours(0, 0, 0, 0);
         slotStart.setTime(
-          slotStart.getTime() + hour * 3600000 + minute * 60000 - ATHENS_OFFSET_MS,
+          slotStart.getTime() +
+            hour * 3600000 +
+            minute * 60000 -
+            ATHENS_OFFSET_MS,
         );
         const slotEnd = new Date(slotStart.getTime() + 30 * 60000);
 
@@ -126,7 +133,10 @@ export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
         });
 
         if (!isBusy) {
-          slots.push({ start: slotStart.toISOString(), end: slotEnd.toISOString() });
+          slots.push({
+            start: slotStart.toISOString(),
+            end: slotEnd.toISOString(),
+          });
         }
       }
     }
@@ -204,7 +214,9 @@ interface Consultation {
  * Find consultation events for a specific attendee email.
  * Searches from 90 days ago to 30 days ahead.
  */
-export async function getConsultationsByEmail(email: string): Promise<Consultation[]> {
+export async function getConsultationsByEmail(
+  email: string,
+): Promise<Consultation[]> {
   const { GOOGLE_CALENDAR_ID } = getIntegrations();
   const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
 
@@ -243,8 +255,9 @@ export async function getConsultationsByEmail(email: string): Promise<Consultati
           title: evt.summary as string,
           start,
           end: (evt.end as { dateTime?: string })?.dateTime ?? "",
-          meetLink: (evt.conferenceData as { entryPoints?: Array<{ uri?: string }> })
-            ?.entryPoints?.[0]?.uri,
+          meetLink: (
+            evt.conferenceData as { entryPoints?: Array<{ uri?: string }> }
+          )?.entryPoints?.[0]?.uri,
           status: new Date(start) > now ? "upcoming" : "past",
         } satisfies Consultation;
       });

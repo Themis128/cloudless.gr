@@ -87,7 +87,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ users, count: users.length });
   } catch (err) {
     console.error("Failed to list users:", err);
-    return NextResponse.json({ error: "Failed to list users" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to list users" },
+      { status: 500 },
+    );
   }
 }
 
@@ -143,7 +146,10 @@ export async function POST(request: NextRequest) {
           GroupName: groupName,
         }),
       );
-      return NextResponse.json({ success: true, message: "User promoted to admin" });
+      return NextResponse.json({
+        success: true,
+        message: "User promoted to admin",
+      });
     }
 
     if (action === "demote" && groupName === "admin") {
@@ -154,15 +160,18 @@ export async function POST(request: NextRequest) {
           GroupName: groupName,
         }),
       );
-      return NextResponse.json({ success: true, message: "User removed from admin group" });
+      return NextResponse.json({
+        success: true,
+        message: "User removed from admin group",
+      });
     }
 
-    return NextResponse.json(
-      { error: "Unknown action" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (err) {
     console.error("Failed to modify user:", err);
-    return NextResponse.json({ error: "Failed to modify user" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to modify user" },
+      { status: 500 },
+    );
   }
 }

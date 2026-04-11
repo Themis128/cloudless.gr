@@ -61,9 +61,13 @@ export default function ProfilePage() {
           <p className="truncate font-heading text-lg font-semibold text-white">
             {user?.name || user?.email?.split("@")[0] || "User"}
           </p>
-          <p className="text-neon-cyan truncate font-mono text-sm">{user?.email}</p>
+          <p className="text-neon-cyan truncate font-mono text-sm">
+            {user?.email}
+          </p>
           {user?.company && (
-            <p className="mt-0.5 truncate text-xs text-slate-500">{user.company}</p>
+            <p className="mt-0.5 truncate text-xs text-slate-500">
+              {user.company}
+            </p>
           )}
         </div>
       </div>
@@ -81,7 +85,10 @@ export default function ProfilePage() {
           </h2>
           <div className="space-y-4">
             <div>
-              <label htmlFor="profile-email" className="mb-1.5 block font-mono text-xs text-slate-500">
+              <label
+                htmlFor="profile-email"
+                className="mb-1.5 block font-mono text-xs text-slate-500"
+              >
                 {t("auth.email", "Email")}
               </label>
               <input
@@ -96,7 +103,10 @@ export default function ProfilePage() {
               </p>
             </div>
             <div>
-              <label htmlFor="profile-name" className="mb-1.5 block font-mono text-xs text-slate-500">
+              <label
+                htmlFor="profile-name"
+                className="mb-1.5 block font-mono text-xs text-slate-500"
+              >
                 {t("auth.fullName", "Full Name")}
               </label>
               <input
@@ -110,7 +120,10 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <label htmlFor="profile-company" className="mb-1.5 block font-mono text-xs text-slate-500">
+              <label
+                htmlFor="profile-company"
+                className="mb-1.5 block font-mono text-xs text-slate-500"
+              >
                 {t("dashboard.company", "Company")}
               </label>
               <input
@@ -120,11 +133,17 @@ export default function ProfilePage() {
                 onChange={(e) => setCompany(e.target.value)}
                 autoComplete="organization"
                 className="bg-void-light focus:border-neon-cyan/50 w-full rounded-lg border border-slate-800 px-4 py-3 font-mono text-sm text-white transition-colors focus:outline-none"
-                placeholder={t("dashboard.companyPlaceholder", "Your company or organization")}
+                placeholder={t(
+                  "dashboard.companyPlaceholder",
+                  "Your company or organization",
+                )}
               />
             </div>
             <div>
-              <label htmlFor="profile-phone" className="mb-1.5 block font-mono text-xs text-slate-500">
+              <label
+                htmlFor="profile-phone"
+                className="mb-1.5 block font-mono text-xs text-slate-500"
+              >
                 {t("dashboard.phone", "Phone")}
               </label>
               <input
@@ -147,7 +166,9 @@ export default function ProfilePage() {
             disabled={saving}
             className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-11 rounded-lg border px-6 py-2.5 font-mono text-sm font-semibold transition-all hover:shadow-[0_0_25px_rgba(0,255,245,0.2)] disabled:opacity-50"
           >
-            {saving ? t("common.saving", "Saving…") : t("common.saveChanges", "Save Changes")}
+            {saving
+              ? t("common.saving", "Saving…")
+              : t("common.saveChanges", "Save Changes")}
           </button>
           {saved && (
             <span className="text-neon-green animate-fade-in-up font-mono text-xs">

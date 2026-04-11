@@ -51,7 +51,9 @@ export default function AdminErrorsPage() {
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-magenta font-mono text-xs">ERRORS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">Error Monitoring</h1>
+        <h1 className="font-heading text-2xl font-bold text-white">
+          Error Monitoring
+        </h1>
         <p className="font-body mt-1 text-slate-400">
           Unresolved issues from Sentry — last 20.
         </p>
@@ -61,14 +63,19 @@ export default function AdminErrorsPage() {
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
           <p className="font-mono text-xs text-slate-500">Unresolved</p>
-          <p className={`font-heading mt-1 text-2xl font-bold ${issues.length === 0 ? "text-neon-green" : "text-red-400"}`}>
+          <p
+            className={`font-heading mt-1 text-2xl font-bold ${issues.length === 0 ? "text-neon-green" : "text-red-400"}`}
+          >
             {loading ? "…" : issues.length}
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
           <p className="font-mono text-xs text-slate-500">Errors</p>
           <p className="font-heading mt-1 text-2xl font-bold text-white">
-            {loading ? "…" : issues.filter((i) => i.level === "error" || i.level === "fatal").length}
+            {loading
+              ? "…"
+              : issues.filter((i) => i.level === "error" || i.level === "fatal")
+                  .length}
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
@@ -95,8 +102,12 @@ export default function AdminErrorsPage() {
       ) : issues.length === 0 ? (
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-12 text-center">
           <p className="text-neon-green text-4xl">✓</p>
-          <p className="font-heading mt-4 text-lg font-semibold text-white">All Clear</p>
-          <p className="mt-1 text-sm text-slate-500">No unresolved issues in Sentry.</p>
+          <p className="font-heading mt-4 text-lg font-semibold text-white">
+            All Clear
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            No unresolved issues in Sentry.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -106,15 +117,23 @@ export default function AdminErrorsPage() {
               className="bg-void-light/50 hover:border-neon-magenta/30 rounded-xl border border-slate-800 p-5 transition-all"
             >
               <div className="flex flex-wrap items-start gap-3">
-                <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] ${levelClasses[issue.level] ?? "text-slate-400 bg-slate-800/50"}`}>
+                <span
+                  className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] ${levelClasses[issue.level] ?? "text-slate-400 bg-slate-800/50"}`}
+                >
                   {issue.level}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h3 className="truncate font-mono text-sm font-medium text-white">{issue.title}</h3>
-                  <p className="mt-1 truncate font-mono text-xs text-slate-500">{issue.culprit}</p>
+                  <h3 className="truncate font-mono text-sm font-medium text-white">
+                    {issue.title}
+                  </h3>
+                  <p className="mt-1 truncate font-mono text-xs text-slate-500">
+                    {issue.culprit}
+                  </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="font-mono text-xs text-slate-400">{issue.count} events</p>
+                  <p className="font-mono text-xs text-slate-400">
+                    {issue.count} events
+                  </p>
                   <p className="mt-1 font-mono text-[10px] text-slate-600">
                     Last: {new Date(issue.lastSeen).toLocaleDateString("en-IE")}
                   </p>

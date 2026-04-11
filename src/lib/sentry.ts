@@ -52,7 +52,11 @@ type SortField = "date" | "new" | "freq" | "users";
 
 const SENTRY_API = "https://sentry.io/api/0";
 
-function getSentryConfig(): { token: string; org: string; project: string } | null {
+function getSentryConfig(): {
+  token: string;
+  org: string;
+  project: string;
+} | null {
   if (!isConfigured("SENTRY_AUTH_TOKEN")) return null;
   const { SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT } = getIntegrations();
   return {
@@ -62,7 +66,10 @@ function getSentryConfig(): { token: string; org: string; project: string } | nu
   };
 }
 
-async function sentryFetch<T>(path: string, options?: RequestInit): Promise<T | null> {
+async function sentryFetch<T>(
+  path: string,
+  options?: RequestInit,
+): Promise<T | null> {
   const cfg = getSentryConfig();
   if (!cfg) return null;
 

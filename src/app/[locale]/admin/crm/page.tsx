@@ -39,7 +39,9 @@ export default function AdminCRMPage() {
         const data = await res.json();
         setContacts(data.contacts ?? []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load contacts");
+        setError(
+          err instanceof Error ? err.message : "Failed to load contacts",
+        );
       } finally {
         setLoading(false);
       }
@@ -65,7 +67,9 @@ export default function AdminCRMPage() {
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-magenta font-mono text-xs">CRM</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">CRM Contacts</h1>
+        <h1 className="font-heading text-2xl font-bold text-white">
+          CRM Contacts
+        </h1>
         <p className="font-body mt-1 text-slate-400">
           Leads and contacts synced from HubSpot.
         </p>
@@ -84,7 +88,8 @@ export default function AdminCRMPage() {
           <p className="font-heading text-neon-cyan mt-1 text-2xl font-bold">
             {loading
               ? "…"
-              : contacts.filter((c) => c.properties.hs_lead_status === "NEW").length}
+              : contacts.filter((c) => c.properties.hs_lead_status === "NEW")
+                  .length}
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
@@ -92,7 +97,9 @@ export default function AdminCRMPage() {
           <p className="font-heading text-neon-magenta mt-1 text-2xl font-bold">
             {loading
               ? "…"
-              : contacts.filter((c) => c.properties.hs_lead_status === "QUALIFIED").length}
+              : contacts.filter(
+                  (c) => c.properties.hs_lead_status === "QUALIFIED",
+                ).length}
           </p>
         </div>
       </div>
@@ -127,37 +134,65 @@ export default function AdminCRMPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-800">
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Name</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Email</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Company</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Lead Status</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Added</th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Company
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Lead Status
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Added
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((c) => (
-                  <tr key={c.id} className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors">
+                  <tr
+                    key={c.id}
+                    className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                  >
                     <td className="px-6 py-4 text-white">
-                      {[c.properties.firstname, c.properties.lastname].filter(Boolean).join(" ") || "—"}
+                      {[c.properties.firstname, c.properties.lastname]
+                        .filter(Boolean)
+                        .join(" ") || "—"}
                     </td>
-                    <td className="text-neon-cyan px-6 py-4 font-mono text-xs">{c.properties.email ?? "—"}</td>
-                    <td className="px-6 py-4 text-slate-300">{c.properties.company || "—"}</td>
+                    <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
+                      {c.properties.email ?? "—"}
+                    </td>
+                    <td className="px-6 py-4 text-slate-300">
+                      {c.properties.company || "—"}
+                    </td>
                     <td className="px-6 py-4">
-                      <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${leadStatusClasses[c.properties.hs_lead_status ?? ""] ?? "text-slate-400 bg-slate-800/50"}`}>
+                      <span
+                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${leadStatusClasses[c.properties.hs_lead_status ?? ""] ?? "text-slate-400 bg-slate-800/50"}`}
+                      >
                         {c.properties.hs_lead_status ?? "—"}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-slate-500">
                       {c.properties.createdate
-                        ? new Date(c.properties.createdate).toLocaleDateString("en-IE")
+                        ? new Date(c.properties.createdate).toLocaleDateString(
+                            "en-IE",
+                          )
                         : "—"}
                     </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center font-mono text-slate-600">
-                      {search ? "No contacts match your search" : "No contacts yet"}
+                    <td
+                      colSpan={5}
+                      className="px-6 py-12 text-center font-mono text-slate-600"
+                    >
+                      {search
+                        ? "No contacts match your search"
+                        : "No contacts yet"}
                     </td>
                   </tr>
                 )}

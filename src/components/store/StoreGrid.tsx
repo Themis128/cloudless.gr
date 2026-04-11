@@ -12,7 +12,12 @@ import {
   type StoreProduct,
 } from "@/lib/store-products-client";
 
-const categories: ("all" | ProductCategory)[] = ["all", "service", "digital", "physical"];
+const categories: ("all" | ProductCategory)[] = [
+  "all",
+  "service",
+  "digital",
+  "physical",
+];
 
 type SortOption = "default" | "price-asc" | "price-desc" | "name-asc";
 
@@ -54,8 +59,13 @@ function ProductCard({ product }: { product: StoreProduct }) {
             </p>
             <ul className="space-y-2">
               {product.features.slice(0, 4).map((feature) => (
-                <li key={feature} className="flex items-start gap-2 text-xs text-slate-300">
-                  <span className="text-neon-cyan mt-0.5 shrink-0">&#x25B8;</span>
+                <li
+                  key={feature}
+                  className="flex items-start gap-2 text-xs text-slate-300"
+                >
+                  <span className="text-neon-cyan mt-0.5 shrink-0">
+                    &#x25B8;
+                  </span>
                   {feature}
                 </li>
               ))}
@@ -75,7 +85,9 @@ function ProductCard({ product }: { product: StoreProduct }) {
             {product.name}
           </h3>
         </Link>
-        <p className="mt-2 line-clamp-2 text-sm text-slate-400">{product.description}</p>
+        <p className="mt-2 line-clamp-2 text-sm text-slate-400">
+          {product.description}
+        </p>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -83,7 +95,9 @@ function ProductCard({ product }: { product: StoreProduct }) {
               {formatPrice(product.price, product.currency)}
             </span>
             {product.recurring && (
-              <span className="ml-1 font-mono text-sm text-slate-500">/{product.interval}</span>
+              <span className="ml-1 font-mono text-sm text-slate-500">
+                /{product.interval}
+              </span>
             )}
           </div>
           <button
@@ -99,16 +113,21 @@ function ProductCard({ product }: { product: StoreProduct }) {
 }
 
 export default function StoreGrid({ products }: { products: StoreProduct[] }) {
-  const [activeCategory, setActiveCategory] = useState<"all" | ProductCategory>("all");
+  const [activeCategory, setActiveCategory] = useState<"all" | ProductCategory>(
+    "all",
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("default");
 
   const categoryCounts = useMemo(
     () => ({
       all: products.length,
-      service: products.filter((product) => product.category === "service").length,
-      digital: products.filter((product) => product.category === "digital").length,
-      physical: products.filter((product) => product.category === "physical").length,
+      service: products.filter((product) => product.category === "service")
+        .length,
+      digital: products.filter((product) => product.category === "digital")
+        .length,
+      physical: products.filter((product) => product.category === "physical")
+        .length,
     }),
     [products],
   );
@@ -125,7 +144,10 @@ export default function StoreGrid({ products }: { products: StoreProduct[] }) {
         (product) =>
           product.name.toLowerCase().includes(query) ||
           product.description.toLowerCase().includes(query) ||
-          (product.features && product.features.some((feature) => feature.toLowerCase().includes(query))),
+          (product.features &&
+            product.features.some((feature) =>
+              feature.toLowerCase().includes(query),
+            )),
       );
     }
 
@@ -187,7 +209,9 @@ export default function StoreGrid({ products }: { products: StoreProduct[] }) {
             }`}
           >
             {category === "all" ? "All Products" : categoryLabels[category]}
-            <span className="ml-2 text-[10px] opacity-60">{categoryCounts[category]}</span>
+            <span className="ml-2 text-[10px] opacity-60">
+              {categoryCounts[category]}
+            </span>
           </button>
         ))}
       </div>
@@ -201,7 +225,9 @@ export default function StoreGrid({ products }: { products: StoreProduct[] }) {
       ) : (
         <div className="py-16 text-center">
           <div className="text-neon-cyan/20 mb-4 font-mono text-4xl">[ ]</div>
-          <p className="font-mono text-sm text-slate-500">No products match your search.</p>
+          <p className="font-mono text-sm text-slate-500">
+            No products match your search.
+          </p>
           <button
             onClick={() => {
               setSearchQuery("");

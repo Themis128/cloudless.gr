@@ -69,7 +69,9 @@ export default function AdminOrdersPage() {
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-magenta font-mono text-xs">ORDERS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">Order Management</h1>
+        <h1 className="font-heading text-2xl font-bold text-white">
+          Order Management
+        </h1>
         <p className="font-body mt-1 text-slate-400">
           Live data from Stripe — checkout sessions and subscriptions.
         </p>
@@ -90,9 +92,13 @@ export default function AdminOrdersPage() {
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
-          <p className="font-mono text-xs text-slate-500">Active Subscriptions</p>
+          <p className="font-mono text-xs text-slate-500">
+            Active Subscriptions
+          </p>
           <p className="font-heading text-neon-cyan mt-1 text-2xl font-bold">
-            {loading ? "…" : subscriptions.filter((s) => s.status === "active").length}
+            {loading
+              ? "…"
+              : subscriptions.filter((s) => s.status === "active").length}
           </p>
         </div>
       </div>
@@ -109,7 +115,8 @@ export default function AdminOrdersPage() {
                 : "border border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
             }`}
           >
-            {t.charAt(0).toUpperCase() + t.slice(1)} ({t === "orders" ? orders.length : subscriptions.length})
+            {t.charAt(0).toUpperCase() + t.slice(1)} (
+            {t === "orders" ? orders.length : subscriptions.length})
           </button>
         ))}
       </div>
@@ -131,19 +138,38 @@ export default function AdminOrdersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-800">
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Session</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Customer</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Items</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Amount</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Status</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Date</th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Session
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Customer
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Items
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Date
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors">
-                    <td className="text-neon-cyan px-6 py-4 font-mono text-xs">{order.id.slice(0, 20)}…</td>
-                    <td className="px-6 py-4 font-mono text-white">{order.email}</td>
+                  <tr
+                    key={order.id}
+                    className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                  >
+                    <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
+                      {order.id.slice(0, 20)}…
+                    </td>
+                    <td className="px-6 py-4 font-mono text-white">
+                      {order.email}
+                    </td>
                     <td className="max-w-[200px] truncate px-6 py-4 text-slate-300">
                       {order.items.map((i) => i.description).join(", ") || "—"}
                     </td>
@@ -151,7 +177,9 @@ export default function AdminOrdersPage() {
                       {order.currency} {order.amount.toFixed(2)}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${statusClasses[order.status] ?? "text-slate-400 bg-slate-800/50"}`}>
+                      <span
+                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${statusClasses[order.status] ?? "text-slate-400 bg-slate-800/50"}`}
+                      >
                         {order.status}
                       </span>
                     </td>
@@ -162,7 +190,12 @@ export default function AdminOrdersPage() {
                 ))}
                 {orders.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">No orders yet</td>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-12 text-center font-mono text-slate-600"
+                    >
+                      No orders yet
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -175,35 +208,59 @@ export default function AdminOrdersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-800">
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Subscription</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Plan</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Amount</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Status</th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Renews</th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Subscription
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Plan
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                    Renews
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {subscriptions.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors">
-                    <td className="text-neon-cyan px-6 py-4 font-mono text-xs">{sub.id.slice(0, 20)}…</td>
+                  <tr
+                    key={sub.id}
+                    className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                  >
+                    <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
+                      {sub.id.slice(0, 20)}…
+                    </td>
                     <td className="px-6 py-4 text-white">{sub.plan}</td>
                     <td className="px-6 py-4 font-mono text-white">
                       {sub.currency} {sub.amount.toFixed(2)}/{sub.interval}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${statusClasses[sub.status] ?? "text-slate-400 bg-slate-800/50"}`}>
+                      <span
+                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${statusClasses[sub.status] ?? "text-slate-400 bg-slate-800/50"}`}
+                      >
                         {sub.status}
                         {sub.cancelAtPeriodEnd ? " (canceling)" : ""}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-slate-500">
-                      {new Date(sub.currentPeriodEnd).toLocaleDateString("en-IE")}
+                      {new Date(sub.currentPeriodEnd).toLocaleDateString(
+                        "en-IE",
+                      )}
                     </td>
                   </tr>
                 ))}
                 {subscriptions.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center font-mono text-slate-600">No subscriptions yet</td>
+                    <td
+                      colSpan={5}
+                      className="px-6 py-12 text-center font-mono text-slate-600"
+                    >
+                      No subscriptions yet
+                    </td>
                   </tr>
                 )}
               </tbody>

@@ -23,7 +23,9 @@ export interface SeoSnapshot {
 }
 
 /** Get domain-level SEO metrics */
-export async function getSeoSnapshot(domain = "cloudless.gr"): Promise<SeoSnapshot | null> {
+export async function getSeoSnapshot(
+  domain = "cloudless.gr",
+): Promise<SeoSnapshot | null> {
   try {
     const res = await ahrefsFetch(
       `/site-explorer/overview?target=${encodeURIComponent(domain)}&mode=domain`,
@@ -52,7 +54,10 @@ export interface KeywordData {
 }
 
 /** Get top organic keywords */
-export async function getTopKeywords(domain = "cloudless.gr", limit = 20): Promise<KeywordData[]> {
+export async function getTopKeywords(
+  domain = "cloudless.gr",
+  limit = 20,
+): Promise<KeywordData[]> {
   try {
     const res = await ahrefsFetch(
       `/site-explorer/organic-keywords?target=${encodeURIComponent(domain)}&mode=domain&limit=${limit}&order_by=traffic_desc`,
@@ -80,9 +85,13 @@ export interface WebAnalyticsData {
 }
 
 /** Get web analytics overview */
-export async function getWebAnalytics(domain = "cloudless.gr"): Promise<WebAnalyticsData | null> {
+export async function getWebAnalytics(
+  domain = "cloudless.gr",
+): Promise<WebAnalyticsData | null> {
   try {
-    const res = await ahrefsFetch(`/web-analytics/stats?target=${encodeURIComponent(domain)}`);
+    const res = await ahrefsFetch(
+      `/web-analytics/stats?target=${encodeURIComponent(domain)}`,
+    );
     if (!res.ok) return null;
     const data = await res.json();
     return {

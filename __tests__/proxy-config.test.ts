@@ -9,6 +9,11 @@ describe("proxy config matcher", () => {
     expect(matcher).toContain("offline\\.html");
   });
 
+  it("excludes all Next.js internals from intl middleware", () => {
+    const matcher = config.matcher?.[0] ?? "";
+    expect(matcher).toContain("_next");
+  });
+
   it("excludes common static file extensions", () => {
     const matcher = config.matcher?.[0] ?? "";
     expect(matcher).toContain("svg");

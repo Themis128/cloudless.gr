@@ -63,14 +63,17 @@ export async function getPosts(): Promise<NotionPost[]> {
   if (!NOTION_API_KEY || !NOTION_BLOG_DB_ID) return [];
 
   try {
-    const res = await fetch(`${NOTION_API}/databases/${NOTION_BLOG_DB_ID}/query`, {
-      method: "POST",
-      headers: notionHeaders(),
-      body: JSON.stringify({
-        filter: { property: "Published", checkbox: { equals: true } },
-        sorts: [{ property: "Date", direction: "descending" }],
-      }),
-    });
+    const res = await fetch(
+      `${NOTION_API}/databases/${NOTION_BLOG_DB_ID}/query`,
+      {
+        method: "POST",
+        headers: notionHeaders(),
+        body: JSON.stringify({
+          filter: { property: "Published", checkbox: { equals: true } },
+          sorts: [{ property: "Date", direction: "descending" }],
+        }),
+      },
+    );
 
     if (!res.ok) return [];
     const data = await res.json();
@@ -89,18 +92,21 @@ export async function getPostBySlug(
   if (!NOTION_API_KEY || !NOTION_BLOG_DB_ID) return null;
 
   try {
-    const res = await fetch(`${NOTION_API}/databases/${NOTION_BLOG_DB_ID}/query`, {
-      method: "POST",
-      headers: notionHeaders(),
-      body: JSON.stringify({
-        filter: {
-          and: [
-            { property: "Slug", rich_text: { equals: slug } },
-            { property: "Published", checkbox: { equals: true } },
-          ],
-        },
-      }),
-    });
+    const res = await fetch(
+      `${NOTION_API}/databases/${NOTION_BLOG_DB_ID}/query`,
+      {
+        method: "POST",
+        headers: notionHeaders(),
+        body: JSON.stringify({
+          filter: {
+            and: [
+              { property: "Slug", rich_text: { equals: slug } },
+              { property: "Published", checkbox: { equals: true } },
+            ],
+          },
+        }),
+      },
+    );
 
     if (!res.ok) return null;
     const data = await res.json();
@@ -108,9 +114,12 @@ export async function getPostBySlug(
     if (!page) return null;
 
     // Fetch blocks (content)
-    const blocksRes = await fetch(`${NOTION_API}/blocks/${page.id}/children?page_size=100`, {
-      headers: notionHeaders(),
-    });
+    const blocksRes = await fetch(
+      `${NOTION_API}/blocks/${page.id}/children?page_size=100`,
+      {
+        headers: notionHeaders(),
+      },
+    );
     const blocksData = blocksRes.ok ? await blocksRes.json() : { results: [] };
 
     return {
