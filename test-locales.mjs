@@ -1,5 +1,7 @@
 import http from "node:http";
 
+const TEST_BASE_URL = process.env.TEST_BASE_URL || `http://localhost:${process.env.PORT || "4000"}`;
+
 const pages = [
   { path: "/", expect: "EN" },
   { path: "/el", expect: "EL" },
@@ -44,7 +46,7 @@ const markers = {
 
 function fetch(path) {
   return new Promise((resolve, reject) => {
-    http.get("http://localhost:3000" + path, { timeout: 15000 }, (res) => {
+    http.get(TEST_BASE_URL + path, { timeout: 15000 }, (res) => {
       let data = "";
       res.on("data", (c) => (data += c));
       res.on("end", () => resolve({ status: res.statusCode, body: data }));
@@ -63,6 +65,8 @@ function getSection(path) {
 let passed = 0;
 let failed = 0;
 const failures = [];
+
+console.log(`Testing locale routes against ${TEST_BASE_URL}`);
 
 for (const { path, expect: lang } of pages) {
   try {
