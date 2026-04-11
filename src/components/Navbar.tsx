@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { playUiClickSound } from "@/lib/sound-effects";
 import { Link } from "@/i18n/navigation";
 import CartButton from "@/components/store/CartButton";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
@@ -28,7 +29,10 @@ export default function Navbar() {
   // Close user menu on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      ) {
         setUserMenuOpen(false);
       }
     }
@@ -43,7 +47,10 @@ export default function Navbar() {
       <div className="bg-void/90 border-neon-cyan/10 border-b backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           {/* Logo */}
-          <Link href="/" className="group glitch flex shrink-0 items-center gap-2">
+          <Link
+            href="/"
+            className="group glitch flex shrink-0 items-center gap-2"
+          >
             <CloudIcon />
             <span className="font-heading text-xl font-bold tracking-tight text-white">
               cloudless<span className="text-neon-cyan">.gr</span>
@@ -71,14 +78,22 @@ export default function Navbar() {
                   <div className="relative" ref={userMenuRef}>
                     <button
                       type="button"
-                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      onClick={() => {
+                        playUiClickSound();
+                        setUserMenuOpen(!userMenuOpen);
+                      }}
                       className="hover:border-neon-cyan/30 flex min-h-11 items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-slate-300 transition-all hover:text-white"
                     >
                       <span className="bg-neon-cyan/20 border-neon-cyan/30 text-neon-cyan flex h-6 w-6 items-center justify-center rounded-full border text-xs">
-                        {(user.name || user.email || user.username || "U")[0].toUpperCase()}
+                        {(user.name ||
+                          user.email ||
+                          user.username ||
+                          "U")[0].toUpperCase()}
                       </span>
                       <span className="hidden max-w-[120px] truncate xl:inline">
-                        {user.name || user.email?.split("@")[0] || user.username}
+                        {user.name ||
+                          user.email?.split("@")[0] ||
+                          user.username}
                       </span>
                       <svg
                         width="12"
@@ -99,7 +114,10 @@ export default function Navbar() {
                       <div className="bg-void-light/95 absolute top-full right-0 z-50 mt-2 w-48 rounded-xl border border-slate-800 py-1 shadow-xl backdrop-blur-xl">
                         <Link
                           href="/dashboard"
-                          onClick={() => setUserMenuOpen(false)}
+                          onClick={() => {
+                            playUiClickSound();
+                            setUserMenuOpen(false);
+                          }}
                           className="hover:text-neon-cyan hover:bg-neon-cyan/5 block px-4 py-2.5 font-mono text-sm text-slate-300 transition-all"
                         >
                           {translate(locale, "navbar.dashboard", "Dashboard")}
@@ -107,16 +125,24 @@ export default function Navbar() {
                         {isAdmin && (
                           <Link
                             href="/admin"
-                            onClick={() => setUserMenuOpen(false)}
+                            onClick={() => {
+                              playUiClickSound();
+                              setUserMenuOpen(false);
+                            }}
                             className="hover:text-neon-magenta hover:bg-neon-magenta/5 block px-4 py-2.5 font-mono text-sm text-slate-300 transition-all"
                           >
-                            {translate(locale, "navbar.adminPanel", "Admin Panel")}
+                            {translate(
+                              locale,
+                              "navbar.adminPanel",
+                              "Admin Panel",
+                            )}
                           </Link>
                         )}
                         <div className="my-1 border-t border-slate-800" />
                         <button
                           type="button"
                           onClick={() => {
+                            playUiClickSound();
                             setUserMenuOpen(false);
                             signOut();
                           }}
@@ -151,15 +177,30 @@ export default function Navbar() {
           <button
             type="button"
             className="text-neon-cyan p-2 lg:hidden"
-            onClick={() => setMobileOpen(!mobileOpen)}
+            onClick={() => {
+              playUiClickSound();
+              setMobileOpen(!mobileOpen);
+            }}
             aria-label={toggleMenuLabel}
           >
             {mobileOpen ? (
-              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M6 6l12 12M6 18L18 6" />
               </svg>
             ) : (
-              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             )}
@@ -178,18 +219,25 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 className="active:text-neon-cyan flex min-h-11 items-center py-3 font-mono text-sm font-medium text-slate-400 transition-colors"
-                onClick={() => setMobileOpen(false)}
+                onClick={() => {
+                  playUiClickSound();
+                  setMobileOpen(false);
+                }}
               >
                 <span className="text-neon-cyan/40 mr-2">&gt;</span>
                 {translate(locale, link.key, link.fallback)}
               </Link>
             ))}
             <div className="mt-2 flex items-center justify-between border-t border-slate-800 pt-2 pb-1">
-              <span className="font-mono text-xs text-slate-500">{cartLabel}</span>
+              <span className="font-mono text-xs text-slate-500">
+                {cartLabel}
+              </span>
               <CartButton />
             </div>
             <div className="mt-2 border-t border-slate-800 pt-1 pb-1">
-              <span className="mb-2 block font-mono text-xs text-slate-500">{languageLabel}</span>
+              <span className="mb-2 block font-mono text-xs text-slate-500">
+                {languageLabel}
+              </span>
               <LocaleSwitcher />
             </div>
             {!isLoading && (
@@ -203,7 +251,10 @@ export default function Navbar() {
                       <Link
                         href="/dashboard"
                         className="active:text-neon-cyan flex min-h-11 items-center py-3 font-mono text-sm font-medium text-slate-400 transition-colors"
-                        onClick={() => setMobileOpen(false)}
+                        onClick={() => {
+                          playUiClickSound();
+                          setMobileOpen(false);
+                        }}
                       >
                         <span className="text-neon-cyan/40 mr-2">&gt;</span>
                         {translate(locale, "navbar.dashboard", "Dashboard")}
@@ -212,15 +263,25 @@ export default function Navbar() {
                         <Link
                           href="/admin"
                           className="active:text-neon-magenta flex min-h-11 items-center py-3 font-mono text-sm font-medium text-slate-400 transition-colors"
-                          onClick={() => setMobileOpen(false)}
+                          onClick={() => {
+                            playUiClickSound();
+                            setMobileOpen(false);
+                          }}
                         >
-                          <span className="text-neon-magenta/40 mr-2">&gt;</span>
-                          {translate(locale, "navbar.adminPanel", "Admin Panel")}
+                          <span className="text-neon-magenta/40 mr-2">
+                            &gt;
+                          </span>
+                          {translate(
+                            locale,
+                            "navbar.adminPanel",
+                            "Admin Panel",
+                          )}
                         </Link>
                       )}
                       <button
                         type="button"
                         onClick={() => {
+                          playUiClickSound();
                           setMobileOpen(false);
                           signOut();
                         }}
@@ -236,14 +297,20 @@ export default function Navbar() {
                     <Link
                       href="/auth/login"
                       className="border-neon-cyan/50 text-neon-cyan active:bg-neon-cyan/10 mt-2 block min-h-11 rounded-lg border px-5 py-3 text-center font-mono text-sm font-semibold transition-all"
-                      onClick={() => setMobileOpen(false)}
+                      onClick={() => {
+                        playUiClickSound();
+                        setMobileOpen(false);
+                      }}
                     >
                       {translate(locale, "navbar.signIn", "Sign In")}
                     </Link>
                     <Link
                       href="/auth/signup"
                       className="mt-2 block min-h-11 rounded-lg border border-slate-700 px-5 py-3 text-center font-mono text-sm font-semibold text-slate-300 transition-all hover:border-neon-cyan/30 hover:text-neon-cyan"
-                      onClick={() => setMobileOpen(false)}
+                      onClick={() => {
+                        playUiClickSound();
+                        setMobileOpen(false);
+                      }}
                     >
                       {translate(locale, "navbar.signUp", "Sign Up")}
                     </Link>
@@ -260,7 +327,13 @@ export default function Navbar() {
 
 function CloudIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="text-neon-cyan">
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 32 32"
+      fill="none"
+      className="text-neon-cyan"
+    >
       <path
         d="M8 24a6 6 0 01-.84-11.94A8 8 0 0123.29 14 5 5 0 0124 24H8z"
         stroke="currentColor"

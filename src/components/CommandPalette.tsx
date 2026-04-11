@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { playUiClickSound } from "@/lib/sound-effects";
 import { Command } from "cmdk";
 
 const navItems = [
@@ -29,7 +30,10 @@ export default function CommandPalette() {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((prev) => (prev ? false : true));
+        setOpen((prev) => {
+          playUiClickSound();
+          return prev ? false : true;
+        });
       }
     }
 
@@ -39,6 +43,7 @@ export default function CommandPalette() {
 
   function navigate(path: string) {
     // Use location navigation to avoid router initialization timing issues.
+    playUiClickSound();
     window.location.assign(path);
     setOpen(false);
   }
@@ -47,7 +52,10 @@ export default function CommandPalette() {
 
   return (
     <div className="fixed inset-0 z-100">
-      <div className="bg-void/70 absolute inset-0 backdrop-blur-sm" onClick={() => setOpen(false)} />
+      <div
+        className="bg-void/70 absolute inset-0 backdrop-blur-sm"
+        onClick={() => setOpen(false)}
+      />
 
       <div className="relative mx-auto mt-[20vh] max-w-lg px-4">
         <Command
@@ -75,7 +83,9 @@ export default function CommandPalette() {
                   onSelect={() => navigate(item.path)}
                   className="data-[selected=true]:bg-neon-cyan/10 data-[selected=true]:text-neon-cyan flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 font-mono text-sm text-slate-400 transition-colors"
                 >
-                  <span className="text-neon-cyan/40 w-4 text-center text-xs">{item.icon}</span>
+                  <span className="text-neon-cyan/40 w-4 text-center text-xs">
+                    {item.icon}
+                  </span>
                   {item.label}
                 </Command.Item>
               ))}
@@ -91,7 +101,9 @@ export default function CommandPalette() {
                   onSelect={() => navigate(item.path)}
                   className="data-[selected=true]:bg-neon-magenta/10 data-[selected=true]:text-neon-magenta flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 font-mono text-sm text-slate-400 transition-colors"
                 >
-                  <span className="text-neon-magenta/40 w-4 text-center text-xs">{item.icon}</span>
+                  <span className="text-neon-magenta/40 w-4 text-center text-xs">
+                    {item.icon}
+                  </span>
                   {item.label}
                 </Command.Item>
               ))}
