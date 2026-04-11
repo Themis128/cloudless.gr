@@ -41,13 +41,21 @@ function resolve(messages: Messages, key: string): unknown {
 }
 
 /** Return a translated string for the given key, or the fallback when missing. */
-export function translate(locale: Locale, key: string, fallback: string): string {
+export function translate(
+  locale: Locale,
+  key: string,
+  fallback: string,
+): string {
   const candidate = resolve(getMessages(locale), key);
   return typeof candidate === "string" ? candidate : fallback;
 }
 
 /** Return a translated string-array for the given key, or the fallback when missing. */
-export function translateArray(locale: Locale, key: string, fallback: string[]): string[] {
+export function translateArray(
+  locale: Locale,
+  key: string,
+  fallback: string[],
+): string[] {
   const candidate = resolve(getMessages(locale), key);
   return Array.isArray(candidate) ? (candidate as string[]) : fallback;
 }

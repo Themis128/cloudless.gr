@@ -64,13 +64,18 @@ export default function ConsultationsPage() {
       <div className="mb-8">
         <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
           <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-          <span className="text-neon-cyan font-mono text-xs">CONSULTATIONS</span>
+          <span className="text-neon-cyan font-mono text-xs">
+            CONSULTATIONS
+          </span>
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">
           {t("dashboard.consultations", "Consultations")}
         </h1>
         <p className="font-body mt-1 text-slate-400">
-          {t("dashboard.consultationsDesc", "Your booked and past consultation sessions.")}
+          {t(
+            "dashboard.consultationsDesc",
+            "Your booked and past consultation sessions.",
+          )}
         </p>
       </div>
 
@@ -102,7 +107,9 @@ export default function ConsultationsPage() {
                 : "border border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
             }`}
           >
-            {t === "upcoming" ? `Upcoming (${upcoming.length})` : `Past (${past.length})`}
+            {t === "upcoming"
+              ? `Upcoming (${upcoming.length})`
+              : `Past (${past.length})`}
           </button>
         ))}
       </div>
@@ -117,7 +124,9 @@ export default function ConsultationsPage() {
             📅
           </div>
           <h2 className="font-heading mb-2 font-semibold text-white">
-            {tab === "upcoming" ? "No upcoming consultations" : "No past consultations"}
+            {tab === "upcoming"
+              ? "No upcoming consultations"
+              : "No past consultations"}
           </h2>
           <p className="font-body mx-auto max-w-md text-sm text-slate-500">
             {tab === "upcoming"
@@ -189,7 +198,8 @@ export default function ConsultationsPage() {
 
       {!configured && !loading && (
         <p className="mt-4 font-mono text-[10px] text-slate-600">
-          Calendar integration is being set up. Consultations will sync automatically once configured.
+          Calendar integration is being set up. Consultations will sync
+          automatically once configured.
         </p>
       )}
     </div>

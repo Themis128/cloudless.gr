@@ -8,7 +8,10 @@
  * @see https://docs.aws.amazon.com/ses/latest/dg/sending-email-suppression-list.html
  */
 
-import { SESv2Client, PutSuppressedDestinationCommand } from "@aws-sdk/client-sesv2";
+import {
+  SESv2Client,
+  PutSuppressedDestinationCommand,
+} from "@aws-sdk/client-sesv2";
 import { getConfig } from "@/lib/ssm-config";
 
 let sesv2Client: SESv2Client | null = null;

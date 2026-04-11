@@ -7,19 +7,19 @@ import { fetchAuthSession } from "aws-amplify/auth";
 
 export async function fetchWithAuth(
   url: string,
-  init?: RequestInit
+  init?: RequestInit,
 ): Promise<Response> {
   try {
     const session = await fetchAuthSession();
     const idToken = session.tokens?.idToken?.toString();
-    
+
     if (!idToken) {
       throw new Error("No ID token available");
     }
 
     const headers: Record<string, string> = {
       ...((init?.headers as Record<string, string>) || {}),
-      "Authorization": `Bearer ${idToken}`,
+      Authorization: `Bearer ${idToken}`,
     };
 
     return fetch(url, {

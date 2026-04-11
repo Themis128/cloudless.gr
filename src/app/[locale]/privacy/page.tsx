@@ -65,7 +65,7 @@ export default async function PrivacyPolicyPage() {
             <p className="mb-12 text-sm leading-relaxed text-slate-400">
               {t(
                 "legal.privacyIntro",
-                "This Privacy Policy explains how Cloudless (\"we\", \"us\", \"our\") collects, uses, discloses, and safeguards your information when you visit cloudless.gr and use our services. We are committed to protecting your privacy in compliance with the EU General Data Protection Regulation (GDPR), the ePrivacy Directive, and the California Consumer Privacy Act (CCPA/CPRA).",
+                'This Privacy Policy explains how Cloudless ("we", "us", "our") collects, uses, discloses, and safeguards your information when you visit cloudless.gr and use our services. We are committed to protecting your privacy in compliance with the EU General Data Protection Regulation (GDPR), the ePrivacy Directive, and the California Consumer Privacy Act (CCPA/CPRA).',
               )}
             </p>
           </ScrollReveal>
@@ -91,10 +91,16 @@ export default async function PrivacyPolicyPage() {
             <ScrollReveal>
               <Section
                 id="data-collected"
-                title={t("legal.dataCollectedTitle", "2. Information We Collect")}
+                title={t(
+                  "legal.dataCollectedTitle",
+                  "2. Information We Collect",
+                )}
               >
                 <p className="font-semibold text-white">
-                  {t("legal.dataProvidedTitle", "Information you provide directly:")}
+                  {t(
+                    "legal.dataProvidedTitle",
+                    "Information you provide directly:",
+                  )}
                 </p>
                 <p>
                   {t(
@@ -103,7 +109,10 @@ export default async function PrivacyPolicyPage() {
                   )}
                 </p>
                 <p className="font-semibold text-white">
-                  {t("legal.dataAutoTitle", "Information collected automatically:")}
+                  {t(
+                    "legal.dataAutoTitle",
+                    "Information collected automatically:",
+                  )}
                 </p>
                 <p>
                   {t(
@@ -117,7 +126,10 @@ export default async function PrivacyPolicyPage() {
             <ScrollReveal>
               <Section
                 id="legal-basis"
-                title={t("legal.legalBasisTitle", "3. Legal Basis for Processing (GDPR)")}
+                title={t(
+                  "legal.legalBasisTitle",
+                  "3. Legal Basis for Processing (GDPR)",
+                )}
               >
                 <p>
                   {t(
@@ -140,7 +152,10 @@ export default async function PrivacyPolicyPage() {
                   )}
                 </p>
                 <p>
-                  <Link href="/cookies" className="text-neon-cyan hover:underline">
+                  <Link
+                    href="/cookies"
+                    className="text-neon-cyan hover:underline"
+                  >
                     {t("legal.fullCookiePolicy", "Read our full Cookie Policy")}
                   </Link>
                 </p>
@@ -164,7 +179,10 @@ export default async function PrivacyPolicyPage() {
             <ScrollReveal>
               <Section
                 id="data-sharing"
-                title={t("legal.dataSharingTitle", "6. Data Sharing & Third Parties")}
+                title={t(
+                  "legal.dataSharingTitle",
+                  "6. Data Sharing & Third Parties",
+                )}
               >
                 <p>
                   {t(
@@ -178,7 +196,10 @@ export default async function PrivacyPolicyPage() {
             <ScrollReveal>
               <Section
                 id="data-transfers"
-                title={t("legal.dataTransfersTitle", "7. International Data Transfers")}
+                title={t(
+                  "legal.dataTransfersTitle",
+                  "7. International Data Transfers",
+                )}
               >
                 <p>
                   {t(
@@ -209,16 +230,22 @@ export default async function PrivacyPolicyPage() {
                 title={t("legal.yourRightsTitle", "9. Your Rights")}
               >
                 <p className="font-semibold text-white">
-                  {t("legal.gdprRightsTitle", "Under the GDPR, you have the right to:")}
+                  {t(
+                    "legal.gdprRightsTitle",
+                    "Under the GDPR, you have the right to:",
+                  )}
                 </p>
                 <p>
                   {t(
                     "legal.gdprRights",
-                    "Access — request a copy of your personal data. Rectification — correct inaccurate data. Erasure — request deletion of your data (\"right to be forgotten\"). Restriction — limit how we process your data. Portability — receive your data in a machine-readable format. Objection — object to processing based on legitimate interest. Withdraw consent — at any time, without affecting prior processing.",
+                    'Access — request a copy of your personal data. Rectification — correct inaccurate data. Erasure — request deletion of your data ("right to be forgotten"). Restriction — limit how we process your data. Portability — receive your data in a machine-readable format. Objection — object to processing based on legitimate interest. Withdraw consent — at any time, without affecting prior processing.',
                   )}
                 </p>
                 <p className="font-semibold text-white">
-                  {t("legal.ccpaRightsTitle", "Under the CCPA/CPRA (California residents):")}
+                  {t(
+                    "legal.ccpaRightsTitle",
+                    "Under the CCPA/CPRA (California residents):",
+                  )}
                 </p>
                 <p>
                   {t(
@@ -285,7 +312,7 @@ export default async function PrivacyPolicyPage() {
                 <p>
                   {t(
                     "legal.changes",
-                    "We may update this Privacy Policy from time to time. Material changes will be communicated via a notice on our website. The \"Last updated\" date at the top reflects the most recent revision.",
+                    'We may update this Privacy Policy from time to time. Material changes will be communicated via a notice on our website. The "Last updated" date at the top reflects the most recent revision.',
                   )}
                 </p>
               </Section>

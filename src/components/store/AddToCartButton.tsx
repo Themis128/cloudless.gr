@@ -3,7 +3,11 @@
 import { useCart } from "@/context/CartContext";
 import type { StoreProduct } from "@/lib/store-products-client";
 
-export default function AddToCartButton({ product }: { product: StoreProduct }) {
+export default function AddToCartButton({
+  product,
+}: {
+  product: StoreProduct;
+}) {
   const { addItem, toggleCart } = useCart();
 
   const handleAdd = () => {

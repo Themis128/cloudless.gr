@@ -1,7 +1,6 @@
-
 /**
  * Server-side Stripe operations.
- * 
+ *
  * NOTE: Only async functions are allowed in "use server" files.
  * For formatPrice (sync), import directly from @/lib/format-price
  */

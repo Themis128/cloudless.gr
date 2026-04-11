@@ -42,7 +42,10 @@ export default async function RefundPolicyPage() {
       <JsonLd
         data={getBreadcrumbSchema([
           { name: "Home", url: "https://cloudless.gr" },
-          { name: "Refund & Returns Policy", url: "https://cloudless.gr/refund" },
+          {
+            name: "Refund & Returns Policy",
+            url: "https://cloudless.gr/refund",
+          },
         ])}
       />
 
@@ -70,7 +73,10 @@ export default async function RefundPolicyPage() {
             <ScrollReveal>
               <Section
                 id="eu-withdrawal"
-                title={t("legal.euWithdrawalTitle", "1. EU Right of Withdrawal (14-Day Cooling-Off Period)")}
+                title={t(
+                  "legal.euWithdrawalTitle",
+                  "1. EU Right of Withdrawal (14-Day Cooling-Off Period)",
+                )}
               >
                 <p>
                   {t(
@@ -96,11 +102,17 @@ export default async function RefundPolicyPage() {
             <ScrollReveal>
               <Section
                 id="withdrawal-form"
-                title={t("legal.withdrawalFormTitle", "2. Model Withdrawal Form")}
+                title={t(
+                  "legal.withdrawalFormTitle",
+                  "2. Model Withdrawal Form",
+                )}
               >
                 <div className="bg-void rounded-lg border border-slate-700 p-4 font-mono text-xs">
                   <p className="mb-2 text-slate-300">
-                    {t("legal.withdrawalFormTo", "To: Cloudless — tbaltzakis@cloudless.gr")}
+                    {t(
+                      "legal.withdrawalFormTo",
+                      "To: Cloudless — tbaltzakis@cloudless.gr",
+                    )}
                   </p>
                   <p className="mb-2 text-slate-300">
                     {t(
@@ -115,7 +127,10 @@ export default async function RefundPolicyPage() {
             <ScrollReveal>
               <Section
                 id="exceptions"
-                title={t("legal.exceptionsTitle", "3. Exceptions to the Right of Withdrawal")}
+                title={t(
+                  "legal.exceptionsTitle",
+                  "3. Exceptions to the Right of Withdrawal",
+                )}
               >
                 <p>
                   {t(
@@ -143,7 +158,10 @@ export default async function RefundPolicyPage() {
             <ScrollReveal>
               <Section
                 id="service-issues"
-                title={t("legal.serviceIssuesTitle", "5. Service Quality Issues")}
+                title={t(
+                  "legal.serviceIssuesTitle",
+                  "5. Service Quality Issues",
+                )}
               >
                 <p>
                   {t(
@@ -195,11 +213,17 @@ export default async function RefundPolicyPage() {
                 </p>
                 <p>
                   {t("legal.refundSeeAlso", "See also:")}{" "}
-                  <Link href="/terms" className="text-neon-cyan hover:underline">
+                  <Link
+                    href="/terms"
+                    className="text-neon-cyan hover:underline"
+                  >
                     {t("legal.termsTitle", "Terms of Service")}
                   </Link>
                   {" | "}
-                  <Link href="/privacy" className="text-neon-cyan hover:underline">
+                  <Link
+                    href="/privacy"
+                    className="text-neon-cyan hover:underline"
+                  >
                     {t("legal.privacyTitle", "Privacy Policy")}
                   </Link>
                 </p>

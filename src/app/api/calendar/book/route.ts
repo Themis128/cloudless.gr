@@ -23,17 +23,26 @@ export async function POST(request: Request) {
     }
 
     if (!isValidEmail(email)) {
-      return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid email address." },
+        { status: 400 },
+      );
     }
 
     if (new Date(start) < new Date()) {
-      return NextResponse.json({ error: "Cannot book a slot in the past." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Cannot book a slot in the past." },
+        { status: 400 },
+      );
     }
 
     const result = await bookConsultation({ name, email, start, end, notes });
 
     if (!result) {
-      return NextResponse.json({ error: "Failed to create booking." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to create booking." },
+        { status: 500 },
+      );
     }
 
     // Notify team via Slack (non-blocking)

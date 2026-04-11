@@ -14,7 +14,11 @@ export async function GET() {
     const posts = await getPosts();
     return NextResponse.json(
       { posts, source: "notion" },
-      { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30" } },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30",
+        },
+      },
     );
   } catch (err) {
     console.error("[Blog] Fetch error:", err);

@@ -14,7 +14,8 @@ export const metadata: Metadata = {
 const categoryColors: Record<string, string> = {
   Cloud: "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20",
   Serverless: "bg-neon-green/10 text-neon-green border border-neon-green/20",
-  Analytics: "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
+  Analytics:
+    "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
   "AI Marketing": "bg-neon-blue/10 text-neon-blue border border-neon-blue/20",
 };
 
@@ -42,8 +43,8 @@ export default function BlogPage() {
             </span>
           </h1>
           <p className="animate-fade-in-up mt-4 max-w-xl text-lg text-slate-400 delay-200">
-            Cloud architecture, serverless, analytics, and AI marketing — written for founders and
-            technical teams who want to move fast.
+            Cloud architecture, serverless, analytics, and AI marketing —
+            written for founders and technical teams who want to move fast.
           </p>
         </div>
       </section>
@@ -67,19 +68,29 @@ export default function BlogPage() {
                     >
                       {post.category}
                     </span>
-                    <span className="font-mono text-xs text-slate-600">{post.readTime}</span>
+                    <span className="font-mono text-xs text-slate-600">
+                      {post.readTime}
+                    </span>
                   </div>
                   <h2 className="font-heading group-hover:text-neon-cyan text-xl font-bold text-white transition-colors">
                     {post.title}
                   </h2>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-400">{post.excerpt}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-400">
+                    {post.excerpt}
+                  </p>
                   <div className="mt-4 flex items-center justify-between">
                     <time className="font-mono text-xs text-slate-600">
                       {formatDate(post.date)}
                     </time>
                     <span className="text-neon-cyan inline-flex items-center gap-1 font-mono text-sm font-semibold transition-all group-hover:gap-2">
                       Read: {post.title}
-                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg
+                        width="14"
+                        height="14"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
                         <path d="M3 7h8M7 3l4 4-4 4" />
                       </svg>
                     </span>

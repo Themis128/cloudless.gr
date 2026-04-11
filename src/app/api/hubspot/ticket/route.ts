@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createTicket, searchContacts } from '@/lib/hubspot';
+import { NextRequest, NextResponse } from "next/server";
+import { createTicket, searchContacts } from "@/lib/hubspot";
 
 /**
  * POST /api/hubspot/ticket
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const { subject, content, email, priority } = body;
     if (!subject || !content) {
       return NextResponse.json(
-        { error: 'Missing required fields: subject, content' },
+        { error: "Missing required fields: subject, content" },
         { status: 400 },
       );
     }
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     let contactId: string | undefined;
     if (email) {
       try {
-        const result = await searchContacts('email', email);
+        const result = await searchContacts("email", email);
         if (result.total > 0) {
           contactId = result.results[0].id;
         }
@@ -36,19 +36,19 @@ export async function POST(request: NextRequest) {
       {
         subject,
         content,
-        hs_ticket_priority: priority || 'MEDIUM',
+        hs_ticket_priority: priority || "MEDIUM",
       },
       contactId,
     );
 
     if (!ticket) {
       return NextResponse.json(
-        { error: 'HubSpot ticket creation is not configured.' },
+        { error: "HubSpot ticket creation is not configured." },
         { status: 503 },
       );
     }
 
-    console.warn('[HubSpot] Ticket created:', ticket.id);
+    console.warn("[HubSpot] Ticket created:", ticket.id);
 
     return NextResponse.json({
       success: true,
@@ -56,10 +56,10 @@ export async function POST(request: NextRequest) {
       contactId: contactId || null,
     });
   } catch (error) {
-    console.error('[HubSpot] Ticket error:', error);
+    console.error("[HubSpot] Ticket error:", error);
     const errMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: 'Failed to create ticket.', detail: errMsg },
+      { error: "Failed to create ticket.", detail: errMsg },
       { status: 500 },
     );
   }

@@ -11,7 +11,9 @@ function ensureSesConfig(config: {
   AWS_SES_REGION: string;
 }): void {
   if (!config.SES_FROM_EMAIL || !config.SES_TO_EMAIL) {
-    throw new Error("Missing required SES config: SES_FROM_EMAIL and SES_TO_EMAIL must be set");
+    throw new Error(
+      "Missing required SES config: SES_FROM_EMAIL and SES_TO_EMAIL must be set",
+    );
   }
   if (!config.AWS_SES_REGION) {
     throw new Error("Missing required SES config: AWS_SES_REGION must be set");

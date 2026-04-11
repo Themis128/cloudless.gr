@@ -16,7 +16,11 @@ const adminLinks = [
   { href: "/admin/settings", label: "Settings", icon: "⚙" },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { user, isAdmin, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -41,7 +45,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Match active link — exact for /admin, startsWith for sub-pages
   const isActive = (href: string) => {
-    if (href === "/admin") return pathname === "/admin" || pathname?.match(/^\/[a-z]{2}\/admin$/);
+    if (href === "/admin")
+      return pathname === "/admin" || pathname?.match(/^\/[a-z]{2}\/admin$/);
     return pathname?.includes(href);
   };
 
@@ -51,7 +56,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="border-neon-magenta/20 bg-neon-magenta/5 border-b">
         <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2 sm:px-6 lg:px-8">
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
-          <span className="text-neon-magenta font-mono text-xs">ADMIN PANEL</span>
+          <span className="text-neon-magenta font-mono text-xs">
+            ADMIN PANEL
+          </span>
         </div>
       </div>
 

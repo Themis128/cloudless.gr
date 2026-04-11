@@ -60,7 +60,9 @@ export default function SuccessPage() {
       <section className="bg-void scanlines relative py-20 md:py-28">
         <div className="cyber-grid absolute inset-0 opacity-20" />
         <div className="relative z-10 mx-auto max-w-3xl px-6 text-center">
-          <div className="text-neon-cyan glow-cyan mb-6 font-mono text-6xl">&#x2713;</div>
+          <div className="text-neon-cyan glow-cyan mb-6 font-mono text-6xl">
+            &#x2713;
+          </div>
           <h1 className="font-heading text-3xl font-bold text-white md:text-4xl">
             Order{" "}
             <span className="from-neon-cyan to-neon-green bg-gradient-to-r bg-clip-text text-transparent">
@@ -68,8 +70,8 @@ export default function SuccessPage() {
             </span>
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-slate-400">
-            Thanks for your purchase. A confirmation email with your order details and any download
-            links is on its way.
+            Thanks for your purchase. A confirmation email with your order
+            details and any download links is on its way.
           </p>
         </div>
       </section>
@@ -93,10 +95,16 @@ export default function SuccessPage() {
                 <div
                   className={`h-10 w-10 ${accentClasses[step.accent].box} mb-4 flex items-center justify-center rounded-lg border text-lg`}
                 >
-                  <span className={accentClasses[step.accent].text}>{step.icon}</span>
+                  <span className={accentClasses[step.accent].text}>
+                    {step.icon}
+                  </span>
                 </div>
-                <h3 className="mb-2 text-sm font-semibold text-white">{step.title}</h3>
-                <p className="text-xs leading-relaxed text-slate-400">{step.description}</p>
+                <h3 className="mb-2 text-sm font-semibold text-white">
+                  {step.title}
+                </h3>
+                <p className="text-xs leading-relaxed text-slate-400">
+                  {step.description}
+                </p>
               </div>
             ))}
           </div>
@@ -108,7 +116,10 @@ export default function SuccessPage() {
         <div className="mx-auto max-w-3xl px-6 text-center">
           <p className="mb-6 font-mono text-sm text-slate-500">
             Questions? Reach us at{" "}
-            <a href="mailto:tbaltzakis@cloudless.gr" className="text-neon-cyan hover:underline">
+            <a
+              href="mailto:tbaltzakis@cloudless.gr"
+              className="text-neon-cyan hover:underline"
+            >
               tbaltzakis@cloudless.gr
             </a>
           </p>

@@ -4,7 +4,10 @@ import { isConfigured } from "@/lib/integrations";
 
 export async function GET() {
   if (!isConfigured("AHREFS_API_KEY")) {
-    return NextResponse.json({ error: "Ahrefs not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "Ahrefs not configured." },
+      { status: 503 },
+    );
   }
 
   try {
@@ -15,6 +18,9 @@ export async function GET() {
     });
   } catch (err) {
     console.error("[Web Analytics] Error:", err);
-    return NextResponse.json({ error: "Failed to fetch analytics." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch analytics." },
+      { status: 500 },
+    );
   }
 }

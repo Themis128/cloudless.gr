@@ -1,7 +1,7 @@
 /* global Response, URL, caches, fetch, self */
 
 // Bump CACHE_VERSION on each deploy to invalidate stale caches
-const CACHE_VERSION = "5";
+const CACHE_VERSION = "6";
 const CACHE_NAME = `cloudless-v${CACHE_VERSION}`;
 const STATIC_CACHE = `cloudless-static-v${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `cloudless-dynamic-v${CACHE_VERSION}`;
@@ -122,8 +122,11 @@ function handleNavigationRequest(event) {
     })
     .catch(() => {
       return caches.match(event.request).then((cached) => {
-        return cached || caches.match("/offline.html");
-      });
+          if (cached) return cached;
+          return caches
+            .match("/offline.html")
+            .then((offline) => offline || new Response("Offline", { status: 503 }));
+        });
     });
 }
 
@@ -137,7 +140,7 @@ function handleStaticAssetRequest(request) {
           if (response.ok) cache.put(request, response.clone());
           return response;
         })
-        .catch(() => null);
+        .catch(() => new Response("Offline", { status: 503 }));
       // Return cached immediately; fall back to network if not cached yet
       return cached || networkFetch;
     });
@@ -159,6 +162,11 @@ function handleDefaultRequest(request) {
     });
 }
 
+function ensureResponse(result, fallbackBody = "Offline") {
+  if (result instanceof Response) return result;
+  return new Response(fallbackBody, { status: 503 });
+}
+
 // Fetch event
 self.addEventListener("fetch", (event) => {
   const { request } = event;
@@ -172,13 +180,21 @@ self.addEventListener("fetch", (event) => {
 
   // Network-only for API routes
   if (url.pathname.startsWith("/api/")) {
-    event.respondWith(handleApiRequest(request));
+    event.respondWith(
+      handleApiRequest(request)
+        .then((response) => ensureResponse(response, "API unavailable offline"))
+        .catch(() => new Response("API unavailable offline", { status: 503 })),
+    );
     return;
   }
 
   // Network-first for navigation (HTML pages)
   if (request.mode === "navigate") {
-    event.respondWith(handleNavigationRequest(event));
+    event.respondWith(
+      handleNavigationRequest(event)
+        .then((response) => ensureResponse(response))
+        .catch(() => new Response("Offline", { status: 503 })),
+    );
     return;
   }
 
@@ -188,12 +204,20 @@ self.addEventListener("fetch", (event) => {
   );
 
   if (isStaticAsset) {
-    event.respondWith(handleStaticAssetRequest(request));
+    event.respondWith(
+      handleStaticAssetRequest(request)
+        .then((response) => ensureResponse(response))
+        .catch(() => new Response("Offline", { status: 503 })),
+    );
     return;
   }
 
   // Default: network-first
-  event.respondWith(handleDefaultRequest(request));
+  event.respondWith(
+    handleDefaultRequest(request)
+      .then((response) => ensureResponse(response))
+      .catch(() => new Response("Offline", { status: 503 })),
+  );
 });
 
 // Push notification handler

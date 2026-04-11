@@ -82,7 +82,11 @@ function handleStatus(_payload: SlashCommandPayload): Response {
     blocks: [
       {
         type: "header",
-        text: { type: "plain_text", text: ":white_check_mark: cloudless.gr Status", emoji: true },
+        text: {
+          type: "plain_text",
+          text: ":white_check_mark: cloudless.gr Status",
+          emoji: true,
+        },
       },
       {
         type: "section",
@@ -119,18 +123,29 @@ async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
         blocks: [
           {
             type: "header",
-            text: { type: "plain_text", text: ":receipt: Recent Orders", emoji: true },
+            text: {
+              type: "plain_text",
+              text: ":receipt: Recent Orders",
+              emoji: true,
+            },
           },
           {
             type: "section",
-            text: { type: "mrkdwn", text: "No checkout sessions found in Stripe." },
+            text: {
+              type: "mrkdwn",
+              text: "No checkout sessions found in Stripe.",
+            },
           },
           {
             type: "actions",
             elements: [
               {
                 type: "button",
-                text: { type: "plain_text", text: "Open Stripe Dashboard", emoji: true },
+                text: {
+                  type: "plain_text",
+                  text: "Open Stripe Dashboard",
+                  emoji: true,
+                },
                 url: "https://dashboard.stripe.com/payments",
                 action_id: "open_stripe_dashboard",
                 style: "primary",
@@ -171,13 +186,23 @@ async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
       blocks: [
         {
           type: "header",
-          text: { type: "plain_text", text: ":receipt: Recent Orders", emoji: true },
+          text: {
+            type: "plain_text",
+            text: ":receipt: Recent Orders",
+            emoji: true,
+          },
         },
         {
           type: "section",
           fields: [
-            { type: "mrkdwn", text: `*Showing*\n${orders.length} order${orders.length === 1 ? "" : "s"}${hasMore ? " (more available)" : ""}` },
-            { type: "mrkdwn", text: `*Paid Revenue*\n${formatPrice(totalRevenue, currency)}` },
+            {
+              type: "mrkdwn",
+              text: `*Showing*\n${orders.length} order${orders.length === 1 ? "" : "s"}${hasMore ? " (more available)" : ""}`,
+            },
+            {
+              type: "mrkdwn",
+              text: `*Paid Revenue*\n${formatPrice(totalRevenue, currency)}`,
+            },
           ],
         },
         { type: "divider" },
@@ -191,7 +216,11 @@ async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
           elements: [
             {
               type: "button",
-              text: { type: "plain_text", text: "Open Stripe Dashboard", emoji: true },
+              text: {
+                type: "plain_text",
+                text: "Open Stripe Dashboard",
+                emoji: true,
+              },
               url: "https://dashboard.stripe.com/payments",
               action_id: "open_stripe_dashboard",
               style: "primary",
@@ -207,7 +236,10 @@ async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
         {
           type: "context",
           elements: [
-            { type: "mrkdwn", text: `Requested by <@${payload.user_id}> | Tip: \`/cloudless-orders 10\` to show more` },
+            {
+              type: "mrkdwn",
+              text: `Requested by <@${payload.user_id}> | Tip: \`/cloudless-orders 10\` to show more`,
+            },
           ],
         },
       ],
@@ -219,7 +251,11 @@ async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
       blocks: [
         {
           type: "header",
-          text: { type: "plain_text", text: ":warning: Orders unavailable", emoji: true },
+          text: {
+            type: "plain_text",
+            text: ":warning: Orders unavailable",
+            emoji: true,
+          },
         },
         {
           type: "section",
@@ -233,7 +269,11 @@ async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
           elements: [
             {
               type: "button",
-              text: { type: "plain_text", text: "Open Stripe Dashboard", emoji: true },
+              text: {
+                type: "plain_text",
+                text: "Open Stripe Dashboard",
+                emoji: true,
+              },
               url: "https://dashboard.stripe.com/payments",
               action_id: "open_stripe_dashboard",
               style: "primary",
@@ -242,7 +282,9 @@ async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
         },
         {
           type: "context",
-          elements: [{ type: "mrkdwn", text: `Requested by <@${payload.user_id}>` }],
+          elements: [
+            { type: "mrkdwn", text: `Requested by <@${payload.user_id}>` },
+          ],
         },
       ],
     });

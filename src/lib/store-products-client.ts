@@ -173,7 +173,12 @@ export const demoProducts: StoreProduct[] = [
     currency: "eur",
     category: "physical",
     image: "/store/dev-kit.svg",
-    features: ["Notebook", "Sticker pack", "Architecture cheatsheet", "Free shipping EU"],
+    features: [
+      "Notebook",
+      "Sticker pack",
+      "Architecture cheatsheet",
+      "Free shipping EU",
+    ],
   },
   {
     id: "phy-tshirt",
@@ -184,7 +189,12 @@ export const demoProducts: StoreProduct[] = [
     currency: "eur",
     category: "physical",
     image: "/store/tshirt.svg",
-    features: ["100% organic cotton", "Embroidered logo", "All sizes", "Free shipping EU"],
+    features: [
+      "100% organic cotton",
+      "Embroidered logo",
+      "All sizes",
+      "Free shipping EU",
+    ],
   },
 ];
 
@@ -198,6 +208,8 @@ export function getProductById(id: string): StoreProduct | undefined {
 /**
  * Synchronous category lookup (demo data only)
  */
-export function getProductsByCategory(category: ProductCategory): StoreProduct[] {
+export function getProductsByCategory(
+  category: ProductCategory,
+): StoreProduct[] {
   return demoProducts.filter((p) => p.category === category);
 }

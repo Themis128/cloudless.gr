@@ -21,7 +21,9 @@ export default function ParticleField({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     if (reducedMotion) return;
 
     const isNarrowViewport = window.matchMedia("(max-width: 768px)").matches;
@@ -37,7 +39,13 @@ export default function ParticleField({
     if (ctx === null) return;
 
     let animId: number;
-    let particles: { x: number; y: number; vx: number; vy: number; size: number }[] = [];
+    let particles: {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      size: number;
+    }[] = [];
 
     function resize() {
       const rect = canvasEl.parentElement?.getBoundingClientRect();

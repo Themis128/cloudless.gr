@@ -26,7 +26,10 @@ const defaultPreferences: CookiePreferences = {
   marketing: false,
 };
 
-function readConsentCookie(): { hasConsented: boolean; preferences: CookiePreferences } {
+function readConsentCookie(): {
+  hasConsented: boolean;
+  preferences: CookiePreferences;
+} {
   // Safe for SSR - returns defaults if document is not available
   if (typeof document === "undefined") {
     return { hasConsented: false, preferences: defaultPreferences };
@@ -78,13 +81,19 @@ interface ConsentState {
 }
 
 type ConsentAction =
-  | { type: "HYDRATE"; payload: { hasConsented: boolean; preferences: CookiePreferences } }
+  | {
+      type: "HYDRATE";
+      payload: { hasConsented: boolean; preferences: CookiePreferences };
+    }
   | { type: "SET_BANNER_VISIBLE"; payload: boolean }
   | { type: "SET_SETTINGS_VISIBLE"; payload: boolean }
   | { type: "SET_PREFERENCES"; payload: CookiePreferences }
   | { type: "MOUNT" };
 
-function consentReducer(state: ConsentState, action: ConsentAction): ConsentState {
+function consentReducer(
+  state: ConsentState,
+  action: ConsentAction,
+): ConsentState {
   switch (action.type) {
     case "HYDRATE":
       return {
@@ -126,7 +135,9 @@ const CookieConsentContext = createContext<CookieConsentState | null>(null);
 export function useCookieConsent(): CookieConsentState {
   const ctx = useContext(CookieConsentContext);
   if (!ctx) {
-    throw new Error("useCookieConsent must be used within CookieConsentProvider");
+    throw new Error(
+      "useCookieConsent must be used within CookieConsentProvider",
+    );
   }
   return ctx;
 }
@@ -149,7 +160,10 @@ export function CookieConsentProvider({ children }: { children: ReactNode }) {
     const stored = readConsentCookie();
     dispatch({
       type: "HYDRATE",
-      payload: { hasConsented: stored.hasConsented, preferences: stored.preferences },
+      payload: {
+        hasConsented: stored.hasConsented,
+        preferences: stored.preferences,
+      },
     });
   }, []);
 

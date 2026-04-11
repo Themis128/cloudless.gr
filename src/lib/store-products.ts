@@ -4,13 +4,20 @@
  */
 
 import { listStripeProducts, type StripeProduct } from "@/lib/stripe";
-import type { ProductCategory, StoreProduct } from "@/lib/store-products-client";
+import type {
+  ProductCategory,
+  StoreProduct,
+} from "@/lib/store-products-client";
 
 let productCache: { products: StoreProduct[]; fetchedAt: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 function normalizeCategory(category: string | undefined): ProductCategory {
-  if (category === "digital" || category === "physical" || category === "service") {
+  if (
+    category === "digital" ||
+    category === "physical" ||
+    category === "service"
+  ) {
     return category;
   }
   return "service";
@@ -36,7 +43,10 @@ function mapStripeProduct(sp: StripeProduct): StoreProduct {
     image,
     features,
     recurring: sp.defaultPrice?.recurring != null,
-    interval: sp.defaultPrice?.recurring?.interval as "month" | "year" | undefined,
+    interval: sp.defaultPrice?.recurring?.interval as
+      | "month"
+      | "year"
+      | undefined,
   };
 }
 
@@ -65,7 +75,9 @@ export async function getProducts(): Promise<StoreProduct[]> {
   }
 }
 
-export async function getProductByIdAsync(id: string): Promise<StoreProduct | undefined> {
+export async function getProductByIdAsync(
+  id: string,
+): Promise<StoreProduct | undefined> {
   const products = await getProducts();
   return products.find((product) => product.id === id);
 }

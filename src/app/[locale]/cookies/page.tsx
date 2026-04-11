@@ -105,7 +105,7 @@ export default function CookiePolicyPage() {
                 <p>
                   {t(
                     "legal.whatAreCookies",
-                    "Cookies are small text files stored on your device when you visit a website. They help the site remember your preferences, understand how you use it, and improve your experience. Cookies may be \"session\" (deleted when you close your browser) or \"persistent\" (stored for a set period).",
+                    'Cookies are small text files stored on your device when you visit a website. They help the site remember your preferences, understand how you use it, and improve your experience. Cookies may be "session" (deleted when you close your browser) or "persistent" (stored for a set period).',
                   )}
                 </p>
               </Section>
@@ -203,12 +203,15 @@ export default function CookiePolicyPage() {
             <ScrollReveal>
               <Section
                 id="manage-cookies"
-                title={t("legal.manageCookiesTitle", "4. Managing Your Preferences")}
+                title={t(
+                  "legal.manageCookiesTitle",
+                  "4. Managing Your Preferences",
+                )}
               >
                 <p>
                   {t(
                     "legal.manageCookies",
-                    "You can change your cookie preferences at any time by clicking the button below, or via the \"Cookie Settings\" link in our website footer.",
+                    'You can change your cookie preferences at any time by clicking the button below, or via the "Cookie Settings" link in our website footer.',
                   )}
                 </p>
                 <button
@@ -233,8 +236,14 @@ export default function CookiePolicyPage() {
                 title={t("legal.moreInfoTitle", "5. More Information")}
               >
                 <p>
-                  {t("legal.moreInfo", "For more details about how we handle your data, see our")}{" "}
-                  <Link href="/privacy" className="text-neon-cyan hover:underline">
+                  {t(
+                    "legal.moreInfo",
+                    "For more details about how we handle your data, see our",
+                  )}{" "}
+                  <Link
+                    href="/privacy"
+                    className="text-neon-cyan hover:underline"
+                  >
                     {t("legal.privacyTitle", "Privacy Policy")}
                   </Link>
                   {". "}

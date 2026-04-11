@@ -6,6 +6,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   // Removed "output: export" to enable API routes and SSR for e-store
+  allowedDevOrigins: ["172.24.240.121"],
   turbopack: {
     root: resolve(import.meta.dirname),
     // next-intl 3.26 writes this alias to the deprecated experimental.turbo key,

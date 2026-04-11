@@ -61,14 +61,17 @@ export default async function TermsPage() {
             <p className="mb-12 text-sm leading-relaxed text-slate-400">
               {t(
                 "legal.termsIntro",
-                "These Terms of Service (\"Terms\") govern your access to and use of cloudless.gr and all services and products offered by Cloudless (\"we\", \"us\", \"our\"). By using our website or purchasing our services, you agree to these Terms. If you do not agree, please do not use our services.",
+                'These Terms of Service ("Terms") govern your access to and use of cloudless.gr and all services and products offered by Cloudless ("we", "us", "our"). By using our website or purchasing our services, you agree to these Terms. If you do not agree, please do not use our services.',
               )}
             </p>
           </ScrollReveal>
 
           <div className="space-y-10">
             <ScrollReveal>
-              <Section id="provider" title={t("legal.providerTitle", "1. Service Provider")}>
+              <Section
+                id="provider"
+                title={t("legal.providerTitle", "1. Service Provider")}
+              >
                 <p>
                   {t(
                     "legal.providerText",
@@ -79,7 +82,10 @@ export default async function TermsPage() {
             </ScrollReveal>
 
             <ScrollReveal>
-              <Section id="services" title={t("legal.servicesTitle", "2. Services & Products")}>
+              <Section
+                id="services"
+                title={t("legal.servicesTitle", "2. Services & Products")}
+              >
                 <p>
                   {t(
                     "legal.servicesText",
@@ -90,7 +96,10 @@ export default async function TermsPage() {
             </ScrollReveal>
 
             <ScrollReveal>
-              <Section id="orders" title={t("legal.ordersTitle", "3. Orders & Payment")}>
+              <Section
+                id="orders"
+                title={t("legal.ordersTitle", "3. Orders & Payment")}
+              >
                 <p>
                   {t(
                     "legal.ordersText",
@@ -103,7 +112,10 @@ export default async function TermsPage() {
             <ScrollReveal>
               <Section
                 id="withdrawal"
-                title={t("legal.withdrawalTitle", "4. Right of Withdrawal (EU Consumers)")}
+                title={t(
+                  "legal.withdrawalTitle",
+                  "4. Right of Withdrawal (EU Consumers)",
+                )}
               >
                 <p>
                   {t(
@@ -121,15 +133,24 @@ export default async function TermsPage() {
                   )}
                 </p>
                 <p>
-                  <Link href="/refund" className="text-neon-cyan hover:underline">
-                    {t("legal.fullRefundPolicy", "Read our full Refund & Returns Policy")}
+                  <Link
+                    href="/refund"
+                    className="text-neon-cyan hover:underline"
+                  >
+                    {t(
+                      "legal.fullRefundPolicy",
+                      "Read our full Refund & Returns Policy",
+                    )}
                   </Link>
                 </p>
               </Section>
             </ScrollReveal>
 
             <ScrollReveal>
-              <Section id="delivery" title={t("legal.deliveryTitle", "5. Delivery")}>
+              <Section
+                id="delivery"
+                title={t("legal.deliveryTitle", "5. Delivery")}
+              >
                 <p>
                   {t(
                     "legal.deliveryText",
@@ -140,7 +161,10 @@ export default async function TermsPage() {
             </ScrollReveal>
 
             <ScrollReveal>
-              <Section id="ip" title={t("legal.ipTitle", "6. Intellectual Property")}>
+              <Section
+                id="ip"
+                title={t("legal.ipTitle", "6. Intellectual Property")}
+              >
                 <p>
                   {t(
                     "legal.ipText",
@@ -165,7 +189,10 @@ export default async function TermsPage() {
             </ScrollReveal>
 
             <ScrollReveal>
-              <Section id="accounts" title={t("legal.accountsTitle", "8. User Accounts")}>
+              <Section
+                id="accounts"
+                title={t("legal.accountsTitle", "8. User Accounts")}
+              >
                 <p>
                   {t(
                     "legal.accountsText",
@@ -192,7 +219,10 @@ export default async function TermsPage() {
             <ScrollReveal>
               <Section
                 id="governing-law"
-                title={t("legal.governingLawTitle", "10. Governing Law & Disputes")}
+                title={t(
+                  "legal.governingLawTitle",
+                  "10. Governing Law & Disputes",
+                )}
               >
                 <p>
                   {t(
@@ -206,7 +236,10 @@ export default async function TermsPage() {
             <ScrollReveal>
               <Section
                 id="terms-changes"
-                title={t("legal.termsChangesTitle", "11. Changes to These Terms")}
+                title={t(
+                  "legal.termsChangesTitle",
+                  "11. Changes to These Terms",
+                )}
               >
                 <p>
                   {t(
