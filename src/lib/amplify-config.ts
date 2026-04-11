@@ -7,8 +7,8 @@ let configured = false;
 export function configureAmplify(): boolean {
   if (configured) return true;
 
-  const userPoolId = globalThis.process?.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
-  const clientId = globalThis.process?.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+  const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
 
   if (!userPoolId || !clientId) {
     return false;
