@@ -1,0 +1,12 @@
+node_modules
+.next
+.open-next
+pnpm-lock.yaml
+pnpm-workspace.yaml
+dist
+build
+*.log
+.env.local
+.git
+.gitignore
+README.md
