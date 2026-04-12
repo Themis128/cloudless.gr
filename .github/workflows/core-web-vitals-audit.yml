@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - name: Run Lighthouse on key routes
         id: lhci
         uses: treosh/lighthouse-ci-action@v12
