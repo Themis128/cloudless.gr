@@ -1,5 +1,8 @@
 name: Monthly Security Audit
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   schedule:
     # Run on the 1st of each month at 9:00 AM UTC
