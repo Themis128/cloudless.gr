@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { config } from "@/proxy";
+import { config } from "@/proxy-config";
 
 describe("proxy config matcher", () => {
   it("excludes manifest, service worker and offline html from intl middleware", () => {
