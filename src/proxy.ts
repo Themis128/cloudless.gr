@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
-export { config } from "./proxy-config";
 
 // --- next-intl locale middleware ---
 const intlMiddleware = createIntlMiddleware(routing);
@@ -149,3 +148,10 @@ export function proxy(request: NextRequest) {
   addSecurityHeaders(response);
   return response;
 }
+
+export const config = {
+  matcher: [
+    // Match all request paths except static files, Next.js internals, and PWA assets
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html)$).*)",
+  ],
+};
