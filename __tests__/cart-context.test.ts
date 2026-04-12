@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { cartReducer } from "@/context/CartContext";
-import type { StoreProduct } from "@/lib/store-products-client";
+import type { StoreProduct } from "@/lib/store-products";
 
 const mockProduct: StoreProduct = {
   id: "test-1",
@@ -100,4 +100,5 @@ describe("cartReducer", () => {
     expect(state.isOpen).toBe(true);
     state = cartReducer(state, { type: "CLOSE_CART" });
     expect(state.isOpen).toBe(false);
-  }
+  });
+});
