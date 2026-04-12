@@ -13,6 +13,25 @@ vi.mock("@/lib/slack-verify", () => ({
   ),
 }));
 
+vi.mock("@/lib/stripe", () => ({
+  listRecentCheckoutSessions: vi.fn(async () => ({
+    orders: [
+      {
+        id: "cs_test_mock123",
+        email: "test@cloudless.gr",
+        amount: 4900,
+        currency: "EUR",
+        status: "complete",
+        created: Math.floor(Date.now() / 1000),
+        paymentStatus: "paid",
+        mode: "payment",
+      },
+    ],
+    hasMore: false,
+  })),
+  formatPrice: vi.fn((amount: number, currency: string) => `€${(amount / 100).toFixed(2)} ${currency}`),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

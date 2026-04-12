@@ -42,4 +42,6 @@ export default defineConfig({
     command: "NEXT_PUBLIC_E2E=1 pnpm dev",
     url: "http://localhost:4000",
     reuseExistingServer: !isCi,
-    timeout: 120
+    timeout: 120_000,
+  },
+});
