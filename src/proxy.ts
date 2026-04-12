@@ -63,25 +63,12 @@ function addSecurityHeaders(response: NextResponse): void {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  response.headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()",
-  );
-  response.headers.set(
-    "Strict-Transport-Security",
-    "max-age=63072000; includeSubDomains; preload",
-  );
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
 }
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  // --- Bypass Next.js internals so dev assets and HMR are never locale-rewritten ---
-  if (pathname.startsWith("/_next/")) {
-    const response = NextResponse.next();
-    addSecurityHeaders(response);
-    return response;
-  }
 
   // --- API routes: CORS + rate limiting + security headers ---
   if (pathname.startsWith("/api/")) {
@@ -91,23 +78,14 @@ export function proxy(request: NextRequest) {
     const origin = request.headers.get("origin") ?? "";
     const allowedOrigins = ["https://cloudless.gr", "https://www.cloudless.gr"];
 
-    if (
-      process.env.NODE_ENV === "development" &&
-      origin.startsWith("http://localhost")
-    ) {
+    if (process.env.NODE_ENV === "development" && origin.startsWith("http://localhost")) {
       allowedOrigins.push(origin);
     }
 
     if (allowedOrigins.includes(origin)) {
       response.headers.set("Access-Control-Allow-Origin", origin);
-      response.headers.set(
-        "Access-Control-Allow-Methods",
-        "GET, POST, OPTIONS",
-      );
-      response.headers.set(
-        "Access-Control-Allow-Headers",
-        "Content-Type, stripe-signature",
-      );
+      response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      response.headers.set("Access-Control-Allow-Headers", "Content-Type, stripe-signature");
     }
 
     if (request.method === "OPTIONS") {
@@ -123,11 +101,7 @@ export function proxy(request: NextRequest) {
 
       const ip = getClientIp(request);
       const key = `${ip}:${pathname}`;
-      const { limited, remaining } = isRateLimited(
-        key,
-        limit.windowMs,
-        limit.max,
-      );
+      const { limited, remaining } = isRateLimited(key, limit.windowMs, limit.max);
 
       response.headers.set("X-RateLimit-Limit", String(limit.max));
       response.headers.set("X-RateLimit-Remaining", String(remaining));
@@ -150,4 +124,15 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // --- Page routes: next-intl loca
+  // --- Page routes: next-intl locale routing + security headers ---
+  const response = intlMiddleware(request);
+  addSecurityHeaders(response);
+  return response;
+}
+
+export const config = {
+  matcher: [
+    // Match all request paths except static files, Next.js internals, and PWA assets
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html)$).*)",
+  ],
+};

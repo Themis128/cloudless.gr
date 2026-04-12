@@ -8,11 +8,7 @@ interface ScrollRevealProps {
   delay?: number;
 }
 
-export default function ScrollReveal({
-  children,
-  className = "",
-  delay = 0,
-}: ScrollRevealProps) {
+export default function ScrollReveal({ children, className = "", delay = 0 }: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,3 +35,5 @@ export default function ScrollReveal({
     <div ref={ref} className={`reveal ${className}`}>
       {children}
     </div>
+  );
+}

@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { configureAmplify } from "@/lib/amplify-config";
 import {
   signIn as amplifySignIn,
@@ -63,17 +56,9 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   confirmSignUp: (email: string, code: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  confirmForgotPassword: (
-    email: string,
-    code: string,
-    newPassword: string,
-  ) => Promise<void>;
+  confirmForgotPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   completeNewPassword: (newPassword: string) => Promise<void>;
-  updateProfile: (attrs: {
-    name?: string;
-    company?: string;
-    phone?: string;
-  }) => Promise<void>;
+  updateProfile: (attrs: { name?: string; company?: string; phone?: string }) => Promise<void>;
   updatePreferences: (prefs: Partial<UserPreferences>) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -104,10 +89,7 @@ function friendlyAuthError(err: unknown): string {
   if (name === "ExpiredCodeException") {
     return "Verification code has expired. Please request a new one.";
   }
-  if (
-    name === "LimitExceededException" ||
-    name === "TooManyRequestsException"
-  ) {
+  if (name === "LimitExceededException" || name === "TooManyRequestsException") {
     return "Too many attempts. Please wait a moment and try again.";
   }
   if (name === "InvalidPasswordException" || message.includes("password")) {
@@ -159,37 +141,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const loadUserProfile = useCallback(
-    async (username: string, email?: string): Promise<AuthUser> => {
-      let name: string | undefined;
-      let company: string | undefined;
-      let phone: string | undefined;
-      let preferences = { ...DEFAULT_PREFERENCES };
+  const loadUserProfile = useCallback(async (username: string, email?: string): Promise<AuthUser> => {
+    let name: string | undefined;
+    let company: string | undefined;
+    let phone: string | undefined;
+    let preferences = { ...DEFAULT_PREFERENCES };
 
-      try {
-        const attrs = await fetchUserAttributes();
-        name = attrs.name || attrs.given_name || undefined;
-        phone = attrs.phone_number || undefined;
-        company = attrs["custom:company"] || undefined;
+    try {
+      const attrs = await fetchUserAttributes();
+      name = attrs.name || attrs.given_name || undefined;
+      phone = attrs.phone_number || undefined;
+      company = attrs["custom:company"] || undefined;
 
-        // Parse preferences from custom attribute
-        const prefsRaw = attrs["custom:preferences"];
-        if (prefsRaw) {
-          try {
-            const parsed = JSON.parse(prefsRaw) as Partial<UserPreferences>;
-            preferences = { ...DEFAULT_PREFERENCES, ...parsed };
-          } catch {
-            /* keep defaults */
-          }
-        }
-      } catch {
-        // Attributes not available — use defaults
+      // Parse preferences from custom attribute
+      const prefsRaw = attrs["custom:preferences"];
+      if (prefsRaw) {
+        try {
+          const parsed = JSON.parse(prefsRaw) as Partial<UserPreferences>;
+          preferences = { ...DEFAULT_PREFERENCES, ...parsed };
+        } catch { /* keep defaults */ }
       }
+    } catch {
+      // Attributes not available — use defaults
+    }
 
-      return { username, email, name, company, phone, preferences };
-    },
-    [],
-  );
+    return { username, email, name, company, phone, preferences };
+  }, []);
 
   const checkAuth = useCallback(async () => {
     try {
@@ -212,11 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ok = configureAmplify();
     } catch (err) {
       console.error("Amplify configuration failed:", err);
-      setConfigError(
-        err instanceof Error
-          ? err.message
-          : "Authentication configuration failed",
-      );
+      setConfigError(err instanceof Error ? err.message : "Authentication configuration failed");
       setIsLoading(false);
       return;
     }
@@ -228,17 +201,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, [checkAuth]);
 
-  const handleSignIn = async (
-    email: string,
-    password: string,
-  ): Promise<SignInResult> => {
+  const handleSignIn = async (email: string, password: string): Promise<SignInResult> => {
     try {
       const result = await amplifySignIn({ username: email, password });
 
-      if (
-        result.nextStep?.signInStep ===
-        "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED"
-      ) {
+      if (result.nextStep?.signInStep === "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED") {
         return { needsNewPassword: true };
       }
 
@@ -252,10 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return {};
     } catch (err: unknown) {
       // If user is already authenticated, sign out first and retry once
-      if (
-        err instanceof Error &&
-        err.name === "UserAlreadyAuthenticatedException"
-      ) {
+      if (err instanceof Error && err.name === "UserAlreadyAuthenticatedException") {
         await amplifySignOut();
         const result = await amplifySignIn({ username: email, password });
         if (result.isSignedIn) {
@@ -268,11 +232,144 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const handleSignUp = async (
-    email: string,
-    password: string,
-    name?: string,
-  ) => {
+  const handleSignUp = async (email: string, password: string, name?: string) => {
     try {
       const userAttributes: Record<string, string> = { email };
-      if (name?.trim()) userAttributes
+      if (name?.trim()) userAttributes.name = name.trim();
+      await amplifySignUp({
+        username: email,
+        password,
+        options: { userAttributes },
+      });
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
+  };
+
+  const handleSignOut = async () => {
+    await amplifySignOut();
+    setUser(null);
+    setIsAdmin(false);
+  };
+
+  const handleConfirmSignUp = async (email: string, code: string) => {
+    try {
+      await amplifyConfirmSignUp({ username: email, confirmationCode: code });
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
+  };
+
+  const handleForgotPassword = async (email: string) => {
+    try {
+      await amplifyResetPassword({ username: email });
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
+  };
+
+  const handleConfirmForgotPassword = async (email: string, code: string, newPassword: string) => {
+    try {
+      await amplifyConfirmResetPassword({
+        username: email,
+        confirmationCode: code,
+        newPassword,
+      });
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
+  };
+
+  const handleCompleteNewPassword = async (newPassword: string) => {
+    try {
+      const result = await amplifyConfirmSignIn({
+        challengeResponse: newPassword,
+      });
+      if (result.isSignedIn) {
+        await checkAuth();
+      }
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
+  };
+
+  const handleUpdateProfile = async (attrs: { name?: string; company?: string; phone?: string }) => {
+    try {
+      const updates: Record<string, string> = {};
+      if (attrs.name !== undefined) updates.name = attrs.name;
+      if (attrs.phone !== undefined) updates.phone_number = attrs.phone;
+      if (attrs.company !== undefined) updates["custom:company"] = attrs.company;
+
+      if (Object.keys(updates).length > 0) {
+        await updateUserAttributes({
+          userAttributes: updates,
+        });
+      }
+
+      // Refresh local state
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: attrs.name ?? prev.name,
+              company: attrs.company ?? prev.company,
+              phone: attrs.phone ?? prev.phone,
+            }
+          : prev,
+      );
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
+  };
+
+  const handleUpdatePreferences = async (prefs: Partial<UserPreferences>) => {
+    try {
+      const merged = { ...(user?.preferences ?? DEFAULT_PREFERENCES), ...prefs };
+      await updateUserAttributes({
+        userAttributes: {
+          "custom:preferences": JSON.stringify(merged),
+        },
+      });
+      setUser((prev) => (prev ? { ...prev, preferences: merged } : prev));
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
+  };
+
+  const handleRefreshProfile = async () => {
+    if (!user) return;
+    const profile = await loadUserProfile(user.username, user.email);
+    setUser(profile);
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAdmin,
+        isLoading,
+        configError,
+        signIn: handleSignIn,
+        signUp: handleSignUp,
+        signOut: handleSignOut,
+        confirmSignUp: handleConfirmSignUp,
+        forgotPassword: handleForgotPassword,
+        confirmForgotPassword: handleConfirmForgotPassword,
+        completeNewPassword: handleCompleteNewPassword,
+        updateProfile: handleUpdateProfile,
+        updatePreferences: handleUpdatePreferences,
+        refreshProfile: handleRefreshProfile,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}

@@ -45,4 +45,14 @@ export default async function LocaleLayout({ children, params }: Props) {
               <Footer />
               <CartSlideOver />
               <ServiceWorkerRegistration />
-              <CommandPa
+              <CommandPalette />
+              <NeonCursor />
+              <KonamiEasterEgg />
+              <CookieConsent />
+            </LenisProvider>
+          </CookieConsentProvider>
+        </CartProvider>
+      </AuthProvider>
+    </NextIntlClientProvider>
+  );
+}

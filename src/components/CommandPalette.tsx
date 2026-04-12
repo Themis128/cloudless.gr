@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { playUiClickSound } from "@/lib/sound-effects";
+import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 
 const navItems = [
@@ -22,41 +22,36 @@ const groupHeadingClass =
 
 export default function CommandPalette() {
   const [open, setOpen] = useState(false);
-
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "1";
+  const router = useRouter();
 
   useEffect(() => {
-    if (isE2E) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((prev) => {
-          playUiClickSound();
-          return prev ? false : true;
-        });
+        setOpen((prev) => !prev);
       }
     }
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [isE2E]);
+  }, []);
 
   function navigate(path: string) {
-    // Use location navigation to avoid router initialization timing issues.
-    playUiClickSound();
-    window.location.assign(path);
+    router.push(path);
     setOpen(false);
   }
 
-  if (isE2E || !open) return null;
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-100">
+      {/* Backdrop */}
       <div
         className="bg-void/70 absolute inset-0 backdrop-blur-sm"
         onClick={() => setOpen(false)}
       />
 
+      {/* Dialog */}
       <div className="relative mx-auto mt-[20vh] max-w-lg px-4">
         <Command
           className="border-neon-cyan/30 bg-void overflow-hidden rounded-lg border shadow-[0_0_40px_rgba(0,255,245,0.1)]"
@@ -83,9 +78,7 @@ export default function CommandPalette() {
                   onSelect={() => navigate(item.path)}
                   className="data-[selected=true]:bg-neon-cyan/10 data-[selected=true]:text-neon-cyan flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 font-mono text-sm text-slate-400 transition-colors"
                 >
-                  <span className="text-neon-cyan/40 w-4 text-center text-xs">
-                    {item.icon}
-                  </span>
+                  <span className="text-neon-cyan/40 w-4 text-center text-xs">{item.icon}</span>
                   {item.label}
                 </Command.Item>
               ))}
@@ -101,9 +94,7 @@ export default function CommandPalette() {
                   onSelect={() => navigate(item.path)}
                   className="data-[selected=true]:bg-neon-magenta/10 data-[selected=true]:text-neon-magenta flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 font-mono text-sm text-slate-400 transition-colors"
                 >
-                  <span className="text-neon-magenta/40 w-4 text-center text-xs">
-                    {item.icon}
-                  </span>
+                  <span className="text-neon-magenta/40 w-4 text-center text-xs">{item.icon}</span>
                   {item.label}
                 </Command.Item>
               ))}
@@ -117,4 +108,15 @@ export default function CommandPalette() {
               </kbd>{" "}
               toggle
             </span>
-            <span className="font-mo
+            <span className="font-mono text-[10px] text-slate-600">
+              <kbd className="bg-void-lighter rounded border border-slate-700 px-1.5 py-0.5 text-slate-500">
+                ESC
+              </kbd>{" "}
+              close
+            </span>
+          </div>
+        </Command>
+      </div>
+    </div>
+  );
+}

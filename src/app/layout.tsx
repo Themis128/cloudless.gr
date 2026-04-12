@@ -1,6 +1,7 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Instrument_Sans, Work_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
+
 
 const instrumentSans = Instrument_Sans({
   variable: "--font-instrument-sans",
@@ -20,15 +21,6 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
-// ── Viewport (must be a separate export per Next.js 13+) ──────────────────
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 5,
-  themeColor: "#0a0a0f",
-  colorScheme: "dark",
-};
-
 export const metadata: Metadata = {
   metadataBase: new URL("https://cloudless.gr"),
   title: {
@@ -47,20 +39,6 @@ export const metadata: Metadata = {
     "Greece",
   ],
   authors: [{ name: "Cloudless" }],
-  // ── iOS PWA ────────────────────────────────────────────────────────────
-  appleWebApp: {
-    capable: true,
-    title: "Cloudless",
-    statusBarStyle: "black-translucent",
-  },
-  // Prevent iOS from auto-linking phone number strings
-  formatDetection: { telephone: false },
-  // Apple touch icon
-  icons: {
-    apple: [
-      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-    ],
-  },
   openGraph: {
     title: "Cloudless — Cloud Computing, Serverless & AI Marketing",
     description:
@@ -72,4 +50,26 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cloudless —
+    title: "Cloudless — Cloud Computing, Serverless & AI Marketing",
+    description:
+      "Clear skies. Zero friction. Cloud architecture, serverless, analytics & AI marketing for startups and SMBs.",
+  },
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${instrumentSans.variable} ${workSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        {children}
+      </body>
+    </html>
+  );
+}

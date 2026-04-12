@@ -35,13 +35,64 @@ export function getIntegrations(): IntegrationConfig {
     NOTION_API_KEY: process.env.NOTION_API_KEY,
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID,
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
-    GOOGLE_SERVICE_ACCOUNT_EMAIL:
-      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-      process.env.GOOGLE_CLIENT_EMAIL,
+    GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL,
     GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID,
     AHREFS_API_KEY: process.env.AHREFS_API_KEY,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
     SENTRY_ORG: process.env.SENTRY_ORG ?? "cloudless",
-    SENTRY_PROJECT: process.env.SENTRY_PROJECT ?? "clou
+    SENTRY_PROJECT: process.env.SENTRY_PROJECT ?? "cloudless-gr",
+  };
+
+  return cached;
+}
+
+/** Check if a specific integration is configured */
+export function isConfigured(
+  ...keys: (keyof IntegrationConfig)[]
+): boolean {
+  const config = getIntegrations();
+  return keys.every((k) => Boolean(config[k]));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Slack-specific config helper                                       */
+/* ------------------------------------------------------------------ */
+
+export interface SlackConfig {
+  SLACK_BOT_TOKEN: string;
+  SLACK_SIGNING_SECRET: string;
+  SLACK_WEBHOOK_URL: string;
+}
+
+let cachedSlack: SlackConfig | null = null;
+
+/**
+ * Returns Slack integration config.
+ * Reads from the general IntegrationConfig (env-backed).
+ */
+export function getSlackConfig(): SlackConfig {
+  if (cachedSlack) return cachedSlack;
+
+  const cfg = getIntegrations();
+  const token = cfg.SLACK_BOT_TOKEN ?? "";
+  const signingSecret = cfg.SLACK_SIGNING_SECRET ?? "";
+  const webhookUrl = cfg.SLACK_WEBHOOK_URL ?? "";
+
+  if (!token && !webhookUrl) {
+    console.warn(
+      "[Slack] Neither SLACK_BOT_TOKEN nor SLACK_WEBHOOK_URL is set — " +
+        "Slack notifications will be skipped.",
+    );
+  }
+
+  cachedSlack = { SLACK_BOT_TOKEN: token, SLACK_SIGNING_SECRET: signingSecret, SLACK_WEBHOOK_URL: webhookUrl };
+  return cachedSlack;
+}
+
+/** Clears the config cache (useful in tests). */
+export function resetSlackConfigCache(): void {
+  cachedSlack = null;
+  cached = null;
+}

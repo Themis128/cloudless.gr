@@ -2,13 +2,8 @@ import { getRequestConfig } from "next-intl/server";
 import { routing } from "./routing";
 import type { AbstractIntlMessages } from "next-intl";
 
-function isValidLocale(
-  value: string | undefined,
-): value is (typeof routing.locales)[number] {
-  return (
-    typeof value === "string" &&
-    (routing.locales as readonly string[]).includes(value)
-  );
+function isValidLocale(value: string | undefined): value is (typeof routing.locales)[number] {
+  return typeof value === "string" && (routing.locales as readonly string[]).includes(value);
 }
 
 export default getRequestConfig(async ({ requestLocale }) => {
@@ -20,11 +15,12 @@ export default getRequestConfig(async ({ requestLocale }) => {
   // doesn't satisfy AbstractIntlMessages index signature in next-intl 3.x
   let messages: AbstractIntlMessages;
   if (locale === "el") {
-    messages = (await import("../locales/el.json"))
-      .default as unknown as AbstractIntlMessages;
+    messages = (await import("../locales/el.json")).default as unknown as AbstractIntlMessages;
   } else if (locale === "fr") {
-    messages = (await import("../locales/fr.json"))
-      .default as unknown as AbstractIntlMessages;
+    messages = (await import("../locales/fr.json")).default as unknown as AbstractIntlMessages;
   } else {
-    messages = (await import("../locales/en.json"))
-      .default as unknown as AbstractIntlMessages;
+    messages = (await import("../locales/en.json")).default as unknown as AbstractIntlMessages;
+  }
+
+  return { locale, messages };
+});

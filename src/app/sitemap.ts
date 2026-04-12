@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
 import { posts } from "@/lib/blog";
-import { getProducts } from "@/lib/store-products";
+import { demoProducts } from "@/lib/store-products";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://cloudless.gr";
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -45,12 +45,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  const products = await getProducts();
-  const productPages: MetadataRoute.Sitemap = products.map((product) => ({
+  const productPages: MetadataRoute.Sitemap = demoProducts.map((product) => ({
     url: `${baseUrl}/store/${product.id}`,
     lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: 0.5,
   }));
 
-  return [
+  return [...staticPages, ...blogPages, ...productPages];
+}

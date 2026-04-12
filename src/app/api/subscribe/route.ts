@@ -8,10 +8,7 @@ export async function POST(request: Request) {
     const { email } = await request.json();
 
     if (!isValidEmail(email)) {
-      return Response.json(
-        { error: "Invalid email address." },
-        { status: 400 },
-      );
+      return Response.json({ error: "Invalid email address." }, { status: 400 });
     }
 
     // Notify the team via email (reuses cached SES client) and Slack (fire-and-forget)
@@ -33,5 +30,6 @@ export async function POST(request: Request) {
     return Response.json({ success: true });
   } catch (error) {
     console.error("Subscribe error:", error);
-    return Response.json(
-      { error: "Failed to subscribe. Please try aga
+    return Response.json({ error: "Failed to subscribe. Please try again." }, { status: 500 });
+  }
+}

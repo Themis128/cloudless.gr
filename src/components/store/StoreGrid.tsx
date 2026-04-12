@@ -1,23 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import ProductIcon from "@/components/store/ProductIcon";
 import { useCart } from "@/context/CartContext";
-import { formatPrice } from "@/lib/format-price";
 import {
-  categoryColors,
+  demoProducts,
   categoryLabels,
+  categoryColors,
   type ProductCategory,
   type StoreProduct,
-} from "@/lib/store-products-client";
+} from "@/lib/store-products";
+import { formatPrice } from "@/lib/format-price";
+import ProductIcon from "@/components/store/ProductIcon";
 
-const categories: ("all" | ProductCategory)[] = [
-  "all",
-  "service",
-  "digital",
-  "physical",
-];
+const categories: ("all" | ProductCategory)[] = ["all", "service", "digital", "physical"];
 
 type SortOption = "default" | "price-asc" | "price-desc" | "name-asc";
 
@@ -26,6 +22,13 @@ const sortLabels: Record<SortOption, string> = {
   "price-asc": "Price: Low to High",
   "price-desc": "Price: High to Low",
   "name-asc": "Name: A to Z",
+};
+
+const categoryCounts: Record<"all" | ProductCategory, number> = {
+  all: demoProducts.length,
+  service: demoProducts.filter((p) => p.category === "service").length,
+  digital: demoProducts.filter((p) => p.category === "digital").length,
+  physical: demoProducts.filter((p) => p.category === "physical").length,
 };
 
 function ProductCard({ product }: { product: StoreProduct }) {
@@ -38,6 +41,7 @@ function ProductCard({ product }: { product: StoreProduct }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
+      {/* Product infographic */}
       <div className="bg-void-lighter relative aspect-[4/3] overflow-hidden">
         <ProductIcon productId={product.id} category={product.category} />
         <span
@@ -48,6 +52,7 @@ function ProductCard({ product }: { product: StoreProduct }) {
           {categoryLabels[product.category]}
         </span>
 
+        {/* Hover feature preview */}
         {product.features && product.features.length > 0 && (
           <div
             className={`bg-void/90 absolute inset-0 flex flex-col justify-center px-6 backdrop-blur-sm transition-opacity duration-300 ${
@@ -58,19 +63,14 @@ function ProductCard({ product }: { product: StoreProduct }) {
               INCLUDES
             </p>
             <ul className="space-y-2">
-              {product.features.slice(0, 4).map((feature) => (
-                <li
-                  key={feature}
-                  className="flex items-start gap-2 text-xs text-slate-300"
-                >
-                  <span className="text-neon-cyan mt-0.5 shrink-0">
-                    &#x25B8;
-                  </span>
-                  {feature}
+              {product.features.slice(0, 4).map((f) => (
+                <li key={f} className="flex items-start gap-2 text-xs text-slate-300">
+                  <span className="text-neon-cyan mt-0.5 shrink-0">&#x25B8;</span>
+                  {f}
                 </li>
               ))}
               {product.features.length > 4 && (
-                <li className="font-mono text-xs text-slate-400">
+                <li className="font-mono text-xs text-slate-500">
                   +{product.features.length - 4} more
                 </li>
               )}
@@ -79,15 +79,14 @@ function ProductCard({ product }: { product: StoreProduct }) {
         )}
       </div>
 
+      {/* Content */}
       <div className="p-6">
         <Link href={`/store/${product.id}`}>
           <h3 className="font-heading group-hover:text-neon-cyan text-lg font-semibold text-white transition-colors">
             {product.name}
           </h3>
         </Link>
-        <p className="mt-2 line-clamp-2 text-sm text-slate-400">
-          {product.description}
-        </p>
+        <p className="mt-2 line-clamp-2 text-sm text-slate-400">{product.description}</p>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -95,9 +94,7 @@ function ProductCard({ product }: { product: StoreProduct }) {
               {formatPrice(product.price, product.currency)}
             </span>
             {product.recurring && (
-              <span className="ml-1 font-mono text-sm text-slate-500">
-                /{product.interval}
-              </span>
+              <span className="ml-1 font-mono text-sm text-slate-500">/{product.interval}</span>
             )}
           </div>
           <button
@@ -112,58 +109,41 @@ function ProductCard({ product }: { product: StoreProduct }) {
   );
 }
 
-export default function StoreGrid({ products }: { products: StoreProduct[] }) {
-  const [activeCategory, setActiveCategory] = useState<"all" | ProductCategory>(
-    "all",
-  );
+export default function StoreGrid() {
+  const [activeCategory, setActiveCategory] = useState<"all" | ProductCategory>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("default");
 
-  const categoryCounts = useMemo(
-    () => ({
-      all: products.length,
-      service: products.filter((product) => product.category === "service")
-        .length,
-      digital: products.filter((product) => product.category === "digital")
-        .length,
-      physical: products.filter((product) => product.category === "physical")
-        .length,
-    }),
-    [products],
-  );
-
   const filtered = useMemo(() => {
-    let visibleProducts =
+    let products =
       activeCategory === "all"
-        ? products
-        : products.filter((product) => product.category === activeCategory);
+        ? demoProducts
+        : demoProducts.filter((p) => p.category === activeCategory);
 
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      visibleProducts = visibleProducts.filter(
-        (product) =>
-          product.name.toLowerCase().includes(query) ||
-          product.description.toLowerCase().includes(query) ||
-          (product.features &&
-            product.features.some((feature) =>
-              feature.toLowerCase().includes(query),
-            )),
+      const q = searchQuery.toLowerCase();
+      products = products.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          (p.features && p.features.some((f) => f.toLowerCase().includes(q))),
       );
     }
 
     if (sortBy !== "default") {
-      visibleProducts = [...visibleProducts].sort((a, b) => {
+      products = [...products].sort((a, b) => {
         if (sortBy === "price-asc") return a.price - b.price;
         if (sortBy === "price-desc") return b.price - a.price;
         return a.name.localeCompare(b.name);
       });
     }
 
-    return visibleProducts;
-  }, [activeCategory, products, searchQuery, sortBy]);
+    return products;
+  }, [activeCategory, searchQuery, sortBy]);
 
   return (
     <>
+      {/* Search + Sort bar */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row">
         <div className="relative flex-1">
           <svg
@@ -180,13 +160,13 @@ export default function StoreGrid({ products }: { products: StoreProduct[] }) {
             type="text"
             placeholder="Search products..."
             value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-void-light focus:border-neon-cyan/50 w-full rounded-lg border border-slate-800 py-2.5 pr-4 pl-10 font-mono text-sm text-white transition-colors placeholder:text-slate-600 focus:outline-none"
           />
         </div>
         <select
           value={sortBy}
-          onChange={(event) => setSortBy(event.target.value as SortOption)}
+          onChange={(e) => setSortBy(e.target.value as SortOption)}
           className="bg-void-light focus:border-neon-cyan/50 cursor-pointer rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-slate-400 transition-colors focus:outline-none"
         >
           {Object.entries(sortLabels).map(([value, label]) => (
@@ -197,25 +177,25 @@ export default function StoreGrid({ products }: { products: StoreProduct[] }) {
         </select>
       </div>
 
+      {/* Category filter */}
       <div className="mb-10 flex flex-wrap gap-2">
-        {categories.map((category) => (
+        {categories.map((cat) => (
           <button
-            key={category}
-            onClick={() => setActiveCategory(category)}
+            key={cat}
+            onClick={() => setActiveCategory(cat)}
             className={`min-h-[44px] rounded-lg px-4 py-2.5 font-mono text-xs font-medium transition-all duration-300 ${
-              activeCategory === category
+              activeCategory === cat
                 ? "bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan border shadow-[0_0_10px_rgba(0,255,245,0.1)]"
                 : "bg-void-light hover:border-neon-cyan/30 active:border-neon-cyan/30 border border-slate-800 text-slate-500 hover:text-slate-300 active:text-slate-300"
             }`}
           >
-            {category === "all" ? "All Products" : categoryLabels[category]}
-            <span className="ml-2 text-[10px] opacity-60">
-              {categoryCounts[category]}
-            </span>
+            {cat === "all" ? "All Products" : categoryLabels[cat]}
+            <span className="ml-2 text-[10px] opacity-60">{categoryCounts[cat]}</span>
           </button>
         ))}
       </div>
 
+      {/* Grid */}
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((product) => (
@@ -225,5 +205,18 @@ export default function StoreGrid({ products }: { products: StoreProduct[] }) {
       ) : (
         <div className="py-16 text-center">
           <div className="text-neon-cyan/20 mb-4 font-mono text-4xl">[ ]</div>
-          <p className="font-mono text-sm text-slate-500">
-            No products mat
+          <p className="font-mono text-sm text-slate-500">No products match your search.</p>
+          <button
+            onClick={() => {
+              setSearchQuery("");
+              setActiveCategory("all");
+            }}
+            className="text-neon-cyan/60 hover:text-neon-cyan mt-4 font-mono text-xs transition-colors"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+    </>
+  );
+}

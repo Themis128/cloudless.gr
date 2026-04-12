@@ -1,11 +1,7 @@
 import { NextRequest } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getConfig } from "@/lib/ssm-config";
-import {
-  sendOrderConfirmation,
-  sendPaymentFailureNotice,
-  notifyTeam,
-} from "@/lib/email";
+import { sendOrderConfirmation, sendPaymentFailureNotice, notifyTeam } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { slackOrderNotify } from "@/lib/slack-notify";
 import type Stripe from "stripe";
@@ -15,10 +11,7 @@ export async function POST(request: NextRequest) {
   const signature = request.headers.get("stripe-signature");
 
   if (!signature) {
-    return Response.json(
-      { error: "Missing stripe-signature header" },
-      { status: 400 },
-    );
+    return Response.json({ error: "Missing stripe-signature header" }, { status: 400 });
   }
 
   const config = await getConfig();
@@ -120,9 +113,7 @@ export async function POST(request: NextRequest) {
 
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
-        console.warn(
-          `[Stripe] Invoice paid: ${invoice.id}, amount: ${invoice.amount_paid}`,
-        );
+        console.warn(`[Stripe] Invoice paid: ${invoice.id}, amount: ${invoice.amount_paid}`);
         break;
       }
 
@@ -134,15 +125,10 @@ export async function POST(request: NextRequest) {
 
         // Notify the customer about the failed payment
         const customerEmail =
-          typeof invoice.customer_email === "string"
-            ? invoice.customer_email
-            : null;
+          typeof invoice.customer_email === "string" ? invoice.customer_email : null;
 
         if (customerEmail) {
-          await sendPaymentFailureNotice(
-            customerEmail,
-            invoice.id ?? "unknown",
-          );
+          await sendPaymentFailureNotice(customerEmail, invoice.id ?? "unknown");
         }
 
         // Notify the team
@@ -151,4 +137,18 @@ export async function POST(request: NextRequest) {
           `<p style="color: #ff4444;"><strong>Payment failed</strong></p>
           <p><strong>Invoice:</strong> ${escapeHtml(invoice.id ?? "unknown")}</p>
           <p><strong>Customer:</strong> ${escapeHtml(customerEmail ?? String(invoice.customer))}</p>
-          <p><strong>Amount:</strong> ${((invoice.amount_due ?? 0) / 100).toFixed
+          <p><strong>Amount:</strong> ${((invoice.amount_due ?? 0) / 100).toFixed(2)} ${escapeHtml((invoice.currency ?? "EUR").toUpperCase())}</p>`,
+        );
+        break;
+      }
+
+      default:
+        console.warn(`[Stripe] Unhandled event type: ${event.type}`);
+    }
+  } catch (err) {
+    console.error(`[Stripe] Error handling ${event.type}:`, err);
+    return Response.json({ error: "Webhook handler failed" }, { status: 500 });
+  }
+
+  return Response.json({ received: true });
+}

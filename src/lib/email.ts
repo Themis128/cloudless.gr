@@ -5,25 +5,9 @@ import { DEFAULT_LOCALE } from "@/lib/locale-defaults";
 
 let sesClient: SESClient | null = null;
 
-function ensureSesConfig(config: {
-  SES_FROM_EMAIL: string;
-  SES_TO_EMAIL: string;
-  AWS_SES_REGION: string;
-}): void {
-  if (!config.SES_FROM_EMAIL || !config.SES_TO_EMAIL) {
-    throw new Error(
-      "Missing required SES config: SES_FROM_EMAIL and SES_TO_EMAIL must be set",
-    );
-  }
-  if (!config.AWS_SES_REGION) {
-    throw new Error("Missing required SES config: AWS_SES_REGION must be set");
-  }
-}
-
 async function getSES(): Promise<SESClient> {
   if (sesClient) return sesClient;
   const config = await getConfig();
-  ensureSesConfig(config);
   sesClient = new SESClient({ region: config.AWS_SES_REGION });
   return sesClient;
 }
@@ -39,7 +23,6 @@ interface SendEmailOptions {
 
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
   const config = await getConfig();
-  ensureSesConfig(config);
   const ses = await getSES();
 
   await ses.send(
@@ -141,4 +124,21 @@ export async function sendPaymentFailureNotice(
       "Payment Failed",
       "",
       `We were unable to process your payment for invoice ${invoiceId}.`,
-      "Please up
+      "Please update your payment method to keep your subscription active.",
+      "",
+      "Contact us at tbaltzakis@cloudless.gr for help.",
+      "",
+      "If this was a mistake, no action is needed. We'll retry the payment automatically.",
+    ].join("\n"),
+  });
+}
+
+export async function notifyTeam(subject: string, body: string): Promise<void> {
+  const config = await getConfig();
+  await sendEmail({
+    to: config.SES_TO_EMAIL,
+    subject,
+    html: `<div style="font-family: sans-serif;">${body}</div>`,
+    text: body.replace(/<[^>]+>/g, ""),
+  });
+}

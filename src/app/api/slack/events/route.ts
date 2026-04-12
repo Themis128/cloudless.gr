@@ -112,16 +112,14 @@ async function handleAppMention(event: SlackEvent): Promise<void> {
 
   let replyText: string;
   if (userText.includes("status")) {
-    replyText =
-      ":white_check_mark: cloudless.gr is *online*. All systems operational.";
+    replyText = ":white_check_mark: cloudless.gr is *online*. All systems operational.";
   } else if (userText.includes("help")) {
     replyText =
       "Available slash commands:\n" +
       "• `/cloudless-status` — app health check\n" +
       "• `/cloudless-orders` — recent store orders";
   } else {
-    replyText =
-      "Hey! I'm the Cloudless bot. Try mentioning me with *status* or *help*.";
+    replyText = "Hey! I'm the Cloudless bot. Try mentioning me with *status* or *help*.";
   }
 
   await fetch("https://slack.com/api/chat.postMessage", {
@@ -151,4 +149,6 @@ async function handleDirectMessage(event: SlackEvent): Promise<void> {
     body: JSON.stringify({
       channel: event.channel,
       text: "Hi! I respond to slash commands — try `/cloudless-status` or `/cloudless-orders`.",
-    
+    }),
+  });
+}
