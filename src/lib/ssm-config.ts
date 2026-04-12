@@ -86,7 +86,10 @@ export async function getConfig(): Promise<AppConfig> {
     NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
     NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
     GOOGLE_CLIENT_EMAIL: params.get("GOOGLE_CLIENT_EMAIL") ?? "",
-    GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n"),
+    GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replace(
+      /\\n/g,
+      "\n",
+    ),
     GOOGLE_CALENDAR_ID: params.get("GOOGLE_CALENDAR_ID") ?? "",
     AHREFS_API_KEY: params.get("AHREFS_API_KEY") ?? "",
   };

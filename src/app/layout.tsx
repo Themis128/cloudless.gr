@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Instrument_Sans, Work_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-
 const instrumentSans = Instrument_Sans({
   variable: "--font-instrument-sans",
   subsets: ["latin"],

@@ -10,11 +10,17 @@ export async function POST(request: Request) {
     const { name, email, company, service, message } = await request.json();
 
     if (!name || !email || !message) {
-      return Response.json({ error: "Name, email, and message are required." }, { status: 400 });
+      return Response.json(
+        { error: "Name, email, and message are required." },
+        { status: 400 },
+      );
     }
 
     if (!isValidEmail(email)) {
-      return Response.json({ error: "Invalid email address." }, { status: 400 });
+      return Response.json(
+        { error: "Invalid email address." },
+        { status: 400 },
+      );
     }
 
     const config = await getConfig();

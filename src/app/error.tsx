@@ -19,7 +19,9 @@ export default function Error({
         <p className="text-neon-magenta glow-magenta animate-neon-pulse font-mono text-5xl font-bold">
           ERROR
         </p>
-        <h1 className="font-heading mt-4 text-2xl font-bold text-white">Something went wrong</h1>
+        <h1 className="font-heading mt-4 text-2xl font-bold text-white">
+          Something went wrong
+        </h1>
         <p className="mt-3 font-mono text-sm text-slate-400">
           An unexpected error occurred. Please try again.
         </p>

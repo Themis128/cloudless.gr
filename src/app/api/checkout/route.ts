@@ -23,7 +23,10 @@ export async function POST(request: NextRequest) {
       if (!product) {
         throw new Error(`Unknown product: ${item.id}`);
       }
-      return { product, quantity: Math.max(1, Math.min(item.quantity || 1, 99)) };
+      return {
+        product,
+        quantity: Math.max(1, Math.min(item.quantity || 1, 99)),
+      };
     });
 
     const lineItems = resolvedProducts.map(({ product, quantity }) => {
@@ -47,7 +50,9 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    const hasSubscription = resolvedProducts.some(({ product }) => product.recurring);
+    const hasSubscription = resolvedProducts.some(
+      ({ product }) => product.recurring,
+    );
     const mode = hasSubscription ? "subscription" : "payment";
 
     const stripe = await getStripe();
@@ -100,6 +105,9 @@ export async function POST(request: NextRequest) {
     return Response.json({ url: session.url });
   } catch (error) {
     console.error("Checkout error:", error);
-    return Response.json({ error: "Failed to create checkout session" }, { status: 500 });
+    return Response.json(
+      { error: "Failed to create checkout session" },
+      { status: 500 },
+    );
   }
 }
