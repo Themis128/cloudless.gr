@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'e2e/**'
       - 'public/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
