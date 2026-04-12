@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "@/i18n/navigation";
-import { useCookieConsent, type CookiePreferences } from "@/context/CookieConsentContext";
+import {
+  useCookieConsent,
+  type CookiePreferences,
+} from "@/context/CookieConsentContext";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
@@ -110,7 +113,10 @@ export default function CookieConsent() {
         aria-labelledby="cookie-settings-title"
         className="border-slate-800 bg-void-light mx-4 w-full max-w-lg rounded-xl border p-6 shadow-2xl"
       >
-        <h3 id="cookie-settings-title" className="mb-4 font-heading text-lg font-bold text-white">
+        <h3
+          id="cookie-settings-title"
+          className="mb-4 font-heading text-lg font-bold text-white"
+        >
           {t("cookies.settingsTitle", "Cookie Preferences")}
         </h3>
         <p className="mb-6 text-sm text-slate-400">
@@ -163,9 +169,7 @@ export default function CookieConsent() {
                 setLocalPrefs((p) => ({ ...p, analytics: !p.analytics }))
               }
               className={`relative h-8 w-12 shrink-0 rounded-full transition-colors ${
-                localPrefs.analytics
-                  ? "bg-neon-cyan/60"
-                  : "bg-slate-700"
+                localPrefs.analytics ? "bg-neon-cyan/60" : "bg-slate-700"
               }`}
             >
               <span
@@ -200,9 +204,7 @@ export default function CookieConsent() {
                 setLocalPrefs((p) => ({ ...p, marketing: !p.marketing }))
               }
               className={`relative h-8 w-12 shrink-0 rounded-full transition-colors ${
-                localPrefs.marketing
-                  ? "bg-neon-cyan/60"
-                  : "bg-slate-700"
+                localPrefs.marketing ? "bg-neon-cyan/60" : "bg-slate-700"
               }`}
             >
               <span
@@ -251,7 +253,11 @@ export default function CookieConsent() {
       {settingsPanel}
 
       {!showSettings && !settingsVisible && (
-        <div className="fixed inset-x-0 bottom-0 z-[10000] p-4" role="region" aria-label={t("cookies.bannerTitle", "We value your privacy")}>
+        <div
+          className="fixed inset-x-0 bottom-0 z-[10000] p-4"
+          role="region"
+          aria-label={t("cookies.bannerTitle", "We value your privacy")}
+        >
           <div className="border-slate-800 bg-void-light/95 mx-auto max-w-4xl rounded-xl border p-6 shadow-2xl backdrop-blur-xl">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
               <div className="flex-1">
