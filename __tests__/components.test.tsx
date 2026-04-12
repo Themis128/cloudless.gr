@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { AbstractIntlMessages } from "next-intl";
@@ -183,22 +183,8 @@ describe("ScrollReveal", () => {
 // ──────────────────────────────────────────
 
 describe("Navbar", () => {
-  let preventLinkNavigation: (e: MouseEvent) => void;
-
   beforeEach(() => {
     document.cookie = `NEXT_LOCALE=en; path=/`;    document.documentElement.lang = "en";
-    // Prevent jsdom "Not implemented: navigation to another Document" on anchor clicks
-    preventLinkNavigation = (e: MouseEvent) => {
-      const target = e.target as Element | null;
-      if (target instanceof HTMLAnchorElement || target?.closest?.("a")) {
-        e.preventDefault();
-      }
-    };
-    document.addEventListener("click", preventLinkNavigation, true);
-  });
-
-  afterEach(() => {
-    document.removeEventListener("click", preventLinkNavigation, true);
   });
 
   function renderNavbar() {
@@ -271,4 +257,15 @@ describe("Navbar", () => {
   it("has 44px minimum touch targets on mobile nav links", () => {
     const { container } = renderNavbar();
 
-    
+    // Open mobile menu
+    fireEvent.click(within(container).getByLabelText("Toggle menu"));
+
+    // Mobile nav links should have min-h-[44px] or min-h-11 class (both equal 44px)
+    const mobileMenu = container.querySelector(".lg\\:hidden.bg-void\\/95");
+    const links = mobileMenu?.querySelectorAll("a");
+    const linksWithMinHeight = Array.from(links ?? []).filter(
+      (a) => a.className.includes("min-h-[44px]") || a.className.includes("min-h-11"),
+    );
+    expect(linksWithMinHeight.length).toBeGreaterThanOrEqual(5);
+  });
+});

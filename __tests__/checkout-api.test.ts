@@ -1,55 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 const mockCreate = vi.fn().mockResolvedValue({
   url: "https://checkout.stripe.com/test-session",
 });
 
+// Mock Stripe
 vi.mock("@/lib/stripe", () => ({
   getStripe: vi.fn().mockResolvedValue({
     checkout: { sessions: { create: (...args: unknown[]) => mockCreate(...args) } },
   }),
-  listStripeProducts: vi.fn().mockResolvedValue([
-    {
-      id: "srv-cloud",
-      name: "Cloud Architecture Audit",
-      description: "Test description",
-      images: ["/store/cloud-audit.svg"],
-      metadata: { category: "service" },
-      defaultPrice: { id: "price_srv_cloud", unitAmount: 200000, currency: "eur" },
-    },
-    {
-      id: "srv-growth",
-      name: "AI Growth Engine",
-      description: "Monthly subscription",
-      images: ["/store/growth-engine.svg"],
-      metadata: { category: "service" },
-      defaultPrice: {
-        id: "price_srv_growth",
-        unitAmount: 80000,
-        currency: "eur",
-        recurring: { interval: "month", intervalCount: 1 },
-      },
-    },
-    {
-      id: "dig-cloud-playbook",
-      name: "Cloud Migration Playbook",
-      description: "Digital product",
-      images: ["/store/migration-playbook.svg"],
-      metadata: { category: "digital" },
-      defaultPrice: { id: "price_dig_playbook", unitAmount: 4900, currency: "eur" },
-    },
-    {
-      id: "phy-tshirt",
-      name: "Cloudless T-Shirt",
-      description: "Physical product",
-      images: ["/store/tshirt.svg"],
-      metadata: { category: "physical" },
-      defaultPrice: { id: "price_phy_tshirt", unitAmount: 2500, currency: "eur" },
-    },
-  ]),
 }));
 
+// Mock SSM config
 vi.mock("@/lib/ssm-config", () => ({
   getConfig: vi.fn().mockResolvedValue({
     STRIPE_SECRET_KEY: "sk_test_123",
@@ -109,9 +72,12 @@ describe("POST /api/checkout", () => {
     const data = await response.json();
     expect(data.url).toBe("https://checkout.stripe.com/test-session");
 
+    // Verify server-side price was used (Cloud Architecture Audit = 200000 cents)
     const createCall = mockCreate.mock.calls[0][0];
     expect(createCall.line_items[0].price_data.unit_amount).toBe(200000);
-    expect(createCall.line_items[0].price_data.product_data.name).toBe("Cloud Architecture Audit");
+    expect(createCall.line_items[0].price_data.product_data.name).toBe(
+      "Cloud Architecture Audit"
+    );
   });
 
   it("ignores client-submitted price and uses catalog price", async () => {
@@ -128,7 +94,9 @@ describe("POST /api/checkout", () => {
 
     const createCall = mockCreate.mock.calls[0][0];
     expect(createCall.line_items[0].price_data.unit_amount).toBe(200000);
-    expect(createCall.line_items[0].price_data.product_data.name).toBe("Cloud Architecture Audit");
+    expect(createCall.line_items[0].price_data.product_data.name).toBe(
+      "Cloud Architecture Audit"
+    );
   });
 
   it("clamps quantity between 1 and 99", async () => {
@@ -160,4 +128,39 @@ describe("POST /api/checkout", () => {
     expect(response.status).toBe(200);
 
     const createCall = mockCreate.mock.calls[0][0];
-    expect(createCall.mode).toBe("subscription")
+    expect(createCall.mode).toBe("subscription");
+  });
+
+  it("requests shipping for physical products", async () => {
+    const request = new NextRequest("http://localhost/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ id: "phy-tshirt", quantity: 1 }],
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+
+    const createCall = mockCreate.mock.calls[0][0];
+    expect(createCall.shipping_address_collection).toBeDefined();
+    expect(createCall.shipping_address_collection.allowed_countries).toContain("GR");
+  });
+
+  it("skips shipping for digital products", async () => {
+    const request = new NextRequest("http://localhost/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [{ id: "dig-cloud-playbook", quantity: 1 }],
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+
+    const createCall = mockCreate.mock.calls[0][0];
+    expect(createCall.shipping_address_collection).toBeUndefined();
+  });
+});
