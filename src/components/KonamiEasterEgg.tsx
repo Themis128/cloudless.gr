@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import styles from "./KonamiEasterEgg.module.css";
-import { playUiSuccessSound } from "@/lib/sound-effects";
 
 const MATRIX_COLUMN_CLASS_NAMES = [
   styles.column0,
@@ -38,11 +37,10 @@ const MATRIX_TIMING_CLASS_NAMES = [
 // Precompute random animation data outside render to satisfy react-hooks/purity
 const MATRIX_RAIN_DATA = Array.from({ length: 20 }, (_, index) => ({
   columnClassName: MATRIX_COLUMN_CLASS_NAMES[index],
-  timingClassName:
-    MATRIX_TIMING_CLASS_NAMES[index % MATRIX_TIMING_CLASS_NAMES.length],
-  chars: Array.from({ length: 30 }, () =>
-    String.fromCharCode(0x30a0 + Math.floor(Math.random() * 96)),
-  ).join("\n"),
+  timingClassName: MATRIX_TIMING_CLASS_NAMES[index % MATRIX_TIMING_CLASS_NAMES.length],
+  chars: Array.from({ length: 30 }, () => String.fromCharCode(0x30a0 + Math.floor(Math.random() * 96))).join(
+    "\n",
+  ),
 }));
 
 const KONAMI_CODE = [
@@ -67,7 +65,6 @@ export default function KonamiEasterEgg() {
       if (e.key === KONAMI_CODE[index]) {
         const next = index + 1;
         if (next === KONAMI_CODE.length) {
-          playUiSuccessSound();
           setTriggered(true);
           setIndex(0);
           setTimeout(() => setTriggered(false), 5000);
@@ -108,4 +105,9 @@ export default function KonamiEasterEgg() {
           ☁ CLOUDLESS MODE
         </p>
         <p className="text-neon-green glow-green animate-fade-in-up mt-4 font-mono text-lg delay-300">
-   
+          [CHEAT ACTIVATED] All systems overclocked
+        </p>
+      </div>
+    </div>
+  );
+}

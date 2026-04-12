@@ -13,11 +13,7 @@ const sidebarLinks = [
   { href: "/dashboard/settings", label: "Settings", icon: "⚙" },
 ];
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -58,10 +54,31 @@ export default function DashboardLayout({
                 {sidebarLinks.map((link) => {
                   const isActive =
                     link.href === "/dashboard"
-                      ? pathname === "/dashboard" ||
-                        pathname?.match(/^\/[a-z]{2}\/dashboard$/)
+                      ? pathname === "/dashboard" || pathname?.match(/^\/[a-z]{2}\/dashboard$/)
                       : pathname?.includes(link.href);
                   return (
                     <Link
                       key={link.href}
-                      href={li
+                      href={link.href}
+                      className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 font-mono text-sm transition-all ${
+                        isActive
+                          ? "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 border"
+                          : "hover:bg-void-lighter/50 text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      <span>{link.icon}</span>
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <main className="min-w-0 flex-1">{children}</main>
+        </div>
+      </div>
+    </div>
+  );
+}

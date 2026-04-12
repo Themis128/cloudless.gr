@@ -19,9 +19,7 @@ const adminCards = [
     href: "/admin/orders",
     statKey: "orders" as const,
     render: (s: DashStats) =>
-      s.orders
-        ? `${s.orders.total} orders · €${s.orders.revenue.toFixed(0)}`
-        : "—",
+      s.orders ? `${s.orders.total} orders · €${s.orders.revenue.toFixed(0)}` : "—",
   },
   {
     title: "CRM Contacts",
@@ -29,8 +27,7 @@ const adminCards = [
     icon: "◉",
     href: "/admin/crm",
     statKey: "contacts" as const,
-    render: (s: DashStats) =>
-      s.contacts ? `${s.contacts.total} contacts` : "—",
+    render: (s: DashStats) => (s.contacts ? `${s.contacts.total} contacts` : "—"),
   },
   {
     title: "SEO & Analytics",
@@ -78,13 +75,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const [ordersRes, contactsRes, errorsRes, healthRes] =
-          await Promise.allSettled([
-            fetchWithAuth("/api/admin/orders?limit=50"),
-            fetchWithAuth("/api/admin/crm/contacts?limit=1"),
-            fetchWithAuth("/api/admin/ops/errors"),
-            fetchWithAuth("/api/health"),
-          ]);
+        const [ordersRes, contactsRes, errorsRes, healthRes] = await Promise.allSettled([
+          fetchWithAuth("/api/admin/orders?limit=50"),
+          fetchWithAuth("/api/admin/crm/contacts?limit=1"),
+          fetchWithAuth("/api/admin/ops/errors"),
+          fetchWithAuth("/api/health"),
+        ]);
 
         const orders =
           ordersRes.status === "fulfilled" && ordersRes.value.ok
@@ -109,19 +105,100 @@ export default function AdminDashboard() {
                 total: orders.orders?.length ?? 0,
                 revenue:
                   orders.orders?.reduce(
-                    (sum: number, o: { amount: number }) =>
-                      sum + (o.amount ?? 0),
+                    (sum: number, o: { amount: number }) => sum + (o.amount ?? 0),
                     0,
                   ) ?? 0,
               }
             : null,
           contacts: contacts ? { total: contacts.total ?? 0 } : null,
           errors: errors ? { total: errors.total ?? 0 } : null,
-          health: health
-            ? { status: health.status, version: health.version }
-            : null,
+          health: health ? { status: health.status, version: health.version } : null,
         });
       } catch {
         /* stats are best-effort */
       } finally {
-        setLoading(
+        setLoading(false);
+      }
+    }
+
+    fetchStats();
+  }, []);
+
+  return (
+    <div>
+      <div className="mb-8">
+        <div className="bg-neon-magenta/10 border-neon-magenta/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
+          <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
+          <span className="text-neon-magenta font-mono text-xs">ADMIN_DASH</span>
+        </div>
+        <h1 className="font-heading text-2xl font-bold text-white">Admin Dashboard</h1>
+        <p className="font-body mt-1 text-slate-400">Manage your Cloudless platform.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {adminCards.map((card) => (
+          <Link key={card.title} href={card.href}>
+            <div className="bg-void-light/50 hover:border-neon-magenta/30 rounded-xl border border-slate-800 p-6 transition-all">
+              <div className="mb-4 flex items-start justify-between">
+                <div className="bg-neon-magenta/10 border-neon-magenta/20 flex h-10 w-10 items-center justify-center rounded-lg border text-lg">
+                  {card.icon}
+                </div>
+                {loading ? (
+                  <span className="bg-slate-800/50 h-4 w-16 animate-pulse rounded" />
+                ) : (
+                  <span className="text-neon-green font-mono text-xs">{card.render(stats)}</span>
+                )}
+              </div>
+              <h3 className="font-heading mb-1 font-semibold text-white">{card.title}</h3>
+              <p className="font-body text-sm text-slate-500">{card.description}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* System Status */}
+      <div className="bg-void-light/50 mt-8 rounded-xl border border-slate-800 p-6">
+        <h2 className="font-heading mb-4 font-semibold text-white">System Status</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[
+            {
+              label: "API",
+              status: stats.health?.status === "ok" ? "Operational" : "Unknown",
+              ok: stats.health?.status === "ok",
+            },
+            {
+              label: "Version",
+              status: stats.health?.version ?? "—",
+              ok: !!stats.health?.version,
+            },
+            {
+              label: "Errors",
+              status:
+                stats.errors !== null
+                  ? stats.errors.total === 0
+                    ? "All Clear"
+                    : `${stats.errors.total} unresolved`
+                  : "Not connected",
+              ok: stats.errors !== null && stats.errors.total === 0,
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="bg-void flex items-center gap-3 rounded-lg border border-slate-800 px-4 py-3"
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${item.ok ? "bg-neon-green" : "bg-slate-600"}`}
+              />
+              <span className="font-mono text-sm text-slate-400">{item.label}</span>
+              <span
+                className={`ml-auto font-mono text-xs ${item.ok ? "text-neon-green" : "text-slate-500"}`}
+              >
+                {item.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

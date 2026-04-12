@@ -29,8 +29,7 @@ function ParticleSystem() {
   // Animate particles with gentle floating motion using elapsed time from the clock
   useFrame(({ clock }) => {
     if (pointsRef.current) {
-      const positions = pointsRef.current.geometry.attributes.position
-        .array as Float32Array;
+      const positions = pointsRef.current.geometry.attributes.position.array as Float32Array;
       const t = clock.elapsedTime;
 
       for (let i = 0; i < positions.length; i += 3) {
@@ -45,12 +44,7 @@ function ParticleSystem() {
   });
 
   return (
-    <Points
-      ref={pointsRef}
-      positions={particles}
-      stride={3}
-      frustumCulled={false}
-    >
+    <Points ref={pointsRef} positions={particles} stride={3} frustumCulled={false}>
       <PointMaterial
         transparent
         color="#00fff5"
@@ -63,9 +57,7 @@ function ParticleSystem() {
   );
 }
 
-export default function ParticleField3D({
-  className = "",
-}: ParticleFieldProps) {
+export default function ParticleField3D({ className = "" }: ParticleFieldProps) {
   return (
     <div className={`pointer-events-none absolute inset-0 ${className}`}>
       <Canvas
@@ -73,4 +65,8 @@ export default function ParticleField3D({
         gl={{ alpha: true }}
         style={{ width: "100%", height: "100%" }}
       >
-        <ParticleSys
+        <ParticleSystem />
+      </Canvas>
+    </div>
+  );
+}

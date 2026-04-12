@@ -10,17 +10,11 @@ export async function POST(request: Request) {
     const { name, email, company, service, message } = await request.json();
 
     if (!name || !email || !message) {
-      return Response.json(
-        { error: "Name, email, and message are required." },
-        { status: 400 },
-      );
+      return Response.json({ error: "Name, email, and message are required." }, { status: 400 });
     }
 
     if (!isValidEmail(email)) {
-      return Response.json(
-        { error: "Invalid email address." },
-        { status: 400 },
-      );
+      return Response.json({ error: "Invalid email address." }, { status: 400 });
     }
 
     const config = await getConfig();
@@ -55,4 +49,23 @@ export async function POST(request: Request) {
       fromLabel: "Cloudless Contact Form",
     });
 
-    // Fire-and-forget: push to CRM + not
+    // Fire-and-forget: push to CRM + notify Slack (non-blocking)
+    const nameParts = String(name).trim().split(" ");
+    Promise.allSettled([
+      slackContactNotify({ name, email, company, service, message }),
+      upsertContact({
+        email,
+        firstname: nameParts[0] ?? "",
+        lastname: nameParts.slice(1).join(" "),
+        company: company || undefined,
+        service_interest: service || undefined,
+        message: String(message).slice(0, 500),
+      }),
+    ]).catch(() => {});
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error("SES send error:", error);
+    return Response.json({ error: "Failed to send email." }, { status: 500 });
+  }
+}

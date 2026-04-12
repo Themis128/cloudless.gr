@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { getProductByIdAsync } from "@/lib/store-products";
 import { getStripe } from "@/lib/stripe";
+import { getProductById } from "@/lib/store-products";
 
 interface CheckoutItem {
   id: string;
@@ -17,19 +17,14 @@ export async function POST(request: NextRequest) {
 
     const origin = request.headers.get("origin") || "https://cloudless.gr";
 
-    const resolvedProducts = await Promise.all(
-      items.map(async (item) => {
-        const product = await getProductByIdAsync(item.id);
-        if (!product) {
-          throw new Error(`Unknown product: ${item.id}`);
-        }
-
-        return {
-          product,
-          quantity: Math.max(1, Math.min(item.quantity || 1, 99)),
-        };
-      }),
-    );
+    // Validate each item against the server-side catalog
+    const resolvedProducts = items.map((item) => {
+      const product = getProductById(item.id);
+      if (!product) {
+        throw new Error(`Unknown product: ${item.id}`);
+      }
+      return { product, quantity: Math.max(1, Math.min(item.quantity || 1, 99)) };
+    });
 
     const lineItems = resolvedProducts.map(({ product, quantity }) => {
       const priceData: Record<string, unknown> = {
@@ -52,9 +47,7 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    const hasSubscription = resolvedProducts.some(
-      ({ product }) => product.recurring,
-    );
+    const hasSubscription = resolvedProducts.some(({ product }) => product.recurring);
     const mode = hasSubscription ? "subscription" : "payment";
 
     const stripe = await getStripe();
@@ -107,5 +100,6 @@ export async function POST(request: NextRequest) {
     return Response.json({ url: session.url });
   } catch (error) {
     console.error("Checkout error:", error);
-    return Response.json(
-      { error: "Fail
+    return Response.json({ error: "Failed to create checkout session" }, { status: 500 });
+  }
+}

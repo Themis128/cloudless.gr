@@ -53,17 +53,12 @@ export default function TypingText({
       }, 0);
       return () => clearTimeout(timeout);
     }
-  }, [
-    charIndex,
-    isDeleting,
-    textIndex,
-    texts,
-    typingSpeed,
-    deletingSpeed,
-    pauseDuration,
-  ]);
+  }, [charIndex, isDeleting, textIndex, texts, typingSpeed, deletingSpeed, pauseDuration]);
 
   return (
     <span className={className}>
       {displayed}
-      <span className="typi
+      <span className="typing-cursor" />
+    </span>
+  );
+}

@@ -25,4 +25,41 @@ function fallbackPngResponse() {
 async function readFirstExisting(filePaths: string[]) {
   for (const filePath of filePaths) {
     try {
-      return await readFile(fileP
+      return await readFile(filePath);
+    } catch {
+      // Continue to next candidate path.
+    }
+  }
+
+  return null;
+}
+
+export async function GET(_request: Request, { params }: { params: Promise<{ name: string }> }) {
+  const { name } = await params;
+  const filename = ICON_MAP[name];
+
+  if (!filename) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  const candidatePaths = [
+    path.join(process.cwd(), "public", "icons", name),
+    path.join(process.cwd(), "brand", "favicons", filename),
+  ];
+
+  try {
+    const buffer = await readFirstExisting(candidatePaths);
+    if (!buffer) {
+      return fallbackPngResponse();
+    }
+
+    return new NextResponse(buffer, {
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    });
+  } catch {
+    return fallbackPngResponse();
+  }
+}

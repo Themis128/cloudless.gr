@@ -7,10 +7,7 @@ interface HolographicCardProps {
   className?: string;
 }
 
-export default function HolographicCard({
-  children,
-  className = "",
-}: HolographicCardProps) {
+export default function HolographicCard({ children, className = "" }: HolographicCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [style, setStyle] = useState<React.CSSProperties>({});
   const [glare, setGlare] = useState<React.CSSProperties>({});
@@ -43,8 +40,7 @@ export default function HolographicCard({
 
   const handleMouseLeave = useCallback(() => {
     setStyle({
-      transform:
-        "perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)",
+      transform: "perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)",
       transition: "transform 0.5s ease-out",
     });
     setGlare({ opacity: 0 });
@@ -64,4 +60,6 @@ export default function HolographicCard({
         className="pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300"
         style={glare}
       />
-    <
+    </div>
+  );
+}
