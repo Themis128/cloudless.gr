@@ -89,16 +89,27 @@ function handleNavigationRequest(request) {
 }
 
 function handleStaticAssetRequest(request) {
-  return caches.match(request).then((cached) => {
-    if (cached) {
-      return cached;
-    }
-
-    return fetch(request).then((response) => {
-      if (response.ok) {
-        cacheResponse(STATIC_CACHE, request, response);
+  return caches.open(STATIC_CACHE).then((cache) => {
+    return cache.match(request).then((cached) => {
+      if (cached) {
+        // Stale-while-revalidate: return cached immediately, refresh in background
+        fetch(request)
+          .then((response) => {
+            if (response.ok) {
+              cache.put(request, response.clone());
+            }
+          })
+          .catch(() => {});
+        return cached;
       }
-      return response;
+
+      // Cache miss: fetch from network and cache the response
+      return fetch(request).then((response) => {
+        if (response.ok) {
+          cache.put(request, response.clone());
+        }
+        return response;
+      });
     });
   });
 }
