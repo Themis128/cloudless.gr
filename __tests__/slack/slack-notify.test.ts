@@ -113,10 +113,6 @@ describe("SlackClient", () => {
 
     it("returns false after 3 failed attempts", async () => {
       vi.useFakeTimers();
-
-      const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
       const mockFetch = failFetch();
       vi.stubGlobal("fetch", mockFetch);
 
@@ -127,9 +123,6 @@ describe("SlackClient", () => {
 
       expect(result).toBe(false);
       expect(mockFetch).toHaveBeenCalledTimes(3);
-
-      errSpy.mockRestore();
-      warnSpy.mockRestore();
       vi.useRealTimers();
     });
 
@@ -157,8 +150,6 @@ describe("SlackClient", () => {
     });
 
     it("does not retry on non-ratelimited Slack API errors", async () => {
-      const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
       const mockFetch = slackErrorFetch("channel_not_found");
       vi.stubGlobal("fetch", mockFetch);
 
@@ -169,8 +160,6 @@ describe("SlackClient", () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
       // result is true because the error path short-circuits retries
       expect(result).toBe(true);
-
-      errSpy.mockRestore();
     });
   });
 
@@ -197,9 +186,6 @@ describe("SlackClient", () => {
 
     it("retries webhook on failure", async () => {
       vi.useFakeTimers();
-
-      const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
       const mockFetch = vi
         .fn()
         .mockResolvedValueOnce(new Response("error", { status: 500 }))
@@ -213,8 +199,6 @@ describe("SlackClient", () => {
 
       expect(result).toBe(true);
       expect(mockFetch).toHaveBeenCalledTimes(2);
-
-      errSpy.mockRestore();
       vi.useRealTimers();
     });
   });
@@ -287,13 +271,9 @@ describe("slackSubscriberNotify", () => {
   it("does not throw when Slack is not configured", async () => {
     mockBotToken = "";
     mockWebhookUrl = "";
-
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubGlobal("fetch", vi.fn());
 
     await expect(slackSubscriberNotify("no-slack@example.com")).resolves.not.toThrow();
-
-    errSpy.mockRestore();
   });
 });
 
@@ -411,4 +391,24 @@ describe("slackDeployNotify", () => {
 
     const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(opts.body as string);
-  
+    const bodyStr = JSON.stringify(body);
+    expect(bodyStr).not.toContain("Actor");
+  });
+
+  it("includes actor when provided", async () => {
+    const mockFetch = okFetch({ ok: true });
+    vi.stubGlobal("fetch", mockFetch);
+
+    await slackDeployNotify({
+      version: "1.0.0",
+      stage: "production",
+      status: "succeeded",
+      actor: "Themis",
+    });
+
+    const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(opts.body as string);
+    const bodyStr = JSON.stringify(body);
+    expect(bodyStr).toContain("Themis");
+  });
+});

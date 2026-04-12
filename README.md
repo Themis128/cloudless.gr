@@ -210,4 +210,108 @@ Required env vars (see `.env.local` for details):
 | `SLACK_SIGNING_SECRET` | Verifies all inbound requests from Slack |
 | `SLACK_WEBHOOK_URL` | Incoming webhook URL (simpler alternative for outbound-only) |
 
-Fu
+Full setup instructions, ngrok local testing guide, and slash command reference: **[docs/SLACK.md](docs/SLACK.md)**
+
+## Secrets Management
+
+```mermaid
+graph LR
+    subgraph Dev["Local Development"]
+        EnvFile[".env.local"] --> NextJS["Next.js Server"]
+    end
+
+    subgraph Prod["Production AWS"]
+        SSM["SSM Parameter Store"] --> GetConfig["getConfig()"]
+        GetConfig --> APIRoutes["API Routes"]
+    end
+
+    SSM -->|SecureString| STRIPE_KEY["STRIPE_SECRET_KEY"]
+    SSM -->|SecureString| SLACK_TOKEN["SLACK_BOT_TOKEN"]
+    SSM -->|SecureString| SES_CREDS["SES_FROM_EMAIL"]
+    SSM -->|String| APP_CONFIG["APP_VERSION etc"]
+```
+
+This project uses **no `.env` files** in production. All secrets are stored in **AWS SSM Parameter Store** under the path prefix `/cloudless/production/` and fetched at runtime via `src/lib/ssm-config.ts`.
+
+Required SSM parameters:
+
+| Parameter                | Type         | Description                   |
+| ------------------------ | ------------ | ----------------------------- |
+| `SES_FROM_EMAIL`         | String       | Verified SES sender address   |
+| `SES_TO_EMAIL`           | String       | Contact form recipient        |
+| `AWS_SES_REGION`         | String       | SES region (e.g. `us-east-1`) |
+| `STRIPE_SECRET_KEY`      | SecureString | Stripe API secret key         |
+| `STRIPE_PUBLISHABLE_KEY` | SecureString | Stripe publishable key        |
+| `SLACK_BOT_TOKEN`        | SecureString | Slack bot OAuth token         |
+| `SLACK_SIGNING_SECRET`   | SecureString | Slack request signing secret  |
+| `SLACK_WEBHOOK_URL`      | SecureString | Slack incoming webhook URL    |
+
+For local development, configure your AWS CLI with credentials that have `ssm:GetParametersByPath` permission.
+
+## Getting Started
+
+```bash
+# Install dependencies
+pnpm install
+
+# Run the dev server (Turbopack)
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Start production server
+pnpm start
+```
+
+## Testing
+
+Tests use **Vitest** + **React Testing Library** with jsdom.
+
+```bash
+# Run tests in watch mode
+pnpm test
+
+# Run tests once (CI)
+pnpm test:ci
+```
+
+Test files live in `__tests__/` and follow the naming convention `*.test.tsx`.
+
+## Brand Identity
+
+The visual identity uses a navy/electric-blue/cyan palette with Instrument Sans for headings and Work Sans for body text. Full brand guidelines are in the `brand/` directory.
+
+## CI/CD
+
+GitHub Actions workflows in `.github/workflows/`:
+
+- **deploy.yml** — Builds and deploys to AWS Amplify on push to `main`
+- **lighthouse.yml** — Runs Lighthouse audits on PRs against key pages
+- **pr-labeler.yml** — Auto-labels PRs by size and file paths
+- **stale.yml** — Marks and closes stale issues/PRs
+
+## Deployment
+
+The app deploys to **AWS Amplify**. The deployment workflow handles build and deploy automatically on push to `main`. Production IAM role needs `ssm:GetParametersByPath` and `ses:SendEmail` permissions.
+
+## Git Line Endings
+
+This repository enforces LF line endings for text files via `.gitattributes`:
+
+- `* text=auto eol=lf`
+- `*.bat`, `*.cmd`, `*.ps1` are kept as CRLF
+
+This avoids noisy `LF will be replaced by CRLF` warnings and keeps diffs stable across Windows/WSL environments.
+
+## Tech Stack
+
+- Next.js 16.2.1 (App Router, Turbopack)
+- React 19.2.4
+- TypeScript 5
+- Tailwind CSS 4
+- AWS Cognito + Amplify v6 (authentication)
+- AWS SES (transactional email)
+- AWS SSM Parameter Store (secrets)
+- Stripe (checkout & payments)
+- Vitest + React Testing Library (109+ tests)

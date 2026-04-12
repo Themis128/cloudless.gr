@@ -6,7 +6,6 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   // Removed "output: export" to enable API routes and SSR for e-store
-  allowedDevOrigins: ["172.24.240.121"],
   turbopack: {
     root: resolve(import.meta.dirname),
     // next-intl 3.26 writes this alias to the deprecated experimental.turbo key,
@@ -32,3 +31,16 @@ const nextConfig: NextConfig = {
   // Do NOT use the Pages Router i18n key here — it causes build failures
 };
 
+const configured = withNextIntl(nextConfig) as NextConfig & {
+  experimental?: Record<string, unknown>;
+};
+
+// Remove deprecated key if injected by older next-intl plugin behavior.
+if (configured.experimental && typeof configured.experimental === "object") {
+  delete configured.experimental.turbo;
+  if (Object.keys(configured.experimental).length === 0) {
+    delete configured.experimental;
+  }
+}
+
+export default configured;

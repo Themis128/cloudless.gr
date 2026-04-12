@@ -278,4 +278,172 @@ All outbound notifications use the `SlackClient` class, which automatically sele
 
 ### `slackContactNotify({ name, email, company?, service?, message })`
 
-Called from `/api/contact` as **fire-and-forget** via `Promise.allSettled` (runs in paral
+Called from `/api/contact` as **fire-and-forget** via `Promise.allSettled` (runs in parallel with HubSpot CRM upsert). Does not block the API response.
+
+Block Kit message includes:
+- Header: "📨 New Contact Form Submission"
+- Fields: Name, Email, Company, Service
+- Full message text (truncated to 2000 chars)
+- Slack-formatted timestamp + source label
+### `slackSubscriberNotify(email)`
+
+Called automatically from `/api/subscribe` in parallel with the SES email notification.
+
+Block Kit message includes:
+- Header: "New Newsletter Subscriber"
+- Email address
+- Slack timestamp with date/time
+
+### `slackOrderNotify({ email, amount, sessionId })`
+
+Called from `/api/webhooks/stripe` when a checkout is completed.
+
+Block Kit message includes:
+- Header: "💰 New Order"
+- Customer email, amount, and truncated Stripe session ID
+- Slack-formatted timestamp + source label
+
+### `slackErrorNotify({ title, message, route?, error? })`
+
+Call this from any route handler to surface unexpected errors in Slack.
+
+```typescript
+import { slackErrorNotify } from "@/lib/slack-notify";
+
+try {
+  // ...
+} catch (err) {
+  await slackErrorNotify({
+    title: "Checkout failed",
+    message: "Stripe session could not be created",
+    route: "/api/checkout",
+    error: err,
+  });
+}
+```
+### `slackDeployNotify({ version, stage, status, actor?, commitSha? })`
+
+Call from your CI/CD pipeline (GitHub Actions, SST, etc.) to post deploy status.
+
+```typescript
+import { slackDeployNotify } from "@/lib/slack-notify";
+
+await slackDeployNotify({
+  version: process.env.APP_VERSION ?? "unknown",
+  stage: "production",
+  status: "succeeded",
+  actor: "github-actions",
+  commitSha: process.env.GITHUB_SHA,
+});
+```
+
+Status values: `"started"` | `"succeeded"` | `"failed"`
+
+---
+
+## SlackClient Internals
+
+```mermaid
+graph TB
+    Call["slackXxxNotify()"] --> SC["SlackClient.post()"]
+    SC --> Check{"Config check"}
+    Check -->|SLACK_BOT_TOKEN set| BotPath["chat.postMessage API"]
+    Check -->|SLACK_WEBHOOK_URL set| WHPath["Incoming Webhook POST"]
+    Check -->|Neither configured| Skip["Log warning, skip silently"]
+
+    BotPath --> Retry["Retry Logic"]
+    WHPath --> Retry
+    Retry -->|Attempt 1| Send["POST to Slack"]
+    Send -->|429 Rate Limited| Backoff["Exponential Backoff"]
+    Backoff -->|500ms / 1s / 2s| Send
+    Send -->|200 OK| Done["Resolved"]
+    Send -->|Other Error| Fail["Reject immediately"]
+```
+
+The `SlackClient` class (in `src/lib/slack-notify.ts`) selects the transport automatically:
+
+1. **Bot token** (`SLACK_BOT_TOKEN`) → uses `chat.postMessage` API
+2. **Webhook URL** (`SLACK_WEBHOOK_URL`) → uses incoming webhook
+3. **Neither configured** → skips silently, logs a warning at startup
+
+**Retry policy:** Up to 3 attempts with exponential backoff (500 ms, 1 000 ms, 2 000 ms). `ratelimited` errors from the Slack API are retried; all other Slack API errors stop immediately.
+
+**Legacy API:** `slackNotify(message)` is still available for backward compatibility but deprecated in favor of `SlackClient.post()`.
+
+**Cache:** Integration config and Slack config are cached in module-level variables. Call `resetSlackConfigCache()` in tests to clear.
+---
+
+## Local Testing with ngrok
+
+To receive Slack events and test slash commands locally:
+
+```bash
+# 1. Start the dev server
+pnpm dev   # runs on port 4000
+
+# 2. In another terminal, start ngrok
+ngrok http 4000
+
+# 3. Copy the HTTPS forwarding URL, e.g.:
+#    https://abc123.ngrok-free.app
+
+# 4. In your Slack app settings, temporarily update:
+#    Event Subscriptions → Request URL:
+#      https://abc123.ngrok-free.app/api/slack/events
+#    Slash Commands → Request URL (each):
+#      https://abc123.ngrok-free.app/api/slack/commands
+#    Interactivity → Request URL:
+#      https://abc123.ngrok-free.app/api/slack/interactions
+
+# 5. Set SLACK_BOT_TOKEN and SLACK_SIGNING_SECRET in .env.local
+#    (restart the dev server after adding them)
+```
+
+> ngrok URLs change on every restart unless you have a paid plan with reserved domains. Update Slack app settings each session, or use a static domain.
+
+---
+
+## Running Tests
+
+### Unit tests (Vitest)
+
+```bash
+# All Slack-related tests
+pnpm test -- --reporter=verbose __tests__/slack/
+
+# Individual test files
+pnpm test -- __tests__/slack/slack-verify.test.ts
+pnpm test -- __tests__/slack/slack-notify.test.ts
+pnpm test -- __tests__/slack/slack-events.test.ts
+pnpm test -- __tests__/slack/slack-commands.test.ts
+pnpm test -- __tests__/slack/slack-interactions.test.ts
+```
+Test coverage (56 tests total):
+
+| File | Tests | What is tested |
+|------|-------|---------------|
+| `slack-verify.test.ts` | 10 | Valid signature, expired timestamp, wrong secret, missing headers, future timestamp, 401 helper |
+| `slack-notify.test.ts` | 21 | SlackClient via API and webhook, retry with backoff, no-config no-op, all five notifiers' Block Kit output |
+| `slack-events.test.ts` | 8 | URL challenge, app_mention responses (status/help/default), bot loop prevention, DM handling, unknown events, invalid JSON |
+| `slack-commands.test.ts` | 8 | /cloudless-status fields + response_type, /cloudless-orders buttons + response_type, unknown command, 401 on bad signature |
+| `slack-interactions.test.ts` | 9 | Button actions (open_stripe_dashboard, open_store), empty actions, view_submission, unknown type, missing/invalid payload field |
+
+### Integration tests (curl/Node.js against running dev server)
+
+Start the dev server (`pnpm dev`) and run:
+
+```bash
+node /path/to/slack-test.mjs
+```
+
+The integration test script verifies all endpoints with properly signed HMAC-SHA256 requests and confirms unsigned requests are rejected with 401.
+
+---
+
+## Security Notes
+
+- **Signature verification** uses constant-time comparison (`crypto.timingSafeEqual`) to prevent timing attacks.
+- **Replay protection** rejects any request with a timestamp older than 5 minutes.
+- **Token isolation** — all tokens are read from environment variables, never hardcoded. The `integrations.ts` config cache prevents repeated env reads.
+- **Bot loop prevention** — the events handler checks for `bot_id` and skips all bot-originated messages.
+- **Input sanitization** — contact form data is passed through Block Kit's `mrkdwn` format (not raw HTML), and message text is truncated to 2000 characters.
