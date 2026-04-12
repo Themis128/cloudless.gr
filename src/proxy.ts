@@ -150,15 +150,4 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // --- Page routes: next-intl locale routing + security headers ---
-  const response = intlMiddleware(request);
-  addSecurityHeaders(response);
-  return response;
-}
-
-export const config = {
-  matcher: [
-    // Match all request paths except static files, Next.js internals, and PWA assets
-    "/((?!_next|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|xml|txt)$).*)",
-  ],
-};
+  // --- Page routes: next-intl loca

@@ -91,16 +91,4 @@ export default function BlogPage() {
                         stroke="currentColor"
                         strokeWidth="2"
                       >
-                        <path d="M3 7h8M7 3l4 4-4 4" />
-                      </svg>
-                    </span>
-                  </div>
-                </Link>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
-    </>
-  );
-}
+                        <path d=

@@ -271,15 +271,4 @@ describe("Navbar", () => {
   it("has 44px minimum touch targets on mobile nav links", () => {
     const { container } = renderNavbar();
 
-    // Open mobile menu
-    fireEvent.click(within(container).getByLabelText("Toggle menu"));
-
-    // Mobile nav links should have min-h-[44px] or min-h-11 class (both equal 44px)
-    const mobileMenu = container.querySelector(".lg\\:hidden.bg-void\\/95");
-    const links = mobileMenu?.querySelectorAll("a");
-    const linksWithMinHeight = Array.from(links ?? []).filter(
-      (a) => a.className.includes("min-h-[44px]") || a.className.includes("min-h-11"),
-    );
-    expect(linksWithMinHeight.length).toBeGreaterThanOrEqual(5);
-  });
-});
+    

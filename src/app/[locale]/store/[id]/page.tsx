@@ -178,22 +178,4 @@ export default async function ProductPage({
                     </p>
                     <span className="text-neon-cyan mt-2 inline-block font-mono text-sm font-bold">
                       {formatPrice(
-                        relatedProduct.price,
-                        relatedProduct.currency,
-                      )}
-                      {relatedProduct.recurring && (
-                        <span className="ml-1 font-normal text-slate-500">
-                          /{relatedProduct.interval}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-    </>
-  );
-}
+                        relatedProd

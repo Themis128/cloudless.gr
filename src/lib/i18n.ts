@@ -57,5 +57,4 @@ export function translateArray(
   fallback: string[],
 ): string[] {
   const candidate = resolve(getMessages(locale), key);
-  return Array.isArray(candidate) ? (candidate as string[]) : fallback;
-}
+  return Array.isArray(candidate) ? (candidate as string

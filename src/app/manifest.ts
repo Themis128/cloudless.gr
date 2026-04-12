@@ -47,16 +47,4 @@ export default function manifest(): MetadataRoute.Manifest {
         name: "Our Services",
         short_name: "Services",
         url: "/services",
-        description: "Cloud, serverless, analytics & AI marketing",
-        icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
-      },
-      {
-        name: "Read Blog",
-        short_name: "Blog",
-        url: "/blog",
-        description: "Tech insights and guides",
-        icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
-      },
-    ],
-  };
-}
+        descript

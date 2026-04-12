@@ -28,7 +28,3 @@ export default getRequestConfig(async ({ requestLocale }) => {
   } else {
     messages = (await import("../locales/en.json"))
       .default as unknown as AbstractIntlMessages;
-  }
-
-  return { locale, messages };
-});

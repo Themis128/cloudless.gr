@@ -73,8 +73,4 @@ export default function ParticleField3D({
         gl={{ alpha: true }}
         style={{ width: "100%", height: "100%" }}
       >
-        <ParticleSystem />
-      </Canvas>
-    </div>
-  );
-}
+        <ParticleSys

@@ -367,13 +367,4 @@ select {
 }
 
 input::placeholder,
-textarea::placeholder {
-  color: #475569 !important;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: rgba(0, 255, 245, 0.5) !important;
-  box-shadow: 0 0 10px rgba(0, 255, 245, 0.15) !important;
-}
+tex

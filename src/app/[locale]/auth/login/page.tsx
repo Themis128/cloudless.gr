@@ -182,24 +182,4 @@ export default function LoginPage() {
               >
                 {submitting
                   ? t("auth.signingIn", "Signing In...")
-                  : t("auth.login", "Sign In")}
-              </button>
-            </form>
-          )}
-
-          {!needsNewPassword && (
-            <p className="mt-6 text-center font-mono text-sm text-slate-500">
-              {t("auth.noAccount", "Don't have an account?")}{" "}
-              <Link
-                href="/auth/signup"
-                className="text-neon-cyan hover:underline"
-              >
-                {t("auth.signup", "Create Account")}
-              </Link>
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+ 

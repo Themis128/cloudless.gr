@@ -72,26 +72,4 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cloudless — Cloud Computing, Serverless & AI Marketing",
-    description:
-      "Clear skies. Zero friction. Cloud architecture, serverless, analytics & AI marketing for startups and SMBs.",
-  },
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html
-      lang="en"
-      data-scroll-behavior="smooth"
-      className={`${instrumentSans.variable} ${workSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col" suppressHydrationWarning>
-        {children}
-      </body>
-    </html>
-  );
-}
+    title: "Cloudless —

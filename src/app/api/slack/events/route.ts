@@ -151,6 +151,4 @@ async function handleDirectMessage(event: SlackEvent): Promise<void> {
     body: JSON.stringify({
       channel: event.channel,
       text: "Hi! I respond to slash commands — try `/cloudless-status` or `/cloudless-orders`.",
-    }),
-  });
-}
+    

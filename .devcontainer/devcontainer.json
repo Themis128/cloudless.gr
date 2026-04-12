@@ -1,9 +1,17 @@
 {
   "name": "cloudless.gr",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=cloudless-pnpm-store,target=/pnpm-store,type=volume"
+  ],
+  "remoteUser": "node",
 
   "features": {
-    "ghcr.io/devcontainers/features/aws-cli:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
 
@@ -32,7 +40,7 @@
     }
   },
 
-  "postCreateCommand": "corepack enable && pnpm install",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
 
   "remoteEnv": {
     "NEXT_PUBLIC_COGNITO_USER_POOL_ID": "${localEnv:NEXT_PUBLIC_COGNITO_USER_POOL_ID}",

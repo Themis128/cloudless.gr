@@ -159,17 +159,4 @@ export default async function StorePage() {
                     {faq.question}
                   </span>
                   <span className="text-neon-cyan/40 shrink-0 text-lg transition-transform group-open:rotate-45">
-                    +
-                  </span>
-                </summary>
-                <div className="px-6 pb-5 text-sm leading-relaxed text-slate-400">
-                  {faq.answer}
-                </div>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
-    </>
-  );
-}
+ 

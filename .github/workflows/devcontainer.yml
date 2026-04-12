@@ -1,0 +1,47 @@
+name: Validate Dev Container
+
+on:
+  push:
+    branches: [main]
+    paths: ['.devcontainer/**']
+  pull_request:
+    paths: ['.devcontainer/**']
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build dev container image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: .devcontainer/Dockerfile
+          push: false
+          load: true
+          tags: cloudless-devcontainer:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify AWS CLI
+        run: |
+          docker run --rm cloudless-devcontainer:ci \
+            sh -c 'aws --version && echo "arch: $(uname -m)"'
+
+      - name: Verify pnpm store is writable as node user
+        run: |
+          docker run --rm --user node cloudless-devcontainer:ci \
+            sh -c 'touch /pnpm-store/.write-test && rm /pnpm-store/.write-test && echo "pnpm store writable"'
+
+      - name: Verify CI env var is NOT set in image
+        run: |
+          docker run --rm cloudless-devcontainer:ci \
+            sh -c 'if [ "${CI:-}" = "true" ]; then echo "ERROR: CI=true is set" && exit 1; fi && echo "CI not forced in image - OK"'

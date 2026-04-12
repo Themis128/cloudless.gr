@@ -193,13 +193,4 @@ export default async function BlogPostPage({ params }: Props) {
             </p>
             <Link
               href="/contact"
-              className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 mt-4 inline-block rounded-lg border px-8 py-3 font-mono text-sm font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
-            >
-              Get a Free Audit
-            </Link>
-          </div>
-        </div>
-      </article>
-    </>
-  );
-}
+              className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 mt-4 inline-block rounded-lg border px-8 py-3 font-mono text-sm font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.

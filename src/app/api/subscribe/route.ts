@@ -34,8 +34,4 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Subscribe error:", error);
     return Response.json(
-      { error: "Failed to subscribe. Please try again." },
-      { status: 500 },
-    );
-  }
-}
+      { error: "Failed to subscribe. Please try aga

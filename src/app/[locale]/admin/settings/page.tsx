@@ -1,15 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+const STORAGE_KEY = "admin-settings";
+
+interface AdminPrefs {
+  notifyOrders: boolean;
+  notifySignups: boolean;
+  notifyFailures: boolean;
+  notifyContact: boolean;
+  siteName: string;
+  supportEmail: string;
+}
+
+const DEFAULTS: AdminPrefs = {
+  notifyOrders: true,
+  notifySignups: true,
+  notifyFailures: true,
+  notifyContact: true,
+  siteName: "Cloudless",
+  supportEmail: "tbaltzakis@cloudless.gr",
+};
+
+function loadAdminPrefs(): AdminPrefs {
+  if (typeof window === "undefined") return DEFAULTS;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS;
+  } catch {
+    return DEFAULTS;
+  }
+}
 
 export default function AdminSettingsPage() {
+  const [prefs, setPrefs] = useState<AdminPrefs>(DEFAULTS);
   const [saved, setSaved] = useState(false);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    setPrefs(loadAdminPrefs());
+  }, []);
+
+  function update<K extends keyof AdminPrefs>(key: K, value: AdminPrefs[K]) {
+    setPrefs((prev) => ({ ...prev, [key]: value }));
+  }
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    } catch {
+      // localStorage unavailable
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
+
+  const notificationPrefs = [
+    {
+      id: "notify-orders" as const,
+      key: "notifyOrders" as const,
+      label: "New orders",
+      desc: "Email the team when a new order is placed",
+    },
+    {
+      id: "notify-signups" as const,
+      key: "notifySignups" as const,
+      label: "New sign-ups",
+      desc: "Email the team when a new user registers",
+    },
+    {
+      id: "notify-failures" as const,
+      key: "notifyFailures" as const,
+      label: "Payment failures",
+      desc: "Alert when a payment fails",
+    },
+    {
+      id: "notify-contact" as const,
+      key: "notifyContact" as const,
+      label: "Contact form submissions",
+      desc: "Forward contact form messages to the team",
+    },
+  ];
 
   return (
     <div>
@@ -39,7 +111,8 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="text"
-                defaultValue="Cloudless"
+                value={prefs.siteName}
+                onChange={(e) => update("siteName", e.target.value)}
                 className="bg-void-light focus:border-neon-magenta/50 w-full max-w-md rounded-lg border border-slate-800 px-4 py-3 font-mono text-sm text-white transition-colors focus:outline-none"
               />
             </div>
@@ -49,7 +122,8 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="email"
-                defaultValue="tbaltzakis@cloudless.gr"
+                value={prefs.supportEmail}
+                onChange={(e) => update("supportEmail", e.target.value)}
                 className="bg-void-light focus:border-neon-magenta/50 w-full max-w-md rounded-lg border border-slate-800 px-4 py-3 font-mono text-sm text-white transition-colors focus:outline-none"
               />
             </div>
@@ -62,39 +136,15 @@ export default function AdminSettingsPage() {
             Team Notifications
           </h2>
           <div className="space-y-3">
-            {[
-              {
-                id: "notify-orders",
-                label: "New orders",
-                desc: "Email the team when a new order is placed",
-                defaultChecked: true,
-              },
-              {
-                id: "notify-signups",
-                label: "New sign-ups",
-                desc: "Email the team when a new user registers",
-                defaultChecked: true,
-              },
-              {
-                id: "notify-failures",
-                label: "Payment failures",
-                desc: "Alert when a payment fails",
-                defaultChecked: true,
-              },
-              {
-                id: "notify-contact",
-                label: "Contact form submissions",
-                desc: "Forward contact form messages to the team",
-                defaultChecked: true,
-              },
-            ].map((pref) => (
+            {notificationPrefs.map((pref) => (
               <label
                 key={pref.id}
                 className="bg-void flex min-h-[44px] cursor-pointer items-start gap-3 rounded-lg border border-slate-800 px-4 py-3 transition-colors hover:border-slate-700"
               >
                 <input
                   type="checkbox"
-                  defaultChecked={pref.defaultChecked}
+                  checked={prefs[pref.key]}
+                  onChange={(e) => update(pref.key, e.target.checked)}
                   className="accent-neon-magenta mt-1"
                 />
                 <div>

@@ -588,14 +588,4 @@ describe("CartSlideOver — Mobile", () => {
     fireEvent.click(view.getByText("Add to Cart"));
 
     // Checkout button uses rounded-lg
-    const checkoutBtn = view.getByText("Checkout");
-    expect(checkoutBtn.className).toContain("rounded-lg");
-
-    // Cart item icon container uses rounded-lg
-    const iconContainers = container.querySelectorAll(".neon-border");
-    const hasRoundedLg = Array.from(iconContainers).some((el) =>
-      el.className.includes("rounded-lg")
-    );
-    expect(hasRoundedLg).toBe(true);
-  });
-});
+    const c

@@ -32,16 +32,3 @@ const nextConfig: NextConfig = {
   // Do NOT use the Pages Router i18n key here — it causes build failures
 };
 
-const configured = withNextIntl(nextConfig) as NextConfig & {
-  experimental?: Record<string, unknown>;
-};
-
-// Remove deprecated key if injected by older next-intl plugin behavior.
-if (configured.experimental && typeof configured.experimental === "object") {
-  delete configured.experimental.turbo;
-  if (Object.keys(configured.experimental).length === 0) {
-    delete configured.experimental;
-  }
-}
-
-export default configured;

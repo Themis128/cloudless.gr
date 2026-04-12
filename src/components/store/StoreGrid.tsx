@@ -226,19 +226,4 @@ export default function StoreGrid({ products }: { products: StoreProduct[] }) {
         <div className="py-16 text-center">
           <div className="text-neon-cyan/20 mb-4 font-mono text-4xl">[ ]</div>
           <p className="font-mono text-sm text-slate-500">
-            No products match your search.
-          </p>
-          <button
-            onClick={() => {
-              setSearchQuery("");
-              setActiveCategory("all");
-            }}
-            className="text-neon-cyan/60 hover:text-neon-cyan mt-4 font-mono text-xs transition-colors"
-          >
-            Clear filters
-          </button>
-        </div>
-      )}
-    </>
-  );
-}
+            No products mat

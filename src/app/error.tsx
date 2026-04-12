@@ -33,6 +33,4 @@ export default function Error({
           Try Again
         </button>
       </div>
-    </section>
-  );
-}
+  

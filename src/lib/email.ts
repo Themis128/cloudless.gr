@@ -141,21 +141,4 @@ export async function sendPaymentFailureNotice(
       "Payment Failed",
       "",
       `We were unable to process your payment for invoice ${invoiceId}.`,
-      "Please update your payment method to keep your subscription active.",
-      "",
-      "Contact us at tbaltzakis@cloudless.gr for help.",
-      "",
-      "If this was a mistake, no action is needed. We'll retry the payment automatically.",
-    ].join("\n"),
-  });
-}
-
-export async function notifyTeam(subject: string, body: string): Promise<void> {
-  const config = await getConfig();
-  await sendEmail({
-    to: config.SES_TO_EMAIL,
-    subject,
-    html: `<div style="font-family: sans-serif;">${body}</div>`,
-    text: body.replace(/<[^>]+>/g, ""),
-  });
-}
+      "Please up

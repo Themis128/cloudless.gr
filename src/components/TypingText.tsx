@@ -66,7 +66,4 @@ export default function TypingText({
   return (
     <span className={className}>
       {displayed}
-      <span className="typing-cursor" />
-    </span>
-  );
-}
+      <span className="typi

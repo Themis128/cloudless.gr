@@ -112,13 +112,4 @@ describe("PushNotificationPrompt", () => {
     const notNowBtn = Array.from(buttons).find((b) =>
       b.textContent?.includes("Not now"),
     );
-    expect(notNowBtn).toBeTruthy();
-    fireEvent.click(notNowBtn!);
-
-    const prompt = container.querySelector('[class*="text-white"]');
-    expect(
-      prompt === null || !prompt.textContent?.includes("Stay updated"),
-    ).toBe(true);
-    expect(sessionStorage.getItem("cloudless-push-dismissed")).toBe("1");
-  });
-});
+    expect(not

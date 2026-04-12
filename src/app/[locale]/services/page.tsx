@@ -680,37 +680,4 @@ export default async function ServicesPage() {
               {t("servicesPage.ctaLabel", "[ NEXT STEP ]")}
             </p>
             <h2 className="font-heading text-3xl font-bold text-white md:text-4xl">
-              {t("servicesPage.ctaTitle", "Ready to get")}{" "}
-              <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
-                {t("servicesPage.ctaTitleHighlight", "started?")}
-              </span>
-            </h2>
-            <p className="mx-auto mt-4 max-w-lg text-lg leading-relaxed text-slate-400">
-              {t(
-                "servicesPage.ctaSubtitle",
-                "Book a free 30-minute audit call. We'll review your current setup, identify quick wins, and map out a plan — no commitment required.",
-              )}
-            </p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link
-                href="/contact"
-                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 rounded-lg border px-8 py-3.5 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
-              >
-                {t("servicesPage.ctaPrimary", "Book Free Audit")}
-              </Link>
-              <Link
-                href="/store"
-                className="group/link font-mono text-sm font-semibold text-slate-400 transition-colors hover:text-white"
-              >
-                {t("servicesPage.ctaSecondary", "Browse store")}{" "}
-                <span className="inline-block transition-transform group-hover/link:translate-x-1">
-                  →
-                </span>
-              </Link>
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
-    </>
-  );
-}
+              {t("servicesPage.ctaT

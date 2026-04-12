@@ -39,5 +39,3 @@ export default function ScrollReveal({
     <div ref={ref} className={`reveal ${className}`}>
       {children}
     </div>
-  );
-}
