@@ -35,24 +35,10 @@ const mockRegister = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
-
-  const mockRegistration = {
-    scope: "/",
-    waiting: null,
-    installing: null,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  };
-  mockRegister.mockResolvedValue(mockRegistration);
+  mockRegister.mockResolvedValue({ scope: "/" });
 
   Object.defineProperty(navigator, "serviceWorker", {
-    value: {
-      register: mockRegister,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      ready: Promise.resolve(mockRegistration),
-      controller: null,
-    },
+    value: { register: mockRegister },
     writable: true,
     configurable: true,
   });
@@ -112,4 +98,13 @@ describe("PushNotificationPrompt", () => {
     const notNowBtn = Array.from(buttons).find((b) =>
       b.textContent?.includes("Not now"),
     );
-    expect(not
+    expect(notNowBtn).toBeTruthy();
+    fireEvent.click(notNowBtn!);
+
+    const prompt = container.querySelector('[class*="text-white"]');
+    expect(
+      prompt === null || !prompt.textContent?.includes("Stay updated"),
+    ).toBe(true);
+    expect(sessionStorage.getItem("cloudless-push-dismissed")).toBe("1");
+  });
+});

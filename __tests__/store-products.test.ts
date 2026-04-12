@@ -5,7 +5,7 @@ import {
   getProductsByCategory,
   categoryLabels,
   categoryColors,
-} from "@/lib/store-products-client";
+} from "@/lib/store-products";
 
 describe("demoProducts catalog", () => {
   it("contains products in all three categories", () => {
@@ -71,4 +71,5 @@ describe("category metadata", () => {
     expect(categoryColors.service).toBeTruthy();
     expect(categoryColors.digital).toBeTruthy();
     expect(categoryColors.physical).toBeTruthy();
-  }
+  });
+});
