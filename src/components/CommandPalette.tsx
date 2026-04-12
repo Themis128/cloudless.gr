@@ -117,15 +117,4 @@ export default function CommandPalette() {
               </kbd>{" "}
               toggle
             </span>
-            <span className="font-mono text-[10px] text-slate-600">
-              <kbd className="bg-void-lighter rounded border border-slate-700 px-1.5 py-0.5 text-slate-500">
-                ESC
-              </kbd>{" "}
-              close
-            </span>
-          </div>
-        </Command>
-      </div>
-    </div>
-  );
-}
+            <span className="font-mo

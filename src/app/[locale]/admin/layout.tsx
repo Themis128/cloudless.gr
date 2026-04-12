@@ -82,23 +82,4 @@ export default function AdminLayout({
                       href={link.href}
                       className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 font-mono text-sm transition-all ${
                         active
-                          ? "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20 border"
-                          : "hover:bg-void-lighter/50 text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      <span>{link.icon}</span>
-                      {link.label}
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
-          </aside>
-
-          {/* Main Content */}
-          <main className="min-w-0 flex-1">{children}</main>
-        </div>
-      </div>
-    </div>
-  );
-}
+                          ? "b

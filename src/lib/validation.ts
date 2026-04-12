@@ -12,6 +12,4 @@ export function isValidEmail(email: unknown): email is string {
   return (
     typeof email === "string" &&
     email.length <= EMAIL_MAX_LENGTH &&
-    EMAIL_REGEX.test(email)
-  );
-}
+    EMAIL_REGEX.t

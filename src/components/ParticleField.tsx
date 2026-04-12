@@ -96,33 +96,4 @@ export default function ParticleField({
 
         if (p.x < 0 || p.x > canvasEl.width) p.vx *= -1;
         if (p.y < 0 || p.y > canvasEl.height) p.vy *= -1;
-      }
-
-      animId = requestAnimationFrame(draw);
-    }
-
-    const handleResize = () => {
-      resize();
-      initParticles();
-    };
-
-    resize();
-    initParticles();
-    draw();
-
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [particleCount, color, connectionDistance]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className={`pointer-events-none absolute inset-0 ${className}`}
-      style={{ zIndex: 0 }}
-    />
-  );
-}
+     

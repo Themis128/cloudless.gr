@@ -11,5 +11,4 @@ export function formatPrice(
     style: "currency",
     currency: currency.toUpperCase(),
     minimumFractionDigits: 0,
-  }).format(amount / 100);
-}
+  }).format(amount / 1

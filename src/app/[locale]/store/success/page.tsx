@@ -132,13 +132,4 @@ export default function SuccessPage() {
             </Link>
             <Link
               href="/"
-              className="hover:border-neon-cyan/30 hover:text-neon-cyan rounded-lg border border-slate-700 px-8 py-3 text-center font-mono font-semibold text-slate-400 transition-all duration-300"
-            >
-              Back to Home
-            </Link>
-          </div>
-        </div>
-      </section>
-    </>
-  );
-}
+              className="hover:border-neon-cyan/30 hover:text-neon-cyan rounded-lg border border-slate-700 px-8 py-3 text-center font-mono font-s

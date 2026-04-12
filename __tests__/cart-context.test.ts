@@ -100,5 +100,4 @@ describe("cartReducer", () => {
     expect(state.isOpen).toBe(true);
     state = cartReducer(state, { type: "CLOSE_CART" });
     expect(state.isOpen).toBe(false);
-  });
-});
+  }

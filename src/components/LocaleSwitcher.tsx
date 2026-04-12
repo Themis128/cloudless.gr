@@ -107,13 +107,4 @@ export default function LocaleSwitcher() {
               >
                 <span className="mr-2 font-mono text-xs opacity-60">
                   {localeFlags[locale]}
-                </span>
-                {localeLabels[locale]}
-              </button>
-            ),
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+   

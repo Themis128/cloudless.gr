@@ -411,24 +411,4 @@ describe("slackDeployNotify", () => {
 
     const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(opts.body as string);
-    const bodyStr = JSON.stringify(body);
-    expect(bodyStr).not.toContain("Actor");
-  });
-
-  it("includes actor when provided", async () => {
-    const mockFetch = okFetch({ ok: true });
-    vi.stubGlobal("fetch", mockFetch);
-
-    await slackDeployNotify({
-      version: "1.0.0",
-      stage: "production",
-      status: "succeeded",
-      actor: "Themis",
-    });
-
-    const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
-    const body = JSON.parse(opts.body as string);
-    const bodyStr = JSON.stringify(body);
-    expect(bodyStr).toContain("Themis");
-  });
-});
+  

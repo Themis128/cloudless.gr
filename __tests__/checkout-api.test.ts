@@ -160,39 +160,4 @@ describe("POST /api/checkout", () => {
     expect(response.status).toBe(200);
 
     const createCall = mockCreate.mock.calls[0][0];
-    expect(createCall.mode).toBe("subscription");
-  });
-
-  it("requests shipping for physical products", async () => {
-    const request = new NextRequest("http://localhost/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: [{ id: "phy-tshirt", quantity: 1 }],
-      }),
-    });
-
-    const response = await POST(request);
-    expect(response.status).toBe(200);
-
-    const createCall = mockCreate.mock.calls[0][0];
-    expect(createCall.shipping_address_collection).toBeDefined();
-    expect(createCall.shipping_address_collection.allowed_countries).toContain("GR");
-  });
-
-  it("skips shipping for digital products", async () => {
-    const request = new NextRequest("http://localhost/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: [{ id: "dig-cloud-playbook", quantity: 1 }],
-      }),
-    });
-
-    const response = await POST(request);
-    expect(response.status).toBe(200);
-
-    const createCall = mockCreate.mock.calls[0][0];
-    expect(createCall.shipping_address_collection).toBeUndefined();
-  });
-});
+    expect(createCall.mode).toBe("subscription")

@@ -119,44 +119,4 @@ async function refreshOrdersAsync(responseUrl: string): Promise<void> {
     const lines = orders.map((o) => {
       const status =
         o.paymentStatus === "paid" ? ":white_check_mark:" : ":hourglass:";
-      const amount = formatPrice(o.amount, o.currency);
-      return `${status} *${amount}* — ${o.email ?? "N/A"}`;
-    });
-
-    await fetch(responseUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        replace_original: true,
-        blocks: [
-          {
-            type: "header",
-            text: {
-              type: "plain_text",
-              text: ":receipt: Recent Orders (Refreshed)",
-              emoji: true,
-            },
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: lines.length > 0 ? lines.join("\n") : "No orders found.",
-            },
-          },
-          {
-            type: "context",
-            elements: [
-              {
-                type: "mrkdwn",
-                text: `Updated <!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|now>`,
-              },
-            ],
-          },
-        ],
-      }),
-    });
-  } catch (err) {
-    console.error("[Slack Interactions] refreshOrdersAsync error:", err);
-  }
-}
+      const amount = formatPrice(o.amount, o.

@@ -38,5 +38,4 @@ export function readLocaleFromCookie(): Locale {
 
 export function setAppLocale(locale: Locale): void {
   // No-op: locale switching is now URL-based via useCurrentLocale
-  void locale;
-}
+  void lo

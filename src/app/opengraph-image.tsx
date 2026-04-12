@@ -101,12 +101,4 @@ export default function Image() {
             width: "200px",
             height: "2px",
             background:
-              "linear-gradient(90deg, transparent, #00fff5, transparent)",
-            marginTop: "16px",
-          }}
-        />
-      </div>
-    </div>,
-    { width: 1200, height: 630 },
-  );
-}
+              "linear-gradient(9

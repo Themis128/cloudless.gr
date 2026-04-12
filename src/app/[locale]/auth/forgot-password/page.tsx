@@ -156,20 +156,4 @@ export default function ForgotPasswordPage() {
                 className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-[44px] w-full rounded-lg border py-3 font-mono font-semibold transition-all hover:shadow-[0_0_15px_rgba(0,255,245,0.2)] disabled:opacity-50"
               >
                 {submitting
-                  ? t("auth.resetting", "Resetting...")
-                  : t("auth.resetPassword", "Reset Password")}
-              </button>
-            </form>
-          )}
-
-          <p className="mt-6 text-center font-mono text-sm text-slate-500">
-            {t("auth.rememberPassword", "Remember your password?")}{" "}
-            <Link href="/auth/login" className="text-neon-cyan hover:underline">
-              {t("auth.login", "Sign In")}
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
+                  ? t("au

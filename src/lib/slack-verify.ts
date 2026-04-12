@@ -90,5 +90,4 @@ export async function verifySlackRequest(
  */
 export function unauthorizedSlack(reason: string): Response {
   console.warn(`[Slack] Signature verification failed: ${reason}`);
-  return Response.json({ error: "Unauthorized" }, { status: 401 });
-}
+  return Response.json({ error:

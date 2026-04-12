@@ -151,18 +151,4 @@ export async function POST(request: NextRequest) {
           `<p style="color: #ff4444;"><strong>Payment failed</strong></p>
           <p><strong>Invoice:</strong> ${escapeHtml(invoice.id ?? "unknown")}</p>
           <p><strong>Customer:</strong> ${escapeHtml(customerEmail ?? String(invoice.customer))}</p>
-          <p><strong>Amount:</strong> ${((invoice.amount_due ?? 0) / 100).toFixed(2)} ${escapeHtml((invoice.currency ?? "EUR").toUpperCase())}</p>`,
-        );
-        break;
-      }
-
-      default:
-        console.warn(`[Stripe] Unhandled event type: ${event.type}`);
-    }
-  } catch (err) {
-    console.error(`[Stripe] Error handling ${event.type}:`, err);
-    return Response.json({ error: "Webhook handler failed" }, { status: 500 });
-  }
-
-  return Response.json({ received: true });
-}
+          <p><strong>Amount:</strong> ${((invoice.amount_due ?? 0) / 100).toFixed

@@ -183,22 +183,4 @@ export default function CartSlideOver() {
                 <p className="text-neon-magenta bg-neon-magenta/10 border-neon-magenta/20 rounded-lg border px-3 py-2 font-mono text-xs">
                   Subscriptions and one-time items can&apos;t be purchased
                   together. Please remove one type before checking out.
-                </p>
-              )}
-              <button
-                onClick={handleCheckout}
-                disabled={isCheckingOut || hasMixedCart}
-                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 active:bg-neon-cyan/20 min-h-[48px] w-full rounded-lg border py-3 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)] disabled:opacity-40"
-              >
-                {isCheckingOut ? "Redirecting to Stripe..." : "Checkout"}
-              </button>
-              <p className="text-center font-mono text-xs text-slate-600">
-                Secure payment powered by Stripe
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  );
-}
+              

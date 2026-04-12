@@ -108,9 +108,4 @@ export default function KonamiEasterEgg() {
           ☁ CLOUDLESS MODE
         </p>
         <p className="text-neon-green glow-green animate-fade-in-up mt-4 font-mono text-lg delay-300">
-          [CHEAT ACTIVATED] All systems overclocked
-        </p>
-      </div>
-    </div>
-  );
-}
+   

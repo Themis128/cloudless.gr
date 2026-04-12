@@ -71,5 +71,4 @@ describe("category metadata", () => {
     expect(categoryColors.service).toBeTruthy();
     expect(categoryColors.digital).toBeTruthy();
     expect(categoryColors.physical).toBeTruthy();
-  });
-});
+  }

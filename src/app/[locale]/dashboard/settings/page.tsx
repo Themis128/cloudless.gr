@@ -2,9 +2,23 @@
 import Link from "next/link";
 
 import { useAuth } from "@/context/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
+
+function storageKey(username: string | undefined) {
+  return `dashboard-settings:${username ?? "guest"}`;
+}
+
+function loadPersistedPrefs(username: string | undefined) {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(storageKey(username));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function SettingsPage() {
   const [locale] = useCurrentLocale();
@@ -12,18 +26,39 @@ export default function SettingsPage() {
   const { user, updatePreferences } = useAuth();
   const prefs = user?.preferences;
 
-  const [theme, setTheme] = useState(prefs?.theme ?? "dark");
-  const [language, setLanguage] = useState(prefs?.language ?? "en");
-  const [emailOrders, setEmailOrders] = useState(prefs?.emailOrders ?? true);
-  const [emailNewsletter, setEmailNewsletter] = useState(
-    prefs?.emailNewsletter ?? false,
+  const persisted = loadPersistedPrefs(user?.username);
+
+  const [theme, setTheme] = useState<"system" | "dark" | "light">(
+    persisted?.theme ?? prefs?.theme ?? "dark",
   );
-  const [emailMarketing, setEmailMarketing] = useState(
-    prefs?.emailMarketing ?? false,
+  const [language, setLanguage] = useState<"en" | "el" | "fr">(
+    persisted?.language ?? prefs?.language ?? "en",
+  );
+  const [emailOrders, setEmailOrders] = useState<boolean>(
+    persisted?.emailOrders ?? prefs?.emailOrders ?? true,
+  );
+  const [emailNewsletter, setEmailNewsletter] = useState<boolean>(
+    persisted?.emailNewsletter ?? prefs?.emailNewsletter ?? false,
+  );
+  const [emailMarketing, setEmailMarketing] = useState<boolean>(
+    persisted?.emailMarketing ?? prefs?.emailMarketing ?? false,
   );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync from auth context when user loads (e.g., after refresh)
+  useEffect(() => {
+    if (!prefs) return;
+    const stored = loadPersistedPrefs(user?.username);
+    if (!stored) {
+      setTheme(prefs.theme ?? "dark");
+      setLanguage(prefs.language ?? "en");
+      setEmailOrders(prefs.emailOrders ?? true);
+      setEmailNewsletter(prefs.emailNewsletter ?? false);
+      setEmailMarketing(prefs.emailMarketing ?? false);
+    }
+  }, [prefs, user?.username]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -33,12 +68,21 @@ export default function SettingsPage() {
 
     try {
       await updatePreferences({
-        theme: theme as "system" | "dark" | "light",
-        language: language as "en" | "el" | "fr",
+        theme,
+        language,
         emailOrders,
         emailNewsletter,
         emailMarketing,
       });
+      // Persist to localStorage for instant reload
+      try {
+        localStorage.setItem(
+          storageKey(user?.username),
+          JSON.stringify({ theme, language, emailOrders, emailNewsletter, emailMarketing }),
+        );
+      } catch {
+        // localStorage may be unavailable in some browsers/contexts
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -218,40 +262,4 @@ export default function SettingsPage() {
                 {t("auth.fullName", "Name")}
               </span>
               <span className="font-mono text-sm text-white">
-                {user?.name || "—"}
-              </span>
-            </div>
-          </div>
-          <p className="mt-3 font-mono text-[10px] text-slate-600">
-            To update your name, company, or phone, visit your{" "}
-            <Link
-              href="/dashboard/profile"
-              className="text-neon-cyan hover:underline"
-            >
-              Profile
-            </Link>
-            .
-          </p>
-        </div>
-
-        {/* Save Button */}
-        <div className="flex items-center gap-4">
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-11 rounded-lg border px-6 py-2.5 font-mono text-sm font-semibold transition-all hover:shadow-[0_0_25px_rgba(0,255,245,0.2)] disabled:opacity-50"
-          >
-            {saving
-              ? t("common.saving", "Saving…")
-              : t("common.saveChanges", "Save Changes")}
-          </button>
-          {saved && (
-            <span className="text-neon-green animate-fade-in-up font-mono text-xs">
-              ✓ {t("dashboard.settingsSaved", "Settings saved")}
-            </span>
-          )}
-        </div>
-      </form>
-    </div>
-  );
-}
+   

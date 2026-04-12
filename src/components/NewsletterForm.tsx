@@ -91,30 +91,4 @@ export default function NewsletterForm() {
         >
           {status === "loading"
             ? translate(locale, "newsletter.subscribing", "Subscribing...")
-            : translate(locale, "newsletter.cta", "Subscribe")}
-        </button>
-      </form>
-      <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
-        {translate(
-          locale,
-          "newsletter.consent",
-          "By subscribing, you agree to receive our newsletter and accept our",
-        )}{" "}
-        <Link
-          href="/privacy"
-          className="text-neon-cyan underline decoration-neon-cyan/60 underline-offset-2 hover:text-white"
-        >
-          {translate(locale, "legal.privacyTitle", "Privacy Policy")}
-        </Link>
-        {". "}
-        {translate(locale, "newsletter.unsubscribe", "Unsubscribe anytime.")}
-      </p>
-      {status === "success" && (
-        <p className="text-neon-green mt-2 font-mono text-xs">{message}</p>
-      )}
-      {status === "error" && (
-        <p className="mt-2 font-mono text-xs text-red-400">{message}</p>
-      )}
-    </div>
-  );
-}
+            : t

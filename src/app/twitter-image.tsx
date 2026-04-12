@@ -129,11 +129,4 @@ export default function TwitterImage() {
             color: "#ffffff",
             display: "flex",
           }}
-        >
-          cloudless.gr
-        </div>
-      </div>
-    </div>,
-    { ...size },
-  );
-}
+ 

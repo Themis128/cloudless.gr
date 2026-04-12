@@ -679,32 +679,4 @@ export default async function Home() {
             <p className="mx-auto mb-4 max-w-xl text-xl text-slate-400">
               {t(
                 "cta.subtitle",
-                "Book a free 30-minute audit. We'll review your current setup and show you exactly where you're overpaying, underperforming, or both.",
-              )}
-            </p>
-            <p className="mx-auto mb-8 max-w-lg text-sm text-slate-500">
-              {t(
-                "cta.subtext",
-                "No pitch. No commitment. Just actionable insights you can use even if you never talk to us again.",
-              )}
-            </p>
-            <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <Link
-                href="/contact"
-                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 shadow-neon-cyan/10 rounded-lg border px-8 py-3.5 font-mono font-semibold shadow-lg transition-all duration-300 hover:shadow-[0_0_30px_rgba(0,255,245,0.25)]"
-              >
-                {t("cta.ctaPrimary", "Book Your Free Audit")}
-              </Link>
-              <Link
-                href="/services"
-                className="bg-void-light rounded-lg border border-slate-700 px-8 py-3.5 font-mono font-medium text-slate-300 transition-colors duration-200 hover:border-slate-500"
-              >
-                {t("cta.ctaSecondary", "View Pricing")}
-              </Link>
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
-    </>
-  );
-}
+                "Book a free 30-minute audi
