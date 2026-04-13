@@ -42,13 +42,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
@@ -74,7 +74,7 @@ jobs:
             'import base64,json,os; p=os.environ["PAYLOAD"]; p+="="*(-len(p)%4); d=json.loads(base64.urlsafe_b64decode(p).decode()); print("OIDC sub: "+d.get("sub","")); print("OIDC aud: "+str(d.get("aud",""))); print("OIDC repository: "+d.get("repository","")); print("OIDC ref: "+d.get("ref",""))'
       - name: Configure AWS credentials
         id: awscreds
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::278585680617:role/GitHubActionsOIDC
           role-session-name: gha-deploy-${{ github.run_id }}
