@@ -25,6 +25,9 @@ permissions:
 
 jobs:
   analyze:
+    # Set repository variable CODEQL_ENABLED=true after enabling
+    # Settings -> Security -> Code security and analysis -> Code scanning.
+    if: ${{ vars.CODEQL_ENABLED == 'true' }}
     name: Analyze
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -47,9 +50,6 @@ jobs:
         uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        # Note: Code scanning must be enabled in repo Settings -> Security for SARIF upload
-        # This step may fail in forked repositories or when code scanning is disabled
         uses: github/codeql-action/analyze@v4
-        continue-on-error: true
         with:
           category: '/language:${{ matrix.language }}'
