@@ -1,8 +1,8 @@
 # Notion CMS Integration
 
-cloudless.gr uses Notion as a headless CMS for the blog. Published posts are fetched from a Notion database and rendered on the site. When Notion is not configured, the blog falls back to static content defined in `src/lib/blog.ts`.
+cloudless.gr uses Notion as a headless CMS for the blog. Published posts are fetched from a Notion database and rendered on the site. When Notion is not configured or the Notion API is unavailable, the blog falls back to static content defined in `src/lib/blog.ts`.
 
-> **Status:** Optional integration — falls back to 4 static blog posts when `NOTION_API_KEY` or `NOTION_BLOG_DB_ID` are missing.
+> **Status:** Optional integration — falls back to 4 static blog posts when Notion is not configured or when upstream Notion calls fail.
 
 ---
 
@@ -38,24 +38,24 @@ sequenceDiagram
     Browser->>API: GET /api/blog/posts
     API->>API: Check NOTION_API_KEY + NOTION_BLOG_DB_ID
 
-    alt Notion configured
+    alt Notion configured and healthy
         API->>Notion: POST /databases/{db}/query
         Note over API,Notion: filter: Published = true, sort: Date desc
         Notion-->>API: { results: [pages...] }
         API->>API: mapPage() each result
-    else Not configured
+    else Not configured or Notion error
         API->>Static: Import static posts array
     end
     API-->>Browser: Array of blog posts
 
     Browser->>API: GET /api/blog/posts/{slug}
-    alt Notion configured
+    alt Notion configured and healthy
         API->>Notion: POST /databases/{db}/query (filter by Slug)
         Notion-->>API: Page match
         API->>Notion: GET /blocks/{pageId}/children
         Notion-->>API: Content blocks
         API->>API: Combine page metadata + blocks
-    else Not configured
+    else Not configured or Notion error
         API->>Static: getPostBySlug(slug)
     end
     API-->>Browser: Post with content
@@ -106,7 +106,8 @@ Fetch all published blog posts, sorted by date descending.
 
 - Queries the Notion database with `Published = true` filter
 - Maps each page through `mapPage()` to extract properties
-- Returns `[]` if Notion is not configured or on any error
+- Returns `[]` if Notion is not configured
+- Throws on upstream Notion API/network failures (route handlers catch and fall back to static posts)
 
 ### `getPostBySlug(slug): Promise<NotionPost & { content } | null>`
 
@@ -115,6 +116,7 @@ Fetch a single post by its slug, including block content.
 - Queries with compound filter: `Slug = slug AND Published = true`
 - Fetches child blocks (up to 100) for the matched page
 - Returns `null` if not found or Notion not configured
+- Throws on upstream Notion API/network failures (route handlers catch and fall back to static posts)
 ---
 
 ## Static Fallback

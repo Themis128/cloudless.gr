@@ -360,7 +360,7 @@ graph TB
     subgraph Patterns["Degradation Patterns"]
         Slack -->|not configured| SkipS["Skip silently"]
         HS -->|not configured| SkipH["Skip silently"]
-        Notion -->|not configured| Fallback["Static blog data"]
+        Notion -->|not configured or error| Fallback["Static blog data"]
         GCal -->|not configured| S503["503 response"]
     end
 ```
@@ -380,7 +380,7 @@ All integrations are optional and degrade gracefully. Config is centralized in `
 
 **Integration patterns:**
 - **Fire-and-forget:** Contact route uses `Promise.allSettled([slackNotify, hubspotUpsert]).catch(() => {})` so the main email flow isn't blocked
-- **Fallback:** Blog API returns static `lib/blog.ts` data when Notion isn't configured
+- **Fallback:** Blog API returns static `lib/blog.ts` data when Notion is not configured or when Notion requests fail
 - **Cache:** Calendar availability is cached 5 minutes; Google OAuth tokens cached until expiry
 
 ## Webhook Fulfillment

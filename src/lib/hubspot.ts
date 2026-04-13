@@ -13,19 +13,47 @@ interface HubSpotContact {
   lead_source?: string;
 }
 
+function getHubSpotTokenFromEnv(): string | null {
+  const integrations = getIntegrations();
+  return (
+    integrations.HUBSPOT_API_KEY ??
+    integrations.HUBSPOT_ACCESS_TOKEN ??
+    integrations.HUBSPOT_PRIVATE_APP_TOKEN ??
+    null
+  );
+}
+
+async function getHubSpotTokenFromSsm(): Promise<string | null> {
+  const config = await getConfig();
+  return (
+    config.HUBSPOT_API_KEY ??
+    config.HUBSPOT_ACCESS_TOKEN ??
+    config.HUBSPOT_PRIVATE_APP_TOKEN ??
+    null
+  );
+}
+
 /**
  * Resolve HubSpot token: try process.env first, fall back to SSM.
- * In Lambda, env vars aren't set for HUBSPOT_API_KEY — SSM is the source of truth.
+ * In Lambda, env vars may not be populated for HubSpot credentials.
  */
 async function getHubSpotToken(): Promise<string> {
-  const envToken = getIntegrations().HUBSPOT_API_KEY;
+  const envToken = getHubSpotTokenFromEnv();
   if (envToken) return envToken;
 
-  const config = await getConfig();
-  const ssmToken = config.HUBSPOT_API_KEY;
+  const ssmToken = await getHubSpotTokenFromSsm();
   if (ssmToken) return ssmToken;
 
   throw new Error("HubSpot not configured (no token in env or SSM)");
+}
+
+export async function isHubSpotConfigured(): Promise<boolean> {
+  try {
+    await getHubSpotToken();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function hubspotFetch(
@@ -52,14 +80,11 @@ async function hubspotFetch(
 export async function upsertContact(
   contact: HubSpotContact,
 ): Promise<string | null> {
-  let token: string;
   try {
-    token = await getHubSpotToken();
+    await getHubSpotToken();
   } catch {
     return null;
   }
-  // token is resolved — proceed (hubspotFetch will also resolve it, but it's cached in SSM)
-  void token;
 
   try {
     const createRes = await hubspotFetch("/crm/v3/objects/contacts", {
@@ -132,9 +157,13 @@ export async function upsertContact(
 
 /** List recent contacts */
 export async function listContacts(limit = 10): Promise<unknown[]> {
+  const safeLimit = Number.isFinite(limit)
+    ? Math.min(Math.max(Math.trunc(limit), 1), 100)
+    : 10;
+
   try {
     const res = await hubspotFetch(
-      `/crm/v3/objects/contacts?limit=${limit}&properties=email,firstname,lastname,company,createdate,hs_lead_status`,
+      `/crm/v3/objects/contacts?limit=${safeLimit}&properties=email,firstname,lastname,company,createdate,hs_lead_status`,
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -162,13 +191,11 @@ export async function createTicket(
   data: TicketData,
   contactId?: string,
 ): Promise<{ id: string } | null> {
-  let token: string;
   try {
-    token = await getHubSpotToken();
+    await getHubSpotToken();
   } catch {
     return null;
   }
-  void token;
 
   const properties: Record<string, string> = {
     subject: data.subject,

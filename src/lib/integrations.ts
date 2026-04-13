@@ -9,6 +9,8 @@ export interface IntegrationConfig {
   SLACK_BOT_TOKEN?: string;
   SLACK_SIGNING_SECRET?: string;
   HUBSPOT_API_KEY?: string;
+  HUBSPOT_ACCESS_TOKEN?: string;
+  HUBSPOT_PRIVATE_APP_TOKEN?: string;
   NOTION_API_KEY?: string;
   NOTION_BLOG_DB_ID?: string;
   GOOGLE_CLIENT_EMAIL?: string;
@@ -32,6 +34,8 @@ export function getIntegrations(): IntegrationConfig {
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN,
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET,
     HUBSPOT_API_KEY: process.env.HUBSPOT_API_KEY,
+    HUBSPOT_ACCESS_TOKEN: process.env.HUBSPOT_ACCESS_TOKEN,
+    HUBSPOT_PRIVATE_APP_TOKEN: process.env.HUBSPOT_PRIVATE_APP_TOKEN,
     NOTION_API_KEY: process.env.NOTION_API_KEY,
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID,
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
