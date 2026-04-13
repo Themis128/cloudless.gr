@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
-import { posts } from "@/lib/blog";
+import { getBlogPosts } from "@/lib/blog-source";
 import { demoProducts } from "@/lib/store-products";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://cloudless.gr";
+  const posts = await getBlogPosts();
 
   const staticPages: MetadataRoute.Sitemap = [
     {

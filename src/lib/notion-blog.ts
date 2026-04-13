@@ -3,7 +3,7 @@ import { getIntegrations } from "@/lib/integrations";
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
-interface NotionPost {
+export interface NotionPost {
   id: string;
   slug: string;
   title: string;
@@ -16,7 +16,7 @@ interface NotionPost {
   content?: NotionBlock[];
 }
 
-interface NotionBlock {
+export interface NotionBlock {
   type: string;
   id: string;
   [key: string]: unknown;
@@ -117,7 +117,6 @@ export async function getPostBySlug(
     const page = data.results?.[0];
     if (!page) return null;
 
-    // Fetch blocks (content)
     const blocksRes = await fetch(
       `${NOTION_API}/blocks/${page.id}/children?page_size=100`,
       {
