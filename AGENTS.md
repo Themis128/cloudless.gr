@@ -373,7 +373,7 @@ All integrations are optional and degrade gracefully. Config is centralized in `
 | ------------------ | ------------------------------------------------------------ | ------------------- |
 | Slack              | `SLACK_WEBHOOK_URL`                                          | `slack-notify.ts`   |
 | HubSpot CRM        | `HUBSPOT_API_KEY`                                            | `hubspot.ts`        |
-| Notion CMS         | `NOTION_API_KEY`, `NOTION_BLOG_DB`                           | `notion-blog.ts`    |
+| Notion CMS         | `NOTION_API_KEY`, `NOTION_BLOG_DB_ID`                           | `notion-blog.ts`    |
 | Google Calendar    | `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CALENDAR_ID` | `google-calendar.ts` |
 | Ahrefs             | `AHREFS_API_KEY`                                             | `ahrefs.ts`         |
 | Sentry             | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`          | (inline in route)   |
