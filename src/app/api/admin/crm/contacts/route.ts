@@ -1,13 +1,12 @@
 import { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { NextResponse } from "next/server";
-import { isConfigured } from "@/lib/integrations";
-import { listContacts } from "@/lib/hubspot";
+import { isHubSpotConfigured, listContacts } from "@/lib/hubspot";
 
 export async function GET(request: NextRequest) {
   const auth = requireAdmin(request);
   if (!auth.ok) return auth.response;
-  if (!isConfigured("HUBSPOT_API_KEY")) {
+  if (!(await isHubSpotConfigured())) {
     return NextResponse.json(
       { error: "HubSpot not configured." },
       { status: 503 },
@@ -16,7 +15,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(Number(searchParams.get("limit") ?? 20), 100);
+    const requestedLimit = Number(searchParams.get("limit") ?? 20);
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(Math.max(Math.trunc(requestedLimit), 1), 100)
+      : 20;
 
     const contacts = await listContacts(limit);
 
