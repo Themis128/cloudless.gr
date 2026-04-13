@@ -104,3 +104,8 @@ export function resetSlackConfigCache(): void {
   cachedSlack = null;
   cached = null;
 }
+
+export function resetIntegrationCache(): void {
+  cached = null;
+  cachedSlack = null;
+}
