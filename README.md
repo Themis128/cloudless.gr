@@ -4,6 +4,10 @@ Cloud computing, serverless development, data analytics, and AI-powered digital 
 
 Built with **Next.js 16**, **React 19**, **Tailwind CSS 4**, and **TypeScript**.
 
+## Mobile UX
+
+The UI is tuned for touch devices with 44px+ interactive targets, coarse-pointer tap feedback, and a scrollable mobile navbar menu so navigation does not clip on shorter viewports.
+
 ## Localization (i18n)
 
 The app supports three locales with cookie-based switching:

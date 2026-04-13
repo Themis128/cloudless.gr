@@ -165,9 +165,11 @@ export default function Navbar() {
           {/* Mobile Hamburger */}
           <button
             type="button"
-            className="text-neon-cyan p-2 lg:hidden"
+            className="text-neon-cyan flex min-h-[44px] min-w-[44px] items-center justify-center p-2 lg:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label={toggleMenuLabel}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav-menu"
           >
             {mobileOpen ? (
               <svg
@@ -195,8 +197,9 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         <div
+          id="mobile-nav-menu"
           className={`bg-void/95 border-neon-cyan/10 overflow-hidden border-t px-6 backdrop-blur-xl transition-all duration-300 ease-in-out lg:hidden ${
-            mobileOpen ? "max-h-96 py-4 opacity-100" : "max-h-0 py-0 opacity-0"
+            mobileOpen ? "max-h-[calc(100dvh-4rem)] overflow-y-auto py-4 opacity-100" : "max-h-0 py-0 opacity-0"
           }`}
         >
           <div className="space-y-1">

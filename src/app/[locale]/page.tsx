@@ -350,7 +350,7 @@ export default async function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Credly certifications"
-                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
+                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-11 w-11 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
                 >
                   <svg
                     width="16"
@@ -366,7 +366,7 @@ export default async function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="GitHub"
-                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
+                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-11 w-11 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
                 >
                   <svg
                     width="16"
@@ -382,7 +382,7 @@ export default async function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="LinkedIn"
-                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
+                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-11 w-11 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
                 >
                   <svg
                     width="16"

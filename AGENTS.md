@@ -275,9 +275,9 @@ sequenceDiagram
 - **Touch targets:** All interactive elements (buttons, links, controls) have `min-h-[44px]` or larger per WCAG 2.5.5
 - **Tap feedback:** `@media (pointer: coarse)` applies neon-cyan tap highlight; `active:` states mirror `hover:` effects across all components
 - **NeonCursor:** Automatically disabled on touch devices via `window.matchMedia("(pointer: coarse)")`
-- **Navbar:** Mobile hamburger menu with cart button row, 44px link targets, `active:text-neon-cyan`
+- **Navbar:** Mobile hamburger menu with cart button row, 44px link targets, `active:text-neon-cyan`, and a scrollable open state capped to the viewport height
 - **Store cards:** Price/button row uses `flex-wrap gap-3` to wrap on narrow screens
-- **CartSlideOver:** Quantity buttons sized to 36px, Remove/Close/Checkout buttons meet 44px+ targets
+- **CartSlideOver:** Quantity buttons, Remove, Close, and Checkout controls meet 44px+ touch targets
 - **Design system rule:** Use `rounded-lg` for buttons and controls (not `rounded-sm`)
 
 ## Security
