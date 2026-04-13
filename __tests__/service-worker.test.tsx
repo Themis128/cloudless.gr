@@ -32,13 +32,19 @@ vi.mock("@/i18n/navigation", () => ({
 }));
 
 const mockRegister = vi.fn();
+const mockUnregister = vi.fn();
+const mockGetRegistrations = vi.fn();
+const originalNodeEnv = process.env.NODE_ENV;
+const originalSiteHost = process.env.NEXT_PUBLIC_SITE_HOSTNAME;
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockRegister.mockResolvedValue({ scope: "/" });
+  mockUnregister.mockResolvedValue(true);
+  mockGetRegistrations.mockResolvedValue([{ unregister: mockUnregister }]);
 
   Object.defineProperty(navigator, "serviceWorker", {
-    value: { register: mockRegister },
+    value: { register: mockRegister, getRegistrations: mockGetRegistrations },
     writable: true,
     configurable: true,
   });
@@ -52,15 +58,25 @@ beforeEach(() => {
     configurable: true,
   });
 
+  delete process.env.NEXT_PUBLIC_SITE_HOSTNAME;
   sessionStorage.clear();
 });
 
 afterEach(() => {
+  process.env.NODE_ENV = originalNodeEnv;
+  if (originalSiteHost) {
+    process.env.NEXT_PUBLIC_SITE_HOSTNAME = originalSiteHost;
+  } else {
+    delete process.env.NEXT_PUBLIC_SITE_HOSTNAME;
+  }
   cleanup();
 });
 
 describe("ServiceWorkerRegistration", () => {
-  it("registers the service worker on mount", async () => {
+  it("registers the service worker in production on non-local hosts", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.NEXT_PUBLIC_SITE_HOSTNAME = "cloudless.gr";
+
     render(
       <NextIntlClientProvider locale="en" messages={messages}>
         <ServiceWorkerRegistration />
@@ -70,6 +86,22 @@ describe("ServiceWorkerRegistration", () => {
     await waitFor(() => {
       expect(mockRegister).toHaveBeenCalledWith("/sw.js");
     });
+  });
+
+  it("does not register and unregisters existing workers on localhost", async () => {
+    process.env.NODE_ENV = "production";
+
+    render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <ServiceWorkerRegistration />
+      </NextIntlClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(mockGetRegistrations).toHaveBeenCalledTimes(1);
+      expect(mockUnregister).toHaveBeenCalledTimes(1);
+    });
+    expect(mockRegister).not.toHaveBeenCalled();
   });
 });
 
