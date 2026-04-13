@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
-import { posts, formatDate } from "@/lib/blog";
+import { formatDate } from "@/lib/blog";
+import { getBlogPosts } from "@/lib/blog-source";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
@@ -19,7 +20,11 @@ const categoryColors: Record<string, string> = {
   "AI Marketing": "bg-neon-blue/10 text-neon-blue border border-neon-blue/20",
 };
 
-export default function BlogPage() {
+export const revalidate = 300;
+
+export default async function BlogPage() {
+  const posts = await getBlogPosts();
+
   return (
     <>
       <JsonLd
@@ -29,7 +34,6 @@ export default function BlogPage() {
         ])}
       />
 
-      {/* Header */}
       <section className="bg-void scanlines relative py-16 text-white md:py-20">
         <div className="cyber-grid absolute inset-0 opacity-30" />
         <div className="relative z-10 mx-auto max-w-6xl px-6">
@@ -49,7 +53,6 @@ export default function BlogPage() {
         </div>
       </section>
 
-      {/* Posts Grid */}
       <section className="bg-void dot-matrix py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">

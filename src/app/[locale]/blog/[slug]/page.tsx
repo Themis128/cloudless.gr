@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
-import { posts, getPostBySlug, formatDate } from "@/lib/blog";
+import { formatDate } from "@/lib/blog";
+import { getBlogPostBySlug, getBlogPosts } from "@/lib/blog-source";
 import React from "react";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
 
-/** Render inline markdown: **bold**, `code`, [links](url) */
 function renderInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   const regex = /(\*\*(.+?)\*\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
@@ -56,7 +56,6 @@ function renderInline(text: string): React.ReactNode[] {
   return parts;
 }
 
-/** Render a block of text — handles bullet lists and plain paragraphs */
 function renderBlock(block: string, keyPrefix: number) {
   const lines = block.split("\n");
   const isList = lines.every(
@@ -84,7 +83,11 @@ function renderBlock(block: string, keyPrefix: number) {
   );
 }
 
+export const revalidate = 300;
+export const dynamicParams = true;
+
 export async function generateStaticParams() {
+  const posts = await getBlogPosts();
   return posts.flatMap((post) =>
     ["en", "el", "fr"].map((locale) => ({ locale, slug: post.slug })),
   );
@@ -92,7 +95,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = await getBlogPostBySlug(slug);
   if (!post) return {};
 
   return {
@@ -109,17 +112,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = await getBlogPostBySlug(slug);
   if (!post) notFound();
 
-  // Simple markdown-ish rendering: split by ## headers
   const sections = post.content.split(/^## /m);
   const intro = sections[0]?.trim();
   const rest = sections.slice(1);
 
   return (
     <>
-      {/* Header */}
       <section className="bg-void scanlines relative py-16 text-white md:py-20">
         <div className="cyber-grid absolute inset-0 opacity-30" />
         <div className="relative z-10 mx-auto max-w-3xl px-6">
@@ -155,7 +156,6 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
       </section>
 
-      {/* Article Body */}
       <article className="bg-void py-12 md:py-20">
         <div className="mx-auto max-w-3xl px-6">
           <div className="prose-custom">
@@ -182,7 +182,6 @@ export default async function BlogPostPage({ params }: Props) {
             })}
           </div>
 
-          {/* Bottom CTA */}
           <div className="neon-border bg-void-light/50 mt-12 rounded-xl p-8 text-center">
             <h3 className="font-heading text-xl font-bold text-white">
               Need help implementing this?
