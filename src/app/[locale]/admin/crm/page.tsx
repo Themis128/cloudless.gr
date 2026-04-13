@@ -124,7 +124,7 @@ export default function AdminCRMPage() {
           <p className="font-mono text-sm text-red-400">{error}</p>
           <p className="mt-2 text-xs text-slate-500">
             {error === "HubSpot not configured"
-              ? "Set HUBSPOT_API_KEY in your environment to enable CRM."
+              ? "Set HUBSPOT_API_KEY, HUBSPOT_ACCESS_TOKEN, or HUBSPOT_PRIVATE_APP_TOKEN in your environment to enable CRM."
               : "Check your HubSpot API key configuration."}
           </p>
         </div>

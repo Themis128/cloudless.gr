@@ -11,6 +11,15 @@ interface BeforeInstallPromptEvent extends Event {
 
 let hasRegisteredServiceWorker = false;
 
+function isLocalDevHost(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname.endsWith(".local")
+  );
+}
+
 export default function ServiceWorkerRegistration() {
   const [locale] = useCurrentLocale();
   const [installPrompt, setInstallPrompt] =
@@ -18,8 +27,28 @@ export default function ServiceWorkerRegistration() {
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
-    // Register service worker
-    if ("serviceWorker" in navigator && !hasRegisteredServiceWorker) {
+    if (!("serviceWorker" in navigator)) {
+      return;
+    }
+
+    const host =
+      process.env.NEXT_PUBLIC_SITE_HOSTNAME || window.location.hostname;
+    const shouldRegisterServiceWorker =
+      process.env.NODE_ENV === "production" && !isLocalDevHost(host);
+
+    // Never keep a service worker active in local development.
+    // It can cache dev assets and interfere with Next.js HMR/router bootstrapping.
+    if (!shouldRegisterServiceWorker) {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) =>
+          Promise.all(
+            registrations.map((registration) => registration.unregister()),
+          ),
+        )
+        .catch(() => {});
+      hasRegisteredServiceWorker = false;
+    } else if (!hasRegisteredServiceWorker) {
       hasRegisteredServiceWorker = true;
       navigator.serviceWorker
         .register("/sw.js")
