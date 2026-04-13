@@ -35,21 +35,16 @@
         "editor.codeActionsOnSave": {
           "source.fixAll.eslint": "explicit"
         },
-        "typescript.tsdk": "node_modules/typescript/lib"
+        "js/ts.tsdk": "node_modules/typescript/lib"
       }
     }
   },
 
   "postCreateCommand": "bash .devcontainer/post-create.sh",
 
-  "remoteEnv": {
-    "NEXT_PUBLIC_COGNITO_USER_POOL_ID": "${localEnv:NEXT_PUBLIC_COGNITO_USER_POOL_ID}",
-    "NEXT_PUBLIC_COGNITO_CLIENT_ID": "${localEnv:NEXT_PUBLIC_COGNITO_CLIENT_ID}"
-  },
-
-  "forwardPorts": [3000],
+  "forwardPorts": [4500],
   "portsAttributes": {
-    "3000": {
+    "4500": {
       "label": "Next.js dev server",
       "onAutoForward": "openPreview"
     }
