@@ -14,11 +14,10 @@ interface HubSpotContact {
 }
 
 function getHubSpotTokenFromEnv(): string | null {
-  const integrations = getIntegrations();
   return (
-    integrations.HUBSPOT_API_KEY ??
-    integrations.HUBSPOT_ACCESS_TOKEN ??
-    integrations.HUBSPOT_PRIVATE_APP_TOKEN ??
+    process.env.HUBSPOT_PRIVATE_APP_TOKEN ||
+    process.env.HUBSPOT_ACCESS_TOKEN ||
+    process.env.HUBSPOT_API_KEY ||
     null
   );
 }
@@ -26,9 +25,9 @@ function getHubSpotTokenFromEnv(): string | null {
 async function getHubSpotTokenFromSsm(): Promise<string | null> {
   const config = await getConfig();
   return (
-    config.HUBSPOT_API_KEY ??
-    config.HUBSPOT_ACCESS_TOKEN ??
-    config.HUBSPOT_PRIVATE_APP_TOKEN ??
+    config.HUBSPOT_PRIVATE_APP_TOKEN ||
+    config.HUBSPOT_ACCESS_TOKEN ||
+    config.HUBSPOT_API_KEY ||
     null
   );
 }
