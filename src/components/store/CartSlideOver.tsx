@@ -130,7 +130,7 @@ export default function CartSlideOver() {
                                   item.quantity - 1,
                                 )
                               }
-                              className="bg-void-light hover:border-neon-cyan/30 active:border-neon-cyan/30 flex h-9 min-h-[36px] w-9 min-w-[36px] items-center justify-center rounded-lg border border-slate-700 text-sm text-slate-400 transition-colors"
+                              className="bg-void-light hover:border-neon-cyan/30 active:border-neon-cyan/30 flex h-11 min-h-[44px] w-11 min-w-[44px] items-center justify-center rounded-lg border border-slate-700 text-sm text-slate-400 transition-colors"
                             >
                               -
                             </button>
@@ -144,7 +144,7 @@ export default function CartSlideOver() {
                                   item.quantity + 1,
                                 )
                               }
-                              className="bg-void-light hover:border-neon-cyan/30 active:border-neon-cyan/30 flex h-9 min-h-[36px] w-9 min-w-[36px] items-center justify-center rounded-lg border border-slate-700 text-sm text-slate-400 transition-colors"
+                              className="bg-void-light hover:border-neon-cyan/30 active:border-neon-cyan/30 flex h-11 min-h-[44px] w-11 min-w-[44px] items-center justify-center rounded-lg border border-slate-700 text-sm text-slate-400 transition-colors"
                             >
                               +
                             </button>
