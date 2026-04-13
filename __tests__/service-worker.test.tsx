@@ -37,6 +37,15 @@ const mockGetRegistrations = vi.fn();
 const originalNodeEnv = process.env.NODE_ENV;
 const originalSiteHost = process.env.NEXT_PUBLIC_SITE_HOSTNAME;
 
+const setNodeEnv = (value: string | undefined) => {
+  const env = process.env as Record<string, string | undefined>;
+  if (value === undefined) {
+    delete env.NODE_ENV;
+  } else {
+    env.NODE_ENV = value;
+  }
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockRegister.mockResolvedValue({ scope: "/" });
@@ -63,7 +72,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  process.env.NODE_ENV = originalNodeEnv;
+  setNodeEnv(originalNodeEnv);
   if (originalSiteHost) {
     process.env.NEXT_PUBLIC_SITE_HOSTNAME = originalSiteHost;
   } else {
@@ -74,7 +83,7 @@ afterEach(() => {
 
 describe("ServiceWorkerRegistration", () => {
   it("registers the service worker in production on non-local hosts", async () => {
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
     process.env.NEXT_PUBLIC_SITE_HOSTNAME = "cloudless.gr";
 
     render(
@@ -89,7 +98,7 @@ describe("ServiceWorkerRegistration", () => {
   });
 
   it("does not register and unregisters existing workers on localhost", async () => {
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     render(
       <NextIntlClientProvider locale="en" messages={messages}>
