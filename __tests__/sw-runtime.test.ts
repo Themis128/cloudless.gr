@@ -94,7 +94,7 @@ describe("service worker runtime", () => {
     expect(handler).toBeTruthy();
 
     const event = createFetchEvent(
-      new Request("http://localhost:4000/api/ping", { method: "POST" }),
+      new Request("http://localhost:4500/api/ping", { method: "POST" }),
     );
     handler?.(event as unknown as FetchEvent);
 
@@ -123,7 +123,7 @@ describe("service worker runtime", () => {
 
     fetchMock.mockRejectedValueOnce(new Error("offline"));
 
-    const event = createFetchEvent(new Request("http://localhost:4000/api/ping"));
+    const event = createFetchEvent(new Request("http://localhost:4500/api/ping"));
     handler?.(event as unknown as FetchEvent);
 
     const response = await event.getResponse();
@@ -142,7 +142,7 @@ describe("service worker runtime", () => {
     // SWR fires background revalidation — provide a network response so fetch doesn't throw
     fetchMock.mockResolvedValue(new Response("fresh-js", { status: 200 }));
 
-    const event = createFetchEvent(new Request("http://localhost:4000/app.js"));
+    const event = createFetchEvent(new Request("http://localhost:4500/app.js"));
     handler?.(event as unknown as FetchEvent);
 
     const response = await event.getResponse();
@@ -162,7 +162,7 @@ describe("service worker runtime", () => {
     const event = createFetchEvent({
       method: "GET",
       mode: "navigate",
-      url: "http://localhost:4000/contact",
+      url: "http://localhost:4500/contact",
     });
 
     handler?.(event as unknown as FetchEvent);

@@ -14,7 +14,7 @@ describe("POST /api/subscribe", () => {
 
   it("returns 400 for invalid email payload", async () => {
     const { POST } = await import("@/app/api/subscribe/route");
-    const request = new globalThis.Request("http://localhost:4000/api/subscribe", {
+    const request = new globalThis.Request("http://localhost:4500/api/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: "not-an-email" }),
@@ -30,7 +30,7 @@ describe("POST /api/subscribe", () => {
 
   it("returns success for valid email", async () => {
     const { POST } = await import("@/app/api/subscribe/route");
-    const request = new globalThis.Request("http://localhost:4000/api/subscribe", {
+    const request = new globalThis.Request("http://localhost:4500/api/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: "hello@cloudless.gr" }),
@@ -48,7 +48,7 @@ describe("POST /api/subscribe", () => {
   it("returns 500 when team notification fails", async () => {
     notifyTeamMock.mockRejectedValueOnce(new Error("ses-down"));
     const { POST } = await import("@/app/api/subscribe/route");
-    const request = new globalThis.Request("http://localhost:4000/api/subscribe", {
+    const request = new globalThis.Request("http://localhost:4500/api/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: "hello@cloudless.gr" }),
