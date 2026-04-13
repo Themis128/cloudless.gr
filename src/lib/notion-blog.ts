@@ -75,12 +75,14 @@ export async function getPosts(): Promise<NotionPost[]> {
       },
     );
 
-    if (!res.ok) return [];
+    if (!res.ok) {
+      throw new Error(`[Notion] Query posts failed: ${res.status}`);
+    }
     const data = await res.json();
     return (data.results ?? []).map(mapPage);
   } catch (err) {
     console.error("[Notion] Failed to fetch posts:", err);
-    return [];
+    throw err;
   }
 }
 
@@ -108,7 +110,9 @@ export async function getPostBySlug(
       },
     );
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      throw new Error(`[Notion] Query post failed: ${res.status}`);
+    }
     const data = await res.json();
     const page = data.results?.[0];
     if (!page) return null;
@@ -120,7 +124,10 @@ export async function getPostBySlug(
         headers: notionHeaders(),
       },
     );
-    const blocksData = blocksRes.ok ? await blocksRes.json() : { results: [] };
+    if (!blocksRes.ok) {
+      throw new Error(`[Notion] Fetch blocks failed: ${blocksRes.status}`);
+    }
+    const blocksData = await blocksRes.json();
 
     return {
       ...mapPage(page),
@@ -128,6 +135,6 @@ export async function getPostBySlug(
     };
   } catch (err) {
     console.error("[Notion] Failed to fetch post:", err);
-    return null;
+    throw err;
   }
 }
