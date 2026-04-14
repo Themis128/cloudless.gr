@@ -10,7 +10,7 @@
  *   - notion-wikis (discoverability patterns)
  */
 
-import { notionFetch, notionFetchAll, extractText } from "@/lib/notion";
+import { notionFetch } from "@/lib/notion";
 import { isConfigured } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------

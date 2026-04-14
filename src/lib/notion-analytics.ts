@@ -335,7 +335,7 @@ export async function archiveOldEvents(
     }
   }
 
-  console.log(`[Notion Analytics] Archived ${archived} old events (${errors} errors)`);
+  console.warn(`[Notion Analytics] Archived ${archived} old events (${errors} errors)`);
   return { archived, errors };
 }
 

@@ -57,7 +57,7 @@ export async function register() {
       }
     }
 
-    console.log(
+    console.warn(
       `[Instrumentation] Loaded ${params.size} SSM parameters from ${prefix}`,
     );
   } catch (err) {
