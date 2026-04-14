@@ -18,10 +18,10 @@ jobs:
   sync:
     name: Sync Notion docs & blog slugs into sitemap
     runs-on: ubuntu-latest
-    if: ${{ env.NOTION_API_KEY != '' }}
+    if: ${{ secrets.NOTION_API_KEY != '' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: main
 
