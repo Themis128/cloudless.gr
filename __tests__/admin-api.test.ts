@@ -48,7 +48,8 @@ function makeUserToken(): string {
 
 function adminRequest(url: string, init?: RequestInit): NextRequest {
   const headers = new Headers({ Authorization: `Bearer ${makeAdminToken()}` });
-  return new NextRequest(url, { method: init?.method, body: init?.body, headers } as unknown as RequestInit);
+  // @ts-expect-error — Next.js ships its own RequestInit type; DOM's is structurally incompatible
+  return new NextRequest(url, { method: init?.method, body: init?.body, headers });
 }
 
 function userRequest(url: string): NextRequest {
