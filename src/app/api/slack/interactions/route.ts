@@ -15,6 +15,7 @@
 
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
 import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
+import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 
 // ---------------------------------------------------------------------------
 // Types (subset of Slack interaction payloads)
@@ -29,6 +30,7 @@ interface BlockAction {
 
 interface SlackInteractionPayload {
   type: "block_actions" | "shortcut" | string;
+  team?: { id: string };
   user: { id: string; username: string };
   actions?: BlockAction[];
   response_url?: string;
@@ -56,6 +58,11 @@ export async function POST(request: Request): Promise<Response> {
     payload = JSON.parse(rawPayload) as SlackInteractionPayload;
   } catch {
     return Response.json({ error: "Invalid payload JSON" }, { status: 400 });
+  }
+
+  const teamId = payload.team?.id ?? "unknown";
+  if (!checkSlackRateLimit(teamId)) {
+    return new Response(null, { status: 429 });
   }
 
   switch (payload.type) {

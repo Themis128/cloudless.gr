@@ -13,6 +13,7 @@
 
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
 import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
+import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,6 +38,12 @@ export async function POST(request: Request): Promise<Response> {
   if (!verified.ok) return unauthorizedSlack(verified.reason);
 
   const params = new URLSearchParams(verified.body);
+
+  const teamId = params.get("team_id") ?? "unknown";
+  if (!checkSlackRateLimit(teamId)) {
+    return slackResponse({ response_type: "ephemeral", text: "Rate limited. Please try again later." });
+  }
+
   const payload: SlashCommandPayload = {
     command: params.get("command") ?? "",
     text: params.get("text") ?? "",

@@ -14,6 +14,17 @@ vi.mock("@/lib/slack-verify", () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Mock slack-rate-limit — allow all by default; individual tests can override
+// ---------------------------------------------------------------------------
+
+const mockCheckRateLimit = vi.fn().mockReturnValue(true);
+
+vi.mock("@/lib/slack-rate-limit", () => ({
+  checkSlackRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
+  resetRateLimiter: vi.fn(),
+}));
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -47,6 +58,7 @@ describe("POST /api/slack/events", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockCheckRateLimit.mockReturnValue(true); // allow all by default
     const mod = await import("@/app/api/slack/events/route");
     POST = mod.POST;
   });
@@ -250,5 +262,24 @@ describe("POST /api/slack/events", () => {
     );
 
     expect(response.status).toBe(400);
+  });
+
+  // --- Rate limiting ---
+
+  it("returns 429 when the workspace is rate limited", async () => {
+    mockCheckRateLimit.mockReturnValue(false);
+
+    const body = {
+      type: "event_callback",
+      team_id: "T_RATE_LIMITED",
+      event_id: "EvRateTest",
+      event_time: Math.floor(Date.now() / 1000),
+      event: { type: "app_mention", user: "U123", text: "status", channel: "C123" },
+    };
+    verifyOk(JSON.stringify(body));
+
+    const response = await POST(makeRequest(body));
+
+    expect(response.status).toBe(429);
   });
 });

@@ -16,6 +16,7 @@
 
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
 import { getSlackConfig } from "@/lib/integrations";
+import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 
 // ---------------------------------------------------------------------------
 // Event deduplication
@@ -93,6 +94,11 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   if (payload.type === "event_callback") {
+    // Rate limit by workspace before any processing
+    if (!checkSlackRateLimit(payload.team_id)) {
+      return new Response(null, { status: 429 });
+    }
+
     // Deduplicate — Slack may retry the same event up to 3 times.
     if (isDuplicate(payload.event_id)) {
       return Response.json({ ok: true });

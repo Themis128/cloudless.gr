@@ -79,6 +79,7 @@ export interface SlackConfig {
 }
 
 let cachedSlack: SlackConfig | null = null;
+let cachedSlackAsync: SlackConfig | null = null;
 
 /**
  * Returns Slack integration config.
@@ -103,8 +104,44 @@ export function getSlackConfig(): SlackConfig {
   return cachedSlack;
 }
 
-/** Clears the config cache (useful in tests). */
+/**
+ * Returns Slack integration config, falling back to SSM if SLACK_SIGNING_SECRET
+ * is not present in env vars. Use this in request handlers that need the signing
+ * secret for verification (verifySlackRequest).
+ */
+export async function getSlackConfigAsync(): Promise<SlackConfig> {
+  if (cachedSlackAsync) return cachedSlackAsync;
+
+  const cfg = getIntegrations();
+  const token = cfg.SLACK_BOT_TOKEN ?? "";
+  let signingSecret = cfg.SLACK_SIGNING_SECRET ?? "";
+  const webhookUrl = cfg.SLACK_WEBHOOK_URL ?? "";
+
+  if (!signingSecret) {
+    const { getConfig } = await import("@/lib/ssm-config");
+    const ssmCfg = await getConfig();
+    signingSecret = ssmCfg.SLACK_SIGNING_SECRET ?? "";
+  }
+
+  if (!token && !webhookUrl) {
+    console.warn(
+      "[Slack] Neither SLACK_BOT_TOKEN nor SLACK_WEBHOOK_URL is set — " +
+        "Slack notifications will be skipped.",
+    );
+  }
+
+  cachedSlackAsync = { SLACK_BOT_TOKEN: token, SLACK_SIGNING_SECRET: signingSecret, SLACK_WEBHOOK_URL: webhookUrl };
+  return cachedSlackAsync;
+}
+
+/** Clears the Slack config caches (useful in tests). */
 export function resetSlackConfigCache(): void {
   cachedSlack = null;
+  cachedSlackAsync = null;
+  cached = null;
+}
+
+/** Clears the integration config cache (useful in tests). */
+export function resetIntegrationCache(): void {
   cached = null;
 }
