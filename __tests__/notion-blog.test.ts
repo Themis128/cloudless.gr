@@ -12,6 +12,12 @@ vi.mock("@/lib/integrations", () => ({
   isConfigured: (...args: string[]) => mockIsConfigured(...args),
 }));
 
+// Bypass the in-memory cache so every test hits the mock directly
+vi.mock("@/lib/notion-cache", () => ({
+  cached: async (_key: string, fetcher: () => Promise<unknown>) => fetcher(),
+  invalidateCache: vi.fn(),
+}));
+
 // Mock notion client
 const mockNotionFetchAll = vi.fn();
 const mockNotionListAll = vi.fn();

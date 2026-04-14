@@ -4,6 +4,12 @@ const mockNotionFetch = vi.fn();
 const mockNotionFetchAll = vi.fn();
 const mockNotionListAll = vi.fn();
 
+// Bypass the in-memory cache so every test hits the mock directly
+vi.mock("@/lib/notion-cache", () => ({
+  cached: async (_key: string, fetcher: () => Promise<unknown>) => fetcher(),
+  invalidateCache: vi.fn(),
+}));
+
 vi.mock("@/lib/integrations", () => ({
   getIntegrations: vi.fn().mockReturnValue({
     NOTION_API_KEY: "secret_test",

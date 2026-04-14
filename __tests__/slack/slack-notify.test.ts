@@ -156,10 +156,10 @@ describe("SlackClient", () => {
       const client = new SlackClient();
       const result = await client.post({ text: "test" });
 
-      // channel_not_found is treated as a terminal error (returns true to stop retry)
+      // channel_not_found is a terminal error — postViaApi returns null,
+      // which the post() wrapper converts to false without retrying
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      // result is true because the error path short-circuits retries
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     });
   });
 
