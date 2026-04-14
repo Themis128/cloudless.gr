@@ -56,6 +56,10 @@ process.env.COGNITO_CLIENT_ID = "test-client-id";
 // Reset all in-memory caches before and after each test so vi.stubEnv() changes
 // are always picked up and never leak between tests.
 beforeEach(() => {
+  // Prevent the CI job-level SLACK_WEBHOOK_URL secret from leaking into tests.
+  // Tests that need it set use vi.stubEnv("SLACK_WEBHOOK_URL", "...") themselves.
+  // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+  delete process.env.SLACK_WEBHOOK_URL;
   resetIntegrationCache();
   resetSlackConfigCache();
   resetSsmCache();
