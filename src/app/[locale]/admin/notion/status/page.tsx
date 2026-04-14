@@ -153,7 +153,7 @@ function DatabaseCard({ db, expanded, onToggle }: { db: DbStatus; expanded: bool
             </thead>
             <tbody>
               {db.sample.map((row, i) => (
-                <tr key={row.id ?? i} className="border-b border-slate-700/30 hover:bg-slate-700/10">
+                <tr key={String(row.id ?? i)} className="border-b border-slate-700/30 hover:bg-slate-700/10">
                   {columns.map((col) => (
                     <td key={col} className="px-2 py-2 text-slate-300">
                       <CellValue value={row[col]} />
