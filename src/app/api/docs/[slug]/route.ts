@@ -9,7 +9,7 @@ import { isConfigured } from "@/lib/integrations";
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { slug: string } },
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   if (!isConfigured("NOTION_API_KEY", "NOTION_DOCS_DB_ID")) {
     return NextResponse.json(
@@ -18,7 +18,7 @@ export async function GET(
     );
   }
 
-  const { slug } = params;
+  const { slug } = await params;
 
   try {
     const doc = await getDocBySlug(slug);
