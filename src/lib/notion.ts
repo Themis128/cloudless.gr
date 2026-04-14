@@ -430,7 +430,7 @@ export interface TocEntry {
 /**
  * Extract a table of contents from Notion blocks (heading blocks only).
  */
-export function extractToc(blocks: any[]): TocEntry[] {
+export function extractToc(blocks: TocBlock[]): TocEntry[] {
   const toc: TocEntry[] = [];
   for (const block of blocks) {
     if (block.type === "heading_1") {
