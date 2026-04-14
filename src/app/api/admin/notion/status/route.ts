@@ -8,24 +8,38 @@ interface DbStatus {
   configured: boolean;
   connected: boolean;
   count: number;
-  sample: Record<string, any>[];
+  sample: Record<string, unknown>[];
   error?: string;
+}
+
+interface NotionProp {
+  type: string;
+  title?: Array<{ plain_text: string }>;
+  rich_text?: Array<{ plain_text: string }>;
+  select?: { name: string };
+  multi_select?: Array<{ name: string }>;
+  checkbox?: boolean;
+  number?: number;
+  date?: { start: string };
+  url?: string;
+  email?: string;
+  bot?: { owner?: { user?: { name?: string } } };
 }
 
 /**
  * Helper: extract a human-readable value from a Notion property object.
  */
-function extractValue(prop: any): any {
+function extractValue(prop: NotionProp): unknown {
   if (!prop) return null;
   switch (prop.type) {
     case "title":
-      return prop.title?.map((t: any) => t.plain_text).join("") ?? "";
+      return prop.title?.map((t) => t.plain_text).join("") ?? "";
     case "rich_text":
-      return prop.rich_text?.map((t: any) => t.plain_text).join("") ?? "";
+      return prop.rich_text?.map((t) => t.plain_text).join("") ?? "";
     case "select":
       return prop.select?.name ?? null;
     case "multi_select":
-      return (prop.multi_select ?? []).map((s: any) => s.name);
+      return (prop.multi_select ?? []).map((s) => s.name);
     case "checkbox":
       return prop.checkbox ?? false;
     case "number":
@@ -54,13 +68,13 @@ async function probeDatabase(
   }
 
   try {
-    const data = await notionFetch<{ results: any[]; has_more: boolean }>(
+    const data = await notionFetch<{ results: Array<{ id: string; properties?: Record<string, NotionProp> }>; has_more: boolean }>(
       `/databases/${dbId}/query`,
       { method: "POST", body: JSON.stringify({ page_size: limit }) },
     );
 
-    const sample = (data.results ?? []).map((page: any) => {
-      const out: Record<string, any> = { id: page.id };
+    const sample = (data.results ?? []).map((page) => {
+      const out: Record<string, unknown> = { id: page.id };
       for (const [key, val] of Object.entries(page.properties ?? {})) {
         out[key] = extractValue(val);
       }
@@ -74,14 +88,14 @@ async function probeDatabase(
       count: data.results?.length ?? 0,
       sample,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       name,
       configured: true,
       connected: false,
       count: 0,
       sample: [],
-      error: err.message ?? String(err),
+      error: err instanceof Error ? err.message : String(err),
     };
   }
 }
@@ -105,7 +119,7 @@ export async function GET(request: NextRequest) {
   // Probe bot identity
   let botName = "";
   try {
-    const me = await notionFetch<{ name?: string; bot?: any }>("/users/me");
+    const me = await notionFetch<{ name?: string; bot?: { owner?: { user?: { name?: string } } } }>("/users/me");
     botName = me.name ?? me.bot?.owner?.user?.name ?? "bot";
   } catch {
     return NextResponse.json(

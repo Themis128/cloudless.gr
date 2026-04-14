@@ -48,8 +48,19 @@ export interface AnalyticsSummary {
 // Mapper
 // ---------------------------------------------------------------------------
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function mapEvent(page: any): AnalyticsEvent {
+interface NotionPage {
+  id: string;
+  created_time?: string;
+  properties?: Record<string, {
+    title?: Array<{ plain_text: string }>;
+    rich_text?: Array<{ plain_text: string }>;
+    select?: { name: string };
+    number?: number;
+    date?: { start: string };
+  }>;
+}
+
+function mapEvent(page: NotionPage): AnalyticsEvent {
   const p = page.properties ?? {};
   return {
     id: page.id,
@@ -63,7 +74,6 @@ function mapEvent(page: any): AnalyticsEvent {
     metadata: extractText(p.Metadata?.rich_text),
   };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
 // Write — Track events
