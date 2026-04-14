@@ -21,7 +21,7 @@ function estimateReadTime(text: string): string {
 }
 
 function getPayload(block: NotionBlock): Record<string, unknown> | undefined {
-  const payload = block[block.type];
+  const payload = block[block.type as string];
   return typeof payload === "object" && payload !== null
     ? (payload as Record<string, unknown>)
     : undefined;
