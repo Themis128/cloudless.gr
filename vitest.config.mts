@@ -27,13 +27,6 @@ export default defineConfig({
         __dirname,
         "__tests__/stubs/aws-cognito-stub.js",
       ),
-      // next-intl/middleware (v4) imports next/server via ESM bare specifier,
-      // which Vitest/JSDOM cannot resolve. Tests only need the proxy `config`
-      // export, so we provide a no-op factory stub here.
-      "next-intl/middleware": path.resolve(
-        __dirname,
-        "__tests__/stubs/next-intl-middleware-stub.js",
-      ),
     },
   },
   define: {

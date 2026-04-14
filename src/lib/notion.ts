@@ -427,6 +427,14 @@ export interface TocEntry {
   blockId: string;
 }
 
+interface TocBlock {
+  type: string;
+  id: string;
+  heading_1?: { rich_text: Array<{ plain_text: string }> };
+  heading_2?: { rich_text: Array<{ plain_text: string }> };
+  heading_3?: { rich_text: Array<{ plain_text: string }> };
+}
+
 /**
  * Extract a table of contents from Notion blocks (heading blocks only).
  */
