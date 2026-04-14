@@ -27,7 +27,9 @@ process.env.HUBSPOT_API_KEY = "test-hs-token";
 // ── Slack ─────────────────────────────────────────────────────────────────────
 process.env.SLACK_BOT_TOKEN = "xoxb-test-token";
 process.env.SLACK_SIGNING_SECRET = "test-signing-secret-32chars-padded";
-process.env.SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/test/test/test";
+// SLACK_WEBHOOK_URL intentionally NOT set globally — tests that need it use
+// vi.stubEnv("SLACK_WEBHOOK_URL", "...") in their own beforeEach, so that
+// the "when neither configured" SlackClient tests see no webhook by default.
 
 // ── Stripe ────────────────────────────────────────────────────────────────────
 process.env.STRIPE_SECRET_KEY = "sk_test_123";
