@@ -54,11 +54,8 @@ export interface NotionPost {
   seoDescription?: string;
 }
 
-export type NotionBlock = Record<string, unknown>;
-
 export interface NotionPostWithContent extends NotionPost {
   html: string;
-  content: NotionBlock[];
 }
 
 // ---------------------------------------------------------------------------
@@ -216,7 +213,7 @@ export async function getPostBySlug(
     const blocks = await notionListAll(`/blocks/${post.id}/children`);
     const html = blocksToHtml(blocks);
 
-    return { ...post, html, content: blocks as NotionBlock[] };
+    return { ...post, html };
   } catch (err) {
     console.error("[Notion Blog] Failed to fetch post by slug:", err);
     return null;
@@ -334,9 +331,9 @@ export async function getPostWithToc(
 
     // Import extractToc at runtime to avoid circular deps
     const { extractToc } = await import("@/lib/notion");
-    const toc = extractToc(blocks as Parameters<typeof extractToc>[0]);
+    const toc = extractToc(blocks);
 
-    return { ...post, html, toc, content: blocks as NotionBlock[] };
+    return { ...post, html, toc };
   } catch (err) {
     console.error("[Notion Blog] Failed to fetch post with TOC:", err);
     return null;

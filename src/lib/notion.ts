@@ -427,18 +427,10 @@ export interface TocEntry {
   blockId: string;
 }
 
-interface TocBlock {
-  type: string;
-  id: string;
-  heading_1?: { rich_text: Array<{ plain_text: string }> };
-  heading_2?: { rich_text: Array<{ plain_text: string }> };
-  heading_3?: { rich_text: Array<{ plain_text: string }> };
-}
-
 /**
  * Extract a table of contents from Notion blocks (heading blocks only).
  */
-export function extractToc(blocks: TocBlock[]): TocEntry[] {
+export function extractToc(blocks: any[]): TocEntry[] {
   const toc: TocEntry[] = [];
   for (const block of blocks) {
     if (block.type === "heading_1") {

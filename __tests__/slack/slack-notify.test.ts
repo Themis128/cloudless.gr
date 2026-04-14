@@ -1,21 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-
-// ---------------------------------------------------------------------------
-// Mock integrations — must be hoisted before any module import
-// ---------------------------------------------------------------------------
-
-let mockBotToken = "xoxb-test-token";
-let mockWebhookUrl = "";
-let mockSigningSecret = "test-secret";
-
-vi.mock("@/lib/integrations", () => ({
-  getSlackConfig: vi.fn(() => ({
-    SLACK_BOT_TOKEN: mockBotToken,
-    SLACK_SIGNING_SECRET: mockSigningSecret,
-    SLACK_WEBHOOK_URL: mockWebhookUrl,
-  })),
-  resetSlackConfigCache: vi.fn(),
-}));
+import { resetSlackConfigCache } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,8 +42,7 @@ describe("SlackClient", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockBotToken = "xoxb-test-token";
-    mockWebhookUrl = "";
+    resetSlackConfigCache();
     const mod = await import("@/lib/slack-notify");
     SlackClient = mod.SlackClient;
   });
@@ -165,8 +148,9 @@ describe("SlackClient", () => {
 
   describe("when only SLACK_WEBHOOK_URL is set", () => {
     beforeEach(() => {
-      mockBotToken = "";
-      mockWebhookUrl = "https://hooks.slack.com/services/T/B/test";
+      vi.stubEnv("SLACK_BOT_TOKEN", "");
+      vi.stubEnv("SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/T/B/test");
+      resetSlackConfigCache();
     });
 
     it("posts to webhook URL and returns true on success", async () => {
@@ -205,8 +189,8 @@ describe("SlackClient", () => {
 
   describe("when neither token nor webhook is configured", () => {
     beforeEach(() => {
-      mockBotToken = "";
-      mockWebhookUrl = "";
+      vi.stubEnv("SLACK_BOT_TOKEN", "");
+      resetSlackConfigCache();
     });
 
     it("returns false immediately without calling fetch", async () => {
@@ -231,8 +215,7 @@ describe("slackSubscriberNotify", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockBotToken = "xoxb-test-token";
-    mockWebhookUrl = "";
+    resetSlackConfigCache();
     const mod = await import("@/lib/slack-notify");
     slackSubscriberNotify = mod.slackSubscriberNotify;
   });
@@ -269,8 +252,8 @@ describe("slackSubscriberNotify", () => {
   });
 
   it("does not throw when Slack is not configured", async () => {
-    mockBotToken = "";
-    mockWebhookUrl = "";
+    vi.stubEnv("SLACK_BOT_TOKEN", "");
+    resetSlackConfigCache();
     vi.stubGlobal("fetch", vi.fn());
 
     await expect(slackSubscriberNotify("no-slack@example.com")).resolves.not.toThrow();
@@ -282,8 +265,7 @@ describe("slackErrorNotify", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockBotToken = "xoxb-test-token";
-    mockWebhookUrl = "";
+    resetSlackConfigCache();
     const mod = await import("@/lib/slack-notify");
     slackErrorNotify = mod.slackErrorNotify;
   });
@@ -340,8 +322,7 @@ describe("slackDeployNotify", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockBotToken = "xoxb-test-token";
-    mockWebhookUrl = "";
+    resetSlackConfigCache();
     const mod = await import("@/lib/slack-notify");
     slackDeployNotify = mod.slackDeployNotify;
   });

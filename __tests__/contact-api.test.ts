@@ -14,16 +14,6 @@ vi.mock("@aws-sdk/client-ses", () => {
   };
 });
 
-// Mock SSM config
-vi.mock("@/lib/ssm-config", () => ({
-  getConfig: vi.fn().mockResolvedValue({
-    SES_FROM_EMAIL: "test@cloudless.gr",
-    SES_TO_EMAIL: "inbox@cloudless.gr",
-    AWS_SES_REGION: "us-east-1",
-    STRIPE_SECRET_KEY: "sk_test_123",
-    STRIPE_PUBLISHABLE_KEY: "pk_test_123",
-  }),
-}));
 
 describe("POST /api/contact", () => {
   let POST: (request: Request) => Promise<Response>;

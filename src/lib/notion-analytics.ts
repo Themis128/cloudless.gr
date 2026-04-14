@@ -48,19 +48,8 @@ export interface AnalyticsSummary {
 // Mapper
 // ---------------------------------------------------------------------------
 
-interface NotionPage {
-  id: string;
-  created_time?: string;
-  properties?: Record<string, {
-    title?: Array<{ plain_text: string }>;
-    rich_text?: Array<{ plain_text: string }>;
-    select?: { name: string };
-    number?: number;
-    date?: { start: string };
-  }>;
-}
-
-function mapEvent(page: NotionPage): AnalyticsEvent {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function mapEvent(page: any): AnalyticsEvent {
   const p = page.properties ?? {};
   return {
     id: page.id,
@@ -74,6 +63,7 @@ function mapEvent(page: NotionPage): AnalyticsEvent {
     metadata: extractText(p.Metadata?.rich_text),
   };
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
 // Write — Track events
@@ -190,7 +180,7 @@ export async function getRecentEvents(
         page_size: Math.min(limit, 100),
       },
     );
-    return (pages as NotionPage[]).slice(0, limit).map(mapEvent);
+    return pages.slice(0, limit).map(mapEvent);
   } catch (err) {
     console.error("[Notion Analytics] Failed to fetch events:", err);
     return [];
@@ -220,7 +210,7 @@ export async function getEventsByDateRange(
         sorts: [{ property: "Date", direction: "descending" }],
       },
     );
-    return (pages as NotionPage[]).map(mapEvent);
+    return pages.map(mapEvent);
   } catch (err) {
     console.error("[Notion Analytics] Failed to fetch events by date:", err);
     return [];

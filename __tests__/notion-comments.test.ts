@@ -1,12 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// Mock integrations
-vi.mock("@/lib/integrations", () => ({
-  getIntegrations: vi.fn().mockReturnValue({
-    NOTION_API_KEY: "secret_test_key_12345",
-  }),
-  isConfigured: vi.fn().mockReturnValue(true),
-}));
+import { resetIntegrationCache } from "@/lib/integrations";
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -18,7 +11,6 @@ import {
   replyToDiscussion,
   getCommentCount,
 } from "@/lib/notion-comments";
-import { isConfigured } from "@/lib/integrations";
 
 describe("notion-comments.ts", () => {
   beforeEach(() => {
@@ -76,7 +68,8 @@ describe("notion-comments.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      vi.mocked(isConfigured).mockReturnValueOnce(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
       const comments = await listComments("page-1");
       expect(comments).toEqual([]);
     });
@@ -142,7 +135,8 @@ describe("notion-comments.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.mocked(isConfigured).mockReturnValueOnce(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
       expect(await addComment("page-1", "text")).toBeNull();
     });
 
@@ -183,7 +177,8 @@ describe("notion-comments.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.mocked(isConfigured).mockReturnValueOnce(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
       expect(await replyToDiscussion("disc-1", "text")).toBeNull();
     });
   });

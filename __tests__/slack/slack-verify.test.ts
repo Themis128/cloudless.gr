@@ -1,20 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createHmac } from "crypto";
-
-// ---------------------------------------------------------------------------
-// Mock integrations before any module import
-// ---------------------------------------------------------------------------
+import { resetSlackConfigCache } from "@/lib/integrations";
 
 const TEST_SIGNING_SECRET = "test-signing-secret-32chars-padded";
-
-vi.mock("@/lib/integrations", () => ({
-  getSlackConfig: vi.fn(() => ({
-    SLACK_BOT_TOKEN: "",
-    SLACK_SIGNING_SECRET: TEST_SIGNING_SECRET,
-    SLACK_WEBHOOK_URL: "",
-  })),
-  resetSlackConfigCache: vi.fn(),
-}));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -49,21 +37,13 @@ function makeRequest(body: string, signature: string, timestamp: string): Reques
 describe("verifySlackRequest", () => {
   let verifySlackRequest: (typeof import("@/lib/slack-verify"))["verifySlackRequest"];
   let unauthorizedSlack: (typeof import("@/lib/slack-verify"))["unauthorizedSlack"];
-  let getSlackConfig: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    resetSlackConfigCache();
     const mod = await import("@/lib/slack-verify");
     verifySlackRequest = mod.verifySlackRequest;
     unauthorizedSlack = mod.unauthorizedSlack;
-    const intMod = await import("@/lib/integrations");
-    getSlackConfig = intMod.getSlackConfig as ReturnType<typeof vi.fn>;
-    // Reset to default mock
-    getSlackConfig.mockReturnValue({
-      SLACK_BOT_TOKEN: "",
-      SLACK_SIGNING_SECRET: TEST_SIGNING_SECRET,
-      SLACK_WEBHOOK_URL: "",
-    });
   });
 
   it("returns ok:true with body for a valid signature", async () => {
@@ -80,11 +60,8 @@ describe("verifySlackRequest", () => {
   });
 
   it("returns ok:false when SLACK_SIGNING_SECRET is not set", async () => {
-    getSlackConfig.mockReturnValue({
-      SLACK_BOT_TOKEN: "",
-      SLACK_SIGNING_SECRET: "",
-      SLACK_WEBHOOK_URL: "",
-    });
+    vi.stubEnv("SLACK_SIGNING_SECRET", "");
+    resetSlackConfigCache();
 
     const body = "{}";
     const ts = nowTs();

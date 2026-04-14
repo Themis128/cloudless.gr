@@ -1,17 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { resetIntegrationCache } from "@/lib/integrations";
 
 const mockNotionFetch = vi.fn();
 const mockNotionFetchAll = vi.fn();
-const mockIsConfigured = vi.fn().mockReturnValue(true);
-
-vi.mock("@/lib/integrations", () => ({
-  getIntegrations: vi.fn().mockReturnValue({
-    NOTION_API_KEY: "secret_test",
-    NOTION_PROJECTS_DB_ID: "projects-db-123",
-    NOTION_TASKS_DB_ID: "tasks-db-123",
-  }),
-  isConfigured: (...args: string[]) => mockIsConfigured(...args),
-}));
 
 vi.mock("@/lib/notion", () => ({
   notionFetch: (...args: unknown[]) => mockNotionFetch(...args),
@@ -64,7 +55,7 @@ function makeTaskPage(overrides: Record<string, unknown> = {}) {
 describe("notion-projects.ts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsConfigured.mockReturnValue(true);
+    resetIntegrationCache();
   });
 
   describe("listProjects", () => {
@@ -96,7 +87,8 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { listProjects } = await import("@/lib/notion-projects");
       expect(await listProjects()).toEqual([]);
@@ -263,7 +255,8 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { getProject } = await import("@/lib/notion-projects");
       expect(await getProject("proj-1")).toBeNull();
@@ -290,7 +283,8 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns false when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { updateTaskStatus } = await import("@/lib/notion-projects");
       expect(await updateTaskStatus("task-1", "Done")).toBe(false);
@@ -306,7 +300,8 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns false when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { updateProjectStatus } = await import("@/lib/notion-projects");
       expect(await updateProjectStatus("proj-1", "Completed")).toBe(false);
@@ -337,7 +332,8 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { listTasks } = await import("@/lib/notion-projects");
       expect(await listTasks()).toEqual([]);
@@ -367,7 +363,8 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { createProject } = await import("@/lib/notion-projects");
       expect(await createProject({ name: "X" })).toBeNull();
@@ -398,7 +395,8 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { createTask } = await import("@/lib/notion-projects");
       expect(await createTask({ task: "X" })).toBeNull();

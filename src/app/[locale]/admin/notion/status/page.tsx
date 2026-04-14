@@ -10,7 +10,7 @@ interface DbStatus {
   configured: boolean;
   connected: boolean;
   count: number;
-  sample: Record<string, unknown>[];
+  sample: Record<string, any>[];
   error?: string;
 }
 
@@ -56,7 +56,7 @@ function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
   );
 }
 
-function CellValue({ value }: { value: unknown }) {
+function CellValue({ value }: { value: any }) {
   if (value === null || value === undefined || value === "")
     return <span className="text-slate-600">{"\u2014"}</span>;
   if (typeof value === "boolean")
@@ -153,7 +153,7 @@ function DatabaseCard({ db, expanded, onToggle }: { db: DbStatus; expanded: bool
             </thead>
             <tbody>
               {db.sample.map((row, i) => (
-                <tr key={String(row.id ?? i)} className="border-b border-slate-700/30 hover:bg-slate-700/10">
+                <tr key={row.id ?? i} className="border-b border-slate-700/30 hover:bg-slate-700/10">
                   {columns.map((col) => (
                     <td key={col} className="px-2 py-2 text-slate-300">
                       <CellValue value={row[col]} />
@@ -202,8 +202,8 @@ export default function NotionStatusPage() {
       // Auto-expand connected databases
       const connected = new Set(json.databases.filter((d) => d.connected).map((d) => d.name));
       setExpandedDbs(connected);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to load");
     } finally {
       setLoading(false);
     }

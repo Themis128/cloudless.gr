@@ -12,13 +12,6 @@ vi.mock("@/lib/stripe", () => ({
   }),
 }));
 
-// Mock SSM config
-vi.mock("@/lib/ssm-config", () => ({
-  getConfig: vi.fn().mockResolvedValue({
-    STRIPE_SECRET_KEY: "sk_test_123",
-    STRIPE_WEBHOOK_SECRET: "whsec_test_123",
-  }),
-}));
 
 describe("POST /api/checkout", () => {
   let POST: (request: NextRequest) => Promise<Response>;

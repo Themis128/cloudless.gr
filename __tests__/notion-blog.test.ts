@@ -1,16 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// Mock integrations
-const mockIsConfigured = vi.fn().mockReturnValue(true);
-const mockGetIntegrations = vi.fn().mockReturnValue({
-  NOTION_API_KEY: "secret_test",
-  NOTION_BLOG_DB_ID: "blog-db-123",
-});
-
-vi.mock("@/lib/integrations", () => ({
-  getIntegrations: () => mockGetIntegrations(),
-  isConfigured: (...args: string[]) => mockIsConfigured(...args),
-}));
+import { resetIntegrationCache } from "@/lib/integrations";
 
 // Bypass the in-memory cache so every test hits the mock directly
 vi.mock("@/lib/notion-cache", () => ({
@@ -59,7 +48,7 @@ function makePage(overrides: Record<string, unknown> = {}) {
 describe("notion-blog.ts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsConfigured.mockReturnValue(true);
+    resetIntegrationCache();
   });
 
   describe("getPosts", () => {
@@ -94,7 +83,8 @@ describe("notion-blog.ts", () => {
     });
 
     it("returns empty array when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { getPosts } = await import("@/lib/notion-blog");
       const posts = await getPosts();
@@ -187,7 +177,8 @@ describe("notion-blog.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { getPostBySlug } = await import("@/lib/notion-blog");
       const post = await getPostBySlug("test-post");
@@ -211,7 +202,8 @@ describe("notion-blog.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { getAllSlugs } = await import("@/lib/notion-blog");
       expect(await getAllSlugs()).toEqual([]);

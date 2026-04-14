@@ -54,51 +54,19 @@ export interface DatabaseProperty {
 // Mappers
 // ---------------------------------------------------------------------------
 
-interface RichTextItem { plain_text: string }
-interface NotionIcon { emoji?: string; external?: { url?: string } }
-interface NotionParent { type?: string; page_id?: string; database_id?: string; workspace_id?: string }
-interface NotionSearchItem {
-  id: string;
-  object: string;
-  url?: string;
-  last_edited_time?: string;
-  parent?: NotionParent;
-  icon?: NotionIcon;
-  title?: RichTextItem[];
-  properties?: Record<string, { title?: RichTextItem[]; [key: string]: unknown }>;
-}
-interface NotionUserRaw {
-  id: string;
-  name?: string;
-  avatar_url?: string;
-  type?: string;
-  person?: { email?: string };
-  bot?: { owner?: { user?: { person?: { email?: string } } } };
-}
-interface NotionPropertyRaw {
-  type?: string;
-  id?: string;
-  select?: { options?: Array<{ name: string; color?: string }> };
-  multi_select?: { options?: Array<{ name: string; color?: string }> };
-  status?: { options?: Array<{ name: string; color?: string }> };
-}
-interface NotionDatabaseRaw {
-  id: string;
-  url?: string;
-  title?: RichTextItem[];
-  properties?: Record<string, NotionPropertyRaw>;
-}
-
-function mapSearchResult(item: NotionSearchItem): SearchResult {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function mapSearchResult(item: any): SearchResult {
   const isPage = item.object === "page";
   let title = "";
 
   if (isPage) {
     const props = item.properties ?? {};
+    // Try common title property names
     const titleProp = props.Title?.title ?? props.Name?.title ?? props.title?.title;
-    title = titleProp ? titleProp.map((t) => t.plain_text).join("") : "";
+    title = titleProp ? titleProp.map((t: any) => t.plain_text).join("") : "";
   } else {
-    title = (item.title ?? []).map((t) => t.plain_text).join("");
+    // Database title
+    title = (item.title ?? []).map((t: any) => t.plain_text).join("");
   }
 
   return {
@@ -117,35 +85,46 @@ function mapSearchResult(item: NotionSearchItem): SearchResult {
   };
 }
 
-function mapUser(user: NotionUserRaw): NotionUser {
+function mapUser(user: any): NotionUser {
   return {
     id: user.id,
     name: user.name ?? "",
     email: user.person?.email ?? user.bot?.owner?.user?.person?.email ?? "",
     avatarUrl: user.avatar_url ?? "",
-    type: (user.type ?? "person") as "person" | "bot",
+    type: user.type as "person" | "bot",
   };
 }
 
-function mapProperty(name: string, prop: NotionPropertyRaw): DatabaseProperty {
+function mapProperty(name: string, prop: any): DatabaseProperty {
   const result: DatabaseProperty = {
     name,
     type: prop.type ?? "unknown",
     id: prop.id ?? "",
   };
 
+  // Extract options for select/multi_select
   if (prop.select?.options) {
-    result.options = prop.select.options.map((o) => ({ name: o.name, color: o.color }));
+    result.options = prop.select.options.map((o: any) => ({
+      name: o.name,
+      color: o.color,
+    }));
   }
   if (prop.multi_select?.options) {
-    result.options = prop.multi_select.options.map((o) => ({ name: o.name, color: o.color }));
+    result.options = prop.multi_select.options.map((o: any) => ({
+      name: o.name,
+      color: o.color,
+    }));
   }
   if (prop.status?.options) {
-    result.options = prop.status.options.map((o) => ({ name: o.name, color: o.color }));
+    result.options = prop.status.options.map((o: any) => ({
+      name: o.name,
+      color: o.color,
+    }));
   }
 
   return result;
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
 // Search API
@@ -169,7 +148,8 @@ export async function searchPages(
   }
 
   try {
-    const body: Record<string, unknown> = {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const body: Record<string, any> = {
       query,
       page_size: Math.min(options?.limit ?? 20, 100),
       sort: {
@@ -186,13 +166,14 @@ export async function searchPages(
     }
 
     const data = await notionFetch<{
-      results: NotionSearchItem[];
+      results: any[];
       has_more: boolean;
       next_cursor?: string;
     }>("/search", {
       method: "POST",
       body: JSON.stringify(body),
     });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     return {
       results: data.results.map(mapSearchResult),
@@ -227,10 +208,12 @@ export async function listUsers(): Promise<NotionUser[]> {
   if (!isConfigured("NOTION_API_KEY")) return [];
 
   try {
-    const data = await notionFetch<{ results: NotionUserRaw[] }>("/users", {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const data = await notionFetch<{ results: any[] }>("/users", {
       method: "GET",
     });
     return data.results.map(mapUser);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
     console.error("[Notion Users] Failed to list users:", err);
     return [];
@@ -244,8 +227,10 @@ export async function getBotUser(): Promise<NotionUser | null> {
   if (!isConfigured("NOTION_API_KEY")) return null;
 
   try {
-    const data = await notionFetch<NotionUserRaw>("/users/me");
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const data = await notionFetch<any>("/users/me");
     return mapUser(data);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
     console.error("[Notion Users] Failed to get bot user:", err);
     return null;
@@ -259,8 +244,10 @@ export async function getUser(userId: string): Promise<NotionUser | null> {
   if (!isConfigured("NOTION_API_KEY")) return null;
 
   try {
-    const data = await notionFetch<NotionUserRaw>(`/users/${userId}`);
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const data = await notionFetch<any>(`/users/${userId}`);
     return mapUser(data);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
     console.error("[Notion Users] Failed to get user:", err);
     return null;
@@ -281,9 +268,10 @@ export async function getDatabaseSchema(
   if (!isConfigured("NOTION_API_KEY")) return null;
 
   try {
-    const db = await notionFetch<NotionDatabaseRaw>(`/databases/${databaseId}`);
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const db = await notionFetch<any>(`/databases/${databaseId}`);
 
-    const title = (db.title ?? []).map((t) => t.plain_text).join("");
+    const title = (db.title ?? []).map((t: any) => t.plain_text).join("");
     const properties: DatabaseProperty[] = Object.entries(db.properties ?? {}).map(
       ([name, prop]) => mapProperty(name, prop),
     );
@@ -294,6 +282,7 @@ export async function getDatabaseSchema(
       properties,
       url: db.url ?? "",
     };
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
     console.error("[Notion Schema] Failed to get database schema:", err);
     return null;
