@@ -50,7 +50,6 @@ export async function POST(request: Request) {
       fromLabel: "Cloudless Contact Form",
     });
 
-    // Fire-and-forget: push to CRM, notify Slack, save to Notion (non-blocking)
     const nameParts = String(name).trim().split(" ");
     Promise.allSettled([
       slackContactNotify({ name, email, company, service, message }),
@@ -68,6 +67,16 @@ export async function POST(request: Request) {
     return Response.json({ success: true });
   } catch (error) {
     console.error("SES send error:", error);
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      await import("@sentry/nextjs")
+        .then(({ captureException, withScope }) =>
+          withScope((scope) => {
+            scope.setTag("route", "contact");
+            captureException(error);
+          }),
+        )
+        .catch(() => {});
+    }
     return Response.json({ error: "Failed to send email." }, { status: 500 });
   }
 }

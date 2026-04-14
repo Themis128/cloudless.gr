@@ -23,29 +23,19 @@ export async function POST(request: Request) {
     }
 
     if (!isValidEmail(email)) {
-      return NextResponse.json(
-        { error: "Invalid email address." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
     }
 
     if (new Date(start) < new Date()) {
-      return NextResponse.json(
-        { error: "Cannot book a slot in the past." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Cannot book a slot in the past." }, { status: 400 });
     }
 
     const result = await bookConsultation({ name, email, start, end, notes });
 
     if (!result) {
-      return NextResponse.json(
-        { error: "Failed to create booking." },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "Failed to create booking." }, { status: 500 });
     }
 
-    // Notify team via Slack (non-blocking)
     slackNotify({
       text: `\ud83d\udcc5 New consultation booked: ${name} (${email}) at ${new Date(start).toLocaleString("en-IE")}`,
     }).catch(() => {});
@@ -57,6 +47,16 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("[Calendar] Booking error:", err);
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      await import("@sentry/nextjs")
+        .then(({ captureException, withScope }) =>
+          withScope((scope) => {
+            scope.setTag("route", "calendar.book");
+            captureException(err);
+          }),
+        )
+        .catch(() => {});
+    }
     return NextResponse.json({ error: "Booking failed." }, { status: 500 });
   }
 }

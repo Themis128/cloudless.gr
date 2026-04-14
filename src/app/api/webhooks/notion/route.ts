@@ -49,10 +49,8 @@ function verifySecret(request: NextRequest): boolean {
 async function handlePageUpdated(payload: WebhookPayload) {
   const { database, slug } = payload;
 
-  // Clear in-memory cache for the affected database
   invalidateCache(database === "blog" ? "blog" : database === "docs" ? "docs" : undefined);
 
-  // Revalidate the specific page + index
   if (database === "blog") {
     revalidatePath("/blog");
     if (slug) revalidatePath(`/blog/${slug}`);
@@ -65,7 +63,6 @@ async function handlePageUpdated(payload: WebhookPayload) {
     if (slug) revalidatePath(`/api/docs/${slug}`);
   }
 
-  // Also revalidate the sitemap since content changed
   revalidatePath("/sitemap.xml");
 
   return { revalidated: true, database, slug: slug ?? null };
@@ -74,10 +71,8 @@ async function handlePageUpdated(payload: WebhookPayload) {
 async function handlePageCreated(payload: WebhookPayload) {
   const { database, slug, data } = payload;
 
-  // Clear in-memory cache for the affected database
   invalidateCache(database === "blog" ? "blog" : database === "docs" ? "docs" : undefined);
 
-  // Revalidate index pages
   if (database === "blog") {
     revalidatePath("/blog");
     revalidatePath("/api/blog/posts");
@@ -88,7 +83,6 @@ async function handlePageCreated(payload: WebhookPayload) {
     revalidatePath("/sitemap.xml");
   }
 
-  // If a new doc was published, optionally notify Slack
   if (database === "docs" && data?.title) {
     await slackContactNotify({
       name: "Notion Docs",
@@ -107,7 +101,6 @@ async function handleProjectUpdated(payload: WebhookPayload) {
   const name = data?.name as string | undefined;
   const status = data?.status as string | undefined;
 
-  // Notify Slack when a project changes to "Completed"
   if (status === "Completed" && name) {
     await slackContactNotify({
       name: "Notion Projects",
@@ -118,7 +111,6 @@ async function handleProjectUpdated(payload: WebhookPayload) {
     }).catch(() => {});
   }
 
-  // Notify on "Blocked" status
   if (status === "Blocked" && name) {
     await slackContactNotify({
       name: "Notion Projects",
@@ -138,7 +130,6 @@ async function handleTaskUpdated(payload: WebhookPayload) {
   const status = data?.status as string | undefined;
   const assignee = data?.assignee as string | undefined;
 
-  // Notify on "Blocked" tasks
   if (status === "Blocked" && task) {
     await slackContactNotify({
       name: "Notion Tasks",
@@ -149,8 +140,6 @@ async function handleTaskUpdated(payload: WebhookPayload) {
     }).catch(() => {});
   }
 
-  // Notify when all tasks in a sprint are Done (optional — would need more context)
-
   return { updated: true, database: "tasks", task: task ?? payload.page_id, status };
 }
 
@@ -159,7 +148,6 @@ async function handleAnalyticsEvent(payload: WebhookPayload) {
   const type = data?.type as string | undefined;
   const count = data?.count as number | undefined;
 
-  // Alert on error spikes — if a single error event has high count
   if (type === "error" && count && count >= 10) {
     await slackContactNotify({
       name: "Notion Analytics",
@@ -184,7 +172,6 @@ async function handleSubmissionStatus(payload: WebhookPayload) {
     return { emailed: false, reason: "Missing email or status in data" };
   }
 
-  // Only email on "Done" (= replied / completed)
   if (status !== "Done") {
     return { emailed: false, reason: `Status "${status}" does not trigger email` };
   }
@@ -268,6 +255,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, type: body.type, ...result });
   } catch (err) {
     console.error("[Webhook] Error processing event:", err);
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      await import("@sentry/nextjs")
+        .then(({ captureException, withScope }) =>
+          withScope((scope) => {
+            scope.setTag("route", "notion.webhook");
+            scope.setTag("notion.event", body.type);
+            captureException(err);
+          }),
+        )
+        .catch(() => {});
+    }
     return NextResponse.json(
       { error: "Internal error processing webhook" },
       { status: 500 },
