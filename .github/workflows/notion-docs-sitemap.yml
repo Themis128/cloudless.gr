@@ -1,0 +1,115 @@
+name: Notion → Sitemap Sync
+
+on:
+  schedule:
+    # Every 6 hours
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+  NOTION_DOCS_DB_ID: ${{ secrets.NOTION_DOCS_DB_ID }}
+  NOTION_BLOG_DB_ID: ${{ secrets.NOTION_BLOG_DB_ID }}
+
+jobs:
+  sync:
+    name: Sync Notion docs & blog slugs into sitemap
+    runs-on: ubuntu-latest
+    if: ${{ env.NOTION_API_KEY != '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Fetch published slugs from Notion
+        id: slugs
+        run: |
+          NOTION_VERSION="2022-06-28"
+          HEADERS=(-H "Authorization: Bearer ${NOTION_API_KEY}" -H "Notion-Version: ${NOTION_VERSION}" -H "Content-Type: application/json")
+
+          DOCS_SLUGS="[]"
+          BLOG_SLUGS="[]"
+
+          # --- Docs ---
+          if [ -n "${NOTION_DOCS_DB_ID}" ]; then
+            DOCS_RAW=$(curl -sS "https://api.notion.com/v1/databases/${NOTION_DOCS_DB_ID}/query" \
+              "${HEADERS[@]}" \
+              -d '{"filter":{"property":"Published","checkbox":{"equals":true}},"page_size":100}')
+
+            DOCS_SLUGS=$(echo "$DOCS_RAW" | jq -r '[.results[]? | (.properties.Slug?.rich_text // [] | map(.plain_text) | join("")) // .id | select(. != "")]')
+          fi
+
+          # --- Blog ---
+          if [ -n "${NOTION_BLOG_DB_ID}" ]; then
+            BLOG_RAW=$(curl -sS "https://api.notion.com/v1/databases/${NOTION_BLOG_DB_ID}/query" \
+              "${HEADERS[@]}" \
+              -d '{"filter":{"property":"Published","checkbox":{"equals":true}},"page_size":100}')
+
+            BLOG_SLUGS=$(echo "$BLOG_RAW" | jq -r '[.results[]? | (.properties.Slug?.rich_text // [] | map(.plain_text) | join("")) // .id | select(. != "")]')
+          fi
+
+          echo "docs_slugs<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$DOCS_SLUGS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          echo "blog_slugs<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$BLOG_SLUGS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          DOCS_COUNT=$(echo "$DOCS_SLUGS" | jq 'length')
+          BLOG_COUNT=$(echo "$BLOG_SLUGS" | jq 'length')
+          echo "docs_count=${DOCS_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "blog_count=${BLOG_COUNT}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Notion sitemap fragment
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+
+          cat > /tmp/notion-sitemap.json << 'JSONEOF'
+          {
+            "docs": ${{ steps.slugs.outputs.docs_slugs }},
+            "blog": ${{ steps.slugs.outputs.blog_slugs }}
+          }
+          JSONEOF
+
+          # Build a TSV of path + lastmod for the dynamic sitemap helper
+          {
+            echo "${{ steps.slugs.outputs.docs_slugs }}" | jq -r '.[] | "/docs/" + . + "\t'"${TODAY}"'"'
+            echo "${{ steps.slugs.outputs.blog_slugs }}" | jq -r '.[] | "/blog/" + . + "\t'"${TODAY}"'"'
+          } > src/data/notion-sitemap-entries.tsv
+
+      - name: Check for changes
+        id: diff
+        run: |
+          git diff --quiet src/data/notion-sitemap-entries.tsv && echo "changed=false" >> "$GITHUB_OUTPUT" || echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit updated sitemap entries
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/data/notion-sitemap-entries.tsv
+          git commit -m "chore: sync Notion docs/blog slugs into sitemap entries
+
+          Docs: ${{ steps.slugs.outputs.docs_count }} published
+          Blog: ${{ steps.slugs.outputs.blog_count }} published"
+          git push
+
+      - name: Summary
+        run: |
+          echo "### 📄 Notion → Sitemap Sync" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Source | Published Pages |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-----------------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Docs   | ${{ steps.slugs.outputs.docs_count }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Blog   | ${{ steps.slugs.outputs.blog_count }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.diff.outputs.changed }}" = "true" ]; then
+            echo "✅ Sitemap entries updated and committed." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ℹ️ No changes — sitemap entries are already up to date." >> "$GITHUB_STEP_SUMMARY"
+          fi

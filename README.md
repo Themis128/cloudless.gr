@@ -4,10 +4,6 @@ Cloud computing, serverless development, data analytics, and AI-powered digital 
 
 Built with **Next.js 16**, **React 19**, **Tailwind CSS 4**, and **TypeScript**.
 
-## Mobile UX
-
-The UI is tuned for touch devices with 44px+ interactive targets, coarse-pointer tap feedback, and a scrollable mobile navbar menu so navigation does not clip on shorter viewports.
-
 ## Localization (i18n)
 
 The app supports three locales with cookie-based switching:
@@ -268,19 +264,74 @@ pnpm build
 pnpm start
 ```
 
-## Testing
+## Google Search Console (SEO)
 
-Tests use **Vitest** + **React Testing Library** with jsdom.
+The SEO integration in `src/lib/gsc.ts` uses the same Google service account already stored in SSM (`GOOGLE_CLIENT_EMAIL` + `GOOGLE_PRIVATE_KEY`) that powers Google Calendar.
+
+### One-time setup
+
+1. Enable the **Google Search Console API** in your GCP project.
+2. In the GSC web UI go to **Settings → Users and permissions → Add user**: paste your service account email and set the role to **Full**.
+3. Verify the property (`https://cloudless.gr/`) — the HTML meta tag method is already deployed.
+
+### Exported API
+
+| Function | Description |
+|---|---|
+| `getSeoSnapshot(siteUrl?)` | 28-day aggregate: clicks, impressions, CTR %, avg position, keyword count |
+| `getTopKeywords(siteUrl?, limit?)` | Top N keywords by clicks |
+| `getPerformanceHistory(siteUrl?, weeks?)` | Daily data for trend charts (default: 12 weeks) |
+| `getTopPages(siteUrl?, limit?)` | Top pages by clicks |
+| `getWebAnalytics(siteUrl?)` | Totals + top pages combined (used as analytics proxy) |
+
+All functions return `null` / `[]` on error — they never throw — so dashboard widgets degrade gracefully.
+
+### Admin API routes
+
+| Route | Source | Notes |
+|---|---|---|
+| `GET /api/admin/analytics/seo` | GSC | Snapshot + top 20 keywords |
+| `GET /api/admin/analytics/keywords?limit=N` | GSC | Top keywords, `limit` max 100 |
+| `GET /api/admin/analytics/pages?limit=N` | GSC | Top pages, `limit` max 100 |
+| `GET /api/admin/analytics/history?weeks=N` | GSC | Daily history, `weeks` max 52 |
+
+All GSC routes return `503` when `GOOGLE_CLIENT_EMAIL` or `GOOGLE_PRIVATE_KEY` are absent from SSM.
+
+### Weekly digest
+
+A scheduled task (`scripts/weekly-seo-digest.ts`) posts a formatted SEO snapshot to Slack `#general` every Monday. Run manually with:
 
 ```bash
-# Run tests in watch mode
-pnpm test
-
-# Run tests once (CI)
-pnpm test:ci
+npx tsx scripts/weekly-seo-digest.ts
 ```
 
-Test files live in `__tests__/` and follow the naming convention `*.test.tsx`.
+## Testing
+
+Tests use **Vitest** + **React Testing Library** with jsdom, and **Playwright** for E2E.
+
+```bash
+# Run unit tests in watch mode
+pnpm test
+
+# Run unit tests once (CI)
+pnpm test:ci
+
+# Run E2E tests
+npx playwright test
+
+# Run E2E with visible browser
+npx playwright test --headed
+```
+
+Unit test files live in `__tests__/` — key test modules:
+
+| File | Coverage |
+|---|---|
+| `__tests__/admin-api.test.ts` | All `/api/admin/**` routes: auth, 503 on missing config, response shape |
+| `__tests__/gsc.test.ts` | `src/lib/gsc.ts` — all 5 exported functions, success + error paths |
+| `__tests__/hubspot-crm.test.ts` | `getPipelines`, `listCompanies`, `listDeals`, `listOwners` |
+| `__tests__/contact-api.test.ts` | `POST /api/contact` |
+| `e2e/*.spec.ts` | Full browser flows via Playwright |
 
 ## Brand Identity
 

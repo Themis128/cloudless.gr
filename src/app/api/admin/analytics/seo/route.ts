@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSeoSnapshot, getTopKeywords } from "@/lib/ahrefs";
-import { isConfigured } from "@/lib/integrations";
+import { getSeoSnapshot, getTopKeywords } from "@/lib/gsc";
+import { getConfig } from "@/lib/ssm-config";
 
 export async function GET() {
-  if (!isConfigured("AHREFS_API_KEY")) {
+  const config = await getConfig();
+  if (!config.GOOGLE_CLIENT_EMAIL || !config.GOOGLE_PRIVATE_KEY) {
     return NextResponse.json(
-      { error: "Ahrefs not configured." },
+      { error: "Google Search Console not configured." },
       { status: 503 },
     );
   }
@@ -20,6 +21,7 @@ export async function GET() {
       snapshot,
       keywords,
       fetchedAt: new Date().toISOString(),
+      source: "google-search-console",
     });
   } catch (err) {
     console.error("[SEO] Error:", err);

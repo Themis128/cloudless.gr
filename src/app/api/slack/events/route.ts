@@ -18,6 +18,32 @@ import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
 import { getSlackConfig } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
+// Event deduplication
+//
+// Slack retries event_callback deliveries up to 3 times if it doesn't receive
+// a 200 within 3 seconds. We deduplicate on event_id to prevent processing
+// the same event more than once. The TTL matches Slack's retry window.
+// ---------------------------------------------------------------------------
+
+const DEDUP_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+/** event_id → timestamp when it was first received */
+const seenEventIds = new Map<string, number>();
+
+function isDuplicate(eventId: string): boolean {
+  const now = Date.now();
+
+  // Purge entries older than the TTL on every check (lazy cleanup)
+  for (const [id, ts] of seenEventIds) {
+    if (now - ts > DEDUP_TTL_MS) seenEventIds.delete(id);
+  }
+
+  if (seenEventIds.has(eventId)) return true;
+  seenEventIds.set(eventId, now);
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // Types (subset of Slack Events API payloads)
 // ---------------------------------------------------------------------------
 
@@ -67,6 +93,11 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   if (payload.type === "event_callback") {
+    // Deduplicate — Slack may retry the same event up to 3 times.
+    if (isDuplicate(payload.event_id)) {
+      return Response.json({ ok: true });
+    }
+
     // Respond 200 immediately — Slack requires a response within 3 seconds.
     // Heavy processing should be offloaded to a background job or queue.
     handleEvent(payload.event).catch((err) => {
@@ -112,16 +143,14 @@ async function handleAppMention(event: SlackEvent): Promise<void> {
 
   let replyText: string;
   if (userText.includes("status")) {
-    replyText =
-      ":white_check_mark: cloudless.gr is *online*. All systems operational.";
+    replyText = ":white_check_mark: cloudless.gr is *online*. All systems operational.";
   } else if (userText.includes("help")) {
     replyText =
       "Available slash commands:\n" +
       "• `/cloudless-status` — app health check\n" +
       "• `/cloudless-orders` — recent store orders";
   } else {
-    replyText =
-      "Hey! I'm the Cloudless bot. Try mentioning me with *status* or *help*.";
+    replyText = "Hey! I'm the Cloudless bot. Try mentioning me with *status* or *help*.";
   }
 
   await fetch("https://slack.com/api/chat.postMessage", {

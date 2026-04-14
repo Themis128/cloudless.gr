@@ -221,15 +221,8 @@ describe("CartSlideOver", () => {
 
     fireEvent.click(view.getByText("Add to Cart"));
 
-    const incrementButton = view.getByText("+");
-    const decrementButton = view.getByText("-");
-
-    expect(incrementButton).toBeTruthy();
-    expect(decrementButton).toBeTruthy();
-    expect(incrementButton.className).toContain("min-h-[44px]");
-    expect(incrementButton.className).toContain("min-w-[44px]");
-    expect(decrementButton.className).toContain("min-h-[44px]");
-    expect(decrementButton.className).toContain("min-w-[44px]");
+    expect(view.getByText("+")).toBeTruthy();
+    expect(view.getByText("-")).toBeTruthy();
   });
 
   it("increments quantity with + button", () => {

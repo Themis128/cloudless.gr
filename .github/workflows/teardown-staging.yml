@@ -1,0 +1,75 @@
+name: Teardown Staging Environment
+
+# Destroy the ephemeral AWS staging stack when a PR is closed (merged or
+# abandoned) so we don't accumulate orphaned CloudFront/Lambda resources.
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+concurrency:
+  group: preview-${{ github.head_ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  teardown:
+    name: Destroy Staging Stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        id: awscreds
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::278585680617:role/GitHubActionsOIDC
+          role-session-name: gha-teardown-${{ github.run_id }}
+          aws-region: us-east-1
+          audience: sts.amazonaws.com
+
+      - name: Skip teardown if OIDC unavailable (fork / external PR)
+        if: steps.awscreds.outcome == 'failure'
+        run: |
+          echo "⚠️  OIDC credentials unavailable (fork PR?). Skipping teardown."
+          echo "If this was an internal PR, check the IAM trust policy allows pull_request sub-claim."
+
+      - name: Destroy staging stack
+        if: steps.awscreds.outcome == 'success'
+        run: pnpm sst remove --stage staging --yes
+        env:
+          # Pass branch name so SST can locate the correct named stage if needed
+          PR_BRANCH: ${{ github.head_ref }}
+
+      - name: Comment on PR
+        if: steps.awscreds.outcome == 'success'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: preview-url
+          message: |
+            ### 🗑️ Staging environment torn down
+            The AWS staging stack for this PR has been removed.

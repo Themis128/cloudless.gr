@@ -23,7 +23,7 @@ vi.mock("@/lib/email", () => ({
 }));
 
 function makeRequest(body: string, signature?: string) {
-  return new NextRequest("http://localhost:4500/api/webhooks/stripe", {
+  return new NextRequest("http://localhost:4000/api/webhooks/stripe", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

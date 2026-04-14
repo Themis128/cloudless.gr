@@ -1,10 +1,6 @@
 name: Stale Issues & PRs
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 8 * * *' # Daily at 08:00 UTC
 

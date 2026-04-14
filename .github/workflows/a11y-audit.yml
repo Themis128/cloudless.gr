@@ -1,14 +1,10 @@
 name: Accessibility Audit
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 on:
   pull_request:
     branches: [main]
     paths:
       - 'src/**'
-      - 'e2e/**'
       - 'public/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -28,9 +24,9 @@ jobs:
       NEXT_PUBLIC_COGNITO_CLIENT_ID: 2qq6i24oc48391cmuv4kfl1rm2
       NEXT_PUBLIC_HUBSPOT_PORTAL_ID: "147639927"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm

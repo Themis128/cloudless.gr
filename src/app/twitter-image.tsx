@@ -16,8 +16,7 @@ export default function TwitterImage() {
         flexDirection: "column",
         justifyContent: "center",
         padding: "60px 80px",
-        background:
-          "linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)",
+        background: "linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)",
         fontFamily: "system-ui, sans-serif",
         position: "relative",
         overflow: "hidden",
@@ -108,8 +107,7 @@ export default function TwitterImage() {
           display: "flex",
         }}
       >
-        Cloud architecture, serverless, analytics & AI marketing for startups
-        and SMBs.
+        Cloud architecture, serverless, analytics & AI marketing for startups and SMBs.
       </div>
 
       {/* Brand */}
@@ -122,14 +120,7 @@ export default function TwitterImage() {
           paddingTop: "40px",
         }}
       >
-        <div
-          style={{
-            fontSize: "28px",
-            fontWeight: 700,
-            color: "#ffffff",
-            display: "flex",
-          }}
-        >
+        <div style={{ fontSize: "28px", fontWeight: 700, color: "#ffffff", display: "flex" }}>
           cloudless.gr
         </div>
       </div>

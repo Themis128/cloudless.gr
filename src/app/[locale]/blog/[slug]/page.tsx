@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
-import { formatDate } from "@/lib/blog";
-import { getBlogPostBySlug, getBlogPosts } from "@/lib/blog-source";
+import { posts as staticPosts, getPostBySlug as getStaticPost, formatDate } from "@/lib/blog";
+import {
+  getPostBySlug as getNotionPost,
+  getPostWithToc,
+  getRelatedPosts,
+  getAllSlugs,
+} from "@/lib/notion-blog";
+import { isConfigured } from "@/lib/integrations";
 import React from "react";
+
+export const revalidate = 300; // ISR: revalidate every 5 minutes
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
 
+/** Render inline markdown: **bold**, `code`, [links](url) */
 function renderInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   const regex = /(\*\*(.+?)\*\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
@@ -56,11 +65,10 @@ function renderInline(text: string): React.ReactNode[] {
   return parts;
 }
 
+/** Render a block of text — handles bullet lists and plain paragraphs */
 function renderBlock(block: string, keyPrefix: number) {
   const lines = block.split("\n");
-  const isList = lines.every(
-    (l) => l.trim().startsWith("- ") || l.trim() === "",
-  );
+  const isList = lines.every((l) => l.trim().startsWith("- ") || l.trim() === "");
 
   if (isList) {
     const items = lines.filter((l) => l.trim().startsWith("- "));
@@ -83,19 +91,55 @@ function renderBlock(block: string, keyPrefix: number) {
   );
 }
 
-export const revalidate = 300;
-export const dynamicParams = true;
+const categoryColors: Record<string, string> = {
+  Cloud: "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20",
+  Serverless: "bg-neon-green/10 text-neon-green border-neon-green/20",
+  Analytics: "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20",
+  "AI Marketing": "bg-neon-blue/10 text-neon-blue border-neon-blue/20",
+  DevOps: "bg-neon-green/10 text-neon-green border-neon-green/20",
+  Security: "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20",
+  Architecture: "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20",
+};
 
 export async function generateStaticParams() {
-  const posts = await getBlogPosts();
-  return posts.flatMap((post) =>
-    ["en", "el", "fr"].map((locale) => ({ locale, slug: post.slug })),
+  const useNotion = isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+  const notionSlugs = useNotion ? await getAllSlugs() : [];
+
+  // Combine Notion slugs with static slugs (deduplicated)
+  const allSlugs = new Set([
+    ...notionSlugs,
+    ...staticPosts.map((p) => p.slug),
+  ]);
+
+  return Array.from(allSlugs).flatMap((slug) =>
+    ["en", "el", "fr"].map((locale) => ({ locale, slug })),
   );
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getBlogPostBySlug(slug);
+  const useNotion = isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+
+  // Try Notion first
+  if (useNotion) {
+    const post = await getNotionPost(slug);
+    if (post) {
+      return {
+        title: post.seoTitle || post.title,
+        description: post.seoDescription || post.excerpt,
+        openGraph: {
+          title: post.title,
+          description: post.excerpt,
+          type: "article",
+          publishedTime: post.date,
+          ...(post.coverImage ? { images: [{ url: post.coverImage }] } : {}),
+        },
+      };
+    }
+  }
+
+  // Fall back to static
+  const post = getStaticPost(slug);
   if (!post) return {};
 
   return {
@@ -112,15 +156,184 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
-  const post = await getBlogPostBySlug(slug);
+  const useNotion = isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+
+  // Try Notion first — use getPostWithToc for TOC support
+  if (useNotion) {
+    const notionPost = await getPostWithToc(slug);
+    if (notionPost) {
+      // Fetch related posts
+      const related = await getRelatedPosts(notionPost, 3);
+
+      return (
+        <>
+          {/* Header */}
+          <section className="bg-void scanlines relative py-16 text-white md:py-20">
+            <div className="cyber-grid absolute inset-0 opacity-30" />
+            <div className="relative z-10 mx-auto max-w-3xl px-6">
+              <Link
+                href="/blog"
+                className="hover:text-neon-cyan mb-6 inline-flex items-center gap-2 font-mono text-sm text-slate-500 transition-colors"
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 7H3M7 3L3 7l4 4" />
+                </svg>
+                Back to Blog
+              </Link>
+              {notionPost.coverImage && (
+                <div className="mb-6 overflow-hidden rounded-xl">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={notionPost.coverImage}
+                    alt={notionPost.title}
+                    className="h-56 w-full object-cover md:h-72"
+                  />
+                </div>
+              )}
+              <div className="mb-4 flex items-center gap-3">
+                <span className="bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 rounded-full border px-3 py-1 font-mono text-[10px] font-medium">
+                  {notionPost.category || "Blog"}
+                </span>
+                {notionPost.readTime && (
+                  <span className="font-mono text-xs text-slate-600">{notionPost.readTime}</span>
+                )}
+              </div>
+              <h1 className="font-heading animate-fade-in-up text-3xl leading-tight font-bold md:text-4xl lg:text-5xl">
+                {notionPost.title}
+              </h1>
+              <div className="animate-fade-in-up mt-4 flex items-center gap-4 delay-100">
+                <time className="font-mono text-sm text-slate-500">
+                  {formatDate(notionPost.date)}
+                </time>
+                {notionPost.author && (
+                  <span className="font-mono text-sm text-slate-500">
+                    by {notionPost.author}
+                  </span>
+                )}
+              </div>
+              {notionPost.tags.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {notionPost.tags.map((tag) => (
+                    <Link
+                      key={tag}
+                      href={`/blog?tag=${encodeURIComponent(tag)}`}
+                      className="rounded border border-slate-700 bg-slate-800/50 px-2.5 py-0.5 font-mono text-[10px] text-slate-500 transition-colors hover:border-neon-cyan/30 hover:text-neon-cyan"
+                    >
+                      {tag}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Article Body with TOC sidebar */}
+          <article className="bg-void py-12 md:py-20">
+            <div className="mx-auto max-w-5xl px-6">
+              <div className="flex gap-10">
+                {/* Main content */}
+                <div className="min-w-0 flex-1">
+                  <div className="mx-auto max-w-3xl">
+                    <div
+                      className="prose-custom notion-content"
+                      dangerouslySetInnerHTML={{ __html: notionPost.html }}
+                    />
+                  </div>
+                </div>
+
+                {/* TOC sidebar */}
+                {notionPost.toc.length > 0 && (
+                  <aside className="hidden w-52 flex-none xl:block">
+                    <div className="sticky top-24">
+                      <p className="mb-3 font-mono text-xs font-medium tracking-widest text-slate-500 uppercase">
+                        On this page
+                      </p>
+                      <ul className="space-y-1 border-l border-slate-800">
+                        {notionPost.toc.map((entry) => (
+                          <li key={entry.blockId}>
+                            <a
+                              href={`#${entry.blockId}`}
+                              className={`block border-l-2 border-transparent py-1 text-sm transition-colors hover:border-neon-cyan/50 hover:text-slate-200 ${
+                                entry.level === 2
+                                  ? "pl-4 text-slate-400"
+                                  : "pl-7 text-slate-500 text-xs"
+                              }`}
+                            >
+                              {entry.text}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </aside>
+                )}
+              </div>
+
+              {/* Related Posts */}
+              {related.length > 0 && (
+                <div className="mx-auto mt-16 max-w-3xl">
+                  <h2 className="font-heading mb-6 text-xl font-bold text-white">Related Posts</h2>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    {related.map((rp) => (
+                      <Link
+                        key={rp.slug}
+                        href={`/blog/${rp.slug}`}
+                        className="group neon-border bg-void-light/50 rounded-lg p-5 transition-all duration-300 hover:-translate-y-0.5"
+                      >
+                        <span
+                          className={`mb-2 inline-block rounded-full border px-2 py-0.5 font-mono text-[9px] ${
+                            categoryColors[rp.category] ??
+                            "border-slate-700 bg-slate-800 text-slate-400"
+                          }`}
+                        >
+                          {rp.category}
+                        </span>
+                        <h3 className="font-heading group-hover:text-neon-cyan text-sm font-semibold text-white transition-colors line-clamp-2">
+                          {rp.title}
+                        </h3>
+                        <p className="mt-1.5 text-xs text-slate-500 line-clamp-2">{rp.excerpt}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Bottom CTA */}
+              <div className="mx-auto mt-12 max-w-3xl">
+                <div className="neon-border bg-void-light/50 rounded-xl p-8 text-center">
+                  <h3 className="font-heading text-xl font-bold text-white">
+                    Need help implementing this?
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-400">
+                    Book a free 30-minute audit and we&apos;ll show you exactly where to start.
+                  </p>
+                  <Link
+                    href="/contact"
+                    className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 mt-4 inline-block rounded-lg border px-8 py-3 font-mono text-sm font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
+                  >
+                    Get a Free Audit
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </article>
+        </>
+      );
+    }
+  }
+
+  // Fall back to static post
+  const post = getStaticPost(slug);
   if (!post) notFound();
 
+  // Simple markdown-ish rendering: split by ## headers
   const sections = post.content.split(/^## /m);
   const intro = sections[0]?.trim();
   const rest = sections.slice(1);
 
   return (
     <>
+      {/* Header */}
       <section className="bg-void scanlines relative py-16 text-white md:py-20">
         <div className="cyber-grid absolute inset-0 opacity-30" />
         <div className="relative z-10 mx-auto max-w-3xl px-6">
@@ -128,13 +341,7 @@ export default async function BlogPostPage({ params }: Props) {
             href="/blog"
             className="hover:text-neon-cyan mb-6 inline-flex items-center gap-2 font-mono text-sm text-slate-500 transition-colors"
           >
-            <svg
-              width="14"
-              height="14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M11 7H3M7 3L3 7l4 4" />
             </svg>
             Back to Blog
@@ -143,9 +350,7 @@ export default async function BlogPostPage({ params }: Props) {
             <span className="bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 rounded-full border px-3 py-1 font-mono text-[10px] font-medium">
               {post.category}
             </span>
-            <span className="font-mono text-xs text-slate-600">
-              {post.readTime}
-            </span>
+            <span className="font-mono text-xs text-slate-600">{post.readTime}</span>
           </div>
           <h1 className="font-heading animate-fade-in-up text-3xl leading-tight font-bold md:text-4xl lg:text-5xl">
             {post.title}
@@ -156,6 +361,7 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
       </section>
 
+      {/* Article Body */}
       <article className="bg-void py-12 md:py-20">
         <div className="mx-auto max-w-3xl px-6">
           <div className="prose-custom">
@@ -182,13 +388,13 @@ export default async function BlogPostPage({ params }: Props) {
             })}
           </div>
 
+          {/* Bottom CTA */}
           <div className="neon-border bg-void-light/50 mt-12 rounded-xl p-8 text-center">
             <h3 className="font-heading text-xl font-bold text-white">
               Need help implementing this?
             </h3>
             <p className="mt-2 text-sm text-slate-400">
-              Book a free 30-minute audit and we&apos;ll show you exactly where
-              to start.
+              Book a free 30-minute audit and we&apos;ll show you exactly where to start.
             </p>
             <Link
               href="/contact"

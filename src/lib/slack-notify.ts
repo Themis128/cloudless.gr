@@ -13,20 +13,10 @@ import { getSlackConfig } from "@/lib/integrations";
 // ---------------------------------------------------------------------------
 
 export type BlockKitBlock =
-  | {
-      type: "section";
-      text: { type: "mrkdwn" | "plain_text"; text: string };
-      accessory?: unknown;
-    }
+  | { type: "section"; text: { type: "mrkdwn" | "plain_text"; text: string }; accessory?: unknown }
   | { type: "divider" }
-  | {
-      type: "header";
-      text: { type: "plain_text"; text: string; emoji?: boolean };
-    }
-  | {
-      type: "context";
-      elements: Array<{ type: "mrkdwn" | "plain_text"; text: string }>;
-    }
+  | { type: "header"; text: { type: "plain_text"; text: string; emoji?: boolean } }
+  | { type: "context"; elements: Array<{ type: "mrkdwn" | "plain_text"; text: string }> }
   | { type: "actions"; elements: Array<Record<string, unknown>> }
   | { type: string; [key: string]: unknown };
 
@@ -60,8 +50,7 @@ export class SlackClient {
     const cfg = getSlackConfig();
     this.token = cfg.SLACK_BOT_TOKEN;
     this.webhookUrl = cfg.SLACK_WEBHOOK_URL;
-    this.defaultChannel =
-      opts?.channel ?? process.env.SLACK_DEFAULT_CHANNEL ?? "#general";
+    this.defaultChannel = opts?.channel ?? process.env.SLACK_DEFAULT_CHANNEL ?? "#general";
   }
 
   /** Send a Block Kit message with retry/backoff. Returns true on success. */
@@ -73,11 +62,14 @@ export class SlackClient {
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
-        const success = this.token
+        // postViaApi returns: true = success, false = ratelimited (retry), null = terminal error
+        const result = this.token
           ? await this.postViaApi({ channel: this.defaultChannel, ...payload })
           : await this.postViaWebhook(payload);
 
-        if (success) return true;
+        if (result === true) return true;
+        if (result === null) return false; // terminal error — don't retry
+        // result === false → ratelimited or transient failure, fall through to backoff
       } catch (err) {
         const isLastAttempt = attempt === MAX_RETRIES - 1;
         if (isLastAttempt) {
@@ -93,7 +85,13 @@ export class SlackClient {
     return false;
   }
 
-  private async postViaApi(payload: PostMessagePayload): Promise<boolean> {
+  /**
+   * Returns:
+   *   true  — message sent successfully
+   *   false — rate-limited (caller should back off and retry)
+   *   null  — terminal API error (wrong token, channel_not_found, etc.) — don't retry
+   */
+  private async postViaApi(payload: PostMessagePayload): Promise<boolean | null> {
     const res = await fetch(CHAT_POST_URL, {
       method: "POST",
       headers: {
@@ -107,11 +105,12 @@ export class SlackClient {
 
     if (!data.ok) {
       console.error(`[Slack] chat.postMessage error: ${data.error}`);
-      // rate_limited is retryable; everything else is not
-      if (data.error !== "ratelimited") return true; // surface as success to stop retry
+      // ratelimited → retryable (return false so caller backs off)
+      // any other error is terminal (wrong token, channel_not_found, etc.) → return null
+      return data.error === "ratelimited" ? false : null;
     }
 
-    return data.ok;
+    return true;
   }
 
   private async postViaWebhook(payload: PostMessagePayload): Promise<boolean> {
@@ -143,10 +142,7 @@ function sectionBlock(text: string): BlockKitBlock {
 }
 
 function contextBlock(...items: string[]): BlockKitBlock {
-  return {
-    type: "context",
-    elements: items.map((t) => ({ type: "mrkdwn", text: t })),
-  };
+  return { type: "context", elements: items.map((t) => ({ type: "mrkdwn", text: t })) };
 }
 
 const divider: BlockKitBlock = { type: "divider" };
@@ -166,10 +162,7 @@ export async function slackSubscriberNotify(email: string): Promise<void> {
     blocks: [
       headerBlock("New Newsletter Subscriber"),
       sectionBlock(`*Email:* \`${email}\``),
-      contextBlock(
-        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
-        "cloudless.gr subscribe form",
-      ),
+      contextBlock(`<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`, "cloudless.gr subscribe form"),
       divider,
     ],
     icon_emoji: ":envelope:",
@@ -197,9 +190,7 @@ export async function slackErrorNotify(opts: {
       headerBlock("Application Error"),
       sectionBlock(`*${opts.title}*\n${opts.message}`),
       ...(opts.route ? [sectionBlock(`*Route:* \`${opts.route}\``)] : []),
-      ...(errText
-        ? [sectionBlock(`*Details:*\n\`\`\`${errText.slice(0, 2000)}\`\`\``)]
-        : []),
+      ...(errText ? [sectionBlock(`*Details:*\n\`\`\`${errText.slice(0, 2000)}\`\`\``)] : []),
       contextBlock(
         `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
         "cloudless.gr",
@@ -222,18 +213,10 @@ export async function slackDeployNotify(opts: {
   status: "started" | "succeeded" | "failed";
 }): Promise<void> {
   const statusEmoji =
-    opts.status === "succeeded"
-      ? ":white_check_mark:"
-      : opts.status === "failed"
-        ? ":x:"
-        : ":rocket:";
+    opts.status === "succeeded" ? ":white_check_mark:" : opts.status === "failed" ? ":x:" : ":rocket:";
 
   const statusLabel =
-    opts.status === "succeeded"
-      ? "Deploy succeeded"
-      : opts.status === "failed"
-        ? "Deploy failed"
-        : "Deploy started";
+    opts.status === "succeeded" ? "Deploy succeeded" : opts.status === "failed" ? "Deploy failed" : "Deploy started";
 
   await client.post({
     text: `${statusLabel} — v${opts.version} (${opts.stage})`,
@@ -260,6 +243,7 @@ export async function slackDeployNotify(opts: {
   });
 }
 
+
 // ---------------------------------------------------------------------------
 // Legacy API — kept for backward compatibility with existing routes
 // ---------------------------------------------------------------------------
@@ -274,10 +258,7 @@ interface SlackMessage {
  * @deprecated Use SlackClient.post() for new code.
  */
 export async function slackNotify(message: SlackMessage): Promise<boolean> {
-  return client.post({
-    text: message.text,
-    blocks: message.blocks as BlockKitBlock[],
-  });
+  return client.post({ text: message.text, blocks: message.blocks as BlockKitBlock[] });
 }
 
 /** Pre-formatted notification for new contact form submissions */
@@ -294,15 +275,12 @@ export async function slackContactNotify(data: {
       headerBlock("\ud83d\udce8 New Contact Form Submission"),
       {
         type: "section",
-        text: {
-          type: "mrkdwn",
-          text: [
-            `*Name:* ${data.name}`,
-            `*Email:* ${data.email}`,
-            `*Company:* ${data.company || "\u2014"}`,
-            `*Service:* ${data.service || "\u2014"}`,
-          ].join("\n"),
-        },
+        text: { type: "mrkdwn", text: [
+          `*Name:* ${data.name}`,
+          `*Email:* ${data.email}`,
+          `*Company:* ${data.company || "\u2014"}`,
+          `*Service:* ${data.service || "\u2014"}`,
+        ].join("\n") },
       },
       divider,
       sectionBlock(`*Message:*\n${data.message.slice(0, 2000)}`),
@@ -328,14 +306,11 @@ export async function slackOrderNotify(data: {
       headerBlock("\ud83d\udcb0 New Order"),
       {
         type: "section",
-        text: {
-          type: "mrkdwn",
-          text: [
-            `*Customer:* ${data.email}`,
-            `*Amount:* ${data.amount}`,
-            `*Session:* \`${data.sessionId.slice(0, 20)}...\``,
-          ].join("\n"),
-        },
+        text: { type: "mrkdwn", text: [
+          `*Customer:* ${data.email}`,
+          `*Amount:* ${data.amount}`,
+          `*Session:* \`${data.sessionId.slice(0, 20)}...\``,
+        ].join("\n") },
       },
       contextBlock(
         `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,

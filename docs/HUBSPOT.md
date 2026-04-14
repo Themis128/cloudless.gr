@@ -2,7 +2,7 @@
 
 cloudless.gr integrates with HubSpot CRM to automatically capture leads from the contact form and provide contact management, search, and ticket creation capabilities.
 
-> **Status:** Optional integration — degrades gracefully when no HubSpot token is configured (`HUBSPOT_API_KEY`, `HUBSPOT_ACCESS_TOKEN`, or `HUBSPOT_PRIVATE_APP_TOKEN`). The contact form continues to work (email + Slack) even without HubSpot.
+> **Status:** Optional integration — degrades gracefully when `HUBSPOT_API_KEY` is not configured. The contact form continues to work (email + Slack) even without HubSpot.
 
 ---
 
@@ -70,9 +70,6 @@ sequenceDiagram
 
 ```bash
 HUBSPOT_API_KEY=pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-# optional aliases supported by the app
-# HUBSPOT_ACCESS_TOKEN=pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-# HUBSPOT_PRIVATE_APP_TOKEN=pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
 ### Production (AWS SSM Parameter Store)
@@ -258,9 +255,6 @@ To create these in HubSpot:
 ```bash
 # .env.local
 HUBSPOT_API_KEY=pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-# optional aliases supported by the app
-# HUBSPOT_ACCESS_TOKEN=pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-# HUBSPOT_PRIVATE_APP_TOKEN=pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
 **Production (AWS):**
@@ -322,7 +316,7 @@ curl -X POST http://localhost:4000/api/contact \
 | File | Purpose |
 |------|---------|
 | `src/lib/hubspot.ts` | All HubSpot API operations — upsertContact, listContacts, createTicket, searchContacts |
-| `src/lib/integrations.ts` | Config loader — reads `HUBSPOT_API_KEY`, `HUBSPOT_ACCESS_TOKEN`, and `HUBSPOT_PRIVATE_APP_TOKEN` from env |
+| `src/lib/integrations.ts` | Config loader — reads `HUBSPOT_API_KEY` from env, provides `isConfigured()` |
 | `src/lib/ssm-config.ts` | SSM Parameter Store fallback for production token resolution |
 | `src/app/api/contact/route.ts` | Contact form handler — calls `upsertContact()` as fire-and-forget |
 | `__tests__/contact-api.test.ts` | Contact route unit tests (indirect HubSpot coverage) |

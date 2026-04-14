@@ -9,10 +9,13 @@ export interface IntegrationConfig {
   SLACK_BOT_TOKEN?: string;
   SLACK_SIGNING_SECRET?: string;
   HUBSPOT_API_KEY?: string;
-  HUBSPOT_ACCESS_TOKEN?: string;
-  HUBSPOT_PRIVATE_APP_TOKEN?: string;
   NOTION_API_KEY?: string;
   NOTION_BLOG_DB_ID?: string;
+  NOTION_SUBMISSIONS_DB_ID?: string;
+  NOTION_DOCS_DB_ID?: string;
+  NOTION_PROJECTS_DB_ID?: string;
+  NOTION_TASKS_DB_ID?: string;
+  NOTION_ANALYTICS_DB_ID?: string;
   GOOGLE_CLIENT_EMAIL?: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
   GOOGLE_PRIVATE_KEY?: string;
@@ -22,6 +25,7 @@ export interface IntegrationConfig {
   SENTRY_AUTH_TOKEN?: string;
   SENTRY_ORG?: string;
   SENTRY_PROJECT?: string;
+  NOTION_WEBHOOK_SECRET?: string;
 }
 
 let cached: IntegrationConfig | null = null;
@@ -34,14 +38,15 @@ export function getIntegrations(): IntegrationConfig {
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN,
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET,
     HUBSPOT_API_KEY: process.env.HUBSPOT_API_KEY,
-    HUBSPOT_ACCESS_TOKEN: process.env.HUBSPOT_ACCESS_TOKEN,
-    HUBSPOT_PRIVATE_APP_TOKEN: process.env.HUBSPOT_PRIVATE_APP_TOKEN,
     NOTION_API_KEY: process.env.NOTION_API_KEY,
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID,
+    NOTION_SUBMISSIONS_DB_ID: process.env.NOTION_SUBMISSIONS_DB_ID,
+    NOTION_DOCS_DB_ID: process.env.NOTION_DOCS_DB_ID,
+    NOTION_PROJECTS_DB_ID: process.env.NOTION_PROJECTS_DB_ID,
+    NOTION_TASKS_DB_ID: process.env.NOTION_TASKS_DB_ID,
+    NOTION_ANALYTICS_DB_ID: process.env.NOTION_ANALYTICS_DB_ID,
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
-    GOOGLE_SERVICE_ACCOUNT_EMAIL:
-      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-      process.env.GOOGLE_CLIENT_EMAIL,
+    GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL,
     GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID,
     AHREFS_API_KEY: process.env.AHREFS_API_KEY,
@@ -49,13 +54,16 @@ export function getIntegrations(): IntegrationConfig {
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
     SENTRY_ORG: process.env.SENTRY_ORG ?? "cloudless",
     SENTRY_PROJECT: process.env.SENTRY_PROJECT ?? "cloudless-gr",
+    NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET,
   };
 
   return cached;
 }
 
 /** Check if a specific integration is configured */
-export function isConfigured(...keys: (keyof IntegrationConfig)[]): boolean {
+export function isConfigured(
+  ...keys: (keyof IntegrationConfig)[]
+): boolean {
   const config = getIntegrations();
   return keys.every((k) => Boolean(config[k]));
 }
@@ -91,11 +99,7 @@ export function getSlackConfig(): SlackConfig {
     );
   }
 
-  cachedSlack = {
-    SLACK_BOT_TOKEN: token,
-    SLACK_SIGNING_SECRET: signingSecret,
-    SLACK_WEBHOOK_URL: webhookUrl,
-  };
+  cachedSlack = { SLACK_BOT_TOKEN: token, SLACK_SIGNING_SECRET: signingSecret, SLACK_WEBHOOK_URL: webhookUrl };
   return cachedSlack;
 }
 
@@ -103,9 +107,4 @@ export function getSlackConfig(): SlackConfig {
 export function resetSlackConfigCache(): void {
   cachedSlack = null;
   cached = null;
-}
-
-export function resetIntegrationCache(): void {
-  cached = null;
-  cachedSlack = null;
 }

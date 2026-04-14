@@ -1,0 +1,136 @@
+name: Notion Schema Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/lib/notion-blog.ts"
+      - "src/lib/notion-forms.ts"
+      - "src/lib/notion-docs.ts"
+      - "src/lib/notion.ts"
+  workflow_dispatch:
+
+env:
+  NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+  NOTION_BLOG_DB_ID: ${{ secrets.NOTION_BLOG_DB_ID }}
+  NOTION_SUBMISSIONS_DB_ID: ${{ secrets.NOTION_SUBMISSIONS_DB_ID }}
+  NOTION_DOCS_DB_ID: ${{ secrets.NOTION_DOCS_DB_ID }}
+
+jobs:
+  validate:
+    name: Validate Notion DB schemas
+    runs-on: ubuntu-latest
+    if: ${{ env.NOTION_API_KEY != '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Blog DB schema
+        if: ${{ env.NOTION_BLOG_DB_ID != '' }}
+        run: |
+          echo "### Blog Database" >> "$GITHUB_STEP_SUMMARY"
+          RESPONSE=$(curl -sS "https://api.notion.com/v1/databases/${NOTION_BLOG_DB_ID}" \
+            -H "Authorization: Bearer ${NOTION_API_KEY}" \
+            -H "Notion-Version: 2022-06-28")
+
+          STATUS=$(echo "$RESPONSE" | jq -r '.object // "error"')
+          if [ "$STATUS" = "error" ]; then
+            echo "❌ Failed to reach Blog DB: $(echo "$RESPONSE" | jq -r '.message')" >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Blog DB unreachable"
+            exit 1
+          fi
+
+          # Check required columns
+          REQUIRED='["Title","Slug","Date","Published","Excerpt","Author","Tags"]'
+          ACTUAL=$(echo "$RESPONSE" | jq -r '[.properties | keys[]]')
+          MISSING=$(echo "$REQUIRED" | jq -r --argjson actual "$ACTUAL" '[.[] | select(. as $k | $actual | index($k) | not)]')
+          COUNT=$(echo "$MISSING" | jq 'length')
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "⚠️ Missing columns: $(echo "$MISSING" | jq -r 'join(", ")')" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Blog DB missing columns: $(echo "$MISSING" | jq -r 'join(", ")')"
+          else
+            echo "✅ All required columns present" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Validate Submissions DB schema
+        if: ${{ env.NOTION_SUBMISSIONS_DB_ID != '' }}
+        run: |
+          echo "### Submissions Database" >> "$GITHUB_STEP_SUMMARY"
+          RESPONSE=$(curl -sS "https://api.notion.com/v1/databases/${NOTION_SUBMISSIONS_DB_ID}" \
+            -H "Authorization: Bearer ${NOTION_API_KEY}" \
+            -H "Notion-Version: 2022-06-28")
+
+          STATUS=$(echo "$RESPONSE" | jq -r '.object // "error"')
+          if [ "$STATUS" = "error" ]; then
+            echo "❌ Failed to reach Submissions DB: $(echo "$RESPONSE" | jq -r '.message')" >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Submissions DB unreachable"
+            exit 1
+          fi
+
+          REQUIRED='["Name","Email","Company","Service","Message","Status","Source","Submitted At"]'
+          ACTUAL=$(echo "$RESPONSE" | jq -r '[.properties | keys[]]')
+          MISSING=$(echo "$REQUIRED" | jq -r --argjson actual "$ACTUAL" '[.[] | select(. as $k | $actual | index($k) | not)]')
+          COUNT=$(echo "$MISSING" | jq 'length')
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "⚠️ Missing columns: $(echo "$MISSING" | jq -r 'join(", ")')" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Submissions DB missing columns: $(echo "$MISSING" | jq -r 'join(", ")')"
+          else
+            echo "✅ All required columns present" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # Check Status select options
+          EXPECTED_STATUSES='["New","In Review","Done"]'
+          ACTUAL_STATUSES=$(echo "$RESPONSE" | jq '[.properties.Status.select.options[]?.name]')
+          MISSING_STATUSES=$(echo "$EXPECTED_STATUSES" | jq -r --argjson actual "$ACTUAL_STATUSES" '[.[] | select(. as $k | $actual | index($k) | not)]')
+
+          if [ "$(echo "$MISSING_STATUSES" | jq 'length')" -gt 0 ]; then
+            echo "⚠️ Missing Status options: $(echo "$MISSING_STATUSES" | jq -r 'join(", ")')" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "✅ Status select options valid" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Validate Docs DB schema
+        if: ${{ env.NOTION_DOCS_DB_ID != '' }}
+        run: |
+          echo "### Docs Database" >> "$GITHUB_STEP_SUMMARY"
+          RESPONSE=$(curl -sS "https://api.notion.com/v1/databases/${NOTION_DOCS_DB_ID}" \
+            -H "Authorization: Bearer ${NOTION_API_KEY}" \
+            -H "Notion-Version: 2022-06-28")
+
+          STATUS=$(echo "$RESPONSE" | jq -r '.object // "error"')
+          if [ "$STATUS" = "error" ]; then
+            echo "❌ Failed to reach Docs DB: $(echo "$RESPONSE" | jq -r '.message')" >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Docs DB unreachable"
+            exit 1
+          fi
+
+          REQUIRED='["Title","Slug","Category","Description","Published","Order"]'
+          ACTUAL=$(echo "$RESPONSE" | jq -r '[.properties | keys[]]')
+          MISSING=$(echo "$REQUIRED" | jq -r --argjson actual "$ACTUAL" '[.[] | select(. as $k | $actual | index($k) | not)]')
+          COUNT=$(echo "$MISSING" | jq 'length')
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "⚠️ Missing columns: $(echo "$MISSING" | jq -r 'join(", ")')" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Docs DB missing columns: $(echo "$MISSING" | jq -r 'join(", ")')"
+          else
+            echo "✅ All required columns present" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # Check Category select options
+          EXPECTED_CATS='["Getting Started","Integrations","API Reference","Guides","General"]'
+          ACTUAL_CATS=$(echo "$RESPONSE" | jq '[.properties.Category.select.options[]?.name]')
+          MISSING_CATS=$(echo "$EXPECTED_CATS" | jq -r --argjson actual "$ACTUAL_CATS" '[.[] | select(. as $k | $actual | index($k) | not)]')
+
+          if [ "$(echo "$MISSING_CATS" | jq 'length')" -gt 0 ]; then
+            echo "⚠️ Missing Category options: $(echo "$MISSING_CATS" | jq -r 'join(", ")')" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "✅ Category select options valid" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Final summary
+        run: |
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "---" >> "$GITHUB_STEP_SUMMARY"
+          echo "Schema check completed at $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_STEP_SUMMARY"

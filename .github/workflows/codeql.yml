@@ -25,9 +25,6 @@ permissions:
 
 jobs:
   analyze:
-    # Set repository variable CODEQL_ENABLED=true after enabling
-    # Settings -> Security -> Code security and analysis -> Code scanning.
-    if: ${{ vars.CODEQL_ENABLED == 'true' }}
     name: Analyze
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -38,7 +35,7 @@ jobs:
         language: ['javascript-typescript']
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -50,6 +47,9 @@ jobs:
         uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
+        # Requires "Code scanning" enabled in repo Settings → Security → Code security.
+        # If disabled, this step will fail loudly — which is intentional: silent passes
+        # masked real issues when continue-on-error was true.
         uses: github/codeql-action/analyze@v4
         with:
           category: '/language:${{ matrix.language }}'

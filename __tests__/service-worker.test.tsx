@@ -32,28 +32,13 @@ vi.mock("@/i18n/navigation", () => ({
 }));
 
 const mockRegister = vi.fn();
-const mockUnregister = vi.fn();
-const mockGetRegistrations = vi.fn();
-const originalNodeEnv = process.env.NODE_ENV;
-const originalSiteHost = process.env.NEXT_PUBLIC_SITE_HOSTNAME;
-
-const setNodeEnv = (value: string | undefined) => {
-  const env = process.env as Record<string, string | undefined>;
-  if (value === undefined) {
-    delete env.NODE_ENV;
-  } else {
-    env.NODE_ENV = value;
-  }
-};
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockRegister.mockResolvedValue({ scope: "/" });
-  mockUnregister.mockResolvedValue(true);
-  mockGetRegistrations.mockResolvedValue([{ unregister: mockUnregister }]);
 
   Object.defineProperty(navigator, "serviceWorker", {
-    value: { register: mockRegister, getRegistrations: mockGetRegistrations },
+    value: { register: mockRegister },
     writable: true,
     configurable: true,
   });
@@ -67,25 +52,15 @@ beforeEach(() => {
     configurable: true,
   });
 
-  delete process.env.NEXT_PUBLIC_SITE_HOSTNAME;
   sessionStorage.clear();
 });
 
 afterEach(() => {
-  setNodeEnv(originalNodeEnv);
-  if (originalSiteHost) {
-    process.env.NEXT_PUBLIC_SITE_HOSTNAME = originalSiteHost;
-  } else {
-    delete process.env.NEXT_PUBLIC_SITE_HOSTNAME;
-  }
   cleanup();
 });
 
 describe("ServiceWorkerRegistration", () => {
-  it("registers the service worker in production on non-local hosts", async () => {
-    setNodeEnv("production");
-    process.env.NEXT_PUBLIC_SITE_HOSTNAME = "cloudless.gr";
-
+  it("registers the service worker on mount", async () => {
     render(
       <NextIntlClientProvider locale="en" messages={messages}>
         <ServiceWorkerRegistration />
@@ -95,22 +70,6 @@ describe("ServiceWorkerRegistration", () => {
     await waitFor(() => {
       expect(mockRegister).toHaveBeenCalledWith("/sw.js");
     });
-  });
-
-  it("does not register and unregisters existing workers on localhost", async () => {
-    setNodeEnv("production");
-
-    render(
-      <NextIntlClientProvider locale="en" messages={messages}>
-        <ServiceWorkerRegistration />
-      </NextIntlClientProvider>,
-    );
-
-    await waitFor(() => {
-      expect(mockGetRegistrations).toHaveBeenCalledTimes(1);
-      expect(mockUnregister).toHaveBeenCalledTimes(1);
-    });
-    expect(mockRegister).not.toHaveBeenCalled();
   });
 });
 

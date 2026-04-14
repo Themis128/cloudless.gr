@@ -13,11 +13,7 @@ const sidebarLinks = [
   { href: "/dashboard/settings", label: "Settings", icon: "⚙" },
 ];
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -58,8 +54,7 @@ export default function DashboardLayout({
                 {sidebarLinks.map((link) => {
                   const isActive =
                     link.href === "/dashboard"
-                      ? pathname === "/dashboard" ||
-                        pathname?.match(/^\/[a-z]{2}\/dashboard$/)
+                      ? pathname === "/dashboard" || pathname?.match(/^\/[a-z]{2}\/dashboard$/)
                       : pathname?.includes(link.href);
                   return (
                     <Link

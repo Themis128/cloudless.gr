@@ -62,9 +62,7 @@ export default function PushNotificationPrompt() {
   return (
     <div className="animate-fade-in-up fixed right-4 bottom-4 z-50 max-w-xs md:right-6">
       <div className="border-neon-cyan/20 bg-void/95 rounded-lg border p-4 shadow-[0_0_15px_rgba(0,255,245,0.08)] backdrop-blur-xl">
-        <p className="font-mono text-sm font-semibold text-white">
-          🔔 Stay updated
-        </p>
+        <p className="font-mono text-sm font-semibold text-white">🔔 Stay updated</p>
         <p className="mt-1 text-xs text-slate-400">
           Get notified about new cloud tips and special offers.
         </p>

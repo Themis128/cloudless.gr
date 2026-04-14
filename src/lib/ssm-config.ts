@@ -15,15 +15,17 @@ interface AppConfig {
   COGNITO_CLIENT_ID: string;
   // Optional integrations
   SLACK_WEBHOOK_URL: string;
+  SLACK_BOT_TOKEN: string;
+  SLACK_SIGNING_SECRET: string;
   HUBSPOT_API_KEY: string;
-  HUBSPOT_ACCESS_TOKEN: string;
-  HUBSPOT_PRIVATE_APP_TOKEN: string;
   NOTION_API_KEY: string;
   NOTION_BLOG_DB_ID: string;
+  NOTION_WEBHOOK_SECRET: string;
   GOOGLE_CLIENT_EMAIL: string;
   GOOGLE_PRIVATE_KEY: string;
   GOOGLE_CALENDAR_ID: string;
-  AHREFS_API_KEY: string;
+  /** GSC domain property, e.g. "sc-domain:cloudless.gr" */
+  GSC_SITE_URL: string;
 }
 
 let cached: AppConfig | null = null;
@@ -84,18 +86,16 @@ export async function getConfig(): Promise<AppConfig> {
     COGNITO_USER_POOL_ID: params.get("COGNITO_USER_POOL_ID") ?? "",
     COGNITO_CLIENT_ID: params.get("COGNITO_CLIENT_ID") ?? "",
     SLACK_WEBHOOK_URL: params.get("SLACK_WEBHOOK_URL") ?? "",
+    SLACK_BOT_TOKEN: params.get("SLACK_BOT_TOKEN") ?? "",
+    SLACK_SIGNING_SECRET: params.get("SLACK_SIGNING_SECRET") ?? "",
     HUBSPOT_API_KEY: params.get("HUBSPOT_API_KEY") ?? "",
-    HUBSPOT_ACCESS_TOKEN: params.get("HUBSPOT_ACCESS_TOKEN") ?? "",
-    HUBSPOT_PRIVATE_APP_TOKEN: params.get("HUBSPOT_PRIVATE_APP_TOKEN") ?? "",
     NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
     NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
+    NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
     GOOGLE_CLIENT_EMAIL: params.get("GOOGLE_CLIENT_EMAIL") ?? "",
-    GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replace(
-      /\\n/g,
-      "\n",
-    ),
+    GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n"),
     GOOGLE_CALENDAR_ID: params.get("GOOGLE_CALENDAR_ID") ?? "",
-    AHREFS_API_KEY: params.get("AHREFS_API_KEY") ?? "",
+    GSC_SITE_URL: params.get("GSC_SITE_URL") ?? "sc-domain:cloudless.gr",
   };
   cachedAt = Date.now();
 

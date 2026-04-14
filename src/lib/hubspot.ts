@@ -13,46 +13,19 @@ interface HubSpotContact {
   lead_source?: string;
 }
 
-function getHubSpotTokenFromEnv(): string | null {
-  return (
-    process.env.HUBSPOT_PRIVATE_APP_TOKEN ||
-    process.env.HUBSPOT_ACCESS_TOKEN ||
-    process.env.HUBSPOT_API_KEY ||
-    null
-  );
-}
-
-async function getHubSpotTokenFromSsm(): Promise<string | null> {
-  const config = await getConfig();
-  return (
-    config.HUBSPOT_PRIVATE_APP_TOKEN ||
-    config.HUBSPOT_ACCESS_TOKEN ||
-    config.HUBSPOT_API_KEY ||
-    null
-  );
-}
-
 /**
  * Resolve HubSpot token: try process.env first, fall back to SSM.
- * In Lambda, env vars may not be populated for HubSpot credentials.
+ * In Lambda, env vars aren't set for HUBSPOT_API_KEY — SSM is the source of truth.
  */
 async function getHubSpotToken(): Promise<string> {
-  const envToken = getHubSpotTokenFromEnv();
+  const envToken = getIntegrations().HUBSPOT_API_KEY;
   if (envToken) return envToken;
 
-  const ssmToken = await getHubSpotTokenFromSsm();
+  const config = await getConfig();
+  const ssmToken = config.HUBSPOT_API_KEY;
   if (ssmToken) return ssmToken;
 
   throw new Error("HubSpot not configured (no token in env or SSM)");
-}
-
-export async function isHubSpotConfigured(): Promise<boolean> {
-  try {
-    await getHubSpotToken();
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 async function hubspotFetch(
@@ -79,11 +52,14 @@ async function hubspotFetch(
 export async function upsertContact(
   contact: HubSpotContact,
 ): Promise<string | null> {
+  let token: string;
   try {
-    await getHubSpotToken();
+    token = await getHubSpotToken();
   } catch {
     return null;
   }
+  // token is resolved — proceed (hubspotFetch will also resolve it, but it's cached in SSM)
+  void token;
 
   try {
     const createRes = await hubspotFetch("/crm/v3/objects/contacts", {
@@ -156,13 +132,9 @@ export async function upsertContact(
 
 /** List recent contacts */
 export async function listContacts(limit = 10): Promise<unknown[]> {
-  const safeLimit = Number.isFinite(limit)
-    ? Math.min(Math.max(Math.trunc(limit), 1), 100)
-    : 10;
-
   try {
     const res = await hubspotFetch(
-      `/crm/v3/objects/contacts?limit=${safeLimit}&properties=email,firstname,lastname,company,createdate,hs_lead_status`,
+      `/crm/v3/objects/contacts?limit=${limit}&properties=email,firstname,lastname,company,createdate,hs_lead_status`,
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -190,11 +162,13 @@ export async function createTicket(
   data: TicketData,
   contactId?: string,
 ): Promise<{ id: string } | null> {
+  let token: string;
   try {
-    await getHubSpotToken();
+    token = await getHubSpotToken();
   } catch {
     return null;
   }
+  void token;
 
   const properties: Record<string, string> = {
     subject: data.subject,
@@ -232,6 +206,85 @@ export async function createTicket(
 
   const ticket = await res.json();
   return { id: ticket.id };
+}
+
+/* ─── CRM list helpers (admin dashboard) ─────────────────────────────────── */
+
+/**
+ * List available pipelines for a given CRM object type.
+ *
+ * @param objectType - HubSpot object type (default: "deals")
+ * @returns Array of pipeline objects, or [] on error.
+ */
+export async function getPipelines(objectType = "deals"): Promise<unknown[]> {
+  try {
+    const res = await hubspotFetch(`/crm/v3/pipelines/${objectType}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * List CRM companies.
+ *
+ * @param limit - Max records to return (1–100, default 20).
+ * @returns Array of company objects, or [] on error.
+ */
+export async function listCompanies(limit = 20): Promise<unknown[]> {
+  const safeLimit = Number.isFinite(limit)
+    ? Math.min(Math.max(Math.trunc(limit), 1), 100)
+    : 20;
+  try {
+    const res = await hubspotFetch(
+      `/crm/v3/objects/companies?limit=${safeLimit}&properties=name,domain,city,country,createdate`,
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * List CRM deals.
+ *
+ * @param limit - Max records to return (1–100, default 20).
+ * @returns Array of deal objects, or [] on error.
+ */
+export async function listDeals(limit = 20): Promise<unknown[]> {
+  const safeLimit = Number.isFinite(limit)
+    ? Math.min(Math.max(Math.trunc(limit), 1), 100)
+    : 20;
+  try {
+    const res = await hubspotFetch(
+      `/crm/v3/objects/deals?limit=${safeLimit}&properties=dealname,amount,dealstage,closedate,createdate`,
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * List CRM owners (HubSpot users).
+ *
+ * @returns Array of owner objects, or [] on error.
+ */
+export async function listOwners(): Promise<unknown[]> {
+  try {
+    const res = await hubspotFetch("/crm/v3/owners");
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results ?? [];
+  } catch {
+    return [];
+  }
 }
 
 /**

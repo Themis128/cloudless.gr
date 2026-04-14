@@ -29,10 +29,7 @@ export default async function Home() {
   const services = [
     {
       icon: "01",
-      title: t(
-        "servicesSection.service1Title",
-        "Cloud Architecture & Migration",
-      ),
+      title: t("servicesSection.service1Title", "Cloud Architecture & Migration"),
       description: t(
         "servicesSection.service1Desc",
         "Design and migrate your infrastructure to AWS, GCP, or Azure with zero downtime. Scalable, secure, cost-optimized.",
@@ -172,11 +169,7 @@ export default async function Home() {
 
   return (
     <>
-      <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-        ])}
-      />
+      <JsonLd data={getBreadcrumbSchema([{ name: "Home", url: "https://cloudless.gr" }])} />
       <JsonLd data={getFAQSchema(faqs)} />
 
       {/* Hero */}
@@ -236,16 +229,9 @@ export default async function Home() {
               </div>
               {/* CTA microcopy */}
               <div className="animate-fade-in-up mt-4 flex flex-col gap-6 font-mono text-xs text-slate-500 delay-300 sm:flex-row">
-                <span>
-                  {t(
-                    "hero.microCopy1",
-                    "No commitment. Actionable insights in 30 min.",
-                  )}
-                </span>
+                <span>{t("hero.microCopy1", "No commitment. Actionable insights in 30 min.")}</span>
                 <span className="hidden sm:inline">•</span>
-                <span>
-                  {t("hero.microCopy2", "Transparent pricing. No lock-in.")}
-                </span>
+                <span>{t("hero.microCopy2", "Transparent pricing. No lock-in.")}</span>
               </div>
             </div>
 
@@ -289,12 +275,8 @@ export default async function Home() {
                 <div className="bg-void-light/30 hover:border-neon-cyan/30 flex items-start gap-4 rounded-xl border border-slate-800 p-5 transition-colors">
                   <span className="mt-0.5 text-2xl">{g.icon}</span>
                   <div>
-                    <h3 className="font-mono text-sm font-semibold text-white">
-                      {g.title}
-                    </h3>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                      {g.desc}
-                    </p>
+                    <h3 className="font-mono text-sm font-semibold text-white">{g.title}</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-400">{g.desc}</p>
                   </div>
                 </div>
               </ScrollReveal>
@@ -310,18 +292,13 @@ export default async function Home() {
             <div className="flex flex-col items-center gap-6 md:flex-row md:gap-10">
               {/* Avatar */}
               <div className="bg-neon-cyan/10 border-neon-cyan/20 flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border">
-                <span className="font-heading text-neon-cyan text-xl font-bold">
-                  TB
-                </span>
+                <span className="font-heading text-neon-cyan text-xl font-bold">TB</span>
               </div>
               {/* Copy */}
               <div className="flex-1 text-center md:text-left">
                 <p className="text-sm leading-relaxed text-slate-300">
                   <span className="font-semibold text-white">
-                    {t(
-                      "credibility.builtBy",
-                      "Built by Themistoklis Baltzakis",
-                    )}
+                    {t("credibility.builtBy", "Built by Themistoklis Baltzakis")}
                   </span>{" "}
                   {t(
                     "credibility.bio",
@@ -336,10 +313,7 @@ export default async function Home() {
                     {t("credibility.badgeOss", "Open-Source Contributor")}
                   </span>
                   <span className="bg-neon-magenta/10 border-neon-magenta/20 text-neon-magenta inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px]">
-                    {t(
-                      "credibility.badgeCapacity",
-                      "Now accepting 5 clients for Q2 2026",
-                    )}
+                    {t("credibility.badgeCapacity", "Now accepting 5 clients for Q2 2026")}
                   </span>
                 </div>
               </div>
@@ -350,14 +324,9 @@ export default async function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Credly certifications"
-                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-11 w-11 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
+                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
                 >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-.3 4.8a7.2 7.2 0 110 14.4 7.2 7.2 0 010-14.4zm0 2.4a4.8 4.8 0 100 9.6 4.8 4.8 0 000-9.6zm0 2.4a2.4 2.4 0 110 4.8 2.4 2.4 0 010-4.8z" />
                   </svg>
                 </a>
@@ -366,14 +335,9 @@ export default async function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="GitHub"
-                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-11 w-11 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
+                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
                 >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
                   </svg>
                 </a>
@@ -382,14 +346,9 @@ export default async function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="LinkedIn"
-                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-11 w-11 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
+                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
                 >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                   </svg>
                 </a>
@@ -486,13 +445,7 @@ export default async function Home() {
                 className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta hover:bg-neon-magenta/20 inline-flex items-center gap-2 rounded-lg border px-6 py-2.5 font-mono text-sm font-semibold transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,0,255,0.1)]"
               >
                 {t("leadCapture.playbookCta", "Download the Playbook")}
-                <svg
-                  width="14"
-                  height="14"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M7 1v10M3 8l4 4 4-4" />
                 </svg>
               </Link>
@@ -511,9 +464,7 @@ export default async function Home() {
               </p>
               <h2 className="font-heading text-3xl font-bold text-white md:text-4xl">
                 {t("faq.title", "Common")}{" "}
-                <span className="text-neon-cyan">
-                  {t("faq.titleHighlight", "questions")}
-                </span>
+                <span className="text-neon-cyan">{t("faq.titleHighlight", "questions")}</span>
               </h2>
             </div>
           </ScrollReveal>
@@ -551,9 +502,7 @@ export default async function Home() {
               </p>
               <h2 className="font-heading text-3xl font-bold text-white md:text-4xl">
                 {t("founder.title", "Meet the")}{" "}
-                <span className="text-neon-cyan">
-                  {t("founder.titleHighlight", "founder")}
-                </span>
+                <span className="text-neon-cyan">{t("founder.titleHighlight", "founder")}</span>
               </h2>
             </div>
           </ScrollReveal>
@@ -563,9 +512,7 @@ export default async function Home() {
               <div className="flex flex-col items-center gap-8 md:flex-row md:items-start">
                 {/* Avatar */}
                 <div className="bg-neon-cyan/10 border-neon-cyan/20 flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border">
-                  <span className="font-heading text-neon-cyan text-3xl font-bold">
-                    TB
-                  </span>
+                  <span className="font-heading text-neon-cyan text-3xl font-bold">TB</span>
                 </div>
 
                 {/* Bio */}
@@ -592,12 +539,7 @@ export default async function Home() {
                       aria-label="LinkedIn"
                       className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
                     >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                       </svg>
                     </a>
@@ -608,12 +550,7 @@ export default async function Home() {
                       aria-label="GitHub"
                       className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
                     >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
                       </svg>
                     </a>
@@ -624,12 +561,7 @@ export default async function Home() {
                       aria-label="Credly certifications"
                       className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
                     >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-.3 4.8a7.2 7.2 0 110 14.4 7.2 7.2 0 010-14.4zm0 2.4a4.8 4.8 0 100 9.6 4.8 4.8 0 000-9.6zm0 2.4a2.4 2.4 0 110 4.8 2.4 2.4 0 010-4.8z" />
                       </svg>
                     </a>
