@@ -106,6 +106,7 @@ export function getSlackConfig(): SlackConfig {
 /** Reset the integration cache — useful in tests to pick up env changes */
 export function resetIntegrationCache(): void {
   cached = null;
+  cachedSlack = null;
 }
 
 /** Clears the config cache (useful in tests). */
