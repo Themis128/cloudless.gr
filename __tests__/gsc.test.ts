@@ -33,13 +33,6 @@ vi.mock("jose", () => {
   };
 });
 
-vi.mock("@/lib/ssm-config", () => ({
-  getConfig: vi.fn().mockResolvedValue({
-    GOOGLE_CLIENT_EMAIL: "svc@project.iam.gserviceaccount.com",
-    GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----",
-  }),
-}));
-
 // ── Token response helper ─────────────────────────────────────────────────────
 
 function tokenResponse() {
@@ -129,12 +122,7 @@ describe("getSeoSnapshot", () => {
   });
 
   it("returns null when credentials are missing", async () => {
-    const { getConfig } = await import("@/lib/ssm-config");
-    (getConfig as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      GOOGLE_CLIENT_EMAIL: "",
-      GOOGLE_PRIVATE_KEY: "",
-    });
-
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
     vi.stubGlobal("fetch", vi.fn());  // should not be called
 
     const { getSeoSnapshot } = await import("@/lib/gsc");

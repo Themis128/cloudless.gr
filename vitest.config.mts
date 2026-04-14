@@ -13,8 +13,16 @@ export default defineConfig({
         __dirname,
         "node_modules/.pnpm/jose@5.2.3/node_modules/jose/dist/node/cjs/index.js",
       ),
-      // @aws-sdk/client-cognito-identity-provider — not installed in this workspace;
-      // provide an empty stub (vi.mock() replaces it in tests that need it)
+      // next-intl/middleware (v4) imports next/server via ESM bare specifier,
+      // which Vitest/JSDOM cannot resolve. Tests only need the proxy `config`
+      // export, so we provide a no-op factory stub here.
+      "next-intl/middleware": path.resolve(
+        __dirname,
+        "__tests__/stubs/next-intl-middleware-stub.js",
+      ),
+      // @aws-sdk/client-cognito-identity-provider is not installed; tests that
+      // need it supply their own vi.mock() — the stub prevents Vite's import
+      // analysis from failing when the route file is dynamically imported.
       "@aws-sdk/client-cognito-identity-provider": path.resolve(
         __dirname,
         "__tests__/stubs/aws-cognito-stub.js",
@@ -29,7 +37,7 @@ export default defineConfig({
     },
   },
   define: {
-    "process.env.NODE_ENV": JSON.stringify("development"),
+    // Don't override NODE_ENV — setup.ts relies on it being "test"
   },
   test: {
     environment: "jsdom",
@@ -37,5 +45,6 @@ export default defineConfig({
     maxWorkers: 2,
     include: ["__tests__/**/*.test.{ts,tsx}"],
     reporters: ["default"],
+    setupFiles: ["./__tests__/setup.ts"],
   },
 });

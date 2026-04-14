@@ -1,19 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { resetSsmCache } from "@/lib/ssm-config";
 
 const constructEventMock = vi.fn();
 const getStripeMock = vi.fn();
-const getConfigMock = vi.fn();
 const sendOrderConfirmationMock = vi.fn();
 const sendPaymentFailureNoticeMock = vi.fn();
 const notifyTeamMock = vi.fn();
 
 vi.mock("@/lib/stripe", () => ({
   getStripe: getStripeMock,
-}));
-
-vi.mock("@/lib/ssm-config", () => ({
-  getConfig: getConfigMock,
 }));
 
 vi.mock("@/lib/email", () => ({
@@ -36,8 +32,8 @@ function makeRequest(body: string, signature?: string) {
 describe("POST /api/webhooks/stripe", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetSsmCache();
 
-    getConfigMock.mockResolvedValue({ STRIPE_WEBHOOK_SECRET: "whsec_test" });
     getStripeMock.mockResolvedValue({
       webhooks: {
         constructEvent: constructEventMock,
@@ -58,7 +54,8 @@ describe("POST /api/webhooks/stripe", () => {
   });
 
   it("returns 500 when webhook secret is not configured", async () => {
-    getConfigMock.mockResolvedValueOnce({ STRIPE_WEBHOOK_SECRET: "" });
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
+    resetSsmCache();
 
     const { POST } = await import("@/app/api/webhooks/stripe/route");
     const response = await POST(makeRequest("{}", "sig_1"));

@@ -13,15 +13,6 @@ vi.mock("@/lib/slack-verify", () => ({
   }),
 }));
 
-vi.mock("@/lib/integrations", () => ({
-  getSlackConfig: vi.fn(() => ({
-    SLACK_BOT_TOKEN: "xoxb-test-token",
-    SLACK_SIGNING_SECRET: "test-secret",
-    SLACK_WEBHOOK_URL: "",
-  })),
-  resetSlackConfigCache: vi.fn(),
-}));
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

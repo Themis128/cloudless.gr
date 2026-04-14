@@ -1,12 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resetIntegrationCache } from "@/lib/integrations";
 
-const isConfiguredMock = vi.fn();
 const getPostsMock = vi.fn();
 const getPostBySlugMock = vi.fn();
-
-vi.mock("@/lib/integrations", () => ({
-  isConfigured: isConfiguredMock,
-}));
 
 vi.mock("@/lib/notion-blog", () => ({
   getPosts: getPostsMock,
@@ -29,7 +25,8 @@ describe("Blog API Notion fallbacks", () => {
   });
 
   it("GET /api/blog/posts returns static posts when Notion is not configured", async () => {
-    isConfiguredMock.mockReturnValue(false);
+    vi.stubEnv("NOTION_API_KEY", "");
+    resetIntegrationCache();
     const { GET } = await import("@/app/api/blog/posts/route");
 
     const response = await GET();
@@ -43,7 +40,6 @@ describe("Blog API Notion fallbacks", () => {
   });
 
   it("GET /api/blog/posts returns Notion source metadata when upstream succeeds", async () => {
-    isConfiguredMock.mockReturnValue(true);
     getPostsMock.mockResolvedValueOnce([{ slug: "from-notion" }]);
 
     const { GET } = await import("@/app/api/blog/posts/route");
@@ -58,7 +54,6 @@ describe("Blog API Notion fallbacks", () => {
   });
 
   it("GET /api/blog/posts falls back to static when Notion fetch throws", async () => {
-    isConfiguredMock.mockReturnValue(true);
     getPostsMock.mockRejectedValueOnce(new Error("notion down"));
 
     const { GET } = await import("@/app/api/blog/posts/route");
@@ -73,7 +68,6 @@ describe("Blog API Notion fallbacks", () => {
   });
 
   it("GET /api/blog/[slug] falls back to static when Notion fetch throws", async () => {
-    isConfiguredMock.mockReturnValue(true);
     getPostBySlugMock.mockRejectedValueOnce(new Error("notion timeout"));
 
     const { GET } = await import("@/app/api/blog/[slug]/route");
@@ -89,7 +83,6 @@ describe("Blog API Notion fallbacks", () => {
   });
 
   it("GET /api/blog/[slug] uses static fallback when Notion returns null", async () => {
-    isConfiguredMock.mockReturnValue(true);
     getPostBySlugMock.mockResolvedValueOnce(null);
 
     const { GET } = await import("@/app/api/blog/[slug]/route");

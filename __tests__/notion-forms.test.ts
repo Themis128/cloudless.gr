@@ -2,13 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockNotionFetch = vi.fn();
 
-vi.mock("@/lib/integrations", () => ({
-  getIntegrations: vi.fn().mockReturnValue({
-    NOTION_API_KEY: "secret_test",
-    NOTION_SUBMISSIONS_DB_ID: "submissions-db-123",
-  }),
-}));
-
 vi.mock("@/lib/notion", () => ({
   notionFetch: (...args: unknown[]) => mockNotionFetch(...args),
 }));

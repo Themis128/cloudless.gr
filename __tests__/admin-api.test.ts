@@ -7,6 +7,8 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import { resetIntegrationCache } from "@/lib/integrations";
+import { resetSsmCache } from "@/lib/ssm-config";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -137,15 +139,6 @@ vi.mock("@/lib/gsc", () => ({
   }),
 }));
 
-// SSM config — used by analytics/seo, analytics/keywords, analytics/pages, analytics/history
-const mockGetConfig = vi.fn().mockResolvedValue({
-  GOOGLE_CLIENT_EMAIL: "svc@project.iam.gserviceaccount.com",
-  GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----",
-});
-vi.mock("@/lib/ssm-config", () => ({
-  getConfig: (...args: unknown[]) => mockGetConfig(...args),
-}));
-
 // HubSpot
 vi.mock("@/lib/hubspot", () => ({
   listContacts: vi.fn().mockResolvedValue([
@@ -168,11 +161,6 @@ vi.mock("@/lib/sentry", () => ({
   }),
 }));
 
-// Integration config — default to "all configured"
-const mockIsConfigured = vi.fn().mockReturnValue(true);
-vi.mock("@/lib/integrations", () => ({
-  isConfigured: (...args: string[]) => mockIsConfigured(...args),
-}));
 
 // ---------------------------------------------------------------------------
 // /api/admin/users
@@ -182,7 +170,7 @@ describe("GET /api/admin/users", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules(); // USER_POOL_ID is read at module-load time, so each test needs fresh import
-    mockIsConfigured.mockReturnValue(true);
+    resetIntegrationCache();
     process.env.COGNITO_USER_POOL_ID = "us-east-1_test";
 
     mockCognitoSend.mockImplementation((cmd: { constructor: { name: string } }) => {
@@ -385,14 +373,12 @@ describe("GET /api/admin/orders", () => {
 describe("GET /api/admin/analytics/web", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetConfig.mockResolvedValue({
-      GOOGLE_CLIENT_EMAIL: "svc@project.iam.gserviceaccount.com",
-      GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----",
-    });
+    resetSsmCache();
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce({ GOOGLE_CLIENT_EMAIL: "", GOOGLE_PRIVATE_KEY: "" });
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetSsmCache();
     const { GET } = await import("@/app/api/admin/analytics/web/route");
     const res = await GET();
     expect(res.status).toBe(503);
@@ -416,17 +402,12 @@ describe("GET /api/admin/analytics/web", () => {
 describe("GET /api/admin/analytics/seo", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetConfig.mockResolvedValue({
-      GOOGLE_CLIENT_EMAIL: "svc@project.iam.gserviceaccount.com",
-      GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----",
-    });
+    resetSsmCache();
   });
 
   it("returns 503 when GSC credentials are not configured", async () => {
-    mockGetConfig.mockResolvedValueOnce({
-      GOOGLE_CLIENT_EMAIL: "",
-      GOOGLE_PRIVATE_KEY: "",
-    });
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetSsmCache();
     const { GET } = await import("@/app/api/admin/analytics/seo/route");
     const res = await GET();
     expect(res.status).toBe(503);
@@ -451,7 +432,8 @@ describe("GET /api/admin/analytics/seo", () => {
 describe("GET /api/admin/crm/contacts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsConfigured.mockReturnValue(true);
+    vi.resetModules(); // prevents stale integrations module instance leaking from prior describe
+    resetIntegrationCache();
   });
 
   it("returns 401 without token", async () => {
@@ -463,7 +445,8 @@ describe("GET /api/admin/crm/contacts", () => {
   });
 
   it("returns 503 when HubSpot is not configured", async () => {
-    mockIsConfigured.mockReturnValue(false);
+    vi.stubEnv("HUBSPOT_API_KEY", "");
+    resetIntegrationCache();
     const { GET } = await import("@/app/api/admin/crm/contacts/route");
     const res = await GET(
       adminRequest("http://localhost/api/admin/crm/contacts"),
@@ -491,11 +474,13 @@ describe("GET /api/admin/crm/contacts", () => {
 describe("POST /api/admin/notifications/test", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsConfigured.mockReturnValue(true);
+    vi.resetModules(); // prevents stale integrations module instance leaking from prior describe
+    resetIntegrationCache();
   });
 
   it("returns 503 when Slack is not configured", async () => {
-    mockIsConfigured.mockReturnValue(false);
+    vi.stubEnv("SLACK_WEBHOOK_URL", "");
+    resetIntegrationCache();
     const { POST } = await import("@/app/api/admin/notifications/test/route");
     const res = await POST();
     expect(res.status).toBe(503);
@@ -559,14 +544,12 @@ describe("GET /api/admin/ops/errors", () => {
 describe("GET /api/admin/analytics/keywords", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetConfig.mockResolvedValue({
-      GOOGLE_CLIENT_EMAIL: "svc@project.iam.gserviceaccount.com",
-      GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----",
-    });
+    resetSsmCache();
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce({ GOOGLE_CLIENT_EMAIL: "", GOOGLE_PRIVATE_KEY: "" });
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetSsmCache();
     const { GET } = await import("@/app/api/admin/analytics/keywords/route");
     const res = await GET(new Request("http://localhost/api/admin/analytics/keywords"));
     expect(res.status).toBe(503);
@@ -597,14 +580,12 @@ describe("GET /api/admin/analytics/keywords", () => {
 describe("GET /api/admin/analytics/pages", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetConfig.mockResolvedValue({
-      GOOGLE_CLIENT_EMAIL: "svc@project.iam.gserviceaccount.com",
-      GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----",
-    });
+    resetSsmCache();
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce({ GOOGLE_CLIENT_EMAIL: "", GOOGLE_PRIVATE_KEY: "" });
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetSsmCache();
     const { GET } = await import("@/app/api/admin/analytics/pages/route");
     const res = await GET(new Request("http://localhost/api/admin/analytics/pages"));
     expect(res.status).toBe(503);
@@ -634,14 +615,12 @@ describe("GET /api/admin/analytics/pages", () => {
 describe("GET /api/admin/analytics/history", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetConfig.mockResolvedValue({
-      GOOGLE_CLIENT_EMAIL: "svc@project.iam.gserviceaccount.com",
-      GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----",
-    });
+    resetSsmCache();
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce({ GOOGLE_CLIENT_EMAIL: "", GOOGLE_PRIVATE_KEY: "" });
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetSsmCache();
     const { GET } = await import("@/app/api/admin/analytics/history/route");
     const res = await GET(new Request("http://localhost/api/admin/analytics/history"));
     expect(res.status).toBe(503);

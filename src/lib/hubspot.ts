@@ -315,15 +315,3 @@ export async function searchContacts(
 
   return res.json();
 }
-
-/**
- * Check whether HubSpot is configured (token available in env or SSM).
- */
-export async function isHubSpotConfigured(): Promise<boolean> {
-  try {
-    await getHubSpotToken();
-    return true;
-  } catch {
-    return false;
-  }
-}

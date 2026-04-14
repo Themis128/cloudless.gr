@@ -7,15 +7,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { resetIntegrationCache } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
-
-const mockIsConfigured = vi.fn().mockReturnValue(true);
-vi.mock("@/lib/integrations", () => ({
-  isConfigured: (...args: string[]) => mockIsConfigured(...args),
-}));
 
 const mockGetAvailableSlots = vi.fn();
 vi.mock("@/lib/google-calendar", () => ({
@@ -35,7 +31,7 @@ vi.mock("@/lib/slack-notify", () => ({
 describe("GET /api/calendar/availability", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsConfigured.mockReturnValue(true);
+    resetIntegrationCache();
     mockGetAvailableSlots.mockResolvedValue([
       {
         start: "2026-05-01T10:00:00Z",
@@ -51,7 +47,8 @@ describe("GET /api/calendar/availability", () => {
   });
 
   it("returns 503 when Google Calendar is not configured", async () => {
-    mockIsConfigured.mockReturnValue(false);
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetIntegrationCache();
     const { GET } = await import("@/app/api/calendar/availability/route");
     const res = await GET(
       new Request("http://localhost/api/calendar/availability"),
@@ -126,7 +123,7 @@ function bookRequest(body: object) {
 describe("POST /api/calendar/book", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockIsConfigured.mockReturnValue(true);
+    resetIntegrationCache();
 
     const { bookConsultation } = vi.mocked(
       await vi.importMock<typeof import("@/lib/google-calendar")>(
@@ -140,7 +137,8 @@ describe("POST /api/calendar/book", () => {
   });
 
   it("returns 503 when Google Calendar is not configured", async () => {
-    mockIsConfigured.mockReturnValue(false);
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetIntegrationCache();
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
       bookRequest({

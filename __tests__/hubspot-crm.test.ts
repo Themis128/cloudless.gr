@@ -11,17 +11,6 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// ── Static mocks ──────────────────────────────────────────────────────────────
-
-vi.mock("@/lib/integrations", () => ({
-  getIntegrations: vi.fn().mockReturnValue({ HUBSPOT_API_KEY: "test-hs-token" }),
-  isConfigured: vi.fn().mockReturnValue(true),
-}));
-
-vi.mock("@/lib/ssm-config", () => ({
-  getConfig: vi.fn().mockResolvedValue({ HUBSPOT_API_KEY: "test-hs-token" }),
-}));
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function hubspotOk(results: unknown[]) {

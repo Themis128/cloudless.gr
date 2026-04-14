@@ -1,12 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// Mock integrations
-vi.mock("@/lib/integrations", () => ({
-  getIntegrations: vi.fn().mockReturnValue({
-    NOTION_API_KEY: "secret_test_key_12345",
-  }),
-  isConfigured: vi.fn().mockReturnValue(true),
-}));
+import { resetIntegrationCache } from "@/lib/integrations";
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -21,7 +14,6 @@ import {
   getDatabaseSchema,
   getPropertyOptions,
 } from "@/lib/notion-search";
-import { isConfigured } from "@/lib/integrations";
 
 describe("notion-search.ts", () => {
   beforeEach(() => {
@@ -86,7 +78,8 @@ describe("notion-search.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      vi.mocked(isConfigured).mockReturnValueOnce(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
       const result = await searchPages("test");
       expect(result.results).toEqual([]);
       expect(result.hasMore).toBe(false);
@@ -189,7 +182,8 @@ describe("notion-search.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      vi.mocked(isConfigured).mockReturnValueOnce(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
       const users = await listUsers();
       expect(users).toEqual([]);
     });
@@ -223,7 +217,8 @@ describe("notion-search.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.mocked(isConfigured).mockReturnValueOnce(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
       expect(await getBotUser()).toBeNull();
     });
   });
@@ -303,7 +298,8 @@ describe("notion-search.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.mocked(isConfigured).mockReturnValueOnce(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
       expect(await getDatabaseSchema("db-id")).toBeNull();
     });
 
