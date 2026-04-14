@@ -17,7 +17,7 @@ describe("getOrganizationSchema", () => {
     expect(schema["@type"]).toContain("LocalBusiness");
     expect(schema.name).toBe("Cloudless");
     expect(schema.url).toBe("https://cloudless.gr");
-    expect(schema.email).toBe("tbaltzakis@cloudless.gr");
+    expect(schema.email).toBe("contact@cloudless.gr");
     expect(schema.address["@type"]).toBe("PostalAddress");
     expect(schema.address.addressCountry).toBe("GR");
   });

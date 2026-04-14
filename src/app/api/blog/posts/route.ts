@@ -7,7 +7,10 @@ export async function GET() {
     // Fall back to static blog data when Notion is not configured
     const blogModule = await import("@/lib/blog");
     const blogPosts = blogModule.posts;
-    return NextResponse.json({ posts: blogPosts, source: "static" });
+    return NextResponse.json(
+      { posts: blogPosts, source: "static", fallbackReason: "not-configured" },
+      { headers: { "x-blog-source": "static" } },
+    );
   }
 
   try {
@@ -17,6 +20,7 @@ export async function GET() {
       {
         headers: {
           "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30",
+          "x-blog-source": "notion",
         },
       },
     );
@@ -24,6 +28,9 @@ export async function GET() {
     console.error("[Blog] Fetch error:", err);
     const blogModule = await import("@/lib/blog");
     const blogPosts = blogModule.posts;
-    return NextResponse.json({ posts: blogPosts, source: "static" });
+    return NextResponse.json(
+      { posts: blogPosts, source: "static", fallbackReason: "notion-error" },
+      { headers: { "x-blog-source": "static" } },
+    );
   }
 }
