@@ -28,13 +28,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -45,7 +45,7 @@ jobs:
       - name: Configure AWS credentials
         id: awscreds
         continue-on-error: true
-        uses: aws-actions/configure-aws-credentials@v5
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::278585680617:role/GitHubActionsOIDC
           role-session-name: gha-teardown-${{ github.run_id }}
