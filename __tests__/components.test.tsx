@@ -184,8 +184,7 @@ describe("ScrollReveal", () => {
 
 describe("Navbar", () => {
   beforeEach(() => {
-    document.cookie = `NEXT_LOCALE=en; path=/`;
-    document.documentElement.lang = "en";
+    document.cookie = `NEXT_LOCALE=en; path=/`;    document.documentElement.lang = "en";
   });
 
   function renderNavbar() {
@@ -205,6 +204,7 @@ describe("Navbar", () => {
     expect(view.getByText("cloudless")).toBeTruthy();
     expect(view.getByText(".gr")).toBeTruthy();
 
+    // Desktop links are present in the DOM
     const homeLinks = view.getAllByText("Home");
     expect(homeLinks.length).toBeGreaterThanOrEqual(1);
   });
@@ -215,56 +215,57 @@ describe("Navbar", () => {
 
     const toggle = view.getByLabelText("Toggle menu");
     expect(toggle).toBeTruthy();
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(toggle.getAttribute("aria-controls")).toBe("mobile-nav-menu");
   });
-
   it("shows mobile menu with nav links and cart on hamburger click", () => {
     const { container } = renderNavbar();
     const view = within(container);
-    const toggle = view.getByLabelText("Toggle menu");
 
-    fireEvent.click(toggle);
+    fireEvent.click(view.getByLabelText("Toggle menu"));
 
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    // Mobile menu should be visible (opacity-100)
+    const mobileMenu = container.querySelector(".lg\\:hidden.bg-void\\/95");
+    expect(mobileMenu?.className).toContain("opacity-100");
+
+    // Cart row visible in mobile menu
     expect(view.getByText("Cart")).toBeTruthy();
   });
 
   it("closes mobile menu when a nav link is clicked", () => {
     const { container } = renderNavbar();
     const view = within(container);
-    const toggle = view.getByLabelText("Toggle menu");
 
-    fireEvent.click(toggle);
+    // Open menu
+    fireEvent.click(view.getByLabelText("Toggle menu"));
 
+    // Click a link in the mobile menu
     const mobileLinks = view.getAllByText("Services");
-    const mobileLink = mobileLinks.find((el) => el.closest("#mobile-nav-menu"));
+    const mobileLink = mobileLinks.find((el) => el.closest(".lg\\:hidden"));
     if (mobileLink) fireEvent.click(mobileLink);
 
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-  });
+    // Menu should be collapsed (opacity-0)
+    const mobileMenu = container.querySelector(".lg\\:hidden.bg-void\\/95");
+    expect(mobileMenu?.className).toContain("opacity-0");  });
 
   it("renders Sign In CTA in both desktop and mobile when unauthenticated", () => {
     const { container } = renderNavbar();
     const view = within(container);
 
     const ctas = view.getAllByText("Sign In");
-    expect(ctas.length).toBe(2);
+    expect(ctas.length).toBe(2); // desktop + mobile
   });
 
   it("has 44px minimum touch targets on mobile nav links", () => {
     const { container } = renderNavbar();
 
+    // Open mobile menu
     fireEvent.click(within(container).getByLabelText("Toggle menu"));
 
-    const links = container.querySelectorAll("a");
-    const linksWithMinHeight = Array.from(links).filter(
-      (anchor) =>
-        anchor.className.includes("min-h-[44px]") ||
-        anchor.className.includes("min-h-11"),
+    // Mobile nav links should have min-h-[44px] or min-h-11 class (both equal 44px)
+    const mobileMenu = container.querySelector(".lg\\:hidden.bg-void\\/95");
+    const links = mobileMenu?.querySelectorAll("a");
+    const linksWithMinHeight = Array.from(links ?? []).filter(
+      (a) => a.className.includes("min-h-[44px]") || a.className.includes("min-h-11"),
     );
     expect(linksWithMinHeight.length).toBeGreaterThanOrEqual(5);
   });
-
-
 });

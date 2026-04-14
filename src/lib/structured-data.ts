@@ -6,6 +6,12 @@ export interface OrganizationSchema {
   name: string;
   url: string;
   email: string;
+  logo: {
+    "@type": "ImageObject";
+    url: string;
+    width: number;
+    height: number;
+  };
   description: string;
   address: {
     "@type": "PostalAddress";
@@ -20,7 +26,16 @@ export function getOrganizationSchema(): OrganizationSchema {
     "@type": ["Organization", "LocalBusiness"],
     name: "Cloudless",
     url: "https://cloudless.gr",
-    email: "tbaltzakis@cloudless.gr",
+    // Use a public contact address — not a personal one — for the Knowledge Panel
+    email: "contact@cloudless.gr",
+    // Logo helps Google display the brand correctly in the Knowledge Panel.
+    // Image should be at least 112×112px, hosted on the same domain.
+    logo: {
+      "@type": "ImageObject",
+      url: "https://cloudless.gr/logo.png",
+      width: 512,
+      height: 512,
+    },
     description:
       "Cloud computing, serverless, and AI marketing solutions for modern businesses. We provide scalable analytics and AI-powered marketing infrastructure.",
     address: {

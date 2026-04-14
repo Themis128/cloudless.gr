@@ -15,6 +15,32 @@ import { getSlackConfig } from "@/lib/integrations";
 /** Maximum age of a request timestamp before it is considered a replay. */
 const MAX_AGE_SECONDS = 60 * 5; // 5 minutes
 
+// ---------------------------------------------------------------------------
+// Replay-attack protection
+//
+// The timestamp check already rejects requests older than 5 minutes, but a
+// stolen signature can still be replayed multiple times within that window.
+// We track seen signatures for the same duration and reject duplicates.
+// ---------------------------------------------------------------------------
+
+const SEEN_TTL_MS = MAX_AGE_SECONDS * 1000;
+
+/** signature → timestamp when first seen */
+const seenSignatures = new Map<string, number>();
+
+function isReplay(signature: string): boolean {
+  const now = Date.now();
+
+  // Lazy eviction of expired entries
+  for (const [sig, ts] of seenSignatures) {
+    if (now - ts > SEEN_TTL_MS) seenSignatures.delete(sig);
+  }
+
+  if (seenSignatures.has(signature)) return true;
+  seenSignatures.set(signature, now);
+  return false;
+}
+
 export interface VerifyResult {
   ok: boolean;
   reason?: string;
@@ -27,9 +53,7 @@ export interface VerifyResult {
  * calling this function. Returns the raw body string on success so the caller
  * does not need to read it again.
  */
-export async function verifySlackRequest(
-  request: Request,
-): Promise<{ ok: true; body: string } | { ok: false; reason: string }> {
+export async function verifySlackRequest(request: Request): Promise<{ ok: true; body: string } | { ok: false; reason: string }> {
   const { SLACK_SIGNING_SECRET } = getSlackConfig();
 
   if (!SLACK_SIGNING_SECRET) {
@@ -40,20 +64,14 @@ export async function verifySlackRequest(
   const signature = request.headers.get("x-slack-signature");
 
   if (!timestamp || !signature) {
-    return {
-      ok: false,
-      reason: "Missing x-slack-request-timestamp or x-slack-signature header",
-    };
+    return { ok: false, reason: "Missing x-slack-request-timestamp or x-slack-signature header" };
   }
 
   // Reject requests older than MAX_AGE_SECONDS (replay attack prevention)
   const nowSeconds = Math.floor(Date.now() / 1000);
   const requestAge = Math.abs(nowSeconds - Number(timestamp));
   if (requestAge > MAX_AGE_SECONDS) {
-    return {
-      ok: false,
-      reason: `Request timestamp is too old (${requestAge}s)`,
-    };
+    return { ok: false, reason: `Request timestamp is too old (${requestAge}s)` };
   }
 
   const body = await request.text();
@@ -79,6 +97,11 @@ export async function verifySlackRequest(
     }
   } catch {
     return { ok: false, reason: "Signature comparison failed" };
+  }
+
+  // Reject replays — same valid signature seen more than once within the window
+  if (isReplay(signature)) {
+    return { ok: false, reason: "Duplicate request (replay detected)" };
   }
 
   return { ok: true, body };

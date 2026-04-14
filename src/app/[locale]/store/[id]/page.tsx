@@ -34,11 +34,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function ProductPage({
-  params,
-}: {
-  params: Promise<{ locale: string; id: string }>;
-}) {
+export default async function ProductPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const { id } = await params;
   const product = getProductById(id);
 
@@ -69,10 +65,7 @@ export default async function ProductPage({
       <section className="bg-void-light border-neon-cyan/10 border-b">
         <div className="mx-auto max-w-6xl px-6 py-4">
           <nav className="flex items-center gap-2 font-mono text-sm text-slate-500">
-            <Link
-              href="/store"
-              className="hover:text-neon-cyan text-xs transition-colors"
-            >
+            <Link href="/store" className="hover:text-neon-cyan text-xs transition-colors">
               Store
             </Link>
             <span className="text-slate-700">/</span>
@@ -104,18 +97,14 @@ export default async function ProductPage({
                 {product.name}
               </h1>
 
-              <p className="mt-4 text-lg leading-relaxed text-slate-400">
-                {product.description}
-              </p>
+              <p className="mt-4 text-lg leading-relaxed text-slate-400">{product.description}</p>
 
               <div className="mt-6 flex items-baseline gap-2">
                 <span className="text-neon-cyan glow-cyan font-mono text-3xl font-bold">
                   {formatPrice(product.price, product.currency)}
                 </span>
                 {product.recurring && (
-                  <span className="font-mono text-sm text-slate-500">
-                    /{product.interval}
-                  </span>
+                  <span className="font-mono text-sm text-slate-500">/{product.interval}</span>
                 )}
               </div>
 
@@ -127,10 +116,7 @@ export default async function ProductPage({
                   </h2>
                   <ul className="space-y-3">
                     {product.features.map((feature) => (
-                      <li
-                        key={feature}
-                        className="flex items-start gap-3 text-sm text-slate-400"
-                      >
+                      <li key={feature} className="flex items-start gap-3 text-sm text-slate-400">
                         <span className="text-neon-cyan mt-0.5 shrink-0 font-mono text-xs">
                           &#x25B8;
                         </span>
@@ -175,15 +161,11 @@ export default async function ProductPage({
                     <h3 className="font-heading group-hover:text-neon-cyan text-sm font-semibold text-white transition-colors">
                       {rel.name}
                     </h3>
-                    <p className="mt-1 line-clamp-1 text-xs text-slate-500">
-                      {rel.description}
-                    </p>
+                    <p className="mt-1 line-clamp-1 text-xs text-slate-500">{rel.description}</p>
                     <span className="text-neon-cyan mt-2 inline-block font-mono text-sm font-bold">
                       {formatPrice(rel.price, rel.currency)}
                       {rel.recurring && (
-                        <span className="ml-1 font-normal text-slate-500">
-                          /{rel.interval}
-                        </span>
+                        <span className="ml-1 font-normal text-slate-500">/{rel.interval}</span>
                       )}
                     </span>
                   </div>

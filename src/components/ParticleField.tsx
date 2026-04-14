@@ -25,13 +25,7 @@ export default function ParticleField({
     if (!ctx) return;
 
     let animId: number;
-    let particles: {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      size: number;
-    }[] = [];
+    let particles: { x: number; y: number; vx: number; vy: number; size: number }[] = [];
 
     function resize() {
       const rect = canvas!.parentElement!.getBoundingClientRect();

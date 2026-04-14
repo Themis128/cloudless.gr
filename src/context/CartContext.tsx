@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useReducer,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useReducer, type ReactNode } from "react";
 import type { StoreProduct } from "@/lib/store-products";
 
 // --- Types ---
@@ -44,16 +38,12 @@ interface CartContextType extends CartState {
 export function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case "ADD_ITEM": {
-      const existing = state.items.find(
-        (item) => item.product.id === action.product.id,
-      );
+      const existing = state.items.find((item) => item.product.id === action.product.id);
       if (existing) {
         return {
           ...state,
           items: state.items.map((item) =>
-            item.product.id === action.product.id
-              ? { ...item, quantity: item.quantity + 1 }
-              : item,
+            item.product.id === action.product.id ? { ...item, quantity: item.quantity + 1 } : item,
           ),
         };
       }
@@ -65,25 +55,19 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
     case "REMOVE_ITEM":
       return {
         ...state,
-        items: state.items.filter(
-          (item) => item.product.id !== action.productId,
-        ),
+        items: state.items.filter((item) => item.product.id !== action.productId),
       };
     case "UPDATE_QUANTITY":
       if (action.quantity <= 0) {
         return {
           ...state,
-          items: state.items.filter(
-            (item) => item.product.id !== action.productId,
-          ),
+          items: state.items.filter((item) => item.product.id !== action.productId),
         };
       }
       return {
         ...state,
         items: state.items.map((item) =>
-          item.product.id === action.productId
-            ? { ...item, quantity: action.quantity }
-            : item,
+          item.product.id === action.productId ? { ...item, quantity: action.quantity } : item,
         ),
       };
     case "CLEAR_CART":
@@ -145,10 +129,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [state.items]);
 
   const totalItems = state.items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = state.items.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0,
-  );
+  const totalPrice = state.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
   const value: CartContextType = {
     ...state,

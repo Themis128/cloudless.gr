@@ -41,6 +41,7 @@
     "sst.config.ts",
     "playwright.config.ts",
     "e2e",
-    ".claude"
+    ".claude",
+    "scripts"
   ]
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Instrument_Sans, Work_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+
 const instrumentSans = Instrument_Sans({
   variable: "--font-instrument-sans",
   subsets: ["latin"],
@@ -38,6 +39,9 @@ export const metadata: Metadata = {
     "Greece",
   ],
   authors: [{ name: "Cloudless" }],
+  verification: {
+    google: "LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w",
+  },
   openGraph: {
     title: "Cloudless — Cloud Computing, Serverless & AI Marketing",
     description:

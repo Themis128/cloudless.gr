@@ -286,7 +286,8 @@ export default function AdminUsersPage() {
                             disabled={actionLoading !== null}
                             className="min-h-[32px] rounded-lg border border-red-900/30 px-2 py-1 font-mono text-[10px] text-red-400 transition-colors hover:bg-red-400/10 disabled:opacity-50"
                           >
-                            {actionLoading === `disable-${user.username}`
+                            {actionLoading ===
+                            `disable-${user.username}`
                               ? "…"
                               : "Disable"}
                           </button>
@@ -298,7 +299,8 @@ export default function AdminUsersPage() {
                             disabled={actionLoading !== null}
                             className="min-h-[32px] rounded-lg border border-neon-green/20 px-2 py-1 font-mono text-[10px] text-neon-green transition-colors hover:bg-neon-green/10 disabled:opacity-50"
                           >
-                            {actionLoading === `enable-${user.username}`
+                            {actionLoading ===
+                            `enable-${user.username}`
                               ? "…"
                               : "Enable"}
                           </button>
@@ -312,7 +314,8 @@ export default function AdminUsersPage() {
                             disabled={actionLoading !== null}
                             className="border-neon-magenta/20 text-neon-magenta hover:bg-neon-magenta/10 min-h-[32px] rounded-lg border px-2 py-1 font-mono text-[10px] transition-colors disabled:opacity-50"
                           >
-                            {actionLoading === `promote-${user.username}`
+                            {actionLoading ===
+                            `promote-${user.username}`
                               ? "…"
                               : "→ Admin"}
                           </button>
@@ -324,7 +327,8 @@ export default function AdminUsersPage() {
                             disabled={actionLoading !== null}
                             className="min-h-[32px] rounded-lg border border-slate-700 px-2 py-1 font-mono text-[10px] text-slate-400 transition-colors hover:bg-slate-800 disabled:opacity-50"
                           >
-                            {actionLoading === `demote-${user.username}`
+                            {actionLoading ===
+                            `demote-${user.username}`
                               ? "…"
                               : "→ User"}
                           </button>
@@ -350,7 +354,7 @@ export default function AdminUsersPage() {
       )}
 
       <p className="mt-4 font-mono text-xs text-slate-600">
-        Powered by AWS Cognito · User Pool{" "}
+        Powered by AWS Cognito · User Pool {" "}
         <span className="text-slate-500">
           {process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "not configured"}
         </span>

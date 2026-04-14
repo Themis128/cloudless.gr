@@ -19,10 +19,7 @@ export default function LocaleSwitcher() {
   useEffect(() => {
     if (!isOpen) return;
     function handleClickOutside(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     }
@@ -63,12 +60,7 @@ export default function LocaleSwitcher() {
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
@@ -90,9 +82,7 @@ export default function LocaleSwitcher() {
                 aria-label={`Set language to ${localeLabels[locale]}`}
                 className="hover:bg-neon-cyan/10 active:bg-neon-cyan/20 bg-neon-cyan/10 text-neon-cyan min-h-11 w-full px-4 py-2.5 text-left text-sm font-medium transition-colors"
               >
-                <span className="mr-2 font-mono text-xs opacity-60">
-                  {localeFlags[locale]}
-                </span>
+                <span className="mr-2 font-mono text-xs opacity-60">{localeFlags[locale]}</span>
                 {localeLabels[locale]}
               </button>
             ) : (
@@ -105,9 +95,7 @@ export default function LocaleSwitcher() {
                 aria-label={`Set language to ${localeLabels[locale]}`}
                 className="hover:bg-neon-cyan/10 active:bg-neon-cyan/20 min-h-11 w-full px-4 py-2.5 text-left text-sm text-slate-300 transition-colors"
               >
-                <span className="mr-2 font-mono text-xs opacity-60">
-                  {localeFlags[locale]}
-                </span>
+                <span className="mr-2 font-mono text-xs opacity-60">{localeFlags[locale]}</span>
                 {localeLabels[locale]}
               </button>
             ),

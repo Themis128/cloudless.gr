@@ -4,23 +4,18 @@ import { sendEmail } from "@/lib/email";
 import { getConfig } from "@/lib/ssm-config";
 import { slackContactNotify } from "@/lib/slack-notify";
 import { upsertContact } from "@/lib/hubspot";
+import { saveSubmission } from "@/lib/notion-forms";
 
 export async function POST(request: Request) {
   try {
     const { name, email, company, service, message } = await request.json();
 
     if (!name || !email || !message) {
-      return Response.json(
-        { error: "Name, email, and message are required." },
-        { status: 400 },
-      );
+      return Response.json({ error: "Name, email, and message are required." }, { status: 400 });
     }
 
     if (!isValidEmail(email)) {
-      return Response.json(
-        { error: "Invalid email address." },
-        { status: 400 },
-      );
+      return Response.json({ error: "Invalid email address." }, { status: 400 });
     }
 
     const config = await getConfig();
@@ -55,7 +50,7 @@ export async function POST(request: Request) {
       fromLabel: "Cloudless Contact Form",
     });
 
-    // Fire-and-forget: push to CRM + notify Slack (non-blocking)
+    // Fire-and-forget: push to CRM, notify Slack, save to Notion (non-blocking)
     const nameParts = String(name).trim().split(" ");
     Promise.allSettled([
       slackContactNotify({ name, email, company, service, message }),
@@ -67,6 +62,7 @@ export async function POST(request: Request) {
         service_interest: service || undefined,
         message: String(message).slice(0, 500),
       }),
+      saveSubmission({ name, email, company, service, message, source: "contact" }),
     ]).catch(() => {});
 
     return Response.json({ success: true });

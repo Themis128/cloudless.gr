@@ -18,25 +18,17 @@ export default function AdminSettingsPage() {
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-magenta font-mono text-xs">SETTINGS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">
-          Site Settings
-        </h1>
-        <p className="font-body mt-1 text-slate-400">
-          Configure your Cloudless platform settings.
-        </p>
+        <h1 className="font-heading text-2xl font-bold text-white">Site Settings</h1>
+        <p className="font-body mt-1 text-slate-400">Configure your Cloudless platform settings.</p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* General */}
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
-          <h2 className="font-heading mb-4 font-semibold text-white">
-            General
-          </h2>
+          <h2 className="font-heading mb-4 font-semibold text-white">General</h2>
           <div className="space-y-4">
             <div>
-              <label className="mb-1.5 block font-mono text-xs text-slate-500">
-                Site Name
-              </label>
+              <label className="mb-1.5 block font-mono text-xs text-slate-500">Site Name</label>
               <input
                 type="text"
                 defaultValue="Cloudless"
@@ -44,9 +36,7 @@ export default function AdminSettingsPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block font-mono text-xs text-slate-500">
-                Support Email
-              </label>
+              <label className="mb-1.5 block font-mono text-xs text-slate-500">Support Email</label>
               <input
                 type="email"
                 defaultValue="tbaltzakis@cloudless.gr"
@@ -58,9 +48,7 @@ export default function AdminSettingsPage() {
 
         {/* Notifications */}
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
-          <h2 className="font-heading mb-4 font-semibold text-white">
-            Team Notifications
-          </h2>
+          <h2 className="font-heading mb-4 font-semibold text-white">Team Notifications</h2>
           <div className="space-y-3">
             {[
               {
@@ -98,9 +86,7 @@ export default function AdminSettingsPage() {
                   className="accent-neon-magenta mt-1"
                 />
                 <div>
-                  <span className="block font-mono text-sm text-white">
-                    {pref.label}
-                  </span>
+                  <span className="block font-mono text-sm text-white">{pref.label}</span>
                   <span className="text-xs text-slate-500">{pref.desc}</span>
                 </div>
               </label>
@@ -110,12 +96,8 @@ export default function AdminSettingsPage() {
 
         {/* Danger Zone */}
         <div className="rounded-xl border border-red-900/30 bg-red-950/10 p-6">
-          <h2 className="font-heading mb-2 font-semibold text-red-400">
-            Danger Zone
-          </h2>
-          <p className="mb-4 text-xs text-slate-500">
-            Irreversible actions. Proceed with caution.
-          </p>
+          <h2 className="font-heading mb-2 font-semibold text-red-400">Danger Zone</h2>
+          <p className="mb-4 text-xs text-slate-500">Irreversible actions. Proceed with caution.</p>
           <button
             type="button"
             className="min-h-[44px] rounded-lg border border-red-900/50 px-4 py-2.5 font-mono text-xs text-red-400 transition-all hover:bg-red-950/30"

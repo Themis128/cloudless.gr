@@ -42,6 +42,13 @@ export default {
         NEXT_PUBLIC_STAGE: stage,
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: "us-east-1_JQWwFbO9a",
         NEXT_PUBLIC_COGNITO_CLIENT_ID: "2qq6i24oc48391cmuv4kfl1rm2",
+        // Notion database IDs (non-secret, safe to inline)
+        NOTION_BLOG_DB_ID: "0ac591657ee44063bbbc8004ea7ccd6c",
+        NOTION_SUBMISSIONS_DB_ID: "9abe0a5614d64b759d44a45cee2d0bbc",
+        NOTION_DOCS_DB_ID: "b45af6ed5bb64d89b9a92a8aff4a9b29",
+        NOTION_PROJECTS_DB_ID: "a9bab34b945e484fb6b0aa6034086e5c",
+        NOTION_TASKS_DB_ID: "14ce4ff6c400437597b13e70ac909354",
+        NOTION_ANALYTICS_DB_ID: "cc4287fcb42a42dc92a7053d6f1199c7",
       },
       warm: isProd ? 2 : 0,
       server: {

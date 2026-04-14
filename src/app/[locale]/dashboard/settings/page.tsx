@@ -15,12 +15,8 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState(prefs?.theme ?? "dark");
   const [language, setLanguage] = useState(prefs?.language ?? "en");
   const [emailOrders, setEmailOrders] = useState(prefs?.emailOrders ?? true);
-  const [emailNewsletter, setEmailNewsletter] = useState(
-    prefs?.emailNewsletter ?? false,
-  );
-  const [emailMarketing, setEmailMarketing] = useState(
-    prefs?.emailMarketing ?? false,
-  );
+  const [emailNewsletter, setEmailNewsletter] = useState(prefs?.emailNewsletter ?? false);
+  const [emailMarketing, setEmailMarketing] = useState(prefs?.emailMarketing ?? false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +38,7 @@ export default function SettingsPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save preferences",
-      );
+      setError(err instanceof Error ? err.message : "Failed to save preferences");
     } finally {
       setSaving(false);
     }
@@ -73,10 +67,7 @@ export default function SettingsPage() {
           {t("dashboard.settings", "Settings")}
         </h1>
         <p className="font-body mt-1 text-slate-400">
-          {t(
-            "dashboard.settingsDesc",
-            "Manage your preferences and notifications.",
-          )}
+          {t("dashboard.settingsDesc", "Manage your preferences and notifications.")}
         </p>
       </div>
 
@@ -102,9 +93,7 @@ export default function SettingsPage() {
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() =>
-                      setTheme(opt.value as "system" | "dark" | "light")
-                    }
+                    onClick={() => setTheme(opt.value as "system" | "dark" | "light")}
                     className={`min-h-[36px] rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
                       theme === opt.value
                         ? "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 border"
@@ -150,30 +139,21 @@ export default function SettingsPage() {
               {
                 id: "email-orders",
                 label: t("dashboard.orderUpdates", "Order updates"),
-                desc: t(
-                  "dashboard.orderUpdatesDesc",
-                  "Confirmations, shipping, and delivery",
-                ),
+                desc: t("dashboard.orderUpdatesDesc", "Confirmations, shipping, and delivery"),
                 checked: emailOrders,
                 onChange: setEmailOrders,
               },
               {
                 id: "email-newsletter",
                 label: t("dashboard.newsletter", "Newsletter"),
-                desc: t(
-                  "dashboard.newsletterDesc",
-                  "Cloud tips, serverless patterns & growth hacks",
-                ),
+                desc: t("dashboard.newsletterDesc", "Cloud tips, serverless patterns & growth hacks"),
                 checked: emailNewsletter,
                 onChange: setEmailNewsletter,
               },
               {
                 id: "email-marketing",
                 label: t("dashboard.productUpdates", "Product updates"),
-                desc: t(
-                  "dashboard.productUpdatesDesc",
-                  "New services and features",
-                ),
+                desc: t("dashboard.productUpdatesDesc", "New services and features"),
                 checked: emailMarketing,
                 onChange: setEmailMarketing,
               },
@@ -189,9 +169,7 @@ export default function SettingsPage() {
                   className="accent-neon-cyan mt-1"
                 />
                 <div>
-                  <span className="block font-mono text-sm text-white">
-                    {pref.label}
-                  </span>
+                  <span className="block font-mono text-sm text-white">{pref.label}</span>
                   <span className="text-xs text-slate-500">{pref.desc}</span>
                 </div>
               </label>
@@ -206,28 +184,17 @@ export default function SettingsPage() {
           </h2>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-xs text-slate-500">
-                {t("auth.email", "Email")}
-              </span>
-              <span className="text-neon-cyan font-mono text-sm">
-                {user?.email ?? "—"}
-              </span>
+              <span className="font-mono text-xs text-slate-500">{t("auth.email", "Email")}</span>
+              <span className="text-neon-cyan font-mono text-sm">{user?.email ?? "—"}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-mono text-xs text-slate-500">
-                {t("auth.fullName", "Name")}
-              </span>
-              <span className="font-mono text-sm text-white">
-                {user?.name || "—"}
-              </span>
+              <span className="font-mono text-xs text-slate-500">{t("auth.fullName", "Name")}</span>
+              <span className="font-mono text-sm text-white">{user?.name || "—"}</span>
             </div>
           </div>
           <p className="mt-3 font-mono text-[10px] text-slate-600">
             To update your name, company, or phone, visit your{" "}
-            <Link
-              href="/dashboard/profile"
-              className="text-neon-cyan hover:underline"
-            >
+            <Link href="/dashboard/profile" className="text-neon-cyan hover:underline">
               Profile
             </Link>
             .
@@ -241,9 +208,7 @@ export default function SettingsPage() {
             disabled={saving}
             className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-11 rounded-lg border px-6 py-2.5 font-mono text-sm font-semibold transition-all hover:shadow-[0_0_25px_rgba(0,255,245,0.2)] disabled:opacity-50"
           >
-            {saving
-              ? t("common.saving", "Saving…")
-              : t("common.saveChanges", "Save Changes")}
+            {saving ? t("common.saving", "Saving…") : t("common.saveChanges", "Save Changes")}
           </button>
           {saved && (
             <span className="text-neon-green animate-fade-in-up font-mono text-xs">

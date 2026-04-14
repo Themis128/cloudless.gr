@@ -275,9 +275,9 @@ sequenceDiagram
 - **Touch targets:** All interactive elements (buttons, links, controls) have `min-h-[44px]` or larger per WCAG 2.5.5
 - **Tap feedback:** `@media (pointer: coarse)` applies neon-cyan tap highlight; `active:` states mirror `hover:` effects across all components
 - **NeonCursor:** Automatically disabled on touch devices via `window.matchMedia("(pointer: coarse)")`
-- **Navbar:** Mobile hamburger menu with cart button row, 44px link targets, `active:text-neon-cyan`, and a scrollable open state capped to the viewport height
+- **Navbar:** Mobile hamburger menu with cart button row, 44px link targets, `active:text-neon-cyan`
 - **Store cards:** Price/button row uses `flex-wrap gap-3` to wrap on narrow screens
-- **CartSlideOver:** Quantity buttons, Remove, Close, and Checkout controls meet 44px+ touch targets
+- **CartSlideOver:** Quantity buttons sized to 36px, Remove/Close/Checkout buttons meet 44px+ targets
 - **Design system rule:** Use `rounded-lg` for buttons and controls (not `rounded-sm`)
 
 ## Security
@@ -360,7 +360,7 @@ graph TB
     subgraph Patterns["Degradation Patterns"]
         Slack -->|not configured| SkipS["Skip silently"]
         HS -->|not configured| SkipH["Skip silently"]
-        Notion -->|not configured or error| Fallback["Static blog data"]
+        Notion -->|not configured| Fallback["Static blog data"]
         GCal -->|not configured| S503["503 response"]
     end
 ```
@@ -373,14 +373,14 @@ All integrations are optional and degrade gracefully. Config is centralized in `
 | ------------------ | ------------------------------------------------------------ | ------------------- |
 | Slack              | `SLACK_WEBHOOK_URL`                                          | `slack-notify.ts`   |
 | HubSpot CRM        | `HUBSPOT_API_KEY`                                            | `hubspot.ts`        |
-| Notion CMS         | `NOTION_API_KEY`, `NOTION_BLOG_DB_ID`                           | `notion-blog.ts`    |
+| Notion CMS         | `NOTION_API_KEY`, `NOTION_BLOG_DB`                           | `notion-blog.ts`    |
 | Google Calendar    | `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CALENDAR_ID` | `google-calendar.ts` |
 | Ahrefs             | `AHREFS_API_KEY`                                             | `ahrefs.ts`         |
 | Sentry             | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`          | (inline in route)   |
 
 **Integration patterns:**
 - **Fire-and-forget:** Contact route uses `Promise.allSettled([slackNotify, hubspotUpsert]).catch(() => {})` so the main email flow isn't blocked
-- **Fallback:** Blog API returns static `lib/blog.ts` data when Notion is not configured or when Notion requests fail
+- **Fallback:** Blog API returns static `lib/blog.ts` data when Notion isn't configured
 - **Cache:** Calendar availability is cached 5 minutes; Google OAuth tokens cached until expiry
 
 ## Webhook Fulfillment

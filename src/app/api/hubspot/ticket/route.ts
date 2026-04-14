@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createTicket,
-  isHubSpotConfigured,
-  searchContacts,
-} from "@/lib/hubspot";
-import { isValidEmail } from "@/lib/validation";
-
-const ALLOWED_PRIORITIES = new Set(["LOW", "MEDIUM", "HIGH"]);
+import { createTicket, searchContacts } from "@/lib/hubspot";
 
 /**
  * POST /api/hubspot/ticket
@@ -15,13 +8,6 @@ const ALLOWED_PRIORITIES = new Set(["LOW", "MEDIUM", "HIGH"]);
  * Optionally associates it with a contact by email.
  */
 export async function POST(request: NextRequest) {
-  if (!(await isHubSpotConfigured())) {
-    return NextResponse.json(
-      { error: "HubSpot ticket creation is not configured." },
-      { status: 503 },
-    );
-  }
-
   try {
     const body = await request.json();
 
@@ -32,17 +18,6 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-
-    if (email && !isValidEmail(String(email))) {
-      return NextResponse.json(
-        { error: "Invalid email provided." },
-        { status: 400 },
-      );
-    }
-
-    const normalizedPriority = ALLOWED_PRIORITIES.has(String(priority))
-      ? String(priority)
-      : "MEDIUM";
 
     // Find contact by email if provided
     let contactId: string | undefined;
@@ -61,7 +36,7 @@ export async function POST(request: NextRequest) {
       {
         subject,
         content,
-        hs_ticket_priority: normalizedPriority,
+        hs_ticket_priority: priority || "MEDIUM",
       },
       contactId,
     );

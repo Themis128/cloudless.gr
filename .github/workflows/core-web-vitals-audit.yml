@@ -1,8 +1,5 @@
 name: Core Web Vitals Route Audit
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 on:
   workflow_run:
     workflows: ['Deploy to Production']
@@ -19,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - name: Run Lighthouse on key routes
         id: lhci
         uses: treosh/lighthouse-ci-action@v12
@@ -33,10 +30,38 @@ jobs:
           budgetPath: .github/lighthouse-budget.json
           uploadArtifacts: true
           temporaryPublicStorage: true
-      - name: Write summary
+      - name: Surface per-route CWV scores inline
         run: |
-          echo "## Core Web Vitals Route Audit" >> "$GITHUB_STEP_SUMMARY"
+          MANIFEST='${{ steps.lhci.outputs.manifest }}'
+
+          echo "## 📊 Core Web Vitals Route Audit" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Audited routes: /, /en, /services, /contact, /store" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Route | Perf | A11y | Best Practices | SEO |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|------|------|----------------|-----|" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "$MANIFEST" | jq -r '.[] |
+            .url as $url |
+            (.summary.performance        * 100 | round) as $perf |
+            (.summary.accessibility      * 100 | round) as $a11y |
+            (.summary["best-practices"]  * 100 | round) as $bp   |
+            (.summary.seo                * 100 | round) as $seo  |
+            "| \($url) | \($perf) | \($a11y) | \($bp) | \($seo) |"
+          ' >> "$GITHUB_STEP_SUMMARY"
+
+          # Fail if any route scores below thresholds
+          FAILED=$(echo "$MANIFEST" | jq '[.[] | select(
+            .summary.performance       < 0.75 or
+            .summary.accessibility     < 0.90 or
+            .summary["best-practices"] < 0.85 or
+            .summary.seo               < 0.90
+          ) | .url] | length')
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "❌ **$FAILED route(s) fell below score thresholds.**" >> "$GITHUB_STEP_SUMMARY"
+            echo "Thresholds: Performance ≥ 75 · Accessibility ≥ 90 · Best Practices ≥ 85 · SEO ≥ 90" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "See uploaded lighthouse artifacts for route-level details." >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ All routes passed Core Web Vitals thresholds." >> "$GITHUB_STEP_SUMMARY"

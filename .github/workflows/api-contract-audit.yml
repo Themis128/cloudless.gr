@@ -1,8 +1,5 @@
 name: API Contract Audit
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 on:
   pull_request:
     branches: [main]
@@ -12,6 +9,9 @@ on:
       - '__tests__/stripe-webhook-api.test.ts'
       - '__tests__/health-api.test.ts'
       - '__tests__/subscribe-api.test.ts'
+      - '__tests__/admin-api.test.ts'
+      - '__tests__/slack/**'
+      - '__tests__/calendar-api.test.ts'
   workflow_dispatch:
 
 permissions:
@@ -23,11 +23,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:ci -- __tests__/contact-api.test.ts __tests__/checkout-api.test.ts __tests__/health-api.test.ts __tests__/subscribe-api.test.ts __tests__/stripe-webhook-api.test.ts
+      - name: Run public API contract tests
+        run: pnpm test:ci -- __tests__/contact-api.test.ts __tests__/checkout-api.test.ts __tests__/health-api.test.ts __tests__/subscribe-api.test.ts __tests__/stripe-webhook-api.test.ts
+
+      - name: Run admin API contract tests
+        run: pnpm test:ci -- __tests__/admin-api.test.ts
+
+      - name: Run Slack API contract tests
+        run: pnpm test:ci -- __tests__/slack/slack-commands.test.ts __tests__/slack/slack-events.test.ts __tests__/slack/slack-interactions.test.ts __tests__/slack/slack-notify.test.ts __tests__/slack/slack-verify.test.ts
+
+      - name: Run Calendar API contract tests
+        run: pnpm test:ci -- __tests__/calendar-api.test.ts

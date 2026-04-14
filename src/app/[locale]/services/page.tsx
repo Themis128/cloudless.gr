@@ -3,11 +3,7 @@ import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import TerminalBlock from "@/components/TerminalBlock";
 import JsonLd from "@/components/JsonLd";
-import {
-  getServiceSchema,
-  getBreadcrumbSchema,
-  getFAQSchema,
-} from "@/lib/structured-data";
+import { getServiceSchema, getBreadcrumbSchema, getFAQSchema } from "@/lib/structured-data";
 import { translate } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 
@@ -27,18 +23,10 @@ const getServices = (t: (key: string, fallback: string) => string) => [
     price: "From €2,000",
     unit: t("servicesPage.perProject", "per project"),
     color: "cyan" as const,
-    outcome: t(
-      "servicesPage.s1Outcome",
-      "Typically saves €15K–€50K/year in infrastructure costs alone.",
-    ),
-    perfectFor: t(
-      "servicesSection.service1For",
-      "For teams paying €500+/mo for infrastructure they can't explain.",
-    ),
-    description: t(
-      "servicesSection.service1Desc",
-      "Design resilient, cost-optimised cloud infrastructure on AWS, GCP, or Azure. We handle architecture blueprints, zero-downtime migrations, and Infrastructure as Code — so your team ships faster with less risk.",
-    ),
+    outcome: t("servicesPage.s1Outcome", "Typically saves €15K–€50K/year in infrastructure costs alone."),
+    perfectFor: t("servicesSection.service1For", "For teams paying €500+/mo for infrastructure they can't explain."),
+    description: t("servicesSection.service1Desc",
+      "Design resilient, cost-optimised cloud infrastructure on AWS, GCP, or Azure. We handle architecture blueprints, zero-downtime migrations, and Infrastructure as Code — so your team ships faster with less risk."),
     features: [
       "AWS / GCP / Azure architecture design",
       "Zero-downtime migration planning",
@@ -71,18 +59,10 @@ const getServices = (t: (key: string, fallback: string) => string) => [
     price: "From €2,400",
     unit: t("servicesPage.perProject", "per project"),
     color: "magenta" as const,
-    outcome: t(
-      "servicesPage.s2Outcome",
-      "Up to 60–80% infrastructure savings. Pay only when code actually runs.",
-    ),
-    perfectFor: t(
-      "servicesSection.service2For",
-      "For founders tired of paying for servers that sit idle 90% of the time.",
-    ),
-    description: t(
-      "servicesSection.service2Desc",
-      "Build event-driven apps that scale to zero and explode to millions — without managing a single server. Lambda, API Gateway, DynamoDB, Step Functions — we wire it all together with CI/CD from day one.",
-    ),
+    outcome: t("servicesPage.s2Outcome", "Up to 60–80% infrastructure savings. Pay only when code actually runs."),
+    perfectFor: t("servicesSection.service2For", "For founders tired of paying for servers that sit idle 90% of the time."),
+    description: t("servicesSection.service2Desc",
+      "Build event-driven apps that scale to zero and explode to millions — without managing a single server. Lambda, API Gateway, DynamoDB, Step Functions — we wire it all together with CI/CD from day one."),
     features: [
       "Event-driven application design",
       "AWS Lambda / API Gateway / DynamoDB",
@@ -115,18 +95,10 @@ const getServices = (t: (key: string, fallback: string) => string) => [
     price: "From €2,400",
     unit: t("servicesPage.perProject", "per project"),
     color: "green" as const,
-    outcome: t(
-      "servicesPage.s3Outcome",
-      "Replace gut-feeling decisions with real data. 10x faster insights from your existing data.",
-    ),
-    perfectFor: t(
-      "servicesSection.service3For",
-      "For teams making decisions on gut feeling instead of data.",
-    ),
-    description: t(
-      "servicesSection.service3Desc",
-      "Turn raw data into decisions. Custom ETL pipelines, real-time dashboards, and BI reporting — all built on modern data stacks so your metrics are always fresh and always actionable.",
-    ),
+    outcome: t("servicesPage.s3Outcome", "Replace gut-feeling decisions with real data. 10x faster insights from your existing data."),
+    perfectFor: t("servicesSection.service3For", "For teams making decisions on gut feeling instead of data."),
+    description: t("servicesSection.service3Desc",
+      "Turn raw data into decisions. Custom ETL pipelines, real-time dashboards, and BI reporting — all built on modern data stacks so your metrics are always fresh and always actionable."),
     features: [
       "Custom analytics dashboards",
       "ETL pipeline development",
@@ -159,18 +131,10 @@ const getServices = (t: (key: string, fallback: string) => string) => [
     price: "From €800",
     unit: t("servicesPage.perMonth", "per month"),
     color: "blue" as const,
-    outcome: t(
-      "servicesPage.s4Outcome",
-      "Typically 3x organic traffic growth. Know exactly which channels are converting.",
-    ),
-    perfectFor: t(
-      "servicesSection.service4For",
-      "For startups spending on ads with no idea what's actually working.",
-    ),
-    description: t(
-      "servicesSection.service4Desc",
-      "AI-powered content, SEO, paid ads, and social automation — driven by real data, not guesswork. We build growth engines that compound month over month.",
-    ),
+    outcome: t("servicesPage.s4Outcome", "Typically 3x organic traffic growth. Know exactly which channels are converting."),
+    perfectFor: t("servicesSection.service4For", "For startups spending on ads with no idea what's actually working."),
+    description: t("servicesSection.service4Desc",
+      "AI-powered content, SEO, paid ads, and social automation — driven by real data, not guesswork. We build growth engines that compound month over month."),
     features: [
       "AI-powered content strategy",
       "SEO & search optimization",
@@ -201,47 +165,23 @@ const getServices = (t: (key: string, fallback: string) => string) => [
 const getServicesFaqs = (t: (key: string, fallback: string) => string) => [
   {
     question: t("servicesPage.faq1Q", "How much will I actually save?"),
-    answer: t(
-      "servicesPage.faq1A",
-      "Cloud Architecture projects typically save €15K–€50K/year in infrastructure costs. Serverless cuts hosting bills by up to 60–80%. The full bundle at €3,600/mo replaces €20K+ in salaries. The free audit gives you exact numbers for your specific setup.",
-    ),
+    answer: t("servicesPage.faq1A", "Cloud Architecture projects typically save €15K–€50K/year in infrastructure costs. Serverless cuts hosting bills by up to 60–80%. The full bundle at €3,600/mo replaces €20K+ in salaries. The free audit gives you exact numbers for your specific setup."),
   },
   {
-    question: t(
-      "servicesPage.faq2Q",
-      "What's the difference between hiring a CTO and using Cloudless?",
-    ),
-    answer: t(
-      "servicesPage.faq2A",
-      "A CTO costs €8K–€12K/month in salary alone, needs 3–6 months to ramp up, and handles strategy but not execution. We deliver architecture, development, analytics, and marketing — execution from day one, at a fraction of the cost. And you can cancel anytime.",
-    ),
+    question: t("servicesPage.faq2Q", "What's the difference between hiring a CTO and using Cloudless?"),
+    answer: t("servicesPage.faq2A", "A CTO costs €8K–€12K/month in salary alone, needs 3–6 months to ramp up, and handles strategy but not execution. We deliver architecture, development, analytics, and marketing — execution from day one, at a fraction of the cost. And you can cancel anytime."),
   },
   {
-    question: t(
-      "servicesPage.faq3Q",
-      "Can you work with our existing infrastructure?",
-    ),
-    answer: t(
-      "servicesPage.faq3A",
-      "Absolutely. We start with an audit of your current setup and create a phased migration plan. No rip-and-replace — we improve what you have and build from there.",
-    ),
+    question: t("servicesPage.faq3Q", "Can you work with our existing infrastructure?"),
+    answer: t("servicesPage.faq3A", "Absolutely. We start with an audit of your current setup and create a phased migration plan. No rip-and-replace — we improve what you have and build from there."),
   },
   {
     question: t("servicesPage.faq4Q", "What happens after the project ends?"),
-    answer: t(
-      "servicesPage.faq4A",
-      "Everything we build is yours — fully documented, handoff-ready, and built with standard tools (Terraform, AWS CDK, GitHub Actions). Your next engineer picks it up without calling us.",
-    ),
+    answer: t("servicesPage.faq4A", "Everything we build is yours — fully documented, handoff-ready, and built with standard tools (Terraform, AWS CDK, GitHub Actions). Your next engineer picks it up without calling us."),
   },
   {
-    question: t(
-      "servicesPage.faq5Q",
-      "How do I know this will work for my business?",
-    ),
-    answer: t(
-      "servicesPage.faq5A",
-      "The free audit tells you. In 30 minutes, we review your setup and give you a concrete action plan with specific ROI estimates. Most founders say it's the most useful 30 minutes they've spent on their tech stack — even if they never hire us.",
-    ),
+    question: t("servicesPage.faq5Q", "How do I know this will work for my business?"),
+    answer: t("servicesPage.faq5A", "The free audit tells you. In 30 minutes, we review your setup and give you a concrete action plan with specific ROI estimates. Most founders say it's the most useful 30 minutes they've spent on their tech stack — even if they never hire us."),
   },
 ];
 
@@ -351,10 +291,7 @@ export default async function ServicesPage() {
             </span>
           </h1>
           <p className="mt-4 max-w-xl text-lg text-slate-400">
-            {t(
-              "servicesPage.subtitle",
-              "Pick what you need or bundle everything for 30% savings. No lock-in contracts — your code is always yours.",
-            )}
+            {t("servicesPage.subtitle", "Pick what you need or bundle everything for 30% savings. No lock-in contracts — your code is always yours.")}
           </p>
         </div>
       </section>
@@ -382,9 +319,7 @@ export default async function ServicesPage() {
                       <span
                         className={`inline-flex items-center gap-2 px-3 py-1.5 ${colors.badge} rounded-full border font-mono text-xs font-medium`}
                       >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${colors.dot} animate-pulse`}
-                        />
+                        <span className={`h-1.5 w-1.5 rounded-full ${colors.dot} animate-pulse`} />
                         {service.tag}
                       </span>
                     </div>
@@ -392,9 +327,7 @@ export default async function ServicesPage() {
                     <h2 className="font-heading text-2xl leading-tight font-bold text-white md:text-3xl">
                       {service.title}
                     </h2>
-                    <p className="mt-3 leading-relaxed text-slate-400">
-                      {service.description}
-                    </p>
+                    <p className="mt-3 leading-relaxed text-slate-400">{service.description}</p>
                     <p className="text-neon-magenta/70 mt-2 font-mono text-xs italic">
                       {service.perfectFor}
                     </p>
@@ -402,10 +335,7 @@ export default async function ServicesPage() {
                     {/* Checkmark feature list */}
                     <ul className="mt-6 space-y-3">
                       {service.features.map((feature) => (
-                        <li
-                          key={feature}
-                          className="flex items-start gap-3 text-sm text-slate-300"
-                        >
+                        <li key={feature} className="flex items-start gap-3 text-sm text-slate-300">
                           <svg
                             className={`h-5 w-5 ${colors.check} mt-0.5 shrink-0`}
                             fill="none"
@@ -413,11 +343,7 @@ export default async function ServicesPage() {
                             stroke="currentColor"
                             strokeWidth={2.5}
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M5 13l4 4L19 7"
-                            />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                           </svg>
                           {feature}
                         </li>
@@ -430,9 +356,7 @@ export default async function ServicesPage() {
                     </p>
                     <div className="mt-4 flex items-center gap-6">
                       <div>
-                        <span
-                          className={`font-mono text-2xl font-bold ${colors.price}`}
-                        >
+                        <span className={`font-mono text-2xl font-bold ${colors.price}`}>
                           {service.price}
                         </span>
                         <span className="ml-2 font-mono text-xs text-slate-500">
@@ -452,9 +376,7 @@ export default async function ServicesPage() {
                   </div>
 
                   {/* Visual column — terminal + stats grid */}
-                  <div
-                    className={`space-y-4 ${isReversed ? "lg:[direction:ltr]" : ""}`}
-                  >
+                  <div className={`space-y-4 ${isReversed ? "lg:[direction:ltr]" : ""}`}>
                     <TerminalBlock
                       lines={service.terminal}
                       title={`cloudless-cli — ${service.tag.toLowerCase()}`}
@@ -467,14 +389,10 @@ export default async function ServicesPage() {
                           key={stat.label}
                           className={`rounded-lg border p-4 ${colors.stat} text-center`}
                         >
-                          <div
-                            className={`font-mono text-xl font-bold ${colors.statValue}`}
-                          >
+                          <div className={`font-mono text-xl font-bold ${colors.statValue}`}>
                             {stat.value}
                           </div>
-                          <div className="mt-1 font-mono text-xs text-slate-500">
-                            {stat.label}
-                          </div>
+                          <div className="mt-1 font-mono text-xs text-slate-500">{stat.label}</div>
                         </div>
                       ))}
                     </div>
@@ -501,26 +419,13 @@ export default async function ServicesPage() {
                 {t("servicesPage.bundleTitle", "Full-Stack Growth Engine")}
               </h2>
               <p className="mt-3 leading-relaxed text-slate-400">
-                {t(
-                  "servicesPage.bundleDesc",
-                  "Get all four services bundled together. Cloud infrastructure, serverless apps, analytics dashboards, and AI marketing — everything your business needs to scale.",
-                )}
+                {t("servicesPage.bundleDesc", "Get all four services bundled together. Cloud infrastructure, serverless apps, analytics dashboards, and AI marketing — everything your business needs to scale.")}
               </p>
               <p className="bg-void/50 mt-3 rounded-lg border border-slate-700 p-3 text-sm text-slate-300">
-                <span className="text-neon-cyan font-semibold">
-                  {t("servicesPage.bundleAlt", "The alternative?")}
-                </span>{" "}
-                {t(
-                  "servicesPage.bundleAltDesc",
-                  "A CTO (~€8K/mo) + marketer (~€4K/mo) + data analyst (~€3K/mo) + cloud engineer (~€5K/mo) =",
-                )}{" "}
-                <span className="font-semibold text-white">
-                  {t("servicesPage.bundleAltTotal", "€20K+/month.")}
-                </span>{" "}
-                {t(
-                  "servicesPage.bundleAltSavings",
-                  "We replace all four for €3,600.",
-                )}
+                <span className="text-neon-cyan font-semibold">{t("servicesPage.bundleAlt", "The alternative?")}</span>{" "}
+                {t("servicesPage.bundleAltDesc", "A CTO (~€8K/mo) + marketer (~€4K/mo) + data analyst (~€3K/mo) + cloud engineer (~€5K/mo) =")}{" "}
+                <span className="font-semibold text-white">{t("servicesPage.bundleAltTotal", "€20K+/month.")}</span>{" "}
+                {t("servicesPage.bundleAltSavings", "We replace all four for €3,600.")}
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {[
@@ -541,12 +446,8 @@ export default async function ServicesPage() {
                 })}
               </div>
               <div className="mt-8 flex items-baseline gap-3">
-                <span className="text-neon-cyan font-mono text-4xl font-bold">
-                  €3,600
-                </span>
-                <span className="font-mono text-sm text-slate-500">
-                  {t("servicesPage.perMonth", "per month")}
-                </span>
+                <span className="text-neon-cyan font-mono text-4xl font-bold">€3,600</span>
+                <span className="font-mono text-sm text-slate-500">{t("servicesPage.perMonth", "per month")}</span>
                 <span className="text-neon-magenta bg-neon-magenta/10 ml-2 rounded-full px-2 py-0.5 font-mono text-xs">
                   {t("servicesPage.bundleSave", "SAVE 30%")}
                 </span>
@@ -559,10 +460,7 @@ export default async function ServicesPage() {
               </Link>
             </div>
             <div className="hidden lg:block">
-              <TerminalBlock
-                lines={bundleTerminal}
-                title="cloudless-cli — bundle"
-              />
+              <TerminalBlock lines={bundleTerminal} title="cloudless-cli — bundle" />
             </div>
           </div>
         </div>
@@ -572,46 +470,30 @@ export default async function ServicesPage() {
       <section className="bg-void py-20 lg:py-28">
         <div className="mx-auto max-w-6xl px-6 text-center">
           <ScrollReveal>
-            <p className="text-neon-cyan mb-3 font-mono text-xs tracking-[0.3em]">
-              {t("servicesPage.guaranteeLabel", "[ GUARANTEE ]")}
-            </p>
-            <h2 className="font-heading text-2xl font-bold text-white md:text-3xl">
-              {t("servicesPage.guaranteeTitle", "Our Promise")}
-            </h2>
+            <p className="text-neon-cyan mb-3 font-mono text-xs tracking-[0.3em]">{t("servicesPage.guaranteeLabel", "[ GUARANTEE ]")}</p>
+            <h2 className="font-heading text-2xl font-bold text-white md:text-3xl">{t("servicesPage.guaranteeTitle", "Our Promise")}</h2>
           </ScrollReveal>
           <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
             {[
               {
                 icon: "⚡",
                 title: t("servicesPage.g1Title", "Results in 14 Days"),
-                desc: t(
-                  "servicesPage.g1Desc",
-                  "See measurable progress within two weeks of kickoff — or we keep working until you do.",
-                ),
+                desc: t("servicesPage.g1Desc", "See measurable progress within two weeks of kickoff — or we keep working until you do."),
               },
               {
                 icon: "🔓",
                 title: t("servicesPage.g2Title", "No Lock-in"),
-                desc: t(
-                  "servicesPage.g2Desc",
-                  "Month-to-month. Cancel anytime. We earn your business every month.",
-                ),
+                desc: t("servicesPage.g2Desc", "Month-to-month. Cancel anytime. We earn your business every month."),
               },
               {
                 icon: "📦",
                 title: t("servicesPage.g3Title", "Your Code Is Yours"),
-                desc: t(
-                  "servicesPage.g3Desc",
-                  "Full documentation, handoff-ready. We build it and you own it — always.",
-                ),
+                desc: t("servicesPage.g3Desc", "Full documentation, handoff-ready. We build it and you own it — always."),
               },
               {
                 icon: "🎯",
                 title: t("servicesPage.g4Title", "Free Audit First"),
-                desc: t(
-                  "servicesPage.g4Desc",
-                  "Every engagement starts with a no-cost review. Actionable insights in 30 minutes.",
-                ),
+                desc: t("servicesPage.g4Desc", "Every engagement starts with a no-cost review. Actionable insights in 30 minutes."),
               },
             ].map((item, i) => (
               <ScrollReveal key={item.title} delay={i * 100}>
@@ -619,9 +501,7 @@ export default async function ServicesPage() {
                   <div className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg border text-lg">
                     {item.icon}
                   </div>
-                  <h3 className="font-heading font-semibold text-white">
-                    {item.title}
-                  </h3>
+                  <h3 className="font-heading font-semibold text-white">{item.title}</h3>
                   <p className="mt-2 text-sm text-slate-400">{item.desc}</p>
                 </div>
               </ScrollReveal>
@@ -640,9 +520,7 @@ export default async function ServicesPage() {
               </p>
               <h2 className="font-heading text-2xl font-bold text-white md:text-3xl">
                 {t("servicesPage.faqTitle", "Questions about our")}{" "}
-                <span className="text-neon-cyan">
-                  {t("servicesPage.faqTitleHighlight", "services")}
-                </span>
+                <span className="text-neon-cyan">{t("servicesPage.faqTitleHighlight", "services")}</span>
               </h2>
             </div>
           </ScrollReveal>
@@ -676,9 +554,7 @@ export default async function ServicesPage() {
         <div className="bg-neon-cyan/5 absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl" />
         <div className="relative z-10 mx-auto max-w-2xl px-6 text-center">
           <ScrollReveal>
-            <p className="text-neon-cyan mb-4 font-mono text-xs tracking-[0.3em]">
-              {t("servicesPage.ctaLabel", "[ NEXT STEP ]")}
-            </p>
+            <p className="text-neon-cyan mb-4 font-mono text-xs tracking-[0.3em]">{t("servicesPage.ctaLabel", "[ NEXT STEP ]")}</p>
             <h2 className="font-heading text-3xl font-bold text-white md:text-4xl">
               {t("servicesPage.ctaTitle", "Ready to get")}{" "}
               <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
@@ -686,10 +562,7 @@ export default async function ServicesPage() {
               </span>
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-lg leading-relaxed text-slate-400">
-              {t(
-                "servicesPage.ctaSubtitle",
-                "Book a free 30-minute audit call. We'll review your current setup, identify quick wins, and map out a plan — no commitment required.",
-              )}
+              {t("servicesPage.ctaSubtitle", "Book a free 30-minute audit call. We'll review your current setup, identify quick wins, and map out a plan — no commitment required.")}
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link

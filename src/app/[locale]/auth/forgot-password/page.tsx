@@ -62,14 +62,8 @@ export default function ForgotPasswordPage() {
           </h1>
           <p className="font-body mt-2 text-slate-400">
             {step === "request"
-              ? t(
-                  "auth.resetRequestDesc",
-                  "We'll send a verification code to your email",
-                )
-              : t(
-                  "auth.resetCodeDesc",
-                  "Enter the code sent to {email}",
-                ).replace("{email}", email)}
+              ? t("auth.resetRequestDesc", "We'll send a verification code to your email")
+              : t("auth.resetCodeDesc", "Enter the code sent to {email}").replace("{email}", email)}
           </p>
         </div>
 

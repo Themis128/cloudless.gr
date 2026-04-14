@@ -56,10 +56,7 @@ function mapStripeProduct(sp: StripeProduct): StoreProduct {
     image,
     features,
     recurring: sp.defaultPrice?.recurring != null,
-    interval: sp.defaultPrice?.recurring?.interval as
-      | "month"
-      | "year"
-      | undefined,
+    interval: sp.defaultPrice?.recurring?.interval as "month" | "year" | undefined,
   };
 }
 
@@ -91,9 +88,7 @@ export async function getProducts(): Promise<StoreProduct[]> {
 // Product lookups (use live data when available)
 // ---------------------------------------------------------------------------
 
-export async function getProductByIdAsync(
-  id: string,
-): Promise<StoreProduct | undefined> {
+export async function getProductByIdAsync(id: string): Promise<StoreProduct | undefined> {
   const products = await getProducts();
   return products.find((p) => p.id === id);
 }
@@ -117,9 +112,7 @@ export function getProductById(id: string): StoreProduct | undefined {
   return demoProducts.find((p) => p.id === id);
 }
 
-export function getProductsByCategory(
-  category: ProductCategory,
-): StoreProduct[] {
+export function getProductsByCategory(category: ProductCategory): StoreProduct[] {
   if (productCache) {
     return productCache.products.filter((p) => p.category === category);
   }
@@ -275,8 +268,7 @@ export const demoProducts: StoreProduct[] = [
   {
     id: "phy-tshirt",
     name: "Cloudless T-Shirt",
-    description:
-      "Soft cotton developer tee with the Cloudless logo. Available in Navy and White.",
+    description: "Soft cotton developer tee with the Cloudless logo. Available in Navy and White.",
     price: 2500,
     currency: "eur",
     category: "physical",

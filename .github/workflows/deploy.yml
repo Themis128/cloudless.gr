@@ -26,6 +26,7 @@ permissions:
   id-token: write
   contents: read
   deployments: write
+
 jobs:
   deploy:
     name: Deploy
@@ -39,22 +40,26 @@ jobs:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: us-east-1_JQWwFbO9a
       NEXT_PUBLIC_COGNITO_CLIENT_ID: 2qq6i24oc48391cmuv4kfl1rm2
       NEXT_PUBLIC_HUBSPOT_PORTAL_ID: "147639927"
+      # Exposed as an env var so it can be used in `if:` expressions.
+      # Secrets cannot be compared directly in GitHub Actions conditionals.
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
       - name: Lint
         run: pnpm lint
 
@@ -64,31 +69,66 @@ jobs:
       - name: Unit tests
         run: pnpm test:ci
 
-      - name: Show OIDC token claims
+      - name: Bump service worker CACHE_VERSION
+        # Derives a version from the short SHA so every deploy gets a unique
+        # cache key, which forces clients to pick up the new service worker.
         run: |
-          set -euo pipefail
-          TOKEN_JSON=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")
-          OIDC_TOKEN=$(echo "$TOKEN_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')
-          PAYLOAD=$(echo "$OIDC_TOKEN" | cut -d '.' -f2)
-          PAYLOAD="$PAYLOAD" python3 -c \
-            'import base64,json,os; p=os.environ["PAYLOAD"]; p+="="*(-len(p)%4); d=json.loads(base64.urlsafe_b64decode(p).decode()); print("OIDC sub: "+d.get("sub","")); print("OIDC aud: "+str(d.get("aud",""))); print("OIDC repository: "+d.get("repository","")); print("OIDC ref: "+d.get("ref",""))'
-      - name: Configure AWS credentials
-        id: awscreds
-        uses: aws-actions/configure-aws-credentials@v5
+          SHORT_SHA="${GITHUB_SHA::8}"
+          # Convert first 4 hex chars to a decimal number for a compact version
+          VERSION=$(printf '%d' "0x${SHORT_SHA:0:4}")
+          sed -i "s/const CACHE_VERSION = \"[^\"]*\"/const CACHE_VERSION = \"${VERSION}\"/" public/sw.js
+          echo "CACHE_VERSION bumped to ${VERSION} (sha: ${SHORT_SHA})"
+          grep "CACHE_VERSION" public/sw.js
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::278585680617:role/GitHubActionsOIDC
-          role-session-name: gha-deploy-${{ github.run_id }}
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
-          audience: sts.amazonaws.com
 
-      - name: Fail with OIDC trust-policy guidance
-        if: steps.awscreds.outcome == 'failure'
+      - name: Notify Slack — deploy started
+        if: env.SLACK_WEBHOOK_URL != ''
         run: |
-          echo "OIDC assume role failed. Update IAM trust policy for arn:aws:iam::278585680617:role/GitHubActionsOIDC."
-          echo "Provider: token.actions.githubusercontent.com"
-          echo "Audience: sts.amazonaws.com"
-          echo "Expected deploy subject: repo:Themis128/cloudless.gr:ref:refs/heads/main"
-          exit 1
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \":rocket: Deploy started — \`${GITHUB_SHA::7}\` by ${{ github.actor }}\",
+              \"blocks\": [
+                {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \":rocket: Deploy Started\", \"emoji\": true}},
+                {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\"}},
+                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
+              ]
+            }"
 
-      - name: Deploy with SST
-        run: pnpm run deploy
+      - name: Deploy (SST)
+        run: pnpm sst deploy --stage production
+        env:
+          AWS_REGION: us-east-1
+
+      - name: Notify Slack — deploy succeeded
+        if: success() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \":white_check_mark: Deploy succeeded — \`${GITHUB_SHA::7}\` is live\",
+              \"blocks\": [
+                {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \":white_check_mark: Deploy Succeeded\", \"emoji\": true}},
+                {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\n*URL:* <https://cloudless.gr|cloudless.gr>\"}},
+                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
+              ]
+            }"
+
+      - name: Notify Slack — deploy failed
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \":x: Deploy failed — \`${GITHUB_SHA::7}\` by ${{ github.actor }}\",
+              \"blocks\": [
+                {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \":x: Deploy Failed\", \"emoji\": true}},
+                {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\"}},
+                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
+              ]
+            }"
