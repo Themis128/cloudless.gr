@@ -48,11 +48,12 @@ function makeUserToken(): string {
 
 function adminRequest(url: string, init?: RequestInit): NextRequest {
   return new NextRequest(url, {
-    ...init,
-    headers: {
+    method: init?.method ?? "GET",
+    body: init?.body,
+    headers: new Headers({
       Authorization: `Bearer ${makeAdminToken()}`,
-    },
-  });
+    }),
+  } as RequestInit);
 }
 
 function userRequest(url: string): NextRequest {

@@ -58,7 +58,7 @@ export type NotionBlock = Record<string, unknown>;
 
 export interface NotionPostWithContent extends NotionPost {
   html: string;
-  content?: NotionBlock[];
+  content: NotionBlock[];
 }
 
 // ---------------------------------------------------------------------------
