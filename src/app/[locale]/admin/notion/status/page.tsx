@@ -10,7 +10,7 @@ interface DbStatus {
   configured: boolean;
   connected: boolean;
   count: number;
-  sample: Record<string, any>[];
+  sample: Record<string, unknown>[];
   error?: string;
 }
 
@@ -56,7 +56,7 @@ function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
   );
 }
 
-function CellValue({ value }: { value: any }) {
+function CellValue({ value }: { value: unknown }) {
   if (value === null || value === undefined || value === "")
     return <span className="text-slate-600">{"\u2014"}</span>;
   if (typeof value === "boolean")
@@ -202,8 +202,8 @@ export default function NotionStatusPage() {
       // Auto-expand connected databases
       const connected = new Set(json.databases.filter((d) => d.connected).map((d) => d.name));
       setExpandedDbs(connected);
-    } catch (err: any) {
-      setError(err.message ?? "Failed to load");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
       setLoading(false);
     }
