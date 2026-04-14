@@ -54,8 +54,11 @@ export interface NotionPost {
   seoDescription?: string;
 }
 
+export type NotionBlock = Record<string, unknown>;
+
 export interface NotionPostWithContent extends NotionPost {
   html: string;
+  content?: NotionBlock[];
 }
 
 // ---------------------------------------------------------------------------
@@ -331,7 +334,7 @@ export async function getPostWithToc(
 
     // Import extractToc at runtime to avoid circular deps
     const { extractToc } = await import("@/lib/notion");
-    const toc = extractToc(blocks);
+    const toc = extractToc(blocks as Parameters<typeof extractToc>[0]);
 
     return { ...post, html, toc };
   } catch (err) {

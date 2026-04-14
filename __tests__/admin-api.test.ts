@@ -50,7 +50,6 @@ function adminRequest(url: string, init?: RequestInit): NextRequest {
   return new NextRequest(url, {
     ...init,
     headers: {
-      ...(init?.headers ?? {}),
       Authorization: `Bearer ${makeAdminToken()}`,
     },
   });

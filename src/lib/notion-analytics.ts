@@ -190,7 +190,7 @@ export async function getRecentEvents(
         page_size: Math.min(limit, 100),
       },
     );
-    return pages.slice(0, limit).map(mapEvent);
+    return (pages as NotionPage[]).slice(0, limit).map(mapEvent);
   } catch (err) {
     console.error("[Notion Analytics] Failed to fetch events:", err);
     return [];
@@ -220,7 +220,7 @@ export async function getEventsByDateRange(
         sorts: [{ property: "Date", direction: "descending" }],
       },
     );
-    return pages.map(mapEvent);
+    return (pages as NotionPage[]).map(mapEvent);
   } catch (err) {
     console.error("[Notion Analytics] Failed to fetch events by date:", err);
     return [];

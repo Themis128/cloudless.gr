@@ -60,6 +60,11 @@ export function getIntegrations(): IntegrationConfig {
   return cached;
 }
 
+/** Reset the integration cache — useful in tests to pick up env changes */
+export function resetIntegrationCache(): void {
+  cached = null;
+}
+
 /** Check if a specific integration is configured */
 export function isConfigured(
   ...keys: (keyof IntegrationConfig)[]

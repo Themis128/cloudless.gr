@@ -124,7 +124,7 @@ function bookRequest(body: object) {
 }
 
 describe("POST /api/calendar/book", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     mockIsConfigured.mockReturnValue(true);
 
