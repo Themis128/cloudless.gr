@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
             session.currency ?? "eur",
           );
         }
-
         // Notify the team
         await notifyTeam(
           `[Order] New purchase: ${session.id}`,
@@ -123,7 +122,6 @@ export async function POST(request: NextRequest) {
           `[Stripe] Invoice payment failed: ${invoice.id}, customer: ${invoice.customer}`,
         );
 
-        // Notify the customer about the failed payment
         const customerEmail =
           typeof invoice.customer_email === "string" ? invoice.customer_email : null;
 
@@ -131,7 +129,6 @@ export async function POST(request: NextRequest) {
           await sendPaymentFailureNotice(customerEmail, invoice.id ?? "unknown");
         }
 
-        // Notify the team
         await notifyTeam(
           `[Payment Failed] Invoice: ${invoice.id}`,
           `<p style="color: #ff4444;"><strong>Payment failed</strong></p>
@@ -147,7 +144,25 @@ export async function POST(request: NextRequest) {
     }
   } catch (err) {
     console.error(`[Stripe] Error handling ${event.type}:`, err);
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      await import("@sentry/nextjs")
+        .then(({ captureException, withScope }) =>
+          withScope((scope) => {
+            scope.setTag("route", "stripe.webhook");
+            scope.setTag("stripe.event", event.type);
+            captureException(err);
+          }),
+        )
+        .catch(() => {});
+    }
     return Response.json({ error: "Webhook handler failed" }, { status: 500 });
+  }
+
+  // Flush Sentry before Lambda returns — events are buffered
+  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    await import("@sentry/nextjs")
+      .then(({ flush }) => flush(2000))
+      .catch(() => {});
   }
 
   return Response.json({ received: true });

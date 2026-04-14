@@ -40,8 +40,6 @@ jobs:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: us-east-1_JQWwFbO9a
       NEXT_PUBLIC_COGNITO_CLIENT_ID: 2qq6i24oc48391cmuv4kfl1rm2
       NEXT_PUBLIC_HUBSPOT_PORTAL_ID: "147639927"
-      # Exposed as an env var so it can be used in `if:` expressions.
-      # Secrets cannot be compared directly in GitHub Actions conditionals.
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
     steps:
@@ -70,11 +68,8 @@ jobs:
         run: pnpm test:ci
 
       - name: Bump service worker CACHE_VERSION
-        # Derives a version from the short SHA so every deploy gets a unique
-        # cache key, which forces clients to pick up the new service worker.
         run: |
           SHORT_SHA="${GITHUB_SHA::8}"
-          # Convert first 4 hex chars to a decimal number for a compact version
           VERSION=$(printf '%d' "0x${SHORT_SHA:0:4}")
           sed -i "s/const CACHE_VERSION = \"[^\"]*\"/const CACHE_VERSION = \"${VERSION}\"/" public/sw.js
           echo "CACHE_VERSION bumped to ${VERSION} (sha: ${SHORT_SHA})"
@@ -104,6 +99,10 @@ jobs:
         run: pnpm sst deploy --stage production
         env:
           AWS_REGION: us-east-1
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: baltzakisthemiscom
+          SENTRY_PROJECT: cloudless-gr
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
 
       - name: Notify Slack — deploy succeeded
         if: success() && env.SLACK_WEBHOOK_URL != ''

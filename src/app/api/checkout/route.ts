@@ -17,7 +17,6 @@ export async function POST(request: NextRequest) {
 
     const origin = request.headers.get("origin") || "https://cloudless.gr";
 
-    // Validate each item against the server-side catalog
     const resolvedProducts = items.map((item) => {
       const product = getProductById(item.id);
       if (!product) {
@@ -29,22 +28,15 @@ export async function POST(request: NextRequest) {
     const lineItems = resolvedProducts.map(({ product, quantity }) => {
       const priceData: Record<string, unknown> = {
         currency: product.currency,
-        product_data: {
-          name: product.name,
-        },
+        product_data: { name: product.name },
         unit_amount: product.price,
       };
 
       if (product.recurring) {
-        priceData.recurring = {
-          interval: product.interval || "month",
-        };
+        priceData.recurring = { interval: product.interval || "month" };
       }
 
-      return {
-        price_data: priceData,
-        quantity,
-      };
+      return { price_data: priceData, quantity };
     });
 
     const hasSubscription = resolvedProducts.some(({ product }) => product.recurring);
@@ -62,36 +54,9 @@ export async function POST(request: NextRequest) {
       )
         ? {
             allowed_countries: [
-              "GR",
-              "DE",
-              "FR",
-              "IT",
-              "ES",
-              "NL",
-              "BE",
-              "AT",
-              "PT",
-              "IE",
-              "FI",
-              "SE",
-              "DK",
-              "PL",
-              "CZ",
-              "RO",
-              "BG",
-              "HR",
-              "SK",
-              "SI",
-              "LT",
-              "LV",
-              "EE",
-              "LU",
-              "MT",
-              "CY",
-              "US",
-              "GB",
-              "CA",
-              "AU",
+              "GR","DE","FR","IT","ES","NL","BE","AT","PT","IE","FI","SE","DK",
+              "PL","CZ","RO","BG","HR","SK","SI","LT","LV","EE","LU","MT","CY",
+              "US","GB","CA","AU",
             ],
           }
         : undefined,
@@ -100,6 +65,16 @@ export async function POST(request: NextRequest) {
     return Response.json({ url: session.url });
   } catch (error) {
     console.error("Checkout error:", error);
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      await import("@sentry/nextjs")
+        .then(({ captureException, withScope }) =>
+          withScope((scope) => {
+            scope.setTag("route", "checkout");
+            captureException(error);
+          }),
+        )
+        .catch(() => {});
+    }
     return Response.json({ error: "Failed to create checkout session" }, { status: 500 });
   }
 }

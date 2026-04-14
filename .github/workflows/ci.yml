@@ -71,6 +71,10 @@ jobs:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
       NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
       NEXT_PUBLIC_HUBSPOT_PORTAL_ID: ${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: baltzakisthemiscom
+      SENTRY_PROJECT: cloudless-gr
+      NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5
