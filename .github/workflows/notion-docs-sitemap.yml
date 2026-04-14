@@ -18,7 +18,6 @@ jobs:
   sync:
     name: Sync Notion docs & blog slugs into sitemap
     runs-on: ubuntu-latest
-    if: ${{ secrets.NOTION_API_KEY != '' }}
 
     steps:
       - uses: actions/checkout@v6

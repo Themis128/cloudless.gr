@@ -20,7 +20,6 @@ jobs:
   validate:
     name: Validate Notion DB schemas
     runs-on: ubuntu-latest
-    if: ${{ secrets.NOTION_API_KEY != '' }}
 
     steps:
       - uses: actions/checkout@v6
