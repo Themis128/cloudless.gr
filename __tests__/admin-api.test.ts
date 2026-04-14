@@ -47,13 +47,8 @@ function makeUserToken(): string {
 }
 
 function adminRequest(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(url, {
-    method: init?.method ?? "GET",
-    body: init?.body,
-    headers: new Headers({
-      Authorization: `Bearer ${makeAdminToken()}`,
-    }),
-  } as RequestInit);
+  const headers = new Headers({ Authorization: `Bearer ${makeAdminToken()}` });
+  return new NextRequest(url, { method: init?.method, body: init?.body, headers } as unknown as RequestInit);
 }
 
 function userRequest(url: string): NextRequest {

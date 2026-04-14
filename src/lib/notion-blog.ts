@@ -216,7 +216,7 @@ export async function getPostBySlug(
     const blocks = await notionListAll(`/blocks/${post.id}/children`);
     const html = blocksToHtml(blocks);
 
-    return { ...post, html };
+    return { ...post, html, content: blocks as NotionBlock[] };
   } catch (err) {
     console.error("[Notion Blog] Failed to fetch post by slug:", err);
     return null;
@@ -336,7 +336,7 @@ export async function getPostWithToc(
     const { extractToc } = await import("@/lib/notion");
     const toc = extractToc(blocks as Parameters<typeof extractToc>[0]);
 
-    return { ...post, html, toc };
+    return { ...post, html, toc, content: blocks as NotionBlock[] };
   } catch (err) {
     console.error("[Notion Blog] Failed to fetch post with TOC:", err);
     return null;
