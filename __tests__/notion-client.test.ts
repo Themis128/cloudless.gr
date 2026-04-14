@@ -1,19 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock integrations
-vi.mock("@/lib/integrations", () => ({
-  getIntegrations: vi.fn().mockReturnValue({
-    NOTION_API_KEY: "secret_test_key_12345",
-    NOTION_BLOG_DB_ID: "blog-db-id",
-    NOTION_SUBMISSIONS_DB_ID: "submissions-db-id",
-    NOTION_DOCS_DB_ID: "docs-db-id",
-    NOTION_PROJECTS_DB_ID: "projects-db-id",
-    NOTION_TASKS_DB_ID: "tasks-db-id",
-    NOTION_ANALYTICS_DB_ID: "analytics-db-id",
-  }),
-  isConfigured: vi.fn().mockReturnValue(true),
-}));
-
 // Mock global fetch
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { upsertContact, isHubSpotConfigured } from "@/lib/hubspot";
+import { upsertContact } from "@/lib/hubspot";
+import { isConfigured } from "@/lib/integrations";
 import { isValidEmail } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  if (!await isHubSpotConfigured()) {
+  if (!isConfigured("HUBSPOT_API_KEY")) {
     return NextResponse.json({ error: "CRM not configured." }, { status: 503 });
   }
 

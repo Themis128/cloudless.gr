@@ -1,13 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { posts as staticPosts } from "@/lib/blog";
+import { resetIntegrationCache } from "@/lib/integrations";
 
-const isConfiguredMock = vi.fn();
 const getNotionPostsMock = vi.fn();
 const getNotionPostBySlugMock = vi.fn();
-
-vi.mock("@/lib/integrations", () => ({
-  isConfigured: isConfiguredMock,
-}));
 
 vi.mock("@/lib/notion-blog", () => ({
   getPosts: getNotionPostsMock,
@@ -20,14 +16,14 @@ describe("blog-source", () => {
   });
 
   it("returns static posts when Notion is not configured", async () => {
-    isConfiguredMock.mockReturnValue(false);
+    vi.stubEnv("NOTION_API_KEY", "");
+    resetIntegrationCache();
     const { getBlogPosts } = await import("@/lib/blog-source");
 
     await expect(getBlogPosts()).resolves.toEqual(staticPosts);
   });
 
   it("maps Notion listing posts into the frontend blog shape", async () => {
-    isConfiguredMock.mockReturnValue(true);
     getNotionPostsMock.mockResolvedValueOnce([
       {
         id: "notion-1",
@@ -56,7 +52,6 @@ describe("blog-source", () => {
   });
 
   it("maps a Notion post into renderable markdown-like content", async () => {
-    isConfiguredMock.mockReturnValue(true);
     getNotionPostBySlugMock.mockResolvedValueOnce({
       id: "notion-2",
       slug: "notion-detail",
@@ -101,7 +96,6 @@ describe("blog-source", () => {
   });
 
   it("falls back to static content when Notion lookup fails", async () => {
-    isConfiguredMock.mockReturnValue(true);
     getNotionPostBySlugMock.mockRejectedValueOnce(new Error("notion down"));
 
     const { getBlogPostBySlug } = await import("@/lib/blog-source");

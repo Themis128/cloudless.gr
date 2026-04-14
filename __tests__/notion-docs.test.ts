@@ -10,13 +10,6 @@ vi.mock("@/lib/notion-cache", () => ({
   invalidateCache: vi.fn(),
 }));
 
-vi.mock("@/lib/integrations", () => ({
-  getIntegrations: vi.fn().mockReturnValue({
-    NOTION_API_KEY: "secret_test",
-    NOTION_DOCS_DB_ID: "docs-db-123",
-  }),
-}));
-
 vi.mock("@/lib/notion", () => ({
   notionFetch: (...args: unknown[]) => mockNotionFetch(...args),
   notionFetchAll: (...args: unknown[]) => mockNotionFetchAll(...args),

@@ -31,11 +31,51 @@ interface AppConfig {
 let cached: AppConfig | null = null;
 let cachedAt = 0;
 
+/** Clears the SSM config cache — used in tests to pick up env changes. */
+export function resetSsmCache(): void {
+  cached = null;
+  cachedAt = 0;
+}
+
+/**
+ * Builds an AppConfig purely from process.env — used in test environments
+ * so tests never touch AWS SSM.
+ */
+function buildConfigFromEnv(): AppConfig {
+  return {
+    SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "noreply@cloudless.gr",
+    SES_TO_EMAIL: process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
+    AWS_SES_REGION: process.env.AWS_SES_REGION || "us-east-1",
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
+    STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
+    COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID || "",
+    COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID || "",
+    SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL || "",
+    SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",
+    SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || "",
+    HUBSPOT_API_KEY:
+      process.env.HUBSPOT_API_KEY || process.env.HUBSPOT_PRIVATE_APP_TOKEN || "",
+    NOTION_API_KEY: process.env.NOTION_API_KEY || "",
+    NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
+    NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",
+    GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL || "",
+    GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+    GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || "",
+    GSC_SITE_URL: process.env.GSC_SITE_URL || "sc-domain:cloudless.gr",
+  };
+}
+
 /**
  * Fetches all /cloudless/production/* parameters from SSM.
  * Cache expires after 5 minutes to pick up rotated secrets without redeploy.
+ * In test environments (NODE_ENV=test), reads from process.env directly.
  */
 export async function getConfig(): Promise<AppConfig> {
+  // In tests, skip SSM entirely and read from process.env.
+  // resetSsmCache() clears `cached` so per-test vi.stubEnv() changes are picked up.
+  if (process.env.NODE_ENV === "test") return buildConfigFromEnv();
+
   if (cached && Date.now() - cachedAt < CACHE_TTL_MS) return cached;
 
   const ssm = new SSMClient({ region: REGION });

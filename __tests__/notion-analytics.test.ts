@@ -1,16 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { resetIntegrationCache } from "@/lib/integrations";
 
 const mockNotionFetch = vi.fn();
 const mockNotionFetchAll = vi.fn();
-const mockIsConfigured = vi.fn().mockReturnValue(true);
-
-vi.mock("@/lib/integrations", () => ({
-  getIntegrations: vi.fn().mockReturnValue({
-    NOTION_API_KEY: "secret_test",
-    NOTION_ANALYTICS_DB_ID: "analytics-db-123",
-  }),
-  isConfigured: (...args: string[]) => mockIsConfigured(...args),
-}));
 
 vi.mock("@/lib/notion", () => ({
   notionFetch: (...args: unknown[]) => mockNotionFetch(...args),
@@ -40,7 +32,7 @@ function makeEventPage(overrides: Record<string, unknown> = {}) {
 describe("notion-analytics.ts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsConfigured.mockReturnValue(true);
+    resetIntegrationCache();
   });
 
   describe("trackEvent", () => {
@@ -68,7 +60,8 @@ describe("notion-analytics.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { trackEvent } = await import("@/lib/notion-analytics");
       const id = await trackEvent({ event: "test", type: "page_view" });
@@ -165,7 +158,8 @@ describe("notion-analytics.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { getRecentEvents } = await import("@/lib/notion-analytics");
       expect(await getRecentEvents()).toEqual([]);
@@ -245,7 +239,8 @@ describe("notion-analytics.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { getEventsByDateRange } = await import("@/lib/notion-analytics");
       expect(await getEventsByDateRange("2026-04-01", "2026-04-10")).toEqual([]);
@@ -389,7 +384,8 @@ describe("notion-analytics.ts", () => {
     });
 
     it("returns zeros when not configured", async () => {
-      mockIsConfigured.mockReturnValue(false);
+      vi.stubEnv("NOTION_API_KEY", "");
+      resetIntegrationCache();
 
       const { archiveOldEvents } = await import("@/lib/notion-analytics");
       const result = await archiveOldEvents();
