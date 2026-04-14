@@ -20,10 +20,10 @@ jobs:
   validate:
     name: Validate Notion DB schemas
     runs-on: ubuntu-latest
-    if: ${{ env.NOTION_API_KEY != '' }}
+    if: ${{ secrets.NOTION_API_KEY != '' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate Blog DB schema
         if: ${{ env.NOTION_BLOG_DB_ID != '' }}

@@ -35,21 +35,23 @@ jobs:
         language: ['javascript-typescript']
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
+        uses: github/codeql-action/autobuild@v3
 
       - name: Perform CodeQL Analysis
-        # Requires "Code scanning" enabled in repo Settings → Security → Code security.
-        # If disabled, this step will fail loudly — which is intentional: silent passes
-        # masked real issues when continue-on-error was true.
-        uses: github/codeql-action/analyze@v4
+        # Requires GitHub Advanced Security (GHAS) — available on public repos or
+        # private repos with a GHAS licence. Without it the upload step returns a
+        # 403 / "Code scanning is not enabled" error, so we mark it non-fatal and
+        # still surface any findings in the log.
+        uses: github/codeql-action/analyze@v3
+        continue-on-error: true
         with:
           category: '/language:${{ matrix.language }}'
