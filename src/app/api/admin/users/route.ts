@@ -79,10 +79,16 @@ export async function GET(request: NextRequest) {
           username: u.Username,
           email: getAttr(u.Attributes, "email"),
           name: getAttr(u.Attributes, "name"),
-          status: u.UserStatus,
+          company: getAttr(u.Attributes, "custom:company"),
+          phone: getAttr(u.Attributes, "phone_number"),
+          emailVerified: getAttr(u.Attributes, "email_verified") === "true",
+          // "active" / "disabled" maps to Cognito's Enabled flag
+          status: u.Enabled ? "active" : "disabled",
+          // Cognito confirmation status: CONFIRMED, UNCONFIRMED, FORCE_CHANGE_PASSWORD, etc.
+          userStatus: u.UserStatus ?? "UNKNOWN",
+          role: isAdmin ? "admin" : "user",
           created: u.UserCreateDate?.toISOString(),
-          updated: u.UserLastModifiedDate?.toISOString(),
-          isAdmin,
+          lastModified: u.UserLastModifiedDate?.toISOString(),
         };
       }),
     );
@@ -110,7 +116,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { action, username, groupName } = await request.json();
+    const { action, username } = await request.json();
 
     if (!action || !username) {
       return NextResponse.json(
@@ -141,12 +147,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: "User enabled" });
     }
 
-    if (action === "promote" && groupName === "admin") {
+    if (action === "promote") {
       await client.send(
         new AdminAddUserToGroupCommand({
           UserPoolId: USER_POOL_ID,
           Username: username,
-          GroupName: groupName,
+          GroupName: "admin",
         }),
       );
       return NextResponse.json({
@@ -155,12 +161,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (action === "demote" && groupName === "admin") {
+    if (action === "demote") {
       await client.send(
         new AdminRemoveUserFromGroupCommand({
           UserPoolId: USER_POOL_ID,
           Username: username,
-          GroupName: groupName,
+          GroupName: "admin",
         }),
       );
       return NextResponse.json({
