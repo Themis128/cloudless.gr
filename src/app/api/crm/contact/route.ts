@@ -19,20 +19,28 @@ export async function POST(request: Request) {
     } = await request.json();
 
     if (!email || !isValidEmail(email)) {
-      return NextResponse.json(
-        { error: "Valid email is required." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Valid email is required." }, { status: 400 });
     }
+
+    // Sanitize and length-cap all string fields before sending to HubSpot
+    const clean = (v: unknown, max: number): string | undefined =>
+      typeof v === "string" ? v.trim().slice(0, max) || undefined : undefined;
+
+    const safeFirstname = clean(firstname, 100);
+    const safeLastname  = clean(lastname,  100);
+    const safeCompany   = clean(company,   200);
+    const safeService   = clean(service_interest, 100);
+    const safeMessage   = clean(message,   1000);
+    const safeSource    = clean(lead_source, 100);
 
     const contactId = await upsertContact({
       email,
-      firstname,
-      lastname,
-      company,
-      service_interest,
-      message,
-      lead_source,
+      firstname:        safeFirstname,
+      lastname:         safeLastname,
+      company:          safeCompany,
+      service_interest: safeService,
+      message:          safeMessage,
+      lead_source:      safeSource,
     });
 
     if (!contactId) {
