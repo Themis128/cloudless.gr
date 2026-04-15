@@ -10,7 +10,7 @@
  */
 
 import { createHmac, timingSafeEqual } from "crypto";
-import { getSlackConfig } from "@/lib/integrations";
+import { getSlackConfigAsync } from "@/lib/integrations";
 
 /** Maximum age of a request timestamp before it is considered a replay. */
 const MAX_AGE_SECONDS = 60 * 5; // 5 minutes
@@ -54,7 +54,7 @@ export interface VerifyResult {
  * does not need to read it again.
  */
 export async function verifySlackRequest(request: Request): Promise<{ ok: true; body: string } | { ok: false; reason: string }> {
-  const { SLACK_SIGNING_SECRET } = getSlackConfig();
+  const { SLACK_SIGNING_SECRET } = await getSlackConfigAsync();
 
   if (!SLACK_SIGNING_SECRET) {
     return { ok: false, reason: "SLACK_SIGNING_SECRET is not configured" };
