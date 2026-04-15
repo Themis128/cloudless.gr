@@ -207,7 +207,8 @@ export async function getTopKeywords(
       ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
       position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
     }));
-  } catch {
+  } catch (err) {
+    console.error("[GSC] getTopKeywords error:", err);
     return [];
   }
 }
@@ -258,7 +259,8 @@ export async function getPerformanceHistory(
       ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
       avgPosition: parseFloat(((r.position as number) ?? 0).toFixed(1)),
     }));
-  } catch {
+  } catch (err) {
+    console.error("[GSC] getPerformanceHistory error:", err);
     return [];
   }
 }
@@ -288,7 +290,8 @@ export async function getTopPages(
       ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
       position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
     }));
-  } catch {
+  } catch (err) {
+    console.error("[GSC] getTopPages error:", err);
     return [];
   }
 }
