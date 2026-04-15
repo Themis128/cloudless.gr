@@ -343,3 +343,42 @@ export async function getWebAnalytics(
     return null;
   }
 }
+
+export interface CountryData {
+  country: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
+/**
+ * Organic traffic breakdown by country (28-day rolling window).
+ */
+export async function getTrafficByCountry(
+  siteUrl = DEFAULT_SITE,
+  limit = 30,
+): Promise<CountryData[]> {
+  try {
+    const res = await gscQuery(siteUrl, {
+      ...dateRange(),
+      dimensions: ["country"],
+      rowLimit: Math.max(1, Math.min(limit, 50)),
+      orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }],
+    });
+
+    if (!res.ok) return [];
+    const data = await res.json();
+
+    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+      country: (r.keys as string[])?.[0] ?? "",
+      clicks: Math.round((r.clicks as number) ?? 0),
+      impressions: Math.round((r.impressions as number) ?? 0),
+      ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
+      position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+    }));
+  } catch (err) {
+    console.error("[GSC] getTrafficByCountry error:", err);
+    return [];
+  }
+}
