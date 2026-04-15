@@ -120,7 +120,7 @@ export async function getSlackConfigAsync(): Promise<SlackConfig> {
   // SSM fallback when signing secret is missing from env
   if (!signingSecret) {
     try {
-      const { getConfig } = await import('@/lib/config');
+      const { getConfig } = await import('@/lib/ssm-config');
       const ssmCfg = await getConfig();
       signingSecret = (ssmCfg as Record<string, string>).SLACK_SIGNING_SECRET ?? '';
       if (!token) token = (ssmCfg as Record<string, string>).SLACK_BOT_TOKEN ?? '';
