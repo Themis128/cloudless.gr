@@ -40,6 +40,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (typeof text !== "string" || text.length > 5000) {
+      return NextResponse.json(
+        { error: "text must be a string no longer than 5000 characters" },
+        { status: 400 },
+      );
+    }
+
     const comment = await addComment(page_id, text);
     if (!comment) {
       return NextResponse.json(

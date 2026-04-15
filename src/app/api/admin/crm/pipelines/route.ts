@@ -13,7 +13,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const objectType = searchParams.get("objectType") ?? "deals";
+    const VALID_OBJECT_TYPES = ["deals", "tickets", "contacts"];
+    const rawType = searchParams.get("objectType") ?? "deals";
+    const objectType = VALID_OBJECT_TYPES.includes(rawType) ? rawType : "deals";
     const pipelines = await getPipelines(objectType);
 
     return NextResponse.json({

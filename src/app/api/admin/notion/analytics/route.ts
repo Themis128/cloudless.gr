@@ -12,7 +12,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Notion Analytics not configured" }, { status: 503 });
   }
 
-  const days = parseInt(request.nextUrl.searchParams.get("days") ?? "7", 10);
+  const _rawDays = parseInt(request.nextUrl.searchParams.get("days") ?? "7", 10);
+  const days = Math.max(1, Math.min(isNaN(_rawDays) ? 7 : _rawDays, 365));
   const type = request.nextUrl.searchParams.get("type") as AnalyticsEventType | null;
 
   if (type) {
@@ -42,7 +43,8 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const action = body.action as string;
-  const daysToKeep = body.daysToKeep ?? 30;
+  const _rawDtk = typeof body.daysToKeep === "number" ? body.daysToKeep : 30;
+  const daysToKeep = Math.max(1, Math.min(isNaN(_rawDtk) ? 30 : _rawDtk, 3650));
 
   if (action === "rollup") {
     const rollupId = await createWeeklyRollup();
