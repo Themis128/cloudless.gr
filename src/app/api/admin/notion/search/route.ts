@@ -8,7 +8,7 @@ import { searchPages, searchDatabases, listUsers, getDatabaseSchema } from "@/li
  * Search Notion pages/databases or list users.
  */
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);

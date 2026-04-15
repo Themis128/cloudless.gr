@@ -10,7 +10,7 @@ import type { TaskStatus } from "@/lib/notion-projects";
 import { isConfigured } from "@/lib/integrations";
 
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   if (!isConfigured("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) {
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   if (!isConfigured("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) {
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   const body = await request.json();

@@ -5,7 +5,7 @@ import { isConfigured } from "@/lib/integrations";
 import { listContacts } from "@/lib/hubspot";
 
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
   if (!isConfigured("HUBSPOT_API_KEY")) {
     return NextResponse.json(

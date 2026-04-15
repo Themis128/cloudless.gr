@@ -7,7 +7,7 @@ import { listComments, addComment } from "@/lib/notion-comments";
  * POST /api/admin/notion/comments { page_id, text }
  */
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authPost = requireAdmin(request);
+  const authPost = await requireAdmin(request);
   if (!authPost.ok) return authPost.response;
 
   try {
