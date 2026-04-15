@@ -15,7 +15,13 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "No items in cart" }, { status: 400 });
     }
 
-    const origin = request.headers.get("origin") || "https://cloudless.gr";
+    // Validate origin against allowlist to prevent open redirect
+    const rawOrigin = request.headers.get("origin") ?? "";
+    const allowedOrigins = ["https://cloudless.gr", "https://www.cloudless.gr"];
+    if (process.env.NODE_ENV === "development" && rawOrigin.startsWith("http://localhost")) {
+      allowedOrigins.push(rawOrigin);
+    }
+    const origin = allowedOrigins.includes(rawOrigin) ? rawOrigin : "https://cloudless.gr";
 
     const resolvedProducts = items.map((item) => {
       const product = getProductById(item.id);
