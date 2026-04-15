@@ -13,6 +13,18 @@ vi.mock("@/lib/slack-verify", () => ({
   }),
 }));
 
+
+// ---------------------------------------------------------------------------
+// Mock rate limiter
+// ---------------------------------------------------------------------------
+
+const mockRateLimit = vi.fn().mockReturnValue(true);
+
+vi.mock("@/lib/slack-rate-limit", () => ({
+  checkSlackRateLimit: (...args: unknown[]) => mockRateLimit(...args),
+  resetRateLimiter: vi.fn(),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -251,4 +263,17 @@ describe("POST /api/slack/events", () => {
 
     expect(response.status).toBe(400);
   });
+
+  // --- Rate limiting ---
+
+  it("returns 429 when rate limit is exceeded", async () => {
+    mockRateLimit.mockReturnValueOnce(false);
+    verifyOk(JSON.stringify({ type: "event_callback", team_id: "T123", event_id: "EvRL1", event_time: 0, event: { type: "app_mention" } }));
+
+    const response = await POST(makeRequest({ type: "event_callback" }));
+    expect(response.status).toBe(429);
+    const data = await response.json();
+    expect(data.error).toBe("Too many requests");
+  });
+
 });

@@ -14,6 +14,7 @@
  */
 
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
+import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 
 // ---------------------------------------------------------------------------
@@ -43,6 +44,11 @@ interface SlackInteractionPayload {
 export async function POST(request: Request): Promise<Response> {
   const verified = await verifySlackRequest(request);
   if (!verified.ok) return unauthorizedSlack(verified.reason);
+
+  const rateLimitKey = request.headers.get("x-forwarded-for") ?? "unknown";
+  if (!checkSlackRateLimit(rateLimitKey)) {
+    return Response.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   // Slack sends the payload as a form field named "payload"
   const params = new URLSearchParams(verified.body);
