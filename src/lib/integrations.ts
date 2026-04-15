@@ -122,9 +122,9 @@ export async function getSlackConfigAsync(): Promise<SlackConfig> {
     try {
       const { getConfig } = await import('@/lib/ssm-config');
       const ssmCfg = await getConfig();
-      signingSecret = (ssmCfg as Record<string, string>).SLACK_SIGNING_SECRET ?? '';
-      if (!token) token = (ssmCfg as Record<string, string>).SLACK_BOT_TOKEN ?? '';
-      if (!webhookUrl) webhookUrl = (ssmCfg as Record<string, string>).SLACK_WEBHOOK_URL ?? '';
+      signingSecret = (ssmCfg as unknown as Record<string, string>).SLACK_SIGNING_SECRET ?? '';
+      if (!token) token = (ssmCfg as unknown as Record<string, string>).SLACK_BOT_TOKEN ?? '';
+      if (!webhookUrl) webhookUrl = (ssmCfg as unknown as Record<string, string>).SLACK_WEBHOOK_URL ?? '';
     } catch (err) {
       console.warn('[Slack] SSM fallback failed:', err);
     }
