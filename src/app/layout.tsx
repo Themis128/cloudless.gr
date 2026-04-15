@@ -19,6 +19,8 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
+  // Not rendered above-the-fold; skip preload to avoid "preloaded but not used" warning
+  preload: false,
 });
 
 export const metadata: Metadata = {

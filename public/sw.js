@@ -1,7 +1,7 @@
 /* global Response, URL, caches, fetch, self */
 
 // Bump CACHE_VERSION on each deploy to invalidate stale caches
-const CACHE_VERSION = "3";
+const CACHE_VERSION = "4";
 const CACHE_NAME = `cloudless-v${CACHE_VERSION}`;
 const STATIC_CACHE = `cloudless-static-v${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `cloudless-dynamic-v${CACHE_VERSION}`;
@@ -139,6 +139,10 @@ self.addEventListener("fetch", (event) => {
 
   // Skip chrome-extension and other non-http(s) schemes
   if (!url.protocol.startsWith("http")) return;
+
+  // Skip cross-origin requests (e.g. Typekit, analytics, CDNs)
+  // The SW should only manage same-origin assets
+  if (url.origin !== self.location.origin) return;
 
   // Network-only for API routes
   if (url.pathname.startsWith("/api/")) {
