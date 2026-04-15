@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/api-auth";
 import { getPerformanceHistory } from "@/lib/gsc";
 import { getConfig } from "@/lib/ssm-config";
 
-export async function GET(req: Request) {
+export async function GET(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   const config = await getConfig();
   if (!config.GOOGLE_CLIENT_EMAIL || !config.GOOGLE_PRIVATE_KEY) {
     return NextResponse.json(
@@ -11,8 +15,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const { searchParams } = new URL(req.url);
-  const weeks = Math.min(Number(searchParams.get("weeks") ?? "12"), 52);
+  const weeks = Math.min(Number(request.nextUrl.searchParams.get("weeks") ?? "12"), 52);
 
   try {
     const history = await getPerformanceHistory(undefined, weeks);
