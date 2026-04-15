@@ -12,6 +12,7 @@ const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
   "/api/contact": { windowMs: 60_000, max: 5 },
   "/api/subscribe": { windowMs: 60_000, max: 3 },
   "/api/checkout": { windowMs: 60_000, max: 10 },
+  "/api/calendar/book": { windowMs: 60_000, max: 5 },
 };
 
 function getClientIp(request: NextRequest): string {

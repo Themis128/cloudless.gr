@@ -62,7 +62,14 @@ export async function POST(request: Request) {
         message: String(message).slice(0, 500),
       }),
       saveSubmission({ name, email, company, service, message, source: "contact" }),
-    ]).catch(() => {});
+    ]).then((results) => {
+      const labels = ["slack", "hubspot", "notion"];
+      results.forEach((r, i) => {
+        if (r.status === "rejected") {
+          console.error("[Contact] Background task " + labels[i] + " failed:", r.reason);
+        }
+      });
+    });
 
     return Response.json({ success: true });
   } catch (error) {

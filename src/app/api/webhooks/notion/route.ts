@@ -5,6 +5,7 @@ import { slackContactNotify } from "@/lib/slack-notify";
 import { sendEmail } from "@/lib/email";
 import { getConfig } from "@/lib/ssm-config";
 import { invalidateCache } from "@/lib/notion-cache";
+import { escapeHtml } from "@/lib/escape-html";
 
 /**
  * POST /api/webhooks/notion
@@ -182,7 +183,7 @@ async function handleSubmissionStatus(payload: WebhookPayload) {
       to: email,
       subject: `Your inquiry has been reviewed — Cloudless`,
       html: `
-        <p>Hi ${name ?? "there"},</p>
+        <p>Hi ${escapeHtml(name ?? "there")},</p>
         <p>We've reviewed your inquiry and will follow up shortly with more details.</p>
         <p>If you have any additional questions, feel free to reply to this email.</p>
         <br/>
