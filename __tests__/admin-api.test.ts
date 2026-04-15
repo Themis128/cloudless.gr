@@ -11,6 +11,25 @@ import { resetIntegrationCache } from "@/lib/integrations";
 import { resetSsmCache } from "@/lib/ssm-config";
 
 // ---------------------------------------------------------------------------
+// Mock jose: replace jwtVerify with a decode-only version so tests can use
+// fake-signed tokens without hitting the real Cognito JWKS endpoint.
+// createRemoteJWKSet is kept but its result is never used (jwtVerify is mocked).
+// ---------------------------------------------------------------------------
+vi.mock("jose", async () => {
+  const actual = await vi.importActual<typeof import("jose")>("jose");
+  return {
+    ...actual,
+    jwtVerify: async (jwt: string) => {
+      const parts = jwt.split(".");
+      if (parts.length !== 3) throw new Error("Invalid JWT structure");
+      const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+      if (payload.exp && Date.now() >= payload.exp * 1000) throw new Error("JWT expired");
+      return { payload, protectedHeader: { alg: "RS256" } };
+    },
+  };
+});
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -482,13 +501,13 @@ describe("POST /api/admin/notifications/test", () => {
     vi.stubEnv("SLACK_WEBHOOK_URL", "");
     resetIntegrationCache();
     const { POST } = await import("@/app/api/admin/notifications/test/route");
-    const res = await POST();
+    const res = await POST(adminRequest("http://localhost/api/admin/notifications/test"));
     expect(res.status).toBe(503);
   });
 
   it("returns success when Slack is configured", async () => {
     const { POST } = await import("@/app/api/admin/notifications/test/route");
-    const res = await POST();
+    const res = await POST(adminRequest("http://localhost/api/admin/notifications/test"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.success).toBe(true);

@@ -5,7 +5,7 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
   try {
     const stripe = await getStripe();

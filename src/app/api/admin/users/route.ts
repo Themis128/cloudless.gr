@@ -29,7 +29,7 @@ function getAttr(
 
 export async function GET(request: NextRequest) {
   // Verify admin authentication
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   try {
@@ -42,7 +42,10 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const limit = Math.min(Number(searchParams.get("limit") ?? 20), 60);
-    const filter = searchParams.get("filter") ?? undefined;
+    // Sanitize filter to prevent CognitoQL injection — allow only
+    // alphanumeric chars, dots, hyphens, underscores, and @ for email filtering.
+    const rawFilter = searchParams.get("filter") ?? "";
+    const filter = rawFilter ? rawFilter.replace(/[^\w.@+-]/g, "").slice(0, 128) || undefined : undefined;
 
     const client = getClient();
 
@@ -96,7 +99,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // Verify admin authentication
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   try {

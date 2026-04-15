@@ -16,7 +16,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { subject, content, email, priority } = body;
+    const rawSubject = typeof body.subject === "string" ? body.subject.trim().slice(0, 200) : "";
+    const rawContent = typeof body.content === "string" ? body.content.trim().slice(0, 2000) : "";
+    const { email, priority } = body;
+    const subject = rawSubject;
+    const content = rawContent;
     if (!subject || !content) {
       return NextResponse.json(
         { error: "Missing required fields: subject, content" },

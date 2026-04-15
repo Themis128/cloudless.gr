@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { isHubSpotConfigured, listOwners } from "@/lib/hubspot";
 
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   if (!(await isHubSpotConfigured())) {

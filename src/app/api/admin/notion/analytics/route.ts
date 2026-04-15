@@ -5,7 +5,7 @@ import type { AnalyticsEventType } from "@/lib/notion-analytics";
 import { isConfigured } from "@/lib/integrations";
 
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   if (!isConfigured("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) {
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
  *   { action: "maintain" } → Rollup + archive in one call
  */
 export async function POST(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   if (!isConfigured("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) {
