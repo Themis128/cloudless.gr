@@ -80,7 +80,7 @@ export function proxy(request: NextRequest) {
     const origin = request.headers.get("origin") ?? "";
     const allowedOrigins = ["https://cloudless.gr", "https://www.cloudless.gr"];
 
-    if (process.env.NODE_ENV === "development" && origin.startsWith("http://localhost")) {
+    if (process.env.NODE_ENV === "development" && /^http:\/\/localhost:(3000|3001|4000)$/.test(origin)) {
       allowedOrigins.push(origin);
     }
 
