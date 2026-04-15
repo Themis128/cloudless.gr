@@ -198,6 +198,7 @@ describe("GET /api/admin/users", () => {
           Users: [
             {
               Username: "user-1",
+              Enabled: true,
               UserStatus: "CONFIRMED",
               UserCreateDate: new Date("2024-01-01"),
               UserLastModifiedDate: new Date("2024-06-01"),
@@ -245,15 +246,17 @@ describe("GET /api/admin/users", () => {
     expect(u).toMatchObject({
       username: "user-1",
       email: "user1@example.com",
-      status: "CONFIRMED",
+      status: "active",
+      userStatus: "CONFIRMED",
+      role: "user",
     });
   });
 
-  it("user objects expose isAdmin field", async () => {
+  it("user objects expose role field", async () => {
     const { GET } = await import("@/app/api/admin/users/route");
     const res = await GET(adminRequest("http://localhost/api/admin/users"));
     const data = await res.json();
-    expect(typeof data.users[0].isAdmin).toBe("boolean");
+    expect(data.users[0].role).toMatch(/^(admin|user)$/);
   });
 });
 
