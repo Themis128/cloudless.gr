@@ -399,13 +399,13 @@ describe("GET /api/admin/analytics/web", () => {
     vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
     resetSsmCache();
     const { GET } = await import("@/app/api/admin/analytics/web/route");
-    const res = await GET();
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/web"));
     expect(res.status).toBe(503);
   });
 
   it("returns analytics payload when GSC is configured", async () => {
     const { GET } = await import("@/app/api/admin/analytics/web/route");
-    const res = await GET();
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/web"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toHaveProperty("analytics");
@@ -428,13 +428,13 @@ describe("GET /api/admin/analytics/seo", () => {
     vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
     resetSsmCache();
     const { GET } = await import("@/app/api/admin/analytics/seo/route");
-    const res = await GET();
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/seo"));
     expect(res.status).toBe(503);
   });
 
   it("returns snapshot + keywords when GSC is configured", async () => {
     const { GET } = await import("@/app/api/admin/analytics/seo/route");
-    const res = await GET();
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/seo"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toHaveProperty("snapshot");
@@ -528,7 +528,7 @@ describe("GET /api/admin/ops/errors", () => {
   it("returns 503 when Sentry is not configured", async () => {
     (isSentryConfigured as ReturnType<typeof vi.fn>).mockReturnValue(false);
     const { GET } = await import("@/app/api/admin/ops/errors/route");
-    const res = await GET();
+    const res = await GET(adminRequest("http://localhost/api/admin/ops/errors"));
     expect(res.status).toBe(503);
   });
 
@@ -536,7 +536,7 @@ describe("GET /api/admin/ops/errors", () => {
     (isSentryConfigured as ReturnType<typeof vi.fn>).mockReturnValue(true);
     (getUnresolvedIssues as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     const { GET } = await import("@/app/api/admin/ops/errors/route");
-    const res = await GET();
+    const res = await GET(adminRequest("http://localhost/api/admin/ops/errors"));
     expect(res.status).toBe(502);
   });
 
@@ -548,7 +548,7 @@ describe("GET /api/admin/ops/errors", () => {
       fetchedAt: new Date().toISOString(),
     });
     const { GET } = await import("@/app/api/admin/ops/errors/route");
-    const res = await GET();
+    const res = await GET(adminRequest("http://localhost/api/admin/ops/errors"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.issues)).toBe(true);
@@ -570,13 +570,13 @@ describe("GET /api/admin/analytics/keywords", () => {
     vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
     resetSsmCache();
     const { GET } = await import("@/app/api/admin/analytics/keywords/route");
-    const res = await GET(new Request("http://localhost/api/admin/analytics/keywords"));
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/keywords"));
     expect(res.status).toBe(503);
   });
 
   it("returns keywords array when configured", async () => {
     const { GET } = await import("@/app/api/admin/analytics/keywords/route");
-    const res = await GET(new Request("http://localhost/api/admin/analytics/keywords"));
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/keywords"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.keywords)).toBe(true);
@@ -587,7 +587,7 @@ describe("GET /api/admin/analytics/keywords", () => {
   it("respects ?limit query param", async () => {
     const { getTopKeywords } = await import("@/lib/gsc");
     const { GET } = await import("@/app/api/admin/analytics/keywords/route");
-    await GET(new Request("http://localhost/api/admin/analytics/keywords?limit=5"));
+    await GET(adminRequest("http://localhost/api/admin/analytics/keywords?limit=5"));
     expect(getTopKeywords).toHaveBeenCalledWith(undefined, 5);
   });
 });
@@ -606,13 +606,13 @@ describe("GET /api/admin/analytics/pages", () => {
     vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
     resetSsmCache();
     const { GET } = await import("@/app/api/admin/analytics/pages/route");
-    const res = await GET(new Request("http://localhost/api/admin/analytics/pages"));
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/pages"));
     expect(res.status).toBe(503);
   });
 
   it("returns pages array when configured", async () => {
     const { GET } = await import("@/app/api/admin/analytics/pages/route");
-    const res = await GET(new Request("http://localhost/api/admin/analytics/pages"));
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/pages"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.pages)).toBe(true);
@@ -622,7 +622,7 @@ describe("GET /api/admin/analytics/pages", () => {
   it("respects ?limit query param", async () => {
     const { getTopPages } = await import("@/lib/gsc");
     const { GET } = await import("@/app/api/admin/analytics/pages/route");
-    await GET(new Request("http://localhost/api/admin/analytics/pages?limit=10"));
+    await GET(adminRequest("http://localhost/api/admin/analytics/pages?limit=10"));
     expect(getTopPages).toHaveBeenCalledWith(undefined, 10);
   });
 });
@@ -641,13 +641,13 @@ describe("GET /api/admin/analytics/history", () => {
     vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
     resetSsmCache();
     const { GET } = await import("@/app/api/admin/analytics/history/route");
-    const res = await GET(new Request("http://localhost/api/admin/analytics/history"));
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/history"));
     expect(res.status).toBe(503);
   });
 
   it("returns history array when configured", async () => {
     const { GET } = await import("@/app/api/admin/analytics/history/route");
-    const res = await GET(new Request("http://localhost/api/admin/analytics/history"));
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/history"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.history)).toBe(true);
@@ -658,7 +658,7 @@ describe("GET /api/admin/analytics/history", () => {
   it("respects ?weeks query param", async () => {
     const { getPerformanceHistory } = await import("@/lib/gsc");
     const { GET } = await import("@/app/api/admin/analytics/history/route");
-    await GET(new Request("http://localhost/api/admin/analytics/history?weeks=4"));
+    await GET(adminRequest("http://localhost/api/admin/analytics/history?weeks=4"));
     expect(getPerformanceHistory).toHaveBeenCalledWith(undefined, 4);
   });
 });
