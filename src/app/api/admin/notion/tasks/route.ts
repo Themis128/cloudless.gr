@@ -49,6 +49,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "task is required" }, { status: 400 });
   }
 
+  if (typeof body.task !== "string" || body.task.length > 500) {
+    return NextResponse.json({ error: "task must be a string no longer than 500 characters" }, { status: 400 });
+  }
+
   const id = await createTask(body);
   if (!id) {
     return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
