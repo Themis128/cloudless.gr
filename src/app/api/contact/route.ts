@@ -69,6 +69,8 @@ export async function POST(request: Request) {
           console.error("[Contact] Background task " + labels[i] + " failed:", r.reason);
         }
       });
+    }).catch((err) => {
+      console.error("[Contact] Background allSettled error:", err);
     });
 
     return Response.json({ success: true });
