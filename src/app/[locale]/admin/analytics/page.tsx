@@ -10,7 +10,7 @@ interface SeoData {
     backlinks: number;
     referringDomains: number;
   } | null;
-  topKeywords: {
+  keywords: {
     keyword: string;
     position: number;
     traffic: number;
@@ -187,7 +187,7 @@ export default function AdminAnalyticsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(seo?.topKeywords ?? []).map((kw, i) => (
+                    {(seo?.keywords ?? []).map((kw, i) => (
                       <tr
                         key={i}
                         className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
@@ -208,7 +208,7 @@ export default function AdminAnalyticsPage() {
                         </td>
                       </tr>
                     ))}
-                    {(seo?.topKeywords ?? []).length === 0 && (
+                    {(seo?.keywords ?? []).length === 0 && (
                       <tr>
                         <td
                           colSpan={4}
