@@ -37,8 +37,6 @@ try {
     widenClientFileUpload: true,
     tunnelRoute: "/monitoring",
     hideSourceMaps: true,
-    disableLogger: true,
-    automaticVercelMonitors: false,
   }) as NextConfig;
 } catch {
   // @sentry/nextjs not yet installed

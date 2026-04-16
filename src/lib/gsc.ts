@@ -344,26 +344,334 @@ export async function getWebAnalytics(
   }
 }
 
-export interface CountryData {
-  country: string;
+/* ------------------------------------------------------------------ */
+/*  CTR Opportunities                                                  */
+/* ------------------------------------------------------------------ */
+
+export interface CtrOpportunity {
+  keyword: string;
   clicks: number;
   impressions: number;
+  /** CTR in % */
   ctr: number;
   position: number;
 }
 
 /**
- * Organic traffic breakdown by country (28-day rolling window).
+ * Keywords ranking position 4–20 with high impressions but low CTR (<5%).
+ * These represent optimisation opportunities (better titles/descriptions).
+ */
+export async function getCtrOpportunities(
+  siteUrl = DEFAULT_SITE,
+  limit = 50,
+): Promise<CtrOpportunity[]> {
+  try {
+    const res = await gscQuery(siteUrl, {
+      ...dateRange(),
+      dimensions: ["query"],
+      rowLimit: 25000,
+    });
+
+    if (!res.ok) return [];
+    const data = await res.json();
+
+    const opportunities = (data.rows ?? [])
+      .filter((r: Record<string, unknown>) => {
+        const position = (r.position as number) ?? 0;
+        const ctr = ((r.ctr as number) ?? 0) * 100;
+        const impressions = (r.impressions as number) ?? 0;
+        return position >= 4 && position <= 20 && ctr < 5 && impressions > 10;
+      })
+      .sort(
+        (a: Record<string, unknown>, b: Record<string, unknown>) =>
+          ((b.impressions as number) ?? 0) - ((a.impressions as number) ?? 0),
+      )
+      .slice(0, limit)
+      .map((r: Record<string, unknown>) => ({
+        keyword: (r.keys as string[])?.[0] ?? "",
+        clicks: Math.round((r.clicks as number) ?? 0),
+        impressions: Math.round((r.impressions as number) ?? 0),
+        ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
+        position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+      }));
+
+    return opportunities;
+  } catch (err) {
+    console.error("[GSC] getCtrOpportunities error:", err);
+    return [];
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Device Breakdown                                                   */
+/* ------------------------------------------------------------------ */
+
+export interface DeviceData {
+  device: string;
+  clicks: number;
+  impressions: number;
+  /** CTR in % */
+  ctr: number;
+  avgPosition: number;
+}
+
+/**
+ * Search performance breakdown by device type (DESKTOP, MOBILE, TABLET).
+ */
+export async function getDeviceBreakdown(
+  siteUrl = DEFAULT_SITE,
+): Promise<DeviceData[]> {
+  try {
+    const res = await gscQuery(siteUrl, {
+      ...dateRange(),
+      dimensions: ["device"],
+      rowLimit: 10,
+    });
+
+    if (!res.ok) return [];
+    const data = await res.json();
+
+    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+      device: (r.keys as string[])?.[0] ?? "",
+      clicks: Math.round((r.clicks as number) ?? 0),
+      impressions: Math.round((r.impressions as number) ?? 0),
+      ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
+      avgPosition: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+    }));
+  } catch (err) {
+    console.error("[GSC] getDeviceBreakdown error:", err);
+    return [];
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Product Page Metrics                                               */
+/* ------------------------------------------------------------------ */
+
+export interface ProductPageData {
+  page: string;
+  clicks: number;
+  impressions: number;
+  /** CTR in % */
+  ctr: number;
+  position: number;
+}
+
+/**
+ * Page-level metrics filtered by URL pattern (e.g. "/store/").
+ * Useful to isolate product / e-commerce page performance.
+ */
+export async function getProductPageMetrics(
+  siteUrl = DEFAULT_SITE,
+  urlPattern = "/store/",
+  limit = 50,
+): Promise<ProductPageData[]> {
+  try {
+    const res = await gscQuery(siteUrl, {
+      ...dateRange(),
+      dimensions: ["page"],
+      dimensionFilterGroups: [
+        {
+          filters: [
+            {
+              dimension: "page",
+              operator: "contains",
+              expression: urlPattern,
+            },
+          ],
+        },
+      ],
+      rowLimit: limit,
+      orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }],
+    });
+
+    if (!res.ok) return [];
+    const data = await res.json();
+
+    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+      page: (r.keys as string[])?.[0] ?? "",
+      clicks: Math.round((r.clicks as number) ?? 0),
+      impressions: Math.round((r.impressions as number) ?? 0),
+      ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
+      position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+    }));
+  } catch (err) {
+    console.error("[GSC] getProductPageMetrics error:", err);
+    return [];
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Query → Page Mapping                                               */
+/* ------------------------------------------------------------------ */
+
+export interface QueryPageMapping {
+  query: string;
+  page: string;
+  clicks: number;
+  impressions: number;
+  /** CTR in % */
+  ctr: number;
+  position: number;
+}
+
+/**
+ * Which search queries land on which pages.
+ * Useful for detecting keyword cannibalisation.
+ */
+export async function getQueryPageMapping(
+  siteUrl = DEFAULT_SITE,
+  limit = 100,
+): Promise<QueryPageMapping[]> {
+  try {
+    const res = await gscQuery(siteUrl, {
+      ...dateRange(),
+      dimensions: ["query", "page"],
+      rowLimit: limit,
+      orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }],
+    });
+
+    if (!res.ok) return [];
+    const data = await res.json();
+
+    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+      query: (r.keys as string[])?.[0] ?? "",
+      page: (r.keys as string[])?.[1] ?? "",
+      clicks: Math.round((r.clicks as number) ?? 0),
+      impressions: Math.round((r.impressions as number) ?? 0),
+      ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
+      position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+    }));
+  } catch (err) {
+    console.error("[GSC] getQueryPageMapping error:", err);
+    return [];
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Search Intent Breakdown                                            */
+/* ------------------------------------------------------------------ */
+
+export interface IntentKeyword {
+  keyword: string;
+  clicks: number;
+  impressions: number;
+  /** CTR in % */
+  ctr: number;
+  position: number;
+}
+
+export interface SearchIntentBreakdown {
+  brand: IntentKeyword[];
+  product: IntentKeyword[];
+  informational: IntentKeyword[];
+  navigational: IntentKeyword[];
+}
+
+/**
+ * Categorise top keywords by inferred search intent.
+ *
+ * Heuristic buckets:
+ *  - brand:          contains the brand name ("cloudless")
+ *  - product:        purchase-intent words (buy, price, order, shipping, store, shop, product)
+ *  - informational:  knowledge-seeking (how, what, why, guide, tutorial, tips, learn, blog)
+ *  - navigational:   everything else (looking for a specific site/page)
+ */
+export async function getSearchIntentBreakdown(
+  siteUrl = DEFAULT_SITE,
+): Promise<SearchIntentBreakdown> {
+  const empty: SearchIntentBreakdown = {
+    brand: [],
+    product: [],
+    informational: [],
+    navigational: [],
+  };
+
+  try {
+    const res = await gscQuery(siteUrl, {
+      ...dateRange(),
+      dimensions: ["query"],
+      rowLimit: 25000,
+    });
+
+    if (!res.ok) return empty;
+    const data = await res.json();
+
+    const brandRe = /cloudless/i;
+    const productRe = /\b(buy|price|order|shipping|store|shop|product|purchase|deal|discount|coupon)\b/i;
+    const infoRe = /\b(how|what|why|when|where|guide|tutorial|tips|learn|blog|article|example|comparison|vs|review)\b/i;
+
+    const toKeyword = (r: Record<string, unknown>): IntentKeyword => ({
+      keyword: (r.keys as string[])?.[0] ?? "",
+      clicks: Math.round((r.clicks as number) ?? 0),
+      impressions: Math.round((r.impressions as number) ?? 0),
+      ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
+      position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+    });
+
+    const result: SearchIntentBreakdown = {
+      brand: [],
+      product: [],
+      informational: [],
+      navigational: [],
+    };
+
+    for (const row of data.rows ?? []) {
+      const kw = (row.keys as string[])?.[0] ?? "";
+      const mapped = toKeyword(row);
+
+      if (brandRe.test(kw)) {
+        result.brand.push(mapped);
+      } else if (productRe.test(kw)) {
+        result.product.push(mapped);
+      } else if (infoRe.test(kw)) {
+        result.informational.push(mapped);
+      } else {
+        result.navigational.push(mapped);
+      }
+    }
+
+    // Sort each bucket by impressions descending
+    const sortByImpressions = (a: IntentKeyword, b: IntentKeyword) =>
+      b.impressions - a.impressions;
+
+    result.brand.sort(sortByImpressions);
+    result.product.sort(sortByImpressions);
+    result.informational.sort(sortByImpressions);
+    result.navigational.sort(sortByImpressions);
+
+    return result;
+  } catch (err) {
+    console.error("[GSC] getSearchIntentBreakdown error:", err);
+    return empty;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Traffic by Country                                                 */
+/* ------------------------------------------------------------------ */
+
+export interface CountryTraffic {
+  country: string;
+  clicks: number;
+  impressions: number;
+  /** CTR in % */
+  ctr: number;
+  avgPosition: number;
+}
+
+/**
+ * Organic search traffic breakdown by country (ISO 3166-1 alpha-3).
  */
 export async function getTrafficByCountry(
   siteUrl = DEFAULT_SITE,
   limit = 30,
-): Promise<CountryData[]> {
+): Promise<CountryTraffic[]> {
   try {
     const res = await gscQuery(siteUrl, {
       ...dateRange(),
       dimensions: ["country"],
-      rowLimit: Math.max(1, Math.min(limit, 50)),
+      rowLimit: limit,
       orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }],
     });
 
@@ -375,7 +683,7 @@ export async function getTrafficByCountry(
       clicks: Math.round((r.clicks as number) ?? 0),
       impressions: Math.round((r.impressions as number) ?? 0),
       ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
-      position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+      avgPosition: parseFloat(((r.position as number) ?? 0).toFixed(1)),
     }));
   } catch (err) {
     console.error("[GSC] getTrafficByCountry error:", err);
