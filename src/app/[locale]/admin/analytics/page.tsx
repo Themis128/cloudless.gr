@@ -588,7 +588,7 @@ export default function AdminAnalyticsPage() {
                             {opp.clicks.toLocaleString()}
                           </td>
                           <td className="px-6 py-3 text-right font-mono text-xs text-neon-green font-semibold">
-                            +y(opp.potentialClicks ?? 0).toLocaleString()} clicks
+                            +{(opp.potentialClicks ?? 0).toLocaleString()} clicks
                           </td>
                         </tr>
                       ))}
