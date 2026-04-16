@@ -14,7 +14,7 @@ import { requireAdmin } from "@/lib/api-auth";
  * @returns 503 if GSC credentials are not configured in SSM.
  */
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   const config = await getConfig();
