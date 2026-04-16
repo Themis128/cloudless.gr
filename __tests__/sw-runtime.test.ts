@@ -54,6 +54,9 @@ function loadServiceWorker() {
       listeners.set(eventName, callback);
     }),
     skipWaiting: vi.fn(),
+    // The SW uses self.location.origin to filter cross-origin requests.
+    // Match the origin used by all test URLs so same-origin requests aren't dropped.
+    location: { origin: "http://localhost:4000" },
     clients: {
       claim: vi.fn(),
       matchAll: vi.fn(async () => []),
