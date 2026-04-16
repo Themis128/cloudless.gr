@@ -52,7 +52,7 @@ export function getIntegrations(): IntegrationConfig {
     AHREFS_API_KEY: process.env.AHREFS_API_KEY,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
-    SENTRY_ORG: process.env.SENTRY_ORG ?? "cloudless",
+    SENTRY_ORG: process.env.SENTRY_ORG ?? "baltzakisthemiscom",
     SENTRY_PROJECT: process.env.SENTRY_PROJECT ?? "cloudless-gr",
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET,
   };
