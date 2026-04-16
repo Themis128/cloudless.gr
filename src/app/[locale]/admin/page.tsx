@@ -19,7 +19,7 @@ const adminCards = [
     href: "/admin/orders",
     statKey: "orders" as const,
     render: (s: DashStats) =>
-      s.orders ? `${s.orders.total} orders · €${s.orders.revenue.toFixed(0)}` : "—",
+      s.orders ? `${s.orders.total} orders · €${s.orders.revenue.toFixed(0)}` : "View →",
   },
   {
     title: "CRM Contacts",
@@ -27,7 +27,10 @@ const adminCards = [
     icon: "◉",
     href: "/admin/crm",
     statKey: "contacts" as const,
-    render: (s: DashStats) => (s.contacts ? `${s.contacts.total} contacts` : "—"),
+    render: (s: DashStats) =>
+      s.contacts
+        ? `${s.contacts.total} contact${s.contacts.total === 1 ? "" : "s"}`
+        : "View →",
   },
   {
     title: "SEO & Analytics",
@@ -43,7 +46,7 @@ const adminCards = [
     icon: "⚠",
     href: "/admin/errors",
     statKey: "errors" as const,
-    render: (s: DashStats) => (s.errors ? `${s.errors.total} unresolved` : "—"),
+    render: (s: DashStats) => (s.errors ? `${s.errors.total} unresolved` : "View →"),
   },
   {
     title: "Notifications",
