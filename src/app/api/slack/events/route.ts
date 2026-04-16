@@ -16,6 +16,7 @@
 
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
 import { getSlackConfig } from "@/lib/integrations";
+import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 
 // ---------------------------------------------------------------------------
 // Event deduplication
@@ -79,6 +80,12 @@ type SlackPayload = SlackUrlVerification | SlackEventCallback;
 export async function POST(request: Request): Promise<Response> {
   const verified = await verifySlackRequest(request);
   if (!verified.ok) return unauthorizedSlack(verified.reason);
+
+  // Rate-limit by team (extracted after parse) — pre-parse check uses IP placeholder
+  const rateLimitKey = request.headers.get("x-forwarded-for") ?? "unknown";
+  if (!checkSlackRateLimit(rateLimitKey)) {
+    return Response.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   let payload: SlackPayload;
   try {

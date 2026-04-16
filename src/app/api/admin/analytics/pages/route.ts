@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/api-auth";
 import { getTopPages } from "@/lib/gsc";
 import { getConfig } from "@/lib/ssm-config";
 
-export async function GET(req: Request) {
+export async function GET(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   const config = await getConfig();
   if (!config.GOOGLE_CLIENT_EMAIL || !config.GOOGLE_PRIVATE_KEY) {
     return NextResponse.json(
@@ -11,8 +15,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const { searchParams } = new URL(req.url);
-  const limit = Math.min(Number(searchParams.get("limit") ?? "25"), 100);
+  const limit = Math.min(Number(request.nextUrl.searchParams.get("limit") ?? "25"), 100);
 
   try {
     const pages = await getTopPages(undefined, limit);

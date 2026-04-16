@@ -32,9 +32,9 @@ export default function Footer() {
 
           {/* Links */}
           <div>
-            <h4 className="text-neon-cyan/70 mb-4 font-mono text-[10px] font-medium tracking-[0.3em]">
+            <p className="text-neon-cyan/70 mb-4 font-mono text-[10px] font-medium tracking-[0.3em]" aria-hidden="true">
               {translate(locale, "footer.navigate", "NAVIGATE")}
-            </h4>
+            </p>
             <ul className="space-y-2 text-sm">
               {[
                 { href: "/", key: "common.home", fallback: "Home" },
@@ -66,9 +66,9 @@ export default function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="text-neon-cyan/70 mb-4 font-mono text-[10px] font-medium tracking-[0.3em]">
+            <p className="text-neon-cyan/70 mb-4 font-mono text-[10px] font-medium tracking-[0.3em]" aria-hidden="true">
               {translate(locale, "footer.getInTouch", "GET IN TOUCH")}
-            </h4>
+            </p>
             <ul className="space-y-2 font-mono text-sm">
               <li>
                 <a
@@ -78,7 +78,7 @@ export default function Footer() {
                   tbaltzakis@cloudless.gr
                 </a>
               </li>
-              <li className="text-xs text-slate-500">
+              <li className="text-xs text-slate-400">
                 {translate(locale, "footer.location", "Greece, EU")}
               </li>
             </ul>
@@ -150,9 +150,9 @@ export default function Footer() {
 
         {/* Legal links row */}
         <div className="border-neon-cyan/10 mt-8 border-t pt-6">
-          <h4 className="text-neon-cyan/70 mb-4 font-mono text-[10px] font-medium tracking-[0.3em]">
+          <p className="text-neon-cyan/70 mb-4 font-mono text-[10px] font-medium tracking-[0.3em]" aria-hidden="true">
             {translate(locale, "footer.legal", "LEGAL")}
-          </h4>
+          </p>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             {[
               { href: "/privacy", key: "legal.privacyTitle", fallback: "Privacy Policy" },
@@ -179,11 +179,11 @@ export default function Footer() {
         </div>
 
         <div className="border-neon-cyan/10 mt-6 flex flex-col items-center justify-between gap-4 border-t pt-6 font-mono text-xs sm:flex-row">
-          <p className="text-slate-500">
+          <p className="text-slate-400">
             &copy; {new Date().getFullYear()} Cloudless.{" "}
             {translate(locale, "footer.rightsReserved", "All rights reserved.")}
           </p>
-          <p className="text-slate-500">
+          <p className="text-slate-400">
             {translate(locale, "footer.builtWith", "Built with Next.js & deployed on AWS")}
           </p>
         </div>

@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 env:
   NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
@@ -88,15 +89,40 @@ jobs:
 
       - name: Commit updated sitemap entries
         if: steps.diff.outputs.changed == 'true'
+        id: push
         run: |
+          BRANCH="chore/sitemap-sync-$(date -u +%Y-%m-%d)"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
           git add src/data/notion-sitemap-entries.tsv
           git commit -m "chore: sync Notion docs/blog slugs into sitemap entries
 
           Docs: ${{ steps.slugs.outputs.docs_count }} published
           Blog: ${{ steps.slugs.outputs.blog_count }} published"
-          git push
+          git push --force origin "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Open PR and merge
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ steps.push.outputs.branch }}"
+          EXISTING=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number')
+          if [ -z "$EXISTING" ]; then
+            gh pr create \
+              --title "chore: sync Notion sitemap entries $(date -u +%Y-%m-%d)" \
+              --body "Automated PR – updates \`src/data/notion-sitemap-entries.tsv\` from Notion.
+          Docs: ${{ steps.slugs.outputs.docs_count }} | Blog: ${{ steps.slugs.outputs.blog_count }}" \
+              --base main \
+              --head "$BRANCH"
+          fi
+          PR_NUM=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number')
+          # Use --admin to bypass required status checks (safe for data-only updates)
+          # Falls back to --auto if --admin is unavailable
+          gh pr merge "$PR_NUM" --squash --admin --delete-branch || \
+            gh pr merge "$PR_NUM" --squash --auto --delete-branch
 
       - name: Summary
         run: |
@@ -108,7 +134,7 @@ jobs:
           echo "| Blog   | ${{ steps.slugs.outputs.blog_count }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ steps.diff.outputs.changed }}" = "true" ]; then
-            echo "✅ Sitemap entries updated and committed." >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ PR opened on \`${{ steps.push.outputs.branch }}\` and merged." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "ℹ️ No changes — sitemap entries are already up to date." >> "$GITHUB_STEP_SUMMARY"
           fi

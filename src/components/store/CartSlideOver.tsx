@@ -60,9 +60,10 @@ export default function CartSlideOver() {
             <h2 className="font-mono text-lg font-bold text-white">Cart ({totalItems})</h2>
             <button
               onClick={closeCart}
+              aria-label="Close cart"
               className="hover:text-neon-cyan active:text-neon-cyan flex min-h-[44px] min-w-[44px] items-center justify-center p-2 text-slate-500 transition-colors"
             >
-              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <path d="M4 4l12 12M16 4L4 16" strokeLinecap="round" />
               </svg>
             </button>
