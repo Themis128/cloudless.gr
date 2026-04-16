@@ -1,3 +1,15 @@
+/**
+ * Admin - Errors page
+ *
+ * Displays unresolved Sentry issues fetched from GET /api/admin/sentry/issues.
+ * Each issue can be resolved or ignored via inline action buttons that POST to
+ * /api/admin/sentry/resolve or /api/admin/sentry/ignore respectively.
+ *
+ * Filtering: the search input narrows the visible list client-side by title /
+ * culprit. Pagination: "Load more" appends the next cursor page.
+ *
+ * @module admin/errors
+ */
 "use client";
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";

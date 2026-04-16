@@ -1,3 +1,22 @@
+/**
+ * Admin - Analytics page
+ *
+ * Five-tab Google Search Console dashboard backed by the /api/admin/analytics/*
+ * family of endpoints. Each tab fetches independently so slow tabs do not block
+ * the rest of the UI.
+ *
+ * Tabs
+ * ----
+ * - Overview      - headline KPIs (clicks, impressions, CTR, position)
+ * - Keywords      - top search queries sortable by any metric
+ * - Pages         - top landing pages by clicks
+ * - History       - 16-week click/impression trend chart (SVG sparkline)
+ * - CTR Opps      - pages with high impressions but below-average CTR
+ *
+ * All requests carry the Cognito session token via fetchWithAuth.
+ *
+ * @module admin/analytics
+ */
 "use client";
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
