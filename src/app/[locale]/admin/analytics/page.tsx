@@ -350,7 +350,7 @@ export default function AdminAnalyticsPage() {
                     <StatCard label="Clicks (organic)" value={web.clicks?.toLocaleString() ?? "—"} />
                     <StatCard label="Impressions" value={web.impressions?.toLocaleString() ?? "—"} />
                     <StatCard label="CTR" value={web ? pct(web.ctr) : "—"} />
-                    <StatCard label="Position" value={web ? web.position.toFixed(1) : "—"} />
+                    <StatCard label="Position" value={web?.position != null ? web.position.toFixed(1) : "—"} />
                   </div>
                 </div>
               )}
