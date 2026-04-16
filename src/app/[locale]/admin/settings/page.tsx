@@ -1,3 +1,17 @@
+/**
+ * Admin - Settings page
+ *
+ * Provides operational controls for the admin panel:
+ *
+ * - Cache management: buttons to flush the in-memory Notion cache via
+ *   POST /api/admin/cache, either globally or scoped to a named prefix
+ *   ("blog", "forms", "projects").
+ *
+ * - Preferences: placeholder save form (currently client-only; no
+ *   persistence backend - extend as needed).
+ *
+ * @module admin/settings
+ */
 "use client";
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
