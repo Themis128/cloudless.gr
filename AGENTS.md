@@ -77,7 +77,6 @@ src/
 │   │   ├── page.tsx             # Admin dashboard with live stats from all integrations
 │   │   ├── orders/page.tsx      # Live Stripe orders + subscriptions (tabbed view)
 │   │   ├── crm/page.tsx         # HubSpot contacts table with search + lead status
-│   │   ├── analytics/page.tsx   # Ahrefs SEO overview + web traffic (tabbed)
 │   │   ├── errors/page.tsx      # Sentry unresolved issues list
 │   │   ├── notifications/page.tsx # Slack test message sender with presets + history
 │   │   ├── users/page.tsx       # Live Cognito user list with search, enable/disable, promote/demote
@@ -102,8 +101,6 @@ src/
 │       │   └── consultations/route.ts # GET: user's Google Calendar consultations by email
 │       └── admin/
 │           ├── analytics/
-│           │   ├── seo/route.ts      # GET: Ahrefs SEO snapshot + top keywords
-│           │   └── web/route.ts      # GET: Ahrefs web analytics (pageviews, visitors, bounce rate)
 │           ├── ops/
 │           │   └── errors/route.ts   # GET: Sentry unresolved issues (last 20)
 │           ├── crm/
@@ -156,12 +153,11 @@ src/
     ├── server-locale.ts     # Server-side locale reader (async cookies() for server components)
     ├── use-locale.ts        # Client hook for locale switching (cookie-based)
     ├── validation.ts        # Email and input validation helpers
-    ├── integrations.ts      # Central config loader for optional integrations (Slack, HubSpot, Notion, Calendar, Ahrefs, Sentry, Vercel)
+    ├── integrations.ts      # Central config loader for optional integrations (Slack, HubSpot, Notion, Calendar, Sentry, Vercel)
     ├── slack-notify.ts      # Slack incoming webhook helper (slackNotify, slackContactNotify, slackOrderNotify)
     ├── hubspot.ts           # HubSpot CRM v3 API (upsertContact, listContacts — handles 409 conflict)
     ├── notion-blog.ts       # Notion database as headless blog CMS (getPosts, getPostBySlug — falls back to static)
     ├── google-calendar.ts   # Google Calendar API via service account JWT (getAvailableSlots, bookConsultation — Athens hours)
-    └── ahrefs.ts            # Ahrefs API v3 (getSeoSnapshot, getTopKeywords, getWebAnalytics)
 
 src/locales/
 ├── en.json                  # English translations (195 keys)
@@ -353,7 +349,6 @@ graph TB
         IC -->|HUBSPOT_API_KEY| HS["hubspot.ts"]
         IC -->|NOTION_API_KEY + DB| Notion["notion-blog.ts"]
         IC -->|GOOGLE_* keys| GCal["google-calendar.ts"]
-        IC -->|AHREFS_API_KEY| Ahrefs["ahrefs.ts"]
         IC -->|SENTRY_* keys| Sentry["Sentry inline"]
     end
 
@@ -375,7 +370,6 @@ All integrations are optional and degrade gracefully. Config is centralized in `
 | HubSpot CRM        | `HUBSPOT_API_KEY`                                            | `hubspot.ts`        |
 | Notion CMS         | `NOTION_API_KEY`, `NOTION_BLOG_DB`                           | `notion-blog.ts`    |
 | Google Calendar    | `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CALENDAR_ID` | `google-calendar.ts` |
-| Ahrefs             | `AHREFS_API_KEY`                                             | `ahrefs.ts`         |
 | Sentry             | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`          | (inline in route)   |
 
 **Integration patterns:**
