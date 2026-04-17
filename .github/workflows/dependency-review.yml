@@ -13,11 +13,11 @@ jobs:
     name: Dependency Risk Review
     runs-on: ubuntu-latest
     timeout-minutes: 8
-    # Requires GitHub Advanced Security (not available on this repo)
-    continue-on-error: true
     steps:
+      - uses: actions/checkout@v6
       - name: Review dependencies
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
           deny-licenses: GPL-2.0, GPL-3.0
+        continue-on-error: true
