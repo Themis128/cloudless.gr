@@ -283,6 +283,12 @@ The SEO integration in `src/lib/gsc.ts` uses the same Google service account alr
 | `getPerformanceHistory(siteUrl?, weeks?)` | Daily data for trend charts (default: 12 weeks) |
 | `getTopPages(siteUrl?, limit?)` | Top pages by clicks |
 | `getWebAnalytics(siteUrl?)` | Totals + top pages combined (used as analytics proxy) |
+| `getCtrOpportunities(siteUrl?, limit?)` | Keywords ranking 4-20 with high impressions but CTR below 5% |
+| `getDeviceBreakdown(siteUrl?)` | Traffic split by device type (DESKTOP, MOBILE, TABLET) |
+| `getProductPageMetrics(siteUrl?, urlPattern?, limit?)` | Page metrics filtered by URL pattern (default: `/store/`) |
+| `getQueryPageMapping(siteUrl?, limit?)` | Query-to-page relationships for keyword cannibalization detection |
+| `getSearchIntentBreakdown(siteUrl?)` | Keywords grouped by intent: brand, product, informational, navigational |
+| `getTrafficByCountry(siteUrl?, limit?)` | Organic traffic breakdown by country (ISO 3166-1 alpha-3) |
 
 All functions return `null` / `[]` on error — they never throw — so dashboard widgets degrade gracefully.
 
@@ -294,8 +300,14 @@ All functions return `null` / `[]` on error — they never throw — so dashboar
 | `GET /api/admin/analytics/keywords?limit=N` | GSC | Top keywords, `limit` max 100 |
 | `GET /api/admin/analytics/pages?limit=N` | GSC | Top pages, `limit` max 100 |
 | `GET /api/admin/analytics/history?weeks=N` | GSC | Daily history, `weeks` max 52 |
+| `GET /api/admin/analytics/ctr-opportunities?limit=N` | GSC | CTR optimization opportunities, `limit` max 200 |
+| `GET /api/admin/analytics/devices` | GSC | Traffic breakdown by device type |
+| `GET /api/admin/analytics/products?limit=N&pattern=…` | GSC | Product page metrics, `limit` max 100, `pattern` default `/store/` |
+| `GET /api/admin/analytics/query-pages?limit=N` | GSC | Query-to-page mappings, `limit` max 500 |
+| `GET /api/admin/analytics/search-intent` | GSC | Keywords grouped by search intent with bucket counts |
+| `GET /api/admin/analytics/countries?limit=N` | GSC | Traffic by country, `limit` max 50 |
 
-All GSC routes return `503` when `GOOGLE_CLIENT_EMAIL` or `GOOGLE_PRIVATE_KEY` are absent from SSM.
+All GSC routes require admin JWT and return `503` when `GOOGLE_CLIENT_EMAIL` or `GOOGLE_PRIVATE_KEY` are absent from SSM.
 
 ### Weekly digest
 
@@ -328,7 +340,7 @@ Unit test files live in `__tests__/` — key test modules:
 | File | Coverage |
 |---|---|
 | `__tests__/admin-api.test.ts` | All `/api/admin/**` routes: auth, 503 on missing config, response shape |
-| `__tests__/gsc.test.ts` | `src/lib/gsc.ts` — all 5 exported functions, success + error paths |
+| `__tests__/gsc.test.ts` | `src/lib/gsc.ts` — all 11 exported functions, success + error paths |
 | `__tests__/hubspot-crm.test.ts` | `getPipelines`, `listCompanies`, `listDeals`, `listOwners` |
 | `__tests__/contact-api.test.ts` | `POST /api/contact` |
 | `e2e/*.spec.ts` | Full browser flows via Playwright |
@@ -361,7 +373,7 @@ This avoids noisy `LF will be replaced by CRLF` warnings and keeps diffs stable 
 
 ## Tech Stack
 
-- Next.js 16.2.1 (App Router, Turbopack)
+- Next.js 16.2.3 (App Router, Turbopack)
 - React 19.2.4
 - TypeScript 5
 - Tailwind CSS 4
@@ -369,4 +381,4 @@ This avoids noisy `LF will be replaced by CRLF` warnings and keeps diffs stable 
 - AWS SES (transactional email)
 - AWS SSM Parameter Store (secrets)
 - Stripe (checkout & payments)
-- Vitest + React Testing Library (109+ tests)
+- Vitest + React Testing Library (140+ tests)
