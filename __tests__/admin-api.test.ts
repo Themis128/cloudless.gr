@@ -124,13 +124,6 @@ vi.mock("@/lib/stripe", () => ({
   }),
 }));
 
-// Ahrefs
-vi.mock("@/lib/ahrefs", () => ({
-  getWebAnalytics: vi.fn().mockResolvedValue({ visits: 1200, pageviews: 3400 }),
-  getSeoSnapshot: vi.fn().mockResolvedValue({ domainRating: 42 }),
-  getTopKeywords: vi.fn().mockResolvedValue([{ keyword: "serverless", volume: 500 }]),
-}));
-
 // Google Search Console (GSC)
 vi.mock("@/lib/gsc", () => ({
   getSeoSnapshot: vi.fn().mockResolvedValue({
