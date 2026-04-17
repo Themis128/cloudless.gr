@@ -26,13 +26,23 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const limit = Math.max(1, Math.min(Number(request.nextUrl.searchParams.get("limit")) || 50, 200));
+  const limit = Math.max(
+    1,
+    Math.min(Number(request.nextUrl.searchParams.get("limit")) || 50, 200),
+  );
 
   try {
     const opportunities = await getCtrOpportunities(undefined, limit);
-    return NextResponse.json({ opportunities, fetchedAt: new Date().toISOString(), source: "google-search-console" });
+    return NextResponse.json({
+      opportunities,
+      fetchedAt: new Date().toISOString(),
+      source: "google-search-console",
+    });
   } catch (err) {
     console.error("[GSC CTR opportunities] Error:", err);
-    return NextResponse.json({ error: "Failed to fetch CTR opportunities." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch CTR opportunities." },
+      { status: 500 },
+    );
   }
 }

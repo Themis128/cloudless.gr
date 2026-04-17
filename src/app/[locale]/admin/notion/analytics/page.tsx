@@ -69,7 +69,9 @@ export default function AnalyticsDashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(`/api/admin/notion/analytics?days=${days}`);
+      const res = await fetchWithAuth(
+        `/api/admin/notion/analytics?days=${days}`,
+      );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as AnalyticsSummary;
       setSummary(data);
@@ -85,7 +87,15 @@ export default function AnalyticsDashboardPage() {
   }, [load]);
 
   // Bar chart helper — renders a simple horizontal bar
-  const Bar = ({ value, max, color }: { value: number; max: number; color: string }) => (
+  const Bar = ({
+    value,
+    max,
+    color,
+  }: {
+    value: number;
+    max: number;
+    color: string;
+  }) => (
     <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-800">
       <div
         className={`h-full rounded-full transition-all ${color}`}
@@ -101,11 +111,16 @@ export default function AnalyticsDashboardPage() {
         <div>
           <div className="bg-neon-green/10 border-neon-green/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-green h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-green font-mono text-xs">NOTION_ANALYTICS</span>
+            <span className="text-neon-green font-mono text-xs">
+              NOTION_ANALYTICS
+            </span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">Site Analytics</h1>
+          <h1 className="font-heading text-2xl font-bold text-white">
+            Site Analytics
+          </h1>
           <p className="font-body mt-1 text-slate-400">
-            Event tracking and visitor insights from your Notion analytics database.
+            Event tracking and visitor insights from your Notion analytics
+            database.
           </p>
         </div>
         <div className="flex gap-2">
@@ -116,7 +131,9 @@ export default function AnalyticsDashboardPage() {
                 key={d}
                 onClick={() => setDays(d)}
                 className={`px-3 py-2 font-mono text-xs transition-colors ${
-                  days === d ? "bg-neon-green/10 text-neon-green" : "text-slate-500 hover:text-slate-300"
+                  days === d
+                    ? "bg-neon-green/10 text-neon-green"
+                    : "text-slate-500 hover:text-slate-300"
                 }`}
               >
                 {d}d
@@ -144,7 +161,10 @@ export default function AnalyticsDashboardPage() {
       {loading && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5">
+            <div
+              key={i}
+              className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5"
+            >
               <div className="mb-2 h-3 w-20 rounded bg-slate-700/60" />
               <div className="h-8 w-16 rounded bg-slate-800/80" />
             </div>
@@ -162,7 +182,9 @@ export default function AnalyticsDashboardPage() {
               <p className="font-heading mt-1 text-3xl font-bold text-neon-cyan">
                 {summary.totalEvents.toLocaleString()}
               </p>
-              <p className="mt-1 font-mono text-xs text-slate-600">Last {days} days</p>
+              <p className="mt-1 font-mono text-xs text-slate-600">
+                Last {days} days
+              </p>
             </div>
             <div className="rounded-xl border border-neon-green/20 bg-void-light/50 p-5">
               <p className="font-mono text-xs text-slate-500">Page Views</p>
@@ -176,19 +198,27 @@ export default function AnalyticsDashboardPage() {
               </p>
             </div>
             <div className="rounded-xl border border-neon-magenta/20 bg-void-light/50 p-5">
-              <p className="font-mono text-xs text-slate-500">Form Submissions</p>
+              <p className="font-mono text-xs text-slate-500">
+                Form Submissions
+              </p>
               <p className="font-heading mt-1 text-3xl font-bold text-neon-magenta">
                 {(summary.byType.form_submit ?? 0).toLocaleString()}
               </p>
-              <p className="mt-1 font-mono text-xs text-slate-600">Conversion events</p>
+              <p className="mt-1 font-mono text-xs text-slate-600">
+                Conversion events
+              </p>
             </div>
             <div className="rounded-xl border border-yellow-500/20 bg-void-light/50 p-5">
               <p className="font-mono text-xs text-slate-500">Errors</p>
-              <p className={`font-heading mt-1 text-3xl font-bold ${(summary.byType.error ?? 0) > 0 ? "text-red-400" : "text-neon-green"}`}>
+              <p
+                className={`font-heading mt-1 text-3xl font-bold ${(summary.byType.error ?? 0) > 0 ? "text-red-400" : "text-neon-green"}`}
+              >
                 {(summary.byType.error ?? 0).toLocaleString()}
               </p>
               <p className="mt-1 font-mono text-xs text-slate-600">
-                {(summary.byType.error ?? 0) === 0 ? "All clear" : "Needs attention"}
+                {(summary.byType.error ?? 0) === 0
+                  ? "All clear"
+                  : "Needs attention"}
               </p>
             </div>
           </div>
@@ -196,7 +226,9 @@ export default function AnalyticsDashboardPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Events by Type */}
             <div className="rounded-xl border border-slate-800 bg-void-light/50 p-6">
-              <h2 className="font-heading mb-4 font-semibold text-white">Events by Type</h2>
+              <h2 className="font-heading mb-4 font-semibold text-white">
+                Events by Type
+              </h2>
               <div className="space-y-3">
                 {Object.entries(summary.byType)
                   .sort(([, a], [, b]) => b - a)
@@ -217,14 +249,18 @@ export default function AnalyticsDashboardPage() {
                     );
                   })}
                 {Object.keys(summary.byType).length === 0 && (
-                  <p className="py-4 text-center font-mono text-xs text-slate-600">No events yet</p>
+                  <p className="py-4 text-center font-mono text-xs text-slate-600">
+                    No events yet
+                  </p>
                 )}
               </div>
             </div>
 
             {/* Top Pages */}
             <div className="rounded-xl border border-slate-800 bg-void-light/50 p-6">
-              <h2 className="font-heading mb-4 font-semibold text-white">Top Pages</h2>
+              <h2 className="font-heading mb-4 font-semibold text-white">
+                Top Pages
+              </h2>
               <div className="space-y-3">
                 {summary.topPages.map(({ page, count }, i) => {
                   const max = summary.topPages[0]?.count ?? 1;
@@ -244,14 +280,18 @@ export default function AnalyticsDashboardPage() {
                   );
                 })}
                 {summary.topPages.length === 0 && (
-                  <p className="py-4 text-center font-mono text-xs text-slate-600">No page data</p>
+                  <p className="py-4 text-center font-mono text-xs text-slate-600">
+                    No page data
+                  </p>
                 )}
               </div>
             </div>
 
             {/* Top Sources */}
             <div className="rounded-xl border border-slate-800 bg-void-light/50 p-6">
-              <h2 className="font-heading mb-4 font-semibold text-white">Top Sources</h2>
+              <h2 className="font-heading mb-4 font-semibold text-white">
+                Top Sources
+              </h2>
               <div className="space-y-3">
                 {summary.topSources.map(({ source, count }, i) => {
                   const max = summary.topSources[0]?.count ?? 1;
@@ -271,14 +311,18 @@ export default function AnalyticsDashboardPage() {
                   );
                 })}
                 {summary.topSources.length === 0 && (
-                  <p className="py-4 text-center font-mono text-xs text-slate-600">No source data</p>
+                  <p className="py-4 text-center font-mono text-xs text-slate-600">
+                    No source data
+                  </p>
                 )}
               </div>
             </div>
 
             {/* Recent Events */}
             <div className="rounded-xl border border-slate-800 bg-void-light/50 p-6">
-              <h2 className="font-heading mb-4 font-semibold text-white">Recent Events</h2>
+              <h2 className="font-heading mb-4 font-semibold text-white">
+                Recent Events
+              </h2>
               <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
                 {summary.recentEvents.slice(0, 15).map((event) => (
                   <div
@@ -304,7 +348,9 @@ export default function AnalyticsDashboardPage() {
                   </div>
                 ))}
                 {summary.recentEvents.length === 0 && (
-                  <p className="py-4 text-center font-mono text-xs text-slate-600">No recent events</p>
+                  <p className="py-4 text-center font-mono text-xs text-slate-600">
+                    No recent events
+                  </p>
                 )}
               </div>
             </div>
@@ -315,7 +361,9 @@ export default function AnalyticsDashboardPage() {
       {/* Empty state */}
       {!loading && !error && !summary && (
         <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
-          <p className="font-mono text-slate-500">No analytics data available.</p>
+          <p className="font-mono text-slate-500">
+            No analytics data available.
+          </p>
           <p className="font-body mt-2 text-sm text-slate-600">
             Events will appear here once the tracking is active.
           </p>

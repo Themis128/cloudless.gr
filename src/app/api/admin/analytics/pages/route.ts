@@ -15,13 +15,23 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const limit = Math.min(Number(request.nextUrl.searchParams.get("limit") ?? "25"), 100);
+  const limit = Math.min(
+    Number(request.nextUrl.searchParams.get("limit") ?? "25"),
+    100,
+  );
 
   try {
     const pages = await getTopPages(undefined, limit);
-    return NextResponse.json({ pages, fetchedAt: new Date().toISOString(), source: "google-search-console" });
+    return NextResponse.json({
+      pages,
+      fetchedAt: new Date().toISOString(),
+      source: "google-search-console",
+    });
   } catch (err) {
     console.error("[GSC pages] Error:", err);
-    return NextResponse.json({ error: "Failed to fetch pages." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch pages." },
+      { status: 500 },
+    );
   }
 }

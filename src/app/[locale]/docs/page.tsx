@@ -36,8 +36,10 @@ export default async function DocsPage({
   searchParams: SearchParams;
 }) {
   const resolvedParams = await searchParams;
-  const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
-  const filterVerification = typeof resolvedParams.status === "string" ? resolvedParams.status : null;
+  const searchQuery =
+    typeof resolvedParams.q === "string" ? resolvedParams.q : "";
+  const filterVerification =
+    typeof resolvedParams.status === "string" ? resolvedParams.status : null;
 
   // Use wiki-aware docs for verification metadata
   const allDocs = await getWikiDocs();
@@ -62,15 +64,23 @@ export default async function DocsPage({
   const categories = Object.keys(grouped);
 
   // Verification stats
-  const verifiedCount = allDocs.filter((d) => d.verificationStatus === "Verified").length;
+  const verifiedCount = allDocs.filter(
+    (d) => d.verificationStatus === "Verified",
+  ).length;
   const needsReviewCount = allDocs.filter(
     (d) => d.verificationStatus === "Needs re-verification",
   ).length;
-  const unverifiedCount = allDocs.filter((d) => d.verificationStatus === "Unverified").length;
+  const unverifiedCount = allDocs.filter(
+    (d) => d.verificationStatus === "Unverified",
+  ).length;
 
   function filterUrl(params: Record<string, string | null>) {
     const search = new URLSearchParams();
-    const values = { q: searchQuery || null, status: filterVerification, ...params };
+    const values = {
+      q: searchQuery || null,
+      status: filterVerification,
+      ...params,
+    };
     for (const [k, v] of Object.entries(values)) {
       if (v) search.set(k, v);
     }
@@ -101,11 +111,16 @@ export default async function DocsPage({
             </span>
           </h1>
           <p className="animate-fade-in-up mt-4 max-w-xl text-lg text-slate-400 delay-200">
-            Everything you need to integrate, configure, and extend the Cloudless platform.
+            Everything you need to integrate, configure, and extend the
+            Cloudless platform.
           </p>
 
           {/* Search */}
-          <form action="" method="get" className="animate-fade-in-up mt-6 max-w-md delay-300">
+          <form
+            action=""
+            method="get"
+            className="animate-fade-in-up mt-6 max-w-md delay-300"
+          >
             <div className="relative">
               <input
                 type="text"
@@ -161,7 +176,10 @@ export default async function DocsPage({
               </Link>
               <Link
                 href={filterUrl({
-                  status: filterVerification === "Needs re-verification" ? null : "Needs re-verification",
+                  status:
+                    filterVerification === "Needs re-verification"
+                      ? null
+                      : "Needs re-verification",
                 })}
                 className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors ${
                   filterVerification === "Needs re-verification"
@@ -173,7 +191,8 @@ export default async function DocsPage({
               </Link>
               <Link
                 href={filterUrl({
-                  status: filterVerification === "Unverified" ? null : "Unverified",
+                  status:
+                    filterVerification === "Unverified" ? null : "Unverified",
                 })}
                 className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors ${
                   filterVerification === "Unverified"
@@ -264,7 +283,14 @@ export default async function DocsPage({
                               )}
                               {doc.lastVerified && (
                                 <span className="font-mono text-[9px] text-slate-600">
-                                  Verified: {new Date(doc.lastVerified).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                                  Verified:{" "}
+                                  {new Date(
+                                    doc.lastVerified,
+                                  ).toLocaleDateString("en-GB", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  })}
                                 </span>
                               )}
                             </div>

@@ -25,13 +25,23 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const limit = Math.max(1, Math.min(Number(request.nextUrl.searchParams.get("limit")) || 100, 500));
+  const limit = Math.max(
+    1,
+    Math.min(Number(request.nextUrl.searchParams.get("limit")) || 100, 500),
+  );
 
   try {
     const mappings = await getQueryPageMapping(undefined, limit);
-    return NextResponse.json({ mappings, fetchedAt: new Date().toISOString(), source: "google-search-console" });
+    return NextResponse.json({
+      mappings,
+      fetchedAt: new Date().toISOString(),
+      source: "google-search-console",
+    });
   } catch (err) {
     console.error("[GSC query-pages] Error:", err);
-    return NextResponse.json({ error: "Failed to fetch query-page mappings." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch query-page mappings." },
+      { status: 500 },
+    );
   }
 }

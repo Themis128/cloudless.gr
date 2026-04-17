@@ -47,7 +47,11 @@ export default function AdminErrorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [actionMsg, setActionMsg] = useState<{ id: string; text: string; ok: boolean } | null>(null);
+  const [actionMsg, setActionMsg] = useState<{
+    id: string;
+    text: string;
+    ok: boolean;
+  } | null>(null);
   const [filter, setFilter] = useState<FilterLevel>("all");
 
   const fetchErrors = useCallback(async () => {
@@ -72,7 +76,10 @@ export default function AdminErrorsPage() {
     fetchErrors();
   }, [fetchErrors]);
 
-  const handleAction = async (id: string, status: "resolved" | "ignored" | "unresolved") => {
+  const handleAction = async (
+    id: string,
+    status: "resolved" | "ignored" | "unresolved",
+  ) => {
     const labels: Record<string, string> = {
       resolved: "Resolved",
       ignored: "Ignored",
@@ -126,7 +133,9 @@ export default function AdminErrorsPage() {
         </div>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-heading text-2xl font-bold text-white">Error Monitoring</h1>
+            <h1 className="font-heading text-2xl font-bold text-white">
+              Error Monitoring
+            </h1>
             <p className="font-body mt-1 text-slate-400">
               Unresolved Sentry issues — resolve or ignore directly from here.
             </p>
@@ -145,7 +154,9 @@ export default function AdminErrorsPage() {
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
           <p className="font-mono text-xs text-slate-500">Unresolved</p>
-          <p className={`font-heading mt-1 text-2xl font-bold ${issues.length === 0 ? "text-neon-green" : "text-red-400"}`}>
+          <p
+            className={`font-heading mt-1 text-2xl font-bold ${issues.length === 0 ? "text-neon-green" : "text-red-400"}`}
+          >
             {loading ? "…" : issues.length}
           </p>
         </div>
@@ -164,7 +175,11 @@ export default function AdminErrorsPage() {
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
           <p className="font-mono text-xs text-slate-500">Total Events</p>
           <p className="font-heading mt-1 text-2xl font-bold text-slate-300">
-            {loading ? "…" : issues.reduce((s, i) => s + Number(i.count || 0), 0).toLocaleString()}
+            {loading
+              ? "…"
+              : issues
+                  .reduce((s, i) => s + Number(i.count || 0), 0)
+                  .toLocaleString()}
           </p>
         </div>
       </div>
@@ -172,25 +187,29 @@ export default function AdminErrorsPage() {
       {/* Filter tabs */}
       {!loading && !error && issues.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
-          {(["all", "fatal", "error", "warning", "info"] as FilterLevel[]).map((lvl) => (
-            <button
-              key={lvl}
-              onClick={() => setFilter(lvl)}
-              className={`min-h-[34px] rounded-lg border px-3 py-1 font-mono text-xs transition-all ${
-                filter === lvl
-                  ? "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20"
-                  : "border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
-              }`}
-            >
-              {lvl} ({counts[lvl]})
-            </button>
-          ))}
+          {(["all", "fatal", "error", "warning", "info"] as FilterLevel[]).map(
+            (lvl) => (
+              <button
+                key={lvl}
+                onClick={() => setFilter(lvl)}
+                className={`min-h-[34px] rounded-lg border px-3 py-1 font-mono text-xs transition-all ${
+                  filter === lvl
+                    ? "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20"
+                    : "border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
+                }`}
+              >
+                {lvl} ({counts[lvl]})
+              </button>
+            ),
+          )}
         </div>
       )}
 
       {/* Global action message */}
       {actionMsg && (
-        <div className={`mb-4 rounded-lg border px-4 py-2 font-mono text-xs ${actionMsg.ok ? "border-neon-green/20 bg-neon-green/5 text-neon-green" : "border-red-900/30 bg-red-950/10 text-red-400"}`}>
+        <div
+          className={`mb-4 rounded-lg border px-4 py-2 font-mono text-xs ${actionMsg.ok ? "border-neon-green/20 bg-neon-green/5 text-neon-green" : "border-red-900/30 bg-red-950/10 text-red-400"}`}
+        >
           {actionMsg.ok ? "✓" : "✗"} {actionMsg.text}
         </div>
       )}
@@ -211,19 +230,27 @@ export default function AdminErrorsPage() {
       ) : issues.length === 0 ? (
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-12 text-center">
           <p className="text-neon-green text-4xl">✓</p>
-          <p className="font-heading mt-4 text-lg font-semibold text-white">All Clear</p>
-          <p className="mt-1 text-sm text-slate-500">No unresolved issues in Sentry.</p>
+          <p className="font-heading mt-4 text-lg font-semibold text-white">
+            All Clear
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            No unresolved issues in Sentry.
+          </p>
         </div>
       ) : visible.length === 0 ? (
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-8 text-center">
-          <p className="font-mono text-sm text-slate-500">No issues at this level.</p>
+          <p className="font-mono text-sm text-slate-500">
+            No issues at this level.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
           {visible.map((issue) => {
             const isActing = actionLoading !== null;
             const dotClass = levelDot[issue.level] ?? "bg-slate-600";
-            const labelClass = levelClasses[issue.level] ?? "text-slate-400 bg-slate-800/50 border-slate-700";
+            const labelClass =
+              levelClasses[issue.level] ??
+              "text-slate-400 bg-slate-800/50 border-slate-700";
 
             return (
               <div
@@ -234,7 +261,9 @@ export default function AdminErrorsPage() {
                   {/* Level dot + badge */}
                   <div className="mt-1 shrink-0 flex items-center gap-2">
                     <span className={`h-2 w-2 rounded-full ${dotClass}`} />
-                    <span className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${labelClass}`}>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${labelClass}`}
+                    >
                       {issue.level}
                     </span>
                   </div>
@@ -248,9 +277,11 @@ export default function AdminErrorsPage() {
                       {issue.culprit || "unknown location"}
                     </p>
                     <p className="mt-1 font-mono text-[10px] text-slate-600">
-                      First: {new Date(issue.firstSeen).toLocaleDateString("en-IE")}
+                      First:{" "}
+                      {new Date(issue.firstSeen).toLocaleDateString("en-IE")}
                       {" · "}
-                      Last: {new Date(issue.lastSeen).toLocaleDateString("en-IE")}
+                      Last:{" "}
+                      {new Date(issue.lastSeen).toLocaleDateString("en-IE")}
                     </p>
                   </div>
 
@@ -259,19 +290,25 @@ export default function AdminErrorsPage() {
                     <p className="font-mono text-sm font-bold text-white">
                       {Number(issue.count).toLocaleString()}
                     </p>
-                    <p className="font-mono text-[10px] text-slate-600">events</p>
+                    <p className="font-mono text-[10px] text-slate-600">
+                      events
+                    </p>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-800/60 pt-3">
-                  <span className="font-mono text-[10px] text-slate-600 mr-1">Actions:</span>
+                  <span className="font-mono text-[10px] text-slate-600 mr-1">
+                    Actions:
+                  </span>
                   <button
                     onClick={() => handleAction(issue.id, "resolved")}
                     disabled={isActing}
                     className="min-h-[30px] rounded-lg border border-neon-green/20 px-3 py-1 font-mono text-[11px] text-neon-green transition-colors hover:bg-neon-green/10 disabled:opacity-40"
                   >
-                    {actionLoading === `resolved-${issue.id}` ? "…" : "✓ Resolve"}
+                    {actionLoading === `resolved-${issue.id}`
+                      ? "…"
+                      : "✓ Resolve"}
                   </button>
                   <button
                     onClick={() => handleAction(issue.id, "ignored")}
@@ -297,7 +334,8 @@ export default function AdminErrorsPage() {
 
       {!loading && issues.length > 0 && (
         <p className="mt-4 font-mono text-[10px] text-slate-600">
-          Showing {visible.length} of {issues.length} unresolved issues · Resolving removes from this list immediately
+          Showing {visible.length} of {issues.length} unresolved issues ·
+          Resolving removes from this list immediately
         </p>
       )}
     </div>

@@ -149,6 +149,28 @@ vi.mock("@/lib/gsc", () => ({
     avgPosition: 14.2,
     topPages: [{ page: "https://cloudless.gr/", clicks: 200, impressions: 5000, position: 7 }],
   }),
+  getCtrOpportunities: vi.fn().mockResolvedValue([
+    { keyword: "serverless nextjs", clicks: 10, impressions: 800, ctr: 1.25, position: 7.2 },
+  ]),
+  getDeviceBreakdown: vi.fn().mockResolvedValue([
+    { device: "DESKTOP", clicks: 300, impressions: 6000, ctr: 5, avgPosition: 9 },
+    { device: "MOBILE", clicks: 200, impressions: 5000, ctr: 4, avgPosition: 12 },
+  ]),
+  getProductPageMetrics: vi.fn().mockResolvedValue([
+    { page: "https://cloudless.gr/store/pro-plan", clicks: 40, impressions: 900, ctr: 4.44, position: 8 },
+  ]),
+  getQueryPageMapping: vi.fn().mockResolvedValue([
+    { query: "cloudless hosting", page: "https://cloudless.gr/", clicks: 60, impressions: 1500, ctr: 4, position: 6 },
+  ]),
+  getSearchIntentBreakdown: vi.fn().mockResolvedValue({
+    brand: [{ keyword: "cloudless gr", clicks: 100, impressions: 2000, ctr: 5, position: 3 }],
+    product: [],
+    informational: [],
+    navigational: [],
+  }),
+  getTrafficByCountry: vi.fn().mockResolvedValue([
+    { country: "grc", clicks: 350, impressions: 7000, ctr: 5, avgPosition: 8 },
+  ]),
 }));
 
 // HubSpot
@@ -656,5 +678,205 @@ describe("GET /api/admin/analytics/history", () => {
     const { GET } = await import("@/app/api/admin/analytics/history/route");
     await GET(adminRequest("http://localhost/api/admin/analytics/history?weeks=4"));
     expect(getPerformanceHistory).toHaveBeenCalledWith(undefined, 4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// /api/admin/analytics/ctr-opportunities  (GSC)
+// ---------------------------------------------------------------------------
+
+describe("GET /api/admin/analytics/ctr-opportunities", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetSsmCache();
+  });
+
+  it("returns 503 when GSC credentials are missing", async () => {
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetSsmCache();
+    const { GET } = await import("@/app/api/admin/analytics/ctr-opportunities/route");
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/ctr-opportunities"));
+    expect(res.status).toBe(503);
+  });
+
+  it("returns opportunities array when configured", async () => {
+    const { GET } = await import("@/app/api/admin/analytics/ctr-opportunities/route");
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/ctr-opportunities"));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.opportunities)).toBe(true);
+    expect(typeof data.fetchedAt).toBe("string");
+    expect(data.source).toBe("google-search-console");
+  });
+
+  it("respects ?limit query param", async () => {
+    const { getCtrOpportunities } = await import("@/lib/gsc");
+    const { GET } = await import("@/app/api/admin/analytics/ctr-opportunities/route");
+    await GET(adminRequest("http://localhost/api/admin/analytics/ctr-opportunities?limit=20"));
+    expect(getCtrOpportunities).toHaveBeenCalledWith(undefined, 20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// /api/admin/analytics/devices  (GSC)
+// ---------------------------------------------------------------------------
+
+describe("GET /api/admin/analytics/devices", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetSsmCache();
+  });
+
+  it("returns 503 when GSC credentials are missing", async () => {
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetSsmCache();
+    const { GET } = await import("@/app/api/admin/analytics/devices/route");
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/devices"));
+    expect(res.status).toBe(503);
+  });
+
+  it("returns devices array when configured", async () => {
+    const { GET } = await import("@/app/api/admin/analytics/devices/route");
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/devices"));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.devices)).toBe(true);
+    expect(data.source).toBe("google-search-console");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// /api/admin/analytics/products  (GSC)
+// ---------------------------------------------------------------------------
+
+describe("GET /api/admin/analytics/products", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetSsmCache();
+  });
+
+  it("returns 503 when GSC credentials are missing", async () => {
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetSsmCache();
+    const { GET } = await import("@/app/api/admin/analytics/products/route");
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/products"));
+    expect(res.status).toBe(503);
+  });
+
+  it("returns products array when configured", async () => {
+    const { GET } = await import("@/app/api/admin/analytics/products/route");
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/products"));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.products)).toBe(true);
+    expect(typeof data.pattern).toBe("string");
+    expect(data.source).toBe("google-search-console");
+  });
+
+  it("respects ?pattern and ?limit query params", async () => {
+    const { getProductPageMetrics } = await import("@/lib/gsc");
+    const { GET } = await import("@/app/api/admin/analytics/products/route");
+    await GET(adminRequest("http://localhost/api/admin/analytics/products?pattern=/blog/&limit=10"));
+    expect(getProductPageMetrics).toHaveBeenCalledWith(undefined, "/blog/", 10);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// /api/admin/analytics/query-pages  (GSC)
+// ---------------------------------------------------------------------------
+
+describe("GET /api/admin/analytics/query-pages", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetSsmCache();
+  });
+
+  it("returns 503 when GSC credentials are missing", async () => {
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetSsmCache();
+    const { GET } = await import("@/app/api/admin/analytics/query-pages/route");
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/query-pages"));
+    expect(res.status).toBe(503);
+  });
+
+  it("returns mappings array when configured", async () => {
+    const { GET } = await import("@/app/api/admin/analytics/query-pages/route");
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/query-pages"));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.mappings)).toBe(true);
+    expect(data.source).toBe("google-search-console");
+  });
+
+  it("respects ?limit query param", async () => {
+    const { getQueryPageMapping } = await import("@/lib/gsc");
+    const { GET } = await import("@/app/api/admin/analytics/query-pages/route");
+    await GET(adminRequest("http://localhost/api/admin/analytics/query-pages?limit=50"));
+    expect(getQueryPageMapping).toHaveBeenCalledWith(undefined, 50);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// /api/admin/analytics/search-intent  (GSC)
+// ---------------------------------------------------------------------------
+
+describe("GET /api/admin/analytics/search-intent", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetSsmCache();
+  });
+
+  it("returns 503 when GSC credentials are missing", async () => {
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetSsmCache();
+    const { GET } = await import("@/app/api/admin/analytics/search-intent/route");
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/search-intent"));
+    expect(res.status).toBe(503);
+  });
+
+  it("returns intent breakdown with summary when configured", async () => {
+    const { GET } = await import("@/app/api/admin/analytics/search-intent/route");
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/search-intent"));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveProperty("intent");
+    expect(data).toHaveProperty("summary");
+    expect(typeof data.summary.brand).toBe("number");
+    expect(data.source).toBe("google-search-console");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// /api/admin/analytics/countries  (GSC)
+// ---------------------------------------------------------------------------
+
+describe("GET /api/admin/analytics/countries", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetSsmCache();
+  });
+
+  it("returns 503 when GSC credentials are missing", async () => {
+    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    resetSsmCache();
+    const { GET } = await import("@/app/api/admin/analytics/countries/route");
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/countries"));
+    expect(res.status).toBe(503);
+  });
+
+  it("returns countries array when configured", async () => {
+    const { GET } = await import("@/app/api/admin/analytics/countries/route");
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/countries"));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.countries)).toBe(true);
+    expect(data.source).toBe("google-search-console");
+  });
+
+  it("respects ?limit query param", async () => {
+    const { getTrafficByCountry } = await import("@/lib/gsc");
+    const { GET } = await import("@/app/api/admin/analytics/countries/route");
+    await GET(adminRequest("http://localhost/api/admin/analytics/countries?limit=10"));
+    expect(getTrafficByCountry).toHaveBeenCalledWith(undefined, 10);
   });
 });

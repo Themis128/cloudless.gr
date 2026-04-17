@@ -31,7 +31,9 @@ export function readLocaleFromCookie(): Locale {
     .split("; ")
     .find((e) => e.startsWith("NEXT_LOCALE="))
     ?.split("=")[1];
-  return cookieLocale && isSupportedLocale(cookieLocale) ? (cookieLocale as Locale) : defaultLocale;
+  return cookieLocale && isSupportedLocale(cookieLocale)
+    ? (cookieLocale as Locale)
+    : defaultLocale;
 }
 
 export function setAppLocale(locale: Locale): void {
