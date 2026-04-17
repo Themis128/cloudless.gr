@@ -324,12 +324,14 @@ export async function getWebAnalytics(
     });
 
     const pagesData = pagesRes.ok ? await pagesRes.json() : {};
-    const topPages = (pagesData.rows ?? []).map((r: Record<string, unknown>) => ({
-      page: (r.keys as string[])?.[0] ?? "",
-      clicks: Math.round((r.clicks as number) ?? 0),
-      impressions: Math.round((r.impressions as number) ?? 0),
-      position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
-    }));
+    const topPages = (pagesData.rows ?? []).map(
+      (r: Record<string, unknown>) => ({
+        page: (r.keys as string[])?.[0] ?? "",
+        clicks: Math.round((r.clicks as number) ?? 0),
+        impressions: Math.round((r.impressions as number) ?? 0),
+        position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+      }),
+    );
 
     return {
       clicks: Math.round(total.clicks ?? 0),
@@ -598,8 +600,10 @@ export async function getSearchIntentBreakdown(
     const data = await res.json();
 
     const brandRe = /cloudless/i;
-    const productRe = /\b(buy|price|order|shipping|store|shop|product|purchase|deal|discount|coupon)\b/i;
-    const infoRe = /\b(how|what|why|when|where|guide|tutorial|tips|learn|blog|article|example|comparison|vs|review)\b/i;
+    const productRe =
+      /\b(buy|price|order|shipping|store|shop|product|purchase|deal|discount|coupon)\b/i;
+    const infoRe =
+      /\b(how|what|why|when|where|guide|tutorial|tips|learn|blog|article|example|comparison|vs|review)\b/i;
 
     const toKeyword = (r: Record<string, unknown>): IntentKeyword => ({
       keyword: (r.keys as string[])?.[0] ?? "",

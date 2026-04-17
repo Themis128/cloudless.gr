@@ -64,7 +64,9 @@ export default function PurchasesPage() {
         setPurchases(data.purchases ?? []);
         setSubscriptions(data.subscriptions ?? []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load purchases");
+        setError(
+          err instanceof Error ? err.message : "Failed to load purchases",
+        );
       } finally {
         setLoading(false);
       }
@@ -87,7 +89,10 @@ export default function PurchasesPage() {
           {t("dashboard.purchases", "Your Purchases")}
         </h1>
         <p className="font-body mt-1 text-slate-400">
-          {t("dashboard.purchasesDesc", "View and manage orders placed with your account.")}
+          {t(
+            "dashboard.purchasesDesc",
+            "View and manage orders placed with your account.",
+          )}
         </p>
       </div>
 
@@ -106,9 +111,13 @@ export default function PurchasesPage() {
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
-          <p className="font-mono text-xs text-slate-500">Active Subscriptions</p>
+          <p className="font-mono text-xs text-slate-500">
+            Active Subscriptions
+          </p>
           <p className="font-heading text-neon-cyan mt-1 text-2xl font-bold">
-            {loading ? "…" : subscriptions.filter((s) => s.status === "active").length}
+            {loading
+              ? "…"
+              : subscriptions.filter((s) => s.status === "active").length}
           </p>
         </div>
       </div>
@@ -125,7 +134,9 @@ export default function PurchasesPage() {
                 : "border border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
             }`}
           >
-            {t === "orders" ? `Orders (${purchases.length})` : `Subscriptions (${subscriptions.length})`}
+            {t === "orders"
+              ? `Orders (${purchases.length})`
+              : `Subscriptions (${subscriptions.length})`}
           </button>
         ))}
       </div>
@@ -149,9 +160,12 @@ export default function PurchasesPage() {
             <div className="bg-neon-cyan/10 border-neon-cyan/20 mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg border text-2xl">
               ◇
             </div>
-            <h2 className="font-heading mb-2 font-semibold text-white">No purchases yet</h2>
+            <h2 className="font-heading mb-2 font-semibold text-white">
+              No purchases yet
+            </h2>
             <p className="font-body mx-auto max-w-md text-sm text-slate-500">
-              When you buy services or products from our store, they&apos;ll appear here.
+              When you buy services or products from our store, they&apos;ll
+              appear here.
             </p>
             <Link
               href="/store"
@@ -172,7 +186,8 @@ export default function PurchasesPage() {
                     <div className="flex items-center gap-2">
                       <span
                         className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] ${
-                          statusClasses[p.status] ?? "bg-slate-800/50 text-slate-400"
+                          statusClasses[p.status] ??
+                          "bg-slate-800/50 text-slate-400"
                         }`}
                       >
                         {p.status}
@@ -186,7 +201,10 @@ export default function PurchasesPage() {
                         <p key={i} className="font-mono text-sm text-white">
                           {item.name}
                           {item.quantity > 1 && (
-                            <span className="text-slate-500"> ×{item.quantity}</span>
+                            <span className="text-slate-500">
+                              {" "}
+                              ×{item.quantity}
+                            </span>
                           )}
                         </p>
                       ))}
@@ -194,7 +212,8 @@ export default function PurchasesPage() {
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="font-heading text-lg font-bold text-white">
-                      {p.currency === "EUR" ? "€" : p.currency} {p.amount.toFixed(2)}
+                      {p.currency === "EUR" ? "€" : p.currency}{" "}
+                      {p.amount.toFixed(2)}
                     </p>
                   </div>
                 </div>
@@ -204,7 +223,9 @@ export default function PurchasesPage() {
         )
       ) : subscriptions.length === 0 ? (
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-12 text-center">
-          <p className="font-heading mb-2 font-semibold text-white">No subscriptions</p>
+          <p className="font-heading mb-2 font-semibold text-white">
+            No subscriptions
+          </p>
           <p className="font-body text-sm text-slate-500">
             Active subscriptions will appear here.
           </p>
@@ -221,7 +242,8 @@ export default function PurchasesPage() {
                   <div className="flex items-center gap-2">
                     <span
                       className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${
-                        statusClasses[sub.status] ?? "bg-slate-800/50 text-slate-400"
+                        statusClasses[sub.status] ??
+                        "bg-slate-800/50 text-slate-400"
                       }`}
                     >
                       {sub.status}
@@ -234,13 +256,16 @@ export default function PurchasesPage() {
                   </div>
                   <div className="mt-2">
                     {sub.items.map((item, i) => (
-                      <p key={i} className="font-mono text-sm text-white">{item.name}</p>
+                      <p key={i} className="font-mono text-sm text-white">
+                        {item.name}
+                      </p>
                     ))}
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-mono text-xs text-slate-500">
-                    Renews {new Date(sub.currentPeriodEnd).toLocaleDateString("en-IE")}
+                    Renews{" "}
+                    {new Date(sub.currentPeriodEnd).toLocaleDateString("en-IE")}
                   </p>
                 </div>
               </div>

@@ -18,7 +18,12 @@
  * All functions degrade gracefully to empty/null when Notion is not configured.
  */
 
-import { notionFetch, notionFetchAll, notionListAll, blocksToHtml } from "@/lib/notion";
+import {
+  notionFetch,
+  notionFetchAll,
+  notionListAll,
+  blocksToHtml,
+} from "@/lib/notion";
 import { getIntegrations } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
@@ -142,7 +147,9 @@ export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
  * Fetch a doc's full content as rendered HTML.
  * Returns null if not found or Notion is not configured.
  */
-export async function getDocContent(pageId: string): Promise<DocContent | null> {
+export async function getDocContent(
+  pageId: string,
+): Promise<DocContent | null> {
   const { NOTION_API_KEY } = getIntegrations();
   if (!NOTION_API_KEY) return null;
 
@@ -151,9 +158,7 @@ export async function getDocContent(pageId: string): Promise<DocContent | null> 
     const page = await notionFetch<unknown>(`/pages/${pageId}`);
 
     // Fetch all blocks (handles pagination via GET)
-    const blocks = await notionListAll<unknown>(
-      `/blocks/${pageId}/children`,
-    );
+    const blocks = await notionListAll<unknown>(`/blocks/${pageId}/children`);
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const record = mapPage(page as any);
@@ -202,9 +207,14 @@ function mapWikiPage(page: any): WikiDocRecord {
   const p = page.properties ?? {};
   return {
     ...base,
-    verificationStatus: p["Verification Status"]?.status?.name ?? p["Verification Status"]?.select?.name ?? "Unverified",
-    owner: (p.Owner?.people ?? []).map((u: any) => u.name ?? "").join(", ") || "",
-    lastVerified: p["Last verified"]?.date?.start ?? p["Last Verified"]?.date?.start ?? "",
+    verificationStatus:
+      p["Verification Status"]?.status?.name ??
+      p["Verification Status"]?.select?.name ??
+      "Unverified",
+    owner:
+      (p.Owner?.people ?? []).map((u: any) => u.name ?? "").join(", ") || "",
+    lastVerified:
+      p["Last verified"]?.date?.start ?? p["Last Verified"]?.date?.start ?? "",
     lastEdited: page.last_edited_time ?? "",
   };
 }
@@ -254,7 +264,9 @@ export async function getDocsNeedingVerification(): Promise<WikiDocRecord[]> {
 /**
  * Get docs owned by a specific person.
  */
-export async function getDocsByOwner(ownerName: string): Promise<WikiDocRecord[]> {
+export async function getDocsByOwner(
+  ownerName: string,
+): Promise<WikiDocRecord[]> {
   const docs = await getWikiDocs();
   return docs.filter((d) =>
     d.owner.toLowerCase().includes(ownerName.toLowerCase()),

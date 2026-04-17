@@ -45,7 +45,9 @@ export async function GET(request: NextRequest) {
     // Sanitize filter to prevent CognitoQL injection — allow only
     // alphanumeric chars, dots, hyphens, underscores, and @ for email filtering.
     const rawFilter = searchParams.get("filter") ?? "";
-    const filter = rawFilter ? rawFilter.replace(/[^\w.@+-]/g, "").slice(0, 128) || undefined : undefined;
+    const filter = rawFilter
+      ? rawFilter.replace(/[^\w.@+-]/g, "").slice(0, 128) || undefined
+      : undefined;
 
     const client = getClient();
 

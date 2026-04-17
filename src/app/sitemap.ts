@@ -12,11 +12,11 @@ import { demoProducts } from "@/lib/store-products";
 // that haven't changed — which harms crawl-priority signals.
 // ---------------------------------------------------------------------------
 const LAST_MODIFIED: Record<string, string> = {
-  "/":         "2025-03-01",
+  "/": "2025-03-01",
   "/services": "2025-01-15",
-  "/store":    "2025-04-01",
-  "/blog":     "2025-04-10",
-  "/contact":  "2024-11-01",
+  "/store": "2025-04-01",
+  "/blog": "2025-04-10",
+  "/contact": "2024-11-01",
   // Store product catalogue — bump when the catalogue is updated
   "/store/products": "2025-04-01",
 };

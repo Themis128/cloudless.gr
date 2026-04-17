@@ -20,7 +20,10 @@ import { useState } from "react";
 export default function AdminSettingsPage() {
   const [saved, setSaved] = useState(false);
   const [cacheClearing, setCacheClearing] = useState(false);
-  const [cacheMsg, setCacheMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [cacheMsg, setCacheMsg] = useState<{
+    ok: boolean;
+    text: string;
+  } | null>(null);
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -61,17 +64,25 @@ export default function AdminSettingsPage() {
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-magenta font-mono text-xs">SETTINGS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">Site Settings</h1>
-        <p className="font-body mt-1 text-slate-400">Configure your Cloudless platform settings.</p>
+        <h1 className="font-heading text-2xl font-bold text-white">
+          Site Settings
+        </h1>
+        <p className="font-body mt-1 text-slate-400">
+          Configure your Cloudless platform settings.
+        </p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* General */}
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
-          <h2 className="font-heading mb-4 font-semibold text-white">General</h2>
+          <h2 className="font-heading mb-4 font-semibold text-white">
+            General
+          </h2>
           <div className="space-y-4">
             <div>
-              <label className="mb-1.5 block font-mono text-xs text-slate-500">Site Name</label>
+              <label className="mb-1.5 block font-mono text-xs text-slate-500">
+                Site Name
+              </label>
               <input
                 type="text"
                 defaultValue="Cloudless"
@@ -79,7 +90,9 @@ export default function AdminSettingsPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block font-mono text-xs text-slate-500">Support Email</label>
+              <label className="mb-1.5 block font-mono text-xs text-slate-500">
+                Support Email
+              </label>
               <input
                 type="email"
                 defaultValue="tbaltzakis@cloudless.gr"
@@ -91,21 +104,49 @@ export default function AdminSettingsPage() {
 
         {/* Notifications */}
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
-          <h2 className="font-heading mb-4 font-semibold text-white">Team Notifications</h2>
+          <h2 className="font-heading mb-4 font-semibold text-white">
+            Team Notifications
+          </h2>
           <div className="space-y-3">
             {[
-              { id: "notify-orders", label: "New orders", desc: "Notify the team when a new order is placed", defaultChecked: true },
-              { id: "notify-signups", label: "New sign-ups", desc: "Notify the team when a new user registers", defaultChecked: true },
-              { id: "notify-failures", label: "Payment failures", desc: "Alert when a payment fails", defaultChecked: true },
-              { id: "notify-contact", label: "Contact form submissions", desc: "Forward contact form messages to the team", defaultChecked: true },
+              {
+                id: "notify-orders",
+                label: "New orders",
+                desc: "Notify the team when a new order is placed",
+                defaultChecked: true,
+              },
+              {
+                id: "notify-signups",
+                label: "New sign-ups",
+                desc: "Notify the team when a new user registers",
+                defaultChecked: true,
+              },
+              {
+                id: "notify-failures",
+                label: "Payment failures",
+                desc: "Alert when a payment fails",
+                defaultChecked: true,
+              },
+              {
+                id: "notify-contact",
+                label: "Contact form submissions",
+                desc: "Forward contact form messages to the team",
+                defaultChecked: true,
+              },
             ].map((pref) => (
               <label
                 key={pref.id}
                 className="bg-void flex min-h-[44px] cursor-pointer items-start gap-3 rounded-lg border border-slate-800 px-4 py-3 transition-colors hover:border-slate-700"
               >
-                <input type="checkbox" defaultChecked={pref.defaultChecked} className="accent-neon-magenta mt-1" />
+                <input
+                  type="checkbox"
+                  defaultChecked={pref.defaultChecked}
+                  className="accent-neon-magenta mt-1"
+                />
                 <div>
-                  <span className="block font-mono text-sm text-white">{pref.label}</span>
+                  <span className="block font-mono text-sm text-white">
+                    {pref.label}
+                  </span>
                   <span className="text-xs text-slate-500">{pref.desc}</span>
                 </div>
               </label>
@@ -115,13 +156,18 @@ export default function AdminSettingsPage() {
 
         {/* Cache Management */}
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
-          <h2 className="font-heading mb-1 font-semibold text-white">Cache Management</h2>
+          <h2 className="font-heading mb-1 font-semibold text-white">
+            Cache Management
+          </h2>
           <p className="mb-4 text-xs text-slate-500">
-            The Notion in-memory cache speeds up page loads. Clear it after manual Notion changes.
+            The Notion in-memory cache speeds up page loads. Clear it after
+            manual Notion changes.
           </p>
 
           {cacheMsg && (
-            <div className={`mb-4 rounded-lg border px-4 py-2 font-mono text-xs ${cacheMsg.ok ? "border-neon-green/20 bg-neon-green/5 text-neon-green" : "border-red-900/30 bg-red-950/10 text-red-400"}`}>
+            <div
+              className={`mb-4 rounded-lg border px-4 py-2 font-mono text-xs ${cacheMsg.ok ? "border-neon-green/20 bg-neon-green/5 text-neon-green" : "border-red-900/30 bg-red-950/10 text-red-400"}`}
+            >
               {cacheMsg.ok ? "✓" : "✗"} {cacheMsg.text}
             </div>
           )}
@@ -151,14 +197,22 @@ export default function AdminSettingsPage() {
 
         {/* Danger Zone */}
         <div className="rounded-xl border border-red-900/30 bg-red-950/10 p-6">
-          <h2 className="font-heading mb-2 font-semibold text-red-400">Danger Zone</h2>
-          <p className="mb-4 text-xs text-slate-500">Irreversible actions. Proceed with caution.</p>
+          <h2 className="font-heading mb-2 font-semibold text-red-400">
+            Danger Zone
+          </h2>
+          <p className="mb-4 text-xs text-slate-500">
+            Irreversible actions. Proceed with caution.
+          </p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className="min-h-[44px] rounded-lg border border-red-900/50 px-4 py-2.5 font-mono text-xs text-red-400 transition-all hover:bg-red-950/30"
               onClick={() => {
-                if (window.confirm("Delete all Notion cache? Active requests will re-fetch.")) {
+                if (
+                  window.confirm(
+                    "Delete all Notion cache? Active requests will re-fetch.",
+                  )
+                ) {
                   handleClearCache();
                 }
               }}

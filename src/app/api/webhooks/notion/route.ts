@@ -31,8 +31,20 @@ import { escapeHtml } from "@/lib/escape-html";
  */
 
 interface WebhookPayload {
-  type: "page.updated" | "page.created" | "submission.status" | "project.updated" | "task.updated" | "analytics.event";
-  database: "blog" | "docs" | "submissions" | "projects" | "tasks" | "analytics";
+  type:
+    | "page.updated"
+    | "page.created"
+    | "submission.status"
+    | "project.updated"
+    | "task.updated"
+    | "analytics.event";
+  database:
+    | "blog"
+    | "docs"
+    | "submissions"
+    | "projects"
+    | "tasks"
+    | "analytics";
   page_id: string;
   slug?: string;
   data?: Record<string, unknown>;
@@ -50,7 +62,9 @@ function verifySecret(request: NextRequest): boolean {
 async function handlePageUpdated(payload: WebhookPayload) {
   const { database, slug } = payload;
 
-  invalidateCache(database === "blog" ? "blog" : database === "docs" ? "docs" : undefined);
+  invalidateCache(
+    database === "blog" ? "blog" : database === "docs" ? "docs" : undefined,
+  );
 
   if (database === "blog") {
     revalidatePath("/blog");
@@ -72,7 +86,9 @@ async function handlePageUpdated(payload: WebhookPayload) {
 async function handlePageCreated(payload: WebhookPayload) {
   const { database, slug, data } = payload;
 
-  invalidateCache(database === "blog" ? "blog" : database === "docs" ? "docs" : undefined);
+  invalidateCache(
+    database === "blog" ? "blog" : database === "docs" ? "docs" : undefined,
+  );
 
   if (database === "blog") {
     revalidatePath("/blog");
@@ -122,7 +138,11 @@ async function handleProjectUpdated(payload: WebhookPayload) {
     }).catch(() => {});
   }
 
-  return { updated: true, database: "projects", project: name ?? payload.page_id };
+  return {
+    updated: true,
+    database: "projects",
+    project: name ?? payload.page_id,
+  };
 }
 
 async function handleTaskUpdated(payload: WebhookPayload) {
@@ -141,7 +161,12 @@ async function handleTaskUpdated(payload: WebhookPayload) {
     }).catch(() => {});
   }
 
-  return { updated: true, database: "tasks", task: task ?? payload.page_id, status };
+  return {
+    updated: true,
+    database: "tasks",
+    task: task ?? payload.page_id,
+    status,
+  };
 }
 
 async function handleAnalyticsEvent(payload: WebhookPayload) {
@@ -174,7 +199,10 @@ async function handleSubmissionStatus(payload: WebhookPayload) {
   }
 
   if (status !== "Done") {
-    return { emailed: false, reason: `Status "${status}" does not trigger email` };
+    return {
+      emailed: false,
+      reason: `Status "${status}" does not trigger email`,
+    };
   }
 
   try {

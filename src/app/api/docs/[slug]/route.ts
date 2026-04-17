@@ -12,10 +12,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   if (!isConfigured("NOTION_API_KEY", "NOTION_DOCS_DB_ID")) {
-    return NextResponse.json(
-      { error: "Docs not configured" },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Docs not configured" }, { status: 503 });
   }
 
   const { slug } = await params;
@@ -37,9 +34,6 @@ export async function GET(
     return NextResponse.json(content);
   } catch (err) {
     console.error("[Docs API] Failed to fetch doc:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch doc" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch doc" }, { status: 500 });
   }
 }

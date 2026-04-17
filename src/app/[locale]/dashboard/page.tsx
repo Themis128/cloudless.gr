@@ -48,21 +48,32 @@ export default function DashboardPage() {
         const subs = data.subscriptions ?? [];
         totalOrders = purchases.length;
         totalSpent = purchases
-          .filter((p: { status: string }) => p.status === "paid" || p.status === "complete")
+          .filter(
+            (p: { status: string }) =>
+              p.status === "paid" || p.status === "complete",
+          )
           .reduce((sum: number, p: { amount: number }) => sum + p.amount, 0);
         activeSubscriptions = subs.filter(
           (s: { status: string }) => s.status === "active",
         ).length;
       }
 
-      if (consultationsRes.status === "fulfilled" && consultationsRes.value.ok) {
+      if (
+        consultationsRes.status === "fulfilled" &&
+        consultationsRes.value.ok
+      ) {
         const data = await consultationsRes.value.json();
         upcomingConsultations = (data.consultations ?? []).filter(
           (c: { status: string }) => c.status === "upcoming",
         ).length;
       }
 
-      setStats({ totalOrders, totalSpent, activeSubscriptions, upcomingConsultations });
+      setStats({
+        totalOrders,
+        totalSpent,
+        activeSubscriptions,
+        upcomingConsultations,
+      });
       setLoading(false);
     }
 
@@ -81,7 +92,10 @@ export default function DashboardPage() {
   const dashboardCards = [
     {
       title: t("dashboard.profile", "Profile"),
-      description: t("dashboard.profileCardDesc", "Update your name, company, and contact info"),
+      description: t(
+        "dashboard.profileCardDesc",
+        "Update your name, company, and contact info",
+      ),
       icon: "◉",
       href: "/dashboard/profile",
       accent: "cyan" as const,
@@ -110,7 +124,10 @@ export default function DashboardPage() {
     },
     {
       title: t("dashboard.settings", "Settings"),
-      description: t("dashboard.settingsCardDesc", "Theme, language, and notification preferences"),
+      description: t(
+        "dashboard.settingsCardDesc",
+        "Theme, language, and notification preferences",
+      ),
       icon: "⚙",
       href: "/dashboard/settings",
       accent: "magenta" as const,
@@ -159,7 +176,7 @@ export default function DashboardPage() {
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
           <p className="font-mono text-[10px] text-slate-500">Orders</p>
           <p className="font-heading mt-1 text-xl font-bold text-white">
-            {loading ? "…" : stats?.totalOrders ?? 0}
+            {loading ? "…" : (stats?.totalOrders ?? 0)}
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
@@ -171,13 +188,13 @@ export default function DashboardPage() {
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
           <p className="font-mono text-[10px] text-slate-500">Subscriptions</p>
           <p className="font-heading text-neon-cyan mt-1 text-xl font-bold">
-            {loading ? "…" : stats?.activeSubscriptions ?? 0}
+            {loading ? "…" : (stats?.activeSubscriptions ?? 0)}
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
           <p className="font-mono text-[10px] text-slate-500">Consultations</p>
           <p className="font-heading text-neon-blue mt-1 text-xl font-bold">
-            {loading ? "…" : stats?.upcomingConsultations ?? 0}
+            {loading ? "…" : (stats?.upcomingConsultations ?? 0)}
           </p>
         </div>
       </div>
@@ -199,8 +216,12 @@ export default function DashboardPage() {
                   {card.icon}
                 </div>
               </div>
-              <h3 className="font-heading mb-1 font-semibold text-white">{card.title}</h3>
-              <p className="font-body text-sm text-slate-500">{card.description}</p>
+              <h3 className="font-heading mb-1 font-semibold text-white">
+                {card.title}
+              </h3>
+              <p className="font-body text-sm text-slate-500">
+                {card.description}
+              </p>
             </Link>
           );
         })}

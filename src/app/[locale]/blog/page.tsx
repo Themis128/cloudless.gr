@@ -18,10 +18,12 @@ export const metadata: Metadata = {
 const categoryColors: Record<string, string> = {
   Cloud: "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20",
   Serverless: "bg-neon-green/10 text-neon-green border border-neon-green/20",
-  Analytics: "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
+  Analytics:
+    "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
   "AI Marketing": "bg-neon-blue/10 text-neon-blue border border-neon-blue/20",
   DevOps: "bg-neon-green/10 text-neon-green border border-neon-green/20",
-  Security: "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
+  Security:
+    "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
   Architecture: "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20",
 };
 
@@ -35,10 +37,18 @@ export default async function BlogPage({
   searchParams: SearchParams;
 }) {
   const resolvedParams = await searchParams;
-  const currentPage = Math.max(1, parseInt(String(resolvedParams.page ?? "1"), 10) || 1);
-  const activeCategory = typeof resolvedParams.category === "string" ? resolvedParams.category : null;
-  const activeTag = typeof resolvedParams.tag === "string" ? resolvedParams.tag : null;
-  const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
+  const currentPage = Math.max(
+    1,
+    parseInt(String(resolvedParams.page ?? "1"), 10) || 1,
+  );
+  const activeCategory =
+    typeof resolvedParams.category === "string"
+      ? resolvedParams.category
+      : null;
+  const activeTag =
+    typeof resolvedParams.tag === "string" ? resolvedParams.tag : null;
+  const searchQuery =
+    typeof resolvedParams.q === "string" ? resolvedParams.q : "";
 
   // Fetch from Notion when configured, otherwise fall back to static posts
   const useNotion = isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
@@ -99,7 +109,10 @@ export default async function BlogPage({
   // Pagination
   const total = filteredPosts.length;
   const totalPages = Math.ceil(total / PER_PAGE);
-  const posts = filteredPosts.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+  const posts = filteredPosts.slice(
+    (currentPage - 1) * PER_PAGE,
+    currentPage * PER_PAGE,
+  );
 
   const categories = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]);
   const tags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
@@ -107,7 +120,12 @@ export default async function BlogPage({
   // Build URL helper for filter links
   function filterUrl(params: Record<string, string | null>) {
     const search = new URLSearchParams();
-    const values = { q: searchQuery || null, category: activeCategory, tag: activeTag, ...params };
+    const values = {
+      q: searchQuery || null,
+      category: activeCategory,
+      tag: activeTag,
+      ...params,
+    };
     for (const [k, v] of Object.entries(values)) {
       if (v && k !== "page") search.set(k, v);
     }
@@ -148,12 +166,16 @@ export default async function BlogPage({
             </span>
           </h1>
           <p className="animate-fade-in-up mt-4 max-w-xl text-lg text-slate-400 delay-200">
-            Cloud architecture, serverless, analytics, and AI marketing — written for founders and
-            technical teams who want to move fast.
+            Cloud architecture, serverless, analytics, and AI marketing —
+            written for founders and technical teams who want to move fast.
           </p>
 
           {/* Search bar */}
-          <form action="" method="get" className="animate-fade-in-up mt-6 max-w-md delay-300">
+          <form
+            action=""
+            method="get"
+            className="animate-fade-in-up mt-6 max-w-md delay-300"
+          >
             <div className="relative">
               <input
                 type="text"
@@ -187,7 +209,9 @@ export default async function BlogPage({
               {/* Active filters */}
               {(activeCategory || activeTag || searchQuery) && (
                 <div className="mb-6 flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-xs text-slate-500">Filtering:</span>
+                  <span className="font-mono text-xs text-slate-500">
+                    Filtering:
+                  </span>
                   {searchQuery && (
                     <Link
                       href={filterUrl({ q: null })}
@@ -265,24 +289,36 @@ export default async function BlogPage({
                           >
                             {post.category}
                           </span>
-                          <span className="font-mono text-xs text-slate-600">{post.readTime}</span>
+                          <span className="font-mono text-xs text-slate-600">
+                            {post.readTime}
+                          </span>
                         </div>
                         <h2 className="font-heading group-hover:text-neon-cyan text-xl font-bold text-white transition-colors">
                           {post.title}
                         </h2>
-                        <p className="mt-3 text-sm leading-relaxed text-slate-400">{post.excerpt}</p>
+                        <p className="mt-3 text-sm leading-relaxed text-slate-400">
+                          {post.excerpt}
+                        </p>
                         <div className="mt-4 flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <time className="font-mono text-xs text-slate-600">
                               {formatDate(post.date)}
                             </time>
                             {post.author && (
-                              <span className="font-mono text-xs text-slate-600">by {post.author}</span>
+                              <span className="font-mono text-xs text-slate-600">
+                                by {post.author}
+                              </span>
                             )}
                           </div>
                           <span className="text-neon-cyan inline-flex items-center gap-1 font-mono text-sm font-semibold transition-all group-hover:gap-2">
                             Read more
-                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg
+                              width="14"
+                              height="14"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
                               <path d="M3 7h8M7 3l4 4-4 4" />
                             </svg>
                           </span>
@@ -316,19 +352,21 @@ export default async function BlogPage({
                       ← Prev
                     </Link>
                   )}
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <Link
-                      key={page}
-                      href={pageUrl(page)}
-                      className={`rounded-lg border px-3 py-2 font-mono text-xs transition-colors ${
-                        page === currentPage
-                          ? "border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan"
-                          : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
-                      }`}
-                    >
-                      {page}
-                    </Link>
-                  ))}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <Link
+                        key={page}
+                        href={pageUrl(page)}
+                        className={`rounded-lg border px-3 py-2 font-mono text-xs transition-colors ${
+                          page === currentPage
+                            ? "border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan"
+                            : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+                        }`}
+                      >
+                        {page}
+                      </Link>
+                    ),
+                  )}
                   {currentPage < totalPages && (
                     <Link
                       href={pageUrl(currentPage + 1)}
@@ -365,7 +403,9 @@ export default async function BlogPage({
                               }`}
                             >
                               <span>{cat}</span>
-                              <span className="font-mono text-[10px] text-slate-600">{count}</span>
+                              <span className="font-mono text-[10px] text-slate-600">
+                                {count}
+                              </span>
                             </Link>
                           </li>
                         ))}

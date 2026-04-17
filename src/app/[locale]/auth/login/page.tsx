@@ -71,14 +71,21 @@ export default function LoginPage() {
         <div className="mb-8 text-center">
           <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-cyan font-mono text-xs">SECURE_AUTH</span>
+            <span className="text-neon-cyan font-mono text-xs">
+              SECURE_AUTH
+            </span>
           </div>
           <h1 className="font-heading text-3xl font-bold text-white">
-            {needsNewPassword ? t("auth.newPassword", "New Password") : t("auth.login", "Sign In")}
+            {needsNewPassword
+              ? t("auth.newPassword", "New Password")
+              : t("auth.login", "Sign In")}
           </h1>
           <p className="font-body mt-2 text-slate-400">
             {needsNewPassword
-              ? t("auth.newPasswordDesc", "You must set a new password before continuing.")
+              ? t(
+                  "auth.newPasswordDesc",
+                  "You must set a new password before continuing.",
+                )
               : t("auth.loginDesc", "Sign in to your Cloudless account")}
           </p>
         </div>
@@ -173,7 +180,9 @@ export default function LoginPage() {
                 disabled={submitting}
                 className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-[44px] w-full rounded-lg border py-3 font-mono font-semibold transition-all hover:shadow-[0_0_15px_rgba(0,255,245,0.2)] disabled:opacity-50"
               >
-                {submitting ? t("auth.signingIn", "Signing In...") : t("auth.login", "Sign In")}
+                {submitting
+                  ? t("auth.signingIn", "Signing In...")
+                  : t("auth.login", "Sign In")}
               </button>
             </form>
           )}
@@ -181,7 +190,10 @@ export default function LoginPage() {
           {!needsNewPassword && (
             <p className="mt-6 text-center font-mono text-sm text-slate-500">
               {t("auth.noAccount", "Don't have an account?")}{" "}
-              <Link href="/auth/signup" className="text-neon-cyan hover:underline">
+              <Link
+                href="/auth/signup"
+                className="text-neon-cyan hover:underline"
+              >
                 {t("auth.signup", "Create Account")}
               </Link>
             </p>
