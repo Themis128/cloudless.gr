@@ -39,6 +39,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     console.error("[GSC search-intent] Error:", err);
-    return NextResponse.json({ error: "Failed to fetch search intent data." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch search intent data." },
+      { status: 500 },
+    );
   }
 }

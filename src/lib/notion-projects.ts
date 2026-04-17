@@ -16,7 +16,12 @@ import { getIntegrations, isConfigured } from "@/lib/integrations";
 // Types
 // ---------------------------------------------------------------------------
 
-export type ProjectStatus = "Planning" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
+export type ProjectStatus =
+  | "Planning"
+  | "In Progress"
+  | "On Hold"
+  | "Completed"
+  | "Cancelled";
 export type ProjectPriority = "Critical" | "High" | "Medium" | "Low";
 export type ProjectType = "Client" | "Internal" | "Maintenance";
 
@@ -36,7 +41,13 @@ export interface Project {
   url: string;
 }
 
-export type TaskStatus = "Backlog" | "To Do" | "In Progress" | "In Review" | "Done" | "Blocked";
+export type TaskStatus =
+  | "Backlog"
+  | "To Do"
+  | "In Progress"
+  | "In Review"
+  | "Done"
+  | "Blocked";
 export type TaskPriority = "Urgent" | "High" | "Medium" | "Low";
 export type TaskEstimate = "XS" | "S" | "M" | "L" | "XL";
 export type TaskType = "Feature" | "Bug" | "Chore" | "Spike" | "Design";
@@ -69,7 +80,9 @@ function mapProject(page: any): Project {
     status: (p.Status?.select?.name ?? "Planning") as ProjectStatus,
     priority: (p.Priority?.select?.name ?? "Medium") as ProjectPriority,
     type: (p.Type?.select?.name ?? "Internal") as ProjectType,
-    owner: (p.Owner?.people ?? []).map((u: any) => u.name ?? "").join(", ") || extractText(p.Owner?.rich_text),
+    owner:
+      (p.Owner?.people ?? []).map((u: any) => u.name ?? "").join(", ") ||
+      extractText(p.Owner?.rich_text),
     startDate: p["Start Date"]?.date?.start ?? "",
     dueDate: p["Due Date"]?.date?.start ?? "",
     description: extractText(p.Description?.rich_text),
@@ -87,7 +100,9 @@ function mapTask(page: any): Task {
     task: extractText(p.Task?.title),
     status: (p.Status?.select?.name ?? "Backlog") as TaskStatus,
     priority: (p.Priority?.select?.name ?? "Medium") as TaskPriority,
-    assignee: (p.Assignee?.people ?? []).map((u: any) => u.name ?? "").join(", ") || extractText(p.Assignee?.rich_text),
+    assignee:
+      (p.Assignee?.people ?? []).map((u: any) => u.name ?? "").join(", ") ||
+      extractText(p.Assignee?.rich_text),
     project: p.Project?.relation?.length
       ? p.Project.relation.map((r: { id: string }) => r.id).join(", ")
       : "",
@@ -163,17 +178,19 @@ export async function createProject(data: {
           Status: { select: { name: data.status ?? "Planning" } },
           Priority: { select: { name: data.priority ?? "Medium" } },
           Type: { select: { name: data.type ?? "Internal" } },
-          ...(data.owner
-            ? { Owner: { people: [{ id: data.owner }] } }
-            : {}),
+          ...(data.owner ? { Owner: { people: [{ id: data.owner }] } } : {}),
           ...(data.description
             ? {
                 Description: {
-                  rich_text: [{ text: { content: data.description.slice(0, 2000) } }],
+                  rich_text: [
+                    { text: { content: data.description.slice(0, 2000) } },
+                  ],
                 },
               }
             : {}),
-          "Start Date": { date: { start: new Date().toISOString().split("T")[0] } },
+          "Start Date": {
+            date: { start: new Date().toISOString().split("T")[0] },
+          },
         },
       }),
     });
@@ -192,7 +209,9 @@ export async function updateProjectStatus(
   try {
     await notionFetch(`/pages/${pageId}`, {
       method: "PATCH",
-      body: JSON.stringify({ properties: { Status: { select: { name: status } } } }),
+      body: JSON.stringify({
+        properties: { Status: { select: { name: status } } },
+      }),
     });
     return true;
   } catch (err) {
@@ -209,7 +228,11 @@ export async function updateProjectProgress(
   try {
     await notionFetch(`/pages/${pageId}`, {
       method: "PATCH",
-      body: JSON.stringify({ properties: { Progress: { number: Math.min(100, Math.max(0, progress)) } } }),
+      body: JSON.stringify({
+        properties: {
+          Progress: { number: Math.min(100, Math.max(0, progress)) },
+        },
+      }),
     });
     return true;
   } catch (err) {
@@ -233,13 +256,22 @@ export async function listTasks(filters?: {
   try {
     const conditions: Record<string, unknown>[] = [];
     if (filters?.status) {
-      conditions.push({ property: "Status", select: { equals: filters.status } });
+      conditions.push({
+        property: "Status",
+        select: { equals: filters.status },
+      });
     }
     if (filters?.project) {
-      conditions.push({ property: "Project", relation: { contains: filters.project } });
+      conditions.push({
+        property: "Project",
+        relation: { contains: filters.project },
+      });
     }
     if (filters?.assignee) {
-      conditions.push({ property: "Assignee", people: { contains: filters.assignee } });
+      conditions.push({
+        property: "Assignee",
+        people: { contains: filters.assignee },
+      });
     }
 
     const filter =
@@ -249,13 +281,16 @@ export async function listTasks(filters?: {
           ? conditions[0]
           : undefined;
 
-    const pages = await notionFetchAll(`/databases/${NOTION_TASKS_DB_ID}/query`, {
-      ...(filter ? { filter } : {}),
-      sorts: [
-        { property: "Status", direction: "ascending" },
-        { property: "Priority", direction: "ascending" },
-      ],
-    });
+    const pages = await notionFetchAll(
+      `/databases/${NOTION_TASKS_DB_ID}/query`,
+      {
+        ...(filter ? { filter } : {}),
+        sorts: [
+          { property: "Status", direction: "ascending" },
+          { property: "Priority", direction: "ascending" },
+        ],
+      },
+    );
     return pages.map(mapTask);
   } catch (err) {
     console.error("[Notion Tasks] Failed to list tasks:", err);
@@ -296,7 +331,9 @@ export async function createTask(data: {
           ...(data.description
             ? {
                 Description: {
-                  rich_text: [{ text: { content: data.description.slice(0, 2000) } }],
+                  rich_text: [
+                    { text: { content: data.description.slice(0, 2000) } },
+                  ],
                 },
               }
             : {}),
@@ -321,7 +358,9 @@ export async function updateTaskStatus(
   try {
     await notionFetch(`/pages/${pageId}`, {
       method: "PATCH",
-      body: JSON.stringify({ properties: { Status: { select: { name: status } } } }),
+      body: JSON.stringify({
+        properties: { Status: { select: { name: status } } },
+      }),
     });
     return true;
   } catch (err) {
@@ -372,16 +411,19 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
 
   const { NOTION_TASKS_DB_ID } = getIntegrations();
   try {
-    const pages = await notionFetchAll(`/databases/${NOTION_TASKS_DB_ID}/query`, {
-      filter: {
-        property: "Sprint",
-        rich_text: { equals: sprintName },
+    const pages = await notionFetchAll(
+      `/databases/${NOTION_TASKS_DB_ID}/query`,
+      {
+        filter: {
+          property: "Sprint",
+          rich_text: { equals: sprintName },
+        },
+        sorts: [
+          { property: "Status", direction: "ascending" },
+          { property: "Priority", direction: "ascending" },
+        ],
       },
-      sorts: [
-        { property: "Status", direction: "ascending" },
-        { property: "Priority", direction: "ascending" },
-      ],
-    });
+    );
     return pages.map(mapTask);
   } catch (err) {
     console.error("[Notion Tasks] Failed to get sprint tasks:", err);
@@ -469,18 +511,21 @@ export async function getOverdueTasks(): Promise<Task[]> {
   const today = new Date().toISOString().split("T")[0];
 
   try {
-    const pages = await notionFetchAll(`/databases/${NOTION_TASKS_DB_ID}/query`, {
-      filter: {
-        and: [
-          { property: "Due Date", date: { before: today } },
-          {
-            property: "Status",
-            select: { does_not_equal: "Done" },
-          },
-        ],
+    const pages = await notionFetchAll(
+      `/databases/${NOTION_TASKS_DB_ID}/query`,
+      {
+        filter: {
+          and: [
+            { property: "Due Date", date: { before: today } },
+            {
+              property: "Status",
+              select: { does_not_equal: "Done" },
+            },
+          ],
+        },
+        sorts: [{ property: "Due Date", direction: "ascending" }],
       },
-      sorts: [{ property: "Due Date", direction: "ascending" }],
-    });
+    );
     return pages.map(mapTask);
   } catch (err) {
     console.error("[Notion Tasks] Failed to get overdue tasks:", err);
@@ -502,7 +547,12 @@ export async function getProjectDashboard(projectName: string): Promise<{
   const tasks = await listTasks({ project: projectName });
 
   const summary: Record<string, number> = {
-    Backlog: 0, "To Do": 0, "In Progress": 0, "In Review": 0, Done: 0, Blocked: 0,
+    Backlog: 0,
+    "To Do": 0,
+    "In Progress": 0,
+    "In Review": 0,
+    Done: 0,
+    Blocked: 0,
   };
   for (const t of tasks) {
     summary[t.status] = (summary[t.status] ?? 0) + 1;

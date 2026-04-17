@@ -24,13 +24,23 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const limit = Math.max(1, Math.min(Number(request.nextUrl.searchParams.get("limit")) || 30, 50));
+  const limit = Math.max(
+    1,
+    Math.min(Number(request.nextUrl.searchParams.get("limit")) || 30, 50),
+  );
 
   try {
     const countries = await getTrafficByCountry(undefined, limit);
-    return NextResponse.json({ countries, fetchedAt: new Date().toISOString(), source: "google-search-console" });
+    return NextResponse.json({
+      countries,
+      fetchedAt: new Date().toISOString(),
+      source: "google-search-console",
+    });
   } catch (err) {
     console.error("[GSC countries] Error:", err);
-    return NextResponse.json({ error: "Failed to fetch country data." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch country data." },
+      { status: 500 },
+    );
   }
 }

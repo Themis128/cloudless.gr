@@ -13,7 +13,8 @@ let hasRegisteredServiceWorker = false;
 
 export default function ServiceWorkerRegistration() {
   const [locale] = useCurrentLocale();
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installPrompt, setInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {

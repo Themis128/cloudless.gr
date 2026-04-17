@@ -66,10 +66,14 @@ export async function saveSubmission(
             email: data.email,
           },
           Company: {
-            rich_text: [{ text: { content: (data.company ?? "").slice(0, 200) } }],
+            rich_text: [
+              { text: { content: (data.company ?? "").slice(0, 200) } },
+            ],
           },
           Service: {
-            rich_text: [{ text: { content: (data.service ?? "").slice(0, 200) } }],
+            rich_text: [
+              { text: { content: (data.service ?? "").slice(0, 200) } },
+            ],
           },
           Message: {
             rich_text: [{ text: { content: data.message.slice(0, 2000) } }],
@@ -122,9 +126,15 @@ export async function listSubmissions(limit = 50): Promise<SubmissionRecord[]> {
         id: page.id,
         name: (p.Name?.title ?? []).map((t: any) => t.plain_text).join(""),
         email: p.Email?.email ?? "",
-        company: (p.Company?.rich_text ?? []).map((t: any) => t.plain_text).join(""),
-        service: (p.Service?.rich_text ?? []).map((t: any) => t.plain_text).join(""),
-        message: (p.Message?.rich_text ?? []).map((t: any) => t.plain_text).join(""),
+        company: (p.Company?.rich_text ?? [])
+          .map((t: any) => t.plain_text)
+          .join(""),
+        service: (p.Service?.rich_text ?? [])
+          .map((t: any) => t.plain_text)
+          .join(""),
+        message: (p.Message?.rich_text ?? [])
+          .map((t: any) => t.plain_text)
+          .join(""),
         status: p.Status?.select?.name ?? "New",
         source: p.Source?.select?.name ?? "contact",
         submittedAt: p["Submitted At"]?.date?.start ?? page.created_time,

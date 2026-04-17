@@ -11,11 +11,17 @@ export async function POST(request: Request) {
     const { name, email, company, service, message } = await request.json();
 
     if (!name || !email || !message) {
-      return Response.json({ error: "Name, email, and message are required." }, { status: 400 });
+      return Response.json(
+        { error: "Name, email, and message are required." },
+        { status: 400 },
+      );
     }
 
     if (!isValidEmail(email)) {
-      return Response.json({ error: "Invalid email address." }, { status: 400 });
+      return Response.json(
+        { error: "Invalid email address." },
+        { status: 400 },
+      );
     }
 
     const config = await getConfig();
@@ -61,17 +67,29 @@ export async function POST(request: Request) {
         service_interest: service || undefined,
         message: String(message).slice(0, 500),
       }),
-      saveSubmission({ name, email, company, service, message, source: "contact" }),
-    ]).then((results) => {
-      const labels = ["slack", "hubspot", "notion"];
-      results.forEach((r, i) => {
-        if (r.status === "rejected") {
-          console.error("[Contact] Background task " + labels[i] + " failed:", r.reason);
-        }
+      saveSubmission({
+        name,
+        email,
+        company,
+        service,
+        message,
+        source: "contact",
+      }),
+    ])
+      .then((results) => {
+        const labels = ["slack", "hubspot", "notion"];
+        results.forEach((r, i) => {
+          if (r.status === "rejected") {
+            console.error(
+              "[Contact] Background task " + labels[i] + " failed:",
+              r.reason,
+            );
+          }
+        });
+      })
+      .catch((err) => {
+        console.error("[Contact] Background allSettled error:", err);
       });
-    }).catch((err) => {
-      console.error("[Contact] Background allSettled error:", err);
-    });
 
     return Response.json({ success: true });
   } catch (error) {

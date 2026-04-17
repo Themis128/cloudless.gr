@@ -22,7 +22,9 @@ export async function GET(
     if (!post) {
       // Notion returned null — fall back to static
       const blogModule = await import("@/lib/blog");
-      const staticPost = (blogModule.posts as Array<{ slug: string }>).find((p) => p.slug === slug);
+      const staticPost = (blogModule.posts as Array<{ slug: string }>).find(
+        (p) => p.slug === slug,
+      );
       if (!staticPost) {
         return NextResponse.json({ error: "Post not found" }, { status: 404 });
       }
@@ -44,7 +46,9 @@ export async function GET(
     console.error("[Blog] Fetch post error:", err);
     // Notion threw — fall back to static
     const blogModule = await import("@/lib/blog");
-    const staticPost = (blogModule.posts as Array<{ slug: string }>).find((p) => p.slug === slug);
+    const staticPost = (blogModule.posts as Array<{ slug: string }>).find(
+      (p) => p.slug === slug,
+    );
     if (!staticPost) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
