@@ -29,15 +29,15 @@ export interface SentryIssue {
   count: string;
   userCount: number;
   firstSeen: string; // ISO 8601
-  lastSeen: string;  // ISO 8601
+  lastSeen: string; // ISO 8601
   status: "unresolved" | "resolved" | "ignored";
   /** Direct link to the issue on sentry.io */
   permalink: string;
   /** Human-readable short ID, e.g. "CLOUDLESS-GR-1A2B" */
   shortId: string;
   metadata: {
-    type?: string;     // Error class name
-    value?: string;    // Error message
+    type?: string; // Error class name
+    value?: string; // Error message
     filename?: string;
     function?: string;
   };
@@ -60,7 +60,11 @@ export type IssueStatus = "resolved" | "ignored" | "unresolved";
 
 const SENTRY_API = "https://sentry.io/api/0";
 
-function getSentryConfig(): { token: string; org: string; project: string } | null {
+function getSentryConfig(): {
+  token: string;
+  org: string;
+  project: string;
+} | null {
   if (!isConfigured("SENTRY_AUTH_TOKEN")) return null;
   const { SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT } = getIntegrations();
   return {
@@ -70,7 +74,10 @@ function getSentryConfig(): { token: string; org: string; project: string } | nu
   };
 }
 
-async function sentryFetch<T>(path: string, options?: RequestInit): Promise<T | null> {
+async function sentryFetch<T>(
+  path: string,
+  options?: RequestInit,
+): Promise<T | null> {
   const cfg = getSentryConfig();
   if (!cfg) return null;
 
@@ -85,7 +92,9 @@ async function sentryFetch<T>(path: string, options?: RequestInit): Promise<T | 
     });
 
     if (res.status === 401 || res.status === 403) {
-      console.error(`[Sentry] Auth error ${res.status} — check SENTRY_AUTH_TOKEN scopes.`);
+      console.error(
+        `[Sentry] Auth error ${res.status} — check SENTRY_AUTH_TOKEN scopes.`,
+      );
       return null;
     }
 
@@ -114,7 +123,12 @@ async function sentryFetch<T>(path: string, options?: RequestInit): Promise<T | 
  * @param options.level  Filter by level: fatal | error | warning | info | debug
  */
 export async function getUnresolvedIssues(
-  options: { limit?: number; sort?: SortField; query?: string; level?: IssueLevel } = {},
+  options: {
+    limit?: number;
+    sort?: SortField;
+    query?: string;
+    level?: IssueLevel;
+  } = {},
 ): Promise<SentryIssueList | null> {
   const cfg = getSentryConfig();
   if (!cfg) return null;
@@ -143,7 +157,11 @@ export async function getUnresolvedIssues(
  * Useful for the admin dashboard summary card.
  */
 export async function getTopErrors(limit = 5): Promise<SentryIssue[]> {
-  const result = await getUnresolvedIssues({ limit, sort: "freq", level: "error" });
+  const result = await getUnresolvedIssues({
+    limit,
+    sort: "freq",
+    level: "error",
+  });
   return result?.issues ?? [];
 }
 
@@ -167,7 +185,12 @@ export async function getErrorCounts(): Promise<{
   const result = await getUnresolvedIssues({ limit: 100, sort: "date" });
   if (!result) return null;
 
-  const counts = { fatal: 0, error: 0, warning: 0, total: result.issues.length };
+  const counts = {
+    fatal: 0,
+    error: 0,
+    warning: 0,
+    total: result.issues.length,
+  };
   for (const issue of result.issues) {
     if (issue.level === "fatal") counts.fatal++;
     else if (issue.level === "error") counts.error++;

@@ -108,7 +108,11 @@ export async function trackEvent(data: {
             ? {
                 Metadata: {
                   rich_text: [
-                    { text: { content: JSON.stringify(data.metadata).slice(0, 2000) } },
+                    {
+                      text: {
+                        content: JSON.stringify(data.metadata).slice(0, 2000),
+                      },
+                    },
                   ],
                 },
               }
@@ -220,9 +224,7 @@ export async function getEventsByDateRange(
 /**
  * Generate a summary of analytics data for the admin dashboard.
  */
-export async function getAnalyticsSummary(
-  days = 7,
-): Promise<AnalyticsSummary> {
+export async function getAnalyticsSummary(days = 7): Promise<AnalyticsSummary> {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
   const events = await getEventsByDateRange(
@@ -320,12 +322,17 @@ export async function archiveOldEvents(
         }
       }
     } catch (err) {
-      console.error(`[Notion Analytics] Failed to archive ${eventType} events:`, err);
+      console.error(
+        `[Notion Analytics] Failed to archive ${eventType} events:`,
+        err,
+      );
       errors++;
     }
   }
 
-  console.warn(`[Notion Analytics] Archived ${archived} old events (${errors} errors)`);
+  console.warn(
+    `[Notion Analytics] Archived ${archived} old events (${errors} errors)`,
+  );
   return { archived, errors };
 }
 

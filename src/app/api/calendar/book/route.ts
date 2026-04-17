@@ -23,25 +23,40 @@ export async function POST(request: Request) {
     }
 
     if (!isValidEmail(email)) {
-      return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid email address." },
+        { status: 400 },
+      );
     }
 
     const startDate = new Date(start);
     const endDate = new Date(end);
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      return NextResponse.json({ error: "Invalid date format for start or end." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid date format for start or end." },
+        { status: 400 },
+      );
     }
     if (startDate < new Date()) {
-      return NextResponse.json({ error: "Cannot book a slot in the past." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Cannot book a slot in the past." },
+        { status: 400 },
+      );
     }
     if (endDate <= startDate) {
-      return NextResponse.json({ error: "End time must be after start time." }, { status: 400 });
+      return NextResponse.json(
+        { error: "End time must be after start time." },
+        { status: 400 },
+      );
     }
 
     const result = await bookConsultation({ name, email, start, end, notes });
 
     if (!result) {
-      return NextResponse.json({ error: "Failed to create booking." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to create booking." },
+        { status: 500 },
+      );
     }
 
     slackNotify({

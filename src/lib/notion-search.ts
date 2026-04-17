@@ -62,7 +62,8 @@ function mapSearchResult(item: any): SearchResult {
   if (isPage) {
     const props = item.properties ?? {};
     // Try common title property names
-    const titleProp = props.Title?.title ?? props.Name?.title ?? props.title?.title;
+    const titleProp =
+      props.Title?.title ?? props.Name?.title ?? props.title?.title;
     title = titleProp ? titleProp.map((t: any) => t.plain_text).join("") : "";
   } else {
     // Database title
@@ -272,9 +273,9 @@ export async function getDatabaseSchema(
     const db = await notionFetch<any>(`/databases/${databaseId}`);
 
     const title = (db.title ?? []).map((t: any) => t.plain_text).join("");
-    const properties: DatabaseProperty[] = Object.entries(db.properties ?? {}).map(
-      ([name, prop]) => mapProperty(name, prop),
-    );
+    const properties: DatabaseProperty[] = Object.entries(
+      db.properties ?? {},
+    ).map(([name, prop]) => mapProperty(name, prop));
 
     return {
       id: db.id,

@@ -28,7 +28,10 @@ export default function Navbar() {
   // Close user menu on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      ) {
         setUserMenuOpen(false);
       }
     }
@@ -43,7 +46,10 @@ export default function Navbar() {
       <div className="bg-void/90 border-neon-cyan/10 border-b backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           {/* Logo */}
-          <Link href="/" className="group glitch flex shrink-0 items-center gap-2">
+          <Link
+            href="/"
+            className="group glitch flex shrink-0 items-center gap-2"
+          >
             <CloudIcon />
             <span className="font-heading text-xl font-bold tracking-tight text-white">
               cloudless<span className="text-neon-cyan">.gr</span>
@@ -75,10 +81,15 @@ export default function Navbar() {
                       className="hover:border-neon-cyan/30 flex min-h-11 items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-slate-300 transition-all hover:text-white"
                     >
                       <span className="bg-neon-cyan/20 border-neon-cyan/30 text-neon-cyan flex h-6 w-6 items-center justify-center rounded-full border text-xs">
-                        {(user.name || user.email || user.username || "U")[0].toUpperCase()}
+                        {(user.name ||
+                          user.email ||
+                          user.username ||
+                          "U")[0].toUpperCase()}
                       </span>
                       <span className="hidden max-w-[120px] truncate xl:inline">
-                        {user.name || user.email?.split("@")[0] || user.username}
+                        {user.name ||
+                          user.email?.split("@")[0] ||
+                          user.username}
                       </span>
                       <svg
                         width="12"
@@ -110,7 +121,11 @@ export default function Navbar() {
                             onClick={() => setUserMenuOpen(false)}
                             className="hover:text-neon-magenta hover:bg-neon-magenta/5 block px-4 py-2.5 font-mono text-sm text-slate-300 transition-all"
                           >
-                            {translate(locale, "navbar.adminPanel", "Admin Panel")}
+                            {translate(
+                              locale,
+                              "navbar.adminPanel",
+                              "Admin Panel",
+                            )}
                           </Link>
                         )}
                         <div className="my-1 border-t border-slate-800" />
@@ -155,11 +170,23 @@ export default function Navbar() {
             aria-label={toggleMenuLabel}
           >
             {mobileOpen ? (
-              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M6 6l12 12M6 18L18 6" />
               </svg>
             ) : (
-              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             )}
@@ -185,11 +212,15 @@ export default function Navbar() {
               </Link>
             ))}
             <div className="mt-2 flex items-center justify-between border-t border-slate-800 pt-2 pb-1">
-              <span className="font-mono text-xs text-slate-500">{cartLabel}</span>
+              <span className="font-mono text-xs text-slate-500">
+                {cartLabel}
+              </span>
               <CartButton />
             </div>
             <div className="mt-2 border-t border-slate-800 pt-1 pb-1">
-              <span className="mb-2 block font-mono text-xs text-slate-500">{languageLabel}</span>
+              <span className="mb-2 block font-mono text-xs text-slate-500">
+                {languageLabel}
+              </span>
               <LocaleSwitcher />
             </div>
             {!isLoading && (
@@ -214,8 +245,14 @@ export default function Navbar() {
                           className="active:text-neon-magenta flex min-h-11 items-center py-3 font-mono text-sm font-medium text-slate-400 transition-colors"
                           onClick={() => setMobileOpen(false)}
                         >
-                          <span className="text-neon-magenta/40 mr-2">&gt;</span>
-                          {translate(locale, "navbar.adminPanel", "Admin Panel")}
+                          <span className="text-neon-magenta/40 mr-2">
+                            &gt;
+                          </span>
+                          {translate(
+                            locale,
+                            "navbar.adminPanel",
+                            "Admin Panel",
+                          )}
                         </Link>
                       )}
                       <button
@@ -260,7 +297,13 @@ export default function Navbar() {
 
 function CloudIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="text-neon-cyan">
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 32 32"
+      fill="none"
+      className="text-neon-cyan"
+    >
       <path
         d="M8 24a6 6 0 01-.84-11.94A8 8 0 0123.29 14 5 5 0 0124 24H8z"
         stroke="currentColor"

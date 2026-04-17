@@ -19,18 +19,58 @@ interface Task {
   url: string;
 }
 
-type TaskStatus = "Backlog" | "To Do" | "In Progress" | "In Review" | "Done" | "Blocked";
+type TaskStatus =
+  | "Backlog"
+  | "To Do"
+  | "In Progress"
+  | "In Review"
+  | "Done"
+  | "Blocked";
 type TaskPriority = "Urgent" | "High" | "Medium" | "Low";
 
-const COLUMNS: TaskStatus[] = ["Backlog", "To Do", "In Progress", "In Review", "Done", "Blocked"];
+const COLUMNS: TaskStatus[] = [
+  "Backlog",
+  "To Do",
+  "In Progress",
+  "In Review",
+  "Done",
+  "Blocked",
+];
 
-const COLUMN_STYLES: Record<string, { border: string; header: string; dot: string }> = {
-  Backlog: { border: "border-slate-700", header: "text-slate-400", dot: "bg-slate-500" },
-  "To Do": { border: "border-neon-blue/30", header: "text-neon-blue", dot: "bg-neon-blue" },
-  "In Progress": { border: "border-neon-cyan/30", header: "text-neon-cyan", dot: "bg-neon-cyan" },
-  "In Review": { border: "border-neon-magenta/30", header: "text-neon-magenta", dot: "bg-neon-magenta" },
-  Done: { border: "border-neon-green/30", header: "text-neon-green", dot: "bg-neon-green" },
-  Blocked: { border: "border-red-500/30", header: "text-red-400", dot: "bg-red-500" },
+const COLUMN_STYLES: Record<
+  string,
+  { border: string; header: string; dot: string }
+> = {
+  Backlog: {
+    border: "border-slate-700",
+    header: "text-slate-400",
+    dot: "bg-slate-500",
+  },
+  "To Do": {
+    border: "border-neon-blue/30",
+    header: "text-neon-blue",
+    dot: "bg-neon-blue",
+  },
+  "In Progress": {
+    border: "border-neon-cyan/30",
+    header: "text-neon-cyan",
+    dot: "bg-neon-cyan",
+  },
+  "In Review": {
+    border: "border-neon-magenta/30",
+    header: "text-neon-magenta",
+    dot: "bg-neon-magenta",
+  },
+  Done: {
+    border: "border-neon-green/30",
+    header: "text-neon-green",
+    dot: "bg-neon-green",
+  },
+  Blocked: {
+    border: "border-red-500/30",
+    header: "text-red-400",
+    dot: "bg-red-500",
+  },
 };
 
 const PRIORITY_STYLES: Record<string, string> = {
@@ -51,7 +91,10 @@ const TYPE_ICONS: Record<string, string> = {
 function formatDate(iso: string) {
   if (!iso) return "";
   try {
-    return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+    return new Date(iso).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+    });
   } catch {
     return iso;
   }
@@ -68,7 +111,9 @@ export default function TasksKanbanPage() {
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [viewMode, setViewMode] = useState<"kanban" | "list" | "sprint">("kanban");
+  const [viewMode, setViewMode] = useState<"kanban" | "list" | "sprint">(
+    "kanban",
+  );
   const [selectedSprint, setSelectedSprint] = useState<string>("all");
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<TaskStatus>("To Do");
@@ -110,7 +155,9 @@ export default function TasksKanbanPage() {
         body: JSON.stringify({ pageId, status }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setTasks((prev) => prev.map((t) => (t.id === pageId ? { ...t, status } : t)));
+      setTasks((prev) =>
+        prev.map((t) => (t.id === pageId ? { ...t, status } : t)),
+      );
     } catch (err) {
       console.error("Failed to update task:", err);
     } finally {
@@ -131,7 +178,9 @@ export default function TasksKanbanPage() {
       );
       await Promise.all(promises);
       setTasks((prev) =>
-        prev.map((t) => (bulkSelected.has(t.id) ? { ...t, status: bulkStatus } : t)),
+        prev.map((t) =>
+          bulkSelected.has(t.id) ? { ...t, status: bulkStatus } : t,
+        ),
       );
       setBulkSelected(new Set());
     } catch (err) {
@@ -172,7 +221,9 @@ export default function TasksKanbanPage() {
   };
 
   // Get unique sprints
-  const sprints = [...new Set(tasks.map((t) => t.sprint).filter(Boolean))] as string[];
+  const sprints = [
+    ...new Set(tasks.map((t) => t.sprint).filter(Boolean)),
+  ] as string[];
 
   // Filter tasks
   const filteredTasks =
@@ -182,13 +233,17 @@ export default function TasksKanbanPage() {
         ? tasks.filter((t) => isOverdue(t.dueDate, t.status))
         : tasks.filter((t) => t.sprint === selectedSprint);
 
-  const tasksByStatus = (status: string) => filteredTasks.filter((t) => t.status === status);
-  const overdueCount = tasks.filter((t) => isOverdue(t.dueDate, t.status)).length;
+  const tasksByStatus = (status: string) =>
+    filteredTasks.filter((t) => t.status === status);
+  const overdueCount = tasks.filter((t) =>
+    isOverdue(t.dueDate, t.status),
+  ).length;
 
   // Sprint progress
   const sprintTotal = filteredTasks.length;
   const sprintDone = filteredTasks.filter((t) => t.status === "Done").length;
-  const sprintPercent = sprintTotal > 0 ? Math.round((sprintDone / sprintTotal) * 100) : 0;
+  const sprintPercent =
+    sprintTotal > 0 ? Math.round((sprintDone / sprintTotal) * 100) : 0;
 
   const toggleBulk = (id: string) => {
     setBulkSelected((prev) => {
@@ -226,7 +281,9 @@ export default function TasksKanbanPage() {
                   {TYPE_ICONS[task.type] ?? "•"}
                 </span>
               )}
-              <h4 className="truncate text-sm font-medium text-white">{task.task}</h4>
+              <h4 className="truncate text-sm font-medium text-white">
+                {task.task}
+              </h4>
               {overdue && (
                 <span className="ml-1 rounded bg-red-500/20 px-1 py-0.5 font-mono text-[8px] text-red-400">
                   OVERDUE
@@ -246,7 +303,14 @@ export default function TasksKanbanPage() {
               rel="noopener noreferrer"
               className="shrink-0 text-slate-600 opacity-0 transition-all hover:text-slate-400 group-hover:opacity-100"
             >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
                 <path d="M9 6.5v3a1 1 0 01-1 1H2.5a1 1 0 01-1-1V4a1 1 0 011-1H5.5M7.5 1.5h3m0 0v3m0-3L5.5 6.5" />
               </svg>
             </a>
@@ -270,7 +334,9 @@ export default function TasksKanbanPage() {
             </span>
           )}
           {task.dueDate && (
-            <span className={`font-mono text-[9px] ${overdue ? "text-red-400" : "text-slate-600"}`}>
+            <span
+              className={`font-mono text-[9px] ${overdue ? "text-red-400" : "text-slate-600"}`}
+            >
               {formatDate(task.dueDate)}
             </span>
           )}
@@ -292,11 +358,15 @@ export default function TasksKanbanPage() {
           <select
             value={task.status}
             disabled={updating === task.id || updating === "bulk"}
-            onChange={(e) => updateStatus(task.id, e.target.value as TaskStatus)}
+            onChange={(e) =>
+              updateStatus(task.id, e.target.value as TaskStatus)
+            }
             className="rounded border border-slate-700 bg-void px-1 py-0.5 font-mono text-[9px] text-slate-400 focus:border-neon-cyan/50 focus:outline-none disabled:opacity-50"
           >
             {COLUMNS.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
         </div>
@@ -324,10 +394,16 @@ export default function TasksKanbanPage() {
         <div>
           <div className="bg-neon-magenta/10 border-neon-magenta/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-magenta font-mono text-xs">NOTION_TASKS</span>
+            <span className="text-neon-magenta font-mono text-xs">
+              NOTION_TASKS
+            </span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">Task Board</h1>
-          <p className="font-body mt-1 text-slate-400">Kanban view of your Notion tasks database.</p>
+          <h1 className="font-heading text-2xl font-bold text-white">
+            Task Board
+          </h1>
+          <p className="font-body mt-1 text-slate-400">
+            Kanban view of your Notion tasks database.
+          </p>
         </div>
         <div className="flex gap-2">
           {/* View toggle */}
@@ -335,7 +411,9 @@ export default function TasksKanbanPage() {
             <button
               onClick={() => setViewMode("kanban")}
               className={`px-3 py-2 font-mono text-xs transition-colors ${
-                viewMode === "kanban" ? "bg-neon-magenta/10 text-neon-magenta" : "text-slate-500 hover:text-slate-300"
+                viewMode === "kanban"
+                  ? "bg-neon-magenta/10 text-neon-magenta"
+                  : "text-slate-500 hover:text-slate-300"
               }`}
             >
               ☰ Board
@@ -343,7 +421,9 @@ export default function TasksKanbanPage() {
             <button
               onClick={() => setViewMode("list")}
               className={`px-3 py-2 font-mono text-xs transition-colors ${
-                viewMode === "list" ? "bg-neon-magenta/10 text-neon-magenta" : "text-slate-500 hover:text-slate-300"
+                viewMode === "list"
+                  ? "bg-neon-magenta/10 text-neon-magenta"
+                  : "text-slate-500 hover:text-slate-300"
               }`}
             >
               ≡ List
@@ -351,7 +431,9 @@ export default function TasksKanbanPage() {
             <button
               onClick={() => setViewMode("sprint")}
               className={`px-3 py-2 font-mono text-xs transition-colors ${
-                viewMode === "sprint" ? "bg-neon-magenta/10 text-neon-magenta" : "text-slate-500 hover:text-slate-300"
+                viewMode === "sprint"
+                  ? "bg-neon-magenta/10 text-neon-magenta"
+                  : "text-slate-500 hover:text-slate-300"
               }`}
             >
               ⟳ Sprint
@@ -442,7 +524,9 @@ export default function TasksKanbanPage() {
             className="rounded border border-slate-700 bg-void px-2 py-1 font-mono text-xs text-slate-300 focus:outline-none"
           >
             {COLUMNS.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
           <button
@@ -464,7 +548,9 @@ export default function TasksKanbanPage() {
       {/* Create form */}
       {showCreate && (
         <div className="bg-void-light/50 mb-6 rounded-xl border border-slate-800 p-6">
-          <h3 className="font-heading mb-4 font-semibold text-white">Create Task</h3>
+          <h3 className="font-heading mb-4 font-semibold text-white">
+            Create Task
+          </h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <input
               type="text"
@@ -545,7 +631,10 @@ export default function TasksKanbanPage() {
       {loading && (
         <div className="grid grid-cols-6 gap-3">
           {COLUMNS.map((col) => (
-            <div key={col} className="animate-pulse rounded-xl border border-slate-800 bg-void-light/30 p-4">
+            <div
+              key={col}
+              className="animate-pulse rounded-xl border border-slate-800 bg-void-light/30 p-4"
+            >
               <div className="mb-3 h-4 w-20 rounded bg-slate-700/60" />
               <div className="space-y-2">
                 <div className="h-16 rounded bg-slate-800/40" />
@@ -558,15 +647,27 @@ export default function TasksKanbanPage() {
 
       {/* Kanban view */}
       {!loading && viewMode === "kanban" && (
-        <div className="grid gap-3 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${COLUMNS.length}, minmax(200px, 1fr))` }}>
+        <div
+          className="grid gap-3 overflow-x-auto"
+          style={{
+            gridTemplateColumns: `repeat(${COLUMNS.length}, minmax(200px, 1fr))`,
+          }}
+        >
           {COLUMNS.map((col) => {
             const style = COLUMN_STYLES[col];
             const colTasks = tasksByStatus(col);
             return (
-              <div key={col} className={`rounded-xl border bg-void-light/20 p-3 ${style.border}`}>
+              <div
+                key={col}
+                className={`rounded-xl border bg-void-light/20 p-3 ${style.border}`}
+              >
                 <div className="mb-3 flex items-center gap-2">
                   <span className={`h-2 w-2 rounded-full ${style.dot}`} />
-                  <span className={`font-mono text-xs font-semibold ${style.header}`}>{col}</span>
+                  <span
+                    className={`font-mono text-xs font-semibold ${style.header}`}
+                  >
+                    {col}
+                  </span>
                   <span className="ml-auto rounded-full bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-slate-500">
                     {colTasks.length}
                   </span>
@@ -576,7 +677,9 @@ export default function TasksKanbanPage() {
                     <TaskCard key={task.id} task={task} />
                   ))}
                   {colTasks.length === 0 && (
-                    <p className="py-4 text-center font-mono text-[10px] text-slate-700">Empty</p>
+                    <p className="py-4 text-center font-mono text-[10px] text-slate-700">
+                      Empty
+                    </p>
                   )}
                 </div>
               </div>
@@ -590,7 +693,9 @@ export default function TasksKanbanPage() {
         <div className="space-y-6">
           {sprints.length === 0 ? (
             <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
-              <p className="font-mono text-slate-500">No sprints assigned to tasks yet.</p>
+              <p className="font-mono text-slate-500">
+                No sprints assigned to tasks yet.
+              </p>
               <p className="font-body mt-2 text-sm text-slate-600">
                 Add a Sprint property to your tasks in Notion.
               </p>
@@ -598,13 +703,23 @@ export default function TasksKanbanPage() {
           ) : (
             sprints.map((sprint) => {
               const sprintTasks = tasks.filter((t) => t.sprint === sprint);
-              const done = sprintTasks.filter((t) => t.status === "Done").length;
-              const pct = sprintTasks.length > 0 ? Math.round((done / sprintTasks.length) * 100) : 0;
+              const done = sprintTasks.filter(
+                (t) => t.status === "Done",
+              ).length;
+              const pct =
+                sprintTasks.length > 0
+                  ? Math.round((done / sprintTasks.length) * 100)
+                  : 0;
               return (
-                <div key={sprint} className="rounded-xl border border-slate-800 bg-void-light/30 p-5">
+                <div
+                  key={sprint}
+                  className="rounded-xl border border-slate-800 bg-void-light/30 p-5"
+                >
                   <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-heading font-semibold text-white">{sprint}</h3>
+                      <h3 className="font-heading font-semibold text-white">
+                        {sprint}
+                      </h3>
                       <span className="font-mono text-xs text-slate-500">
                         {done}/{sprintTasks.length} done
                       </span>
@@ -616,7 +731,9 @@ export default function TasksKanbanPage() {
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="font-mono text-xs text-slate-500">{pct}%</span>
+                      <span className="font-mono text-xs text-slate-500">
+                        {pct}%
+                      </span>
                     </div>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -673,7 +790,9 @@ export default function TasksKanbanPage() {
                 className="accent-neon-cyan"
               />
               <span className="text-xs">{TYPE_ICONS[task.type] ?? "•"}</span>
-              <span className="min-w-0 flex-1 text-sm font-medium text-white">{task.task}</span>
+              <span className="min-w-0 flex-1 text-sm font-medium text-white">
+                {task.task}
+              </span>
               {isOverdue(task.dueDate, task.status) && (
                 <span className="rounded bg-red-500/20 px-1.5 py-0.5 font-mono text-[9px] text-red-400">
                   OVERDUE
@@ -685,22 +804,32 @@ export default function TasksKanbanPage() {
                 {task.priority}
               </span>
               {task.sprint && (
-                <span className="font-mono text-[10px] text-neon-blue/60">{task.sprint}</span>
+                <span className="font-mono text-[10px] text-neon-blue/60">
+                  {task.sprint}
+                </span>
               )}
               {task.project && (
-                <span className="font-mono text-[10px] text-slate-500">{task.project}</span>
+                <span className="font-mono text-[10px] text-slate-500">
+                  {task.project}
+                </span>
               )}
               {task.assignee && (
-                <span className="font-mono text-[10px] text-neon-magenta/60">{task.assignee}</span>
+                <span className="font-mono text-[10px] text-neon-magenta/60">
+                  {task.assignee}
+                </span>
               )}
               <select
                 value={task.status}
                 disabled={updating === task.id || updating === "bulk"}
-                onChange={(e) => updateStatus(task.id, e.target.value as TaskStatus)}
+                onChange={(e) =>
+                  updateStatus(task.id, e.target.value as TaskStatus)
+                }
                 className="rounded border border-slate-700 bg-void px-2 py-1 font-mono text-[10px] text-slate-300 focus:border-neon-magenta/50 focus:outline-none disabled:opacity-50"
               >
                 {COLUMNS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
                 ))}
               </select>
             </div>
@@ -712,7 +841,8 @@ export default function TasksKanbanPage() {
       {!loading && filteredTasks.length > 0 && (
         <p className="mt-4 text-right font-mono text-xs text-slate-600">
           {filteredTasks.length} task{filteredTasks.length !== 1 ? "s" : ""}
-          {selectedSprint !== "all" && ` in ${selectedSprint === "overdue" ? "overdue" : selectedSprint}`}
+          {selectedSprint !== "all" &&
+            ` in ${selectedSprint === "overdue" ? "overdue" : selectedSprint}`}
         </p>
       )}
     </div>
