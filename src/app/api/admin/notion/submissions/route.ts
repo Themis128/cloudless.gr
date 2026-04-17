@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  listSubmissions,
-  updateSubmissionStatus,
-} from "@/lib/notion-forms";
+import { listSubmissions, updateSubmissionStatus } from "@/lib/notion-forms";
 import { isConfigured } from "@/lib/integrations";
 
 /**

@@ -34,8 +34,7 @@ export interface NotionComment {
 function mapComment(comment: any): NotionComment {
   return {
     id: comment.id,
-    parentPageId:
-      comment.parent?.page_id ?? comment.parent?.block_id ?? "",
+    parentPageId: comment.parent?.page_id ?? comment.parent?.block_id ?? "",
     discussionId: comment.discussion_id ?? "",
     createdTime: comment.created_time ?? "",
     lastEditedTime: comment.last_edited_time ?? "",
@@ -53,16 +52,12 @@ function mapComment(comment: any): NotionComment {
  * List all comments on a page or block.
  * Supports pagination via the Notion list endpoint.
  */
-export async function listComments(
-  blockId: string,
-): Promise<NotionComment[]> {
+export async function listComments(blockId: string): Promise<NotionComment[]> {
   if (!isConfigured("NOTION_API_KEY")) return [];
 
   try {
     /* eslint-disable @typescript-eslint/no-explicit-any */
-    const results = await notionListAll<any>(
-      `/comments?block_id=${blockId}`,
-    );
+    const results = await notionListAll<any>(`/comments?block_id=${blockId}`);
     return results.map(mapComment);
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {

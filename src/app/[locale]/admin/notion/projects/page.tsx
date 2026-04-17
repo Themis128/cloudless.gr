@@ -19,7 +19,12 @@ interface Project {
   url: string;
 }
 
-type ProjectStatus = "Planning" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
+type ProjectStatus =
+  | "Planning"
+  | "In Progress"
+  | "On Hold"
+  | "Completed"
+  | "Cancelled";
 type ProjectPriority = "Critical" | "High" | "Medium" | "Low";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -58,7 +63,8 @@ function formatDate(iso: string) {
 }
 
 function isOverdue(dueDate: string, status: string): boolean {
-  if (!dueDate || status === "Completed" || status === "Cancelled") return false;
+  if (!dueDate || status === "Completed" || status === "Cancelled")
+    return false;
   return new Date(dueDate) < new Date();
 }
 
@@ -167,8 +173,15 @@ export default function ProjectsPage() {
     }
   };
 
-  const statuses: ProjectStatus[] = ["Planning", "In Progress", "On Hold", "Completed", "Cancelled"];
-  const countByStatus = (s: string) => projects.filter((p) => p.status === s).length;
+  const statuses: ProjectStatus[] = [
+    "Planning",
+    "In Progress",
+    "On Hold",
+    "Completed",
+    "Cancelled",
+  ];
+  const countByStatus = (s: string) =>
+    projects.filter((p) => p.status === s).length;
 
   return (
     <div>
@@ -177,10 +190,16 @@ export default function ProjectsPage() {
         <div>
           <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-cyan font-mono text-xs">NOTION_PROJECTS</span>
+            <span className="text-neon-cyan font-mono text-xs">
+              NOTION_PROJECTS
+            </span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">Projects</h1>
-          <p className="font-body mt-1 text-slate-400">Manage projects from your Notion workspace.</p>
+          <h1 className="font-heading text-2xl font-bold text-white">
+            Projects
+          </h1>
+          <p className="font-body mt-1 text-slate-400">
+            Manage projects from your Notion workspace.
+          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -229,7 +248,9 @@ export default function ProjectsPage() {
       {/* Create form */}
       {showCreate && (
         <div className="bg-void-light/50 mb-6 rounded-xl border border-slate-800 p-6">
-          <h3 className="font-heading mb-4 font-semibold text-white">Create Project</h3>
+          <h3 className="font-heading mb-4 font-semibold text-white">
+            Create Project
+          </h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <input
               type="text"
@@ -240,7 +261,9 @@ export default function ProjectsPage() {
             />
             <select
               value={newPriority}
-              onChange={(e) => setNewPriority(e.target.value as ProjectPriority)}
+              onChange={(e) =>
+                setNewPriority(e.target.value as ProjectPriority)
+              }
               className="bg-void rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-neon-cyan/50 focus:outline-none"
             >
               <option value="Critical">Critical</option>
@@ -301,7 +324,10 @@ export default function ProjectsPage() {
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5">
+            <div
+              key={i}
+              className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5"
+            >
               <div className="mb-3 h-4 w-48 rounded bg-slate-700/60" />
               <div className="h-3 w-32 rounded bg-slate-800/80" />
             </div>
@@ -325,119 +351,144 @@ export default function ProjectsPage() {
           {projects.map((project) => {
             const overdue = isOverdue(project.dueDate, project.status);
             return (
-            <div
-              key={project.id}
-              className={`rounded-xl border p-5 transition-all hover:border-slate-700 ${
-                overdue
-                  ? "border-red-500/20 bg-red-500/5"
-                  : "border-slate-800 bg-void-light/50"
-              }`}
-            >
-              <div className="flex flex-wrap items-start gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`font-mono text-xs ${PRIORITY_STYLES[project.priority] ?? ""}`}>
-                      {PRIORITY_ICONS[project.priority] ?? "◆"}
-                    </span>
-                    <h3 className="font-heading font-semibold text-white">{project.name}</h3>
-                    {overdue && (
-                      <span className="rounded bg-red-500/20 px-1.5 py-0.5 font-mono text-[9px] text-red-400">
-                        OVERDUE
+              <div
+                key={project.id}
+                className={`rounded-xl border p-5 transition-all hover:border-slate-700 ${
+                  overdue
+                    ? "border-red-500/20 bg-red-500/5"
+                    : "border-slate-800 bg-void-light/50"
+                }`}
+              >
+                <div className="flex flex-wrap items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`font-mono text-xs ${PRIORITY_STYLES[project.priority] ?? ""}`}
+                      >
+                        {PRIORITY_ICONS[project.priority] ?? "◆"}
                       </span>
-                    )}
-                    <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-[10px] text-slate-400">
-                      {project.type}
-                    </span>
-                  </div>
-                  {project.description && (
-                    <p className="font-body mt-1 text-sm text-slate-500 line-clamp-1">
-                      {project.description}
-                    </p>
-                  )}
-                  <div className="mt-2 flex flex-wrap gap-3 font-mono text-xs text-slate-600">
-                    {project.owner && <span>Owner: {project.owner}</span>}
-                    <span>Start: {formatDate(project.startDate)}</span>
-                    {project.dueDate && <span>Due: {formatDate(project.dueDate)}</span>}
-                    {project.budget !== null && <span>Budget: €{project.budget.toLocaleString()}</span>}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-2">
-                  {/* Status selector */}
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-full border px-2 py-0.5 font-mono text-xs ${STATUS_STYLES[project.status] ?? STATUS_STYLES.Planning}`}
-                    >
-                      {project.status}
-                    </span>
-                    <select
-                      value={project.status}
-                      disabled={updating === project.id}
-                      onChange={(e) => updateStatus(project.id, e.target.value as ProjectStatus)}
-                      className="rounded border border-slate-700 bg-void px-2 py-1 font-mono text-xs text-slate-300 focus:border-neon-cyan/50 focus:outline-none disabled:opacity-50"
-                    >
-                      {statuses.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-800">
-                      <div
-                        className="h-full rounded-full bg-neon-cyan transition-all"
-                        style={{ width: `${project.progress}%` }}
-                      />
+                      <h3 className="font-heading font-semibold text-white">
+                        {project.name}
+                      </h3>
+                      {overdue && (
+                        <span className="rounded bg-red-500/20 px-1.5 py-0.5 font-mono text-[9px] text-red-400">
+                          OVERDUE
+                        </span>
+                      )}
+                      <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-[10px] text-slate-400">
+                        {project.type}
+                      </span>
                     </div>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={project.progress}
-                      disabled={updating === project.id}
-                      onChange={(e) => {
-                        const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
-                        setProjects((prev) =>
-                          prev.map((p) => (p.id === project.id ? { ...p, progress: val } : p)),
-                        );
-                      }}
-                      onBlur={(e) => {
-                        const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
-                        updateProgress(project.id, val);
-                      }}
-                      className="w-12 rounded border border-slate-700 bg-void px-1 py-0.5 text-center font-mono text-xs text-slate-300 focus:border-neon-cyan/50 focus:outline-none disabled:opacity-50"
-                    />
-                    <span className="font-mono text-[10px] text-slate-600">%</span>
+                    {project.description && (
+                      <p className="font-body mt-1 text-sm text-slate-500 line-clamp-1">
+                        {project.description}
+                      </p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-3 font-mono text-xs text-slate-600">
+                      {project.owner && <span>Owner: {project.owner}</span>}
+                      <span>Start: {formatDate(project.startDate)}</span>
+                      {project.dueDate && (
+                        <span>Due: {formatDate(project.dueDate)}</span>
+                      )}
+                      {project.budget !== null && (
+                        <span>Budget: €{project.budget.toLocaleString()}</span>
+                      )}
+                    </div>
                   </div>
 
-                  {project.url && (
-                    <a
-                      href={project.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-neon-cyan/60 hover:text-neon-cyan font-mono text-[10px] transition-colors"
-                    >
-                      Open in Notion →
-                    </a>
-                  )}
-                </div>
-              </div>
+                  <div className="flex flex-col items-end gap-2">
+                    {/* Status selector */}
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`rounded-full border px-2 py-0.5 font-mono text-xs ${STATUS_STYLES[project.status] ?? STATUS_STYLES.Planning}`}
+                      >
+                        {project.status}
+                      </span>
+                      <select
+                        value={project.status}
+                        disabled={updating === project.id}
+                        onChange={(e) =>
+                          updateStatus(
+                            project.id,
+                            e.target.value as ProjectStatus,
+                          )
+                        }
+                        className="rounded border border-slate-700 bg-void px-2 py-1 font-mono text-xs text-slate-300 focus:border-neon-cyan/50 focus:outline-none disabled:opacity-50"
+                      >
+                        {statuses.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-              {/* Tags */}
-              {project.tags.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {project.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded border border-slate-700 bg-slate-800/50 px-2 py-0.5 font-mono text-[9px] text-slate-500"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                    {/* Progress bar */}
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-800">
+                        <div
+                          className="h-full rounded-full bg-neon-cyan transition-all"
+                          style={{ width: `${project.progress}%` }}
+                        />
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={project.progress}
+                        disabled={updating === project.id}
+                        onChange={(e) => {
+                          const val = Math.min(
+                            100,
+                            Math.max(0, parseInt(e.target.value) || 0),
+                          );
+                          setProjects((prev) =>
+                            prev.map((p) =>
+                              p.id === project.id ? { ...p, progress: val } : p,
+                            ),
+                          );
+                        }}
+                        onBlur={(e) => {
+                          const val = Math.min(
+                            100,
+                            Math.max(0, parseInt(e.target.value) || 0),
+                          );
+                          updateProgress(project.id, val);
+                        }}
+                        className="w-12 rounded border border-slate-700 bg-void px-1 py-0.5 text-center font-mono text-xs text-slate-300 focus:border-neon-cyan/50 focus:outline-none disabled:opacity-50"
+                      />
+                      <span className="font-mono text-[10px] text-slate-600">
+                        %
+                      </span>
+                    </div>
+
+                    {project.url && (
+                      <a
+                        href={project.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-neon-cyan/60 hover:text-neon-cyan font-mono text-[10px] transition-colors"
+                      >
+                        Open in Notion →
+                      </a>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Tags */}
+                {project.tags.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {project.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded border border-slate-700 bg-slate-800/50 px-2 py-0.5 font-mono text-[9px] text-slate-500"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>

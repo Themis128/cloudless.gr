@@ -26,9 +26,16 @@ export async function GET(request: NextRequest) {
 
   try {
     const devices = await getDeviceBreakdown();
-    return NextResponse.json({ devices, fetchedAt: new Date().toISOString(), source: "google-search-console" });
+    return NextResponse.json({
+      devices,
+      fetchedAt: new Date().toISOString(),
+      source: "google-search-console",
+    });
   } catch (err) {
     console.error("[GSC devices] Error:", err);
-    return NextResponse.json({ error: "Failed to fetch device data." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch device data." },
+      { status: 500 },
+    );
   }
 }

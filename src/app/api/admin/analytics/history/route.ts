@@ -15,13 +15,24 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const weeks = Math.min(Number(request.nextUrl.searchParams.get("weeks") ?? "12"), 52);
+  const weeks = Math.min(
+    Number(request.nextUrl.searchParams.get("weeks") ?? "12"),
+    52,
+  );
 
   try {
     const history = await getPerformanceHistory(undefined, weeks);
-    return NextResponse.json({ history, weeks, fetchedAt: new Date().toISOString(), source: "google-search-console" });
+    return NextResponse.json({
+      history,
+      weeks,
+      fetchedAt: new Date().toISOString(),
+      source: "google-search-console",
+    });
   } catch (err) {
     console.error("[GSC history] Error:", err);
-    return NextResponse.json({ error: "Failed to fetch history." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch history." },
+      { status: 500 },
+    );
   }
 }

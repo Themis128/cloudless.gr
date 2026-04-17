@@ -1,4 +1,8 @@
-import { posts as staticPosts, getPostBySlug as getStaticPostBySlug, type BlogPost } from "@/lib/blog";
+import {
+  posts as staticPosts,
+  getPostBySlug as getStaticPostBySlug,
+  type BlogPost,
+} from "@/lib/blog";
 import { isConfigured } from "@/lib/integrations";
 import {
   getPosts as getNotionPosts,
@@ -11,7 +15,8 @@ const DEFAULT_CATEGORY = "Cloud" as BlogPost["category"];
 const WORDS_PER_MINUTE = 200;
 
 function normalizeCategory(tags: string[]): BlogPost["category"] {
-  return (tags.find((tag) => tag.trim()) ?? DEFAULT_CATEGORY) as BlogPost["category"];
+  return (tags.find((tag) => tag.trim()) ??
+    DEFAULT_CATEGORY) as BlogPost["category"];
 }
 
 function estimateReadTime(text: string): string {
@@ -117,7 +122,9 @@ function mapNotionListingPost(post: NotionPost): BlogPost {
   };
 }
 
-function mapNotionPost(post: NotionPost & { content: NotionBlock[] }): BlogPost {
+function mapNotionPost(
+  post: NotionPost & { content: NotionBlock[] },
+): BlogPost {
   const content = blocksToContent(post.content);
   return {
     slug: post.slug,
@@ -143,7 +150,9 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
   }
 }
 
-export async function getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
+export async function getBlogPostBySlug(
+  slug: string,
+): Promise<BlogPost | undefined> {
   if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) {
     return getStaticPostBySlug(slug);
   }

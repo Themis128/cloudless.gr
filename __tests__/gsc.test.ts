@@ -378,3 +378,339 @@ describe("getWebAnalytics", () => {
     expect(data!.topPages).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("getCtrOpportunities", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("filters rows to position 4-20 with CTR < 5% and impressions > 10", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(
+          gscOkResponse([
+            { keys: ["opportunity keyword"], clicks: 10, impressions: 500, ctr: 0.02, position: 8 },
+            { keys: ["rank 2 keyword"], clicks: 200, impressions: 5000, ctr: 0.04, position: 2 },
+            { keys: ["high ctr keyword"], clicks: 80, impressions: 1000, ctr: 0.08, position: 10 },
+            { keys: ["low impressions"], clicks: 1, impressions: 5, ctr: 0.02, position: 9 },
+          ]),
+        ),
+    );
+
+    const { getCtrOpportunities } = await import("@/lib/gsc");
+    const opps = await getCtrOpportunities();
+
+    expect(opps).toHaveLength(1);
+    expect(opps[0].keyword).toBe("opportunity keyword");
+    expect(opps[0].position).toBe(8);
+    expect(opps[0].ctr).toBe(2);
+  });
+
+  it("returns [] when GSC call fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(gscErrorResponse()),
+    );
+
+    const { getCtrOpportunities } = await import("@/lib/gsc");
+    expect(await getCtrOpportunities()).toEqual([]);
+  });
+
+  it("respects limit parameter", async () => {
+    const rows = Array.from({ length: 10 }, (_, i) => ({
+      keys: [`keyword ${i}`],
+      clicks: 5,
+      impressions: 500,
+      ctr: 0.01,
+      position: 12,
+    }));
+
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(gscOkResponse(rows)),
+    );
+
+    const { getCtrOpportunities } = await import("@/lib/gsc");
+    const opps = await getCtrOpportunities(undefined, 3);
+    expect(opps).toHaveLength(3);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("getDeviceBreakdown", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("maps device rows to DeviceData objects", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(
+          gscOkResponse([
+            { keys: ["DESKTOP"], clicks: 400, impressions: 8000, ctr: 0.05, position: 10 },
+            { keys: ["MOBILE"], clicks: 300, impressions: 7000, ctr: 0.043, position: 12 },
+          ]),
+        ),
+    );
+
+    const { getDeviceBreakdown } = await import("@/lib/gsc");
+    const devices = await getDeviceBreakdown();
+
+    expect(devices).toHaveLength(2);
+    expect(devices[0]).toMatchObject({
+      device: "DESKTOP",
+      clicks: 400,
+      impressions: 8000,
+      ctr: 5,
+      avgPosition: 10,
+    });
+  });
+
+  it("returns [] when GSC call fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(gscErrorResponse()),
+    );
+
+    const { getDeviceBreakdown } = await import("@/lib/gsc");
+    expect(await getDeviceBreakdown()).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("getProductPageMetrics", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("maps page rows to ProductPageData objects", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(
+          gscOkResponse([
+            { keys: ["https://cloudless.gr/store/pro-plan"], clicks: 50, impressions: 1200, ctr: 0.042, position: 8.5 },
+          ]),
+        ),
+    );
+
+    const { getProductPageMetrics } = await import("@/lib/gsc");
+    const products = await getProductPageMetrics();
+
+    expect(products).toHaveLength(1);
+    expect(products[0]).toMatchObject({
+      page: "https://cloudless.gr/store/pro-plan",
+      clicks: 50,
+      impressions: 1200,
+    });
+    expect(products[0].ctr).toBeCloseTo(4.2, 1);
+  });
+
+  it("returns [] when GSC call fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(gscErrorResponse()),
+    );
+
+    const { getProductPageMetrics } = await import("@/lib/gsc");
+    expect(await getProductPageMetrics()).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("getQueryPageMapping", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("maps query+page rows to QueryPageMapping objects", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(
+          gscOkResponse([
+            {
+              keys: ["cloudless serverless", "https://cloudless.gr/"],
+              clicks: 80,
+              impressions: 2000,
+              ctr: 0.04,
+              position: 7.2,
+            },
+          ]),
+        ),
+    );
+
+    const { getQueryPageMapping } = await import("@/lib/gsc");
+    const mappings = await getQueryPageMapping();
+
+    expect(mappings).toHaveLength(1);
+    expect(mappings[0]).toMatchObject({
+      query: "cloudless serverless",
+      page: "https://cloudless.gr/",
+      clicks: 80,
+    });
+  });
+
+  it("returns [] when GSC call fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(gscErrorResponse()),
+    );
+
+    const { getQueryPageMapping } = await import("@/lib/gsc");
+    expect(await getQueryPageMapping()).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("getSearchIntentBreakdown", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("categorises keywords into brand/product/informational/navigational buckets", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(
+          gscOkResponse([
+            { keys: ["cloudless gr"], clicks: 100, impressions: 2000, ctr: 0.05, position: 3 },
+            { keys: ["buy serverless hosting"], clicks: 20, impressions: 400, ctr: 0.05, position: 8 },
+            { keys: ["how to deploy nextjs"], clicks: 30, impressions: 600, ctr: 0.05, position: 6 },
+            { keys: ["some other term"], clicks: 10, impressions: 200, ctr: 0.05, position: 12 },
+          ]),
+        ),
+    );
+
+    const { getSearchIntentBreakdown } = await import("@/lib/gsc");
+    const result = await getSearchIntentBreakdown();
+
+    expect(result.brand).toHaveLength(1);
+    expect(result.brand[0].keyword).toBe("cloudless gr");
+    expect(result.product).toHaveLength(1);
+    expect(result.product[0].keyword).toBe("buy serverless hosting");
+    expect(result.informational).toHaveLength(1);
+    expect(result.informational[0].keyword).toBe("how to deploy nextjs");
+    expect(result.navigational).toHaveLength(1);
+    expect(result.navigational[0].keyword).toBe("some other term");
+  });
+
+  it("returns empty buckets when GSC call fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(gscErrorResponse()),
+    );
+
+    const { getSearchIntentBreakdown } = await import("@/lib/gsc");
+    const result = await getSearchIntentBreakdown();
+
+    expect(result.brand).toEqual([]);
+    expect(result.product).toEqual([]);
+    expect(result.informational).toEqual([]);
+    expect(result.navigational).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("getTrafficByCountry", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("maps country rows to CountryTraffic objects", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(
+          gscOkResponse([
+            { keys: ["grc"], clicks: 450, impressions: 9000, ctr: 0.05, position: 8 },
+            { keys: ["usa"], clicks: 200, impressions: 5000, ctr: 0.04, position: 11 },
+          ]),
+        ),
+    );
+
+    const { getTrafficByCountry } = await import("@/lib/gsc");
+    const countries = await getTrafficByCountry();
+
+    expect(countries).toHaveLength(2);
+    expect(countries[0]).toMatchObject({
+      country: "grc",
+      clicks: 450,
+      impressions: 9000,
+      ctr: 5,
+      avgPosition: 8,
+    });
+  });
+
+  it("returns [] when GSC call fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(gscErrorResponse()),
+    );
+
+    const { getTrafficByCountry } = await import("@/lib/gsc");
+    expect(await getTrafficByCountry()).toEqual([]);
+  });
+
+  it("respects limit parameter", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(tokenResponse())
+      .mockResolvedValueOnce(gscOkResponse([]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { getTrafficByCountry } = await import("@/lib/gsc");
+    await getTrafficByCountry(undefined, 5);
+
+    const body = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string);
+    expect(body.rowLimit).toBe(5);
+  });
+});

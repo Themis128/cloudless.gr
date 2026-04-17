@@ -15,13 +15,23 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const limit = Math.min(Number(request.nextUrl.searchParams.get("limit") ?? "20"), 100);
+  const limit = Math.min(
+    Number(request.nextUrl.searchParams.get("limit") ?? "20"),
+    100,
+  );
 
   try {
     const keywords = await getTopKeywords(undefined, limit);
-    return NextResponse.json({ keywords, fetchedAt: new Date().toISOString(), source: "google-search-console" });
+    return NextResponse.json({
+      keywords,
+      fetchedAt: new Date().toISOString(),
+      source: "google-search-console",
+    });
   } catch (err) {
     console.error("[GSC keywords] Error:", err);
-    return NextResponse.json({ error: "Failed to fetch keywords." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch keywords." },
+      { status: 500 },
+    );
   }
 }

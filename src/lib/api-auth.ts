@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { NextRequest, NextResponse } from "next/server";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 
 /**
  * Server-side authentication helpers for API routes.
@@ -7,28 +7,26 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
  * via the pool's JWKS endpoint.
  */
 
-const REGION = process.env.AWS_REGION ?? 'us-east-1';
+const REGION = process.env.AWS_REGION ?? "us-east-1";
 const USER_POOL_ID =
   process.env.COGNITO_USER_POOL_ID ??
   process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ??
-  '';
+  "";
 
 const COGNITO_ISSUER = USER_POOL_ID
   ? "https://cognito-idp." + REGION + ".amazonaws.com/" + USER_POOL_ID
-  : '';
+  : "";
 
 // JWKS is cached in-process by jose (fetched once per key rotation)
 const getJWKS = USER_POOL_ID
-  ? createRemoteJWKSet(
-      new URL(COGNITO_ISSUER + '/.well-known/jwks.json'),
-    )
+  ? createRemoteJWKSet(new URL(COGNITO_ISSUER + "/.well-known/jwks.json"))
   : null;
 
 export interface DecodedToken {
   sub: string;
   email?: string;
-  'cognito:username'?: string;
-  'cognito:groups'?: string[];
+  "cognito:username"?: string;
+  "cognito:groups"?: string[];
   aud: string;
   iss: string;
   iat: number;
@@ -41,10 +39,10 @@ export type AuthResult = AuthSuccess | AuthError;
 
 /** Extract JWT token from Authorization header (Bearer scheme). */
 export function getTokenFromHeader(request: NextRequest): string | null {
-  const authHeader = request.headers.get('authorization');
+  const authHeader = request.headers.get("authorization");
   if (!authHeader) return null;
-  const [scheme, token] = authHeader.split(' ');
-  if (scheme !== 'Bearer') return null;
+  const [scheme, token] = authHeader.split(" ");
+  if (scheme !== "Bearer") return null;
   return token ?? null;
 }
 
@@ -68,10 +66,10 @@ export async function verifyToken(token: string): Promise<DecodedToken | null> {
 
   // Dev/test fallback: decode + expiry only (no signature check)
   try {
-    const parts = token.split('.');
+    const parts = token.split(".");
     if (parts.length !== 3) return null;
     const payload = JSON.parse(
-      Buffer.from(parts[1], 'base64').toString('utf-8'),
+      Buffer.from(parts[1], "base64").toString("utf-8"),
     ) as DecodedToken;
     if (payload.exp && Date.now() >= payload.exp * 1000) return null;
     return payload;
@@ -82,7 +80,7 @@ export async function verifyToken(token: string): Promise<DecodedToken | null> {
 
 /** Check if a decoded token belongs to the admin group. */
 export function isAdmin(decoded: DecodedToken | undefined | null): boolean {
-  return decoded?.['cognito:groups']?.includes('admin') ?? false;
+  return decoded?.["cognito:groups"]?.includes("admin") ?? false;
 }
 
 /** Require authentication — returns user or 401 response. */
@@ -92,7 +90,7 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     return {
       ok: false,
       response: NextResponse.json(
-        { error: 'Missing authorization token' },
+        { error: "Missing authorization token" },
         { status: 401 },
       ),
     };
@@ -103,7 +101,7 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     return {
       ok: false,
       response: NextResponse.json(
-        { error: 'Invalid or expired token' },
+        { error: "Invalid or expired token" },
         { status: 401 },
       ),
     };
@@ -121,7 +119,7 @@ export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
     return {
       ok: false,
       response: NextResponse.json(
-        { error: 'Admin access required' },
+        { error: "Admin access required" },
         { status: 403 },
       ),
     };

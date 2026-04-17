@@ -84,7 +84,8 @@ function richTextToHtml(richText: RichTextItem[]): string {
       if (t.annotations?.code) text = `<code>${text}</code>`;
       if (t.annotations?.strikethrough) text = `<s>${text}</s>`;
       if (t.annotations?.underline) text = `<u>${text}</u>`;
-      if (t.href) text = `<a href="${t.href}" target="_blank" rel="noopener">${text}</a>`;
+      if (t.href)
+        text = `<a href="${t.href}" target="_blank" rel="noopener">${text}</a>`;
 
       return text;
     })
@@ -117,12 +118,18 @@ export function blocksToHtml(blocks: any[]): string {
 
     // List items need buffering so we can wrap in <ul>/<ol>
     if (type === "bulleted_list_item") {
-      if (listType !== "ul") { flushList(); listType = "ul"; }
+      if (listType !== "ul") {
+        flushList();
+        listType = "ul";
+      }
       listBuffer.push(`<li>${text}</li>`);
       continue;
     }
     if (type === "numbered_list_item") {
-      if (listType !== "ol") { flushList(); listType = "ol"; }
+      if (listType !== "ol") {
+        flushList();
+        listType = "ol";
+      }
       listBuffer.push(`<li>${text}</li>`);
       continue;
     }
@@ -144,7 +151,9 @@ export function blocksToHtml(blocks: any[]): string {
         break;
       case "code":
         lines.push(
-          `<pre><code class="language-${data.language ?? "plain"}">${extractText(rt)
+          `<pre><code class="language-${data.language ?? "plain"}">${extractText(
+            rt,
+          )
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")}</code></pre>`,
@@ -218,11 +227,16 @@ export async function notionFetchAll<T = unknown>(
   let cursor: string | undefined;
 
   do {
-    const payload = { ...(body ?? {}), page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) };
-    const data = await notionFetch<{ results: T[]; has_more: boolean; next_cursor?: string }>(
-      path,
-      { method: "POST", body: JSON.stringify(payload) },
-    );
+    const payload = {
+      ...(body ?? {}),
+      page_size: 100,
+      ...(cursor ? { start_cursor: cursor } : {}),
+    };
+    const data = await notionFetch<{
+      results: T[];
+      has_more: boolean;
+      next_cursor?: string;
+    }>(path, { method: "POST", body: JSON.stringify(payload) });
     results.push(...data.results);
     cursor = data.has_more ? data.next_cursor : undefined;
   } while (cursor);
@@ -233,16 +247,18 @@ export async function notionFetchAll<T = unknown>(
 /**
  * Paginated GET — for list endpoints (GET /blocks/{id}/children).
  */
-export async function notionListAll<T = unknown>(
-  path: string,
-): Promise<T[]> {
+export async function notionListAll<T = unknown>(path: string): Promise<T[]> {
   const results: T[] = [];
   let cursor: string | undefined;
 
   do {
     const sep = path.includes("?") ? "&" : "?";
     const url = `${path}${sep}page_size=100${cursor ? `&start_cursor=${cursor}` : ""}`;
-    const data = await notionFetch<{ results: T[]; has_more: boolean; next_cursor?: string }>(url);
+    const data = await notionFetch<{
+      results: T[];
+      has_more: boolean;
+      next_cursor?: string;
+    }>(url);
     results.push(...data.results);
     cursor = data.has_more ? data.next_cursor : undefined;
   } while (cursor);
@@ -442,11 +458,23 @@ export function extractToc(blocks: TocBlock[]): TocEntry[] {
   const toc: TocEntry[] = [];
   for (const block of blocks) {
     if (block.type === "heading_1") {
-      toc.push({ text: extractText(block.heading_1?.rich_text), level: 1, blockId: block.id });
+      toc.push({
+        text: extractText(block.heading_1?.rich_text),
+        level: 1,
+        blockId: block.id,
+      });
     } else if (block.type === "heading_2") {
-      toc.push({ text: extractText(block.heading_2?.rich_text), level: 2, blockId: block.id });
+      toc.push({
+        text: extractText(block.heading_2?.rich_text),
+        level: 2,
+        blockId: block.id,
+      });
     } else if (block.type === "heading_3") {
-      toc.push({ text: extractText(block.heading_3?.rich_text), level: 3, blockId: block.id });
+      toc.push({
+        text: extractText(block.heading_3?.rich_text),
+        level: 3,
+        blockId: block.id,
+      });
     }
   }
   return toc;

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getAnalyticsSummary, getRecentEvents, createWeeklyRollup, archiveOldEvents } from "@/lib/notion-analytics";
+import {
+  getAnalyticsSummary,
+  getRecentEvents,
+  createWeeklyRollup,
+  archiveOldEvents,
+} from "@/lib/notion-analytics";
 import type { AnalyticsEventType } from "@/lib/notion-analytics";
 import { isConfigured } from "@/lib/integrations";
 
@@ -9,12 +14,20 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!isConfigured("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) {
-    return NextResponse.json({ error: "Notion Analytics not configured" }, { status: 503 });
+    return NextResponse.json(
+      { error: "Notion Analytics not configured" },
+      { status: 503 },
+    );
   }
 
-  const _rawDays = parseInt(request.nextUrl.searchParams.get("days") ?? "7", 10);
+  const _rawDays = parseInt(
+    request.nextUrl.searchParams.get("days") ?? "7",
+    10,
+  );
   const days = Math.max(1, Math.min(isNaN(_rawDays) ? 7 : _rawDays, 365));
-  const type = request.nextUrl.searchParams.get("type") as AnalyticsEventType | null;
+  const type = request.nextUrl.searchParams.get(
+    "type",
+  ) as AnalyticsEventType | null;
 
   if (type) {
     const events = await getRecentEvents(type);
@@ -38,7 +51,10 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!isConfigured("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) {
-    return NextResponse.json({ error: "Notion Analytics not configured" }, { status: 503 });
+    return NextResponse.json(
+      { error: "Notion Analytics not configured" },
+      { status: 503 },
+    );
   }
 
   const body = await request.json().catch(() => ({}));

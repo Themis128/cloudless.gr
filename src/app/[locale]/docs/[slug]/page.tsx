@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
-import { getDocs, getDocBySlug, getDocContentWithToc, groupDocsByCategory } from "@/lib/notion-docs";
+import {
+  getDocs,
+  getDocBySlug,
+  getDocContentWithToc,
+  groupDocsByCategory,
+} from "@/lib/notion-docs";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 
@@ -24,10 +29,7 @@ export const revalidate = 3600; // Revalidate hourly
 export default async function DocPage({ params }: Props) {
   const { slug } = await params;
 
-  const [doc, allDocs] = await Promise.all([
-    getDocBySlug(slug),
-    getDocs(),
-  ]);
+  const [doc, allDocs] = await Promise.all([getDocBySlug(slug), getDocs()]);
 
   if (!doc) notFound();
 
@@ -89,7 +91,10 @@ export default async function DocPage({ params }: Props) {
             <main className="min-w-0 flex-1">
               {/* Breadcrumb */}
               <div className="mb-6 flex items-center gap-2 font-mono text-xs text-slate-500">
-                <Link href="/docs" className="hover:text-slate-300 transition-colors">
+                <Link
+                  href="/docs"
+                  className="hover:text-slate-300 transition-colors"
+                >
                   Docs
                 </Link>
                 <span>/</span>
@@ -107,7 +112,9 @@ export default async function DocPage({ params }: Props) {
                   {doc.title}
                 </h1>
                 {doc.description && (
-                  <p className="font-body mt-3 text-lg text-slate-400">{doc.description}</p>
+                  <p className="font-body mt-3 text-lg text-slate-400">
+                    {doc.description}
+                  </p>
                 )}
               </div>
 
@@ -130,7 +137,9 @@ export default async function DocPage({ params }: Props) {
                       dangerouslySetInnerHTML={{ __html: content.html }}
                     />
                   ) : (
-                    <p className="font-mono text-slate-500">No content available.</p>
+                    <p className="font-mono text-slate-500">
+                      No content available.
+                    </p>
                   )}
                 </div>
 

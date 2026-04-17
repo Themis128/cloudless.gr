@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isHubSpotConfigured, createTicket, searchContacts } from "@/lib/hubspot";
+import {
+  isHubSpotConfigured,
+  createTicket,
+  searchContacts,
+} from "@/lib/hubspot";
 import { isValidEmail } from "@/lib/validation";
 
 /**
@@ -9,15 +13,22 @@ import { isValidEmail } from "@/lib/validation";
  * Optionally associates it with a contact by email.
  */
 export async function POST(request: NextRequest) {
-  if (!await isHubSpotConfigured()) {
-    return NextResponse.json({ error: "HubSpot ticket creation is not configured." }, { status: 503 });
+  if (!(await isHubSpotConfigured())) {
+    return NextResponse.json(
+      { error: "HubSpot ticket creation is not configured." },
+      { status: 503 },
+    );
   }
 
   try {
     const body = await request.json();
 
-    const rawSubject = typeof body.subject === "string" ? body.subject.trim().slice(0, 200) : "";
-    const rawContent = typeof body.content === "string" ? body.content.trim().slice(0, 2000) : "";
+    const rawSubject =
+      typeof body.subject === "string" ? body.subject.trim().slice(0, 200) : "";
+    const rawContent =
+      typeof body.content === "string"
+        ? body.content.trim().slice(0, 2000)
+        : "";
     const { email, priority } = body;
     const subject = rawSubject;
     const content = rawContent;
@@ -37,7 +48,9 @@ export async function POST(request: NextRequest) {
 
     // Normalize priority — only HIGH/MEDIUM/LOW are valid HubSpot values
     const VALID_PRIORITIES = ["HIGH", "MEDIUM", "LOW"];
-    const normalizedPriority = VALID_PRIORITIES.includes((priority || "").toUpperCase())
+    const normalizedPriority = VALID_PRIORITIES.includes(
+      (priority || "").toUpperCase(),
+    )
       ? (priority as string).toUpperCase()
       : "MEDIUM";
 

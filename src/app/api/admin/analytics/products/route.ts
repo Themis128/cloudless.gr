@@ -25,14 +25,25 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const limit = Math.max(1, Math.min(Number(request.nextUrl.searchParams.get("limit")) || 50, 100));
+  const limit = Math.max(
+    1,
+    Math.min(Number(request.nextUrl.searchParams.get("limit")) || 50, 100),
+  );
   const pattern = request.nextUrl.searchParams.get("pattern") || "/store/";
 
   try {
     const products = await getProductPageMetrics(undefined, pattern, limit);
-    return NextResponse.json({ products, pattern, fetchedAt: new Date().toISOString(), source: "google-search-console" });
+    return NextResponse.json({
+      products,
+      pattern,
+      fetchedAt: new Date().toISOString(),
+      source: "google-search-console",
+    });
   } catch (err) {
     console.error("[GSC products] Error:", err);
-    return NextResponse.json({ error: "Failed to fetch product data." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch product data." },
+      { status: 500 },
+    );
   }
 }

@@ -68,10 +68,13 @@ async function probeDatabase(
   }
 
   try {
-    const data = await notionFetch<{ results: Array<{ id: string; properties?: Record<string, NotionProp> }>; has_more: boolean }>(
-      `/databases/${dbId}/query`,
-      { method: "POST", body: JSON.stringify({ page_size: limit }) },
-    );
+    const data = await notionFetch<{
+      results: Array<{ id: string; properties?: Record<string, NotionProp> }>;
+      has_more: boolean;
+    }>(`/databases/${dbId}/query`, {
+      method: "POST",
+      body: JSON.stringify({ page_size: limit }),
+    });
 
     const sample = (data.results ?? []).map((page) => {
       const out: Record<string, unknown> = { id: page.id };
@@ -81,10 +84,20 @@ async function probeDatabase(
       return out;
     });
 
-    return { name, configured: true, connected: true, count: data.results?.length ?? 0, sample };
+    return {
+      name,
+      configured: true,
+      connected: true,
+      count: data.results?.length ?? 0,
+      sample,
+    };
   } catch (err: unknown) {
     return {
-      name, configured: true, connected: false, count: 0, sample: [],
+      name,
+      configured: true,
+      connected: false,
+      count: 0,
+      sample: [],
       error: err instanceof Error ? err.message : String(err),
     };
   }
@@ -96,18 +109,29 @@ export async function GET(request: NextRequest) {
 
   if (!isConfigured("NOTION_API_KEY")) {
     return NextResponse.json(
-      { authenticated: false, error: "NOTION_API_KEY not configured. Add it to .env.local", databases: [] },
+      {
+        authenticated: false,
+        error: "NOTION_API_KEY not configured. Add it to .env.local",
+        databases: [],
+      },
       { status: 200 },
     );
   }
 
   let botName = "";
   try {
-    const me = await notionFetch<{ name?: string; bot?: { owner?: { user?: { name?: string } } } }>("/users/me");
+    const me = await notionFetch<{
+      name?: string;
+      bot?: { owner?: { user?: { name?: string } } };
+    }>("/users/me");
     botName = me.name ?? me.bot?.owner?.user?.name ?? "bot";
   } catch {
     return NextResponse.json(
-      { authenticated: false, error: "NOTION_API_KEY is invalid or expired", databases: [] },
+      {
+        authenticated: false,
+        error: "NOTION_API_KEY is invalid or expired",
+        databases: [],
+      },
       { status: 200 },
     );
   }

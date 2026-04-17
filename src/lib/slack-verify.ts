@@ -53,7 +53,9 @@ export interface VerifyResult {
  * calling this function. Returns the raw body string on success so the caller
  * does not need to read it again.
  */
-export async function verifySlackRequest(request: Request): Promise<{ ok: true; body: string } | { ok: false; reason: string }> {
+export async function verifySlackRequest(
+  request: Request,
+): Promise<{ ok: true; body: string } | { ok: false; reason: string }> {
   const { SLACK_SIGNING_SECRET } = await getSlackConfigAsync();
 
   if (!SLACK_SIGNING_SECRET) {
@@ -64,14 +66,20 @@ export async function verifySlackRequest(request: Request): Promise<{ ok: true; 
   const signature = request.headers.get("x-slack-signature");
 
   if (!timestamp || !signature) {
-    return { ok: false, reason: "Missing x-slack-request-timestamp or x-slack-signature header" };
+    return {
+      ok: false,
+      reason: "Missing x-slack-request-timestamp or x-slack-signature header",
+    };
   }
 
   // Reject requests older than MAX_AGE_SECONDS (replay attack prevention)
   const nowSeconds = Math.floor(Date.now() / 1000);
   const requestAge = Math.abs(nowSeconds - Number(timestamp));
   if (requestAge > MAX_AGE_SECONDS) {
-    return { ok: false, reason: `Request timestamp is too old (${requestAge}s)` };
+    return {
+      ok: false,
+      reason: `Request timestamp is too old (${requestAge}s)`,
+    };
   }
 
   const body = await request.text();
