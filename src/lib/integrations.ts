@@ -20,7 +20,6 @@ export interface IntegrationConfig {
   GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
   GOOGLE_PRIVATE_KEY?: string;
   GOOGLE_CALENDAR_ID?: string;
-  AHREFS_API_KEY?: string;
   STRIPE_SECRET_KEY?: string;
   SENTRY_AUTH_TOKEN?: string;
   SENTRY_ORG?: string;
@@ -49,7 +48,6 @@ export function getIntegrations(): IntegrationConfig {
     GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL,
     GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID,
-    AHREFS_API_KEY: process.env.AHREFS_API_KEY,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
     SENTRY_ORG: process.env.SENTRY_ORG ?? "baltzakisthemiscom",
