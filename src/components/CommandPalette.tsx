@@ -78,7 +78,9 @@ export default function CommandPalette() {
                   onSelect={() => navigate(item.path)}
                   className="data-[selected=true]:bg-neon-cyan/10 data-[selected=true]:text-neon-cyan flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 font-mono text-sm text-slate-400 transition-colors"
                 >
-                  <span className="text-neon-cyan/40 w-4 text-center text-xs">{item.icon}</span>
+                  <span className="text-neon-cyan/40 w-4 text-center text-xs">
+                    {item.icon}
+                  </span>
                   {item.label}
                 </Command.Item>
               ))}
@@ -94,7 +96,9 @@ export default function CommandPalette() {
                   onSelect={() => navigate(item.path)}
                   className="data-[selected=true]:bg-neon-magenta/10 data-[selected=true]:text-neon-magenta flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 font-mono text-sm text-slate-400 transition-colors"
                 >
-                  <span className="text-neon-magenta/40 w-4 text-center text-xs">{item.icon}</span>
+                  <span className="text-neon-magenta/40 w-4 text-center text-xs">
+                    {item.icon}
+                  </span>
                   {item.label}
                 </Command.Item>
               ))}

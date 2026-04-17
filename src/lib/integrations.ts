@@ -46,7 +46,9 @@ export function getIntegrations(): IntegrationConfig {
     NOTION_TASKS_DB_ID: process.env.NOTION_TASKS_DB_ID,
     NOTION_ANALYTICS_DB_ID: process.env.NOTION_ANALYTICS_DB_ID,
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
-    GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL,
+    GOOGLE_SERVICE_ACCOUNT_EMAIL:
+      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
+      process.env.GOOGLE_CLIENT_EMAIL,
     GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID,
     AHREFS_API_KEY: process.env.AHREFS_API_KEY,
@@ -61,9 +63,7 @@ export function getIntegrations(): IntegrationConfig {
 }
 
 /** Check if a specific integration is configured */
-export function isConfigured(
-  ...keys: (keyof IntegrationConfig)[]
-): boolean {
+export function isConfigured(...keys: (keyof IntegrationConfig)[]): boolean {
   const config = getIntegrations();
   return keys.every((k) => Boolean(config[k]));
 }
@@ -99,7 +99,11 @@ export function getSlackConfig(): SlackConfig {
     );
   }
 
-  cachedSlack = { SLACK_BOT_TOKEN: token, SLACK_SIGNING_SECRET: signingSecret, SLACK_WEBHOOK_URL: webhookUrl };
+  cachedSlack = {
+    SLACK_BOT_TOKEN: token,
+    SLACK_SIGNING_SECRET: signingSecret,
+    SLACK_WEBHOOK_URL: webhookUrl,
+  };
   return cachedSlack;
 }
 
@@ -113,31 +117,41 @@ export async function getSlackConfigAsync(): Promise<SlackConfig> {
   if (cachedSlackAsync) return cachedSlackAsync;
 
   const cfg = getIntegrations();
-  let token = cfg.SLACK_BOT_TOKEN ?? '';
-  let signingSecret = cfg.SLACK_SIGNING_SECRET ?? '';
-  let webhookUrl = cfg.SLACK_WEBHOOK_URL ?? '';
+  let token = cfg.SLACK_BOT_TOKEN ?? "";
+  let signingSecret = cfg.SLACK_SIGNING_SECRET ?? "";
+  let webhookUrl = cfg.SLACK_WEBHOOK_URL ?? "";
 
   // SSM fallback when signing secret is missing from env
   if (!signingSecret) {
     try {
-      const { getConfig } = await import('@/lib/ssm-config');
+      const { getConfig } = await import("@/lib/ssm-config");
       const ssmCfg = await getConfig();
-      signingSecret = (ssmCfg as unknown as Record<string, string>).SLACK_SIGNING_SECRET ?? '';
-      if (!token) token = (ssmCfg as unknown as Record<string, string>).SLACK_BOT_TOKEN ?? '';
-      if (!webhookUrl) webhookUrl = (ssmCfg as unknown as Record<string, string>).SLACK_WEBHOOK_URL ?? '';
+      signingSecret =
+        (ssmCfg as unknown as Record<string, string>).SLACK_SIGNING_SECRET ??
+        "";
+      if (!token)
+        token =
+          (ssmCfg as unknown as Record<string, string>).SLACK_BOT_TOKEN ?? "";
+      if (!webhookUrl)
+        webhookUrl =
+          (ssmCfg as unknown as Record<string, string>).SLACK_WEBHOOK_URL ?? "";
     } catch (err) {
-      console.warn('[Slack] SSM fallback failed:', err);
+      console.warn("[Slack] SSM fallback failed:", err);
     }
   }
 
   if (!token && !webhookUrl) {
     console.warn(
-      '[Slack] Neither SLACK_BOT_TOKEN nor SLACK_WEBHOOK_URL is set — ' +
-        'Slack notifications will be skipped.',
+      "[Slack] Neither SLACK_BOT_TOKEN nor SLACK_WEBHOOK_URL is set — " +
+        "Slack notifications will be skipped.",
     );
   }
 
-  cachedSlackAsync = { SLACK_BOT_TOKEN: token, SLACK_SIGNING_SECRET: signingSecret, SLACK_WEBHOOK_URL: webhookUrl };
+  cachedSlackAsync = {
+    SLACK_BOT_TOKEN: token,
+    SLACK_SIGNING_SECRET: signingSecret,
+    SLACK_WEBHOOK_URL: webhookUrl,
+  };
   return cachedSlackAsync;
 }
 

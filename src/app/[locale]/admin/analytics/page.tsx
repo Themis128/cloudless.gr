@@ -73,11 +73,23 @@ interface WebAnalytics {
 
 // ─── Helper components ────────────────────────────────────────────────────────
 
-function StatCard({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
+function StatCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  accent?: string;
+}) {
   return (
     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
       <p className="font-mono text-[10px] text-slate-500">{label}</p>
-      <p className={`font-heading mt-1 text-xl font-bold ${accent ?? "text-white"}`}>{value}</p>
+      <p
+        className={`font-heading mt-1 text-xl font-bold ${accent ?? "text-white"}`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
@@ -121,7 +133,13 @@ function pct(v: number) {
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
 
-function Sparkline({ data, field }: { data: HistoryPoint[]; field: "clicks" | "impressions" }) {
+function Sparkline({
+  data,
+  field,
+}: {
+  data: HistoryPoint[];
+  field: "clicks" | "impressions";
+}) {
   if (!data.length) return null;
   const vals = data.map((d) => d[field]);
   const max = Math.max(...vals) || 1;
@@ -175,15 +193,25 @@ export default function AdminAnalyticsPage() {
 
   // ── Loading / error per tab ──
   const [loadingTab, setLoadingTab] = useState<Record<Tab, boolean>>({
-    overview: false, keywords: false, pages: false, history: false, ctr: false,
+    overview: false,
+    keywords: false,
+    pages: false,
+    history: false,
+    ctr: false,
   });
   const [errors, setErrors] = useState<Record<Tab, string | null>>({
-    overview: null, keywords: null, pages: null, history: null, ctr: null,
+    overview: null,
+    keywords: null,
+    pages: null,
+    history: null,
+    ctr: null,
   });
   const [fetchedTabs, setFetchedTabs] = useState<Set<Tab>>(new Set());
 
-  const setLoading = (t: Tab, v: boolean) => setLoadingTab((p) => ({ ...p, [t]: v }));
-  const setError = (t: Tab, v: string | null) => setErrors((p) => ({ ...p, [t]: v }));
+  const setLoading = (t: Tab, v: boolean) =>
+    setLoadingTab((p) => ({ ...p, [t]: v }));
+  const setError = (t: Tab, v: string | null) =>
+    setErrors((p) => ({ ...p, [t]: v }));
   const markFetched = (t: Tab) => setFetchedTabs((p) => new Set(p).add(t));
 
   const fetchOverview = useCallback(async () => {
@@ -219,7 +247,10 @@ export default function AdminAnalyticsPage() {
       const d = await res.json();
       setKeywords(d.keywords ?? []);
     } catch (err) {
-      setError("keywords", err instanceof Error ? err.message : "Failed to load keywords");
+      setError(
+        "keywords",
+        err instanceof Error ? err.message : "Failed to load keywords",
+      );
     } finally {
       setLoading("keywords", false);
       markFetched("keywords");
@@ -235,7 +266,10 @@ export default function AdminAnalyticsPage() {
       const d = await res.json();
       setPages(d.pages ?? []);
     } catch (err) {
-      setError("pages", err instanceof Error ? err.message : "Failed to load pages");
+      setError(
+        "pages",
+        err instanceof Error ? err.message : "Failed to load pages",
+      );
     } finally {
       setLoading("pages", false);
       markFetched("pages");
@@ -251,7 +285,10 @@ export default function AdminAnalyticsPage() {
       const d = await res.json();
       setHistory(d.history ?? []);
     } catch (err) {
-      setError("history", err instanceof Error ? err.message : "Failed to load history");
+      setError(
+        "history",
+        err instanceof Error ? err.message : "Failed to load history",
+      );
     } finally {
       setLoading("history", false);
       markFetched("history");
@@ -262,12 +299,17 @@ export default function AdminAnalyticsPage() {
     setLoading("ctr", true);
     setError("ctr", null);
     try {
-      const res = await fetchWithAuth("/api/admin/analytics/ctr-opportunities?limit=40");
+      const res = await fetchWithAuth(
+        "/api/admin/analytics/ctr-opportunities?limit=40",
+      );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d = await res.json();
       setOpportunities(d.opportunities ?? []);
     } catch (err) {
-      setError("ctr", err instanceof Error ? err.message : "Failed to load CTR opportunities");
+      setError(
+        "ctr",
+        err instanceof Error ? err.message : "Failed to load CTR opportunities",
+      );
     } finally {
       setLoading("ctr", false);
       markFetched("ctr");
@@ -283,7 +325,15 @@ export default function AdminAnalyticsPage() {
       if (tab === "history") fetchHistory();
       if (tab === "ctr") fetchCtr();
     }
-  }, [tab, fetchedTabs, fetchOverview, fetchKeywords, fetchPages, fetchHistory, fetchCtr]);
+  }, [
+    tab,
+    fetchedTabs,
+    fetchOverview,
+    fetchKeywords,
+    fetchPages,
+    fetchHistory,
+    fetchCtr,
+  ]);
 
   const currentLoading = loadingTab[tab];
   const currentError = errors[tab];
@@ -296,9 +346,12 @@ export default function AdminAnalyticsPage() {
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-magenta font-mono text-xs">ANALYTICS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">SEO & Analytics</h1>
+        <h1 className="font-heading text-2xl font-bold text-white">
+          SEO & Analytics
+        </h1>
         <p className="font-body mt-1 text-slate-400">
-          Performance data from Google Search Console — clicks, impressions, rankings.
+          Performance data from Google Search Console — clicks, impressions,
+          rankings.
         </p>
       </div>
 
@@ -334,40 +387,75 @@ export default function AdminAnalyticsPage() {
           {tab === "overview" && (
             <div className="space-y-6">
               <div>
-                <p className="mb-3 font-mono text-xs text-slate-500">Last 28 days · Google Search Console</p>
+                <p className="mb-3 font-mono text-xs text-slate-500">
+                  Last 28 days · Google Search Console
+                </p>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                  <StatCard label="Total Clicks" value={snapshot?.clicks?.toLocaleString() ?? "—"} accent="text-neon-magenta" />
-                  <StatCard label="Impressions" value={snapshot?.impressions?.toLocaleString() ?? "—"} accent="text-neon-cyan" />
-                  <StatCard label="Avg CTR" value={snapshot ? pct(snapshot.ctr) : "—"} accent="text-neon-green" />
-                  <StatCard label="Avg Position" value={snapshot ? snapshot.position.toFixed(1) : "—"} accent="text-yellow-400" />
+                  <StatCard
+                    label="Total Clicks"
+                    value={snapshot?.clicks?.toLocaleString() ?? "—"}
+                    accent="text-neon-magenta"
+                  />
+                  <StatCard
+                    label="Impressions"
+                    value={snapshot?.impressions?.toLocaleString() ?? "—"}
+                    accent="text-neon-cyan"
+                  />
+                  <StatCard
+                    label="Avg CTR"
+                    value={snapshot ? pct(snapshot.ctr) : "—"}
+                    accent="text-neon-green"
+                  />
+                  <StatCard
+                    label="Avg Position"
+                    value={snapshot ? snapshot.position.toFixed(1) : "—"}
+                    accent="text-yellow-400"
+                  />
                 </div>
               </div>
 
               {web && (
                 <div>
-                  <p className="mb-3 font-mono text-xs text-slate-500">Organic search summary</p>
+                  <p className="mb-3 font-mono text-xs text-slate-500">
+                    Organic search summary
+                  </p>
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    <StatCard label="Clicks (organic)" value={web.clicks?.toLocaleString() ?? "—"} />
-                    <StatCard label="Impressions" value={web.impressions?.toLocaleString() ?? "—"} />
+                    <StatCard
+                      label="Clicks (organic)"
+                      value={web.clicks?.toLocaleString() ?? "—"}
+                    />
+                    <StatCard
+                      label="Impressions"
+                      value={web.impressions?.toLocaleString() ?? "—"}
+                    />
                     <StatCard label="CTR" value={web ? pct(web.ctr) : "—"} />
-                    <StatCard label="Position" value={web?.position != null ? web.position.toFixed(1) : "—"} />
+                    <StatCard
+                      label="Position"
+                      value={
+                        web?.position != null ? web.position.toFixed(1) : "—"
+                      }
+                    />
                   </div>
                 </div>
               )}
 
               {/* Quick links to other tabs */}
               <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
-                <p className="mb-3 font-mono text-xs text-slate-500">Explore deeper</p>
+                <p className="mb-3 font-mono text-xs text-slate-500">
+                  Explore deeper
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  {(["keywords", "pages", "history", "ctr"] as Tab[]).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTab(t)}
-                      className="hover:border-neon-magenta/30 hover:text-neon-magenta rounded-lg border border-slate-700 px-3 py-1.5 font-mono text-xs text-slate-400 transition-all"
-                    >
-                      {TABS.find((x) => x.id === t)?.label} →
-                    </button>
-                  ))}
+                  {(["keywords", "pages", "history", "ctr"] as Tab[]).map(
+                    (t) => (
+                      <button
+                        key={t}
+                        onClick={() => setTab(t)}
+                        className="hover:border-neon-magenta/30 hover:text-neon-magenta rounded-lg border border-slate-700 px-3 py-1.5 font-mono text-xs text-slate-400 transition-all"
+                      >
+                        {TABS.find((x) => x.id === t)?.label} →
+                      </button>
+                    ),
+                  )}
                 </div>
               </div>
             </div>
@@ -380,36 +468,70 @@ export default function AdminAnalyticsPage() {
                 <h3 className="font-mono text-xs font-medium text-slate-400">
                   Top {keywords.length} Keywords by Clicks
                 </h3>
-                <span className="font-mono text-[10px] text-slate-600">Google Search Console</span>
+                <span className="font-mono text-[10px] text-slate-600">
+                  Google Search Console
+                </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-800">
-                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">#</th>
-                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Keyword</th>
-                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Clicks</th>
-                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Impr.</th>
-                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">CTR</th>
-                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Pos.</th>
+                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                        #
+                      </th>
+                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                        Keyword
+                      </th>
+                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                        Clicks
+                      </th>
+                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                        Impr.
+                      </th>
+                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                        CTR
+                      </th>
+                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                        Pos.
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {keywords.map((kw, i) => (
-                      <tr key={i} className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors">
-                        <td className="px-6 py-3 font-mono text-xs text-slate-600">{i + 1}</td>
+                      <tr
+                        key={i}
+                        className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                      >
+                        <td className="px-6 py-3 font-mono text-xs text-slate-600">
+                          {i + 1}
+                        </td>
                         <td className="px-6 py-3 text-white">{kw.keyword}</td>
-                        <td className="px-6 py-3 text-right font-mono text-sm text-white">{kw.clicks.toLocaleString()}</td>
-                        <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">{kw.impressions.toLocaleString()}</td>
-                        <td className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(kw.ctr)}`}>{pct(kw.ctr)}</td>
-                        <td className={`px-6 py-3 text-right font-mono text-sm font-semibold ${positionColor(kw.position)}`}>
+                        <td className="px-6 py-3 text-right font-mono text-sm text-white">
+                          {kw.clicks.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
+                          {kw.impressions.toLocaleString()}
+                        </td>
+                        <td
+                          className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(kw.ctr)}`}
+                        >
+                          {pct(kw.ctr)}
+                        </td>
+                        <td
+                          className={`px-6 py-3 text-right font-mono text-sm font-semibold ${positionColor(kw.position)}`}
+                        >
                           #{kw.position.toFixed(1)}
                         </td>
                       </tr>
                     ))}
                     {keywords.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">No keyword data available</td>
+                        <td
+                          colSpan={6}
+                          className="px-6 py-12 text-center font-mono text-slate-600"
+                        >
+                          No keyword data available
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -422,29 +544,54 @@ export default function AdminAnalyticsPage() {
           {tab === "pages" && (
             <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
               <div className="flex items-center justify-between border-b border-slate-800 px-6 py-3">
-                <h3 className="font-mono text-xs font-medium text-slate-400">Top {pages.length} Pages by Clicks</h3>
-                <span className="font-mono text-[10px] text-slate-600">Google Search Console</span>
+                <h3 className="font-mono text-xs font-medium text-slate-400">
+                  Top {pages.length} Pages by Clicks
+                </h3>
+                <span className="font-mono text-[10px] text-slate-600">
+                  Google Search Console
+                </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-800">
-                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">#</th>
-                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Page</th>
-                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Clicks</th>
-                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Impr.</th>
-                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">CTR</th>
-                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Pos.</th>
+                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                        #
+                      </th>
+                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                        Page
+                      </th>
+                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                        Clicks
+                      </th>
+                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                        Impr.
+                      </th>
+                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                        CTR
+                      </th>
+                      <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                        Pos.
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {pages.map((pg, i) => {
                       // Strip domain for display
                       let display = pg.page;
-                      try { display = new URL(pg.page).pathname || "/"; } catch { /* keep raw */ }
+                      try {
+                        display = new URL(pg.page).pathname || "/";
+                      } catch {
+                        /* keep raw */
+                      }
                       return (
-                        <tr key={i} className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors">
-                          <td className="px-6 py-3 font-mono text-xs text-slate-600">{i + 1}</td>
+                        <tr
+                          key={i}
+                          className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                        >
+                          <td className="px-6 py-3 font-mono text-xs text-slate-600">
+                            {i + 1}
+                          </td>
                           <td className="px-6 py-3">
                             <a
                               href={pg.page}
@@ -456,10 +603,20 @@ export default function AdminAnalyticsPage() {
                               {display}
                             </a>
                           </td>
-                          <td className="px-6 py-3 text-right font-mono text-sm text-white">{pg.clicks.toLocaleString()}</td>
-                          <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">{pg.impressions.toLocaleString()}</td>
-                          <td className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(pg.ctr)}`}>{pct(pg.ctr)}</td>
-                          <td className={`px-6 py-3 text-right font-mono text-sm font-semibold ${positionColor(pg.position)}`}>
+                          <td className="px-6 py-3 text-right font-mono text-sm text-white">
+                            {pg.clicks.toLocaleString()}
+                          </td>
+                          <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
+                            {pg.impressions.toLocaleString()}
+                          </td>
+                          <td
+                            className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(pg.ctr)}`}
+                          >
+                            {pct(pg.ctr)}
+                          </td>
+                          <td
+                            className={`px-6 py-3 text-right font-mono text-sm font-semibold ${positionColor(pg.position)}`}
+                          >
                             #{pg.position.toFixed(1)}
                           </td>
                         </tr>
@@ -467,7 +624,12 @@ export default function AdminAnalyticsPage() {
                     })}
                     {pages.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">No page data available</td>
+                        <td
+                          colSpan={6}
+                          className="px-6 py-12 text-center font-mono text-slate-600"
+                        >
+                          No page data available
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -484,16 +646,24 @@ export default function AdminAnalyticsPage() {
                   {/* Sparklines */}
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
-                      <p className="mb-1 font-mono text-xs text-slate-500">Clicks (16 weeks)</p>
+                      <p className="mb-1 font-mono text-xs text-slate-500">
+                        Clicks (16 weeks)
+                      </p>
                       <p className="font-heading mb-3 text-2xl font-bold text-neon-magenta">
-                        {history.reduce((s, h) => s + h.clicks, 0).toLocaleString()}
+                        {history
+                          .reduce((s, h) => s + h.clicks, 0)
+                          .toLocaleString()}
                       </p>
                       <Sparkline data={history} field="clicks" />
                     </div>
                     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
-                      <p className="mb-1 font-mono text-xs text-slate-500">Impressions (16 weeks)</p>
+                      <p className="mb-1 font-mono text-xs text-slate-500">
+                        Impressions (16 weeks)
+                      </p>
                       <p className="font-heading mb-3 text-2xl font-bold text-neon-cyan">
-                        {history.reduce((s, h) => s + h.impressions, 0).toLocaleString()}
+                        {history
+                          .reduce((s, h) => s + h.impressions, 0)
+                          .toLocaleString()}
                       </p>
                       <Sparkline data={history} field="impressions" />
                     </div>
@@ -502,29 +672,57 @@ export default function AdminAnalyticsPage() {
                   {/* Table */}
                   <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
                     <div className="border-b border-slate-800 px-6 py-3">
-                      <h3 className="font-mono text-xs font-medium text-slate-400">Weekly Breakdown</h3>
+                      <h3 className="font-mono text-xs font-medium text-slate-400">
+                        Weekly Breakdown
+                      </h3>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-slate-800">
-                            <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Week of</th>
-                            <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Clicks</th>
-                            <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Impressions</th>
-                            <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">CTR</th>
-                            <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Avg Pos.</th>
+                            <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                              Week of
+                            </th>
+                            <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                              Clicks
+                            </th>
+                            <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                              Impressions
+                            </th>
+                            <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                              CTR
+                            </th>
+                            <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                              Avg Pos.
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {[...history].reverse().map((h, i) => (
-                            <tr key={i} className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors">
+                            <tr
+                              key={i}
+                              className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                            >
                               <td className="px-6 py-3 font-mono text-xs text-slate-300">
-                                {new Date(h.date).toLocaleDateString("en-IE", { month: "short", day: "numeric" })}
+                                {new Date(h.date).toLocaleDateString("en-IE", {
+                                  month: "short",
+                                  day: "numeric",
+                                })}
                               </td>
-                              <td className="px-6 py-3 text-right font-mono text-sm text-white">{h.clicks.toLocaleString()}</td>
-                              <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">{h.impressions.toLocaleString()}</td>
-                              <td className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(h.ctr)}`}>{pct(h.ctr)}</td>
-                              <td className={`px-6 py-3 text-right font-mono text-xs ${positionColor(h.position)}`}>
+                              <td className="px-6 py-3 text-right font-mono text-sm text-white">
+                                {h.clicks.toLocaleString()}
+                              </td>
+                              <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
+                                {h.impressions.toLocaleString()}
+                              </td>
+                              <td
+                                className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(h.ctr)}`}
+                              >
+                                {pct(h.ctr)}
+                              </td>
+                              <td
+                                className={`px-6 py-3 text-right font-mono text-xs ${positionColor(h.position)}`}
+                              >
                                 {h.position.toFixed(1)}
                               </td>
                             </tr>
@@ -536,7 +734,9 @@ export default function AdminAnalyticsPage() {
                 </>
               ) : (
                 <div className="bg-void-light/50 rounded-xl border border-slate-800 p-12 text-center">
-                  <p className="font-mono text-sm text-slate-500">No history data available yet.</p>
+                  <p className="font-mono text-sm text-slate-500">
+                    No history data available yet.
+                  </p>
                 </div>
               )}
             </div>
@@ -547,8 +747,9 @@ export default function AdminAnalyticsPage() {
             <div className="space-y-4">
               <div className="bg-yellow-950/20 rounded-xl border border-yellow-900/30 p-4">
                 <p className="font-mono text-xs text-yellow-400">
-                  ⚡ These keywords rank position 4–20 with high impressions but low CTR (&lt;5%).
-                  Improving your title/meta description for these queries could significantly boost organic traffic.
+                  ⚡ These keywords rank position 4–20 with high impressions but
+                  low CTR (&lt;5%). Improving your title/meta description for
+                  these queries could significantly boost organic traffic.
                 </p>
               </div>
 
@@ -557,25 +758,46 @@ export default function AdminAnalyticsPage() {
                   <h3 className="font-mono text-xs font-medium text-slate-400">
                     {opportunities.length} CTR Opportunities
                   </h3>
-                  <span className="font-mono text-[10px] text-slate-600">Sorted by potential</span>
+                  <span className="font-mono text-[10px] text-slate-600">
+                    Sorted by potential
+                  </span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-slate-800">
-                        <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Keyword</th>
-                        <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Pos.</th>
-                        <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Impr.</th>
-                        <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Current CTR</th>
-                        <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Clicks</th>
-                        <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Potential ↑</th>
+                        <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                          Keyword
+                        </th>
+                        <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                          Pos.
+                        </th>
+                        <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                          Impr.
+                        </th>
+                        <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                          Current CTR
+                        </th>
+                        <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                          Clicks
+                        </th>
+                        <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                          Potential ↑
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {opportunities.map((opp, i) => (
-                        <tr key={i} className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors">
-                          <td className="px-6 py-3 text-white">{opp.keyword}</td>
-                          <td className={`px-6 py-3 text-right font-mono text-xs ${positionColor(opp.position)}`}>
+                        <tr
+                          key={i}
+                          className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                        >
+                          <td className="px-6 py-3 text-white">
+                            {opp.keyword}
+                          </td>
+                          <td
+                            className={`px-6 py-3 text-right font-mono text-xs ${positionColor(opp.position)}`}
+                          >
                             #{opp.position.toFixed(1)}
                           </td>
                           <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
@@ -588,13 +810,17 @@ export default function AdminAnalyticsPage() {
                             {opp.clicks.toLocaleString()}
                           </td>
                           <td className="px-6 py-3 text-right font-mono text-xs text-neon-green font-semibold">
-                            +{(opp.potentialClicks ?? 0).toLocaleString()} clicks
+                            +{(opp.potentialClicks ?? 0).toLocaleString()}{" "}
+                            clicks
                           </td>
                         </tr>
                       ))}
                       {opportunities.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">
+                          <td
+                            colSpan={6}
+                            className="px-6 py-12 text-center font-mono text-slate-600"
+                          >
                             No CTR opportunities found — your CTRs look healthy!
                           </td>
                         </tr>

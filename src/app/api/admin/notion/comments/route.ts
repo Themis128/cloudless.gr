@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ comments });
   } catch (err) {
     console.error("[API] Comments error:", err);
-    return NextResponse.json({ error: "Failed to fetch comments" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch comments" },
+      { status: 500 },
+    );
   }
 }
 
@@ -58,6 +61,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ comment }, { status: 201 });
   } catch (err) {
     console.error("[API] Add comment error:", err);
-    return NextResponse.json({ error: "Failed to add comment" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to add comment" },
+      { status: 500 },
+    );
   }
 }

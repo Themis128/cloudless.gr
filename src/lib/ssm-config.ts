@@ -55,12 +55,17 @@ function buildConfigFromEnv(): AppConfig {
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || "",
     HUBSPOT_API_KEY:
-      process.env.HUBSPOT_API_KEY || process.env.HUBSPOT_PRIVATE_APP_TOKEN || "",
+      process.env.HUBSPOT_API_KEY ||
+      process.env.HUBSPOT_PRIVATE_APP_TOKEN ||
+      "",
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL || "",
-    GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+    GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replace(
+      /\\n/g,
+      "\n",
+    ),
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || "",
     GSC_SITE_URL: process.env.GSC_SITE_URL || "sc-domain:cloudless.gr",
   };
@@ -133,7 +138,10 @@ export async function getConfig(): Promise<AppConfig> {
     NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
     NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
     GOOGLE_CLIENT_EMAIL: params.get("GOOGLE_CLIENT_EMAIL") ?? "",
-    GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n"),
+    GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replace(
+      /\\n/g,
+      "\n",
+    ),
     GOOGLE_CALENDAR_ID: params.get("GOOGLE_CALENDAR_ID") ?? "",
     GSC_SITE_URL: params.get("GSC_SITE_URL") ?? "sc-domain:cloudless.gr",
   };

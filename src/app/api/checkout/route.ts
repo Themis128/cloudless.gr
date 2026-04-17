@@ -18,17 +18,25 @@ export async function POST(request: NextRequest) {
     // Validate origin against allowlist to prevent open redirect
     const rawOrigin = request.headers.get("origin") ?? "";
     const allowedOrigins = ["https://cloudless.gr", "https://www.cloudless.gr"];
-    if (process.env.NODE_ENV === "development" && rawOrigin.startsWith("http://localhost")) {
+    if (
+      process.env.NODE_ENV === "development" &&
+      rawOrigin.startsWith("http://localhost")
+    ) {
       allowedOrigins.push(rawOrigin);
     }
-    const origin = allowedOrigins.includes(rawOrigin) ? rawOrigin : "https://cloudless.gr";
+    const origin = allowedOrigins.includes(rawOrigin)
+      ? rawOrigin
+      : "https://cloudless.gr";
 
     const resolvedProducts = items.map((item) => {
       const product = getProductById(item.id);
       if (!product) {
         throw new Error(`Unknown product: ${item.id}`);
       }
-      return { product, quantity: Math.max(1, Math.min(item.quantity || 1, 99)) };
+      return {
+        product,
+        quantity: Math.max(1, Math.min(item.quantity || 1, 99)),
+      };
     });
 
     const lineItems = resolvedProducts.map(({ product, quantity }) => {
@@ -45,7 +53,9 @@ export async function POST(request: NextRequest) {
       return { price_data: priceData, quantity };
     });
 
-    const hasSubscription = resolvedProducts.some(({ product }) => product.recurring);
+    const hasSubscription = resolvedProducts.some(
+      ({ product }) => product.recurring,
+    );
     const mode = hasSubscription ? "subscription" : "payment";
 
     const stripe = await getStripe();
@@ -60,9 +70,36 @@ export async function POST(request: NextRequest) {
       )
         ? {
             allowed_countries: [
-              "GR","DE","FR","IT","ES","NL","BE","AT","PT","IE","FI","SE","DK",
-              "PL","CZ","RO","BG","HR","SK","SI","LT","LV","EE","LU","MT","CY",
-              "US","GB","CA","AU",
+              "GR",
+              "DE",
+              "FR",
+              "IT",
+              "ES",
+              "NL",
+              "BE",
+              "AT",
+              "PT",
+              "IE",
+              "FI",
+              "SE",
+              "DK",
+              "PL",
+              "CZ",
+              "RO",
+              "BG",
+              "HR",
+              "SK",
+              "SI",
+              "LT",
+              "LV",
+              "EE",
+              "LU",
+              "MT",
+              "CY",
+              "US",
+              "GB",
+              "CA",
+              "AU",
             ],
           }
         : undefined,
@@ -81,6 +118,9 @@ export async function POST(request: NextRequest) {
         )
         .catch(() => {});
     }
-    return Response.json({ error: "Failed to create checkout session" }, { status: 500 });
+    return Response.json(
+      { error: "Failed to create checkout session" },
+      { status: 500 },
+    );
   }
 }

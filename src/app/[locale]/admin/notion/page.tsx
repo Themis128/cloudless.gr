@@ -51,10 +51,15 @@ export default function NotionSubmissionsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/notion/submissions");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { submissions: Submission[]; count: number };
+      const data = (await res.json()) as {
+        submissions: Submission[];
+        count: number;
+      };
       setSubmissions(data.submissions ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load submissions");
+      setError(
+        err instanceof Error ? err.message : "Failed to load submissions",
+      );
     } finally {
       setLoading(false);
     }
@@ -90,9 +95,13 @@ export default function NotionSubmissionsPage() {
         <div>
           <div className="bg-neon-magenta/10 border-neon-magenta/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-magenta font-mono text-xs">NOTION_SUBMISSIONS</span>
+            <span className="text-neon-magenta font-mono text-xs">
+              NOTION_SUBMISSIONS
+            </span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">Contact Submissions</h1>
+          <h1 className="font-heading text-2xl font-bold text-white">
+            Contact Submissions
+          </h1>
           <p className="font-body mt-1 text-slate-400">
             Form submissions stored in your Notion database.
           </p>
@@ -153,8 +162,12 @@ export default function NotionSubmissionsPage() {
               <div className="flex flex-wrap items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-heading font-semibold text-white">{sub.name}</span>
-                    <span className="font-mono text-xs text-slate-500">{sub.email}</span>
+                    <span className="font-heading font-semibold text-white">
+                      {sub.name}
+                    </span>
+                    <span className="font-mono text-xs text-slate-500">
+                      {sub.email}
+                    </span>
                     {sub.company && (
                       <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-slate-400">
                         {sub.company}
@@ -178,7 +191,9 @@ export default function NotionSubmissionsPage() {
                   <select
                     value={sub.status}
                     disabled={updating === sub.id}
-                    onChange={(e) => updateStatus(sub.id, e.target.value as StatusValue)}
+                    onChange={(e) =>
+                      updateStatus(sub.id, e.target.value as StatusValue)
+                    }
                     className="rounded border border-slate-700 bg-void px-2 py-1 font-mono text-xs text-slate-300 focus:border-neon-magenta/50 focus:outline-none disabled:opacity-50"
                   >
                     <option value="New">New</option>
@@ -187,7 +202,9 @@ export default function NotionSubmissionsPage() {
                   </select>
 
                   <button
-                    onClick={() => setExpanded(expanded === sub.id ? null : sub.id)}
+                    onClick={() =>
+                      setExpanded(expanded === sub.id ? null : sub.id)
+                    }
                     className="text-slate-500 hover:text-slate-300 font-mono text-xs transition-colors"
                   >
                     {expanded === sub.id ? "▲ hide" : "▼ show"}
