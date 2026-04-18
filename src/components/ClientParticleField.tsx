@@ -7,6 +7,13 @@ const ParticleField = dynamic(() => import("@/components/ParticleField"), {
   loading: () => null,
 });
 
-export default function ClientParticleField() {
-  return <ParticleField />;
+interface ClientParticleFieldProps {
+  className?: string;
+  particleCount?: number;
+  color?: string;
+  connectionDistance?: number;
+}
+
+export default function ClientParticleField(props: ClientParticleFieldProps) {
+  return <ParticleField {...props} />;
 }
