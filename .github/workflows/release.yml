@@ -40,6 +40,7 @@ jobs:
         if: steps.check_tag.outputs.exists != 'true'
         uses: actions/github-script@v8
         with:
+          github-token: ${{ secrets.GH_PAT }}
           script: |
             const tag = '${{ steps.version.outputs.tag }}';
             const runUrl = '${{ github.event.workflow_run.html_url }}';
