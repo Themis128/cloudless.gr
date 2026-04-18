@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 interface TypingTextProps {
   texts: string[];
@@ -12,6 +18,27 @@ interface TypingTextProps {
   className?: string;
 }
 
+/** Subscribe to the prefers-reduced-motion media query without triggering the
+ *  "setState in effect body" lint rule. useSyncExternalStore is the React-blessed
+ *  pattern for reading browser state synchronously. */
+function useReducedMotion(): boolean {
+  const subscribe = useCallback((cb: () => void) => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    mq.addEventListener("change", cb);
+    return () => mq.removeEventListener("change", cb);
+  }, []);
+
+  const getSnapshot = useCallback(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    [],
+  );
+
+  // During SSR, assume no preference
+  const getServerSnapshot = useCallback(() => false, []);
+
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
 export default function TypingText({
   texts,
   initialText,
@@ -20,21 +47,16 @@ export default function TypingText({
   pauseDuration = 2000,
   className = "",
 }: TypingTextProps) {
-  const firstText = initialText ?? texts[0] ?? "";
+  const firstText = useMemo(
+    () => initialText ?? texts[0] ?? "",
+    [initialText, texts],
+  );
   const [displayed, setDisplayed] = useState(firstText);
   const [textIndex, setTextIndex] = useState(0);
   // Start charIndex at the end of the initial text so the pause fires first
   const [charIndex, setCharIndex] = useState(firstText.length);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (reducedMotion) return;

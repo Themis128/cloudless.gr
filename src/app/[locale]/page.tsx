@@ -9,7 +9,6 @@ import { translate, translateArray } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 import ClientParticleField from "@/components/ClientParticleField";
 
-
 // ISR: render once per hour, served from CloudFront cache (avoids Lambda cold start on every hit)
 export const revalidate = 3600;
 
