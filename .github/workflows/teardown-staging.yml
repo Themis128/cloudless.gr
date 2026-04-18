@@ -60,7 +60,7 @@ jobs:
 
       - name: Destroy staging stack
         if: steps.awscreds.outcome == 'success'
-        run: pnpm sst remove --stage staging --yes
+        run: pnpm sst remove --stage staging --yes || true
         env:
           # Pass branch name so SST can locate the correct named stage if needed
           PR_BRANCH: ${{ github.head_ref }}
