@@ -377,3 +377,15 @@ select:focus {
   border-color: rgba(0, 255, 245, 0.5) !important;
   box-shadow: 0 0 10px rgba(0, 255, 245, 0.15) !important;
 }
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

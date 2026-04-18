@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 interface TypingTextProps {
   texts: string[];
+  /** Text rendered immediately (SSR + before animation). Defaults to texts[0]. */
+  initialText?: string;
   typingSpeed?: number;
   deletingSpeed?: number;
   pauseDuration?: number;
@@ -12,17 +14,30 @@ interface TypingTextProps {
 
 export default function TypingText({
   texts,
+  initialText,
   typingSpeed = 80,
   deletingSpeed = 40,
   pauseDuration = 2000,
   className = "",
 }: TypingTextProps) {
-  const [displayed, setDisplayed] = useState("");
+  const firstText = initialText ?? texts[0] ?? "";
+  const [displayed, setDisplayed] = useState(firstText);
   const [textIndex, setTextIndex] = useState(0);
-  const [charIndex, setCharIndex] = useState(0);
+  // Start charIndex at the end of the initial text so the pause fires first
+  const [charIndex, setCharIndex] = useState(firstText.length);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (reducedMotion) return;
     const current = texts[textIndex];
 
     if (!isDeleting && charIndex < current.length) {
@@ -61,12 +76,13 @@ export default function TypingText({
     typingSpeed,
     deletingSpeed,
     pauseDuration,
+    reducedMotion,
   ]);
 
   return (
     <span className={className}>
       {displayed}
-      <span className="typing-cursor" />
+      {!reducedMotion && <span className="typing-cursor" />}
     </span>
   );
 }

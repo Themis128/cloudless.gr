@@ -13,6 +13,26 @@ import ClientParticleField from "@/components/ClientParticleField";
 // ISR: render once per hour, served from CloudFront cache (avoids Lambda cold start on every hit)
 export const revalidate = 3600;
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const base = "https://cloudless.gr";
+  return {
+    alternates: {
+      canonical: `${base}/${locale}`,
+      languages: {
+        en: `${base}/en`,
+        el: `${base}/el`,
+        fr: `${base}/fr`,
+        "x-default": `${base}/en`,
+      },
+    },
+  };
+}
+
 const terminalLines = [
   "$ cloudless deploy --env production",
   "  Provisioning serverless infrastructure...",
@@ -204,10 +224,11 @@ export default async function Home() {
                 {t("hero.badge", "v2.0 — Now Accepting Clients")}
               </div>
               <br />
-              <h1 className="font-heading animate-fade-in-up text-4xl leading-tight font-bold tracking-tight delay-100 md:text-5xl lg:text-6xl">
+              <h1 className="font-heading text-4xl leading-tight font-bold tracking-tight md:text-5xl lg:text-6xl">
                 {t("hero.titleStatic", "Clear skies.")}{" "}
                 <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
                   <TypingText
+                    initialText={typingTexts[0]}
                     texts={typingTexts}
                     typingSpeed={70}
                     pauseDuration={2500}
