@@ -126,7 +126,7 @@ jobs:
           echo "number=$PR_NUM" >> "$GITHUB_OUTPUT"
 
       - name: Enable auto-merge
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.diff.outputs.changed == 'true' && steps.pr.outputs.number
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
