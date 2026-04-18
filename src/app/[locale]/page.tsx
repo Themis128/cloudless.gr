@@ -186,7 +186,7 @@ export default async function Home() {
       {/* Hero */}
       <section className="bg-void scanlines scan-line relative overflow-hidden text-white">
         {/* Particle network background */}
-        <ParticleField particleCount={70} />
+        <ClientParticleField particleCount={70} />
 
         {/* Grid overlay */}
         <div className="cyber-grid absolute inset-0 opacity-50" />
