@@ -66,20 +66,20 @@ jobs:
           echo "blog_count=${BLOG_COUNT}" >> "$GITHUB_OUTPUT"
 
       - name: Generate Notion sitemap fragment
+        env:
+          DOCS_SLUGS: ${{ steps.slugs.outputs.docs_slugs }}
+          BLOG_SLUGS: ${{ steps.slugs.outputs.blog_slugs }}
         run: |
           TODAY=$(date -u +%Y-%m-%d)
 
-          cat > /tmp/notion-sitemap.json << 'JSONEOF'
-          {
-            "docs": ${{ steps.slugs.outputs.docs_slugs }},
-            "blog": ${{ steps.slugs.outputs.blog_slugs }}
-          }
-          JSONEOF
+          # Write JSON fragment for reference
+          jq -n --argjson docs "$DOCS_SLUGS" --argjson blog "$BLOG_SLUGS" \
+            '{docs: $docs, blog: $blog}' > /tmp/notion-sitemap.json
 
           # Build a TSV of path + lastmod for the dynamic sitemap helper
           {
-            echo "${{ steps.slugs.outputs.docs_slugs }}" | jq -r '.[] | "/docs/" + . + "\t'"${TODAY}"'"'
-            echo "${{ steps.slugs.outputs.blog_slugs }}" | jq -r '.[] | "/blog/" + . + "\t'"${TODAY}"'"'
+            echo "$DOCS_SLUGS" | jq -r --arg d "$TODAY" '.[] | "/docs/" + . + "\t" + $d'
+            echo "$BLOG_SLUGS" | jq -r --arg d "$TODAY" '.[] | "/blog/" + . + "\t" + $d'
           } > src/data/notion-sitemap-entries.tsv
 
       - name: Check for changes
