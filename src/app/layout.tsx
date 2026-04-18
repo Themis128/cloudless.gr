@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
-  // Not rendered above-the-fold; skip preload to avoid "preloaded but not used" warning
-  preload: false,
+  // Hero badge, CTAs, and TerminalBlock all use font-mono above-the-fold
+  preload: true,
 });
 
 export const metadata: Metadata = {

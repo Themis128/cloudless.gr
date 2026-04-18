@@ -50,7 +50,7 @@ export default {
         NOTION_TASKS_DB_ID: "14ce4ff6c400437597b13e70ac909354",
         NOTION_ANALYTICS_DB_ID: "cc4287fcb42a42dc92a7053d6f1199c7",
       },
-      warm: isProd ? 2 : 0,
+      warm: isProd ? 5 : 0,
       server: {
         memory: "1024 MB",
         architecture: "arm64",

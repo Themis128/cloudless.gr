@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
+  experimental: {
+    // Tree-shake heavy barrel packages — reduces client bundle for Amplify, GSAP, cmdk
+    optimizePackageImports: ["aws-amplify", "gsap", "cmdk", "lenis"],
+  },
 };
 
 const configured = withNextIntl(nextConfig) as NextConfig & {

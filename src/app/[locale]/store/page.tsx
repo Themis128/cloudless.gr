@@ -3,6 +3,8 @@ import StoreGrid from "@/components/store/StoreGrid";
 import JsonLd from "@/components/JsonLd";
 import { getFAQSchema } from "@/lib/structured-data";
 
+export const revalidate = 3600; // products change infrequently; cache for 1h
+
 export const metadata: Metadata = {
   title: "Store",
   description:
