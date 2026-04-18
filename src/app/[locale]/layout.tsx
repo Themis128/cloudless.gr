@@ -1,6 +1,7 @@
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
+import dynamic from "next/dynamic";
 import { routing } from "@/i18n/routing";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -9,18 +10,36 @@ import { AuthProvider } from "@/context/AuthContext";
 import CartSlideOver from "@/components/store/CartSlideOver";
 import JsonLd from "@/components/JsonLd";
 import { getOrganizationSchema } from "@/lib/structured-data";
-import LenisProvider from "@/components/LenisProvider";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
-import CommandPalette from "@/components/CommandPalette";
-import NeonCursor from "@/components/NeonCursor";
-import KonamiEasterEgg from "@/components/KonamiEasterEgg";
 import { CookieConsentProvider } from "@/context/CookieConsentContext";
 import CookieConsent from "@/components/CookieConsent";
+
+// Decorative / interaction-only components deferred until after hydration
+// to keep main-thread work off the critical path (reduces TBT)
+const LenisInitializer = dynamic(
+  () => import("@/components/LenisInitializer"),
+  { ssr: false },
+);
+const CommandPalette = dynamic(() => import("@/components/CommandPalette"), {
+  ssr: false,
+});
+const NeonCursor = dynamic(() => import("@/components/NeonCursor"), {
+  ssr: false,
+});
+const KonamiEasterEgg = dynamic(() => import("@/components/KonamiEasterEgg"), {
+  ssr: false,
+});
 
 type Props = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 };
+
+// Pre-generate all locale segments so ISR-eligible pages are built once
+// and served from CloudFront cache rather than hitting Lambda on every request
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
 
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
@@ -38,18 +57,17 @@ export default async function LocaleLayout({ children, params }: Props) {
       <AuthProvider>
         <CartProvider>
           <CookieConsentProvider>
-            <LenisProvider>
-              <JsonLd data={getOrganizationSchema()} />
-              <Navbar />
-              <main className="flex-1">{children}</main>
-              <Footer />
-              <CartSlideOver />
-              <ServiceWorkerRegistration />
-              <CommandPalette />
-              <NeonCursor />
-              <KonamiEasterEgg />
-              <CookieConsent />
-            </LenisProvider>
+            <JsonLd data={getOrganizationSchema()} />
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <CartSlideOver />
+            <ServiceWorkerRegistration />
+            <LenisInitializer />
+            <CommandPalette />
+            <NeonCursor />
+            <KonamiEasterEgg />
+            <CookieConsent />
           </CookieConsentProvider>
         </CartProvider>
       </AuthProvider>
