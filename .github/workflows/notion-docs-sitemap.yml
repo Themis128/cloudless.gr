@@ -103,10 +103,14 @@ jobs:
           git push --force origin "$BRANCH"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
-      - name: Open PR and merge
+      - name: Open PR
         if: steps.diff.outputs.changed == 'true'
+        id: pr
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A PAT (not GITHUB_TOKEN) is required here so that GitHub triggers
+          # CI workflows on the created PR. GITHUB_TOKEN-created events are
+          # intentionally suppressed by GitHub to prevent infinite loops.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           BRANCH="${{ steps.push.outputs.branch }}"
           EXISTING=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number')
@@ -119,10 +123,15 @@ jobs:
               --head "$BRANCH"
           fi
           PR_NUM=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number')
-          # Use --admin to bypass required status checks (safe for data-only updates)
-          # Falls back to --auto if --admin is unavailable
-          gh pr merge "$PR_NUM" --squash --admin --delete-branch || \
-            gh pr merge "$PR_NUM" --squash --auto --delete-branch
+          echo "number=$PR_NUM" >> "$GITHUB_OUTPUT"
+
+      - name: Enable auto-merge
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUM="${{ steps.pr.outputs.number }}"
+          gh pr merge "$PR_NUM" --squash --auto --delete-branch
 
       - name: Summary
         run: |
