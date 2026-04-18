@@ -1,5 +1,4 @@
 import { Link } from "@/i18n/navigation";
-import dynamic from "next/dynamic";
 import ScrollReveal from "@/components/ScrollReveal";
 import TypingText from "@/components/TypingText";
 import TerminalBlock from "@/components/TerminalBlock";
@@ -8,12 +7,8 @@ import { getBreadcrumbSchema, getFAQSchema } from "@/lib/structured-data";
 import HolographicCard from "@/components/HolographicCard";
 import { translate, translateArray } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
+import ClientParticleField from "@/components/ClientParticleField";
 
-// Defer particle canvas — decorative, O(n²) per frame; does not affect LCP
-const ParticleField = dynamic(() => import("@/components/ParticleField"), {
-  ssr: false,
-  loading: () => null,
-});
 
 // ISR: render once per hour, served from CloudFront cache (avoids Lambda cold start on every hit)
 export const revalidate = 3600;

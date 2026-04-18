@@ -1,7 +1,6 @@
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
-import dynamic from "next/dynamic";
 import { routing } from "@/i18n/routing";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -13,22 +12,8 @@ import { getOrganizationSchema } from "@/lib/structured-data";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { CookieConsentProvider } from "@/context/CookieConsentContext";
 import CookieConsent from "@/components/CookieConsent";
+import ClientDecorators from "@/components/ClientDecorators";
 
-// Decorative / interaction-only components deferred until after hydration
-// to keep main-thread work off the critical path (reduces TBT)
-const LenisInitializer = dynamic(
-  () => import("@/components/LenisInitializer"),
-  { ssr: false },
-);
-const CommandPalette = dynamic(() => import("@/components/CommandPalette"), {
-  ssr: false,
-});
-const NeonCursor = dynamic(() => import("@/components/NeonCursor"), {
-  ssr: false,
-});
-const KonamiEasterEgg = dynamic(() => import("@/components/KonamiEasterEgg"), {
-  ssr: false,
-});
 
 type Props = {
   children: React.ReactNode;
@@ -63,10 +48,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             <Footer />
             <CartSlideOver />
             <ServiceWorkerRegistration />
-            <LenisInitializer />
-            <CommandPalette />
-            <NeonCursor />
-            <KonamiEasterEgg />
+            <ClientDecorators />
             <CookieConsent />
           </CookieConsentProvider>
         </CartProvider>
