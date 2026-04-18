@@ -11,6 +11,8 @@ import {
 import { translate } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 
+export const revalidate = 86400; // static content — rebuild once per day
+
 export const metadata: Metadata = {
   title: "Services",
   description:
