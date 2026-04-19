@@ -14,7 +14,6 @@ import { CookieConsentProvider } from "@/context/CookieConsentContext";
 import CookieConsent from "@/components/CookieConsent";
 import ClientDecorators from "@/components/ClientDecorators";
 
-
 type Props = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
