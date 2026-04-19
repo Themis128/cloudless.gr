@@ -25,6 +25,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **Void colors:** `#0a0a0f` (void), `#12121a` (void-light), `#1a1a2e` (void-lighter)
 - **Neon colors:** cyan `#00fff5`, magenta `#ff00ff`, green `#00ff41`, blue `#4d7cff`
 - **Fonts:** Instrument Sans (heading), Work Sans (body), Geist Mono (code)
+- **Font loading:** Google fonts are imported via `next/font/google` with `preload: false` to avoid redundant `.woff2` preloads and reduce unused font downloads.
 - **Effects:** scanlines, cyber-grid, neon-border, glow-cyan, dot-matrix
 
 ### Card & Section Patterns (QD-inspired)
