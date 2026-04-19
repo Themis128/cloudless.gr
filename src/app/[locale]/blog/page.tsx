@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   title: "Blog",
   description:
     "Insights on cloud computing, serverless architecture, data analytics, and AI marketing for startups and SMBs.",
+  alternates: {
+    canonical: "https://cloudless.gr/blog",
+  },
 };
 
 const categoryColors: Record<string, string> = {

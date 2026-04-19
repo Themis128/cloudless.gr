@@ -436,7 +436,7 @@ export default async function Home() {
       </section>
 
       {/* Services Overview */}
-      <section className="bg-void py-12 lg:py-16">
+      <section className="bg-void py-16 lg:py-20">
         <div className="mx-auto max-w-6xl px-6">
           <ScrollReveal>
             <div className="mx-auto mb-16 max-w-2xl text-center">
@@ -538,7 +538,7 @@ export default async function Home() {
       </section>
 
       {/* FAQ */}
-      <section className="bg-void-light/50 border-y border-slate-800 py-12 lg:py-16">
+      <section className="bg-void-light/50 border-y border-slate-800 py-16 lg:py-20">
         <div className="mx-auto max-w-3xl px-6">
           <ScrollReveal>
             <div className="mb-14 text-center">
@@ -578,7 +578,7 @@ export default async function Home() {
       </section>
 
       {/* Founder */}
-      <section className="bg-void py-12 lg:py-16">
+      <section className="bg-void py-16 lg:py-20">
         <div className="mx-auto max-w-4xl px-6">
           <ScrollReveal>
             <div className="mb-12 text-center">
