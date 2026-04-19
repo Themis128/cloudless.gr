@@ -153,13 +153,13 @@ export default async function BlogPage({
       />
 
       {/* Header */}
-      <section className="bg-void scanlines relative py-16 text-white md:py-20">
+      <section className="bg-void scanlines relative overflow-hidden py-14 text-white md:py-20 lg:py-24">
         <div className="cyber-grid absolute inset-0 opacity-30" />
         <div className="relative z-10 mx-auto max-w-6xl px-6">
           <p className="text-neon-cyan animate-fade-in-up mb-3 font-mono text-xs font-medium tracking-[0.3em]">
             [ BLOG ]
           </p>
-          <h1 className="font-heading animate-fade-in-up text-3xl leading-tight font-bold delay-100 md:text-5xl">
+          <h1 className="font-heading animate-fade-in-up text-3xl leading-tight font-bold text-white delay-100 md:text-5xl">
             Insights &amp;{" "}
             <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
               practical guides
