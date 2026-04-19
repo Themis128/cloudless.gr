@@ -34,7 +34,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<import("next").Metadata> {
-  const { locale } = await params;
+  await params;
 
   return {
     alternates: {
