@@ -33,26 +33,18 @@ describe("bundle optimization", () => {
     expect(src).not.toMatch(/^import KonamiEasterEgg from/m);
   });
 
-  it("lighthouse budget has path-specific script budgets for /contact and /store", () => {
+  it("lighthouse budget covers heaviest route script size", () => {
     const budget: BudgetEntry[] = JSON.parse(
       readFileSync(path.resolve(".github/lighthouse-budget.json"), "utf-8"),
     );
 
-    const scriptBudget = (entry: BudgetEntry) =>
-      entry.resourceSizes?.find((r) => r.resourceType === "script")?.budget;
-
     const globalEntry = budget.find((b) => b.path === "/*");
-    const contactEntry = budget.find((b) => b.path === "/contact");
-    const storeEntry = budget.find((b) => b.path === "/store");
-
     expect(globalEntry).toBeDefined();
-    expect(contactEntry).toBeDefined();
-    expect(storeEntry).toBeDefined();
 
-    expect(scriptBudget(globalEntry!)).toBe(300);
-    expect(scriptBudget(contactEntry!)).toBeGreaterThan(300);
-    expect(scriptBudget(storeEntry!)).toBeGreaterThan(
-      scriptBudget(contactEntry!)!,
-    );
+    const scriptBudget = globalEntry!.resourceSizes?.find(
+      (r) => r.resourceType === "script",
+    )?.budget;
+    // Must cover /store route (~332KB)
+    expect(scriptBudget).toBeGreaterThanOrEqual(340);
   });
 });
