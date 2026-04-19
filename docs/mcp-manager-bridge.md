@@ -11,7 +11,9 @@ This workspace supports the MCP Manager Bridge VS Code extension, allowing VS Co
 
 ## Supported servers in this workspace
 
-This repository includes the following MCP servers in `mcp.json`, `.mcp.json`, and `project.mcp.json`:
+The canonical config is `mcp.json`. The files `.mcp.json` and `project.mcp.json` are symlinks to it, so all consumers read the same configuration.
+
+Configured servers:
 
 - `project` — launches `project-mcp`
 - `mcp-tool-shop` — launches `mcp-tool-shop`
