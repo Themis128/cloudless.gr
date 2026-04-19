@@ -1,17 +1,19 @@
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
+import dynamic from "next/dynamic";
 import { routing } from "@/i18n/routing";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
-import CartSlideOver from "@/components/store/CartSlideOver";
 import JsonLd from "@/components/JsonLd";
 import { getOrganizationSchema } from "@/lib/structured-data";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { CookieConsentProvider } from "@/context/CookieConsentContext";
 import CookieConsent from "@/components/CookieConsent";
+
+const CartSlideOver = dynamic(() => import("@/components/store/CartSlideOver"));
 import ClientDecorators from "@/components/ClientDecorators";
 
 type Props = {

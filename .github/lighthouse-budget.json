@@ -2,13 +2,82 @@
   {
     "path": "/*",
     "timings": [
-      { "metric": "interactive", "budget": 5000 },
-      { "metric": "first-contentful-paint", "budget": 2000 },
-      { "metric": "largest-contentful-paint", "budget": 4500 }
+      {
+        "metric": "interactive",
+        "budget": 5000
+      },
+      {
+        "metric": "first-contentful-paint",
+        "budget": 2000
+      },
+      {
+        "metric": "largest-contentful-paint",
+        "budget": 4500
+      }
     ],
     "resourceSizes": [
-      { "resourceType": "script", "budget": 301 },
-      { "resourceType": "total", "budget": 800 }
+      {
+        "resourceType": "script",
+        "budget": 300
+      },
+      {
+        "resourceType": "total",
+        "budget": 800
+      }
+    ]
+  },
+  {
+    "path": "/contact",
+    "timings": [
+      {
+        "metric": "interactive",
+        "budget": 5000
+      },
+      {
+        "metric": "first-contentful-paint",
+        "budget": 2000
+      },
+      {
+        "metric": "largest-contentful-paint",
+        "budget": 4500
+      }
+    ],
+    "resourceSizes": [
+      {
+        "resourceType": "script",
+        "budget": 315
+      },
+      {
+        "resourceType": "total",
+        "budget": 800
+      }
+    ]
+  },
+  {
+    "path": "/store",
+    "timings": [
+      {
+        "metric": "interactive",
+        "budget": 5000
+      },
+      {
+        "metric": "first-contentful-paint",
+        "budget": 2000
+      },
+      {
+        "metric": "largest-contentful-paint",
+        "budget": 4500
+      }
+    ],
+    "resourceSizes": [
+      {
+        "resourceType": "script",
+        "budget": 340
+      },
+      {
+        "resourceType": "total",
+        "budget": 800
+      }
     ]
   }
 ]
