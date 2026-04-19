@@ -13,6 +13,11 @@ import {
   getAllSlugs,
 } from "@/lib/notion-blog";
 import { isConfigured } from "@/lib/integrations";
+import JsonLd from "@/components/JsonLd";
+import {
+  getBlogPostSchema,
+  getBreadcrumbSchema,
+} from "@/lib/structured-data";
 import React from "react";
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
@@ -120,7 +125,8 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
+  const canonical = `https://cloudless.gr/${locale}/blog/${slug}`;
   const useNotion = isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
 
   // Try Notion first
@@ -130,6 +136,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       return {
         title: post.seoTitle || post.title,
         description: post.seoDescription || post.excerpt,
+        alternates: { canonical },
         openGraph: {
           title: post.title,
           description: post.excerpt,
@@ -148,6 +155,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: post.title,
     description: post.excerpt,
+    alternates: { canonical },
     openGraph: {
       title: post.title,
       description: post.excerpt,
@@ -170,6 +178,24 @@ export default async function BlogPostPage({ params }: Props) {
 
       return (
         <>
+          <JsonLd
+            data={getBlogPostSchema({
+              title: notionPost.title,
+              excerpt: notionPost.excerpt,
+              date: notionPost.date,
+              slug: notionPost.slug,
+              category: notionPost.category || "Blog",
+              coverImage: notionPost.coverImage,
+              author: notionPost.author,
+            })}
+          />
+          <JsonLd
+            data={getBreadcrumbSchema([
+              { name: "Home", url: "https://cloudless.gr" },
+              { name: "Blog", url: "https://cloudless.gr/blog" },
+              { name: notionPost.title, url: `https://cloudless.gr/blog/${notionPost.slug}` },
+            ])}
+          />
           {/* Header */}
           <section className="bg-void scanlines relative py-16 text-white md:py-20">
             <div className="cyber-grid absolute inset-0 opacity-30" />
@@ -349,6 +375,22 @@ export default async function BlogPostPage({ params }: Props) {
 
   return (
     <>
+      <JsonLd
+        data={getBlogPostSchema({
+          title: post.title,
+          excerpt: post.excerpt,
+          date: post.date,
+          slug: post.slug,
+          category: post.category,
+        })}
+      />
+      <JsonLd
+        data={getBreadcrumbSchema([
+          { name: "Home", url: "https://cloudless.gr" },
+          { name: "Blog", url: "https://cloudless.gr/blog" },
+          { name: post.title, url: `https://cloudless.gr/blog/${post.slug}` },
+        ])}
+      />
       {/* Header */}
       <section className="bg-void scanlines relative py-16 text-white md:py-20">
         <div className="cyber-grid absolute inset-0 opacity-30" />

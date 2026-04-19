@@ -42,7 +42,10 @@ export function getOrganizationSchema(): OrganizationSchema {
       "@type": "PostalAddress",
       addressCountry: "GR",
     },
-    sameAs: [],
+    sameAs: [
+      "https://www.linkedin.com/company/cloudless-gr",
+      "https://github.com/Themis128",
+    ],
   };
 }
 
@@ -105,6 +108,8 @@ export interface BlogPostSchemaInput {
   date: string;
   slug: string;
   category: string;
+  coverImage?: string;
+  author?: string;
 }
 
 export interface BlogPostSchema {
@@ -115,9 +120,18 @@ export interface BlogPostSchema {
   datePublished: string;
   url: string;
   articleSection: string;
+  image?: string;
   author: {
+    "@type": "Person" | "Organization";
+    name: string;
+  };
+  publisher: {
     "@type": "Organization";
     name: "Cloudless";
+    logo: {
+      "@type": "ImageObject";
+      url: string;
+    };
   };
 }
 
@@ -130,9 +144,17 @@ export function getBlogPostSchema(post: BlogPostSchemaInput): BlogPostSchema {
     datePublished: post.date,
     url: `https://cloudless.gr/blog/${post.slug}`,
     articleSection: post.category,
-    author: {
+    ...(post.coverImage ? { image: post.coverImage } : {}),
+    author: post.author
+      ? { "@type": "Person", name: post.author }
+      : { "@type": "Organization", name: "Cloudless" },
+    publisher: {
       "@type": "Organization",
       name: "Cloudless",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://cloudless.gr/logo.png",
+      },
     },
   };
 }

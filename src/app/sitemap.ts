@@ -12,14 +12,26 @@ import { demoProducts } from "@/lib/store-products";
 // that haven't changed — which harms crawl-priority signals.
 // ---------------------------------------------------------------------------
 const LAST_MODIFIED: Record<string, string> = {
-  "/": "2025-03-01",
-  "/services": "2025-01-15",
-  "/store": "2025-04-01",
-  "/blog": "2025-04-10",
-  "/contact": "2024-11-01",
+  "/": "2026-04-19",
+  "/services": "2026-04-19",
+  "/store": "2026-04-19",
+  "/blog": "2026-04-19",
+  "/contact": "2026-04-19",
   // Store product catalogue — bump when the catalogue is updated
-  "/store/products": "2025-04-01",
+  "/store/products": "2026-04-19",
 };
+
+/** Build language alternates for a locale-agnostic path (e.g. "/blog/slug") */
+function localeAlternates(path: string) {
+  const base = "https://cloudless.gr";
+  return {
+    languages: {
+      en: (base + "/en" + path) as string,
+      el: (base + "/el" + path) as string,
+      "x-default": (base + "/en" + path) as string,
+    },
+  };
+}
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://cloudless.gr";
@@ -30,6 +42,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(LAST_MODIFIED["/"]),
       changeFrequency: "weekly",
       priority: 1,
+      alternates: localeAlternates(""),
     },
     {
       url: `${baseUrl}/services`,
@@ -63,6 +76,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: new Date(post.date),
     changeFrequency: "monthly" as const,
     priority: 0.6,
+    alternates: localeAlternates(`/blog/${post.slug}`),
   }));
 
   // Products don't carry an individual last-modified date; share the
