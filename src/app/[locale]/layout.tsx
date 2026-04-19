@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -25,6 +27,35 @@ type Props = {
 // and served from CloudFront cache rather than hitting Lambda on every request
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
+}
+
+const BASE_URL = "https://cloudless.gr";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "";
+
+  const pathWithoutLocale = pathname
+    .replace(/^\/(en|el|fr)/, "")
+    .replace(/\/$/, "");
+  const canonical = `${BASE_URL}${locale === "en" ? "" : `/${locale}`}${pathWithoutLocale || ""}`;
+
+  return {
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}${pathWithoutLocale || ""}`,
+        el: `${BASE_URL}/el${pathWithoutLocale || ""}`,
+        fr: `${BASE_URL}/fr${pathWithoutLocale || ""}`,
+        "x-default": `${BASE_URL}${pathWithoutLocale || ""}`,
+      },
+    },
+  };
 }
 
 export default async function LocaleLayout({ children, params }: Props) {
