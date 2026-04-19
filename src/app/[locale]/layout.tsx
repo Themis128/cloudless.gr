@@ -17,15 +17,6 @@ const CartSlideOver = dynamic(
   () => import("@/components/store/CartSlideOver"),
   { ssr: false },
 );
-const CommandPalette = dynamic(() => import("@/components/CommandPalette"), {
-  ssr: false,
-});
-const NeonCursor = dynamic(() => import("@/components/NeonCursor"), {
-  ssr: false,
-});
-const KonamiEasterEgg = dynamic(() => import("@/components/KonamiEasterEgg"), {
-  ssr: false,
-});
 import ClientDecorators from "@/components/ClientDecorators";
 
 type Props = {
