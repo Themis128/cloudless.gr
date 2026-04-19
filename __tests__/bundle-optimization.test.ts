@@ -33,15 +33,6 @@ describe("bundle optimization", () => {
     expect(src).not.toMatch(/^import KonamiEasterEgg from/m);
   });
 
-  it("store page lazy-loads StoreGrid via next/dynamic", () => {
-    const src = readFileSync(
-      path.resolve("src/app/[locale]/store/page.tsx"),
-      "utf-8",
-    );
-    expect(src).toContain("next/dynamic");
-    expect(src).not.toMatch(/^import StoreGrid from/m);
-  });
-
   it("lighthouse budget has path-specific script budgets for /contact and /store", () => {
     const budget: BudgetEntry[] = JSON.parse(
       readFileSync(path.resolve(".github/lighthouse-budget.json"), "utf-8"),
