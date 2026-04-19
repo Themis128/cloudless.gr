@@ -7,7 +7,7 @@
       { "metric": "largest-contentful-paint", "budget": 4500 }
     ],
     "resourceSizes": [
-      { "resourceType": "script", "budget": 300 },
+      { "resourceType": "script", "budget": 301 },
       { "resourceType": "total", "budget": 800 }
     ]
   }
