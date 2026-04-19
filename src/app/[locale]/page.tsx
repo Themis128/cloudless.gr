@@ -191,7 +191,7 @@ export default async function Home() {
         <div className="bg-neon-cyan/5 animate-gradient-shift absolute top-0 right-0 h-[500px] w-[500px] translate-x-1/3 -translate-y-1/2 rounded-full blur-3xl" />
         <div className="bg-neon-magenta/5 animate-gradient-shift absolute bottom-0 left-0 h-[400px] w-[400px] -translate-x-1/3 translate-y-1/2 rounded-full blur-3xl delay-200" />
 
-        <div className="relative z-10 mx-auto max-w-6xl px-6 py-24 md:py-32 lg:py-40">
+        <div className="relative z-10 mx-auto max-w-6xl px-6 py-14 md:py-20 lg:py-24">
           <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
             {/* Left — copy */}
             <div>
@@ -250,7 +250,7 @@ export default async function Home() {
             </div>
 
             {/* Right — terminal */}
-            <div className="animate-fade-in-up hidden delay-300 lg:block">
+            <div className="animate-fade-in-up hidden lg:block">
               <TerminalBlock
                 lines={terminalLines}
                 title={t("hero.terminalTitle", "cloudless-cli v2.0")}
@@ -402,7 +402,7 @@ export default async function Home() {
       </section>
 
       {/* Services Overview */}
-      <section className="bg-void py-20 lg:py-28">
+      <section className="bg-void py-16 lg:py-20">
         <div className="mx-auto max-w-6xl px-6">
           <ScrollReveal>
             <div className="mx-auto mb-16 max-w-2xl text-center">
@@ -504,7 +504,7 @@ export default async function Home() {
       </section>
 
       {/* FAQ */}
-      <section className="bg-void-light/50 border-y border-slate-800 py-20 lg:py-28">
+      <section className="bg-void-light/50 border-y border-slate-800 py-16 lg:py-20">
         <div className="mx-auto max-w-3xl px-6">
           <ScrollReveal>
             <div className="mb-14 text-center">
@@ -544,7 +544,7 @@ export default async function Home() {
       </section>
 
       {/* Founder */}
-      <section className="bg-void py-20 lg:py-28">
+      <section className="bg-void py-16 lg:py-20">
         <div className="mx-auto max-w-4xl px-6">
           <ScrollReveal>
             <div className="mb-12 text-center">
