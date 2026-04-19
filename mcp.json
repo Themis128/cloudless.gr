@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "project": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "project-mcp"
+      ],
+      "autoStart": true
+    },
+    "mcp-tool-shop": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-tool-shop"
+      ],
+      "autoStart": true
+    },
+    "codeglide-mcp-server": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "docker run --pull=always --platform linux/amd64 --rm -i -v $(pwd):$(pwd) -e MCP_CLIENT=$(whoami) -v codeglide-data:/var/codeglide/data ghcr.io/codeglide/extension:latest"
+      ]
+    }
+  }
+}
