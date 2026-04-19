@@ -128,7 +128,7 @@ export default function StorePage() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-white">{t.name}</p>
-                    <p className="font-mono text-[10px] text-slate-500">
+                    <p className="font-mono text-[10px] text-slate-400">
                       {t.role}
                     </p>
                   </div>

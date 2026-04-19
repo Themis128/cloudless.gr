@@ -80,7 +80,7 @@ function ProductCard({ product }: { product: StoreProduct }) {
                 </li>
               ))}
               {product.features.length > 4 && (
-                <li className="font-mono text-xs text-slate-500">
+                <li className="font-mono text-xs text-slate-400">
                   +{product.features.length - 4} more
                 </li>
               )}
@@ -106,7 +106,7 @@ function ProductCard({ product }: { product: StoreProduct }) {
               {formatPrice(product.price, product.currency)}
             </span>
             {product.recurring && (
-              <span className="ml-1 font-mono text-sm text-slate-500">
+              <span className="ml-1 font-mono text-sm text-slate-400">
                 /{product.interval}
               </span>
             )}
@@ -163,7 +163,7 @@ export default function StoreGrid() {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row">
         <div className="relative flex-1">
           <svg
-            className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500"
+            className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
@@ -181,6 +181,7 @@ export default function StoreGrid() {
           />
         </div>
         <select
+          aria-label="Sort products"
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortOption)}
           className="bg-void-light focus:border-neon-cyan/50 cursor-pointer rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-slate-400 transition-colors focus:outline-none"
@@ -202,7 +203,7 @@ export default function StoreGrid() {
             className={`min-h-[44px] rounded-lg px-4 py-2.5 font-mono text-xs font-medium transition-all duration-300 ${
               activeCategory === cat
                 ? "bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan border shadow-[0_0_10px_rgba(0,255,245,0.1)]"
-                : "bg-void-light hover:border-neon-cyan/30 active:border-neon-cyan/30 border border-slate-800 text-slate-500 hover:text-slate-300 active:text-slate-300"
+                : "bg-void-light hover:border-neon-cyan/30 active:border-neon-cyan/30 border border-slate-800 text-slate-400 hover:text-slate-300 active:text-slate-300"
             }`}
           >
             {cat === "all" ? "All Products" : categoryLabels[cat]}
@@ -222,8 +223,8 @@ export default function StoreGrid() {
         </div>
       ) : (
         <div className="py-16 text-center">
-          <div className="text-neon-cyan/20 mb-4 font-mono text-4xl">[ ]</div>
-          <p className="font-mono text-sm text-slate-500">
+          <div className="text-neon-cyan/40 mb-4 font-mono text-4xl">[ ]</div>
+          <p className="font-mono text-sm text-slate-400">
             No products match your search.
           </p>
           <button

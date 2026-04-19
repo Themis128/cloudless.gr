@@ -615,18 +615,19 @@ export default async function ServicesPage() {
                   "Every engagement starts with a no-cost review. Actionable insights in 30 minutes.",
                 ),
               },
-            ].map((item, i) => (
-              <ScrollReveal key={item.title} delay={i * 100}>
-                <div className="bg-void-light/50 hover:border-neon-cyan/30 rounded-xl border border-slate-800 p-6 transition-all duration-300">
-                  <div className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg border text-lg">
-                    {item.icon}
-                  </div>
-                  <h3 className="font-heading font-semibold text-white">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-sm text-slate-400">{item.desc}</p>
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="bg-void-light/50 hover:border-neon-cyan/30 rounded-xl border border-slate-800 p-6 transition-all duration-300"
+              >
+                <div className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg border text-lg">
+                  {item.icon}
                 </div>
-              </ScrollReveal>
+                <h3 className="font-heading font-semibold text-white">
+                  {item.title}
+                </h3>
+                <p className="mt-2 text-sm text-slate-400">{item.desc}</p>
+              </div>
             ))}
           </div>
         </div>
