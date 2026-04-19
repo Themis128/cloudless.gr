@@ -70,7 +70,7 @@ export default function CartSlideOver() {
             <button
               onClick={closeCart}
               aria-label="Close cart"
-              className="hover:text-neon-cyan active:text-neon-cyan flex min-h-[44px] min-w-[44px] items-center justify-center p-2 text-slate-500 transition-colors"
+              className="hover:text-neon-cyan active:text-neon-cyan flex min-h-[44px] min-w-[44px] items-center justify-center p-2 text-slate-400 transition-colors"
             >
               <svg
                 width="20"
@@ -92,7 +92,7 @@ export default function CartSlideOver() {
                 <div className="text-neon-cyan/40 mb-4 font-mono text-4xl">
                   [ ]
                 </div>
-                <p className="font-mono text-sm text-slate-500">
+                <p className="font-mono text-sm text-slate-400">
                   Your cart is empty
                 </p>
               </div>
