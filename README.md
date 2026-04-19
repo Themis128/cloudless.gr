@@ -382,3 +382,76 @@ This avoids noisy `LF will be replaced by CRLF` warnings and keeps diffs stable 
 - AWS SSM Parameter Store (secrets)
 - Stripe (checkout & payments)
 - Vitest + React Testing Library (140+ tests)
+
+## Project MCP Configuration
+
+This workspace includes Project MCP config files for three MCP servers:
+
+- `project` — launches `project-mcp`
+- `mcp-tool-shop` — launches `mcp-tool-shop`
+- `codeglide-mcp-server` — launches the CodeGlide MCP server via Docker
+
+All configs are available in:
+
+- `mcp.json`
+- `.mcp.json`
+- `project.mcp.json`
+
+Current config:
+
+```json
+{
+  "mcpServers": {
+    "project": {
+      "command": "npx",
+      "args": ["-y", "project-mcp"],
+      "autoStart": true
+    },
+    "mcp-tool-shop": {
+      "command": "npx",
+      "args": ["-y", "mcp-tool-shop"],
+      "autoStart": true
+    },
+    "codeglide-mcp-server": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "docker run --pull=always --platform linux/amd64 --rm -i -v $(pwd):$(pwd) -e MCP_CLIENT=$(whoami) -v codeglide-data:/var/codeglide/data ghcr.io/codeglide/extension:latest"
+      ]
+    }
+  }
+}
+```
+
+A dedicated GitHub Actions workflow has also been added in `.github/workflows/codeglide-mcp-server.yml` for CI-driven MCP server generation. The workflow runs the CodeGlide Docker image and writes generated MCP artifacts into the repository workspace, with generated artifacts available under `${{ github.workspace }}-codeglide-extension-artifacts` if produced.
+
+This workspace config uses `autoStart: true` so compatible MCP extensions can launch these servers automatically on startup.
+
+### MCP Manager Bridge
+
+This repository is compatible with the MCP Manager Bridge VS Code extension, which connects VS Code to the MCP Manager desktop application and keeps workspace `mcp.json` configuration in sync.
+
+For a dedicated reference, see `docs/mcp-manager-bridge.md`.
+
+- Install the MCP Manager desktop app and the MCP Manager Bridge extension in VS Code.
+- Use the extension to view server status, enable/disable servers, restart servers, and sync configuration with Cursor.
+- The bridge can write Cursor config to:
+  - macOS/Linux: `~/.cursor/mcp.json`
+  - Windows: `%APPDATA%\Cursor\mcp.json`
+- `codeglide-mcp-server` runs via Docker using `bash`; Windows users should run VS Code from WSL or adjust the command for their shell environment.
+
+Commands provided by the extension include:
+
+- `MCP Bridge: Connect`
+- `MCP Bridge: Disconnect`
+- `MCP Bridge: Refresh`
+- `MCP Bridge: Sync with MCP Manager`
+
+To use this workspace in VS Code:
+
+1. Open the `cloudless.gr` workspace.
+2. Install a Project MCP-compatible extension or MCP Manager Bridge extension.
+3. Open the Project MCP panel or MCP Manager Bridge panel.
+4. Launch the `project`, `mcp-tool-shop`, or `codeglide-mcp-server` MCP server from workspace config.
+
+If the extension sees the workspace config, it should start the selected server by name.

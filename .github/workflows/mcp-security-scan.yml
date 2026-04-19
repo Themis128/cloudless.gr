@@ -1,0 +1,36 @@
+name: MCP Security Scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Run MCP security scanner
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install scanner dependencies
+        run: npm install
+        working-directory: tools/mcp-security-scanner
+
+      - name: Run MCP security scan
+        run: npm run scan -- --path "src/**/*.{ts,tsx,js,jsx,py,md}"
+        working-directory: tools/mcp-security-scanner
