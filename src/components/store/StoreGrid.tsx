@@ -180,7 +180,8 @@ export default function StoreGrid() {
             className="bg-void-light focus:border-neon-cyan/50 w-full rounded-lg border border-slate-800 py-2.5 pr-4 pl-10 font-mono text-sm text-white transition-colors placeholder:text-slate-600 focus:outline-none"
           />
         </div>
-        <select aria-label="Sort products"
+        <select
+          aria-label="Sort products"
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortOption)}
           className="bg-void-light focus:border-neon-cyan/50 cursor-pointer rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-slate-400 transition-colors focus:outline-none"
