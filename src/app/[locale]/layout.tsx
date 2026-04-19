@@ -1,5 +1,3 @@
-import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -35,24 +33,16 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string }>;
-}): Promise<Metadata> {
+}): Promise<import("next").Metadata> {
   const { locale } = await params;
-  const headersList = await headers();
-  const pathname = headersList.get("x-pathname") ?? "";
-
-  const pathWithoutLocale = pathname
-    .replace(/^\/(en|el|fr)/, "")
-    .replace(/\/$/, "");
-  const canonical = `${BASE_URL}${locale === "en" ? "" : `/${locale}`}${pathWithoutLocale || ""}`;
 
   return {
     alternates: {
-      canonical,
       languages: {
-        en: `${BASE_URL}${pathWithoutLocale || ""}`,
-        el: `${BASE_URL}/el${pathWithoutLocale || ""}`,
-        fr: `${BASE_URL}/fr${pathWithoutLocale || ""}`,
-        "x-default": `${BASE_URL}${pathWithoutLocale || ""}`,
+        en: `${BASE_URL}`,
+        el: `${BASE_URL}/el`,
+        fr: `${BASE_URL}/fr`,
+        "x-default": `${BASE_URL}`,
       },
     },
   };
