@@ -1,6 +1,8 @@
-import process from "node:process";
+import path from "path";
+import { fileURLToPath } from "url";
 import { defineConfig, devices } from "@playwright/test";
 
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const isCi = !!process.env.CI;
 
 /**
@@ -12,7 +14,7 @@ const isCi = !!process.env.CI;
  *   npx playwright test --headed     # see the browser
  */
 export default defineConfig({
-  testDir: "./e2e",
+  testDir: path.join(rootDir, "e2e"),
   fullyParallel: true,
   forbidOnly: isCi,
   retries: isCi ? 2 : 0,
@@ -39,9 +41,13 @@ export default defineConfig({
 
   /* Start the dev server before tests run */
   webServer: {
-    command: "NEXT_PUBLIC_E2E=1 pnpm dev",
+    command: "pnpm dev",
+    cwd: rootDir,
     url: "http://localhost:4000",
     reuseExistingServer: !isCi,
     timeout: 120_000,
+    env: {
+      NEXT_PUBLIC_E2E: "1",
+    },
   },
 });

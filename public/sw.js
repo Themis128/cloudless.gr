@@ -89,6 +89,25 @@ function handleNavigationRequest(request) {
 }
 
 function handleStaticAssetRequest(request) {
+  const isJsAsset = request.url.endsWith(".js");
+  const isCssAsset = request.url.endsWith(".css");
+
+  // Use network-first for JS/CSS chunks to avoid stale script/style cache issues.
+  if (isJsAsset || isCssAsset) {
+    return fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          cacheResponse(STATIC_CACHE, request, response);
+        }
+        return response;
+      })
+      .catch(() => {
+        return caches.match(request).then((cached) => {
+          return cached || new Response("Offline", { status: 503 });
+        });
+      });
+  }
+
   return caches.open(STATIC_CACHE).then((cache) => {
     return cache.match(request).then((cached) => {
       if (cached) {
