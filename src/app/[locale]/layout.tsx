@@ -27,6 +27,27 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+const BASE_URL = "https://cloudless.gr";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<import("next").Metadata> {
+  const { locale } = await params;
+
+  return {
+    alternates: {
+      languages: {
+        en: `${BASE_URL}`,
+        el: `${BASE_URL}/el`,
+        fr: `${BASE_URL}/fr`,
+        "x-default": `${BASE_URL}`,
+      },
+    },
+  };
+}
+
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
 
