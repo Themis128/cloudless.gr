@@ -43,7 +43,7 @@ jobs:
         continue-on-error: true
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::278585680617:role/GitHubActionsOIDC
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           role-session-name: gha-preview-${{ github.run_id }}
           aws-region: us-east-1
           audience: sts.amazonaws.com
@@ -53,7 +53,7 @@ jobs:
         run: |
           echo "OIDC assume role failed for PR preview."
           echo "If this is from a fork, GitHub will not grant OIDC tokens by default."
-          echo "If this is an internal PR, allow sub claim repo:Themis128/cloudless.gr:pull_request in the IAM trust policy."
+          echo "If this is an internal PR, check that the IAM trust policy allows the pull_request sub-claim for this repo."
           exit 1
 
       - name: Deploy staging
