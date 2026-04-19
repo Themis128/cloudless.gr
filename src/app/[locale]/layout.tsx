@@ -13,10 +13,7 @@ import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { CookieConsentProvider } from "@/context/CookieConsentContext";
 import CookieConsent from "@/components/CookieConsent";
 
-const CartSlideOver = dynamic(
-  () => import("@/components/store/CartSlideOver"),
-  { ssr: false },
-);
+const CartSlideOver = dynamic(() => import("@/components/store/CartSlideOver"));
 import ClientDecorators from "@/components/ClientDecorators";
 
 type Props = {

@@ -1,19 +1,5 @@
 import type { Metadata } from "next";
-import dynamic from "next/dynamic";
-
-const StoreGrid = dynamic(() => import("@/components/store/StoreGrid"), {
-  ssr: false,
-  loading: () => (
-    <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <div
-          key={i}
-          className="bg-void-light/50 neon-border h-80 animate-pulse rounded-lg"
-        />
-      ))}
-    </div>
-  ),
-});
+import StoreGrid from "@/components/store/StoreGrid";
 import JsonLd from "@/components/JsonLd";
 import { getFAQSchema } from "@/lib/structured-data";
 

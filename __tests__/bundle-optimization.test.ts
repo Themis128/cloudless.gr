@@ -19,7 +19,6 @@ describe("bundle optimization", () => {
       "utf-8",
     );
     expect(src).toContain("next/dynamic");
-    expect(src).toContain("ssr: false");
     expect(src).not.toMatch(/^import CartSlideOver from/m);
   });
 
