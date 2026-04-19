@@ -402,7 +402,7 @@ export default async function Home() {
       </section>
 
       {/* Services Overview */}
-      <section className="bg-void py-16 lg:py-20">
+      <section className="bg-void py-12 lg:py-16">
         <div className="mx-auto max-w-6xl px-6">
           <ScrollReveal>
             <div className="mx-auto mb-16 max-w-2xl text-center">
@@ -473,7 +473,7 @@ export default async function Home() {
 
           {/* Secondary lead capture */}
           <ScrollReveal delay={500}>
-            <div className="bg-void-light/30 mt-16 rounded-xl border border-slate-800 p-6 text-center">
+            <div className="bg-void-light/30 mt-10 rounded-xl border border-slate-800 p-6 text-center">
               <p className="mb-3 text-sm text-slate-400">
                 {t("leadCapture.notReady", "Not ready for a call? No problem.")}
               </p>
@@ -504,7 +504,7 @@ export default async function Home() {
       </section>
 
       {/* FAQ */}
-      <section className="bg-void-light/50 border-y border-slate-800 py-16 lg:py-20">
+      <section className="bg-void-light/50 border-y border-slate-800 py-12 lg:py-16">
         <div className="mx-auto max-w-3xl px-6">
           <ScrollReveal>
             <div className="mb-14 text-center">
@@ -544,7 +544,7 @@ export default async function Home() {
       </section>
 
       {/* Founder */}
-      <section className="bg-void py-16 lg:py-20">
+      <section className="bg-void py-12 lg:py-16">
         <div className="mx-auto max-w-4xl px-6">
           <ScrollReveal>
             <div className="mb-12 text-center">
