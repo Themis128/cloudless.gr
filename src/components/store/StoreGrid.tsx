@@ -222,7 +222,7 @@ export default function StoreGrid() {
         </div>
       ) : (
         <div className="py-16 text-center">
-          <div className="text-neon-cyan/20 mb-4 font-mono text-4xl">[ ]</div>
+          <div className="text-neon-cyan/40 mb-4 font-mono text-4xl">[ ]</div>
           <p className="font-mono text-sm text-slate-500">
             No products match your search.
           </p>

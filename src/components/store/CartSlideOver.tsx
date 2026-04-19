@@ -89,7 +89,7 @@ export default function CartSlideOver() {
           <div className="flex-1 overflow-y-auto px-6 py-4">
             {items.length === 0 ? (
               <div className="py-12 text-center">
-                <div className="text-neon-cyan/20 mb-4 font-mono text-4xl">
+                <div className="text-neon-cyan/40 mb-4 font-mono text-4xl">
                   [ ]
                 </div>
                 <p className="font-mono text-sm text-slate-500">
