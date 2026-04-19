@@ -116,7 +116,6 @@ for (const route of ROUTES) {
       const results = await new AxeBuilder({ page })
         .withRules([
           "tabindex",
-          "focus-trap",
           "scrollable-region-focusable",
         ])
         .analyze();
