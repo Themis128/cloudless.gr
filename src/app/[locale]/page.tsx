@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import TypingText from "@/components/TypingText";
@@ -16,17 +17,26 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string }>;
-}) {
+}): Promise<Metadata> {
   const { locale } = await params;
-  const base = "https://cloudless.gr";
+  const localePaths: Record<string, string> = {
+    en: "https://cloudless.gr",
+    el: "https://cloudless.gr/el",
+    fr: "https://cloudless.gr/fr",
+  };
+  const canonical = localePaths[locale] ?? `https://cloudless.gr/${locale}`;
+
   return {
+    title: "Cloudless \u2014 Cloud Computing, Serverless & AI Marketing",
+    description:
+      "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
     alternates: {
-      canonical: `${base}/${locale}`,
+      canonical,
       languages: {
-        en: `${base}/en`,
-        el: `${base}/el`,
-        fr: `${base}/fr`,
-        "x-default": `${base}/en`,
+        en: localePaths.en,
+        el: localePaths.el,
+        fr: localePaths.fr,
+        "x-default": localePaths.en,
       },
     },
   };
