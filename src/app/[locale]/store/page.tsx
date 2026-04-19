@@ -92,14 +92,14 @@ export default function StorePage() {
       </section>
 
       {/* Product Grid */}
-      <section className="bg-void dot-matrix py-16 md:py-24">
+      <section className="bg-void dot-matrix py-16">
         <div className="mx-auto max-w-6xl px-6">
           <StoreGrid />
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="bg-void border-t border-slate-800 py-16 md:py-20">
+      <section className="bg-void border-t border-slate-800 py-16">
         <div className="mx-auto max-w-6xl px-6">
           <p className="text-neon-cyan mb-2 font-mono text-xs font-medium tracking-[0.3em]">
             [ TESTIMONIALS ]
@@ -138,7 +138,7 @@ export default function StorePage() {
       </section>
 
       {/* Store FAQ */}
-      <section className="bg-void border-t border-slate-800 py-16 md:py-20">
+      <section className="bg-void border-t border-slate-800 py-16">
         <div className="mx-auto max-w-5xl px-6">
           <p className="text-neon-cyan mb-2 font-mono text-xs font-medium tracking-[0.3em]">
             [ FAQ ]
