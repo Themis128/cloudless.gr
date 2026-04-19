@@ -28,7 +28,7 @@ export const rules: Rule[] = [
     severity: 'critical',
     owaspMapping: 'A4: Injection',
     description: 'Shell execution functions are invoked with potentially dynamic input.',
-    patterns: ['\b(exec|spawn|execSync|spawnSync|system|popen|shell_exec)\s*\('],
+    patterns: ['\\b(exec|spawn|execSync|spawnSync|system|popen|shell_exec)\\s*\\('],
     advice: 'Avoid shell execution on untrusted input or sanitize values before passing them to shell APIs.'
   },
   {
@@ -38,7 +38,7 @@ export const rules: Rule[] = [
     severity: 'high',
     owaspMapping: 'A4: Injection',
     description: 'Interpolated strings are used to construct commands or system paths.',
-    patterns: ['`.*\$\{.*\}.*`', '\+\s*.*\+\s*.*'],
+    patterns: ['`.*\\$\\{.*\\}.*`', '\\+\\s*.*\\+\\s*.*'],
     advice: 'Do not interpolate user-supplied values into shell or file system commands.'
   },
   {
@@ -48,7 +48,7 @@ export const rules: Rule[] = [
     severity: 'high',
     owaspMapping: 'A4: Injection',
     description: 'File paths are assembled from untrusted input without normalization.',
-    patterns: ['\.\./', 'path\.join\(', 'path\.resolve\(', 'path\.normalize\('],
+    patterns: ['\\.\\./', 'path\\.join\\(', 'path\\.resolve\\(', 'path\\.normalize\\('],
     advice: 'Normalize and validate path segments before allowing them to reach file-system APIs.'
   },
   {
@@ -58,7 +58,7 @@ export const rules: Rule[] = [
     severity: 'critical',
     owaspMapping: 'A3: Sensitive Data Exposure',
     description: 'Secret-looking tokens and credentials are present in source code literals.',
-    patterns: ['AKIA[A-Z0-9]{16}', 'AIza[0-9A-Za-z\-_]{35}', 'sk_live_[0-9a-zA-Z]{24}', 'sk_test_[0-9a-zA-Z]{24}', 'password\s*=\s*["\'"]'],
+    patterns: ['AKIA[A-Z0-9]{16}', 'AIza[0-9A-Za-z\\-_]{35}', 'sk_live_[0-9a-zA-Z]{24}', 'sk_test_[0-9a-zA-Z]{24}', "password\\s*=\\s*[\"']"],
     advice: 'Do not commit credentials or API keys. Use secret stores or environment variables instead.'
   },
   {
@@ -68,7 +68,7 @@ export const rules: Rule[] = [
     severity: 'high',
     owaspMapping: 'A3: Sensitive Data Exposure',
     description: 'Environment variables or config keys are referenced without protective controls in logs or client bundles.',
-    patterns: ['process\.env\.', 'NEXT_PUBLIC_', 'SECRET', 'API_KEY', 'TOKEN', 'PASSWORD'],
+    patterns: ['process\\.env\\.', 'NEXT_PUBLIC_', 'SECRET', 'API_KEY', 'TOKEN', 'PASSWORD'],
     advice: 'Keep secrets server-side and avoid leaking environment references in browser-delivered bundles or logs.'
   },
   {
@@ -88,7 +88,7 @@ export const rules: Rule[] = [
     severity: 'medium',
     owaspMapping: 'MCP-2: Prompt Injection',
     description: 'Prompt text contains suspicious patterns often used for injection attacks.',
-    patterns: ['human:\s*|assistant:\s*|system:\s*', 'instruction[s]?\s*:', 'do not answer|bypass.*filters|ignore.*safe'],
+    patterns: ['human:\\s*|assistant:\\s*|system:\\s*', 'instruction[s]?\\s*:', 'do not answer|bypass.*filters|ignore.*safe'],
     advice: 'Sanitize user-provided prompt segments and treat them as untrusted input.'
   },
   {
@@ -108,7 +108,7 @@ export const rules: Rule[] = [
     severity: 'high',
     owaspMapping: 'A6: Security Misconfiguration',
     description: 'CORS policies allow all origins or use a wildcard origin value.',
-      patterns: ['Access-Control-Allow-Origin:\s*\*', 'origin:\s*["\']\*["\']'],
+    patterns: ["Access-Control-Allow-Origin:\\s*\\*", "origin:\\s*[\"']\\*[\"']"],
     advice: 'Restrict CORS origins to trusted domains for MCP endpoints.'
   },
   {
@@ -118,7 +118,7 @@ export const rules: Rule[] = [
     severity: 'medium',
     owaspMapping: 'A4: Injection',
     description: 'Redirect targets or location headers appear to be built from untrusted input.',
-    patterns: ['redirect\(', 'location\.href', 'window\.location', 'res\.setHeader\(.*Location'],
+    patterns: ['redirect\\(', 'location\\.href', 'window\\.location', 'res\\.setHeader\\(.*Location'],
     advice: 'Validate or whitelist redirect destinations before sending clients to external URLs.'
   },
   {
@@ -128,7 +128,7 @@ export const rules: Rule[] = [
     severity: 'low',
     owaspMapping: 'A3: Sensitive Data Exposure',
     description: 'Logging calls may emit raw user input or secret values without masking.',
-    patterns: ['console\.log\(', 'logger\.info\(', 'logger\.debug\(', 'console\.error\(', 'request.body', 'req\.body', 'event\.body'],
+    patterns: ['console\\.log\\(', 'logger\\.info\\(', 'logger\\.debug\\(', 'console\\.error\\(', 'request.body', 'req\\.body', 'event\\.body'],
     advice: 'Mask or remove sensitive payloads and secret values from application logs.'
   }
 ];

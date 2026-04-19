@@ -124,7 +124,7 @@ async function scanFile(file: string): Promise<Finding[]> {
 }
 
 async function run(): Promise<void> {
-  const files = await globAsync(options.path, { nodir: true });
+  const files = await globAsync(options.path, { onlyFiles: true });
   const allFindings: Finding[] = [];
   for (const file of files) {
     allFindings.push(...(await scanFile(file)));
