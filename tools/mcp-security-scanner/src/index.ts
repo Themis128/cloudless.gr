@@ -1,12 +1,12 @@
-import { Command } from 'commander';
-import chalk from 'chalk';
-import { spawnSync } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import fg from 'fast-glob';
-import rules from './rules.js';
-import type { Finding, Rule } from './types.js';
+import { Command } from "commander";
+import chalk from "chalk";
+import { spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import fg from "fast-glob";
+import rules from "./rules.js";
+import type { Finding, Rule } from "./types.js";
 
 const globAsync = fg;
 
@@ -19,11 +19,15 @@ type ScanOptions = {
 const program = new Command();
 
 program
-  .name('mcp-security-scanner')
-  .description('Static analysis security scanner for MCP servers.')
-  .option('-p, --path <pattern>', 'glob pattern to scan', 'src/**/*.{ts,tsx,js,jsx,py,md}')
-  .option('--json', 'output JSON results', false)
-  .option('--skip-python', 'skip the Python prompt injection analyzer', false)
+  .name("mcp-security-scanner")
+  .description("Static analysis security scanner for MCP servers.")
+  .option(
+    "-p, --path <pattern>",
+    "glob pattern to scan",
+    "src/**/*.{ts,tsx,js,jsx,py,md}",
+  )
+  .option("--json", "output JSON results", false)
+  .option("--skip-python", "skip the Python prompt injection analyzer", false)
   .parse();
 
 const options = program.opts<ScanOptions>();
@@ -33,30 +37,73 @@ function isServerRoute(file: string): boolean {
 }
 
 function hasAuthGuard(contents: string): boolean {
-  return /(auth|authorization|authorize|requireAuth|getServerSession|cognito:groups|protected|withAuth|session)/i.test(contents);
+  return /\b(auth|authorization|authorize|requireAuth|getServerSession|cognito:groups|protected|withAuth|session)\b/i.test(contents);
 }
 
 function hasRateLimit(contents: string): boolean {
-  return /(rateLimit|throttle|limiter|limit:\s*\d|burst|windowMs|requestsPerMinute|ratelimit)/i.test(contents);
+  return /\b(rateLimit|throttle|limiter|limit:\s*\d|burst|windowMs|requestsPerMinute|ratelimit)\b/i.test(contents);
 }
 
-function createFinding(rule: Rule, file: string, line: number, excerpt: string): Finding {
+function shouldSkipLine(line: string, inBlockComment: boolean): [boolean, boolean] {
+  const trimmed = line.trim();
+  if (!trimmed) return [true, inBlockComment];
+
+  if (inBlockComment) {
+    if (trimmed.includes("*/")) return [true, false];
+    return [true, true];
+  }
+
+  if (trimmed.startsWith("//")) return [true, false];
+  if (trimmed.startsWith("/*")) {
+    return [true, !trimmed.includes("*/")];
+  }
+  if (trimmed.startsWith("*")) {
+    return [true, false];
+  }
+
+  return [false, false];
+}
+
+function createFinding(
+  rule: Rule,
+  file: string,
+  line: number,
+  excerpt: string,
+): Finding {
   return { rule, file, line, excerpt };
 }
 
-function runPythonPromptAnalyzer(contents: string): Finding[] {
-  const scriptPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../py/prompt_injection_analyzer.py');
-  const python = spawnSync('python3', [scriptPath, '--json'], { input: contents, encoding: 'utf8' });
+function runPythonPromptAnalyzer(file: string, contents: string): Finding[] {
+  const scriptPath = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../py/prompt_injection_analyzer.py",
+  );
+  const python = spawnSync("python3", [scriptPath, "--json"], {
+    input: contents,
+    encoding: "utf8",
+  });
+
   if (python.error || python.status !== 0) {
     return [];
   }
+
   try {
-    const output = JSON.parse(python.stdout) as Array<{ id: string; line: number; excerpt: string; message: string }>;
+    const output = JSON.parse(python.stdout) as Array<{
+      id: string;
+      line: number;
+      excerpt: string;
+      message: string;
+    }>;
     return output
       .map((item) => {
         const rule = rules.find((ruleItem) => ruleItem.id === item.id);
         if (!rule) return null;
-        return createFinding(rule, 'stdin', item.line, item.excerpt || item.message);
+        return createFinding(
+          rule,
+          file,
+          item.line,
+          item.excerpt || item.message,
+        );
       })
       .filter((item): item is Finding => item !== null);
   } catch {
@@ -69,7 +116,7 @@ function formatFinding(finding: Finding): string {
     critical: chalk.red.bold,
     high: chalk.red,
     medium: chalk.yellow,
-    low: chalk.blue
+    low: chalk.blue,
   }[finding.rule.severity];
 
   return [
@@ -78,38 +125,57 @@ function formatFinding(finding: Finding): string {
     chalk.bold(finding.rule.id),
     `(${finding.rule.owaspMapping})`,
     `- ${finding.rule.name}`,
-    `
-    ${finding.excerpt}`,
-    `
-    Advice: ${finding.rule.advice}`
-  ].join(' ');
+    `\n    ${finding.excerpt}`,
+    `\n    Advice: ${finding.rule.advice}`,
+  ].join(" ");
 }
 
 async function scanFile(file: string): Promise<Finding[]> {
-  const contents = await readFile(file, 'utf8');
+  const contents = await readFile(file, "utf8");
   const lines = contents.split(/\r?\n/);
   const findings: Finding[] = [];
 
   for (const rule of rules) {
-    if (rule.id === 'mcp-001-missing-authentication') {
+    if (rule.id === "mcp-001-missing-authentication") {
       if (isServerRoute(file) && !hasAuthGuard(contents)) {
-        findings.push(createFinding(rule, file, 1, 'No explicit authentication or authorization check found.'));
+        findings.push(
+          createFinding(
+            rule,
+            file,
+            1,
+            "No explicit authentication or authorization check found.",
+          ),
+        );
       }
       continue;
     }
 
-    if (rule.id === 'mcp-010-rate-limit-missing') {
+    if (rule.id === "mcp-010-rate-limit-missing") {
       if (isServerRoute(file) && !hasRateLimit(contents)) {
-        findings.push(createFinding(rule, file, 1, 'No rate limiting or throttling handlers detected.'));
+        findings.push(
+          createFinding(
+            rule,
+            file,
+            1,
+            "No rate limiting or throttling handlers detected.",
+          ),
+        );
       }
       continue;
     }
 
-    const regexes = rule.patterns.map((pattern) => new RegExp(pattern, 'gi'));
-    for (const [index, line] of lines.entries()) {
+    const regexes = rule.patterns.map((pattern) => new RegExp(pattern, "gi"));
+    let inBlockComment = false;
+
+    for (const [index, rawLine] of lines.entries()) {
+      const [skip, nextBlock] = shouldSkipLine(rawLine, inBlockComment);
+      inBlockComment = nextBlock;
+      if (skip) continue;
+
+      const line = rawLine.trim();
       for (const regex of regexes) {
         if (regex.test(line)) {
-          findings.push(createFinding(rule, file, index + 1, line.trim()));
+          findings.push(createFinding(rule, file, index + 1, line));
           break;
         }
       }
@@ -117,46 +183,54 @@ async function scanFile(file: string): Promise<Finding[]> {
   }
 
   if (!options.skipPython) {
-    findings.push(...runPythonPromptAnalyzer(contents));
+    findings.push(...runPythonPromptAnalyzer(file, contents));
   }
 
   return findings;
 }
 
 async function run(): Promise<void> {
-  const files = await globAsync(options.path, { onlyFiles: true });
+  const files = await globAsync(options.path, { nodir: true });
   const allFindings: Finding[] = [];
+
   for (const file of files) {
-    allFindings.push(...(await scanFile(file)));
+    const result = await scanFile(file);
+    allFindings.push(...result);
   }
 
   if (options.json) {
-    console.log(JSON.stringify(allFindings.map((finding) => ({
-      file: finding.file,
-      line: finding.line,
-      rule: finding.rule.id,
-      category: finding.rule.category,
-      owaspMapping: finding.rule.owaspMapping,
-      excerpt: finding.excerpt,
-      advice: finding.rule.advice
-    })), null, 2));
+    console.log(
+      JSON.stringify(
+        allFindings.map((finding) => ({
+          file: finding.file,
+          line: finding.line,
+          rule: finding.rule.id,
+          category: finding.rule.category,
+          owaspMapping: finding.rule.owaspMapping,
+          excerpt: finding.excerpt,
+          advice: finding.rule.advice,
+        })),
+        null,
+        2,
+      ),
+    );
     process.exit(allFindings.length > 0 ? 1 : 0);
   }
 
   if (allFindings.length === 0) {
-    console.log(chalk.green('MCP security scanner completed: no findings detected.'));
+    console.log(chalk.green("MCP security scanner completed: no findings detected."));
     process.exit(0);
   }
 
   console.log(chalk.red(`MCP security scanner detected ${allFindings.length} findings:`));
   for (const finding of allFindings) {
     console.log(formatFinding(finding));
-    console.log('');
+    console.log("");
   }
   process.exit(1);
 }
 
 run().catch((error) => {
-  console.error(chalk.red('Scanner failed:'), error);
+  console.error(chalk.red("Scanner failed:"), error);
   process.exit(2);
 });
