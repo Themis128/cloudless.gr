@@ -1,8 +1,9 @@
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, devices } from "@playwright/test";
 
-const rootDir = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = fs.realpathSync(path.dirname(fileURLToPath(import.meta.url)));
 const isCi = !!process.env.CI;
 
 /**
