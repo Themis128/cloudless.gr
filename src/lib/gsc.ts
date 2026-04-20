@@ -13,12 +13,12 @@
 
 import { getConfig } from "@/lib/ssm-config";
 
-const GSC_API = "https://searchconsole.googleapis.com/v1/sites";
+const GSC_API = "https://searchconsole.googleapis.com/webmasters/v3/sites";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
 
 /** Default GSC property — domain property covers all subdomains & protocols. */
-const DEFAULT_SITE = process.env.GSC_SITE_URL ?? "sc-domain:cloudless.gr";
+const DEFAULT_SITE = process.env.GSC_SITE_URL ?? "https://cloudless.gr/";
 
 /** 28-day rolling window (GSC standard reporting period). */
 function dateRange() {
