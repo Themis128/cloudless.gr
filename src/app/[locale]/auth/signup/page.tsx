@@ -27,7 +27,9 @@ function SignUpForm() {
   useEffect(() => {
     const verifyEmail = searchParams.get("verify");
     if (verifyEmail) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail(verifyEmail);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep("verify");
     }
   }, [searchParams]);
