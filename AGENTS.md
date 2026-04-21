@@ -44,124 +44,132 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Project Structure
 
+> Full architecture documentation → **[ARCHITECTURE.md](ARCHITECTURE.md)**
+
 ```
 src/
 ├── app/
-│   ├── layout.tsx          # Root layout (AuthProvider, CartProvider, LenisProvider, Navbar, Footer, SW, CommandPalette, NeonCursor, KonamiEasterEgg)
-│   ├── page.tsx            # Homepage (Hero, Stats, Trusted-by, Services, FAQ, CTA — QD-styled)
-│   ├── manifest.ts         # PWA manifest
-│   ├── opengraph-image.tsx # Dynamic OG image generator (Edge runtime)
-│   ├── sitemap.ts          # Dynamic sitemap
-│   ├── robots.ts           # Robots.txt
-│   ├── services/page.tsx   # Services + pricing + FAQ (QD-styled cards)
-│   ├── blog/page.tsx       # Blog listing
-│   ├── blog/[slug]/page.tsx # Blog post
-│   ├── contact/page.tsx    # Contact form
-│   ├── store/              # E-commerce store
-│   │   ├── page.tsx            # Store listing with testimonials + FAQ accordion
-│   │   ├── [id]/page.tsx       # Product detail with JSON-LD, breadcrumbs, related products
-│   │   └── success/page.tsx    # Order confirmed with per-type next steps
-│   ├── auth/                # Authentication pages (Cognito)
-│   │   ├── login/page.tsx       # Login with FORCE_CHANGE_PASSWORD support
-│   │   ├── signup/page.tsx      # Two-step: signup form → email verification
-│   │   └── forgot-password/page.tsx # Two-step: email → code + new password
-│   ├── dashboard/           # Client dashboard (neon-cyan accent, protected, personalized)
-│   │   ├── layout.tsx           # Sidebar nav (5 links) + auth guard + user avatar
-│   │   ├── page.tsx             # Personalized overview: greeting by name, live stats, cards
-│   │   ├── profile/page.tsx     # Editable profile (name, company, phone → Cognito attributes)
-│   │   ├── purchases/page.tsx   # Live Stripe orders + subscriptions for current user
-│   │   ├── consultations/page.tsx # Booked/past Google Calendar consultations
-│   │   └── settings/page.tsx    # Theme, language, notification prefs (persisted to Cognito)
-│   ├── admin/               # Admin panel (neon-magenta accent, admin-only)
-│   │   ├── layout.tsx           # Sidebar nav + admin guard (redirects non-admins)
-│   │   ├── page.tsx             # Admin dashboard with live stats from all integrations
-│   │   ├── orders/page.tsx      # Live Stripe orders + subscriptions (tabbed view)
-│   │   ├── crm/page.tsx         # HubSpot contacts table with search + lead status
-│   │   ├── errors/page.tsx      # Sentry unresolved issues list
-│   │   ├── notifications/page.tsx # Slack test message sender with presets + history
-│   │   ├── users/page.tsx       # Live Cognito user list with search, enable/disable, promote/demote
-│   │   └── settings/page.tsx    # Site configuration + notification prefs
+│   ├── layout.tsx               # Root layout: AuthProvider → CartProvider → CookieConsentProvider → LenisProvider → Navbar, Footer, SW, CommandPalette, NeonCursor, KonamiEasterEgg
+│   ├── [locale]/                # i18n routing (en · el · fr)
+│   │   ├── page.tsx             # Homepage (Hero, Stats, Services, FAQ, CTA)
+│   │   ├── services/            # Service offerings & pricing
+│   │   ├── blog/[slug]/         # Blog (Notion CMS, static fallback)
+│   │   ├── docs/[slug]/         # Docs (Notion CMS)
+│   │   ├── store/               # E-commerce (Stripe live products)
+│   │   │   ├── page.tsx         # Store listing
+│   │   │   ├── [id]/page.tsx    # Product detail + JSON-LD
+│   │   │   └── success/         # Order confirmation
+│   │   ├── contact/             # Contact form (SES + Slack + HubSpot + Notion)
+│   │   ├── auth/                # Login · Signup · Forgot Password (Cognito Amplify v6)
+│   │   ├── dashboard/           # Customer portal (auth-protected, cyan accent)
+│   │   │   ├── profile/         # Edit name, company, phone (Cognito attributes)
+│   │   │   ├── purchases/       # Stripe order history
+│   │   │   ├── consultations/   # Google Calendar bookings
+│   │   │   └── settings/        # Theme, language, notifications
+│   │   └── admin/               # Admin panel (admin group only, magenta accent)
+│   │       ├── orders/          # Stripe sessions + subscriptions
+│   │       ├── crm/             # HubSpot contacts
+│   │       ├── analytics/       # Google Search Console SEO dashboard
+│   │       ├── errors/          # Sentry issues
+│   │       ├── notion/          # Notion DB explorer
+│   │       ├── notifications/   # Slack test panel
+│   │       ├── settings/        # App config viewer
+│   │       └── users/           # Cognito user management
 │   └── api/
-│       ├── contact/route.ts    # Contact form → SES + Slack + HubSpot (fire-and-forget)
-│       ├── checkout/route.ts   # Stripe checkout session
-│       ├── subscribe/route.ts  # Newsletter subscribe (uses notifyTeam from lib/email)
-│       ├── health/route.ts     # Health check (APP_VERSION env var, baked at build time)
-│       ├── webhooks/stripe/route.ts # Stripe webhook handler (fulfillment emails, team + Slack notifications)
+│       ├── contact/             # POST → SES + Slack + HubSpot + Notion
+│       ├── checkout/            # POST → Stripe Checkout Session
+│       ├── subscribe/           # POST → SES + Slack
+│       ├── unsubscribe/         # POST → SES suppression list
+│       ├── health/              # GET → status + version
+│       ├── blog/posts/          # GET → Notion blog (fallback: static)
 │       ├── calendar/
-│       │   ├── availability/route.ts # GET: available 30-min consultation slots (5min cache)
-│       │   └── book/route.ts         # POST: book consultation + Google Meet + Slack notify
-│       ├── blog/
-│       │   ├── posts/route.ts        # GET: blog posts from Notion CMS (falls back to static lib/blog.ts)
-│       │   └── [slug]/route.ts       # GET: single blog post by slug with Notion fallback
-│       ├── crm/
-│       │   └── contact/route.ts      # POST: upsert HubSpot contact with validation
-│       ├── unsubscribe/route.ts      # POST: newsletter unsubscribe + GET: email link handler
+│       │   ├── availability/    # GET → open slots (Google Calendar, 5min cache)
+│       │   └── book/            # POST → create event + Slack notify
+│       ├── slack/
+│       │   ├── events/          # POST → Events API (HMAC verified)
+│       │   ├── commands/        # POST → /cloudless-status, /cloudless-orders
+│       │   └── interactions/    # POST → Block Kit button clicks
 │       ├── user/
-│       │   ├── purchases/route.ts    # GET: user's Stripe orders + subscriptions by email
-│       │   └── consultations/route.ts # GET: user's Google Calendar consultations by email
-│       └── admin/
-│           ├── analytics/
-│           ├── ops/
-│           │   └── errors/route.ts   # GET: Sentry unresolved issues (last 20)
-│           ├── crm/
-│           │   └── contacts/route.ts # GET: list HubSpot contacts (limit param)
-│           ├── orders/route.ts       # GET: recent Stripe checkout sessions + subscriptions
-│           ├── users/route.ts       # GET: list Cognito users + POST: enable/disable/promote/demote
-│           └── notifications/
-│               └── test/route.ts     # POST: send test Slack message
-├── proxy.ts                # Next.js 16 proxy (security headers, CORS, rate limiting)
+│       │   ├── purchases/       # GET → Stripe orders (requires JWT)
+│       │   └── consultations/   # GET → Calendar bookings (requires JWT)
+│       ├── crm/contact/         # POST → HubSpot upsert
+│       ├── hubspot/ticket/      # POST → HubSpot support ticket
+│       ├── webhooks/
+│       │   ├── stripe/          # POST → fulfillment (SES + Slack)
+│       │   └── notion/          # POST → cache invalidation + email
+│       └── admin/               # All require admin JWT
+│           ├── analytics/       # 10x GSC endpoints
+│           ├── cache/           # Notion cache flush
+│           ├── crm/             # HubSpot contacts/companies/deals/owners/pipelines
+│           ├── notifications/   # Slack test
+│           ├── notion/          # Blog/docs/tasks/projects/submissions/search
+│           ├── ops/errors/      # Sentry issues
+│           ├── orders/          # Stripe orders summary
+│           └── users/           # Cognito user list
+│
 ├── components/
-│   ├── Navbar.tsx               # QD-styled: top accent bar + backdrop-blur + mobile cart/menu + auth dropdown
-│   ├── Footer.tsx               # Footer with active: tap states for mobile
-│   ├── ScrollReveal.tsx         # IntersectionObserver reveal (legacy, still used)
-│   ├── GSAPReveal.tsx           # GSAP ScrollTrigger reveal (up/left/right)
-│   ├── ParticleField.tsx        # 2D canvas particle network
-│   ├── ParticleField3D.tsx      # 3D WebGL particles (react-three-fiber)
-│   ├── TypingText.tsx           # Typing animation
-│   ├── TerminalBlock.tsx        # Terminal-style code block
-│   ├── LenisProvider.tsx        # Smooth scroll wrapper
-│   ├── CommandPalette.tsx       # Cmd+K navigation (cmdk)
-│   ├── NeonCursor.tsx           # Custom cursor (dot + ring with lag, disabled on touch devices)
-│   ├── HolographicCard.tsx      # Tilt + holographic gradient on hover
-│   ├── KonamiEasterEgg.tsx      # ↑↑↓↓←→←→BA easter egg
-│   ├── JsonLd.tsx               # Server component for JSON-LD structured data
-│   ├── ServiceWorkerRegistration.tsx # SW registration + PWA install banner
-│   ├── PushNotificationPrompt.tsx   # Push notification opt-in
-│   ├── NewsletterForm.tsx           # Newsletter subscribe form
-│   ├── LocaleSwitcher.tsx           # Language switcher (en/el/fr) with cookie persistence
+│   ├── Navbar.tsx · Footer.tsx
+│   ├── CommandPalette.tsx       # Cmd+K global search (cmdk)
+│   ├── NeonCursor.tsx           # Desktop-only cursor effect
+│   ├── GSAPReveal.tsx · ScrollReveal.tsx · LenisProvider.tsx
+│   ├── CookieConsent.tsx · PushNotificationPrompt.tsx
+│   ├── ServiceWorkerRegistration.tsx
+│   ├── ParticleField.tsx · ParticleField3D.tsx
+│   ├── HolographicCard.tsx · TerminalBlock.tsx · TypingText.tsx
+│   ├── KonamiEasterEgg.tsx · JsonLd.tsx
 │   └── store/
-│       ├── AddToCartButton.tsx      # Add to cart / Subscribe button (44px+ touch target)
-│       ├── CartButton.tsx           # Cart icon with badge count (navbar)
-│       ├── CartSlideOver.tsx        # Slide-over cart panel with ProductIcon, quantity controls
-│       ├── ProductIcon.tsx          # SVG icons per product ID with cyber-grid background
-│       └── StoreGrid.tsx            # Product grid with search, sort, category filters, count badges
+│       ├── StoreGrid.tsx · CartSlideOver.tsx
+│       ├── CartButton.tsx · AddToCartButton.tsx · ProductIcon.tsx
+│
 ├── context/
-│   ├── CartContext.tsx      # Cart state (useReducer) with localStorage persistence
-│   └── AuthContext.tsx      # Cognito auth state (Amplify v6): signIn, signUp, signOut, admin detection, user profile (name/company/phone/preferences via fetchUserAttributes), updateProfile, updatePreferences
-└── lib/
-    ├── amplify-config.ts    # Amplify v6 Cognito configuration (singleton, fails fast without env vars)
-    ├── blog.ts              # Blog post data
-    ├── locale-defaults.ts   # Shared locale (en-IE) & currency (EUR) constants
-    ├── store-products.ts    # Product catalog
-    ├── stripe.ts            # Stripe client helper (server-only)
-    ├── format-price.ts      # Price formatting util (client-safe, uses locale-defaults)
-    ├── escape-html.ts       # HTML escaping for email bodies
-    ├── email.ts             # Email helper (SES): order confirmation, payment failure, team notifications
-    ├── ssm-config.ts        # AWS SSM config loader (fails fast on missing secrets, validates email fields)
-    ├── structured-data.ts   # Schema.org JSON-LD generators
-    ├── i18n.ts              # Locale system (en, el, fr) with type-safe utilities + translate/translateArray — uses next-intl routing
-    ├── server-locale.ts     # Server-side locale reader (async cookies() for server components)
-    ├── use-locale.ts        # Client hook for locale switching (cookie-based)
-    ├── validation.ts        # Email and input validation helpers
-    ├── integrations.ts      # Central config loader for optional integrations (Slack, HubSpot, Notion, Calendar, Sentry, Vercel)
-    ├── slack-notify.ts      # Slack incoming webhook helper (slackNotify, slackContactNotify, slackOrderNotify)
-    ├── hubspot.ts           # HubSpot CRM v3 API (upsertContact, listContacts — handles 409 conflict)
-    ├── notion-blog.ts       # Notion database as headless blog CMS (getPosts, getPostBySlug — falls back to static)
-    ├── google-calendar.ts   # Google Calendar API via service account JWT (getAvailableSlots, bookConsultation — Athens hours)
+│   ├── AuthContext.tsx           # Cognito state: signIn/signUp/signOut, admin detection, profile
+│   ├── CartContext.tsx           # Cart (useReducer, in-memory)
+│   └── CookieConsentContext.tsx
+│
+├── lib/                         # Server + shared utilities (see ARCHITECTURE.md §9)
+│   ├── ssm-config.ts            # SSM secrets loader (5-min TTL, fails fast on required keys)
+│   ├── integrations.ts          # isConfigured() guards for all optional integrations
+│   ├── api-auth.ts              # requireAuth() / requireAdmin() — Cognito JWKS verification
+│   ├── amplify-config.ts        # Amplify v6 Cognito client (client-side singleton)
+│   ├── email.ts                 # SES: sendEmail, sendOrderConfirmation, notifyTeam
+│   ├── ses-suppression.ts       # SES suppression list management
+│   ├── stripe.ts                # Stripe client, product/session helpers
+│   ├── store-products.ts        # Maps Stripe products to store format (5-min cache)
+│   ├── store-products-client.ts # Client-safe product helpers
+│   ├── notion.ts                # Base Notion client + block renderers
+│   ├── notion-blog.ts           # Blog DB: getPosts, getPost, getAllSlugs
+│   ├── notion-docs.ts           # Docs DB: getDocs, getDoc
+│   ├── notion-forms.ts          # Submissions DB: saveSubmission
+│   ├── notion-projects.ts       # Projects + Tasks DB queries
+│   ├── notion-search.ts         # Cross-DB full-text search
+│   ├── notion-comments.ts       # Comment threads
+│   ├── notion-analytics.ts      # Analytics DB: trackEvent, getAnalyticsSummary
+│   ├── notion-cache.ts          # In-memory TTL cache + invalidateCache()
+│   ├── hubspot.ts               # CRM: upsertContact, createTicket, listContacts/Deals/Companies
+│   ├── slack-notify.ts          # SlackClient with retry: contact/subscriber/order/error/deploy
+│   ├── slack-verify.ts          # HMAC-SHA256 inbound verification
+│   ├── slack-rate-limit.ts      # Per-IP rate limiting for Slack endpoints
+│   ├── google-calendar.ts       # getAvailableSlots, bookConsultation, getConsultationsByEmail
+│   ├── gsc.ts                   # 11x GSC functions (SEO snapshot, keywords, pages, intent…)
+│   ├── sentry.ts                # captureException, getUnresolvedIssues, Sentry REST client
+│   ├── meta-pixel.ts            # trackPixelEvent — no-op until NEXT_PUBLIC_META_PIXEL_ID set
+│   ├── meta-capi.ts             # sendLeadEvent — no-op until META_CAPI_ACCESS_TOKEN set
+│   ├── blog.ts                  # Static blog fallback data
+│   ├── blog-source.ts           # Selects Notion vs static source
+│   ├── structured-data.ts       # JSON-LD schemas (Organization, Product, FAQ, Blog…)
+│   ├── i18n.ts                  # translate() · translateArray() · getMessages()
+│   ├── server-locale.ts         # getServerLocale() — reads NEXT_LOCALE cookie server-side
+│   ├── use-locale.ts            # useCurrentLocale() — client hook
+│   ├── locale-defaults.ts       # DEFAULT_LOCALE = 'en-IE' · DEFAULT_CURRENCY = 'EUR'
+│   ├── fetch-with-auth.ts       # Adds Cognito JWT to client-side API calls
+│   ├── format-price.ts          # Currency formatter (imports from locale-defaults)
+│   ├── validation.ts            # isValidEmail() and other validators
+│   └── escape-html.ts           # HTML sanitiser for email bodies
 
 src/locales/
-├── en.json                  # English translations (195 keys)
-├── el.json                  # Greek translations (195 keys)
+├── en.json                      # 195 translation keys
+├── el.json                      # Greek (195 keys)
+└── fr.json                      # French (195 keys)
 └── fr.json                  # French translations (195 keys)
 
 public/

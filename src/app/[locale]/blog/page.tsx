@@ -156,7 +156,7 @@ export default async function BlogPage({
       />
 
       {/* Header */}
-      <section className="bg-void scanlines relative overflow-hidden py-14 text-white md:py-20 lg:py-24">
+      <section className="bg-void scanlines relative overflow-hidden py-20 text-white md:py-28 lg:py-32">
         <div className="cyber-grid absolute inset-0 opacity-30" />
         <div className="relative z-10 mx-auto max-w-6xl px-6">
           <p className="text-neon-cyan animate-fade-in-up mb-3 font-mono text-xs font-medium tracking-[0.3em]">
@@ -168,7 +168,7 @@ export default async function BlogPage({
               practical guides
             </span>
           </h1>
-          <p className="animate-fade-in-up mt-4 max-w-xl text-lg text-slate-400 delay-200">
+          <p className="animate-fade-in-up mt-6 max-w-xl text-lg text-slate-400 delay-200">
             Cloud architecture, serverless, analytics, and AI marketing —
             written for founders and technical teams who want to move fast.
           </p>
@@ -177,7 +177,7 @@ export default async function BlogPage({
           <form
             action=""
             method="get"
-            className="animate-fade-in-up mt-6 max-w-md delay-300"
+            className="animate-fade-in-up mt-8 max-w-md delay-300"
           >
             <div className="relative">
               <input
@@ -204,9 +204,9 @@ export default async function BlogPage({
       </section>
 
       {/* Posts Grid with Sidebar */}
-      <section className="bg-void dot-matrix py-16 md:py-24">
+      <section className="bg-void dot-matrix py-20 lg:py-24">
         <div className="mx-auto max-w-6xl px-6">
-          <div className="flex gap-10">
+          <div className="flex gap-8 lg:gap-12">
             {/* Main content */}
             <div className="min-w-0 flex-1">
               {/* Active filters */}
@@ -266,12 +266,12 @@ export default async function BlogPage({
                   </Link>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   {posts.map((post, i) => (
                     <ScrollReveal key={post.slug} delay={i * 100}>
                       <Link
                         href={`/blog/${post.slug}`}
-                        className="group neon-border bg-void-light/50 block rounded-xl p-8 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1"
+                        className="group neon-border bg-void-light/50 block rounded-xl p-6 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1"
                       >
                         {post.coverImage && (
                           <div className="mb-4 overflow-hidden rounded-lg">
@@ -384,7 +384,7 @@ export default async function BlogPage({
 
             {/* Sidebar */}
             {(categories.length > 0 || tags.length > 0) && (
-              <aside className="hidden w-56 flex-none lg:block">
+              <aside className="hidden w-60 flex-none lg:block">
                 <div className="sticky top-24 space-y-8">
                   {/* Categories */}
                   {categories.length > 0 && (
