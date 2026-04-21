@@ -30,7 +30,7 @@ import {
   extractText,
   blocksToHtml,
 } from "@/lib/notion";
-import { getIntegrations, isConfigured } from "@/lib/integrations";
+import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
 // ---------------------------------------------------------------------------
@@ -102,10 +102,10 @@ function mapPage(page: any): NotionPost {
  * Returns empty array when Notion is not configured.
  */
 export async function getPosts(): Promise<NotionPost[]> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
 
   return cached("blog:posts", async () => {
-    const { NOTION_BLOG_DB_ID } = getIntegrations();
+    const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
     try {
       const pages = await notionFetchAll(
         `/databases/${NOTION_BLOG_DB_ID}/query`,
@@ -126,9 +126,9 @@ export async function getPosts(): Promise<NotionPost[]> {
  * Fetch featured posts only (for homepage hero).
  */
 export async function getFeaturedPosts(): Promise<NotionPost[]> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
 
-  const { NOTION_BLOG_DB_ID } = getIntegrations();
+  const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
     const pages = await notionFetchAll(
       `/databases/${NOTION_BLOG_DB_ID}/query`,
@@ -155,9 +155,9 @@ export async function getFeaturedPosts(): Promise<NotionPost[]> {
 export async function getPostsByCategory(
   category: string,
 ): Promise<NotionPost[]> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
 
-  const { NOTION_BLOG_DB_ID } = getIntegrations();
+  const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
     const pages = await notionFetchAll(
       `/databases/${NOTION_BLOG_DB_ID}/query`,
@@ -182,9 +182,9 @@ export async function getPostsByCategory(
  * Fetch posts filtered by tag.
  */
 export async function getPostsByTag(tag: string): Promise<NotionPost[]> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
 
-  const { NOTION_BLOG_DB_ID } = getIntegrations();
+  const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
     const pages = await notionFetchAll(
       `/databases/${NOTION_BLOG_DB_ID}/query`,
@@ -211,9 +211,9 @@ export async function getPostsByTag(tag: string): Promise<NotionPost[]> {
 export async function getPostBySlug(
   slug: string,
 ): Promise<NotionPostWithContent | null> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return null;
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return null;
 
-  const { NOTION_BLOG_DB_ID } = getIntegrations();
+  const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
     const pages = await notionFetchAll(
       `/databases/${NOTION_BLOG_DB_ID}/query`,
@@ -247,9 +247,9 @@ export async function getPostBySlug(
  * Get all published slugs (for sitemap / static generation).
  */
 export async function getAllSlugs(): Promise<string[]> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
 
-  const { NOTION_BLOG_DB_ID } = getIntegrations();
+  const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
     const pages = await notionFetchAll(
       `/databases/${NOTION_BLOG_DB_ID}/query`,
@@ -337,9 +337,9 @@ export async function getPostWithToc(
 ): Promise<
   (NotionPostWithContent & { toc: import("@/lib/notion").TocEntry[] }) | null
 > {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return null;
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return null;
 
-  const { NOTION_BLOG_DB_ID } = getIntegrations();
+  const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
     const pages = await notionFetchAll(
       `/databases/${NOTION_BLOG_DB_ID}/query`,

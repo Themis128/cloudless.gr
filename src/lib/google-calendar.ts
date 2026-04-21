@@ -1,4 +1,4 @@
-import { getIntegrations } from "@/lib/integrations";
+import { getIntegrationsAsync } from "@/lib/integrations";
 
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -8,7 +8,7 @@ let cachedToken: { token: string; expires: number } | null = null;
 
 /** Get OAuth2 access token via service account JWT (jose library) */
 async function getAccessToken(): Promise<string> {
-  const { GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY } = getIntegrations();
+  const { GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY } = await getIntegrationsAsync();
   if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) {
     throw new Error("Google Calendar not configured");
   }
@@ -78,7 +78,7 @@ interface TimeSlot {
  * during business hours (09:00-17:00 Athens time, weekdays only).
  */
 export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
-  const { GOOGLE_CALENDAR_ID } = getIntegrations();
+  const { GOOGLE_CALENDAR_ID } = await getIntegrationsAsync();
   const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
 
   const now = new Date();
@@ -153,7 +153,7 @@ export async function bookConsultation(data: {
   end: string;
   notes?: string;
 }): Promise<{ eventId: string; htmlLink: string } | null> {
-  const { GOOGLE_CALENDAR_ID } = getIntegrations();
+  const { GOOGLE_CALENDAR_ID } = await getIntegrationsAsync();
   const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
 
   try {
@@ -217,7 +217,7 @@ interface Consultation {
 export async function getConsultationsByEmail(
   email: string,
 ): Promise<Consultation[]> {
-  const { GOOGLE_CALENDAR_ID } = getIntegrations();
+  const { GOOGLE_CALENDAR_ID } = await getIntegrationsAsync();
   const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
 
   const now = new Date();

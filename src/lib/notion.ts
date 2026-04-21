@@ -8,7 +8,7 @@
  *  - extractText()     — collapses rich_text arrays to plain string
  */
 
-import { getIntegrations } from "@/lib/integrations";
+import { getIntegrationsAsync } from "@/lib/integrations";
 
 export const NOTION_API = "https://api.notion.com/v1";
 export const NOTION_VERSION = "2022-06-28";
@@ -17,8 +17,8 @@ export const NOTION_VERSION = "2022-06-28";
 // Headers
 // ---------------------------------------------------------------------------
 
-export function notionHeaders(): Record<string, string> {
-  const { NOTION_API_KEY } = getIntegrations();
+export async function notionHeaders(): Promise<Record<string, string>> {
+  const { NOTION_API_KEY } = await getIntegrationsAsync();
   if (!NOTION_API_KEY) throw new Error("NOTION_API_KEY is not configured");
   return {
     Authorization: `Bearer ${NOTION_API_KEY}`,
@@ -38,7 +38,7 @@ export async function notionFetch<T = unknown>(
   const res = await fetch(`${NOTION_API}${path}`, {
     ...init,
     headers: {
-      ...notionHeaders(),
+      ...(await notionHeaders()),
       ...(init?.headers ?? {}),
     },
   });

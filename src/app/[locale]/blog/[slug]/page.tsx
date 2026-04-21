@@ -224,13 +224,14 @@ export default async function BlogPostPage({ params }: Props) {
                 </svg>
                 Back to Blog
               </Link>
-              {notionPost.coverImage && (
+              {notionPost.coverImage && notionPost.coverImage.startsWith('http') && (
                 <div className="mb-6 overflow-hidden rounded-xl">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={notionPost.coverImage}
                     alt={notionPost.title}
                     className="h-56 w-full object-cover md:h-72"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                   />
                 </div>
               )}

@@ -24,7 +24,7 @@ import {
   notionListAll,
   blocksToHtml,
 } from "@/lib/notion";
-import { getIntegrations } from "@/lib/integrations";
+import { getIntegrationsAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
 // ---------------------------------------------------------------------------
@@ -80,7 +80,7 @@ function mapPage(page: any): DocRecord {
  * Returns empty array if Notion is not configured.
  */
 export async function getDocs(): Promise<DocRecord[]> {
-  const { NOTION_API_KEY, NOTION_DOCS_DB_ID } = getIntegrations();
+  const { NOTION_API_KEY, NOTION_DOCS_DB_ID } = await getIntegrationsAsync();
   if (!NOTION_API_KEY || !NOTION_DOCS_DB_ID) return [];
 
   return cached("docs:all", async () => {
@@ -111,7 +111,7 @@ export async function getDocs(): Promise<DocRecord[]> {
  * Returns null if not found or Notion is not configured.
  */
 export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
-  const { NOTION_API_KEY, NOTION_DOCS_DB_ID } = getIntegrations();
+  const { NOTION_API_KEY, NOTION_DOCS_DB_ID } = await getIntegrationsAsync();
   if (!NOTION_API_KEY || !NOTION_DOCS_DB_ID) return null;
 
   try {
@@ -150,7 +150,7 @@ export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
 export async function getDocContent(
   pageId: string,
 ): Promise<DocContent | null> {
-  const { NOTION_API_KEY } = getIntegrations();
+  const { NOTION_API_KEY } = await getIntegrationsAsync();
   if (!NOTION_API_KEY) return null;
 
   try {
@@ -225,7 +225,7 @@ function mapWikiPage(page: any): WikiDocRecord {
  * Falls back to regular docs if wiki properties don't exist.
  */
 export async function getWikiDocs(): Promise<WikiDocRecord[]> {
-  const { NOTION_API_KEY, NOTION_DOCS_DB_ID } = getIntegrations();
+  const { NOTION_API_KEY, NOTION_DOCS_DB_ID } = await getIntegrationsAsync();
   if (!NOTION_API_KEY || !NOTION_DOCS_DB_ID) return [];
 
   try {
@@ -293,7 +293,7 @@ export async function searchDocs(query: string): Promise<DocRecord[]> {
 export async function getDocContentWithToc(
   pageId: string,
 ): Promise<(DocContent & { toc: import("@/lib/notion").TocEntry[] }) | null> {
-  const { NOTION_API_KEY } = getIntegrations();
+  const { NOTION_API_KEY } = await getIntegrationsAsync();
   if (!NOTION_API_KEY) return null;
 
   try {

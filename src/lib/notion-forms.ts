@@ -19,7 +19,7 @@
  */
 
 import { notionFetch } from "@/lib/notion";
-import { getIntegrations } from "@/lib/integrations";
+import { getIntegrationsAsync } from "@/lib/integrations";
 
 export interface ContactSubmission {
   name: string;
@@ -50,7 +50,7 @@ export interface SubmissionRecord {
 export async function saveSubmission(
   data: ContactSubmission,
 ): Promise<string | null> {
-  const { NOTION_API_KEY, NOTION_SUBMISSIONS_DB_ID } = getIntegrations();
+  const { NOTION_API_KEY, NOTION_SUBMISSIONS_DB_ID } = await getIntegrationsAsync();
   if (!NOTION_API_KEY || !NOTION_SUBMISSIONS_DB_ID) return null;
 
   try {
@@ -104,7 +104,7 @@ export async function saveSubmission(
  * Returns empty array if Notion is not configured.
  */
 export async function listSubmissions(limit = 50): Promise<SubmissionRecord[]> {
-  const { NOTION_API_KEY, NOTION_SUBMISSIONS_DB_ID } = getIntegrations();
+  const { NOTION_API_KEY, NOTION_SUBMISSIONS_DB_ID } = await getIntegrationsAsync();
   if (!NOTION_API_KEY || !NOTION_SUBMISSIONS_DB_ID) return [];
 
   try {
@@ -155,7 +155,7 @@ export async function updateSubmissionStatus(
   pageId: string,
   status: "New" | "In Review" | "Done",
 ): Promise<boolean> {
-  const { NOTION_API_KEY } = getIntegrations();
+  const { NOTION_API_KEY } = await getIntegrationsAsync();
   if (!NOTION_API_KEY) return false;
 
   try {

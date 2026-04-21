@@ -1,4 +1,4 @@
-import { isConfigured, getIntegrations } from "@/lib/integrations";
+import { isConfiguredAsync, getIntegrationsAsync } from "@/lib/integrations";
 import { requireAdmin } from "@/lib/api-auth";
 import { notionFetch } from "@/lib/notion";
 import { NextRequest, NextResponse } from "next/server";
@@ -60,7 +60,7 @@ async function probeDatabase(
   envKey: string,
   limit = 5,
 ): Promise<DbStatus> {
-  const cfg = getIntegrations();
+  const cfg = await getIntegrationsAsync();
   const dbId = cfg[envKey as keyof typeof cfg] as string | undefined;
 
   if (!dbId) {
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!isConfigured("NOTION_API_KEY")) {
+  if (!await isConfiguredAsync("NOTION_API_KEY")) {
     return NextResponse.json(
       {
         authenticated: false,

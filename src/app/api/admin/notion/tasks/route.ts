@@ -7,13 +7,13 @@ import {
   getTaskSummary,
 } from "@/lib/notion-projects";
 import type { TaskStatus } from "@/lib/notion-projects";
-import { isConfigured } from "@/lib/integrations";
+import { isConfiguredAsync } from "@/lib/integrations";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!isConfigured("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) {
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) {
     return NextResponse.json(
       { error: "Notion Tasks not configured" },
       { status: 503 },
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!isConfigured("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) {
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) {
     return NextResponse.json(
       { error: "Notion Tasks not configured" },
       { status: 503 },

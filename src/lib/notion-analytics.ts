@@ -8,7 +8,7 @@
  */
 
 import { notionFetch, notionFetchAll, extractText } from "@/lib/notion";
-import { getIntegrations, isConfigured } from "@/lib/integrations";
+import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -82,9 +82,9 @@ export async function trackEvent(data: {
   country?: string;
   metadata?: Record<string, unknown>;
 }): Promise<string | null> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) return null;
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) return null;
 
-  const { NOTION_ANALYTICS_DB_ID } = getIntegrations();
+  const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
     const page = await notionFetch<{ id: string }>("/pages", {
       method: "POST",
@@ -168,9 +168,9 @@ export async function getRecentEvents(
   type?: AnalyticsEventType,
   limit = 50,
 ): Promise<AnalyticsEvent[]> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) return [];
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) return [];
 
-  const { NOTION_ANALYTICS_DB_ID } = getIntegrations();
+  const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
     const filter = type
       ? { property: "Type", select: { equals: type } }
@@ -198,9 +198,9 @@ export async function getEventsByDateRange(
   startDate: string,
   endDate: string,
 ): Promise<AnalyticsEvent[]> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) return [];
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) return [];
 
-  const { NOTION_ANALYTICS_DB_ID } = getIntegrations();
+  const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
     const pages = await notionFetchAll(
       `/databases/${NOTION_ANALYTICS_DB_ID}/query`,
@@ -282,10 +282,10 @@ export async function getAnalyticsSummary(days = 7): Promise<AnalyticsSummary> {
 export async function archiveOldEvents(
   daysToKeep = 30,
 ): Promise<{ archived: number; errors: number }> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID"))
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID"))
     return { archived: 0, errors: 0 };
 
-  const { NOTION_ANALYTICS_DB_ID } = getIntegrations();
+  const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - daysToKeep);
   const cutoffStr = cutoff.toISOString().split("T")[0];
