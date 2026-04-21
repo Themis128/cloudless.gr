@@ -64,6 +64,10 @@ afterEach(() => {
 
 describe("ServiceWorkerRegistration", () => {
   it("registers the service worker on mount", async () => {
+    const originalEnv = process.env.NODE_ENV;
+    // @ts-expect-error override for test
+    process.env.NODE_ENV = "production";
+
     render(
       <NextIntlClientProvider locale="en" messages={messages}>
         <ServiceWorkerRegistration />
@@ -73,6 +77,9 @@ describe("ServiceWorkerRegistration", () => {
     await waitFor(() => {
       expect(mockRegister).toHaveBeenCalledWith("/sw.js");
     });
+
+    // @ts-expect-error restore
+    process.env.NODE_ENV = originalEnv;
   });
 });
 

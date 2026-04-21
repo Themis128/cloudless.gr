@@ -140,17 +140,18 @@ describe("service worker runtime", () => {
     const handler = listeners.get("fetch");
     expect(handler).toBeTruthy();
 
-    const cached = new Response("cached-js", { status: 200 });
+    const cached = new Response("cached-image", { status: 200 });
     cacheMatch.mockResolvedValueOnce(cached);
     // SWR fires background revalidation — provide a network response so fetch doesn't throw
-    fetchMock.mockResolvedValue(new Response("fresh-js", { status: 200 }));
+    fetchMock.mockResolvedValue(new Response("fresh-image", { status: 200 }));
 
-    const event = createFetchEvent(new Request("http://localhost:4000/app.js"));
+    // Use .png (non-JS/CSS) to trigger stale-while-revalidate path (not network-first)
+    const event = createFetchEvent(new Request("http://localhost:4000/icons/icon-192.png"));
     handler?.(event as unknown as FetchEvent);
 
     const response = await event.getResponse();
-    // Cached version returned immediately (check body, not reference)
-    expect(await response?.text()).toBe("cached-js");
+    // Cached version returned immediately
+    expect(await response?.text()).toBe("cached-image");
     // Background revalidation fetch was fired
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
