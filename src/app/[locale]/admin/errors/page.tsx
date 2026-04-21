@@ -1,9 +1,9 @@
 /**
  * Admin - Errors page
  *
- * Displays unresolved Sentry issues fetched from GET /api/admin/sentry/issues.
- * Each issue can be resolved or ignored via inline action buttons that POST to
- * /api/admin/sentry/resolve or /api/admin/sentry/ignore respectively.
+ * Displays unresolved Sentry issues fetched from GET /api/admin/ops/errors.
+ * Each issue can be resolved, ignored, or reopened via inline action buttons
+ * that call PUT /api/admin/ops/errors/[id] with the desired status.
  *
  * Filtering: the search input narrows the visible list client-side by title /
  * culprit. Pagination: "Load more" appends the next cursor page.
