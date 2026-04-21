@@ -2,8 +2,14 @@ import { notifyTeam } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { isValidEmail } from "@/lib/validation";
 import { slackSubscriberNotify } from "@/lib/slack-notify";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  // Rate limit: 3 subscribe attempts per IP per 10 minutes
+  const ip = getClientIp(request);
+  const rl = rateLimit(`subscribe:${ip}`, 3, 10 * 60_000);
+  if (!rl.ok) return rl.response;
+
   try {
     const { email } = await request.json();
 

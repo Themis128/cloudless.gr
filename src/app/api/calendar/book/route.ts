@@ -4,8 +4,14 @@ import { isConfigured } from "@/lib/integrations";
 import { isValidEmail } from "@/lib/validation";
 import { slackNotify } from "@/lib/slack-notify";
 import { upsertContact, createDeal, associateDealWithContact } from "@/lib/hubspot";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  // Rate limit: 5 booking attempts per IP per 10 minutes
+  const ip = getClientIp(request);
+  const rl = rateLimit(`calendar-book:${ip}`, 5, 10 * 60_000);
+  if (!rl.ok) return rl.response;
+
   if (!isConfigured("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY")) {
     return NextResponse.json(
       { error: "Calendar booking is not yet available." },

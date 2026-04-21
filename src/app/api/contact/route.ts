@@ -6,8 +6,14 @@ import { slackContactNotify } from "@/lib/slack-notify";
 import { upsertContact } from "@/lib/hubspot";
 import { saveSubmission } from "@/lib/notion-forms";
 import { trackEvent } from "@/lib/notion-analytics";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  // Rate limit: 5 contact submissions per IP per 10 minutes
+  const ip = getClientIp(request);
+  const rl = rateLimit(`contact:${ip}`, 5, 10 * 60_000);
+  if (!rl.ok) return rl.response;
+
   try {
     const { name, email, company, service, message } = await request.json();
 
