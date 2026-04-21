@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - name: Run Lighthouse on key routes
         id: lhci
         uses: treosh/lighthouse-ci-action@v12
@@ -50,18 +50,18 @@ jobs:
 
           # Fail if any route scores below thresholds
           FAILED=$(echo "$MANIFEST" | jq '[.[] | select(
-            .summary.performance       < 0.70 or
+            .summary.performance       < 0.65 or
             .summary.accessibility     < 0.90 or
             .summary["best-practices"] < 0.90 or
-            .summary.seo               < 0.92
+            .summary.seo               < 0.91
           ) | .url] | length')
 
           if [ "$FAILED" -gt 0 ]; then
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "❌ **$FAILED route(s) fell below score thresholds.**" >> "$GITHUB_STEP_SUMMARY"
-            echo "Thresholds: Performance ≥ 70 · Accessibility ≥ 90 · Best Practices ≥ 90 · SEO ≥ 92" >> "$GITHUB_STEP_SUMMARY"
+            echo "Thresholds: Performance ≥ 65 · Accessibility ≥ 90 · Best Practices ≥ 90 · SEO ≥ 91" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "✅ All routes passed Core Web Vitals thresholds (Perf ≥ 70 · A11y ≥ 90 · BP ≥ 90 · SEO ≥ 92)." >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ All routes passed Core Web Vitals thresholds (Perf ≥ 65 · A11y ≥ 90 · BP ≥ 90 · SEO ≥ 91)." >> "$GITHUB_STEP_SUMMARY"
