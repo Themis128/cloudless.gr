@@ -38,7 +38,10 @@ beforeEach(() => {
   mockRegister.mockResolvedValue({ scope: "/" });
 
   Object.defineProperty(navigator, "serviceWorker", {
-    value: { register: mockRegister },
+    value: {
+      register: mockRegister,
+      getRegistrations: vi.fn().mockResolvedValue([]),
+    },
     writable: true,
     configurable: true,
   });
