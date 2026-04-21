@@ -7,6 +7,7 @@ import {
   getDocContentWithToc,
   groupDocsByCategory,
 } from "@/lib/notion-docs";
+import { isConfigured } from "@/lib/integrations";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { trackEvent } from "@/lib/notion-analytics";
@@ -14,6 +15,17 @@ import { trackEvent } from "@/lib/notion-analytics";
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
+
+export const dynamicParams = true; // Allow new slugs added after build
+
+export async function generateStaticParams() {
+  if (!isConfigured("NOTION_API_KEY", "NOTION_DOCS_DB_ID")) return [];
+
+  const docs = await getDocs();
+  return docs.flatMap((doc) =>
+    ["en", "el", "fr"].map((locale) => ({ locale, slug: doc.slug })),
+  );
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
