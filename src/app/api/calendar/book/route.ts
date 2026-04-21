@@ -3,6 +3,7 @@ import { bookConsultation } from "@/lib/google-calendar";
 import { isConfigured } from "@/lib/integrations";
 import { isValidEmail } from "@/lib/validation";
 import { slackNotify } from "@/lib/slack-notify";
+import { upsertContact, createDeal, associateDealWithContact } from "@/lib/hubspot";
 
 export async function POST(request: Request) {
   if (!isConfigured("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY")) {
@@ -62,6 +63,31 @@ export async function POST(request: Request) {
     slackNotify({
       text: `\ud83d\udcc5 New consultation booked: ${name} (${email}) at ${new Date(start).toLocaleString("en-IE")}`,
     }).catch(() => {});
+
+    // HubSpot: upsert contact + create consultation deal (fire-and-forget)
+    (async () => {
+      try {
+        const [firstName, ...rest] = (name as string).trim().split(" ");
+        const contactId = await upsertContact({
+          email,
+          firstname: firstName ?? "",
+          lastname: rest.join(" "),
+          lead_source: "calendar_booking",
+        });
+        const dealId = await createDeal({
+          dealname: `Consultation – ${name} (${new Date(start).toLocaleDateString("en-IE")})`,
+          dealstage: "appointmentscheduled",
+          lead_source: "calendar_booking",
+          closedate: new Date(start).toISOString(),
+          description: notes ? `Notes: ${notes}` : undefined,
+        });
+        if (dealId && contactId) {
+          await associateDealWithContact(dealId, contactId);
+        }
+      } catch (err) {
+        console.error("[Calendar→HubSpot] Deal creation failed:", err);
+      }
+    })();
 
     return NextResponse.json({
       success: true,

@@ -13,6 +13,7 @@ import {
   getAllSlugs,
 } from "@/lib/notion-blog";
 import { isConfigured } from "@/lib/integrations";
+import { trackEvent } from "@/lib/notion-analytics";
 import JsonLd from "@/components/JsonLd";
 import {
   getBlogPostSchema,
@@ -168,6 +169,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
   const useNotion = isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+
+  // Track blog view (fire-and-forget — never blocks render)
+  trackEvent({
+    event: `blog_view:${slug}`,
+    type: "blog_view",
+    page: `/blog/${slug}`,
+    source: "organic",
+  }).catch(() => {});
 
   // Try Notion first — use getPostWithToc for TOC support
   if (useNotion) {
