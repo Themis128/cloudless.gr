@@ -46,7 +46,7 @@ jobs:
 
       - name: Run GSC → Notion sync
         id: sync
-        run: npx tsx scripts/weekly-gsc-sync.ts
+        run: pnpm dlx tsx scripts/weekly-gsc-sync.ts
 
       - name: Notify Slack on success
         if: success() && env.SLACK_WEBHOOK_URL != ''
