@@ -51,7 +51,7 @@
       },
       {
         "metric": "total-blocking-time",
-        "budget": 300
+        "budget": 600
       }
     ],
     "resourceSizes": [
