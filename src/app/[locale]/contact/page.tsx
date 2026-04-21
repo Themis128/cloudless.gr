@@ -6,7 +6,7 @@ import { translate } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 
 export const metadata: Metadata = {
-  title: "Contact Us | Cloudless",
+  title: "Contact Us",
 };
 
 export default async function ContactPage() {
