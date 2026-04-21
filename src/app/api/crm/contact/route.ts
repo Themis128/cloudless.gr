@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { isHubSpotConfigured, upsertContact } from "@/lib/hubspot";
 import { isValidEmail } from "@/lib/validation";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  // Rate limit: 10 CRM contact upserts per IP per 10 minutes
+  const ip = getClientIp(request);
+  const rl = rateLimit(`crm-contact:${ip}`, 10, 10 * 60_000);
+  if (!rl.ok) return rl.response;
+
   if (!(await isHubSpotConfigured())) {
     return NextResponse.json({ error: "CRM not configured." }, { status: 503 });
   }
