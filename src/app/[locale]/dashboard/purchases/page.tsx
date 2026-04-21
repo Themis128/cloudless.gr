@@ -49,6 +49,7 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     if (!user?.email) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
       return;
     }

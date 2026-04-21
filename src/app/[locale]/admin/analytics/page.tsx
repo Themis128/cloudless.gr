@@ -321,13 +321,9 @@ export default function AdminAnalyticsPage() {
     if (!fetchedTabs.has(tab)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (tab === "overview") fetchOverview();
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (tab === "keywords") fetchKeywords();
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (tab === "pages") fetchPages();
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (tab === "history") fetchHistory();
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (tab === "ctr") fetchCtr();
     }
   }, [
