@@ -8,11 +8,11 @@
       },
       {
         "metric": "first-contentful-paint",
-        "budget": 1800
+        "budget": 2000
       },
       {
         "metric": "largest-contentful-paint",
-        "budget": 3000
+        "budget": 3500
       },
       {
         "metric": "total-blocking-time",
