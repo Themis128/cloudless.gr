@@ -8,6 +8,7 @@ import {
 } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { slackOrderNotify } from "@/lib/slack-notify";
+import { upsertContact, createDeal, associateDealWithContact } from "@/lib/hubspot";
 import type Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -72,6 +73,35 @@ export async function POST(request: NextRequest) {
           email: session.customer_email ?? "N/A",
           amount: String((session.amount_total ?? 0) / 100),
         }).catch(() => {});
+
+        // HubSpot: upsert contact + create deal (fire-and-forget)
+        if (session.customer_email) {
+          (async () => {
+            try {
+              const amountEur = (session.amount_total ?? 0) / 100;
+              const currency = (session.currency ?? "eur").toUpperCase();
+              const contactId = await upsertContact({
+                email: session.customer_email!,
+                firstname: session.customer_details?.name?.split(" ")[0] ?? "",
+                lastname: session.customer_details?.name?.split(" ").slice(1).join(" ") ?? "",
+                lead_source: "stripe_checkout",
+              });
+              const dealId = await createDeal({
+                dealname: `Purchase – ${session.id}`,
+                amount: amountEur,
+                currency,
+                dealstage: "closedwon",
+                lead_source: "stripe_checkout",
+                description: `Stripe checkout session ${session.id}`,
+              });
+              if (dealId && contactId) {
+                await associateDealWithContact(dealId, contactId);
+              }
+            } catch (err) {
+              console.error("[Stripe→HubSpot] Deal creation failed:", err);
+            }
+          })();
+        }
         break;
       }
 

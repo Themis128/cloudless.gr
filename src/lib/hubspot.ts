@@ -327,3 +327,97 @@ export async function isHubSpotConfigured(): Promise<boolean> {
     return false;
   }
 }
+
+/* ─── Deal automation ────────────────────────────────────────────────────── */
+
+export type DealSource = "stripe_checkout" | "calendar_booking" | "contact_form";
+
+interface DealData {
+  /** Human-readable deal name, e.g. "Purchase – session_xyz" */
+  dealname: string;
+  /** Amount in major currency units (e.g. 49.00). Omit for consultations. */
+  amount?: number;
+  /** ISO-4217 currency code, e.g. "EUR". Defaults to EUR. */
+  currency?: string;
+  /** Pipeline stage ID. Defaults to "closedwon" for purchases, "appointmentscheduled" for consultations. */
+  dealstage?: string;
+  /** Pipeline ID. Defaults to "default". */
+  pipeline?: string;
+  /** Close date as ISO string. Defaults to today. */
+  closedate?: string;
+  /** Where the deal originated. */
+  lead_source?: DealSource;
+  /** Extra notes / metadata stored in the deal description. */
+  description?: string;
+}
+
+/**
+ * Create a new deal in HubSpot.
+ * Returns the new deal ID, or null if HubSpot is not configured or creation fails.
+ * Fire-and-forget safe — never throws.
+ */
+export async function createDeal(data: DealData): Promise<string | null> {
+  let token: string;
+  try {
+    token = await getHubSpotToken();
+  } catch {
+    return null;
+  }
+  void token;
+
+  const closedate =
+    data.closedate ?? new Date().toISOString().split("T")[0] + "T00:00:00.000Z";
+
+  const properties: Record<string, string> = {
+    dealname: data.dealname,
+    dealstage: data.dealstage ?? (data.amount !== undefined ? "closedwon" : "appointmentscheduled"),
+    pipeline: data.pipeline ?? "default",
+    closedate,
+    ...(data.amount !== undefined && { amount: String(data.amount) }),
+    ...(data.currency && { deal_currency_code: data.currency.toUpperCase() }),
+    ...(data.lead_source && { lead_source: data.lead_source }),
+    ...(data.description && { description: data.description }),
+  };
+
+  try {
+    const res = await hubspotFetch("/crm/v3/objects/deals", {
+      method: "POST",
+      body: JSON.stringify({ properties }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error("[HubSpot] createDeal failed:", res.status, err);
+      return null;
+    }
+
+    const deal = await res.json();
+    return deal.id as string;
+  } catch (err) {
+    console.error("[HubSpot] createDeal error:", err);
+    return null;
+  }
+}
+
+/**
+ * Associate an existing deal with an existing contact.
+ * Safe to call fire-and-forget — never throws.
+ */
+export async function associateDealWithContact(
+  dealId: string,
+  contactId: string,
+): Promise<void> {
+  try {
+    await hubspotFetch(
+      `/crm/v4/objects/deals/${dealId}/associations/contacts/${contactId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify([
+          { associationCategory: "HUBSPOT_DEFINED", associationTypeId: 3 },
+        ]),
+      },
+    );
+  } catch (err) {
+    console.error("[HubSpot] associateDealWithContact error:", err);
+  }
+}

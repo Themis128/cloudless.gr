@@ -5,6 +5,7 @@ import { getConfig } from "@/lib/ssm-config";
 import { slackContactNotify } from "@/lib/slack-notify";
 import { upsertContact } from "@/lib/hubspot";
 import { saveSubmission } from "@/lib/notion-forms";
+import { trackEvent } from "@/lib/notion-analytics";
 
 export async function POST(request: Request) {
   try {
@@ -90,6 +91,14 @@ export async function POST(request: Request) {
       .catch((err) => {
         console.error("[Contact] Background allSettled error:", err);
       });
+
+    // Track form submission (fire-and-forget)
+    trackEvent({
+      event: "contact_form_submit",
+      type: "form_submit",
+      page: "/contact",
+      source: service ?? "website_contact_form",
+    }).catch(() => {});
 
     return Response.json({ success: true });
   } catch (error) {

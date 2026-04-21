@@ -9,6 +9,7 @@ import {
 } from "@/lib/notion-docs";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { trackEvent } from "@/lib/notion-analytics";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -32,6 +33,14 @@ export default async function DocPage({ params }: Props) {
   const [doc, allDocs] = await Promise.all([getDocBySlug(slug), getDocs()]);
 
   if (!doc) notFound();
+
+  // Track doc view (fire-and-forget — never blocks render)
+  trackEvent({
+    event: `doc_view:${slug}`,
+    type: "doc_view",
+    page: `/docs/${slug}`,
+    source: "organic",
+  }).catch(() => {});
 
   // Fetch content with TOC (enhanced)
   const content = await getDocContentWithToc(doc.id);
