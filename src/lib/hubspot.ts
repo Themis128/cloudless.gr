@@ -1,5 +1,4 @@
-import { getIntegrations } from "@/lib/integrations";
-import { getConfig } from "@/lib/ssm-config";
+import { getIntegrationsAsync } from "@/lib/integrations";
 
 const HUBSPOT_API = "https://api.hubapi.com";
 
@@ -14,16 +13,13 @@ interface HubSpotContact {
 }
 
 /**
- * Resolve HubSpot token: try process.env first, fall back to SSM.
+ * Resolve HubSpot token via getIntegrationsAsync() which falls back to SSM.
  * In Lambda, env vars aren't set for HUBSPOT_API_KEY — SSM is the source of truth.
  */
 async function getHubSpotToken(): Promise<string> {
-  const envToken = getIntegrations().HUBSPOT_API_KEY;
-  if (envToken) return envToken;
-
-  const config = await getConfig();
-  const ssmToken = config.HUBSPOT_API_KEY;
-  if (ssmToken) return ssmToken;
+  const cfg = await getIntegrationsAsync();
+  const token = cfg.HUBSPOT_API_KEY;
+  if (token) return token;
 
   throw new Error("HubSpot not configured (no token in env or SSM)");
 }

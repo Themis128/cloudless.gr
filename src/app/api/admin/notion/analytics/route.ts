@@ -7,13 +7,13 @@ import {
   archiveOldEvents,
 } from "@/lib/notion-analytics";
 import type { AnalyticsEventType } from "@/lib/notion-analytics";
-import { isConfigured } from "@/lib/integrations";
+import { isConfiguredAsync } from "@/lib/integrations";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!isConfigured("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) {
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) {
     return NextResponse.json(
       { error: "Notion Analytics not configured" },
       { status: 503 },
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!isConfigured("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) {
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) {
     return NextResponse.json(
       { error: "Notion Analytics not configured" },
       { status: 503 },

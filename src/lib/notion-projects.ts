@@ -10,7 +10,7 @@
  */
 
 import { notionFetch, notionFetchAll, extractText } from "@/lib/notion";
-import { getIntegrations, isConfigured } from "@/lib/integrations";
+import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -123,9 +123,9 @@ function mapTask(page: any): Task {
 export async function listProjects(
   statusFilter?: ProjectStatus,
 ): Promise<Project[]> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_PROJECTS_DB_ID")) return [];
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_PROJECTS_DB_ID")) return [];
 
-  const { NOTION_PROJECTS_DB_ID } = getIntegrations();
+  const { NOTION_PROJECTS_DB_ID } = await getIntegrationsAsync();
   try {
     const filter = statusFilter
       ? { property: "Status", select: { equals: statusFilter } }
@@ -146,7 +146,7 @@ export async function listProjects(
 }
 
 export async function getProject(pageId: string): Promise<Project | null> {
-  if (!isConfigured("NOTION_API_KEY")) return null;
+  if (!await isConfiguredAsync("NOTION_API_KEY")) return null;
   try {
     const page = await notionFetch(`/pages/${pageId}`);
     return mapProject(page);
@@ -165,9 +165,9 @@ export async function createProject(data: {
   owner?: string;
   description?: string;
 }): Promise<string | null> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_PROJECTS_DB_ID")) return null;
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_PROJECTS_DB_ID")) return null;
 
-  const { NOTION_PROJECTS_DB_ID } = getIntegrations();
+  const { NOTION_PROJECTS_DB_ID } = await getIntegrationsAsync();
   try {
     const page = await notionFetch<{ id: string }>("/pages", {
       method: "POST",
@@ -205,7 +205,7 @@ export async function updateProjectStatus(
   pageId: string,
   status: ProjectStatus,
 ): Promise<boolean> {
-  if (!isConfigured("NOTION_API_KEY")) return false;
+  if (!await isConfiguredAsync("NOTION_API_KEY")) return false;
   try {
     await notionFetch(`/pages/${pageId}`, {
       method: "PATCH",
@@ -224,7 +224,7 @@ export async function updateProjectProgress(
   pageId: string,
   progress: number,
 ): Promise<boolean> {
-  if (!isConfigured("NOTION_API_KEY")) return false;
+  if (!await isConfiguredAsync("NOTION_API_KEY")) return false;
   try {
     await notionFetch(`/pages/${pageId}`, {
       method: "PATCH",
@@ -250,9 +250,9 @@ export async function listTasks(filters?: {
   project?: string;
   assignee?: string;
 }): Promise<Task[]> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) return [];
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) return [];
 
-  const { NOTION_TASKS_DB_ID } = getIntegrations();
+  const { NOTION_TASKS_DB_ID } = await getIntegrationsAsync();
   try {
     const conditions: Record<string, unknown>[] = [];
     if (filters?.status) {
@@ -309,9 +309,9 @@ export async function createTask(data: {
   description?: string;
   dueDate?: string;
 }): Promise<string | null> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) return null;
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) return null;
 
-  const { NOTION_TASKS_DB_ID } = getIntegrations();
+  const { NOTION_TASKS_DB_ID } = await getIntegrationsAsync();
   try {
     const page = await notionFetch<{ id: string }>("/pages", {
       method: "POST",
@@ -354,7 +354,7 @@ export async function updateTaskStatus(
   pageId: string,
   status: TaskStatus,
 ): Promise<boolean> {
-  if (!isConfigured("NOTION_API_KEY")) return false;
+  if (!await isConfiguredAsync("NOTION_API_KEY")) return false;
   try {
     await notionFetch(`/pages/${pageId}`, {
       method: "PATCH",
@@ -407,9 +407,9 @@ export interface Sprint {
  * Sprint is typically stored as a Select property on the Task.
  */
 export async function getSprintTasks(sprintName: string): Promise<Task[]> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) return [];
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) return [];
 
-  const { NOTION_TASKS_DB_ID } = getIntegrations();
+  const { NOTION_TASKS_DB_ID } = await getIntegrationsAsync();
   try {
     const pages = await notionFetchAll(
       `/databases/${NOTION_TASKS_DB_ID}/query`,
@@ -459,7 +459,7 @@ export async function rolloverSprintTasks(
   fromSprint: string,
   toSprint: string,
 ): Promise<number> {
-  if (!isConfigured("NOTION_API_KEY")) return 0;
+  if (!await isConfiguredAsync("NOTION_API_KEY")) return 0;
 
   const tasks = await getSprintTasks(fromSprint);
   const incomplete = tasks.filter((t) => t.status !== "Done");
@@ -491,7 +491,7 @@ export async function bulkUpdateTaskStatus(
   taskIds: string[],
   status: TaskStatus,
 ): Promise<number> {
-  if (!isConfigured("NOTION_API_KEY")) return 0;
+  if (!await isConfiguredAsync("NOTION_API_KEY")) return 0;
 
   let updated = 0;
   for (const id of taskIds) {
@@ -505,9 +505,9 @@ export async function bulkUpdateTaskStatus(
  * Get overdue tasks — tasks with a due date before today that aren't Done.
  */
 export async function getOverdueTasks(): Promise<Task[]> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) return [];
+  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_TASKS_DB_ID")) return [];
 
-  const { NOTION_TASKS_DB_ID } = getIntegrations();
+  const { NOTION_TASKS_DB_ID } = await getIntegrationsAsync();
   const today = new Date().toISOString().split("T")[0];
 
   try {

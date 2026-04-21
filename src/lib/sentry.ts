@@ -14,7 +14,7 @@
  * All REST functions return null on config/API errors (graceful degradation).
  */
 
-import { getIntegrations, isConfigured } from "@/lib/integrations";
+import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -60,13 +60,13 @@ export type IssueStatus = "resolved" | "ignored" | "unresolved";
 
 const SENTRY_API = "https://sentry.io/api/0";
 
-function getSentryConfig(): {
+async function getSentryConfig(): Promise<{
   token: string;
   org: string;
   project: string;
-} | null {
-  if (!isConfigured("SENTRY_AUTH_TOKEN")) return null;
-  const { SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT } = getIntegrations();
+} | null> {
+  if (!await isConfiguredAsync("SENTRY_AUTH_TOKEN")) return null;
+  const { SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT } = await getIntegrationsAsync();
   return {
     token: SENTRY_AUTH_TOKEN!,
     org: SENTRY_ORG ?? "baltzakisthemiscom",
@@ -78,7 +78,7 @@ async function sentryFetch<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T | null> {
-  const cfg = getSentryConfig();
+  const cfg = await getSentryConfig();
   if (!cfg) return null;
 
   try {
@@ -130,7 +130,7 @@ export async function getUnresolvedIssues(
     level?: IssueLevel;
   } = {},
 ): Promise<SentryIssueList | null> {
-  const cfg = getSentryConfig();
+  const cfg = await getSentryConfig();
   if (!cfg) return null;
 
   const { limit = 20, sort = "date", level } = options;
@@ -255,9 +255,9 @@ export async function resolveInRelease(
 // ---------------------------------------------------------------------------
 
 /**
- * Returns true if SENTRY_AUTH_TOKEN is set.
+ * Returns true if SENTRY_AUTH_TOKEN is set (checks env + SSM).
  * Use before rendering Sentry-dependent admin UI.
  */
-export function isSentryConfigured(): boolean {
-  return isConfigured("SENTRY_AUTH_TOKEN");
+export async function isSentryConfigured(): Promise<boolean> {
+  return isConfiguredAsync("SENTRY_AUTH_TOKEN");
 }

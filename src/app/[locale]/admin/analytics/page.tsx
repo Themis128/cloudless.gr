@@ -33,34 +33,34 @@ interface SeoSnapshot {
 
 interface Keyword {
   keyword: string;
-  clicks: number;
-  impressions: number;
-  ctr: number;
-  position: number;
+  clicks: number | null | undefined;
+  impressions: number | null | undefined;
+  ctr: number | null | undefined;
+  position: number | null | undefined;
 }
 
 interface Page {
   page: string;
-  clicks: number;
-  impressions: number;
-  ctr: number;
-  position: number;
+  clicks: number | null | undefined;
+  impressions: number | null | undefined;
+  ctr: number | null | undefined;
+  position: number | null | undefined;
 }
 
 interface HistoryPoint {
   date: string;
-  clicks: number;
-  impressions: number;
-  ctr: number;
-  position: number;
+  clicks: number | null | undefined;
+  impressions: number | null | undefined;
+  ctr: number | null | undefined;
+  position: number | null | undefined;
 }
 
 interface CtrOpportunity {
   keyword: string;
-  position: number;
-  impressions: number;
-  ctr: number;
-  clicks: number;
+  position: number | null | undefined;
+  impressions: number | null | undefined;
+  ctr: number | null | undefined;
+  clicks: number | null | undefined;
   potentialClicks: number;
 }
 
@@ -113,21 +113,24 @@ function ErrorState({ msg }: { msg: string }) {
   );
 }
 
-function positionColor(pos: number): string {
+function positionColor(pos: number | null | undefined): string {
+  if (pos == null) return "text-slate-400";
   if (pos <= 3) return "text-neon-green";
   if (pos <= 10) return "text-neon-cyan";
   if (pos <= 20) return "text-yellow-400";
   return "text-slate-400";
 }
 
-function ctrColor(ctr: number): string {
+function ctrColor(ctr: number | null | undefined): string {
+  if (ctr == null) return "text-slate-500";
   if (ctr >= 0.1) return "text-neon-green";
   if (ctr >= 0.05) return "text-neon-cyan";
   if (ctr >= 0.02) return "text-yellow-400";
   return "text-slate-500";
 }
 
-function pct(v: number) {
+function pct(v: number | undefined | null): string {
+  if (v == null) return "—";
   return `${(v * 100).toFixed(1)}%`;
 }
 
@@ -141,7 +144,7 @@ function Sparkline({
   field: "clicks" | "impressions";
 }) {
   if (!data.length) return null;
-  const vals = data.map((d) => d[field]);
+  const vals = data.map((d) => d[field] ?? 0);
   const max = Math.max(...vals) || 1;
   const min = Math.min(...vals);
   const W = 240;
@@ -508,10 +511,10 @@ export default function AdminAnalyticsPage() {
                         </td>
                         <td className="px-6 py-3 text-white">{kw.keyword}</td>
                         <td className="px-6 py-3 text-right font-mono text-sm text-white">
-                          {kw.clicks.toLocaleString()}
+                          {(kw.clicks ?? 0).toLocaleString()}
                         </td>
                         <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
-                          {kw.impressions.toLocaleString()}
+                          {(kw.impressions ?? 0).toLocaleString()}
                         </td>
                         <td
                           className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(kw.ctr)}`}
@@ -521,7 +524,7 @@ export default function AdminAnalyticsPage() {
                         <td
                           className={`px-6 py-3 text-right font-mono text-sm font-semibold ${positionColor(kw.position)}`}
                         >
-                          #{kw.position.toFixed(1)}
+                          #{kw.position != null ? kw.position.toFixed(1) : "—"}
                         </td>
                       </tr>
                     ))}
@@ -605,10 +608,10 @@ export default function AdminAnalyticsPage() {
                             </a>
                           </td>
                           <td className="px-6 py-3 text-right font-mono text-sm text-white">
-                            {pg.clicks.toLocaleString()}
+                            {(pg.clicks ?? 0).toLocaleString()}
                           </td>
                           <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
-                            {pg.impressions.toLocaleString()}
+                            {(pg.impressions ?? 0).toLocaleString()}
                           </td>
                           <td
                             className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(pg.ctr)}`}
@@ -618,7 +621,7 @@ export default function AdminAnalyticsPage() {
                           <td
                             className={`px-6 py-3 text-right font-mono text-sm font-semibold ${positionColor(pg.position)}`}
                           >
-                            #{pg.position.toFixed(1)}
+                            #{pg.position != null ? pg.position.toFixed(1) : "—"}
                           </td>
                         </tr>
                       );
@@ -652,7 +655,7 @@ export default function AdminAnalyticsPage() {
                       </p>
                       <p className="font-heading mb-3 text-2xl font-bold text-neon-magenta">
                         {history
-                          .reduce((s, h) => s + h.clicks, 0)
+                          .reduce((s, h) => s + (h.clicks ?? 0), 0)
                           .toLocaleString()}
                       </p>
                       <Sparkline data={history} field="clicks" />
@@ -663,7 +666,7 @@ export default function AdminAnalyticsPage() {
                       </p>
                       <p className="font-heading mb-3 text-2xl font-bold text-neon-cyan">
                         {history
-                          .reduce((s, h) => s + h.impressions, 0)
+                          .reduce((s, h) => s + (h.impressions ?? 0), 0)
                           .toLocaleString()}
                       </p>
                       <Sparkline data={history} field="impressions" />
@@ -711,10 +714,10 @@ export default function AdminAnalyticsPage() {
                                 })}
                               </td>
                               <td className="px-6 py-3 text-right font-mono text-sm text-white">
-                                {h.clicks.toLocaleString()}
+                                {(h.clicks ?? 0).toLocaleString()}
                               </td>
                               <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
-                                {h.impressions.toLocaleString()}
+                                {(h.impressions ?? 0).toLocaleString()}
                               </td>
                               <td
                                 className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(h.ctr)}`}
@@ -724,7 +727,7 @@ export default function AdminAnalyticsPage() {
                               <td
                                 className={`px-6 py-3 text-right font-mono text-xs ${positionColor(h.position)}`}
                               >
-                                {h.position.toFixed(1)}
+                                {h.position != null ? h.position.toFixed(1) : "—"}
                               </td>
                             </tr>
                           ))}
@@ -799,16 +802,16 @@ export default function AdminAnalyticsPage() {
                           <td
                             className={`px-6 py-3 text-right font-mono text-xs ${positionColor(opp.position)}`}
                           >
-                            #{opp.position.toFixed(1)}
+                            #{opp.position != null ? opp.position.toFixed(1) : "—"}
                           </td>
                           <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
-                            {opp.impressions.toLocaleString()}
+                            {(opp.impressions ?? 0).toLocaleString()}
                           </td>
                           <td className="px-6 py-3 text-right font-mono text-xs text-red-400">
                             {pct(opp.ctr)}
                           </td>
                           <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
-                            {opp.clicks.toLocaleString()}
+                            {(opp.clicks ?? 0).toLocaleString()}
                           </td>
                           <td className="px-6 py-3 text-right font-mono text-xs text-neon-green font-semibold">
                             +{(opp.potentialClicks ?? 0).toLocaleString()}{" "}

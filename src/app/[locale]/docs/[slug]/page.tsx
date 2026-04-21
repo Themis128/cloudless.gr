@@ -54,8 +54,13 @@ export default async function DocPage({ params }: Props) {
     source: "organic",
   }).catch(() => {});
 
-  // Fetch content with TOC (enhanced)
-  const content = await getDocContentWithToc(doc.id);
+  // Fetch content with TOC (enhanced) — gracefully degrade if Notion fails
+  let content = null;
+  try {
+    content = await getDocContentWithToc(doc.id);
+  } catch (err) {
+    console.error("[Docs] Failed to fetch content:", err);
+  }
   const grouped = groupDocsByCategory(allDocs);
   const categories = Object.keys(grouped);
 

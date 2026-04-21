@@ -1,7 +1,10 @@
 /**
- * Optional integration API keys — loaded from env vars.
+ * Optional integration API keys — loaded from env vars with SSM fallback.
  * The app works without any of these; each integration degrades gracefully.
- * In production, add these to SSM under /cloudless/production/ and extend getConfig().
+ *
+ * Use getIntegrations() (sync) in contexts where SSM is unavailable (e.g. build time).
+ * Use getIntegrationsAsync() (async) in API routes — it merges SSM values for any
+ * keys that are missing from process.env, which is the normal production case.
  */
 
 export interface IntegrationConfig {
@@ -64,6 +67,89 @@ export function getIntegrations(): IntegrationConfig {
 export function isConfigured(...keys: (keyof IntegrationConfig)[]): boolean {
   const config = getIntegrations();
   return keys.every((k) => Boolean(config[k]));
+}
+
+let cachedAsync: IntegrationConfig | null = null;
+
+/**
+ * Async version of getIntegrations() — reads from process.env first, then
+ * fills any missing values from SSM Parameter Store (/cloudless/production/*).
+ *
+ * Use this in API route handlers where SSM is available (Lambda / server).
+ * The sync getIntegrations() is only suitable for build-time / edge contexts
+ * where SSM cannot be called.
+ */
+export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
+  if (cachedAsync) return cachedAsync;
+
+  // Start with env-based values
+  const envCfg = getIntegrations();
+
+  // If all critical keys are already present in env, skip SSM round-trip
+  const criticalKeys: (keyof IntegrationConfig)[] = [
+    "NOTION_API_KEY",
+    "HUBSPOT_API_KEY",
+    "STRIPE_SECRET_KEY",
+    "SENTRY_AUTH_TOKEN",
+  ];
+  const allPresent = criticalKeys.every((k) => Boolean(envCfg[k]));
+  if (allPresent) {
+    cachedAsync = envCfg;
+    return cachedAsync;
+  }
+
+  // At least one critical key is missing — pull from SSM
+  try {
+    const { getConfig } = await import("@/lib/ssm-config");
+    const ssm = await getConfig();
+
+    cachedAsync = {
+      SLACK_WEBHOOK_URL: envCfg.SLACK_WEBHOOK_URL || ssm.SLACK_WEBHOOK_URL || undefined,
+      SLACK_BOT_TOKEN: envCfg.SLACK_BOT_TOKEN || ssm.SLACK_BOT_TOKEN || undefined,
+      SLACK_SIGNING_SECRET: envCfg.SLACK_SIGNING_SECRET || ssm.SLACK_SIGNING_SECRET || undefined,
+      HUBSPOT_API_KEY: envCfg.HUBSPOT_API_KEY || ssm.HUBSPOT_API_KEY || undefined,
+      NOTION_API_KEY: envCfg.NOTION_API_KEY || ssm.NOTION_API_KEY || undefined,
+      NOTION_BLOG_DB_ID: envCfg.NOTION_BLOG_DB_ID || ssm.NOTION_BLOG_DB_ID || undefined,
+      NOTION_SUBMISSIONS_DB_ID: envCfg.NOTION_SUBMISSIONS_DB_ID || ssm.NOTION_SUBMISSIONS_DB_ID || undefined,
+      NOTION_DOCS_DB_ID: envCfg.NOTION_DOCS_DB_ID || ssm.NOTION_DOCS_DB_ID || undefined,
+      NOTION_PROJECTS_DB_ID: envCfg.NOTION_PROJECTS_DB_ID || ssm.NOTION_PROJECTS_DB_ID || undefined,
+      NOTION_TASKS_DB_ID: envCfg.NOTION_TASKS_DB_ID || ssm.NOTION_TASKS_DB_ID || undefined,
+      NOTION_ANALYTICS_DB_ID: envCfg.NOTION_ANALYTICS_DB_ID || ssm.NOTION_ANALYTICS_DB_ID || undefined,
+      GOOGLE_CLIENT_EMAIL: envCfg.GOOGLE_CLIENT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
+      GOOGLE_SERVICE_ACCOUNT_EMAIL:
+        envCfg.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
+        ssm.GOOGLE_CLIENT_EMAIL ||
+        undefined,
+      GOOGLE_PRIVATE_KEY: envCfg.GOOGLE_PRIVATE_KEY || ssm.GOOGLE_PRIVATE_KEY || undefined,
+      GOOGLE_CALENDAR_ID: envCfg.GOOGLE_CALENDAR_ID || ssm.GOOGLE_CALENDAR_ID || undefined,
+      STRIPE_SECRET_KEY: envCfg.STRIPE_SECRET_KEY || ssm.STRIPE_SECRET_KEY || undefined,
+      SENTRY_AUTH_TOKEN: envCfg.SENTRY_AUTH_TOKEN || ssm.SENTRY_AUTH_TOKEN || undefined,
+      SENTRY_ORG: envCfg.SENTRY_ORG || ssm.SENTRY_ORG || "baltzakisthemiscom",
+      SENTRY_PROJECT: envCfg.SENTRY_PROJECT || ssm.SENTRY_PROJECT || "cloudless-gr",
+      NOTION_WEBHOOK_SECRET: envCfg.NOTION_WEBHOOK_SECRET || ssm.NOTION_WEBHOOK_SECRET || undefined,
+    };
+  } catch (err) {
+    console.warn("[Integrations] SSM fallback failed, using env-only config:", err);
+    cachedAsync = envCfg;
+  }
+
+  return cachedAsync!;
+}
+
+/**
+ * Async version of isConfigured() — uses SSM fallback.
+ * Use in API routes instead of the sync isConfigured().
+ */
+export async function isConfiguredAsync(
+  ...keys: (keyof IntegrationConfig)[]
+): Promise<boolean> {
+  const config = await getIntegrationsAsync();
+  return keys.every((k) => Boolean(config[k]));
+}
+
+/** Reset the async integration cache — useful in tests */
+export function resetIntegrationCacheAsync(): void {
+  cachedAsync = null;
 }
 
 /* ------------------------------------------------------------------ */
