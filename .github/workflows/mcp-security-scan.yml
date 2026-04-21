@@ -32,5 +32,7 @@ jobs:
         working-directory: tools/mcp-security-scanner
 
       - name: Run MCP security scan
-        run: npm run scan -- --path "src/**/*.{ts,tsx,js,jsx,py,md}"
+        # Scan only the app src/ directory — exclude tools/ to avoid
+        # the scanner flagging its own source code as vulnerable.
+        run: npm run scan -- --path "../../src/**/*.{ts,tsx,js,jsx,py,md}"
         working-directory: tools/mcp-security-scanner
