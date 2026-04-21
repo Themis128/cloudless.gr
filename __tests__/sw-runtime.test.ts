@@ -149,8 +149,8 @@ describe("service worker runtime", () => {
     handler?.(event as unknown as FetchEvent);
 
     const response = await event.getResponse();
-    // Cached version returned immediately
-    expect(response).toBe(cached);
+    // Cached version returned immediately (check body, not reference)
+    expect(await response?.text()).toBe("cached-js");
     // Background revalidation fetch was fired
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });

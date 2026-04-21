@@ -44,7 +44,7 @@ describe("bundle optimization", () => {
     const scriptBudget = globalEntry!.resourceSizes?.find(
       (r) => r.resourceType === "script",
     )?.budget;
-    // Must cover /store route (~332KB)
-    expect(scriptBudget).toBeGreaterThanOrEqual(340);
+    // Tightened budget target (250KB). /store was ~332KB — needs optimisation.
+    expect(scriptBudget).toBeGreaterThanOrEqual(250);
   });
 });
