@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Bypass rate limiting in unit tests — we test the limiter separately
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: vi.fn(() => ({ ok: true, remaining: 99 })),
+  getClientIp: vi.fn(() => "127.0.0.1"),
+  resetRateLimitStore: vi.fn(),
+}));
+
 const notifyTeamMock = vi.fn();
 
 vi.mock("@/lib/email", () => ({

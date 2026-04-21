@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Bypass rate limiting in unit tests — we test the limiter separately
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: vi.fn(() => ({ ok: true, remaining: 99 })),
+  getClientIp: vi.fn(() => "127.0.0.1"),
+  resetRateLimitStore: vi.fn(),
+}));
+
 const mockSend = vi.fn().mockResolvedValue({});
 
 // Mock AWS SES before importing the route — use class syntax for constructor
