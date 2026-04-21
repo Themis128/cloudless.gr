@@ -243,6 +243,7 @@ export async function getSlackConfigAsync(): Promise<SlackConfig> {
 export function resetIntegrationCache(): void {
   cached = null;
   cachedSlack = null;
+  cachedAsync = null;
 }
 
 /** Clears the config cache (useful in tests). */
