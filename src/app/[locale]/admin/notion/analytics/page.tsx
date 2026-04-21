@@ -82,6 +82,7 @@ export default function AnalyticsDashboardPage() {
     }
   }, [days]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     load();
   }, [load]);

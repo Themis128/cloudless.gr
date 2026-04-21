@@ -72,6 +72,7 @@ export default function AdminErrorsPage() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     fetchErrors();
   }, [fetchErrors]);

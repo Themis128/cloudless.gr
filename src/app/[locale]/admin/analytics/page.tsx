@@ -317,6 +317,7 @@ export default function AdminAnalyticsPage() {
   }, []);
 
   // Lazy-load: only fetch when tab is first opened
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!fetchedTabs.has(tab)) {
       if (tab === "overview") fetchOverview();
