@@ -224,7 +224,7 @@ export default async function Home() {
         <div className="bg-neon-cyan/5 animate-gradient-shift absolute top-0 right-0 h-[500px] w-[500px] translate-x-1/3 -translate-y-1/2 rounded-full blur-3xl" />
         <div className="bg-neon-magenta/5 animate-gradient-shift absolute bottom-0 left-0 h-[400px] w-[400px] -translate-x-1/3 translate-y-1/2 rounded-full blur-3xl delay-200" />
 
-        <div className="relative z-10 mx-auto max-w-6xl px-6 py-14 md:py-20 lg:py-24">
+        <div className="relative z-10 mx-auto max-w-6xl px-6 py-20 md:py-28 lg:py-32">
           <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
             {/* Left — copy */}
             <div>
@@ -232,8 +232,7 @@ export default async function Home() {
                 <span className="bg-neon-green h-2 w-2 animate-pulse rounded-full" />
                 {t("hero.badge", "v2.0 — Now Accepting Clients")}
               </div>
-              <br />
-              <h1 className="font-heading text-4xl leading-tight font-bold tracking-tight md:text-5xl lg:text-6xl">
+              <h1 className="font-heading mt-4 text-4xl leading-tight font-bold tracking-tight md:text-5xl lg:text-6xl">
                 {t("hero.titleStatic", "Clear skies.")}{" "}
                 <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
                   <TypingText
@@ -245,7 +244,7 @@ export default async function Home() {
                   />
                 </span>
               </h1>
-              <p className="animate-fade-in-up mt-6 max-w-xl text-lg leading-relaxed text-slate-300 delay-200 md:text-xl">
+              <p className="animate-fade-in-up mt-8 max-w-xl text-lg leading-relaxed text-slate-300 delay-200 md:text-xl">
                 {t(
                   "hero.subtitle",
                   "Enterprise cloud? You can't afford it. DIY infrastructure? You shouldn't. We're the third way — serverless, data-driven growth, and scaling that actually fits a 2–20 person team.",
@@ -296,7 +295,7 @@ export default async function Home() {
 
       {/* Stats Bar */}
       <section className="bg-void-light border-neon-cyan/10 border-y">
-        <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="mx-auto max-w-6xl px-6 py-12 lg:py-16">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {stats.map((stat, i) => (
               <ScrollReveal key={stat.label} delay={i * 100}>
@@ -315,7 +314,7 @@ export default async function Home() {
       </section>
 
       {/* Guarantees Row */}
-      <section className="bg-void border-b border-slate-800 py-10 lg:py-14">
+      <section className="bg-void border-b border-slate-800 py-12 lg:py-16">
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             {guarantees.map((g) => (
@@ -340,7 +339,7 @@ export default async function Home() {
       </section>
 
       {/* Founder Credibility Strip */}
-      <section className="bg-void-light/50 border-b border-slate-800 py-10 lg:py-14">
+      <section className="bg-void-light/50 border-b border-slate-800 py-12 lg:py-16">
         <div className="mx-auto max-w-6xl px-6">
           <ScrollReveal>
             <div className="flex flex-col items-center gap-6 md:flex-row md:gap-10">
@@ -436,10 +435,10 @@ export default async function Home() {
       </section>
 
       {/* Services Overview */}
-      <section className="bg-void py-16 lg:py-20">
+      <section className="bg-void py-20 lg:py-24">
         <div className="mx-auto max-w-6xl px-6">
           <ScrollReveal>
-            <div className="mx-auto mb-16 max-w-2xl text-center">
+            <div className="mx-auto mb-12 max-w-2xl text-center">
               <p className="text-neon-cyan mb-3 font-mono text-xs font-medium tracking-[0.3em]">
                 {t("servicesSection.label", "[ WHAT WE DO ]")}
               </p>
@@ -538,10 +537,10 @@ export default async function Home() {
       </section>
 
       {/* FAQ */}
-      <section className="bg-void-light/50 border-y border-slate-800 py-16 lg:py-20">
+      <section className="bg-void-light/50 border-y border-slate-800 py-20 lg:py-24">
         <div className="mx-auto max-w-3xl px-6">
           <ScrollReveal>
-            <div className="mb-14 text-center">
+            <div className="mb-12 text-center">
               <p className="text-neon-cyan mb-3 font-mono text-xs font-medium tracking-[0.3em]">
                 {t("faq.label", "[ FAQ ]")}
               </p>
@@ -578,7 +577,7 @@ export default async function Home() {
       </section>
 
       {/* Founder */}
-      <section className="bg-void py-16 lg:py-20">
+      <section className="bg-void py-20 lg:py-24">
         <div className="mx-auto max-w-4xl px-6">
           <ScrollReveal>
             <div className="mb-12 text-center">
@@ -700,7 +699,7 @@ export default async function Home() {
       </section>
 
       {/* CTA */}
-      <section className="relative overflow-hidden py-20 lg:py-28">
+      <section className="relative overflow-hidden py-24 lg:py-32">
         <div className="from-neon-cyan/10 via-neon-blue/10 to-neon-magenta/10 absolute inset-0 bg-gradient-to-r" />
         <div className="cyber-grid absolute inset-0 opacity-20" />
         <div className="relative z-10 mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">

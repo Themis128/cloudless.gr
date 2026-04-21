@@ -1,9 +1,4 @@
-/**
- * Contract tests for /api/admin/** routes.
- *
- * Verifies auth enforcement (401 / 403), 503 when integrations are unconfigured,
- * and shape of successful responses using mocked third-party clients.
- */
+
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
