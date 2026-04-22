@@ -7,7 +7,7 @@ import { listContacts } from "@/lib/hubspot";
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
-  if (!await isConfiguredAsync("HUBSPOT_API_KEY")) {
+  if (!(await isConfiguredAsync("HUBSPOT_API_KEY"))) {
     return NextResponse.json(
       { error: "HubSpot not configured." },
       { status: 503 },

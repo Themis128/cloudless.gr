@@ -104,32 +104,56 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
     const ssm = await getConfig();
 
     cachedAsync = {
-      SLACK_WEBHOOK_URL: envCfg.SLACK_WEBHOOK_URL || ssm.SLACK_WEBHOOK_URL || undefined,
-      SLACK_BOT_TOKEN: envCfg.SLACK_BOT_TOKEN || ssm.SLACK_BOT_TOKEN || undefined,
-      SLACK_SIGNING_SECRET: envCfg.SLACK_SIGNING_SECRET || ssm.SLACK_SIGNING_SECRET || undefined,
-      HUBSPOT_API_KEY: envCfg.HUBSPOT_API_KEY || ssm.HUBSPOT_API_KEY || undefined,
+      SLACK_WEBHOOK_URL:
+        envCfg.SLACK_WEBHOOK_URL || ssm.SLACK_WEBHOOK_URL || undefined,
+      SLACK_BOT_TOKEN:
+        envCfg.SLACK_BOT_TOKEN || ssm.SLACK_BOT_TOKEN || undefined,
+      SLACK_SIGNING_SECRET:
+        envCfg.SLACK_SIGNING_SECRET || ssm.SLACK_SIGNING_SECRET || undefined,
+      HUBSPOT_API_KEY:
+        envCfg.HUBSPOT_API_KEY || ssm.HUBSPOT_API_KEY || undefined,
       NOTION_API_KEY: envCfg.NOTION_API_KEY || ssm.NOTION_API_KEY || undefined,
-      NOTION_BLOG_DB_ID: envCfg.NOTION_BLOG_DB_ID || ssm.NOTION_BLOG_DB_ID || undefined,
-      NOTION_SUBMISSIONS_DB_ID: envCfg.NOTION_SUBMISSIONS_DB_ID || ssm.NOTION_SUBMISSIONS_DB_ID || undefined,
-      NOTION_DOCS_DB_ID: envCfg.NOTION_DOCS_DB_ID || ssm.NOTION_DOCS_DB_ID || undefined,
-      NOTION_PROJECTS_DB_ID: envCfg.NOTION_PROJECTS_DB_ID || ssm.NOTION_PROJECTS_DB_ID || undefined,
-      NOTION_TASKS_DB_ID: envCfg.NOTION_TASKS_DB_ID || ssm.NOTION_TASKS_DB_ID || undefined,
-      NOTION_ANALYTICS_DB_ID: envCfg.NOTION_ANALYTICS_DB_ID || ssm.NOTION_ANALYTICS_DB_ID || undefined,
-      GOOGLE_CLIENT_EMAIL: envCfg.GOOGLE_CLIENT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
+      NOTION_BLOG_DB_ID:
+        envCfg.NOTION_BLOG_DB_ID || ssm.NOTION_BLOG_DB_ID || undefined,
+      NOTION_SUBMISSIONS_DB_ID:
+        envCfg.NOTION_SUBMISSIONS_DB_ID ||
+        ssm.NOTION_SUBMISSIONS_DB_ID ||
+        undefined,
+      NOTION_DOCS_DB_ID:
+        envCfg.NOTION_DOCS_DB_ID || ssm.NOTION_DOCS_DB_ID || undefined,
+      NOTION_PROJECTS_DB_ID:
+        envCfg.NOTION_PROJECTS_DB_ID || ssm.NOTION_PROJECTS_DB_ID || undefined,
+      NOTION_TASKS_DB_ID:
+        envCfg.NOTION_TASKS_DB_ID || ssm.NOTION_TASKS_DB_ID || undefined,
+      NOTION_ANALYTICS_DB_ID:
+        envCfg.NOTION_ANALYTICS_DB_ID ||
+        ssm.NOTION_ANALYTICS_DB_ID ||
+        undefined,
+      GOOGLE_CLIENT_EMAIL:
+        envCfg.GOOGLE_CLIENT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
       GOOGLE_SERVICE_ACCOUNT_EMAIL:
         envCfg.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
         ssm.GOOGLE_CLIENT_EMAIL ||
         undefined,
-      GOOGLE_PRIVATE_KEY: envCfg.GOOGLE_PRIVATE_KEY || ssm.GOOGLE_PRIVATE_KEY || undefined,
-      GOOGLE_CALENDAR_ID: envCfg.GOOGLE_CALENDAR_ID || ssm.GOOGLE_CALENDAR_ID || undefined,
-      STRIPE_SECRET_KEY: envCfg.STRIPE_SECRET_KEY || ssm.STRIPE_SECRET_KEY || undefined,
-      SENTRY_AUTH_TOKEN: envCfg.SENTRY_AUTH_TOKEN || ssm.SENTRY_AUTH_TOKEN || undefined,
+      GOOGLE_PRIVATE_KEY:
+        envCfg.GOOGLE_PRIVATE_KEY || ssm.GOOGLE_PRIVATE_KEY || undefined,
+      GOOGLE_CALENDAR_ID:
+        envCfg.GOOGLE_CALENDAR_ID || ssm.GOOGLE_CALENDAR_ID || undefined,
+      STRIPE_SECRET_KEY:
+        envCfg.STRIPE_SECRET_KEY || ssm.STRIPE_SECRET_KEY || undefined,
+      SENTRY_AUTH_TOKEN:
+        envCfg.SENTRY_AUTH_TOKEN || ssm.SENTRY_AUTH_TOKEN || undefined,
       SENTRY_ORG: envCfg.SENTRY_ORG || ssm.SENTRY_ORG || "baltzakisthemiscom",
-      SENTRY_PROJECT: envCfg.SENTRY_PROJECT || ssm.SENTRY_PROJECT || "cloudless-gr",
-      NOTION_WEBHOOK_SECRET: envCfg.NOTION_WEBHOOK_SECRET || ssm.NOTION_WEBHOOK_SECRET || undefined,
+      SENTRY_PROJECT:
+        envCfg.SENTRY_PROJECT || ssm.SENTRY_PROJECT || "cloudless-gr",
+      NOTION_WEBHOOK_SECRET:
+        envCfg.NOTION_WEBHOOK_SECRET || ssm.NOTION_WEBHOOK_SECRET || undefined,
     };
   } catch (err) {
-    console.warn("[Integrations] SSM fallback failed, using env-only config:", err);
+    console.warn(
+      "[Integrations] SSM fallback failed, using env-only config:",
+      err,
+    );
     cachedAsync = envCfg;
   }
 

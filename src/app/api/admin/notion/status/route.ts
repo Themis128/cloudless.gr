@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!await isConfiguredAsync("NOTION_API_KEY")) {
+  if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
     return NextResponse.json(
       {
         authenticated: false,

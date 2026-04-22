@@ -65,8 +65,9 @@ async function getSentryConfig(): Promise<{
   org: string;
   project: string;
 } | null> {
-  if (!await isConfiguredAsync("SENTRY_AUTH_TOKEN")) return null;
-  const { SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT } = await getIntegrationsAsync();
+  if (!(await isConfiguredAsync("SENTRY_AUTH_TOKEN"))) return null;
+  const { SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT } =
+    await getIntegrationsAsync();
   return {
     token: SENTRY_AUTH_TOKEN!,
     org: SENTRY_ORG ?? "baltzakisthemiscom",

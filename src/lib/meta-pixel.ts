@@ -55,7 +55,12 @@ export function trackPixelEvent(
 ): void {
   if (!isPixelReady()) return;
   try {
-    window.fbq?.("track", eventName, params, eventId ? { eventID: eventId } : undefined);
+    window.fbq?.(
+      "track",
+      eventName,
+      params,
+      eventId ? { eventID: eventId } : undefined,
+    );
   } catch (err) {
     // Pixel failures must never break the user flow.
     if (process.env.NODE_ENV !== "production") {
@@ -75,7 +80,10 @@ export function trackPixelEvent(
  * it is NOT deterministic. For deterministic dedup keys (e.g. order-based),
  * pass your own ID directly.
  */
-export function generateEventId(prefix: string, ...parts: (string | number)[]): string {
+export function generateEventId(
+  prefix: string,
+  ...parts: (string | number)[]
+): string {
   const rand = Math.random().toString(36).slice(2, 10);
   return [prefix, Date.now(), rand, ...parts].filter(Boolean).join("-");
 }

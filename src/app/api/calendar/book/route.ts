@@ -3,7 +3,11 @@ import { bookConsultation } from "@/lib/google-calendar";
 import { isConfigured } from "@/lib/integrations";
 import { isValidEmail } from "@/lib/validation";
 import { slackNotify } from "@/lib/slack-notify";
-import { upsertContact, createDeal, associateDealWithContact } from "@/lib/hubspot";
+import {
+  upsertContact,
+  createDeal,
+  associateDealWithContact,
+} from "@/lib/hubspot";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {

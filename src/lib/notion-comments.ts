@@ -53,7 +53,7 @@ function mapComment(comment: any): NotionComment {
  * Supports pagination via the Notion list endpoint.
  */
 export async function listComments(blockId: string): Promise<NotionComment[]> {
-  if (!await isConfiguredAsync("NOTION_API_KEY")) return [];
+  if (!(await isConfiguredAsync("NOTION_API_KEY"))) return [];
 
   try {
     /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -76,7 +76,7 @@ export async function addComment(
   pageId: string,
   text: string,
 ): Promise<NotionComment | null> {
-  if (!await isConfiguredAsync("NOTION_API_KEY")) return null;
+  if (!(await isConfiguredAsync("NOTION_API_KEY"))) return null;
 
   try {
     /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -102,7 +102,7 @@ export async function replyToDiscussion(
   discussionId: string,
   text: string,
 ): Promise<NotionComment | null> {
-  if (!await isConfiguredAsync("NOTION_API_KEY")) return null;
+  if (!(await isConfiguredAsync("NOTION_API_KEY"))) return null;
 
   try {
     /* eslint-disable @typescript-eslint/no-explicit-any */

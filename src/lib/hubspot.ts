@@ -326,7 +326,10 @@ export async function isHubSpotConfigured(): Promise<boolean> {
 
 /* ─── Deal automation ────────────────────────────────────────────────────── */
 
-export type DealSource = "stripe_checkout" | "calendar_booking" | "contact_form";
+export type DealSource =
+  | "stripe_checkout"
+  | "calendar_booking"
+  | "contact_form";
 
 interface DealData {
   /** Human-readable deal name, e.g. "Purchase – session_xyz" */
@@ -366,7 +369,9 @@ export async function createDeal(data: DealData): Promise<string | null> {
 
   const properties: Record<string, string> = {
     dealname: data.dealname,
-    dealstage: data.dealstage ?? (data.amount !== undefined ? "closedwon" : "appointmentscheduled"),
+    dealstage:
+      data.dealstage ??
+      (data.amount !== undefined ? "closedwon" : "appointmentscheduled"),
     pipeline: data.pipeline ?? "default",
     closedate,
     ...(data.amount !== undefined && { amount: String(data.amount) }),

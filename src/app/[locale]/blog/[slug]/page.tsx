@@ -15,10 +15,7 @@ import {
 import { isConfigured } from "@/lib/integrations";
 import { trackEvent } from "@/lib/notion-analytics";
 import JsonLd from "@/components/JsonLd";
-import {
-  getBlogPostSchema,
-  getBreadcrumbSchema,
-} from "@/lib/structured-data";
+import { getBlogPostSchema, getBreadcrumbSchema } from "@/lib/structured-data";
 import React from "react";
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
@@ -202,7 +199,10 @@ export default async function BlogPostPage({ params }: Props) {
             data={getBreadcrumbSchema([
               { name: "Home", url: "https://cloudless.gr" },
               { name: "Blog", url: "https://cloudless.gr/blog" },
-              { name: notionPost.title, url: `https://cloudless.gr/blog/${notionPost.slug}` },
+              {
+                name: notionPost.title,
+                url: `https://cloudless.gr/blog/${notionPost.slug}`,
+              },
             ])}
           />
           {/* Header */}
@@ -224,17 +224,21 @@ export default async function BlogPostPage({ params }: Props) {
                 </svg>
                 Back to Blog
               </Link>
-              {notionPost.coverImage && notionPost.coverImage.startsWith('http') && (
-                <div className="mb-6 overflow-hidden rounded-xl">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={notionPost.coverImage}
-                    alt={notionPost.title}
-                    className="h-56 w-full object-cover md:h-72"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                  />
-                </div>
-              )}
+              {notionPost.coverImage &&
+                notionPost.coverImage.startsWith("http") && (
+                  <div className="mb-6 overflow-hidden rounded-xl">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={notionPost.coverImage}
+                      alt={notionPost.title}
+                      className="h-56 w-full object-cover md:h-72"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display =
+                          "none";
+                      }}
+                    />
+                  </div>
+                )}
               <div className="mb-4 flex items-center gap-3">
                 <span className="bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 rounded-full border px-3 py-1 font-mono text-[10px] font-medium">
                   {notionPost.category || "Blog"}

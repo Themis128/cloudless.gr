@@ -34,7 +34,10 @@ export default function BlogLoading() {
             <div className="bg-void-light/30 animate-pulse rounded-xl border border-slate-800 p-6">
               <div className="bg-void-light/50 mb-4 h-4 w-24 rounded" />
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="bg-void-light/50 mb-2 h-4 w-full rounded" />
+                <div
+                  key={i}
+                  className="bg-void-light/50 mb-2 h-4 w-full rounded"
+                />
               ))}
             </div>
           </div>

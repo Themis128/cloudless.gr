@@ -8,7 +8,11 @@ import {
 } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { slackOrderNotify } from "@/lib/slack-notify";
-import { upsertContact, createDeal, associateDealWithContact } from "@/lib/hubspot";
+import {
+  upsertContact,
+  createDeal,
+  associateDealWithContact,
+} from "@/lib/hubspot";
 import type Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -83,7 +87,11 @@ export async function POST(request: NextRequest) {
               const contactId = await upsertContact({
                 email: session.customer_email!,
                 firstname: session.customer_details?.name?.split(" ")[0] ?? "",
-                lastname: session.customer_details?.name?.split(" ").slice(1).join(" ") ?? "",
+                lastname:
+                  session.customer_details?.name
+                    ?.split(" ")
+                    .slice(1)
+                    .join(" ") ?? "",
                 lead_source: "stripe_checkout",
               });
               const dealId = await createDeal({
