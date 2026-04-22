@@ -621,7 +621,8 @@ export default function AdminAnalyticsPage() {
                           <td
                             className={`px-6 py-3 text-right font-mono text-sm font-semibold ${positionColor(pg.position)}`}
                           >
-                            #{pg.position != null ? pg.position.toFixed(1) : "—"}
+                            #
+                            {pg.position != null ? pg.position.toFixed(1) : "—"}
                           </td>
                         </tr>
                       );
@@ -727,7 +728,9 @@ export default function AdminAnalyticsPage() {
                               <td
                                 className={`px-6 py-3 text-right font-mono text-xs ${positionColor(h.position)}`}
                               >
-                                {h.position != null ? h.position.toFixed(1) : "—"}
+                                {h.position != null
+                                  ? h.position.toFixed(1)
+                                  : "—"}
                               </td>
                             </tr>
                           ))}
@@ -802,7 +805,10 @@ export default function AdminAnalyticsPage() {
                           <td
                             className={`px-6 py-3 text-right font-mono text-xs ${positionColor(opp.position)}`}
                           >
-                            #{opp.position != null ? opp.position.toFixed(1) : "—"}
+                            #
+                            {opp.position != null
+                              ? opp.position.toFixed(1)
+                              : "—"}
                           </td>
                           <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
                             {(opp.impressions ?? 0).toLocaleString()}

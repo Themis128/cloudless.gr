@@ -82,7 +82,8 @@ export async function trackEvent(data: {
   country?: string;
   metadata?: Record<string, unknown>;
 }): Promise<string | null> {
-  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) return null;
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
+    return null;
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
@@ -168,7 +169,8 @@ export async function getRecentEvents(
   type?: AnalyticsEventType,
   limit = 50,
 ): Promise<AnalyticsEvent[]> {
-  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) return [];
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
+    return [];
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
@@ -198,7 +200,8 @@ export async function getEventsByDateRange(
   startDate: string,
   endDate: string,
 ): Promise<AnalyticsEvent[]> {
-  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")) return [];
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
+    return [];
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
@@ -282,7 +285,7 @@ export async function getAnalyticsSummary(days = 7): Promise<AnalyticsSummary> {
 export async function archiveOldEvents(
   daysToKeep = 30,
 ): Promise<{ archived: number; errors: number }> {
-  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID"))
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
     return { archived: 0, errors: 0 };
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();

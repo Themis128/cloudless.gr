@@ -7,7 +7,10 @@ export default function DocsLoading() {
           <aside className="hidden w-56 flex-none lg:block">
             <div className="space-y-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-void-light/50 h-4 animate-pulse rounded" />
+                <div
+                  key={i}
+                  className="bg-void-light/50 h-4 animate-pulse rounded"
+                />
               ))}
             </div>
           </aside>

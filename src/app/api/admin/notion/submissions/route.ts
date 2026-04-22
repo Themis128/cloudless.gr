@@ -20,7 +20,9 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_SUBMISSIONS_DB_ID")) {
+  if (
+    !(await isConfiguredAsync("NOTION_API_KEY", "NOTION_SUBMISSIONS_DB_ID"))
+  ) {
     return NextResponse.json(
       { error: "Notion submissions not configured" },
       { status: 503 },
@@ -46,7 +48,7 @@ export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!await isConfiguredAsync("NOTION_API_KEY")) {
+  if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
     return NextResponse.json(
       { error: "Notion not configured" },
       { status: 503 },

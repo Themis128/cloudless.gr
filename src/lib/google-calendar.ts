@@ -8,7 +8,8 @@ let cachedToken: { token: string; expires: number } | null = null;
 
 /** Get OAuth2 access token via service account JWT (jose library) */
 async function getAccessToken(): Promise<string> {
-  const { GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY } = await getIntegrationsAsync();
+  const { GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY } =
+    await getIntegrationsAsync();
   if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) {
     throw new Error("Google Calendar not configured");
   }

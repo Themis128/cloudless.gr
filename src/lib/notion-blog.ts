@@ -102,7 +102,8 @@ function mapPage(page: any): NotionPost {
  * Returns empty array when Notion is not configured.
  */
 export async function getPosts(): Promise<NotionPost[]> {
-  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+    return [];
 
   return cached("blog:posts", async () => {
     const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
@@ -126,7 +127,8 @@ export async function getPosts(): Promise<NotionPost[]> {
  * Fetch featured posts only (for homepage hero).
  */
 export async function getFeaturedPosts(): Promise<NotionPost[]> {
-  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+    return [];
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
@@ -155,7 +157,8 @@ export async function getFeaturedPosts(): Promise<NotionPost[]> {
 export async function getPostsByCategory(
   category: string,
 ): Promise<NotionPost[]> {
-  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+    return [];
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
@@ -182,7 +185,8 @@ export async function getPostsByCategory(
  * Fetch posts filtered by tag.
  */
 export async function getPostsByTag(tag: string): Promise<NotionPost[]> {
-  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+    return [];
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
@@ -211,7 +215,8 @@ export async function getPostsByTag(tag: string): Promise<NotionPost[]> {
 export async function getPostBySlug(
   slug: string,
 ): Promise<NotionPostWithContent | null> {
-  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return null;
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+    return null;
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
@@ -247,7 +252,8 @@ export async function getPostBySlug(
  * Get all published slugs (for sitemap / static generation).
  */
 export async function getAllSlugs(): Promise<string[]> {
-  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return [];
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+    return [];
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
@@ -337,7 +343,8 @@ export async function getPostWithToc(
 ): Promise<
   (NotionPostWithContent & { toc: import("@/lib/notion").TocEntry[] }) | null
 > {
-  if (!await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) return null;
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+    return null;
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {

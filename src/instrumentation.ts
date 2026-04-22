@@ -22,8 +22,9 @@ export async function register() {
   if (!prefix) return;
 
   try {
-    const { SSMClient, GetParametersByPathCommand } =
-      await import("@aws-sdk/client-ssm");
+    const { SSMClient, GetParametersByPathCommand } = await import(
+      "@aws-sdk/client-ssm"
+    );
     const ssm = new SSMClient({
       region: process.env.AWS_REGION ?? "us-east-1",
     });
