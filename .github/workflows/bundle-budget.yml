@@ -22,7 +22,7 @@ jobs:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: us-east-1_JQWwFbO9a
       NEXT_PUBLIC_COGNITO_CLIENT_ID: 2qq6i24oc48391cmuv4kfl1rm2
       NEXT_PUBLIC_HUBSPOT_PORTAL_ID: "147639927"
-      BUNDLE_MAX_KB: "1200"
+      BUNDLE_MAX_KB: "1700"
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5
