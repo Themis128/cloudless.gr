@@ -47,8 +47,8 @@ export default function CalendarPage() {
     finally { setLoading(false); }
   }
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadItems();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month]);

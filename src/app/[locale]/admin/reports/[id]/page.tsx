@@ -30,9 +30,9 @@ export default function ReportViewPage() {
     }
   }
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!id) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadReport();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
