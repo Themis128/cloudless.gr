@@ -87,7 +87,7 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { listProjects } = await import("@/lib/notion-projects");
@@ -255,7 +255,7 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { getProject } = await import("@/lib/notion-projects");
@@ -283,7 +283,7 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns false when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { updateTaskStatus } = await import("@/lib/notion-projects");
@@ -300,7 +300,7 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns false when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { updateProjectStatus } = await import("@/lib/notion-projects");
@@ -332,7 +332,7 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { listTasks } = await import("@/lib/notion-projects");
@@ -363,7 +363,7 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { createProject } = await import("@/lib/notion-projects");
@@ -395,7 +395,7 @@ describe("notion-projects.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { createTask } = await import("@/lib/notion-projects");

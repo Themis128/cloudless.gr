@@ -83,7 +83,7 @@ describe("notion-blog.ts", () => {
     });
 
     it("returns empty array when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { getPosts } = await import("@/lib/notion-blog");
@@ -177,7 +177,7 @@ describe("notion-blog.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { getPostBySlug } = await import("@/lib/notion-blog");
@@ -202,7 +202,7 @@ describe("notion-blog.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { getAllSlugs } = await import("@/lib/notion-blog");

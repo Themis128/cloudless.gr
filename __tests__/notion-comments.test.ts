@@ -68,7 +68,7 @@ describe("notion-comments.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
       const comments = await listComments("page-1");
       expect(comments).toEqual([]);
@@ -135,7 +135,7 @@ describe("notion-comments.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
       expect(await addComment("page-1", "text")).toBeNull();
     });
@@ -177,7 +177,7 @@ describe("notion-comments.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
       expect(await replyToDiscussion("disc-1", "text")).toBeNull();
     });

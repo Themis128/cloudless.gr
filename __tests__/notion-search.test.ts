@@ -78,7 +78,7 @@ describe("notion-search.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
       const result = await searchPages("test");
       expect(result.results).toEqual([]);
@@ -182,7 +182,7 @@ describe("notion-search.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
       const users = await listUsers();
       expect(users).toEqual([]);
@@ -217,7 +217,7 @@ describe("notion-search.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
       expect(await getBotUser()).toBeNull();
     });
@@ -298,7 +298,7 @@ describe("notion-search.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
       expect(await getDatabaseSchema("db-id")).toBeNull();
     });

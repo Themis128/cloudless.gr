@@ -24,6 +24,33 @@ process.env.NOTION_WEBHOOK_SECRET = "whsec_notion_test";
 // ── HubSpot ───────────────────────────────────────────────────────────────────
 process.env.HUBSPOT_API_KEY = "test-hs-token";
 
+// ── ActiveCampaign ────────────────────────────────────────────────────────────
+process.env.ACTIVECAMPAIGN_API_URL = "https://test.api-us1.com";
+process.env.ACTIVECAMPAIGN_API_TOKEN = "test-ac-token";
+
+// ── TikTok ────────────────────────────────────────────────────────────────────
+process.env.TIKTOK_ACCESS_TOKEN = "test-tiktok-token";
+process.env.TIKTOK_ADVERTISER_ID = "test-tiktok-advertiser";
+
+// ── LinkedIn ──────────────────────────────────────────────────────────────────
+process.env.LINKEDIN_ACCESS_TOKEN = "test-li-token";
+process.env.LINKEDIN_AD_ACCOUNT_ID = "test-li-account";
+process.env.LINKEDIN_ORGANIZATION_URN = "urn:li:organization:123";
+
+// ── X (Twitter) Ads ──────────────────────────────────────────────────────────
+process.env.X_API_KEY = "test-x-api-key";
+process.env.X_API_SECRET = "test-x-api-secret";
+process.env.X_ACCESS_TOKEN = "test-x-access-token";
+process.env.X_ACCESS_SECRET = "test-x-access-secret";
+process.env.X_AD_ACCOUNT_ID = "test-x-ad-account";
+
+// ── Google Ads ────────────────────────────────────────────────────────────────
+process.env.GOOGLE_ADS_DEVELOPER_TOKEN = "test-gads-devtoken";
+process.env.GOOGLE_ADS_CUSTOMER_ID = "test-gads-customer";
+
+// ── Anthropic ─────────────────────────────────────────────────────────────────
+process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
+
 // ── Slack ─────────────────────────────────────────────────────────────────────
 process.env.SLACK_BOT_TOKEN = "xoxb-test-token";
 process.env.SLACK_SIGNING_SECRET = "test-signing-secret-32chars-padded";
@@ -53,13 +80,21 @@ process.env.COGNITO_USER_POOL_ID = "us-east-1_TestPool";
 process.env.COGNITO_CLIENT_ID = "test-client-id";
 
 // ── Cache resets ──────────────────────────────────────────────────────────────
-// Reset all in-memory caches before and after each test so vi.stubEnv() changes
-// are always picked up and never leak between tests.
+// Reset all in-memory caches before each test and restore env vars that tests
+// may clear to trigger 503 "not configured" responses.
 beforeEach(() => {
   // Prevent the CI job-level SLACK_WEBHOOK_URL secret from leaking into tests.
-  // Tests that need it set use vi.stubEnv("SLACK_WEBHOOK_URL", "...") themselves.
+  // Tests that need it set use process.env assignment directly.
   // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
   delete process.env.SLACK_WEBHOOK_URL;
+  // Restore credentials that 503 "not configured" tests may clear.
+  process.env.GOOGLE_CLIENT_EMAIL = "svc@project.iam.gserviceaccount.com";
+  process.env.GOOGLE_PRIVATE_KEY =
+    "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----";
+  process.env.HUBSPOT_API_KEY = "test-hs-token";
+  process.env.NOTION_API_KEY = "secret_test_key_12345";
+  process.env.SLACK_SIGNING_SECRET = "test-signing-secret-32chars-padded";
+  process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_123";
   resetIntegrationCache();
   resetSlackConfigCache();
   resetSsmCache();

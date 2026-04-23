@@ -54,7 +54,7 @@ describe("GET /api/calendar/availability", () => {
   });
 
   it("returns 503 when Google Calendar is not configured", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    process.env.GOOGLE_CLIENT_EMAIL = ""; process.env.GOOGLE_PRIVATE_KEY = "";
     resetIntegrationCache();
     const { GET } = await import("@/app/api/calendar/availability/route");
     const res = await GET(
@@ -144,7 +144,7 @@ describe("POST /api/calendar/book", () => {
   });
 
   it("returns 503 when Google Calendar is not configured", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    process.env.GOOGLE_CLIENT_EMAIL = ""; process.env.GOOGLE_PRIVATE_KEY = "";
     resetIntegrationCache();
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
