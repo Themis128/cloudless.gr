@@ -32,11 +32,6 @@ export default function CalendarPage() {
   });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadItems();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month]);
-
   async function loadItems() {
     setLoading(true);
     const firstDay = `${year}-${String(month + 1).padStart(2, "0")}-01`;
@@ -51,6 +46,12 @@ export default function CalendarPage() {
     } catch { /* silent */ }
     finally { setLoading(false); }
   }
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    loadItems();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
