@@ -22,10 +22,6 @@ export default function ReportsPage() {
     includeSections: ["pipeline", "email"],
   });
 
-  useEffect(() => {
-    loadReports();
-  }, []);
-
   async function loadReports() {
     setLoading(true);
     try {
@@ -36,6 +32,11 @@ export default function ReportsPage() {
     } catch { /* silent */ }
     finally { setLoading(false); }
   }
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    loadReports();
+  }, []);
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();

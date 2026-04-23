@@ -46,6 +46,7 @@ export default function XPage() {
     }
   }
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   if (notConfigured) {

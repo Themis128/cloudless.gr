@@ -30,6 +30,7 @@ export default function ReportViewPage() {
     }
   }
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!id) return;
     loadReport();

@@ -69,6 +69,7 @@ export default function PipelinePage() {
     }
   }
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   async function moveDeal(dealId: string, stageId: string) {

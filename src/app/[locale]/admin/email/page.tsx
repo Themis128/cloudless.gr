@@ -100,12 +100,14 @@ export default function EmailPage() {
     }
   }
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     loadStats();
     loadTab(tab);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     loadTab(tab);
   // eslint-disable-next-line react-hooks/exhaustive-deps
