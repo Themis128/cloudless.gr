@@ -15,12 +15,12 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     clientName: "",
     dateStart: new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0],
     dateEnd: new Date().toISOString().split("T")[0],
-    includeSections: ["pipeline", "email"],
-  });
+    includeSections: ["pipeline", "email"] as string[],
+  }));
 
   async function loadReports() {
     setLoading(true);
