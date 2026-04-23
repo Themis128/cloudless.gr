@@ -434,13 +434,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="bg-void py-12 lg:py-16">
->>>>>>> fix/design-audit-spacing-i18n
       {/* Services Overview */}
       <section className="bg-void py-20 lg:py-24">
-=======
-      <section className="bg-void py-12 lg:py-16">
->>>>>>> fix/design-audit-spacing-i18n
         <div className="mx-auto max-w-6xl px-6">
           <ScrollReveal>
             <div className="mx-auto mb-12 max-w-2xl text-center">
@@ -541,13 +536,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="bg-void-light/50 border-y border-slate-800 py-12 lg:py-16">
->>>>>>> fix/design-audit-spacing-i18n
       {/* FAQ */}
       <section className="bg-void-light/50 border-y border-slate-800 py-20 lg:py-24">
-=======
-      <section className="bg-void-light/50 border-y border-slate-800 py-12 lg:py-16">
->>>>>>> fix/design-audit-spacing-i18n
         <div className="mx-auto max-w-3xl px-6">
           <ScrollReveal>
             <div className="mb-12 text-center">
@@ -586,13 +576,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="bg-void py-12 lg:py-16">
->>>>>>> fix/design-audit-spacing-i18n
       {/* Founder */}
       <section className="bg-void py-20 lg:py-24">
-=======
-      <section className="bg-void py-12 lg:py-16">
->>>>>>> fix/design-audit-spacing-i18n
         <div className="mx-auto max-w-4xl px-6">
           <ScrollReveal>
             <div className="mb-12 text-center">
