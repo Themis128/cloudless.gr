@@ -13,12 +13,6 @@ export default function ReportViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!id) return;
-    loadReport();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
   async function loadReport() {
     setLoading(true);
     try {
@@ -35,6 +29,12 @@ export default function ReportViewPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!id) return;
+    loadReport();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   if (loading) {
     return (

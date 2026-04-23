@@ -28,8 +28,6 @@ export default function LinkedInPage() {
   const [notConfigured, setNotConfigured] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { load(); }, []);
-
   async function load() {
     setLoading(true);
     setError(null);
@@ -48,6 +46,8 @@ export default function LinkedInPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => { load(); }, []);
 
   if (notConfigured) {
     return (
