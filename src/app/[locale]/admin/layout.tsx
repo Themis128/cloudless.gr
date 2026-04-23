@@ -5,7 +5,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
-const adminLinks = [
+type AdminLink =
+  | { href: string; label: string; icon: string; section?: never }
+  | { href: string; label: string; icon: string; section: "Marketing" };
+
+const adminLinks: AdminLink[] = [
   { href: "/admin", label: "Dashboard", icon: "◈" },
   { href: "/admin/orders", label: "Orders", icon: "◇" },
   { href: "/admin/crm", label: "CRM", icon: "◉" },
@@ -13,6 +17,14 @@ const adminLinks = [
   { href: "/admin/errors", label: "Errors", icon: "⚠" },
   { href: "/admin/users", label: "Users", icon: "👤" },
   { href: "/admin/notifications", label: "Notifications", icon: "🔔" },
+  // Marketing Hub
+  { href: "/admin/campaigns", label: "Campaigns", icon: "📣", section: "Marketing" },
+  { href: "/admin/email", label: "Email", icon: "📧", section: "Marketing" },
+  { href: "/admin/pipeline", label: "Pipeline", icon: "🔀", section: "Marketing" },
+  { href: "/admin/calendar", label: "Calendar", icon: "📅", section: "Marketing" },
+  { href: "/admin/reports", label: "Reports", icon: "📋", section: "Marketing" },
+  { href: "/admin/ai-assistant", label: "AI Assistant", icon: "🤖", section: "Marketing" },
+  // Bottom
   { href: "/admin/settings", label: "Settings", icon: "⚙" },
 ];
 
@@ -74,21 +86,32 @@ export default function AdminLayout({
                 </p>
               </div>
               <nav className="space-y-1">
-                {adminLinks.map((link) => {
+                {adminLinks.map((link, i) => {
                   const active = isActive(link.href);
+                  const isFirstMarketing =
+                    link.section === "Marketing" &&
+                    adminLinks[i - 1]?.section !== "Marketing";
                   return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 font-mono text-sm transition-all ${
-                        active
-                          ? "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20 border"
-                          : "hover:bg-void-lighter/50 text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      <span>{link.icon}</span>
-                      {link.label}
-                    </Link>
+                    <div key={link.href}>
+                      {isFirstMarketing && (
+                        <div className="px-3 pb-1 pt-3">
+                          <p className="font-mono text-[10px] uppercase tracking-widest text-slate-600">
+                            Marketing Hub
+                          </p>
+                        </div>
+                      )}
+                      <Link
+                        href={link.href}
+                        className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 font-mono text-sm transition-all ${
+                          active
+                            ? "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20 border"
+                            : "hover:bg-void-lighter/50 text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        <span>{link.icon}</span>
+                        {link.label}
+                      </Link>
+                    </div>
                   );
                 })}
               </nav>

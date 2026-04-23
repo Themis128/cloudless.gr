@@ -315,8 +315,123 @@ curl -X POST http://localhost:4000/api/contact \
 
 | File | Purpose |
 |------|---------|
-| `src/lib/hubspot.ts` | All HubSpot API operations — upsertContact, listContacts, createTicket, searchContacts |
+| `src/lib/hubspot.ts` | All HubSpot API operations — CRM contacts + pipeline extensions |
 | `src/lib/integrations.ts` | Config loader — reads `HUBSPOT_API_KEY` from env, provides `isConfigured()` |
 | `src/lib/ssm-config.ts` | SSM Parameter Store fallback for production token resolution |
 | `src/app/api/contact/route.ts` | Contact form handler — calls `upsertContact()` as fire-and-forget |
+| `src/app/api/admin/pipeline/board/route.ts` | GET kanban board (deals grouped by stage) |
+| `src/app/api/admin/pipeline/deals/[id]/move/route.ts` | POST move deal to a new stage |
+| `src/app/api/admin/pipeline/deals/[id]/notes/route.ts` | GET/POST deal notes |
+| `src/app/api/admin/pipeline/stats/route.ts` | GET pipeline stats (totalDeals, totalValue, byStage) |
+| `src/app/[locale]/admin/pipeline/page.tsx` | Kanban board UI |
 | `__tests__/contact-api.test.ts` | Contact route unit tests (indirect HubSpot coverage) |
+| `__tests__/hubspot-pipeline.test.ts` | Pipeline extension unit tests |
+| `__tests__/admin-pipeline-api.test.ts` | Pipeline API route tests |
+
+---
+
+## Pipeline Extensions (Marketing Hub — Phase 4)
+
+The following functions were added to `src/lib/hubspot.ts` to power the `/admin/pipeline` kanban board.
+
+### `updateDeal(id, data): Promise<{id: string} | null>`
+
+PATCH any deal properties.
+
+```typescript
+await updateDeal("deal_1", { dealname: "Renamed", amount: "5000" });
+```
+
+Returns `null` on API error.
+
+---
+
+### `moveDealStage(id, stageId): Promise<{id: string} | null>`
+
+Shortcut for `updateDeal` that sets only `dealstage`.
+
+```typescript
+await moveDealStage("deal_1", "closedwon");
+```
+
+---
+
+### `getDealsByStage(limit?): Promise<Record<string, unknown[]>>`
+
+Fetch up to `limit` deals (default 100) and group them by their `dealstage` property.
+
+```typescript
+const board = await getDealsByStage();
+// { "appointmentscheduled": [...], "closedwon": [...] }
+```
+
+Returns `{}` on API error.
+
+---
+
+### `createNote(dealId, body): Promise<{id: string} | null>`
+
+Create an engagement note and associate it with a deal.
+
+```typescript
+await createNote("deal_1", "Called — interested in AI package");
+```
+
+Returns `null` on failure.
+
+---
+
+### `listNotes(dealId): Promise<unknown[]>`
+
+Fetch all notes associated with a deal.
+
+```typescript
+const notes = await listNotes("deal_1");
+```
+
+Returns `[]` on failure.
+
+---
+
+### `getPipelineStats(): Promise<PipelineStats>`
+
+Aggregate totals across all deals.
+
+```typescript
+const stats = await getPipelineStats();
+// {
+//   totalDeals: 42,
+//   totalValue: 85000,
+//   byStage: {
+//     closedwon:               { count: 10, value: 50000 },
+//     appointmentscheduled:    { count: 8,  value: 12000 },
+//   }
+// }
+```
+
+Deals with no `amount` contribute `0` to the value totals. Returns zeroed stats on API error.
+
+---
+
+### Pipeline API Routes
+
+All pipeline routes require a valid Cognito admin JWT (checked by `requireAdmin`) and return `503` when HubSpot is not configured.
+
+| Route | Method | Description |
+|---|---|---|
+| `/api/admin/pipeline/board` | GET | Returns `{ dealsByStage, pipelines, fetchedAt }` |
+| `/api/admin/pipeline/stats` | GET | Returns `{ totalDeals, totalValue, byStage, fetchedAt }` |
+| `/api/admin/pipeline/deals/[id]/move` | POST | Body: `{ stageId }` — returns `{ deal }` |
+| `/api/admin/pipeline/deals/[id]/notes` | GET | Returns `{ notes }` |
+| `/api/admin/pipeline/deals/[id]/notes` | POST | Body: `{ body }` — returns `{ note }` |
+
+### Required HubSpot scopes for pipeline
+
+In addition to the contact scopes above:
+
+| Scope | Used by |
+|-------|---------|
+| `crm.objects.deals.read` | `getDealsByStage`, `getPipelineStats`, board route |
+| `crm.objects.deals.write` | `updateDeal`, `moveDealStage` |
+| `crm.objects.notes.write` | `createNote` |
+| `crm.schemas.deals.read` | `getPipelines` (pipeline definitions) |

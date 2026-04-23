@@ -36,6 +36,37 @@ interface AppConfig {
   SENTRY_AUTH_TOKEN: string;
   SENTRY_ORG: string;
   SENTRY_PROJECT: string;
+  // ActiveCampaign
+  ACTIVECAMPAIGN_API_URL: string;
+  ACTIVECAMPAIGN_API_TOKEN: string;
+  // Google Ads
+  GOOGLE_ADS_DEVELOPER_TOKEN: string;
+  GOOGLE_ADS_CUSTOMER_ID: string;
+  // LinkedIn
+  LINKEDIN_CLIENT_ID: string;
+  LINKEDIN_CLIENT_SECRET: string;
+  LINKEDIN_ACCESS_TOKEN: string;
+  LINKEDIN_AD_ACCOUNT_ID: string;
+  LINKEDIN_ORGANIZATION_URN: string;
+  // TikTok
+  TIKTOK_APP_ID: string;
+  TIKTOK_APP_SECRET: string;
+  TIKTOK_ACCESS_TOKEN: string;
+  TIKTOK_ADVERTISER_ID: string;
+  // X (Twitter)
+  X_API_KEY: string;
+  X_API_SECRET: string;
+  X_ACCESS_TOKEN: string;
+  X_ACCESS_SECRET: string;
+  X_AD_ACCOUNT_ID: string;
+  // Meta
+  META_AD_ACCOUNT_ID: string;
+  META_PIXEL_ID: string;
+  META_CAPI_ACCESS_TOKEN: string;
+  META_ACCESS_TOKEN: string;
+  META_PAGE_ID: string;
+  // AI
+  ANTHROPIC_API_KEY: string;
 }
 
 let cached: AppConfig | null = null;
@@ -86,6 +117,30 @@ function buildConfigFromEnv(): AppConfig {
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN || "",
     SENTRY_ORG: process.env.SENTRY_ORG || "baltzakisthemiscom",
     SENTRY_PROJECT: process.env.SENTRY_PROJECT || "cloudless-gr",
+    ACTIVECAMPAIGN_API_URL: process.env.ACTIVECAMPAIGN_API_URL || "",
+    ACTIVECAMPAIGN_API_TOKEN: process.env.ACTIVECAMPAIGN_API_TOKEN || "",
+    GOOGLE_ADS_DEVELOPER_TOKEN: process.env.GOOGLE_ADS_DEVELOPER_TOKEN || "",
+    GOOGLE_ADS_CUSTOMER_ID: process.env.GOOGLE_ADS_CUSTOMER_ID || "",
+    LINKEDIN_CLIENT_ID: process.env.LINKEDIN_CLIENT_ID || "",
+    LINKEDIN_CLIENT_SECRET: process.env.LINKEDIN_CLIENT_SECRET || "",
+    LINKEDIN_ACCESS_TOKEN: process.env.LINKEDIN_ACCESS_TOKEN || "",
+    LINKEDIN_AD_ACCOUNT_ID: process.env.LINKEDIN_AD_ACCOUNT_ID || "",
+    LINKEDIN_ORGANIZATION_URN: process.env.LINKEDIN_ORGANIZATION_URN || "",
+    TIKTOK_APP_ID: process.env.TIKTOK_APP_ID || "",
+    TIKTOK_APP_SECRET: process.env.TIKTOK_APP_SECRET || "",
+    TIKTOK_ACCESS_TOKEN: process.env.TIKTOK_ACCESS_TOKEN || "",
+    TIKTOK_ADVERTISER_ID: process.env.TIKTOK_ADVERTISER_ID || "",
+    X_API_KEY: process.env.X_API_KEY || "",
+    X_API_SECRET: process.env.X_API_SECRET || "",
+    X_ACCESS_TOKEN: process.env.X_ACCESS_TOKEN || "",
+    X_ACCESS_SECRET: process.env.X_ACCESS_SECRET || "",
+    X_AD_ACCOUNT_ID: process.env.X_AD_ACCOUNT_ID || "",
+    META_AD_ACCOUNT_ID: process.env.META_AD_ACCOUNT_ID || "",
+    META_PIXEL_ID: process.env.META_PIXEL_ID || "",
+    META_CAPI_ACCESS_TOKEN: process.env.META_CAPI_ACCESS_TOKEN || "",
+    META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN || "",
+    META_PAGE_ID: process.env.META_PAGE_ID || "",
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
   };
 }
 
@@ -170,6 +225,30 @@ export async function getConfig(): Promise<AppConfig> {
     SENTRY_AUTH_TOKEN: params.get("SENTRY_AUTH_TOKEN") ?? "",
     SENTRY_ORG: params.get("SENTRY_ORG") ?? "baltzakisthemiscom",
     SENTRY_PROJECT: params.get("SENTRY_PROJECT") ?? "cloudless-gr",
+    ACTIVECAMPAIGN_API_URL: params.get("ACTIVECAMPAIGN_API_URL") ?? "",
+    ACTIVECAMPAIGN_API_TOKEN: params.get("ACTIVECAMPAIGN_API_TOKEN") ?? "",
+    GOOGLE_ADS_DEVELOPER_TOKEN: params.get("GOOGLE_ADS_DEVELOPER_TOKEN") ?? "",
+    GOOGLE_ADS_CUSTOMER_ID: params.get("GOOGLE_ADS_CUSTOMER_ID") ?? "",
+    LINKEDIN_CLIENT_ID: params.get("LINKEDIN_CLIENT_ID") ?? "",
+    LINKEDIN_CLIENT_SECRET: params.get("LINKEDIN_CLIENT_SECRET") ?? "",
+    LINKEDIN_ACCESS_TOKEN: params.get("LINKEDIN_ACCESS_TOKEN") ?? "",
+    LINKEDIN_AD_ACCOUNT_ID: params.get("LINKEDIN_AD_ACCOUNT_ID") ?? "",
+    LINKEDIN_ORGANIZATION_URN: params.get("LINKEDIN_ORGANIZATION_URN") ?? "",
+    TIKTOK_APP_ID: params.get("TIKTOK_APP_ID") ?? "",
+    TIKTOK_APP_SECRET: params.get("TIKTOK_APP_SECRET") ?? "",
+    TIKTOK_ACCESS_TOKEN: params.get("TIKTOK_ACCESS_TOKEN") ?? "",
+    TIKTOK_ADVERTISER_ID: params.get("TIKTOK_ADVERTISER_ID") ?? "",
+    X_API_KEY: params.get("X_API_KEY") ?? "",
+    X_API_SECRET: params.get("X_API_SECRET") ?? "",
+    X_ACCESS_TOKEN: params.get("X_ACCESS_TOKEN") ?? "",
+    X_ACCESS_SECRET: params.get("X_ACCESS_SECRET") ?? "",
+    X_AD_ACCOUNT_ID: params.get("X_AD_ACCOUNT_ID") ?? "",
+    META_AD_ACCOUNT_ID: params.get("META_AD_ACCOUNT_ID") ?? "",
+    META_PIXEL_ID: params.get("META_PIXEL_ID") ?? "",
+    META_CAPI_ACCESS_TOKEN: params.get("META_CAPI_ACCESS_TOKEN") ?? "",
+    META_ACCESS_TOKEN: params.get("META_ACCESS_TOKEN") ?? "",
+    META_PAGE_ID: params.get("META_PAGE_ID") ?? "",
+    ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
   };
   cachedAt = Date.now();
 

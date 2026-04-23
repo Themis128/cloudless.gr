@@ -6,6 +6,112 @@ import { resetIntegrationCache } from "@/lib/integrations";
 import { resetSsmCache } from "@/lib/ssm-config";
 
 // ---------------------------------------------------------------------------
+// Hoist mock variables so vi.mock() factories can reference them safely.
+// ---------------------------------------------------------------------------
+
+const { mockGetConfig, mockIsConfiguredAsync, mockResetIntegrationCache } =
+  vi.hoisted(() => ({
+    mockGetConfig: vi.fn(),
+    mockIsConfiguredAsync: vi.fn().mockResolvedValue(true),
+    mockResetIntegrationCache: vi.fn(),
+  }));
+
+// ---------------------------------------------------------------------------
+// Mock ssm-config so tests never touch AWS SSM and getConfig() is controllable.
+// ---------------------------------------------------------------------------
+
+vi.mock("@/lib/ssm-config", () => ({
+  getConfig: mockGetConfig,
+  resetSsmCache: vi.fn(),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock integrations so isConfiguredAsync() is controllable per-test.
+// ---------------------------------------------------------------------------
+
+vi.mock("@/lib/integrations", () => ({
+  isConfiguredAsync: mockIsConfiguredAsync,
+  isConfigured: vi.fn().mockReturnValue(true),
+  resetIntegrationCache: mockResetIntegrationCache,
+  getIntegrations: vi.fn().mockReturnValue({}),
+  getIntegrationsAsync: vi.fn().mockResolvedValue({}),
+}));
+
+const GSC_CONFIGURED_CONFIG = {
+  SES_FROM_EMAIL: "test@cloudless.gr",
+  SES_TO_EMAIL: "inbox@cloudless.gr",
+  AWS_SES_REGION: "us-east-1",
+  STRIPE_SECRET_KEY: "sk_test_123",
+  STRIPE_PUBLISHABLE_KEY: "",
+  STRIPE_WEBHOOK_SECRET: "whsec_test",
+  COGNITO_USER_POOL_ID: "us-east-1_TestPool",
+  COGNITO_CLIENT_ID: "test-client-id",
+  SLACK_WEBHOOK_URL: "",
+  SLACK_BOT_TOKEN: "",
+  SLACK_SIGNING_SECRET: "",
+  HUBSPOT_API_KEY: "test-hs-token",
+  NOTION_API_KEY: "secret_test_key_12345",
+  NOTION_BLOG_DB_ID: "",
+  NOTION_WEBHOOK_SECRET: "",
+  NOTION_SUBMISSIONS_DB_ID: "",
+  NOTION_DOCS_DB_ID: "",
+  NOTION_PROJECTS_DB_ID: "",
+  NOTION_TASKS_DB_ID: "",
+  NOTION_ANALYTICS_DB_ID: "",
+  GOOGLE_CLIENT_EMAIL: "svc@project.iam.gserviceaccount.com",
+  GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----",
+  GOOGLE_CALENDAR_ID: "calendar@cloudless.gr",
+  GSC_SITE_URL: "sc-domain:cloudless.gr",
+  SENTRY_AUTH_TOKEN: "",
+  SENTRY_ORG: "baltzakisthemiscom",
+  SENTRY_PROJECT: "cloudless-gr",
+  ACTIVECAMPAIGN_API_URL: "https://test.api-us1.com",
+  ACTIVECAMPAIGN_API_TOKEN: "test-ac-token",
+  GOOGLE_ADS_DEVELOPER_TOKEN: "",
+  GOOGLE_ADS_CUSTOMER_ID: "",
+  LINKEDIN_CLIENT_ID: "",
+  LINKEDIN_CLIENT_SECRET: "",
+  LINKEDIN_ACCESS_TOKEN: "",
+  LINKEDIN_AD_ACCOUNT_ID: "",
+  LINKEDIN_ORGANIZATION_URN: "",
+  TIKTOK_APP_ID: "",
+  TIKTOK_APP_SECRET: "",
+  TIKTOK_ACCESS_TOKEN: "",
+  TIKTOK_ADVERTISER_ID: "",
+  X_API_KEY: "",
+  X_API_SECRET: "",
+  X_ACCESS_TOKEN: "",
+  X_ACCESS_SECRET: "",
+  X_AD_ACCOUNT_ID: "",
+  META_AD_ACCOUNT_ID: "",
+  META_PIXEL_ID: "",
+  META_CAPI_ACCESS_TOKEN: "",
+  META_ACCESS_TOKEN: "",
+  META_PAGE_ID: "",
+  ANTHROPIC_API_KEY: "test-anthropic-key",
+};
+
+const GSC_MISSING_CONFIG = {
+  ...GSC_CONFIGURED_CONFIG,
+  GOOGLE_CLIENT_EMAIL: "",
+  GOOGLE_PRIVATE_KEY: "",
+};
+
+const HUBSPOT_MISSING_CONFIG = {
+  ...GSC_CONFIGURED_CONFIG,
+  HUBSPOT_API_KEY: "",
+};
+
+// Set default getConfig() return value (overridden per-test where needed).
+mockGetConfig.mockResolvedValue(GSC_CONFIGURED_CONFIG);
+
+// Reset mocks before each test to the safe defaults.
+beforeEach(() => {
+  mockGetConfig.mockResolvedValue(GSC_CONFIGURED_CONFIG);
+  mockIsConfiguredAsync.mockResolvedValue(true);
+});
+
+// ---------------------------------------------------------------------------
 // Mock jose: replace jwtVerify with a decode-only version so tests can use
 // fake-signed tokens without hitting the real Cognito JWKS endpoint.
 // createRemoteJWKSet is kept but its result is never used (jwtVerify is mocked).
@@ -409,8 +515,7 @@ describe("GET /api/admin/analytics/web", () => {
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
-    resetSsmCache();
+    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
     const { GET } = await import("@/app/api/admin/analytics/web/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/web"));
     expect(res.status).toBe(503);
@@ -438,8 +543,7 @@ describe("GET /api/admin/analytics/seo", () => {
   });
 
   it("returns 503 when GSC credentials are not configured", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
-    resetSsmCache();
+    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
     const { GET } = await import("@/app/api/admin/analytics/seo/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/seo"));
     expect(res.status).toBe(503);
@@ -477,8 +581,7 @@ describe("GET /api/admin/crm/contacts", () => {
   });
 
   it("returns 503 when HubSpot is not configured", async () => {
-    vi.stubEnv("HUBSPOT_API_KEY", "");
-    resetIntegrationCache();
+    mockIsConfiguredAsync.mockResolvedValueOnce(false);
     const { GET } = await import("@/app/api/admin/crm/contacts/route");
     const res = await GET(
       adminRequest("http://localhost/api/admin/crm/contacts"),
@@ -580,8 +683,7 @@ describe("GET /api/admin/analytics/keywords", () => {
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
-    resetSsmCache();
+    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
     const { GET } = await import("@/app/api/admin/analytics/keywords/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/keywords"));
     expect(res.status).toBe(503);
@@ -616,8 +718,7 @@ describe("GET /api/admin/analytics/pages", () => {
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
-    resetSsmCache();
+    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
     const { GET } = await import("@/app/api/admin/analytics/pages/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/pages"));
     expect(res.status).toBe(503);
@@ -651,8 +752,7 @@ describe("GET /api/admin/analytics/history", () => {
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
-    resetSsmCache();
+    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
     const { GET } = await import("@/app/api/admin/analytics/history/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/history"));
     expect(res.status).toBe(503);
@@ -687,8 +787,7 @@ describe("GET /api/admin/analytics/ctr-opportunities", () => {
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
-    resetSsmCache();
+    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
     const { GET } = await import("@/app/api/admin/analytics/ctr-opportunities/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/ctr-opportunities"));
     expect(res.status).toBe(503);
@@ -723,8 +822,7 @@ describe("GET /api/admin/analytics/devices", () => {
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
-    resetSsmCache();
+    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
     const { GET } = await import("@/app/api/admin/analytics/devices/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/devices"));
     expect(res.status).toBe(503);
@@ -751,8 +849,7 @@ describe("GET /api/admin/analytics/products", () => {
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
-    resetSsmCache();
+    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
     const { GET } = await import("@/app/api/admin/analytics/products/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/products"));
     expect(res.status).toBe(503);
@@ -787,8 +884,7 @@ describe("GET /api/admin/analytics/query-pages", () => {
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
-    resetSsmCache();
+    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
     const { GET } = await import("@/app/api/admin/analytics/query-pages/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/query-pages"));
     expect(res.status).toBe(503);
@@ -822,8 +918,7 @@ describe("GET /api/admin/analytics/search-intent", () => {
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
-    resetSsmCache();
+    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
     const { GET } = await import("@/app/api/admin/analytics/search-intent/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/search-intent"));
     expect(res.status).toBe(503);
@@ -852,8 +947,7 @@ describe("GET /api/admin/analytics/countries", () => {
   });
 
   it("returns 503 when GSC credentials are missing", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
-    resetSsmCache();
+    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
     const { GET } = await import("@/app/api/admin/analytics/countries/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/countries"));
     expect(res.status).toBe(503);

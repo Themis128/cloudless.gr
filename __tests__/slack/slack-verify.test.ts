@@ -60,7 +60,7 @@ describe("verifySlackRequest", () => {
   });
 
   it("returns ok:false when SLACK_SIGNING_SECRET is not set", async () => {
-    vi.stubEnv("SLACK_SIGNING_SECRET", "");
+    process.env.SLACK_SIGNING_SECRET = "";
     resetSlackConfigCache();
 
     const body = "{}";

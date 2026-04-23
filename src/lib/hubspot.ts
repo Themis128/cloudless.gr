@@ -401,6 +401,154 @@ export async function createDeal(data: DealData): Promise<string | null> {
 }
 
 /**
+ * Update a deal's properties.
+ */
+export async function updateDeal(
+  id: string,
+  data: Partial<Record<string, string>>,
+): Promise<{ id: string } | null> {
+  try {
+    const res = await hubspotFetch(`/crm/v3/objects/deals/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ properties: data }),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Move a deal to a new pipeline stage.
+ */
+export async function moveDealStage(
+  id: string,
+  stageId: string,
+): Promise<{ id: string } | null> {
+  return updateDeal(id, { dealstage: stageId });
+}
+
+/**
+ * Get all deals grouped by stage for a kanban board view.
+ * Returns a map of stageId -> deals[].
+ */
+export async function getDealsByStage(
+  limit = 100,
+): Promise<Record<string, unknown[]>> {
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
+  try {
+    const res = await hubspotFetch(
+      `/crm/v3/objects/deals?limit=${safeLimit}&properties=dealname,amount,dealstage,pipeline,closedate,createdate,hs_deal_stage_probability`,
+    );
+    if (!res.ok) return {};
+    const data = await res.json();
+    const grouped: Record<string, unknown[]> = {};
+    for (const deal of data.results ?? []) {
+      const stage = (deal as { properties: { dealstage: string } }).properties
+        .dealstage;
+      if (!grouped[stage]) grouped[stage] = [];
+      grouped[stage].push(deal);
+    }
+    return grouped;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Create a note on a deal.
+ */
+export async function createNote(
+  dealId: string,
+  body: string,
+): Promise<{ id: string } | null> {
+  try {
+    const res = await hubspotFetch("/crm/v3/objects/notes", {
+      method: "POST",
+      body: JSON.stringify({
+        properties: {
+          hs_note_body: body,
+          hs_timestamp: new Date().toISOString(),
+        },
+        associations: [
+          {
+            to: { id: dealId },
+            types: [
+              { associationCategory: "HUBSPOT_DEFINED", associationTypeId: 214 },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * List notes for a deal.
+ */
+export async function listNotes(dealId: string): Promise<unknown[]> {
+  try {
+    const res = await hubspotFetch(
+      `/crm/v3/objects/deals/${dealId}/associations/notes`,
+    );
+    if (!res.ok) return [];
+    const assocData = await res.json();
+    const noteIds: string[] = (assocData.results ?? []).map(
+      (r: { id: string }) => r.id,
+    );
+    if (noteIds.length === 0) return [];
+    const notes = await Promise.all(
+      noteIds.map(async (id) => {
+        const r = await hubspotFetch(
+          `/crm/v3/objects/notes/${id}?properties=hs_note_body,hs_timestamp`,
+        );
+        return r.ok ? r.json() : null;
+      }),
+    );
+    return notes.filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Pipeline stats: conversion rates and deal counts per stage.
+ */
+export async function getPipelineStats(): Promise<{
+  totalDeals: number;
+  totalValue: number;
+  byStage: Record<string, { count: number; value: number }>;
+}> {
+  try {
+    const res = await hubspotFetch(
+      `/crm/v3/objects/deals?limit=100&properties=dealname,amount,dealstage`,
+    );
+    if (!res.ok) return { totalDeals: 0, totalValue: 0, byStage: {} };
+    const data = await res.json();
+    const byStage: Record<string, { count: number; value: number }> = {};
+    let totalValue = 0;
+    for (const deal of data.results ?? []) {
+      const { dealstage, amount } = (
+        deal as { properties: { dealstage: string; amount: string } }
+      ).properties;
+      const val = parseFloat(amount || "0") || 0;
+      if (!byStage[dealstage]) byStage[dealstage] = { count: 0, value: 0 };
+      byStage[dealstage].count++;
+      byStage[dealstage].value += val;
+      totalValue += val;
+    }
+    return { totalDeals: data.results?.length ?? 0, totalValue, byStage };
+  } catch {
+    return { totalDeals: 0, totalValue: 0, byStage: {} };
+  }
+}
+
+/**
  * Associate an existing deal with an existing contact.
  * Safe to call fire-and-forget — never throws.
  */

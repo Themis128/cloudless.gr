@@ -122,7 +122,7 @@ describe("getSeoSnapshot", () => {
   });
 
   it("returns null when credentials are missing", async () => {
-    vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+    process.env.GOOGLE_CLIENT_EMAIL = ""; process.env.GOOGLE_PRIVATE_KEY = "";
     vi.stubGlobal("fetch", vi.fn());  // should not be called
 
     const { getSeoSnapshot } = await import("@/lib/gsc");

@@ -8,10 +8,10 @@ export default defineConfig({
     // node_modules/jose is missing its package.json, so Vite can't resolve it
     // via normal package resolution. Alias it to the real store location.
     alias: {
-      // jose — pnpm stub is missing package.json; point directly to the store
+      // jose — point to the installed package's webapi dist (works for both v5 and v6)
       jose: path.resolve(
         __dirname,
-        "node_modules/.pnpm/jose@5.2.3/node_modules/jose/dist/node/cjs/index.js",
+        "node_modules/jose/dist/webapi/index.js",
       ),
       // next-intl/middleware (v4) imports next/server via ESM bare specifier,
       // which Vitest/JSDOM cannot resolve. Tests only need the proxy `config`

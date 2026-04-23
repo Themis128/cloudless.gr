@@ -16,7 +16,7 @@ describe("blog-source", () => {
   });
 
   it("returns static posts when Notion is not configured", async () => {
-    vi.stubEnv("NOTION_API_KEY", "");
+    process.env.NOTION_API_KEY = "";
     resetIntegrationCache();
     const { getBlogPosts } = await import("@/lib/blog-source");
 

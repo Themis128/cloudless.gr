@@ -60,7 +60,7 @@ describe("notion-analytics.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { trackEvent } = await import("@/lib/notion-analytics");
@@ -158,7 +158,7 @@ describe("notion-analytics.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { getRecentEvents } = await import("@/lib/notion-analytics");
@@ -239,7 +239,7 @@ describe("notion-analytics.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { getEventsByDateRange } = await import("@/lib/notion-analytics");
@@ -384,7 +384,7 @@ describe("notion-analytics.ts", () => {
     });
 
     it("returns zeros when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { archiveOldEvents } = await import("@/lib/notion-analytics");

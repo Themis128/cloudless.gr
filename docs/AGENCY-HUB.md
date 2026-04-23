@@ -1,5 +1,7 @@
-# Admin Agency Hub — Implementation Plan
+# Admin Agency Hub
 
+> **Status: IMPLEMENTED** (Phases 2-10 complete as of April 2026. Phase 1 Meta/Instagram deferred pending ad policy appeal.)
+>
 > **Goal:** Turn the `/admin` panel into a full-stack digital agency command centre:
 > social media campaign management, email marketing, lead pipeline, content calendar,
 > client reporting — all with AI-assisted creation.
@@ -150,22 +152,35 @@ AI campaign creation routes call **Anthropic Claude API** (or OpenAI) server-sid
 
 ## 4. Phase Roadmap
 
-| Phase | Feature | Effort | Unblocked by |
+| Phase | Feature | Status | Notes |
 |---|---|---|---|
-| **1** | Meta campaigns + Pixel activation | Medium | Complete runbook phases A+B+C |
-| **2** | ActiveCampaign email marketing | Small | Add SSM keys |
-| **3** | Google Ads | Medium | Get developer token approved |
-| **4** | HubSpot full deal pipeline | Small | Already have HubSpot connected |
-| **5** | LinkedIn campaigns | Medium | Create LinkedIn App |
-| **6** | TikTok campaigns | Medium | Create TikTok Business App |
-| **7** | X campaigns | Medium | Twitter developer account |
-| **8** | Content calendar | Medium | Phases 1-4 done |
-| **9** | Client reporting | Large | Phases 1-7 done |
-| **10** | AI campaign assistant | Medium | ANTHROPIC_API_KEY + at least 1 platform |
+| **1** | Meta campaigns + Pixel activation | DEFERRED | Blocked: ad policy appeal pending (see `project_instagram_blocker.md`) |
+| **2** | ActiveCampaign email marketing | DONE | `src/lib/activecampaign.ts`, `/admin/email`, API routes at `/api/admin/email/` |
+| **3** | Google Ads | DONE | `src/lib/campaigns/google-ads.ts`, `/admin/campaigns/google`, insights route |
+| **4** | HubSpot full deal pipeline | DONE | Extended `hubspot.ts`; kanban at `/admin/pipeline`; API at `/api/admin/pipeline/` |
+| **5** | LinkedIn campaigns | DONE | `src/lib/campaigns/linkedin.ts`, `/admin/campaigns/linkedin` |
+| **6** | TikTok campaigns | DONE | `src/lib/campaigns/tiktok.ts`, `/admin/campaigns/tiktok` |
+| **7** | X (Twitter) campaigns | DONE | `src/lib/campaigns/x-ads.ts` (OAuth 1.0a), `/admin/campaigns/x` |
+| **8** | Content calendar | DONE | `src/lib/content-calendar.ts`, `/admin/calendar`, CRUD API at `/api/admin/calendar/` |
+| **9** | Client reporting | DONE | `src/lib/reports.ts`, `/admin/reports`, generate + view; AI insights via Claude |
+| **10** | AI campaign assistant | DONE | `/admin/ai-assistant`; strategy + copy routes at `/api/admin/ai/`; uses `claude-sonnet-4-6` via fetch |
+
+### What still needs SSM keys populated in AWS
+
+All code is deployed and gracefully returns 503 when credentials are missing. Populate these in AWS Parameter Store to activate each platform:
+
+```
+ACTIVECAMPAIGN_API_URL, ACTIVECAMPAIGN_API_TOKEN
+GOOGLE_ADS_DEVELOPER_TOKEN, GOOGLE_ADS_CUSTOMER_ID
+LINKEDIN_ACCESS_TOKEN, LINKEDIN_AD_ACCOUNT_ID, LINKEDIN_ORGANIZATION_URN
+TIKTOK_ACCESS_TOKEN, TIKTOK_ADVERTISER_ID
+X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET, X_AD_ACCOUNT_ID
+ANTHROPIC_API_KEY  (for AI assistant + report insights)
+```
 
 ---
 
-## 5. Phase 1 — Meta (Facebook + Instagram)
+## 5. Phase 1 — Meta (Facebook + Instagram) — DEFERRED
 
 ### What to build
 
@@ -224,9 +239,21 @@ Complete `meta-account-runbook.md`:
 
 ---
 
-## 6. Phase 2 — Email Marketing (ActiveCampaign)
+## 6. Phase 2 — Email Marketing (ActiveCampaign) — DONE
 
-You already have a complete MCP server at `activecampaign-mcp-server/`. The plan is to expose it as REST API routes consumed by an admin UI.
+**Implemented files:**
+- `src/lib/activecampaign.ts` — AC API v3 client (campaigns, contacts, lists, automations, stats)
+- `src/app/api/admin/email/campaigns/route.ts` — GET list / POST create
+- `src/app/api/admin/email/campaigns/[id]/route.ts` — GET single
+- `src/app/api/admin/email/contacts/route.ts` — GET list
+- `src/app/api/admin/email/lists/route.ts` — GET lists
+- `src/app/api/admin/email/automations/route.ts` — GET automations
+- `src/app/api/admin/email/stats/route.ts` — aggregate totals
+- `src/app/[locale]/admin/email/page.tsx` — tabbed UI (campaigns / contacts / automations)
+
+All routes return 503 when `ACTIVECAMPAIGN_API_URL` or `ACTIVECAMPAIGN_API_TOKEN` is missing from SSM.
+
+**Original plan for reference:** You already have a complete MCP server at `activecampaign-mcp-server/`. The plan is to expose it as REST API routes consumed by an admin UI.
 
 ### What to build
 
@@ -262,9 +289,17 @@ src/app/[locale]/admin/email/
 
 ---
 
-## 7. Phase 3 — Google Ads
+## 7. Phase 3 — Google Ads — DONE
 
-### What to build
+**Implemented files:**
+- `src/lib/campaigns/google-ads.ts` — Google Ads API v17 with GAQL queries
+- `src/app/api/admin/campaigns/google/route.ts` — GET campaigns
+- `src/app/api/admin/campaigns/google/insights/route.ts` — GET metrics
+- `src/app/[locale]/admin/campaigns/google/page.tsx`
+
+Returns 503 when `GOOGLE_ADS_DEVELOPER_TOKEN` or `GOOGLE_ADS_CUSTOMER_ID` missing.
+
+### Original plan
 
 ```
 src/lib/campaigns/google-ads.ts        ← Google Ads API v17 client
@@ -292,9 +327,17 @@ pauseCampaign(id: string): Promise<void>
 
 ---
 
-## 8. Phase 4 — Lead Pipeline Automation (HubSpot)
+## 8. Phase 4 — Lead Pipeline Automation (HubSpot) — DONE
 
-You already have `src/lib/hubspot.ts` with contacts, deals, and companies. This phase closes the automation loop and adds a visual pipeline view.
+**Implemented files:**
+- `src/lib/hubspot.ts` — extended with `updateDeal`, `moveDealStage`, `getDealsByStage`, `createNote`, `listNotes`, `getPipelineStats`
+- `src/app/api/admin/pipeline/board/route.ts` — GET deals grouped by stage + pipelines
+- `src/app/api/admin/pipeline/deals/[id]/move/route.ts` — POST move to stage
+- `src/app/api/admin/pipeline/deals/[id]/notes/route.ts` — GET/POST notes
+- `src/app/api/admin/pipeline/stats/route.ts` — totalDeals, totalValue, byStage
+- `src/app/[locale]/admin/pipeline/page.tsx` — Kanban board with stage columns
+
+**Original plan:** You already have `src/lib/hubspot.ts` with contacts, deals, and companies. This phase closes the automation loop and adds a visual pipeline view.
 
 ### What to build
 
@@ -331,7 +374,11 @@ src/app/[locale]/admin/pipeline/
 
 ---
 
-## 9. Phase 5 — LinkedIn Campaigns
+## 9. Phase 5 — LinkedIn Campaigns — DONE
+
+**Implemented:** `src/lib/campaigns/linkedin.ts`, `src/app/api/admin/campaigns/linkedin/route.ts`, `src/app/api/admin/campaigns/linkedin/insights/route.ts`, `src/app/[locale]/admin/campaigns/linkedin/page.tsx`. Uses LinkedIn Marketing API v2 with `LinkedIn-Version: 202401` header. Returns 503 when `LINKEDIN_ACCESS_TOKEN` or `LINKEDIN_AD_ACCOUNT_ID` missing.
+
+### Original plan
 
 ```
 src/lib/campaigns/linkedin.ts
@@ -350,7 +397,11 @@ src/app/[locale]/admin/campaigns/linkedin/page.tsx
 
 ---
 
-## 10. Phase 6 — TikTok Campaigns
+## 10. Phase 6 — TikTok Campaigns — DONE
+
+**Implemented:** `src/lib/campaigns/tiktok.ts`, API routes at `/api/admin/campaigns/tiktok/` and `/api/admin/campaigns/tiktok/insights/`, `src/app/[locale]/admin/campaigns/tiktok/page.tsx`. Uses TikTok Business API v1.3 with `Access-Token` header. Returns 503 when `TIKTOK_ACCESS_TOKEN` or `TIKTOK_ADVERTISER_ID` missing.
+
+### Original plan
 
 ```
 src/lib/campaigns/tiktok.ts
@@ -366,7 +417,11 @@ src/app/[locale]/admin/campaigns/tiktok/page.tsx
 
 ---
 
-## 11. Phase 7 — X (Twitter) Campaigns
+## 11. Phase 7 — X (Twitter) Campaigns — DONE
+
+**Implemented:** `src/lib/campaigns/x-ads.ts`, API routes at `/api/admin/campaigns/x/` and `/api/admin/campaigns/x/insights/`, `src/app/[locale]/admin/campaigns/x/page.tsx`. Uses X Ads API v12 with OAuth 1.0a HMAC-SHA1 signing (Node.js `crypto` module). Returns 503 when any of `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`, `X_AD_ACCOUNT_ID` is missing.
+
+### Original plan
 
 ```
 src/lib/campaigns/x-ads.ts
@@ -382,7 +437,13 @@ src/app/[locale]/admin/campaigns/x/page.tsx
 
 ---
 
-## 12. Phase 8 — Content Calendar
+## 12. Phase 8 — Content Calendar — DONE
+
+**Implemented:** `src/lib/content-calendar.ts` (in-memory CRUD store), API routes at `/api/admin/calendar/` (GET), `/api/admin/calendar/create/` (POST), `/api/admin/calendar/[id]/` (PATCH/DELETE), `src/app/[locale]/admin/calendar/page.tsx` (month grid with click-to-add modal). Supports types: `social_post`, `email_campaign`, `blog_post`, `consultation`, `ad_campaign`.
+
+**Note:** The in-memory store resets on server restart. For persistence, connect `content-calendar.ts` to a database or Notion.
+
+### Original plan
 
 A unified visual calendar showing all scheduled content across channels.
 
@@ -410,7 +471,13 @@ src/app/[locale]/admin/calendar/
 
 ---
 
-## 13. Phase 9 — Client Reporting
+## 13. Phase 9 — Client Reporting — DONE
+
+**Implemented:** `src/lib/reports.ts` (in-memory report store), API routes at `/api/admin/reports/` (GET list), `/api/admin/reports/generate/` (POST), `/api/admin/reports/[id]/` (GET/DELETE), `src/app/[locale]/admin/reports/page.tsx` (list + generate modal), `src/app/[locale]/admin/reports/[id]/page.tsx` (report viewer with AI insights + print/PDF button). Report generation aggregates HubSpot pipeline stats and ActiveCampaign email stats. AI insights generated per section via Claude when `ANTHROPIC_API_KEY` is set.
+
+**Note:** Reports use an in-memory store (reset on restart). For persistence, connect `reports.ts` to a database.
+
+### Original plan
 
 Auto-generated performance reports combining data from all connected platforms, exportable as PDF or shareable as a live HTML page.
 
@@ -442,7 +509,11 @@ src/app/[locale]/admin/reports/
 
 ---
 
-## 14. Phase 10 — AI Campaign Assistant
+## 14. Phase 10 — AI Campaign Assistant — DONE
+
+**Implemented:** API routes at `/api/admin/ai/campaign/` (POST strategy), `/api/admin/ai/copy/` (POST 5 copy variants), `/api/admin/ai/report-insights/` (POST section insights). UI at `src/app/[locale]/admin/ai-assistant/page.tsx` with Campaign Strategy and Ad Copy Generator tabs. All routes call `https://api.anthropic.com/v1/messages` directly via `fetch` (no SDK) using model `claude-sonnet-4-6`. Returns 503 when `ANTHROPIC_API_KEY` missing from SSM.
+
+### Original plan
 
 An AI wizard that creates full campaign setups from a plain-language brief.
 
@@ -576,14 +647,26 @@ Also extend `AppConfig` interface in `src/lib/ssm-config.ts` and `IntegrationCon
 
 ---
 
-## Implementation Order (Recommended)
+## Implementation Status (April 2026)
 
-1. **Today** — Finish `meta-account-runbook.md` Phases A+B+C (unblocks Meta + Pixel)
-2. **Week 1** — Phase 4 (HubSpot pipeline) — smallest lift, already connected
-3. **Week 1** — Phase 2 (ActiveCampaign email) — MCP server already built, just needs UI
-4. **Week 2** — Phase 1 (Meta campaigns) — highest ROI once runbook is done
-5. **Week 2** — Phase 10 (AI assistant) — can generate copy for Meta immediately after
-6. **Week 3** — Phase 8 (Content calendar) — needs at least Meta + email to be useful
-7. **Week 4** — Phase 3 (Google Ads) — parallel with developer token approval
-8. **Week 5** — Phases 5, 6, 7 (LinkedIn, TikTok, X)
-9. **Week 6** — Phase 9 (Client reporting) — aggregate everything
+Phases 2-10 are fully implemented and deployed. The remaining work is operational:
+
+1. **Populate SSM keys** for each platform (see table in Section 4)
+2. **Complete Meta policy appeal** to unblock Phase 1 (see `project_instagram_blocker.md`)
+3. **Add database persistence** for content calendar and reports (currently in-memory)
+4. **Wire automation hooks** from Phase 4 plan (e.g. `/api/contact` creating HubSpot deals)
+
+### Test coverage
+
+All new Marketing Hub code is covered by Vitest unit tests:
+
+| Test file | Coverage |
+|---|---|
+| `__tests__/hubspot-pipeline.test.ts` | `hubspot.ts` pipeline extensions (updateDeal, moveDealStage, getDealsByStage, createNote, getPipelineStats) |
+| `__tests__/activecampaign.test.ts` | `activecampaign.ts` (all exported functions) |
+| `__tests__/content-calendar.test.ts` | `content-calendar.ts` CRUD |
+| `__tests__/reports.test.ts` | `reports.ts` CRUD |
+| `__tests__/admin-pipeline-api.test.ts` | `/api/admin/pipeline/` routes |
+| `__tests__/admin-email-api.test.ts` | `/api/admin/email/` routes |
+| `__tests__/admin-calendar-api.test.ts` | `/api/admin/calendar/` routes |
+| `__tests__/admin-reports-api.test.ts` | `/api/admin/reports/` routes |

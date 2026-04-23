@@ -54,7 +54,7 @@ describe("POST /api/webhooks/stripe", () => {
   });
 
   it("returns 500 when webhook secret is not configured", async () => {
-    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
+    process.env.STRIPE_WEBHOOK_SECRET = "";
     resetSsmCache();
 
     const { POST } = await import("@/app/api/webhooks/stripe/route");

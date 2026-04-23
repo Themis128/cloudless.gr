@@ -28,6 +28,37 @@ export interface IntegrationConfig {
   SENTRY_ORG?: string;
   SENTRY_PROJECT?: string;
   NOTION_WEBHOOK_SECRET?: string;
+  // ActiveCampaign
+  ACTIVECAMPAIGN_API_URL?: string;
+  ACTIVECAMPAIGN_API_TOKEN?: string;
+  // Google Ads
+  GOOGLE_ADS_DEVELOPER_TOKEN?: string;
+  GOOGLE_ADS_CUSTOMER_ID?: string;
+  // LinkedIn
+  LINKEDIN_CLIENT_ID?: string;
+  LINKEDIN_CLIENT_SECRET?: string;
+  LINKEDIN_ACCESS_TOKEN?: string;
+  LINKEDIN_AD_ACCOUNT_ID?: string;
+  LINKEDIN_ORGANIZATION_URN?: string;
+  // TikTok
+  TIKTOK_APP_ID?: string;
+  TIKTOK_APP_SECRET?: string;
+  TIKTOK_ACCESS_TOKEN?: string;
+  TIKTOK_ADVERTISER_ID?: string;
+  // X (Twitter)
+  X_API_KEY?: string;
+  X_API_SECRET?: string;
+  X_ACCESS_TOKEN?: string;
+  X_ACCESS_SECRET?: string;
+  X_AD_ACCOUNT_ID?: string;
+  // Meta
+  META_AD_ACCOUNT_ID?: string;
+  META_PIXEL_ID?: string;
+  META_CAPI_ACCESS_TOKEN?: string;
+  META_ACCESS_TOKEN?: string;
+  META_PAGE_ID?: string;
+  // AI
+  ANTHROPIC_API_KEY?: string;
 }
 
 let cached: IntegrationConfig | null = null;
@@ -58,6 +89,30 @@ export function getIntegrations(): IntegrationConfig {
     SENTRY_ORG: process.env.SENTRY_ORG ?? "baltzakisthemiscom",
     SENTRY_PROJECT: process.env.SENTRY_PROJECT ?? "cloudless-gr",
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET,
+    ACTIVECAMPAIGN_API_URL: process.env.ACTIVECAMPAIGN_API_URL,
+    ACTIVECAMPAIGN_API_TOKEN: process.env.ACTIVECAMPAIGN_API_TOKEN,
+    GOOGLE_ADS_DEVELOPER_TOKEN: process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
+    GOOGLE_ADS_CUSTOMER_ID: process.env.GOOGLE_ADS_CUSTOMER_ID,
+    LINKEDIN_CLIENT_ID: process.env.LINKEDIN_CLIENT_ID,
+    LINKEDIN_CLIENT_SECRET: process.env.LINKEDIN_CLIENT_SECRET,
+    LINKEDIN_ACCESS_TOKEN: process.env.LINKEDIN_ACCESS_TOKEN,
+    LINKEDIN_AD_ACCOUNT_ID: process.env.LINKEDIN_AD_ACCOUNT_ID,
+    LINKEDIN_ORGANIZATION_URN: process.env.LINKEDIN_ORGANIZATION_URN,
+    TIKTOK_APP_ID: process.env.TIKTOK_APP_ID,
+    TIKTOK_APP_SECRET: process.env.TIKTOK_APP_SECRET,
+    TIKTOK_ACCESS_TOKEN: process.env.TIKTOK_ACCESS_TOKEN,
+    TIKTOK_ADVERTISER_ID: process.env.TIKTOK_ADVERTISER_ID,
+    X_API_KEY: process.env.X_API_KEY,
+    X_API_SECRET: process.env.X_API_SECRET,
+    X_ACCESS_TOKEN: process.env.X_ACCESS_TOKEN,
+    X_ACCESS_SECRET: process.env.X_ACCESS_SECRET,
+    X_AD_ACCOUNT_ID: process.env.X_AD_ACCOUNT_ID,
+    META_AD_ACCOUNT_ID: process.env.META_AD_ACCOUNT_ID,
+    META_PIXEL_ID: process.env.META_PIXEL_ID,
+    META_CAPI_ACCESS_TOKEN: process.env.META_CAPI_ACCESS_TOKEN,
+    META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN,
+    META_PAGE_ID: process.env.META_PAGE_ID,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   };
 
   return cached;
@@ -148,6 +203,41 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
         envCfg.SENTRY_PROJECT || ssm.SENTRY_PROJECT || "cloudless-gr",
       NOTION_WEBHOOK_SECRET:
         envCfg.NOTION_WEBHOOK_SECRET || ssm.NOTION_WEBHOOK_SECRET || undefined,
+      ACTIVECAMPAIGN_API_URL:
+        envCfg.ACTIVECAMPAIGN_API_URL || ssm.ACTIVECAMPAIGN_API_URL || undefined,
+      ACTIVECAMPAIGN_API_TOKEN:
+        envCfg.ACTIVECAMPAIGN_API_TOKEN || ssm.ACTIVECAMPAIGN_API_TOKEN || undefined,
+      GOOGLE_ADS_DEVELOPER_TOKEN:
+        envCfg.GOOGLE_ADS_DEVELOPER_TOKEN || ssm.GOOGLE_ADS_DEVELOPER_TOKEN || undefined,
+      GOOGLE_ADS_CUSTOMER_ID:
+        envCfg.GOOGLE_ADS_CUSTOMER_ID || ssm.GOOGLE_ADS_CUSTOMER_ID || undefined,
+      LINKEDIN_CLIENT_ID: envCfg.LINKEDIN_CLIENT_ID || ssm.LINKEDIN_CLIENT_ID || undefined,
+      LINKEDIN_CLIENT_SECRET:
+        envCfg.LINKEDIN_CLIENT_SECRET || ssm.LINKEDIN_CLIENT_SECRET || undefined,
+      LINKEDIN_ACCESS_TOKEN:
+        envCfg.LINKEDIN_ACCESS_TOKEN || ssm.LINKEDIN_ACCESS_TOKEN || undefined,
+      LINKEDIN_AD_ACCOUNT_ID:
+        envCfg.LINKEDIN_AD_ACCOUNT_ID || ssm.LINKEDIN_AD_ACCOUNT_ID || undefined,
+      LINKEDIN_ORGANIZATION_URN:
+        envCfg.LINKEDIN_ORGANIZATION_URN || ssm.LINKEDIN_ORGANIZATION_URN || undefined,
+      TIKTOK_APP_ID: envCfg.TIKTOK_APP_ID || ssm.TIKTOK_APP_ID || undefined,
+      TIKTOK_APP_SECRET: envCfg.TIKTOK_APP_SECRET || ssm.TIKTOK_APP_SECRET || undefined,
+      TIKTOK_ACCESS_TOKEN:
+        envCfg.TIKTOK_ACCESS_TOKEN || ssm.TIKTOK_ACCESS_TOKEN || undefined,
+      TIKTOK_ADVERTISER_ID:
+        envCfg.TIKTOK_ADVERTISER_ID || ssm.TIKTOK_ADVERTISER_ID || undefined,
+      X_API_KEY: envCfg.X_API_KEY || ssm.X_API_KEY || undefined,
+      X_API_SECRET: envCfg.X_API_SECRET || ssm.X_API_SECRET || undefined,
+      X_ACCESS_TOKEN: envCfg.X_ACCESS_TOKEN || ssm.X_ACCESS_TOKEN || undefined,
+      X_ACCESS_SECRET: envCfg.X_ACCESS_SECRET || ssm.X_ACCESS_SECRET || undefined,
+      X_AD_ACCOUNT_ID: envCfg.X_AD_ACCOUNT_ID || ssm.X_AD_ACCOUNT_ID || undefined,
+      META_AD_ACCOUNT_ID: envCfg.META_AD_ACCOUNT_ID || ssm.META_AD_ACCOUNT_ID || undefined,
+      META_PIXEL_ID: envCfg.META_PIXEL_ID || ssm.META_PIXEL_ID || undefined,
+      META_CAPI_ACCESS_TOKEN:
+        envCfg.META_CAPI_ACCESS_TOKEN || ssm.META_CAPI_ACCESS_TOKEN || undefined,
+      META_ACCESS_TOKEN: envCfg.META_ACCESS_TOKEN || ssm.META_ACCESS_TOKEN || undefined,
+      META_PAGE_ID: envCfg.META_PAGE_ID || ssm.META_PAGE_ID || undefined,
+      ANTHROPIC_API_KEY: envCfg.ANTHROPIC_API_KEY || ssm.ANTHROPIC_API_KEY || undefined,
     };
   } catch (err) {
     console.warn(

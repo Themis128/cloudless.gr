@@ -25,7 +25,7 @@ describe("Blog API Notion fallbacks", () => {
   });
 
   it("GET /api/blog/posts returns static posts when Notion is not configured", async () => {
-    vi.stubEnv("NOTION_API_KEY", "");
+    process.env.NOTION_API_KEY = "";
     resetIntegrationCache();
     const { GET } = await import("@/app/api/blog/posts/route");
 
