@@ -63,17 +63,6 @@ export default function EmailPage() {
   const [notConfigured, setNotConfigured] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadStats();
-    loadTab(tab);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    loadTab(tab);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
-
   async function loadStats() {
     try {
       const res = await fetchWithAuth("/api/admin/email/stats");
@@ -110,6 +99,17 @@ export default function EmailPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    loadStats();
+    loadTab(tab);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    loadTab(tab);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   if (notConfigured) {
     return (

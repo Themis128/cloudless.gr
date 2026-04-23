@@ -47,10 +47,6 @@ export default function PipelinePage() {
   const [error, setError] = useState<string | null>(null);
   const [movingDeal, setMovingDeal] = useState<string | null>(null);
 
-  useEffect(() => {
-    load();
-  }, []);
-
   async function load() {
     setLoading(true);
     setError(null);
@@ -72,6 +68,8 @@ export default function PipelinePage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => { load(); }, []);
 
   async function moveDeal(dealId: string, stageId: string) {
     setMovingDeal(dealId);

@@ -29,8 +29,6 @@ export default function GoogleAdsPage() {
   const [notConfigured, setNotConfigured] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { load(); }, []);
-
   async function load() {
     setLoading(true);
     setError(null);
@@ -49,6 +47,8 @@ export default function GoogleAdsPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => { load(); }, []);
 
   if (notConfigured) {
     return (
