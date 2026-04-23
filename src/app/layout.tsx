@@ -6,12 +6,14 @@ const instrumentSans = Instrument_Sans({
   variable: "--font-instrument-sans",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 const workSans = Work_Sans({
   variable: "--font-work-sans",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 const geistMono = Geist_Mono({
@@ -19,7 +21,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
   display: "swap",
   // Hero badge, CTAs, and TerminalBlock all use font-mono above-the-fold
-  preload: true,
+  preload: false,
 });
 
 export const metadata: Metadata = {
