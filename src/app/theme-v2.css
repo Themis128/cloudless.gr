@@ -102,9 +102,21 @@
 
   /* Hero gradient mesh (deep navy + faint cyan/indigo) */
   --gradient-hero:
-    radial-gradient(circle at 20% 0%, rgb(34 211 230 / 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 80% 10%, rgb(99 102 241 / 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 50% 100%, rgb(168 85 247 / 0.04) 0%, transparent 60%),
+    radial-gradient(
+      circle at 20% 0%,
+      rgb(34 211 230 / 0.08) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 10%,
+      rgb(99 102 241 / 0.08) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 50% 100%,
+      rgb(168 85 247 / 0.04) 0%,
+      transparent 60%
+    ),
     var(--surface-canvas);
 }
 
@@ -134,9 +146,21 @@
     --shadow-md: 0 4px 12px rgb(0 0 0 / 0.35);
     --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.45);
     --gradient-hero:
-      radial-gradient(circle at 20% 0%, rgb(34 211 230 / 0.08) 0%, transparent 50%),
-      radial-gradient(circle at 80% 10%, rgb(99 102 241 / 0.08) 0%, transparent 50%),
-      radial-gradient(circle at 50% 100%, rgb(168 85 247 / 0.04) 0%, transparent 60%),
+      radial-gradient(
+        circle at 20% 0%,
+        rgb(34 211 230 / 0.08) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 80% 10%,
+        rgb(99 102 241 / 0.08) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 50% 100%,
+        rgb(168 85 247 / 0.04) 0%,
+        transparent 60%
+      ),
       var(--surface-canvas);
   }
 }
@@ -352,24 +376,44 @@
   opacity: 0.35;
 }
 
-/* Decorative numbered badges (the 01/02/03 service cards) — bg-neon-cyan/10
-   reads as a faint cyan card on dark. On light it disappears; bump contrast. */
-[data-theme="light"] [class*="bg-neon-cyan/"],
-[data-theme="light"] [class*="bg-neon-magenta/"],
-[data-theme="light"] [class*="bg-neon-green/"],
-[data-theme="light"] [class*="bg-neon-blue/"] {
+/* Decorative badges + alpha-modulated accent backgrounds — Tailwind v4
+   strips attribute-substring selectors like [class*="bg-neon-cyan/"] during
+   production CSS optimization (Phase 6.2 finding). Use explicit class
+   selectors so the rules survive into the bundled CSS.
+   On light theme each alpha variant collapses to --accent-soft so the badge
+   stays visible without a neon halo. */
+[data-theme="light"] .bg-neon-cyan\/5,
+[data-theme="light"] .bg-neon-cyan\/10,
+[data-theme="light"] .bg-neon-cyan\/20,
+[data-theme="light"] .bg-neon-cyan\/30,
+[data-theme="light"] .bg-neon-cyan\/40,
+[data-theme="light"] .bg-neon-cyan\/50,
+[data-theme="light"] .bg-neon-cyan\/60,
+[data-theme="light"] .bg-neon-magenta\/5,
+[data-theme="light"] .bg-neon-magenta\/10,
+[data-theme="light"] .bg-neon-magenta\/20,
+[data-theme="light"] .bg-neon-magenta\/30,
+[data-theme="light"] .bg-neon-green\/5,
+[data-theme="light"] .bg-neon-green\/10,
+[data-theme="light"] .bg-neon-green\/20,
+[data-theme="light"] .bg-neon-green\/30,
+[data-theme="light"] .bg-neon-blue\/5,
+[data-theme="light"] .bg-neon-blue\/10,
+[data-theme="light"] .bg-neon-blue\/20,
+[data-theme="light"] .bg-neon-blue\/30 {
   background-color: var(--accent-soft);
 }
 
-/* Phase 6.1 — fix the inverse: when a parent has bg-neon-cyan/N (now
-   accent-soft on light) AND a child uses text-void or text-white expecting
-   a dark background, the white-on-pale-cyan pair fails contrast at 1.12:1.
-   Re-target both color tokens to --accent (dark teal) inside accent-soft
-   surfaces so the pairing reads as bold-accent-on-soft (~7:1). */
-[data-theme="light"] [class*="bg-neon-cyan/"] .text-void,
-[data-theme="light"] [class*="bg-neon-cyan/"] .text-white,
-[data-theme="light"] [class*="bg-neon-cyan/"][class*=" text-void"],
-[data-theme="light"] [class*="bg-neon-cyan/"][class*=" text-white"] {
+/* When a parent has bg-neon-cyan/N (now accent-soft) AND a child uses
+   text-void/text-white expecting a dark background, the white-on-pale pair
+   fails contrast. Retarget those text tokens to --accent inside the
+   accent-soft surface. Same explicit-class approach as above. */
+[data-theme="light"] .bg-neon-cyan\/5 .text-void,
+[data-theme="light"] .bg-neon-cyan\/10 .text-void,
+[data-theme="light"] .bg-neon-cyan\/20 .text-void,
+[data-theme="light"] .bg-neon-cyan\/5 .text-white,
+[data-theme="light"] .bg-neon-cyan\/10 .text-white,
+[data-theme="light"] .bg-neon-cyan\/20 .text-white {
   color: var(--accent);
 }
 
@@ -395,10 +439,8 @@
 /* The two huge gradient orbs (.bg-neon-{cyan,magenta}/5 with translate +
    blur) are the most invasive remnants of the cyberpunk hero. Hide them
    on light pages — the gradient mesh already provides the atmosphere. */
-[data-theme="light"]
-  div.bg-neon-cyan\/5.animate-gradient-shift,
-[data-theme="light"]
-  div.bg-neon-magenta\/5.animate-gradient-shift,
+[data-theme="light"] div.bg-neon-cyan\/5.animate-gradient-shift,
+[data-theme="light"] div.bg-neon-magenta\/5.animate-gradient-shift,
 [data-theme="light"] div[class*="bg-neon-cyan/5"][class*="blur"],
 [data-theme="light"] div[class*="bg-neon-magenta/5"][class*="blur"] {
   display: none;
@@ -414,8 +456,7 @@
 
 /* Hero badge (status pill) — bg-neon-cyan/10 with text-neon-cyan reads
    as a glowing pill on dark. On light, retarget to the v2 pill styling. */
-[data-theme="light"]
-  div.bg-neon-cyan\/10.border-neon-cyan\/20.text-neon-cyan {
+[data-theme="light"] div.bg-neon-cyan\/10.border-neon-cyan\/20.text-neon-cyan {
   background-color: var(--accent-soft);
   border-color: transparent;
   color: var(--accent);
@@ -435,15 +476,40 @@
 
 /* ──────────────────────────────────────────────────────────────────
    PHASE 6 — A11y polish (WCAG AA contrast)
-   Lighthouse caught alpha-modulated accent text (text-neon-cyan/30 .. /70
-   used in service tags, footer captions, and decorative numerals) failing
-   contrast at 1.57–3.37:1 against the light surface. Re-target every alpha
-   variant to --ink-muted, which sits at 4.5:1+ on white.
+   Alpha-modulated accent text fails contrast on light backgrounds.
+   Phase 6.2: same Tailwind-purger fix as the bg overrides above — replaced
+   [class*="..."] attribute selectors with explicit class lists.
+   Also covers .text-neon-green/* (decorative category badges in blog cards)
+   which Phase 6.1 missed.
    ────────────────────────────────────────────────────────────────── */
-[data-theme="light"] [class*="text-neon-cyan/"],
-[data-theme="light"] [class*="text-neon-magenta/"],
-[data-theme="light"] [class*="text-neon-blue/"] {
+[data-theme="light"] .text-neon-cyan\/20,
+[data-theme="light"] .text-neon-cyan\/30,
+[data-theme="light"] .text-neon-cyan\/40,
+[data-theme="light"] .text-neon-cyan\/50,
+[data-theme="light"] .text-neon-cyan\/60,
+[data-theme="light"] .text-neon-cyan\/70,
+[data-theme="light"] .text-neon-cyan\/80,
+[data-theme="light"] .text-neon-magenta\/30,
+[data-theme="light"] .text-neon-magenta\/40,
+[data-theme="light"] .text-neon-magenta\/60,
+[data-theme="light"] .text-neon-magenta\/70,
+[data-theme="light"] .text-neon-blue\/40,
+[data-theme="light"] .text-neon-blue\/60,
+[data-theme="light"] .text-neon-blue\/70,
+[data-theme="light"] .text-neon-green\/40,
+[data-theme="light"] .text-neon-green\/60,
+[data-theme="light"] .text-neon-green\/70 {
   color: var(--ink-muted);
+}
+
+/* Solid (no /N) accent text colors that still fail contrast on light pages.
+   --accent (#0a7785) on white passes; but --success (--neon-green base) at
+   #0a8a52 on a parent .bg-neon-green/10 (now --accent-soft via the bg
+   override above) drops below 4.5:1 because of the soft cyan background.
+   Strengthen the green pill text to use --accent (cyan-teal) too — keeps
+   the brand cohesive (one accent across all category pills) and clears AA. */
+[data-theme="light"] .text-neon-green {
+  color: var(--accent);
 }
 
 /* Mobile tap highlight in light theme — was a hardcoded
