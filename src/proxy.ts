@@ -135,7 +135,11 @@ const CSP_REPORT_ONLY = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  "upgrade-insecure-requests",
+  // Note: upgrade-insecure-requests is intentionally OMITTED here.
+  // Browsers ignore it inside Content-Security-Policy-Report-Only and log
+  // a "directive ignored" warning to the console (Lighthouse Best-Practices
+  // -1). Re-add it inside the enforcing CSP once we promote out of
+  // Report-Only mode (see scheduled agent: trig_01Lwqaf2cUrs3rZPXSdWhdkM).
 ].join("; ");
 
 /** Security headers applied to all responses */

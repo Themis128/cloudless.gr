@@ -393,7 +393,8 @@
   "cookies": {
     "bannerTitle": "Nous respectons votre vie privée",
     "bannerDesc": "Nous utilisons des cookies pour améliorer votre expérience. Vous pouvez tout accepter, refuser les optionnels ou personnaliser vos préférences.",
-    "learnMore": "En savoir plus",
+    "learnMore": "En savoir plus sur les cookies",
+    "learnMoreLabel": "En savoir plus sur notre politique de cookies",
     "acceptAll": "Tout accepter",
     "rejectAll": "Refuser les optionnels",
     "customise": "Personnaliser",
