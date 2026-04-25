@@ -8,6 +8,7 @@ import { getBreadcrumbSchema, getFAQSchema } from "@/lib/structured-data";
 import HolographicCard from "@/components/HolographicCard";
 import { translate, translateArray } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
+import { setRequestLocale } from "next-intl/server";
 import ClientParticleField from "@/components/ClientParticleField";
 
 // ISR: render once per hour, served from CloudFront cache (avoids Lambda cold start on every hit)
@@ -55,7 +56,13 @@ const terminalLines = [
   "  production: LIVE | latency: 12ms | cost: $0.003/req",
 ];
 
-export default async function Home() {
+export default async function Home({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale: localeParam } = await params;
+  setRequestLocale(localeParam);
   const locale = await getServerLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
 

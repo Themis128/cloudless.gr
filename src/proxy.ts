@@ -2,6 +2,48 @@ import { NextRequest, NextResponse } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 
+const LOCALES = routing.locales as readonly string[];
+const DEFAULT_LOCALE = routing.defaultLocale;
+
+function getLocaleFromPath(pathname: string): string {
+  const segment = pathname.split("/")[1];
+  return LOCALES.includes(segment) ? segment : DEFAULT_LOCALE;
+}
+
+function stripLocale(pathname: string): string {
+  const locale = getLocaleFromPath(pathname);
+  if (locale === DEFAULT_LOCALE) return pathname;
+  return pathname.slice(locale.length + 1) || "/";
+}
+
+function readCognitoToken(
+  request: NextRequest,
+): { valid: boolean; isAdmin: boolean } {
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+  if (!clientId) return { valid: false, isAdmin: false };
+  const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
+  const username = request.cookies.get(lastAuthKey)?.value;
+  if (!username) return { valid: false, isAdmin: false };
+  const tokenKey = `CognitoIdentityServiceProvider.${clientId}.${username}.accessToken`;
+  const token = request.cookies.get(tokenKey)?.value;
+  if (!token) return { valid: false, isAdmin: false };
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return { valid: false, isAdmin: false };
+    const payload = JSON.parse(
+      Buffer.from(parts[1], "base64").toString("utf-8"),
+    ) as { exp?: number; "cognito:groups"?: string[] };
+    if (payload.exp && Date.now() >= payload.exp * 1000)
+      return { valid: false, isAdmin: false };
+    return {
+      valid: true,
+      isAdmin: payload["cognito:groups"]?.includes("admin") ?? false,
+    };
+  } catch {
+    return { valid: false, isAdmin: false };
+  }
+}
+
 // --- next-intl locale middleware ---
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -145,7 +187,34 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // --- Page routes: next-intl locale routing + security headers ---
+  // --- Page routes: Cognito auth guard + next-intl locale routing + security headers ---
+  const bare = stripLocale(pathname);
+  const locale = getLocaleFromPath(pathname);
+  const prefix = locale === DEFAULT_LOCALE ? "" : `/${locale}`;
+
+  const isAdminPath = bare === "/admin" || bare.startsWith("/admin/");
+  const isDashboardPath = bare === "/dashboard" || bare.startsWith("/dashboard/");
+
+  if (isAdminPath || isDashboardPath) {
+    const { valid, isAdmin: hasAdminGroup } = readCognitoToken(request);
+    if (valid) {
+      if (isAdminPath && !hasAdminGroup) {
+        return NextResponse.redirect(
+          new URL(`${prefix}/dashboard`, request.url),
+        );
+      }
+    } else {
+      const hasAnyAmplifySession = request.cookies
+        .getAll()
+        .some((c) => c.name.startsWith("CognitoIdentityServiceProvider."));
+      if (hasAnyAmplifySession) {
+        const loginUrl = new URL(`${prefix}/auth/login`, request.url);
+        loginUrl.searchParams.set("redirect", pathname);
+        return NextResponse.redirect(loginUrl);
+      }
+    }
+  }
+
   const response = intlMiddleware(request);
   addSecurityHeaders(response);
   return response;

@@ -19,6 +19,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const item = createCalendarItem(input);
+  const item = await createCalendarItem(input);
   return NextResponse.json({ item }, { status: 201 });
 }

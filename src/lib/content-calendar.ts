@@ -1,3 +1,11 @@
+import { getIntegrationsAsync } from "@/lib/integrations";
+import {
+  notionGetCalendarItems,
+  notionCreateCalendarItem,
+  notionUpdateCalendarItem,
+  notionDeleteCalendarItem,
+} from "@/lib/notion-calendar";
+
 export type CalendarItemType =
   | "social_post"
   | "email_campaign"
@@ -46,12 +54,21 @@ export const PLATFORM_LABELS: Record<CalendarPlatform, string> = {
   google_calendar: "Calendar",
 };
 
+// In-memory fallback store (used when Notion is not configured)
 let store: CalendarItem[] = [];
 
-export function getCalendarItems(
+async function notionEnabled(): Promise<boolean> {
+  const cfg = await getIntegrationsAsync();
+  return !!(cfg.NOTION_API_KEY && cfg.NOTION_CALENDAR_DB_ID);
+}
+
+export async function getCalendarItems(
   from?: string,
   to?: string,
-): CalendarItem[] {
+): Promise<CalendarItem[]> {
+  if (await notionEnabled()) {
+    return (await notionGetCalendarItems(from, to)) ?? [];
+  }
   if (!from && !to) return store;
   return store.filter((item) => {
     if (from && item.date < from) return false;
@@ -60,28 +77,43 @@ export function getCalendarItems(
   });
 }
 
-export function createCalendarItem(
+export async function createCalendarItem(
   input: Omit<CalendarItem, "id">,
-): CalendarItem {
+): Promise<CalendarItem> {
   const item: CalendarItem = {
     ...input,
     id: `cal_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
   };
-  store.push(item);
+  if (await notionEnabled()) {
+    await notionCreateCalendarItem(item);
+  } else {
+    store.push(item);
+  }
   return item;
 }
 
-export function updateCalendarItem(
+export async function updateCalendarItem(
   id: string,
   updates: Partial<Omit<CalendarItem, "id">>,
-): CalendarItem | null {
+): Promise<CalendarItem | null> {
+  if (await notionEnabled()) {
+    const all = (await notionGetCalendarItems()) ?? [];
+    const existing = all.find((i) => i.id === id);
+    if (!existing) return null;
+    const updated = { ...existing, ...updates };
+    await notionUpdateCalendarItem(updated);
+    return updated;
+  }
   const idx = store.findIndex((i) => i.id === id);
   if (idx === -1) return null;
   store[idx] = { ...store[idx], ...updates };
   return store[idx];
 }
 
-export function deleteCalendarItem(id: string): boolean {
+export async function deleteCalendarItem(id: string): Promise<boolean> {
+  if (await notionEnabled()) {
+    return notionDeleteCalendarItem(id);
+  }
   const len = store.length;
   store = store.filter((i) => i.id !== id);
   return store.length < len;

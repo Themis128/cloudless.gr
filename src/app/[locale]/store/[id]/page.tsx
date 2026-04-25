@@ -1,8 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 import {
-  demoProducts,
   getProductById,
   getProductsByCategory,
   categoryLabels,
@@ -13,12 +14,7 @@ import ProductIcon from "@/components/store/ProductIcon";
 import JsonLd from "@/components/JsonLd";
 import { formatPrice } from "@/lib/format-price";
 import { getProductSchema, getBreadcrumbSchema } from "@/lib/structured-data";
-
-export function generateStaticParams() {
-  return demoProducts.flatMap((p) =>
-    ["en", "el", "fr"].map((locale) => ({ locale, id: p.id })),
-  );
-}
+import { routing } from "@/i18n/routing";
 
 export async function generateMetadata({
   params,
@@ -39,7 +35,9 @@ export default async function ProductPage({
 }: {
   params: Promise<{ locale: string; id: string }>;
 }) {
-  const { id } = await params;
+  const { locale, id } = await params;
+  const localePath = (path: string) =>
+    locale === routing.defaultLocale ? path : `/${locale}${path}`;
   const product = getProductById(id);
 
   if (!product) notFound();
@@ -70,7 +68,7 @@ export default async function ProductPage({
         <div className="mx-auto max-w-6xl px-6 py-4">
           <nav className="flex items-center gap-2 font-mono text-sm text-slate-500">
             <Link
-              href="/store"
+              href={localePath("/store")}
               className="hover:text-neon-cyan text-xs transition-colors"
             >
               Store
@@ -165,7 +163,7 @@ export default async function ProductPage({
               {related.map((rel) => (
                 <Link
                   key={rel.id}
-                  href={`/store/${rel.id}`}
+                  href={localePath(`/store/${rel.id}`)}
                   className="group neon-border bg-void-light/50 overflow-hidden rounded-lg transition-all duration-300 hover:-translate-y-1 active:scale-[0.98]"
                 >
                   <div className="bg-void-lighter relative aspect-[4/3] overflow-hidden">

@@ -8,6 +8,21 @@ vi.mock("@/lib/api-auth", () => ({
   requireAdmin: requireAdminMock,
 }));
 
+vi.mock("@/lib/notion-calendar", () => ({
+  notionGetCalendarItems: vi.fn().mockResolvedValue(null),
+  notionCreateCalendarItem: vi.fn().mockResolvedValue(null),
+  notionUpdateCalendarItem: vi.fn().mockResolvedValue(false),
+  notionDeleteCalendarItem: vi.fn().mockResolvedValue(false),
+}));
+
+vi.mock("@/lib/integrations", () => ({
+  getIntegrationsAsync: vi.fn().mockResolvedValue({}),
+  isConfiguredAsync: vi.fn().mockResolvedValue(false),
+  isConfigured: vi.fn().mockReturnValue(false),
+  getIntegrations: vi.fn().mockReturnValue({}),
+  resetIntegrationCacheAsync: vi.fn(),
+}));
+
 function makeGet(path: string): NextRequest {
   return new NextRequest(`http://localhost:4500${path}`, { method: "GET" });
 }
@@ -32,15 +47,26 @@ function makeDelete(path: string): NextRequest {
   return new NextRequest(`http://localhost:4500${path}`, { method: "DELETE" });
 }
 
-function clearCalendar() {
-  getCalendarItems().forEach((i) => deleteCalendarItem(i.id));
+async function clearCalendar() {
+  const all = await getCalendarItems();
+  for (const i of all) {
+    await deleteCalendarItem(i.id);
+  }
 }
 
 describe("Admin Calendar API routes", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     requireAdminMock.mockReturnValue({ ok: true, user: { sub: "admin" } });
-    clearCalendar();
+    // Re-apply mocks after clearAllMocks
+    const notionCalendar = await import("@/lib/notion-calendar");
+    vi.mocked(notionCalendar.notionGetCalendarItems).mockResolvedValue(null);
+    vi.mocked(notionCalendar.notionCreateCalendarItem).mockResolvedValue(null);
+    vi.mocked(notionCalendar.notionUpdateCalendarItem).mockResolvedValue(false);
+    vi.mocked(notionCalendar.notionDeleteCalendarItem).mockResolvedValue(false);
+    const integrations = await import("@/lib/integrations");
+    vi.mocked(integrations.getIntegrationsAsync).mockResolvedValue({});
+    await clearCalendar();
   });
 
   // ── GET /api/admin/calendar ──────────────────────────────────────────────────

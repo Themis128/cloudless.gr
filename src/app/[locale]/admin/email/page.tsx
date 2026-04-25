@@ -103,7 +103,6 @@ export default function EmailPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadStats();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTab(tab);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -111,7 +110,6 @@ export default function EmailPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTab(tab);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
   if (notConfigured) {

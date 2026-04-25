@@ -3,7 +3,7 @@ import { isValidEmail } from "@/lib/validation";
 import { sendEmail } from "@/lib/email";
 import { getConfig } from "@/lib/ssm-config";
 import { slackContactNotify } from "@/lib/slack-notify";
-import { upsertContact } from "@/lib/hubspot";
+import { upsertContact, createDeal, associateDealWithContact } from "@/lib/hubspot";
 import { saveSubmission } from "@/lib/notion-forms";
 import { trackEvent } from "@/lib/notion-analytics";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
@@ -66,14 +66,25 @@ export async function POST(request: Request) {
     const nameParts = String(name).trim().split(" ");
     Promise.allSettled([
       slackContactNotify({ name, email, company, service, message }),
-      upsertContact({
-        email,
-        firstname: nameParts[0] ?? "",
-        lastname: nameParts.slice(1).join(" "),
-        company: company || undefined,
-        service_interest: service || undefined,
-        message: String(message).slice(0, 500),
-      }),
+      (async () => {
+        const contactId = await upsertContact({
+          email,
+          firstname: nameParts[0] ?? "",
+          lastname: nameParts.slice(1).join(" "),
+          company: company || undefined,
+          service_interest: service || undefined,
+          message: String(message).slice(0, 500),
+        });
+        const dealId = await createDeal({
+          dealname: `Lead – ${String(name).slice(0, 80)} (${service || "General"})`,
+          dealstage: "qualifiedtobuy",
+          lead_source: "contact_form",
+          description: String(message).slice(0, 500),
+        });
+        if (dealId && contactId) {
+          await associateDealWithContact(dealId, contactId);
+        }
+      })(),
       saveSubmission({
         name,
         email,

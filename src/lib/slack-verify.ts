@@ -56,6 +56,12 @@ export interface VerifyResult {
 export async function verifySlackRequest(
   request: Request,
 ): Promise<{ ok: true; body: string } | { ok: false; reason: string }> {
+  // Fast-path: detect explicitly-cleared env var before touching the async cache.
+  const envSecret = process.env.SLACK_SIGNING_SECRET;
+  if (envSecret !== undefined && !envSecret) {
+    return { ok: false, reason: "SLACK_SIGNING_SECRET is not configured" };
+  }
+
   const { SLACK_SIGNING_SECRET } = await getSlackConfigAsync();
 
   if (!SLACK_SIGNING_SECRET) {

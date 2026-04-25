@@ -8,7 +8,7 @@
  */
 
 import { beforeEach, afterEach, vi } from "vitest";
-import { resetIntegrationCache, resetSlackConfigCache } from "@/lib/integrations";
+import { resetIntegrationCache, resetIntegrationCacheAsync, resetSlackConfigCache } from "@/lib/integrations";
 import { resetSsmCache } from "@/lib/ssm-config";
 
 // ── Notion ────────────────────────────────────────────────────────────────────
@@ -19,6 +19,8 @@ process.env.NOTION_DOCS_DB_ID = "docs-db-123";
 process.env.NOTION_PROJECTS_DB_ID = "projects-db-123";
 process.env.NOTION_TASKS_DB_ID = "tasks-db-123";
 process.env.NOTION_ANALYTICS_DB_ID = "analytics-db-123";
+process.env.NOTION_CALENDAR_DB_ID = "calendar-db-123";
+process.env.NOTION_REPORTS_DB_ID = "reports-db-123";
 process.env.NOTION_WEBHOOK_SECRET = "whsec_notion_test";
 
 // ── HubSpot ───────────────────────────────────────────────────────────────────
@@ -93,9 +95,12 @@ beforeEach(() => {
     "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----";
   process.env.HUBSPOT_API_KEY = "test-hs-token";
   process.env.NOTION_API_KEY = "secret_test_key_12345";
+  process.env.NOTION_CALENDAR_DB_ID = "calendar-db-123";
+  process.env.NOTION_REPORTS_DB_ID = "reports-db-123";
   process.env.SLACK_SIGNING_SECRET = "test-signing-secret-32chars-padded";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_123";
   resetIntegrationCache();
+  resetIntegrationCacheAsync();
   resetSlackConfigCache();
   resetSsmCache();
 });
@@ -108,6 +113,7 @@ afterEach(() => {
   // stubs to persist across all tests in the file.
   vi.unstubAllEnvs();
   resetIntegrationCache();
+  resetIntegrationCacheAsync();
   resetSlackConfigCache();
   resetSsmCache();
 });

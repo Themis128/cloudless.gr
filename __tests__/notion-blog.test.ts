@@ -396,4 +396,53 @@ describe("notion-blog.ts", () => {
       expect(posts[0].seoDescription).toBeUndefined();
     });
   });
+
+  describe("getAllPosts", () => {
+    it("returns all posts including drafts", async () => {
+      const published = makePage({ id: "pub-1" });
+      const draft = makePage({
+        id: "draft-1",
+        properties: { ...makePage().properties, Published: { checkbox: false } },
+      });
+      mockNotionFetchAll.mockResolvedValueOnce([published, draft]);
+
+      const { getAllPosts } = await import("@/lib/notion-blog");
+      const posts = await getAllPosts();
+
+      expect(posts).toHaveLength(2);
+      expect(posts[0].published).toBe(true);
+      expect(posts[1].published).toBe(false);
+    });
+
+    it("sends no published filter (fetches all)", async () => {
+      mockNotionFetchAll.mockResolvedValueOnce([]);
+
+      const { getAllPosts } = await import("@/lib/notion-blog");
+      await getAllPosts();
+
+      const [, body] = mockNotionFetchAll.mock.calls[0];
+      expect(body).not.toHaveProperty("filter");
+      expect(body.sorts).toEqual([{ property: "Date", direction: "descending" }]);
+    });
+
+    it("returns empty array when not configured", async () => {
+      process.env.NOTION_API_KEY = "";
+      resetIntegrationCache();
+
+      const { getAllPosts } = await import("@/lib/notion-blog");
+      const posts = await getAllPosts();
+
+      expect(posts).toEqual([]);
+      expect(mockNotionFetchAll).not.toHaveBeenCalled();
+    });
+
+    it("returns empty array on error", async () => {
+      mockNotionFetchAll.mockRejectedValueOnce(new Error("API error"));
+
+      const { getAllPosts } = await import("@/lib/notion-blog");
+      const posts = await getAllPosts();
+
+      expect(posts).toEqual([]);
+    });
+  });
 });

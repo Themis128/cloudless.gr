@@ -1,0 +1,120 @@
+diff --git a/dist/client/components/layout-router.js b/dist/client/components/layout-router.js
+index 06b68cc9..4ee800ec 100644
+--- a/dist/client/components/layout-router.js
++++ b/dist/client/components/layout-router.js	
+@@ -273,7 +273,12 @@ class InnerScrollAndFocusHandlerOld extends _react.default.Component {
+ }
+ const InnerScrollAndMaybeFocusHandler = enableNewScrollHandler ? InnerScrollHandlerNew : InnerScrollAndFocusHandlerOld;
+ function ScrollAndMaybeFocusHandler({ children, cacheNode }) {
+-    const context = (0, _react.useContext)(_approutercontextsharedruntime.GlobalLayoutRouterContext);
++    let context;
++    try {
++        context = (0, _react.useContext)(_approutercontextsharedruntime.GlobalLayoutRouterContext);
++    } catch (e) {
++        return children;
++    }
+     if (!context) {
+         throw Object.defineProperty(new Error('invariant global layout router not mounted'), "__NEXT_ERROR_CODE", {
+             value: "E473",
+@@ -290,7 +295,12 @@ function ScrollAndMaybeFocusHandler({ children, cacheNode }) {
+ /**
+  * InnerLayoutRouter handles rendering the provided segment based on the cache.
+  */ function InnerLayoutRouter({ tree, segmentPath, debugNameContext, cacheNode: maybeCacheNode, params, url, isActive }) {
+-    const context = (0, _react.useContext)(_approutercontextsharedruntime.GlobalLayoutRouterContext);
++    let context;
++    try {
++        context = (0, _react.useContext)(_approutercontextsharedruntime.GlobalLayoutRouterContext);
++    } catch (e) {
++        return null;
++    }
+     const parentNavPromises = (0, _react.useContext)(_hooksclientcontextsharedruntime.NavigationPromisesContext);
+     if (!context) {
+         throw Object.defineProperty(new Error('invariant global layout router not mounted'), "__NEXT_ERROR_CODE", {
+@@ -390,7 +400,12 @@ function LoadingBoundaryProvider({ loading, children }) {
+     // it separately is so that when there are multiple parallel routes, we only
+     // send the boundary data once, rather than once per child. But that's a
+     // negligible benefit and can be achieved via caching instead.
+-    const parentContext = (0, _react.use)(_approutercontextsharedruntime.LayoutRouterContext);
++    let parentContext;
++    try {
++        parentContext = (0, _react.use)(_approutercontextsharedruntime.LayoutRouterContext);
++    } catch (e) {
++        return children;
++    }
+     if (parentContext === null) {
+         return children;
+     }
+@@ -439,7 +454,12 @@ function LoadingBoundaryProvider({ loading, children }) {
+     });
+ }
+ function OuterLayoutRouter({ parallelRouterKey, error, errorStyles, errorScripts, templateStyles, templateScripts, template, notFound, forbidden, unauthorized, segmentViewBoundaries }) {
+-    const context = (0, _react.useContext)(_approutercontextsharedruntime.LayoutRouterContext);
++    let context;
++    try {
++        context = (0, _react.useContext)(_approutercontextsharedruntime.LayoutRouterContext);
++    } catch (e) {
++        return null;
++    }
+     if (!context) {
+         throw Object.defineProperty(new Error('invariant expected layout router to be mounted'), "__NEXT_ERROR_CODE", {
+             value: "E56",
+diff --git a/dist/esm/client/components/layout-router.js b/dist/esm/client/components/layout-router.js
+index 25e44ba4..b90c23d0 100644
+--- a/dist/esm/client/components/layout-router.js
++++ b/dist/esm/client/components/layout-router.js	
+@@ -246,7 +246,12 @@ class InnerScrollAndFocusHandlerOld extends React.Component {
+ }
+ const InnerScrollAndMaybeFocusHandler = enableNewScrollHandler ? InnerScrollHandlerNew : InnerScrollAndFocusHandlerOld;
+ function ScrollAndMaybeFocusHandler({ children, cacheNode }) {
+-    const context = useContext(GlobalLayoutRouterContext);
++    let context;
++    try {
++        context = useContext(GlobalLayoutRouterContext);
++    } catch (e) {
++        return children;
++    }
+     if (!context) {
+         throw Object.defineProperty(new Error('invariant global layout router not mounted'), "__NEXT_ERROR_CODE", {
+             value: "E473",
+@@ -263,7 +268,12 @@ function ScrollAndMaybeFocusHandler({ children, cacheNode }) {
+ /**
+  * InnerLayoutRouter handles rendering the provided segment based on the cache.
+  */ function InnerLayoutRouter({ tree, segmentPath, debugNameContext, cacheNode: maybeCacheNode, params, url, isActive }) {
+-    const context = useContext(GlobalLayoutRouterContext);
++    let context;
++    try {
++        context = useContext(GlobalLayoutRouterContext);
++    } catch (e) {
++        return null;
++    }
+     const parentNavPromises = useContext(NavigationPromisesContext);
+     if (!context) {
+         throw Object.defineProperty(new Error('invariant global layout router not mounted'), "__NEXT_ERROR_CODE", {
+@@ -363,7 +373,12 @@ export function LoadingBoundaryProvider({ loading, children }) {
+     // it separately is so that when there are multiple parallel routes, we only
+     // send the boundary data once, rather than once per child. But that's a
+     // negligible benefit and can be achieved via caching instead.
+-    const parentContext = use(LayoutRouterContext);
++    let parentContext;
++    try {
++        parentContext = use(LayoutRouterContext);
++    } catch (e) {
++        return children;
++    }
+     if (parentContext === null) {
+         return children;
+     }
+@@ -415,7 +430,12 @@ export function LoadingBoundaryProvider({ loading, children }) {
+  * OuterLayoutRouter handles the current segment as well as <Offscreen> rendering of other segments.
+  * It can be rendered next to each other with a different `parallelRouterKey`, allowing for Parallel routes.
+  */ export default function OuterLayoutRouter({ parallelRouterKey, error, errorStyles, errorScripts, templateStyles, templateScripts, template, notFound, forbidden, unauthorized, segmentViewBoundaries }) {
+-    const context = useContext(LayoutRouterContext);
++    let context;
++    try {
++        context = useContext(LayoutRouterContext);
++    } catch (e) {
++        return null;
++    }
+     if (!context) {
+         throw Object.defineProperty(new Error('invariant expected layout router to be mounted'), "__NEXT_ERROR_CODE", {
+             value: "E56",

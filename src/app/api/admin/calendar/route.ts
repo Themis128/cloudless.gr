@@ -10,6 +10,6 @@ export async function GET(request: NextRequest) {
   const from = searchParams.get("from") ?? undefined;
   const to = searchParams.get("to") ?? undefined;
 
-  const items = getCalendarItems(from, to);
+  const items = await getCalendarItems(from, to);
   return NextResponse.json({ items, total: items.length });
 }

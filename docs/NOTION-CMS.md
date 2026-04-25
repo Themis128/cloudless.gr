@@ -1,6 +1,6 @@
 # Notion Integration
 
-cloudless.gr uses **Notion as a workspace hub** with 6 databases powering the blog CMS, contact form storage, project tracking, task management, internal documentation, and site analytics. The integration now includes **search**, **comments**, **wiki features**, **sprint management**, and **block building** utilities. All integrations degrade gracefully when Notion is not configured.
+cloudless.gr uses **Notion as a workspace hub** with 8 databases powering the blog CMS, contact form storage, project tracking, task management, internal documentation, site analytics, content calendar, and client reports. The integration includes **search**, **comments**, **wiki features**, **sprint management**, **block building**, **content calendar**, and **report persistence** utilities. All integrations degrade gracefully when Notion is not configured.
 
 > **Status:** Optional integration — all features fall back to empty/static data when `NOTION_API_KEY` is missing.
 
@@ -27,6 +27,8 @@ graph TB
         NotionAnalytics["notion-analytics.ts"]
         NotionSearch["notion-search.ts"]
         NotionComments["notion-comments.ts"]
+        NotionCalendar["notion-calendar.ts"]
+        NotionReports["notion-reports.ts"]
     end
 
     subgraph Notion["Notion Workspace"]
@@ -36,6 +38,8 @@ graph TB
         DB4["Projects DB"]
         DB5["Tasks DB"]
         DB6["Analytics DB"]
+        DB7["Content Calendar DB"]
+        DB8["Reports DB"]
     end
 
     Blog --> NotionBlog --> NotionClient --> DB1
@@ -46,6 +50,8 @@ graph TB
     Admin --> NotionAnalytics --> NotionClient --> DB6
     Admin --> NotionSearch --> NotionClient
     Admin --> NotionComments --> NotionClient
+    Admin --> NotionCalendar --> NotionClient --> DB7
+    Admin --> NotionReports --> NotionClient --> DB8
     Webhooks --> |Slack alerts| Slack["Slack"]
 ```
 
@@ -66,6 +72,8 @@ NOTION_DOCS_DB_ID=b45af6ed5bb64d89b9a92a8aff4a9b29
 NOTION_PROJECTS_DB_ID=a9bab34b945e484fb6b0aa6034086e5c
 NOTION_TASKS_DB_ID=14ce4ff6c400437597b13e70ac909354
 NOTION_ANALYTICS_DB_ID=cc4287fcb42a42dc92a7053d6f1199c7
+NOTION_CALENDAR_DB_ID=your-calendar-database-id
+NOTION_REPORTS_DB_ID=your-reports-database-id
 
 # Webhook authentication
 NOTION_WEBHOOK_SECRET=your_random_secret_here
@@ -196,6 +204,45 @@ Next.js `instrumentation.ts` runs once on every Lambda cold start. It reads all 
 
 **Library:** `src/lib/notion-analytics.ts`
 
+### 7. Content Calendar (`NOTION_CALENDAR_DB_ID`)
+
+Stores scheduled content items for the Marketing Hub calendar view. Used by `src/lib/content-calendar.ts` with Notion as primary backend and in-memory store as fallback.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| Name | Title | Content item title |
+| CalID | Rich text | Internal ID (prefixed `cal_`) |
+| Type | Select | social_post / blog_post / ad_campaign / email / other |
+| Platform | Select | meta / linkedin / x / tiktok / google / email / organic |
+| Date | Date | Scheduled date (start; optional end for campaigns) |
+| Status | Select | draft / scheduled / published / cancelled |
+| URL | URL | Published content URL |
+| Notes | Rich text | Additional notes |
+
+**Library:** `src/lib/notion-calendar.ts`
+**Consumer:** `src/lib/content-calendar.ts` (async CRUD with in-memory fallback)
+**Routes:** `src/app/api/admin/calendar/`
+**Fallback:** In-memory store when `NOTION_CALENDAR_DB_ID` is not set
+
+### 8. Client Reports (`NOTION_REPORTS_DB_ID`)
+
+Stores generated client reports for the Marketing Hub reports view. Used by `src/lib/reports.ts` with Notion as primary backend and in-memory store as fallback.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| Name | Title | Client name |
+| ReportID | Rich text | Internal ID (prefixed `report_`) |
+| Status | Select | generating / ready / error |
+| DateStart | Date | Report period start |
+| DateEnd | Rich text | Report period end (ISO string) |
+| Sections | Rich text | JSON array of report sections (capped at 2000 chars) |
+| CreatedAt | Date | Report generation timestamp |
+
+**Library:** `src/lib/notion-reports.ts`
+**Consumer:** `src/lib/reports.ts` (async CRUD with in-memory fallback)
+**Routes:** `src/app/api/admin/reports/`
+**Fallback:** In-memory store when `NOTION_REPORTS_DB_ID` is not set
+
 ---
 
 ## Shared Client (`src/lib/notion.ts`)
@@ -283,6 +330,8 @@ Page comment management for review workflows and wiki verification.
 
 | Function | Description |
 |----------|-------------|
+| `getPosts()` | All published posts, sorted by date desc (cached) |
+| `getAllPosts()` | All posts including drafts, no filter, not cached — for admin use |
 | `searchPosts(query)` | Search posts by title, excerpt, or tags |
 | `getRelatedPosts(post, limit?)` | Find related posts by shared tags/category |
 | `getPostWithToc(slug)` | Get post with rendered HTML and table of contents |
@@ -296,6 +345,8 @@ Page comment management for review workflows and wiki verification.
 
 | Function | Description |
 |----------|-------------|
+| `getDocs()` | All published docs, sorted by Category + Order (cached) |
+| `getAllDocs()` | All docs including unpublished, no filter, not cached — for admin use |
 | `getWikiDocs()` | Docs with verification status, owner, last verified date |
 | `getDocsNeedingVerification()` | Filter to docs needing re-verification |
 | `getDocsByOwner(ownerName)` | Filter docs by content owner |
@@ -334,13 +385,14 @@ Page comment management for review workflows and wiki verification.
 
 ## Admin Panel Pages
 
+All Notion-backed admin pages live under the **Content** section of the admin sidebar (`/admin/layout.tsx`).
+
 | Route | Feature |
 |-------|---------|
-| `/admin/notion` | Integration overview dashboard |
-| `/admin/notion/submissions` | View/update contact submissions |
-| `/admin/notion/projects` | Project management with status filters, progress bars |
-| `/admin/notion/tasks` | Kanban board with 6 columns, card-level status updates |
-| `/admin/notion/analytics` | KPI cards, bar charts, event feed, date range selector |
+| `/admin/blog` | All blog posts (published + drafts) with status filter tabs, category, tags, and featured badge |
+| `/admin/docs` | All docs grouped by category; toggle to show/hide drafts; Notion deep-link per doc |
+| `/admin/projects` | Two-tab view: Projects (inline status selector, progress bar, priority) and Tasks (inline status selector, estimate, type) |
+| `/admin/notion` | Contact form submissions with expand/collapse message and status selector |
 
 ---
 
@@ -348,12 +400,21 @@ Page comment management for review workflows and wiki verification.
 
 | Route | Method | Description |
 |-------|--------|-------------|
-| `/api/admin/notion/submissions` | GET, PATCH | List and update submissions |
+| `/api/admin/notion/blog` | GET | All posts including drafts (`getAllPosts`) — no published filter |
+| `/api/admin/notion/docs` | GET | All docs including unpublished (`getAllDocs`) — no published filter |
+| `/api/admin/notion/submissions` | GET, PATCH | List and update form submissions |
 | `/api/admin/notion/projects` | GET, POST, PATCH | CRUD for projects |
 | `/api/admin/notion/tasks` | GET, POST, PATCH | CRUD for tasks |
 | `/api/admin/notion/analytics` | GET, POST | Analytics summary; POST actions: `rollup`, `archive`, `maintain` |
 | `/api/admin/notion/search` | GET | Cross-workspace search, users, and schemas |
 | `/api/admin/notion/comments` | GET, POST | List and add page comments |
+| `/api/admin/calendar` | GET | List calendar items (optional `from`/`to` query params) |
+| `/api/admin/calendar/create` | POST | Create a calendar item |
+| `/api/admin/calendar/[id]` | PATCH, DELETE | Update or delete a calendar item |
+| `/api/admin/reports` | GET | List all reports |
+| `/api/admin/reports/generate` | POST | Generate a new report |
+| `/api/admin/reports/[id]` | GET, DELETE | Get or delete a report |
+| `/api/admin/reports/[id]/pdf` | GET | Export report as PDF |
 | `/api/webhooks/notion` | POST | Webhook handler |
 
 ---
@@ -399,6 +460,10 @@ The project includes 8 skill reference files under `.claude/skills/`:
 | `src/lib/notion-analytics.ts` | Site analytics |
 | `src/lib/notion-search.ts` | Cross-workspace search, users, schemas |
 | `src/lib/notion-comments.ts` | Page comments and discussions |
+| `src/lib/notion-calendar.ts` | Content calendar Notion CRUD |
+| `src/lib/notion-reports.ts` | Client reports Notion CRUD |
+| `src/lib/content-calendar.ts` | Calendar CRUD (Notion + in-memory fallback) |
+| `src/lib/reports.ts` | Reports CRUD (Notion + in-memory fallback) |
 | `src/lib/blog.ts` | Static blog fallback |
 | `src/lib/integrations.ts` | Integration config & `isConfigured()` |
 | `src/lib/notion-cache.ts` | In-memory TTL cache for Notion queries |

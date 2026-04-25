@@ -76,6 +76,32 @@ function mapPage(page: any): DocRecord {
 // ---------------------------------------------------------------------------
 
 /**
+ * List all docs (published and unpublished) for admin use. Not cached.
+ */
+export async function getAllDocs(): Promise<DocRecord[]> {
+  const { NOTION_API_KEY, NOTION_DOCS_DB_ID } = await getIntegrationsAsync();
+  if (!NOTION_API_KEY || !NOTION_DOCS_DB_ID) return [];
+
+  try {
+    const results = await notionFetchAll<unknown>(
+      `/databases/${NOTION_DOCS_DB_ID}/query`,
+      {
+        sorts: [
+          { property: "Category", direction: "ascending" },
+          { property: "Order", direction: "ascending" },
+        ],
+      },
+    );
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    return (results as any[]).map(mapPage);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+  } catch (err) {
+    console.error("[Notion] Failed to fetch all docs:", err);
+    return [];
+  }
+}
+
+/**
  * List all published docs, sorted by Category + Order.
  * Returns empty array if Notion is not configured.
  */

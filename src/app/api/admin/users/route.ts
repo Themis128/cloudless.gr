@@ -11,10 +11,14 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 
 const REGION = process.env.AWS_REGION ?? "us-east-1";
-const USER_POOL_ID =
-  process.env.COGNITO_USER_POOL_ID ??
-  process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ??
-  "";
+
+function getPoolId() {
+  return (
+    process.env.COGNITO_USER_POOL_ID ??
+    process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ??
+    ""
+  );
+}
 
 function getClient() {
   return new CognitoIdentityProviderClient({ region: REGION });
@@ -28,12 +32,12 @@ function getAttr(
 }
 
 export async function GET(request: NextRequest) {
-  // Verify admin authentication
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   try {
-    if (!USER_POOL_ID) {
+    const poolId = getPoolId();
+    if (!poolId) {
       return NextResponse.json(
         { error: "Cognito User Pool not configured" },
         { status: 503 },
@@ -42,8 +46,6 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const limit = Math.min(Number(searchParams.get("limit") ?? 20), 60);
-    // Sanitize filter to prevent CognitoQL injection — allow only
-    // alphanumeric chars, dots, hyphens, underscores, and @ for email filtering.
     const rawFilter = searchParams.get("filter") ?? "";
     const filter = rawFilter
       ? rawFilter.replace(/[^\w.@+-]/g, "").slice(0, 128) || undefined
@@ -51,10 +53,9 @@ export async function GET(request: NextRequest) {
 
     const client = getClient();
 
-    // List users from Cognito
     const listRes = await client.send(
       new ListUsersCommand({
-        UserPoolId: USER_POOL_ID,
+        UserPoolId: poolId,
         Limit: limit,
         ...(filter ? { Filter: `email ^= "${filter}"` } : {}),
       }),
@@ -62,12 +63,11 @@ export async function GET(request: NextRequest) {
 
     const users = await Promise.all(
       (listRes.Users ?? []).map(async (u) => {
-        // Check if user is in admin group
         let isAdmin = false;
         try {
           const groupsRes = await client.send(
             new AdminListGroupsForUserCommand({
-              UserPoolId: USER_POOL_ID,
+              UserPoolId: poolId,
               Username: u.Username!,
             }),
           );
@@ -84,9 +84,7 @@ export async function GET(request: NextRequest) {
           company: getAttr(u.Attributes, "custom:company"),
           phone: getAttr(u.Attributes, "phone_number"),
           emailVerified: getAttr(u.Attributes, "email_verified") === "true",
-          // "active" / "disabled" maps to Cognito's Enabled flag
           status: u.Enabled ? "active" : "disabled",
-          // Cognito confirmation status: CONFIRMED, UNCONFIRMED, FORCE_CHANGE_PASSWORD, etc.
           userStatus: u.UserStatus ?? "UNKNOWN",
           role: isAdmin ? "admin" : "user",
           created: u.UserCreateDate?.toISOString(),
@@ -106,12 +104,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Verify admin authentication
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   try {
-    if (!USER_POOL_ID) {
+    const poolId = getPoolId();
+    if (!poolId) {
       return NextResponse.json(
         { error: "Cognito User Pool not configured" },
         { status: 503 },
@@ -132,7 +130,7 @@ export async function POST(request: NextRequest) {
     if (action === "disable") {
       await client.send(
         new AdminDisableUserCommand({
-          UserPoolId: USER_POOL_ID,
+          UserPoolId: poolId,
           Username: username,
         }),
       );
@@ -142,7 +140,7 @@ export async function POST(request: NextRequest) {
     if (action === "enable") {
       await client.send(
         new AdminEnableUserCommand({
-          UserPoolId: USER_POOL_ID,
+          UserPoolId: poolId,
           Username: username,
         }),
       );
@@ -152,7 +150,7 @@ export async function POST(request: NextRequest) {
     if (action === "promote") {
       await client.send(
         new AdminAddUserToGroupCommand({
-          UserPoolId: USER_POOL_ID,
+          UserPoolId: poolId,
           Username: username,
           GroupName: "admin",
         }),
@@ -166,7 +164,7 @@ export async function POST(request: NextRequest) {
     if (action === "demote") {
       await client.send(
         new AdminRemoveUserFromGroupCommand({
-          UserPoolId: USER_POOL_ID,
+          UserPoolId: poolId,
           Username: username,
           GroupName: "admin",
         }),

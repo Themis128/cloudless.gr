@@ -11,7 +11,7 @@ export async function PATCH(
 
   const { id } = await params;
   const updates = await request.json();
-  const item = updateCalendarItem(id, updates);
+  const item = await updateCalendarItem(id, updates);
   if (!item) {
     return NextResponse.json({ error: "Item not found." }, { status: 404 });
   }
@@ -26,7 +26,7 @@ export async function DELETE(
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
-  const deleted = deleteCalendarItem(id);
+  const deleted = await deleteCalendarItem(id);
   if (!deleted) {
     return NextResponse.json({ error: "Item not found." }, { status: 404 });
   }

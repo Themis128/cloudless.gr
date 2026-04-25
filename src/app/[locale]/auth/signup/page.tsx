@@ -11,9 +11,15 @@ import { useCurrentLocale } from "@/lib/use-locale";
 function SignUpForm() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
-  const { signUp, confirmSignUp } = useAuth();
+  const { signUp, confirmSignUp, user, isAdmin, isLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.push(isAdmin ? "/admin" : "/dashboard");
+    }
+  }, [user, isAdmin, isLoading, router]);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +35,6 @@ function SignUpForm() {
     if (verifyEmail) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail(verifyEmail);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep("verify");
     }
   }, [searchParams]);
