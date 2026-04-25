@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
+export const dynamic = "force-static";
+
 export const alt =
   "cloudless.gr Cloud Computing, Serverless, Analytics & AI Marketing";
 export const size = {
@@ -49,17 +50,8 @@ export default function Image() {
           zIndex: 1,
         }}
       >
-        {/* Logo: cloud emoji + cloudless + .gr in cyan */}
+        {/* Logo: cloudless + .gr in cyan */}
         <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-          <div
-            style={{
-              fontSize: "48px",
-              color: "#00fff5",
-              textShadow: "0 0 20px rgba(0, 255, 245, 0.5)",
-            }}
-          >
-            ☁
-          </div>
           <div
             style={{
               fontSize: "56px",
