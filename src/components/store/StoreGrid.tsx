@@ -215,6 +215,7 @@ export default function StoreGrid() {
       </div>
 
       {/* Grid */}
+      <h2 className="sr-only">Products</h2>
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((product) => (
