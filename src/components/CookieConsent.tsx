@@ -234,7 +234,7 @@ export default function CookieConsent() {
           <button
             type="button"
             onClick={handleCloseModal}
-            className="min-h-[44px] rounded-lg px-4 py-2 font-mono text-sm text-slate-500 transition-colors hover:text-slate-300"
+            className="min-h-[44px] rounded-lg px-4 py-2 font-mono text-sm text-slate-400 transition-colors hover:text-slate-300"
           >
             {t("cookies.cancel", "Cancel")}
           </button>
@@ -298,7 +298,7 @@ export default function CookieConsent() {
                     handleOpenFromBanner();
                     setShowSettings(true);
                   }}
-                  className="min-h-[44px] rounded-lg px-5 py-2 font-mono text-xs text-slate-500 transition-colors hover:text-slate-300"
+                  className="min-h-[44px] rounded-lg px-5 py-2 font-mono text-xs text-slate-400 transition-colors hover:text-slate-300"
                 >
                   {t("cookies.customise", "Customise")}
                 </button>
