@@ -272,8 +272,12 @@ export default function CookieConsent() {
                   <Link
                     href="/cookies"
                     className="text-neon-cyan hover:underline"
+                    aria-label={t(
+                      "cookies.learnMoreLabel",
+                      "Learn more about our cookie policy",
+                    )}
                   >
-                    {t("cookies.learnMore", "Learn more")}
+                    {t("cookies.learnMore", "Learn more about cookies")}
                   </Link>
                 </p>
               </div>
