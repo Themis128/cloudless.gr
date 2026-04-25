@@ -103,6 +103,41 @@ function cleanupStaleEntries() {
   }
 }
 
+/**
+ * Content-Security-Policy — shipped in Report-Only mode for an initial soak.
+ *
+ * Allowlists every third-party host the site currently loads:
+ *   - Stripe (checkout + redirect)
+ *   - Sentry (browser SDK + ingest)
+ *   - Meta Pixel (when wired — META_CAPI_ACCESS_TOKEN gating is server-side
+ *     but the client pixel still loads connect.facebook.net)
+ *   - Cognito (Amplify auth flows)
+ *   - HubSpot (forms + tracking)
+ *
+ * 'unsafe-inline' is required for Next.js inline runtime scripts and styled
+ * components until we wire nonce-per-request via the App Router. 'unsafe-eval'
+ * is kept for Three.js / WebGL helpers that compile shaders dynamically.
+ *
+ * Once we've watched DevTools / Sentry CSP reports for a week with no
+ * legitimate violations, promote this to "Content-Security-Policy" (enforce).
+ */
+const CSP_REPORT_ONLY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://cognito-idp.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com https://api.hubapi.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com https://www.facebook.com",
+  "worker-src 'self' blob:",
+  "media-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests",
+].join("; ");
+
 /** Security headers applied to all responses */
 function addSecurityHeaders(response: NextResponse): void {
   response.headers.set("X-Content-Type-Options", "nosniff");
@@ -116,6 +151,7 @@ function addSecurityHeaders(response: NextResponse): void {
     "Strict-Transport-Security",
     "max-age=63072000; includeSubDomains; preload",
   );
+  response.headers.set("Content-Security-Policy-Report-Only", CSP_REPORT_ONLY);
 }
 
 export function proxy(request: NextRequest) {
