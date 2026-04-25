@@ -5,6 +5,7 @@
  * Usage: pnpm tsx scripts/x-ads-setup.ts
  */
 
+import { bypassFetch } from "./dns-bypass.js";
 import { createHmac } from "crypto";
 import { config } from "dotenv";
 import { resolve } from "path";
@@ -71,7 +72,7 @@ async function main() {
   // Try Ads API accounts endpoint
   const adsUrl = "https://ads-api.x.com/12/accounts";
   console.log("Calling X Ads API...");
-  const adsRes = await fetch(adsUrl, {
+  const adsRes = await bypassFetch(adsUrl, {
     headers: { Authorization: buildAuthHeader("GET", adsUrl) },
   });
   const adsData = await adsRes.json() as { data?: Array<{ id: string; name: string }> ; errors?: unknown };

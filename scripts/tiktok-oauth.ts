@@ -12,6 +12,7 @@
  *   5. Prints the values to copy into .env.local / SSM
  */
 
+import { bypassFetch } from "./dns-bypass.js";
 import http from "http";
 import { exec } from "child_process";
 import { URL } from "url";
@@ -27,7 +28,7 @@ const AUTH_URL =
   `?app_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=cloudless`;
 
 async function exchangeAuthCode(authCode: string) {
-  const res = await fetch(
+  const res = await bypassFetch(
     "https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/",
     {
       method: "POST",
@@ -46,7 +47,7 @@ async function listAdvertisers(accessToken: string) {
   const url =
     `https://business-api.tiktok.com/open_api/v1.3/oauth2/advertiser/get/` +
     `?app_id=${APP_ID}&secret=${APP_SECRET}`;
-  const res = await fetch(url, {
+  const res = await bypassFetch(url, {
     headers: { "Access-Token": accessToken },
   });
   return res.json() as Promise<{
@@ -56,13 +57,18 @@ async function listAdvertisers(accessToken: string) {
 }
 
 function openBrowser(url: string) {
-  const cmd =
-    process.platform === "win32"
-      ? `start "" "${url}"`
-      : process.platform === "darwin"
-        ? `open "${url}"`
-        : `xdg-open "${url}"`;
-  exec(cmd);
+  if (process.platform === "win32") {
+    // Use a separate Chrome profile with host-resolver-rules to bypass local DNS blocks
+    const rules = [
+      "MAP business-api.tiktok.com 2.21.69.8",
+      "MAP ads.tiktok.com 2.16.19.9",
+      "MAP www.tiktok.com 2.21.69.9",
+    ].join(",");
+    const profileDir = `C:\\Users\\baltz\\AppData\\Local\\Temp\\chrome-bypass-tiktok`;
+    exec(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --host-resolver-rules="${rules}" --user-data-dir="${profileDir}" "${url}"`);
+  } else {
+    exec(process.platform === "darwin" ? `open "${url}"` : `xdg-open "${url}"`);
+  }
 }
 
 async function main() {

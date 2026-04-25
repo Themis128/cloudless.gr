@@ -12,6 +12,7 @@
  *   pnpm tsx scripts/google-ads-setup.ts
  */
 
+import { bypassFetch } from "./dns-bypass.js";
 import { createSign } from "crypto";
 import { config } from "dotenv";
 import { resolve } from "path";
@@ -48,10 +49,10 @@ async function getAccessToken(): Promise<string> {
   const signature = base64url(signer.sign(privateKey));
   const jwt = `${header}.${payload}.${signature}`;
 
-  const res = await fetch("https://oauth2.googleapis.com/token", {
+  const res = await bypassFetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt }),
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt }).toString(),
   });
 
   const data = (await res.json()) as { access_token?: string; error?: string; error_description?: string };
@@ -62,7 +63,7 @@ async function getAccessToken(): Promise<string> {
 }
 
 async function listCustomers(accessToken: string, devToken: string): Promise<string[]> {
-  const res = await fetch(
+  const res = await bypassFetch(
     "https://googleads.googleapis.com/v19/customers:listAccessibleCustomers",
     { headers: { Authorization: `Bearer ${accessToken}`, "developer-token": devToken } }
   );
