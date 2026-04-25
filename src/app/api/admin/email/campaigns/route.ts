@@ -12,13 +12,20 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isActiveCampaignConfigured())) {
-    return NextResponse.json({ error: "ActiveCampaign not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "ActiveCampaign not configured." },
+      { status: 503 },
+    );
   }
 
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
   const campaigns = await listCampaigns(limit);
-  return NextResponse.json({ campaigns, total: campaigns.length, fetchedAt: new Date().toISOString() });
+  return NextResponse.json({
+    campaigns,
+    total: campaigns.length,
+    fetchedAt: new Date().toISOString(),
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -26,20 +33,30 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isActiveCampaignConfigured())) {
-    return NextResponse.json({ error: "ActiveCampaign not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "ActiveCampaign not configured." },
+      { status: 503 },
+    );
   }
 
   let input: CreateCampaignInput;
   try {
     input = await request.json();
-    if (!input.name || !input.subject || !input.listId) throw new Error("missing fields");
+    if (!input.name || !input.subject || !input.listId)
+      throw new Error("missing fields");
   } catch {
-    return NextResponse.json({ error: "name, subject, listId are required." }, { status: 400 });
+    return NextResponse.json(
+      { error: "name, subject, listId are required." },
+      { status: 400 },
+    );
   }
 
   const campaign = await createCampaign(input);
   if (!campaign) {
-    return NextResponse.json({ error: "Failed to create campaign." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create campaign." },
+      { status: 500 },
+    );
   }
   return NextResponse.json({ campaign }, { status: 201 });
 }

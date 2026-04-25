@@ -41,22 +41,30 @@ export default function SubmissionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "New" | "In Review" | "Done">("all");
+  const [filter, setFilter] = useState<"all" | "New" | "In Review" | "Done">(
+    "all",
+  );
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/submissions?limit=100");
+      const res = await fetchWithAuth(
+        "/api/admin/notion/submissions?limit=100",
+      );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+        throw new Error(
+          (data as { error?: string }).error ?? `HTTP ${res.status}`,
+        );
       }
       const data = (await res.json()) as { submissions: Submission[] };
       setSubmissions(data.submissions ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load submissions");
+      setError(
+        err instanceof Error ? err.message : "Failed to load submissions",
+      );
     } finally {
       setLoading(false);
     }
@@ -67,7 +75,10 @@ export default function SubmissionsPage() {
     load();
   }, [load]);
 
-  const updateStatus = async (pageId: string, status: "New" | "In Review" | "Done") => {
+  const updateStatus = async (
+    pageId: string,
+    status: "New" | "In Review" | "Done",
+  ) => {
     setUpdating(pageId);
     try {
       const res = await fetchWithAuth("/api/admin/notion/submissions", {
@@ -87,7 +98,9 @@ export default function SubmissionsPage() {
   };
 
   const filtered =
-    filter === "all" ? submissions : submissions.filter((s) => s.status === filter);
+    filter === "all"
+      ? submissions
+      : submissions.filter((s) => s.status === filter);
 
   const counts = {
     New: submissions.filter((s) => s.status === "New").length,
@@ -102,9 +115,13 @@ export default function SubmissionsPage() {
         <div>
           <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-cyan font-mono text-xs">NOTION_SUBMISSIONS</span>
+            <span className="text-neon-cyan font-mono text-xs">
+              NOTION_SUBMISSIONS
+            </span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">Contact Submissions</h1>
+          <h1 className="font-heading text-2xl font-bold text-white">
+            Contact Submissions
+          </h1>
           <p className="font-body mt-1 text-slate-400">
             Incoming leads and contact form entries from cloudless.gr.
           </p>
@@ -140,7 +157,9 @@ export default function SubmissionsPage() {
       {filter !== "all" && (
         <div className="mb-4 flex items-center gap-2">
           <span className="font-mono text-xs text-slate-500">Showing:</span>
-          <span className={`rounded-full border px-3 py-1 font-mono text-xs ${STATUS_STYLES[filter]}`}>
+          <span
+            className={`rounded-full border px-3 py-1 font-mono text-xs ${STATUS_STYLES[filter]}`}
+          >
             {filter}
           </span>
           <button
@@ -183,7 +202,9 @@ export default function SubmissionsPage() {
       {!loading && filtered.length === 0 && !error && (
         <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
           <p className="font-mono text-slate-500">
-            {filter === "all" ? "No submissions yet." : `No submissions with status "${filter}".`}
+            {filter === "all"
+              ? "No submissions yet."
+              : `No submissions with status "${filter}".`}
           </p>
         </div>
       )}
@@ -192,7 +213,10 @@ export default function SubmissionsPage() {
       {!loading && filtered.length > 0 && (
         <div className="space-y-2">
           {filtered.map((sub) => (
-            <div key={sub.id} className="rounded-xl border border-slate-800 bg-void-light/30 overflow-hidden">
+            <div
+              key={sub.id}
+              className="rounded-xl border border-slate-800 bg-void-light/30 overflow-hidden"
+            >
               {/* Row */}
               <button
                 onClick={() => setExpanded(expanded === sub.id ? null : sub.id)}
@@ -200,7 +224,9 @@ export default function SubmissionsPage() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-3">
-                    <span className="font-medium text-white truncate">{sub.name}</span>
+                    <span className="font-medium text-white truncate">
+                      {sub.name}
+                    </span>
                     {sub.company && (
                       <span className="font-mono text-xs text-slate-500 truncate">
                         {sub.company}
@@ -208,7 +234,9 @@ export default function SubmissionsPage() {
                     )}
                   </div>
                   <div className="mt-0.5 flex items-center gap-3">
-                    <span className="font-mono text-xs text-slate-500">{sub.email}</span>
+                    <span className="font-mono text-xs text-slate-500">
+                      {sub.email}
+                    </span>
                     {sub.service && (
                       <span className="rounded bg-neon-cyan/5 px-1.5 py-0.5 font-mono text-[10px] text-neon-cyan/60">
                         {sub.service}
@@ -239,14 +267,18 @@ export default function SubmissionsPage() {
                 <div className="border-t border-slate-800 px-5 py-4">
                   {sub.message && (
                     <div className="mb-4">
-                      <p className="font-mono text-xs text-slate-500 mb-1">Message</p>
+                      <p className="font-mono text-xs text-slate-500 mb-1">
+                        Message
+                      </p>
                       <p className="font-body text-sm text-slate-300 whitespace-pre-wrap">
                         {sub.message}
                       </p>
                     </div>
                   )}
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-xs text-slate-500">Update status:</span>
+                    <span className="font-mono text-xs text-slate-500">
+                      Update status:
+                    </span>
                     {VALID_STATUSES.map((s) => (
                       <button
                         key={s}

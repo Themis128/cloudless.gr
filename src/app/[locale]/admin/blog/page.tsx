@@ -68,7 +68,9 @@ export default function AdminBlogPage() {
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
             <span className="text-neon-cyan font-mono text-xs">BLOG</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">Blog Posts</h1>
+          <h1 className="font-heading text-2xl font-bold text-white">
+            Blog Posts
+          </h1>
           <p className="font-body mt-1 text-slate-400">
             All posts from your Notion blog database.
           </p>
@@ -104,7 +106,11 @@ export default function AdminBlogPage() {
             >
               {FILTER_LABELS[f]}
               <span className="ml-1.5 font-mono text-[10px] opacity-60">
-                {f === "all" ? posts.length : f === "published" ? publishedCount : draftCount}
+                {f === "all"
+                  ? posts.length
+                  : f === "published"
+                    ? publishedCount
+                    : draftCount}
               </span>
             </button>
           ))}
@@ -114,7 +120,10 @@ export default function AdminBlogPage() {
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5">
+            <div
+              key={i}
+              className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5"
+            >
               <div className="mb-2 h-4 w-2/3 rounded bg-slate-700/60" />
               <div className="h-3 w-1/3 rounded bg-slate-800/80" />
             </div>
@@ -125,7 +134,9 @@ export default function AdminBlogPage() {
       {!loading && !error && filtered.length === 0 && (
         <div className="rounded-xl border border-slate-800 bg-void-light/30 py-12 text-center">
           <p className="font-mono text-sm text-slate-500">
-            {posts.length === 0 ? "No posts in Notion yet." : "No posts match this filter."}
+            {posts.length === 0
+              ? "No posts in Notion yet."
+              : "No posts match this filter."}
           </p>
         </div>
       )}
@@ -136,17 +147,32 @@ export default function AdminBlogPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-800">
-                  <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Title</th>
-                  <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Category</th>
-                  <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Date</th>
-                  <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Status</th>
-                  <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Tags</th>
-                  <th className="px-5 py-3 text-right font-mono text-xs text-slate-500">Read Time</th>
+                  <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                    Title
+                  </th>
+                  <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                    Category
+                  </th>
+                  <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                    Date
+                  </th>
+                  <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                    Status
+                  </th>
+                  <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                    Tags
+                  </th>
+                  <th className="px-5 py-3 text-right font-mono text-xs text-slate-500">
+                    Read Time
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((post) => (
-                  <tr key={post.id} className="hover:bg-void-lighter/20 border-b border-slate-800/50 transition-colors">
+                  <tr
+                    key={post.id}
+                    className="hover:bg-void-lighter/20 border-b border-slate-800/50 transition-colors"
+                  >
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         {post.featured && (
@@ -154,12 +180,20 @@ export default function AdminBlogPage() {
                             FEATURED
                           </span>
                         )}
-                        <span className="font-medium text-white">{post.title || "(Untitled)"}</span>
+                        <span className="font-medium text-white">
+                          {post.title || "(Untitled)"}
+                        </span>
                       </div>
-                      <p className="mt-0.5 font-mono text-[10px] text-slate-600">{post.slug}</p>
+                      <p className="mt-0.5 font-mono text-[10px] text-slate-600">
+                        {post.slug}
+                      </p>
                     </td>
-                    <td className="px-5 py-3 font-mono text-xs text-slate-400">{post.category}</td>
-                    <td className="px-5 py-3 font-mono text-xs text-slate-400">{formatDate(post.date)}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-slate-400">
+                      {post.category}
+                    </td>
+                    <td className="px-5 py-3 font-mono text-xs text-slate-400">
+                      {formatDate(post.date)}
+                    </td>
                     <td className="px-5 py-3">
                       <span
                         className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
@@ -174,16 +208,23 @@ export default function AdminBlogPage() {
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-1">
                         {post.tags.slice(0, 3).map((tag) => (
-                          <span key={tag} className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[9px] text-slate-400">
+                          <span
+                            key={tag}
+                            className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[9px] text-slate-400"
+                          >
                             {tag}
                           </span>
                         ))}
                         {post.tags.length > 3 && (
-                          <span className="font-mono text-[9px] text-slate-600">+{post.tags.length - 3}</span>
+                          <span className="font-mono text-[9px] text-slate-600">
+                            +{post.tags.length - 3}
+                          </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-right font-mono text-xs text-slate-500">{post.readTime}</td>
+                    <td className="px-5 py-3 text-right font-mono text-xs text-slate-500">
+                      {post.readTime}
+                    </td>
                   </tr>
                 ))}
               </tbody>

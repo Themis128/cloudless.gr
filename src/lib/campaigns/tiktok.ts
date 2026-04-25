@@ -2,7 +2,10 @@ import { getConfig } from "@/lib/ssm-config";
 
 const TIKTOK_API = "https://business-api.tiktok.com/open_api/v1.3";
 
-async function getTikTokConfig(): Promise<{ token: string; advertiserId: string }> {
+async function getTikTokConfig(): Promise<{
+  token: string;
+  advertiserId: string;
+}> {
   const cfg = await getConfig();
   const token = cfg.TIKTOK_ACCESS_TOKEN;
   const advertiserId = cfg.TIKTOK_ADVERTISER_ID;
@@ -10,7 +13,10 @@ async function getTikTokConfig(): Promise<{ token: string; advertiserId: string 
   return { token, advertiserId };
 }
 
-async function ttFetch(path: string, options: RequestInit = {}): Promise<Response> {
+async function ttFetch(
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
   const { token } = await getTikTokConfig();
   return fetch(`${TIKTOK_API}${path}`, {
     ...options,
@@ -95,9 +101,11 @@ export async function getTikTokInsights(
     });
     if (!res.ok) return empty;
     const data = await res.json();
-    const rows: Record<string, Record<string, string>>[] = data.data?.list ?? [];
+    const rows: Record<string, Record<string, string>>[] =
+      data.data?.list ?? [];
     if (rows.length === 0) return empty;
-    const metrics: Record<string, string> = (rows[0].metrics as Record<string, string>) ?? {};
+    const metrics: Record<string, string> =
+      (rows[0].metrics as Record<string, string>) ?? {};
     return {
       spend: metrics.spend ?? "0",
       impressions: metrics.impressions ?? "0",

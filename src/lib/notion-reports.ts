@@ -26,7 +26,8 @@ import type { Report } from "@/lib/reports";
 async function getDb(): Promise<{ apiKey: string; dbId: string } | null> {
   // Fast-path: respect explicit env-var clears immediately (bypasses stale async cache).
   // Mirrors the same guard in isConfiguredAsync().
-  if (!process.env.NOTION_API_KEY || !process.env.NOTION_REPORTS_DB_ID) return null;
+  if (!process.env.NOTION_API_KEY || !process.env.NOTION_REPORTS_DB_ID)
+    return null;
   const cfg = await getIntegrationsAsync();
   if (!cfg.NOTION_API_KEY || !cfg.NOTION_REPORTS_DB_ID) return null;
   return { apiKey: cfg.NOTION_API_KEY, dbId: cfg.NOTION_REPORTS_DB_ID };
@@ -38,7 +39,8 @@ function rt(text: string) {
 
 function pageToReport(page: Record<string, unknown>): Report | null {
   try {
-    const p = (page as { properties: Record<string, unknown> }).properties ?? {};
+    const p =
+      (page as { properties: Record<string, unknown> }).properties ?? {};
 
     function sel(key: string): string {
       const prop = p[key] as { select?: { name?: string } } | undefined;
@@ -46,12 +48,16 @@ function pageToReport(page: Record<string, unknown>): Report | null {
     }
 
     function richText(key: string): string {
-      const prop = p[key] as { rich_text?: { plain_text?: string }[] } | undefined;
+      const prop = p[key] as
+        | { rich_text?: { plain_text?: string }[] }
+        | undefined;
       return prop?.rich_text?.map((r) => r.plain_text ?? "").join("") ?? "";
     }
 
     function title(): string {
-      const prop = p["Name"] as { title?: { plain_text?: string }[] } | undefined;
+      const prop = p["Name"] as
+        | { title?: { plain_text?: string }[] }
+        | undefined;
       return prop?.title?.map((r) => r.plain_text ?? "").join("") ?? "";
     }
 
@@ -63,7 +69,9 @@ function pageToReport(page: Record<string, unknown>): Report | null {
     let sections: Report["sections"] = [];
     try {
       sections = JSON.parse(richText("Sections") || "[]");
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     return {
       id: richText("ReportID") || (page as { id: string }).id,
@@ -90,12 +98,15 @@ export async function notionListReports(): Promise<Report[] | null> {
   if (!db) return null;
 
   try {
-    const res = await notionFetch<{ results: unknown[] }>(`/databases/${db.dbId}/query`, {
-      method: "POST",
-      body: JSON.stringify({
-        sorts: [{ property: "CreatedAt", direction: "descending" }],
-      }),
-    });
+    const res = await notionFetch<{ results: unknown[] }>(
+      `/databases/${db.dbId}/query`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          sorts: [{ property: "CreatedAt", direction: "descending" }],
+        }),
+      },
+    );
 
     return res.results
       .map((p) => pageToReport(p as Record<string, unknown>))
@@ -110,13 +121,16 @@ export async function notionGetReport(id: string): Promise<Report | null> {
   if (!db) return null;
 
   try {
-    const res = await notionFetch<{ results: unknown[] }>(`/databases/${db.dbId}/query`, {
-      method: "POST",
-      body: JSON.stringify({
-        filter: { property: "ReportID", rich_text: { equals: id } },
-        page_size: 1,
-      }),
-    });
+    const res = await notionFetch<{ results: unknown[] }>(
+      `/databases/${db.dbId}/query`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          filter: { property: "ReportID", rich_text: { equals: id } },
+          page_size: 1,
+        }),
+      },
+    );
 
     const page = res.results[0];
     if (!page) return null;
@@ -126,7 +140,9 @@ export async function notionGetReport(id: string): Promise<Report | null> {
   }
 }
 
-export async function notionCreateReport(report: Report): Promise<string | null> {
+export async function notionCreateReport(
+  report: Report,
+): Promise<string | null> {
   const db = await getDb();
   if (!db) return null;
 
@@ -175,7 +191,8 @@ export async function notionUpdateReport(
     if (!pageId) return false;
 
     const properties: Record<string, unknown> = {};
-    if (updates.status) properties.Status = { select: { name: updates.status } };
+    if (updates.status)
+      properties.Status = { select: { name: updates.status } };
     if (updates.sections !== undefined) {
       properties.Sections = { rich_text: rt(JSON.stringify(updates.sections)) };
     }

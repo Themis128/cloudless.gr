@@ -29,8 +29,11 @@ export default function ReportsPage() {
       if (!res.ok) return;
       const data = await res.json();
       setReports(data.reports ?? []);
-    } catch { /* silent */ }
-    finally { setLoading(false); }
+    } catch {
+      /* silent */
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -50,8 +53,11 @@ export default function ReportsPage() {
       if (!res.ok) return;
       setShowForm(false);
       await loadReports();
-    } catch { /* silent */ }
-    finally { setGenerating(false); }
+    } catch {
+      /* silent */
+    } finally {
+      setGenerating(false);
+    }
   }
 
   async function handleDelete(id: string) {
@@ -77,9 +83,12 @@ export default function ReportsPage() {
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
             <span className="text-neon-cyan font-mono text-xs">REPORTS</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">Client Reports</h1>
+          <h1 className="font-heading text-2xl font-bold text-white">
+            Client Reports
+          </h1>
           <p className="font-body mt-1 text-slate-400">
-            Generate performance reports combining data from all connected platforms.
+            Generate performance reports combining data from all connected
+            platforms.
           </p>
         </div>
         <button
@@ -118,9 +127,12 @@ export default function ReportsPage() {
             className="bg-void-light/50 flex items-center justify-between rounded-xl border border-slate-800 px-5 py-4"
           >
             <div>
-              <p className="font-mono text-sm font-semibold text-white">{r.clientName}</p>
+              <p className="font-mono text-sm font-semibold text-white">
+                {r.clientName}
+              </p>
               <p className="mt-0.5 font-mono text-xs text-slate-500">
-                {r.dateRange.start} — {r.dateRange.end} · {r.sections.length} sections
+                {r.dateRange.start} — {r.dateRange.end} · {r.sections.length}{" "}
+                sections
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -159,55 +171,80 @@ export default function ReportsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="bg-void w-full max-w-md rounded-xl border border-slate-700 p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-mono text-sm font-semibold text-white">Generate New Report</h3>
-              <button type="button" onClick={() => setShowForm(false)} className="font-mono text-slate-500 hover:text-white">
+              <h3 className="font-mono text-sm font-semibold text-white">
+                Generate New Report
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="font-mono text-slate-500 hover:text-white"
+              >
                 ✕
               </button>
             </div>
             <form onSubmit={handleGenerate} className="space-y-4">
               <div>
-                <label className="mb-1 block font-mono text-xs text-slate-400">Client Name</label>
+                <label className="mb-1 block font-mono text-xs text-slate-400">
+                  Client Name
+                </label>
                 <input
                   required
                   value={form.clientName}
-                  onChange={(e) => setForm((f) => ({ ...f, clientName: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, clientName: e.target.value }))
+                  }
                   className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-white focus:outline-none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block font-mono text-xs text-slate-400">Date Start</label>
+                  <label className="mb-1 block font-mono text-xs text-slate-400">
+                    Date Start
+                  </label>
                   <input
                     type="date"
                     required
                     value={form.dateStart}
-                    onChange={(e) => setForm((f) => ({ ...f, dateStart: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, dateStart: e.target.value }))
+                    }
                     className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-white focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block font-mono text-xs text-slate-400">Date End</label>
+                  <label className="mb-1 block font-mono text-xs text-slate-400">
+                    Date End
+                  </label>
                   <input
                     type="date"
                     required
                     value={form.dateEnd}
-                    onChange={(e) => setForm((f) => ({ ...f, dateEnd: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, dateEnd: e.target.value }))
+                    }
                     className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-white focus:outline-none"
                   />
                 </div>
               </div>
               <div>
-                <label className="mb-2 block font-mono text-xs text-slate-400">Sections</label>
+                <label className="mb-2 block font-mono text-xs text-slate-400">
+                  Sections
+                </label>
                 <div className="space-y-2">
                   {SECTION_OPTIONS.map((s) => (
-                    <label key={s.id} className="flex cursor-pointer items-center gap-3">
+                    <label
+                      key={s.id}
+                      className="flex cursor-pointer items-center gap-3"
+                    >
                       <input
                         type="checkbox"
                         checked={form.includeSections.includes(s.id)}
                         onChange={() => toggleSection(s.id)}
                         className="rounded border-slate-600"
                       />
-                      <span className="font-mono text-xs text-slate-300">{s.label}</span>
+                      <span className="font-mono text-xs text-slate-300">
+                        {s.label}
+                      </span>
                     </label>
                   ))}
                 </div>

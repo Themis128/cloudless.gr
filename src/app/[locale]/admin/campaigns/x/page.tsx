@@ -35,7 +35,10 @@ export default function XPage() {
         fetchWithAuth("/api/admin/campaigns/x"),
         fetchWithAuth("/api/admin/campaigns/x/insights"),
       ]);
-      if (camRes.status === 503) { setNotConfigured(true); return; }
+      if (camRes.status === 503) {
+        setNotConfigured(true);
+        return;
+      }
       if (!camRes.ok) throw new Error("Failed to load campaigns");
       setCampaigns((await camRes.json()).campaigns ?? []);
       if (statsRes.ok) setStats((await statsRes.json()).stats ?? null);
@@ -46,8 +49,10 @@ export default function XPage() {
     }
   }
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, []);
 
   if (notConfigured) {
     return (
@@ -73,15 +78,26 @@ export default function XPage() {
           <span className="h-2 w-2 animate-pulse rounded-full bg-slate-300" />
           <span className="font-mono text-xs text-slate-300">X (TWITTER)</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">X Campaigns</h1>
+        <h1 className="font-heading text-2xl font-bold text-white">
+          X Campaigns
+        </h1>
       </div>
 
       {stats && (
         <div className="mb-8 grid grid-cols-4 gap-4">
-          <MetricCard label="Impressions" value={stats.impressions.toLocaleString()} />
+          <MetricCard
+            label="Impressions"
+            value={stats.impressions.toLocaleString()}
+          />
           <MetricCard label="Clicks" value={stats.clicks.toLocaleString()} />
-          <MetricCard label="Spend" value={`$${(stats.spend_micro / 1_000_000).toFixed(2)}`} />
-          <MetricCard label="Engagements" value={stats.engagements.toLocaleString()} />
+          <MetricCard
+            label="Spend"
+            value={`$${(stats.spend_micro / 1_000_000).toFixed(2)}`}
+          />
+          <MetricCard
+            label="Engagements"
+            value={stats.engagements.toLocaleString()}
+          />
         </div>
       )}
 
@@ -92,25 +108,49 @@ export default function XPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/50">
-                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Campaign</th>
-                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Status</th>
-                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Objective</th>
-                <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">Daily Budget</th>
+                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+                  Campaign
+                </th>
+                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+                  Objective
+                </th>
+                <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+                  Daily Budget
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {campaigns.length === 0 && (
-                <tr><td colSpan={4} className="py-8 text-center font-mono text-sm text-slate-600">No campaigns found.</td></tr>
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="py-8 text-center font-mono text-sm text-slate-600"
+                  >
+                    No campaigns found.
+                  </td>
+                </tr>
               )}
               {campaigns.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-800/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-sm text-white">{c.name}</td>
+                <tr
+                  key={c.id}
+                  className="hover:bg-slate-800/30 transition-colors"
+                >
+                  <td className="px-4 py-3 font-mono text-sm text-white">
+                    {c.name}
+                  </td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${c.status === "ACTIVE" ? "border-neon-green/30 text-neon-green" : "border-slate-700 text-slate-500"}`}>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${c.status === "ACTIVE" ? "border-neon-green/30 text-neon-green" : "border-slate-700 text-slate-500"}`}
+                    >
                       {c.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-400">{c.objective}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-slate-400">
+                    {c.objective}
+                  </td>
                   <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
                     {c.daily_budget_amount_local_micro
                       ? `$${(c.daily_budget_amount_local_micro / 1_000_000).toFixed(2)}`
@@ -129,7 +169,10 @@ export default function XPage() {
 function BackLink() {
   return (
     <div className="mb-6">
-      <Link href="/admin/campaigns" className="font-mono text-xs text-slate-500 hover:text-slate-300">
+      <Link
+        href="/admin/campaigns"
+        className="font-mono text-xs text-slate-500 hover:text-slate-300"
+      >
         ← Campaigns
       </Link>
     </div>

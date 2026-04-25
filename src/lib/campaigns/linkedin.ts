@@ -15,7 +15,10 @@ async function getLinkedInConfig(): Promise<{
   return { token, adAccountId, orgUrn };
 }
 
-async function liiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+async function liiFetch(
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
   const { token } = await getLinkedInConfig();
   return fetch(`${LINKEDIN_API}${path}`, {
     ...options,
@@ -65,7 +68,10 @@ export async function listLinkedInCampaigns(): Promise<LinkedInCampaign[]> {
         type: string;
         objectiveType: string;
         totalBudget?: { amount: string; currencyCode: string };
-        changeAuditStamps: { created: { time: number }; lastModified: { time: number } };
+        changeAuditStamps: {
+          created: { time: number };
+          lastModified: { time: number };
+        };
       }) => ({
         id: String(el.id),
         name: el.name,

@@ -16,9 +16,10 @@ function stripLocale(pathname: string): string {
   return pathname.slice(locale.length + 1) || "/";
 }
 
-function readCognitoToken(
-  request: NextRequest,
-): { valid: boolean; isAdmin: boolean } {
+function readCognitoToken(request: NextRequest): {
+  valid: boolean;
+  isAdmin: boolean;
+} {
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   if (!clientId) return { valid: false, isAdmin: false };
   const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
@@ -193,7 +194,8 @@ export function proxy(request: NextRequest) {
   const prefix = locale === DEFAULT_LOCALE ? "" : `/${locale}`;
 
   const isAdminPath = bare === "/admin" || bare.startsWith("/admin/");
-  const isDashboardPath = bare === "/dashboard" || bare.startsWith("/dashboard/");
+  const isDashboardPath =
+    bare === "/dashboard" || bare.startsWith("/dashboard/");
 
   if (isAdminPath || isDashboardPath) {
     const { valid, isAdmin: hasAdminGroup } = readCognitoToken(request);

@@ -37,7 +37,10 @@ export default function TikTokPage() {
         fetchWithAuth("/api/admin/campaigns/tiktok"),
         fetchWithAuth("/api/admin/campaigns/tiktok/insights"),
       ]);
-      if (camRes.status === 503) { setNotConfigured(true); return; }
+      if (camRes.status === 503) {
+        setNotConfigured(true);
+        return;
+      }
       if (!camRes.ok) throw new Error("Failed to load campaigns");
       const camData = await camRes.json();
       setCampaigns(camData.campaigns ?? []);
@@ -52,8 +55,10 @@ export default function TikTokPage() {
     }
   }
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, []);
 
   if (notConfigured) {
     return (
@@ -67,7 +72,10 @@ export default function TikTokPage() {
   return (
     <div>
       <div className="mb-6 flex items-center gap-3">
-        <Link href="/admin/campaigns" className="font-mono text-xs text-slate-500 hover:text-slate-300">
+        <Link
+          href="/admin/campaigns"
+          className="font-mono text-xs text-slate-500 hover:text-slate-300"
+        >
           ← Campaigns
         </Link>
       </div>
@@ -76,28 +84,55 @@ export default function TikTokPage() {
           <span className="h-2 w-2 animate-pulse rounded-full bg-pink-400" />
           <span className="font-mono text-xs text-pink-400">TIKTOK</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">TikTok Campaigns</h1>
+        <h1 className="font-heading text-2xl font-bold text-white">
+          TikTok Campaigns
+        </h1>
       </div>
 
       {insights && (
         <div className="mb-8 grid grid-cols-3 gap-4 sm:grid-cols-6">
-          <MetricCard label="Spend" value={`$${parseFloat(insights.spend).toFixed(2)}`} />
-          <MetricCard label="Impressions" value={parseInt(insights.impressions).toLocaleString()} />
-          <MetricCard label="Clicks" value={parseInt(insights.clicks).toLocaleString()} />
-          <MetricCard label="CTR" value={`${parseFloat(insights.ctr).toFixed(2)}%`} />
-          <MetricCard label="CPC" value={`$${parseFloat(insights.cpc).toFixed(2)}`} />
-          <MetricCard label="Conversions" value={parseInt(insights.conversions).toLocaleString()} />
+          <MetricCard
+            label="Spend"
+            value={`$${parseFloat(insights.spend).toFixed(2)}`}
+          />
+          <MetricCard
+            label="Impressions"
+            value={parseInt(insights.impressions).toLocaleString()}
+          />
+          <MetricCard
+            label="Clicks"
+            value={parseInt(insights.clicks).toLocaleString()}
+          />
+          <MetricCard
+            label="CTR"
+            value={`${parseFloat(insights.ctr).toFixed(2)}%`}
+          />
+          <MetricCard
+            label="CPC"
+            value={`$${parseFloat(insights.cpc).toFixed(2)}`}
+          />
+          <MetricCard
+            label="Conversions"
+            value={parseInt(insights.conversions).toLocaleString()}
+          />
         </div>
       )}
 
       <CampaignTable loading={loading} error={error}>
         {campaigns.map((c) => (
-          <tr key={c.campaign_id} className="hover:bg-slate-800/30 transition-colors">
-            <td className="px-4 py-3 font-mono text-sm text-white">{c.campaign_name}</td>
+          <tr
+            key={c.campaign_id}
+            className="hover:bg-slate-800/30 transition-colors"
+          >
+            <td className="px-4 py-3 font-mono text-sm text-white">
+              {c.campaign_name}
+            </td>
             <td className="px-4 py-3">
               <StatusBadge status={c.status} />
             </td>
-            <td className="px-4 py-3 font-mono text-xs text-slate-400">{c.objective_type}</td>
+            <td className="px-4 py-3 font-mono text-xs text-slate-400">
+              {c.objective_type}
+            </td>
             <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
               {c.budget ? `$${parseFloat(c.budget).toLocaleString()}` : "—"}
             </td>
@@ -124,10 +159,18 @@ function CampaignTable({
       <table className="w-full">
         <thead>
           <tr className="border-b border-slate-800 bg-slate-900/50">
-            <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Campaign</th>
-            <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Status</th>
-            <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Objective</th>
-            <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">Budget</th>
+            <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+              Campaign
+            </th>
+            <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+              Status
+            </th>
+            <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+              Objective
+            </th>
+            <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+              Budget
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">{children}</tbody>
@@ -141,7 +184,9 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span
       className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
-        isActive ? "border-neon-green/30 text-neon-green" : "border-slate-700 text-slate-500"
+        isActive
+          ? "border-neon-green/30 text-neon-green"
+          : "border-slate-700 text-slate-500"
       }`}
     >
       {isActive ? "Active" : "Paused"}
@@ -175,11 +220,20 @@ function ErrorMsg({ msg }: { msg: string }) {
   );
 }
 
-function NotConfiguredBanner({ platform, keys }: { platform: string; keys: string[] }) {
+function NotConfiguredBanner({
+  platform,
+  keys,
+}: {
+  platform: string;
+  keys: string[];
+}) {
   return (
     <div>
       <div className="mb-6 flex items-center gap-3">
-        <Link href="/admin/campaigns" className="font-mono text-xs text-slate-500 hover:text-slate-300">
+        <Link
+          href="/admin/campaigns"
+          className="font-mono text-xs text-slate-500 hover:text-slate-300"
+        >
           ← Campaigns
         </Link>
       </div>

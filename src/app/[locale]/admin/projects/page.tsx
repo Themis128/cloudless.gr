@@ -2,7 +2,12 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
-import type { Project, Task, ProjectStatus, TaskStatus } from "@/lib/notion-projects";
+import type {
+  Project,
+  Task,
+  ProjectStatus,
+  TaskStatus,
+} from "@/lib/notion-projects";
 
 type Tab = "projects" | "tasks";
 
@@ -26,8 +31,14 @@ const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
 function formatDate(iso: string) {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  } catch { return iso; }
+    return new Date(iso).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return iso;
+  }
 }
 
 function ProgressBar({ value }: { value: number }) {
@@ -65,7 +76,9 @@ export default function AdminProjectsPage() {
       const data = await res.json();
       setProjects(data.projects ?? []);
     } catch (err) {
-      setErrorProjects(err instanceof Error ? err.message : "Failed to load projects");
+      setErrorProjects(
+        err instanceof Error ? err.message : "Failed to load projects",
+      );
     } finally {
       setLoadingProjects(false);
     }
@@ -81,7 +94,9 @@ export default function AdminProjectsPage() {
       setTasks(data.tasks ?? []);
       setFetchedTasks(true);
     } catch (err) {
-      setErrorTasks(err instanceof Error ? err.message : "Failed to load tasks");
+      setErrorTasks(
+        err instanceof Error ? err.message : "Failed to load tasks",
+      );
     } finally {
       setLoadingTasks(false);
     }
@@ -107,7 +122,9 @@ export default function AdminProjectsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId: id, status }),
       });
-      setProjects((prev) => prev.map((p) => p.id === id ? { ...p, status } : p));
+      setProjects((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, status } : p)),
+      );
     } finally {
       setUpdatingId(null);
     }
@@ -121,7 +138,7 @@ export default function AdminProjectsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId: id, status }),
       });
-      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status } : t));
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
     } finally {
       setUpdatingId(null);
     }
@@ -134,7 +151,9 @@ export default function AdminProjectsPage() {
           <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-cyan font-mono text-xs">PROJECTS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">Projects & Tasks</h1>
+        <h1 className="font-heading text-2xl font-bold text-white">
+          Projects & Tasks
+        </h1>
         <p className="font-body mt-1 text-slate-400">
           Manage projects and tasks from your Notion workspace.
         </p>
@@ -163,7 +182,10 @@ export default function AdminProjectsPage() {
         ))}
         <button
           type="button"
-          onClick={() => { if (tab === "projects") loadProjects(); else loadTasks(); }}
+          onClick={() => {
+            if (tab === "projects") loadProjects();
+            else loadTasks();
+          }}
           className="ml-auto rounded-lg border border-slate-700 px-3 py-1.5 font-mono text-xs text-slate-400 hover:text-white transition-colors"
         >
           ↺ Refresh
@@ -173,12 +195,17 @@ export default function AdminProjectsPage() {
       {tab === "projects" && (
         <>
           {errorProjects && (
-            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 font-mono text-sm text-red-400">{errorProjects}</div>
+            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 font-mono text-sm text-red-400">
+              {errorProjects}
+            </div>
           )}
           {loadingProjects && (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5">
+                <div
+                  key={i}
+                  className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5"
+                >
                   <div className="mb-2 h-4 w-1/2 rounded bg-slate-700/60" />
                   <div className="h-3 w-1/4 rounded bg-slate-800/80" />
                 </div>
@@ -187,7 +214,9 @@ export default function AdminProjectsPage() {
           )}
           {!loadingProjects && projects.length === 0 && !errorProjects && (
             <div className="rounded-xl border border-slate-800 bg-void-light/30 py-12 text-center">
-              <p className="font-mono text-sm text-slate-500">No projects in Notion yet.</p>
+              <p className="font-mono text-sm text-slate-500">
+                No projects in Notion yet.
+              </p>
             </div>
           )}
           {!loadingProjects && projects.length > 0 && (
@@ -196,37 +225,81 @@ export default function AdminProjectsPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-800">
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Project</th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Status</th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Progress</th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Priority</th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Owner</th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Due</th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                        Project
+                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                        Status
+                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                        Progress
+                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                        Priority
+                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                        Owner
+                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                        Due
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {projects.map((p) => (
-                      <tr key={p.id} className="hover:bg-void-lighter/20 border-b border-slate-800/50 transition-colors">
+                      <tr
+                        key={p.id}
+                        className="hover:bg-void-lighter/20 border-b border-slate-800/50 transition-colors"
+                      >
                         <td className="px-5 py-3">
-                          <div className="font-medium text-white">{p.name || "(Untitled)"}</div>
-                          {p.type && <div className="font-mono text-[10px] text-slate-600">{p.type}</div>}
+                          <div className="font-medium text-white">
+                            {p.name || "(Untitled)"}
+                          </div>
+                          {p.type && (
+                            <div className="font-mono text-[10px] text-slate-600">
+                              {p.type}
+                            </div>
+                          )}
                         </td>
                         <td className="px-5 py-3">
                           <select
                             value={p.status}
                             disabled={updatingId === p.id}
-                            onChange={(e) => updateProjectStatus(p.id, e.target.value as ProjectStatus)}
+                            onChange={(e) =>
+                              updateProjectStatus(
+                                p.id,
+                                e.target.value as ProjectStatus,
+                              )
+                            }
                             className={`rounded border bg-void px-2 py-1 font-mono text-[10px] focus:outline-none disabled:opacity-50 ${PROJECT_STATUS_COLORS[p.status] ?? "border-slate-700 text-slate-400"}`}
                           >
-                            {(["Planning", "In Progress", "On Hold", "Completed", "Cancelled"] as ProjectStatus[]).map((s) => (
-                              <option key={s} value={s}>{s}</option>
+                            {(
+                              [
+                                "Planning",
+                                "In Progress",
+                                "On Hold",
+                                "Completed",
+                                "Cancelled",
+                              ] as ProjectStatus[]
+                            ).map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
                             ))}
                           </select>
                         </td>
-                        <td className="px-5 py-3"><ProgressBar value={p.progress} /></td>
-                        <td className="px-5 py-3 font-mono text-xs text-slate-400">{p.priority}</td>
-                        <td className="px-5 py-3 font-mono text-xs text-slate-400">{p.owner || "—"}</td>
-                        <td className="px-5 py-3 font-mono text-xs text-slate-500">{formatDate(p.dueDate)}</td>
+                        <td className="px-5 py-3">
+                          <ProgressBar value={p.progress} />
+                        </td>
+                        <td className="px-5 py-3 font-mono text-xs text-slate-400">
+                          {p.priority}
+                        </td>
+                        <td className="px-5 py-3 font-mono text-xs text-slate-400">
+                          {p.owner || "—"}
+                        </td>
+                        <td className="px-5 py-3 font-mono text-xs text-slate-500">
+                          {formatDate(p.dueDate)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -243,42 +316,69 @@ export default function AdminProjectsPage() {
       {tab === "tasks" && (
         <>
           {errorTasks && (
-            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 font-mono text-sm text-red-400">{errorTasks}</div>
+            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 font-mono text-sm text-red-400">
+              {errorTasks}
+            </div>
           )}
           {loadingTasks && (
             <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-4">
+                <div
+                  key={i}
+                  className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-4"
+                >
                   <div className="mb-1.5 h-3.5 w-1/2 rounded bg-slate-700/60" />
                   <div className="h-3 w-1/4 rounded bg-slate-800/80" />
                 </div>
               ))}
             </div>
           )}
-          {!loadingTasks && fetchedTasks && tasks.length === 0 && !errorTasks && (
-            <div className="rounded-xl border border-slate-800 bg-void-light/30 py-12 text-center">
-              <p className="font-mono text-sm text-slate-500">No tasks in Notion yet.</p>
-            </div>
-          )}
+          {!loadingTasks &&
+            fetchedTasks &&
+            tasks.length === 0 &&
+            !errorTasks && (
+              <div className="rounded-xl border border-slate-800 bg-void-light/30 py-12 text-center">
+                <p className="font-mono text-sm text-slate-500">
+                  No tasks in Notion yet.
+                </p>
+              </div>
+            )}
           {!loadingTasks && tasks.length > 0 && (
             <div className="overflow-hidden rounded-xl border border-slate-800 bg-void-light/50">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-800">
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Task</th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Status</th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Priority</th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Assignee</th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Type</th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Due</th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                        Task
+                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                        Status
+                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                        Priority
+                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                        Assignee
+                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                        Type
+                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
+                        Due
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {tasks.map((t) => (
-                      <tr key={t.id} className="hover:bg-void-lighter/20 border-b border-slate-800/50 transition-colors">
+                      <tr
+                        key={t.id}
+                        className="hover:bg-void-lighter/20 border-b border-slate-800/50 transition-colors"
+                      >
                         <td className="px-5 py-3">
-                          <div className="font-medium text-white">{t.task || "(Untitled)"}</div>
+                          <div className="font-medium text-white">
+                            {t.task || "(Untitled)"}
+                          </div>
                           {t.estimate && (
                             <span className="mt-0.5 inline-block rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[9px] text-slate-500">
                               {t.estimate}
@@ -289,18 +389,42 @@ export default function AdminProjectsPage() {
                           <select
                             value={t.status}
                             disabled={updatingId === t.id}
-                            onChange={(e) => updateTaskStatus(t.id, e.target.value as TaskStatus)}
+                            onChange={(e) =>
+                              updateTaskStatus(
+                                t.id,
+                                e.target.value as TaskStatus,
+                              )
+                            }
                             className={`rounded border bg-void px-2 py-1 font-mono text-[10px] focus:outline-none disabled:opacity-50 ${TASK_STATUS_COLORS[t.status] ?? "border-slate-700 text-slate-400"}`}
                           >
-                            {(["Backlog", "To Do", "In Progress", "In Review", "Done", "Blocked"] as TaskStatus[]).map((s) => (
-                              <option key={s} value={s}>{s}</option>
+                            {(
+                              [
+                                "Backlog",
+                                "To Do",
+                                "In Progress",
+                                "In Review",
+                                "Done",
+                                "Blocked",
+                              ] as TaskStatus[]
+                            ).map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
                             ))}
                           </select>
                         </td>
-                        <td className="px-5 py-3 font-mono text-xs text-slate-400">{t.priority}</td>
-                        <td className="px-5 py-3 font-mono text-xs text-slate-400">{t.assignee || "—"}</td>
-                        <td className="px-5 py-3 font-mono text-xs text-slate-500">{t.type || "—"}</td>
-                        <td className="px-5 py-3 font-mono text-xs text-slate-500">{formatDate(t.dueDate)}</td>
+                        <td className="px-5 py-3 font-mono text-xs text-slate-400">
+                          {t.priority}
+                        </td>
+                        <td className="px-5 py-3 font-mono text-xs text-slate-400">
+                          {t.assignee || "—"}
+                        </td>
+                        <td className="px-5 py-3 font-mono text-xs text-slate-500">
+                          {t.type || "—"}
+                        </td>
+                        <td className="px-5 py-3 font-mono text-xs text-slate-500">
+                          {formatDate(t.dueDate)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

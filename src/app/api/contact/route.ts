@@ -3,7 +3,11 @@ import { isValidEmail } from "@/lib/validation";
 import { sendEmail } from "@/lib/email";
 import { getConfig } from "@/lib/ssm-config";
 import { slackContactNotify } from "@/lib/slack-notify";
-import { upsertContact, createDeal, associateDealWithContact } from "@/lib/hubspot";
+import {
+  upsertContact,
+  createDeal,
+  associateDealWithContact,
+} from "@/lib/hubspot";
 import { saveSubmission } from "@/lib/notion-forms";
 import { trackEvent } from "@/lib/notion-analytics";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";

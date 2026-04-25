@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { createReport, updateReport, type ReportSection } from "@/lib/reports";
 import { isHubSpotConfigured, getPipelineStats } from "@/lib/hubspot";
-import { isActiveCampaignConfigured, getEmailStats } from "@/lib/activecampaign";
+import {
+  isActiveCampaignConfigured,
+  getEmailStats,
+} from "@/lib/activecampaign";
 import { getConfig } from "@/lib/ssm-config";
 
 async function generateInsights(
@@ -53,7 +56,8 @@ export async function POST(request: NextRequest) {
     dateStart = body.dateStart;
     dateEnd = body.dateEnd;
     includeSections = body.includeSections ?? ["pipeline", "email"];
-    if (!clientName || !dateStart || !dateEnd) throw new Error("clientName, dateStart, dateEnd required");
+    if (!clientName || !dateStart || !dateEnd)
+      throw new Error("clientName, dateStart, dateEnd required");
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Invalid input" },
@@ -61,10 +65,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const report = await createReport({ clientName, dateStart, dateEnd, includeSections });
+  const report = await createReport({
+    clientName,
+    dateStart,
+    dateEnd,
+    includeSections,
+  });
 
   const cfg = await getConfig();
-  const anthropicKey = cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY || "";
+  const anthropicKey =
+    cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY || "";
   const period = `${dateStart} to ${dateEnd}`;
 
   const sections: ReportSection[] = [];
@@ -87,7 +97,10 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (includeSections.includes("email") && (await isActiveCampaignConfigured())) {
+  if (
+    includeSections.includes("email") &&
+    (await isActiveCampaignConfigured())
+  ) {
     const emailData = await getEmailStats();
     const insights = anthropicKey
       ? await generateInsights(

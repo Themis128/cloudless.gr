@@ -66,10 +66,15 @@ export default function EmailPage() {
   async function loadStats() {
     try {
       const res = await fetchWithAuth("/api/admin/email/stats");
-      if (res.status === 503) { setNotConfigured(true); return; }
+      if (res.status === 503) {
+        setNotConfigured(true);
+        return;
+      }
       if (!res.ok) return;
       setStats(await res.json());
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
   }
 
   async function loadTab(t: Tab) {
@@ -78,7 +83,10 @@ export default function EmailPage() {
     try {
       if (t === "campaigns") {
         const res = await fetchWithAuth("/api/admin/email/campaigns?limit=50");
-        if (res.status === 503) { setNotConfigured(true); return; }
+        if (res.status === 503) {
+          setNotConfigured(true);
+          return;
+        }
         if (!res.ok) throw new Error("Failed to load campaigns");
         const data = await res.json();
         setCampaigns(data.campaigns ?? []);
@@ -104,7 +112,7 @@ export default function EmailPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadStats();
     loadTab(tab);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -120,7 +128,8 @@ export default function EmailPage() {
           <p className="font-mono text-sm text-yellow-400">
             ActiveCampaign is not configured. Add{" "}
             <code className="text-yellow-300">ACTIVECAMPAIGN_API_URL</code> and{" "}
-            <code className="text-yellow-300">ACTIVECAMPAIGN_API_TOKEN</code> to AWS SSM.
+            <code className="text-yellow-300">ACTIVECAMPAIGN_API_TOKEN</code> to
+            AWS SSM.
           </p>
         </div>
       </div>
@@ -133,8 +142,14 @@ export default function EmailPage() {
 
       {stats && (
         <div className="mb-8 grid grid-cols-3 gap-4">
-          <StatCard label="Contacts" value={stats.totalContacts.toLocaleString()} />
-          <StatCard label="Campaigns" value={stats.totalCampaigns.toLocaleString()} />
+          <StatCard
+            label="Contacts"
+            value={stats.totalContacts.toLocaleString()}
+          />
+          <StatCard
+            label="Campaigns"
+            value={stats.totalCampaigns.toLocaleString()}
+          />
           <StatCard label="Lists" value={stats.totalLists.toLocaleString()} />
         </div>
       )}
@@ -174,26 +189,44 @@ export default function EmailPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/50">
-                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Campaign</th>
-                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Status</th>
-                <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">Sent</th>
-                <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">Opens</th>
-                <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">Clicks</th>
+                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+                  Campaign
+                </th>
+                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+                  Sent
+                </th>
+                <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+                  Opens
+                </th>
+                <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+                  Clicks
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {campaigns.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center font-mono text-sm text-slate-600">
+                  <td
+                    colSpan={5}
+                    className="py-8 text-center font-mono text-sm text-slate-600"
+                  >
                     No campaigns found.
                   </td>
                 </tr>
               )}
               {campaigns.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-800/30 transition-colors">
+                <tr
+                  key={c.id}
+                  className="hover:bg-slate-800/30 transition-colors"
+                >
                   <td className="px-4 py-3">
                     <p className="font-mono text-sm text-white">{c.name}</p>
-                    <p className="font-mono text-xs text-slate-500 truncate max-w-xs">{c.subject}</p>
+                    <p className="font-mono text-xs text-slate-500 truncate max-w-xs">
+                      {c.subject}
+                    </p>
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -223,27 +256,43 @@ export default function EmailPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/50">
-                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Email</th>
-                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Name</th>
-                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Added</th>
+                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+                  Email
+                </th>
+                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+                  Name
+                </th>
+                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+                  Added
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {contacts.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="py-8 text-center font-mono text-sm text-slate-600">
+                  <td
+                    colSpan={3}
+                    className="py-8 text-center font-mono text-sm text-slate-600"
+                  >
                     No contacts found.
                   </td>
                 </tr>
               )}
               {contacts.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-800/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-sm text-white">{c.email}</td>
+                <tr
+                  key={c.id}
+                  className="hover:bg-slate-800/30 transition-colors"
+                >
+                  <td className="px-4 py-3 font-mono text-sm text-white">
+                    {c.email}
+                  </td>
                   <td className="px-4 py-3 font-mono text-sm text-slate-300">
                     {[c.firstName, c.lastName].filter(Boolean).join(" ") || "—"}
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-500">
-                    {c.cdate ? new Date(c.cdate).toLocaleDateString("en-IE") : "—"}
+                    {c.cdate
+                      ? new Date(c.cdate).toLocaleDateString("en-IE")
+                      : "—"}
                   </td>
                 </tr>
               ))}
@@ -292,7 +341,9 @@ function PageHeader() {
     <div className="mb-8">
       <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
         <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-        <span className="text-neon-cyan font-mono text-xs">EMAIL MARKETING</span>
+        <span className="text-neon-cyan font-mono text-xs">
+          EMAIL MARKETING
+        </span>
       </div>
       <h1 className="font-heading text-2xl font-bold text-white">Email</h1>
       <p className="font-body mt-1 text-slate-400">

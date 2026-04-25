@@ -7,7 +7,10 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isActiveCampaignConfigured())) {
-    return NextResponse.json({ error: "ActiveCampaign not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "ActiveCampaign not configured." },
+      { status: 503 },
+    );
   }
 
   const lists = await listACLists();

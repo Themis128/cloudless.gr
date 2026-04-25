@@ -7,7 +7,12 @@ import { useAuth } from "@/context/AuthContext";
 
 type AdminLink =
   | { href: string; label: string; icon: string; section?: never }
-  | { href: string; label: string; icon: string; section: "Marketing" | "Content" };
+  | {
+      href: string;
+      label: string;
+      icon: string;
+      section: "Marketing" | "Content";
+    };
 
 const adminLinks: AdminLink[] = [
   { href: "/admin", label: "Dashboard", icon: "◈" },
@@ -21,14 +26,44 @@ const adminLinks: AdminLink[] = [
   { href: "/admin/blog", label: "Blog", icon: "✍", section: "Content" },
   { href: "/admin/docs", label: "Docs", icon: "📄", section: "Content" },
   { href: "/admin/projects", label: "Projects", icon: "◫", section: "Content" },
-  { href: "/admin/notion", label: "Submissions", icon: "📬", section: "Content" },
+  {
+    href: "/admin/notion",
+    label: "Submissions",
+    icon: "📬",
+    section: "Content",
+  },
   // Marketing Hub
-  { href: "/admin/campaigns", label: "Campaigns", icon: "📣", section: "Marketing" },
+  {
+    href: "/admin/campaigns",
+    label: "Campaigns",
+    icon: "📣",
+    section: "Marketing",
+  },
   { href: "/admin/email", label: "Email", icon: "📧", section: "Marketing" },
-  { href: "/admin/pipeline", label: "Pipeline", icon: "🔀", section: "Marketing" },
-  { href: "/admin/calendar", label: "Calendar", icon: "📅", section: "Marketing" },
-  { href: "/admin/reports", label: "Reports", icon: "📋", section: "Marketing" },
-  { href: "/admin/ai-assistant", label: "AI Assistant", icon: "🤖", section: "Marketing" },
+  {
+    href: "/admin/pipeline",
+    label: "Pipeline",
+    icon: "🔀",
+    section: "Marketing",
+  },
+  {
+    href: "/admin/calendar",
+    label: "Calendar",
+    icon: "📅",
+    section: "Marketing",
+  },
+  {
+    href: "/admin/reports",
+    label: "Reports",
+    icon: "📋",
+    section: "Marketing",
+  },
+  {
+    href: "/admin/ai-assistant",
+    label: "AI Assistant",
+    icon: "🤖",
+    section: "Marketing",
+  },
   // Bottom
   { href: "/admin/settings", label: "Settings", icon: "⚙" },
 ];
@@ -98,7 +133,9 @@ export default function AdminLayoutClient({
                       {isFirstInSection && (
                         <div className="px-3 pb-1 pt-3">
                           <p className="font-mono text-[10px] uppercase tracking-widest text-slate-600">
-                            {link.section === "Marketing" ? "Marketing Hub" : "Content"}
+                            {link.section === "Marketing"
+                              ? "Marketing Hub"
+                              : "Content"}
                           </p>
                         </div>
                       )}

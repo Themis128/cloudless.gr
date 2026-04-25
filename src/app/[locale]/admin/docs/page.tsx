@@ -44,7 +44,9 @@ export default function AdminDocsPage() {
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
             <span className="text-neon-cyan font-mono text-xs">DOCS</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">Documentation</h1>
+          <h1 className="font-heading text-2xl font-bold text-white">
+            Documentation
+          </h1>
           <p className="font-body mt-1 text-slate-400">
             All docs from your Notion docs database.
           </p>
@@ -69,8 +71,8 @@ export default function AdminDocsPage() {
         <div className="mb-4 flex items-center gap-4">
           <div className="flex items-center gap-3">
             <span className="font-mono text-xs text-slate-500">
-              <span className="text-neon-green">{publishedCount}</span> published
-              &nbsp;·&nbsp;
+              <span className="text-neon-green">{publishedCount}</span>{" "}
+              published &nbsp;·&nbsp;
               <span className="text-slate-400">{draftCount}</span> drafts
             </span>
           </div>
@@ -81,7 +83,9 @@ export default function AdminDocsPage() {
               onChange={(e) => setShowDrafts(e.target.checked)}
               className="rounded border-slate-600"
             />
-            <span className="font-mono text-xs text-slate-400">Show drafts</span>
+            <span className="font-mono text-xs text-slate-400">
+              Show drafts
+            </span>
           </label>
         </div>
       )}
@@ -89,7 +93,10 @@ export default function AdminDocsPage() {
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5">
+            <div
+              key={i}
+              className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5"
+            >
               <div className="mb-2 h-4 w-1/3 rounded bg-slate-700/60" />
               <div className="space-y-2">
                 {[1, 2].map((j) => (
@@ -112,27 +119,46 @@ export default function AdminDocsPage() {
       {!loading && filtered.length > 0 && (
         <div className="space-y-6">
           {categories.map((category) => {
-            const categoryDocs = filtered.filter((d) => d.category === category);
+            const categoryDocs = filtered.filter(
+              (d) => d.category === category,
+            );
             return (
-              <div key={category} className="rounded-xl border border-slate-800 bg-void-light/50 overflow-hidden">
+              <div
+                key={category}
+                className="rounded-xl border border-slate-800 bg-void-light/50 overflow-hidden"
+              >
                 <div className="border-b border-slate-800 px-5 py-3 flex items-center justify-between">
-                  <h2 className="font-mono text-xs font-semibold text-white">{category}</h2>
-                  <span className="font-mono text-[10px] text-slate-600">{categoryDocs.length} doc{categoryDocs.length !== 1 ? "s" : ""}</span>
+                  <h2 className="font-mono text-xs font-semibold text-white">
+                    {category}
+                  </h2>
+                  <span className="font-mono text-[10px] text-slate-600">
+                    {categoryDocs.length} doc
+                    {categoryDocs.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
                 <div className="divide-y divide-slate-800/50">
                   {categoryDocs.map((doc) => (
-                    <div key={doc.id} className="hover:bg-void-lighter/20 flex items-center justify-between px-5 py-3 transition-colors">
+                    <div
+                      key={doc.id}
+                      className="hover:bg-void-lighter/20 flex items-center justify-between px-5 py-3 transition-colors"
+                    >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-xs text-slate-500 w-6 shrink-0">
                             {doc.order}
                           </span>
-                          <span className="font-medium text-white text-sm truncate">{doc.title || "(Untitled)"}</span>
+                          <span className="font-medium text-white text-sm truncate">
+                            {doc.title || "(Untitled)"}
+                          </span>
                         </div>
                         {doc.description && (
-                          <p className="mt-0.5 ml-8 font-mono text-[10px] text-slate-600 truncate">{doc.description}</p>
+                          <p className="mt-0.5 ml-8 font-mono text-[10px] text-slate-600 truncate">
+                            {doc.description}
+                          </p>
                         )}
-                        <p className="mt-0.5 ml-8 font-mono text-[10px] text-slate-700">{doc.slug}</p>
+                        <p className="mt-0.5 ml-8 font-mono text-[10px] text-slate-700">
+                          {doc.slug}
+                        </p>
                       </div>
                       <div className="ml-4 flex shrink-0 items-center gap-2">
                         <span
@@ -162,7 +188,8 @@ export default function AdminDocsPage() {
             );
           })}
           <p className="text-right font-mono text-[10px] text-slate-600">
-            {filtered.length} doc{filtered.length !== 1 ? "s" : ""} across {categories.length} categor{categories.length !== 1 ? "ies" : "y"}
+            {filtered.length} doc{filtered.length !== 1 ? "s" : ""} across{" "}
+            {categories.length} categor{categories.length !== 1 ? "ies" : "y"}
           </p>
         </div>
       )}

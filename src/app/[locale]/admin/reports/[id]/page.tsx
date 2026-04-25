@@ -34,7 +34,7 @@ export default function ReportViewPage() {
     if (!id) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadReport();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (loading) {
@@ -50,7 +50,10 @@ export default function ReportViewPage() {
     return (
       <div>
         <div className="mb-6">
-          <Link href="/admin/reports" className="font-mono text-xs text-slate-500 hover:text-slate-300">
+          <Link
+            href="/admin/reports"
+            className="font-mono text-xs text-slate-500 hover:text-slate-300"
+          >
             ← Reports
           </Link>
         </div>
@@ -64,7 +67,10 @@ export default function ReportViewPage() {
   return (
     <div>
       <div className="mb-6">
-        <Link href="/admin/reports" className="font-mono text-xs text-slate-500 hover:text-slate-300">
+        <Link
+          href="/admin/reports"
+          className="font-mono text-xs text-slate-500 hover:text-slate-300"
+        >
           ← Reports
         </Link>
       </div>
@@ -74,7 +80,9 @@ export default function ReportViewPage() {
           <span className="bg-neon-cyan h-2 w-2 rounded-full" />
           <span className="text-neon-cyan font-mono text-xs">REPORT</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">{report.clientName}</h1>
+        <h1 className="font-heading text-2xl font-bold text-white">
+          {report.clientName}
+        </h1>
         <p className="font-body mt-1 text-slate-400">
           {report.dateRange.start} — {report.dateRange.end}
         </p>
@@ -82,23 +90,35 @@ export default function ReportViewPage() {
 
       <div className="space-y-6">
         {report.sections.map((section) => (
-          <div key={section.id} className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
-            <h2 className="font-heading mb-4 font-semibold text-white">{section.title}</h2>
+          <div
+            key={section.id}
+            className="bg-void-light/50 rounded-xl border border-slate-800 p-6"
+          >
+            <h2 className="font-heading mb-4 font-semibold text-white">
+              {section.title}
+            </h2>
 
             {section.insights && (
               <div className="border-neon-cyan/20 bg-neon-cyan/5 mb-4 rounded-lg border p-4">
                 <p className="text-neon-cyan mb-1 font-mono text-[10px] uppercase tracking-wider">
                   AI Insights
                 </p>
-                <p className="font-mono text-xs text-slate-300">{section.insights}</p>
+                <p className="font-mono text-xs text-slate-300">
+                  {section.insights}
+                </p>
               </div>
             )}
 
             <div className="grid gap-3 sm:grid-cols-3">
               {Object.entries(section.data).map(([key, value]) => (
-                <div key={key} className="rounded-lg border border-slate-800 bg-slate-900/50 p-3">
+                <div
+                  key={key}
+                  className="rounded-lg border border-slate-800 bg-slate-900/50 p-3"
+                >
                   <p className="font-mono text-[10px] text-slate-500">
-                    {key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase())}
+                    {key
+                      .replace(/([A-Z])/g, " $1")
+                      .replace(/^./, (s) => s.toUpperCase())}
                   </p>
                   <p className="mt-1 font-mono text-sm font-bold text-white">
                     {typeof value === "number"
@@ -113,7 +133,9 @@ export default function ReportViewPage() {
 
         {report.sections.length === 0 && (
           <div className="rounded-xl border border-slate-800 py-12 text-center">
-            <p className="font-mono text-sm text-slate-600">No sections in this report.</p>
+            <p className="font-mono text-sm text-slate-600">
+              No sections in this report.
+            </p>
           </div>
         )}
       </div>
