@@ -205,7 +205,7 @@ export default function ContactFormSection() {
                     )}{" "}
                     <Link
                       href="/privacy"
-                      className="text-neon-cyan hover:underline"
+                      className="text-neon-cyan underline underline-offset-2"
                     >
                       {t("legal.privacyTitle", "Privacy Policy")}
                     </Link>
