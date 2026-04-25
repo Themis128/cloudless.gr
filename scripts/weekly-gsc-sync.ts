@@ -16,17 +16,21 @@
  *   NOTION_API_KEY               Notion integration token
  *   NOTION_GSC_REPORTS_DB_ID     destination database id
  *
- * Notion DB schema (matches what the workflow expects):
- *   Title           Title           "Week of YYYY-MM-DD"
- *   WeekStart       Date            ISO date (start of 28-day window)
- *   WeekEnd         Date            ISO date (end of 28-day window — today)
- *   Clicks          Number
- *   Impressions     Number
- *   CTR             Number          0..1 (Notion percent column expects fraction)
- *   AvgPosition     Number
- *   TopQueries      Rich text       JSON-stringified array of {q, clicks, ctr}
- *   TopPages        Rich text       JSON-stringified array of {p, clicks, ctr}
- *   GeneratedAt     Date            ISO timestamp at run time
+ * Notion DB schema (matches NOTION_GSC_REPORTS_DB_ID as of 2026-04):
+ *   Week              Title       "Week of YYYY-MM-DD"
+ *   Date              Date        End date of 28-day window
+ *   Clicks            Number
+ *   Impressions       Number
+ *   CTR %             Number      Whole percent (e.g. 3.5 for 3.5%)
+ *   Avg Position      Number
+ *   Keywords          Number      Count of organic keywords with impressions
+ *   Top Keywords      Rich text   JSON-stringified [{q, clicks, ctr}]
+ *   Top Products      Rich text   (left empty — populated by separate ecommerce sync)
+ *   Top Country       Rich text   ISO country with most clicks
+ *   Mobile %          Number      Share of clicks from mobile devices
+ *   CTR Opportunities Number      Count of queries with impressions>=20 and ctr<2%
+ *   Product Clicks    Number      (left 0 — populated by separate ecommerce sync)
+ *   Report JSON       Rich text   Full raw payload (truncated to 2000 chars)
  */
 
 import { SignJWT, importPKCS8 } from "jose";
@@ -165,48 +169,83 @@ async function main(): Promise<void> {
     position: 0,
   };
 
-  // Top 20 queries by clicks
+  // Top 20 queries by clicks (also drives Keywords count + CTR opportunities)
   const queriesResp = await gscQuery(token, siteUrl, {
     ...range,
     dimensions: ["query"],
-    rowLimit: 20,
+    rowLimit: 1000,
     orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }],
   });
-  const topQueries = (queriesResp.rows ?? []).map((r) => ({
+  const allQueries = queriesResp.rows ?? [];
+  const topQueries = allQueries.slice(0, 20).map((r) => ({
     q: r.keys?.[0] ?? "",
     clicks: Math.round(r.clicks),
     ctr: parseFloat((r.ctr * 100).toFixed(2)),
   }));
 
-  // Top 20 pages by clicks
-  const pagesResp = await gscQuery(token, siteUrl, {
+  // CTR Opportunities — queries with decent impressions but poor CTR.
+  const ctrOpportunities = allQueries.filter(
+    (r) => r.impressions >= 20 && r.ctr < 0.02,
+  ).length;
+
+  // Country breakdown — find the country with most clicks.
+  const countryResp = await gscQuery(token, siteUrl, {
     ...range,
-    dimensions: ["page"],
-    rowLimit: 20,
+    dimensions: ["country"],
+    rowLimit: 5,
     orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }],
   });
-  const topPages = (pagesResp.rows ?? []).map((r) => ({
-    p: r.keys?.[0] ?? "",
-    clicks: Math.round(r.clicks),
-    ctr: parseFloat((r.ctr * 100).toFixed(2)),
-  }));
+  const topCountry = countryResp.rows?.[0]?.keys?.[0]?.toUpperCase() ?? "";
+
+  // Device breakdown — share of mobile clicks.
+  const deviceResp = await gscQuery(token, siteUrl, {
+    ...range,
+    dimensions: ["device"],
+    rowLimit: 5,
+  });
+  const totalDeviceClicks = (deviceResp.rows ?? []).reduce(
+    (sum, r) => sum + r.clicks,
+    0,
+  );
+  const mobileClicks =
+    deviceResp.rows?.find((r) => r.keys?.[0] === "MOBILE")?.clicks ?? 0;
+  const mobilePct =
+    totalDeviceClicks > 0
+      ? parseFloat(((mobileClicks / totalDeviceClicks) * 100).toFixed(1))
+      : 0;
 
   console.log(
     `[weekly-gsc-sync] clicks=${totals.clicks} impressions=${totals.impressions} ` +
-      `topQueries=${topQueries.length} topPages=${topPages.length}`,
+      `topQueries=${topQueries.length} keywords=${allQueries.length} ` +
+      `ctrOpps=${ctrOpportunities} country=${topCountry} mobile=${mobilePct}%`,
   );
 
+  const reportJson = JSON.stringify({
+    range,
+    totals: {
+      clicks: Math.round(totals.clicks),
+      impressions: Math.round(totals.impressions),
+      ctrPct: parseFloat((totals.ctr * 100).toFixed(2)),
+      avgPosition: parseFloat(totals.position.toFixed(2)),
+    },
+    topQueries,
+    topCountry,
+    mobilePct,
+  });
+
   await notionCreatePage(notionApiKey, notionDbId, {
-    Title: { title: [{ text: { content: `Week of ${range.endDate}` } }] },
-    WeekStart: { date: { start: range.startDate } },
-    WeekEnd: { date: { start: range.endDate } },
+    Week: { title: [{ text: { content: `Week of ${range.endDate}` } }] },
+    Date: { date: { start: range.endDate } },
     Clicks: { number: Math.round(totals.clicks) },
     Impressions: { number: Math.round(totals.impressions) },
-    CTR: { number: parseFloat((totals.ctr).toFixed(4)) },
-    AvgPosition: { number: parseFloat(totals.position.toFixed(2)) },
-    TopQueries: rt(JSON.stringify(topQueries)),
-    TopPages: rt(JSON.stringify(topPages)),
-    GeneratedAt: { date: { start: new Date().toISOString() } },
+    "CTR %": { number: parseFloat((totals.ctr * 100).toFixed(2)) },
+    "Avg Position": { number: parseFloat(totals.position.toFixed(2)) },
+    Keywords: { number: allQueries.length },
+    "Top Keywords": rt(JSON.stringify(topQueries)),
+    "Top Country": rt(topCountry),
+    "Mobile %": { number: mobilePct },
+    "CTR Opportunities": { number: ctrOpportunities },
+    "Report JSON": rt(reportJson),
   });
 
   console.log(`[weekly-gsc-sync] Notion page created in db ${notionDbId}`);
