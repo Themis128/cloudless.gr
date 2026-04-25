@@ -32,7 +32,9 @@
   /* Text */
   --ink-primary: #0f1822;
   --ink-body: #475467;
-  --ink-muted: #7a8aa0;
+  /* --ink-muted darkened in Phase 6.1 from #7a8aa0 (3.5:1 on white)
+     to #5b6776 so it clears WCAG AA on small captions. */
+  --ink-muted: #5b6776;
 
   /* Accent (calmer cyan/teal). Darkened in Phase 6 from #0e9aab so it
      hits WCAG AA (4.5:1) on both white and accent-soft surfaces. */
@@ -358,6 +360,23 @@
 [data-theme="light"] [class*="bg-neon-blue/"] {
   background-color: var(--accent-soft);
 }
+
+/* Phase 6.1 — fix the inverse: when a parent has bg-neon-cyan/N (now
+   accent-soft on light) AND a child uses text-void or text-white expecting
+   a dark background, the white-on-pale-cyan pair fails contrast at 1.12:1.
+   Re-target both color tokens to --accent (dark teal) inside accent-soft
+   surfaces so the pairing reads as bold-accent-on-soft (~7:1). */
+[data-theme="light"] [class*="bg-neon-cyan/"] .text-void,
+[data-theme="light"] [class*="bg-neon-cyan/"] .text-white,
+[data-theme="light"] [class*="bg-neon-cyan/"][class*=" text-void"],
+[data-theme="light"] [class*="bg-neon-cyan/"][class*=" text-white"] {
+  color: var(--accent);
+}
+
+/* Same logic for solid bg-neon-cyan (without the /N partial). On dark this
+   is the bright neon CTA with text-void = readable. On light this collapses
+   to dark-teal accent CTA with white text — keep white. The browser handles
+   that correctly; no override needed. */
 
 /* ──────────────────────────────────────────────────────────────────
    PHASE 4 — Homepage hero gradient mesh
