@@ -2,6 +2,7 @@
 
 import { Link } from "@/i18n/navigation";
 import NewsletterForm from "@/components/NewsletterForm";
+import Logo from "@/components/Logo";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 import { useCookieConsent } from "@/context/CookieConsentContext";
@@ -18,9 +19,10 @@ export default function Footer() {
           <div>
             <Link
               href="/"
-              className="font-heading text-lg font-bold text-white"
+              className="text-white transition-opacity hover:opacity-90"
+              aria-label="cloudless.gr — home"
             >
-              cloudless<span className="text-neon-cyan">.gr</span>
+              <Logo variant="wordmark" size="sm" />
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
               {translate(

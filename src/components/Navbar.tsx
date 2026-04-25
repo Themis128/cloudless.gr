@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "@/i18n/navigation";
 import CartButton from "@/components/store/CartButton";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
+import Logo from "@/components/Logo";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 import { useAuth } from "@/context/AuthContext";
@@ -48,12 +49,10 @@ export default function Navbar() {
           {/* Logo */}
           <Link
             href="/"
-            className="group glitch flex shrink-0 items-center gap-2"
+            className="group flex shrink-0 items-center text-white transition-opacity hover:opacity-90"
+            aria-label="cloudless.gr — home"
           >
-            <CloudIcon />
-            <span className="font-heading text-xl font-bold tracking-tight text-white">
-              cloudless<span className="text-neon-cyan">.gr</span>
-            </span>
+            <Logo variant="wordmark" size="md" />
           </Link>
 
           {/* Desktop Nav */}
@@ -295,22 +294,4 @@ export default function Navbar() {
   );
 }
 
-function CloudIcon() {
-  return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 32 32"
-      fill="none"
-      className="text-neon-cyan"
-    >
-      <path
-        d="M8 24a6 6 0 01-.84-11.94A8 8 0 0123.29 14 5 5 0 0124 24H8z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+// CloudIcon removed — replaced by the shared <Logo /> component.
