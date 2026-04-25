@@ -27,6 +27,8 @@
     "devcontainer:preflight": "bash -lc 'if ! command -v docker >/dev/null 2>&1; then echo \"Docker CLI not found in this WSL distro. Enable Docker Desktop WSL integration for this distro.\"; exit 1; fi; if ! docker version >/dev/null 2>&1; then echo \"Docker daemon not reachable from WSL. Start Docker Desktop and wait for Engine running.\"; exit 1; fi; if command -v wsl.exe >/dev/null 2>&1; then wsl.exe -l -v; fi; echo \"Docker is ready for Dev Containers.\"'",
     "devcontainer:doctor": "bash scripts/devcontainer-doctor.sh",
     "devcontainer:stop": "bash scripts/devcontainer-stop.sh",
+    "notion:test": "tsx --tsconfig scripts/tsconfig.json scripts/notion-test.ts",
+    "gsc:sync": "tsx --tsconfig scripts/tsconfig.json scripts/weekly-gsc-sync.ts",
     "mcp-security-scan": "cd tools/mcp-security-scanner && npm install && npm run scan -- --path \"../../src/**/*.{ts,tsx,js,jsx,py,md}\"",
     "mcp-security-scan:server": "cd tools/mcp-security-scanner && npm install && npm run scan -- --path \"../../src/{app/api,lib}/**/*.{ts,tsx,js,jsx,py,md}\""
   },

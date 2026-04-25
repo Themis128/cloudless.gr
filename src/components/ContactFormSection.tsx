@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
+import { trackPixelEvent } from "@/lib/meta-pixel";
 
 const serviceOptions = [
   "Cloud Architecture & Migration",
@@ -44,6 +45,16 @@ export default function ContactFormSection() {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          eventId?: string;
+        } | null;
+        // Browser-side Lead event with the same eventId the server sent to CAPI.
+        // No-ops if the pixel is not loaded.
+        trackPixelEvent(
+          "Lead",
+          { content_name: payload.service || "contact_form" },
+          data?.eventId,
+        );
         setStatus("sent");
         form.reset();
       } else {
