@@ -23,11 +23,18 @@ async function getServiceAccountAccessToken(): Promise<string> {
   const rawKey = process.env.GOOGLE_PRIVATE_KEY ?? "";
   const privateKey = rawKey.replace(/\\n/g, "\n");
 
-  if (!email || !privateKey) throw new Error("Google service account env vars missing");
+  if (!email || !privateKey)
+    throw new Error("Google service account env vars missing");
 
   const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
   const payload = base64url(
-    JSON.stringify({ iss: email, scope: ADS_SCOPE, aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 }),
+    JSON.stringify({
+      iss: email,
+      scope: ADS_SCOPE,
+      aud: "https://oauth2.googleapis.com/token",
+      iat: now,
+      exp: now + 3600,
+    }),
   );
 
   const signer = createSign("RSA-SHA256");
@@ -38,11 +45,15 @@ async function getServiceAccountAccessToken(): Promise<string> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt }),
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
   });
 
   const data = (await res.json()) as { access_token?: string; error?: string };
-  if (!data.access_token) throw new Error(`Google token exchange failed: ${data.error}`);
+  if (!data.access_token)
+    throw new Error(`Google token exchange failed: ${data.error}`);
 
   cachedToken = { value: data.access_token, expiresAt: now + 3600 };
   return data.access_token;
@@ -65,7 +76,10 @@ async function getGoogleAdsConfig(): Promise<{
   };
 }
 
-async function gadsFetch(path: string, options: RequestInit = {}): Promise<Response> {
+async function gadsFetch(
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
   const { devToken, customerId, accessToken } = await getGoogleAdsConfig();
   return fetch(`${GOOGLE_ADS_API}${path}`, {
     ...options,
@@ -82,7 +96,9 @@ async function gadsFetch(path: string, options: RequestInit = {}): Promise<Respo
 export async function isGoogleAdsConfigured(): Promise<boolean> {
   try {
     const cfg = await getConfig();
-    return Boolean(cfg.GOOGLE_ADS_DEVELOPER_TOKEN && cfg.GOOGLE_ADS_CUSTOMER_ID);
+    return Boolean(
+      cfg.GOOGLE_ADS_DEVELOPER_TOKEN && cfg.GOOGLE_ADS_CUSTOMER_ID,
+    );
   } catch {
     return false;
   }

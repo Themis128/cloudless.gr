@@ -475,7 +475,10 @@ export async function createNote(
           {
             to: { id: dealId },
             types: [
-              { associationCategory: "HUBSPOT_DEFINED", associationTypeId: 214 },
+              {
+                associationCategory: "HUBSPOT_DEFINED",
+                associationTypeId: 214,
+              },
             ],
           },
         ],

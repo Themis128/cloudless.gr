@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getConfig } from "@/lib/ssm-config";
 
-async function callClaude(prompt: string, apiKey: string, maxTokens = 1000): Promise<string> {
+async function callClaude(
+  prompt: string,
+  apiKey: string,
+  maxTokens = 1000,
+): Promise<string> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -46,7 +50,10 @@ export async function POST(request: NextRequest) {
   const cfg = await getConfig();
   const apiKey = cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "ANTHROPIC_API_KEY not configured." },
+      { status: 503 },
+    );
   }
 
   const charLimits: Record<string, { headline: number; body: number }> = {

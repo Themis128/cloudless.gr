@@ -11,7 +11,10 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isHubSpotConfigured())) {
-    return NextResponse.json({ error: "HubSpot not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "HubSpot not configured." },
+      { status: 503 },
+    );
   }
 
   try {
@@ -26,6 +29,9 @@ export async function GET(request: NextRequest) {
       fetchedAt: new Date().toISOString(),
     });
   } catch {
-    return NextResponse.json({ error: "Failed to fetch pipeline board." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch pipeline board." },
+      { status: 500 },
+    );
   }
 }

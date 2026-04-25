@@ -10,7 +10,11 @@ function formatValue(val: unknown): string {
   return escapeHtml(String(val));
 }
 
-function renderSection(section: { title: string; data: Record<string, unknown>; insights?: string }): string {
+function renderSection(section: {
+  title: string;
+  data: Record<string, unknown>;
+  insights?: string;
+}): string {
   const rows = Object.entries(section.data)
     .map(
       ([k, v]) =>

@@ -254,9 +254,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
   ): Promise<SignInResult> => {
-    const { signIn: amplifySignIn, signOut: amplifySignOut } = await import(
-      "aws-amplify/auth"
-    );
+    const { signIn: amplifySignIn, signOut: amplifySignOut } =
+      await import("aws-amplify/auth");
     try {
       const result = await amplifySignIn({ username: email, password });
 
@@ -318,9 +317,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleConfirmSignUp = async (email: string, code: string) => {
-    const { confirmSignUp: amplifyConfirmSignUp } = await import(
-      "aws-amplify/auth"
-    );
+    const { confirmSignUp: amplifyConfirmSignUp } =
+      await import("aws-amplify/auth");
     try {
       await amplifyConfirmSignUp({ username: email, confirmationCode: code });
     } catch (err) {
@@ -329,9 +327,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleForgotPassword = async (email: string) => {
-    const { resetPassword: amplifyResetPassword } = await import(
-      "aws-amplify/auth"
-    );
+    const { resetPassword: amplifyResetPassword } =
+      await import("aws-amplify/auth");
     try {
       await amplifyResetPassword({ username: email });
     } catch (err) {
@@ -344,9 +341,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     code: string,
     newPassword: string,
   ) => {
-    const { confirmResetPassword: amplifyConfirmResetPassword } = await import(
-      "aws-amplify/auth"
-    );
+    const { confirmResetPassword: amplifyConfirmResetPassword } =
+      await import("aws-amplify/auth");
     try {
       await amplifyConfirmResetPassword({
         username: email,
@@ -359,9 +355,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleCompleteNewPassword = async (newPassword: string) => {
-    const { confirmSignIn: amplifyConfirmSignIn } = await import(
-      "aws-amplify/auth"
-    );
+    const { confirmSignIn: amplifyConfirmSignIn } =
+      await import("aws-amplify/auth");
     try {
       const result = await amplifyConfirmSignIn({
         challengeResponse: newPassword,

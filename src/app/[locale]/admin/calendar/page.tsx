@@ -11,8 +11,18 @@ import { CALENDAR_ITEM_COLORS, PLATFORM_LABELS } from "@/lib/content-calendar";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 export default function CalendarPage() {
@@ -43,14 +53,17 @@ export default function CalendarPage() {
       if (!res.ok) return;
       const data = await res.json();
       setItems(data.items ?? []);
-    } catch { /* silent */ }
-    finally { setLoading(false); }
+    } catch {
+      /* silent */
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadItems();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month]);
 
   async function handleCreate(e: React.FormEvent) {
@@ -65,10 +78,19 @@ export default function CalendarPage() {
       });
       if (!res.ok) return;
       setShowForm(false);
-      setForm({ title: "", type: "social_post", platform: "meta", status: "draft", notes: "" });
+      setForm({
+        title: "",
+        type: "social_post",
+        platform: "meta",
+        status: "draft",
+        notes: "",
+      });
       await loadItems();
-    } catch { /* silent */ }
-    finally { setSaving(false); }
+    } catch {
+      /* silent */
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete(id: string) {
@@ -77,12 +99,16 @@ export default function CalendarPage() {
   }
 
   const prevMonth = () => {
-    if (month === 0) { setYear(y => y - 1); setMonth(11); }
-    else setMonth(m => m - 1);
+    if (month === 0) {
+      setYear((y) => y - 1);
+      setMonth(11);
+    } else setMonth((m) => m - 1);
   };
   const nextMonth = () => {
-    if (month === 11) { setYear(y => y + 1); setMonth(0); }
-    else setMonth(m => m + 1);
+    if (month === 11) {
+      setYear((y) => y + 1);
+      setMonth(0);
+    } else setMonth((m) => m + 1);
   };
 
   const firstWeekday = new Date(year, month, 1).getDay();
@@ -105,9 +131,13 @@ export default function CalendarPage() {
       <div className="mb-8">
         <div className="border-neon-cyan/20 bg-neon-cyan/10 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
           <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-          <span className="text-neon-cyan font-mono text-xs">CONTENT CALENDAR</span>
+          <span className="text-neon-cyan font-mono text-xs">
+            CONTENT CALENDAR
+          </span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">Content Calendar</h1>
+        <h1 className="font-heading text-2xl font-bold text-white">
+          Content Calendar
+        </h1>
         <p className="font-body mt-1 text-slate-400">
           Schedule and manage content across all channels.
         </p>
@@ -115,20 +145,31 @@ export default function CalendarPage() {
 
       <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
         <div className="mb-4 flex items-center justify-between">
-          <button type="button" onClick={prevMonth} className="font-mono text-slate-400 hover:text-white transition-colors px-2">
+          <button
+            type="button"
+            onClick={prevMonth}
+            className="font-mono text-slate-400 hover:text-white transition-colors px-2"
+          >
             ‹
           </button>
           <h2 className="font-mono text-sm font-semibold text-white">
             {MONTHS[month]} {year}
           </h2>
-          <button type="button" onClick={nextMonth} className="font-mono text-slate-400 hover:text-white transition-colors px-2">
+          <button
+            type="button"
+            onClick={nextMonth}
+            className="font-mono text-slate-400 hover:text-white transition-colors px-2"
+          >
             ›
           </button>
         </div>
 
         <div className="grid grid-cols-7 gap-px bg-slate-800">
           {DAYS.map((d) => (
-            <div key={d} className="bg-void-light py-2 text-center font-mono text-[10px] text-slate-500">
+            <div
+              key={d}
+              className="bg-void-light py-2 text-center font-mono text-[10px] text-slate-500"
+            >
               {d}
             </div>
           ))}
@@ -156,9 +197,7 @@ export default function CalendarPage() {
                   <>
                     <p
                       className={`mb-1 font-mono text-[10px] ${
-                        isToday
-                          ? "text-neon-cyan font-bold"
-                          : "text-slate-500"
+                        isToday ? "text-neon-cyan font-bold" : "text-slate-500"
                       }`}
                     >
                       {day}
@@ -219,20 +258,31 @@ export default function CalendarPage() {
             </div>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="mb-1 block font-mono text-xs text-slate-400">Title</label>
+                <label className="mb-1 block font-mono text-xs text-slate-400">
+                  Title
+                </label>
                 <input
                   required
                   value={form.title}
-                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, title: e.target.value }))
+                  }
                   className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-white focus:border-slate-500 focus:outline-none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block font-mono text-xs text-slate-400">Type</label>
+                  <label className="mb-1 block font-mono text-xs text-slate-400">
+                    Type
+                  </label>
                   <select
                     value={form.type}
-                    onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as CalendarItemType }))}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        type: e.target.value as CalendarItemType,
+                      }))
+                    }
                     className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs text-white focus:outline-none"
                   >
                     <option value="social_post">Social Post</option>
@@ -243,23 +293,38 @@ export default function CalendarPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block font-mono text-xs text-slate-400">Platform</label>
+                  <label className="mb-1 block font-mono text-xs text-slate-400">
+                    Platform
+                  </label>
                   <select
                     value={form.platform}
-                    onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value as CalendarPlatform }))}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        platform: e.target.value as CalendarPlatform,
+                      }))
+                    }
                     className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs text-white focus:outline-none"
                   >
-                    {(Object.keys(PLATFORM_LABELS) as CalendarPlatform[]).map((p) => (
-                      <option key={p} value={p}>{PLATFORM_LABELS[p]}</option>
-                    ))}
+                    {(Object.keys(PLATFORM_LABELS) as CalendarPlatform[]).map(
+                      (p) => (
+                        <option key={p} value={p}>
+                          {PLATFORM_LABELS[p]}
+                        </option>
+                      ),
+                    )}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="mb-1 block font-mono text-xs text-slate-400">Notes</label>
+                <label className="mb-1 block font-mono text-xs text-slate-400">
+                  Notes
+                </label>
                 <textarea
                   value={form.notes}
-                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, notes: e.target.value }))
+                  }
                   rows={2}
                   className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs text-white focus:border-slate-500 focus:outline-none"
                 />

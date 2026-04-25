@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createWeeklyRollup,
-  archiveOldEvents,
-} from "@/lib/notion-analytics";
+import { createWeeklyRollup, archiveOldEvents } from "@/lib/notion-analytics";
 import { SlackClient } from "@/lib/slack-notify";
 
 function cronAuth(req: NextRequest): boolean {
@@ -24,9 +21,7 @@ export async function GET(request: NextRequest) {
   const lines = [
     `*Rollup:* ${rollupId ? "created" : "skipped (Notion not configured)"}`,
     `*Archived:* ${archiveResult.archived} event(s)`,
-    ...(archiveResult.errors > 0
-      ? [`*Errors:* ${archiveResult.errors}`]
-      : []),
+    ...(archiveResult.errors > 0 ? [`*Errors:* ${archiveResult.errors}`] : []),
   ];
 
   const client = new SlackClient();

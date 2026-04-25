@@ -42,7 +42,10 @@ export async function POST(request: NextRequest) {
   const cfg = await getConfig();
   const apiKey = cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "ANTHROPIC_API_KEY not configured." },
+      { status: 503 },
+    );
   }
 
   const prompt = `You are a marketing analyst. Write concise, insightful commentary on this campaign performance data for a client report.

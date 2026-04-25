@@ -34,7 +34,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     description = body.description;
-    platforms = Array.isArray(body.platforms) ? body.platforms : ["Meta", "LinkedIn", "Google"];
+    platforms = Array.isArray(body.platforms)
+      ? body.platforms
+      : ["Meta", "LinkedIn", "Google"];
     objective = body.objective ?? "LEAD_GENERATION";
     if (!description) throw new Error("description is required");
   } catch (e) {
@@ -47,7 +49,10 @@ export async function POST(request: NextRequest) {
   const cfg = await getConfig();
   const apiKey = cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "ANTHROPIC_API_KEY not configured." },
+      { status: 503 },
+    );
   }
 
   const prompt = `You are a digital marketing targeting expert for Cloudless.gr, a Greek digital agency specialising in AI-powered marketing.

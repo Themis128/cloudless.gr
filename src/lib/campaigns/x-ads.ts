@@ -11,7 +11,8 @@ async function getXConfig(): Promise<{
   adAccountId: string;
 }> {
   const cfg = await getConfig();
-  if (!cfg.X_API_KEY || !cfg.X_ACCESS_TOKEN) throw new Error("X not configured");
+  if (!cfg.X_API_KEY || !cfg.X_ACCESS_TOKEN)
+    throw new Error("X not configured");
   return {
     apiKey: cfg.X_API_KEY,
     apiSecret: cfg.X_API_SECRET,
@@ -55,7 +56,10 @@ function buildOAuthHeader(
   return header;
 }
 
-async function xFetch(path: string, options: RequestInit = {}): Promise<Response> {
+async function xFetch(
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
   const cfg = await getXConfig();
   const url = `${X_ADS_API}${path}`;
   const method = (options.method ?? "GET").toUpperCase();
@@ -122,7 +126,12 @@ export async function getXStats(
   dateStart: string,
   dateEnd: string,
 ): Promise<XStats> {
-  const empty: XStats = { impressions: 0, clicks: 0, spend_micro: 0, engagements: 0 };
+  const empty: XStats = {
+    impressions: 0,
+    clicks: 0,
+    spend_micro: 0,
+    engagements: 0,
+  };
   try {
     const { adAccountId } = await getXConfig();
     if (!adAccountId) return empty;

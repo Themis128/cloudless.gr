@@ -22,7 +22,14 @@ export default function GlobalError({
         }}
       >
         <div>
-          <p style={{ fontSize: "5rem", fontWeight: 700, color: "#ff0080", margin: 0 }}>
+          <p
+            style={{
+              fontSize: "5rem",
+              fontWeight: 700,
+              color: "#ff0080",
+              margin: 0,
+            }}
+          >
             500
           </p>
           <h1 style={{ marginTop: "1rem", fontSize: "1.5rem" }}>

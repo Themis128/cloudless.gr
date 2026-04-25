@@ -10,7 +10,10 @@ export async function GET(
   if (!auth.ok) return auth.response;
 
   if (!(await isHubSpotConfigured())) {
-    return NextResponse.json({ error: "HubSpot not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "HubSpot not configured." },
+      { status: 503 },
+    );
   }
 
   const { id } = await params;
@@ -26,7 +29,10 @@ export async function POST(
   if (!auth.ok) return auth.response;
 
   if (!(await isHubSpotConfigured())) {
-    return NextResponse.json({ error: "HubSpot not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "HubSpot not configured." },
+      { status: 503 },
+    );
   }
 
   const { id } = await params;
@@ -41,7 +47,10 @@ export async function POST(
 
   const note = await createNote(id, body);
   if (!note) {
-    return NextResponse.json({ error: "Failed to create note." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create note." },
+      { status: 500 },
+    );
   }
   return NextResponse.json({ note });
 }

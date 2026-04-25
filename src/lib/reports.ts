@@ -54,7 +54,9 @@ export async function getReport(id: string): Promise<Report | null> {
   return store.find((r) => r.id === id) ?? null;
 }
 
-export async function createReport(input: GenerateReportInput): Promise<Report> {
+export async function createReport(
+  input: GenerateReportInput,
+): Promise<Report> {
   const report: Report = {
     id: `report_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     clientName: input.clientName,

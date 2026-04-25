@@ -10,7 +10,10 @@ export async function POST(
   if (!auth.ok) return auth.response;
 
   if (!(await isHubSpotConfigured())) {
-    return NextResponse.json({ error: "HubSpot not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "HubSpot not configured." },
+      { status: 503 },
+    );
   }
 
   const { id } = await params;
@@ -20,16 +23,25 @@ export async function POST(
     stageId = body.stageId;
     if (!stageId) throw new Error("missing stageId");
   } catch {
-    return NextResponse.json({ error: "stageId is required." }, { status: 400 });
+    return NextResponse.json(
+      { error: "stageId is required." },
+      { status: 400 },
+    );
   }
 
   try {
     const deal = await moveDealStage(id, stageId);
     if (!deal) {
-      return NextResponse.json({ error: "Failed to move deal." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to move deal." },
+        { status: 500 },
+      );
     }
     return NextResponse.json({ deal });
   } catch {
-    return NextResponse.json({ error: "Failed to move deal." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to move deal." },
+      { status: 500 },
+    );
   }
 }

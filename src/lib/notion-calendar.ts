@@ -26,7 +26,8 @@ import type { CalendarItem } from "@/lib/content-calendar";
 
 async function getDb(): Promise<{ apiKey: string; dbId: string } | null> {
   // Fast-path: respect explicit env-var clears immediately (bypasses stale async cache).
-  if (!process.env.NOTION_API_KEY || !process.env.NOTION_CALENDAR_DB_ID) return null;
+  if (!process.env.NOTION_API_KEY || !process.env.NOTION_CALENDAR_DB_ID)
+    return null;
   const cfg = await getIntegrationsAsync();
   if (!cfg.NOTION_API_KEY || !cfg.NOTION_CALENDAR_DB_ID) return null;
   return { apiKey: cfg.NOTION_API_KEY, dbId: cfg.NOTION_CALENDAR_DB_ID };
@@ -38,7 +39,8 @@ function rt(text: string) {
 
 function pageToItem(page: Record<string, unknown>): CalendarItem | null {
   try {
-    const p = (page as { properties: Record<string, unknown> }).properties ?? {};
+    const p =
+      (page as { properties: Record<string, unknown> }).properties ?? {};
 
     function sel(key: string): string {
       const prop = p[key] as { select?: { name?: string } } | undefined;
@@ -46,17 +48,23 @@ function pageToItem(page: Record<string, unknown>): CalendarItem | null {
     }
 
     function richText(key: string): string {
-      const prop = p[key] as { rich_text?: { plain_text?: string }[] } | undefined;
+      const prop = p[key] as
+        | { rich_text?: { plain_text?: string }[] }
+        | undefined;
       return prop?.rich_text?.map((r) => r.plain_text ?? "").join("") ?? "";
     }
 
     function title(): string {
-      const prop = p["Name"] as { title?: { plain_text?: string }[] } | undefined;
+      const prop = p["Name"] as
+        | { title?: { plain_text?: string }[] }
+        | undefined;
       return prop?.title?.map((r) => r.plain_text ?? "").join("") ?? "";
     }
 
     function dateField(key: string): { start?: string; end?: string } {
-      const prop = p[key] as { date?: { start?: string; end?: string | null } } | undefined;
+      const prop = p[key] as
+        | { date?: { start?: string; end?: string | null } }
+        | undefined;
       return { start: prop?.date?.start, end: prop?.date?.end ?? undefined };
     }
 
@@ -113,10 +121,13 @@ export async function notionGetCalendarItems(
   }
 
   try {
-    const res = await notionFetch<{ results: unknown[] }>(`/databases/${db.dbId}/query`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+    const res = await notionFetch<{ results: unknown[] }>(
+      `/databases/${db.dbId}/query`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    );
 
     return res.results
       .map((p) => pageToItem(p as Record<string, unknown>))

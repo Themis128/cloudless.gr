@@ -59,7 +59,9 @@ export default function CampaignsDashboard() {
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-magenta font-mono text-xs">CAMPAIGNS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">Campaign Manager</h1>
+        <h1 className="font-heading text-2xl font-bold text-white">
+          Campaign Manager
+        </h1>
         <p className="font-body mt-1 text-slate-400">
           Manage paid campaigns across all advertising platforms.
         </p>
@@ -87,15 +89,26 @@ export default function CampaignsDashboard() {
       </div>
 
       <div className="mt-8 rounded-xl border border-slate-800 bg-slate-900/20 p-5">
-        <h2 className="font-heading mb-2 font-semibold text-white">Quick Links</h2>
+        <h2 className="font-heading mb-2 font-semibold text-white">
+          Quick Links
+        </h2>
         <div className="flex flex-wrap gap-3">
-          <Link href="/admin/calendar" className="font-mono text-xs text-slate-400 hover:text-white transition-colors">
+          <Link
+            href="/admin/calendar"
+            className="font-mono text-xs text-slate-400 hover:text-white transition-colors"
+          >
             Content Calendar →
           </Link>
-          <Link href="/admin/reports" className="font-mono text-xs text-slate-400 hover:text-white transition-colors">
+          <Link
+            href="/admin/reports"
+            className="font-mono text-xs text-slate-400 hover:text-white transition-colors"
+          >
             Reports →
           </Link>
-          <Link href="/admin/ai-assistant" className="font-mono text-xs text-slate-400 hover:text-white transition-colors">
+          <Link
+            href="/admin/ai-assistant"
+            className="font-mono text-xs text-slate-400 hover:text-white transition-colors"
+          >
             AI Campaign Assistant →
           </Link>
         </div>
