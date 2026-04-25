@@ -34,9 +34,10 @@
   --ink-body: #475467;
   --ink-muted: #7a8aa0;
 
-  /* Accent (calmer cyan/teal) */
-  --accent: #0e9aab;
-  --accent-hover: #0c8696;
+  /* Accent (calmer cyan/teal). Darkened in Phase 6 from #0e9aab so it
+     hits WCAG AA (4.5:1) on both white and accent-soft surfaces. */
+  --accent: #0a7785;
+  --accent-hover: #086370;
   --accent-soft: #e0f2f5;
   --accent-on: #ffffff;
 
@@ -410,5 +411,34 @@
   [data-theme="light"] section.lg\:py-32 {
     padding-top: var(--section-y);
     padding-bottom: var(--section-y);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   PHASE 6 — A11y polish (WCAG AA contrast)
+   Lighthouse caught alpha-modulated accent text (text-neon-cyan/30 .. /70
+   used in service tags, footer captions, and decorative numerals) failing
+   contrast at 1.57–3.37:1 against the light surface. Re-target every alpha
+   variant to --ink-muted, which sits at 4.5:1+ on white.
+   ────────────────────────────────────────────────────────────────── */
+[data-theme="light"] [class*="text-neon-cyan/"],
+[data-theme="light"] [class*="text-neon-magenta/"],
+[data-theme="light"] [class*="text-neon-blue/"] {
+  color: var(--ink-muted);
+}
+
+/* Mobile tap highlight in light theme — was a hardcoded
+   rgba(0, 255, 245, 0.15) inherited from globals.css. Re-target so the
+   highlight reads as a soft accent halo, not bright neon. */
+@media (pointer: coarse) {
+  [data-theme="light"] a,
+  [data-theme="light"] button,
+  [data-theme="light"] [role="button"],
+  [data-theme="light"] summary {
+    -webkit-tap-highlight-color: color-mix(
+      in srgb,
+      var(--accent) 18%,
+      transparent
+    );
   }
 }
