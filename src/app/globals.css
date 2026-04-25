@@ -1,13 +1,24 @@
 @import "tailwindcss";
+@import "./theme-v2.css";
 
+/**
+ * Design tokens — v1 names retained as Tailwind theme aliases, but their
+ * resolved values now come from the v2 ("Calm Cloud") palette in theme-v2.css.
+ * This bridge lets every existing utility (bg-void, text-neon-cyan, etc.)
+ * pick up the new palette without touching component code.
+ *
+ * Phase 2 ships the dark variant of v2 only — marketing pages remain dark
+ * to avoid breaking text-white-on-dark contrasts. Phase 3 introduces light
+ * mode page by page.
+ */
 @theme inline {
-  /* ── Cyberpunk Palette ── */
-  --color-void: #0a0a0f;
-  --color-void-light: #12121a;
-  --color-void-lighter: #1a1a2e;
+  /* ── Surfaces (was "void" family) ── */
+  --color-void: var(--surface-canvas);
+  --color-void-light: var(--surface-subtle);
+  --color-void-lighter: var(--surface-raised);
 
-  /* Keep brand blues but add neon variants */
-  --color-navy: #0f172a;
+  /* Brand blues — kept for legacy refs, but slightly softened */
+  --color-navy: #0f1822;
   --color-navy-light: #1e293b;
   --color-navy-lighter: #334155;
   --color-electric: #3b82f6;
@@ -17,11 +28,13 @@
   --color-cyan-dark: #0891b2;
   --color-cyan-light: #22d3ee;
 
-  /* Neon accents */
-  --color-neon-cyan: #00fff5;
-  --color-neon-magenta: #ff00ff;
-  --color-neon-green: #00ff41;
-  --color-neon-blue: #4d7cff;
+  /* Neon accents — collapsed onto the single v2 accent.
+     glow-* utilities still reference hardcoded literals; they will
+     be tamed in Phase 5 cleanup. */
+  --color-neon-cyan: var(--accent);
+  --color-neon-magenta: var(--accent);
+  --color-neon-green: var(--success);
+  --color-neon-blue: var(--accent);
 
   /* Neutrals */
   --color-slate-50: #f8fafc;
@@ -33,11 +46,11 @@
   --color-slate-600: #475569;
   --color-slate-700: #334155;
 
-  /* Semantic */
-  --color-background: #0a0a0f;
-  --color-foreground: #e2e8f0;
-  --color-muted: #94a3b8;
-  --color-accent: #00fff5;
+  /* Semantic — bridged to v2 */
+  --color-background: var(--surface-canvas);
+  --color-foreground: var(--ink-primary);
+  --color-muted: var(--ink-muted);
+  --color-accent: var(--accent);
 
   /* Fonts */
   --font-heading: var(--font-instrument-sans);
@@ -357,25 +370,30 @@ h6 {
   pointer-events: none;
 }
 
-/* ── Form inputs — cyber theme ── */
+/* ── Form inputs — bridged to v2 surface tokens ── */
 input,
 textarea,
 select {
-  background: rgba(10, 10, 15, 0.8) !important;
-  border-color: rgba(0, 255, 245, 0.15) !important;
-  color: #e2e8f0 !important;
+  background-color: var(--surface-raised);
+  border-color: var(--border-subtle);
+  color: var(--ink-primary);
+  border-radius: var(--radius-md);
+  transition:
+    border-color var(--motion-base) var(--ease-default),
+    box-shadow var(--motion-base) var(--ease-default);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #475569 !important;
+  color: var(--ink-muted);
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: rgba(0, 255, 245, 0.5) !important;
-  box-shadow: 0 0 10px rgba(0, 255, 245, 0.15) !important;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 /* ── Reduced motion ── */
