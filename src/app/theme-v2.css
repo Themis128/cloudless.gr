@@ -250,3 +250,103 @@
     transform: none !important;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   LIGHT-MODE UTILITY OVERRIDES — Phase 3
+   When [data-theme="light"] is set on a subtree, retarget the most-used
+   dark-only Tailwind colour utilities to v2 light tokens so the existing
+   markup reads correctly without component changes.
+   These are written as descendant selectors so [data-theme="dark"] children
+   (e.g. TerminalBlock) opt out automatically.
+   ────────────────────────────────────────────────────────────────── */
+
+[data-theme="light"] .text-white {
+  color: var(--ink-primary);
+}
+[data-theme="light"] .text-slate-100,
+[data-theme="light"] .text-slate-200 {
+  color: var(--ink-primary);
+}
+[data-theme="light"] .text-slate-300,
+[data-theme="light"] .text-slate-400 {
+  color: var(--ink-body);
+}
+[data-theme="light"] .text-slate-500,
+[data-theme="light"] .text-slate-600 {
+  color: var(--ink-muted);
+}
+
+/* Card backgrounds — slate-800/900 reads as a card on dark; on light we want
+   subtle elevation, not a slab. */
+[data-theme="light"] .bg-slate-800,
+[data-theme="light"] .bg-slate-900 {
+  background-color: var(--surface-subtle);
+}
+[data-theme="light"] .bg-slate-800\/50,
+[data-theme="light"] .bg-slate-900\/50 {
+  background-color: color-mix(in srgb, var(--surface-subtle) 50%, transparent);
+}
+
+/* Borders */
+[data-theme="light"] .border-slate-700,
+[data-theme="light"] .border-slate-800 {
+  border-color: var(--border-subtle);
+}
+[data-theme="light"] .border-slate-600 {
+  border-color: var(--border-strong);
+}
+
+/* Glow utilities — disabled on light. They only read on dark backgrounds. */
+[data-theme="light"] .glow-cyan,
+[data-theme="light"] .glow-magenta,
+[data-theme="light"] .glow-blue,
+[data-theme="light"] .glow-green {
+  text-shadow: none;
+}
+[data-theme="light"] .box-glow-cyan,
+[data-theme="light"] .box-glow-electric,
+[data-theme="light"] .box-glow-magenta {
+  box-shadow: var(--shadow-md);
+}
+
+/* Scanlines / cyber-grid / dot-matrix — also dark-only effects. */
+[data-theme="light"] .scanlines::after,
+[data-theme="light"] .scan-line::before {
+  display: none;
+}
+[data-theme="light"] .cyber-grid,
+[data-theme="light"] .cyber-grid-dense,
+[data-theme="light"] .dot-matrix {
+  background-image: none;
+}
+
+/* neon-border — keep the border but use the calmer accent without the glow halo. */
+[data-theme="light"] .neon-border {
+  border-color: var(--border-subtle);
+}
+[data-theme="light"] .neon-border:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+
+/* Mobile tap highlight — accent-soft instead of high-saturation cyan. */
+[data-theme="light"] {
+  -webkit-tap-highlight-color: color-mix(
+    in srgb,
+    var(--accent) 18%,
+    transparent
+  );
+}
+
+/* Selection — calmer accent on light. */
+[data-theme="light"] ::selection {
+  background-color: var(--accent);
+  color: var(--accent-on);
+}
+
+/* Body itself — when the html data-theme="light", the body should use the
+   v2 surface, not the dark void. */
+[data-theme="light"] body {
+  background: var(--surface-canvas);
+  color: var(--ink-primary);
+}
