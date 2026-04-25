@@ -350,3 +350,39 @@
   background: var(--surface-canvas);
   color: var(--ink-primary);
 }
+
+/* Inline placeholder utilities — forms put placeholder:text-slate-{500,600}
+   directly on inputs, which overrides the global form rule. Re-target. */
+[data-theme="light"] .placeholder\:text-slate-500::placeholder,
+[data-theme="light"] .placeholder\:text-slate-600::placeholder,
+[data-theme="light"] .placeholder\:text-slate-700::placeholder {
+  color: var(--ink-muted);
+}
+
+/* kbd / code chips often use bg-void-lighter + border-slate-700, which already
+   alias correctly via @theme. Make sure their text reads on a light surface. */
+[data-theme="light"] kbd,
+[data-theme="light"] .kbd {
+  background-color: var(--surface-subtle);
+  border-color: var(--border-subtle);
+  color: var(--ink-body);
+}
+
+/* Hero / section "ambient" gradient overlays — pages use absolutely-positioned
+   div with from-neon-cyan/10 to-neon-magenta/10 for atmosphere. With both
+   neons collapsed onto a single accent these become a flat tint, which is too
+   strong on a light surface. Soften. */
+[data-theme="light"] .absolute.inset-0.bg-gradient-to-r,
+[data-theme="light"] .absolute.inset-0.bg-gradient-to-br,
+[data-theme="light"] .absolute.inset-0.bg-gradient-to-b {
+  opacity: 0.35;
+}
+
+/* Decorative numbered badges (the 01/02/03 service cards) — bg-neon-cyan/10
+   reads as a faint cyan card on dark. On light it disappears; bump contrast. */
+[data-theme="light"] [class*="bg-neon-cyan/"],
+[data-theme="light"] [class*="bg-neon-magenta/"],
+[data-theme="light"] [class*="bg-neon-green/"],
+[data-theme="light"] [class*="bg-neon-blue/"] {
+  background-color: var(--accent-soft);
+}

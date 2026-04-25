@@ -29,14 +29,26 @@ export function themeForRoute(pathname: string): Theme {
     return "dark";
   }
 
-  // Marketing routes flipped to light, one at a time.
-  const lightRoutes = ["/services"];
+  // Marketing routes flipped to light, one prefix at a time.
+  // The homepage stays dark for now — Phase 4 redesigns the hero with the
+  // gradient-mesh and at that point the homepage flips together with the
+  // hero refresh. /auth and /dashboard stay dark by intent.
+  const lightRoutes = [
+    "/services",
+    "/blog",
+    "/contact",
+    "/store",
+    "/docs",
+    "/privacy",
+    "/terms",
+    "/cookies",
+    "/refund",
+  ];
   if (lightRoutes.some((p) => stripped === p || stripped.startsWith(p + "/"))) {
     return "light";
   }
 
-  // Everything else (homepage, blog, store, contact, docs, auth, dashboard)
-  // stays on the v2 dark palette until its own Phase 3 PR.
+  // Everything else (homepage, auth, dashboard) stays on v2 dark.
   return "dark";
 }
 
