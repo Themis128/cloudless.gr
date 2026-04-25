@@ -22,7 +22,9 @@ jobs:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
       NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
       NEXT_PUBLIC_HUBSPOT_PORTAL_ID: ${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
-      BUNDLE_MAX_KB: "1700"
+      # Bumped from 1700KB in Phase 6.3 — calm-cloud rebrand added theme-v2.css
+      # (~6KB) plus the explicit alpha-class override list (~12KB on the build).
+      BUNDLE_MAX_KB: "1800"
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5
