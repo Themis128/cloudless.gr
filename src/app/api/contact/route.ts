@@ -11,6 +11,8 @@ import {
 import { saveSubmission } from "@/lib/notion-forms";
 import { trackEvent } from "@/lib/notion-analytics";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { sendLeadEvent } from "@/lib/meta-capi";
+import { generateEventId } from "@/lib/meta-pixel";
 
 export async function POST(request: Request) {
   // Rate limit: 5 contact submissions per IP per 10 minutes
@@ -121,7 +123,26 @@ export async function POST(request: Request) {
       source: service ?? "website_contact_form",
     }).catch(() => {});
 
-    return Response.json({ success: true });
+    // Meta CAPI — Lead event. eventId is shared with the browser pixel for dedup.
+    // Short-circuits if NEXT_PUBLIC_META_PIXEL_ID / META_CAPI_ACCESS_TOKEN are unset.
+    const eventId = generateEventId("lead");
+    const userAgent = request.headers.get("user-agent") ?? undefined;
+    const fbp = request.headers.get("cookie")?.match(/_fbp=([^;]+)/)?.[1];
+    const fbc = request.headers.get("cookie")?.match(/_fbc=([^;]+)/)?.[1];
+    void sendLeadEvent({
+      eventId,
+      email,
+      firstName: nameParts[0],
+      lastName: nameParts.slice(1).join(" ") || undefined,
+      clientIpAddress: ip !== "unknown" ? ip : undefined,
+      clientUserAgent: userAgent,
+      fbp,
+      fbc,
+      eventSourceUrl: "https://cloudless.gr/contact",
+      source: service ?? undefined,
+    });
+
+    return Response.json({ success: true, eventId });
   } catch (error) {
     console.error("SES send error:", error);
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
