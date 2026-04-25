@@ -75,5 +75,12 @@
     "vite": "^8.0.8",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "fast-xml-parser@<5.7.0": ">=5.7.0",
+      "postcss@<8.5.10": ">=8.5.10",
+      "uuid@<14.0.0": ">=14.0.0"
+    }
   }
 }
