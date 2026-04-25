@@ -95,118 +95,62 @@ h6 {
 }
 
 ::selection {
-  background-color: #00fff5;
-  color: #0a0a0f;
+  background-color: var(--accent);
+  color: var(--accent-on);
 }
 
-/* ── Neon glow utilities ── */
-.glow-cyan {
-  text-shadow:
-    0 0 7px #00fff5,
-    0 0 10px #00fff5,
-    0 0 21px #00fff5,
-    0 0 42px #0891b2;
-}
+/* ──────────────────────────────────────────────────────────────────
+   LEGACY V1 UTILITIES — retired in Phase 5
+   These class names are still referenced in component markup (services,
+   homepage, navbar, contact form, store, terminal blocks). To avoid a
+   churning cross-file rename, we keep the class hooks defined here but
+   collapse them to either no-op effects or v2-styled subtle equivalents.
+   The cyberpunk neon glow / scanline / dot-matrix language is GONE.
+   ────────────────────────────────────────────────────────────────── */
 
-.glow-magenta {
-  text-shadow:
-    0 0 7px #ff00ff,
-    0 0 10px #ff00ff,
-    0 0 21px #ff00ff,
-    0 0 42px #8b008b;
-}
-
-.glow-blue {
-  text-shadow:
-    0 0 7px #3b82f6,
-    0 0 10px #3b82f6,
-    0 0 21px #3b82f6;
-}
-
+/* glow-* — text-shadow. Retired completely; class becomes a no-op. */
+.glow-cyan,
+.glow-magenta,
+.glow-blue,
 .glow-green {
-  text-shadow:
-    0 0 7px #00ff41,
-    0 0 10px #00ff41,
-    0 0 21px #00ff41;
+  text-shadow: none;
 }
 
-.box-glow-cyan {
-  box-shadow:
-    0 0 5px rgba(0, 255, 245, 0.3),
-    0 0 20px rgba(0, 255, 245, 0.1),
-    inset 0 0 5px rgba(0, 255, 245, 0.05);
-}
-
-.box-glow-electric {
-  box-shadow:
-    0 0 5px rgba(59, 130, 246, 0.3),
-    0 0 20px rgba(59, 130, 246, 0.1),
-    inset 0 0 5px rgba(59, 130, 246, 0.05);
-}
-
+/* box-glow-* — replace neon halo with v2 elevation shadow. */
+.box-glow-cyan,
+.box-glow-electric,
 .box-glow-magenta {
-  box-shadow:
-    0 0 5px rgba(255, 0, 255, 0.3),
-    0 0 20px rgba(255, 0, 255, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
-/* ── Scanline overlay ── */
-.scanlines::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 255, 245, 0.015) 2px,
-    rgba(0, 255, 245, 0.015) 4px
-  );
-  pointer-events: none;
-  z-index: 1;
+/* Scanline / scan-line / cyber-grid / dot-matrix — visual noise utilities.
+   Retired. Class still exists so the markup parses, but produces no overlay. */
+.scanlines::after,
+.scan-line::before {
+  content: none;
 }
-
-/* ── Grid overlay ── */
-.cyber-grid {
-  background-image:
-    linear-gradient(rgba(0, 255, 245, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 245, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-.cyber-grid-dense {
-  background-image:
-    linear-gradient(rgba(0, 255, 245, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 245, 0.05) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-/* ── Dot matrix ── */
+.cyber-grid,
+.cyber-grid-dense,
 .dot-matrix {
-  background-image: radial-gradient(
-    rgba(0, 255, 245, 0.08) 1px,
-    transparent 1px
-  );
-  background-size: 16px 16px;
+  background-image: none;
 }
 
-/* ── Neon border ── */
+/* neon-border — kept as a v2-styled thin border with accent on hover.
+   The terminal blocks rely on this class for their card chrome. */
 .neon-border {
-  border: 1px solid rgba(0, 255, 245, 0.2);
+  border: 1px solid var(--border-subtle);
 }
-
 .neon-border:hover {
-  border-color: rgba(0, 255, 245, 0.5);
-  box-shadow:
-    0 0 15px rgba(0, 255, 245, 0.15),
-    inset 0 0 15px rgba(0, 255, 245, 0.05);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
 }
 
-/* ── Typing cursor ── */
+/* typing-cursor — retained as a calmer caret using --accent. */
 .typing-cursor::after {
-  content: "█";
+  content: "▎";
   animation: blink 1s step-end infinite;
-  color: #00fff5;
+  color: var(--accent);
+  margin-left: 2px;
 }
 
 @keyframes blink {
@@ -219,28 +163,11 @@ h6 {
   }
 }
 
-/* ── Glitch effect ── */
-@keyframes glitch {
-  0%,
-  100% {
-    transform: translate(0);
-  }
-  20% {
-    transform: translate(-2px, 2px);
-  }
-  40% {
-    transform: translate(-2px, -2px);
-  }
-  60% {
-    transform: translate(2px, 2px);
-  }
-  80% {
-    transform: translate(2px, -2px);
-  }
-}
-
+/* glitch — neutered. The hover transform hop was distracting; replaced
+   with a subtle 2px nudge that reads as a normal interactive affordance. */
 .glitch:hover {
-  animation: glitch 0.3s ease-in-out;
+  transform: translateY(-1px);
+  transition: transform var(--motion-fast) var(--ease-default);
 }
 
 /* ── Scroll-reveal animations ── */
@@ -317,57 +244,12 @@ h6 {
   animation-delay: 500ms;
 }
 
-/* ── Gradient pulse ── */
-@keyframes gradient-shift {
-  0%,
-  100% {
-    opacity: 0.1;
-  }
-  50% {
-    opacity: 0.2;
-  }
-}
-
-.animate-gradient-shift {
-  animation: gradient-shift 4s ease-in-out infinite;
-}
-
-/* ── Neon pulse ── */
-@keyframes neon-pulse {
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
+/* animate-gradient-shift / animate-neon-pulse — retained as no-ops so
+   markup that still references them parses cleanly. The cyberpunk
+   ambient pulse is gone; gentler reveal animations above replace it. */
+.animate-gradient-shift,
 .animate-neon-pulse {
-  animation: neon-pulse 2s ease-in-out infinite;
-}
-
-/* ── Horizontal scan line ── */
-@keyframes scan {
-  0% {
-    top: -10%;
-  }
-  100% {
-    top: 110%;
-  }
-}
-
-.scan-line::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #00fff5, transparent);
-  opacity: 0.15;
-  animation: scan 8s linear infinite;
-  z-index: 2;
-  pointer-events: none;
+  animation: none;
 }
 
 /* ── Form inputs — bridged to v2 surface tokens ── */
