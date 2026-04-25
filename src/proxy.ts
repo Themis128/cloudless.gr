@@ -253,6 +253,11 @@ export function proxy(request: NextRequest) {
     }
   }
 
+  // Forward the pathname as a request header so server components (root
+  // layout) can call themeForRoute() and render <html data-theme=...>
+  // server-side with no first-paint flash. next/headers reads request-side.
+  request.headers.set("x-pathname", pathname);
+
   const response = intlMiddleware(request);
   addSecurityHeaders(response);
   return response;

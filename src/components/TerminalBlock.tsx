@@ -12,7 +12,11 @@ export default function TerminalBlock({
   className = "",
 }: TerminalBlockProps) {
   return (
+    // data-theme="dark" pins the terminal block to dark-mode tokens even when
+    // its parent route is light. Terminal aesthetic is intentional and the
+    // syntax-highlighting palette only reads correctly on a dark surface.
     <div
+      data-theme="dark"
       className={`neon-border bg-void/90 overflow-hidden rounded-lg backdrop-blur-sm ${className}`}
     >
       {/* Title bar */}
