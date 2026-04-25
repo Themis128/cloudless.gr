@@ -54,10 +54,17 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
   "/api/contact": { windowMs: 60_000, max: 5 },
   "/api/subscribe": { windowMs: 60_000, max: 3 },
+  "/api/unsubscribe": { windowMs: 60_000, max: 5 },
   "/api/checkout": { windowMs: 60_000, max: 10 },
   "/api/calendar/book": { windowMs: 60_000, max: 5 },
   "/api/hubspot/ticket": { windowMs: 60_000, max: 5 },
+  "/api/crm/contact": { windowMs: 60_000, max: 5 },
 };
+
+// Admin endpoints are JWT-auth-gated, but we still rate-limit them to cap
+// abuse from stolen tokens and prevent expensive AI/report operations from
+// being hammered. windowMs: 60s, max: 120 req/min per IP across all /api/admin/*.
+const ADMIN_RATE_LIMIT = { windowMs: 60_000, max: 120 };
 
 function getClientIp(request: NextRequest): string {
   return (
@@ -200,8 +207,10 @@ export function proxy(request: NextRequest) {
       });
     }
 
-    const limit = RATE_LIMITS[pathname];
-    if (limit && request.method === "POST") {
+    const limit =
+      RATE_LIMITS[pathname] ??
+      (pathname.startsWith("/api/admin/") ? ADMIN_RATE_LIMIT : null);
+    if (limit && request.method !== "GET" && request.method !== "OPTIONS") {
       cleanupStaleEntries();
 
       const ip = getClientIp(request);
