@@ -29,10 +29,12 @@ export function themeForRoute(pathname: string): Theme {
     return "dark";
   }
 
-  // Marketing routes flipped to light, one prefix at a time.
-  // The homepage stays dark for now — Phase 4 redesigns the hero with the
-  // gradient-mesh and at that point the homepage flips together with the
-  // hero refresh. /auth and /dashboard stay dark by intent.
+  // Homepage gets light + gradient-mesh hero in Phase 4.
+  if (stripped === "/") {
+    return "light";
+  }
+
+  // Marketing + legal routes — light.
   const lightRoutes = [
     "/services",
     "/blog",
@@ -48,7 +50,7 @@ export function themeForRoute(pathname: string): Theme {
     return "light";
   }
 
-  // Everything else (homepage, auth, dashboard) stays on v2 dark.
+  // Auth + dashboard stay dark by intent.
   return "dark";
 }
 
