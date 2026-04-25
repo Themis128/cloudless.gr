@@ -39,7 +39,7 @@
   "exclude": [
     "node_modules",
     "sst.config.ts",
-    "playwright.config.ts",
+    "playwright.config.mts",
     "e2e",
     ".claude",
     "scripts",
