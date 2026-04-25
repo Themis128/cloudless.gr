@@ -101,17 +101,18 @@ The current visual language (deep void background, hard neon glow, scanlines, gl
 - `--type-small` 14px / 22px
 - `--type-caption` 13px / 18px
 
-## Phased rollout
+## Phased rollout — status
 
-| Phase | Scope | PR target |
-|---|---|---|
-| **1. Foundation** *(this commit)* | Spec doc + new token file (`src/app/theme-v2.css`). Not imported globally yet. | 1 PR |
-| **2. Primitives** | Migrate `Button`, `Input`, `Card`, `Badge`, `Link`, `Section` to v2 tokens. Also add `[data-theme]` provider that toggles light/dark. | 1 PR |
-| **3. Layout** | Header, footer, hero shell, common section wrappers. Hero gradient mesh replaces dot-matrix. | 1 PR |
-| **4. Marketing pages** | Homepage, services, blog, contact, store, docs. Per-page polish. | 1 PR per page (~6 PRs) — or 1 large PR if smaller scope per page |
-| **5. Admin + cleanup** | Admin dashboard restyle (kept dark by default). Remove deprecated v1 tokens, glow/scanline/glitch utilities, neon-magenta references. | 1 PR |
+| Phase | Scope | PR | Status |
+|---|---|---|---|
+| **1. Foundation** | Spec doc + `src/app/theme-v2.css` token file. | merged into `main` as `8c70aa57` | ✅ done |
+| **2. Token bridge + ThemeProvider** | Rewrote `@theme inline` to alias legacy v1 tokens onto v2 values, added route-aware `themeForRoute()` helper, set `data-theme` on `<html>` server-side via middleware → `headers()` → root layout. | [#53](https://github.com/Themis128/cloudless.gr/pull/53) | ✅ open |
+| **3. /services light** | First marketing route flipped to light. Light-mode overrides for `text-white`, `text-slate-*`, `bg-slate-*`, `border-slate-*`. TerminalBlock pinned dark. | [#54](https://github.com/Themis128/cloudless.gr/pull/54) | ✅ open |
+| **3.x Marketing surface light** | `/blog`, `/contact`, `/store`, `/docs`, `/privacy`, `/terms`, `/cookies`, `/refund` flipped. Additional overrides for placeholder text, kbd, decorative gradient overlays. | [#55](https://github.com/Themis128/cloudless.gr/pull/55) | ✅ open |
+| **4. Homepage hero** | `/` flipped to light with gradient-mesh hero replacing the scanlines + cyber-grid + neon orbs. Three.js particle field calmed to 30% opacity. Section padding bumped to v2 96px on tablet+. | [#56](https://github.com/Themis128/cloudless.gr/pull/56) | ✅ open |
+| **5. Cleanup** *(this commit)* | Retired the deprecated v1 effect utilities (`glow-*`, `box-glow-*`, `scanlines`, `cyber-grid`, `dot-matrix`, `glitch`, `typing-cursor`, `animate-gradient-shift`, `animate-neon-pulse`, `scan-line`). The class hooks remain so existing markup parses, but they collapse to no-ops or to v2-styled subtle equivalents. `neon-border` is preserved as a calm v2-styled border for terminal blocks. | this PR | ✅ done |
 
-Each PR is independently mergeable. No long-lived feature branch.
+Each PR is independently mergeable, stacked in order: `#53 → #54 → #55 → #56 → this`.
 
 ## Open questions
 

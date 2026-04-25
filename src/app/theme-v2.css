@@ -296,38 +296,9 @@
   border-color: var(--border-strong);
 }
 
-/* Glow utilities — disabled on light. They only read on dark backgrounds. */
-[data-theme="light"] .glow-cyan,
-[data-theme="light"] .glow-magenta,
-[data-theme="light"] .glow-blue,
-[data-theme="light"] .glow-green {
-  text-shadow: none;
-}
-[data-theme="light"] .box-glow-cyan,
-[data-theme="light"] .box-glow-electric,
-[data-theme="light"] .box-glow-magenta {
-  box-shadow: var(--shadow-md);
-}
-
-/* Scanlines / cyber-grid / dot-matrix — also dark-only effects. */
-[data-theme="light"] .scanlines::after,
-[data-theme="light"] .scan-line::before {
-  display: none;
-}
-[data-theme="light"] .cyber-grid,
-[data-theme="light"] .cyber-grid-dense,
-[data-theme="light"] .dot-matrix {
-  background-image: none;
-}
-
-/* neon-border — keep the border but use the calmer accent without the glow halo. */
-[data-theme="light"] .neon-border {
-  border-color: var(--border-subtle);
-}
-[data-theme="light"] .neon-border:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-md);
-}
+/* glow-* / box-glow-* / scanlines / cyber-grid / dot-matrix / neon-border —
+   retired in Phase 5; no light-mode overrides needed. The base utilities in
+   globals.css are now no-ops site-wide. */
 
 /* Mobile tap highlight — accent-soft instead of high-saturation cyan. */
 [data-theme="light"] {
