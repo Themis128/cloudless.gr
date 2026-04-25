@@ -2,7 +2,6 @@ import { ImageResponse } from "next/og";
 import { getPostBySlug } from "@/lib/notion-blog";
 import { isConfigured } from "@/lib/integrations";
 
-export const runtime = "edge";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
