@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Instrument_Sans, Work_Sans, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { headers } from "next/headers";
+import { themeForRoute } from "@/components/ThemeProvider";
 import "./globals.css";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
@@ -65,16 +67,21 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Pathname is forwarded via x-pathname by middleware (src/proxy.ts).
+  // Falls back to "/" for routes outside the matcher (which we don't render).
+  const pathname = (await headers()).get("x-pathname") ?? "/";
+  const theme = themeForRoute(pathname);
+
   return (
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      data-theme="dark"
+      data-theme={theme}
       className={`${instrumentSans.variable} ${workSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>

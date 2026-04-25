@@ -16,16 +16,27 @@ type Theme = "light" | "dark";
 /**
  * Decide which theme a given pathname should render with.
  *
- * Phase 2 default: every route renders dark. Flip individual prefixes to
- * "light" as their primitives are migrated in Phase 3.
+ * Phase 3 in progress: /services is the first marketing route flipped to
+ * light. Other marketing routes follow once we've watched /services in
+ * production and adjusted any leftover dark-only utilities.
  */
 export function themeForRoute(pathname: string): Theme {
+  // Strip locale prefix so the same rules apply across en/el/fr.
+  const stripped = pathname.replace(/^\/(?:en|el|fr)(?=\/|$)/, "") || "/";
+
   // Admin always dark. Long sessions, low ambient light, stays dark forever.
-  if (pathname.startsWith("/admin") || pathname.includes("/admin/")) {
+  if (stripped === "/admin" || stripped.startsWith("/admin/")) {
     return "dark";
   }
 
-  // Phase 2: marketing routes also dark, awaiting Phase 3 light-mode rollout.
+  // Marketing routes flipped to light, one at a time.
+  const lightRoutes = ["/services"];
+  if (lightRoutes.some((p) => stripped === p || stripped.startsWith(p + "/"))) {
+    return "light";
+  }
+
+  // Everything else (homepage, blog, store, contact, docs, auth, dashboard)
+  // stays on the v2 dark palette until its own Phase 3 PR.
   return "dark";
 }
 
