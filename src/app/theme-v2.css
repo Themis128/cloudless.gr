@@ -386,3 +386,58 @@
 [data-theme="light"] [class*="bg-neon-blue/"] {
   background-color: var(--accent-soft);
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   PHASE 4 — Homepage hero gradient mesh
+   The homepage hero section uses scanlines + cyber-grid + two giant
+   floating orbs in cyan/magenta. On light those orbs are oversized and
+   shouty; replace the entire backdrop with the v2 gradient mesh and
+   suppress the orbs.
+   ────────────────────────────────────────────────────────────────── */
+
+/* Scope the hero treatment to homepage-style sections. The homepage hero
+   is the first section.scanlines.scan-line on a light page. */
+[data-theme="light"] section.scanlines.scan-line {
+  background: var(--gradient-hero) !important;
+}
+
+/* The two huge gradient orbs (.bg-neon-{cyan,magenta}/5 with translate +
+   blur) are the most invasive remnants of the cyberpunk hero. Hide them
+   on light pages — the gradient mesh already provides the atmosphere. */
+[data-theme="light"]
+  div.bg-neon-cyan\/5.animate-gradient-shift,
+[data-theme="light"]
+  div.bg-neon-magenta\/5.animate-gradient-shift,
+[data-theme="light"] div[class*="bg-neon-cyan/5"][class*="blur"],
+[data-theme="light"] div[class*="bg-neon-magenta/5"][class*="blur"] {
+  display: none;
+}
+
+/* Particle network — Three.js scene. On light pages the cyan particles
+   read as visual noise. Dial it down to 30% opacity so it's a hint, not
+   a feature. (Hiding entirely also works; preserved at low opacity for
+   continuity with the dark version.) */
+[data-theme="light"] section.scanlines canvas {
+  opacity: 0.3;
+}
+
+/* Hero badge (status pill) — bg-neon-cyan/10 with text-neon-cyan reads
+   as a glowing pill on dark. On light, retarget to the v2 pill styling. */
+[data-theme="light"]
+  div.bg-neon-cyan\/10.border-neon-cyan\/20.text-neon-cyan {
+  background-color: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+
+/* Section padding — the v2 spec prescribes 96px desktop / 64px mobile.
+   Most marketing sections currently use py-16 (64px). Bump only on light
+   so dark pages stay compact. */
+@media (min-width: 768px) {
+  [data-theme="light"] section.py-16,
+  [data-theme="light"] section.md\:py-24,
+  [data-theme="light"] section.lg\:py-32 {
+    padding-top: var(--section-y);
+    padding-bottom: var(--section-y);
+  }
+}
