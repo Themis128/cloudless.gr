@@ -19,6 +19,8 @@ export interface IntegrationConfig {
   NOTION_PROJECTS_DB_ID?: string;
   NOTION_TASKS_DB_ID?: string;
   NOTION_ANALYTICS_DB_ID?: string;
+  NOTION_CALENDAR_DB_ID?: string;
+  NOTION_REPORTS_DB_ID?: string;
   GOOGLE_CLIENT_EMAIL?: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
   GOOGLE_PRIVATE_KEY?: string;
@@ -78,6 +80,8 @@ export function getIntegrations(): IntegrationConfig {
     NOTION_PROJECTS_DB_ID: process.env.NOTION_PROJECTS_DB_ID,
     NOTION_TASKS_DB_ID: process.env.NOTION_TASKS_DB_ID,
     NOTION_ANALYTICS_DB_ID: process.env.NOTION_ANALYTICS_DB_ID,
+    NOTION_CALENDAR_DB_ID: process.env.NOTION_CALENDAR_DB_ID,
+    NOTION_REPORTS_DB_ID: process.env.NOTION_REPORTS_DB_ID,
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
     GOOGLE_SERVICE_ACCOUNT_EMAIL:
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
@@ -184,6 +188,10 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
         envCfg.NOTION_ANALYTICS_DB_ID ||
         ssm.NOTION_ANALYTICS_DB_ID ||
         undefined,
+      NOTION_CALENDAR_DB_ID:
+        envCfg.NOTION_CALENDAR_DB_ID || ssm.NOTION_CALENDAR_DB_ID || undefined,
+      NOTION_REPORTS_DB_ID:
+        envCfg.NOTION_REPORTS_DB_ID || ssm.NOTION_REPORTS_DB_ID || undefined,
       GOOGLE_CLIENT_EMAIL:
         envCfg.GOOGLE_CLIENT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
       GOOGLE_SERVICE_ACCOUNT_EMAIL:
@@ -257,6 +265,13 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
 export async function isConfiguredAsync(
   ...keys: (keyof IntegrationConfig)[]
 ): Promise<boolean> {
+  // Fast-path: if any env var is explicitly cleared to "" return false immediately.
+  // This ensures tests that clear env vars bypass the async cache regardless of
+  // any module-isolation effects from vi.mock.
+  for (const k of keys) {
+    const val = process.env[k as string];
+    if (val !== undefined && !val) return false;
+  }
   const config = await getIntegrationsAsync();
   return keys.every((k) => Boolean(config[k]));
 }
@@ -358,6 +373,7 @@ export function resetIntegrationCache(): void {
   cached = null;
   cachedSlack = null;
   cachedAsync = null;
+  cachedSlackAsync = null;
 }
 
 /** Clears the config cache (useful in tests). */

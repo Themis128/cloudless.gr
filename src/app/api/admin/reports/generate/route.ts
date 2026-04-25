@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const report = createReport({ clientName, dateStart, dateEnd, includeSections });
+  const report = await createReport({ clientName, dateStart, dateEnd, includeSections });
 
   const cfg = await getConfig();
   const anthropicKey = cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY || "";
@@ -105,6 +105,6 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const updated = updateReport(report.id, { sections, status: "ready" });
+  const updated = await updateReport(report.id, { sections, status: "ready" });
   return NextResponse.json({ report: updated }, { status: 201 });
 }

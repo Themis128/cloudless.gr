@@ -124,6 +124,26 @@ export async function getPosts(): Promise<NotionPost[]> {
 }
 
 /**
+ * Fetch all posts (published and drafts) for admin use. Not cached.
+ */
+export async function getAllPosts(): Promise<NotionPost[]> {
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+    return [];
+
+  const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
+  try {
+    const pages = await notionFetchAll(
+      `/databases/${NOTION_BLOG_DB_ID}/query`,
+      { sorts: [{ property: "Date", direction: "descending" }] },
+    );
+    return pages.map(mapPage);
+  } catch (err) {
+    console.error("[Notion Blog] Failed to fetch all posts:", err);
+    return [];
+  }
+}
+
+/**
  * Fetch featured posts only (for homepage hero).
  */
 export async function getFeaturedPosts(): Promise<NotionPost[]> {

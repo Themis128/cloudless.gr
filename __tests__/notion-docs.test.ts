@@ -292,4 +292,45 @@ describe("notion-docs.ts", () => {
       expect(grouped["General"]).toHaveLength(2);
     });
   });
+
+  describe("getAllDocs", () => {
+    it("returns all docs including unpublished", async () => {
+      const published = makeDocPage({ id: "pub-1" });
+      const draft = makeDocPage({
+        id: "draft-1",
+        properties: { ...makeDocPage().properties, Published: { checkbox: false } },
+      });
+      mockNotionFetchAll.mockResolvedValueOnce([published, draft]);
+
+      const { getAllDocs } = await import("@/lib/notion-docs");
+      const docs = await getAllDocs();
+
+      expect(docs).toHaveLength(2);
+      expect(docs[0].published).toBe(true);
+      expect(docs[1].published).toBe(false);
+    });
+
+    it("sends no published filter (fetches all)", async () => {
+      mockNotionFetchAll.mockResolvedValueOnce([]);
+
+      const { getAllDocs } = await import("@/lib/notion-docs");
+      await getAllDocs();
+
+      const [, body] = mockNotionFetchAll.mock.calls[0];
+      expect(body).not.toHaveProperty("filter");
+      expect(body.sorts).toEqual([
+        { property: "Category", direction: "ascending" },
+        { property: "Order", direction: "ascending" },
+      ]);
+    });
+
+    it("returns empty array on error", async () => {
+      mockNotionFetchAll.mockRejectedValueOnce(new Error("API failed"));
+
+      const { getAllDocs } = await import("@/lib/notion-docs");
+      const docs = await getAllDocs();
+
+      expect(docs).toEqual([]);
+    });
+  });
 });

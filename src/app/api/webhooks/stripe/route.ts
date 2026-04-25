@@ -26,6 +26,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Fast-path: detect explicitly-cleared env var before SSM lookup.
+  const envSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (envSecret !== undefined && !envSecret) {
+    console.error("STRIPE_WEBHOOK_SECRET not configured");
+    return Response.json({ error: "Webhook not configured" }, { status: 500 });
+  }
+
   const config = await getConfig();
   const webhookSecret = config.STRIPE_WEBHOOK_SECRET;
 

@@ -10,7 +10,7 @@ export async function GET(
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
-  const report = getReport(id);
+  const report = await getReport(id);
   if (!report) {
     return NextResponse.json({ error: "Report not found." }, { status: 404 });
   }
@@ -25,7 +25,7 @@ export async function DELETE(
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
-  const deleted = deleteReport(id);
+  const deleted = await deleteReport(id);
   if (!deleted) {
     return NextResponse.json({ error: "Report not found." }, { status: 404 });
   }

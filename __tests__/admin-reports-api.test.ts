@@ -28,6 +28,22 @@ vi.mock("@/lib/ssm-config", () => ({
   resetSsmCache: vi.fn(),
 }));
 
+vi.mock("@/lib/notion-reports", () => ({
+  notionListReports: vi.fn().mockResolvedValue(null),
+  notionGetReport: vi.fn().mockResolvedValue(null),
+  notionCreateReport: vi.fn().mockResolvedValue(null),
+  notionUpdateReport: vi.fn().mockResolvedValue(false),
+  notionDeleteReport: vi.fn().mockResolvedValue(false),
+}));
+
+vi.mock("@/lib/integrations", () => ({
+  getIntegrationsAsync: vi.fn().mockResolvedValue({}),
+  isConfiguredAsync: vi.fn().mockResolvedValue(false),
+  isConfigured: vi.fn().mockReturnValue(false),
+  getIntegrations: vi.fn().mockReturnValue({}),
+  resetIntegrationCacheAsync: vi.fn(),
+}));
+
 function makeGet(path: string): NextRequest {
   return new NextRequest(`http://localhost:4500${path}`, { method: "GET" });
 }
@@ -44,12 +60,15 @@ function makeDelete(path: string): NextRequest {
   return new NextRequest(`http://localhost:4500${path}`, { method: "DELETE" });
 }
 
-function clearReports() {
-  listReports().forEach((r) => deleteReport(r.id));
+async function clearReports() {
+  const all = await listReports();
+  for (const r of all) {
+    await deleteReport(r.id);
+  }
 }
 
 describe("Admin Reports API routes", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     requireAdminMock.mockReturnValue({ ok: true, user: { sub: "admin" } });
     isHubSpotConfiguredMock.mockResolvedValue(true);
@@ -57,7 +76,16 @@ describe("Admin Reports API routes", () => {
     getPipelineStatsMock.mockResolvedValue({ totalDeals: 5, totalValue: 5000, byStage: {} });
     getEmailStatsMock.mockResolvedValue({ totalContacts: 300, totalCampaigns: 10, totalLists: 2 });
     getConfigMock.mockResolvedValue({ ANTHROPIC_API_KEY: "" });
-    clearReports();
+    // Re-apply Notion/integrations mocks after clearAllMocks
+    const notionReports = await import("@/lib/notion-reports");
+    vi.mocked(notionReports.notionListReports).mockResolvedValue(null);
+    vi.mocked(notionReports.notionGetReport).mockResolvedValue(null);
+    vi.mocked(notionReports.notionCreateReport).mockResolvedValue(null);
+    vi.mocked(notionReports.notionUpdateReport).mockResolvedValue(false);
+    vi.mocked(notionReports.notionDeleteReport).mockResolvedValue(false);
+    const integrations = await import("@/lib/integrations");
+    vi.mocked(integrations.getIntegrationsAsync).mockResolvedValue({});
+    await clearReports();
   });
 
   // ── GET /api/admin/reports ───────────────────────────────────────────────────

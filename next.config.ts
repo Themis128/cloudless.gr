@@ -30,20 +30,4 @@ if (configured.experimental && typeof configured.experimental === "object") {
   if (Object.keys(configured.experimental).length === 0) delete configured.experimental;
 }
 
-let sentryConfigured: NextConfig = configured;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { withSentryConfig } = require("@sentry/nextjs");
-  sentryConfigured = withSentryConfig(configured, {
-    org: "baltzakisthemiscom",
-    project: "cloudless-gr",
-    silent: true,
-    widenClientFileUpload: true,
-    tunnelRoute: "/monitoring",
-    hideSourceMaps: true,
-  }) as NextConfig;
-} catch {
-  // @sentry/nextjs not yet installed
-}
-
-export default sentryConfigured;
+export default configured;

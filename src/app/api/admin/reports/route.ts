@@ -6,6 +6,6 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const reports = listReports();
+  const reports = await listReports();
   return NextResponse.json({ reports, total: reports.length });
 }

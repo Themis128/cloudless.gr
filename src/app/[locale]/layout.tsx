@@ -1,5 +1,5 @@
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
+import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import dynamic from "next/dynamic";
 import { routing } from "@/i18n/routing";
@@ -55,6 +55,9 @@ export default async function LocaleLayout({ children, params }: Props) {
   if (!(routing.locales as readonly string[]).includes(locale)) {
     notFound();
   }
+
+  // Enable static rendering for all locale child routes
+  setRequestLocale(locale);
 
   // Load messages for NextIntlClientProvider
   const messages = await getMessages();
