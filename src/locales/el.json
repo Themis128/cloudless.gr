@@ -79,7 +79,7 @@
     "service1Desc": "Σχεδιάστε και μεταφέρετε την υποδομή σας σε AWS, GCP ή Azure χωρίς downtime. Κλιμακώσιμο, ασφαλές, βελτιστοποιημένο κόστος.",
     "service1Tag": "CLOUD",
     "service1For": "Για ομάδες που πληρώνουν 500€+/μήνα για υποδομή που δεν μπορούν να εξηγήσουν.",
-    "service2Title": "Serverless Development",
+    "service2Title": "Ανάπτυξη Serverless",
     "service2Desc": "Κατασκευάστε event-driven εφαρμογές που κλιμακώνουν αυτόματα και δεν κοστίζουν τίποτα σε αδράνεια. Lambda, API Gateway, DynamoDB.",
     "service2Tag": "SERVERLESS",
     "service2For": "Για founders κουρασμένους να πληρώνουν servers που κάθονται idle το 90% του χρόνου.",
@@ -87,7 +87,7 @@
     "service3Desc": "Μετατρέψτε ακατέργαστα δεδομένα σε χρήσιμες πληροφορίες με custom dashboards, pipelines και real-time reporting.",
     "service3Tag": "ANALYTICS",
     "service3For": "Για ομάδες που παίρνουν αποφάσεις με ένστικτο αντί για δεδομένα.",
-    "service4Title": "AI & Digital Marketing",
+    "service4Title": "AI & Ψηφιακό Marketing",
     "service4Desc": "Καμπάνιες με AI, SEO, στρατηγική περιεχομένου και performance marketing που οδηγεί σε μετρήσιμη ανάπτυξη.",
     "service4Tag": "AI",
     "service4For": "Για startups που ξοδεύουν σε διαφημίσεις χωρίς ιδέα τι αποδίδει."
@@ -119,7 +119,7 @@
     "title": "Γνωρίστε τον",
     "titleHighlight": "ιδρυτή",
     "name": "Θεμιστοκλής Μπαλτζάκης",
-    "role": "Cloud Architect & Growth Engineer",
+    "role": "Cloud Architect & Μηχανικός Ανάπτυξης",
     "bio": "Πιστοποιημένος cloud architect με πρακτική εμπειρία σε AWS, serverless αρχιτεκτονικές, ανάλυση δεδομένων, και AI-powered marketing. Βοηθάω startups και SMBs να χτίσουν υποδομή που κλιμακώνει χωρίς το enterprise κόστος."
   },
   "cta": {
