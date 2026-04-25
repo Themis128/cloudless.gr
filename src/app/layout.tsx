@@ -74,6 +74,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
+      data-theme="dark"
       className={`${instrumentSans.variable} ${workSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
