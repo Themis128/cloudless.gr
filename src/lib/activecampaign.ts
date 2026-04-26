@@ -63,7 +63,8 @@ export async function verifyActiveCampaignToken(): Promise<{
         message: `Token rejected (${res.status}) — account may be expired or token rotated.`,
       };
     }
-    if (!res.ok) return { status: "error", message: `API returned ${res.status}` };
+    if (!res.ok)
+      return { status: "error", message: `API returned ${res.status}` };
     return { status: "valid" };
   } catch {
     return { status: "error", message: "Connection failed." };

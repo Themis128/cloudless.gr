@@ -3,14 +3,18 @@ import { requireAdmin } from "@/lib/api-auth";
 import { createHmac } from "crypto";
 import { getConfig } from "@/lib/ssm-config";
 
-const TOKEN_URL = "https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/";
+const TOKEN_URL =
+  "https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/";
 
 function verifyState(state: string, secret: string): boolean {
   const dot = state.lastIndexOf(".");
   if (dot === -1) return false;
   const nonce = state.slice(0, dot);
   const sig = state.slice(dot + 1);
-  const expected = createHmac("sha256", secret).update(nonce).digest("hex").slice(0, 16);
+  const expected = createHmac("sha256", secret)
+    .update(nonce)
+    .digest("hex")
+    .slice(0, 16);
   return sig === expected;
 }
 
@@ -42,7 +46,9 @@ async function exchangeCode(
 }
 
 function successHtml(accessToken: string, advertiserIds: string[]): string {
-  const adsBlock = advertiserIds.map((id) => `<code>TIKTOK_ADVERTISER_ID=${id}</code>`).join("<br>");
+  const adsBlock = advertiserIds
+    .map((id) => `<code>TIKTOK_ADVERTISER_ID=${id}</code>`)
+    .join("<br>");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>TikTok OAuth — Success</title>
 <style>
@@ -90,42 +96,62 @@ export async function GET(request: NextRequest) {
   }
 
   if (!authCode) {
-    return new NextResponse(errorHtml("Missing auth_code in callback parameters."), {
-      status: 400,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
+    return new NextResponse(
+      errorHtml("Missing auth_code in callback parameters."),
+      {
+        status: 400,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      },
+    );
   }
 
   const cfg = await getConfig();
   const secret = process.env.CRON_SECRET ?? cfg.TIKTOK_APP_SECRET;
 
   if (!verifyState(state, secret)) {
-    return new NextResponse(errorHtml("Invalid state parameter — possible CSRF. Restart the OAuth flow."), {
-      status: 400,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
+    return new NextResponse(
+      errorHtml(
+        "Invalid state parameter — possible CSRF. Restart the OAuth flow.",
+      ),
+      {
+        status: 400,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      },
+    );
   }
 
   if (!cfg.TIKTOK_APP_ID || !cfg.TIKTOK_APP_SECRET) {
-    return new NextResponse(errorHtml("TIKTOK_APP_ID or TIKTOK_APP_SECRET not configured."), {
-      status: 503,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
+    return new NextResponse(
+      errorHtml("TIKTOK_APP_ID or TIKTOK_APP_SECRET not configured."),
+      {
+        status: 503,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      },
+    );
   }
 
   let tokenData: TikTokTokenResponse;
   try {
-    tokenData = await exchangeCode(cfg.TIKTOK_APP_ID, cfg.TIKTOK_APP_SECRET, authCode);
+    tokenData = await exchangeCode(
+      cfg.TIKTOK_APP_ID,
+      cfg.TIKTOK_APP_SECRET,
+      authCode,
+    );
   } catch {
-    return new NextResponse(errorHtml("Token exchange request failed. Check network connectivity."), {
-      status: 502,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
+    return new NextResponse(
+      errorHtml("Token exchange request failed. Check network connectivity."),
+      {
+        status: 502,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      },
+    );
   }
 
   if (tokenData.code !== 0 || !tokenData.data?.access_token) {
     return new NextResponse(
-      errorHtml(`TikTok token exchange failed: ${tokenData.message ?? "unknown error"} (code ${tokenData.code})`),
+      errorHtml(
+        `TikTok token exchange failed: ${tokenData.message ?? "unknown error"} (code ${tokenData.code})`,
+      ),
       { status: 502, headers: { "Content-Type": "text/html; charset=utf-8" } },
     );
   }
