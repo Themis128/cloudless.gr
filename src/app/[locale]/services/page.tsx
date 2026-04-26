@@ -12,6 +12,7 @@ import {
 } from "@/lib/structured-data";
 import { translate } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
+import StatCounter from "@/components/StatCounter";
 
 export const revalidate = 86400; // static content — rebuild once per day
 
@@ -342,19 +343,22 @@ export default async function ServicesPage() {
       {/* ── Header ──────────────────────────────────────────── */}
       <section className="bg-void relative overflow-hidden py-20 text-white lg:py-28">
         <div className="cyber-grid absolute inset-0 opacity-20" />
-        <div className="bg-neon-cyan/5 absolute top-0 right-0 h-[400px] w-[400px] translate-x-1/3 -translate-y-1/2 rounded-full blur-3xl" />
+        <div className="bg-neon-cyan/5 animate-float absolute top-0 right-0 h-[400px] w-[400px] translate-x-1/3 -translate-y-1/2 rounded-full blur-3xl" />
         <div className="relative z-10 mx-auto max-w-6xl px-6">
-          <div className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-sm font-medium">
-            <span className="bg-neon-green h-2 w-2 animate-pulse rounded-full" />
+          <div className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan animate-fade-in-up mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-sm font-medium">
+            <span className="relative flex h-2 w-2">
+              <span className="bg-neon-green animate-ping-slow absolute inline-flex h-full w-full rounded-full opacity-75" />
+              <span className="bg-neon-green relative inline-flex h-2 w-2 rounded-full" />
+            </span>
             {t("servicesPage.badge", "Transparent Pricing")}
           </div>
-          <h1 className="font-heading text-3xl leading-tight font-bold md:text-5xl">
+          <h1 className="animate-fade-in-up delay-100 font-heading text-3xl leading-tight font-bold md:text-5xl">
             {t("servicesPage.title", "No hidden fees.")}{" "}
             <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
               {t("servicesPage.titleHighlight", "Real results.")}
             </span>
           </h1>
-          <p className="mt-4 max-w-xl text-lg text-slate-400">
+          <p className="animate-fade-in-up delay-200 mt-4 max-w-xl text-lg text-slate-400">
             {t(
               "servicesPage.subtitle",
               "Pick what you need or bundle everything for 30% savings. No lock-in contracts — your code is always yours.",
@@ -471,11 +475,12 @@ export default async function ServicesPage() {
                           key={stat.label}
                           className={`rounded-lg border p-4 ${colors.stat} text-center`}
                         >
-                          <div
-                            className={`font-mono text-xl font-bold ${colors.statValue}`}
-                          >
-                            {stat.value}
-                          </div>
+                          <StatCounter
+                            value={stat.value}
+                            label={stat.label}
+                            valueClassName={`font-mono text-xl font-bold ${colors.statValue}`}
+                            showLabel={false}
+                          />
                           <div className="mt-1 font-mono text-xs text-slate-500">
                             {stat.label}
                           </div>
@@ -557,7 +562,7 @@ export default async function ServicesPage() {
               </div>
               <Link
                 href="/contact"
-                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 mt-6 inline-block rounded-lg border px-8 py-3.5 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
+                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 animate-glow-pulse mt-6 inline-block rounded-lg border px-8 py-3.5 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
               >
                 {t("servicesPage.bundleCta", "Let's Talk")}
               </Link>
@@ -576,7 +581,7 @@ export default async function ServicesPage() {
       <section className="bg-void py-20 lg:py-28">
         <div className="mx-auto max-w-6xl px-6 text-center">
           <ScrollReveal>
-            <p className="text-neon-cyan mb-3 font-mono text-xs tracking-[0.3em]">
+            <p className="animate-shimmer-text mb-3 font-mono text-xs tracking-[0.3em]">
               {t("servicesPage.guaranteeLabel", "[ GUARANTEE ]")}
             </p>
             <h2 className="font-heading text-2xl font-bold text-white md:text-3xl">
@@ -617,19 +622,18 @@ export default async function ServicesPage() {
                   "Every engagement starts with a no-cost review. Actionable insights in 30 minutes.",
                 ),
               },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="bg-void-light/50 hover:border-neon-cyan/30 rounded-xl border border-slate-800 p-6 transition-all duration-300"
-              >
-                <div className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg border text-lg">
-                  {item.icon}
+            ].map((item, gi) => (
+              <ScrollReveal key={item.title} delay={gi * 80}>
+                <div className="bg-void-light/50 hover:border-neon-cyan/30 rounded-xl border border-slate-800 p-6 transition-all duration-300">
+                  <div className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg border text-lg">
+                    {item.icon}
+                  </div>
+                  <h3 className="font-heading font-semibold text-white">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-400">{item.desc}</p>
                 </div>
-                <h3 className="font-heading font-semibold text-white">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm text-slate-400">{item.desc}</p>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -640,7 +644,7 @@ export default async function ServicesPage() {
         <div className="mx-auto max-w-3xl px-6">
           <ScrollReveal>
             <div className="mb-14 text-center">
-              <p className="text-neon-cyan mb-3 font-mono text-xs font-medium tracking-[0.3em]">
+              <p className="animate-shimmer-text mb-3 font-mono text-xs font-medium tracking-[0.3em]">
                 {t("servicesPage.faqLabel", "[ FAQ ]")}
               </p>
               <h2 className="font-heading text-2xl font-bold text-white md:text-3xl">
@@ -681,7 +685,7 @@ export default async function ServicesPage() {
         <div className="bg-neon-cyan/5 absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl" />
         <div className="relative z-10 mx-auto max-w-2xl px-6 text-center">
           <ScrollReveal>
-            <p className="text-neon-cyan mb-4 font-mono text-xs tracking-[0.3em]">
+            <p className="animate-shimmer-text mb-4 font-mono text-xs tracking-[0.3em]">
               {t("servicesPage.ctaLabel", "[ NEXT STEP ]")}
             </p>
             <h2 className="font-heading text-3xl font-bold text-white md:text-4xl">
@@ -699,7 +703,7 @@ export default async function ServicesPage() {
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/contact"
-                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 rounded-lg border px-8 py-3.5 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
+                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 animate-glow-pulse rounded-lg border px-8 py-3.5 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
               >
                 {t("servicesPage.ctaPrimary", "Book Free Audit")}
               </Link>
