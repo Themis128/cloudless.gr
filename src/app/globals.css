@@ -243,6 +243,110 @@ h6 {
 .delay-500 {
   animation-delay: 500ms;
 }
+.delay-600 {
+  animation-delay: 600ms;
+}
+.delay-700 {
+  animation-delay: 700ms;
+}
+.delay-800 {
+  animation-delay: 800ms;
+}
+
+/* ── Floating orbs — gentle ambient drift for decorative bg elements ── */
+@keyframes float-orb {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(10px, -22px) scale(1.04);
+  }
+  66% {
+    transform: translate(-8px, -12px) scale(0.97);
+  }
+}
+.animate-float {
+  animation: float-orb 12s ease-in-out infinite;
+}
+.animate-float-slow {
+  animation: float-orb 18s ease-in-out infinite;
+}
+
+/* ── Ping slow — expanding ring for status / live indicators ── */
+@keyframes ping-slow {
+  75%,
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+.animate-ping-slow {
+  animation: ping-slow 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* ── Shimmer text — moving highlight sweep across monospace labels ── */
+@keyframes shimmer-sweep {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+.animate-shimmer-text {
+  background: linear-gradient(
+    90deg,
+    var(--accent) 20%,
+    color-mix(in srgb, var(--accent) 35%, #fff) 50%,
+    var(--accent) 80%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: shimmer-sweep 4s linear infinite;
+}
+
+/* ── Glow pulse — breathing accent box-shadow for primary CTAs ── */
+@keyframes glow-pulse-accent {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow: 0 0 22px 5px color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+}
+.animate-glow-pulse {
+  animation: glow-pulse-accent 3s ease-in-out infinite;
+}
+
+/* ── Mobile-safe overrides ── */
+
+/* Reduce float drift amplitude on narrow screens */
+@media (max-width: 768px) {
+  @keyframes float-orb {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(4px, -10px) scale(1.02);
+    }
+    66% {
+      transform: translate(-4px, -6px) scale(0.99);
+    }
+  }
+}
+
+/* Glow pulse is GPU-composited box-shadow — restrict to pointer devices */
+@media (hover: none) {
+  .animate-glow-pulse {
+    animation: none;
+  }
+}
 
 /* animate-gradient-shift / animate-neon-pulse — retained as no-ops so
    markup that still references them parses cleanly. The cyberpunk
