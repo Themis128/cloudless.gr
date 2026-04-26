@@ -42,6 +42,22 @@ describe('hasAuthGuard', () => {
     expect(hasAuthGuard('export default withAuth(handler)')).toBe(true);
   });
 
+  it('detects verifySlackRequest (Slack HMAC auth)', () => {
+    expect(hasAuthGuard('const verified = await verifySlackRequest(request, body);')).toBe(true);
+  });
+
+  it('detects verifySecret (webhook shared-secret auth)', () => {
+    expect(hasAuthGuard('if (!verifySecret(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });')).toBe(true);
+  });
+
+  it('detects cronAuth (Vercel Cron Bearer auth)', () => {
+    expect(hasAuthGuard('function cronAuth(req) { return req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`; }')).toBe(true);
+  });
+
+  it('detects stripe-signature header check', () => {
+    expect(hasAuthGuard('const signature = request.headers.get("stripe-signature");')).toBe(true);
+  });
+
   it('returns false when no auth patterns present', () => {
     expect(hasAuthGuard('export async function GET() { return Response.json({}) }')).toBe(false);
   });
@@ -192,6 +208,46 @@ describe('scanContents', () => {
     const findings = scanContents(code, 'src/api/handler.ts');
     const finding = findings.find((f) => f.rule.id === 'mcp-013-unsafe-logging');
     expect(finding).toBeDefined();
+  });
+
+  it('does not flag mcp-001 for Slack HMAC-verified route', () => {
+    const code = [
+      'import { verifySlackRequest } from "@/lib/slack-verify";',
+      'export async function POST(request: Request) {',
+      '  const verified = await verifySlackRequest(request);',
+      '  if (!verified.ok) return Response.json({ error: "Unauthorized" }, { status: 401 });',
+      '  return Response.json({ ok: true });',
+      '}',
+    ].join('\n');
+    const findings = scanContents(code, 'src/app/api/slack/commands/route.ts');
+    const authFinding = findings.find((f) => f.rule.id === 'mcp-001-missing-authentication');
+    expect(authFinding).toBeUndefined();
+  });
+
+  it('does not flag mcp-001 for cron route with cronAuth guard', () => {
+    const code = [
+      'function cronAuth(req) { return req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`; }',
+      'export async function GET(request) {',
+      '  if (!cronAuth(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });',
+      '  return Response.json({ ok: true });',
+      '}',
+    ].join('\n');
+    const findings = scanContents(code, 'src/app/api/cron/rollup/route.ts');
+    const authFinding = findings.find((f) => f.rule.id === 'mcp-001-missing-authentication');
+    expect(authFinding).toBeUndefined();
+  });
+
+  it('does not flag mcp-001 for webhook route with verifySecret guard', () => {
+    const code = [
+      'function verifySecret(request) { return request.headers.get("x-webhook-secret") === process.env.NOTION_WEBHOOK_SECRET; }',
+      'export async function POST(request) {',
+      '  if (!verifySecret(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });',
+      '  return Response.json({ ok: true });',
+      '}',
+    ].join('\n');
+    const findings = scanContents(code, 'src/app/api/webhooks/notion/route.ts');
+    const authFinding = findings.find((f) => f.rule.id === 'mcp-001-missing-authentication');
+    expect(authFinding).toBeUndefined();
   });
 
   it('returns empty findings for clean code', () => {
