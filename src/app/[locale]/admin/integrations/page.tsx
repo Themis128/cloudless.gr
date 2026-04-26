@@ -27,12 +27,9 @@ interface StatusResponse {
 }
 
 function safeSetupUrl(url: string): string | undefined {
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" ? url : undefined;
-  } catch {
-    return undefined;
-  }
+  return typeof url === "string" && url.startsWith("https://")
+    ? url
+    : undefined;
 }
 
 const STATUS_DOT: Record<IntegrationStatus, string> = {
