@@ -5,7 +5,7 @@ import { Link } from "@/i18n/navigation";
 import CartButton from "@/components/store/CartButton";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import Logo from "@/components/Logo";
-import { translate } from "@/lib/i18n";
+import { translate, locales, localeLabels, type Locale } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 import { useAuth } from "@/context/AuthContext";
 
@@ -21,7 +21,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const [locale] = useCurrentLocale();
+  const [locale, setLocale] = useCurrentLocale();
   const { user, isAdmin, isLoading, signOut } = useAuth();
   const toggleMenuLabel = translate(locale, "navbar.toggleMenu", "Toggle menu");
   const cartLabel = translate(locale, "common.cart", "Cart");
@@ -220,7 +220,27 @@ export default function Navbar() {
               <span className="mb-2 block font-mono text-xs text-slate-500">
                 {languageLabel}
               </span>
-              <LocaleSwitcher />
+              <div className="flex gap-2">
+                {locales.map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => {
+                      setLocale(l as Locale);
+                      setMobileOpen(false);
+                    }}
+                    aria-label={`Set language to ${localeLabels[l]}`}
+                    aria-pressed={l === locale}
+                    className={`min-h-11 flex-1 rounded-lg border px-3 py-2 font-mono text-sm transition-colors ${
+                      l === locale
+                        ? "border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan"
+                        : "border-slate-700 text-slate-400 hover:border-slate-600 hover:text-white"
+                    }`}
+                  >
+                    {l.toUpperCase()}
+                  </button>
+                ))}
+              </div>
             </div>
             {!isLoading && (
               <>
