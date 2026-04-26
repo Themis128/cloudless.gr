@@ -5,16 +5,14 @@ import { useEffect, useState } from "react";
 
 type IntegrationStatus = "configured" | "not_configured" | "degraded" | "error";
 
-interface IntegrationReport {
+interface ApiIntegration {
   id: string;
-  name: string;
-  category: string;
   status: IntegrationStatus;
   message?: string;
 }
 
-interface StatusResponse {
-  integrations: IntegrationReport[];
+interface ApiResponse {
+  integrations: ApiIntegration[];
   summary: {
     total: number;
     configured: number;
@@ -25,22 +23,118 @@ interface StatusResponse {
   checkedAt: string;
 }
 
-const SETUP_URLS: Record<string, string> = {
-  cognito: "https://console.aws.amazon.com/cognito",
-  stripe: "https://dashboard.stripe.com/apikeys",
-  hubspot: "https://app.hubspot.com/private-apps",
-  slack: "https://api.slack.com/apps",
-  notion: "https://www.notion.so/my-integrations",
-  google: "https://console.cloud.google.com/iam-admin/serviceaccounts",
-  sentry: "https://sentry.io/settings/auth-tokens/",
-  anthropic: "https://console.anthropic.com/settings/keys",
-  activecampaign: "https://www.activecampaign.com",
-  meta: "https://business.facebook.com/settings/system-users",
-  linkedin: "https://www.linkedin.com/campaignmanager",
-  tiktok: "https://ads.tiktok.com/marketing_api/apps",
-  x: "https://ads.x.com/help",
-  google_ads: "https://ads.google.com/intl/en_us/home/tools/api-center/",
-};
+interface IntegrationDef {
+  id: string;
+  name: string;
+  category: string;
+  setupUrl: string;
+}
+
+const INTEGRATIONS: IntegrationDef[] = [
+  {
+    id: "ses",
+    name: "AWS SES",
+    category: "Email",
+    setupUrl: "https://console.aws.amazon.com/ses",
+  },
+  {
+    id: "cognito",
+    name: "AWS Cognito",
+    category: "Auth",
+    setupUrl: "https://console.aws.amazon.com/cognito",
+  },
+  {
+    id: "stripe",
+    name: "Stripe",
+    category: "Payments",
+    setupUrl: "https://dashboard.stripe.com/apikeys",
+  },
+  {
+    id: "hubspot",
+    name: "HubSpot CRM",
+    category: "CRM",
+    setupUrl: "https://app.hubspot.com/private-apps",
+  },
+  {
+    id: "slack",
+    name: "Slack",
+    category: "Communication",
+    setupUrl: "https://api.slack.com/apps",
+  },
+  {
+    id: "notion",
+    name: "Notion",
+    category: "Content",
+    setupUrl: "https://www.notion.so/my-integrations",
+  },
+  {
+    id: "google",
+    name: "Google (Calendar + Search Console)",
+    category: "Analytics",
+    setupUrl: "https://console.cloud.google.com/iam-admin/serviceaccounts",
+  },
+  {
+    id: "sentry",
+    name: "Sentry",
+    category: "Monitoring",
+    setupUrl: "https://sentry.io/settings/auth-tokens/",
+  },
+  {
+    id: "anthropic",
+    name: "Anthropic (Claude AI)",
+    category: "AI",
+    setupUrl: "https://console.anthropic.com/settings/keys",
+  },
+  {
+    id: "activecampaign",
+    name: "ActiveCampaign",
+    category: "Email",
+    setupUrl: "https://www.activecampaign.com",
+  },
+  {
+    id: "meta",
+    name: "Meta (Facebook/Instagram)",
+    category: "Ads",
+    setupUrl: "https://business.facebook.com/settings/system-users",
+  },
+  {
+    id: "linkedin",
+    name: "LinkedIn Ads",
+    category: "Ads",
+    setupUrl: "https://www.linkedin.com/campaignmanager",
+  },
+  {
+    id: "tiktok",
+    name: "TikTok Ads",
+    category: "Ads",
+    setupUrl: "https://ads.tiktok.com/marketing_api/apps",
+  },
+  {
+    id: "x",
+    name: "X (Twitter) Ads",
+    category: "Ads",
+    setupUrl: "https://ads.x.com/help",
+  },
+  {
+    id: "google_ads",
+    name: "Google Ads",
+    category: "Ads",
+    setupUrl: "https://ads.google.com/intl/en_us/home/tools/api-center/",
+  },
+];
+
+const CATEGORY_ORDER = [
+  "Email",
+  "CRM",
+  "Ads",
+  "Analytics",
+  "Monitoring",
+  "Payments",
+  "Communication",
+  "Content",
+  "Auth",
+  "AI",
+];
 
 const STATUS_DOT: Record<IntegrationStatus, string> = {
   configured: "bg-neon-green",
@@ -63,36 +157,29 @@ const STATUS_TEXT: Record<IntegrationStatus, string> = {
   error: "text-red-400",
 };
 
-const CATEGORY_ORDER = [
-  "Email",
-  "CRM",
-  "Ads",
-  "Analytics",
-  "Monitoring",
-  "Payments",
-  "Communication",
-  "Content",
-  "AI",
-];
+type StatusMap = Map<string, { status: IntegrationStatus; message?: string }>;
 
-function groupByCategory(
-  items: IntegrationReport[],
-): Record<string, IntegrationReport[]> {
-  const map: Record<string, IntegrationReport[]> = {};
-  for (const item of items) {
+function groupByCategory(): Record<string, IntegrationDef[]> {
+  const map: Record<string, IntegrationDef[]> = {};
+  for (const item of INTEGRATIONS) {
     (map[item.category] ??= []).push(item);
   }
   return map;
 }
 
-function sortedCategories(map: Record<string, IntegrationReport[]>): string[] {
+function sortedCategories(map: Record<string, IntegrationDef[]>): string[] {
   const known = CATEGORY_ORDER.filter((c) => map[c]);
   const rest = Object.keys(map).filter((c) => !CATEGORY_ORDER.includes(c));
   return [...known, ...rest];
 }
 
+const grouped = groupByCategory();
+const categories = sortedCategories(grouped);
+
 export default function IntegrationsPage() {
-  const [data, setData] = useState<StatusResponse | null>(null);
+  const [statusMap, setStatusMap] = useState<StatusMap>(new Map());
+  const [summary, setSummary] = useState<ApiResponse["summary"] | null>(null);
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -105,7 +192,18 @@ export default function IntegrationsPage() {
       try {
         const res = await fetchWithAuth("/api/admin/integrations/status");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        if (!cancelled) setData(await res.json());
+        const data: ApiResponse = await res.json();
+        if (!cancelled) {
+          const map: StatusMap = new Map(
+            data.integrations.map((i) => [
+              i.id,
+              { status: i.status, message: i.message },
+            ]),
+          );
+          setStatusMap(map);
+          setSummary(data.summary);
+          setCheckedAt(data.checkedAt);
+        }
       } catch (err) {
         if (!cancelled)
           setError(err instanceof Error ? err.message : "Failed to load");
@@ -118,9 +216,6 @@ export default function IntegrationsPage() {
       cancelled = true;
     };
   }, [refreshKey]);
-
-  const grouped = data ? groupByCategory(data.integrations) : {};
-  const categories = sortedCategories(grouped);
 
   return (
     <div>
@@ -150,14 +245,14 @@ export default function IntegrationsPage() {
       </div>
 
       {/* Summary bar */}
-      {data && (
+      {summary && (
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {(
             [
-              ["Configured", data.summary.configured, "text-neon-green"],
-              ["Degraded", data.summary.degraded, "text-yellow-400"],
-              ["Not set up", data.summary.not_configured, "text-slate-500"],
-              ["Error", data.summary.error, "text-red-400"],
+              ["Configured", summary.configured, "text-neon-green"],
+              ["Degraded", summary.degraded, "text-yellow-400"],
+              ["Not set up", summary.not_configured, "text-slate-500"],
+              ["Error", summary.error, "text-red-400"],
             ] as const
           ).map(([label, count, cls]) => (
             <div
@@ -179,7 +274,7 @@ export default function IntegrationsPage() {
         </div>
       )}
 
-      {loading && !data && (
+      {loading && statusMap.size === 0 && (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div
@@ -190,7 +285,7 @@ export default function IntegrationsPage() {
         </div>
       )}
 
-      {/* Integration groups */}
+      {/* Integration groups — iterates over static INTEGRATIONS, status looked up by id */}
       <div className="space-y-6">
         {categories.map((category) => (
           <div key={category}>
@@ -199,7 +294,9 @@ export default function IntegrationsPage() {
             </h2>
             <div className="divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800">
               {grouped[category].map((integration) => {
-                const connectUrl = SETUP_URLS[integration.id];
+                const info = statusMap.get(integration.id);
+                const status: IntegrationStatus =
+                  info?.status ?? "not_configured";
                 return (
                   <div
                     key={integration.id}
@@ -207,7 +304,7 @@ export default function IntegrationsPage() {
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       <span
-                        className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${STATUS_DOT[integration.status]}`}
+                        className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${STATUS_DOT[status]}`}
                       />
                       <span className="font-heading truncate font-medium text-white">
                         {integration.name}
@@ -215,19 +312,19 @@ export default function IntegrationsPage() {
                     </div>
 
                     <div className="flex items-center gap-3 pl-5 sm:pl-0">
-                      {integration.message && (
+                      {info?.message && (
                         <span className="font-mono text-xs text-slate-500">
-                          {integration.message}
+                          {info.message}
                         </span>
                       )}
                       <span
-                        className={`flex-shrink-0 font-mono text-xs ${STATUS_TEXT[integration.status]}`}
+                        className={`flex-shrink-0 font-mono text-xs ${STATUS_TEXT[status]}`}
                       >
-                        {STATUS_LABEL[integration.status]}
+                        {STATUS_LABEL[status]}
                       </span>
-                      {connectUrl && integration.status !== "configured" && (
+                      {status !== "configured" && (
                         <a
-                          href={connectUrl}
+                          href={integration.setupUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-shrink-0 rounded-lg border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300 transition-all hover:border-neon-magenta/50 hover:text-white"
@@ -244,10 +341,10 @@ export default function IntegrationsPage() {
         ))}
       </div>
 
-      {data && (
+      {checkedAt && (
         <p className="mt-6 font-mono text-xs text-slate-600">
           Last checked:{" "}
-          {new Date(data.checkedAt).toLocaleTimeString("en-IE", {
+          {new Date(checkedAt).toLocaleTimeString("en-IE", {
             hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",
