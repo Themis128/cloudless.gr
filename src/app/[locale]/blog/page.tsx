@@ -160,8 +160,9 @@ export default async function BlogPage({
       {/* Header */}
       <section className="bg-void scanlines relative overflow-hidden py-20 text-white md:py-28 lg:py-32">
         <div className="cyber-grid absolute inset-0 opacity-30" />
+        <div className="bg-neon-cyan/5 animate-float-slow absolute top-0 left-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl" />
         <div className="relative z-10 mx-auto max-w-6xl px-6">
-          <p className="text-neon-cyan animate-fade-in-up mb-3 font-mono text-xs font-medium tracking-[0.3em]">
+          <p className="animate-shimmer-text mb-3 font-mono text-xs font-medium tracking-[0.3em]">
             [ BLOG ]
           </p>
           <h1 className="font-heading animate-fade-in-up text-3xl leading-tight font-bold text-white delay-100 md:text-5xl">
@@ -179,7 +180,7 @@ export default async function BlogPage({
           <form
             action=""
             method="get"
-            className="animate-fade-in-up mt-8 max-w-md delay-300"
+            className="animate-scale-in mt-8 max-w-md delay-300"
           >
             <div className="relative">
               <input

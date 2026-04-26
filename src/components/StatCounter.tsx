@@ -6,6 +6,8 @@ import { CountUp } from "countup.js";
 interface StatCounterProps {
   value: string;
   label: string;
+  valueClassName?: string;
+  showLabel?: boolean;
 }
 
 function parseStatValue(value: string): {
@@ -21,7 +23,12 @@ function parseStatValue(value: string): {
   return { end: num, suffix, decimalPlaces };
 }
 
-export default function StatCounter({ value, label }: StatCounterProps) {
+export default function StatCounter({
+  value,
+  label,
+  valueClassName = "text-neon-cyan font-mono text-3xl font-bold",
+  showLabel = true,
+}: StatCounterProps) {
   const elRef = useRef<HTMLDivElement>(null);
   const started = useRef(false);
 
@@ -54,16 +61,14 @@ export default function StatCounter({ value, label }: StatCounterProps) {
 
   return (
     <div className="text-center">
-      <div
-        ref={elRef}
-        className="text-neon-cyan font-mono text-3xl font-bold"
-        aria-label={value}
-      >
+      <div ref={elRef} className={valueClassName} aria-label={value}>
         {value}
       </div>
-      <div className="mt-1 font-mono text-xs tracking-wider text-slate-500 uppercase">
-        {label}
-      </div>
+      {showLabel && (
+        <div className="mt-1 font-mono text-xs tracking-wider text-slate-500 uppercase">
+          {label}
+        </div>
+      )}
     </div>
   );
 }
