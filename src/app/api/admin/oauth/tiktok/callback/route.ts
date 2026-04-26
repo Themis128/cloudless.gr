@@ -6,6 +6,15 @@ import { getConfig } from "@/lib/ssm-config";
 const TOKEN_URL =
   "https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/";
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function verifyState(state: string, secret: string): boolean {
   const dot = state.lastIndexOf(".");
   if (dot === -1) return false;
@@ -47,7 +56,7 @@ async function exchangeCode(
 
 function successHtml(accessToken: string, advertiserIds: string[]): string {
   const adsBlock = advertiserIds
-    .map((id) => `<code>TIKTOK_ADVERTISER_ID=${id}</code>`)
+    .map((id) => `<code>TIKTOK_ADVERTISER_ID=${escapeHtml(id)}</code>`)
     .join("<br>");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>TikTok OAuth — Success</title>
@@ -60,7 +69,7 @@ function successHtml(accessToken: string, advertiserIds: string[]): string {
 <h1 class="success">TikTok OAuth complete</h1>
 <p>Add these values to <strong>AWS SSM</strong> under <code>/cloudless/production/</code> or to your <code>.env.local</code>:</p>
 <div class="box">
-  <code>TIKTOK_ACCESS_TOKEN=${accessToken}</code><br><br>
+  <code>TIKTOK_ACCESS_TOKEN=${escapeHtml(accessToken)}</code><br><br>
   ${adsBlock || "<em>No advertiser accounts returned. Ensure your app has access to at least one TikTok Ads account.</em>"}
 </div>
 <p class="warn">Store the access token securely. Do not commit it to version control. After saving, restart the server (or wait for the SSM cache to expire).</p>
@@ -74,7 +83,7 @@ function errorHtml(message: string): string {
 <style>body { font-family: system-ui, sans-serif; max-width: 640px; margin: 4rem auto; padding: 0 1rem; } h1 { color: #dc2626; }</style>
 </head><body>
 <h1>TikTok OAuth failed</h1>
-<p>${message}</p>
+<p>${escapeHtml(message)}</p>
 <p><a href="/admin">Return to admin dashboard</a></p>
 </body></html>`;
 }
