@@ -10,6 +10,7 @@ import { translate, translateArray } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 import { setRequestLocale } from "next-intl/server";
 import ClientParticleField from "@/components/ClientParticleField";
+import StatCounter from "@/components/StatCounter";
 
 // ISR: render once per hour, served from CloudFront cache (avoids Lambda cold start on every hit)
 export const revalidate = 3600;
@@ -228,15 +229,18 @@ export default async function Home({
         <div className="cyber-grid absolute inset-0 opacity-50" />
 
         {/* Gradient orbs */}
-        <div className="bg-neon-cyan/5 animate-gradient-shift absolute top-0 right-0 h-[500px] w-[500px] translate-x-1/3 -translate-y-1/2 rounded-full blur-3xl" />
-        <div className="bg-neon-magenta/5 animate-gradient-shift absolute bottom-0 left-0 h-[400px] w-[400px] -translate-x-1/3 translate-y-1/2 rounded-full blur-3xl delay-200" />
+        <div className="bg-neon-cyan/5 animate-float absolute top-0 right-0 h-[500px] w-[500px] translate-x-1/3 -translate-y-1/2 rounded-full blur-3xl" />
+        <div className="bg-neon-magenta/5 animate-float-slow absolute bottom-0 left-0 h-[400px] w-[400px] -translate-x-1/3 translate-y-1/2 rounded-full blur-3xl delay-300" />
 
         <div className="relative z-10 mx-auto max-w-6xl px-6 py-20 md:py-28 lg:py-32">
           <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
             {/* Left — copy */}
             <div>
               <div className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan animate-fade-in-up mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-sm font-medium">
-                <span className="bg-neon-green h-2 w-2 animate-pulse rounded-full" />
+                <span className="relative flex h-2 w-2">
+                  <span className="bg-neon-green animate-ping-slow absolute inline-flex h-full w-full rounded-full opacity-75" />
+                  <span className="bg-neon-green relative inline-flex h-2 w-2 rounded-full" />
+                </span>
                 {t("hero.badge", "v2.0 — Now Accepting Clients")}
               </div>
               <h1 className="font-heading mt-4 text-4xl leading-tight font-bold tracking-tight md:text-5xl lg:text-6xl">
@@ -263,7 +267,7 @@ export default async function Home({
               <div className="animate-fade-in-up mt-8 flex flex-col gap-4 delay-300 sm:flex-row">
                 <Link
                   href="/contact"
-                  className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 relative rounded-lg border px-8 py-3.5 text-center font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
+                  className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 animate-glow-pulse relative rounded-lg border px-8 py-3.5 text-center font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
                 >
                   {t("hero.ctaPrimary", "Get a Free Audit")}
                 </Link>
@@ -306,14 +310,7 @@ export default async function Home({
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {stats.map((stat, i) => (
               <ScrollReveal key={stat.label} delay={i * 100}>
-                <div className="text-center">
-                  <div className="text-neon-cyan glow-cyan animate-neon-pulse font-mono text-3xl font-bold">
-                    {stat.value}
-                  </div>
-                  <div className="mt-1 font-mono text-xs tracking-wider text-slate-500 uppercase">
-                    {stat.label}
-                  </div>
-                </div>
+                <StatCounter value={stat.value} label={stat.label} />
               </ScrollReveal>
             ))}
           </div>
@@ -446,7 +443,7 @@ export default async function Home({
         <div className="mx-auto max-w-6xl px-6">
           <ScrollReveal>
             <div className="mx-auto mb-12 max-w-2xl text-center">
-              <p className="text-neon-cyan mb-3 font-mono text-xs font-medium tracking-[0.3em]">
+              <p className="animate-shimmer-text mb-3 font-mono text-xs font-medium tracking-[0.3em]">
                 {t("servicesSection.label", "[ WHAT WE DO ]")}
               </p>
               <h2 className="font-heading text-3xl font-bold text-white md:text-4xl">
@@ -548,7 +545,7 @@ export default async function Home({
         <div className="mx-auto max-w-3xl px-6">
           <ScrollReveal>
             <div className="mb-12 text-center">
-              <p className="text-neon-cyan mb-3 font-mono text-xs font-medium tracking-[0.3em]">
+              <p className="animate-shimmer-text mb-3 font-mono text-xs font-medium tracking-[0.3em]">
                 {t("faq.label", "[ FAQ ]")}
               </p>
               <h2 className="font-heading text-3xl font-bold text-white md:text-4xl">
@@ -588,7 +585,7 @@ export default async function Home({
         <div className="mx-auto max-w-4xl px-6">
           <ScrollReveal>
             <div className="mb-12 text-center">
-              <p className="text-neon-cyan mb-3 font-mono text-xs font-medium tracking-[0.3em]">
+              <p className="animate-shimmer-text mb-3 font-mono text-xs font-medium tracking-[0.3em]">
                 {t("founder.label", "[ ABOUT ]")}
               </p>
               <h2 className="font-heading text-3xl font-bold text-white md:text-4xl">
