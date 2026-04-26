@@ -26,6 +26,15 @@ interface StatusResponse {
   checkedAt: string;
 }
 
+function safeSetupUrl(url: string): string | undefined {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" ? url : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 const STATUS_DOT: Record<IntegrationStatus, string> = {
   configured: "bg-neon-green",
   degraded: "bg-yellow-400",
@@ -182,43 +191,47 @@ export default function IntegrationsPage() {
               {category}
             </h2>
             <div className="divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800">
-              {grouped[category].map((integration) => (
-                <div
-                  key={integration.id}
-                  className="bg-void-light/50 flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:gap-4"
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <span
-                      className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${STATUS_DOT[integration.status]}`}
-                    />
-                    <span className="font-heading truncate font-medium text-white">
-                      {integration.name}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3 pl-5 sm:pl-0">
-                    {integration.message && (
-                      <span className="font-mono text-xs text-slate-500">
-                        {integration.message}
+              {grouped[category].map((integration) => {
+                const connectUrl = integration.setupUrl
+                  ? safeSetupUrl(integration.setupUrl)
+                  : undefined;
+                return (
+                  <div
+                    key={integration.id}
+                    className="bg-void-light/50 flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:gap-4"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <span
+                        className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${STATUS_DOT[integration.status]}`}
+                      />
+                      <span className="font-heading truncate font-medium text-white">
+                        {integration.name}
                       </span>
-                    )}
-                    <span
-                      className={`flex-shrink-0 font-mono text-xs ${STATUS_TEXT[integration.status]}`}
-                    >
-                      {STATUS_LABEL[integration.status]}
-                    </span>
-                    {integration.setupUrl &&
-                      integration.status !== "configured" && (
+                    </div>
+
+                    <div className="flex items-center gap-3 pl-5 sm:pl-0">
+                      {integration.message && (
+                        <span className="font-mono text-xs text-slate-500">
+                          {integration.message}
+                        </span>
+                      )}
+                      <span
+                        className={`flex-shrink-0 font-mono text-xs ${STATUS_TEXT[integration.status]}`}
+                      >
+                        {STATUS_LABEL[integration.status]}
+                      </span>
+                      {connectUrl && integration.status !== "configured" && (
                         <a
-                          href={integration.setupUrl}
+                          href={connectUrl}
                           className="flex-shrink-0 rounded-lg border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300 transition-all hover:border-neon-magenta/50 hover:text-white"
                         >
                           Connect
                         </a>
                       )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
