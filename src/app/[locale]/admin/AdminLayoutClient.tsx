@@ -65,6 +65,7 @@ const adminLinks: AdminLink[] = [
     section: "Marketing",
   },
   // Bottom
+  { href: "/admin/integrations", label: "Integrations", icon: "🔌" },
   { href: "/admin/settings", label: "Settings", icon: "⚙" },
 ];
 

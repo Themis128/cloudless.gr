@@ -92,6 +92,14 @@ const adminCards = [
     render: () => "Dashboard →",
   },
   {
+    title: "Integrations",
+    description: "Live status of all connected external services",
+    icon: "🔌",
+    href: "/admin/integrations",
+    statKey: null,
+    render: () => "View Status →",
+  },
+  {
     title: "Settings",
     description: "Site configuration and preferences",
     icon: "⚙",
