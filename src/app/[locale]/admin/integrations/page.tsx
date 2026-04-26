@@ -79,24 +79,29 @@ export default function IntegrationsPage() {
   const [data, setData] = useState<StatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetchWithAuth("/api/admin/integrations/status");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setData(await res.json());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    load();
-  }, []);
+    let cancelled = false;
+    async function fetchStatus() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetchWithAuth("/api/admin/integrations/status");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!cancelled) setData(await res.json());
+      } catch (err) {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Failed to load");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
   const grouped = data ? groupByCategory(data.integrations) : {};
   const categories = sortedCategories(grouped);
@@ -120,7 +125,7 @@ export default function IntegrationsPage() {
         </div>
         <button
           type="button"
-          onClick={load}
+          onClick={() => setRefreshKey((k) => k + 1)}
           disabled={loading}
           className="mt-2 rounded-lg border border-slate-700 px-4 py-2 font-mono text-xs text-slate-300 transition-all hover:border-slate-600 hover:text-white disabled:opacity-50"
         >
