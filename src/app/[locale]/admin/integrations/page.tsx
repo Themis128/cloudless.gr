@@ -11,7 +11,6 @@ interface IntegrationReport {
   category: string;
   status: IntegrationStatus;
   message?: string;
-  setupUrl?: string;
 }
 
 interface StatusResponse {
@@ -26,11 +25,22 @@ interface StatusResponse {
   checkedAt: string;
 }
 
-function safeSetupUrl(url: string): string | undefined {
-  return typeof url === "string" && url.startsWith("https://")
-    ? url
-    : undefined;
-}
+const SETUP_URLS: Record<string, string> = {
+  cognito: "https://console.aws.amazon.com/cognito",
+  stripe: "https://dashboard.stripe.com/apikeys",
+  hubspot: "https://app.hubspot.com/private-apps",
+  slack: "https://api.slack.com/apps",
+  notion: "https://www.notion.so/my-integrations",
+  google: "https://console.cloud.google.com/iam-admin/serviceaccounts",
+  sentry: "https://sentry.io/settings/auth-tokens/",
+  anthropic: "https://console.anthropic.com/settings/keys",
+  activecampaign: "https://www.activecampaign.com",
+  meta: "https://business.facebook.com/settings/system-users",
+  linkedin: "https://www.linkedin.com/campaignmanager",
+  tiktok: "https://ads.tiktok.com/marketing_api/apps",
+  x: "https://ads.x.com/help",
+  google_ads: "https://ads.google.com/intl/en_us/home/tools/api-center/",
+};
 
 const STATUS_DOT: Record<IntegrationStatus, string> = {
   configured: "bg-neon-green",
@@ -189,9 +199,7 @@ export default function IntegrationsPage() {
             </h2>
             <div className="divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800">
               {grouped[category].map((integration) => {
-                const connectUrl = integration.setupUrl
-                  ? safeSetupUrl(integration.setupUrl)
-                  : undefined;
+                const connectUrl = SETUP_URLS[integration.id];
                 return (
                   <div
                     key={integration.id}
@@ -220,6 +228,8 @@ export default function IntegrationsPage() {
                       {connectUrl && integration.status !== "configured" && (
                         <a
                           href={connectUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="flex-shrink-0 rounded-lg border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300 transition-all hover:border-neon-magenta/50 hover:text-white"
                         >
                           Connect
