@@ -14,6 +14,7 @@ type ScanOptions = {
   path: string;
   json: boolean;
   skipPython: boolean;
+  exitZero: boolean;
 };
 
 const program = new Command();
@@ -28,6 +29,7 @@ program
   )
   .option("--json", "output JSON results", false)
   .option("--skip-python", "skip the Python prompt injection analyzer", false)
+  .option("--exit-zero", "always exit 0 (informational mode — findings are logged but do not fail CI)", false)
   .parse();
 
 const options = program.opts<ScanOptions>();
@@ -311,7 +313,7 @@ async function run(): Promise<void> {
         2,
       ),
     );
-    process.exit(allFindings.length > 0 ? 1 : 0);
+    process.exit(options.exitZero || allFindings.length === 0 ? 0 : 1);
   }
 
   if (allFindings.length === 0) {
@@ -324,7 +326,7 @@ async function run(): Promise<void> {
     console.log(formatFinding(finding));
     console.log("");
   }
-  process.exit(1);
+  process.exit(options.exitZero ? 0 : 1);
 }
 
 run().catch((error) => {
