@@ -32,6 +32,44 @@ export async function isActiveCampaignConfigured(): Promise<boolean> {
   }
 }
 
+export type ACTokenStatus = "valid" | "rejected" | "not_configured" | "error";
+
+/**
+ * Pings the ActiveCampaign API with the configured token.
+ * Returns a fine-grained status so the admin integrations health check can
+ * distinguish an expired/revoked token from a missing one.
+ */
+export async function verifyActiveCampaignToken(): Promise<{
+  status: ACTokenStatus;
+  message?: string;
+}> {
+  let url: string;
+  let token: string;
+  try {
+    const cfg = await getACConfig();
+    url = cfg.url;
+    token = cfg.token;
+  } catch {
+    return { status: "not_configured" };
+  }
+  try {
+    const res = await fetch(`${url}/api/3/contacts?limit=1`, {
+      headers: { "Api-Token": token },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.status === 401 || res.status === 403) {
+      return {
+        status: "rejected",
+        message: `Token rejected (${res.status}) — account may be expired or token rotated.`,
+      };
+    }
+    if (!res.ok) return { status: "error", message: `API returned ${res.status}` };
+    return { status: "valid" };
+  } catch {
+    return { status: "error", message: "Connection failed." };
+  }
+}
+
 // ── Campaigns ────────────────────────────────────────────────────────────────
 
 export interface ACCampaign {
