@@ -48,12 +48,8 @@ export default function Logo({
       className={`inline-flex items-center gap-2 ${className}`}
       aria-label="cloudless.gr"
     >
-      {variant === "wordmark" && (
-        <CloudMark size={s.mark} aria-hidden />
-      )}
-      <span
-        className={`font-heading ${s.text} font-bold tracking-tight`}
-      >
+      {variant === "wordmark" && <CloudMark size={s.mark} aria-hidden />}
+      <span className={`font-heading ${s.text} font-bold tracking-tight`}>
         cloudless<span className="text-neon-cyan">.gr</span>
       </span>
     </span>

@@ -11,7 +11,7 @@ export function isServerRoute(file: string): boolean {
 }
 
 export function hasAuthGuard(contents: string): boolean {
-  return /(auth|authorization|authorize|requireAuth|getServerSession|cognito:groups|protected|withAuth|session)/i.test(contents);
+  return /\b(auth|authorization|authorize|requireAuth|getServerSession|cognito:groups|protected|withAuth|session|verifySlackRequest|verifyRequest|verifySignature|verifySecret|webhookSecret|hmacDigest|stripe-signature|cronAuth)\b/i.test(contents);
 }
 
 export function hasRateLimit(contents: string): boolean {
