@@ -316,8 +316,7 @@ h6 {
     box-shadow: 0 0 0 0 transparent;
   }
   50% {
-    box-shadow: 0 0 22px 5px
-      color-mix(in srgb, var(--accent) 28%, transparent);
+    box-shadow: 0 0 22px 5px color-mix(in srgb, var(--accent) 28%, transparent);
   }
 }
 .animate-glow-pulse {

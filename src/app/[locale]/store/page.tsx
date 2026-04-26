@@ -155,21 +155,19 @@ export default function StorePage() {
           <div className="space-y-4">
             {storeFAQs.map((faq, fi) => (
               <ScrollReveal key={faq.question} delay={fi * 60}>
-              <details
-                className="group bg-void open:border-neon-cyan/30 rounded-xl border border-slate-800 transition-colors"
-              >
-                <summary className="flex cursor-pointer items-center justify-between px-6 py-5 select-none">
-                  <span className="pr-4 text-sm font-semibold text-white">
-                    {faq.question}
-                  </span>
-                  <span className="text-neon-cyan/40 shrink-0 text-lg transition-transform group-open:rotate-45">
-                    +
-                  </span>
-                </summary>
-                <div className="px-6 pb-5 text-sm leading-relaxed text-slate-400">
-                  {faq.answer}
-                </div>
-              </details>
+                <details className="group bg-void open:border-neon-cyan/30 rounded-xl border border-slate-800 transition-colors">
+                  <summary className="flex cursor-pointer items-center justify-between px-6 py-5 select-none">
+                    <span className="pr-4 text-sm font-semibold text-white">
+                      {faq.question}
+                    </span>
+                    <span className="text-neon-cyan/40 shrink-0 text-lg transition-transform group-open:rotate-45">
+                      +
+                    </span>
+                  </summary>
+                  <div className="px-6 pb-5 text-sm leading-relaxed text-slate-400">
+                    {faq.answer}
+                  </div>
+                </details>
               </ScrollReveal>
             ))}
           </div>
