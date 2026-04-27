@@ -105,6 +105,7 @@ export async function POST(request: Request) {
           dealstage: "qualifiedtobuy",
           lead_source: "contact_form",
           description: String(message).slice(0, 500),
+          service_interest: serviceSlug,
         });
         if (dealId && contactId) {
           await associateDealWithContact(dealId, contactId);
