@@ -48,6 +48,7 @@ export default function ChatWidget() {
     setMessages((prev) => {
       const copy = [...prev];
       const last = copy[copy.length - 1];
+      if (!last) return copy;
       copy[copy.length - 1] = { id: last.id, role: "assistant", content };
       return copy;
     });
@@ -57,6 +58,7 @@ export default function ChatWidget() {
     setMessages((prev) => {
       const copy = [...prev];
       const last = copy[copy.length - 1];
+      if (!last) return copy;
       copy[copy.length - 1] = {
         id: last.id,
         role: "assistant",

@@ -84,8 +84,7 @@ export function generateEventId(
   prefix: string,
   ...parts: (string | number)[]
 ): string {
-  const buf = new Uint32Array(1);
-  globalThis.crypto.getRandomValues(buf);
-  const rand = buf[0].toString(36);
+  const buf = globalThis.crypto.getRandomValues(new Uint32Array(1));
+  const rand = (buf[0] ?? 0).toString(36);
   return [prefix, Date.now(), rand, ...parts].filter(Boolean).join("-");
 }
