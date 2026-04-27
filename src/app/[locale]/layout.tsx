@@ -14,6 +14,7 @@ import { CookieConsentProvider } from "@/context/CookieConsentContext";
 import CookieConsent from "@/components/CookieConsent";
 
 const CartSlideOver = dynamic(() => import("@/components/store/CartSlideOver"));
+const ChatWidget = dynamic(() => import("@/components/ChatWidget"));
 import ClientDecorators from "@/components/ClientDecorators";
 
 type Props = {
@@ -42,6 +43,7 @@ export async function generateMetadata({
         en: `${BASE_URL}`,
         el: `${BASE_URL}/el`,
         fr: `${BASE_URL}/fr`,
+        de: `${BASE_URL}/de`,
         "x-default": `${BASE_URL}`,
       },
     },
@@ -69,12 +71,15 @@ export default async function LocaleLayout({ children, params }: Props) {
           <CookieConsentProvider>
             <JsonLd data={getOrganizationSchema()} />
             <Navbar />
-            <main className="flex-1">{children}</main>
+            <main id="main-content" className="flex-1">
+              {children}
+            </main>
             <Footer />
             <CartSlideOver />
             <ServiceWorkerRegistration />
             <ClientDecorators />
             <CookieConsent />
+            <ChatWidget />
           </CookieConsentProvider>
         </CartProvider>
       </AuthProvider>

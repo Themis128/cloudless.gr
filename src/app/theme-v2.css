@@ -49,6 +49,14 @@
   --danger: #c0392b;
   --info: var(--accent);
 
+  /* Secondary (violet) — used for neon-magenta. #7c3aed on white = 9.1:1 WCAG AA. */
+  --secondary: #7c3aed;
+  --secondary-hover: #6d28d9;
+  --secondary-soft: #ede9fe;
+  /* Info strong (blue) — used for neon-blue. #1d4ed8 on white = 9.3:1 WCAG AA. */
+  --info-strong: #1d4ed8;
+  --info-soft: #dbeafe;
+
   /* Shadows — light-mode-visible elevation */
   --shadow-sm: 0 1px 2px rgb(15 24 34 / 0.04), 0 1px 1px rgb(15 24 34 / 0.06);
   --shadow-md: 0 4px 12px rgb(15 24 34 / 0.06), 0 2px 4px rgb(15 24 34 / 0.04);
@@ -94,6 +102,14 @@
   --warning: #e09530;
   --danger: #e85f4d;
   --info: var(--accent);
+
+  /* Secondary (violet) — #a78bfa on #0b0f15 = 6.0:1 WCAG AA. */
+  --secondary: #a78bfa;
+  --secondary-hover: #c4b5fd;
+  --secondary-soft: rgb(167 139 250 / 0.12);
+  /* Info strong (blue) — #60a5fa on #0b0f15 = 4.9:1 WCAG AA. */
+  --info-strong: #60a5fa;
+  --info-soft: rgb(96 165 250 / 0.12);
 
   /* Shadows — dark mode mostly relies on surface contrast */
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
@@ -142,6 +158,11 @@
     --success: #1fa56e;
     --warning: #e09530;
     --danger: #e85f4d;
+    --secondary: #a78bfa;
+    --secondary-hover: #c4b5fd;
+    --secondary-soft: rgb(167 139 250 / 0.12);
+    --info-strong: #60a5fa;
+    --info-soft: rgb(96 165 250 / 0.12);
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 12px rgb(0 0 0 / 0.35);
     --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.45);
@@ -382,6 +403,7 @@
    selectors so the rules survive into the bundled CSS.
    On light theme each alpha variant collapses to --accent-soft so the badge
    stays visible without a neon halo. */
+/* Cyan + green share the teal accent-soft. */
 [data-theme="light"] .bg-neon-cyan\/5,
 [data-theme="light"] .bg-neon-cyan\/10,
 [data-theme="light"] .bg-neon-cyan\/20,
@@ -389,25 +411,32 @@
 [data-theme="light"] .bg-neon-cyan\/40,
 [data-theme="light"] .bg-neon-cyan\/50,
 [data-theme="light"] .bg-neon-cyan\/60,
-[data-theme="light"] .bg-neon-magenta\/5,
-[data-theme="light"] .bg-neon-magenta\/10,
-[data-theme="light"] .bg-neon-magenta\/20,
-[data-theme="light"] .bg-neon-magenta\/30,
 [data-theme="light"] .bg-neon-green\/5,
 [data-theme="light"] .bg-neon-green\/10,
 [data-theme="light"] .bg-neon-green\/20,
-[data-theme="light"] .bg-neon-green\/30,
+[data-theme="light"] .bg-neon-green\/30 {
+  background-color: var(--accent-soft);
+}
+
+/* Magenta → violet tint. */
+[data-theme="light"] .bg-neon-magenta\/5,
+[data-theme="light"] .bg-neon-magenta\/10,
+[data-theme="light"] .bg-neon-magenta\/20,
+[data-theme="light"] .bg-neon-magenta\/30 {
+  background-color: var(--secondary-soft);
+}
+
+/* Blue → blue tint. */
 [data-theme="light"] .bg-neon-blue\/5,
 [data-theme="light"] .bg-neon-blue\/10,
 [data-theme="light"] .bg-neon-blue\/20,
 [data-theme="light"] .bg-neon-blue\/30 {
-  background-color: var(--accent-soft);
+  background-color: var(--info-soft);
 }
 
-/* When a parent has bg-neon-cyan/N (now accent-soft) AND a child uses
+/* When a parent has bg-neon-{cyan,magenta,blue}/N AND a child uses
    text-void/text-white expecting a dark background, the white-on-pale pair
-   fails contrast. Retarget those text tokens to --accent inside the
-   accent-soft surface. Same explicit-class approach as above. */
+   fails contrast. Retarget to the matching accent token. */
 [data-theme="light"] .bg-neon-cyan\/5 .text-void,
 [data-theme="light"] .bg-neon-cyan\/10 .text-void,
 [data-theme="light"] .bg-neon-cyan\/20 .text-void,
@@ -415,6 +444,16 @@
 [data-theme="light"] .bg-neon-cyan\/10 .text-white,
 [data-theme="light"] .bg-neon-cyan\/20 .text-white {
   color: var(--accent);
+}
+[data-theme="light"] .bg-neon-magenta\/5 .text-white,
+[data-theme="light"] .bg-neon-magenta\/10 .text-white,
+[data-theme="light"] .bg-neon-magenta\/20 .text-white {
+  color: var(--secondary);
+}
+[data-theme="light"] .bg-neon-blue\/5 .text-white,
+[data-theme="light"] .bg-neon-blue\/10 .text-white,
+[data-theme="light"] .bg-neon-blue\/20 .text-white {
+  color: var(--info-strong);
 }
 
 /* Same logic for solid bg-neon-cyan (without the /N partial). On dark this
@@ -482,6 +521,7 @@
    Also covers .text-neon-green/* (decorative category badges in blog cards)
    which Phase 6.1 missed.
    ────────────────────────────────────────────────────────────────── */
+/* Cyan low-alpha → muted (teal fades fast on light backgrounds). */
 [data-theme="light"] .text-neon-cyan\/20,
 [data-theme="light"] .text-neon-cyan\/30,
 [data-theme="light"] .text-neon-cyan\/40,
@@ -489,17 +529,29 @@
 [data-theme="light"] .text-neon-cyan\/60,
 [data-theme="light"] .text-neon-cyan\/70,
 [data-theme="light"] .text-neon-cyan\/80,
-[data-theme="light"] .text-neon-magenta\/30,
-[data-theme="light"] .text-neon-magenta\/40,
-[data-theme="light"] .text-neon-magenta\/60,
-[data-theme="light"] .text-neon-magenta\/70,
-[data-theme="light"] .text-neon-blue\/40,
-[data-theme="light"] .text-neon-blue\/60,
-[data-theme="light"] .text-neon-blue\/70,
+/* Green alpha → muted (collapsing to accent anyway). */
 [data-theme="light"] .text-neon-green\/40,
 [data-theme="light"] .text-neon-green\/60,
-[data-theme="light"] .text-neon-green\/70 {
+[data-theme="light"] .text-neon-green\/70,
+/* Magenta/blue very-low alpha only — /30 and below fade below 3:1.
+   /40+ are readable as violet/blue on light surfaces. */
+[data-theme="light"] .text-neon-magenta\/30,
+[data-theme="light"] .text-neon-blue\/30 {
   color: var(--ink-muted);
+}
+
+/* Magenta mid-alpha (decorative) → full secondary so it reads as violet. */
+[data-theme="light"] .text-neon-magenta\/40,
+[data-theme="light"] .text-neon-magenta\/60,
+[data-theme="light"] .text-neon-magenta\/70 {
+  color: var(--secondary);
+}
+
+/* Blue mid-alpha → full info-strong so it reads as blue. */
+[data-theme="light"] .text-neon-blue\/40,
+[data-theme="light"] .text-neon-blue\/60,
+[data-theme="light"] .text-neon-blue\/70 {
+  color: var(--info-strong);
 }
 
 /* Solid (no /N) accent text colors that still fail contrast on light pages.

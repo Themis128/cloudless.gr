@@ -22,9 +22,11 @@ jobs:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
       NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
       NEXT_PUBLIC_HUBSPOT_PORTAL_ID: ${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
-      # Bumped from 1700KB in Phase 6.3 — calm-cloud rebrand added theme-v2.css
-      # (~6KB) plus the explicit alpha-class override list (~12KB on the build).
-      BUNDLE_MAX_KB: "1800"
+      # Budget history:
+      #   1700KB → 1800KB (Phase 6.3): calm-cloud rebrand (theme-v2.css + alpha override list)
+      #   1800KB → 1900KB (portal feature): customer portal flow added /portal/waiting,
+      #     /portal/[token] timeline, admin pending-clients UI, lucide-react icons (~25KB).
+      BUNDLE_MAX_KB: "1900"
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5

@@ -11,9 +11,21 @@ import { getServerLocale } from "@/lib/server-locale";
 import { setRequestLocale } from "next-intl/server";
 import ClientParticleField from "@/components/ClientParticleField";
 import StatCounter from "@/components/StatCounter";
+import SocialLinks from "@/components/SocialLinks";
 
-// ISR: render once per hour, served from CloudFront cache (avoids Lambda cold start on every hit)
-export const revalidate = 3600;
+// Force-dynamic temporarily — turbopack prerender hits a "cannot read length of undefined"
+// inside framework frames during static generation. Switching to dynamic SSR unblocks the
+// build; revisit once the upstream issue is identified.
+// TODO(perf): restore `export const revalidate = 3600;` once prerender works.
+export const dynamic = "force-dynamic";
+
+function stepColorClass(color: string): string {
+  if (color === "cyan")
+    return "bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan";
+  if (color === "magenta")
+    return "bg-neon-magenta/10 border-neon-magenta/20 text-neon-magenta";
+  return "bg-neon-green/10 border-neon-green/20 text-neon-green";
+}
 
 export async function generateMetadata({
   params,
@@ -59,9 +71,9 @@ const terminalLines = [
 
 export default async function Home({
   params,
-}: {
+}: Readonly<{
   params: Promise<{ locale: string }>;
-}) {
+}>) {
   const { locale: localeParam } = await params;
   setRequestLocale(localeParam);
   const locale = await getServerLocale();
@@ -342,16 +354,93 @@ export default async function Home({
         </div>
       </section>
 
+      {/* How it works */}
+      <section className="bg-void-light/50 border-b border-slate-800 py-16 lg:py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <ScrollReveal>
+            <div className="mb-10 text-center">
+              <p className="animate-shimmer-text mb-3 font-mono text-xs font-medium tracking-[0.3em]">
+                {t("process.label", "[ HOW IT WORKS ]")}
+              </p>
+              <h2 className="font-heading text-2xl font-bold text-white md:text-3xl">
+                {t("process.title", "From first call to")}{" "}
+                <span className="text-neon-cyan">
+                  {t("process.titleHighlight", "first results")}
+                </span>{" "}
+                {t("process.titleEnd", "in 14 days")}
+              </h2>
+            </div>
+          </ScrollReveal>
+
+          <div className="relative grid grid-cols-1 gap-6 md:grid-cols-3">
+            {/* Connector line — desktop only */}
+            <div
+              aria-hidden="true"
+              className="absolute top-8 left-[calc(16.67%+1.5rem)] right-[calc(16.67%+1.5rem)] hidden h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent md:block"
+            />
+            {(
+              [
+                {
+                  step: "01",
+                  color: "cyan",
+                  title: t("process.step1Title", "Free Audit"),
+                  desc: t(
+                    "process.step1Desc",
+                    "30-minute call. We review your infrastructure and marketing, identify quick wins, and give you a concrete action plan — no commitment required.",
+                  ),
+                },
+                {
+                  step: "02",
+                  color: "magenta",
+                  title: t("process.step2Title", "Choose your scope"),
+                  desc: t(
+                    "process.step2Desc",
+                    "Pick one service or bundle all four for 30% savings. We align on deliverables, timeline, and what 'done' looks like before any work starts.",
+                  ),
+                },
+                {
+                  step: "03",
+                  color: "green",
+                  title: t("process.step3Title", "Results in 14 days"),
+                  desc: t(
+                    "process.step3Desc",
+                    "We kick off immediately. Measurable progress within two weeks — cost savings, live infrastructure, first campaign data. We keep working until you see it.",
+                  ),
+                },
+              ] as const
+            ).map((item, i) => (
+              <ScrollReveal key={item.step} delay={i * 120}>
+                <div className="bg-void-light/30 rounded-xl border border-slate-800 p-6">
+                  <div
+                    className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg border font-mono text-sm font-bold ${stepColorClass(item.color)}`}
+                  >
+                    {item.step}
+                  </div>
+                  <h3 className="font-heading mb-2 font-semibold text-white">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-slate-400">
+                    {item.desc}
+                  </p>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Founder Credibility Strip */}
-      <section className="bg-void-light/50 border-b border-slate-800 py-12 lg:py-16">
+      <section className="bg-void border-b border-slate-800 py-12 lg:py-16">
         <div className="mx-auto max-w-6xl px-6">
           <ScrollReveal>
             <div className="flex flex-col items-center gap-6 md:flex-row md:gap-10">
-              {/* Avatar */}
-              <div className="bg-neon-cyan/10 border-neon-cyan/20 flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border">
-                <span className="font-heading text-neon-cyan text-xl font-bold">
-                  TB
-                </span>
+              {/* Avatar — swap src for /images/founder.jpg once photo is added */}
+              <div className="from-neon-cyan/30 to-neon-magenta/30 shrink-0 rounded-full bg-gradient-to-br p-0.5">
+                <div className="bg-void-light flex h-16 w-16 items-center justify-center rounded-full">
+                  <span className="font-heading text-neon-cyan text-xl font-bold">
+                    TB
+                  </span>
+                </div>
               </div>
               {/* Copy */}
               <div className="flex-1 text-center md:text-left">
@@ -368,12 +457,22 @@ export default async function Home({
                   )}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-3 md:justify-start">
-                  <span className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px]">
-                    {t("credibility.badgeAws", "AWS Certified")}
-                  </span>
-                  <span className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px]">
-                    {t("credibility.badgeOss", "Open-Source Contributor")}
-                  </span>
+                  <a
+                    href="https://www.credly.com/users/themistoklis-baltzakis"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/20 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors"
+                  >
+                    ↗ {t("credibility.badgeAws", "AWS Certified")}
+                  </a>
+                  <a
+                    href="https://github.com/Themis128"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/20 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors"
+                  >
+                    ↗ {t("credibility.badgeOss", "Open-Source Contributor")}
+                  </a>
                   <span className="bg-neon-magenta/10 border-neon-magenta/20 text-neon-magenta inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px]">
                     {t(
                       "credibility.badgeCapacity",
@@ -383,56 +482,7 @@ export default async function Home({
                 </div>
               </div>
               {/* Links */}
-              <div className="flex shrink-0 items-center gap-2">
-                <a
-                  href="https://www.credly.com/users/themistoklis-baltzakis"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Credly certifications"
-                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-.3 4.8a7.2 7.2 0 110 14.4 7.2 7.2 0 010-14.4zm0 2.4a4.8 4.8 0 100 9.6 4.8 4.8 0 000-9.6zm0 2.4a2.4 2.4 0 110 4.8 2.4 2.4 0 010-4.8z" />
-                  </svg>
-                </a>
-                <a
-                  href="https://github.com/Themis128"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="GitHub"
-                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
-                  </svg>
-                </a>
-                <a
-                  href="https://linkedin.com/in/baltzakis-themis"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="LinkedIn"
-                  className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                  </svg>
-                </a>
-              </div>
+              <SocialLinks className="shrink-0" />
             </div>
           </ScrollReveal>
         </div>
@@ -562,13 +612,21 @@ export default async function Home({
               <ScrollReveal key={i} delay={i * 80}>
                 <details className="group bg-void hover:border-neon-cyan/30 open:border-neon-cyan/30 rounded-xl border border-slate-800 transition-all duration-300 open:shadow-[0_0_15px_rgba(0,255,245,0.05)]">
                   <summary className="group-open:text-neon-cyan flex cursor-pointer list-none items-center justify-between p-5 font-mono text-sm font-semibold text-white transition-colors [&::-webkit-details-marker]:hidden">
-                    <span className="flex items-center gap-3">
-                      <span className="text-neon-cyan/40 text-xs">▸</span>
-                      {faq.question}
-                    </span>
-                    <span className="text-neon-cyan/40 text-xs transition-transform duration-200 group-open:rotate-90">
-                      ▸
-                    </span>
+                    <span>{faq.question}</span>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      className="text-neon-cyan/60 ml-4 shrink-0 transition-transform duration-200 group-open:rotate-90"
+                    >
+                      <path d="M5 2l5 5-5 5" />
+                    </svg>
                   </summary>
                   <div className="border-t border-slate-800 px-5 pt-4 pb-5 text-sm leading-relaxed text-slate-400">
                     {faq.answer}
@@ -623,78 +681,10 @@ export default async function Home({
                   </p>
 
                   {/* Social links */}
-                  <div className="mt-6 flex items-center justify-center gap-3 md:justify-start">
-                    <a
-                      href="https://linkedin.com/in/baltzakis-themis"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="LinkedIn"
-                      className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
-                    >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                      </svg>
-                    </a>
-                    <a
-                      href="https://github.com/Themis128"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="GitHub"
-                      className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
-                    >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
-                      </svg>
-                    </a>
-                    <a
-                      href="https://www.credly.com/users/themistoklis-baltzakis"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="Credly certifications"
-                      className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
-                    >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-.3 4.8a7.2 7.2 0 110 14.4 7.2 7.2 0 010-14.4zm0 2.4a4.8 4.8 0 100 9.6 4.8 4.8 0 000-9.6zm0 2.4a2.4 2.4 0 110 4.8 2.4 2.4 0 010-4.8z" />
-                      </svg>
-                    </a>
-                    <a
-                      href="https://www.baltzakisthemis.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="Portfolio website"
-                      className="bg-void/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors"
-                    >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M2 12h20" />
-                        <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
-                      </svg>
-                    </a>
-                  </div>
+                  <SocialLinks
+                    size="md"
+                    className="mt-6 justify-center md:justify-start"
+                  />
                 </div>
               </div>
             </div>
