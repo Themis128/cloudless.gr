@@ -829,6 +829,140 @@ export default function ClientPortalsPage() {
           })}
         </div>
       )}
+
+      {/* In-app help — how the portal flow works */}
+      <details className="mt-12 group rounded-xl border border-slate-800 bg-void-light/20 open:border-neon-cyan/30">
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 text-sm font-semibold text-white [&::-webkit-details-marker]:hidden">
+          <span className="bg-neon-cyan/15 border-neon-cyan/30 flex h-7 w-7 items-center justify-center rounded-full border text-base">
+            ?
+          </span>
+          <span className="font-mono">How the portal flow works</span>
+          <svg
+            className="ml-auto h-4 w-4 text-slate-500 transition-transform group-open:rotate-90"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </summary>
+        <div className="border-t border-slate-800 px-5 py-5 space-y-4 text-sm leading-relaxed text-slate-300">
+          <div>
+            <p className="font-mono text-xs tracking-widest text-neon-cyan uppercase mb-2">
+              The flow, end-to-end
+            </p>
+            <ol className="ml-5 list-decimal space-y-2 text-slate-400">
+              <li>
+                Client clicks a service or bundle CTA on{" "}
+                <code className="rounded bg-void px-1 text-neon-cyan">
+                  /services
+                </code>{" "}
+                — they get sent to{" "}
+                <code className="rounded bg-void px-1 text-neon-cyan">
+                  /auth/signup?plan=...
+                </code>
+              </li>
+              <li>
+                Cognito sign-up + email verification → client lands in{" "}
+                <code className="rounded bg-void px-1 text-neon-cyan">
+                  /portal/waiting
+                </code>
+              </li>
+              <li>
+                Waiting room creates a pending entry. <strong>You</strong> get a
+                Slack ping +{" "}
+                <code className="rounded bg-void px-1 text-neon-cyan">
+                  tbaltzakis@cloudless.gr
+                </code>{" "}
+                email with the client&rsquo;s name, email, and plan.
+              </li>
+              <li>
+                You see them in the &ldquo;
+                <span className="text-yellow-400">⏳ N clients waiting</span>
+                &rdquo; section above. One click on{" "}
+                <span className="text-neon-green">Approve & Create Portal</span>{" "}
+                creates the portal with 6 default steps and emails the client a
+                link to{" "}
+                <code className="rounded bg-void px-1 text-neon-cyan">
+                  /portal/[token]
+                </code>{" "}
+                from{" "}
+                <code className="rounded bg-void px-1 text-neon-cyan">
+                  noreply@cloudless.gr
+                </code>
+                .
+              </li>
+              <li>
+                Manage the project from the expanded portal card below — set
+                step statuses (pending → in-progress → completed), post comments
+                that appear in the client&rsquo;s timeline, add custom steps if
+                needed.
+              </li>
+            </ol>
+          </div>
+
+          <div>
+            <p className="font-mono text-xs tracking-widest text-neon-cyan uppercase mb-2">
+              Default project steps
+            </p>
+            <p className="text-slate-400">
+              Free Audit → Proposal & Scope → Setup & Kickoff → Implementation →
+              Review & Feedback → Delivery & Handoff. You can rename, reorder
+              (delete + re-add), or add custom steps per portal.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-mono text-xs tracking-widest text-neon-cyan uppercase mb-2">
+              What the client sees
+            </p>
+            <ul className="ml-5 list-disc space-y-1 text-slate-400">
+              <li>
+                Visual project timeline (horizontal on desktop, vertical on
+                mobile)
+              </li>
+              <li>
+                Per-step status indicator and your comment thread per step
+              </li>
+              <li>
+                Linked Stripe subscriptions and paid invoices (if their email is
+                in Stripe)
+              </li>
+              <li>
+                Live updates — they don&rsquo;t need to refresh; their portal
+                polls for changes
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="font-mono text-xs tracking-widest text-neon-cyan uppercase mb-2">
+              Storage and security
+            </p>
+            <p className="text-slate-400">
+              Pending clients live in SSM at{" "}
+              <code className="rounded bg-void px-1 text-neon-cyan">
+                /cloudless/PENDING_CLIENTS_JSON
+              </code>
+              ; portals at{" "}
+              <code className="rounded bg-void px-1 text-neon-cyan">
+                /cloudless/CLIENT_PORTALS_JSON
+              </code>
+              . The portal token is a UUID v4 (
+              <code className="rounded bg-void px-1 text-neon-cyan">
+                crypto.randomUUID
+              </code>
+              ) — anyone with the link can view that client&rsquo;s portal, so
+              share it via email only. Use Revoke to invalidate immediately.
+            </p>
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
