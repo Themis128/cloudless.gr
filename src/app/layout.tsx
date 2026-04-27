@@ -85,6 +85,9 @@ export default async function RootLayout({
       className={`${instrumentSans.variable} ${workSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        <a href="#main-content" className="skip-nav">
+          Skip to content
+        </a>
         {META_PIXEL_ID ? (
           <>
             <Script id="meta-pixel-init" strategy="afterInteractive">
