@@ -69,6 +69,16 @@ export async function POST(request: Request) {
       fromLabel: "Cloudless Contact Form",
     });
 
+    // Map form display strings to HubSpot service_interest dropdown values
+    const SERVICE_SLUG: Record<string, string> = {
+      "Cloud Architecture & Migration": "cloud-architecture",
+      "Serverless Development": "serverless",
+      "Data Analytics & Dashboards": "analytics",
+      "AI & Digital Marketing": "digital-marketing",
+      "Full-Stack Growth Engine (Bundle)": "full-bundle",
+    };
+    const serviceSlug = service ? (SERVICE_SLUG[service] ?? undefined) : undefined;
+
     const nameParts = String(name).trim().split(" ");
     Promise.allSettled([
       slackContactNotify({ name, email, company, service, message }),
@@ -78,7 +88,7 @@ export async function POST(request: Request) {
           firstname: nameParts[0] ?? "",
           lastname: nameParts.slice(1).join(" "),
           company: company || undefined,
-          service_interest: service || undefined,
+          service_interest: serviceSlug,
           message: String(message).slice(0, 500),
         });
         const dealId = await createDeal({

@@ -6,6 +6,7 @@ import { themeForRoute } from "@/components/ThemeProvider";
 import "./globals.css";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
+const HS_PORTAL_ID = process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ?? "";
 
 const instrumentSans = Instrument_Sans({
   variable: "--font-instrument-sans",
@@ -112,6 +113,13 @@ export default async function RootLayout({
               />
             </noscript>
           </>
+        ) : null}
+        {HS_PORTAL_ID ? (
+          <Script
+            id="hs-script-loader"
+            src={`//js-eu1.hs-scripts.com/${HS_PORTAL_ID}.js`}
+            strategy="afterInteractive"
+          />
         ) : null}
         {children}
       </body>
