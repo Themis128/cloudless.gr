@@ -822,7 +822,15 @@ export default async function ServicesPage() {
               </p>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-800">
+            <div
+              className="overflow-x-auto rounded-xl border border-slate-800"
+              tabIndex={0}
+              role="region"
+              aria-label={t(
+                "servicesPage.compareTableLabel",
+                "Service comparison table",
+              )}
+            >
               <table className="w-full min-w-[540px] text-left">
                 <thead>
                   <tr className="border-b border-slate-800 bg-void-light/30">
