@@ -43,6 +43,7 @@ interface AppConfig {
   // ActiveCampaign
   ACTIVECAMPAIGN_API_URL: string;
   ACTIVECAMPAIGN_API_TOKEN: string;
+  ACTIVECAMPAIGN_NEWSLETTER_LIST_ID: string;
   // Google Ads
   GOOGLE_ADS_DEVELOPER_TOKEN: string;
   GOOGLE_ADS_CUSTOMER_ID: string;
@@ -127,6 +128,8 @@ function buildConfigFromEnv(): AppConfig {
     SENTRY_PROJECT: process.env.SENTRY_PROJECT || "cloudless-gr",
     ACTIVECAMPAIGN_API_URL: process.env.ACTIVECAMPAIGN_API_URL || "",
     ACTIVECAMPAIGN_API_TOKEN: process.env.ACTIVECAMPAIGN_API_TOKEN || "",
+    ACTIVECAMPAIGN_NEWSLETTER_LIST_ID:
+      process.env.ACTIVECAMPAIGN_NEWSLETTER_LIST_ID || "",
     GOOGLE_ADS_DEVELOPER_TOKEN: process.env.GOOGLE_ADS_DEVELOPER_TOKEN || "",
     GOOGLE_ADS_CUSTOMER_ID: process.env.GOOGLE_ADS_CUSTOMER_ID || "",
     LINKEDIN_CLIENT_ID: process.env.LINKEDIN_CLIENT_ID || "",
@@ -239,6 +242,8 @@ export async function getConfig(): Promise<AppConfig> {
     SENTRY_PROJECT: params.get("SENTRY_PROJECT") ?? "cloudless-gr",
     ACTIVECAMPAIGN_API_URL: params.get("ACTIVECAMPAIGN_API_URL") ?? "",
     ACTIVECAMPAIGN_API_TOKEN: params.get("ACTIVECAMPAIGN_API_TOKEN") ?? "",
+    ACTIVECAMPAIGN_NEWSLETTER_LIST_ID:
+      params.get("ACTIVECAMPAIGN_NEWSLETTER_LIST_ID") ?? "",
     GOOGLE_ADS_DEVELOPER_TOKEN: params.get("GOOGLE_ADS_DEVELOPER_TOKEN") ?? "",
     GOOGLE_ADS_CUSTOMER_ID: params.get("GOOGLE_ADS_CUSTOMER_ID") ?? "",
     LINKEDIN_CLIENT_ID: params.get("LINKEDIN_CLIENT_ID") ?? "",

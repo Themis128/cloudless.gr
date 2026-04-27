@@ -184,6 +184,75 @@ describe("activecampaign.ts", () => {
     });
   });
 
+  // ── addContactToList ────────────────────────────────────────────────────────
+
+  describe("addContactToList", () => {
+    it("syncs the contact and links it to the list with status=1", async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ contact: { id: "ac-99" } }),
+        })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+      const { addContactToList } = await import("@/lib/activecampaign");
+      const id = await addContactToList("hello@cloudless.gr", "5", {
+        firstName: "Hello",
+      });
+
+      expect(id).toBe("ac-99");
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const [syncUrl, syncOpts] = mockFetch.mock.calls[0];
+      expect(syncUrl).toContain("/api/3/contact/sync");
+      expect(JSON.parse(syncOpts.body)).toEqual({
+        contact: {
+          email: "hello@cloudless.gr",
+          firstName: "Hello",
+          lastName: "",
+        },
+      });
+      const [listUrl, listOpts] = mockFetch.mock.calls[1];
+      expect(listUrl).toContain("/api/3/contactLists");
+      expect(JSON.parse(listOpts.body)).toEqual({
+        contactList: { list: "5", contact: "ac-99", status: 1 },
+      });
+    });
+
+    it("returns null when contact/sync fails", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 422,
+        text: async () => "validation error",
+      });
+      const { addContactToList } = await import("@/lib/activecampaign");
+      const id = await addContactToList("bad@cloudless.gr", "5");
+      expect(id).toBeNull();
+      expect(mockFetch).toHaveBeenCalledTimes(1); // didn't reach contactLists
+    });
+
+    it("returns null when contactLists fails after contact sync", async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ contact: { id: "ac-100" } }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          text: async () => "ac down",
+        });
+      const { addContactToList } = await import("@/lib/activecampaign");
+      const id = await addContactToList("retry@cloudless.gr", "5");
+      expect(id).toBeNull();
+    });
+
+    it("returns null when network fetch throws", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("ENETUNREACH"));
+      const { addContactToList } = await import("@/lib/activecampaign");
+      const id = await addContactToList("oops@cloudless.gr", "5");
+      expect(id).toBeNull();
+    });
+  });
+
   // ── getEmailStats ────────────────────────────────────────────────────────────
 
   describe("getEmailStats", () => {

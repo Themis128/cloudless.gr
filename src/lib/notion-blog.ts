@@ -52,6 +52,10 @@ export interface NotionPost {
   readTime: string;
   seoTitle?: string;
   seoDescription?: string;
+  /** Editorial workflow state — drives the weekly publisher cron. */
+  status: "Draft" | "Approved" | "Published" | "";
+  /** Provenance of the post — "AI" for cron-generated drafts, "Human" otherwise. */
+  generatedBy: "AI" | "Human" | "";
 }
 
 export type NotionBlock = Record<string, unknown>;
@@ -86,9 +90,15 @@ function mapPage(page: any): NotionPost {
       p["Cover Image"]?.url ??
       page.cover?.external?.url ??
       page.cover?.file?.url,
-    readTime: extractText(p["Read Time"]?.rich_text) || "5 min read",
+    readTime:
+      extractText(p["Read Time"]?.rich_text) ||
+      extractText(p.ReadTime?.rich_text) ||
+      "5 min read",
     seoTitle: extractText(p["SEO Title"]?.rich_text) || undefined,
     seoDescription: extractText(p["SEO Description"]?.rich_text) || undefined,
+    status: (p.Status?.select?.name ?? "") as NotionPost["status"],
+    generatedBy: (p.GeneratedBy?.select?.name ??
+      "") as NotionPost["generatedBy"],
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

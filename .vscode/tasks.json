@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run MCP security scan",
+      "type": "shell",
+      "command": "npm install && npm run scan -- --path 'src/**/*.{ts,tsx,js,jsx,py,md}'",
+      "options": {
+        "cwd": "${workspaceFolder}/tools/mcp-security-scanner"
+      },
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

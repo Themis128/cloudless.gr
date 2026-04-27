@@ -29,6 +29,8 @@
     "devcontainer:stop": "bash scripts/devcontainer-stop.sh",
     "notion:test": "tsx --tsconfig scripts/tsconfig.json scripts/notion-test.ts",
     "gsc:sync": "tsx --tsconfig scripts/tsconfig.json scripts/weekly-gsc-sync.ts",
+    "newsletter:draft": "tsx --tsconfig scripts/tsconfig.json scripts/generate-weekly-article.ts",
+    "newsletter:send": "tsx --tsconfig scripts/tsconfig.json scripts/publish-and-send-newsletter.ts",
     "mcp-security-scan": "cd tools/mcp-security-scanner && npm install && npm run scan -- --path \"../../src/**/*.{ts,tsx,js,jsx,py,md}\"",
     "mcp-security-scan:server": "cd tools/mcp-security-scanner && npm install && npm run scan -- --path \"../../src/{app/api,lib}/**/*.{ts,tsx,js,jsx,py,md}\""
   },

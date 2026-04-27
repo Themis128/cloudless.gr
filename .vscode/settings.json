@@ -1,0 +1,9 @@
+{
+  // MCP Manager Bridge — connects VS Code to the MCP Manager desktop app.
+  // Both the extension and MCP Manager run inside WSL, so localhost:4040
+  // is reachable directly. See https://github.com/unbywyd/tscodex-mcp-manager-app
+  "mcpBridge.port": 4040,
+  "mcpBridge.autoConnect": true,
+  "mcpBridge.reconnectInterval": 5000,
+  "mcpBridge.heartbeatInterval": 30000
+}

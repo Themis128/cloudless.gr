@@ -159,6 +159,60 @@ export interface ACContact {
   udate: string;
 }
 
+/**
+ * Idempotently upsert a contact and subscribe them to a list.
+ *
+ * AC's `contact/sync` creates or updates by email; `contactLists` with
+ * status=1 marks them subscribed (status=2 = unsubscribed). Calling this
+ * twice for the same email + list is a no-op.
+ *
+ * Returns the AC contact id on success, null on any failure (logged).
+ */
+export async function addContactToList(
+  email: string,
+  listId: string,
+  fields?: { firstName?: string; lastName?: string },
+): Promise<string | null> {
+  try {
+    const syncRes = await acFetch("/contact/sync", {
+      method: "POST",
+      body: JSON.stringify({
+        contact: {
+          email,
+          firstName: fields?.firstName ?? "",
+          lastName: fields?.lastName ?? "",
+        },
+      }),
+    });
+    if (!syncRes.ok) {
+      console.error(
+        `[AC] contact/sync failed: ${syncRes.status} ${await syncRes.text()}`,
+      );
+      return null;
+    }
+    const syncData = await syncRes.json();
+    const contactId: string | undefined = syncData.contact?.id;
+    if (!contactId) return null;
+
+    const listRes = await acFetch("/contactLists", {
+      method: "POST",
+      body: JSON.stringify({
+        contactList: { list: listId, contact: contactId, status: 1 },
+      }),
+    });
+    if (!listRes.ok) {
+      console.error(
+        `[AC] contactLists failed: ${listRes.status} ${await listRes.text()}`,
+      );
+      return null;
+    }
+    return contactId;
+  } catch (err) {
+    console.error("[AC] addContactToList error:", err);
+    return null;
+  }
+}
+
 export async function listACContacts(limit = 20): Promise<ACContact[]> {
   try {
     const res = await acFetch(`/contacts?limit=${limit}&orders[cdate]=DESC`);
