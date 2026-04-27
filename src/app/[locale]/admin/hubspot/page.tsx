@@ -109,7 +109,7 @@ export default function HubSpotOverviewPage() {
             (c) => c.properties.hs_lead_status === "NEW",
           ).length,
           qualified: contacts.filter(
-            (c) => c.properties.hs_lead_status === "QUALIFIED",
+            (c) => c.properties.hs_lead_status === "OPEN_DEAL",
           ).length,
           recent: contacts
             .slice()
@@ -223,7 +223,7 @@ export default function HubSpotOverviewPage() {
               color="text-neon-cyan"
             />
             <StatCard
-              label="Qualified"
+              label="Open Deal"
               value={loading ? "…" : stats.contacts.qualified}
               color="text-neon-magenta"
             />

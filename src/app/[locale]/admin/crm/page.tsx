@@ -18,8 +18,11 @@ const leadStatusClasses: Record<string, string> = {
   NEW: "text-neon-cyan bg-neon-cyan/10",
   OPEN: "text-neon-green bg-neon-green/10",
   IN_PROGRESS: "text-yellow-400 bg-yellow-400/10",
-  QUALIFIED: "text-neon-magenta bg-neon-magenta/10",
+  OPEN_DEAL: "text-neon-magenta bg-neon-magenta/10",
   UNQUALIFIED: "text-slate-400 bg-slate-800/50",
+  ATTEMPTED_TO_CONTACT: "text-orange-400 bg-orange-400/10",
+  CONNECTED: "text-blue-400 bg-blue-400/10",
+  BAD_TIMING: "text-slate-500 bg-slate-700/30",
 };
 
 export default function AdminCRMPage() {
@@ -104,12 +107,12 @@ export default function AdminCRMPage() {
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
-          <p className="font-mono text-xs text-slate-500">Qualified</p>
+          <p className="font-mono text-xs text-slate-500">Open Deal</p>
           <p className="font-heading text-neon-magenta mt-1 text-2xl font-bold">
             {loading
               ? "…"
               : contacts.filter(
-                  (c) => c.properties.hs_lead_status === "QUALIFIED",
+                  (c) => c.properties.hs_lead_status === "OPEN_DEAL",
                 ).length}
           </p>
         </div>
