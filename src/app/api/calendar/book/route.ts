@@ -7,6 +7,7 @@ import {
   upsertContact,
   createDeal,
   associateDealWithContact,
+  createContactNote,
 } from "@/lib/hubspot";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
@@ -84,6 +85,13 @@ export async function POST(request: Request) {
           lastname: rest.join(" "),
           lead_source: "calendar_booking",
         });
+        if (contactId) {
+          const noteLines = [
+            `Consultation booked: ${new Date(start).toLocaleString("en-IE")}`,
+            ...(notes ? [`Notes: ${notes}`] : []),
+          ];
+          await createContactNote(contactId, noteLines.join("\n"));
+        }
         const dealId = await createDeal({
           dealname: `Consultation – ${name} (${new Date(start).toLocaleDateString("en-IE")})`,
           dealstage: "appointmentscheduled",

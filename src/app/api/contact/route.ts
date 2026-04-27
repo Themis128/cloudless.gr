@@ -7,6 +7,7 @@ import {
   upsertContact,
   createDeal,
   associateDealWithContact,
+  createContactNote,
 } from "@/lib/hubspot";
 import { saveSubmission } from "@/lib/notion-forms";
 import { trackEvent } from "@/lib/notion-analytics";
@@ -91,6 +92,14 @@ export async function POST(request: Request) {
           service_interest: serviceSlug,
           message: String(message).slice(0, 500),
         });
+        if (contactId) {
+          const noteLines = [
+            `Service interest: ${service || "General inquiry"}`,
+            `Message: ${String(message).slice(0, 500)}`,
+            ...(company ? [`Company: ${company}`] : []),
+          ];
+          await createContactNote(contactId, noteLines.join("\n"));
+        }
         const dealId = await createDeal({
           dealname: `Lead – ${String(name).slice(0, 80)} (${service || "General"})`,
           dealstage: "qualifiedtobuy",
