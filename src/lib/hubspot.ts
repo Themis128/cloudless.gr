@@ -513,6 +513,41 @@ export async function createNote(
 }
 
 /**
+ * Create a note on a contact's timeline.
+ */
+export async function createContactNote(
+  contactId: string,
+  body: string,
+): Promise<{ id: string } | null> {
+  try {
+    const res = await hubspotFetch("/crm/v3/objects/notes", {
+      method: "POST",
+      body: JSON.stringify({
+        properties: {
+          hs_note_body: body,
+          hs_timestamp: new Date().toISOString(),
+        },
+        associations: [
+          {
+            to: { id: contactId },
+            types: [
+              {
+                associationCategory: "HUBSPOT_DEFINED",
+                associationTypeId: 202,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * List notes for a deal.
  */
 export async function listNotes(dealId: string): Promise<unknown[]> {
