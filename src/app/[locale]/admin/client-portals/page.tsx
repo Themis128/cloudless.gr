@@ -22,10 +22,10 @@ const STEP_STATUS_OPTIONS: {
 function StepManager({
   portal,
   onUpdate,
-}: {
+}: Readonly<{
   portal: ClientPortal;
   onUpdate: () => void;
-}) {
+}>) {
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
   const [commentAuthor, setCommentAuthor] = useState("Cloudless Team");
   const [submitting, setSubmitting] = useState<string | null>(null);
@@ -129,10 +129,14 @@ function StepManager({
     <div className="mt-4 space-y-3">
       {/* Author name (shared across step comments) */}
       <div className="flex items-center gap-2">
-        <label className="font-mono text-xs text-slate-500 shrink-0">
+        <label
+          htmlFor="portal-comment-author"
+          className="font-mono text-xs text-slate-500 shrink-0"
+        >
           Comment as:
         </label>
         <input
+          id="portal-comment-author"
           type="text"
           value={commentAuthor}
           onChange={(e) => setCommentAuthor(e.target.value)}
@@ -154,8 +158,17 @@ function StepManager({
           >
             {/* Step header */}
             <div
+              role="button"
+              tabIndex={0}
+              aria-expanded={isOpen}
               className="flex cursor-pointer items-center gap-3 px-4 py-3"
               onClick={() => setExpanded(isOpen ? null : step.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setExpanded(isOpen ? null : step.id);
+                }
+              }}
             >
               <span className="font-mono text-xs text-slate-600 w-5 shrink-0">
                 {String(idx + 1).padStart(2, "0")}
@@ -187,7 +200,7 @@ function StepManager({
               {step.comments.length > 0 && (
                 <span className="font-mono text-[10px] text-slate-500">
                   {step.comments.length} comment
-                  {step.comments.length !== 1 ? "s" : ""}
+                  {step.comments.length === 1 ? "" : "s"}
                 </span>
               )}
 
@@ -349,7 +362,7 @@ function StepManager({
   );
 }
 
-function PendingClients({ onApproved }: { onApproved: () => void }) {
+function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
   const [clients, setClients] = useState<PendingClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
@@ -436,7 +449,7 @@ function PendingClients({ onApproved }: { onApproved: () => void }) {
         </span>
         <div>
           <h2 className="font-heading text-base font-semibold text-yellow-200">
-            {clients.length} client{clients.length !== 1 ? "s" : ""} waiting for
+            {clients.length} client{clients.length === 1 ? "" : "s"} waiting for
             portal access
           </h2>
           <p className="font-mono text-xs text-yellow-700">
@@ -592,7 +605,7 @@ export default function ClientPortalsPage() {
   }
 
   function copyLink(token: string) {
-    const baseUrl = window.location.origin;
+    const baseUrl = globalThis.location.origin;
     navigator.clipboard.writeText(`${baseUrl}/portal/${token}`);
     setCopied(token);
     setTimeout(() => setCopied(null), 2000);
@@ -632,10 +645,14 @@ export default function ClientPortalsPage() {
         <form onSubmit={create} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="font-mono mb-1 block text-xs text-slate-500">
+              <label
+                htmlFor="cp-label"
+                className="font-mono mb-1 block text-xs text-slate-500"
+              >
                 Label
               </label>
               <input
+                id="cp-label"
                 type="text"
                 value={form.label}
                 onChange={(e) =>
@@ -646,10 +663,14 @@ export default function ClientPortalsPage() {
               />
             </div>
             <div>
-              <label className="font-mono mb-1 block text-xs text-slate-500">
+              <label
+                htmlFor="cp-client-email"
+                className="font-mono mb-1 block text-xs text-slate-500"
+              >
                 Client Email
               </label>
               <input
+                id="cp-client-email"
                 type="email"
                 value={form.clientEmail}
                 onChange={(e) =>
@@ -660,10 +681,14 @@ export default function ClientPortalsPage() {
               />
             </div>
             <div>
-              <label className="font-mono mb-1 block text-xs text-slate-500">
+              <label
+                htmlFor="cp-client-name"
+                className="font-mono mb-1 block text-xs text-slate-500"
+              >
                 Client Name (optional)
               </label>
               <input
+                id="cp-client-name"
                 type="text"
                 value={form.clientName}
                 onChange={(e) =>
@@ -699,9 +724,9 @@ export default function ClientPortalsPage() {
 
       {loading && (
         <div className="space-y-3">
-          {[...Array(3)].map((_, i) => (
+          {["cp-skel-1", "cp-skel-2", "cp-skel-3"].map((k) => (
             <div
-              key={i}
+              key={k}
               className="h-20 animate-pulse rounded-xl border border-slate-800 bg-void-light/30"
             />
           ))}
@@ -737,8 +762,17 @@ export default function ClientPortalsPage() {
               >
                 {/* Portal header */}
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isOpen}
                   className="flex cursor-pointer flex-wrap items-start justify-between gap-3 p-4"
                   onClick={() => setExpanded(isOpen ? null : portal.token)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setExpanded(isOpen ? null : portal.token);
+                    }
+                  }}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -885,7 +919,9 @@ export default function ClientPortalsPage() {
                 You see them in the &ldquo;
                 <span className="text-yellow-400">⏳ N clients waiting</span>
                 &rdquo; section above. One click on{" "}
-                <span className="text-neon-green">Approve & Create Portal</span>{" "}
+                <span className="text-neon-green">
+                  Approve & Create Portal
+                </span>{" "}
                 creates the portal with 6 default steps and emails the client a
                 link to{" "}
                 <code className="rounded bg-void px-1 text-neon-cyan">

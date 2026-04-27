@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import type { Workspace } from "@/app/api/admin/workspaces/route";
@@ -25,7 +26,9 @@ const WorkspaceContext = createContext<WorkspaceContextValue>({
   setWorkspaces: () => {},
 });
 
-export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
+export function WorkspaceProvider({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   const [workspaces, setWorkspacesState] = useState<Workspace[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
 
@@ -46,7 +49,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       // Auto-select first if nothing selected yet
       if (!currentId && ws.length > 0) {
         const stored = localStorage.getItem(LS_KEY);
-        const valid = ws.find((w) => w.id === stored) ? stored : ws[0].id;
+        const valid = ws.some((w) => w.id === stored) ? stored : ws[0].id;
         if (valid) {
           setCurrentId(valid);
           localStorage.setItem(LS_KEY, valid);
@@ -59,10 +62,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const current =
     workspaces.find((w) => w.id === currentId) ?? workspaces[0] ?? null;
 
+  const value = useMemo(
+    () => ({ workspaces, current, switchTo, setWorkspaces }),
+    [workspaces, current, switchTo, setWorkspaces],
+  );
+
   return (
-    <WorkspaceContext.Provider
-      value={{ workspaces, current, switchTo, setWorkspaces }}
-    >
+    <WorkspaceContext.Provider value={value}>
       {children}
     </WorkspaceContext.Provider>
   );

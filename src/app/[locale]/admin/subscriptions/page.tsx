@@ -214,9 +214,9 @@ export default function SubscriptionsPage() {
 
       {loading && (
         <div className="space-y-3">
-          {[...Array(4)].map((_, i) => (
+          {["sub-1", "sub-2", "sub-3", "sub-4"].map((k) => (
             <div
-              key={i}
+              key={k}
               className="h-20 animate-pulse rounded-xl border border-slate-800 bg-void-light/30"
             />
           ))}

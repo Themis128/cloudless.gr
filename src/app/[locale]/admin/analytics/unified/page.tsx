@@ -44,12 +44,12 @@ function KpiCard({
   value,
   sub,
   color,
-}: {
+}: Readonly<{
   label: string;
   value: string;
   sub?: string;
   color: string;
-}) {
+}>) {
   return (
     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
       <div className={`font-mono text-2xl font-bold ${color}`}>{value}</div>
@@ -67,11 +67,11 @@ function SectionHeader({
   title,
   icon,
   href,
-}: {
+}: Readonly<{
   title: string;
   icon: string;
   href: string;
-}) {
+}>) {
   return (
     <div className="mb-3 flex items-center justify-between">
       <h2 className="font-heading text-sm font-semibold uppercase tracking-widest text-slate-500">
@@ -87,7 +87,7 @@ function SectionHeader({
   );
 }
 
-function EmptyState({ label }: { label: string }) {
+function EmptyState({ label }: Readonly<{ label: string }>) {
   return (
     <div className="bg-void-light/30 rounded-xl border border-slate-800 px-5 py-6 font-mono text-xs text-slate-600">
       {label} not configured

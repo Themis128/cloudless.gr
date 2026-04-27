@@ -34,7 +34,7 @@ const POLL_INTERVAL_MS = 30_000;
  * The 3-step system indicator — mirrors the services-page "How it works" so
  * the client sees consistent branding from purchase to portal access.
  */
-function SystemIndicator({ activeStep }: { activeStep: 1 | 2 | 3 }) {
+function SystemIndicator({ activeStep }: Readonly<{ activeStep: 1 | 2 | 3 }>) {
   const steps = [
     { num: "01", label: "Order received", color: "neon-cyan" },
     { num: "02", label: "Portal setup", color: "neon-magenta" },
@@ -49,16 +49,12 @@ function SystemIndicator({ activeStep }: { activeStep: 1 | 2 | 3 }) {
           const stepIndex = i + 1;
           const isComplete = stepIndex < activeStep;
           const isActive = stepIndex === activeStep;
-          const colorRing = isComplete
-            ? "border-neon-green ring-neon-green/30"
-            : isActive
-              ? `border-${s.color} ring-${s.color}/30`
-              : "border-slate-700 ring-transparent";
-          const colorText = isComplete
-            ? "text-neon-green"
-            : isActive
-              ? `text-${s.color}`
-              : "text-slate-500";
+          let colorRing = "border-slate-700 ring-transparent";
+          if (isComplete) colorRing = "border-neon-green ring-neon-green/30";
+          else if (isActive) colorRing = `border-${s.color} ring-${s.color}/30`;
+          let colorText = "text-slate-500";
+          if (isComplete) colorText = "text-neon-green";
+          else if (isActive) colorText = `text-${s.color}`;
 
           return (
             <div

@@ -12,7 +12,7 @@ import {
   GetParameterCommand,
   PutParameterCommand,
 } from "@aws-sdk/client-ssm";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import type {
   ClientPortal,
   PortalStep,

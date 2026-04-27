@@ -1,5 +1,5 @@
 import { getConfig } from "@/lib/ssm-config";
-import { createHmac } from "crypto";
+import { createHmac, randomBytes } from "crypto";
 
 const X_ADS_API = "https://ads-api.x.com/12";
 
@@ -30,7 +30,7 @@ function buildOAuthHeader(
   accessToken: string,
   accessSecret: string,
 ): string {
-  const nonce = Math.random().toString(36).substring(2);
+  const nonce = randomBytes(16).toString("hex");
   const ts = Math.floor(Date.now() / 1000).toString();
   const params: Record<string, string> = {
     oauth_consumer_key: apiKey,

@@ -3,8 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 
 interface Message {
+  id: string;
   role: "user" | "assistant";
   content: string;
+}
+
+function newId() {
+  return globalThis.crypto.randomUUID();
 }
 
 const SUGGESTIONS = [
@@ -18,6 +23,7 @@ export default function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
+      id: newId(),
       role: "assistant",
       content:
         "Hi! I'm the Cloudless assistant. Ask me anything about our cloud, serverless, or AI marketing services.",
@@ -38,16 +44,73 @@ export default function ChatWidget() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streaming]);
 
+  function replaceLastAssistant(content: string) {
+    setMessages((prev) => {
+      const copy = [...prev];
+      const last = copy[copy.length - 1];
+      copy[copy.length - 1] = { id: last.id, role: "assistant", content };
+      return copy;
+    });
+  }
+
+  function appendToLastAssistant(text: string) {
+    setMessages((prev) => {
+      const copy = [...prev];
+      const last = copy[copy.length - 1];
+      copy[copy.length - 1] = {
+        id: last.id,
+        role: "assistant",
+        content: last.content + text,
+      };
+      return copy;
+    });
+  }
+
+  async function consumeStream(
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+  ) {
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      if (handleSseLines(lines)) break;
+    }
+  }
+
+  function handleSseLines(lines: string[]): boolean {
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const data = line.slice(6).trim();
+      if (data === "[DONE]") return true;
+      try {
+        const { text } = JSON.parse(data) as { text: string };
+        appendToLastAssistant(text);
+      } catch {
+        // skip malformed chunk
+      }
+    }
+    return false;
+  }
+
   async function send(text: string) {
     if (!text.trim() || streaming) return;
-    const userMsg: Message = { role: "user", content: text.trim() };
+    const userMsg: Message = {
+      id: newId(),
+      role: "user",
+      content: text.trim(),
+    };
     const next = [...messages, userMsg];
     setMessages(next);
     setInput("");
     setStreaming(true);
-
-    // Placeholder assistant turn that we stream into
-    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+    setMessages((prev) => [
+      ...prev,
+      { id: newId(), role: "assistant", content: "" },
+    ]);
 
     try {
       const res = await fetch("/api/chat", {
@@ -57,57 +120,15 @@ export default function ChatWidget() {
       });
 
       if (!res.ok || !res.body) {
-        setMessages((prev) => {
-          const copy = [...prev];
-          copy[copy.length - 1] = {
-            role: "assistant",
-            content:
-              "Sorry, I'm unavailable right now. Please use the Contact page.",
-          };
-          return copy;
-        });
+        replaceLastAssistant(
+          "Sorry, I'm unavailable right now. Please use the Contact page.",
+        );
         return;
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") break;
-          try {
-            const { text } = JSON.parse(data) as { text: string };
-            setMessages((prev) => {
-              const copy = [...prev];
-              copy[copy.length - 1] = {
-                role: "assistant",
-                content: copy[copy.length - 1].content + text,
-              };
-              return copy;
-            });
-          } catch {
-            // skip
-          }
-        }
-      }
+      await consumeStream(res.body.getReader());
     } catch {
-      setMessages((prev) => {
-        const copy = [...prev];
-        copy[copy.length - 1] = {
-          role: "assistant",
-          content: "Connection error. Please try the Contact page.",
-        };
-        return copy;
-      });
+      replaceLastAssistant("Connection error. Please try the Contact page.");
     } finally {
       setStreaming(false);
     }
@@ -150,9 +171,9 @@ export default function ChatWidget() {
 
           {/* Messages */}
           <div className="flex max-h-80 flex-col gap-3 overflow-y-auto p-4">
-            {messages.map((m, i) => (
+            {messages.map((m) => (
               <div
-                key={i}
+                key={m.id}
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div

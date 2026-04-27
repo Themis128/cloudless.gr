@@ -19,6 +19,14 @@ import SocialLinks from "@/components/SocialLinks";
 // TODO(perf): restore `export const revalidate = 3600;` once prerender works.
 export const dynamic = "force-dynamic";
 
+function stepColorClass(color: string): string {
+  if (color === "cyan")
+    return "bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan";
+  if (color === "magenta")
+    return "bg-neon-magenta/10 border-neon-magenta/20 text-neon-magenta";
+  return "bg-neon-green/10 border-neon-green/20 text-neon-green";
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -33,7 +41,7 @@ export async function generateMetadata({
   const canonical = localePaths[locale] ?? `https://cloudless.gr/${locale}`;
 
   return {
-    title: "Cloudless \u2014 Cloud Computing, Serverless & AI Marketing",
+    title: "Cloudless — Cloud Computing, Serverless & AI Marketing",
     description:
       "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
     alternates: {
@@ -63,9 +71,9 @@ const terminalLines = [
 
 export default async function Home({
   params,
-}: {
+}: Readonly<{
   params: Promise<{ locale: string }>;
-}) {
+}>) {
   const { locale: localeParam } = await params;
   setRequestLocale(localeParam);
   const locale = await getServerLocale();
@@ -404,13 +412,7 @@ export default async function Home({
               <ScrollReveal key={item.step} delay={i * 120}>
                 <div className="bg-void-light/30 rounded-xl border border-slate-800 p-6">
                   <div
-                    className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg border font-mono text-sm font-bold ${
-                      item.color === "cyan"
-                        ? "bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan"
-                        : item.color === "magenta"
-                          ? "bg-neon-magenta/10 border-neon-magenta/20 text-neon-magenta"
-                          : "bg-neon-green/10 border-neon-green/20 text-neon-green"
-                    }`}
+                    className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg border font-mono text-sm font-bold ${stepColorClass(item.color)}`}
                   >
                     {item.step}
                   </div>
