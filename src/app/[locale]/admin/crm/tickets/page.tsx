@@ -58,10 +58,11 @@ export default function AdminTicketsPage() {
   }, []);
 
   useEffect(() => {
-    fetchTickets();
-    const interval = setInterval(() => fetchTickets(), REFRESH_INTERVAL);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchTickets();
+    const interval = setInterval(() => void fetchTickets(), REFRESH_INTERVAL);
     const onVisible = () => {
-      if (document.visibilityState === "visible") fetchTickets();
+      if (document.visibilityState === "visible") void fetchTickets();
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
