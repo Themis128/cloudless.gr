@@ -18,6 +18,7 @@ interface AppConfig {
   SLACK_BOT_TOKEN: string;
   SLACK_SIGNING_SECRET: string;
   HUBSPOT_API_KEY: string;
+  HUBSPOT_CLIENT_SECRET: string;
   NOTION_API_KEY: string;
   NOTION_BLOG_DB_ID: string;
   NOTION_WEBHOOK_SECRET: string;
@@ -102,6 +103,7 @@ function buildConfigFromEnv(): AppConfig {
       process.env.HUBSPOT_API_KEY ||
       process.env.HUBSPOT_PRIVATE_APP_TOKEN ||
       "",
+    HUBSPOT_CLIENT_SECRET: process.env.HUBSPOT_CLIENT_SECRET || "",
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",
@@ -213,6 +215,7 @@ export async function getConfig(): Promise<AppConfig> {
     SLACK_BOT_TOKEN: params.get("SLACK_BOT_TOKEN") ?? "",
     SLACK_SIGNING_SECRET: params.get("SLACK_SIGNING_SECRET") ?? "",
     HUBSPOT_API_KEY: params.get("HUBSPOT_API_KEY") ?? "",
+    HUBSPOT_CLIENT_SECRET: params.get("HUBSPOT_CLIENT_SECRET") ?? "",
     NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
     NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
     NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
