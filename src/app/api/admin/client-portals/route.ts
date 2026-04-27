@@ -5,7 +5,7 @@ import {
   GetParameterCommand,
   PutParameterCommand,
 } from "@aws-sdk/client-ssm";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
 const SSM_KEY = "/cloudless/CLIENT_PORTALS_JSON";
 const REGION = process.env.AWS_REGION ?? "eu-central-1";
@@ -147,6 +147,105 @@ type PatchAction =
   | { token: string; action: "delete-step"; stepId: string }
   | { token: string; action: "rename-step"; stepId: string; name: string };
 
+function stepNotFound() {
+  return NextResponse.json({ error: "Step not found" }, { status: 404 });
+}
+
+function applyUpdateStep(
+  portal: ClientPortal,
+  body: Extract<PatchAction, { action: "update-step" }>,
+): NextResponse | null {
+  const step = portal.steps.find((s) => s.id === body.stepId);
+  if (!step) return stepNotFound();
+  step.status = body.status;
+  if (body.status === "completed" && !step.completedAt) {
+    step.completedAt = new Date().toISOString();
+  } else if (body.status !== "completed") {
+    delete step.completedAt;
+  }
+  return null;
+}
+
+function applyAddComment(
+  portal: ClientPortal,
+  body: Extract<PatchAction, { action: "add-comment" }>,
+): NextResponse | null {
+  const step = portal.steps.find((s) => s.id === body.stepId);
+  if (!step) return stepNotFound();
+  if (!body.text?.trim()) {
+    return NextResponse.json(
+      { error: "Comment text required" },
+      { status: 400 },
+    );
+  }
+  step.comments.push({
+    id: randomUUID(),
+    author: String(body.author || "Cloudless Team").slice(0, 80),
+    text: String(body.text).slice(0, 2000),
+    createdAt: new Date().toISOString(),
+  });
+  return null;
+}
+
+function applyDeleteComment(
+  portal: ClientPortal,
+  body: Extract<PatchAction, { action: "delete-comment" }>,
+): NextResponse | null {
+  const step = portal.steps.find((s) => s.id === body.stepId);
+  if (!step) return stepNotFound();
+  step.comments = step.comments.filter((c) => c.id !== body.commentId);
+  return null;
+}
+
+function applyAddStep(
+  portal: ClientPortal,
+  body: Extract<PatchAction, { action: "add-step" }>,
+): NextResponse | null {
+  if (!body.name?.trim()) {
+    return NextResponse.json({ error: "Step name required" }, { status: 400 });
+  }
+  portal.steps.push({
+    id: randomUUID(),
+    name: String(body.name).slice(0, 80),
+    status: "pending",
+    comments: [],
+  });
+  return null;
+}
+
+function applyRenameStep(
+  portal: ClientPortal,
+  body: Extract<PatchAction, { action: "rename-step" }>,
+): NextResponse | null {
+  const step = portal.steps.find((s) => s.id === body.stepId);
+  if (!step) return stepNotFound();
+  step.name = String(body.name).slice(0, 80);
+  return null;
+}
+
+function dispatchPatch(
+  portal: ClientPortal,
+  body: PatchAction,
+): NextResponse | null {
+  switch (body.action) {
+    case "update-step":
+      return applyUpdateStep(portal, body);
+    case "add-comment":
+      return applyAddComment(portal, body);
+    case "delete-comment":
+      return applyDeleteComment(portal, body);
+    case "add-step":
+      return applyAddStep(portal, body);
+    case "delete-step":
+      portal.steps = portal.steps.filter((s) => s.id !== body.stepId);
+      return null;
+    case "rename-step":
+      return applyRenameStep(portal, body);
+    default:
+      return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  }
+}
+
 export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
@@ -166,78 +265,8 @@ export async function PATCH(request: NextRequest) {
   }
 
   const portal = portals[idx];
-
-  switch (body.action) {
-    case "update-step": {
-      const step = portal.steps.find((s) => s.id === body.stepId);
-      if (!step)
-        return NextResponse.json({ error: "Step not found" }, { status: 404 });
-      step.status = body.status;
-      if (body.status === "completed" && !step.completedAt) {
-        step.completedAt = new Date().toISOString();
-      } else if (body.status !== "completed") {
-        delete step.completedAt;
-      }
-      break;
-    }
-
-    case "add-comment": {
-      const step = portal.steps.find((s) => s.id === body.stepId);
-      if (!step)
-        return NextResponse.json({ error: "Step not found" }, { status: 404 });
-      if (!body.text?.trim())
-        return NextResponse.json(
-          { error: "Comment text required" },
-          { status: 400 },
-        );
-      step.comments.push({
-        id: randomUUID(),
-        author: String(body.author || "Cloudless Team").slice(0, 80),
-        text: String(body.text).slice(0, 2000),
-        createdAt: new Date().toISOString(),
-      });
-      break;
-    }
-
-    case "delete-comment": {
-      const step = portal.steps.find((s) => s.id === body.stepId);
-      if (!step)
-        return NextResponse.json({ error: "Step not found" }, { status: 404 });
-      step.comments = step.comments.filter((c) => c.id !== body.commentId);
-      break;
-    }
-
-    case "add-step": {
-      if (!body.name?.trim())
-        return NextResponse.json(
-          { error: "Step name required" },
-          { status: 400 },
-        );
-      portal.steps.push({
-        id: randomUUID(),
-        name: String(body.name).slice(0, 80),
-        status: "pending",
-        comments: [],
-      });
-      break;
-    }
-
-    case "delete-step": {
-      portal.steps = portal.steps.filter((s) => s.id !== body.stepId);
-      break;
-    }
-
-    case "rename-step": {
-      const step = portal.steps.find((s) => s.id === body.stepId);
-      if (!step)
-        return NextResponse.json({ error: "Step not found" }, { status: 404 });
-      step.name = String(body.name).slice(0, 80);
-      break;
-    }
-
-    default:
-      return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-  }
+  const errorResponse = dispatchPatch(portal, body);
+  if (errorResponse) return errorResponse;
 
   portals[idx] = portal;
   await writePortals(portals);

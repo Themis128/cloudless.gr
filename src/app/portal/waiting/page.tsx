@@ -34,7 +34,7 @@ const POLL_INTERVAL_MS = 30_000;
  * The 3-step system indicator — mirrors the services-page "How it works" so
  * the client sees consistent branding from purchase to portal access.
  */
-function SystemIndicator({ activeStep }: { activeStep: 1 | 2 | 3 }) {
+function SystemIndicator({ activeStep }: Readonly<{ activeStep: 1 | 2 | 3 }>) {
   const steps = [
     { num: "01", label: "Order received", color: "neon-cyan" },
     { num: "02", label: "Portal setup", color: "neon-magenta" },
