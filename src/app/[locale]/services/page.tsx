@@ -759,10 +759,7 @@ export default async function ServicesPage() {
                         </span>
                       </div>
                       <Link
-                        href={{
-                          pathname: "/auth/signup",
-                          query: { plan: service.planKey },
-                        }}
+                        href={`/auth/signup?plan=${service.planKey}`}
                         className={`${colors.link} group/link inline-flex items-center gap-1.5 font-mono text-sm font-semibold transition-colors`}
                       >
                         {t("servicesPage.getStarted", "Get started")}
@@ -1050,10 +1047,7 @@ export default async function ServicesPage() {
                 </span>
               </div>
               <Link
-                href={{
-                  pathname: "/auth/signup",
-                  query: { plan: "bundle" },
-                }}
+                href="/auth/signup?plan=bundle"
                 className="group/link bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 animate-glow-pulse mt-6 inline-flex items-center gap-2 rounded-lg border px-8 py-3.5 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
               >
                 {t("servicesPage.bundleCta", "Get the bundle")}
