@@ -239,7 +239,7 @@ export default function ChatWidget() {
               type="button"
               onClick={() => send(input)}
               disabled={!input.trim() || streaming}
-              className="flex-shrink-0 rounded-lg border border-neon-green/30 px-3 py-1.5 font-mono text-xs text-neon-green transition hover:border-neon-green/60 disabled:opacity-30"
+              className="shrink-0 rounded-lg border border-neon-green/30 px-3 py-1.5 font-mono text-xs text-neon-green transition hover:border-neon-green/60 disabled:opacity-30"
             >
               Send
             </button>
