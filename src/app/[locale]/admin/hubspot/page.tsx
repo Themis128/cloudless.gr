@@ -141,6 +141,7 @@ export default function HubSpotOverviewPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchAll();
     const interval = setInterval(() => void fetchAll(), REFRESH_INTERVAL);
     const onVisible = () => {

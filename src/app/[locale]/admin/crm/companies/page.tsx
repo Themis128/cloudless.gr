@@ -46,6 +46,7 @@ export default function AdminCompaniesPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchCompanies();
     const interval = setInterval(() => void fetchCompanies(), REFRESH_INTERVAL);
     const onVisible = () => {
