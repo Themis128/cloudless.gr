@@ -41,7 +41,7 @@ export async function generateMetadata({
   const canonical = localePaths[locale] ?? `https://cloudless.gr/${locale}`;
 
   return {
-    title: "Cloudless \u2014 Cloud Computing, Serverless & AI Marketing",
+    title: "Cloudless — Cloud Computing, Serverless & AI Marketing",
     description:
       "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
     alternates: {
