@@ -369,6 +369,8 @@ interface DealData {
   lead_source?: DealSource;
   /** Extra notes / metadata stored in the deal description. */
   description?: string;
+  /** Service the deal is associated with (matches service_interest on contacts). */
+  service_interest?: string;
 }
 
 /**
@@ -399,6 +401,7 @@ export async function createDeal(data: DealData): Promise<string | null> {
     ...(data.currency && { deal_currency_code: data.currency.toUpperCase() }),
     ...(data.lead_source && { lead_source: data.lead_source }),
     ...(data.description && { description: data.description }),
+    ...(data.service_interest && { service_interest: data.service_interest }),
   };
 
   try {
