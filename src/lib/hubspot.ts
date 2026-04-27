@@ -140,6 +140,27 @@ export async function listContacts(limit = 10): Promise<unknown[]> {
   }
 }
 
+/**
+ * List CRM support tickets.
+ *
+ * @param limit - Max records to return (1–100, default 20).
+ */
+export async function listTickets(limit = 20): Promise<unknown[]> {
+  const safeLimit = Number.isFinite(limit)
+    ? Math.min(Math.max(Math.trunc(limit), 1), 100)
+    : 20;
+  try {
+    const res = await hubspotFetch(
+      `/crm/v3/objects/tickets?limit=${safeLimit}&properties=subject,content,hs_pipeline,hs_pipeline_stage,hs_ticket_priority,createdate`,
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /* ─── Ticket support (requires 'tickets' scope) ─────────────────── */
 
 interface TicketData {
