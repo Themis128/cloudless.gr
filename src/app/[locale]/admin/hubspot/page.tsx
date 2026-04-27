@@ -56,11 +56,6 @@ interface Stats {
   fetchedAt: string | null;
 }
 
-const priorityClasses: Record<string, string> = {
-  HIGH: "text-red-400 bg-red-400/10",
-  MEDIUM: "text-yellow-400 bg-yellow-400/10",
-  LOW: "text-neon-green bg-neon-green/10",
-};
 
 export default function HubSpotOverviewPage() {
   const [stats, setStats] = useState<Stats>({
@@ -146,10 +141,10 @@ export default function HubSpotOverviewPage() {
   }, []);
 
   useEffect(() => {
-    fetchAll();
-    const interval = setInterval(() => fetchAll(), REFRESH_INTERVAL);
+    void fetchAll();
+    const interval = setInterval(() => void fetchAll(), REFRESH_INTERVAL);
     const onVisible = () => {
-      if (document.visibilityState === "visible") fetchAll();
+      if (document.visibilityState === "visible") void fetchAll();
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);

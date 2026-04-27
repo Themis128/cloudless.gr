@@ -46,10 +46,10 @@ export default function AdminCompaniesPage() {
   }, []);
 
   useEffect(() => {
-    fetchCompanies();
-    const interval = setInterval(() => fetchCompanies(), REFRESH_INTERVAL);
+    void fetchCompanies();
+    const interval = setInterval(() => void fetchCompanies(), REFRESH_INTERVAL);
     const onVisible = () => {
-      if (document.visibilityState === "visible") fetchCompanies();
+      if (document.visibilityState === "visible") void fetchCompanies();
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);

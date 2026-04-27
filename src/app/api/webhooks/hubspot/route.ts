@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     const { subscriptionType, objectId, propertyName, propertyValue, occurredAt } =
       event;
 
-    console.info(
+    console.warn(
       `[HubSpot Webhook] ${subscriptionType} | object=${objectId} | t=${occurredAt}`,
       propertyName ? { propertyName, propertyValue } : undefined,
     );
