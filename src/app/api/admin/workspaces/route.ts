@@ -5,7 +5,7 @@ import {
   GetParameterCommand,
   PutParameterCommand,
 } from "@aws-sdk/client-ssm";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
 const SSM_KEY = "/cloudless/WORKSPACES_JSON";
 const REGION = process.env.AWS_REGION ?? "eu-central-1";
@@ -44,8 +44,8 @@ async function writeWorkspaces(workspaces: Workspace[]): Promise<void> {
 function toSlug(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/^-|-$/g, "")
     .slice(0, 40);
 }
 

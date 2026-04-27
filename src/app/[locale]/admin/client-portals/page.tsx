@@ -129,10 +129,14 @@ function StepManager({
     <div className="mt-4 space-y-3">
       {/* Author name (shared across step comments) */}
       <div className="flex items-center gap-2">
-        <label className="font-mono text-xs text-slate-500 shrink-0">
+        <label
+          htmlFor="portal-comment-author"
+          className="font-mono text-xs text-slate-500 shrink-0"
+        >
           Comment as:
         </label>
         <input
+          id="portal-comment-author"
           type="text"
           value={commentAuthor}
           onChange={(e) => setCommentAuthor(e.target.value)}
@@ -154,8 +158,17 @@ function StepManager({
           >
             {/* Step header */}
             <div
+              role="button"
+              tabIndex={0}
+              aria-expanded={isOpen}
               className="flex cursor-pointer items-center gap-3 px-4 py-3"
               onClick={() => setExpanded(isOpen ? null : step.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setExpanded(isOpen ? null : step.id);
+                }
+              }}
             >
               <span className="font-mono text-xs text-slate-600 w-5 shrink-0">
                 {String(idx + 1).padStart(2, "0")}
@@ -187,7 +200,7 @@ function StepManager({
               {step.comments.length > 0 && (
                 <span className="font-mono text-[10px] text-slate-500">
                   {step.comments.length} comment
-                  {step.comments.length !== 1 ? "s" : ""}
+                  {step.comments.length === 1 ? "" : "s"}
                 </span>
               )}
 
@@ -436,7 +449,7 @@ function PendingClients({ onApproved }: { onApproved: () => void }) {
         </span>
         <div>
           <h2 className="font-heading text-base font-semibold text-yellow-200">
-            {clients.length} client{clients.length !== 1 ? "s" : ""} waiting for
+            {clients.length} client{clients.length === 1 ? "" : "s"} waiting for
             portal access
           </h2>
           <p className="font-mono text-xs text-yellow-700">
@@ -592,7 +605,7 @@ export default function ClientPortalsPage() {
   }
 
   function copyLink(token: string) {
-    const baseUrl = window.location.origin;
+    const baseUrl = globalThis.location.origin;
     navigator.clipboard.writeText(`${baseUrl}/portal/${token}`);
     setCopied(token);
     setTimeout(() => setCopied(null), 2000);
@@ -737,8 +750,17 @@ export default function ClientPortalsPage() {
               >
                 {/* Portal header */}
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isOpen}
                   className="flex cursor-pointer flex-wrap items-start justify-between gap-3 p-4"
                   onClick={() => setExpanded(isOpen ? null : portal.token)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setExpanded(isOpen ? null : portal.token);
+                    }
+                  }}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">

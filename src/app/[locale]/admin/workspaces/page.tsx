@@ -152,10 +152,14 @@ export default function WorkspacesPage() {
         <form onSubmit={create} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="font-mono mb-1 block text-xs text-slate-500">
+              <label
+                htmlFor="ws-name"
+                className="font-mono mb-1 block text-xs text-slate-500"
+              >
                 Name
               </label>
               <input
+                id="ws-name"
                 type="text"
                 value={form.name}
                 onChange={(e) =>
@@ -166,10 +170,14 @@ export default function WorkspacesPage() {
               />
             </div>
             <div>
-              <label className="font-mono mb-1 block text-xs text-slate-500">
+              <label
+                htmlFor="ws-admin-emails"
+                className="font-mono mb-1 block text-xs text-slate-500"
+              >
                 Admin Emails (comma-separated)
               </label>
               <input
+                id="ws-admin-emails"
                 type="text"
                 value={form.adminEmails}
                 onChange={(e) =>
@@ -181,10 +189,14 @@ export default function WorkspacesPage() {
             </div>
           </div>
           <div>
-            <label className="font-mono mb-1 block text-xs text-slate-500">
+            <label
+              htmlFor="ws-description"
+              className="font-mono mb-1 block text-xs text-slate-500"
+            >
               Description (optional)
             </label>
             <input
+              id="ws-description"
               type="text"
               value={form.description}
               onChange={(e) =>
@@ -215,9 +227,9 @@ export default function WorkspacesPage() {
 
       {loading && (
         <div className="space-y-3">
-          {[...Array(3)].map((_, i) => (
+          {["skel-1", "skel-2", "skel-3"].map((k) => (
             <div
-              key={i}
+              key={k}
               className="h-24 animate-pulse rounded-xl border border-slate-800 bg-void-light/30"
             />
           ))}

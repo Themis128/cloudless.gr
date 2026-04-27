@@ -51,9 +51,9 @@ export default function VoiceBriefPage() {
   }
 
   function playBrief() {
-    if (!brief || !window.speechSynthesis) return;
+    if (!brief || !globalThis.speechSynthesis) return;
     if (playing) {
-      window.speechSynthesis.cancel();
+      globalThis.speechSynthesis.cancel();
       setPlaying(false);
       return;
     }
@@ -64,7 +64,7 @@ export default function VoiceBriefPage() {
     u.onend = () => setPlaying(false);
     u.onerror = () => setPlaying(false);
     utteranceRef.current = u;
-    window.speechSynthesis.speak(u);
+    globalThis.speechSynthesis.speak(u);
     setPlaying(true);
   }
 
@@ -72,7 +72,7 @@ export default function VoiceBriefPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     return () => {
-      window.speechSynthesis?.cancel();
+      globalThis.speechSynthesis?.cancel();
     };
   }, []);
 

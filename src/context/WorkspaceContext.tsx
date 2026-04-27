@@ -46,7 +46,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       // Auto-select first if nothing selected yet
       if (!currentId && ws.length > 0) {
         const stored = localStorage.getItem(LS_KEY);
-        const valid = ws.find((w) => w.id === stored) ? stored : ws[0].id;
+        const valid = ws.some((w) => w.id === stored) ? stored : ws[0].id;
         if (valid) {
           setCurrentId(valid);
           localStorage.setItem(LS_KEY, valid);
