@@ -194,8 +194,10 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         <div
-          className={`bg-void/95 border-neon-cyan/10 overflow-hidden border-t px-6 backdrop-blur-xl transition-all duration-300 ease-in-out lg:hidden ${
-            mobileOpen ? "max-h-96 py-4 opacity-100" : "max-h-0 py-0 opacity-0"
+          className={`bg-void/95 border-neon-cyan/10 overflow-y-auto border-t px-6 backdrop-blur-xl transition-all duration-300 ease-in-out lg:hidden ${
+            mobileOpen
+              ? "max-h-[calc(100svh-4rem)] py-4 opacity-100"
+              : "max-h-0 py-0 opacity-0"
           }`}
         >
           <div className="space-y-1">
@@ -203,7 +205,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="active:text-neon-cyan flex min-h-11 items-center py-3 font-mono text-sm font-medium text-slate-400 transition-colors"
+                className="hover:text-neon-cyan active:text-neon-cyan active:scale-95 flex min-h-11 items-center py-3 font-mono text-sm font-medium text-slate-400 transition-all"
                 onClick={() => setMobileOpen(false)}
               >
                 <span className="text-neon-cyan/40 mr-2">&gt;</span>
@@ -220,7 +222,7 @@ export default function Navbar() {
               <span className="mb-2 block font-mono text-xs text-slate-500">
                 {languageLabel}
               </span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {locales.map((l) => (
                   <button
                     key={l}
@@ -231,7 +233,7 @@ export default function Navbar() {
                     }}
                     aria-label={`Set language to ${localeLabels[l]}`}
                     aria-pressed={l === locale}
-                    className={`min-h-11 flex-1 rounded-lg border px-3 py-2 font-mono text-sm transition-colors ${
+                    className={`min-h-11 min-w-[64px] rounded-lg border px-3 py-2 font-mono text-sm transition-all active:scale-95 ${
                       l === locale
                         ? "border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan"
                         : "border-slate-700 text-slate-400 hover:border-slate-600 hover:text-white"

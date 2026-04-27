@@ -163,6 +163,8 @@
     "submit": "Envoyer le Message",
     "sending": "Envoi...",
     "success": "Message envoyé avec succès !",
+    "sendAnother": "Envoyer un autre message →",
+    "serviceOfInterest": "SERVICE SOUHAITÉ",
     "error": "Une erreur est survenue. Veuillez réessayer.",
     "privacyConsent": "J'accepte que mes données soient traitées pour répondre à ma demande, comme décrit dans la"
   },

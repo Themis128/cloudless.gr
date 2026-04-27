@@ -15,11 +15,22 @@ function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // If a plan was selected on the services page, send the user straight to
+  // the portal waiting room after auth (the waiting room enrolls them).
+  const planParam = searchParams.get("plan");
+  const postSignupDestination = planParam
+    ? `/portal/waiting?plan=${encodeURIComponent(planParam)}`
+    : null;
+
   useEffect(() => {
     if (!isLoading && user) {
-      router.push(isAdmin ? "/admin" : "/dashboard");
+      if (postSignupDestination) {
+        router.push(postSignupDestination);
+      } else {
+        router.push(isAdmin ? "/admin" : "/dashboard");
+      }
     }
-  }, [user, isAdmin, isLoading, router]);
+  }, [user, isAdmin, isLoading, router, postSignupDestination]);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -63,7 +74,11 @@ function SignUpForm() {
     setSubmitting(true);
     try {
       await confirmSignUp(email, code);
-      router.push("/auth/login");
+      // Forward the plan param so the user lands in the waiting room post-login
+      const next = postSignupDestination
+        ? `/auth/login?next=${encodeURIComponent(postSignupDestination)}`
+        : "/auth/login";
+      router.push(next);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {

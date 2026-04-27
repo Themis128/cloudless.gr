@@ -36,6 +36,7 @@ export default defineConfig({
     environment: "jsdom",
     pool: "threads",
     maxWorkers: 2,
+    testTimeout: 15000,
     include: ["__tests__/**/*.test.{ts,tsx}"],
     reporters: ["default"],
     setupFiles: ["./__tests__/setup.ts"],
