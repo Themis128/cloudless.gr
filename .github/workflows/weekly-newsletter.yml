@@ -1,0 +1,74 @@
+name: Weekly Newsletter
+
+on:
+  schedule:
+    # Every Monday at 09:00 UTC (11:00 Athens). Three hours after the draft
+    # generator — that window is the human review SLA. If nothing is approved
+    # by now, the publisher exits 0 and no newsletter is sent.
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: weekly-newsletter
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish approved posts and send newsletter
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+      NOTION_BLOG_DB_ID: ${{ secrets.NOTION_BLOG_DB_ID }}
+      NOTION_WEBHOOK_SECRET: ${{ secrets.NOTION_WEBHOOK_SECRET }}
+      ACTIVECAMPAIGN_API_URL: ${{ secrets.ACTIVECAMPAIGN_API_URL }}
+      ACTIVECAMPAIGN_API_TOKEN: ${{ secrets.ACTIVECAMPAIGN_API_TOKEN }}
+      ACTIVECAMPAIGN_NEWSLETTER_LIST_ID: ${{ secrets.ACTIVECAMPAIGN_NEWSLETTER_LIST_ID }}
+      SES_FROM_EMAIL: ${{ secrets.SES_FROM_EMAIL }}
+      SITE_URL: ${{ secrets.SITE_URL }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Publish approved posts and send newsletter
+        run: pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/publish-and-send-newsletter.ts
+
+      - name: Notify Slack on failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": "❌ Weekly newsletter publish failed",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": { "type": "plain_text", "text": "❌ Newsletter Publish Failed", "emoji": true }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "The Monday publisher failed. Approved posts may not have been promoted, and the newsletter may not have sent.\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View logs>"
+                  }
+                }
+              ]
+            }'

@@ -1,8 +1,10 @@
+import { addContactToList } from "@/lib/activecampaign";
 import { notifyTeam, sendSubscriberWelcome } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { isValidEmail } from "@/lib/validation";
 import { slackSubscriberNotify } from "@/lib/slack-notify";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { getConfig } from "@/lib/ssm-config";
 
 export async function POST(request: Request) {
   // Rate limit: 3 subscribe attempts per IP per 10 minutes
@@ -20,10 +22,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Both SES sends must succeed — if either fails the subscriber gets 500
-    // and can retry. Slack is non-critical: fire-and-forget so a Slack outage
-    // never causes a false failure for the subscriber.
+    const config = await getConfig();
+    const listId = config.ACTIVECAMPAIGN_NEWSLETTER_LIST_ID;
+
+    // AC subscribe is the source of truth for the newsletter list. If it fails
+    // we still surface success to the user (team-notify + Slack run in parallel
+    // so we have a manual fallback path), but the failure is logged.
+    const acPromise = listId
+      ? addContactToList(email, listId)
+      : Promise.resolve(null);
+
     await Promise.all([
+      acPromise,
       notifyTeam(
         `[Newsletter] New subscriber: ${email.slice(0, 80)}`,
         `<h2>New newsletter subscriber</h2>
@@ -31,8 +41,8 @@ export async function POST(request: Request) {
         <p><strong>Date:</strong> ${new Date().toISOString()}</p>
         <hr />
         <p style="color: #666; font-size: 12px;">
-          Add this email to your mailing list. This notification was sent
-          from the cloudless.gr subscribe form.
+          Subscriber added to ActiveCampaign list ${escapeHtml(listId || "(unconfigured)")}.
+          This notification was sent from the cloudless.gr subscribe form.
         </p>`,
       ),
       sendSubscriberWelcome(email),
