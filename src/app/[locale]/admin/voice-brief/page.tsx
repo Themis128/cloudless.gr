@@ -156,7 +156,7 @@ export default function VoiceBriefPage() {
               <button
                 type="button"
                 onClick={playBrief}
-                className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border transition ${
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border transition ${
                   playing
                     ? "border-neon-blue/50 bg-neon-blue/10 text-neon-blue"
                     : "border-slate-700 bg-slate-800 text-white hover:border-neon-blue/40"

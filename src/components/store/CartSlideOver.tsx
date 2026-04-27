@@ -104,7 +104,7 @@ export default function CartSlideOver() {
                     className="border-neon-cyan/5 flex gap-4 border-b py-4"
                   >
                     {/* Icon */}
-                    <div className="bg-void-lighter neon-border h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
+                    <div className="bg-void-lighter neon-border h-16 w-16 shrink-0 overflow-hidden rounded-lg">
                       <ProductIcon
                         productId={item.product.id}
                         category={item.product.category}
