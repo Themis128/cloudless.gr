@@ -272,7 +272,7 @@ export default function UnifiedAnalyticsPage() {
                           <span className="truncate text-slate-400">
                             {stage}
                           </span>
-                          <span className="text-neon-magenta ml-2 flex-shrink-0">
+                          <span className="text-neon-magenta ml-2 shrink-0">
                             {count}
                           </span>
                         </div>
