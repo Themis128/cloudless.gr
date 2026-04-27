@@ -8,6 +8,7 @@ const localeFlags: Record<Locale, string> = {
   en: "EN",
   el: "EL",
   fr: "FR",
+  de: "DE",
 };
 
 export default function LocaleSwitcher() {

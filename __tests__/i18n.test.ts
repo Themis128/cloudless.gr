@@ -3,7 +3,7 @@ import { locales, defaultLocale, isSupportedLocale, type Locale } from '@/lib/i1
 
 describe('i18n utilities', () => {
   it('should export supported locales', () => {
-    expect(locales).toEqual(['en', 'el', 'fr']);
+    expect(locales).toEqual(['en', 'el', 'fr', 'de']);
   });
 
   it('should have en as default locale', () => {
@@ -14,11 +14,11 @@ describe('i18n utilities', () => {
     expect(isSupportedLocale('en')).toBe(true);
     expect(isSupportedLocale('el')).toBe(true);
     expect(isSupportedLocale('fr')).toBe(true);
+    expect(isSupportedLocale('de')).toBe(true);
   });
 
   it('should reject unsupported locales', () => {
     expect(isSupportedLocale('es')).toBe(false);
-    expect(isSupportedLocale('de')).toBe(false);
     expect(isSupportedLocale('invalid')).toBe(false);
     expect(isSupportedLocale('')).toBe(false);
   });
@@ -27,10 +27,12 @@ describe('i18n utilities', () => {
     const validLocale: Locale = 'en';
     const anotherValid: Locale = 'el';
     const another: Locale = 'fr';
-    
+    const german: Locale = 'de';
+
     expect(validLocale).toBeDefined();
     expect(anotherValid).toBeDefined();
     expect(another).toBeDefined();
+    expect(german).toBeDefined();
   });
 
   it('should have consistent locale definitions', () => {
