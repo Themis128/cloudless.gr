@@ -183,11 +183,14 @@ function WaitingRoomContent() {
   }, [status?.status]);
 
   useEffect(() => {
-    if (status?.status === "approved" && status.portalToken && !redirecting) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setRedirecting(true);
-      setTimeout(() => router.push(`/portal/${status.portalToken}`), 1800);
+    if (status?.status !== "approved" || !status.portalToken || redirecting) {
+      return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRedirecting(true);
+    const token = status.portalToken;
+    const t = setTimeout(() => router.push(`/portal/${token}`), 1800);
+    return () => clearTimeout(t);
   }, [status, router, redirecting]);
 
   if (isLoading || !user) {
