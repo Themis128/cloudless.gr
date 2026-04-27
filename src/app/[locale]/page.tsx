@@ -13,8 +13,11 @@ import ClientParticleField from "@/components/ClientParticleField";
 import StatCounter from "@/components/StatCounter";
 import SocialLinks from "@/components/SocialLinks";
 
-// ISR: render once per hour, served from CloudFront cache (avoids Lambda cold start on every hit)
-export const revalidate = 3600;
+// Force-dynamic temporarily — turbopack prerender hits a "cannot read length of undefined"
+// inside framework frames during static generation. Switching to dynamic SSR unblocks the
+// build; revisit once the upstream issue is identified.
+// TODO(perf): restore `export const revalidate = 3600;` once prerender works.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

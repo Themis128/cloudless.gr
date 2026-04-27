@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getABFlags, DEFAULT_FLAGS, type ABFlag } from "@/lib/ab-flags";
-import SSM from "@aws-sdk/client-ssm";
+import { SSMClient, PutParameterCommand } from "@aws-sdk/client-ssm";
 
 const SSM_KEY = "/cloudless/AB_FLAGS_JSON";
 
 async function putSSMParam(value: string): Promise<void> {
   const region = process.env.AWS_REGION ?? "eu-central-1";
-  const client = new SSM.SSMClient({ region });
+  const client = new SSMClient({ region });
   await client.send(
-    new SSM.PutParameterCommand({
+    new PutParameterCommand({
       Name: SSM_KEY,
       Value: value,
       Type: "String",
