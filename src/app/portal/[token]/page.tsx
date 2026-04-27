@@ -120,7 +120,7 @@ const STEP_CONFIG: Record<
   },
 };
 
-function StepIcon({ status }: { status: PortalStep["status"] }) {
+function StepIcon({ status }: Readonly<{ status: PortalStep["status"] }>) {
   if (status === "completed") {
     return (
       <svg
@@ -159,7 +159,7 @@ function StepIcon({ status }: { status: PortalStep["status"] }) {
   return <span className="h-2 w-2 rounded-full bg-slate-600" />;
 }
 
-function CommentCard({ comment }: { comment: PortalComment }) {
+function CommentCard({ comment }: Readonly<{ comment: PortalComment }>) {
   return (
     <div className="flex gap-3">
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-void-lighter border border-slate-700 font-mono text-[10px] text-slate-400 uppercase">
@@ -182,7 +182,7 @@ function CommentCard({ comment }: { comment: PortalComment }) {
   );
 }
 
-function ProjectTimeline({ steps }: { steps: PortalStep[] }) {
+function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
   const [expanded, setExpanded] = useState<string | null>(() => {
     const active = steps.find(
       (s) => s.status === "in-progress" || s.status === "blocked",
@@ -428,9 +428,9 @@ export default function PortalPage({
         {loading && (
           <div className="space-y-4">
             <div className="h-10 w-64 animate-pulse rounded-lg bg-void-light/40" />
-            {[...Array(4)].map((_, i) => (
+            {["s1", "s2", "s3", "s4"].map((k) => (
               <div
-                key={i}
+                key={k}
                 className="h-16 animate-pulse rounded-xl border border-slate-800 bg-void-light/30"
               />
             ))}

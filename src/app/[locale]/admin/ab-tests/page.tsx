@@ -7,10 +7,10 @@ import type { ABFlag } from "@/lib/ab-flags";
 function Toggle({
   checked,
   onChange,
-}: {
+}: Readonly<{
   checked: boolean;
   onChange: (v: boolean) => void;
-}) {
+}>) {
   return (
     <button
       type="button"
@@ -72,6 +72,12 @@ export default function ABTestsPage() {
     } finally {
       setSaving(null);
     }
+  }
+
+  function setTrafficSplit(id: string, value: number) {
+    setFlags((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, trafficSplit: value } : f)),
+    );
   }
 
   async function resetAll() {
@@ -242,13 +248,7 @@ export default function ABTestsPage() {
                 step={5}
                 value={flag.trafficSplit}
                 onChange={(e) =>
-                  setFlags((prev) =>
-                    prev.map((f) =>
-                      f.id === flag.id
-                        ? { ...f, trafficSplit: Number(e.target.value) }
-                        : f,
-                    ),
-                  )
+                  setTrafficSplit(flag.id, Number(e.target.value))
                 }
                 onMouseUp={(e) =>
                   updateFlag(flag.id, {

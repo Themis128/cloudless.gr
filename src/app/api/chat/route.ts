@@ -30,11 +30,8 @@ export async function POST(request: NextRequest) {
     if (!Array.isArray(body.messages)) throw new Error("messages required");
     messages = body.messages
       .filter(
-        (m: unknown) =>
-          m &&
-          typeof m === "object" &&
-          "role" in (m as object) &&
-          "content" in (m as object),
+        (m: unknown): m is { role: string; content: string } =>
+          typeof m === "object" && m !== null && "role" in m && "content" in m,
       )
       .slice(-10) // keep last 10 turns for context
       .map((m: { role: string; content: string }) => ({
