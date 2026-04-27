@@ -46,25 +46,23 @@ export default function ChatWidget() {
 
   function replaceLastAssistant(content: string) {
     setMessages((prev) => {
-      const copy = [...prev];
-      const last = copy[copy.length - 1];
-      if (!last) return copy;
-      copy[copy.length - 1] = { id: last.id, role: "assistant", content };
-      return copy;
+      const last = prev.at(-1);
+      if (!last) return prev;
+      return [
+        ...prev.slice(0, -1),
+        { id: last.id, role: "assistant", content },
+      ];
     });
   }
 
   function appendToLastAssistant(text: string) {
     setMessages((prev) => {
-      const copy = [...prev];
-      const last = copy[copy.length - 1];
-      if (!last) return copy;
-      copy[copy.length - 1] = {
-        id: last.id,
-        role: "assistant",
-        content: last.content + text,
-      };
-      return copy;
+      const last = prev.at(-1);
+      if (!last) return prev;
+      return [
+        ...prev.slice(0, -1),
+        { id: last.id, role: "assistant", content: last.content + text },
+      ];
     });
   }
 
