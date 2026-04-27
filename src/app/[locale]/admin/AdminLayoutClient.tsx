@@ -32,6 +32,8 @@ import {
   AlertTriangle,
   Bell,
   Settings,
+  LayoutGrid,
+  Ticket,
   type LucideIcon,
 } from "lucide-react";
 
@@ -48,9 +50,17 @@ const adminGroups: AdminGroup[] = [
     ],
   },
   {
+    label: "HubSpot",
+    links: [
+      { href: "/admin/hubspot", label: "Overview", Icon: LayoutGrid },
+      { href: "/admin/crm", label: "Contacts", Icon: Users },
+      { href: "/admin/crm/companies", label: "Companies", Icon: Building2 },
+      { href: "/admin/crm/tickets", label: "Tickets", Icon: Ticket },
+    ],
+  },
+  {
     label: "Clients",
     links: [
-      { href: "/admin/crm", label: "CRM", Icon: Users },
       { href: "/admin/client-portals", label: "Client Portals", Icon: Link2 },
       { href: "/admin/workspaces", label: "Workspaces", Icon: Building2 },
     ],
@@ -173,7 +183,8 @@ export default function AdminLayoutClient({
       return (
         pathname === "/admin" || Boolean(pathname?.match(/^\/[a-z]{2}\/admin$/))
       );
-    return Boolean(pathname?.includes(href));
+    const path = (pathname ?? "").replace(/^\/[a-z]{2}(?=\/)/, "");
+    return path === href;
   };
 
   return (
