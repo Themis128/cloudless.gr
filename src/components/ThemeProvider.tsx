@@ -21,8 +21,8 @@ type Theme = "light" | "dark";
  * production and adjusted any leftover dark-only utilities.
  */
 export function themeForRoute(pathname: string): Theme {
-  // Strip locale prefix so the same rules apply across en/el/fr.
-  const stripped = pathname.replace(/^\/(?:en|el|fr)(?=\/|$)/, "") || "/";
+  // Strip locale prefix so the same rules apply across en/el/fr/de.
+  const stripped = pathname.replace(/^\/(?:en|el|fr|de)(?=\/|$)/, "") || "/";
 
   // Admin always dark. Long sessions, low ambient light, stays dark forever.
   if (stripped === "/admin" || stripped.startsWith("/admin/")) {

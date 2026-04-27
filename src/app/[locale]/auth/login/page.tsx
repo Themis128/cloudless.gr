@@ -1,17 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
-export default function LoginPage() {
+function LoginContent() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
   const { signIn, completeNewPassword, user, isAdmin, isLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // ?next=/portal/waiting%3Fplan%3Dbundle — forwarded from signup or services page CTA
+  const nextParam = searchParams.get("next");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -21,9 +24,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      router.push(isAdmin ? "/admin" : "/dashboard");
+      if (nextParam && nextParam.startsWith("/")) {
+        router.push(nextParam);
+      } else {
+        router.push(isAdmin ? "/admin" : "/dashboard");
+      }
     }
-  }, [user, isAdmin, isLoading, router]);
+  }, [user, isAdmin, isLoading, router, nextParam]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,5 +208,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="bg-void flex min-h-screen items-center justify-center">
+          <div className="border-neon-cyan h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

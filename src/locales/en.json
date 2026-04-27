@@ -163,6 +163,8 @@
     "submit": "Send Message",
     "sending": "Sending...",
     "success": "Message sent successfully!",
+    "sendAnother": "Send another message →",
+    "serviceOfInterest": "SERVICE OF INTEREST",
     "error": "Something went wrong. Please try again.",
     "privacyConsent": "I agree that my data will be processed to respond to my enquiry, as described in the"
   },

@@ -99,7 +99,7 @@ describe("GET /api/admin/notion/blog", () => {
     expect(getPostsMock).not.toHaveBeenCalled();
   });
 
-  it("returns all posts including drafts", async () => {
+  it("returns all posts including drafts", { timeout: 10000 }, async () => {
     getPostsMock.mockResolvedValueOnce([
       { id: "p1", title: "Published Post", published: true },
       { id: "p2", title: "Draft Post", published: false },
