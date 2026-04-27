@@ -26,7 +26,7 @@ const REQUIRED_ROUTE_FILES = [
 
 describe("locale route smoke coverage", () => {
   it("keeps next-intl locale contract stable", () => {
-    expect(routing.locales).toEqual(["en", "el", "fr"]);
+    expect(routing.locales).toEqual(["en", "el", "fr", "de"]);
     expect(routing.defaultLocale).toBe("en");
     expect(routing.localePrefix).toBe("as-needed");
   });
