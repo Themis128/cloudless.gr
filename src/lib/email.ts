@@ -25,20 +25,28 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
   const config = await getConfig();
   const ses = await getSES();
 
-  await ses.send(
-    new SendEmailCommand({
-      Source: `${options.fromLabel ?? "Cloudless"} <${config.SES_FROM_EMAIL}>`,
-      Destination: { ToAddresses: [options.to] },
-      ...(options.replyTo && { ReplyToAddresses: options.replyTo }),
-      Message: {
-        Subject: { Data: options.subject, Charset: "UTF-8" },
-        Body: {
-          Html: { Data: options.html, Charset: "UTF-8" },
-          Text: { Data: options.text, Charset: "UTF-8" },
+  try {
+    await ses.send(
+      new SendEmailCommand({
+        Source: `${options.fromLabel ?? "Cloudless"} <${config.SES_FROM_EMAIL}>`,
+        Destination: { ToAddresses: [options.to] },
+        ...(options.replyTo && { ReplyToAddresses: options.replyTo }),
+        Message: {
+          Subject: { Data: options.subject, Charset: "UTF-8" },
+          Body: {
+            Html: { Data: options.html, Charset: "UTF-8" },
+            Text: { Data: options.text, Charset: "UTF-8" },
+          },
         },
-      },
-    }),
-  );
+      }),
+    );
+  } catch (err: unknown) {
+    // AWS SDK v3 XML parser throws a deserialization error on SES success responses
+    // that contain &#xD; entities. If HTTP status is 200 the email was delivered —
+    // swallow the parse error and continue.
+    const meta = (err as { $metadata?: { httpStatusCode?: number } })?.$metadata;
+    if (meta?.httpStatusCode !== 200) throw err;
+  }
 }
 
 export async function sendOrderConfirmation(
