@@ -71,8 +71,7 @@ export function assignVariant(flag: ABFlag, cookieValue?: string): "a" | "b" {
   // Web Crypto is available in both Node and browser; use it instead of
   // Math.random so variant rollout is uniformly distributed and not flagged
   // as a weak-PRNG security hotspot. Bucketing here is non-cryptographic.
-  const buf = new Uint32Array(1);
-  globalThis.crypto.getRandomValues(buf);
-  const r = buf[0] / 0xffffffff;
+  const buf = globalThis.crypto.getRandomValues(new Uint32Array(1));
+  const r = (buf[0] ?? 0) / 0xffffffff;
   return r * 100 < flag.trafficSplit ? "b" : "a";
 }
