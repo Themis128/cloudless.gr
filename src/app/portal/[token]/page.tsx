@@ -159,7 +159,7 @@ function StepIcon({ status }: Readonly<{ status: PortalStep["status"] }>) {
   return <span className="h-2 w-2 rounded-full bg-slate-600" />;
 }
 
-function CommentCard({ comment }: { comment: PortalComment }) {
+function CommentCard({ comment }: Readonly<{ comment: PortalComment }>) {
   return (
     <div className="flex gap-3">
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-void-lighter border border-slate-700 font-mono text-[10px] text-slate-400 uppercase">

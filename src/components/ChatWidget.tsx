@@ -9,9 +9,7 @@ interface Message {
 }
 
 function newId() {
-  return (
-    globalThis.crypto?.randomUUID?.() ?? `m-${Date.now()}-${Math.random()}`
-  );
+  return globalThis.crypto.randomUUID();
 }
 
 const SUGGESTIONS = [

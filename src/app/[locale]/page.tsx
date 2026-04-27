@@ -71,9 +71,9 @@ const terminalLines = [
 
 export default async function Home({
   params,
-}: {
+}: Readonly<{
   params: Promise<{ locale: string }>;
-}) {
+}>) {
   const { locale: localeParam } = await params;
   setRequestLocale(localeParam);
   const locale = await getServerLocale();

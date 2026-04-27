@@ -22,10 +22,10 @@ const STEP_STATUS_OPTIONS: {
 function StepManager({
   portal,
   onUpdate,
-}: {
+}: Readonly<{
   portal: ClientPortal;
   onUpdate: () => void;
-}) {
+}>) {
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
   const [commentAuthor, setCommentAuthor] = useState("Cloudless Team");
   const [submitting, setSubmitting] = useState<string | null>(null);
@@ -362,7 +362,7 @@ function StepManager({
   );
 }
 
-function PendingClients({ onApproved }: { onApproved: () => void }) {
+function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
   const [clients, setClients] = useState<PendingClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
@@ -645,10 +645,14 @@ export default function ClientPortalsPage() {
         <form onSubmit={create} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="font-mono mb-1 block text-xs text-slate-500">
+              <label
+                htmlFor="cp-label"
+                className="font-mono mb-1 block text-xs text-slate-500"
+              >
                 Label
               </label>
               <input
+                id="cp-label"
                 type="text"
                 value={form.label}
                 onChange={(e) =>
@@ -659,10 +663,14 @@ export default function ClientPortalsPage() {
               />
             </div>
             <div>
-              <label className="font-mono mb-1 block text-xs text-slate-500">
+              <label
+                htmlFor="cp-client-email"
+                className="font-mono mb-1 block text-xs text-slate-500"
+              >
                 Client Email
               </label>
               <input
+                id="cp-client-email"
                 type="email"
                 value={form.clientEmail}
                 onChange={(e) =>
@@ -673,10 +681,14 @@ export default function ClientPortalsPage() {
               />
             </div>
             <div>
-              <label className="font-mono mb-1 block text-xs text-slate-500">
+              <label
+                htmlFor="cp-client-name"
+                className="font-mono mb-1 block text-xs text-slate-500"
+              >
                 Client Name (optional)
               </label>
               <input
+                id="cp-client-name"
                 type="text"
                 value={form.clientName}
                 onChange={(e) =>
@@ -712,9 +724,9 @@ export default function ClientPortalsPage() {
 
       {loading && (
         <div className="space-y-3">
-          {[...Array(3)].map((_, i) => (
+          {["cp-skel-1", "cp-skel-2", "cp-skel-3"].map((k) => (
             <div
-              key={i}
+              key={k}
               className="h-20 animate-pulse rounded-xl border border-slate-800 bg-void-light/30"
             />
           ))}
