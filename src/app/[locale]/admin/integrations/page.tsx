@@ -238,7 +238,7 @@ export default function IntegrationsPage() {
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     <span
-                      className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${STATUS_DOT[row.status]}`}
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT[row.status]}`}
                     />
                     <span className="font-heading truncate font-medium text-white">
                       {row.name}
@@ -252,7 +252,7 @@ export default function IntegrationsPage() {
                       </span>
                     )}
                     <span
-                      className={`flex-shrink-0 font-mono text-xs ${STATUS_TEXT[row.status]}`}
+                      className={`shrink-0 font-mono text-xs ${STATUS_TEXT[row.status]}`}
                     >
                       {STATUS_LABEL[row.status]}
                     </span>
@@ -261,7 +261,7 @@ export default function IntegrationsPage() {
                         href={row.setupUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-shrink-0 rounded-lg border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300 transition-all hover:border-neon-magenta/50 hover:text-white"
+                        className="shrink-0 rounded-lg border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300 transition-all hover:border-neon-magenta/50 hover:text-white"
                       >
                         Connect
                       </a>
