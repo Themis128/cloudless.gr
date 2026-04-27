@@ -214,7 +214,7 @@ export default function AdminTicketsPage() {
                               : "text-yellow-400 bg-yellow-400/10"
                           }`}
                         >
-                          {stageLabels[stage] ?? stage || "—"}
+                          {stageLabels[stage] ?? (stage || "—")}
                         </span>
                       </td>
                       <td className="px-6 py-4 font-mono text-slate-500">
