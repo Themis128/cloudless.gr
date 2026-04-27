@@ -91,7 +91,7 @@ const sizeClasses: Record<SocialLinksSize, string> = {
 export default function SocialLinks({
   size = "sm",
   className = "",
-}: SocialLinksProps) {
+}: Readonly<SocialLinksProps>) {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       {LINKS.map(({ href, label, icon }) => (
