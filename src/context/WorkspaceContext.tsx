@@ -29,7 +29,7 @@ const WorkspaceContext = createContext<WorkspaceContextValue>({
 export function WorkspaceProvider({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [workspaces, setWorkspacesState] = useState<Workspace[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,28 +38,24 @@ export function WorkspaceProvider({
     if (stored) setCurrentId(stored);
   }, []);
 
+  // Auto-select first workspace once the list arrives if nothing is selected.
+  useEffect(() => {
+    if (currentId || workspaces.length === 0) return;
+    const stored = localStorage.getItem(LS_KEY);
+    const valid = workspaces.some((w) => w.id === stored)
+      ? stored
+      : (workspaces[0]?.id ?? null);
+    if (valid) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCurrentId(valid);
+      localStorage.setItem(LS_KEY, valid);
+    }
+  }, [workspaces, currentId]);
+
   const switchTo = useCallback((id: string) => {
     setCurrentId(id);
     localStorage.setItem(LS_KEY, id);
   }, []);
-
-  const setWorkspaces = useCallback(
-    (ws: Workspace[]) => {
-      setWorkspacesState(ws);
-      // Auto-select first if nothing selected yet
-      if (!currentId && ws.length > 0) {
-        const stored = localStorage.getItem(LS_KEY);
-        const valid = ws.some((w) => w.id === stored)
-          ? stored
-          : (ws[0]?.id ?? null);
-        if (valid) {
-          setCurrentId(valid);
-          localStorage.setItem(LS_KEY, valid);
-        }
-      }
-    },
-    [currentId],
-  );
 
   const current =
     workspaces.find((w) => w.id === currentId) ?? workspaces[0] ?? null;
