@@ -885,7 +885,9 @@ export default function ClientPortalsPage() {
                 You see them in the &ldquo;
                 <span className="text-yellow-400">⏳ N clients waiting</span>
                 &rdquo; section above. One click on{" "}
-                <span className="text-neon-green">Approve & Create Portal</span>{" "}
+                <span className="text-neon-green">
+                  Approve & Create Portal
+                </span>{" "}
                 creates the portal with 6 default steps and emails the client a
                 link to{" "}
                 <code className="rounded bg-void px-1 text-neon-cyan">
