@@ -117,7 +117,7 @@ export default async function RootLayout({
         {HS_PORTAL_ID ? (
           <Script
             id="hs-script-loader"
-            src={`//js-eu1.hs-scripts.com/${HS_PORTAL_ID}.js`}
+            src={`https://js-eu1.hs-scripts.com/${HS_PORTAL_ID}.js`}
             strategy="afterInteractive"
           />
         ) : null}

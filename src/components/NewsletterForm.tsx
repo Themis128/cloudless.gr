@@ -74,7 +74,7 @@ export default function NewsletterForm() {
           "Cloud tips, cost-saving strategies, and growth hacks. No spam.",
         )}
       </p>
-      <form onSubmit={handleSubmit} className="flex gap-2">
+      <form onSubmit={handleSubmit} className="flex gap-2" suppressHydrationWarning>
         <input
           type="email"
           value={email}
