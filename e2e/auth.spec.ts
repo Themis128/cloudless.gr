@@ -3,18 +3,27 @@ import { test, expect } from "@playwright/test";
 test.describe("Authentication", () => {
   test("homepage is accessible without login", async ({ page }) => {
     await page.goto("/");
-    expect(page.url()).toContain(":4000");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("can navigate to login page", async ({ page }) => {
+  test("login page exposes email and password fields", async ({ page }) => {
     await page.goto("/auth/login");
-    const inputs = await page.locator("input").count();
-    expect(inputs).toBeGreaterThan(0);
+    await expect(page).toHaveURL(/\/auth\/login/);
+    await expect(page.getByLabel(/email/i)).toBeVisible();
+    await expect(page.getByLabel(/password/i).first()).toBeVisible();
   });
 
-  test("can navigate to signup page", async ({ page }) => {
+  test("signup page exposes name, email and password fields", async ({ page }) => {
     await page.goto("/auth/signup");
-    const inputs = await page.locator("input").count();
-    expect(inputs).toBeGreaterThan(0);
+    await expect(page).toHaveURL(/\/auth\/signup/);
+    await expect(page.getByLabel(/name/i)).toBeVisible();
+    await expect(page.getByLabel(/email/i)).toBeVisible();
+    await expect(page.getByLabel(/^password/i)).toBeVisible();
+  });
+
+  test("forgot-password page is reachable from login", async ({ page }) => {
+    await page.goto("/auth/login");
+    await page.getByRole("link", { name: /forgot/i }).click();
+    await expect(page).toHaveURL(/\/auth\/forgot-password/);
   });
 });
