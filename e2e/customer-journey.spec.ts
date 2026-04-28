@@ -1,33 +1,33 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Customer Journey", () => {
-  test("can navigate homepage", async ({ page }) => {
+  test("homepage shows hero heading and main landmark", async ({ page }) => {
     await page.goto("/");
-    const main = await page.locator("main").count();
-    expect(main).toBeGreaterThan(0);
+    await expect(page).toHaveTitle(/cloudless/i);
+    await expect(page.locator("main")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("can view services page", async ({ page }) => {
+  test("services page renders an h1", async ({ page }) => {
     await page.goto("/services");
-    const content = await page.locator("body").textContent();
-    expect(content).toBeTruthy();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("can view store/products", async ({ page }) => {
+  test("store page renders an h1", async ({ page }) => {
     await page.goto("/store");
-    const content = await page.locator("body").textContent();
-    expect(content).toBeTruthy();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("can view blog", async ({ page }) => {
+  test("blog page renders an h1", async ({ page }) => {
     await page.goto("/blog");
-    const content = await page.locator("body").textContent();
-    expect(content).toBeTruthy();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("can view contact page", async ({ page }) => {
+  test("contact page renders the form", async ({ page }) => {
     await page.goto("/contact");
-    const forms = await page.locator("form").count();
-    expect(forms).toBeGreaterThanOrEqual(0);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /send|submit/i })
+    ).toBeVisible();
   });
 });

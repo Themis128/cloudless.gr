@@ -1,15 +1,28 @@
-import { test, expect, devices } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
 test.describe("Mobile & Responsive", () => {
-  test("homepage is responsive on mobile", async ({ page }) => {
+  test("homepage main and h1 are visible on the active viewport", async ({ page }) => {
     await page.goto("/");
-    const main = await page.locator("main").count();
-    expect(main).toBeGreaterThanOrEqual(0);
+    await expect(page.locator("main")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("buttons are visible on desktop", async ({ page }) => {
+  test("homepage exposes at least one navigable link", async ({ page }) => {
     await page.goto("/");
-    const buttons = await page.locator("button").count();
-    expect(buttons).toBeGreaterThan(0);
+    const links = page.getByRole("link");
+    await expect(links.first()).toBeVisible();
+    expect(await links.count()).toBeGreaterThan(0);
+  });
+
+  test("footer contact link reaches the contact page", async ({ page }) => {
+    await page.goto("/");
+    // The footer link is rendered last and is visible on every viewport
+    // (no hamburger gating it on mobile).
+    await page
+      .getByRole("link", { name: /contact/i })
+      .last()
+      .scrollIntoViewIfNeeded();
+    await page.getByRole("link", { name: /contact/i }).last().click();
+    await expect(page).toHaveURL(/\/contact/);
   });
 });
