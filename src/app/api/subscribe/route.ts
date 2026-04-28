@@ -1,4 +1,4 @@
-import { notifyTeam } from "@/lib/email";
+import { notifyTeam, sendSubscriberWelcome } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { isValidEmail } from "@/lib/validation";
 import { slackSubscriberNotify } from "@/lib/slack-notify";
@@ -20,7 +20,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Notify the team via email (reuses cached SES client) and Slack (fire-and-forget)
     await Promise.all([
       notifyTeam(
         `[Newsletter] New subscriber: ${email.slice(0, 80)}`,
@@ -33,6 +32,7 @@ export async function POST(request: Request) {
           from the cloudless.gr subscribe form.
         </p>`,
       ),
+      sendSubscriberWelcome(email),
       slackSubscriberNotify(email),
     ]);
 

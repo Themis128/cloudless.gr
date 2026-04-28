@@ -28,7 +28,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
   try {
     await ses.send(
       new SendEmailCommand({
-        Source: `${options.fromLabel ?? "Cloudless"} <${config.SES_FROM_EMAIL}>`,
+        Source: options.fromLabel
+          ? `${options.fromLabel} <${config.SES_FROM_EMAIL}>`
+          : config.SES_FROM_EMAIL,
         Destination: { ToAddresses: [options.to] },
         ...(options.replyTo && { ReplyToAddresses: options.replyTo }),
         Message: {
@@ -137,6 +139,38 @@ export async function sendPaymentFailureNotice(
       "Contact us at tbaltzakis@cloudless.gr for help.",
       "",
       "If this was a mistake, no action is needed. We'll retry the payment automatically.",
+    ].join("\n"),
+  });
+}
+
+export async function sendSubscriberWelcome(
+  subscriberEmail: string,
+): Promise<void> {
+  const unsubscribeUrl = `https://cloudless.gr/api/unsubscribe?email=${encodeURIComponent(subscriberEmail)}`;
+  await sendEmail({
+    to: subscriberEmail,
+    subject: "Welcome to the Cloudless newsletter",
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #00fff5;">You're in.</h2>
+        <p>Thanks for subscribing to the Cloudless newsletter.</p>
+        <p>You'll get cloud tips, cost-saving strategies, and growth hacks. No spam.</p>
+        <hr style="border: none; border-top: 1px solid #333; margin: 24px 0;" />
+        <p style="color: #888; font-size: 12px;">
+          You received this email because you subscribed at
+          <a href="https://cloudless.gr" style="color: #00fff5;">cloudless.gr</a>.
+          <br />
+          <a href="${escapeHtml(unsubscribeUrl)}" style="color: #888;">Unsubscribe</a>
+        </p>
+      </div>
+    `,
+    text: [
+      "You're in.",
+      "",
+      "Thanks for subscribing to the Cloudless newsletter.",
+      "You'll get cloud tips, cost-saving strategies, and growth hacks. No spam.",
+      "",
+      `Unsubscribe: ${unsubscribeUrl}`,
     ].join("\n"),
   });
 }

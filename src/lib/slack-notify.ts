@@ -71,15 +71,33 @@ export class SlackClient {
       return false;
     }
 
+    // Prefer the incoming webhook when configured: it posts to the channel
+    // chosen at app install without requiring the bot to be a channel member.
+    // chat.postMessage is only reachable for channels the bot has joined,
+    // which we cannot do programmatically without channels:join scope.
+    const useWebhookFirst = !!this.webhookUrl;
+
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         // postViaApi returns: true = success, false = ratelimited (retry), null = terminal error
-        const result = this.token
-          ? await this.postViaApi({ channel: this.defaultChannel, ...payload })
-          : await this.postViaWebhook(payload);
+        let result: boolean | null;
+        if (useWebhookFirst) {
+          result = await this.postViaWebhook(payload);
+        } else if (this.token) {
+          result = await this.postViaApi({
+            channel: this.defaultChannel,
+            ...payload,
+          });
+        } else {
+          return false;
+        }
 
         if (result === true) return true;
-        if (result === null) return false; // terminal error — don't retry
+        if (result === null) {
+          // Terminal API error (not_in_channel, channel_not_found, invalid_auth, …).
+          // Only reachable via the API path; webhook returns boolean.
+          return false;
+        }
         // result === false → ratelimited or transient failure, fall through to backoff
       } catch (err) {
         const isLastAttempt = attempt === MAX_RETRIES - 1;
