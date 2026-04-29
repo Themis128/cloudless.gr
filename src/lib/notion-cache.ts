@@ -15,16 +15,18 @@ interface CacheEntry<T> {
 }
 
 const cache = new Map<string, CacheEntry<unknown>>();
+const inflight = new Map<string, Promise<unknown>>();
 
 const DEFAULT_TTL_MS = 60 * 1000; // 60 seconds
 
 /**
  * Get-or-fetch: returns cached data if fresh, otherwise calls `fetcher`
- * and caches the result.
+ * and caches the result. Concurrent calls for the same key while a fetch
+ * is in progress share the single in-flight promise (stampede protection).
  *
- * @param key   Unique cache key (e.g. "blog:posts", "docs:all")
- * @param fetcher  Async function that fetches fresh data
- * @param ttlMs    Cache TTL in milliseconds (default 60s)
+ * @param key     Unique cache key (e.g. "blog:posts", "docs:all")
+ * @param fetcher Async function that fetches fresh data
+ * @param ttlMs   Cache TTL in milliseconds (default 60s)
  */
 export async function cached<T>(
   key: string,
@@ -34,13 +36,24 @@ export async function cached<T>(
   const now = Date.now();
   const entry = cache.get(key) as CacheEntry<T> | undefined;
 
-  if (entry && entry.expiresAt > now) {
-    return entry.data;
-  }
+  if (entry && entry.expiresAt > now) return entry.data;
 
-  const data = await fetcher();
-  cache.set(key, { data, expiresAt: now + ttlMs });
-  return data;
+  const existing = inflight.get(key);
+  if (existing) return existing as Promise<T>;
+
+  const promise = fetcher()
+    .then((data) => {
+      cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+      inflight.delete(key);
+      return data;
+    })
+    .catch((err) => {
+      inflight.delete(key);
+      throw err;
+    });
+
+  inflight.set(key, promise as Promise<unknown>);
+  return promise;
 }
 
 /**

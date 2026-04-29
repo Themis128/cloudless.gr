@@ -1,8 +1,16 @@
 import { GetParametersByPathCommand, SSMClient } from "@aws-sdk/client-ssm";
 
-const SSM_PREFIX = process.env.SSM_PREFIX ?? "/cloudless/production";
-const REGION = process.env.AWS_REGION ?? "us-east-1";
+// || (not ??) so that SSM_PREFIX="" falls back to the default instead of fetching from "/"
+const SSM_PREFIX = process.env.SSM_PREFIX || "/cloudless/production";
+const REGION = process.env.AWS_REGION || "us-east-1";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// Module-level singleton — avoids re-creating the connection pool on every cache miss
+let ssmClient: SSMClient | null = null;
+function getSsmClient(): SSMClient {
+  if (!ssmClient) ssmClient = new SSMClient({ region: REGION });
+  return ssmClient;
+}
 
 interface AppConfig {
   SES_FROM_EMAIL: string;
@@ -164,28 +172,42 @@ export async function getConfig(): Promise<AppConfig> {
 
   if (cached && Date.now() - cachedAt < CACHE_TTL_MS) return cached;
 
-  const ssm = new SSMClient({ region: REGION });
+  const ssm = getSsmClient();
   const params = new Map<string, string>();
 
-  let nextToken: string | undefined;
-  do {
-    const res = await ssm.send(
-      new GetParametersByPathCommand({
-        Path: SSM_PREFIX,
-        WithDecryption: true,
-        NextToken: nextToken,
-      }),
-    );
+  try {
+    let nextToken: string | undefined;
+    do {
+      const res = await ssm.send(
+        new GetParametersByPathCommand({
+          Path: SSM_PREFIX,
+          WithDecryption: true,
+          NextToken: nextToken,
+        }),
+      );
 
-    for (const p of res.Parameters ?? []) {
-      const key = p.Name?.replace(`${SSM_PREFIX}/`, "") ?? "";
-      if (key && p.Value) params.set(key, p.Value);
+      for (const p of res.Parameters ?? []) {
+        const key = p.Name?.replace(`${SSM_PREFIX}/`, "") ?? "";
+        if (key && p.Value) params.set(key, p.Value);
+      }
+
+      nextToken = res.NextToken;
+    } while (nextToken);
+  } catch (err) {
+    // Transient SSM failure — serve stale cache rather than crashing all requests
+    if (cached) {
+      console.warn("[SSM] Fetch failed, serving stale config:", err);
+      return cached;
     }
+    throw err;
+  }
 
-    nextToken = res.NextToken;
-  } while (nextToken);
-
-  const required = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"] as const;
+  const required = [
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "COGNITO_USER_POOL_ID",
+    "COGNITO_CLIENT_ID",
+  ] as const;
   for (const key of required) {
     if (!params.get(key)) {
       throw new Error(`Missing required SSM parameter: ${SSM_PREFIX}/${key}`);

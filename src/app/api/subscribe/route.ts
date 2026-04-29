@@ -20,6 +20,9 @@ export async function POST(request: Request) {
       );
     }
 
+    // Both SES sends must succeed — if either fails the subscriber gets 500
+    // and can retry. Slack is non-critical: fire-and-forget so a Slack outage
+    // never causes a false failure for the subscriber.
     await Promise.all([
       notifyTeam(
         `[Newsletter] New subscriber: ${email.slice(0, 80)}`,
@@ -33,8 +36,11 @@ export async function POST(request: Request) {
         </p>`,
       ),
       sendSubscriberWelcome(email),
-      slackSubscriberNotify(email),
     ]);
+
+    slackSubscriberNotify(email).catch((err) => {
+      console.error("[subscribe] Slack notification failed:", err);
+    });
 
     return Response.json({ success: true });
   } catch (error) {

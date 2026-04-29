@@ -104,51 +104,85 @@ describe("notion-blog.ts", () => {
   });
 
   describe("getFeaturedPosts", () => {
-    it("filters for Published AND Featured", async () => {
-      mockNotionFetchAll.mockResolvedValueOnce([]);
+    it("returns only posts with featured flag set", async () => {
+      const featuredPage = makePage({
+        id: "featured-1",
+        properties: { ...makePage().properties, Featured: { checkbox: true } },
+      });
+      const regularPage = makePage({
+        id: "regular-1",
+        properties: { ...makePage().properties, Featured: { checkbox: false } },
+      });
+      mockNotionFetchAll.mockResolvedValueOnce([featuredPage, regularPage]);
 
       const { getFeaturedPosts } = await import("@/lib/notion-blog");
-      await getFeaturedPosts();
+      const posts = await getFeaturedPosts();
 
-      const callBody = mockNotionFetchAll.mock.calls[0][1];
-      expect(callBody.filter.and).toEqual(
-        expect.arrayContaining([
-          { property: "Published", checkbox: { equals: true } },
-          { property: "Featured", checkbox: { equals: true } },
-        ]),
-      );
+      expect(posts).toHaveLength(1);
+      expect(posts[0].id).toBe("featured-1");
+      expect(posts[0].featured).toBe(true);
+    });
+
+    it("returns empty array when no posts are featured", async () => {
+      mockNotionFetchAll.mockResolvedValueOnce([makePage()]);
+
+      const { getFeaturedPosts } = await import("@/lib/notion-blog");
+      const posts = await getFeaturedPosts();
+
+      expect(posts).toEqual([]);
     });
   });
 
   describe("getPostsByCategory", () => {
-    it("filters by category", async () => {
-      mockNotionFetchAll.mockResolvedValueOnce([]);
+    it("returns only posts matching the requested category", async () => {
+      const cloudPage = makePage({ id: "cloud-1" });
+      const devOpsPage = makePage({
+        id: "devops-1",
+        properties: { ...makePage().properties, Category: { select: { name: "DevOps" } } },
+      });
+      mockNotionFetchAll.mockResolvedValueOnce([cloudPage, devOpsPage]);
 
       const { getPostsByCategory } = await import("@/lib/notion-blog");
-      await getPostsByCategory("Cloud");
+      const posts = await getPostsByCategory("Cloud");
 
-      const callBody = mockNotionFetchAll.mock.calls[0][1];
-      expect(callBody.filter.and).toEqual(
-        expect.arrayContaining([
-          { property: "Category", select: { equals: "Cloud" } },
-        ]),
-      );
+      expect(posts).toHaveLength(1);
+      expect(posts[0].id).toBe("cloud-1");
+      expect(posts[0].category).toBe("Cloud");
+    });
+
+    it("returns empty array when no posts match category", async () => {
+      mockNotionFetchAll.mockResolvedValueOnce([makePage()]);
+
+      const { getPostsByCategory } = await import("@/lib/notion-blog");
+      const posts = await getPostsByCategory("Nonexistent");
+
+      expect(posts).toEqual([]);
     });
   });
 
   describe("getPostsByTag", () => {
-    it("filters by tag", async () => {
-      mockNotionFetchAll.mockResolvedValueOnce([]);
+    it("returns only posts containing the requested tag", async () => {
+      const awsPage = makePage({ id: "aws-post" });
+      const dockerPage = makePage({
+        id: "docker-post",
+        properties: { ...makePage().properties, Tags: { multi_select: [{ name: "docker" }] } },
+      });
+      mockNotionFetchAll.mockResolvedValueOnce([awsPage, dockerPage]);
 
       const { getPostsByTag } = await import("@/lib/notion-blog");
-      await getPostsByTag("serverless");
+      const posts = await getPostsByTag("serverless");
 
-      const callBody = mockNotionFetchAll.mock.calls[0][1];
-      expect(callBody.filter.and).toEqual(
-        expect.arrayContaining([
-          { property: "Tags", multi_select: { contains: "serverless" } },
-        ]),
-      );
+      expect(posts).toHaveLength(1);
+      expect(posts[0].id).toBe("aws-post");
+    });
+
+    it("returns empty array when no posts contain the tag", async () => {
+      mockNotionFetchAll.mockResolvedValueOnce([makePage()]);
+
+      const { getPostsByTag } = await import("@/lib/notion-blog");
+      const posts = await getPostsByTag("kubernetes");
+
+      expect(posts).toEqual([]);
     });
   });
 

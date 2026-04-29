@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getProductById } from "@/lib/store-products";
+import { getTokenFromHeader, verifyToken } from "@/lib/api-auth";
 
 interface CheckoutItem {
   id: string;
@@ -58,13 +59,22 @@ export async function POST(request: NextRequest) {
     );
     const mode = hasSubscription ? "subscription" : "payment";
 
+    // Optional: extract authenticated user to pre-fill email and link order
+    const rawToken = getTokenFromHeader(request);
+    const authUser = rawToken ? await verifyToken(rawToken).catch(() => null) : null;
+
     const stripe = await getStripe();
     const session = await stripe.checkout.sessions.create({
       mode: mode as "payment" | "subscription",
       line_items: lineItems as never[],
       success_url: `${origin}/store/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/store`,
+      ...(authUser?.email ? { customer_email: authUser.email } : {}),
       billing_address_collection: "required",
+      metadata: {
+        source: "cloudless.gr",
+        ...(authUser?.sub ? { userId: authUser.sub } : {}),
+      },
       shipping_address_collection: resolvedProducts.some(
         ({ product }) => !product.recurring && product.category === "physical",
       )

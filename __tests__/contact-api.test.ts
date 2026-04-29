@@ -9,10 +9,10 @@ vi.mock("@/lib/rate-limit", () => ({
 
 const mockSend = vi.fn().mockResolvedValue({});
 
-// Mock AWS SES before importing the route — use class syntax for constructor
-vi.mock("@aws-sdk/client-ses", () => {
+// Mock AWS SES v2 before importing the route — email.ts now uses client-sesv2
+vi.mock("@aws-sdk/client-sesv2", () => {
   return {
-    SESClient: class MockSESClient {
+    SESv2Client: class MockSESv2Client {
       send = mockSend;
     },
     SendEmailCommand: class MockSendEmailCommand {

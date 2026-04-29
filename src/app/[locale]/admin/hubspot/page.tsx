@@ -56,7 +56,6 @@ interface Stats {
   fetchedAt: string | null;
 }
 
-
 export default function HubSpotOverviewPage() {
   const [stats, setStats] = useState<Stats>({
     contacts: { total: 0, newLeads: 0, qualified: 0, recent: [] },

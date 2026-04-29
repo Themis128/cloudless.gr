@@ -1,6 +1,6 @@
+import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getIntegrations } from "@/lib/integrations";
 import { slackContactNotify } from "@/lib/slack-notify";
 import { sendEmail } from "@/lib/email";
 import { getConfig } from "@/lib/ssm-config";
@@ -50,11 +50,17 @@ interface WebhookPayload {
   data?: Record<string, unknown>;
 }
 
-function verifySecret(request: NextRequest): boolean {
-  const { NOTION_WEBHOOK_SECRET } = getIntegrations();
-  if (!NOTION_WEBHOOK_SECRET) return false;
+async function verifySecret(request: NextRequest): Promise<boolean> {
+  const config = await getConfig();
+  const secret = config.NOTION_WEBHOOK_SECRET;
+  if (!secret) return false;
   const provided = request.headers.get("x-webhook-secret");
-  return provided === NOTION_WEBHOOK_SECRET;
+  if (!provided) return false;
+  const enc = new TextEncoder();
+  const a = enc.encode(secret);
+  const b = enc.encode(provided);
+  if (a.byteLength !== b.byteLength) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 // ───────────────────────────── Handlers ──────────────────────────────
@@ -231,7 +237,7 @@ async function handleSubmissionStatus(payload: WebhookPayload) {
 // ───────────────────────────── Main ──────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  if (!verifySecret(request)) {
+  if (!(await verifySecret(request))) {
     return NextResponse.json(
       { error: "Invalid or missing x-webhook-secret" },
       { status: 401 },

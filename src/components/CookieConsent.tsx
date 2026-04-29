@@ -269,10 +269,7 @@ export default function CookieConsent() {
                     "cookies.bannerDesc",
                     "We use cookies to improve your experience, analyse traffic, and personalise content. You can accept all cookies, reject optional ones, or customise your preferences.",
                   )}{" "}
-                  <Link
-                    href="/cookies"
-                    className="text-neon-cyan underline"
-                  >
+                  <Link href="/cookies" className="text-neon-cyan underline">
                     {t("cookies.learnMore", "Learn more about cookies")}
                   </Link>
                 </p>

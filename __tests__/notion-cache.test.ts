@@ -60,6 +60,32 @@ describe("notion-cache.ts", () => {
       const result = await cached("complex", fetcher);
       expect(result).toEqual(data);
     });
+
+    it("concurrent calls share a single in-flight promise (stampede protection)", async () => {
+      const fetcher = vi.fn().mockResolvedValue("shared-value");
+
+      const [a, b, c] = await Promise.all([
+        cached("stampede-key", fetcher),
+        cached("stampede-key", fetcher),
+        cached("stampede-key", fetcher),
+      ]);
+
+      expect(a).toBe("shared-value");
+      expect(b).toBe("shared-value");
+      expect(c).toBe("shared-value");
+      expect(fetcher).toHaveBeenCalledOnce();
+    });
+
+    it("removes in-flight entry on error so subsequent calls retry", async () => {
+      const failFetcher = vi.fn().mockRejectedValue(new Error("fetch failed"));
+      await expect(cached("error-key", failFetcher)).rejects.toThrow("fetch failed");
+
+      const successFetcher = vi.fn().mockResolvedValue("recovered");
+      const result = await cached("error-key", successFetcher);
+
+      expect(result).toBe("recovered");
+      expect(successFetcher).toHaveBeenCalledOnce();
+    });
   });
 
   describe("invalidateCache()", () => {

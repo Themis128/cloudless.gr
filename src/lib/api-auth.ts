@@ -12,6 +12,10 @@ const USER_POOL_ID =
   process.env.COGNITO_USER_POOL_ID ??
   process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ??
   "";
+const CLIENT_ID =
+  process.env.COGNITO_CLIENT_ID ??
+  process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ??
+  "";
 
 const COGNITO_ISSUER = USER_POOL_ID
   ? "https://cognito-idp." + REGION + ".amazonaws.com/" + USER_POOL_ID
@@ -27,6 +31,7 @@ export interface DecodedToken {
   email?: string;
   "cognito:username"?: string;
   "cognito:groups"?: string[];
+  token_use?: "id" | "access";
   aud: string;
   iss: string;
   iat: number;
@@ -57,7 +62,10 @@ export async function verifyToken(token: string): Promise<DecodedToken | null> {
     try {
       const { payload } = await jwtVerify(token, getJWKS, {
         issuer: COGNITO_ISSUER,
+        ...(CLIENT_ID ? { audience: CLIENT_ID } : {}),
       });
+      // Only accept ID tokens — access tokens use a different audience claim
+      if ((payload as Record<string, unknown>)["token_use"] !== "id") return null;
       return payload as unknown as DecodedToken;
     } catch {
       return null;

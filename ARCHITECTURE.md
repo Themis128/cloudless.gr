@@ -85,7 +85,7 @@ pnpm dev                 # → localhost:4000 (Turbopack)
 src/
 ├── app/                          ← Next.js App Router
 │   ├── layout.tsx                ← Root layout (providers, fonts, SW, global nav)
-│   ├── [locale]/                 ← i18n routing (en · el · fr)
+│   ├── [locale]/                 ← i18n routing (en · el · fr · de)
 │   │   ├── page.tsx              ← Homepage (Hero, Services, FAQ, CTA)
 │   │   ├── services/             ← Service offerings & pricing
 │   │   ├── blog/                 ← Blog listing + [slug] detail (Notion CMS)
@@ -177,7 +177,8 @@ src/
 └── locales/
     ├── en.json                   ← 195 keys
     ├── el.json                   ← 195 keys (Greek)
-    └── fr.json                   ← 195 keys (French)
+    ├── fr.json                   ← 195 keys (French)
+    └── de.json                   ← 195 keys (German)
 ```
 
 ---
@@ -195,9 +196,19 @@ src/
 │        │             │     │              │                         │
 │        ▼             │     │              ▼                         │
 │   process.env        │     │   getConfig() — ssm-config.ts          │
-│                      │     │   (5-min TTL cache, lazy-loaded)       │
+│                      │     │   (5-min TTL cache, singleton client,  │
+│                      │     │    stale-cache fallback on SSM error)  │
 └──────────────────────┘     └────────────────────────────────────────┘
 ```
+
+**SSM data store (separate from secrets config):** Some features use SSM as a key-value data store for mutable app state. These use their own `SSMClient` instances targeting dedicated parameter keys:
+
+| Key | File | Purpose |
+|---|---|---|
+| `/cloudless/PENDING_CLIENTS_JSON` | `pending-clients.ts` | Client signup queue |
+| `/cloudless/AB_FLAGS_JSON` | `admin/ab-tests` route | A/B test flag state |
+| `/cloudless/CLIENT_PORTALS_JSON` | `admin/client-portals` route | Portal token registry |
+| `/cloudless/WORKSPACES_JSON` | `admin/workspaces` route | Workspace config |
 
 ### SSM Parameters (all in `us-east-1`)
 
@@ -215,6 +226,7 @@ src/
 | `SLACK_SIGNING_SECRET` | SecureString | Inbound Slack verification |
 | `SLACK_WEBHOOK_URL` | SecureString | Outbound Slack notifications |
 | `HUBSPOT_API_KEY` | SecureString | CRM operations |
+| `HUBSPOT_CLIENT_SECRET` | SecureString | HubSpot webhook signature verification |
 | `NOTION_API_KEY` | SecureString | All Notion DB access |
 | `NOTION_BLOG_DB_ID` | String | Blog CMS |
 | `NOTION_WEBHOOK_SECRET` | SecureString | Notion webhook auth |
@@ -257,10 +269,21 @@ User Groups:
   - (none)  → regular user → /dashboard
   - admin   → /admin + /dashboard
 
-API Route Protection:
+Page Route Protection (src/proxy.ts middleware):
+  - All requests to /dashboard/* and /admin/* without a valid
+    Cognito cookie are redirected to /auth/login server-side.
+  - Admin paths with a valid cookie but no admin group are
+    redirected to /dashboard.
+
+API Route Protection (src/lib/api-auth.ts):
   requireAuth(req)   → 401 if missing/invalid JWT
   requireAdmin(req)  → 401/403 if not admin group
-  (uses JWKS endpoint for RS256 verification)
+
+JWT Verification (JWKS · RS256):
+  - Issuer:   https://cognito-idp.us-east-1.amazonaws.com/<pool>
+  - Audience: COGNITO_CLIENT_ID (rejects tokens for other apps)
+  - token_use: "id" required (access tokens explicitly rejected)
+  - Key rotation handled automatically (jose in-process JWKS cache)
 ```
 
 ### Route access matrix
@@ -405,8 +428,9 @@ graph TB
 | `GET` | `/api/blog/posts` | Blog posts (Notion or static fallback) | Notion Blog DB |
 | `POST` | `/api/contact` | Contact form submission | SES · Slack · HubSpot · Notion Submissions |
 | `POST` | `/api/checkout` | Create Stripe checkout session | Stripe |
-| `POST` | `/api/subscribe` | Newsletter signup | SES · Slack |
-| `POST` | `/api/unsubscribe` | Unsubscribe (SES suppression) | SES |
+| `POST` | `/api/subscribe` | Newsletter signup — both SES sends must succeed; Slack notification is fire-and-forget | SES · Slack |
+| `POST` | `/api/unsubscribe` | Unsubscribe via API (rate-limited: 5/min/IP) | SES suppression |
+| `GET` | `/api/unsubscribe?email=…` | One-click unsubscribe from email link (rate-limited: 5/min/IP) | SES suppression |
 | `GET` | `/api/calendar/availability` | Open consultation slots | Google Calendar |
 | `POST` | `/api/calendar/book` | Book consultation | Google Calendar · Slack |
 
@@ -421,8 +445,8 @@ graph TB
 
 | Method | Route | Auth | What it does |
 |---|---|---|---|
-| `POST` | `/api/webhooks/stripe` | Stripe signature | Orders, subscriptions, payment failures |
-| `POST` | `/api/webhooks/notion` | x-webhook-secret | Cache invalidation, email on status change |
+| `POST` | `/api/webhooks/stripe` | Stripe signature | Orders, subscriptions, payment failures. `constructEvent` verifies HMAC-SHA256 signature before any processing. Order confirmation email only sent when `payment_status="paid"` or `mode="subscription"`. |
+| `POST` | `/api/webhooks/notion` | x-webhook-secret (timing-safe via `crypto.timingSafeEqual`, secret from SSM) | Cache invalidation, submission email on `Done`, Slack alerts for project/task/analytics events |
 | `POST` | `/api/slack/events` | HMAC-SHA256 | App mentions, DMs |
 | `POST` | `/api/slack/commands` | HMAC-SHA256 | `/cloudless-status`, `/cloudless-orders` |
 | `POST` | `/api/slack/interactions` | HMAC-SHA256 | Block Kit buttons |
@@ -472,20 +496,25 @@ graph TB
 ## 8. Integration Map
 
 ```
-Integration         Status      Auth Method              Used In
-─────────────────────────────────────────────────────────────────────
-AWS Cognito         ✅ Live      JWKS / Amplify v6        Auth, all protected routes
-AWS SES             ✅ Live      IAM (Lambda role)         Contact, subscribe, webhooks
-AWS SSM             ✅ Live      IAM (Lambda role)         All API routes (secrets)
-Stripe              ✅ Live      Secret key (SSM)          Store, checkout, webhooks
-Notion              ✅ Live      API key (SSM)             Blog, docs, forms, analytics
-HubSpot             ✅ Live      API key (SSM)             CRM, contact form, admin
-Slack               ✅ Live      Bot token + secret        Notifications, inbound cmds
-Google Calendar     ✅ Live      Service account (SSM)     Consultation booking
-Google Search Con.  ✅ Live      Service account (SSM)     SEO admin dashboard
-Sentry              ✅ Live      DSN (SDK) + auth token    Error monitoring, admin
-Meta Pixel          🔶 Staged    Pixel ID (env)            Client-side tracking
-Meta CAPI           🔶 Staged    Access token (SSM)        Server-side lead events
+Integration            Status         Auth Method                    Used In
+────────────────────────────────────────────────────────────────────────────────────
+AWS Cognito            ✅ Live         JWKS / Amplify v6              Auth, all protected routes
+AWS SES                ✅ Live         IAM (Lambda role)              Contact, subscribe, webhooks
+AWS SSM                ✅ Live         IAM (Lambda role)              All API routes (secrets)
+Stripe                 ✅ Live         Secret key (SSM)               Store, checkout, webhooks
+Notion                 ✅ Live         API key (SSM)                  Blog, docs, forms, analytics
+HubSpot CRM            ✅ Live         API key (SSM)                  CRM, contact form, admin
+Slack                  ✅ Live         Bot token + secret (SSM)       Notifications, inbound cmds
+Google Calendar + GSC  ✅ Live         Service account (SSM)          Consultation booking, SEO admin
+Sentry                 ✅ Live         DSN (SDK) + auth token (SSM)   Error monitoring, admin
+Anthropic (Claude AI)  ✅ Live         API key (SSM)                  AI copy, insights, audience
+ActiveCampaign         ✅ Live         API key (SSM)                  Newsletter, email sequences
+Meta Pixel             🔶 Staged       Pixel ID (public env)          Client-side browser tracking
+Meta CAPI              🔶 Staged       Access token (SSM)             Server-side lead/purchase events
+LinkedIn Ads           🔶 Staged       Access token (SSM)             Campaign management
+TikTok Ads             🔶 Staged       OAuth → access token (SSM)     Campaign management (OAuth required)
+X (Twitter) Ads        🔶 Staged       OAuth tokens (SSM)             Campaign management (ad account needed)
+Google Ads             🔸 Pending      Dev token approval required    Campaign management
 ```
 
 ### Integration degradation behaviour
@@ -510,24 +539,24 @@ All modules live in `src/lib/`. They are **server-side only** unless noted.
 
 | File | Purpose |
 |---|---|
-| `ssm-config.ts` | Loads all secrets from SSM (5-min TTL cache). Single source of truth for prod config. |
+| `ssm-config.ts` | Loads all secrets from SSM (5-min TTL cache, singleton `SSMClient`, stale-cache fallback on error). Validates `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID` as required. `SSM_PREFIX` uses `||` so an empty string falls back to `/cloudless/production`. |
 | `integrations.ts` | Reads integration keys from env. Provides `isConfigured(...keys)` guard. |
-| `api-auth.ts` | `requireAuth()` / `requireAdmin()` — JWT verification against Cognito JWKS. |
+| `api-auth.ts` | `requireAuth()` / `requireAdmin()` — RS256 JWT verification against Cognito JWKS; enforces issuer, audience (client ID), and `token_use: "id"`. |
 | `amplify-config.ts` | Configures Amplify v6 Cognito client (singleton, client-side). |
 
 ### Email
 
 | File | Purpose |
 |---|---|
-| `email.ts` | `sendEmail()` · `sendOrderConfirmation()` · `sendPaymentFailureNotice()` · `notifyTeam()` |
-| `ses-suppression.ts` | `addToSuppressionList()` — SES account-level unsubscribe. |
+| `email.ts` | `sendEmail()` · `sendOrderConfirmation()` · `sendPaymentFailureNotice()` · `sendSubscriberWelcome()` · `notifyTeam()` — uses SES v2 (`@aws-sdk/client-sesv2`). `sendEmail` accepts an optional `listUnsubscribeUrl` which adds RFC 8058 `List-Unsubscribe` + `List-Unsubscribe-Post` headers. |
+| `ses-suppression.ts` | `addToSuppressionList()` — SES v2 account-level suppression list (prevents future sends to unsubscribed addresses). |
 | `escape-html.ts` | Sanitises HTML in email bodies (injection prevention). |
 
 ### Payments
 
 | File | Purpose |
 |---|---|
-| `stripe.ts` | Stripe client singleton, `listStripeProducts()`, `listRecentCheckoutSessions()`, `formatPrice()`. |
+| `stripe.ts` | Lazy singleton `getStripe()` — initialized once from SSM secret, reused across Lambda warm instances. Exports `listStripeProducts()`, `listRecentCheckoutSessions()`, `formatPrice()`. |
 | `store-products.ts` | Maps Stripe products to store format. Cached 5 min. Falls back to local demo data. |
 | `store-products-client.ts` | Client-safe product helpers (no secret keys). |
 
@@ -627,7 +656,7 @@ AuthProvider
 
 ### i18n
 
-- Locales: `en` (default) · `el` (Greek) · `fr` (French)
+- Locales: `en` (default) · `el` (Greek) · `fr` (French) · `de` (German)
 - 195 translation keys per locale
 - Cookie-based switching (`NEXT_LOCALE`)
 - Server: `getServerLocale()` | Client: `useCurrentLocale()`
@@ -671,8 +700,11 @@ Stripe processes payment
         ▼
 POST /api/webhooks/stripe (checkout.session.completed)
   → sendOrderConfirmation() → SES email to customer
+      (only when payment_status="paid" OR mode="subscription";
+       skipped for one-time payments with unpaid status)
   → notifyTeam()           → SES email to admin
   → slackOrderNotify()     → Slack notification (fire-and-forget)
+  → HubSpot upsertContact + createDeal (fire-and-forget)
         │
         ▼
 Redirect to /store/success
@@ -735,14 +767,29 @@ pnpm test:ci       # Vitest single run (CI)
 pnpm test:e2e      # Playwright E2E
 ```
 
-### Test files
+### Test files (99 suites · 1164 tests)
 
 | File | Coverage |
 |---|---|
 | `__tests__/admin-api.test.ts` | All `/api/admin/**` routes: auth, 503, response shape |
+| `__tests__/admin-analytics-api.test.ts` | All 10 GSC analytics admin endpoints |
+| `__tests__/admin-campaigns-api.test.ts` | Google, LinkedIn, TikTok, X campaign routes |
+| `__tests__/admin-client-portals-api.test.ts` | Client portal enroll + token lookup |
+| `__tests__/admin-crm-api.test.ts` | HubSpot contacts/companies/deals/tickets admin routes |
+| `__tests__/admin-pipeline-api.test.ts` | HubSpot deal pipeline board + move + notes |
+| `__tests__/admin-workspaces-api.test.ts` | Workspace CRUD admin routes |
 | `__tests__/gsc.test.ts` | All 11 GSC functions, success + error paths |
 | `__tests__/hubspot-crm.test.ts` | `getPipelines`, `listCompanies`, `listDeals`, `listOwners` |
+| `__tests__/hubspot-pipeline.test.ts` | Pipeline board data, deal move, deal notes |
 | `__tests__/contact-api.test.ts` | `POST /api/contact` full flow |
+| `__tests__/subscribe-api.test.ts` | `POST /api/subscribe` — SES + Slack + validation |
+| `__tests__/notion-*.test.ts` | All Notion lib modules (blog, docs, analytics, calendar, projects, …) |
+| `__tests__/portal-pending-flow.test.ts` | Client portal enroll + token + waiting page flow |
+| `__tests__/tiktok-oauth.test.ts` | TikTok OAuth callback + token exchange |
+| `__tests__/store-components.test.tsx` | Cart slide-over, add-to-cart, store grid |
+| `__tests__/components.test.tsx` | Navbar, Footer, CookieConsent, NewsletterForm, etc. |
+| `__tests__/locale-routes-smoke.test.ts` | next-intl locale contract, required route files |
+| `__tests__/locales-parity.test.ts` | All four locale files have identical key sets |
 | `e2e/*.spec.ts` | Full browser flows via Playwright + axe-core accessibility |
 
 ### Key testing rules
@@ -769,15 +816,16 @@ pnpm test:e2e      # Playwright E2E
 - Sentry error monitoring
 - Admin dashboard (orders, CRM, SEO, errors, Notion explorer)
 - Customer dashboard (purchases, consultations, profile, settings)
-- i18n (en, el, fr)
+- i18n (en, el, fr, de)
 - PWA (service worker, offline, push notifications)
-- Security: rate limiting, CORS, CSP headers, HMAC verification, server-side price validation
+- Security: rate limiting (incl. admin GET + unsubscribe GET), CORS with `Authorization` header, CSP headers, HMAC verification, server-side price validation, JWT audience + `token_use` enforcement
+- SES v2 transactional email with RFC 8058 `List-Unsubscribe` headers on subscriber emails (Gmail/Yahoo bulk-sender compliance)
 
 ### 🔶 Staged (code exists, needs activation)
 
 - Meta Pixel (client-side) — needs Pixel ID · **blocked by Meta advertising restriction**
 - Meta CAPI (server-side) — needs access token + wire-up in `/api/contact` · **blocked by Meta advertising restriction**
-- Notion webhook invalidation — webhook route fully built, needs external trigger (Make/Zapier/n8n) pointed at `POST /api/webhooks/notion`
+- Notion webhook — route hardened (timing-safe secret, SSM-backed), needs external trigger (Make/Zapier/n8n) pointed at `POST /api/webhooks/notion`
 
 ### 🚧 Planned (not yet built)
 

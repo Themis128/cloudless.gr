@@ -6,11 +6,12 @@ Built with **Next.js 16**, **React 19**, **Tailwind CSS 4**, and **TypeScript**.
 
 ## Localization (i18n)
 
-The app supports three locales with cookie-based switching:
+The app supports four locales with cookie-based switching:
 
-- `en` — English (default, ~200+ translated keys)
+- `en` — English (default)
 - `el` — Greek (full translation)
-- `fr` — French (UI-selectable, currently falls back to English strings)
+- `fr` — French (full translation)
+- `de` — German (full translation)
 
 Translation dictionaries live in `src/locales/en.json` and `src/locales/el.json`. The i18n system provides `translate(locale, key, fallback)` for strings and `translateArray(locale, key, fallback)` for array values. Server components use `getServerLocale()` from `src/lib/server-locale.ts`; client components use the `useCurrentLocale()` hook.
 
@@ -56,7 +57,8 @@ Key features of the auth system:
 - Sign-in edge case handling — `FORCE_CHANGE_PASSWORD` challenge, unverified users (`CONFIRM_SIGN_UP` → redirect to verify), and `UserAlreadyAuthenticatedException` (auto sign-out + retry) are all handled.
 - Password manager support — all auth forms include `autoComplete` attributes (`email`, `current-password`, `new-password`, `one-time-code`).
 - Admin detection — client-side via decoded JWT `cognito:groups` claim. Admin routes redirect non-admins to the dashboard.
-- Route protection is client-side via layout guards in `/dashboard` and `/admin`.
+- Route protection is **server-side** via `src/proxy.ts` middleware (all unauthenticated requests to `/dashboard` and `/admin` are redirected to login before the page renders) and additionally client-side via layout guards.
+- JWT hardening — `verifyToken` in `src/lib/api-auth.ts` enforces `issuer`, `audience` (Cognito client ID), and `token_use: "id"` claims so only ID tokens issued for this app are accepted.
 
 ## Architecture
 
@@ -233,7 +235,25 @@ graph LR
 
 This project uses **no `.env` files** in production. All secrets are stored in **AWS SSM Parameter Store** under the path prefix `/cloudless/production/` and fetched at runtime via `src/lib/ssm-config.ts`.
 
-Required SSM parameters:
+### How `ssm-config.ts` works
+
+- `SSM_PREFIX` uses `||` (not `??`) so an empty string falls back to `/cloudless/production` and never fetches from the SSM root.
+- A module-level singleton `SSMClient` avoids re-creating the connection pool on every 5-min cache refresh.
+- On transient SSM failure, `getConfig()` serves the last known good (stale) cache instead of crashing all in-flight requests. If there is no prior cache, it throws so Lambda reports a cold-start failure.
+- `NODE_ENV=test` short-circuits SSM entirely and reads from `process.env` (unit tests never touch AWS).
+
+### Required SSM parameters (startup validation)
+
+`getConfig()` throws on startup if any of these are missing:
+
+| Parameter | Type | Description |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | SecureString | Stripe API secret key |
+| `STRIPE_WEBHOOK_SECRET` | SecureString | Stripe webhook signature secret |
+| `COGNITO_USER_POOL_ID` | String | Cognito pool for JWT verification |
+| `COGNITO_CLIENT_ID` | String | Cognito app client for JWT `aud` check |
+
+### All SSM parameters
 
 | Parameter                | Type         | Description                   |
 | ------------------------ | ------------ | ----------------------------- |
@@ -242,11 +262,109 @@ Required SSM parameters:
 | `AWS_SES_REGION`         | String       | SES region (e.g. `us-east-1`) |
 | `STRIPE_SECRET_KEY`      | SecureString | Stripe API secret key         |
 | `STRIPE_PUBLISHABLE_KEY` | SecureString | Stripe publishable key        |
+| `STRIPE_WEBHOOK_SECRET`  | SecureString | Stripe webhook signature       |
+| `COGNITO_USER_POOL_ID`   | String       | Cognito pool ID               |
+| `COGNITO_CLIENT_ID`      | String       | Cognito app client ID         |
 | `SLACK_BOT_TOKEN`        | SecureString | Slack bot OAuth token         |
 | `SLACK_SIGNING_SECRET`   | SecureString | Slack request signing secret  |
 | `SLACK_WEBHOOK_URL`      | SecureString | Slack incoming webhook URL    |
+| `GOOGLE_CLIENT_EMAIL`    | String       | Google service account email  |
+| `GOOGLE_PRIVATE_KEY`     | SecureString | Google service account key    |
+| `NOTION_API_KEY`         | SecureString | Notion integration token      |
+| `ANTHROPIC_API_KEY`      | SecureString | Claude AI API key             |
+| _(+ all other integration keys in `AppConfig`)_ | | |
 
-For local development, configure your AWS CLI with credentials that have `ssm:GetParametersByPath` permission.
+For local development, configure your AWS CLI with credentials that have `ssm:GetParametersByPath` permission on `/cloudless/production/*`.
+
+### SSM as data store (separate from secrets)
+
+Some features use SSM as a mutable JSON blob store for app state, separate from the secrets config:
+
+| Key | Purpose |
+|---|---|
+| `/cloudless/PENDING_CLIENTS_JSON` | Client signup queue (`pending-clients.ts`) |
+| `/cloudless/AB_FLAGS_JSON` | A/B test flag state (`admin/ab-tests`) |
+| `/cloudless/CLIENT_PORTALS_JSON` | Portal token registry |
+| `/cloudless/WORKSPACES_JSON` | Workspace config |
+
+## Transactional Email (SES)
+
+All outbound email uses **AWS SES v2** (`@aws-sdk/client-sesv2`) via `src/lib/email.ts`.
+
+| Function | Trigger | Notes |
+|---|---|---|
+| `sendEmail()` | Base helper | Accepts optional `listUnsubscribeUrl` → adds RFC 8058 `List-Unsubscribe` + `List-Unsubscribe-Post` headers |
+| `notifyTeam()` | Contact form, orders, subscribe, unsubscribe | Sends to `SES_TO_EMAIL` (from SSM) |
+| `sendOrderConfirmation()` | Stripe `checkout.session.completed` | Sent to customer |
+| `sendPaymentFailureNotice()` | Stripe `invoice.payment_failed` | Sent to customer |
+| `sendSubscriberWelcome()` | Newsletter signup | Sent to subscriber with `List-Unsubscribe` header |
+
+### Unsubscribe
+
+Two endpoints handle opt-outs, both rate-limited to **5 requests / IP / minute**:
+
+- `POST /api/unsubscribe` — JSON `{ email }`, used by the settings UI
+- `GET /api/unsubscribe?email=…` — one-click link included in all subscriber emails (`List-Unsubscribe` header)
+
+Both call `addToSuppressionList()` in `src/lib/ses-suppression.ts`, which adds the address to the SES account-level suppression list via `PutSuppressedDestinationCommand`. SES will reject all future sends to suppressed addresses at the infrastructure level.
+
+### Reliability notes
+
+- `POST /api/subscribe` sends both SES emails in `Promise.all()` — if either fails the subscriber gets a 500 and can retry. Slack notification is fire-and-forget and never fails the request.
+- `sendEmail()` swallows AWS SDK XML parse errors on HTTP 200 responses (known SDK quirk where a successful send throws a deserialization error).
+- No `.env` files in production — all SES credentials (`SES_FROM_EMAIL`, `SES_TO_EMAIL`, `AWS_SES_REGION`) are loaded from SSM at runtime.
+
+## Stripe (Store, Checkout, Webhooks)
+
+All Stripe operations use a lazy singleton from `src/lib/stripe.ts` (`getStripe()`) initialized once from SSM and reused across warm Lambda instances.
+
+### Checkout (`POST /api/checkout`)
+
+- Server-side price resolution only — client-submitted prices are ignored; all amounts come from the internal product catalog.
+- Quantity clamped to 1-99.
+- Origin validated against an allowlist to prevent open redirect on `success_url`/`cancel_url`.
+- If the user is authenticated (Bearer token in `Authorization` header), the checkout session is pre-filled with `customer_email` and `metadata.userId` to link the Stripe order to the Cognito account.
+- Every session includes `metadata.source = "cloudless.gr"` for tracing.
+
+### Webhook (`POST /api/webhooks/stripe`)
+
+- Signature verified via `stripe.webhooks.constructEvent()` (HMAC-SHA256) before any processing — returns 400 on failure.
+- Webhook secret loaded exclusively from SSM (`STRIPE_WEBHOOK_SECRET`) — no env var fast-path.
+- `checkout.session.completed`: order confirmation email sent only when `payment_status === "paid"` OR `mode === "subscription"`. One-time payments with `payment_status !== "paid"` (e.g. async bank transfers still pending) do not trigger the email.
+- `invoice.payment_failed`: sends failure notice to customer + team alert.
+- HubSpot contact upsert + deal creation runs fire-and-forget after `checkout.session.completed`.
+- Sentry `captureException` and `flush` called on handler errors before Lambda returns.
+
+### User purchases (`GET /api/user/purchases`)
+
+Requires JWT auth. Looks up the Stripe customer by email, then returns checkout sessions and subscriptions. Falls back to a session scan filtered by email if no Stripe customer record exists yet.
+
+## Notion (Blog CMS, Docs, Forms, Projects, Analytics)
+
+All Notion operations use `src/lib/notion.ts` — a thin fetch wrapper that calls `getIntegrationsAsync()` for the API key on every request (no module-level secret capture).
+
+### Webhook (`POST /api/webhooks/notion`)
+
+- Shared secret verified via `x-webhook-secret` header using `crypto.timingSafeEqual` (timing-safe) before any payload is parsed. Secret loaded from SSM (`NOTION_WEBHOOK_SECRET`) via `getConfig()`.
+- Missing or incorrect secret returns 401; invalid JSON returns 400.
+- Supported event types and their effects:
+
+| Event type | Effect |
+|---|---|
+| `page.updated` | Invalidates blog/docs cache, revalidates ISR paths + sitemap |
+| `page.created` | Same revalidation + optional Slack notify for new docs |
+| `submission.status` | Sends "inquiry reviewed" email to submitter when `status === "Done"` |
+| `project.updated` | Slack alert on `Completed` or `Blocked` |
+| `task.updated` | Slack alert on `Blocked` |
+| `analytics.event` | Slack alert when error count >= 10 |
+
+### Calendar persistence (`src/lib/notion-calendar.ts`)
+
+Persists content calendar items to `NOTION_CALENDAR_DB_ID`. Reads config from `getIntegrationsAsync()` (env + SSM merged). Respects explicit `NOTION_CALENDAR_DB_ID = ""` env-var clears (disables integration without clearing SSM cache).
+
+### Reports persistence (`src/lib/notion-reports.ts`)
+
+Same pattern as calendar, uses `NOTION_REPORTS_DB_ID`.
 
 ## Getting Started
 
@@ -335,7 +453,7 @@ npx playwright test
 npx playwright test --headed
 ```
 
-Unit test files live in `__tests__/` — key test modules:
+Unit test files live in `__tests__/` (99 suites, 1164 tests) — key modules:
 
 | File | Coverage |
 |---|---|
@@ -343,7 +461,11 @@ Unit test files live in `__tests__/` — key test modules:
 | `__tests__/gsc.test.ts` | `src/lib/gsc.ts` — all 11 exported functions, success + error paths |
 | `__tests__/hubspot-crm.test.ts` | `getPipelines`, `listCompanies`, `listDeals`, `listOwners` |
 | `__tests__/contact-api.test.ts` | `POST /api/contact` |
-| `e2e/*.spec.ts` | Full browser flows via Playwright |
+| `__tests__/subscribe-api.test.ts` | `POST /api/subscribe` — SES + Slack + validation |
+| `__tests__/notion-*.test.ts` | All Notion lib modules |
+| `__tests__/store-components.test.tsx` | Cart, store grid, add-to-cart |
+| `__tests__/locales-parity.test.ts` | All four locale files have matching keys |
+| `e2e/*.spec.ts` | Full browser flows via Playwright + axe-core accessibility |
 
 ## Brand Identity
 
@@ -373,85 +495,41 @@ This avoids noisy `LF will be replaced by CRLF` warnings and keeps diffs stable 
 
 ## Tech Stack
 
-- Next.js 16.2.3 (App Router, Turbopack)
+- Next.js 16.2.4 (App Router, Turbopack)
 - React 19.2.4
 - TypeScript 5
 - Tailwind CSS 4
 - AWS Cognito + Amplify v6 (authentication)
-- AWS SES (transactional email)
+- AWS SES v2 (transactional email — contact, orders, newsletter, portal approvals)
 - AWS SSM Parameter Store (secrets)
 - Stripe (checkout & payments)
-- Vitest + React Testing Library (140+ tests)
+- Vitest + React Testing Library (1164 tests)
 
 ## Project MCP Configuration
 
-This workspace includes Project MCP config files for three MCP servers:
+The workspace MCP config lives in `mcp.json`. Three servers are configured:
 
-- `project` — launches `project-mcp`
-- `mcp-tool-shop` — launches `mcp-tool-shop`
-- `codeglide-mcp-server` — launches the CodeGlide MCP server via Docker
+| Server | Package | Purpose |
+|--------|---------|---------|
+| `project` | `project-mcp` | Project context for Claude Code |
+| `mcp-tool-shop` | `mcp-tool-shop` | Additional Claude Code tools |
+| `notion` | `@notionhq/notion-mcp-server` | Direct Notion API access (uses `NOTION_API_KEY`) |
 
-All configs are available in:
-
-- `mcp.json`
-- `.mcp.json`
-- `project.mcp.json`
-
-Current config:
+All servers use `autoStart: true` and are launched via `npx -y` — no global installs required.
 
 ```json
 {
   "mcpServers": {
-    "project": {
+    "project": { "command": "npx", "args": ["-y", "project-mcp"], "autoStart": true },
+    "mcp-tool-shop": { "command": "npx", "args": ["-y", "mcp-tool-shop"], "autoStart": true },
+    "notion": {
       "command": "npx",
-      "args": ["-y", "project-mcp"],
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": { "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer ${NOTION_API_KEY}\",\"Notion-Version\":\"2022-06-28\"}" },
       "autoStart": true
-    },
-    "mcp-tool-shop": {
-      "command": "npx",
-      "args": ["-y", "mcp-tool-shop"],
-      "autoStart": true
-    },
-    "codeglide-mcp-server": {
-      "command": "bash",
-      "args": [
-        "-c",
-        "docker run --pull=always --platform linux/amd64 --rm -i -v $(pwd):$(pwd) -e MCP_CLIENT=$(whoami) -v codeglide-data:/var/codeglide/data ghcr.io/codeglide/extension:latest"
-      ]
     }
   }
 }
 ```
 
-A dedicated GitHub Actions workflow has also been added in `.github/workflows/codeglide-mcp-server.yml` for CI-driven MCP server generation. The workflow runs the CodeGlide Docker image and writes generated MCP artifacts into the repository workspace, with generated artifacts available under `${{ github.workspace }}-codeglide-extension-artifacts` if produced.
-
-This workspace config uses `autoStart: true` so compatible MCP extensions can launch these servers automatically on startup.
-
-### MCP Manager Bridge
-
-This repository is compatible with the MCP Manager Bridge VS Code extension, which connects VS Code to the MCP Manager desktop application and keeps workspace `mcp.json` configuration in sync.
-
-For a dedicated reference, see `docs/mcp-manager-bridge.md`.
-
-- Install the MCP Manager desktop app and the MCP Manager Bridge extension in VS Code.
-- Use the extension to view server status, enable/disable servers, restart servers, and sync configuration with Cursor.
-- The bridge can write Cursor config to:
-  - macOS/Linux: `~/.cursor/mcp.json`
-  - Windows: `%APPDATA%\Cursor\mcp.json`
-- `codeglide-mcp-server` runs via Docker using `bash`; Windows users should run VS Code from WSL or adjust the command for their shell environment.
-
-Commands provided by the extension include:
-
-- `MCP Bridge: Connect`
-- `MCP Bridge: Disconnect`
-- `MCP Bridge: Refresh`
-- `MCP Bridge: Sync with MCP Manager`
-
-To use this workspace in VS Code:
-
-1. Open the `cloudless.gr` workspace.
-2. Install a Project MCP-compatible extension or MCP Manager Bridge extension.
-3. Open the Project MCP panel or MCP Manager Bridge panel.
-4. Launch the `project`, `mcp-tool-shop`, or `codeglide-mcp-server` MCP server from workspace config.
-
-If the extension sees the workspace config, it should start the selected server by name.
+The `.mcp.json` file is a symlink to `mcp.json` for tools that look for the dot-prefixed filename.

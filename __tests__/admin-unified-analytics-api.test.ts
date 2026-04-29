@@ -69,6 +69,7 @@ function makeAdminToken(): string {
     sub: "admin-sub",
     email: "admin@test.com",
     "cognito:groups": ["admin"],
+    token_use: "id",
     aud: "test-client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_test",
     iat: Math.floor(Date.now() / 1000) - 60,
@@ -83,6 +84,7 @@ function makeUserToken(): string {
   const payload = {
     sub: "user-sub",
     "cognito:groups": [],
+    token_use: "id",
     aud: "test-client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_test",
     iat: Math.floor(Date.now() / 1000) - 60,
