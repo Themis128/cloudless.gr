@@ -2,6 +2,7 @@ import { isValidEmail } from "@/lib/validation";
 import { notifyTeam } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { addToSuppressionList } from "@/lib/ses-suppression";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * Newsletter unsubscribe endpoint.
@@ -47,6 +48,15 @@ export async function POST(request: Request) {
 
 /** GET handler for email link unsubscribes (List-Unsubscribe header) */
 export async function GET(request: Request) {
+  const ip = getClientIp(request);
+  const rl = rateLimit(`unsubscribe:${ip}`, 5, 60_000);
+  if (!rl.ok) {
+    return new Response(
+      unsubscribePage("Too many requests. Please try again later.", false),
+      { status: 429, headers: { "Content-Type": "text/html; charset=utf-8" } },
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("email");
 

@@ -11,6 +11,12 @@ vi.mock("@/lib/ses-suppression", () => ({
   addToSuppressionList: addToSuppressionListMock,
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: vi.fn(() => ({ ok: true, remaining: 99 })),
+  getClientIp: vi.fn(() => "127.0.0.1"),
+  resetRateLimitStore: vi.fn(),
+}));
+
 describe("POST /api/unsubscribe", () => {
   beforeEach(() => {
     vi.clearAllMocks();

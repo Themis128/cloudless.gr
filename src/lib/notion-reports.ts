@@ -24,9 +24,8 @@ import type { Report } from "@/lib/reports";
 // ---------------------------------------------------------------------------
 
 async function getDb(): Promise<{ apiKey: string; dbId: string } | null> {
-  // Fast-path: respect explicit env-var clears immediately (bypasses stale async cache).
-  // Mirrors the same guard in isConfiguredAsync().
-  if (!process.env.NOTION_API_KEY || !process.env.NOTION_REPORTS_DB_ID)
+  // Empty string means explicitly disabled -- don't let SSM override a cleared env var.
+  if (process.env.NOTION_API_KEY === "" || process.env.NOTION_REPORTS_DB_ID === "")
     return null;
   const cfg = await getIntegrationsAsync();
   if (!cfg.NOTION_API_KEY || !cfg.NOTION_REPORTS_DB_ID) return null;
