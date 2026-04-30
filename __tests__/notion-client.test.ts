@@ -256,10 +256,11 @@ describe("notion.ts — Shared Client", () => {
       expect(html).toContain('loading="lazy"');
     });
 
-    it("renders image with file URL (no caption)", async () => {
+    it("renders image with file URL via proxy (no caption)", async () => {
       const { blocksToHtml } = await import("@/lib/notion");
       const blocks = [
         {
+          id: "img-block-1",
           type: "image",
           image: {
             type: "file",
@@ -269,7 +270,7 @@ describe("notion.ts — Shared Client", () => {
         },
       ];
       const html = blocksToHtml(blocks);
-      expect(html).toContain('src="https://s3.aws.com/img.png"');
+      expect(html).toContain('src="/api/notion-image?id=img-block-1&type=block"');
       expect(html).not.toContain("<figcaption>");
     });
 

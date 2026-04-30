@@ -14,6 +14,9 @@ const mockNotionListAll = vi.fn();
 vi.mock("@/lib/notion", () => ({
   notionFetchAll: (...args: unknown[]) => mockNotionFetchAll(...args),
   notionListAll: (...args: unknown[]) => mockNotionListAll(...args),
+  fetchBlocksDeep: (...args: unknown[]) => mockNotionListAll(...args),
+  notionImageProxyUrl: (id: string, type?: string) =>
+    `/api/notion-image?id=${id}&type=${type ?? "block"}`,
   extractText: (rt: { plain_text: string }[] | undefined) =>
     (rt ?? []).map((t) => t.plain_text).join(""),
   blocksToHtml: () => "<p>Rendered HTML</p>",

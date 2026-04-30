@@ -14,6 +14,7 @@ vi.mock("@/lib/notion", () => ({
   notionFetch: (...args: unknown[]) => mockNotionFetch(...args),
   notionFetchAll: (...args: unknown[]) => mockNotionFetchAll(...args),
   notionListAll: (...args: unknown[]) => mockNotionListAll(...args),
+  fetchBlocksDeep: (...args: unknown[]) => mockNotionListAll(...args),
   blocksToHtml: () => "<p>Rendered doc content</p>",
 }));
 
@@ -235,7 +236,7 @@ describe("notion-docs.ts", () => {
       await getDocContent("doc-1");
 
       expect(mockNotionFetch).toHaveBeenCalledWith("/pages/doc-1");
-      expect(mockNotionListAll).toHaveBeenCalledWith("/blocks/doc-1/children");
+      expect(mockNotionListAll).toHaveBeenCalledWith("doc-1");
     });
 
     it("returns null when not configured (no API key)", async () => {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { revalidatePath } from "next/cache";
 import { getIntegrations } from "@/lib/integrations";
 import { slackContactNotify } from "@/lib/slack-notify";
@@ -54,7 +55,15 @@ function verifySecret(request: NextRequest): boolean {
   const { NOTION_WEBHOOK_SECRET } = getIntegrations();
   if (!NOTION_WEBHOOK_SECRET) return false;
   const provided = request.headers.get("x-webhook-secret");
-  return provided === NOTION_WEBHOOK_SECRET;
+  if (!provided) return false;
+  try {
+    return timingSafeEqual(
+      Buffer.from(provided),
+      Buffer.from(NOTION_WEBHOOK_SECRET),
+    );
+  } catch {
+    return false;
+  }
 }
 
 // ───────────────────────────── Handlers ──────────────────────────────

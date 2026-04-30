@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockNotionFetch = vi.fn();
+const mockNotionFetchAll = vi.fn();
 
 vi.mock("@/lib/notion", () => ({
   notionFetch: (...args: unknown[]) => mockNotionFetch(...args),
+  notionFetchAll: (...args: unknown[]) => mockNotionFetchAll(...args),
 }));
 
 describe("notion-forms.ts", () => {
@@ -81,25 +83,23 @@ describe("notion-forms.ts", () => {
 
   describe("listSubmissions", () => {
     it("returns mapped submission records", async () => {
-      mockNotionFetch.mockResolvedValueOnce({
-        results: [
-          {
-            id: "sub-1",
-            url: "https://notion.so/sub-1",
-            created_time: "2026-04-01T00:00:00Z",
-            properties: {
-              Name: { title: [{ plain_text: "Alice" }] },
-              Email: { email: "alice@example.com" },
-              Company: { rich_text: [{ plain_text: "TechCorp" }] },
-              Service: { rich_text: [{ plain_text: "DevOps" }] },
-              Message: { rich_text: [{ plain_text: "Help me" }] },
-              Status: { select: { name: "New" } },
-              Source: { select: { name: "contact" } },
-              "Submitted At": { date: { start: "2026-04-01T10:00:00Z" } },
-            },
+      mockNotionFetchAll.mockResolvedValueOnce([
+        {
+          id: "sub-1",
+          url: "https://notion.so/sub-1",
+          created_time: "2026-04-01T00:00:00Z",
+          properties: {
+            Name: { title: [{ plain_text: "Alice" }] },
+            Email: { email: "alice@example.com" },
+            Company: { rich_text: [{ plain_text: "TechCorp" }] },
+            Service: { rich_text: [{ plain_text: "DevOps" }] },
+            Message: { rich_text: [{ plain_text: "Help me" }] },
+            Status: { select: { name: "New" } },
+            Source: { select: { name: "contact" } },
+            "Submitted At": { date: { start: "2026-04-01T10:00:00Z" } },
           },
-        ],
-      });
+        },
+      ]);
 
       const { listSubmissions } = await import("@/lib/notion-forms");
       const subs = await listSubmissions();
@@ -111,7 +111,7 @@ describe("notion-forms.ts", () => {
     });
 
     it("returns empty array on error", async () => {
-      mockNotionFetch.mockRejectedValueOnce(new Error("API error"));
+      mockNotionFetchAll.mockRejectedValueOnce(new Error("API error"));
 
       const { listSubmissions } = await import("@/lib/notion-forms");
       const subs = await listSubmissions();
@@ -223,25 +223,23 @@ describe("notion-forms.ts", () => {
 
   describe("listSubmissions edge cases", () => {
     it("maps all fields correctly from Notion response", async () => {
-      mockNotionFetch.mockResolvedValueOnce({
-        results: [
-          {
-            id: "sub-1",
-            url: "https://notion.so/sub-1",
-            created_time: "2026-04-01T00:00:00Z",
-            properties: {
-              Name: { title: [{ plain_text: "Alice" }] },
-              Email: { email: "alice@example.com" },
-              Company: { rich_text: [{ plain_text: "TechCorp" }] },
-              Service: { rich_text: [{ plain_text: "DevOps" }] },
-              Message: { rich_text: [{ plain_text: "Help needed" }] },
-              Status: { select: { name: "In Review" } },
-              Source: { select: { name: "subscribe" } },
-              "Submitted At": { date: { start: "2026-04-01T10:00:00Z" } },
-            },
+      mockNotionFetchAll.mockResolvedValueOnce([
+        {
+          id: "sub-1",
+          url: "https://notion.so/sub-1",
+          created_time: "2026-04-01T00:00:00Z",
+          properties: {
+            Name: { title: [{ plain_text: "Alice" }] },
+            Email: { email: "alice@example.com" },
+            Company: { rich_text: [{ plain_text: "TechCorp" }] },
+            Service: { rich_text: [{ plain_text: "DevOps" }] },
+            Message: { rich_text: [{ plain_text: "Help needed" }] },
+            Status: { select: { name: "In Review" } },
+            Source: { select: { name: "subscribe" } },
+            "Submitted At": { date: { start: "2026-04-01T10:00:00Z" } },
           },
-        ],
-      });
+        },
+      ]);
 
       const { listSubmissions } = await import("@/lib/notion-forms");
       const subs = await listSubmissions();
@@ -256,25 +254,23 @@ describe("notion-forms.ts", () => {
     });
 
     it("handles missing optional fields with defaults", async () => {
-      mockNotionFetch.mockResolvedValueOnce({
-        results: [
-          {
-            id: "sub-2",
-            url: "https://notion.so/sub-2",
-            created_time: "2026-04-01T00:00:00Z",
-            properties: {
-              Name: { title: [] },
-              Email: {},
-              Company: { rich_text: [] },
-              Service: { rich_text: [] },
-              Message: { rich_text: [] },
-              Status: {},
-              Source: {},
-              "Submitted At": {},
-            },
+      mockNotionFetchAll.mockResolvedValueOnce([
+        {
+          id: "sub-2",
+          url: "https://notion.so/sub-2",
+          created_time: "2026-04-01T00:00:00Z",
+          properties: {
+            Name: { title: [] },
+            Email: {},
+            Company: { rich_text: [] },
+            Service: { rich_text: [] },
+            Message: { rich_text: [] },
+            Status: {},
+            Source: {},
+            "Submitted At": {},
           },
-        ],
-      });
+        },
+      ]);
 
       const { listSubmissions } = await import("@/lib/notion-forms");
       const subs = await listSubmissions();
@@ -288,24 +284,52 @@ describe("notion-forms.ts", () => {
       expect(subs[0].submittedAt).toBe("2026-04-01T00:00:00Z");
     });
 
-    it("respects limit parameter", async () => {
-      mockNotionFetch.mockResolvedValueOnce({ results: [] });
+    it("slices results to the requested limit", async () => {
+      const pages = Array.from({ length: 30 }, (_, i) => ({
+        id: `sub-${i}`,
+        url: `https://notion.so/sub-${i}`,
+        created_time: "2026-04-01T00:00:00Z",
+        properties: {
+          Name: { title: [{ plain_text: `User ${i}` }] },
+          Email: { email: `user${i}@example.com` },
+          Company: { rich_text: [] },
+          Service: { rich_text: [] },
+          Message: { rich_text: [] },
+          Status: { select: { name: "New" } },
+          Source: { select: { name: "contact" } },
+          "Submitted At": { date: { start: "2026-04-01T10:00:00Z" } },
+        },
+      }));
+      mockNotionFetchAll.mockResolvedValueOnce(pages);
 
       const { listSubmissions } = await import("@/lib/notion-forms");
-      await listSubmissions(25);
+      const subs = await listSubmissions(10);
 
-      const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
-      expect(body.page_size).toBe(25);
+      expect(subs).toHaveLength(10);
     });
 
-    it("caps limit at 100", async () => {
-      mockNotionFetch.mockResolvedValueOnce({ results: [] });
+    it("returns all results when limit exceeds total", async () => {
+      const pages = Array.from({ length: 5 }, (_, i) => ({
+        id: `sub-${i}`,
+        url: `https://notion.so/sub-${i}`,
+        created_time: "2026-04-01T00:00:00Z",
+        properties: {
+          Name: { title: [{ plain_text: `User ${i}` }] },
+          Email: { email: `user${i}@example.com` },
+          Company: { rich_text: [] },
+          Service: { rich_text: [] },
+          Message: { rich_text: [] },
+          Status: { select: { name: "New" } },
+          Source: { select: { name: "contact" } },
+          "Submitted At": { date: { start: "2026-04-01T10:00:00Z" } },
+        },
+      }));
+      mockNotionFetchAll.mockResolvedValueOnce(pages);
 
       const { listSubmissions } = await import("@/lib/notion-forms");
-      await listSubmissions(200);
+      const subs = await listSubmissions(200);
 
-      const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
-      expect(body.page_size).toBe(100);
+      expect(subs).toHaveLength(5);
     });
 
     it("returns empty when not configured", async () => {

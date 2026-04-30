@@ -21,7 +21,7 @@
 import {
   notionFetch,
   notionFetchAll,
-  notionListAll,
+  fetchBlocksDeep,
   blocksToHtml,
 } from "@/lib/notion";
 import { getIntegrationsAsync } from "@/lib/integrations";
@@ -184,7 +184,7 @@ export async function getDocContent(
     const page = await notionFetch<unknown>(`/pages/${pageId}`);
 
     // Fetch all blocks (handles pagination via GET)
-    const blocks = await notionListAll<unknown>(`/blocks/${pageId}/children`);
+    const blocks = await fetchBlocksDeep(pageId);
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const record = mapPage(page as any);
@@ -324,7 +324,7 @@ export async function getDocContentWithToc(
 
   try {
     const page = await notionFetch<unknown>(`/pages/${pageId}`);
-    const blocks = await notionListAll<unknown>(`/blocks/${pageId}/children`);
+    const blocks = await fetchBlocksDeep(pageId);
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const record = mapPage(page as any);

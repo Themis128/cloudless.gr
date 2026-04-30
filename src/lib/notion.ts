@@ -165,14 +165,18 @@ export function blocksToHtml(blocks: any[]): string {
       case "divider":
         lines.push("<hr />");
         break;
-      case "callout":
+      case "callout": {
+        const calloutBody = block.children ? blocksToHtml(block.children) : "";
         lines.push(
-          `<div class="callout">${data.icon?.emoji ?? ""} ${text}</div>`,
+          `<div class="callout">${data.icon?.emoji ?? ""} ${text}${calloutBody ? `\n${calloutBody}` : ""}</div>`,
         );
         break;
+      }
       case "image": {
         const url =
-          data.type === "external" ? data.external?.url : data.file?.url;
+          data.type === "external"
+            ? data.external?.url
+            : notionImageProxyUrl(block.id);
         const caption = extractText(data.caption);
         if (url) {
           lines.push(
@@ -198,9 +202,13 @@ export function blocksToHtml(blocks: any[]): string {
           `<label class="todo"><input type="checkbox" disabled ${data.checked ? "checked" : ""} /> ${text}</label>`,
         );
         break;
-      case "toggle":
-        lines.push(`<details><summary>${text}</summary></details>`);
+      case "toggle": {
+        const toggleBody = block.children ? blocksToHtml(block.children) : "";
+        lines.push(
+          `<details><summary>${text}</summary>${toggleBody ? `\n${toggleBody}` : ""}</details>`,
+        );
         break;
+      }
       default:
         // Unknown block type — render plain text if present
         if (text) lines.push(`<p>${text}</p>`);
@@ -264,6 +272,41 @@ export async function notionListAll<T = unknown>(path: string): Promise<T[]> {
   } while (cursor);
 
   return results;
+}
+
+// ---------------------------------------------------------------------------
+// Deep block fetcher — recursively fetches children for nested blocks
+// ---------------------------------------------------------------------------
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * Fetch all blocks under a parent, recursively expanding any block that
+ * has `has_children: true` (e.g. toggle, callout, column_list).
+ */
+export async function fetchBlocksDeep(parentId: string): Promise<any[]> {
+  const blocks = await notionListAll<any>(`/blocks/${parentId}/children`);
+  for (const block of blocks) {
+    if (block.has_children) {
+      block.children = await fetchBlocksDeep(block.id);
+    }
+  }
+  return blocks;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+// ---------------------------------------------------------------------------
+// Image proxy URL helper — avoids Notion signed-URL expiry in rendered HTML
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the local image-proxy URL for a Notion-hosted file.
+ * The proxy route re-fetches the fresh signed URL on each request.
+ */
+export function notionImageProxyUrl(
+  id: string,
+  type: "block" | "cover" = "block",
+): string {
+  return `/api/notion-image?id=${encodeURIComponent(id)}&type=${type}`;
 }
 
 // ---------------------------------------------------------------------------

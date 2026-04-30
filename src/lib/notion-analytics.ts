@@ -66,22 +66,17 @@ function mapEvent(page: any): AnalyticsEvent {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
-// Write — Track events
+// Write — Track events (with queue-based batching to stay under 3 req/s)
 // ---------------------------------------------------------------------------
 
-/**
- * Track a single analytics event in Notion.
- * Fire-and-forget; returns the page ID or null.
- */
-export async function trackEvent(data: {
-  event: string;
-  type: AnalyticsEventType;
-  page?: string;
-  source?: string;
-  count?: number;
-  country?: string;
-  metadata?: Record<string, unknown>;
-}): Promise<string | null> {
+type EventData = Parameters<typeof trackEvent>[0];
+
+const writeQueue: EventData[] = [];
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+const FLUSH_THRESHOLD = 10;
+const FLUSH_DELAY_MS = 5000;
+
+async function writeEventToNotion(data: EventData): Promise<string | null> {
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
     return null;
 
@@ -128,6 +123,72 @@ export async function trackEvent(data: {
   }
 }
 
+/** Clear the pending event queue without writing — for use in tests only. */
+export function resetEventQueue(): void {
+  writeQueue.splice(0);
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+}
+
+/**
+ * Flush the pending event queue — writes each event to Notion sequentially.
+ * Called automatically when the queue reaches FLUSH_THRESHOLD or after FLUSH_DELAY_MS.
+ */
+export async function flushEventQueue(): Promise<{
+  written: number;
+  errors: number;
+}> {
+  const events = writeQueue.splice(0);
+  if (!events.length) return { written: 0, errors: 0 };
+  let written = 0;
+  let errors = 0;
+  for (const event of events) {
+    const id = await writeEventToNotion(event);
+    if (id) written++;
+    else errors++;
+  }
+  return { written, errors };
+}
+
+/**
+ * Track an analytics event in Notion.
+ * By default queues the write and batches flushes to avoid hitting 3 req/s.
+ * Pass `{ immediate: true }` to bypass the queue (e.g. for weekly rollups).
+ */
+export async function trackEvent(
+  data: {
+    event: string;
+    type: AnalyticsEventType;
+    page?: string;
+    source?: string;
+    count?: number;
+    country?: string;
+    metadata?: Record<string, unknown>;
+  },
+  opts?: { immediate?: boolean },
+): Promise<string | null> {
+  if (opts?.immediate) return writeEventToNotion(data);
+
+  writeQueue.push(data);
+
+  if (writeQueue.length >= FLUSH_THRESHOLD) {
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+    void flushEventQueue();
+  } else if (!flushTimer) {
+    flushTimer = setTimeout(() => {
+      flushTimer = null;
+      void flushEventQueue();
+    }, FLUSH_DELAY_MS);
+  }
+
+  return null;
+}
+
 /**
  * Convenience: track a form submission event.
  */
@@ -135,12 +196,15 @@ export async function trackFormSubmission(
   formName: string,
   source?: string,
 ): Promise<string | null> {
-  return trackEvent({
-    event: `Form: ${formName}`,
-    type: "form_submit",
-    page: `/contact`,
-    source,
-  });
+  return trackEvent(
+    {
+      event: `Form: ${formName}`,
+      type: "form_submit",
+      page: `/contact`,
+      source,
+    },
+    { immediate: true },
+  );
 }
 
 /**
@@ -150,12 +214,15 @@ export async function trackBlogView(
   slug: string,
   source?: string,
 ): Promise<string | null> {
-  return trackEvent({
-    event: `Blog: ${slug}`,
-    type: "blog_view",
-    page: `/blog/${slug}`,
-    source,
-  });
+  return trackEvent(
+    {
+      event: `Blog: ${slug}`,
+      type: "blog_view",
+      page: `/blog/${slug}`,
+      source,
+    },
+    { immediate: true },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -351,10 +418,13 @@ export async function createWeeklyRollup(): Promise<string | null> {
     topSources: summary.topSources.slice(0, 5),
   };
 
-  return trackEvent({
-    event: `Weekly Rollup — ${new Date().toISOString().split("T")[0]}`,
-    type: "weekly_rollup",
-    count: summary.totalEvents,
-    metadata,
-  });
+  return trackEvent(
+    {
+      event: `Weekly Rollup — ${new Date().toISOString().split("T")[0]}`,
+      type: "weekly_rollup",
+      count: summary.totalEvents,
+      metadata,
+    },
+    { immediate: true },
+  );
 }

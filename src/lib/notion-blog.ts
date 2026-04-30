@@ -26,9 +26,10 @@
 
 import {
   notionFetchAll,
-  notionListAll,
+  fetchBlocksDeep,
   extractText,
   blocksToHtml,
+  notionImageProxyUrl,
 } from "@/lib/notion";
 import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
@@ -85,7 +86,9 @@ function mapPage(page: any): NotionPost {
     coverImage:
       p["Cover Image"]?.url ??
       page.cover?.external?.url ??
-      page.cover?.file?.url,
+      (page.cover?.type === "file"
+        ? notionImageProxyUrl(page.id, "cover")
+        : undefined),
     readTime: extractText(p["Read Time"]?.rich_text) || "5 min read",
     seoTitle: extractText(p["SEO Title"]?.rich_text) || undefined,
     seoDescription: extractText(p["SEO Description"]?.rich_text) || undefined,
@@ -257,8 +260,7 @@ export async function getPostBySlug(
 
     const post = mapPage(page);
 
-    // Fetch block content (GET endpoint — use notionListAll)
-    const blocks = await notionListAll(`/blocks/${post.id}/children`);
+    const blocks = await fetchBlocksDeep(post.id);
     const html = blocksToHtml(blocks);
 
     return { ...post, html, content: blocks as NotionBlock[] };
@@ -384,10 +386,9 @@ export async function getPostWithToc(
     if (!page) return null;
 
     const post = mapPage(page);
-    const blocks = await notionListAll(`/blocks/${post.id}/children`);
+    const blocks = await fetchBlocksDeep(post.id);
     const html = blocksToHtml(blocks);
 
-    // Import extractToc at runtime to avoid circular deps
     const { extractToc } = await import("@/lib/notion");
     const toc = extractToc(blocks as Parameters<typeof extractToc>[0]);
 
