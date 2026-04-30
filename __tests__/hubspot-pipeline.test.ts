@@ -72,11 +72,96 @@ describe("hubspot.ts — pipeline extensions", () => {
       expect(grouped["appointmentscheduled"]).toHaveLength(1);
     });
 
+    it("paginates across multiple pages", async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            results: [{ id: "d1", properties: { dealstage: "closedwon" } }],
+            paging: { next: { after: "cursor_abc" } },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            results: [{ id: "d2", properties: { dealstage: "closedwon" } }],
+          }),
+        });
+      const { getDealsByStage } = await import("@/lib/hubspot");
+      const grouped = await getDealsByStage();
+      expect(grouped["closedwon"]).toHaveLength(2);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const secondUrl: string = mockFetch.mock.calls[1][0];
+      expect(secondUrl).toContain("after=cursor_abc");
+    });
+
     it("returns empty object on API error", async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
       const { getDealsByStage } = await import("@/lib/hubspot");
       const grouped = await getDealsByStage();
       expect(grouped).toEqual({});
+    });
+  });
+
+  // ── listNotes ───────────────────────────────────────────────────────────────
+
+  describe("listNotes", () => {
+    it("returns notes via batch read", async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            results: [{ id: "n1" }, { id: "n2" }],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            results: [
+              { id: "n1", properties: { hs_note_body: "First note", hs_timestamp: "2025-01-01T00:00:00Z" } },
+              { id: "n2", properties: { hs_note_body: "Second note", hs_timestamp: "2025-01-02T00:00:00Z" } },
+            ],
+          }),
+        });
+      const { listNotes } = await import("@/lib/hubspot");
+      const notes = await listNotes("deal_1");
+      expect(notes).toHaveLength(2);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const batchCall = mockFetch.mock.calls[1];
+      expect(batchCall[0]).toContain("/crm/v3/objects/notes/batch/read");
+      expect(batchCall[1].method).toBe("POST");
+      const batchBody = JSON.parse(batchCall[1].body as string);
+      expect(batchBody.inputs).toEqual([{ id: "n1" }, { id: "n2" }]);
+    });
+
+    it("returns [] when deal has no associated notes", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ results: [] }),
+      });
+      const { listNotes } = await import("@/lib/hubspot");
+      const notes = await listNotes("deal_1");
+      expect(notes).toEqual([]);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns [] when associations fetch fails", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({}) });
+      const { listNotes } = await import("@/lib/hubspot");
+      const notes = await listNotes("deal_1");
+      expect(notes).toEqual([]);
+    });
+
+    it("returns [] when batch read fails", async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ results: [{ id: "n1" }] }),
+        })
+        .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
+      const { listNotes } = await import("@/lib/hubspot");
+      const notes = await listNotes("deal_1");
+      expect(notes).toEqual([]);
     });
   });
 
@@ -124,6 +209,32 @@ describe("hubspot.ts — pipeline extensions", () => {
       expect(stats.byStage["closedwon"].count).toBe(2);
       expect(stats.byStage["closedwon"].value).toBe(1500);
       expect(stats.byStage["appointmentscheduled"].count).toBe(1);
+    });
+
+    it("paginates to collect all deals", async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            results: [
+              { id: "d1", properties: { amount: "100", dealstage: "closedwon" } },
+            ],
+            paging: { next: { after: "pg2" } },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            results: [
+              { id: "d2", properties: { amount: "200", dealstage: "closedwon" } },
+            ],
+          }),
+        });
+      const { getPipelineStats } = await import("@/lib/hubspot");
+      const stats = await getPipelineStats();
+      expect(stats.totalDeals).toBe(2);
+      expect(stats.totalValue).toBe(300);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it("returns zero stats on error", async () => {

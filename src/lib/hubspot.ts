@@ -41,6 +41,30 @@ async function hubspotFetch(
 }
 
 /**
+ * Fetch all pages of a HubSpot list endpoint using cursor-based pagination.
+ * Stops when `paging.next.after` is absent in the response.
+ */
+async function hubspotListAll<T = unknown>(path: string): Promise<T[]> {
+  const results: T[] = [];
+  let after: string | undefined;
+
+  do {
+    const sep = path.includes("?") ? "&" : "?";
+    const url = `${path}${sep}limit=100${after ? `&after=${encodeURIComponent(after)}` : ""}`;
+    const res = await hubspotFetch(url);
+    if (!res.ok) break;
+    const data = (await res.json()) as {
+      results: T[];
+      paging?: { next?: { after: string } };
+    };
+    results.push(...data.results);
+    after = data.paging?.next?.after;
+  } while (after);
+
+  return results;
+}
+
+/**
  * Create or update a HubSpot contact.
  * Uses the email as the unique identifier.
  * Silently returns null if no HubSpot token is available.
@@ -48,14 +72,7 @@ async function hubspotFetch(
 export async function upsertContact(
   contact: HubSpotContact,
 ): Promise<string | null> {
-  let token: string;
-  try {
-    token = await getHubSpotToken();
-  } catch {
-    return null;
-  }
-  // token is resolved — proceed (hubspotFetch will also resolve it, but it's cached in SSM)
-  void token;
+  if (!(await isHubSpotConfigured())) return null;
 
   try {
     const createRes = await hubspotFetch("/crm/v3/objects/contacts", {
@@ -128,9 +145,12 @@ export async function upsertContact(
 
 /** List recent contacts */
 export async function listContacts(limit = 10): Promise<unknown[]> {
+  const safeLimit = Number.isFinite(limit)
+    ? Math.min(Math.max(Math.trunc(limit), 1), 100)
+    : 10;
   try {
     const res = await hubspotFetch(
-      `/crm/v3/objects/contacts?limit=${limit}&properties=email,firstname,lastname,company,createdate,hs_lead_status`,
+      `/crm/v3/objects/contacts?limit=${safeLimit}&properties=email,firstname,lastname,company,createdate,hs_lead_status`,
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -179,13 +199,7 @@ export async function createTicket(
   data: TicketData,
   contactId?: string,
 ): Promise<{ id: string } | null> {
-  let token: string;
-  try {
-    token = await getHubSpotToken();
-  } catch {
-    return null;
-  }
-  void token;
+  if (!(await isHubSpotConfigured())) return null;
 
   const properties: Record<string, string> = {
     subject: data.subject,
@@ -379,13 +393,7 @@ interface DealData {
  * Fire-and-forget safe — never throws.
  */
 export async function createDeal(data: DealData): Promise<string | null> {
-  let token: string;
-  try {
-    token = await getHubSpotToken();
-  } catch {
-    return null;
-  }
-  void token;
+  if (!(await isHubSpotConfigured())) return null;
 
   const closedate =
     data.closedate ?? new Date().toISOString().split("T")[0] + "T00:00:00.000Z";
@@ -457,20 +465,16 @@ export async function moveDealStage(
  * Get all deals grouped by stage for a kanban board view.
  * Returns a map of stageId -> deals[].
  */
-export async function getDealsByStage(
-  limit = 100,
-): Promise<Record<string, unknown[]>> {
-  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
+export async function getDealsByStage(): Promise<Record<string, unknown[]>> {
   try {
-    const res = await hubspotFetch(
-      `/crm/v3/objects/deals?limit=${safeLimit}&properties=dealname,amount,dealstage,pipeline,closedate,createdate,hs_deal_stage_probability`,
+    const allDeals = await hubspotListAll<{
+      properties: { dealstage: string };
+    }>(
+      `/crm/v3/objects/deals?properties=dealname,amount,dealstage,pipeline,closedate,createdate,hs_deal_stage_probability`,
     );
-    if (!res.ok) return {};
-    const data = await res.json();
     const grouped: Record<string, unknown[]> = {};
-    for (const deal of data.results ?? []) {
-      const stage = (deal as { properties: { dealstage: string } }).properties
-        .dealstage;
+    for (const deal of allDeals) {
+      const stage = deal.properties.dealstage;
       if (!grouped[stage]) grouped[stage] = [];
       grouped[stage].push(deal);
     }
@@ -564,15 +568,18 @@ export async function listNotes(dealId: string): Promise<unknown[]> {
       (r: { id: string }) => r.id,
     );
     if (noteIds.length === 0) return [];
-    const notes = await Promise.all(
-      noteIds.map(async (id) => {
-        const r = await hubspotFetch(
-          `/crm/v3/objects/notes/${id}?properties=hs_note_body,hs_timestamp`,
-        );
-        return r.ok ? r.json() : null;
+
+    // Batch read all notes in a single request instead of N individual fetches
+    const batchRes = await hubspotFetch("/crm/v3/objects/notes/batch/read", {
+      method: "POST",
+      body: JSON.stringify({
+        properties: ["hs_note_body", "hs_timestamp"],
+        inputs: noteIds.slice(0, 100).map((id) => ({ id })),
       }),
-    );
-    return notes.filter(Boolean);
+    });
+    if (!batchRes.ok) return [];
+    const batchData = await batchRes.json();
+    return batchData.results ?? [];
   } catch {
     return [];
   }
@@ -587,24 +594,21 @@ export async function getPipelineStats(): Promise<{
   byStage: Record<string, { count: number; value: number }>;
 }> {
   try {
-    const res = await hubspotFetch(
-      `/crm/v3/objects/deals?limit=100&properties=dealname,amount,dealstage`,
-    );
-    if (!res.ok) return { totalDeals: 0, totalValue: 0, byStage: {} };
-    const data = await res.json();
+    const allDeals = await hubspotListAll<{
+      properties: { dealstage: string; amount: string };
+    }>(`/crm/v3/objects/deals?properties=dealname,amount,dealstage`);
+
     const byStage: Record<string, { count: number; value: number }> = {};
     let totalValue = 0;
-    for (const deal of data.results ?? []) {
-      const { dealstage, amount } = (
-        deal as { properties: { dealstage: string; amount: string } }
-      ).properties;
+    for (const deal of allDeals) {
+      const { dealstage, amount } = deal.properties;
       const val = parseFloat(amount || "0") || 0;
       if (!byStage[dealstage]) byStage[dealstage] = { count: 0, value: 0 };
       byStage[dealstage].count++;
       byStage[dealstage].value += val;
       totalValue += val;
     }
-    return { totalDeals: data.results?.length ?? 0, totalValue, byStage };
+    return { totalDeals: allDeals.length, totalValue, byStage };
   } catch {
     return { totalDeals: 0, totalValue: 0, byStage: {} };
   }
