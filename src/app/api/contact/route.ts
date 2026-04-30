@@ -78,7 +78,9 @@ export async function POST(request: Request) {
       "AI & Digital Marketing": "digital-marketing",
       "Full-Stack Growth Engine (Bundle)": "full-bundle",
     };
-    const serviceSlug = service ? (SERVICE_SLUG[service] ?? undefined) : undefined;
+    const serviceSlug = service
+      ? (SERVICE_SLUG[service] ?? undefined)
+      : undefined;
 
     const nameParts = String(name).trim().split(" ");
     Promise.allSettled([

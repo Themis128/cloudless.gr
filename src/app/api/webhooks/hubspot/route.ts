@@ -92,7 +92,10 @@ async function onContactCreated(token: string, id: number): Promise<void> {
   await slack.post({
     text: `New contact: ${name} (${email})`,
     blocks: [
-      { type: "header", text: { type: "plain_text", text: "New Contact", emoji: true } },
+      {
+        type: "header",
+        text: { type: "plain_text", text: "New Contact", emoji: true },
+      },
       {
         type: "section",
         text: {
@@ -104,12 +107,18 @@ async function onContactCreated(token: string, id: number): Promise<void> {
             `*Service:* ${service}`,
           ].join("\n"),
         },
-        accessory: viewButton("Open in HubSpot", `${PORTAL_BASE}/contact/${id}`),
+        accessory: viewButton(
+          "Open in HubSpot",
+          `${PORTAL_BASE}/contact/${id}`,
+        ),
       },
       {
         type: "context",
         elements: [
-          { type: "mrkdwn", text: `<!date^${ts()}^{date_short_pretty} at {time}|now>` },
+          {
+            type: "mrkdwn",
+            text: `<!date^${ts()}^{date_short_pretty} at {time}|now>`,
+          },
           { type: "mrkdwn", text: "HubSpot · contact.creation" },
         ],
       },
@@ -136,21 +145,29 @@ async function onDealCreated(token: string, id: number): Promise<void> {
   await slack.post({
     text: `New deal: ${name} (${amount})`,
     blocks: [
-      { type: "header", text: { type: "plain_text", text: "New Deal", emoji: true } },
+      {
+        type: "header",
+        text: { type: "plain_text", text: "New Deal", emoji: true },
+      },
       {
         type: "section",
         text: {
           type: "mrkdwn",
-          text: [`*Deal:* ${name}`, `*Amount:* ${amount}`, `*Stage:* \`${stage}\``].join(
-            "\n",
-          ),
+          text: [
+            `*Deal:* ${name}`,
+            `*Amount:* ${amount}`,
+            `*Stage:* \`${stage}\``,
+          ].join("\n"),
         },
         accessory: viewButton("Open in HubSpot", `${PORTAL_BASE}/deal/${id}`),
       },
       {
         type: "context",
         elements: [
-          { type: "mrkdwn", text: `<!date^${ts()}^{date_short_pretty} at {time}|now>` },
+          {
+            type: "mrkdwn",
+            text: `<!date^${ts()}^{date_short_pretty} at {time}|now>`,
+          },
           { type: "mrkdwn", text: "HubSpot · deal.creation" },
         ],
       },
@@ -188,7 +205,10 @@ async function onDealClosedWon(token: string, id: number): Promise<void> {
       {
         type: "context",
         elements: [
-          { type: "mrkdwn", text: `<!date^${ts()}^{date_short_pretty} at {time}|now>` },
+          {
+            type: "mrkdwn",
+            text: `<!date^${ts()}^{date_short_pretty} at {time}|now>`,
+          },
           { type: "mrkdwn", text: "HubSpot · deal.propertyChange (closedwon)" },
         ],
       },
@@ -234,7 +254,10 @@ async function onTicketCreated(token: string, id: number): Promise<void> {
       {
         type: "context",
         elements: [
-          { type: "mrkdwn", text: `<!date^${ts()}^{date_short_pretty} at {time}|now>` },
+          {
+            type: "mrkdwn",
+            text: `<!date^${ts()}^{date_short_pretty} at {time}|now>`,
+          },
           { type: "mrkdwn", text: "HubSpot · ticket.creation" },
         ],
       },
@@ -281,7 +304,10 @@ async function onCompanyCreated(token: string, id: number): Promise<void> {
       {
         type: "context",
         elements: [
-          { type: "mrkdwn", text: `<!date^${ts()}^{date_short_pretty} at {time}|now>` },
+          {
+            type: "mrkdwn",
+            text: `<!date^${ts()}^{date_short_pretty} at {time}|now>`,
+          },
           { type: "mrkdwn", text: "HubSpot · company.creation" },
         ],
       },
