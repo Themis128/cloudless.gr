@@ -2,7 +2,7 @@
 
 cloudless.gr uses a Slack app for two-way communication: outbound notifications (contact form submissions, new subscribers, orders, errors, deploys) and inbound commands (status checks, order lookups).
 
-> **Last verified:** 2026-04-09 — all 56 Slack unit tests pass, all 12 integration tests pass (signed requests, unsigned rejection, webhook delivery).
+> **Last verified:** 2026-04-30 — 74 Slack unit tests pass (signed requests, unsigned rejection, webhook delivery, mrkdwn escaping, lazy SSM config resolution).
 
 ---
 
@@ -78,7 +78,10 @@ SLACK_DEFAULT_CHANNEL=#general
 
 ### Production (AWS SSM Parameter Store)
 
-Add the same keys under `/cloudless/production/`:
+In Lambda the env vars are not set; SSM is the source of truth. `slack-notify.ts`
+and the Events route both call `getSlackConfigAsync()` which falls back to SSM
+when `SLACK_SIGNING_SECRET` is missing from `process.env`. Add the same keys
+under `/cloudless/production/`:
 
 ```
 /cloudless/production/SLACK_BOT_TOKEN       SecureString
@@ -86,7 +89,10 @@ Add the same keys under `/cloudless/production/`:
 /cloudless/production/SLACK_WEBHOOK_URL     SecureString
 ```
 
-Then update `src/lib/ssm-config.ts` to fetch and pass these to `integrations.ts`, or ensure your deploy pipeline injects them as environment variables before the Next.js server starts.
+> **Note:** `SlackClient.post()` resolves config lazily on every call (cached
+> after the first SSM lookup). It does **not** capture the token in the
+> constructor, so the module-level `const client = new SlackClient()` works
+> correctly even when env vars aren't populated at module-load time.
 ---
 
 ## Slack App Setup
@@ -366,11 +372,26 @@ The `SlackClient` class (in `src/lib/slack-notify.ts`) selects the transport aut
 2. **Webhook URL** (`SLACK_WEBHOOK_URL`) → uses incoming webhook
 3. **Neither configured** → skips silently, logs a warning at startup
 
+**Config resolution:** The constructor only stores `defaultChannel`. Token
+and webhook are resolved lazily inside `post()` via `getSlackConfigAsync()`
+so SSM-backed values are picked up in Lambda. The async config has a
+module-level cache, so subsequent calls within the same invocation are free.
+
 **Retry policy:** Up to 3 attempts with exponential backoff (500 ms, 1 000 ms, 2 000 ms). `ratelimited` errors from the Slack API are retried; all other Slack API errors stop immediately.
 
 **Legacy API:** `slackNotify(message)` is still available for backward compatibility but deprecated in favor of `SlackClient.post()`.
 
 **Cache:** Integration config and Slack config are cached in module-level variables. Call `resetSlackConfigCache()` in tests to clear.
+
+### `slackEscape()` — mrkdwn injection guard
+
+User-supplied strings (contact form name/email/message, subscriber email,
+order email) are passed through `slackEscape()` before being interpolated
+into Block Kit `mrkdwn` text. The helper escapes `&`, `<`, `>` so that
+inputs like `<@here>` or `<!channel>` cannot be rendered as Slack mentions
+or links.
+
+Apply to any new user-controlled value before composing a Block Kit message.
 ---
 
 ## Local Testing with ngrok
@@ -418,15 +439,17 @@ pnpm test -- __tests__/slack/slack-events.test.ts
 pnpm test -- __tests__/slack/slack-commands.test.ts
 pnpm test -- __tests__/slack/slack-interactions.test.ts
 ```
-Test coverage (56 tests total):
+Test coverage (74 tests total across 7 files):
 
 | File | Tests | What is tested |
 |------|-------|---------------|
 | `slack-verify.test.ts` | 10 | Valid signature, expired timestamp, wrong secret, missing headers, future timestamp, 401 helper |
-| `slack-notify.test.ts` | 21 | SlackClient via API and webhook, retry with backoff, no-config no-op, all five notifiers' Block Kit output |
-| `slack-events.test.ts` | 8 | URL challenge, app_mention responses (status/help/default), bot loop prevention, DM handling, unknown events, invalid JSON |
+| `slack/slack-notify.test.ts` | 24 | SlackClient via API and webhook, retry with backoff, no-config no-op, all five notifiers' Block Kit output, **mrkdwn escaping for user-supplied fields** |
+| `slack-notify.test.ts` (top-level) | 8 | SlackClient with mocked `getSlackConfigAsync`, transport selection, terminal-error handling |
+| `slack-events.test.ts` | 9 | URL challenge, app_mention responses (status/help/default), bot loop prevention, DM handling, unknown events, invalid JSON, rate-limit |
 | `slack-commands.test.ts` | 8 | /cloudless-status fields + response_type, /cloudless-orders buttons + response_type, unknown command, 401 on bad signature |
 | `slack-interactions.test.ts` | 9 | Button actions (open_stripe_dashboard, open_store), empty actions, view_submission, unknown type, missing/invalid payload field |
+| `slack-rate-limit.test.ts` | 6 | Sliding-window rate limiter — under/over threshold, key isolation, reset |
 
 ### Integration tests (curl/Node.js against running dev server)
 
@@ -443,7 +466,7 @@ The integration test script verifies all endpoints with properly signed HMAC-SHA
 ## Security Notes
 
 - **Signature verification** uses constant-time comparison (`crypto.timingSafeEqual`) to prevent timing attacks.
-- **Replay protection** rejects any request with a timestamp older than 5 minutes.
-- **Token isolation** — all tokens are read from environment variables, never hardcoded. The `integrations.ts` config cache prevents repeated env reads.
+- **Replay protection** rejects any request with a timestamp older than 5 minutes; signatures seen within the window are also rejected as duplicates.
+- **Token isolation** — tokens come from `process.env` first, falling back to AWS SSM Parameter Store via `getSlackConfigAsync()`. The integration cache prevents repeated SSM lookups.
 - **Bot loop prevention** — the events handler checks for `bot_id` and skips all bot-originated messages.
-- **Input sanitization** — contact form data is passed through Block Kit's `mrkdwn` format (not raw HTML), and message text is truncated to 2000 characters.
+- **Mrkdwn-injection prevention** — every user-supplied string (contact form name/email/message/company/service, subscriber email, order email) is passed through `slackEscape()` before being interpolated into Block Kit text. This blocks attacks like `<@here>` (channel ping) or `<!channel>` (broadcast) embedded in form input. Message text is also truncated to 2000 characters.
