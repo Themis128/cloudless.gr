@@ -8,15 +8,22 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 
 const notifyTeamMock = vi.fn();
+const sendSubscriberWelcomeMock = vi.fn();
 
 vi.mock("@/lib/email", () => ({
   notifyTeam: notifyTeamMock,
+  sendSubscriberWelcome: sendSubscriberWelcomeMock,
+}));
+
+vi.mock("@/lib/slack-notify", () => ({
+  slackSubscriberNotify: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("POST /api/subscribe", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     notifyTeamMock.mockResolvedValue(undefined);
+    sendSubscriberWelcomeMock.mockResolvedValue(undefined);
   });
 
   it("returns 400 for invalid email payload", async () => {
