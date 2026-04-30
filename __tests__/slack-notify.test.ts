@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockGetSlackConfig = vi.fn();
+const mockGetSlackConfigAsync = vi.fn();
 
 vi.mock("@/lib/integrations", () => ({
-  getSlackConfig: () => mockGetSlackConfig(),
+  getSlackConfigAsync: () => mockGetSlackConfigAsync(),
   getIntegrations: vi.fn().mockReturnValue({}),
   resetIntegrationCache: vi.fn(),
   resetIntegrationCacheAsync: vi.fn(),
 }));
 
 function mockSlackConfig(token = "", webhookUrl = "") {
-  mockGetSlackConfig.mockReturnValue({
+  mockGetSlackConfigAsync.mockResolvedValue({
     SLACK_BOT_TOKEN: token,
     SLACK_SIGNING_SECRET: "",
     SLACK_WEBHOOK_URL: webhookUrl,

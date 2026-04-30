@@ -258,6 +258,72 @@ describe("slackSubscriberNotify", () => {
 
     await expect(slackSubscriberNotify("no-slack@example.com")).resolves.not.toThrow();
   });
+
+  it("escapes mrkdwn special chars in email", async () => {
+    const mockFetch = okFetch({ ok: true });
+    vi.stubGlobal("fetch", mockFetch);
+
+    await slackSubscriberNotify("<@here>@evil.com");
+
+    const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(opts.body as string);
+    const bodyStr = JSON.stringify(body);
+    expect(bodyStr).not.toContain("<@here>");
+    expect(bodyStr).toContain("&lt;@here&gt;");
+  });
+});
+
+describe("slackContactNotify", () => {
+  let slackContactNotify: (typeof import("@/lib/slack-notify"))["slackContactNotify"];
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    resetSlackConfigCache();
+    const mod = await import("@/lib/slack-notify");
+    slackContactNotify = mod.slackContactNotify;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("escapes mrkdwn special chars in name and email", async () => {
+    const mockFetch = okFetch({ ok: true });
+    vi.stubGlobal("fetch", mockFetch);
+
+    await slackContactNotify({
+      name: "<@channel>",
+      email: "a&b@example.com",
+      message: "hello <world>",
+    });
+
+    const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(opts.body as string);
+    const bodyStr = JSON.stringify(body);
+    expect(bodyStr).not.toContain("<@channel>");
+    expect(bodyStr).toContain("&lt;@channel&gt;");
+    expect(bodyStr).toContain("a&amp;b@example.com");
+    expect(bodyStr).toContain("hello &lt;world&gt;");
+  });
+
+  it("sends notification with all fields", async () => {
+    const mockFetch = okFetch({ ok: true });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const result = await slackContactNotify({
+      name: "Themis",
+      email: "themis@cloudless.gr",
+      company: "Cloudless",
+      service: "AI consulting",
+      message: "I need help.",
+    });
+
+    expect(result).toBe(true);
+    const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(opts.body as string);
+    expect(body.text).toContain("Themis");
+    expect(body.text).toContain("themis@cloudless.gr");
+  });
 });
 
 describe("slackErrorNotify", () => {

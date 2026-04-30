@@ -6,7 +6,7 @@
  * All sends are fire-and-forget with automatic retry + exponential backoff.
  */
 
-import { getSlackConfig } from "@/lib/integrations";
+import { getSlackConfigAsync } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -52,21 +52,22 @@ const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 500;
 
 export class SlackClient {
-  private token: string;
-  private webhookUrl: string;
   private defaultChannel: string;
 
   constructor(opts?: { channel?: string }) {
-    const cfg = getSlackConfig();
-    this.token = cfg.SLACK_BOT_TOKEN;
-    this.webhookUrl = cfg.SLACK_WEBHOOK_URL;
     this.defaultChannel =
       opts?.channel ?? process.env.SLACK_DEFAULT_CHANNEL ?? "#general";
   }
 
   /** Send a Block Kit message with retry/backoff. Returns true on success. */
   async post(payload: PostMessagePayload): Promise<boolean> {
-    if (!this.token && !this.webhookUrl) {
+    // Resolve config lazily so SSM-backed tokens are available in Lambda
+    // where env vars aren't set at module-load time.
+    const cfg = await getSlackConfigAsync();
+    const token = cfg.SLACK_BOT_TOKEN;
+    const webhookUrl = cfg.SLACK_WEBHOOK_URL;
+
+    if (!token && !webhookUrl) {
       // Slack not configured — skip silently (warning logged at config init)
       return false;
     }
@@ -75,16 +76,16 @@ export class SlackClient {
     // chosen at app install without requiring the bot to be a channel member.
     // chat.postMessage is only reachable for channels the bot has joined,
     // which we cannot do programmatically without channels:join scope.
-    const useWebhookFirst = !!this.webhookUrl;
+    const useWebhookFirst = !!webhookUrl;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         // postViaApi returns: true = success, false = ratelimited (retry), null = terminal error
         let result: boolean | null;
         if (useWebhookFirst) {
-          result = await this.postViaWebhook(payload);
-        } else if (this.token) {
-          result = await this.postViaApi({
+          result = await this.postViaWebhook(webhookUrl, payload);
+        } else if (token) {
+          result = await this.postViaApi(token, {
             channel: this.defaultChannel,
             ...payload,
           });
@@ -121,13 +122,14 @@ export class SlackClient {
    *   null  — terminal API error (wrong token, channel_not_found, etc.) — don't retry
    */
   private async postViaApi(
+    token: string,
     payload: PostMessagePayload,
   ): Promise<boolean | null> {
     const res = await fetch(CHAT_POST_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        Authorization: `Bearer ${this.token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
     });
@@ -144,8 +146,11 @@ export class SlackClient {
     return true;
   }
 
-  private async postViaWebhook(payload: PostMessagePayload): Promise<boolean> {
-    const res = await fetch(this.webhookUrl, {
+  private async postViaWebhook(
+    webhookUrl: string,
+    payload: PostMessagePayload,
+  ): Promise<boolean> {
+    const res = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: payload.text, blocks: payload.blocks }),
@@ -191,11 +196,12 @@ const client = new SlackClient();
  * Notify Slack when a new newsletter subscriber signs up.
  */
 export async function slackSubscriberNotify(email: string): Promise<void> {
+  const safeEmail = slackEscape(email);
   await client.post({
-    text: `New subscriber: ${email}`,
+    text: `New subscriber: ${safeEmail}`,
     blocks: [
       headerBlock("New Newsletter Subscriber"),
-      sectionBlock(`*Email:* \`${email}\``),
+      sectionBlock(`*Email:* \`${safeEmail}\``),
       contextBlock(
         `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
         "cloudless.gr subscribe form",
@@ -318,8 +324,13 @@ export async function slackContactNotify(data: {
   service?: string;
   message: string;
 }): Promise<boolean> {
+  const safeName = slackEscape(data.name);
+  const safeEmail = slackEscape(data.email);
+  const safeCompany = data.company ? slackEscape(data.company) : "\u2014";
+  const safeService = data.service ? slackEscape(data.service) : "\u2014";
+  const safeMessage = slackEscape(data.message).slice(0, 2000);
   return client.post({
-    text: `New contact from ${data.name} (${data.email})`,
+    text: `New contact from ${safeName} (${safeEmail})`,
     blocks: [
       headerBlock("\ud83d\udce8 New Contact Form Submission"),
       {
@@ -327,15 +338,15 @@ export async function slackContactNotify(data: {
         text: {
           type: "mrkdwn",
           text: [
-            `*Name:* ${data.name}`,
-            `*Email:* ${data.email}`,
-            `*Company:* ${data.company || "\u2014"}`,
-            `*Service:* ${data.service || "\u2014"}`,
+            `*Name:* ${safeName}`,
+            `*Email:* ${safeEmail}`,
+            `*Company:* ${safeCompany}`,
+            `*Service:* ${safeService}`,
           ].join("\n"),
         },
       },
       divider,
-      sectionBlock(`*Message:*\n${data.message.slice(0, 2000)}`),
+      sectionBlock(`*Message:*\n${safeMessage}`),
       contextBlock(
         `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
         "cloudless.gr contact form",
@@ -352,8 +363,9 @@ export async function slackOrderNotify(data: {
   amount: string;
   sessionId: string;
 }): Promise<boolean> {
+  const safeEmail = slackEscape(data.email);
   return client.post({
-    text: `New order: ${data.amount} from ${data.email}`,
+    text: `New order: ${data.amount} from ${safeEmail}`,
     blocks: [
       headerBlock("\ud83d\udcb0 New Order"),
       {
@@ -361,7 +373,7 @@ export async function slackOrderNotify(data: {
         text: {
           type: "mrkdwn",
           text: [
-            `*Customer:* ${data.email}`,
+            `*Customer:* ${safeEmail}`,
             `*Amount:* ${data.amount}`,
             `*Session:* \`${data.sessionId.slice(0, 20)}...\``,
           ].join("\n"),
@@ -383,4 +395,12 @@ export async function slackOrderNotify(data: {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Escape Slack mrkdwn special characters in user-supplied strings.
+ * Prevents link injection (<url|text>) and @mention injection (<@here>).
+ */
+function slackEscape(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
