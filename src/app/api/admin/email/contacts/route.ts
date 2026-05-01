@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
+  const limit = Math.max(1, Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100));
   const contacts = await listACContacts(limit);
   return NextResponse.json({
     contacts,

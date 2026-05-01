@@ -15,9 +15,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const limit = Math.min(
-    Number(request.nextUrl.searchParams.get("limit") ?? "25"),
-    100,
+  const limit = Math.max(
+    1,
+    Math.min(Number(request.nextUrl.searchParams.get("limit") ?? "25"), 100),
   );
 
   try {
