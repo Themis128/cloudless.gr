@@ -61,7 +61,9 @@ export async function POST(request: NextRequest) {
 
     // Optional: extract authenticated user to pre-fill email and link order
     const rawToken = getTokenFromHeader(request);
-    const authUser = rawToken ? await verifyToken(rawToken).catch(() => null) : null;
+    const authUser = rawToken
+      ? await verifyToken(rawToken).catch(() => null)
+      : null;
 
     const stripe = await getStripe();
     const session = await stripe.checkout.sessions.create({

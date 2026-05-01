@@ -166,9 +166,15 @@ function buildConfigFromEnv(): AppConfig {
  * In test environments (NODE_ENV=test), reads from process.env directly.
  */
 export async function getConfig(): Promise<AppConfig> {
-  // In tests, skip SSM entirely and read from process.env.
+  // In tests, skip SSM entirely and read from process.env. Still cache the
+  // result so successive getConfig() calls return the same object reference;
   // resetSsmCache() clears `cached` so per-test vi.stubEnv() changes are picked up.
-  if (process.env.NODE_ENV === "test") return buildConfigFromEnv();
+  if (process.env.NODE_ENV === "test") {
+    if (cached) return cached;
+    cached = buildConfigFromEnv();
+    cachedAt = Date.now();
+    return cached;
+  }
 
   if (cached && Date.now() - cachedAt < CACHE_TTL_MS) return cached;
 
