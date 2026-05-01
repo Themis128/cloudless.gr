@@ -26,9 +26,9 @@ vi.mock("@/lib/google-calendar", () => ({
   bookConsultation: vi.fn(),
 }));
 
-const mockSlackNotify = vi.fn().mockResolvedValue(true);
+const mockSlackBookingNotify = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/slack-notify", () => ({
-  slackNotify: mockSlackNotify,
+  slackBookingNotify: mockSlackBookingNotify,
 }));
 
 // ---------------------------------------------------------------------------
@@ -226,8 +226,14 @@ describe("POST /api/calendar/book", () => {
     );
     // Give the fire-and-forget promise a tick to resolve
     await new Promise((r) => setTimeout(r, 0));
-    expect(mockSlackNotify).toHaveBeenCalledOnce();
-    expect(mockSlackNotify.mock.calls[0][0].text).toContain("Notify Test");
+    expect(mockSlackBookingNotify).toHaveBeenCalledOnce();
+    const call = mockSlackBookingNotify.mock.calls[0][0] as {
+      name: string;
+      email: string;
+      start: string;
+    };
+    expect(call.name).toBe("Notify Test");
+    expect(call.email).toBe("notify@example.com");
   });
 
   it("returns 500 when bookConsultation returns null", async () => {

@@ -15,9 +15,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const weeks = Math.min(
-    Number(request.nextUrl.searchParams.get("weeks") ?? "12"),
-    52,
+  const weeks = Math.max(
+    1,
+    Math.min(Number(request.nextUrl.searchParams.get("weeks") ?? "12"), 52),
   );
 
   try {

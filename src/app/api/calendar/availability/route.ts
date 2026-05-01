@@ -12,7 +12,7 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const days = Math.min(Number(searchParams.get("days") || 7), 30);
+    const days = Math.max(1, Math.min(Number(searchParams.get("days") || 7), 30));
     const slots = await getAvailableSlots(days);
 
     return NextResponse.json(

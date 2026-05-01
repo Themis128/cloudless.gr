@@ -357,6 +357,50 @@ export async function slackContactNotify(data: {
   });
 }
 
+/** Pre-formatted notification for a new consultation booking */
+export async function slackBookingNotify(data: {
+  name: string;
+  email: string;
+  start: string;
+  notes?: string;
+}): Promise<void> {
+  const safeName = slackEscape(data.name);
+  const safeEmail = slackEscape(data.email);
+  const dateStr = slackEscape(
+    new Date(data.start).toLocaleString("en-IE", {
+      timeZone: "Europe/Athens",
+      dateStyle: "full",
+      timeStyle: "short",
+    }),
+  );
+  await client.post({
+    text: `📅 New consultation booked: ${safeName} (${safeEmail})`,
+    blocks: [
+      headerBlock("📅 New Consultation Booked"),
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: [
+            `*Name:* ${safeName}`,
+            `*Email:* ${safeEmail}`,
+            `*Time:* ${dateStr} (Athens)`,
+          ].join("\n"),
+        },
+      },
+      ...(data.notes
+        ? [sectionBlock(`*Notes:*\n${slackEscape(data.notes).slice(0, 500)}`)]
+        : []),
+      contextBlock(
+        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
+        "cloudless.gr calendar booking",
+      ),
+    ],
+    icon_emoji: ":calendar:",
+    username: "Cloudless Bot",
+  });
+}
+
 /** Pre-formatted notification for new orders */
 export async function slackOrderNotify(data: {
   email: string;

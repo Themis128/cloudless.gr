@@ -326,6 +326,73 @@ describe("slackContactNotify", () => {
   });
 });
 
+describe("slackBookingNotify", () => {
+  let slackBookingNotify: (typeof import("@/lib/slack-notify"))["slackBookingNotify"];
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    resetSlackConfigCache();
+    const mod = await import("@/lib/slack-notify");
+    slackBookingNotify = mod.slackBookingNotify;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("includes name and email in the notification", async () => {
+    const mockFetch = okFetch({ ok: true });
+    vi.stubGlobal("fetch", mockFetch);
+
+    await slackBookingNotify({
+      name: "Alice",
+      email: "alice@example.com",
+      start: "2026-06-10T09:00:00Z",
+    });
+
+    const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(opts.body as string);
+    const bodyStr = JSON.stringify(body);
+    expect(bodyStr).toContain("Alice");
+    expect(bodyStr).toContain("alice@example.com");
+    expect(body.icon_emoji).toBe(":calendar:");
+  });
+
+  it("includes notes when provided", async () => {
+    const mockFetch = okFetch({ ok: true });
+    vi.stubGlobal("fetch", mockFetch);
+
+    await slackBookingNotify({
+      name: "Bob",
+      email: "bob@example.com",
+      start: "2026-06-10T09:00:00Z",
+      notes: "Looking forward to the call",
+    });
+
+    const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(opts.body as string);
+    const bodyStr = JSON.stringify(body);
+    expect(bodyStr).toContain("Looking forward to the call");
+  });
+
+  it("escapes mrkdwn injection in name and email", async () => {
+    const mockFetch = okFetch({ ok: true });
+    vi.stubGlobal("fetch", mockFetch);
+
+    await slackBookingNotify({
+      name: "<@here>",
+      email: "evil&one@example.com",
+      start: "2026-06-10T09:00:00Z",
+    });
+
+    const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const bodyStr = JSON.stringify(JSON.parse(opts.body as string));
+    expect(bodyStr).not.toContain("<@here>");
+    expect(bodyStr).toContain("&lt;@here&gt;");
+    expect(bodyStr).toContain("evil&amp;one@example.com");
+  });
+});
+
 describe("slackErrorNotify", () => {
   let slackErrorNotify: (typeof import("@/lib/slack-notify"))["slackErrorNotify"];
 
