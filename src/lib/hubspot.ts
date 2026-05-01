@@ -4,6 +4,7 @@ const HUBSPOT_API = "https://api.hubapi.com";
 const HUBSPOT_PAGE_SIZE = 100;
 const HUBSPOT_MAX_LIMIT = 100;
 const HUBSPOT_BATCH_NOTE_LIMIT = 100;
+const HUBSPOT_DEFINED = "HUBSPOT_DEFINED";
 
 interface HubSpotContact {
   email: string;
@@ -220,7 +221,7 @@ export async function createTicket(
         to: { id: contactId },
         types: [
           {
-            associationCategory: "HUBSPOT_DEFINED",
+            associationCategory: HUBSPOT_DEFINED,
             associationTypeId: 16,
           },
         ],
@@ -507,7 +508,7 @@ export async function createNote(
             to: { id: dealId },
             types: [
               {
-                associationCategory: "HUBSPOT_DEFINED",
+                associationCategory: HUBSPOT_DEFINED,
                 associationTypeId: 214,
               },
             ],
@@ -542,7 +543,7 @@ export async function createContactNote(
             to: { id: contactId },
             types: [
               {
-                associationCategory: "HUBSPOT_DEFINED",
+                associationCategory: HUBSPOT_DEFINED,
                 associationTypeId: 202,
               },
             ],
@@ -631,7 +632,7 @@ export async function associateDealWithContact(
       {
         method: "PUT",
         body: JSON.stringify([
-          { associationCategory: "HUBSPOT_DEFINED", associationTypeId: 3 },
+          { associationCategory: HUBSPOT_DEFINED, associationTypeId: 3 },
         ]),
       },
     );

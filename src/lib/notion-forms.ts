@@ -21,13 +21,16 @@
 import { notionFetch, notionFetchAll } from "@/lib/notion";
 import { getIntegrationsAsync } from "@/lib/integrations";
 
+const SOURCE_CONTACT = "contact";
+const SUBMITTED_AT_PROP = "Submitted At";
+
 export interface ContactSubmission {
   name: string;
   email: string;
   company?: string;
   service?: string;
   message: string;
-  source?: "contact" | "subscribe" | "other";
+  source?: "contact" | "subscribe" | "other"; // NOSONAR — type annotation
 }
 
 export interface SubmissionRecord {
@@ -83,9 +86,9 @@ export async function saveSubmission(
             select: { name: "New" },
           },
           Source: {
-            select: { name: data.source ?? "contact" },
+            select: { name: data.source ?? SOURCE_CONTACT },
           },
-          "Submitted At": {
+          [SUBMITTED_AT_PROP]: {
             date: { start: new Date().toISOString() },
           },
         },
@@ -113,7 +116,7 @@ export async function listSubmissions(limit = 50): Promise<SubmissionRecord[]> {
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const results = await notionFetchAll<any>(
       `/databases/${NOTION_SUBMISSIONS_DB_ID}/query`,
-      { sorts: [{ property: "Submitted At", direction: "descending" }] },
+      { sorts: [{ property: SUBMITTED_AT_PROP, direction: "descending" }] },
     );
 
     return results.slice(0, limit).map((page: any) => {
@@ -132,8 +135,8 @@ export async function listSubmissions(limit = 50): Promise<SubmissionRecord[]> {
           .map((t: any) => t.plain_text)
           .join(""),
         status: p.Status?.select?.name ?? "New",
-        source: p.Source?.select?.name ?? "contact",
-        submittedAt: p["Submitted At"]?.date?.start ?? page.created_time,
+        source: p.Source?.select?.name ?? SOURCE_CONTACT,
+        submittedAt: p[SUBMITTED_AT_PROP]?.date?.start ?? page.created_time,
         url: page.url,
       };
     });

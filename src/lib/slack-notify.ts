@@ -12,20 +12,20 @@ import { getSlackConfigAsync } from "@/lib/integrations";
 // Types
 // ---------------------------------------------------------------------------
 
-export type BlockKitBlock =
+export type BlockKitBlock = // NOSONAR — discriminated union type annotations
   | {
-      type: "section";
-      text: { type: "mrkdwn" | "plain_text"; text: string };
+      type: "section"; // NOSONAR
+      text: { type: "mrkdwn" | "plain_text"; text: string }; // NOSONAR
       accessory?: unknown;
     }
   | { type: "divider" }
   | {
       type: "header";
-      text: { type: "plain_text"; text: string; emoji?: boolean };
+      text: { type: "plain_text"; text: string; emoji?: boolean }; // NOSONAR
     }
   | {
       type: "context";
-      elements: Array<{ type: "mrkdwn" | "plain_text"; text: string }>;
+      elements: Array<{ type: "mrkdwn" | "plain_text"; text: string }>; // NOSONAR
     }
   | { type: "actions"; elements: Array<Record<string, unknown>> }
   | { type: string; [key: string]: unknown };
@@ -264,7 +264,7 @@ export async function slackDeployNotify(opts: {
   stage: string;
   actor?: string;
   commitSha?: string;
-  status: "started" | "succeeded" | "failed";
+  status: "started" | "succeeded" | "failed"; // NOSONAR — type annotation
 }): Promise<void> {
   const statusEmoji =
     opts.status === "succeeded"
@@ -342,18 +342,14 @@ export async function slackContactNotify(data: {
     text: `New contact from ${safeName} (${safeEmail})`,
     blocks: [
       headerBlock("\ud83d\udce8 New Contact Form Submission"),
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: [
-            `*Name:* ${safeName}`,
-            `*Email:* ${safeEmail}`,
-            `*Company:* ${safeCompany}`,
-            `*Service:* ${safeService}`,
-          ].join("\n"),
-        },
-      },
+      sectionBlock(
+        [
+          `*Name:* ${safeName}`,
+          `*Email:* ${safeEmail}`,
+          `*Company:* ${safeCompany}`,
+          `*Service:* ${safeService}`,
+        ].join("\n"),
+      ),
       divider,
       sectionBlock(`*Message:*\n${safeMessage}`),
       contextBlock(
@@ -386,17 +382,13 @@ export async function slackBookingNotify(data: {
     text: `📅 New consultation booked: ${safeName} (${safeEmail})`,
     blocks: [
       headerBlock("📅 New Consultation Booked"),
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: [
-            `*Name:* ${safeName}`,
-            `*Email:* ${safeEmail}`,
-            `*Time:* ${dateStr} (Athens)`,
-          ].join("\n"),
-        },
-      },
+      sectionBlock(
+        [
+          `*Name:* ${safeName}`,
+          `*Email:* ${safeEmail}`,
+          `*Time:* ${dateStr} (Athens)`,
+        ].join("\n"),
+      ),
       ...(data.notes
         ? [sectionBlock(`*Notes:*\n${slackEscape(data.notes).slice(0, MAX_NOTES_TEXT_LENGTH)}`)]
         : []),
@@ -421,17 +413,13 @@ export async function slackOrderNotify(data: {
     text: `New order: ${data.amount} from ${safeEmail}`,
     blocks: [
       headerBlock("\ud83d\udcb0 New Order"),
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: [
-            `*Customer:* ${safeEmail}`,
-            `*Amount:* ${data.amount}`,
-            `*Session:* \`${data.sessionId.slice(0, ORDER_SESSION_DISPLAY_LENGTH)}...\``,
-          ].join("\n"),
-        },
-      },
+      sectionBlock(
+        [
+          `*Customer:* ${safeEmail}`,
+          `*Amount:* ${data.amount}`,
+          `*Session:* \`${data.sessionId.slice(0, ORDER_SESSION_DISPLAY_LENGTH)}...\``,
+        ].join("\n"),
+      ),
       contextBlock(
         slackTimestamp(),
         "cloudless.gr stripe checkout",

@@ -14,6 +14,7 @@
 import { createGoogleAuth } from "@/lib/google-auth";
 
 const GSC_API = "https://searchconsole.googleapis.com/webmasters/v3/sites";
+const SORT_DESCENDING = "DESCENDING";
 
 /** Default GSC property — domain property covers all subdomains & protocols. */
 const DEFAULT_SITE = process.env.GSC_SITE_URL ?? "https://cloudless.gr/";
@@ -155,7 +156,7 @@ export async function getTopKeywords(
       ...dateRange(),
       dimensions: ["query"],
       rowLimit: limit,
-      orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }],
+      orderBy: [{ fieldName: "clicks", sortOrder: SORT_DESCENDING }],
     });
 
     if (!res.ok) return [];
@@ -238,7 +239,7 @@ export async function getTopPages(
       ...dateRange(),
       dimensions: ["page"],
       rowLimit: limit,
-      orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }],
+      orderBy: [{ fieldName: "clicks", sortOrder: SORT_DESCENDING }],
     });
 
     if (!res.ok) return [];
@@ -281,7 +282,7 @@ export async function getWebAnalytics(
       ...range,
       dimensions: ["page"],
       rowLimit: 20,
-      orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }],
+      orderBy: [{ fieldName: "clicks", sortOrder: SORT_DESCENDING }],
     });
 
     const pagesData = pagesRes.ok ? await pagesRes.json() : {};
@@ -445,7 +446,7 @@ export async function getProductPageMetrics(
         },
       ],
       rowLimit: limit,
-      orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }],
+      orderBy: [{ fieldName: "clicks", sortOrder: SORT_DESCENDING }],
     });
 
     if (!res.ok) return [];
@@ -491,7 +492,7 @@ export async function getQueryPageMapping(
       ...dateRange(),
       dimensions: ["query", "page"],
       rowLimit: limit,
-      orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }],
+      orderBy: [{ fieldName: "clicks", sortOrder: SORT_DESCENDING }],
     });
 
     if (!res.ok) return [];
@@ -637,7 +638,7 @@ export async function getTrafficByCountry(
       ...dateRange(),
       dimensions: ["country"],
       rowLimit: limit,
-      orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }],
+      orderBy: [{ fieldName: "clicks", sortOrder: SORT_DESCENDING }],
     });
 
     if (!res.ok) return [];

@@ -34,6 +34,10 @@ import {
 import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
+const BLOG_PUBLISHED_FILTER = { property: "Published", checkbox: { equals: true } };
+const BLOG_DATE_SORT = [{ property: "Date", direction: "descending" }];
+const isBlogConfigured = () => isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -105,7 +109,7 @@ function mapPage(page: any): NotionPost {
  * Returns empty array when Notion is not configured.
  */
 export async function getPosts(): Promise<NotionPost[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+  if (!(await isBlogConfigured()))
     return [];
 
   return cached("blog:posts", async () => {
@@ -114,8 +118,8 @@ export async function getPosts(): Promise<NotionPost[]> {
       const pages = await notionFetchAll(
         `/databases/${NOTION_BLOG_DB_ID}/query`,
         {
-          filter: { property: "Published", checkbox: { equals: true } },
-          sorts: [{ property: "Date", direction: "descending" }],
+          filter: BLOG_PUBLISHED_FILTER,
+          sorts: BLOG_DATE_SORT,
         },
       );
       return pages.map(mapPage);
@@ -130,14 +134,14 @@ export async function getPosts(): Promise<NotionPost[]> {
  * Fetch all posts (published and drafts) for admin use. Not cached.
  */
 export async function getAllPosts(): Promise<NotionPost[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+  if (!(await isBlogConfigured()))
     return [];
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
     const pages = await notionFetchAll(
       `/databases/${NOTION_BLOG_DB_ID}/query`,
-      { sorts: [{ property: "Date", direction: "descending" }] },
+      { sorts: BLOG_DATE_SORT },
     );
     return pages.map(mapPage);
   } catch (err) {
@@ -150,7 +154,7 @@ export async function getAllPosts(): Promise<NotionPost[]> {
  * Fetch featured posts only (for homepage hero).
  */
 export async function getFeaturedPosts(): Promise<NotionPost[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+  if (!(await isBlogConfigured()))
     return [];
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
@@ -160,11 +164,11 @@ export async function getFeaturedPosts(): Promise<NotionPost[]> {
       {
         filter: {
           and: [
-            { property: "Published", checkbox: { equals: true } },
+            BLOG_PUBLISHED_FILTER,
             { property: "Featured", checkbox: { equals: true } },
           ],
         },
-        sorts: [{ property: "Date", direction: "descending" }],
+        sorts: BLOG_DATE_SORT,
       },
     );
     return pages.map(mapPage);
@@ -180,7 +184,7 @@ export async function getFeaturedPosts(): Promise<NotionPost[]> {
 export async function getPostsByCategory(
   category: string,
 ): Promise<NotionPost[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+  if (!(await isBlogConfigured()))
     return [];
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
@@ -190,11 +194,11 @@ export async function getPostsByCategory(
       {
         filter: {
           and: [
-            { property: "Published", checkbox: { equals: true } },
+            BLOG_PUBLISHED_FILTER,
             { property: "Category", select: { equals: category } },
           ],
         },
-        sorts: [{ property: "Date", direction: "descending" }],
+        sorts: BLOG_DATE_SORT,
       },
     );
     return pages.map(mapPage);
@@ -208,7 +212,7 @@ export async function getPostsByCategory(
  * Fetch posts filtered by tag.
  */
 export async function getPostsByTag(tag: string): Promise<NotionPost[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+  if (!(await isBlogConfigured()))
     return [];
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
@@ -218,11 +222,11 @@ export async function getPostsByTag(tag: string): Promise<NotionPost[]> {
       {
         filter: {
           and: [
-            { property: "Published", checkbox: { equals: true } },
+            BLOG_PUBLISHED_FILTER,
             { property: "Tags", multi_select: { contains: tag } },
           ],
         },
-        sorts: [{ property: "Date", direction: "descending" }],
+        sorts: BLOG_DATE_SORT,
       },
     );
     return pages.map(mapPage);
@@ -238,7 +242,7 @@ export async function getPostsByTag(tag: string): Promise<NotionPost[]> {
 export async function getPostBySlug(
   slug: string,
 ): Promise<NotionPostWithContent | null> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+  if (!(await isBlogConfigured()))
     return null;
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
@@ -249,7 +253,7 @@ export async function getPostBySlug(
         filter: {
           and: [
             { property: "Slug", rich_text: { equals: slug } },
-            { property: "Published", checkbox: { equals: true } },
+            BLOG_PUBLISHED_FILTER,
           ],
         },
       },
@@ -274,7 +278,7 @@ export async function getPostBySlug(
  * Get all published slugs (for sitemap / static generation).
  */
 export async function getAllSlugs(): Promise<string[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+  if (!(await isBlogConfigured()))
     return [];
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
@@ -282,7 +286,7 @@ export async function getAllSlugs(): Promise<string[]> {
     const pages = await notionFetchAll(
       `/databases/${NOTION_BLOG_DB_ID}/query`,
       {
-        filter: { property: "Published", checkbox: { equals: true } },
+        filter: BLOG_PUBLISHED_FILTER,
       },
     );
     return pages.map((p) => mapPage(p).slug).filter(Boolean);
@@ -365,7 +369,7 @@ export async function getPostWithToc(
 ): Promise<
   (NotionPostWithContent & { toc: import("@/lib/notion").TocEntry[] }) | null
 > {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+  if (!(await isBlogConfigured()))
     return null;
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
@@ -376,7 +380,7 @@ export async function getPostWithToc(
         filter: {
           and: [
             { property: "Slug", rich_text: { equals: slug } },
-            { property: "Published", checkbox: { equals: true } },
+            BLOG_PUBLISHED_FILTER,
           ],
         },
       },

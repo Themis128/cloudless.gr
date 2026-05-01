@@ -6,6 +6,11 @@ import { SlackClient } from "@/lib/slack-notify";
 const MAX_TIMESTAMP_AGE_MS = 5 * 60 * 1000;
 const HUBSPOT_API = "https://api.hubapi.com";
 const PORTAL_BASE = "https://app-eu1.hubspot.com/contacts/147639927";
+const PLAIN_TEXT = "plain_text";
+const SECTION = "section";
+const CONTEXT = "context";
+const OPEN_IN_HUBSPOT = "Open in HubSpot";
+const CRM_BOT_NAME = "Cloudless CRM";
 
 type HubSpotEvent = {
   eventId: number;
@@ -66,7 +71,7 @@ function ts(): number {
 function viewButton(label: string, url: string) {
   return {
     type: "button",
-    text: { type: "plain_text", text: label },
+    text: { type: PLAIN_TEXT, text: label },
     url,
   };
 }
@@ -94,10 +99,10 @@ async function onContactCreated(token: string, id: number): Promise<void> {
     blocks: [
       {
         type: "header",
-        text: { type: "plain_text", text: "New Contact", emoji: true },
+        text: { type: PLAIN_TEXT, text: "New Contact", emoji: true },
       },
       {
-        type: "section",
+        type: SECTION,
         text: {
           type: "mrkdwn",
           text: [
@@ -108,12 +113,12 @@ async function onContactCreated(token: string, id: number): Promise<void> {
           ].join("\n"),
         },
         accessory: viewButton(
-          "Open in HubSpot",
+          OPEN_IN_HUBSPOT,
           `${PORTAL_BASE}/contact/${id}`,
         ),
       },
       {
-        type: "context",
+        type: CONTEXT,
         elements: [
           {
             type: "mrkdwn",
@@ -124,7 +129,7 @@ async function onContactCreated(token: string, id: number): Promise<void> {
       },
     ],
     icon_emoji: ":bust_in_silhouette:",
-    username: "Cloudless CRM",
+    username: CRM_BOT_NAME,
   });
 }
 
@@ -147,10 +152,10 @@ async function onDealCreated(token: string, id: number): Promise<void> {
     blocks: [
       {
         type: "header",
-        text: { type: "plain_text", text: "New Deal", emoji: true },
+        text: { type: PLAIN_TEXT, text: "New Deal", emoji: true },
       },
       {
-        type: "section",
+        type: SECTION,
         text: {
           type: "mrkdwn",
           text: [
@@ -159,10 +164,10 @@ async function onDealCreated(token: string, id: number): Promise<void> {
             `*Stage:* \`${stage}\``,
           ].join("\n"),
         },
-        accessory: viewButton("Open in HubSpot", `${PORTAL_BASE}/deal/${id}`),
+        accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/deal/${id}`),
       },
       {
-        type: "context",
+        type: CONTEXT,
         elements: [
           {
             type: "mrkdwn",
@@ -173,7 +178,7 @@ async function onDealCreated(token: string, id: number): Promise<void> {
       },
     ],
     icon_emoji: ":handshake:",
-    username: "Cloudless CRM",
+    username: CRM_BOT_NAME,
   });
 }
 
@@ -190,20 +195,20 @@ async function onDealClosedWon(token: string, id: number): Promise<void> {
     blocks: [
       {
         type: "header",
-        text: { type: "plain_text", text: "Deal Closed Won!", emoji: true },
+        text: { type: PLAIN_TEXT, text: "Deal Closed Won!", emoji: true },
       },
       {
-        type: "section",
+        type: SECTION,
         text: {
           type: "mrkdwn",
           text: [`*Deal:* ${name}`, amount ? `*Amount:* *${amount}*` : ""]
             .filter(Boolean)
             .join("\n"),
         },
-        accessory: viewButton("Open in HubSpot", `${PORTAL_BASE}/deal/${id}`),
+        accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/deal/${id}`),
       },
       {
-        type: "context",
+        type: CONTEXT,
         elements: [
           {
             type: "mrkdwn",
@@ -214,7 +219,7 @@ async function onDealClosedWon(token: string, id: number): Promise<void> {
       },
     ],
     icon_emoji: ":trophy:",
-    username: "Cloudless CRM",
+    username: CRM_BOT_NAME,
   });
 }
 
@@ -238,10 +243,10 @@ async function onTicketCreated(token: string, id: number): Promise<void> {
     blocks: [
       {
         type: "header",
-        text: { type: "plain_text", text: "New Support Ticket", emoji: true },
+        text: { type: PLAIN_TEXT, text: "New Support Ticket", emoji: true },
       },
       {
-        type: "section",
+        type: SECTION,
         text: {
           type: "mrkdwn",
           text: [
@@ -249,10 +254,10 @@ async function onTicketCreated(token: string, id: number): Promise<void> {
             `*Priority:* ${priorityEmoji} ${priority}`,
           ].join("\n"),
         },
-        accessory: viewButton("Open in HubSpot", `${PORTAL_BASE}/ticket/${id}`),
+        accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/ticket/${id}`),
       },
       {
-        type: "context",
+        type: CONTEXT,
         elements: [
           {
             type: "mrkdwn",
@@ -263,7 +268,7 @@ async function onTicketCreated(token: string, id: number): Promise<void> {
       },
     ],
     icon_emoji: ":ticket:",
-    username: "Cloudless CRM",
+    username: CRM_BOT_NAME,
   });
 }
 
@@ -284,10 +289,10 @@ async function onCompanyCreated(token: string, id: number): Promise<void> {
     blocks: [
       {
         type: "header",
-        text: { type: "plain_text", text: "New Company", emoji: true },
+        text: { type: PLAIN_TEXT, text: "New Company", emoji: true },
       },
       {
-        type: "section",
+        type: SECTION,
         text: {
           type: "mrkdwn",
           text: [
@@ -297,12 +302,12 @@ async function onCompanyCreated(token: string, id: number): Promise<void> {
           ].join("\n"),
         },
         accessory: viewButton(
-          "Open in HubSpot",
+          OPEN_IN_HUBSPOT,
           `${PORTAL_BASE}/company/${id}`,
         ),
       },
       {
-        type: "context",
+        type: CONTEXT,
         elements: [
           {
             type: "mrkdwn",
@@ -313,7 +318,7 @@ async function onCompanyCreated(token: string, id: number): Promise<void> {
       },
     ],
     icon_emoji: ":office:",
-    username: "Cloudless CRM",
+    username: CRM_BOT_NAME,
   });
 }
 

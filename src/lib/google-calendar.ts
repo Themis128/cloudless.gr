@@ -12,6 +12,9 @@ const SLOT_DURATION_MINUTES = 30;
 const LOOKBACK_DAYS = 90;
 const LOOKAHEAD_DAYS = 30;
 const MAX_CALENDAR_RESULTS = 50;
+const CALENDAR_TIMEZONE = "Europe/Athens";
+const DEFAULT_CALENDAR_ID = "primary";
+const DATE_PART_2_DIGIT = "2-digit";
 
 const getAccessToken = createGoogleAuth(
   "https://www.googleapis.com/auth/calendar",
@@ -23,13 +26,13 @@ const getAccessToken = createGoogleAuth(
  */
 function athensOffsetMs(date: Date): number {
   const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Europe/Athens",
+    timeZone: CALENDAR_TIMEZONE,
     year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
+    month: DATE_PART_2_DIGIT,
+    day: DATE_PART_2_DIGIT,
+    hour: DATE_PART_2_DIGIT,
+    minute: DATE_PART_2_DIGIT,
+    second: DATE_PART_2_DIGIT,
     hour12: false,
   });
   const p = Object.fromEntries(
@@ -72,7 +75,7 @@ interface TimeSlot {
  */
 export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
   const { GOOGLE_CALENDAR_ID } = await getConfig();
-  const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
+  const calendarId = GOOGLE_CALENDAR_ID ?? DEFAULT_CALENDAR_ID;
 
   const now = new Date();
   const end = new Date(now.getTime() + daysAhead * MS_PER_DAY);
@@ -141,7 +144,7 @@ export async function bookConsultation(data: {
   notes?: string;
 }): Promise<{ eventId: string; htmlLink: string } | null> {
   const { GOOGLE_CALENDAR_ID } = await getConfig();
-  const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
+  const calendarId = GOOGLE_CALENDAR_ID ?? DEFAULT_CALENDAR_ID;
 
   try {
     const res = await calendarFetch(
@@ -205,7 +208,7 @@ export async function getConsultationsByEmail(
   email: string,
 ): Promise<Consultation[]> {
   const { GOOGLE_CALENDAR_ID } = await getConfig();
-  const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
+  const calendarId = GOOGLE_CALENDAR_ID ?? DEFAULT_CALENDAR_ID;
 
   const now = new Date();
   const timeMin = new Date(now.getTime() - LOOKBACK_DAYS * MS_PER_DAY).toISOString();

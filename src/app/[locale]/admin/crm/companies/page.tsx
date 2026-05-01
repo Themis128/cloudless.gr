@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 
 const REFRESH_INTERVAL = 10_000;
+const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
 
 interface Company {
   id: string;
@@ -150,16 +151,16 @@ export default function AdminCompaniesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-800">
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                  <th className={TH_CLASS}>
                     Company
                   </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                  <th className={TH_CLASS}>
                     Domain
                   </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                  <th className={TH_CLASS}>
                     Location
                   </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                  <th className={TH_CLASS}>
                     Added
                   </th>
                 </tr>

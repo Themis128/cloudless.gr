@@ -24,13 +24,13 @@ export interface SentryIssue {
   id: string;
   title: string;
   culprit: string;
-  level: "fatal" | "error" | "warning" | "info" | "debug";
+  level: "fatal" | "error" | "warning" | "info" | "debug"; // NOSONAR — type annotation
   /** Total event count as string (Sentry returns strings for large numbers) */
   count: string;
   userCount: number;
   firstSeen: string; // ISO 8601
   lastSeen: string; // ISO 8601
-  status: "unresolved" | "resolved" | "ignored";
+  status: "unresolved" | "resolved" | "ignored"; // NOSONAR — type annotation
   /** Direct link to the issue on sentry.io */
   permalink: string;
   /** Human-readable short ID, e.g. "CLOUDLESS-GR-1A2B" */
@@ -51,8 +51,10 @@ export interface SentryIssueList {
 }
 
 export type SortField = "date" | "new" | "freq" | "users";
-export type IssueLevel = "fatal" | "error" | "warning" | "info" | "debug";
-export type IssueStatus = "resolved" | "ignored" | "unresolved";
+export type IssueLevel = "fatal" | "error" | "warning" | "info" | "debug"; // NOSONAR — type annotation
+export type IssueStatus = "resolved" | "ignored" | "unresolved"; // NOSONAR — type annotation
+
+const STATUS_RESOLVED: IssueStatus = "resolved";
 
 export type SentryTokenStatus = "valid" | "rejected" | "not_configured" | "error";
 
@@ -269,7 +271,7 @@ export async function updateIssueStatus(
  * Resolve an issue — shorthand for updateIssueStatus(id, "resolved").
  */
 export async function resolveIssue(issueId: string): Promise<boolean> {
-  return updateIssueStatus(issueId, "resolved");
+  return updateIssueStatus(issueId, STATUS_RESOLVED);
 }
 
 /**
@@ -290,9 +292,9 @@ export async function resolveInRelease(
   const result = await sentryFetch<{ status: string }>(`/issues/${issueId}/`, {
     method: "PUT",
     body: JSON.stringify({
-      status: "resolved",
+      status: STATUS_RESOLVED,
       statusDetails: { inRelease: version },
     }),
   });
-  return result?.status === "resolved";
+  return result?.status === STATUS_RESOLVED;
 }

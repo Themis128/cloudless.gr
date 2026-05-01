@@ -22,9 +22,10 @@ Key facts:
 Keep answers concise (2–4 sentences max). If someone asks about pricing, give ranges and suggest booking a free audit. Never make up specific technical details not listed above. If you don't know something, say so and suggest they book a call.`;
 
 const MAX_USER_MESSAGE = 500;
+const ROLE_ASSISTANT = "assistant";
 
 export async function POST(request: NextRequest) {
-  let messages: { role: "user" | "assistant"; content: string }[];
+  let messages: { role: "user" | "assistant"; content: string }[]; // NOSONAR — type annotation
   try {
     const body = await request.json();
     if (!Array.isArray(body.messages)) throw new Error("messages required");
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       )
       .slice(-10) // keep last 10 turns for context
       .map((m: { role: string; content: string }) => ({
-        role: m.role === "assistant" ? "assistant" : "user",
+        role: m.role === ROLE_ASSISTANT ? ROLE_ASSISTANT : "user",
         content: String(m.content).slice(0, MAX_USER_MESSAGE),
       }));
     if (messages.length === 0) throw new Error("No valid messages");

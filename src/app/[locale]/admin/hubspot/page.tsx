@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 
 const REFRESH_INTERVAL = 10_000;
+const SECTION_LABEL_CLASS = "mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600";
+const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
 
 interface Contact {
   id: string;
@@ -207,7 +209,7 @@ export default function HubSpotOverviewPage() {
       ) : (
         <>
           {/* Contacts stats */}
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600">
+          <p className={SECTION_LABEL_CLASS}>
             Contacts
           </p>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -229,7 +231,7 @@ export default function HubSpotOverviewPage() {
           </div>
 
           {/* Deals stats */}
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600">
+          <p className={SECTION_LABEL_CLASS}>
             Deals
           </p>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -251,7 +253,7 @@ export default function HubSpotOverviewPage() {
           </div>
 
           {/* Tickets stats */}
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600">
+          <p className={SECTION_LABEL_CLASS}>
             Support Tickets
           </p>
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -268,7 +270,7 @@ export default function HubSpotOverviewPage() {
           </div>
 
           {/* Recent leads */}
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600">
+          <p className={SECTION_LABEL_CLASS}>
             Recent Leads
           </p>
           <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
@@ -285,16 +287,16 @@ export default function HubSpotOverviewPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-800">
-                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                      <th className={TH_CLASS}>
                         Name
                       </th>
-                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                      <th className={TH_CLASS}>
                         Email
                       </th>
-                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                      <th className={TH_CLASS}>
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                      <th className={TH_CLASS}>
                         Added
                       </th>
                     </tr>

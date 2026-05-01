@@ -10,14 +10,17 @@
 import { notionFetch, notionFetchAll, extractText } from "@/lib/notion";
 import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 
+const isAnalyticsConfigured = () =>
+  isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID");
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type AnalyticsEventType =
-  | "page_view"
+export type AnalyticsEventType = // NOSONAR — type annotation
+  | "page_view" // NOSONAR
   | "form_submit"
-  | "blog_view"
+  | "blog_view" // NOSONAR
   | "doc_view"
   | "signup"
   | "order"
@@ -77,7 +80,7 @@ const FLUSH_THRESHOLD = 10;
 const FLUSH_DELAY_MS = 5000;
 
 async function writeEventToNotion(data: EventData): Promise<string | null> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
+  if (!(await isAnalyticsConfigured()))
     return null;
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
@@ -236,7 +239,7 @@ export async function getRecentEvents(
   type?: AnalyticsEventType,
   limit = 50,
 ): Promise<AnalyticsEvent[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
+  if (!(await isAnalyticsConfigured()))
     return [];
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
@@ -267,7 +270,7 @@ export async function getEventsByDateRange(
   startDate: string,
   endDate: string,
 ): Promise<AnalyticsEvent[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
+  if (!(await isAnalyticsConfigured()))
     return [];
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
@@ -352,7 +355,7 @@ export async function getAnalyticsSummary(days = 7): Promise<AnalyticsSummary> {
 export async function archiveOldEvents(
   daysToKeep = 30,
 ): Promise<{ archived: number; errors: number }> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
+  if (!(await isAnalyticsConfigured()))
     return { archived: 0, errors: 0 };
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
