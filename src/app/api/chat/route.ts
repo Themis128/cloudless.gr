@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getConfig } from "@/lib/ssm-config";
+import { getAnthropicApiKey } from "@/lib/anthropic";
 import { escapeHtml } from "@/lib/escape-html";
 
 const SYSTEM_PROMPT = `You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency run by Themistoklis Baltzakis (AWS Certified Cloud Architect, 8+ years experience).
@@ -46,8 +46,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const cfg = await getConfig();
-  const apiKey = cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+  const apiKey = await getAnthropicApiKey();
   if (!apiKey) {
     return Response.json(
       { error: "Chat not available right now. Please use the Contact page." },

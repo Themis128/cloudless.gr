@@ -1,25 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getConfig } from "@/lib/ssm-config";
-
-async function callClaude(prompt: string, apiKey: string): Promise<string> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 500,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!res.ok) throw new Error(`Anthropic API error ${res.status}`);
-  const data = await res.json();
-  return data.content?.[0]?.text ?? "";
-}
+import { callClaude, getAnthropicApiKey } from "@/lib/anthropic";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -39,8 +20,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const cfg = await getConfig();
-  const apiKey = cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+  const apiKey = await getAnthropicApiKey();
   if (!apiKey) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY not configured." },
@@ -56,7 +36,7 @@ Metrics: ${JSON.stringify(metrics, null, 2)}
 Write 3-5 sentences of plain English insights. Mention specific numbers, compare to industry benchmarks where relevant, and end with 1-2 actionable recommendations. Be direct and professional.`;
 
   try {
-    const insights = await callClaude(prompt, apiKey);
+    const insights = await callClaude(prompt, apiKey, { maxTokens: 500 });
     return NextResponse.json({ insights });
   } catch (e) {
     return NextResponse.json(

@@ -1,28 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getConfig } from "@/lib/ssm-config";
-
-async function callClaude(prompt: string, apiKey: string): Promise<string> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1500,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Anthropic API error ${res.status}: ${err}`);
-  }
-  const data = await res.json();
-  return data.content?.[0]?.text ?? "";
-}
+import { callClaude, getAnthropicApiKey } from "@/lib/anthropic";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -46,8 +24,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const cfg = await getConfig();
-  const apiKey = cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+  const apiKey = await getAnthropicApiKey();
   if (!apiKey) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY not configured." },
@@ -112,7 +89,7 @@ Respond with a JSON object (no markdown fences, just raw JSON) with this structu
 Only include the platforms that were requested. Tailor recommendations for the Greek market unless the description specifies otherwise.`;
 
   try {
-    const text = await callClaude(prompt, apiKey);
+    const text = await callClaude(prompt, apiKey, { maxTokens: 1500 });
     let targeting: unknown;
     try {
       targeting = JSON.parse(text.replace(/```json\n?|\n?```/g, "").trim());
