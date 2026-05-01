@@ -30,6 +30,7 @@ import {
   extractText,
   blocksToHtml,
   notionImageProxyUrl,
+  type TocEntry,
 } from "@/lib/notion";
 import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
@@ -367,7 +368,7 @@ export async function getRelatedPosts(
 export async function getPostWithToc(
   slug: string,
 ): Promise<
-  (NotionPostWithContent & { toc: import("@/lib/notion").TocEntry[] }) | null
+  (NotionPostWithContent & { toc: TocEntry[] }) | null
 > {
   if (!(await isBlogConfigured()))
     return null;

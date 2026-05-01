@@ -13,6 +13,9 @@ import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 const isAnalyticsConfigured = () =>
   isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID");
 
+const EVENT_PAGE_VIEW = "page_view";
+const EVENT_BLOG_VIEW = "blog_view";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -57,7 +60,7 @@ function mapEvent(page: any): AnalyticsEvent {
   return {
     id: page.id,
     event: extractText(p.Event?.title),
-    type: (p.Type?.select?.name ?? "page_view") as AnalyticsEventType,
+    type: (p.Type?.select?.name ?? EVENT_PAGE_VIEW) as AnalyticsEventType,
     page: extractText(p.Page?.rich_text),
     source: extractText(p.Source?.rich_text),
     count: p.Count?.number ?? 1,
@@ -220,7 +223,7 @@ export async function trackBlogView(
   return trackEvent(
     {
       event: `Blog: ${slug}`,
-      type: "blog_view",
+      type: EVENT_BLOG_VIEW,
       page: `/blog/${slug}`,
       source,
     },
@@ -364,7 +367,7 @@ export async function archiveOldEvents(
   const cutoffStr = cutoff.toISOString().split("T")[0];
 
   // Only archive high-volume granular events
-  const archivableTypes = ["page_view", "blog_view", "doc_view"];
+  const archivableTypes = [EVENT_PAGE_VIEW, EVENT_BLOG_VIEW, "doc_view"];
 
   let archived = 0;
   let errors = 0;

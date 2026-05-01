@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 const REFRESH_INTERVAL = 10_000;
 const SECTION_LABEL_CLASS = "mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600";
 const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
+const COLOR_WHITE = "text-white";
 
 interface Contact {
   id: string;
@@ -216,7 +217,7 @@ export default function HubSpotOverviewPage() {
             <StatCard
               label="Total Contacts"
               value={loading ? "…" : stats.contacts.total}
-              color="text-white"
+              color={COLOR_WHITE}
             />
             <StatCard
               label="New Leads"
@@ -238,7 +239,7 @@ export default function HubSpotOverviewPage() {
             <StatCard
               label="Total Deals"
               value={loading ? "…" : stats.deals.total}
-              color="text-white"
+              color={COLOR_WHITE}
             />
             <StatCard
               label="Pipeline Value"
@@ -260,7 +261,7 @@ export default function HubSpotOverviewPage() {
             <StatCard
               label="Total Tickets"
               value={loading ? "…" : stats.tickets.total}
-              color="text-white"
+              color={COLOR_WHITE}
             />
             <StatCard
               label="Open"

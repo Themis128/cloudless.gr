@@ -48,6 +48,7 @@ interface SlackApiResponse {
 // ---------------------------------------------------------------------------
 
 const CHAT_POST_URL = "https://slack.com/api/chat.postMessage";
+const STATUS_SUCCEEDED = "succeeded";
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 500;
 const BOT_USERNAME = "Cloudless Bot";
@@ -175,7 +176,7 @@ export class SlackClient {
 // ---------------------------------------------------------------------------
 
 function headerBlock(text: string): BlockKitBlock {
-  return { type: "header", text: { type: "plain_text", text, emoji: true } };
+  return { type: "header", text: { type: "plain_text", text, emoji: true } }; // NOSONAR
 }
 
 function sectionBlock(text: string): BlockKitBlock {
@@ -267,14 +268,14 @@ export async function slackDeployNotify(opts: {
   status: "started" | "succeeded" | "failed"; // NOSONAR — type annotation
 }): Promise<void> {
   const statusEmoji =
-    opts.status === "succeeded"
+    opts.status === STATUS_SUCCEEDED
       ? ":white_check_mark:"
       : opts.status === "failed"
         ? ":x:"
         : ":rocket:";
 
   const statusLabel =
-    opts.status === "succeeded"
+    opts.status === STATUS_SUCCEEDED
       ? "Deploy succeeded"
       : opts.status === "failed"
         ? "Deploy failed"

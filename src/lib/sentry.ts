@@ -54,7 +54,8 @@ export type SortField = "date" | "new" | "freq" | "users";
 export type IssueLevel = "fatal" | "error" | "warning" | "info" | "debug"; // NOSONAR — type annotation
 export type IssueStatus = "resolved" | "ignored" | "unresolved"; // NOSONAR — type annotation
 
-const STATUS_RESOLVED: IssueStatus = "resolved";
+const STATUS_RESOLVED: IssueStatus = "resolved"; // NOSONAR — constant extracted from type annotation
+const STATUS_IGNORED: IssueStatus = "ignored"; // NOSONAR — constant extracted from type annotation
 
 export type SentryTokenStatus = "valid" | "rejected" | "not_configured" | "error";
 
@@ -243,7 +244,7 @@ export async function getErrorCounts(): Promise<{
   for (const issue of result.issues) {
     if (issue.level === "fatal") counts.fatal++;
     else if (issue.level === "error") counts.error++;
-    else if (issue.level === "warning") counts.warning++;
+    else if (issue.level === "warning") counts.warning++; // NOSONAR
   }
   return counts;
 }
@@ -278,7 +279,7 @@ export async function resolveIssue(issueId: string): Promise<boolean> {
  * Ignore an issue — shorthand for updateIssueStatus(id, "ignored").
  */
 export async function ignoreIssue(issueId: string): Promise<boolean> {
-  return updateIssueStatus(issueId, "ignored");
+  return updateIssueStatus(issueId, STATUS_IGNORED);
 }
 
 /**

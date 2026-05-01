@@ -23,6 +23,7 @@ import {
   notionFetchAll,
   fetchBlocksDeep,
   blocksToHtml,
+  type TocEntry,
 } from "@/lib/notion";
 import { getIntegrationsAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
@@ -315,7 +316,7 @@ export async function searchDocs(query: string): Promise<DocRecord[]> {
  */
 export async function getDocContentWithToc(
   pageId: string,
-): Promise<(DocContent & { toc: import("@/lib/notion").TocEntry[] }) | null> {
+): Promise<(DocContent & { toc: TocEntry[] }) | null> {
   const { NOTION_API_KEY } = await getIntegrationsAsync();
   if (!NOTION_API_KEY) return null;
 

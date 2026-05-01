@@ -158,8 +158,8 @@ export async function bookConsultation(data: {
             `Email: ${data.email}`,
             data.notes ? `\nNotes: ${data.notes}` : "",
           ].join("\n"),
-          start: { dateTime: data.start, timeZone: "Europe/Athens" },
-          end: { dateTime: data.end, timeZone: "Europe/Athens" },
+          start: { dateTime: data.start, timeZone: CALENDAR_TIMEZONE },
+          end: { dateTime: data.end, timeZone: CALENDAR_TIMEZONE },
           attendees: [{ email: data.email }],
           reminders: {
             useDefault: false,
