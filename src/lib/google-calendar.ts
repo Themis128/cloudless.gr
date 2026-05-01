@@ -1,57 +1,39 @@
-import { getIntegrationsAsync } from "@/lib/integrations";
+import { createGoogleAuth } from "@/lib/google-auth";
+import { getConfig } from "@/lib/ssm-config";
 
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
-const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const SCOPE = "https://www.googleapis.com/auth/calendar";
 
-let cachedToken: { token: string; expires: number } | null = null;
+const getAccessToken = createGoogleAuth(
+  "https://www.googleapis.com/auth/calendar",
+);
 
-/** Get OAuth2 access token via service account JWT (jose library) */
-async function getAccessToken(): Promise<string> {
-  const { GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY } =
-    await getIntegrationsAsync();
-  if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) {
-    throw new Error("Google Calendar not configured");
-  }
-
-  if (cachedToken && Date.now() < cachedToken.expires) {
-    return cachedToken.token;
-  }
-
-  // Dynamic import jose (ships with Next.js)
-  const { SignJWT, importPKCS8 } = await import("jose");
-
-  const now = Math.floor(Date.now() / 1000);
-  const key = await importPKCS8(GOOGLE_PRIVATE_KEY, "RS256");
-
-  const jwt = await new SignJWT({
-    iss: GOOGLE_CLIENT_EMAIL,
-    scope: SCOPE,
-    aud: TOKEN_URL,
-  })
-    .setProtectedHeader({ alg: "RS256" })
-    .setIssuedAt(now)
-    .setExpirationTime(now + 3600)
-    .sign(key);
-
-  const res = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }),
+/**
+ * Returns the UTC offset for Europe/Athens at the given instant, in ms.
+ * Handles DST correctly (Athens is UTC+2 EET in winter, UTC+3 EEST in summer).
+ */
+function athensOffsetMs(date: Date): number {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Athens",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
   });
-
-  if (!res.ok) throw new Error(`Google token error: ${res.status}`);
-  const data = await res.json();
-
-  cachedToken = {
-    token: data.access_token,
-    expires: Date.now() + (data.expires_in - 60) * 1000,
-  };
-
-  return cachedToken.token;
+  const p = Object.fromEntries(
+    fmt.formatToParts(date).map(({ type, value }) => [type, value]),
+  );
+  const localMs = Date.UTC(
+    +p.year,
+    +p.month - 1,
+    +p.day,
+    +p.hour % 24,
+    +p.minute,
+    +p.second,
+  );
+  return localMs - date.getTime();
 }
 
 async function calendarFetch(
@@ -79,19 +61,14 @@ interface TimeSlot {
  * during business hours (09:00-17:00 Athens time, weekdays only).
  */
 export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
-  const { GOOGLE_CALENDAR_ID } = await getIntegrationsAsync();
-  const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
+  const { GOOGLE_CALENDAR_ID } = await getConfig();
+  const calendarId = GOOGLE_CALENDAR_ID || "primary";
 
   const now = new Date();
   const end = new Date(now.getTime() + daysAhead * 86400000);
-  const token = await getAccessToken();
 
-  const freeBusyRes = await fetch(`${CALENDAR_API}/freeBusy`, {
+  const freeBusyRes = await calendarFetch("/freeBusy", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       timeMin: now.toISOString(),
       timeMax: end.toISOString(),
@@ -104,9 +81,10 @@ export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
   const busySlots: TimeSlot[] =
     freeBusyData.calendars?.[calendarId]?.busy ?? [];
 
-  // Generate 30-min slots during business hours (09:00-17:00 UTC+3 Athens)
+  // Generate 30-min slots during business hours (09:00-17:00 Europe/Athens).
+  // Athens is UTC+2 (EET) in winter and UTC+3 (EEST) in summer; the offset
+  // is computed per-day so DST transitions are handled correctly.
   const slots: TimeSlot[] = [];
-  const ATHENS_OFFSET_MS = 3 * 3600000;
 
   for (let d = 0; d < daysAhead; d++) {
     const day = new Date(now.getTime() + d * 86400000);
@@ -117,11 +95,9 @@ export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
       for (const minute of [0, 30]) {
         const slotStart = new Date(day);
         slotStart.setUTCHours(0, 0, 0, 0);
+        const offset = athensOffsetMs(slotStart);
         slotStart.setTime(
-          slotStart.getTime() +
-            hour * 3600000 +
-            minute * 60000 -
-            ATHENS_OFFSET_MS,
+          slotStart.getTime() + hour * 3600000 + minute * 60000 - offset,
         );
         const slotEnd = new Date(slotStart.getTime() + 30 * 60000);
 
@@ -154,8 +130,8 @@ export async function bookConsultation(data: {
   end: string;
   notes?: string;
 }): Promise<{ eventId: string; htmlLink: string } | null> {
-  const { GOOGLE_CALENDAR_ID } = await getIntegrationsAsync();
-  const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
+  const { GOOGLE_CALENDAR_ID } = await getConfig();
+  const calendarId = GOOGLE_CALENDAR_ID || "primary";
 
   try {
     const res = await calendarFetch(
@@ -218,8 +194,8 @@ interface Consultation {
 export async function getConsultationsByEmail(
   email: string,
 ): Promise<Consultation[]> {
-  const { GOOGLE_CALENDAR_ID } = await getIntegrationsAsync();
-  const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
+  const { GOOGLE_CALENDAR_ID } = await getConfig();
+  const calendarId = GOOGLE_CALENDAR_ID || "primary";
 
   const now = new Date();
   const timeMin = new Date(now.getTime() - 90 * 86400000).toISOString();

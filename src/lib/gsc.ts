@@ -11,11 +11,9 @@
  *     paste your service account email, set role "Full".
  */
 
-import { getConfig } from "@/lib/ssm-config";
+import { createGoogleAuth } from "@/lib/google-auth";
 
 const GSC_API = "https://searchconsole.googleapis.com/webmasters/v3/sites";
-const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
 
 /** Default GSC property — domain property covers all subdomains & protocols. */
 const DEFAULT_SITE = process.env.GSC_SITE_URL ?? "https://cloudless.gr/";
@@ -35,46 +33,9 @@ function dateRange() {
 /*  Auth                                                               */
 /* ------------------------------------------------------------------ */
 
-let cachedToken: { token: string; expires: number } | null = null;
-
-async function getAccessToken(): Promise<string> {
-  if (cachedToken && Date.now() < cachedToken.expires) {
-    return cachedToken.token;
-  }
-
-  const config = await getConfig();
-  const email = config.GOOGLE_CLIENT_EMAIL;
-  const key = config.GOOGLE_PRIVATE_KEY;
-  if (!email || !key) throw new Error("Google service account not configured");
-
-  const { SignJWT, importPKCS8 } = await import("jose");
-  const now = Math.floor(Date.now() / 1000);
-  const privateKey = await importPKCS8(key, "RS256");
-
-  const jwt = await new SignJWT({ iss: email, scope: SCOPE, aud: TOKEN_URL })
-    .setProtectedHeader({ alg: "RS256" })
-    .setIssuedAt(now)
-    .setExpirationTime(now + 3600)
-    .sign(privateKey);
-
-  const res = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }),
-  });
-
-  if (!res.ok) throw new Error(`Google token error: ${res.status}`);
-  const data = await res.json();
-
-  cachedToken = {
-    token: data.access_token,
-    expires: Date.now() + (data.expires_in - 60) * 1000,
-  };
-  return cachedToken.token;
-}
+const getAccessToken = createGoogleAuth(
+  "https://www.googleapis.com/auth/webmasters.readonly",
+);
 
 /* ------------------------------------------------------------------ */
 /*  Low-level fetch                                                    */

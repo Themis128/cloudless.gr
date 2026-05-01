@@ -1,13 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { resetIntegrationCache, resetIntegrationCacheAsync } from "@/lib/integrations";
-
-const mockGetIntegrationsAsync = vi.fn();
-
-vi.mock("@/lib/integrations", () => ({
-  getIntegrationsAsync: () => mockGetIntegrationsAsync(),
-  resetIntegrationCache: vi.fn(),
-  resetIntegrationCacheAsync: vi.fn(),
-}));
 
 // Hoist jose mock variables so they're available when vi.mock("jose") factory runs
 const { mockImportPKCS8, mockSign } = vi.hoisted(() => ({
@@ -25,34 +16,24 @@ vi.mock("jose", () => ({
   importPKCS8: mockImportPKCS8,
 }));
 
-const CONFIGURED = {
-  GOOGLE_CLIENT_EMAIL: "svc@project.iam.gserviceaccount.com",
-  GOOGLE_PRIVATE_KEY:
-    "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASC...\n-----END PRIVATE KEY-----",
-  GOOGLE_CALENDAR_ID: "primary",
-};
-
-const NOT_CONFIGURED = { GOOGLE_CLIENT_EMAIL: "", GOOGLE_PRIVATE_KEY: "" };
-
 describe("google-calendar.ts", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
     vi.stubGlobal("fetch", vi.fn());
-    resetIntegrationCache();
-    resetIntegrationCacheAsync();
   });
 
   describe("getAvailableSlots()", () => {
-    it("throws when Google Calendar is not configured", async () => {
-      mockGetIntegrationsAsync.mockResolvedValue(NOT_CONFIGURED);
+    it("throws when Google credentials are not configured", async () => {
+      vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
+      vi.stubEnv("GOOGLE_PRIVATE_KEY", "");
       const { getAvailableSlots } = await import("@/lib/google-calendar");
-      await expect(getAvailableSlots()).rejects.toThrow("Google Calendar not configured");
+      await expect(getAvailableSlots()).rejects.toThrow(
+        "Google service account not configured",
+      );
     });
 
     it("returns empty array when freeBusy request fails", async () => {
-      mockGetIntegrationsAsync.mockResolvedValue(CONFIGURED);
-
       vi.mocked(global.fetch)
         .mockResolvedValueOnce(
           new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), {
@@ -65,12 +46,68 @@ describe("google-calendar.ts", () => {
       const slots = await getAvailableSlots(1);
       expect(slots).toEqual([]);
     });
+
+    it("generates slots at correct UTC time for Athens summer (UTC+3)", async () => {
+      // Fixed date: 2026-06-15 (summer, Athens = UTC+3)
+      const summerMonday = new Date("2026-06-15T00:00:00Z"); // Monday
+      vi.setSystemTime(summerMonday);
+
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), {
+            status: 200,
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ calendars: { primary: { busy: [] } } }),
+            { status: 200 },
+          ),
+        );
+
+      const { getAvailableSlots } = await import("@/lib/google-calendar");
+      const slots = await getAvailableSlots(1);
+
+      // 09:00 Athens = 06:00 UTC in summer (UTC+3)
+      expect(slots[0]?.start).toBe("2026-06-15T06:00:00.000Z");
+      // 16:30 Athens = 13:30 UTC
+      expect(slots[slots.length - 1]?.start).toBe("2026-06-15T13:30:00.000Z");
+
+      vi.useRealTimers();
+    });
+
+    it("generates slots at correct UTC time for Athens winter (UTC+2)", async () => {
+      // Fixed date: 2026-01-05 (winter, Athens = UTC+2)
+      const winterMonday = new Date("2026-01-05T00:00:00Z"); // Monday
+      vi.setSystemTime(winterMonday);
+
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), {
+            status: 200,
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ calendars: { primary: { busy: [] } } }),
+            { status: 200 },
+          ),
+        );
+
+      const { getAvailableSlots } = await import("@/lib/google-calendar");
+      const slots = await getAvailableSlots(1);
+
+      // 09:00 Athens = 07:00 UTC in winter (UTC+2)
+      expect(slots[0]?.start).toBe("2026-01-05T07:00:00.000Z");
+      // 16:30 Athens = 14:30 UTC
+      expect(slots[slots.length - 1]?.start).toBe("2026-01-05T14:30:00.000Z");
+
+      vi.useRealTimers();
+    });
   });
 
   describe("bookConsultation()", () => {
     it("returns null when the calendar API returns an error", async () => {
-      mockGetIntegrationsAsync.mockResolvedValue(CONFIGURED);
-
       vi.mocked(global.fetch)
         .mockResolvedValueOnce(
           new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), { status: 200 }),
@@ -88,8 +125,6 @@ describe("google-calendar.ts", () => {
     });
 
     it("returns eventId and htmlLink on success", async () => {
-      mockGetIntegrationsAsync.mockResolvedValue(CONFIGURED);
-
       vi.mocked(global.fetch)
         .mockResolvedValueOnce(
           new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), { status: 200 }),
@@ -115,8 +150,6 @@ describe("google-calendar.ts", () => {
 
   describe("getConsultationsByEmail()", () => {
     it("returns empty array when calendar API fails", async () => {
-      mockGetIntegrationsAsync.mockResolvedValue(CONFIGURED);
-
       vi.mocked(global.fetch)
         .mockResolvedValueOnce(
           new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), { status: 200 }),
@@ -129,8 +162,6 @@ describe("google-calendar.ts", () => {
     });
 
     it("filters events to only those with 'consultation' in the title", async () => {
-      mockGetIntegrationsAsync.mockResolvedValue(CONFIGURED);
-
       const events = [
         { id: "e1", summary: "Cloudless Consultation — Alice", start: { dateTime: "2026-05-10T09:00:00Z" }, end: { dateTime: "2026-05-10T09:30:00Z" } },
         { id: "e2", summary: "Random Meeting", start: { dateTime: "2026-05-11T10:00:00Z" }, end: { dateTime: "2026-05-11T10:30:00Z" } },

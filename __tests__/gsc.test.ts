@@ -2,12 +2,11 @@
  * Unit tests for src/lib/gsc.ts
  *
  * Strategy:
- * - Mock `jose` (dynamic-imported inside getAccessToken) globally
- * - Mock `@/lib/ssm-config` to provide Google credentials
+ * - Mock `jose` (dynamic-imported inside createGoogleAuth in google-auth.ts)
+ * - Credentials come from process.env set in __tests__/setup.ts
  * - Stub `fetch` per-test with ordered return values (token call first,
  *   then GSC searchAnalytics calls)
- * - `vi.resetModules()` in beforeEach so the module-level `cachedToken`
- *   is reset between tests
+ * - `vi.resetModules()` in beforeEach resets the token cache in the closure
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
