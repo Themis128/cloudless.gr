@@ -19,6 +19,9 @@ vi.mock("@/lib/slack-notify", () => ({
   slackSubscriberNotify: vi.fn().mockResolvedValue(undefined),
 }));
 
+const CONTENT_TYPE_JSON = "application/json";
+const HEADER_CONTENT_TYPE = "Content-Type";
+
 describe("POST /api/subscribe", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -30,7 +33,7 @@ describe("POST /api/subscribe", () => {
     const { POST } = await import("@/app/api/subscribe/route");
     const request = new globalThis.Request("http://localhost:4000/api/subscribe", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
       body: JSON.stringify({ email: "not-an-email" }),
     });
 
@@ -46,7 +49,7 @@ describe("POST /api/subscribe", () => {
     const { POST } = await import("@/app/api/subscribe/route");
     const request = new globalThis.Request("http://localhost:4000/api/subscribe", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
       body: JSON.stringify({ email: "hello@cloudless.gr" }),
     });
 
@@ -64,7 +67,7 @@ describe("POST /api/subscribe", () => {
     const { POST } = await import("@/app/api/subscribe/route");
     const request = new globalThis.Request("http://localhost:4000/api/subscribe", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
       body: JSON.stringify({ email: "hello@cloudless.gr" }),
     });
 

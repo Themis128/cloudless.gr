@@ -23,8 +23,8 @@ function makeDocPage(overrides: Record<string, unknown> = {}) {
     id: "doc-1",
     url: "https://notion.so/doc-1",
     properties: {
-      Title: { title: [{ plain_text: "Getting Started" }] },
-      Slug: { rich_text: [{ plain_text: "getting-started" }] },
+      Title: { title: [{ plain_text: DOC_TITLE }] },
+      Slug: { rich_text: [{ plain_text: DOC_SLUG }] },
       Category: { select: { name: "Guides" } },
       Description: { rich_text: [{ plain_text: "How to get started" }] },
       Published: { checkbox: true },
@@ -33,6 +33,10 @@ function makeDocPage(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+const DOC_SLUG = "getting-started";
+const DOC_TITLE = "Getting Started";
+const DOC_CATEGORY = "General";
 
 describe("notion-docs.ts", () => {
   beforeEach(() => {
@@ -58,8 +62,8 @@ describe("notion-docs.ts", () => {
       const docs = await getDocs();
 
       expect(docs).toHaveLength(2);
-      expect(docs[0].title).toBe("Getting Started");
-      expect(docs[0].slug).toBe("getting-started");
+      expect(docs[0].title).toBe(DOC_TITLE);
+      expect(docs[0].slug).toBe(DOC_SLUG);
       expect(docs[0].category).toBe("Guides");
       expect(docs[0].description).toBe("How to get started");
       expect(docs[0].order).toBe(1);
@@ -118,7 +122,7 @@ describe("notion-docs.ts", () => {
       const { getDocs } = await import("@/lib/notion-docs");
       const docs = await getDocs();
 
-      expect(docs[0].category).toBe("General");
+      expect(docs[0].category).toBe(DOC_CATEGORY);
     });
 
     it("defaults order to 0 when missing", async () => {
@@ -162,23 +166,23 @@ describe("notion-docs.ts", () => {
       });
 
       const { getDocBySlug } = await import("@/lib/notion-docs");
-      const doc = await getDocBySlug("getting-started");
+      const doc = await getDocBySlug(DOC_SLUG);
 
       expect(doc).not.toBeNull();
-      expect(doc!.slug).toBe("getting-started");
-      expect(doc!.title).toBe("Getting Started");
+      expect(doc!.slug).toBe(DOC_SLUG);
+      expect(doc!.title).toBe(DOC_TITLE);
     });
 
     it("sends Slug + Published filter", async () => {
       mockNotionFetch.mockResolvedValueOnce({ results: [makeDocPage()] });
 
       const { getDocBySlug } = await import("@/lib/notion-docs");
-      await getDocBySlug("getting-started");
+      await getDocBySlug(DOC_SLUG);
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
       expect(body.filter.and).toEqual(
         expect.arrayContaining([
-          { property: "Slug", rich_text: { equals: "getting-started" } },
+          { property: "Slug", rich_text: { equals: DOC_SLUG } },
           { property: "Published", checkbox: { equals: true } },
         ]),
       );
@@ -224,7 +228,7 @@ describe("notion-docs.ts", () => {
       const content = await getDocContent("doc-1");
 
       expect(content).not.toBeNull();
-      expect(content!.title).toBe("Getting Started");
+      expect(content!.title).toBe(DOC_TITLE);
       expect(content!.html).toBe("<p>Rendered doc content</p>");
     });
 
@@ -284,13 +288,13 @@ describe("notion-docs.ts", () => {
       const { groupDocsByCategory } = await import("@/lib/notion-docs");
 
       const docs = [
-        { id: "1", slug: "a", title: "A", description: "", category: "General", order: 1, published: true, url: "" },
-        { id: "2", slug: "b", title: "B", description: "", category: "General", order: 2, published: true, url: "" },
+        { id: "1", slug: "a", title: "A", description: "", category: DOC_CATEGORY, order: 1, published: true, url: "" },
+        { id: "2", slug: "b", title: "B", description: "", category: DOC_CATEGORY, order: 2, published: true, url: "" },
       ];
 
       const grouped = groupDocsByCategory(docs);
-      expect(Object.keys(grouped)).toEqual(["General"]);
-      expect(grouped["General"]).toHaveLength(2);
+      expect(Object.keys(grouped)).toEqual([DOC_CATEGORY]);
+      expect(grouped[DOC_CATEGORY]).toHaveLength(2);
     });
   });
 

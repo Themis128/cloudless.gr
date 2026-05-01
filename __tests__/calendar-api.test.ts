@@ -34,6 +34,8 @@ vi.mock("@/lib/slack-notify", () => ({
 // ---------------------------------------------------------------------------
 // GET /api/calendar/availability
 // ---------------------------------------------------------------------------
+const TEST_USER_NAME = "Test User";
+const TEST_USER_EMAIL = "test@example.com";
 
 describe("GET /api/calendar/availability", () => {
   beforeEach(() => {
@@ -149,8 +151,8 @@ describe("POST /api/calendar/book", () => {
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
       bookRequest({
-        name: "Test User",
-        email: "test@example.com",
+        name: TEST_USER_NAME,
+        email: TEST_USER_EMAIL,
         start: futureStart,
         end: futureEnd,
       }),
@@ -160,7 +162,7 @@ describe("POST /api/calendar/book", () => {
 
   it("returns 400 when required fields are missing", async () => {
     const { POST } = await import("@/app/api/calendar/book/route");
-    const res = await POST(bookRequest({ name: "Test User" }));
+    const res = await POST(bookRequest({ name: TEST_USER_NAME }));
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data).toHaveProperty("error");
@@ -170,7 +172,7 @@ describe("POST /api/calendar/book", () => {
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
       bookRequest({
-        name: "Test User",
+        name: TEST_USER_NAME,
         email: "not-an-email",
         start: futureStart,
         end: futureEnd,
@@ -185,8 +187,8 @@ describe("POST /api/calendar/book", () => {
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
       bookRequest({
-        name: "Test User",
-        email: "test@example.com",
+        name: TEST_USER_NAME,
+        email: TEST_USER_EMAIL,
         start: "2020-01-01T10:00:00Z",
         end: "2020-01-01T10:30:00Z",
       }),
@@ -200,8 +202,8 @@ describe("POST /api/calendar/book", () => {
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
       bookRequest({
-        name: "Test User",
-        email: "test@example.com",
+        name: TEST_USER_NAME,
+        email: TEST_USER_EMAIL,
         start: futureStart,
         end: futureEnd,
         notes: "Looking forward to the call",
@@ -247,8 +249,8 @@ describe("POST /api/calendar/book", () => {
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
       bookRequest({
-        name: "Test User",
-        email: "test@example.com",
+        name: TEST_USER_NAME,
+        email: TEST_USER_EMAIL,
         start: futureStart,
         end: futureEnd,
       }),

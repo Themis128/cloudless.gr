@@ -25,10 +25,12 @@ const CONFIGURED_CONFIG = {
 };
 
 const UNCONFIGURED = { ...CONFIGURED_CONFIG, SENTRY_AUTH_TOKEN: "" };
+const STATUS_RESOLVED = "resolved";
+const ISSUE_ID = "issue-1";
 
 function makeSentryIssue(overrides = {}) {
   return {
-    id: "issue-1",
+    id: ISSUE_ID,
     title: "TypeError: Cannot read property",
     culprit: "src/lib/test.ts",
     level: "error",
@@ -172,16 +174,16 @@ describe("sentry.ts", () => {
   describe("updateIssueStatus()", () => {
     it("returns true when patch succeeds", async () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
-        new Response(JSON.stringify({ status: "resolved" }), { status: 200 }),
+        new Response(JSON.stringify({ status: STATUS_RESOLVED }), { status: 200 }),
       );
-      expect(await updateIssueStatus("issue-1", "resolved")).toBe(true);
+      expect(await updateIssueStatus(ISSUE_ID, STATUS_RESOLVED)).toBe(true);
     });
 
     it("returns false when API returns a different status", async () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify({ status: "unresolved" }), { status: 200 }),
       );
-      expect(await updateIssueStatus("issue-1", "resolved")).toBe(false);
+      expect(await updateIssueStatus(ISSUE_ID, STATUS_RESOLVED)).toBe(false);
     });
   });
 });

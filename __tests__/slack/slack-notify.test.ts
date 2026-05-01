@@ -11,7 +11,7 @@ function okFetch(body: object = { ok: true }): FetchMock {
   return vi.fn().mockResolvedValue(
     new Response(JSON.stringify(body), {
       status: 200,
-      headers: { "content-type": "application/json" },
+      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
     }),
   );
 }
@@ -28,7 +28,7 @@ function slackErrorFetch(error: string): FetchMock {
   return vi.fn().mockResolvedValue(
     new Response(JSON.stringify({ ok: false, error }), {
       status: 200,
-      headers: { "content-type": "application/json" },
+      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
     }),
   );
 }
@@ -36,6 +36,13 @@ function slackErrorFetch(error: string): FetchMock {
 // ---------------------------------------------------------------------------
 // Tests: SlackClient
 // ---------------------------------------------------------------------------
+
+const STATUS_SUCCEEDED = "succeeded";
+const ENV_SLACK_BOT_TOKEN = "SLACK_BOT_TOKEN";
+const HEADER_CONTENT_TYPE = "content-type";
+const CONTENT_TYPE_JSON = "application/json";
+const SLACK_HERE_MENTION = "<@here>";
+const BOOKING_DATE = "2026-06-10T09:00:00Z";
 
 describe("SlackClient", () => {
   let SlackClient: (typeof import("@/lib/slack-notify"))["SlackClient"];
@@ -117,7 +124,7 @@ describe("SlackClient", () => {
         .mockResolvedValue(
           new Response(JSON.stringify({ ok: true }), {
             status: 200,
-            headers: { "content-type": "application/json" },
+            headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
           }),
         );
       vi.stubGlobal("fetch", mockFetch);
@@ -148,7 +155,7 @@ describe("SlackClient", () => {
 
   describe("when only SLACK_WEBHOOK_URL is set", () => {
     beforeEach(() => {
-      vi.stubEnv("SLACK_BOT_TOKEN", "");
+      vi.stubEnv(ENV_SLACK_BOT_TOKEN, "");
       vi.stubEnv("SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/T/B/test");
       resetSlackConfigCache();
     });
@@ -189,7 +196,7 @@ describe("SlackClient", () => {
 
   describe("when neither token nor webhook is configured", () => {
     beforeEach(() => {
-      vi.stubEnv("SLACK_BOT_TOKEN", "");
+      vi.stubEnv(ENV_SLACK_BOT_TOKEN, "");
       resetSlackConfigCache();
     });
 
@@ -252,7 +259,7 @@ describe("slackSubscriberNotify", () => {
   });
 
   it("does not throw when Slack is not configured", async () => {
-    vi.stubEnv("SLACK_BOT_TOKEN", "");
+    vi.stubEnv(ENV_SLACK_BOT_TOKEN, "");
     resetSlackConfigCache();
     vi.stubGlobal("fetch", vi.fn());
 
@@ -268,7 +275,7 @@ describe("slackSubscriberNotify", () => {
     const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(opts.body as string);
     const bodyStr = JSON.stringify(body);
-    expect(bodyStr).not.toContain("<@here>");
+    expect(bodyStr).not.toContain(SLACK_HERE_MENTION);
     expect(bodyStr).toContain("&lt;@here&gt;");
   });
 });
@@ -347,7 +354,7 @@ describe("slackBookingNotify", () => {
     await slackBookingNotify({
       name: "Alice",
       email: "alice@example.com",
-      start: "2026-06-10T09:00:00Z",
+      start: BOOKING_DATE,
     });
 
     const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
@@ -365,7 +372,7 @@ describe("slackBookingNotify", () => {
     await slackBookingNotify({
       name: "Bob",
       email: "bob@example.com",
-      start: "2026-06-10T09:00:00Z",
+      start: BOOKING_DATE,
       notes: "Looking forward to the call",
     });
 
@@ -380,14 +387,14 @@ describe("slackBookingNotify", () => {
     vi.stubGlobal("fetch", mockFetch);
 
     await slackBookingNotify({
-      name: "<@here>",
+      name: SLACK_HERE_MENTION,
       email: "evil&one@example.com",
-      start: "2026-06-10T09:00:00Z",
+      start: BOOKING_DATE,
     });
 
     const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
     const bodyStr = JSON.stringify(JSON.parse(opts.body as string));
-    expect(bodyStr).not.toContain("<@here>");
+    expect(bodyStr).not.toContain(SLACK_HERE_MENTION);
     expect(bodyStr).toContain("&lt;@here&gt;");
     expect(bodyStr).toContain("evil&amp;one@example.com");
   });
@@ -466,7 +473,7 @@ describe("slackDeployNotify", () => {
 
   it.each([
     ["started", ":rocket:"],
-    ["succeeded", ":white_check_mark:"],
+    [STATUS_SUCCEEDED, ":white_check_mark:"],
     ["failed", ":x:"],
   ] as const)("uses correct emoji for status=%s", async (status, expectedEmoji) => {
     const mockFetch = okFetch({ ok: true });
@@ -486,7 +493,7 @@ describe("slackDeployNotify", () => {
     await slackDeployNotify({
       version: "2.0.0",
       stage: "staging",
-      status: "succeeded",
+      status: STATUS_SUCCEEDED,
       commitSha: "abcdef1234567890",
     });
 
@@ -516,7 +523,7 @@ describe("slackDeployNotify", () => {
     await slackDeployNotify({
       version: "1.0.0",
       stage: "production",
-      status: "succeeded",
+      status: STATUS_SUCCEEDED,
       actor: "Themis",
     });
 

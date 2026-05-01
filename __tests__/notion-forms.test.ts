@@ -16,6 +16,15 @@ const SUBMITTED_AT = "Submitted At";
 const CREATED_TIME = "2026-04-01T00:00:00Z";
 const SUBMITTED_AT_DATE = "2026-04-01T10:00:00Z";
 const SUB_1_URL = "https://notion.so/sub-1";
+const TEST_EMAIL = "test@test.com";
+const PAGE_ID = "page-id";
+const PAGE_123 = "page-123";
+const SOURCE_CONTACT = "contact";
+const SOURCE_SUBSCRIBE = "subscribe";
+const STATUS_IN_REVIEW = "In Review";
+const ALICE_EMAIL = "alice@example.com";
+const TECH_CORP = "TechCorp";
+const ENV_NOTION_API_KEY = "NOTION_API_KEY";
 
 describe("notion-forms.ts", () => {
   beforeEach(() => {
@@ -32,7 +41,7 @@ describe("notion-forms.ts", () => {
         company: "Acme",
         service: "Cloud Consulting",
         message: "I need help with AWS.",
-        source: "contact",
+        source: SOURCE_CONTACT,
       });
 
       expect(result).toBe("new-page-id");
@@ -49,10 +58,10 @@ describe("notion-forms.ts", () => {
     });
 
     it("returns null when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      vi.stubEnv(ENV_NOTION_API_KEY, "");
       const result = await saveSubmission({
         name: "Test",
-        email: "test@test.com",
+        email: TEST_EMAIL,
         message: "Test message",
       });
       expect(result).toBeNull();
@@ -63,7 +72,7 @@ describe("notion-forms.ts", () => {
 
       const result = await saveSubmission({
         name: "Test",
-        email: "test@test.com",
+        email: TEST_EMAIL,
         message: "Test message",
       });
 
@@ -71,12 +80,12 @@ describe("notion-forms.ts", () => {
     });
 
     it("truncates message to 2000 chars", async () => {
-      mockNotionFetch.mockResolvedValueOnce({ id: "page-id" });
+      mockNotionFetch.mockResolvedValueOnce({ id: PAGE_ID });
 
       const longMessage = "x".repeat(3000);
       await saveSubmission({
         name: "Test",
-        email: "test@test.com",
+        email: TEST_EMAIL,
         message: longMessage,
       });
 
@@ -95,12 +104,12 @@ describe("notion-forms.ts", () => {
           created_time: CREATED_TIME,
           properties: {
             Name: { title: [{ plain_text: "Alice" }] },
-            Email: { email: "alice@example.com" },
-            Company: { rich_text: [{ plain_text: "TechCorp" }] },
+            Email: { email: ALICE_EMAIL },
+            Company: { rich_text: [{ plain_text: TECH_CORP }] },
             Service: { rich_text: [{ plain_text: "DevOps" }] },
             Message: { rich_text: [{ plain_text: "Help me" }] },
             Status: { select: { name: "New" } },
-            Source: { select: { name: "contact" } },
+            Source: { select: { name: SOURCE_CONTACT } },
             [SUBMITTED_AT]: { date: { start: SUBMITTED_AT_DATE } },
           },
         },
@@ -110,7 +119,7 @@ describe("notion-forms.ts", () => {
 
       expect(subs).toHaveLength(1);
       expect(subs[0].name).toBe("Alice");
-      expect(subs[0].email).toBe("alice@example.com");
+      expect(subs[0].email).toBe(ALICE_EMAIL);
       expect(subs[0].status).toBe("New");
     });
 
@@ -127,7 +136,7 @@ describe("notion-forms.ts", () => {
     it("patches the page status", async () => {
       mockNotionFetch.mockResolvedValueOnce({});
 
-      const result = await updateSubmissionStatus("page-123", "In Review");
+      const result = await updateSubmissionStatus(PAGE_123, STATUS_IN_REVIEW);
 
       expect(result).toBe(true);
       expect(mockNotionFetch).toHaveBeenCalledWith(
@@ -136,20 +145,20 @@ describe("notion-forms.ts", () => {
       );
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
-      expect(body.properties.Status.select.name).toBe("In Review");
+      expect(body.properties.Status.select.name).toBe(STATUS_IN_REVIEW);
     });
 
     it("returns false on error", async () => {
       mockNotionFetch.mockRejectedValueOnce(new Error("error"));
 
-      const result = await updateSubmissionStatus("page-123", "Done");
+      const result = await updateSubmissionStatus(PAGE_123, "Done");
 
       expect(result).toBe(false);
     });
 
     it("returns false when not configured (no API key)", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
-      const result = await updateSubmissionStatus("page-123", "Done");
+      vi.stubEnv(ENV_NOTION_API_KEY, "");
+      const result = await updateSubmissionStatus(PAGE_123, "Done");
       expect(result).toBe(false);
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
@@ -157,40 +166,40 @@ describe("notion-forms.ts", () => {
 
   describe("saveSubmission edge cases", () => {
     it("handles missing optional fields (company, service, source)", async () => {
-      mockNotionFetch.mockResolvedValueOnce({ id: "page-id" });
+      mockNotionFetch.mockResolvedValueOnce({ id: PAGE_ID });
 
       await saveSubmission({
         name: "Test",
-        email: "test@test.com",
+        email: TEST_EMAIL,
         message: "Hello",
       });
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
       expect(body.properties.Company.rich_text[0].text.content).toBe("");
       expect(body.properties.Service.rich_text[0].text.content).toBe("");
-      expect(body.properties.Source.select.name).toBe("contact");
+      expect(body.properties.Source.select.name).toBe(SOURCE_CONTACT);
     });
 
     it("includes custom source when provided", async () => {
-      mockNotionFetch.mockResolvedValueOnce({ id: "page-id" });
+      mockNotionFetch.mockResolvedValueOnce({ id: PAGE_ID });
 
       await saveSubmission({
         name: "Test",
-        email: "test@test.com",
+        email: TEST_EMAIL,
         message: "Hello",
-        source: "subscribe",
+        source: SOURCE_SUBSCRIBE,
       });
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
-      expect(body.properties.Source.select.name).toBe("subscribe");
+      expect(body.properties.Source.select.name).toBe(SOURCE_SUBSCRIBE);
     });
 
     it("truncates name to 200 characters", async () => {
-      mockNotionFetch.mockResolvedValueOnce({ id: "page-id" });
+      mockNotionFetch.mockResolvedValueOnce({ id: PAGE_ID });
 
       await saveSubmission({
         name: "x".repeat(300),
-        email: "test@test.com",
+        email: TEST_EMAIL,
         message: "Hello",
       });
 
@@ -199,11 +208,11 @@ describe("notion-forms.ts", () => {
     });
 
     it("sets Submitted At date", async () => {
-      mockNotionFetch.mockResolvedValueOnce({ id: "page-id" });
+      mockNotionFetch.mockResolvedValueOnce({ id: PAGE_ID });
 
       await saveSubmission({
         name: "Test",
-        email: "test@test.com",
+        email: TEST_EMAIL,
         message: "Hello",
       });
 
@@ -222,12 +231,12 @@ describe("notion-forms.ts", () => {
           created_time: CREATED_TIME,
           properties: {
             Name: { title: [{ plain_text: "Alice" }] },
-            Email: { email: "alice@example.com" },
-            Company: { rich_text: [{ plain_text: "TechCorp" }] },
+            Email: { email: ALICE_EMAIL },
+            Company: { rich_text: [{ plain_text: TECH_CORP }] },
             Service: { rich_text: [{ plain_text: "DevOps" }] },
             Message: { rich_text: [{ plain_text: "Help needed" }] },
-            Status: { select: { name: "In Review" } },
-            Source: { select: { name: "subscribe" } },
+            Status: { select: { name: STATUS_IN_REVIEW } },
+            Source: { select: { name: SOURCE_SUBSCRIBE } },
             [SUBMITTED_AT]: { date: { start: SUBMITTED_AT_DATE } },
           },
         },
@@ -235,11 +244,11 @@ describe("notion-forms.ts", () => {
 
       const subs = await listSubmissions();
 
-      expect(subs[0].company).toBe("TechCorp");
+      expect(subs[0].company).toBe(TECH_CORP);
       expect(subs[0].service).toBe("DevOps");
       expect(subs[0].message).toBe("Help needed");
-      expect(subs[0].source).toBe("subscribe");
-      expect(subs[0].status).toBe("In Review");
+      expect(subs[0].source).toBe(SOURCE_SUBSCRIBE);
+      expect(subs[0].status).toBe(STATUS_IN_REVIEW);
       expect(subs[0].submittedAt).toBe(SUBMITTED_AT_DATE);
       expect(subs[0].url).toBe(SUB_1_URL);
     });
@@ -269,7 +278,7 @@ describe("notion-forms.ts", () => {
       expect(subs[0].email).toBe("");
       expect(subs[0].company).toBe("");
       expect(subs[0].status).toBe("New");
-      expect(subs[0].source).toBe("contact");
+      expect(subs[0].source).toBe(SOURCE_CONTACT);
       expect(subs[0].submittedAt).toBe(CREATED_TIME);
     });
 
@@ -285,7 +294,7 @@ describe("notion-forms.ts", () => {
           Service: { rich_text: [] },
           Message: { rich_text: [] },
           Status: { select: { name: "New" } },
-          Source: { select: { name: "contact" } },
+          Source: { select: { name: SOURCE_CONTACT } },
           [SUBMITTED_AT]: { date: { start: SUBMITTED_AT_DATE } },
         },
       }));
@@ -308,7 +317,7 @@ describe("notion-forms.ts", () => {
           Service: { rich_text: [] },
           Message: { rich_text: [] },
           Status: { select: { name: "New" } },
-          Source: { select: { name: "contact" } },
+          Source: { select: { name: SOURCE_CONTACT } },
           [SUBMITTED_AT]: { date: { start: SUBMITTED_AT_DATE } },
         },
       }));
@@ -320,7 +329,7 @@ describe("notion-forms.ts", () => {
     });
 
     it("returns empty when not configured", async () => {
-      vi.stubEnv("NOTION_API_KEY", "");
+      vi.stubEnv(ENV_NOTION_API_KEY, "");
       const subs = await listSubmissions();
       expect(subs).toEqual([]);
       expect(mockNotionFetchAll).not.toHaveBeenCalled();

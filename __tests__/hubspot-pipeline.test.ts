@@ -13,6 +13,9 @@ import {
   getPipelineStats,
 } from "@/lib/hubspot";
 
+const STAGE_CLOSEDWON = "closedwon";
+const STAGE_APPT_SCHEDULED = "appointmentscheduled";
+
 describe("hubspot.ts — pipeline extensions", () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -51,10 +54,10 @@ describe("hubspot.ts — pipeline extensions", () => {
         ok: true,
         json: async () => ({ id: "deal_1" }),
       });
-      const result = await moveDealStage("deal_1", "closedwon");
+      const result = await moveDealStage("deal_1", STAGE_CLOSEDWON);
       expect(result?.id).toBe("deal_1");
       const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
-      expect(body.properties.dealstage).toBe("closedwon");
+      expect(body.properties.dealstage).toBe(STAGE_CLOSEDWON);
     });
   });
 
@@ -66,15 +69,15 @@ describe("hubspot.ts — pipeline extensions", () => {
         ok: true,
         json: async () => ({
           results: [
-            { id: "d1", properties: { dealname: "A", dealstage: "closedwon", amount: "100" } },
-            { id: "d2", properties: { dealname: "B", dealstage: "closedwon", amount: "200" } },
-            { id: "d3", properties: { dealname: "C", dealstage: "appointmentscheduled", amount: "50" } },
+            { id: "d1", properties: { dealname: "A", dealstage: STAGE_CLOSEDWON, amount: "100" } },
+            { id: "d2", properties: { dealname: "B", dealstage: STAGE_CLOSEDWON, amount: "200" } },
+            { id: "d3", properties: { dealname: "C", dealstage: STAGE_APPT_SCHEDULED, amount: "50" } },
           ],
         }),
       });
       const grouped = await getDealsByStage();
-      expect(grouped["closedwon"]).toHaveLength(2);
-      expect(grouped["appointmentscheduled"]).toHaveLength(1);
+      expect(grouped[STAGE_CLOSEDWON]).toHaveLength(2);
+      expect(grouped[STAGE_APPT_SCHEDULED]).toHaveLength(1);
     });
 
     it("paginates across multiple pages", async () => {
@@ -82,18 +85,18 @@ describe("hubspot.ts — pipeline extensions", () => {
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({
-            results: [{ id: "d1", properties: { dealstage: "closedwon" } }],
+            results: [{ id: "d1", properties: { dealstage: STAGE_CLOSEDWON } }],
             paging: { next: { after: "cursor_abc" } },
           }),
         })
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({
-            results: [{ id: "d2", properties: { dealstage: "closedwon" } }],
+            results: [{ id: "d2", properties: { dealstage: STAGE_CLOSEDWON } }],
           }),
         });
       const grouped = await getDealsByStage();
-      expect(grouped["closedwon"]).toHaveLength(2);
+      expect(grouped[STAGE_CLOSEDWON]).toHaveLength(2);
       expect(mockFetch).toHaveBeenCalledTimes(2);
       const secondUrl: string = mockFetch.mock.calls[1][0];
       expect(secondUrl).toContain("after=cursor_abc");
@@ -193,18 +196,18 @@ describe("hubspot.ts — pipeline extensions", () => {
         ok: true,
         json: async () => ({
           results: [
-            { id: "d1", properties: { dealname: "A", amount: "1000", dealstage: "closedwon" } },
-            { id: "d2", properties: { dealname: "B", amount: "500", dealstage: "closedwon" } },
-            { id: "d3", properties: { dealname: "C", amount: "250", dealstage: "appointmentscheduled" } },
+            { id: "d1", properties: { dealname: "A", amount: "1000", dealstage: STAGE_CLOSEDWON } },
+            { id: "d2", properties: { dealname: "B", amount: "500", dealstage: STAGE_CLOSEDWON } },
+            { id: "d3", properties: { dealname: "C", amount: "250", dealstage: STAGE_APPT_SCHEDULED } },
           ],
         }),
       });
       const stats = await getPipelineStats();
       expect(stats.totalDeals).toBe(3);
       expect(stats.totalValue).toBe(1750);
-      expect(stats.byStage["closedwon"].count).toBe(2);
-      expect(stats.byStage["closedwon"].value).toBe(1500);
-      expect(stats.byStage["appointmentscheduled"].count).toBe(1);
+      expect(stats.byStage[STAGE_CLOSEDWON].count).toBe(2);
+      expect(stats.byStage[STAGE_CLOSEDWON].value).toBe(1500);
+      expect(stats.byStage[STAGE_APPT_SCHEDULED].count).toBe(1);
     });
 
     it("paginates to collect all deals", async () => {
@@ -213,7 +216,7 @@ describe("hubspot.ts — pipeline extensions", () => {
           ok: true,
           json: async () => ({
             results: [
-              { id: "d1", properties: { amount: "100", dealstage: "closedwon" } },
+              { id: "d1", properties: { amount: "100", dealstage: STAGE_CLOSEDWON } },
             ],
             paging: { next: { after: "pg2" } },
           }),
@@ -222,7 +225,7 @@ describe("hubspot.ts — pipeline extensions", () => {
           ok: true,
           json: async () => ({
             results: [
-              { id: "d2", properties: { amount: "200", dealstage: "closedwon" } },
+              { id: "d2", properties: { amount: "200", dealstage: STAGE_CLOSEDWON } },
             ],
           }),
         });
@@ -244,13 +247,13 @@ describe("hubspot.ts — pipeline extensions", () => {
         ok: true,
         json: async () => ({
           results: [
-            { id: "d1", properties: { dealname: "A", amount: "", dealstage: "appointmentscheduled" } },
+            { id: "d1", properties: { dealname: "A", amount: "", dealstage: STAGE_APPT_SCHEDULED } },
           ],
         }),
       });
       const stats = await getPipelineStats();
       expect(stats.totalValue).toBe(0);
-      expect(stats.byStage["appointmentscheduled"].value).toBe(0);
+      expect(stats.byStage[STAGE_APPT_SCHEDULED].value).toBe(0);
     });
   });
 });

@@ -31,12 +31,12 @@ function makePage(overrides: Record<string, unknown> = {}) {
     cover: null,
     properties: {
       Title: { title: [{ plain_text: "Test Post" }] },
-      Slug: { rich_text: [{ plain_text: "test-post" }] },
+      Slug: { rich_text: [{ plain_text: TEST_SLUG }] },
       Excerpt: { rich_text: [{ plain_text: "A test excerpt" }] },
       Date: { date: { start: "2026-04-01" } },
       Author: { people: [{ name: "Themis" }] },
       Category: { select: { name: "Cloud" } },
-      Tags: { multi_select: [{ name: "aws" }, { name: "serverless" }] },
+      Tags: { multi_select: [{ name: "aws" }, { name: CATEGORY_SERVERLESS }] },
       Published: { checkbox: true },
       Featured: { checkbox: false },
       "Cover Image": { url: "https://img.example.com/cover.jpg" },
@@ -47,6 +47,9 @@ function makePage(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+const TEST_SLUG = "test-post";
+const CATEGORY_SERVERLESS = "serverless";
 
 describe("notion-blog.ts", () => {
   beforeEach(() => {
@@ -63,9 +66,9 @@ describe("notion-blog.ts", () => {
 
       expect(posts).toHaveLength(2);
       expect(posts[0].title).toBe("Test Post");
-      expect(posts[0].slug).toBe("test-post");
+      expect(posts[0].slug).toBe(TEST_SLUG);
       expect(posts[0].category).toBe("Cloud");
-      expect(posts[0].tags).toEqual(["aws", "serverless"]);
+      expect(posts[0].tags).toEqual(["aws", CATEGORY_SERVERLESS]);
       expect(posts[0].author).toBe("Themis");
       expect(posts[0].coverImage).toBe("https://img.example.com/cover.jpg");
     });
@@ -144,12 +147,12 @@ describe("notion-blog.ts", () => {
       mockNotionFetchAll.mockResolvedValueOnce([]);
 
       const { getPostsByTag } = await import("@/lib/notion-blog");
-      await getPostsByTag("serverless");
+      await getPostsByTag(CATEGORY_SERVERLESS);
 
       const callBody = mockNotionFetchAll.mock.calls[0][1];
       expect(callBody.filter.and).toEqual(
         expect.arrayContaining([
-          { property: "Tags", multi_select: { contains: "serverless" } },
+          { property: "Tags", multi_select: { contains: CATEGORY_SERVERLESS } },
         ]),
       );
     });
@@ -163,10 +166,10 @@ describe("notion-blog.ts", () => {
       ]);
 
       const { getPostBySlug } = await import("@/lib/notion-blog");
-      const post = await getPostBySlug("test-post");
+      const post = await getPostBySlug(TEST_SLUG);
 
       expect(post).not.toBeNull();
-      expect(post!.slug).toBe("test-post");
+      expect(post!.slug).toBe(TEST_SLUG);
       expect(post!.html).toBe("<p>Rendered HTML</p>");
     });
 
@@ -184,7 +187,7 @@ describe("notion-blog.ts", () => {
       resetIntegrationCache();
 
       const { getPostBySlug } = await import("@/lib/notion-blog");
-      const post = await getPostBySlug("test-post");
+      const post = await getPostBySlug(TEST_SLUG);
 
       expect(post).toBeNull();
     });
@@ -200,7 +203,7 @@ describe("notion-blog.ts", () => {
       const { getAllSlugs } = await import("@/lib/notion-blog");
       const slugs = await getAllSlugs();
 
-      expect(slugs).toContain("test-post");
+      expect(slugs).toContain(TEST_SLUG);
       expect(slugs).toContain("second-post");
     });
 
@@ -238,7 +241,7 @@ describe("notion-blog.ts", () => {
           id: "p2",
           properties: {
             ...makePage().properties,
-            Tags: { multi_select: [{ name: "serverless" }, { name: "docker" }] },
+            Tags: { multi_select: [{ name: CATEGORY_SERVERLESS }, { name: "docker" }] },
           },
         }),
       ]);
@@ -247,9 +250,9 @@ describe("notion-blog.ts", () => {
       const tags = await getTags();
 
       expect(tags).toContain("aws");
-      expect(tags).toContain("serverless");
+      expect(tags).toContain(CATEGORY_SERVERLESS);
       expect(tags).toContain("docker");
-      // "serverless" appears in both posts but should be unique
+      // CATEGORY_SERVERLESS appears in both posts but should be unique
       const serverlessCount = tags.filter((t: string) => t === "serverless").length;
       expect(serverlessCount).toBe(1);
     });
