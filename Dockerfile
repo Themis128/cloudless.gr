@@ -45,6 +45,8 @@ ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} \
     NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=deps /app/node_modules ./node_modules
+# Recursive copy of the build context. Safe because .dockerignore excludes
+# secrets, .git, .env*, tests, docs, and other non-build artifacts.
 COPY . .
 RUN pnpm build
 
@@ -60,10 +62,11 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0
 
 # node:22-alpine ships with a non-root `node` user at uid/gid 1000 — reuse it
-# (matches the k3s Deployment's runAsUser: 1000).
-COPY --from=builder --chown=node:node /app/.next/standalone ./
-COPY --from=builder --chown=node:node /app/.next/static ./.next/static
-COPY --from=builder --chown=node:node /app/public ./public
+# (matches the k3s Deployment's runAsUser: 1000). --chmod=0555 drops write bits
+# on the copied resources so the runtime user can't tamper with the bundle.
+COPY --from=builder --chown=node:node --chmod=0555 /app/.next/standalone ./
+COPY --from=builder --chown=node:node --chmod=0555 /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node --chmod=0555 /app/public ./public
 
 USER node
 EXPOSE 3000
