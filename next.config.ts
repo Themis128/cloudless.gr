@@ -5,6 +5,9 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
+  // For Docker builds (Pi HA standby): emit a self-contained .next/standalone
+  // bundle. SST/Vercel deploys leave this unset.
+  output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
   turbopack: {
     root: resolve(import.meta.dirname),
     resolveAlias: { "next-intl/config": "./src/i18n/request.ts" },

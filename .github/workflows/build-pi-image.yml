@@ -1,0 +1,96 @@
+name: build pi image
+
+# Builds an arm64 image for the Pi HA standby and pushes it to ECR
+# (cloudless-pi-app in us-east-1). Triggered on every push to main and
+# on manual dispatch.
+#
+# Auth: OIDC role arn:aws:iam::278585680617:role/cloudless-github-actions
+# (trust restricted to repo Themis128/cloudless.gr).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'next.config.ts'
+      - 'patches/**'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/build-pi-image.yml'
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/build-pi-image.yml'
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REPO: cloudless-pi-app
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: pi-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    name: build arm64 + push to ECR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: configure AWS credentials (OIDC)
+        if: github.event_name != 'pull_request'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::278585680617:role/cloudless-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: login to ECR
+        if: github.event_name != 'pull_request'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: set up QEMU (for arm64 emulation on x86 runner)
+        uses: docker/setup-qemu-action@v3
+
+      - name: set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: compute tags
+        id: tags
+        run: |
+          SHA="${GITHUB_SHA::12}"
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "push=true" >> "$GITHUB_OUTPUT"
+            echo "tags=${ECR_REGISTRY}/${ECR_REPO}:${SHA},${ECR_REGISTRY}/${ECR_REPO}:latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "push=false" >> "$GITHUB_OUTPUT"
+            echo "tags=cloudless-pi-app:pr-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: build (and push if main)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/arm64
+          push: ${{ steps.tags.outputs.push == 'true' }}
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
+            NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
+            NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
+            NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
