@@ -46,7 +46,10 @@ jobs:
   build-and-push:
     name: build arm64 + push to ECR
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # arm64 cross-compile under QEMU is slow on first build (~40-50min for full
+    # Next.js + pnpm install). Subsequent builds hit the GHA cache and finish
+    # in well under 15min.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
