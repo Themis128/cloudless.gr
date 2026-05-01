@@ -50,6 +50,11 @@ interface SlackApiResponse {
 const CHAT_POST_URL = "https://slack.com/api/chat.postMessage";
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 500;
+const BOT_USERNAME = "Cloudless Bot";
+const MAX_ERROR_TEXT_LENGTH = 2_000;
+const MAX_NOTES_TEXT_LENGTH = 500;
+const COMMIT_SHA_SHORT_LENGTH = 7;
+const ORDER_SESSION_DISPLAY_LENGTH = 20;
 
 export class SlackClient {
   private defaultChannel: string;
@@ -186,6 +191,10 @@ function contextBlock(...items: string[]): BlockKitBlock {
 
 const divider: BlockKitBlock = { type: "divider" };
 
+function slackTimestamp(): string {
+  return `<!date^${Math.floor(Date.now() / 1_000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`;
+}
+
 // ---------------------------------------------------------------------------
 // High-level notifiers
 // ---------------------------------------------------------------------------
@@ -203,13 +212,13 @@ export async function slackSubscriberNotify(email: string): Promise<void> {
       headerBlock("New Newsletter Subscriber"),
       sectionBlock(`*Email:* \`${safeEmail}\``),
       contextBlock(
-        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
+        slackTimestamp(),
         "cloudless.gr subscribe form",
       ),
       divider,
     ],
     icon_emoji: ":envelope:",
-    username: "Cloudless Bot",
+    username: BOT_USERNAME,
   });
 }
 
@@ -234,16 +243,16 @@ export async function slackErrorNotify(opts: {
       sectionBlock(`*${opts.title}*\n${opts.message}`),
       ...(opts.route ? [sectionBlock(`*Route:* \`${opts.route}\``)] : []),
       ...(errText
-        ? [sectionBlock(`*Details:*\n\`\`\`${errText.slice(0, 2000)}\`\`\``)]
+        ? [sectionBlock(`*Details:*\n\`\`\`${errText.slice(0, MAX_ERROR_TEXT_LENGTH)}\`\`\``)]
         : []),
       contextBlock(
-        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
+        slackTimestamp(),
         "cloudless.gr",
       ),
       divider,
     ],
     icon_emoji: ":rotating_light:",
-    username: "Cloudless Bot",
+    username: BOT_USERNAME,
   });
 }
 
@@ -280,19 +289,19 @@ export async function slackDeployNotify(opts: {
           `*Version:* \`${opts.version}\``,
           `*Stage:* \`${opts.stage}\``,
           opts.actor ? `*Actor:* ${opts.actor}` : null,
-          opts.commitSha ? `*Commit:* \`${opts.commitSha.slice(0, 7)}\`` : null,
+          opts.commitSha ? `*Commit:* \`${opts.commitSha.slice(0, COMMIT_SHA_SHORT_LENGTH)}\`` : null,
         ]
           .filter((s): s is string => Boolean(s))
           .join("\n"),
       ),
       contextBlock(
-        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
+        slackTimestamp(),
         "cloudless.gr deploy pipeline",
       ),
       divider,
     ],
     icon_emoji: statusEmoji,
-    username: "Cloudless Bot",
+    username: BOT_USERNAME,
   });
 }
 
@@ -348,12 +357,12 @@ export async function slackContactNotify(data: {
       divider,
       sectionBlock(`*Message:*\n${safeMessage}`),
       contextBlock(
-        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
+        slackTimestamp(),
         "cloudless.gr contact form",
       ),
     ],
     icon_emoji: ":incoming_envelope:",
-    username: "Cloudless Bot",
+    username: BOT_USERNAME,
   });
 }
 
@@ -389,15 +398,15 @@ export async function slackBookingNotify(data: {
         },
       },
       ...(data.notes
-        ? [sectionBlock(`*Notes:*\n${slackEscape(data.notes).slice(0, 500)}`)]
+        ? [sectionBlock(`*Notes:*\n${slackEscape(data.notes).slice(0, MAX_NOTES_TEXT_LENGTH)}`)]
         : []),
       contextBlock(
-        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
+        slackTimestamp(),
         "cloudless.gr calendar booking",
       ),
     ],
     icon_emoji: ":calendar:",
-    username: "Cloudless Bot",
+    username: BOT_USERNAME,
   });
 }
 
@@ -419,17 +428,17 @@ export async function slackOrderNotify(data: {
           text: [
             `*Customer:* ${safeEmail}`,
             `*Amount:* ${data.amount}`,
-            `*Session:* \`${data.sessionId.slice(0, 20)}...\``,
+            `*Session:* \`${data.sessionId.slice(0, ORDER_SESSION_DISPLAY_LENGTH)}...\``,
           ].join("\n"),
         },
       },
       contextBlock(
-        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
+        slackTimestamp(),
         "cloudless.gr stripe checkout",
       ),
     ],
     icon_emoji: ":moneybag:",
-    username: "Cloudless Bot",
+    username: BOT_USERNAME,
   });
 }
 

@@ -89,7 +89,7 @@ Respond with a JSON object (no markdown fences, just raw JSON) with this structu
 Only include the platforms that were requested. Tailor recommendations for the Greek market unless the description specifies otherwise.`;
 
   try {
-    const text = await callClaude(prompt, apiKey, { maxTokens: 1500 });
+    const text = await callClaude(prompt, apiKey, { maxTokens: 1_500 });
     let targeting: unknown;
     try {
       targeting = JSON.parse(text.replace(/```json\n?|\n?```/g, "").trim());

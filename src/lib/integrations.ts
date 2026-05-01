@@ -7,6 +7,9 @@
  * keys that are missing from process.env, which is the normal production case.
  */
 
+const DEFAULT_SENTRY_ORG = "baltzakisthemiscom";
+const DEFAULT_SENTRY_PROJECT = "cloudless-gr";
+
 export interface IntegrationConfig {
   SLACK_WEBHOOK_URL?: string;
   SLACK_BOT_TOKEN?: string;
@@ -94,8 +97,8 @@ export function getIntegrations(): IntegrationConfig {
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
-    SENTRY_ORG: process.env.SENTRY_ORG ?? "baltzakisthemiscom",
-    SENTRY_PROJECT: process.env.SENTRY_PROJECT ?? "cloudless-gr",
+    SENTRY_ORG: process.env.SENTRY_ORG ?? DEFAULT_SENTRY_ORG,
+    SENTRY_PROJECT: process.env.SENTRY_PROJECT ?? DEFAULT_SENTRY_PROJECT,
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET,
     ACTIVECAMPAIGN_API_URL: process.env.ACTIVECAMPAIGN_API_URL,
     ACTIVECAMPAIGN_API_TOKEN: process.env.ACTIVECAMPAIGN_API_TOKEN,
@@ -216,9 +219,9 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
         envCfg.STRIPE_SECRET_KEY || ssm.STRIPE_SECRET_KEY || undefined,
       SENTRY_AUTH_TOKEN:
         envCfg.SENTRY_AUTH_TOKEN || ssm.SENTRY_AUTH_TOKEN || undefined,
-      SENTRY_ORG: envCfg.SENTRY_ORG || ssm.SENTRY_ORG || "baltzakisthemiscom",
+      SENTRY_ORG: envCfg.SENTRY_ORG || ssm.SENTRY_ORG || DEFAULT_SENTRY_ORG,
       SENTRY_PROJECT:
-        envCfg.SENTRY_PROJECT || ssm.SENTRY_PROJECT || "cloudless-gr",
+        envCfg.SENTRY_PROJECT || ssm.SENTRY_PROJECT || DEFAULT_SENTRY_PROJECT,
       NOTION_WEBHOOK_SECRET:
         envCfg.NOTION_WEBHOOK_SECRET || ssm.NOTION_WEBHOOK_SECRET || undefined,
       ACTIVECAMPAIGN_API_URL:

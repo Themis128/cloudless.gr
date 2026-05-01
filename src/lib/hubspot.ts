@@ -1,6 +1,9 @@
 import { getIntegrationsAsync } from "@/lib/integrations";
 
 const HUBSPOT_API = "https://api.hubapi.com";
+const HUBSPOT_PAGE_SIZE = 100;
+const HUBSPOT_MAX_LIMIT = 100;
+const HUBSPOT_BATCH_NOTE_LIMIT = 100;
 
 interface HubSpotContact {
   email: string;
@@ -50,7 +53,7 @@ async function hubspotListAll<T = unknown>(path: string): Promise<T[]> {
 
   do {
     const sep = path.includes("?") ? "&" : "?";
-    const url = `${path}${sep}limit=100${after ? `&after=${encodeURIComponent(after)}` : ""}`;
+    const url = `${path}${sep}limit=${HUBSPOT_PAGE_SIZE}${after ? `&after=${encodeURIComponent(after)}` : ""}`;
     const res = await hubspotFetch(url);
     if (!res.ok) break;
     const data = (await res.json()) as {
@@ -146,7 +149,7 @@ export async function upsertContact(
 /** List recent contacts */
 export async function listContacts(limit = 10): Promise<unknown[]> {
   const safeLimit = Number.isFinite(limit)
-    ? Math.min(Math.max(Math.trunc(limit), 1), 100)
+    ? Math.min(Math.max(Math.trunc(limit), 1), HUBSPOT_MAX_LIMIT)
     : 10;
   try {
     const res = await hubspotFetch(
@@ -167,7 +170,7 @@ export async function listContacts(limit = 10): Promise<unknown[]> {
  */
 export async function listTickets(limit = 20): Promise<unknown[]> {
   const safeLimit = Number.isFinite(limit)
-    ? Math.min(Math.max(Math.trunc(limit), 1), 100)
+    ? Math.min(Math.max(Math.trunc(limit), 1), HUBSPOT_MAX_LIMIT)
     : 20;
   try {
     const res = await hubspotFetch(
@@ -266,7 +269,7 @@ export async function getPipelines(objectType = "deals"): Promise<unknown[]> {
  */
 export async function listCompanies(limit = 20): Promise<unknown[]> {
   const safeLimit = Number.isFinite(limit)
-    ? Math.min(Math.max(Math.trunc(limit), 1), 100)
+    ? Math.min(Math.max(Math.trunc(limit), 1), HUBSPOT_MAX_LIMIT)
     : 20;
   try {
     const res = await hubspotFetch(
@@ -288,7 +291,7 @@ export async function listCompanies(limit = 20): Promise<unknown[]> {
  */
 export async function listDeals(limit = 20): Promise<unknown[]> {
   const safeLimit = Number.isFinite(limit)
-    ? Math.min(Math.max(Math.trunc(limit), 1), 100)
+    ? Math.min(Math.max(Math.trunc(limit), 1), HUBSPOT_MAX_LIMIT)
     : 20;
   try {
     const res = await hubspotFetch(
@@ -574,7 +577,7 @@ export async function listNotes(dealId: string): Promise<unknown[]> {
       method: "POST",
       body: JSON.stringify({
         properties: ["hs_note_body", "hs_timestamp"],
-        inputs: noteIds.slice(0, 100).map((id) => ({ id })),
+        inputs: noteIds.slice(0, HUBSPOT_BATCH_NOTE_LIMIT).map((id) => ({ id })),
       }),
     });
     if (!batchRes.ok) return [];

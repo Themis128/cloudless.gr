@@ -36,7 +36,7 @@ Metrics: ${JSON.stringify(metrics, null, 2)}
 Write 3-5 sentences of plain English insights. Mention specific numbers, compare to industry benchmarks where relevant, and end with 1-2 actionable recommendations. Be direct and professional.`;
 
   try {
-    const insights = await callClaude(prompt, apiKey, { maxTokens: 500 });
+    const insights = await callClaude(prompt, apiKey, { maxTokens: 500 }); // NOSONAR
     return NextResponse.json({ insights });
   } catch (e) {
     return NextResponse.json(

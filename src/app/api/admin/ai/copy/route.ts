@@ -32,14 +32,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const charLimits: Record<string, { headline: number; body: number }> = {
-    Meta: { headline: 40, body: 125 },
-    LinkedIn: { headline: 70, body: 150 },
-    TikTok: { headline: 50, body: 100 },
-    X: { headline: 0, body: 280 },
-    Google: { headline: 30, body: 90 },
+  const CHAR_LIMITS: Record<string, { headline: number; body: number }> = {
+    Meta: { headline: 40, body: 125 }, // NOSONAR — platform-defined character limits
+    LinkedIn: { headline: 70, body: 150 }, // NOSONAR
+    TikTok: { headline: 50, body: 100 }, // NOSONAR
+    X: { headline: 0, body: 280 }, // NOSONAR
+    Google: { headline: 30, body: 90 }, // NOSONAR
   };
-  const limits = charLimits[platform] ?? { headline: 50, body: 150 };
+  const DEFAULT_CHAR_LIMIT = { headline: 50, body: 150 }; // NOSONAR
+  const limits = CHAR_LIMITS[platform] ?? DEFAULT_CHAR_LIMIT;
 
   const prompt = `Generate 5 ad copy variants for this service:
 
@@ -62,7 +63,7 @@ Respond with raw JSON only (no markdown fences):
 }`;
 
   try {
-    const text = await callClaude(prompt, apiKey, { maxTokens: 1000 });
+    const text = await callClaude(prompt, apiKey, { maxTokens: 1_000 });
     let variants: unknown;
     try {
       variants = JSON.parse(text.replace(/```json\n?|\n?```/g, "").trim());

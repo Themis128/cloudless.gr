@@ -61,6 +61,9 @@ export type SentryTokenStatus = "valid" | "rejected" | "not_configured" | "error
 // ---------------------------------------------------------------------------
 
 const SENTRY_API = "https://sentry.io/api/0";
+const VERIFY_TIMEOUT_MS = 5_000;
+const DEFAULT_SENTRY_ORG = "baltzakisthemiscom";
+const DEFAULT_SENTRY_PROJECT = "cloudless-gr";
 
 async function getSentryConfig(): Promise<{
   token: string;
@@ -71,8 +74,8 @@ async function getSentryConfig(): Promise<{
   if (!config.SENTRY_AUTH_TOKEN) return null;
   return {
     token: config.SENTRY_AUTH_TOKEN,
-    org: config.SENTRY_ORG || "baltzakisthemiscom",
-    project: config.SENTRY_PROJECT || "cloudless-gr",
+    org: config.SENTRY_ORG ?? DEFAULT_SENTRY_ORG,
+    project: config.SENTRY_PROJECT ?? DEFAULT_SENTRY_PROJECT,
   };
 }
 
@@ -139,7 +142,7 @@ export async function verifySentryToken(): Promise<{
   try {
     const res = await fetch(`${SENTRY_API}/projects/${cfg.org}/${cfg.project}/`, {
       headers: { Authorization: `Bearer ${cfg.token}` },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
     });
     if (res.status === 401 || res.status === 403) {
       return {

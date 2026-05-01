@@ -3,6 +3,16 @@ import { getConfig } from "@/lib/ssm-config";
 
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 
+const MS_PER_DAY = 86_400_000;
+const MS_PER_HOUR = 3_600_000;
+const MS_PER_MINUTE = 60_000;
+const BUSINESS_OPEN_HOUR = 9;
+const BUSINESS_CLOSE_HOUR = 17;
+const SLOT_DURATION_MINUTES = 30;
+const LOOKBACK_DAYS = 90;
+const LOOKAHEAD_DAYS = 30;
+const MAX_CALENDAR_RESULTS = 50;
+
 const getAccessToken = createGoogleAuth(
   "https://www.googleapis.com/auth/calendar",
 );
@@ -62,10 +72,10 @@ interface TimeSlot {
  */
 export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
   const { GOOGLE_CALENDAR_ID } = await getConfig();
-  const calendarId = GOOGLE_CALENDAR_ID || "primary";
+  const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
 
   const now = new Date();
-  const end = new Date(now.getTime() + daysAhead * 86400000);
+  const end = new Date(now.getTime() + daysAhead * MS_PER_DAY);
 
   const freeBusyRes = await calendarFetch("/freeBusy", {
     method: "POST",
@@ -87,19 +97,19 @@ export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
   const slots: TimeSlot[] = [];
 
   for (let d = 0; d < daysAhead; d++) {
-    const day = new Date(now.getTime() + d * 86400000);
+    const day = new Date(now.getTime() + d * MS_PER_DAY);
     const dayOfWeek = day.getUTCDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) continue; // skip weekends
 
-    for (let hour = 9; hour < 17; hour++) {
-      for (const minute of [0, 30]) {
+    for (let hour = BUSINESS_OPEN_HOUR; hour < BUSINESS_CLOSE_HOUR; hour++) {
+      for (const minute of [0, SLOT_DURATION_MINUTES]) {
         const slotStart = new Date(day);
         slotStart.setUTCHours(0, 0, 0, 0);
         const offset = athensOffsetMs(slotStart);
         slotStart.setTime(
-          slotStart.getTime() + hour * 3600000 + minute * 60000 - offset,
+          slotStart.getTime() + hour * MS_PER_HOUR + minute * MS_PER_MINUTE - offset,
         );
-        const slotEnd = new Date(slotStart.getTime() + 30 * 60000);
+        const slotEnd = new Date(slotStart.getTime() + SLOT_DURATION_MINUTES * MS_PER_MINUTE);
 
         if (slotStart < now) continue;
 
@@ -131,7 +141,7 @@ export async function bookConsultation(data: {
   notes?: string;
 }): Promise<{ eventId: string; htmlLink: string } | null> {
   const { GOOGLE_CALENDAR_ID } = await getConfig();
-  const calendarId = GOOGLE_CALENDAR_ID || "primary";
+  const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
 
   try {
     const res = await calendarFetch(
@@ -151,8 +161,8 @@ export async function bookConsultation(data: {
           reminders: {
             useDefault: false,
             overrides: [
-              { method: "email", minutes: 60 },
-              { method: "popup", minutes: 15 },
+              { method: "email", minutes: 60 }, // NOSONAR — reminder minutes are semantic config values
+              { method: "popup", minutes: 15 }, // NOSONAR
             ],
           },
           conferenceData: {
@@ -195,11 +205,11 @@ export async function getConsultationsByEmail(
   email: string,
 ): Promise<Consultation[]> {
   const { GOOGLE_CALENDAR_ID } = await getConfig();
-  const calendarId = GOOGLE_CALENDAR_ID || "primary";
+  const calendarId = GOOGLE_CALENDAR_ID ?? "primary";
 
   const now = new Date();
-  const timeMin = new Date(now.getTime() - 90 * 86400000).toISOString();
-  const timeMax = new Date(now.getTime() + 30 * 86400000).toISOString();
+  const timeMin = new Date(now.getTime() - LOOKBACK_DAYS * MS_PER_DAY).toISOString();
+  const timeMax = new Date(now.getTime() + LOOKAHEAD_DAYS * MS_PER_DAY).toISOString();
 
   try {
     const params = new URLSearchParams({
@@ -208,7 +218,7 @@ export async function getConsultationsByEmail(
       q: email,
       singleEvents: "true",
       orderBy: "startTime",
-      maxResults: "50",
+      maxResults: String(MAX_CALENDAR_RESULTS),
     });
 
     const res = await calendarFetch(

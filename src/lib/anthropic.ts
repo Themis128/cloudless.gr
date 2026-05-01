@@ -16,6 +16,8 @@ import { getConfig } from "@/lib/ssm-config";
 
 const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
+const VERIFY_TIMEOUT_MS = 8_000;
+const DEFAULT_MAX_TOKENS = 1_000;
 
 export type AnthropicTokenStatus = "valid" | "rejected" | "not_configured" | "error";
 
@@ -60,7 +62,7 @@ export async function verifyAnthropicKey(): Promise<{
         max_tokens: 1,
         messages: [{ role: "user", content: "ping" }],
       }),
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
     });
     if (res.status === 401 || res.status === 403) {
       return {
@@ -98,7 +100,7 @@ export async function callClaude(
   apiKey: string,
   options: CallClaudeOptions = {},
 ): Promise<string> {
-  const { model = "claude-sonnet-4-6", maxTokens = 1000, system } = options;
+  const { model = "claude-sonnet-4-6", maxTokens = DEFAULT_MAX_TOKENS, system } = options;
 
   const body: Record<string, unknown> = {
     model,

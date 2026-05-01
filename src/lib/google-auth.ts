@@ -1,6 +1,8 @@
 import { getConfig } from "@/lib/ssm-config";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
+const JWT_EXPIRY_SECS = 3_600;
+const TOKEN_REFRESH_BUFFER_SECS = 60;
 
 /**
  * Returns a getAccessToken() function scoped to the given OAuth2 scope.
@@ -29,7 +31,7 @@ export function createGoogleAuth(scope: string): () => Promise<string> {
     const jwt = await new SignJWT({ iss: email, scope, aud: TOKEN_URL })
       .setProtectedHeader({ alg: "RS256" })
       .setIssuedAt(now)
-      .setExpirationTime(now + 3600)
+      .setExpirationTime(now + JWT_EXPIRY_SECS)
       .sign(privateKey);
 
     const res = await fetch(TOKEN_URL, {
@@ -46,7 +48,7 @@ export function createGoogleAuth(scope: string): () => Promise<string> {
 
     cached = {
       token: data.access_token,
-      expires: Date.now() + (data.expires_in - 60) * 1000,
+      expires: Date.now() + (data.expires_in - TOKEN_REFRESH_BUFFER_SECS) * 1_000,
     };
 
     return cached.token;

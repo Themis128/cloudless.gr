@@ -278,13 +278,20 @@ export async function notionListAll<T = unknown>(path: string): Promise<T[]> {
 // Deep block fetcher — recursively fetches children for nested blocks
 // ---------------------------------------------------------------------------
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+export interface NotionBlock {
+  id: string;
+  type: string;
+  has_children: boolean;
+  children?: NotionBlock[];
+  [key: string]: unknown;
+}
+
 /**
  * Fetch all blocks under a parent, recursively expanding any block that
  * has `has_children: true` (e.g. toggle, callout, column_list).
  */
-export async function fetchBlocksDeep(parentId: string): Promise<any[]> {
-  const blocks = await notionListAll<any>(`/blocks/${parentId}/children`);
+export async function fetchBlocksDeep(parentId: string): Promise<NotionBlock[]> {
+  const blocks = await notionListAll<NotionBlock>(`/blocks/${parentId}/children`);
   for (const block of blocks) {
     if (block.has_children) {
       block.children = await fetchBlocksDeep(block.id);
@@ -292,7 +299,6 @@ export async function fetchBlocksDeep(parentId: string): Promise<any[]> {
   }
   return blocks;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
 // Image proxy URL helper — avoids Notion signed-URL expiry in rendered HTML

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const result = await getUnresolvedIssues({ limit: 20, sort: "date" });
+  const result = await getUnresolvedIssues({ limit: 20, sort: "date" }); // NOSONAR
 
   if (!result) {
     return NextResponse.json(

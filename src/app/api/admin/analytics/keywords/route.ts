@@ -15,9 +15,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const DEFAULT_LIMIT = 20;
+  const MAX_LIMIT = 100;
   const limit = Math.max(
     1,
-    Math.min(Number(request.nextUrl.searchParams.get("limit") ?? "20"), 100),
+    Math.min(Number(request.nextUrl.searchParams.get("limit") ?? String(DEFAULT_LIMIT)), MAX_LIMIT),
   );
 
   try {

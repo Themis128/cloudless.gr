@@ -3,6 +3,18 @@ import { notionFetch } from "@/lib/notion";
 
 export const dynamic = "force-dynamic";
 
+const CACHE_MAX_AGE_SECS = 3_300; // 55 min — Notion signed URLs last ~1 h
+const CACHE_SWR_SECS = 600; // stale-while-revalidate
+
+interface NotionPage {
+  cover?: { type: string; file?: { url: string }; external?: { url: string } };
+}
+
+interface NotionBlock {
+  type: string;
+  [key: string]: { file?: { url: string } } | string | unknown;
+}
+
 export async function GET(request: NextRequest): Promise<Response> {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
@@ -14,15 +26,12 @@ export async function GET(request: NextRequest): Promise<Response> {
     let fileUrl: string | undefined;
 
     if (type === "cover") {
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      const page = await notionFetch<any>(`/pages/${id}`);
+      const page = await notionFetch<NotionPage>(`/pages/${id}`);
       fileUrl = page.cover?.type === "file" ? page.cover.file?.url : undefined;
-      /* eslint-enable @typescript-eslint/no-explicit-any */
     } else {
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      const block = await notionFetch<any>(`/blocks/${id}`);
-      fileUrl = (block[block.type] as any)?.file?.url;
-      /* eslint-enable @typescript-eslint/no-explicit-any */
+      const block = await notionFetch<NotionBlock>(`/blocks/${id}`);
+      const blockData = block[block.type] as { file?: { url: string } } | undefined;
+      fileUrl = blockData?.file?.url;
     }
 
     if (!fileUrl) return new Response("No file URL found", { status: 404 });
@@ -33,12 +42,10 @@ export async function GET(request: NextRequest): Promise<Response> {
     return new Response(img.body, {
       headers: {
         "Content-Type": img.headers.get("Content-Type") ?? "image/jpeg",
-        // Cache for 55 min (Notion signed URLs last ~1 h; revalidate before expiry)
-        "Cache-Control": "public, max-age=3300, stale-while-revalidate=600",
+        "Cache-Control": `public, max-age=${CACHE_MAX_AGE_SECS}, stale-while-revalidate=${CACHE_SWR_SECS}`,
       },
     });
-  } catch (err) {
-    console.error("[notion-image] Error:", err);
+  } catch {
     return new Response("Internal error", { status: 500 });
   }
 }
