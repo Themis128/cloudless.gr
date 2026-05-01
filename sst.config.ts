@@ -2,12 +2,14 @@
 
 /// <reference path="./.sst/platform/config.d.ts" />
 
+const STAGE_PRODUCTION = "production";
+
 export default {
   app(input) {
     return {
       name: "cloudless",
-      removal: input?.stage === "production" ? "retain" : "remove",
-      protect: ["production"].includes(input?.stage ?? ""),
+      removal: input?.stage === STAGE_PRODUCTION ? "retain" : "remove",
+      protect: [STAGE_PRODUCTION].includes(input?.stage ?? ""),
       home: "aws",
       providers: {
         aws: {
@@ -22,7 +24,7 @@ export default {
     // Only pass non-secret configuration that varies per stage.
 
     const stage = $app.stage;
-    const isProd = stage === "production";
+    const isProd = stage === STAGE_PRODUCTION;
 
     const site = new sst.aws.Nextjs("CloudlessSite", {
       // Domain: cloudless.gr with existing Route53 zone + ACM cert

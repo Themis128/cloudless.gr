@@ -8,6 +8,8 @@ import { getConfig } from "@/lib/ssm-config";
 import { invalidateCache } from "@/lib/notion-cache";
 import { escapeHtml } from "@/lib/escape-html";
 
+const SITEMAP_PATH = "/sitemap.xml";
+
 /**
  * POST /api/webhooks/notion
  *
@@ -87,7 +89,7 @@ async function handlePageUpdated(payload: WebhookPayload) {
     if (slug) revalidatePath(`/api/docs/${slug}`);
   }
 
-  revalidatePath("/sitemap.xml");
+  revalidatePath(SITEMAP_PATH);
 
   return { revalidated: true, database, slug: slug ?? null };
 }
@@ -102,11 +104,11 @@ async function handlePageCreated(payload: WebhookPayload) {
   if (database === "blog") {
     revalidatePath("/blog");
     revalidatePath("/api/blog/posts");
-    revalidatePath("/sitemap.xml");
+    revalidatePath(SITEMAP_PATH);
   } else if (database === "docs") {
     revalidatePath("/docs");
     revalidatePath("/api/docs");
-    revalidatePath("/sitemap.xml");
+    revalidatePath(SITEMAP_PATH);
   }
 
   if (database === "docs" && data?.title) {
