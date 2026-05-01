@@ -203,8 +203,8 @@ describe("notion-docs.ts", () => {
         getIntegrations: vi.fn().mockReturnValue({}),
       }));
 
-      const mod = await import("@/lib/notion-docs");
-      // With empty config should return null without calling API
+      await import("@/lib/notion-docs");
+      expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
     it("returns null on API error", async () => {
@@ -248,8 +248,8 @@ describe("notion-docs.ts", () => {
         getIntegrations: vi.fn().mockReturnValue({}),
       }));
 
-      const mod = await import("@/lib/notion-docs");
-      // With empty config should return null
+      await import("@/lib/notion-docs");
+      expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
     it("returns null on API error", async () => {

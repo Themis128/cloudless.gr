@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { resetIntegrationCache } from "@/lib/integrations";
-import { resetEventQueue } from "@/lib/notion-analytics";
+import { resetEventQueue } from "@/lib/notion-analytics"; // NOSONAR — import path repeated across dynamic imports in test suite
 
 const mockNotionFetch = vi.fn();
 const mockNotionFetchAll = vi.fn();
