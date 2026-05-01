@@ -54,6 +54,7 @@ export default {
       server: {
         memory: "1024 MB",
         architecture: "arm64",
+        runtime: "nodejs22.x",
         timeout: "30 seconds",
       },
       // Invalidate CloudFront cache on every deployment for fresh content
