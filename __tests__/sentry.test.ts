@@ -1,16 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockGetConfig = vi.fn();
+const { mockGetConfig } = vi.hoisted(() => ({
+  mockGetConfig: vi.fn(),
+}));
+
 vi.mock("@/lib/ssm-config", () => ({
   getConfig: mockGetConfig,
   resetSsmCache: vi.fn(),
 }));
+
+import {
+  isSentryConfigured,
+  verifySentryToken,
+  getUnresolvedIssues,
+  getTopErrors,
+  getErrorCounts,
+  updateIssueStatus,
+} from "@/lib/sentry";
 
 const CONFIGURED_CONFIG = {
   SENTRY_AUTH_TOKEN: "sntrys_test_token",
   SENTRY_ORG: "baltzakisthemiscom",
   SENTRY_PROJECT: "cloudless-gr",
 };
+
+const UNCONFIGURED = { ...CONFIGURED_CONFIG, SENTRY_AUTH_TOKEN: "" };
 
 function makeSentryIssue(overrides = {}) {
   return {
@@ -41,13 +55,11 @@ describe("sentry.ts", () => {
 
   describe("isSentryConfigured()", () => {
     it("returns true when SENTRY_AUTH_TOKEN is configured", async () => {
-      const { isSentryConfigured } = await import("@/lib/sentry");
       expect(await isSentryConfigured()).toBe(true);
     });
 
     it("returns false when SENTRY_AUTH_TOKEN is not configured", async () => {
-      mockGetConfig.mockResolvedValueOnce({ ...CONFIGURED_CONFIG, SENTRY_AUTH_TOKEN: "" });
-      const { isSentryConfigured } = await import("@/lib/sentry");
+      mockGetConfig.mockResolvedValueOnce(UNCONFIGURED);
       expect(await isSentryConfigured()).toBe(false);
     });
   });
@@ -56,36 +68,26 @@ describe("sentry.ts", () => {
 
   describe("verifySentryToken()", () => {
     it("returns not_configured when SENTRY_AUTH_TOKEN is missing", async () => {
-      mockGetConfig.mockResolvedValueOnce({ ...CONFIGURED_CONFIG, SENTRY_AUTH_TOKEN: "" });
-      const { verifySentryToken } = await import("@/lib/sentry");
+      mockGetConfig.mockResolvedValueOnce(UNCONFIGURED);
       const result = await verifySentryToken();
       expect(result.status).toBe("not_configured");
     });
 
     it("returns valid on 200", async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce(
-        new Response("{}", { status: 200 }),
-      );
-      const { verifySentryToken } = await import("@/lib/sentry");
+      vi.mocked(global.fetch).mockResolvedValueOnce(new Response("{}", { status: 200 }));
       const result = await verifySentryToken();
       expect(result.status).toBe("valid");
     });
 
     it("returns rejected on 401", async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce(
-        new Response("", { status: 401 }),
-      );
-      const { verifySentryToken } = await import("@/lib/sentry");
+      vi.mocked(global.fetch).mockResolvedValueOnce(new Response("", { status: 401 }));
       const result = await verifySentryToken();
       expect(result.status).toBe("rejected");
       expect(result.message).toMatch(/401/);
     });
 
     it("returns error on non-auth failure", async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce(
-        new Response("", { status: 500 }),
-      );
-      const { verifySentryToken } = await import("@/lib/sentry");
+      vi.mocked(global.fetch).mockResolvedValueOnce(new Response("", { status: 500 }));
       const result = await verifySentryToken();
       expect(result.status).toBe("error");
     });
@@ -95,8 +97,7 @@ describe("sentry.ts", () => {
 
   describe("getUnresolvedIssues()", () => {
     it("returns null when Sentry is not configured", async () => {
-      mockGetConfig.mockResolvedValue({ ...CONFIGURED_CONFIG, SENTRY_AUTH_TOKEN: "" });
-      const { getUnresolvedIssues } = await import("@/lib/sentry");
+      mockGetConfig.mockResolvedValue(UNCONFIGURED);
       expect(await getUnresolvedIssues()).toBeNull();
     });
 
@@ -105,7 +106,6 @@ describe("sentry.ts", () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify(issues), { status: 200 }),
       );
-      const { getUnresolvedIssues } = await import("@/lib/sentry");
       const result = await getUnresolvedIssues();
       expect(result).not.toBeNull();
       expect(result!.issues).toHaveLength(2);
@@ -115,15 +115,11 @@ describe("sentry.ts", () => {
 
     it("returns null when fetch fails", async () => {
       vi.mocked(global.fetch).mockRejectedValueOnce(new Error("network error"));
-      const { getUnresolvedIssues } = await import("@/lib/sentry");
       expect(await getUnresolvedIssues()).toBeNull();
     });
 
     it("returns null when API returns 401", async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce(
-        new Response("", { status: 401 }),
-      );
-      const { getUnresolvedIssues } = await import("@/lib/sentry");
+      vi.mocked(global.fetch).mockResolvedValueOnce(new Response("", { status: 401 }));
       expect(await getUnresolvedIssues()).toBeNull();
     });
   });
@@ -132,8 +128,7 @@ describe("sentry.ts", () => {
 
   describe("getTopErrors()", () => {
     it("returns empty array when Sentry is not configured", async () => {
-      mockGetConfig.mockResolvedValue({ ...CONFIGURED_CONFIG, SENTRY_AUTH_TOKEN: "" });
-      const { getTopErrors } = await import("@/lib/sentry");
+      mockGetConfig.mockResolvedValue(UNCONFIGURED);
       expect(await getTopErrors()).toEqual([]);
     });
 
@@ -141,7 +136,6 @@ describe("sentry.ts", () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify([makeSentryIssue()]), { status: 200 }),
       );
-      const { getTopErrors } = await import("@/lib/sentry");
       expect(await getTopErrors(1)).toHaveLength(1);
     });
   });
@@ -150,8 +144,7 @@ describe("sentry.ts", () => {
 
   describe("getErrorCounts()", () => {
     it("returns null when Sentry is not configured", async () => {
-      mockGetConfig.mockResolvedValue({ ...CONFIGURED_CONFIG, SENTRY_AUTH_TOKEN: "" });
-      const { getErrorCounts } = await import("@/lib/sentry");
+      mockGetConfig.mockResolvedValue(UNCONFIGURED);
       expect(await getErrorCounts()).toBeNull();
     });
 
@@ -165,7 +158,6 @@ describe("sentry.ts", () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify(issues), { status: 200 }),
       );
-      const { getErrorCounts } = await import("@/lib/sentry");
       const result = await getErrorCounts();
       expect(result).not.toBeNull();
       expect(result!.fatal).toBe(1);
@@ -182,7 +174,6 @@ describe("sentry.ts", () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify({ status: "resolved" }), { status: 200 }),
       );
-      const { updateIssueStatus } = await import("@/lib/sentry");
       expect(await updateIssueStatus("issue-1", "resolved")).toBe(true);
     });
 
@@ -190,7 +181,6 @@ describe("sentry.ts", () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify({ status: "unresolved" }), { status: 200 }),
       );
-      const { updateIssueStatus } = await import("@/lib/sentry");
       expect(await updateIssueStatus("issue-1", "resolved")).toBe(false);
     });
   });

@@ -4,6 +4,15 @@ import { resetIntegrationCache } from "@/lib/integrations";
 const mockFetch = vi.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
 
+import {
+  updateDeal,
+  moveDealStage,
+  getDealsByStage,
+  listNotes,
+  createNote,
+  getPipelineStats,
+} from "@/lib/hubspot";
+
 describe("hubspot.ts — pipeline extensions", () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -19,7 +28,6 @@ describe("hubspot.ts — pipeline extensions", () => {
         ok: true,
         json: async () => ({ id: "deal_1" }),
       });
-      const { updateDeal } = await import("@/lib/hubspot");
       const result = await updateDeal("deal_1", { dealname: "Updated" });
       expect(result?.id).toBe("deal_1");
       expect(mockFetch).toHaveBeenCalledWith(
@@ -30,7 +38,6 @@ describe("hubspot.ts — pipeline extensions", () => {
 
     it("returns null on API error", async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
-      const { updateDeal } = await import("@/lib/hubspot");
       const result = await updateDeal("deal_1", {});
       expect(result).toBeNull();
     });
@@ -44,7 +51,6 @@ describe("hubspot.ts — pipeline extensions", () => {
         ok: true,
         json: async () => ({ id: "deal_1" }),
       });
-      const { moveDealStage } = await import("@/lib/hubspot");
       const result = await moveDealStage("deal_1", "closedwon");
       expect(result?.id).toBe("deal_1");
       const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
@@ -66,7 +72,6 @@ describe("hubspot.ts — pipeline extensions", () => {
           ],
         }),
       });
-      const { getDealsByStage } = await import("@/lib/hubspot");
       const grouped = await getDealsByStage();
       expect(grouped["closedwon"]).toHaveLength(2);
       expect(grouped["appointmentscheduled"]).toHaveLength(1);
@@ -87,7 +92,6 @@ describe("hubspot.ts — pipeline extensions", () => {
             results: [{ id: "d2", properties: { dealstage: "closedwon" } }],
           }),
         });
-      const { getDealsByStage } = await import("@/lib/hubspot");
       const grouped = await getDealsByStage();
       expect(grouped["closedwon"]).toHaveLength(2);
       expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -97,7 +101,6 @@ describe("hubspot.ts — pipeline extensions", () => {
 
     it("returns empty object on API error", async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
-      const { getDealsByStage } = await import("@/lib/hubspot");
       const grouped = await getDealsByStage();
       expect(grouped).toEqual({});
     });
@@ -123,7 +126,6 @@ describe("hubspot.ts — pipeline extensions", () => {
             ],
           }),
         });
-      const { listNotes } = await import("@/lib/hubspot");
       const notes = await listNotes("deal_1");
       expect(notes).toHaveLength(2);
       expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -139,7 +141,6 @@ describe("hubspot.ts — pipeline extensions", () => {
         ok: true,
         json: async () => ({ results: [] }),
       });
-      const { listNotes } = await import("@/lib/hubspot");
       const notes = await listNotes("deal_1");
       expect(notes).toEqual([]);
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -147,7 +148,6 @@ describe("hubspot.ts — pipeline extensions", () => {
 
     it("returns [] when associations fetch fails", async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({}) });
-      const { listNotes } = await import("@/lib/hubspot");
       const notes = await listNotes("deal_1");
       expect(notes).toEqual([]);
     });
@@ -159,7 +159,6 @@ describe("hubspot.ts — pipeline extensions", () => {
           json: async () => ({ results: [{ id: "n1" }] }),
         })
         .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
-      const { listNotes } = await import("@/lib/hubspot");
       const notes = await listNotes("deal_1");
       expect(notes).toEqual([]);
     });
@@ -173,7 +172,6 @@ describe("hubspot.ts — pipeline extensions", () => {
         ok: true,
         json: async () => ({ id: "note_1" }),
       });
-      const { createNote } = await import("@/lib/hubspot");
       const result = await createNote("deal_1", "Test note");
       expect(result?.id).toBe("note_1");
       const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
@@ -182,7 +180,6 @@ describe("hubspot.ts — pipeline extensions", () => {
 
     it("returns null on failure", async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({}) });
-      const { createNote } = await import("@/lib/hubspot");
       const result = await createNote("deal_1", "Test");
       expect(result).toBeNull();
     });
@@ -202,7 +199,6 @@ describe("hubspot.ts — pipeline extensions", () => {
           ],
         }),
       });
-      const { getPipelineStats } = await import("@/lib/hubspot");
       const stats = await getPipelineStats();
       expect(stats.totalDeals).toBe(3);
       expect(stats.totalValue).toBe(1750);
@@ -230,7 +226,6 @@ describe("hubspot.ts — pipeline extensions", () => {
             ],
           }),
         });
-      const { getPipelineStats } = await import("@/lib/hubspot");
       const stats = await getPipelineStats();
       expect(stats.totalDeals).toBe(2);
       expect(stats.totalValue).toBe(300);
@@ -239,7 +234,6 @@ describe("hubspot.ts — pipeline extensions", () => {
 
     it("returns zero stats on error", async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
-      const { getPipelineStats } = await import("@/lib/hubspot");
       const stats = await getPipelineStats();
       expect(stats.totalDeals).toBe(0);
       expect(stats.totalValue).toBe(0);
@@ -254,7 +248,6 @@ describe("hubspot.ts — pipeline extensions", () => {
           ],
         }),
       });
-      const { getPipelineStats } = await import("@/lib/hubspot");
       const stats = await getPipelineStats();
       expect(stats.totalValue).toBe(0);
       expect(stats.byStage["appointmentscheduled"].value).toBe(0);

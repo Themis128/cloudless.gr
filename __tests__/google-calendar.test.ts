@@ -16,6 +16,19 @@ vi.mock("jose", () => ({
   importPKCS8: mockImportPKCS8,
 }));
 
+async function importGcal() {
+  return import("@/lib/google-calendar");
+}
+
+function mockAuthOk() {
+  return new Response(
+    JSON.stringify({ access_token: "tok", expires_in: 3600 }),
+    { status: 200 },
+  );
+}
+
+const TEST_EMAIL = "test@example.com";
+
 describe("google-calendar.ts", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -27,7 +40,7 @@ describe("google-calendar.ts", () => {
     it("throws when Google credentials are not configured", async () => {
       vi.stubEnv("GOOGLE_CLIENT_EMAIL", "");
       vi.stubEnv("GOOGLE_PRIVATE_KEY", "");
-      const { getAvailableSlots } = await import("@/lib/google-calendar");
+      const { getAvailableSlots } = await importGcal();
       await expect(getAvailableSlots()).rejects.toThrow(
         "Google service account not configured",
       );
@@ -35,14 +48,10 @@ describe("google-calendar.ts", () => {
 
     it("returns empty array when freeBusy request fails", async () => {
       vi.mocked(global.fetch)
-        .mockResolvedValueOnce(
-          new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), {
-            status: 200,
-          }),
-        )
+        .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(new Response("error", { status: 500 }));
 
-      const { getAvailableSlots } = await import("@/lib/google-calendar");
+      const { getAvailableSlots } = await importGcal();
       const slots = await getAvailableSlots(1);
       expect(slots).toEqual([]);
     });
@@ -53,11 +62,7 @@ describe("google-calendar.ts", () => {
       vi.setSystemTime(summerMonday);
 
       vi.mocked(global.fetch)
-        .mockResolvedValueOnce(
-          new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), {
-            status: 200,
-          }),
-        )
+        .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(
           new Response(
             JSON.stringify({ calendars: { primary: { busy: [] } } }),
@@ -65,7 +70,7 @@ describe("google-calendar.ts", () => {
           ),
         );
 
-      const { getAvailableSlots } = await import("@/lib/google-calendar");
+      const { getAvailableSlots } = await importGcal();
       const slots = await getAvailableSlots(1);
 
       // 09:00 Athens = 06:00 UTC in summer (UTC+3)
@@ -82,11 +87,7 @@ describe("google-calendar.ts", () => {
       vi.setSystemTime(winterMonday);
 
       vi.mocked(global.fetch)
-        .mockResolvedValueOnce(
-          new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), {
-            status: 200,
-          }),
-        )
+        .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(
           new Response(
             JSON.stringify({ calendars: { primary: { busy: [] } } }),
@@ -94,7 +95,7 @@ describe("google-calendar.ts", () => {
           ),
         );
 
-      const { getAvailableSlots } = await import("@/lib/google-calendar");
+      const { getAvailableSlots } = await importGcal();
       const slots = await getAvailableSlots(1);
 
       // 09:00 Athens = 07:00 UTC in winter (UTC+2)
@@ -109,15 +110,13 @@ describe("google-calendar.ts", () => {
   describe("bookConsultation()", () => {
     it("returns null when the calendar API returns an error", async () => {
       vi.mocked(global.fetch)
-        .mockResolvedValueOnce(
-          new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), { status: 200 }),
-        )
+        .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(new Response("error", { status: 400 }));
 
-      const { bookConsultation } = await import("@/lib/google-calendar");
+      const { bookConsultation } = await importGcal();
       const result = await bookConsultation({
         name: "Test User",
-        email: "test@example.com",
+        email: TEST_EMAIL,
         start: "2026-05-10T09:00:00Z",
         end: "2026-05-10T09:30:00Z",
       });
@@ -126,9 +125,7 @@ describe("google-calendar.ts", () => {
 
     it("returns eventId and htmlLink on success", async () => {
       vi.mocked(global.fetch)
-        .mockResolvedValueOnce(
-          new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), { status: 200 }),
-        )
+        .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(
           new Response(
             JSON.stringify({ id: "event-abc", htmlLink: "https://cal.google.com/event/event-abc" }),
@@ -136,10 +133,10 @@ describe("google-calendar.ts", () => {
           ),
         );
 
-      const { bookConsultation } = await import("@/lib/google-calendar");
+      const { bookConsultation } = await importGcal();
       const result = await bookConsultation({
         name: "Test User",
-        email: "test@example.com",
+        email: TEST_EMAIL,
         start: "2026-05-10T09:00:00Z",
         end: "2026-05-10T09:30:00Z",
       });
@@ -151,13 +148,11 @@ describe("google-calendar.ts", () => {
   describe("getConsultationsByEmail()", () => {
     it("returns empty array when calendar API fails", async () => {
       vi.mocked(global.fetch)
-        .mockResolvedValueOnce(
-          new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), { status: 200 }),
-        )
+        .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(new Response("error", { status: 500 }));
 
-      const { getConsultationsByEmail } = await import("@/lib/google-calendar");
-      const result = await getConsultationsByEmail("test@example.com");
+      const { getConsultationsByEmail } = await importGcal();
+      const result = await getConsultationsByEmail(TEST_EMAIL);
       expect(result).toEqual([]);
     });
 
@@ -168,14 +163,12 @@ describe("google-calendar.ts", () => {
       ];
 
       vi.mocked(global.fetch)
-        .mockResolvedValueOnce(
-          new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), { status: 200 }),
-        )
+        .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(
           new Response(JSON.stringify({ items: events }), { status: 200 }),
         );
 
-      const { getConsultationsByEmail } = await import("@/lib/google-calendar");
+      const { getConsultationsByEmail } = await importGcal();
       const result = await getConsultationsByEmail("alice@example.com");
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe("e1");
