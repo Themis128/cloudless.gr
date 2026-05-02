@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { bookConsultation } from "@/lib/google-calendar";
 import { isConfigured } from "@/lib/integrations";
 import { isValidEmail } from "@/lib/validation";
-import { slackNotify } from "@/lib/slack-notify";
+import { slackBookingNotify } from "@/lib/slack-notify";
 import {
   upsertContact,
   createDeal,
@@ -71,9 +71,7 @@ export async function POST(request: Request) {
       );
     }
 
-    slackNotify({
-      text: `\ud83d\udcc5 New consultation booked: ${name} (${email}) at ${new Date(start).toLocaleString("en-IE")}`,
-    }).catch(() => {});
+    slackBookingNotify({ name, email, start, notes }).catch(() => {});
 
     // HubSpot: upsert contact + create consultation deal (fire-and-forget)
     (async () => {

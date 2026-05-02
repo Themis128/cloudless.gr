@@ -19,6 +19,10 @@ vi.mock("@/lib/slack-notify", () => ({
   slackSubscriberNotify: vi.fn().mockResolvedValue(undefined),
 }));
 
+const CONTENT_TYPE_JSON = "application/json";
+const HEADER_CONTENT_TYPE = "Content-Type";
+const SUBSCRIBE_URL = "http://localhost:4000/api/subscribe";
+
 describe("POST /api/subscribe", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -28,9 +32,9 @@ describe("POST /api/subscribe", () => {
 
   it("returns 400 for invalid email payload", async () => {
     const { POST } = await import("@/app/api/subscribe/route");
-    const request = new globalThis.Request("http://localhost:4000/api/subscribe", {
+    const request = new globalThis.Request(SUBSCRIBE_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
       body: JSON.stringify({ email: "not-an-email" }),
     });
 
@@ -44,9 +48,9 @@ describe("POST /api/subscribe", () => {
 
   it("returns success for valid email", async () => {
     const { POST } = await import("@/app/api/subscribe/route");
-    const request = new globalThis.Request("http://localhost:4000/api/subscribe", {
+    const request = new globalThis.Request(SUBSCRIBE_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
       body: JSON.stringify({ email: "hello@cloudless.gr" }),
     });
 
@@ -62,9 +66,9 @@ describe("POST /api/subscribe", () => {
   it("returns 500 when team notification fails", async () => {
     notifyTeamMock.mockRejectedValueOnce(new Error("ses-down"));
     const { POST } = await import("@/app/api/subscribe/route");
-    const request = new globalThis.Request("http://localhost:4000/api/subscribe", {
+    const request = new globalThis.Request(SUBSCRIBE_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
       body: JSON.stringify({ email: "hello@cloudless.gr" }),
     });
 

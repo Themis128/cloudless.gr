@@ -26,12 +26,18 @@
 
 import {
   notionFetchAll,
-  notionListAll,
+  fetchBlocksDeep,
   extractText,
   blocksToHtml,
+  notionImageProxyUrl,
+  type TocEntry,
 } from "@/lib/notion";
 import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
+
+const BLOG_PUBLISHED_FILTER = { property: "Published", checkbox: { equals: true } };
+const BLOG_DATE_SORT = [{ property: "Date", direction: "descending" }];
+const isBlogConfigured = () => isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
 
 // ---------------------------------------------------------------------------
 // Types
@@ -85,7 +91,9 @@ function mapPage(page: any): NotionPost {
     coverImage:
       p["Cover Image"]?.url ??
       page.cover?.external?.url ??
-      page.cover?.file?.url,
+      (page.cover?.type === "file"
+        ? notionImageProxyUrl(page.id, "cover")
+        : undefined),
     readTime: extractText(p["Read Time"]?.rich_text) || "5 min read",
     seoTitle: extractText(p["SEO Title"]?.rich_text) || undefined,
     seoDescription: extractText(p["SEO Description"]?.rich_text) || undefined,
@@ -102,7 +110,7 @@ function mapPage(page: any): NotionPost {
  * Returns empty array when Notion is not configured.
  */
 export async function getPosts(): Promise<NotionPost[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+  if (!(await isBlogConfigured()))
     return [];
 
   return cached("blog:posts", async () => {
@@ -111,8 +119,8 @@ export async function getPosts(): Promise<NotionPost[]> {
       const pages = await notionFetchAll(
         `/databases/${NOTION_BLOG_DB_ID}/query`,
         {
-          filter: { property: "Published", checkbox: { equals: true } },
-          sorts: [{ property: "Date", direction: "descending" }],
+          filter: BLOG_PUBLISHED_FILTER,
+          sorts: BLOG_DATE_SORT,
         },
       );
       return pages.map(mapPage);
@@ -127,14 +135,14 @@ export async function getPosts(): Promise<NotionPost[]> {
  * Fetch all posts (published and drafts) for admin use. Not cached.
  */
 export async function getAllPosts(): Promise<NotionPost[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+  if (!(await isBlogConfigured()))
     return [];
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
     const pages = await notionFetchAll(
       `/databases/${NOTION_BLOG_DB_ID}/query`,
-      { sorts: [{ property: "Date", direction: "descending" }] },
+      { sorts: BLOG_DATE_SORT },
     );
     return pages.map(mapPage);
   } catch (err) {
@@ -178,7 +186,7 @@ export async function getPostsByTag(tag: string): Promise<NotionPost[]> {
 export async function getPostBySlug(
   slug: string,
 ): Promise<NotionPostWithContent | null> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+  if (!(await isBlogConfigured()))
     return null;
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
@@ -189,7 +197,7 @@ export async function getPostBySlug(
         filter: {
           and: [
             { property: "Slug", rich_text: { equals: slug } },
-            { property: "Published", checkbox: { equals: true } },
+            BLOG_PUBLISHED_FILTER,
           ],
         },
       },
@@ -200,8 +208,7 @@ export async function getPostBySlug(
 
     const post = mapPage(page);
 
-    // Fetch block content (GET endpoint — use notionListAll)
-    const blocks = await notionListAll(`/blocks/${post.id}/children`);
+    const blocks = await fetchBlocksDeep(post.id);
     const html = blocksToHtml(blocks);
 
     return { ...post, html, content: blocks as NotionBlock[] };
@@ -291,9 +298,9 @@ export async function getRelatedPosts(
 export async function getPostWithToc(
   slug: string,
 ): Promise<
-  (NotionPostWithContent & { toc: import("@/lib/notion").TocEntry[] }) | null
+  (NotionPostWithContent & { toc: TocEntry[] }) | null
 > {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
+  if (!(await isBlogConfigured()))
     return null;
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
@@ -304,7 +311,7 @@ export async function getPostWithToc(
         filter: {
           and: [
             { property: "Slug", rich_text: { equals: slug } },
-            { property: "Published", checkbox: { equals: true } },
+            BLOG_PUBLISHED_FILTER,
           ],
         },
       },
@@ -314,10 +321,9 @@ export async function getPostWithToc(
     if (!page) return null;
 
     const post = mapPage(page);
-    const blocks = await notionListAll(`/blocks/${post.id}/children`);
+    const blocks = await fetchBlocksDeep(post.id);
     const html = blocksToHtml(blocks);
 
-    // Import extractToc at runtime to avoid circular deps
     const { extractToc } = await import("@/lib/notion");
     const toc = extractToc(blocks as Parameters<typeof extractToc>[0]);
 

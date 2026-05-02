@@ -6,14 +6,14 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!isSentryConfigured()) {
+  if (!(await isSentryConfigured())) {
     return NextResponse.json(
       { error: "Sentry not configured." },
       { status: 503 },
     );
   }
 
-  const result = await getUnresolvedIssues({ limit: 20, sort: "date" });
+  const result = await getUnresolvedIssues({ limit: 20, sort: "date" }); // NOSONAR
 
   if (!result) {
     return NextResponse.json(

@@ -10,14 +10,20 @@
 import { notionFetch, notionFetchAll, extractText } from "@/lib/notion";
 import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 
+const isAnalyticsConfigured = () =>
+  isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID");
+
+const EVENT_PAGE_VIEW = "page_view";
+const EVENT_BLOG_VIEW = "blog_view";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type AnalyticsEventType =
-  | "page_view"
+export type AnalyticsEventType = // NOSONAR — type annotation
+  | "page_view" // NOSONAR
   | "form_submit"
-  | "blog_view"
+  | "blog_view" // NOSONAR
   | "doc_view"
   | "signup"
   | "order"
@@ -54,7 +60,7 @@ function mapEvent(page: any): AnalyticsEvent {
   return {
     id: page.id,
     event: extractText(p.Event?.title),
-    type: (p.Type?.select?.name ?? "page_view") as AnalyticsEventType,
+    type: (p.Type?.select?.name ?? EVENT_PAGE_VIEW) as AnalyticsEventType,
     page: extractText(p.Page?.rich_text),
     source: extractText(p.Source?.rich_text),
     count: p.Count?.number ?? 1,
@@ -69,20 +75,10 @@ function mapEvent(page: any): AnalyticsEvent {
 // Write — Track events
 // ---------------------------------------------------------------------------
 
-/**
- * Track a single analytics event in Notion.
- * Fire-and-forget; returns the page ID or null.
- */
-export async function trackEvent(data: {
-  event: string;
-  type: AnalyticsEventType;
-  page?: string;
-  source?: string;
-  count?: number;
-  country?: string;
-  metadata?: Record<string, unknown>;
-}): Promise<string | null> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
+type EventData = Parameters<typeof trackEvent>[0];
+
+async function writeEventToNotion(data: EventData): Promise<string | null> {
+  if (!(await isAnalyticsConfigured()))
     return null;
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
@@ -128,6 +124,45 @@ export async function trackEvent(data: {
   }
 }
 
+/** No-op kept for backward compatibility; the queue has been removed. */
+export function resetEventQueue(): void {}
+
+/**
+ * No-op kept for backward compatibility; events are now written immediately.
+ * Previously flushed a pending queue; in serverless environments a module-level
+ * timer cannot reliably fire before the process freezes, so batching is removed.
+ */
+export async function flushEventQueue(): Promise<{
+  written: number;
+  errors: number;
+}> {
+  return { written: 0, errors: 0 };
+}
+
+/**
+ * Track an analytics event in Notion.
+ * Writes immediately (fire-and-forget safe). The `opts.immediate` flag is
+ * accepted for backward compatibility but has no effect — all writes are direct.
+ *
+ * In serverless (Lambda/Edge) environments a module-level setTimeout cannot
+ * reliably flush before the process is frozen, so queue-based batching has been
+ * removed in favour of direct writes.
+ */
+export async function trackEvent(
+  data: {
+    event: string;
+    type: AnalyticsEventType;
+    page?: string;
+    source?: string;
+    count?: number;
+    country?: string;
+    metadata?: Record<string, unknown>;
+  },
+  opts?: { immediate?: boolean },
+): Promise<string | null> {
+  return writeEventToNotion(data);
+}
+
 /**
  * Convenience: track a form submission event.
  */
@@ -135,12 +170,15 @@ export async function trackFormSubmission(
   formName: string,
   source?: string,
 ): Promise<string | null> {
-  return trackEvent({
-    event: `Form: ${formName}`,
-    type: "form_submit",
-    page: `/contact`,
-    source,
-  });
+  return trackEvent(
+    {
+      event: `Form: ${formName}`,
+      type: "form_submit",
+      page: `/contact`,
+      source,
+    },
+    { immediate: true },
+  );
 }
 
 /**
@@ -150,12 +188,15 @@ export async function trackBlogView(
   slug: string,
   source?: string,
 ): Promise<string | null> {
-  return trackEvent({
-    event: `Blog: ${slug}`,
-    type: "blog_view",
-    page: `/blog/${slug}`,
-    source,
-  });
+  return trackEvent(
+    {
+      event: `Blog: ${slug}`,
+      type: EVENT_BLOG_VIEW,
+      page: `/blog/${slug}`,
+      source,
+    },
+    { immediate: true },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -169,7 +210,7 @@ export async function getRecentEvents(
   type?: AnalyticsEventType,
   limit = 50,
 ): Promise<AnalyticsEvent[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
+  if (!(await isAnalyticsConfigured()))
     return [];
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
@@ -200,7 +241,7 @@ export async function getEventsByDateRange(
   startDate: string,
   endDate: string,
 ): Promise<AnalyticsEvent[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
+  if (!(await isAnalyticsConfigured()))
     return [];
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
@@ -285,7 +326,7 @@ export async function getAnalyticsSummary(days = 7): Promise<AnalyticsSummary> {
 export async function archiveOldEvents(
   daysToKeep = 30,
 ): Promise<{ archived: number; errors: number }> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID")))
+  if (!(await isAnalyticsConfigured()))
     return { archived: 0, errors: 0 };
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
@@ -294,7 +335,7 @@ export async function archiveOldEvents(
   const cutoffStr = cutoff.toISOString().split("T")[0];
 
   // Only archive high-volume granular events
-  const archivableTypes = ["page_view", "blog_view", "doc_view"];
+  const archivableTypes = [EVENT_PAGE_VIEW, EVENT_BLOG_VIEW, "doc_view"];
 
   let archived = 0;
   let errors = 0;
@@ -351,10 +392,13 @@ export async function createWeeklyRollup(): Promise<string | null> {
     topSources: summary.topSources.slice(0, 5),
   };
 
-  return trackEvent({
-    event: `Weekly Rollup — ${new Date().toISOString().split("T")[0]}`,
-    type: "weekly_rollup",
-    count: summary.totalEvents,
-    metadata,
-  });
+  return trackEvent(
+    {
+      event: `Weekly Rollup — ${new Date().toISOString().split("T")[0]}`,
+      type: "weekly_rollup",
+      count: summary.totalEvents,
+      metadata,
+    },
+    { immediate: true },
+  );
 }

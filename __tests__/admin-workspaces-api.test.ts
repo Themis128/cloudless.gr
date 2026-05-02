@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { Workspace } from "@/app/api/admin/workspaces/route";
+const WORKSPACES_URL = "http://localhost/api/admin/workspaces";
+const ACME_WORKSPACE = "Acme Workspace";
 
 // ---------------------------------------------------------------------------
 // Hoist mocks
@@ -56,7 +58,7 @@ function adminReq(url: string, init?: { method?: string; body?: string }): NextR
 
 const MOCK_WS: Workspace = {
   id: "ws-uuid-1234",
-  name: "Acme Workspace",
+  name: ACME_WORKSPACE,
   slug: "acme-workspace",
   description: "Main client workspace",
   adminEmails: ["admin@acme.com"],
@@ -74,20 +76,20 @@ describe("GET /api/admin/workspaces", () => {
 
   it("returns 401 without token", async () => {
     const { GET } = await import("@/app/api/admin/workspaces/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/workspaces"));
+    const res = await GET(new NextRequest(WORKSPACES_URL));
     expect(res.status).toBe(401);
   });
 
   it("returns workspace list for admin", async () => {
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([MOCK_WS]) } });
     const { GET } = await import("@/app/api/admin/workspaces/route");
-    const res = await GET(adminReq("http://localhost/api/admin/workspaces"));
+    const res = await GET(adminReq(WORKSPACES_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.workspaces)).toBe(true);
     expect(data.workspaces[0]).toMatchObject({
       id: "ws-uuid-1234",
-      name: "Acme Workspace",
+      name: ACME_WORKSPACE,
       slug: "acme-workspace",
     });
   });
@@ -95,7 +97,7 @@ describe("GET /api/admin/workspaces", () => {
   it("returns empty array when SSM throws", async () => {
     mockSSMSend.mockRejectedValue(new Error("Not found"));
     const { GET } = await import("@/app/api/admin/workspaces/route");
-    const res = await GET(adminReq("http://localhost/api/admin/workspaces"));
+    const res = await GET(adminReq(WORKSPACES_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.workspaces).toEqual([]);
@@ -115,7 +117,7 @@ describe("POST /api/admin/workspaces", () => {
 
   it("returns 400 when name is missing", async () => {
     const { POST } = await import("@/app/api/admin/workspaces/route");
-    const res = await POST(adminReq("http://localhost/api/admin/workspaces", {
+    const res = await POST(adminReq(WORKSPACES_URL, {
       method: "POST",
       body: JSON.stringify({ description: "test" }),
     }));
@@ -127,7 +129,7 @@ describe("POST /api/admin/workspaces", () => {
       .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } })
       .mockResolvedValue({});
     const { POST } = await import("@/app/api/admin/workspaces/route");
-    const res = await POST(adminReq("http://localhost/api/admin/workspaces", {
+    const res = await POST(adminReq(WORKSPACES_URL, {
       method: "POST",
       body: JSON.stringify({
         name: "My New Client",
@@ -149,9 +151,9 @@ describe("POST /api/admin/workspaces", () => {
       .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([MOCK_WS]) } })
       .mockResolvedValue({});
     const { POST } = await import("@/app/api/admin/workspaces/route");
-    const res = await POST(adminReq("http://localhost/api/admin/workspaces", {
+    const res = await POST(adminReq(WORKSPACES_URL, {
       method: "POST",
-      body: JSON.stringify({ name: "Acme Workspace" }), // same slug as MOCK_WS
+      body: JSON.stringify({ name: ACME_WORKSPACE }), // same slug as MOCK_WS
     }));
     expect(res.status).toBe(409);
   });
@@ -170,7 +172,7 @@ describe("PATCH /api/admin/workspaces", () => {
 
   it("returns 400 when id is missing", async () => {
     const { PATCH } = await import("@/app/api/admin/workspaces/route");
-    const res = await PATCH(adminReq("http://localhost/api/admin/workspaces", {
+    const res = await PATCH(adminReq(WORKSPACES_URL, {
       method: "PATCH",
       body: JSON.stringify({ name: "New Name" }),
     }));
@@ -179,7 +181,7 @@ describe("PATCH /api/admin/workspaces", () => {
 
   it("returns 404 when workspace not found", async () => {
     const { PATCH } = await import("@/app/api/admin/workspaces/route");
-    const res = await PATCH(adminReq("http://localhost/api/admin/workspaces", {
+    const res = await PATCH(adminReq(WORKSPACES_URL, {
       method: "PATCH",
       body: JSON.stringify({ id: "does-not-exist", name: "X" }),
     }));
@@ -191,7 +193,7 @@ describe("PATCH /api/admin/workspaces", () => {
       .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([MOCK_WS]) } })
       .mockResolvedValue({});
     const { PATCH } = await import("@/app/api/admin/workspaces/route");
-    const res = await PATCH(adminReq("http://localhost/api/admin/workspaces", {
+    const res = await PATCH(adminReq(WORKSPACES_URL, {
       method: "PATCH",
       body: JSON.stringify({ id: MOCK_WS.id, name: "Acme Renamed" }),
     }));
@@ -215,7 +217,7 @@ describe("DELETE /api/admin/workspaces", () => {
 
   it("returns 400 when id is missing", async () => {
     const { DELETE } = await import("@/app/api/admin/workspaces/route");
-    const res = await DELETE(adminReq("http://localhost/api/admin/workspaces", {
+    const res = await DELETE(adminReq(WORKSPACES_URL, {
       method: "DELETE",
       body: JSON.stringify({}),
     }));
@@ -227,7 +229,7 @@ describe("DELETE /api/admin/workspaces", () => {
       .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([MOCK_WS]) } })
       .mockResolvedValue({});
     const { DELETE } = await import("@/app/api/admin/workspaces/route");
-    const res = await DELETE(adminReq("http://localhost/api/admin/workspaces", {
+    const res = await DELETE(adminReq(WORKSPACES_URL, {
       method: "DELETE",
       body: JSON.stringify({ id: MOCK_WS.id }),
     }));

@@ -21,11 +21,18 @@
 import {
   notionFetch,
   notionFetchAll,
-  notionListAll,
+  fetchBlocksDeep,
   blocksToHtml,
+  type TocEntry,
 } from "@/lib/notion";
 import { getIntegrationsAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
+
+const DOCS_PUBLISHED_FILTER = { property: "Published", checkbox: { equals: true } };
+const DOCS_SORT = [
+  { property: "Category", direction: "ascending" },
+  { property: "Order", direction: "ascending" },
+];
 
 // ---------------------------------------------------------------------------
 // Types
@@ -86,10 +93,7 @@ export async function getAllDocs(): Promise<DocRecord[]> {
     const results = await notionFetchAll<unknown>(
       `/databases/${NOTION_DOCS_DB_ID}/query`,
       {
-        sorts: [
-          { property: "Category", direction: "ascending" },
-          { property: "Order", direction: "ascending" },
-        ],
+        sorts: DOCS_SORT,
       },
     );
     /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -114,11 +118,8 @@ export async function getDocs(): Promise<DocRecord[]> {
       const results = await notionFetchAll<unknown>(
         `/databases/${NOTION_DOCS_DB_ID}/query`,
         {
-          filter: { property: "Published", checkbox: { equals: true } },
-          sorts: [
-            { property: "Category", direction: "ascending" },
-            { property: "Order", direction: "ascending" },
-          ],
+          filter: DOCS_PUBLISHED_FILTER,
+          sorts: DOCS_SORT,
         },
       );
 
@@ -149,7 +150,7 @@ export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
           filter: {
             and: [
               { property: "Slug", rich_text: { equals: slug } },
-              { property: "Published", checkbox: { equals: true } },
+              DOCS_PUBLISHED_FILTER,
             ],
           },
           page_size: 1,
@@ -184,7 +185,7 @@ export async function getDocContent(
     const page = await notionFetch<unknown>(`/pages/${pageId}`);
 
     // Fetch all blocks (handles pagination via GET)
-    const blocks = await notionListAll<unknown>(`/blocks/${pageId}/children`);
+    const blocks = await fetchBlocksDeep(pageId);
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const record = mapPage(page as any);
@@ -258,11 +259,8 @@ export async function getWikiDocs(): Promise<WikiDocRecord[]> {
     const results = await notionFetchAll<unknown>(
       `/databases/${NOTION_DOCS_DB_ID}/query`,
       {
-        filter: { property: "Published", checkbox: { equals: true } },
-        sorts: [
-          { property: "Category", direction: "ascending" },
-          { property: "Order", direction: "ascending" },
-        ],
+        filter: DOCS_PUBLISHED_FILTER,
+        sorts: DOCS_SORT,
       },
     );
 
@@ -318,13 +316,13 @@ export async function searchDocs(query: string): Promise<DocRecord[]> {
  */
 export async function getDocContentWithToc(
   pageId: string,
-): Promise<(DocContent & { toc: import("@/lib/notion").TocEntry[] }) | null> {
+): Promise<(DocContent & { toc: TocEntry[] }) | null> {
   const { NOTION_API_KEY } = await getIntegrationsAsync();
   if (!NOTION_API_KEY) return null;
 
   try {
     const page = await notionFetch<unknown>(`/pages/${pageId}`);
-    const blocks = await notionListAll<unknown>(`/blocks/${pageId}/children`);
+    const blocks = await fetchBlocksDeep(pageId);
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const record = mapPage(page as any);

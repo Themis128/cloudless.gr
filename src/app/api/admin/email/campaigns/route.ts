@@ -19,7 +19,9 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
+  const DEFAULT_LIMIT = 20;
+  const MAX_LIMIT = 100;
+  const limit = Math.max(1, Math.min(Number.parseInt(searchParams.get("limit") ?? String(DEFAULT_LIMIT), 10), MAX_LIMIT));
   const campaigns = await listCampaigns(limit);
   return NextResponse.json({
     campaigns,

@@ -3,15 +3,14 @@ import * as hubspot from '../src/lib/hubspot';
 import { resetIntegrationCache } from '../src/lib/integrations';
 
 const mockFetch = vi.fn();
-global.fetch = mockFetch as unknown as typeof fetch;
+globalThis.fetch = mockFetch as unknown as typeof fetch;
 
 describe('hubspot.ts', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     resetIntegrationCache();
     mockFetch.mockReset();
-    process.env.HUBSPOT_PRIVATE_APP_TOKEN = 'test-token';
-    process.env.HUBSPOT_ACCESS_TOKEN = '';
+    process.env.HUBSPOT_API_KEY = 'test-token';
   });
 
   it('should upsert a contact (create)', async () => {
@@ -46,6 +45,27 @@ describe('hubspot.ts', () => {
     const contacts = await hubspot.listContacts(1);
     expect((contacts[0] as any).properties.email).toBe('a@b.com');
     expect((contacts[0] as any).properties.firstname).toBe('A');
+  });
+
+  it('listContacts clamps limit to 100 max', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: [] }) });
+    await hubspot.listContacts(999);
+    const url: string = mockFetch.mock.calls[0][0];
+    expect(url).toContain('limit=100');
+  });
+
+  it('listContacts clamps limit to 1 min', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: [] }) });
+    await hubspot.listContacts(-5);
+    const url: string = mockFetch.mock.calls[0][0];
+    expect(url).toContain('limit=1');
+  });
+
+  it('listContacts uses default 10 for NaN', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: [] }) });
+    await hubspot.listContacts(Number.NaN);
+    const url: string = mockFetch.mock.calls[0][0];
+    expect(url).toContain('limit=10');
   });
 
   it('should handle API errors gracefully', async () => {
