@@ -95,61 +95,134 @@ export default {
       const apexCfDomain = "d3k7muo3c6lw6s.cloudfront.net";
       const wwwCfDomain = "dgrxxatzrgxfi.cloudfront.net";
 
-      // Apex — PRIMARY (CloudFront alias)
-      new aws.route53.Record("ApexPrimary", {
-        zoneId,
-        name: "cloudless.gr",
-        type: "A",
-        setIdentifier: "primary",
-        failoverRoutingPolicies: [{ type: "PRIMARY" }],
-        healthCheckId,
-        aliases: [
-          {
-            name: apexCfDomain,
-            zoneId: cfZoneId,
-            evaluateTargetHealth: false,
-          },
-        ],
-      });
+      // IMPORTANT — pre-deploy migration required.
+      // The Route 53 records below are *adopted*, not *created*, on first
+      // deploy. Before merging this PR + running `sst deploy`, the operator
+      // must run `scripts/migrate-route53-failover.sh` to atomically convert
+      // the four pre-existing simple alias records (apex+www × A+AAAA) into
+      // the six failover records declared here. The `import:` resource option
+      // tells Pulumi to read state from R53 instead of creating duplicates
+      // (which would fail with "RRSet already exists"). Pulumi import ID
+      // format for Route 53 records:  ZONEID_NAME_TYPE_SETIDENTIFIER
+      // (underscore-separated).
+      //
+      // Pi has no IPv6, so AAAA SECONDARY is intentionally omitted. While the
+      // primary is healthy, AAAA resolves normally; if the primary fails,
+      // dual-stack clients fall back to v4 via the A SECONDARY.
 
-      // Apex — SECONDARY (Pi A record)
-      new aws.route53.Record("ApexSecondary", {
-        zoneId,
-        name: "cloudless.gr",
-        type: "A",
-        setIdentifier: "secondary",
-        failoverRoutingPolicies: [{ type: "SECONDARY" }],
-        ttl: 60,
-        records: [piWanIp],
-      });
+      // Apex — PRIMARY A (CloudFront alias)
+      new aws.route53.Record(
+        "ApexPrimary",
+        {
+          zoneId,
+          name: "cloudless.gr",
+          type: "A",
+          setIdentifier: "primary",
+          failoverRoutingPolicies: [{ type: "PRIMARY" }],
+          healthCheckId,
+          aliases: [
+            {
+              name: apexCfDomain,
+              zoneId: cfZoneId,
+              evaluateTargetHealth: false,
+            },
+          ],
+        },
+        { import: `${zoneId}_cloudless.gr_A_primary` },
+      );
 
-      // www — PRIMARY (CloudFront alias)
-      new aws.route53.Record("WwwPrimary", {
-        zoneId,
-        name: "www.cloudless.gr",
-        type: "A",
-        setIdentifier: "primary",
-        failoverRoutingPolicies: [{ type: "PRIMARY" }],
-        healthCheckId,
-        aliases: [
-          {
-            name: wwwCfDomain,
-            zoneId: cfZoneId,
-            evaluateTargetHealth: false,
-          },
-        ],
-      });
+      // Apex — SECONDARY A (Pi A record)
+      new aws.route53.Record(
+        "ApexSecondary",
+        {
+          zoneId,
+          name: "cloudless.gr",
+          type: "A",
+          setIdentifier: "secondary",
+          failoverRoutingPolicies: [{ type: "SECONDARY" }],
+          ttl: 60,
+          records: [piWanIp],
+        },
+        { import: `${zoneId}_cloudless.gr_A_secondary` },
+      );
 
-      // www — SECONDARY (Pi A record)
-      new aws.route53.Record("WwwSecondary", {
-        zoneId,
-        name: "www.cloudless.gr",
-        type: "A",
-        setIdentifier: "secondary",
-        failoverRoutingPolicies: [{ type: "SECONDARY" }],
-        ttl: 60,
-        records: [piWanIp],
-      });
+      // Apex — PRIMARY AAAA (CloudFront alias). No SECONDARY — Pi has no v6.
+      new aws.route53.Record(
+        "ApexPrimaryAAAA",
+        {
+          zoneId,
+          name: "cloudless.gr",
+          type: "AAAA",
+          setIdentifier: "primary",
+          failoverRoutingPolicies: [{ type: "PRIMARY" }],
+          healthCheckId,
+          aliases: [
+            {
+              name: apexCfDomain,
+              zoneId: cfZoneId,
+              evaluateTargetHealth: false,
+            },
+          ],
+        },
+        { import: `${zoneId}_cloudless.gr_AAAA_primary` },
+      );
+
+      // www — PRIMARY A (CloudFront alias)
+      new aws.route53.Record(
+        "WwwPrimary",
+        {
+          zoneId,
+          name: "www.cloudless.gr",
+          type: "A",
+          setIdentifier: "primary",
+          failoverRoutingPolicies: [{ type: "PRIMARY" }],
+          healthCheckId,
+          aliases: [
+            {
+              name: wwwCfDomain,
+              zoneId: cfZoneId,
+              evaluateTargetHealth: false,
+            },
+          ],
+        },
+        { import: `${zoneId}_www.cloudless.gr_A_primary` },
+      );
+
+      // www — SECONDARY A (Pi A record)
+      new aws.route53.Record(
+        "WwwSecondary",
+        {
+          zoneId,
+          name: "www.cloudless.gr",
+          type: "A",
+          setIdentifier: "secondary",
+          failoverRoutingPolicies: [{ type: "SECONDARY" }],
+          ttl: 60,
+          records: [piWanIp],
+        },
+        { import: `${zoneId}_www.cloudless.gr_A_secondary` },
+      );
+
+      // www — PRIMARY AAAA (CloudFront alias). No SECONDARY — Pi has no v6.
+      new aws.route53.Record(
+        "WwwPrimaryAAAA",
+        {
+          zoneId,
+          name: "www.cloudless.gr",
+          type: "AAAA",
+          setIdentifier: "primary",
+          failoverRoutingPolicies: [{ type: "PRIMARY" }],
+          healthCheckId,
+          aliases: [
+            {
+              name: wwwCfDomain,
+              zoneId: cfZoneId,
+              evaluateTargetHealth: false,
+            },
+          ],
+        },
+        { import: `${zoneId}_www.cloudless.gr_AAAA_primary` },
+      );
     }
 
     return {
