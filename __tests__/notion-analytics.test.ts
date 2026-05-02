@@ -366,8 +366,11 @@ describe("notion-analytics.ts", () => {
       );
 
       // Verify query filters include correct types
+      type QueryArgs = {
+        filter: { and: Array<{ select: { equals: string } }> };
+      };
       const queryTypes = mockNotionFetchAll.mock.calls.map(
-        (c: any) => c[1].filter.and[0].select.equals,
+        (c) => (c[1] as QueryArgs).filter.and[0].select.equals,
       );
       expect(queryTypes).toEqual([EVENT_PAGE_VIEW, "blog_view", "doc_view"]);
     });

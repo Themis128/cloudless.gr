@@ -97,10 +97,6 @@ const GSC_MISSING_CONFIG = {
   GOOGLE_PRIVATE_KEY: "",
 };
 
-const HUBSPOT_MISSING_CONFIG = {
-  ...GSC_CONFIGURED_CONFIG,
-  HUBSPOT_API_KEY: "",
-};
 
 // Set default getConfig() return value (overridden per-test where needed).
 mockGetConfig.mockResolvedValue(GSC_CONFIGURED_CONFIG);
