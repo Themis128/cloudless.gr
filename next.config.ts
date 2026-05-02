@@ -24,6 +24,16 @@ const nextConfig: NextConfig = {
   },
 };
 
+// Bypass Turbopack dev-mode bug where [locale] catches special metadata routes
+// in the App Router before next/manifest.ts can handle them.
+nextConfig.rewrites = async () => ({
+  beforeFiles: [
+    { source: "/manifest.webmanifest", destination: "/api/pwa-manifest" },
+  ],
+  afterFiles: [],
+  fallback: [],
+});
+
 const configured = withNextIntl(nextConfig) as NextConfig & {
   experimental?: Record<string, unknown>;
 };
