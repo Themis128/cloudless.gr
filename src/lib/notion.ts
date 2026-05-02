@@ -40,6 +40,10 @@ export async function notionFetch<T = unknown>(
   init?: RequestInit,
 ): Promise<T> {
   const headers = await notionHeaders();
+  // Validate the path only contains safe characters (prevents injection into the URL)
+  if (!/^\/[a-zA-Z0-9/_\-?&=%+.]+$/.test(path)) {
+    throw new Error(`[Notion] Path contains invalid characters: ${path}`);
+  }
   const url = `${NOTION_API}${path}`;
   // Validate the constructed URL stays on the Notion API origin (SSRF guard)
   if (new URL(url).origin !== new URL(NOTION_API).origin) {
@@ -49,35 +53,32 @@ export async function notionFetch<T = unknown>(
     ...init,
     headers: { ...headers, ...(init?.headers ?? {}) },
   };
-  return notionFetchAttempt<T>(url, path, reqInit, 0);
-}
 
-async function notionFetchAttempt<T>(
-  url: string,
-  path: string,
-  reqInit: RequestInit,
-  attempt: number,
-): Promise<T> {
+  // Retry helper as closure so `url` is captured after validation (CodeQL SSRF guard)
   const MAX_RETRIES = 3;
-  const res = await fetch(url, reqInit);
+  async function attempt(n: number): Promise<T> {
+    const res = await fetch(url, reqInit);
 
-  if (res.status === 429 && attempt < MAX_RETRIES) {
-    const retryAfterRaw = parseInt(res.headers.get("Retry-After") ?? "1", 10);
-    await sleep((isNaN(retryAfterRaw) ? 1 : retryAfterRaw) * 1000);
-    return notionFetchAttempt<T>(url, path, reqInit, attempt + 1);
+    if (res.status === 429 && n < MAX_RETRIES) {
+      const retryAfterRaw = parseInt(res.headers.get("Retry-After") ?? "1", 10);
+      await sleep((isNaN(retryAfterRaw) ? 1 : retryAfterRaw) * 1000);
+      return attempt(n + 1);
+    }
+
+    if (res.status >= 500 && n < MAX_RETRIES) {
+      await sleep(2 ** n * 500);
+      return attempt(n + 1);
+    }
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Notion API error ${res.status} on ${path}: ${body}`);
+    }
+
+    return res.json() as Promise<T>;
   }
 
-  if (res.status >= 500 && attempt < MAX_RETRIES) {
-    await sleep(2 ** attempt * 500);
-    return notionFetchAttempt<T>(url, path, reqInit, attempt + 1);
-  }
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Notion API error ${res.status} on ${path}: ${body}`);
-  }
-
-  return res.json() as Promise<T>;
+  return attempt(0);
 }
 
 // ---------------------------------------------------------------------------
