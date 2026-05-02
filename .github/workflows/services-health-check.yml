@@ -1,0 +1,70 @@
+name: External Services Health Check
+
+on:
+  schedule:
+    # Every day at 05:00 UTC (07:00 Athens time) — runs before all sync jobs
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: services-health-check
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  health-check:
+    name: Check all external service integrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Do not fail the workflow on error — always report results to Slack
+    continue-on-error: true
+
+    env:
+      NODE_ENV: production
+      NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+      HUBSPOT_API_KEY: ${{ secrets.HUBSPOT_API_KEY }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
+      GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+      ACTIVECAMPAIGN_API_URL: ${{ secrets.ACTIVECAMPAIGN_API_URL }}
+      ACTIVECAMPAIGN_API_TOKEN: ${{ secrets.ACTIVECAMPAIGN_API_TOKEN }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run services health check
+        id: check
+        run: pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/services-health-check.ts
+        continue-on-error: true
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### 🩺 External Services Health Check" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Key | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-----|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Result | ${{ steps.check.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Run at | $(date -u +%Y-%m-%dT%H:%M:%SZ) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "See the run logs for per-service latency and status details." >> "$GITHUB_STEP_SUMMARY"
