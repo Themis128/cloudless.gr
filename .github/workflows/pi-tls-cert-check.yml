@@ -20,11 +20,14 @@ name: Pi TLS Cert Check
 # with SNI=cloudless.gr gives us "the failover endpoint is healthy" on
 # every run, not just during real outages.
 #
-# Schedule: daily at 06:30 UTC. Also runnable on demand.
+# Schedule: every 6h on the half-hour (00:30, 06:30, 12:30, 18:30 UTC).
+# Daily was too sparse — detection lag of ~24h means a SECONDARY rot
+# could be invisible right up until a real PRIMARY failure forces
+# failover. Quartering it to ~6h costs ~4 runner-minutes/day.
 
 on:
   schedule:
-    - cron: '30 6 * * *'
+    - cron: '30 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -42,7 +45,7 @@ jobs:
   probe:
     name: Probe SECONDARY failover
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 3
     steps:
       - name: TLS handshake + cert validity
         run: |
