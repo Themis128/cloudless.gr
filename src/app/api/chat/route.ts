@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getAnthropicApiKey, getAnthropicChatModel } from "@/lib/anthropic";
 import { escapeHtml } from "@/lib/escape-html";
+import { CHAT_TOOLS, runTool } from "@/lib/chat-tools";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,69 +23,56 @@ Key facts:
 - Based in Greece, serves EU and international clients
 - Contact: via the Contact page or book a free audit
 
-Keep answers concise (2–4 sentences max). If someone asks about pricing, give ranges and suggest booking a free audit. Never make up specific technical details not listed above. If you don't know something, say so and suggest they book a call.`;
+You have two tools:
+- lookup_product(query): search the storefront for a service or product. Use this when the visitor asks about a specific service, package, or pricing.
+- check_calendar_availability(days_ahead): look up open consultation slots. Use this when the visitor asks to book or see availability.
+
+Use tools when their output would be more accurate than your memory (specific prices, real availability). Don't call a tool just to confirm what you already know. After a tool returns, summarize the result in plain language and include any URLs the tool gave you so the visitor can click through.
+
+Keep answers concise (2–4 sentences max). If someone asks about pricing not surfaced by lookup_product, give the ranges from "Services offered" above and suggest booking a free audit. Never make up specific technical details. If you don't know something, say so and suggest they book a call.`;
 
 const MAX_USER_MESSAGE = 500;
 const MAX_TURNS = 10;
-const MAX_TOKENS = 300;
-const ANTHROPIC_TIMEOUT_MS = 15_000;
+const MAX_TOKENS = 600;
+const MAX_TOOL_ITERATIONS = 4;
+const ANTHROPIC_TIMEOUT_MS = 20_000;
 const ROLE_ASSISTANT = "assistant";
-const SSE_DATA_PREFIX = "data: ";
 
 const encoder = new TextEncoder();
 
-function sanitizeDeltaText(input: string | undefined): string {
-  return escapeHtml(input ?? "");
-}
+// ---------------------------------------------------------------------------
+// Anthropic message-shape types — narrow versions of the SDK's Message type.
+// We only model what we read.
+// ---------------------------------------------------------------------------
 
-type ParsedSseEvent = { kind: "text"; text: string } | { kind: "done" } | null;
-
-function parseSseEvent(data: string): ParsedSseEvent {
-  try {
-    const parsed = JSON.parse(data) as {
-      type?: string;
-      delta?: { type?: string; text?: string };
+type ContentBlock =
+  | { type: "text"; text: string }
+  | {
+      type: "tool_use";
+      id: string;
+      name: string;
+      input: unknown;
     };
 
-    if (
-      parsed.type === "content_block_delta" &&
-      parsed.delta?.type === "text_delta"
-    ) {
-      return { kind: "text", text: sanitizeDeltaText(parsed.delta.text) };
-    }
+type ToolResultBlock = {
+  type: "tool_result";
+  tool_use_id: string;
+  content: string;
+};
 
-    if (parsed.type === "message_stop") {
-      return { kind: "done" };
-    }
-
-    return null;
-  } catch {
-    // skip malformed SSE lines
-    return null;
-  }
+interface AnthropicResponse {
+  stop_reason?: string;
+  content?: ContentBlock[];
 }
 
-function forwardSseLine(
-  line: string,
-  controller: ReadableStreamDefaultController,
-): void {
-  if (!line.startsWith(SSE_DATA_PREFIX)) return;
-
-  const data = line.slice(SSE_DATA_PREFIX.length).trim();
-  if (data === "" || data === "[DONE]") return;
-
-  const event = parseSseEvent(data);
-  if (!event) return;
-
-  if (event.kind === "text") {
-    controller.enqueue(
-      encoder.encode(`data: ${JSON.stringify({ text: event.text })}\n\n`),
-    );
-    return;
-  }
-
-  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string | ContentBlock[] | ToolResultBlock[];
 }
+
+// ---------------------------------------------------------------------------
+// Input parsing
+// ---------------------------------------------------------------------------
 
 interface RawMessage {
   role: string;
@@ -123,6 +111,123 @@ function parseMessages(
   return result;
 }
 
+// ---------------------------------------------------------------------------
+// Tool-use loop — non-streaming, calls Anthropic until stop_reason !== tool_use
+// ---------------------------------------------------------------------------
+
+async function callAnthropic(
+  apiKey: string,
+  model: string,
+  messages: ConversationMessage[],
+): Promise<AnthropicResponse> {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: MAX_TOKENS,
+      system: SYSTEM_PROMPT,
+      tools: CHAT_TOOLS,
+      messages,
+    }),
+    signal: AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    console.error(
+      `[chat] anthropic returned ${res.status}: ${detail.slice(0, 500)}`,
+    );
+    throw new Error(`ANTHROPIC_${res.status}`);
+  }
+
+  return (await res.json()) as AnthropicResponse;
+}
+
+async function executeToolBlocks(
+  blocks: ContentBlock[],
+): Promise<ToolResultBlock[]> {
+  const toolUses = blocks.filter(
+    (b): b is Extract<ContentBlock, { type: "tool_use" }> =>
+      b.type === "tool_use",
+  );
+  return Promise.all(
+    toolUses.map(async (b) => ({
+      type: "tool_result" as const,
+      tool_use_id: b.id,
+      content: await runTool(b.name, b.input),
+    })),
+  );
+}
+
+function extractFinalText(blocks: ContentBlock[] | undefined): string {
+  if (!blocks) return "";
+  return blocks
+    .filter((b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text")
+    .map((b) => b.text)
+    .join("");
+}
+
+async function runChatLoop(
+  apiKey: string,
+  model: string,
+  initialMessages: { role: "user" | "assistant"; content: string }[],
+): Promise<string> {
+  const messages: ConversationMessage[] = [...initialMessages];
+  for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+    const response = await callAnthropic(apiKey, model, messages);
+    const blocks = response.content ?? [];
+
+    if (response.stop_reason !== "tool_use") {
+      return extractFinalText(blocks);
+    }
+
+    messages.push({ role: "assistant", content: blocks });
+    const toolResults = await executeToolBlocks(blocks);
+    messages.push({ role: "user", content: toolResults });
+  }
+
+  // Hit iteration cap without a final answer.
+  console.warn("[chat] hit MAX_TOOL_ITERATIONS without a final response");
+  return "I'm having trouble pulling that together right now. Could you share a bit more detail or use the Contact page to reach Themis directly?";
+}
+
+// ---------------------------------------------------------------------------
+// SSE response helpers — match the existing client contract
+// ---------------------------------------------------------------------------
+
+function chunkText(text: string, size = 80): string[] {
+  if (text.length <= size) return [text];
+  const chunks: string[] = [];
+  for (let i = 0; i < text.length; i += size) {
+    chunks.push(text.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function sseStreamFromText(text: string): ReadableStream<Uint8Array> {
+  const safe = escapeHtml(text);
+  return new ReadableStream({
+    start(controller) {
+      for (const piece of chunkText(safe)) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ text: piece })}\n\n`),
+        );
+      }
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Route handler
+// ---------------------------------------------------------------------------
+
 export async function POST(request: NextRequest) {
   let messages: { role: "user" | "assistant"; content: string }[];
   try {
@@ -140,81 +245,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const chatModel = await getAnthropicChatModel();
+  const model = await getAnthropicChatModel();
 
-  let anthropicRes: Response;
+  let finalText: string;
   try {
-    anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: chatModel,
-        max_tokens: MAX_TOKENS,
-        system: SYSTEM_PROMPT,
-        messages,
-        stream: true,
-      }),
-      signal: AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS),
-    });
+    finalText = await runChatLoop(apiKey, model, messages);
   } catch (err) {
-    console.error("[chat] anthropic fetch failed:", err);
+    console.error("[chat] tool-use loop failed:", err);
     return Response.json({ error: "AI service unavailable." }, { status: 502 });
   }
 
-  if (!anthropicRes.ok || !anthropicRes.body) {
-    const status = anthropicRes.status;
-    const detail = await anthropicRes.text().catch(() => "");
-    console.error(
-      `[chat] anthropic returned ${status}: ${detail.slice(0, 500)}`,
-    );
-    return Response.json({ error: "AI service unavailable." }, { status: 502 });
-  }
-
-  const upstream = anthropicRes.body;
-
-  // Buffer partial SSE lines across TCP chunks. `reader.read()` returns
-  // whatever bytes are currently available, which can split a `data: ...`
-  // line in two and lose tokens if we don't carry the tail to the next chunk.
-  const stream = new ReadableStream({
-    async start(controller) {
-      const reader = upstream.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            buffer += decoder.decode();
-            if (buffer.length > 0) forwardSseLine(buffer, controller);
-            break;
-          }
-          buffer += decoder.decode(value, { stream: true });
-          let newlineIdx = buffer.indexOf("\n");
-          while (newlineIdx !== -1) {
-            const line = buffer.slice(0, newlineIdx);
-            buffer = buffer.slice(newlineIdx + 1);
-            forwardSseLine(line, controller);
-            newlineIdx = buffer.indexOf("\n");
-          }
-        }
-      } catch (err) {
-        console.error("[chat] stream relay failed:", err);
-      } finally {
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
+  return new Response(sseStreamFromText(finalText), {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
-      // Disable proxy buffering so SSE deltas reach the browser immediately.
       "X-Accel-Buffering": "no",
     },
   });
