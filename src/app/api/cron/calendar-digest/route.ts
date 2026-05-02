@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCalendarItems, PLATFORM_LABELS } from "@/lib/content-calendar";
 import { SlackClient } from "@/lib/slack-notify";
+import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 
 const STATUS_EMOJI: Record<string, string> = {
   draft: ":pencil:",
@@ -9,15 +10,9 @@ const STATUS_EMOJI: Record<string, string> = {
   cancelled: ":x:",
 };
 
-function cronAuth(req: NextRequest): boolean {
-  return (
-    req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`
-  );
-}
-
 export async function GET(request: NextRequest) {
-  if (!cronAuth(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorized();
   }
 
   const today = new Date().toISOString().slice(0, 10);
