@@ -11,7 +11,7 @@ function okFetch(body: object = { ok: true }): FetchMock {
   return vi.fn().mockResolvedValue(
     new Response(JSON.stringify(body), {
       status: 200,
-      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
+      headers: { [HEADER_CONTENT_TYPE]: CONTENT_TYPE_JSON },
     }),
   );
 }
@@ -28,7 +28,7 @@ function slackErrorFetch(error: string): FetchMock {
   return vi.fn().mockResolvedValue(
     new Response(JSON.stringify({ ok: false, error }), {
       status: 200,
-      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
+      headers: { [HEADER_CONTENT_TYPE]: CONTENT_TYPE_JSON },
     }),
   );
 }
@@ -125,7 +125,7 @@ describe("SlackClient", () => {
         .mockResolvedValue(
           new Response(JSON.stringify({ ok: true }), {
             status: 200,
-            headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
+            headers: { [HEADER_CONTENT_TYPE]: CONTENT_TYPE_JSON },
           }),
         );
       vi.stubGlobal("fetch", mockFetch);

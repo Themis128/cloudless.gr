@@ -43,8 +43,9 @@ describe('hubspot.ts', () => {
       { id: 'cid', properties: { email: 'a@b.com', firstname: 'A', lastname: 'B', company: 'C' } }
     ] }) });
     const contacts = await hubspot.listContacts(1);
-    expect((contacts[0] as any).properties.email).toBe('a@b.com');
-    expect((contacts[0] as any).properties.firstname).toBe('A');
+    const first = contacts[0] as { properties: Record<string, string> };
+    expect(first.properties.email).toBe('a@b.com');
+    expect(first.properties.firstname).toBe('A');
   });
 
   it('listContacts clamps limit to 100 max', async () => {
