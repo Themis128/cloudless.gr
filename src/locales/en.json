@@ -411,5 +411,10 @@
     "marketingDesc": "Used to deliver relevant ads and track campaign effectiveness across platforms.",
     "savePreferences": "Save preferences",
     "cancel": "Cancel"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The page you're looking for doesn't exist or has been moved.",
+    "cta": "Back to Home"
   }
 }

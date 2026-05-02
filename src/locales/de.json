@@ -119,7 +119,7 @@
     "title": "Lernen Sie den",
     "titleHighlight": "Gründer kennen",
     "name": "Themistoklis Baltzakis",
-    "role": "Cloud Architect & Growth Engineer",
+    "role": "Cloud-Architekt & Growth Engineer",
     "bio": "Zertifizierter Cloud Architect mit praktischer Erfahrung in AWS, serverlosen Architekturen, Datenanalyse und KI-gesteuertem Marketing. Ich helfe Startups und KMUs, Infrastrukturen aufzubauen, die skalieren — ohne Enterprise-Overhead."
   },
   "cta": {
@@ -411,5 +411,10 @@
     "marketingDesc": "Zur Anzeige relevanter Werbung und Kampagnenverfolgung.",
     "savePreferences": "Einstellungen speichern",
     "cancel": "Abbrechen"
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "body": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
+    "cta": "Zurück zur Startseite"
   }
 }
