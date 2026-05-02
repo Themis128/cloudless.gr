@@ -273,6 +273,7 @@ This project uses **no `.env` files** in production. All secrets are stored in *
 | `GOOGLE_PRIVATE_KEY`     | SecureString | Google service account key    |
 | `NOTION_API_KEY`         | SecureString | Notion integration token      |
 | `ANTHROPIC_API_KEY`      | SecureString | Claude AI API key             |
+| `ANTHROPIC_CHAT_MODEL`   | String       | Optional Claude model for chatbot (`/api/chat`) |
 | _(+ all other integration keys in `AppConfig`)_ | | |
 
 For local development, configure your AWS CLI with credentials that have `ssm:GetParametersByPath` permission on `/cloudless/production/*`.

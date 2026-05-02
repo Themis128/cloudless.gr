@@ -5,7 +5,7 @@ cloudless.gr uses the Anthropic Messages API for two distinct surfaces:
 1. **Public chatbot** — `ChatWidget` on every page; streaming SSE via `/api/chat`
 2. **Admin AI tools** — copy generation, campaign strategy, audience targeting, and report insights under `/api/admin/ai/*`
 
-All surfaces share a single `ANTHROPIC_API_KEY` loaded through `src/lib/anthropic.ts`.
+All surfaces share a single `ANTHROPIC_API_KEY` loaded through `src/lib/anthropic.ts`. The public chatbot model can be overridden with `ANTHROPIC_CHAT_MODEL`.
 
 > **Status:** Optional — `/api/chat` returns 503 when the key is absent (widget shows a graceful error). Admin AI routes return 503 similarly. The rest of the site is unaffected.
 >
@@ -52,6 +52,7 @@ graph TB
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-api03-...
+ANTHROPIC_CHAT_MODEL=claude-3-5-haiku-latest
 ```
 
 ### Production (AWS SSM Parameter Store)
@@ -59,6 +60,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-...
 | Parameter path | Type |
 |----------------|------|
 | `/cloudless/production/ANTHROPIC_API_KEY` | SecureString |
+| `/cloudless/production/ANTHROPIC_CHAT_MODEL` | String (optional) |
 
 ---
 
@@ -83,7 +85,7 @@ const ChatWidget = dynamic(() => import("@/components/ChatWidget"));
 
 | Property | Value |
 |----------|-------|
-| Model | `claude-haiku-4-5-20251001` (fast, low-cost) |
+| Model | `ANTHROPIC_CHAT_MODEL` or fallback `claude-3-5-haiku-latest` |
 | `max_tokens` | 300 |
 | Streaming | SSE (`text/event-stream`) |
 | Max history | 10 turns |
@@ -174,9 +176,9 @@ Throws on API errors — callers catch and return 500.
 
 | Surface | Model | Reason |
 |---------|-------|--------|
-| Public chatbot (`/api/chat`) | `claude-haiku-4-5-20251001` | Low latency, low cost for high-volume public traffic |
+| Public chatbot (`/api/chat`) | `ANTHROPIC_CHAT_MODEL` or `claude-3-5-haiku-latest` | Configurable per account and region availability |
 | Admin AI routes | `claude-sonnet-4-6` | Higher reasoning quality for structured JSON outputs |
-| `verifyAnthropicKey()` ping | `claude-haiku-4-5-20251001` | Cheapest possible health check (1 token) |
+| `verifyAnthropicKey()` ping | `ANTHROPIC_CHAT_MODEL` (or fallback) | Verifies the key against the model your chatbot actually uses |
 
 ---
 

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getAnthropicApiKey } from "@/lib/anthropic";
+import { getAnthropicApiKey, getAnthropicChatModel } from "@/lib/anthropic";
 import { escapeHtml } from "@/lib/escape-html";
 
 export const runtime = "nodejs";
@@ -117,6 +117,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const chatModel = await getAnthropicChatModel();
+
   let anthropicRes: Response;
   try {
     anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
@@ -127,7 +129,7 @@ export async function POST(request: NextRequest) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: chatModel,
         max_tokens: MAX_TOKENS,
         system: SYSTEM_PROMPT,
         messages,
