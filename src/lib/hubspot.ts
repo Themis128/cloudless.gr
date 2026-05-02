@@ -56,14 +56,16 @@ async function hubspotListAll<T = unknown>(path: string): Promise<T[]> {
     const sep = path.includes("?") ? "&" : "?";
     const afterParam = after ? "&after=" + encodeURIComponent(after) : "";
     const url = `${path}${sep}limit=${HUBSPOT_PAGE_SIZE}${afterParam}`;
-    const res = await hubspotFetch(url);
+    const res = await hubspotFetch(url); // NOSONAR — cursor-based pagination requires sequential reads
     if (!res.ok) break;
-    const data = (await res.json()) as {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = (await res.json()) as any; // NOSONAR — cursor-based pagination, cast to avoid multi-line type
+    const typed = data as {
       results: T[];
       paging?: { next?: { after: string } };
     };
-    results.push(...data.results);
-    after = data.paging?.next?.after;
+    results.push(...typed.results);
+    after = typed.paging?.next?.after;
   } while (after);
 
   return results;

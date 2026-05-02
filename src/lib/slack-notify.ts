@@ -94,7 +94,7 @@ export class SlackClient {
       }
 
       // Exponential backoff: 500 ms, 1 000 ms, 2 000 ms
-      await sleep(RETRY_BASE_MS * 2 ** attempt);
+      await sleep(RETRY_BASE_MS * 2 ** attempt); // NOSONAR — sequential retry backoff
     }
 
     return false;

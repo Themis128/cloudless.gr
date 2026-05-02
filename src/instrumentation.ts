@@ -32,13 +32,12 @@ export async function register() {
     let nextToken: string | undefined;
 
     do {
-      const res = await ssm.send(
-        new GetParametersByPathCommand({
-          Path: prefix,
-          WithDecryption: true,
-          NextToken: nextToken,
-        }),
-      );
+      const cmd = new GetParametersByPathCommand({
+        Path: prefix,
+        WithDecryption: true,
+        NextToken: nextToken,
+      });
+      const res = await ssm.send(cmd); // NOSONAR — SSM pagination requires sequential reads (NextToken cursor)
 
       for (const p of res.Parameters ?? []) {
         const key = p.Name?.replace(`${prefix}/`, "") ?? "";

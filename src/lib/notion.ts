@@ -66,7 +66,7 @@ export async function notionFetch<T = unknown>(
     }
 
     if (!res.ok) {
-      const body = await res.text().catch(() => "");
+      const body = await res.text().catch(() => ""); // NOSONAR — error body read inside retry loop
       throw new Error(`Notion API error ${res.status} on ${path}: ${body}`);
     }
 
@@ -267,8 +267,8 @@ export async function notionFetchAll<T = unknown>(
       page_size: 100,
       ...(cursor ? { start_cursor: cursor } : {}),
     };
-    // NOSONAR — cursor-based pagination requires sequential reads (cursor from previous page)
     const data = await notionFetch<{
+      // NOSONAR — cursor-based pagination requires sequential reads
       results: T[];
       has_more: boolean;
       next_cursor?: string;
@@ -290,8 +290,8 @@ export async function notionListAll<T = unknown>(path: string): Promise<T[]> {
   do {
     const sep = path.includes("?") ? "&" : "?";
     const url = `${path}${sep}page_size=100${cursor ? `&start_cursor=${cursor}` : ""}`;
-    // NOSONAR — cursor-based pagination requires sequential reads (cursor from previous page)
     const data = await notionFetch<{
+      // NOSONAR — cursor-based pagination requires sequential reads
       results: T[];
       has_more: boolean;
       next_cursor?: string;

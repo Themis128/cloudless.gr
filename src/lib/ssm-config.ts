@@ -184,13 +184,12 @@ export async function getConfig(): Promise<AppConfig> {
   try {
     let nextToken: string | undefined;
     do {
-      const res = await ssm.send(
-        new GetParametersByPathCommand({
-          Path: SSM_PREFIX,
-          WithDecryption: true,
-          NextToken: nextToken,
-        }),
-      );
+      const cmd = new GetParametersByPathCommand({
+        Path: SSM_PREFIX,
+        WithDecryption: true,
+        NextToken: nextToken,
+      });
+      const res = await ssm.send(cmd); // NOSONAR — SSM pagination requires sequential reads (NextToken cursor)
 
       for (const p of res.Parameters ?? []) {
         const key = p.Name?.replace(`${SSM_PREFIX}/`, "") ?? "";
