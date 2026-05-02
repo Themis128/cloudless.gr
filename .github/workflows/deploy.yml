@@ -175,6 +175,27 @@ jobs:
           SENTRY_PROJECT: cloudless-gr
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
 
+      - name: Publish current SHA to SSM (for Pi-side image pin)
+        # Writes the just-deployed commit SHA to a well-known SSM parameter.
+        # The Pi K3s standby reads this to know which cloudless-pi-app:<sha>
+        # tag to pull, so Pi and cloud are deterministically pinned to the
+        # same code. Failure here doesn't block deploy — the cloud is already
+        # live; Pi just won't know about this revision until the next deploy.
+        # Requires ssm:PutParameter on /cloudless/production/* (covered by
+        # PowerUserAccess on the deploy role).
+        if: success()
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          aws ssm put-parameter \
+            --name '/cloudless/production/current-image-sha' \
+            --type String \
+            --value "${GITHUB_SHA}" \
+            --overwrite \
+            --description 'Latest production deploy SHA — Pi K3s reads this to pin its image tag.' \
+            --region us-east-1 > /dev/null
+          echo "→ Published SHA ${GITHUB_SHA::12} to SSM /cloudless/production/current-image-sha"
+
       - name: Notify Slack — deploy succeeded
         if: success() && env.SLACK_WEBHOOK_URL != ''
         run: |

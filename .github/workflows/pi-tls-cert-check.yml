@@ -1,0 +1,112 @@
+name: Pi TLS Cert Check
+
+# Probes the Pi standby's WAN endpoint and asserts:
+#   - TLS handshake succeeds with SNI=cloudless.gr
+#   - Cert SAN/CN matches cloudless.gr
+#   - notAfter is more than 14 days away
+#
+# This catches the failure mode where the Pi cert expires silently while
+# CloudFront is healthy. The R53 primary health check would never notice
+# (it always probes whatever's currently routed) — so without this, you
+# discover the dead Pi cert at 3am during a real failover.
+#
+# Schedule: daily at 06:30 UTC. Also runnable on demand.
+
+on:
+  schedule:
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Probing the Pi by raw WAN IP. If the WAN IP becomes dynamic (the
+  # existence of the `cloudless-ddns-updater` IAM user hints at this),
+  # create a DNS record like `pi-standby.cloudless.gr` and switch
+  # PI_HOST to that name — SNI must remain `cloudless.gr` either way.
+  PI_HOST: '150.228.63.192'
+  PI_SNI: 'cloudless.gr'
+  MIN_DAYS_REMAINING: 14
+
+jobs:
+  probe:
+    name: Probe Pi TLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch and validate cert
+        run: |
+          set -euo pipefail
+
+          echo "→ Pre-check: TCP reachability of ${PI_HOST}:443"
+          if ! timeout 10 bash -c "exec 3<>/dev/tcp/${PI_HOST}/443" 2>/dev/null; then
+            echo "::error::Pi TCP port 443 is not reachable from the runner."
+            echo "::error::This is a critical HA failure — Route 53 secondary points at ${PI_HOST} but nothing is listening (or a firewall/NAT is blocking external 443)."
+            echo "::error::Possible causes: (1) Pi offline, (2) NAT not forwarding 443, (3) WAN IP changed, (4) firewall blocks the GitHub runner IP range."
+            exit 1
+          fi
+          echo "  ✓ TCP 443 open"
+
+          echo "→ Connecting to ${PI_HOST}:443 with SNI=${PI_SNI}"
+          # `-verify_return_error` forces a non-zero exit if the chain is
+          # invalid (self-signed, expired, untrusted CA, etc.). Stream both
+          # stdout and stderr to the same file so the partial PEM output and
+          # the verification error context are both captured for diagnosis.
+          set +e
+          timeout 15 openssl s_client \
+            -connect "${PI_HOST}:443" \
+            -servername "${PI_SNI}" \
+            -showcerts -verify_return_error \
+            < /dev/null > /tmp/openssl.out 2>&1
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::TLS handshake failed for ${PI_HOST} (SNI=${PI_SNI}, exit=${rc})"
+            echo "::group::openssl combined output"
+            cat /tmp/openssl.out >&2
+            echo "::endgroup::"
+            exit 1
+          fi
+          cert=$(cat /tmp/openssl.out)
+
+          # Extract the leaf cert (first BEGIN/END block)
+          leaf=$(echo "$cert" | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' | awk '/-----BEGIN/{i++} i==1')
+
+          # Validity window
+          not_after=$(echo "$leaf" | openssl x509 -noout -enddate | cut -d= -f2)
+          not_after_epoch=$(date -d "$not_after" +%s)
+          now_epoch=$(date +%s)
+          days_left=$(( (not_after_epoch - now_epoch) / 86400 ))
+          echo "→ Cert notAfter: ${not_after} (${days_left} days remaining)"
+
+          if [ "$days_left" -lt "${MIN_DAYS_REMAINING}" ]; then
+            echo "::error::Pi cert expires in ${days_left} days (< ${MIN_DAYS_REMAINING}). Renew now."
+            exit 1
+          fi
+
+          # SAN / CN match
+          san=$(echo "$leaf" | openssl x509 -noout -text | grep -A1 "Subject Alternative Name" | tail -1 | tr ',' '\n' | tr -d ' ')
+          cn=$(echo "$leaf" | openssl x509 -noout -subject | grep -oE 'CN[ ]?=[ ]?[^,/]+' | sed 's/CN[ ]*=[ ]*//')
+          echo "→ Subject CN: ${cn}"
+          echo "→ SAN: ${san}"
+
+          if echo "$san" | grep -q "DNS:${PI_SNI}\b" || [ "${cn}" = "${PI_SNI}" ]; then
+            echo "✅ Cert valid for ${PI_SNI}, ${days_left} days remaining"
+          else
+            echo "::error::Cert at ${PI_HOST} does not match ${PI_SNI} (CN=${cn}, SAN=${san})"
+            exit 1
+          fi
+
+          # Add a step summary line for the routine to scrape
+          {
+            echo "## Pi TLS Cert Check"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Host | ${PI_HOST} |"
+            echo "| SNI | ${PI_SNI} |"
+            echo "| Subject CN | ${cn} |"
+            echo "| Days remaining | ${days_left} |"
+            echo "| Status | ✅ valid |"
+          } >> "$GITHUB_STEP_SUMMARY"
