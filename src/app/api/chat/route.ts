@@ -24,6 +24,35 @@ Keep answers concise (2–4 sentences max). If someone asks about pricing, give 
 const MAX_USER_MESSAGE = 500;
 const ROLE_ASSISTANT = "assistant";
 
+function forwardSseLine(
+  line: string,
+  controller: ReadableStreamDefaultController,
+): void {
+  if (!line.startsWith("data: ")) return;
+  const data = line.slice(6).trim();
+  if (data === "[DONE]") return;
+  try {
+    const parsed = JSON.parse(data) as {
+      type?: string;
+      delta?: { type?: string; text?: string };
+    };
+    if (
+      parsed.type === "content_block_delta" &&
+      parsed.delta?.type === "text_delta"
+    ) {
+      const text = escapeHtml(parsed.delta.text ?? "");
+      controller.enqueue(
+        new TextEncoder().encode(`data: ${JSON.stringify({ text })}\n\n`),
+      );
+    }
+    if (parsed.type === "message_stop") {
+      controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+    }
+  } catch {
+    // skip malformed SSE lines
+  }
+}
+
 export async function POST(request: NextRequest) {
   let messages: { role: "user" | "assistant"; content: string }[]; // NOSONAR — type annotation
   try {
@@ -85,32 +114,8 @@ export async function POST(request: NextRequest) {
           const { done, value } = await reader.read();
           if (done) break;
           const chunk = decoder.decode(value, { stream: true });
-          // Parse SSE lines and forward only text_delta events
           for (const line of chunk.split("\n")) {
-            if (!line.startsWith("data: ")) continue;
-            const data = line.slice(6).trim();
-            if (data === "[DONE]") continue;
-            try {
-              const parsed = JSON.parse(data);
-              if (
-                parsed.type === "content_block_delta" &&
-                parsed.delta?.type === "text_delta"
-              ) {
-                const text = escapeHtml(parsed.delta.text ?? "");
-                controller.enqueue(
-                  new TextEncoder().encode(
-                    `data: ${JSON.stringify({ text })}\n\n`,
-                  ),
-                );
-              }
-              if (parsed.type === "message_stop") {
-                controller.enqueue(
-                  new TextEncoder().encode("data: [DONE]\n\n"),
-                );
-              }
-            } catch {
-              // skip malformed lines
-            }
+            forwardSseLine(line, controller);
           }
         }
       } finally {

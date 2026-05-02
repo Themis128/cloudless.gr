@@ -59,6 +59,45 @@ interface Stats {
   fetchedAt: string | null;
 }
 
+const RECENT_CONTACTS_LIMIT = 5;
+
+function computeContactStats(contacts: Contact[]): Stats["contacts"] {
+  return {
+    total: contacts.length,
+    newLeads: contacts.filter((c) => c.properties.hs_lead_status === "NEW")
+      .length,
+    qualified: contacts.filter(
+      (c) => c.properties.hs_lead_status === "OPEN_DEAL",
+    ).length,
+    recent: contacts
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(b.properties.createdate ?? 0).getTime() -
+          new Date(a.properties.createdate ?? 0).getTime(),
+      )
+      .slice(0, RECENT_CONTACTS_LIMIT),
+  };
+}
+
+function computeDealStats(deals: Deal[]): Stats["deals"] {
+  return {
+    total: deals.length,
+    pipelineValue: deals.reduce(
+      (sum, d) => sum + (parseFloat(d.properties.amount ?? "0") || 0),
+      0,
+    ),
+    won: deals.filter((d) => d.properties.dealstage === "closedwon").length,
+  };
+}
+
+function computeTicketStats(tickets: Ticket[]): Stats["tickets"] {
+  return {
+    total: tickets.length,
+    open: tickets.filter((t) => t.properties.hs_pipeline_stage !== "4").length,
+  };
+}
+
 export default function HubSpotOverviewPage() {
   const [stats, setStats] = useState<Stats>({
     contacts: { total: 0, newLeads: 0, qualified: 0, recent: [] },
@@ -89,48 +128,10 @@ export default function HubSpotOverviewPage() {
         ticketsRes.ok ? ticketsRes.json() : { tickets: [] },
       ]);
 
-      const contacts: Contact[] = contactsData.contacts ?? [];
-      const deals: Deal[] = dealsData.deals ?? [];
-      const tickets: Ticket[] = ticketsData.tickets ?? [];
-
-      const pipelineValue = deals.reduce(
-        (sum, d) => sum + (parseFloat(d.properties.amount ?? "0") || 0),
-        0,
-      );
-      const wonDeals = deals.filter(
-        (d) => d.properties.dealstage === "closedwon",
-      ).length;
-      const openTickets = tickets.filter(
-        (t) => t.properties.hs_pipeline_stage !== "4",
-      ).length;
-
       setStats({
-        contacts: {
-          total: contacts.length,
-          newLeads: contacts.filter(
-            (c) => c.properties.hs_lead_status === "NEW",
-          ).length,
-          qualified: contacts.filter(
-            (c) => c.properties.hs_lead_status === "OPEN_DEAL",
-          ).length,
-          recent: contacts
-            .slice()
-            .sort(
-              (a, b) =>
-                new Date(b.properties.createdate ?? 0).getTime() -
-                new Date(a.properties.createdate ?? 0).getTime(),
-            )
-            .slice(0, 5),
-        },
-        deals: {
-          total: deals.length,
-          pipelineValue,
-          won: wonDeals,
-        },
-        tickets: {
-          total: tickets.length,
-          open: openTickets,
-        },
+        contacts: computeContactStats(contactsData.contacts ?? []),
+        deals: computeDealStats(dealsData.deals ?? []),
+        tickets: computeTicketStats(ticketsData.tickets ?? []),
         fetchedAt: new Date().toISOString(),
       });
       setError(null);
@@ -144,10 +145,14 @@ export default function HubSpotOverviewPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchAll();
-    const interval = setInterval(() => void fetchAll(), REFRESH_INTERVAL);
+    fetchAll().catch(() => {});
+    const interval = setInterval(() => {
+      fetchAll().catch(() => {});
+    }, REFRESH_INTERVAL);
     const onVisible = () => {
-      if (document.visibilityState === "visible") void fetchAll();
+      if (document.visibilityState === "visible") {
+        fetchAll().catch(() => {});
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);

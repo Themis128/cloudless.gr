@@ -76,20 +76,20 @@ describe("sentry.ts", () => {
     });
 
     it("returns valid on 200", async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce(new Response("{}", { status: 200 }));
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("{}", { status: 200 }));
       const result = await verifySentryToken();
       expect(result.status).toBe("valid");
     });
 
     it("returns rejected on 401", async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce(new Response("", { status: 401 }));
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("", { status: 401 }));
       const result = await verifySentryToken();
       expect(result.status).toBe("rejected");
       expect(result.message).toMatch(/401/);
     });
 
     it("returns error on non-auth failure", async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce(new Response("", { status: 500 }));
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("", { status: 500 }));
       const result = await verifySentryToken();
       expect(result.status).toBe("error");
     });
@@ -105,7 +105,7 @@ describe("sentry.ts", () => {
 
     it("returns issue list with total and fetchedAt", async () => {
       const issues = [makeSentryIssue(), makeSentryIssue({ id: "issue-2" })];
-      vi.mocked(global.fetch).mockResolvedValueOnce(
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify(issues), { status: 200 }),
       );
       const result = await getUnresolvedIssues();
@@ -116,12 +116,12 @@ describe("sentry.ts", () => {
     });
 
     it("returns null when fetch fails", async () => {
-      vi.mocked(global.fetch).mockRejectedValueOnce(new Error("network error"));
+      vi.mocked(globalThis.fetch).mockRejectedValueOnce(new Error("network error"));
       expect(await getUnresolvedIssues()).toBeNull();
     });
 
     it("returns null when API returns 401", async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce(new Response("", { status: 401 }));
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("", { status: 401 }));
       expect(await getUnresolvedIssues()).toBeNull();
     });
   });
@@ -135,7 +135,7 @@ describe("sentry.ts", () => {
     });
 
     it("returns issues from getUnresolvedIssues", async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce(
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify([makeSentryIssue()]), { status: 200 }),
       );
       expect(await getTopErrors(1)).toHaveLength(1);
@@ -157,7 +157,7 @@ describe("sentry.ts", () => {
         makeSentryIssue({ level: "error" }),
         makeSentryIssue({ level: "warning" }),
       ];
-      vi.mocked(global.fetch).mockResolvedValueOnce(
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify(issues), { status: 200 }),
       );
       const result = await getErrorCounts();
@@ -173,14 +173,14 @@ describe("sentry.ts", () => {
 
   describe("updateIssueStatus()", () => {
     it("returns true when patch succeeds", async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce(
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify({ status: STATUS_RESOLVED }), { status: 200 }),
       );
       expect(await updateIssueStatus(ISSUE_ID, STATUS_RESOLVED)).toBe(true);
     });
 
     it("returns false when API returns a different status", async () => {
-      vi.mocked(global.fetch).mockResolvedValueOnce(
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify({ status: "unresolved" }), { status: 200 }),
       );
       expect(await updateIssueStatus(ISSUE_ID, STATUS_RESOLVED)).toBe(false);

@@ -78,33 +78,12 @@ export class SlackClient {
       return false;
     }
 
-    // Prefer the incoming webhook when configured: it posts to the channel
-    // chosen at app install without requiring the bot to be a channel member.
-    // chat.postMessage is only reachable for channels the bot has joined,
-    // which we cannot do programmatically without channels:join scope.
-    const useWebhookFirst = !!webhookUrl;
-
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
-        // postViaApi returns: true = success, false = ratelimited (retry), null = terminal error
-        let result: boolean | null;
-        if (useWebhookFirst) {
-          result = await this.postViaWebhook(webhookUrl, payload);
-        } else if (token) {
-          result = await this.postViaApi(token, {
-            channel: this.defaultChannel,
-            ...payload,
-          });
-        } else {
-          return false;
-        }
-
+        const result = await this.postOnce(payload, token, webhookUrl);
         if (result === true) return true;
-        if (result === null) {
-          // Terminal API error (not_in_channel, channel_not_found, invalid_auth, …).
-          // Only reachable via the API path; webhook returns boolean.
-          return false;
-        }
+        // result === null → terminal API error, don't retry
+        if (result === null) return false;
         // result === false → ratelimited or transient failure, fall through to backoff
       } catch (err) {
         const isLastAttempt = attempt === MAX_RETRIES - 1;
@@ -119,6 +98,27 @@ export class SlackClient {
     }
 
     return false;
+  }
+
+  /**
+   * Single-attempt send. Prefers the incoming webhook when configured: it posts
+   * to the channel chosen at app install without requiring the bot to be a
+   * channel member. chat.postMessage is only reachable for channels the bot has
+   * joined, which we cannot do programmatically without the channels:join scope.
+   */
+  private async postOnce(
+    payload: PostMessagePayload,
+    token: string | undefined,
+    webhookUrl: string | undefined,
+  ): Promise<boolean | null> {
+    if (webhookUrl) return this.postViaWebhook(webhookUrl, payload);
+    if (token) {
+      return this.postViaApi(token, {
+        channel: this.defaultChannel,
+        ...payload,
+      });
+    }
+    return null;
   }
 
   /**

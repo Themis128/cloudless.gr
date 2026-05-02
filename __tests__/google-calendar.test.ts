@@ -47,7 +47,7 @@ describe("google-calendar.ts", () => {
     });
 
     it("returns empty array when freeBusy request fails", async () => {
-      vi.mocked(global.fetch)
+      vi.mocked(globalThis.fetch)
         .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(new Response("error", { status: 500 }));
 
@@ -61,7 +61,7 @@ describe("google-calendar.ts", () => {
       const summerMonday = new Date("2026-06-15T00:00:00Z"); // Monday
       vi.setSystemTime(summerMonday);
 
-      vi.mocked(global.fetch)
+      vi.mocked(globalThis.fetch)
         .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(
           new Response(
@@ -86,7 +86,7 @@ describe("google-calendar.ts", () => {
       const winterMonday = new Date("2026-01-05T00:00:00Z"); // Monday
       vi.setSystemTime(winterMonday);
 
-      vi.mocked(global.fetch)
+      vi.mocked(globalThis.fetch)
         .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(
           new Response(
@@ -109,7 +109,7 @@ describe("google-calendar.ts", () => {
 
   describe("bookConsultation()", () => {
     it("returns null when the calendar API returns an error", async () => {
-      vi.mocked(global.fetch)
+      vi.mocked(globalThis.fetch)
         .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(new Response("error", { status: 400 }));
 
@@ -124,7 +124,7 @@ describe("google-calendar.ts", () => {
     });
 
     it("returns eventId and htmlLink on success", async () => {
-      vi.mocked(global.fetch)
+      vi.mocked(globalThis.fetch)
         .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(
           new Response(
@@ -147,7 +147,7 @@ describe("google-calendar.ts", () => {
 
   describe("getConsultationsByEmail()", () => {
     it("returns empty array when calendar API fails", async () => {
-      vi.mocked(global.fetch)
+      vi.mocked(globalThis.fetch)
         .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(new Response("error", { status: 500 }));
 
@@ -162,7 +162,7 @@ describe("google-calendar.ts", () => {
         { id: "e2", summary: "Random Meeting", start: { dateTime: "2026-05-11T10:00:00Z" }, end: { dateTime: "2026-05-11T10:30:00Z" } },
       ];
 
-      vi.mocked(global.fetch)
+      vi.mocked(globalThis.fetch)
         .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(
           new Response(JSON.stringify({ items: events }), { status: 200 }),

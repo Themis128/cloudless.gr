@@ -46,10 +46,14 @@ export default function AdminCompaniesPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchCompanies();
-    const interval = setInterval(() => void fetchCompanies(), REFRESH_INTERVAL);
+    fetchCompanies().catch(() => {});
+    const interval = setInterval(() => {
+      fetchCompanies().catch(() => {});
+    }, REFRESH_INTERVAL);
     const onVisible = () => {
-      if (document.visibilityState === "visible") void fetchCompanies();
+      if (document.visibilityState === "visible") {
+        fetchCompanies().catch(() => {});
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
