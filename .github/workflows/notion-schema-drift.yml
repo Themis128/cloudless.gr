@@ -1,0 +1,59 @@
+name: Notion schema drift
+
+on:
+  pull_request:
+    paths:
+      - "scripts/notion-schema-sync.ts"
+      - ".github/workflows/notion-schema-drift.yml"
+  schedule:
+    # Daily at 06:30 UTC (catches drift introduced via the Notion UI)
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  drift:
+    name: notion-schema-sync --dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::278585680617:role/cloudless-github-actions
+          aws-region: us-east-1
+
+      - name: Fetch NOTION_API_KEY from SSM
+        run: |
+          KEY=$(aws ssm get-parameter \
+            --name /cloudless/production/NOTION_API_KEY \
+            --with-decryption \
+            --query Parameter.Value --output text)
+          echo "::add-mask::$KEY"
+          echo "NOTION_API_KEY=$KEY" >> "$GITHUB_ENV"
+
+      - name: Run dry-run schema sync
+        id: sync
+        run: |
+          set -o pipefail
+          npx tsx --tsconfig scripts/tsconfig.json scripts/notion-schema-sync.ts --dry-run \
+            | tee /tmp/sync.out
+          # Fail the job if any line starts with "→" (proposed addition)
+          if grep -E "^→" /tmp/sync.out >/dev/null; then
+            echo
+            echo "::error::Notion schema drift detected — apply scripts/notion-schema-sync.ts (or revert local schema changes)"
+            exit 1
+          fi
