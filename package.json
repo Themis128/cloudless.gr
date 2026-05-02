@@ -30,7 +30,9 @@
     "notion:test": "tsx --tsconfig scripts/tsconfig.json scripts/notion-test.ts",
     "gsc:sync": "tsx --tsconfig scripts/tsconfig.json scripts/weekly-gsc-sync.ts",
     "mcp-security-scan": "cd tools/mcp-security-scanner && npm install && npm run scan -- --path \"../../src/**/*.{ts,tsx,js,jsx,py,md}\"",
-    "mcp-security-scan:server": "cd tools/mcp-security-scanner && npm install && npm run scan -- --path \"../../src/{app/api,lib}/**/*.{ts,tsx,js,jsx,py,md}\""
+    "mcp-security-scan:server": "cd tools/mcp-security-scanner && npm install && npm run scan -- --path \"../../src/{app/api,lib}/**/*.{ts,tsx,js,jsx,py,md}\"",
+    "test:e2e:fullstack": "playwright test e2e/fullstack-frontend-backend.spec.ts",
+    "test:e2e:integrations": "playwright test e2e/integrations-contracts.spec.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1028.0",

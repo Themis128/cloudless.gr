@@ -68,12 +68,33 @@ const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
 // being hammered. windowMs: 60s, max: 120 req/min per IP across all /api/admin/*.
 const ADMIN_RATE_LIMIT = { windowMs: 60_000, max: 120 };
 
+function normalizeIpHeader(value: string | null): string | null {
+  if (value === null) return null;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  return trimmed;
+}
+
+function firstForwardedIp(header: string | null): string | null {
+  const normalized = normalizeIpHeader(header);
+  if (normalized === null) return null;
+
+  const comma = normalized.indexOf(",");
+  if (comma === -1) return normalized;
+
+  const first = normalized.slice(0, comma).trim();
+  if (first === "") return null;
+  return first;
+}
+
 function getClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip") ??
-    "unknown"
-  );
+  const forwardedIp = firstForwardedIp(request.headers.get("x-forwarded-for"));
+  if (forwardedIp !== null) return forwardedIp;
+
+  const realIp = normalizeIpHeader(request.headers.get("x-real-ip"));
+  if (realIp !== null) return realIp;
+
+  return "unknown";
 }
 
 function isRateLimited(
