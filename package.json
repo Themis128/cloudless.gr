@@ -32,7 +32,9 @@
     "mcp-security-scan": "cd tools/mcp-security-scanner && npm install && npm run scan -- --path \"../../src/**/*.{ts,tsx,js,jsx,py,md}\"",
     "mcp-security-scan:server": "cd tools/mcp-security-scanner && npm install && npm run scan -- --path \"../../src/{app/api,lib}/**/*.{ts,tsx,js,jsx,py,md}\"",
     "test:e2e:fullstack": "playwright test e2e/fullstack-frontend-backend.spec.ts",
-    "test:e2e:integrations": "playwright test e2e/integrations-contracts.spec.ts"
+    "test:e2e:integrations": "playwright test e2e/integrations-contracts.spec.ts",
+    "test:k3s": "playwright test --config=playwright.k3s.config.mts",
+    "test:k3s:smoke": "playwright test --config=playwright.k3s.config.mts e2e/k3s/smoke.spec.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1028.0",
