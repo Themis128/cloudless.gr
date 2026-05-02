@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { getConfig } from "@/lib/ssm-config";
 
 const TOKEN_URL =
@@ -24,7 +24,10 @@ function verifyState(state: string, secret: string): boolean {
     .update(nonce)
     .digest("hex")
     .slice(0, 16);
-  return sig === expected;
+  const sigBuf = Buffer.from(sig, "utf-8");
+  const expectedBuf = Buffer.from(expected, "utf-8");
+  if (sigBuf.length !== expectedBuf.length) return false;
+  return timingSafeEqual(sigBuf, expectedBuf);
 }
 
 interface TikTokTokenResponse {

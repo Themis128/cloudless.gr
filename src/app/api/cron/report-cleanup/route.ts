@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listReports, updateReport } from "@/lib/reports";
 import { SlackClient } from "@/lib/slack-notify";
+import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 
 const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000;
 
-function cronAuth(req: NextRequest): boolean {
-  return (
-    req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`
-  );
-}
-
 export async function GET(request: NextRequest) {
-  if (!cronAuth(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorized();
   }
 
   const reports = await listReports();
