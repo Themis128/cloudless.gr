@@ -160,6 +160,7 @@ async function refreshOrdersAsync(responseUrl: string): Promise<void> {
           },
         ],
       }),
+      signal: AbortSignal.timeout(5_000),
     });
   } catch (err) {
     console.error("[Slack Interactions] refreshOrdersAsync error:", err);

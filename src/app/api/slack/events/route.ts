@@ -173,6 +173,7 @@ async function handleAppMention(event: SlackEvent): Promise<void> {
       thread_ts: event.ts,
       text: replyText,
     }),
+    signal: AbortSignal.timeout(5_000),
   });
 }
 
@@ -190,5 +191,6 @@ async function handleDirectMessage(event: SlackEvent): Promise<void> {
       channel: event.channel,
       text: "Hi! I respond to slash commands — try `/cloudless-status` or `/cloudless-orders`.",
     }),
+    signal: AbortSignal.timeout(5_000),
   });
 }

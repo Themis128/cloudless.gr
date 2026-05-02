@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
   try {
     const res = await fetch(`${baseUrl}/api/cron/voice-brief`, {
       headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+      signal: AbortSignal.timeout(60_000),
     });
     if (!res.ok) throw new Error(`Cron returned ${res.status}`);
     const data = await res.json();
@@ -58,8 +59,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (e) {
+    console.error("[admin/voice-brief] generation failed:", e);
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Generation failed" },
+      { error: "Generation failed" },
       { status: 500 },
     );
   }

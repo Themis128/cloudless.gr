@@ -112,6 +112,7 @@ export async function GET(request: NextRequest) {
             },
           ],
         }),
+        signal: AbortSignal.timeout(30_000),
       });
       if (res.ok) {
         const data = await res.json();

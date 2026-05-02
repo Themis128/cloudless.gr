@@ -54,7 +54,10 @@ async function fetchObject(
   try {
     const res = await fetch(
       `${HUBSPOT_API}/crm/v3/objects/${objectType}/${objectId}?properties=${properties.join(",")}`,
-      { headers: { Authorization: `Bearer ${token}` } },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(5_000),
+      },
     );
     if (!res.ok) return null;
     const data = await res.json();

@@ -32,6 +32,7 @@ async function generateInsights(
           },
         ],
       }),
+      signal: AbortSignal.timeout(30_000),
     });
     if (!res.ok) return "";
     const d = await res.json();
