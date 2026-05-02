@@ -5,16 +5,11 @@ import {
   flushEventQueue,
 } from "@/lib/notion-analytics";
 import { SlackClient } from "@/lib/slack-notify";
-
-function cronAuth(req: NextRequest): boolean {
-  return (
-    req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`
-  );
-}
+import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 
 export async function GET(request: NextRequest) {
-  if (!cronAuth(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorized();
   }
 
   // Flush any queued events before creating the rollup so counts are accurate

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
+import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
 
 const LOCALES = routing.locales as readonly string[];
 const DEFAULT_LOCALE = routing.defaultLocale;
@@ -61,41 +62,14 @@ const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
   "/api/calendar/book": { windowMs: 60_000, max: 5 },
   "/api/hubspot/ticket": { windowMs: 60_000, max: 5 },
   "/api/crm/contact": { windowMs: 60_000, max: 5 },
+  // LLM proxy — each call hits the Anthropic API and costs money. Tighter cap.
+  "/api/chat": { windowMs: 60_000, max: 20 },
 };
 
 // Admin endpoints are JWT-auth-gated, but we still rate-limit them to cap
 // abuse from stolen tokens and prevent expensive AI/report operations from
 // being hammered. windowMs: 60s, max: 120 req/min per IP across all /api/admin/*.
 const ADMIN_RATE_LIMIT = { windowMs: 60_000, max: 120 };
-
-function normalizeIpHeader(value: string | null): string | null {
-  if (value === null) return null;
-  const trimmed = value.trim();
-  if (trimmed === "") return null;
-  return trimmed;
-}
-
-function firstForwardedIp(header: string | null): string | null {
-  const normalized = normalizeIpHeader(header);
-  if (normalized === null) return null;
-
-  const comma = normalized.indexOf(",");
-  if (comma === -1) return normalized;
-
-  const first = normalized.slice(0, comma).trim();
-  if (first === "") return null;
-  return first;
-}
-
-function getClientIp(request: NextRequest): string {
-  const forwardedIp = firstForwardedIp(request.headers.get("x-forwarded-for"));
-  if (forwardedIp !== null) return forwardedIp;
-
-  const realIp = normalizeIpHeader(request.headers.get("x-real-ip"));
-  if (realIp !== null) return realIp;
-
-  return "unknown";
-}
 
 function isRateLimited(
   key: string,
@@ -215,7 +189,7 @@ export function proxy(request: NextRequest) {
       response.headers.set("Access-Control-Allow-Origin", origin);
       response.headers.set(
         "Access-Control-Allow-Methods",
-        "GET, POST, OPTIONS",
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS",
       );
       response.headers.set(
         "Access-Control-Allow-Headers",
@@ -241,7 +215,7 @@ export function proxy(request: NextRequest) {
     ) {
       cleanupStaleEntries();
 
-      const ip = getClientIp(request);
+      const ip = getSharedClientIp(request);
       const key = `${ip}:${pathname}`;
       const { limited, remaining } = isRateLimited(
         key,

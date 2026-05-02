@@ -63,7 +63,7 @@ test.describe("Full-stack frontend coverage", () => {
 
       const status = response?.status() ?? 0;
       expect(status, `${route} returned HTTP ${status}`).toBeLessThan(400);
-      await expect(page.locator("main")).toBeVisible();
+      await expect(page.locator("#main-content")).toBeVisible();
     });
   }
 
