@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 
 const REFRESH_INTERVAL = 10_000;
+const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
 
 interface Ticket {
   id: string;
@@ -111,10 +112,10 @@ export default function AdminTicketsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800">
-                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Subject</th>
-                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Priority</th>
-                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Stage</th>
-                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Created</th>
+                <th className={TH_CLASS}>Subject</th>
+                <th className={TH_CLASS}>Priority</th>
+                <th className={TH_CLASS}>Stage</th>
+                <th className={TH_CLASS}>Created</th>
               </tr>
             </thead>
             <tbody>
