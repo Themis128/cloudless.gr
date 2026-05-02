@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+const VOICE_BRIEF_URL = "http://localhost/api/admin/voice-brief";
 
 // ---------------------------------------------------------------------------
 // Hoist mocks
@@ -95,20 +96,20 @@ describe("GET /api/admin/voice-brief", () => {
 
   it("returns 401 without token", async () => {
     const { GET } = await import("@/app/api/admin/voice-brief/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/voice-brief"));
+    const res = await GET(new NextRequest(VOICE_BRIEF_URL));
     expect(res.status).toBe(401);
   });
 
   it("returns 403 for non-admin", async () => {
     const { GET } = await import("@/app/api/admin/voice-brief/route");
-    const res = await GET(userReq("http://localhost/api/admin/voice-brief"));
+    const res = await GET(userReq(VOICE_BRIEF_URL));
     expect(res.status).toBe(403);
   });
 
   it("returns brief from SSM when present", async () => {
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(MOCK_BRIEF) } });
     const { GET } = await import("@/app/api/admin/voice-brief/route");
-    const res = await GET(adminReq("http://localhost/api/admin/voice-brief"));
+    const res = await GET(adminReq(VOICE_BRIEF_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.brief).toMatchObject({ text: MOCK_BRIEF.text, week: MOCK_BRIEF.week });
@@ -117,7 +118,7 @@ describe("GET /api/admin/voice-brief", () => {
   it("returns null brief when SSM parameter missing", async () => {
     mockSSMSend.mockRejectedValue(new Error("ParameterNotFound"));
     const { GET } = await import("@/app/api/admin/voice-brief/route");
-    const res = await GET(adminReq("http://localhost/api/admin/voice-brief"));
+    const res = await GET(adminReq(VOICE_BRIEF_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.brief).toBeNull();
@@ -137,7 +138,7 @@ describe("POST /api/admin/voice-brief", () => {
 
   it("returns 401 without token", async () => {
     const { POST } = await import("@/app/api/admin/voice-brief/route");
-    const res = await POST(new NextRequest("http://localhost/api/admin/voice-brief", { method: "POST" }));
+    const res = await POST(new NextRequest(VOICE_BRIEF_URL, { method: "POST" }));
     expect(res.status).toBe(401);
   });
 
@@ -147,7 +148,7 @@ describe("POST /api/admin/voice-brief", () => {
       json: async () => ({ text: "AI-enhanced brief.", generatedAt: new Date().toISOString() }),
     });
     const { POST } = await import("@/app/api/admin/voice-brief/route");
-    const res = await POST(adminReq("http://localhost/api/admin/voice-brief", { method: "POST" }));
+    const res = await POST(adminReq(VOICE_BRIEF_URL, { method: "POST" }));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.brief).toBeDefined();
@@ -158,7 +159,7 @@ describe("POST /api/admin/voice-brief", () => {
   it("returns 500 when cron route fails", async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
     const { POST } = await import("@/app/api/admin/voice-brief/route");
-    const res = await POST(adminReq("http://localhost/api/admin/voice-brief", { method: "POST" }));
+    const res = await POST(adminReq(VOICE_BRIEF_URL, { method: "POST" }));
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.error).toBeDefined();

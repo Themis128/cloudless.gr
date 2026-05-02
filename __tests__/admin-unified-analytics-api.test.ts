@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+const ANALYTICS_URL = "http://localhost/api/admin/analytics/unified";
+const ALG_RS256 = "RS256";
+const ENC_BASE64URL = "base64url";
 
 // ---------------------------------------------------------------------------
 // Hoist mocks
@@ -19,7 +22,7 @@ vi.mock("jose", async () => {
       if (parts.length !== 3) throw new Error("Invalid JWT");
       const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
       if (payload.exp && Date.now() >= payload.exp * 1000) throw new Error("expired");
-      return { payload, protectedHeader: { alg: "RS256" } };
+      return { payload, protectedHeader: { alg: ALG_RS256 } };
     },
   };
 });
@@ -74,8 +77,8 @@ function makeAdminToken(): string {
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
-  const h = Buffer.from(JSON.stringify({ alg: "RS256" })).toString("base64url");
-  const b = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const h = Buffer.from(JSON.stringify({ alg: ALG_RS256 })).toString(ENC_BASE64URL);
+  const b = Buffer.from(JSON.stringify(payload)).toString(ENC_BASE64URL);
   return `${h}.${b}.sig`;
 }
 
@@ -88,8 +91,8 @@ function makeUserToken(): string {
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
-  const h = Buffer.from(JSON.stringify({ alg: "RS256" })).toString("base64url");
-  const b = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const h = Buffer.from(JSON.stringify({ alg: ALG_RS256 })).toString(ENC_BASE64URL);
+  const b = Buffer.from(JSON.stringify(payload)).toString(ENC_BASE64URL);
   return `${h}.${b}.sig`;
 }
 
@@ -121,19 +124,19 @@ describe("GET /api/admin/analytics/unified", () => {
 
   it("returns 401 without token", async () => {
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/analytics/unified"));
+    const res = await GET(new NextRequest(ANALYTICS_URL));
     expect(res.status).toBe(401);
   });
 
   it("returns 403 for non-admin user", async () => {
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
-    const res = await GET(userReq("http://localhost/api/admin/analytics/unified"));
+    const res = await GET(userReq(ANALYTICS_URL));
     expect(res.status).toBe(403);
   });
 
   it("returns 200 with all sources when all configured", async () => {
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/unified"));
+    const res = await GET(adminReq(ANALYTICS_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toHaveProperty("stripe");
@@ -146,7 +149,7 @@ describe("GET /api/admin/analytics/unified", () => {
   it("returns null seo when GSC not configured", async () => {
     mockGetConfig.mockResolvedValue({ ...BASE_CFG, GOOGLE_CLIENT_EMAIL: "", GOOGLE_PRIVATE_KEY: "" });
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/unified"));
+    const res = await GET(adminReq(ANALYTICS_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.seo).toBeNull();
@@ -155,7 +158,7 @@ describe("GET /api/admin/analytics/unified", () => {
   it("returns null pipeline when HubSpot not configured", async () => {
     mockIsHubSpot.mockResolvedValue(false);
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/unified"));
+    const res = await GET(adminReq(ANALYTICS_URL));
     const data = await res.json();
     expect(data.pipeline).toBeNull();
   });
@@ -163,7 +166,7 @@ describe("GET /api/admin/analytics/unified", () => {
   it("returns null email when ActiveCampaign not configured", async () => {
     mockIsAC.mockResolvedValue(false);
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/unified"));
+    const res = await GET(adminReq(ANALYTICS_URL));
     const data = await res.json();
     expect(data.email).toBeNull();
   });
@@ -171,7 +174,7 @@ describe("GET /api/admin/analytics/unified", () => {
   it("returns null stripe when not configured", async () => {
     mockGetConfig.mockResolvedValue({ ...BASE_CFG, STRIPE_SECRET_KEY: "" });
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/unified"));
+    const res = await GET(adminReq(ANALYTICS_URL));
     const data = await res.json();
     expect(data.stripe).toBeNull();
   });

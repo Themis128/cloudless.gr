@@ -11,6 +11,9 @@ vi.mock("@/lib/notion", () => ({
 }));
 
 import { saveSubmission, listSubmissions, updateSubmissionStatus } from "@/lib/notion-forms";
+const FORM_HELLO = "Hello";
+const TAG_DEVOPS = "DevOps";
+const TEST_USER = "Alice";
 
 const SUBMITTED_AT = "Submitted At";
 const CREATED_TIME = "2026-04-01T00:00:00Z";
@@ -103,10 +106,10 @@ describe("notion-forms.ts", () => {
           url: SUB_1_URL,
           created_time: CREATED_TIME,
           properties: {
-            Name: { title: [{ plain_text: "Alice" }] },
+            Name: { title: [{ plain_text: TEST_USER }] },
             Email: { email: ALICE_EMAIL },
             Company: { rich_text: [{ plain_text: TECH_CORP }] },
-            Service: { rich_text: [{ plain_text: "DevOps" }] },
+            Service: { rich_text: [{ plain_text: TAG_DEVOPS }] },
             Message: { rich_text: [{ plain_text: "Help me" }] },
             Status: { select: { name: "New" } },
             Source: { select: { name: SOURCE_CONTACT } },
@@ -118,7 +121,7 @@ describe("notion-forms.ts", () => {
       const subs = await listSubmissions();
 
       expect(subs).toHaveLength(1);
-      expect(subs[0].name).toBe("Alice");
+      expect(subs[0].name).toBe(TEST_USER);
       expect(subs[0].email).toBe(ALICE_EMAIL);
       expect(subs[0].status).toBe("New");
     });
@@ -171,7 +174,7 @@ describe("notion-forms.ts", () => {
       await saveSubmission({
         name: "Test",
         email: TEST_EMAIL,
-        message: "Hello",
+        message: FORM_HELLO,
       });
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
@@ -186,7 +189,7 @@ describe("notion-forms.ts", () => {
       await saveSubmission({
         name: "Test",
         email: TEST_EMAIL,
-        message: "Hello",
+        message: FORM_HELLO,
         source: SOURCE_SUBSCRIBE,
       });
 
@@ -200,7 +203,7 @@ describe("notion-forms.ts", () => {
       await saveSubmission({
         name: "x".repeat(300),
         email: TEST_EMAIL,
-        message: "Hello",
+        message: FORM_HELLO,
       });
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
@@ -213,7 +216,7 @@ describe("notion-forms.ts", () => {
       await saveSubmission({
         name: "Test",
         email: TEST_EMAIL,
-        message: "Hello",
+        message: FORM_HELLO,
       });
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
@@ -230,10 +233,10 @@ describe("notion-forms.ts", () => {
           url: SUB_1_URL,
           created_time: CREATED_TIME,
           properties: {
-            Name: { title: [{ plain_text: "Alice" }] },
+            Name: { title: [{ plain_text: TEST_USER }] },
             Email: { email: ALICE_EMAIL },
             Company: { rich_text: [{ plain_text: TECH_CORP }] },
-            Service: { rich_text: [{ plain_text: "DevOps" }] },
+            Service: { rich_text: [{ plain_text: TAG_DEVOPS }] },
             Message: { rich_text: [{ plain_text: "Help needed" }] },
             Status: { select: { name: STATUS_IN_REVIEW } },
             Source: { select: { name: SOURCE_SUBSCRIBE } },
@@ -245,7 +248,7 @@ describe("notion-forms.ts", () => {
       const subs = await listSubmissions();
 
       expect(subs[0].company).toBe(TECH_CORP);
-      expect(subs[0].service).toBe("DevOps");
+      expect(subs[0].service).toBe(TAG_DEVOPS);
       expect(subs[0].message).toBe("Help needed");
       expect(subs[0].source).toBe(SOURCE_SUBSCRIBE);
       expect(subs[0].status).toBe(STATUS_IN_REVIEW);

@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+const DOC_ID = "doc-1";
+const SORT_ASC = "ascending";
+const CAT_GUIDES = "Guides";
 
 const mockNotionFetch = vi.fn();
 const mockNotionFetchAll = vi.fn();
@@ -20,12 +23,12 @@ vi.mock("@/lib/notion", () => ({
 
 function makeDocPage(overrides: Record<string, unknown> = {}) {
   return {
-    id: "doc-1",
+    id: DOC_ID,
     url: "https://notion.so/doc-1",
     properties: {
       Title: { title: [{ plain_text: DOC_TITLE }] },
       Slug: { rich_text: [{ plain_text: DOC_SLUG }] },
-      Category: { select: { name: "Guides" } },
+      Category: { select: { name: CAT_GUIDES } },
       Description: { rich_text: [{ plain_text: "How to get started" }] },
       Published: { checkbox: true },
       Order: { number: 1 },
@@ -64,7 +67,7 @@ describe("notion-docs.ts", () => {
       expect(docs).toHaveLength(2);
       expect(docs[0].title).toBe(DOC_TITLE);
       expect(docs[0].slug).toBe(DOC_SLUG);
-      expect(docs[0].category).toBe("Guides");
+      expect(docs[0].category).toBe(CAT_GUIDES);
       expect(docs[0].description).toBe("How to get started");
       expect(docs[0].order).toBe(1);
       expect(docs[0].published).toBe(true);
@@ -82,8 +85,8 @@ describe("notion-docs.ts", () => {
         expect.objectContaining({
           filter: { property: "Published", checkbox: { equals: true } },
           sorts: [
-            { property: "Category", direction: "ascending" },
-            { property: "Order", direction: "ascending" },
+            { property: "Category", direction: SORT_ASC },
+            { property: "Order", direction: SORT_ASC },
           ],
         }),
       );
@@ -224,7 +227,7 @@ describe("notion-docs.ts", () => {
       ]);
 
       const { getDocContent } = await import("@/lib/notion-docs");
-      const content = await getDocContent("doc-1");
+      const content = await getDocContent(DOC_ID);
 
       expect(content).not.toBeNull();
       expect(content!.title).toBe(DOC_TITLE);
@@ -236,10 +239,10 @@ describe("notion-docs.ts", () => {
       mockNotionListAll.mockResolvedValueOnce([]);
 
       const { getDocContent } = await import("@/lib/notion-docs");
-      await getDocContent("doc-1");
+      await getDocContent(DOC_ID);
 
       expect(mockNotionFetch).toHaveBeenCalledWith("/pages/doc-1");
-      expect(mockNotionListAll).toHaveBeenCalledWith("doc-1");
+      expect(mockNotionListAll).toHaveBeenCalledWith(DOC_ID);
     });
 
     it("returns null when not configured (no API key)", async () => {
@@ -266,15 +269,15 @@ describe("notion-docs.ts", () => {
       const { groupDocsByCategory } = await import("@/lib/notion-docs");
 
       const docs = [
-        { id: "1", slug: "a", title: "A", description: "", category: "Guides", order: 1, published: true, url: "" },
+        { id: "1", slug: "a", title: "A", description: "", category: CAT_GUIDES, order: 1, published: true, url: "" },
         { id: "2", slug: "b", title: "B", description: "", category: "API", order: 1, published: true, url: "" },
-        { id: "3", slug: "c", title: "C", description: "", category: "Guides", order: 2, published: true, url: "" },
+        { id: "3", slug: "c", title: "C", description: "", category: CAT_GUIDES, order: 2, published: true, url: "" },
       ];
 
       const grouped = groupDocsByCategory(docs);
 
-      expect(Object.keys(grouped)).toEqual(["Guides", "API"]);
-      expect(grouped["Guides"]).toHaveLength(2);
+      expect(Object.keys(grouped)).toEqual([CAT_GUIDES, "API"]);
+      expect(grouped[CAT_GUIDES]).toHaveLength(2);
       expect(grouped["API"]).toHaveLength(1);
     });
 
@@ -323,8 +326,8 @@ describe("notion-docs.ts", () => {
       const [, body] = mockNotionFetchAll.mock.calls[0];
       expect(body).not.toHaveProperty("filter");
       expect(body.sorts).toEqual([
-        { property: "Category", direction: "ascending" },
-        { property: "Order", direction: "ascending" },
+        { property: "Category", direction: SORT_ASC },
+        { property: "Order", direction: SORT_ASC },
       ]);
     });
 

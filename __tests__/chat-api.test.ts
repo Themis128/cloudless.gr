@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+const EVENT_MESSAGE_STOP = "message_stop";
 
 // ---------------------------------------------------------------------------
 // Hoist mocks
@@ -75,7 +76,7 @@ describe("POST /api/chat", () => {
     mockFetch.mockResolvedValueOnce(
       makeStreamResponse([
         'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hello"}}\n\n',
-        'data: {"type":"message_stop"}\n\n',
+        'data: {"type":EVENT_MESSAGE_STOP}\n\n',
       ])
     );
     const { POST } = await import("@/app/api/chat/route");
@@ -88,7 +89,7 @@ describe("POST /api/chat", () => {
 
   it("calls Anthropic API with correct model", async () => {
     mockFetch.mockResolvedValueOnce(makeStreamResponse([
-      'data: {"type":"message_stop"}\n\n',
+      'data: {"type":EVENT_MESSAGE_STOP}\n\n',
     ]));
     const { POST } = await import("@/app/api/chat/route");
     await POST(makeRequest({
@@ -105,7 +106,7 @@ describe("POST /api/chat", () => {
 
   it("caps messages to last 10 turns", async () => {
     mockFetch.mockResolvedValueOnce(makeStreamResponse([
-      'data: {"type":"message_stop"}\n\n',
+      'data: {"type":EVENT_MESSAGE_STOP}\n\n',
     ]));
     const { POST } = await import("@/app/api/chat/route");
     const messages = Array.from({ length: 15 }, (_, i) => ({

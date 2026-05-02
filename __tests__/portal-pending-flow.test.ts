@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+const PENDING_URL = "http://localhost/api/admin/pending-clients";
+const ENROLL_URL = "http://localhost/api/portal/enroll";
+const PORTAL_ME_URL = "http://localhost/api/portal/me";
+const TEST_EMAIL = "eve@example.com";
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks
@@ -98,7 +102,7 @@ describe("POST /api/portal/enroll", () => {
 
   it("returns 401 when no auth token", async () => {
     const { POST } = await import("@/app/api/portal/enroll/route");
-    const res = await POST(unauthReq("http://localhost/api/portal/enroll", {
+    const res = await POST(unauthReq(ENROLL_URL, {
       method: "POST",
       body: JSON.stringify({ plan: "bundle" }),
     }));
@@ -107,7 +111,7 @@ describe("POST /api/portal/enroll", () => {
 
   it("returns 400 when plan is missing", async () => {
     const { POST } = await import("@/app/api/portal/enroll/route");
-    const res = await POST(authReq("http://localhost/api/portal/enroll", {
+    const res = await POST(authReq(ENROLL_URL, {
       method: "POST",
       body: JSON.stringify({}),
     }));
@@ -116,7 +120,7 @@ describe("POST /api/portal/enroll", () => {
 
   it("returns 400 when plan is not in allowed list", async () => {
     const { POST } = await import("@/app/api/portal/enroll/route");
-    const res = await POST(authReq("http://localhost/api/portal/enroll", {
+    const res = await POST(authReq(ENROLL_URL, {
       method: "POST",
       body: JSON.stringify({ plan: "not-a-real-plan" }),
     }));
@@ -125,7 +129,7 @@ describe("POST /api/portal/enroll", () => {
 
   it("creates a pending client for a valid plan", async () => {
     const { POST } = await import("@/app/api/portal/enroll/route");
-    const res = await POST(authReq("http://localhost/api/portal/enroll", {
+    const res = await POST(authReq(ENROLL_URL, {
       method: "POST",
       email: "alice@example.com",
       body: JSON.stringify({ plan: "bundle", name: "Alice" }),
@@ -142,7 +146,7 @@ describe("POST /api/portal/enroll", () => {
 
   it("accepts new plan keys (web, hosting)", async () => {
     const { POST } = await import("@/app/api/portal/enroll/route");
-    const res1 = await POST(authReq("http://localhost/api/portal/enroll", {
+    const res1 = await POST(authReq(ENROLL_URL, {
       method: "POST",
       body: JSON.stringify({ plan: "web" }),
     }));
@@ -153,7 +157,7 @@ describe("POST /api/portal/enroll", () => {
       .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } })
       .mockResolvedValue({});
 
-    const res2 = await POST(authReq("http://localhost/api/portal/enroll", {
+    const res2 = await POST(authReq(ENROLL_URL, {
       method: "POST",
       body: JSON.stringify({ plan: "hosting" }),
     }));
@@ -171,14 +175,14 @@ describe("GET /api/portal/me", () => {
 
   it("returns 401 without auth", async () => {
     const { GET } = await import("@/app/api/portal/me/route");
-    const res = await GET(unauthReq("http://localhost/api/portal/me"));
+    const res = await GET(unauthReq(PORTAL_ME_URL));
     expect(res.status).toBe(401);
   });
 
   it("returns status: none when user has no pending entry", async () => {
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([]) } });
     const { GET } = await import("@/app/api/portal/me/route");
-    const res = await GET(authReq("http://localhost/api/portal/me"));
+    const res = await GET(authReq(PORTAL_ME_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe("none");
@@ -197,7 +201,7 @@ describe("GET /api/portal/me", () => {
     ];
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
     const { GET } = await import("@/app/api/portal/me/route");
-    const res = await GET(authReq("http://localhost/api/portal/me", { email: "bob@example.com" }));
+    const res = await GET(authReq(PORTAL_ME_URL, { email: "bob@example.com" }));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toMatchObject({
@@ -220,7 +224,7 @@ describe("GET /api/portal/me", () => {
     ];
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
     const { GET } = await import("@/app/api/portal/me/route");
-    const res = await GET(authReq("http://localhost/api/portal/me", { email: "carol@example.com" }));
+    const res = await GET(authReq(PORTAL_ME_URL, { email: "carol@example.com" }));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe("approved");
@@ -238,7 +242,7 @@ describe("GET /api/portal/me", () => {
     ];
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
     const { GET } = await import("@/app/api/portal/me/route");
-    const res = await GET(authReq("http://localhost/api/portal/me", { email: "dan@example.com" }));
+    const res = await GET(authReq(PORTAL_ME_URL, { email: "dan@example.com" }));
     const data = await res.json();
     expect(data.status).toBe("waiting");
   });
@@ -254,13 +258,13 @@ describe("GET /api/admin/pending-clients", () => {
 
   it("returns 401 without auth", async () => {
     const { GET } = await import("@/app/api/admin/pending-clients/route");
-    const res = await GET(unauthReq("http://localhost/api/admin/pending-clients"));
+    const res = await GET(unauthReq(PENDING_URL));
     expect(res.status).toBe(401);
   });
 
   it("returns 403 for non-admin", async () => {
     const { GET } = await import("@/app/api/admin/pending-clients/route");
-    const res = await GET(authReq("http://localhost/api/admin/pending-clients", { admin: false }));
+    const res = await GET(authReq(PENDING_URL, { admin: false }));
     expect(res.status).toBe(403);
   });
 
@@ -273,7 +277,7 @@ describe("GET /api/admin/pending-clients", () => {
     ];
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
     const { GET } = await import("@/app/api/admin/pending-clients/route");
-    const res = await GET(authReq("http://localhost/api/admin/pending-clients", { admin: true }));
+    const res = await GET(authReq(PENDING_URL, { admin: true }));
     expect(res.status).toBe(200);
     const data = await res.json();
     // Waiting first, newest waiting first
@@ -291,7 +295,7 @@ describe("POST /api/admin/pending-clients (approve)", () => {
 
   it("returns 403 for non-admin", async () => {
     const { POST } = await import("@/app/api/admin/pending-clients/route");
-    const res = await POST(authReq("http://localhost/api/admin/pending-clients", {
+    const res = await POST(authReq(PENDING_URL, {
       method: "POST",
       body: JSON.stringify({ email: "x@y.com" }),
     }));
@@ -300,7 +304,7 @@ describe("POST /api/admin/pending-clients (approve)", () => {
 
   it("returns 400 when email is missing", async () => {
     const { POST } = await import("@/app/api/admin/pending-clients/route");
-    const res = await POST(authReq("http://localhost/api/admin/pending-clients", {
+    const res = await POST(authReq(PENDING_URL, {
       method: "POST",
       admin: true,
       body: JSON.stringify({}),
@@ -311,7 +315,7 @@ describe("POST /api/admin/pending-clients (approve)", () => {
   it("returns 404 when pending client not found", async () => {
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([]) } });
     const { POST } = await import("@/app/api/admin/pending-clients/route");
-    const res = await POST(authReq("http://localhost/api/admin/pending-clients", {
+    const res = await POST(authReq(PENDING_URL, {
       method: "POST",
       admin: true,
       body: JSON.stringify({ email: "ghost@example.com" }),
@@ -321,7 +325,7 @@ describe("POST /api/admin/pending-clients (approve)", () => {
 
   it("approves a pending client and creates portal", async () => {
     const pending = [
-      { email: "eve@example.com", name: "Eve", plan: "bundle", planLabel: "Bundle", status: "waiting", submittedAt: new Date().toISOString() },
+      { email: TEST_EMAIL, name: "Eve", plan: "bundle", planLabel: "Bundle", status: "waiting", submittedAt: new Date().toISOString() },
     ];
     // Need to track call count to set up the right mock for each call
     // 1. readPendingClients (find pending)
@@ -340,15 +344,15 @@ describe("POST /api/admin/pending-clients (approve)", () => {
     });
 
     const { POST } = await import("@/app/api/admin/pending-clients/route");
-    const res = await POST(authReq("http://localhost/api/admin/pending-clients", {
+    const res = await POST(authReq(PENDING_URL, {
       method: "POST",
       admin: true,
-      body: JSON.stringify({ email: "eve@example.com" }),
+      body: JSON.stringify({ email: TEST_EMAIL }),
     }));
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.portal).toMatchObject({
-      clientEmail: "eve@example.com",
+      clientEmail: TEST_EMAIL,
       clientName: "Eve",
     });
     expect(data.portal.steps.length).toBeGreaterThan(0);
@@ -361,7 +365,7 @@ describe("POST /api/admin/pending-clients (approve)", () => {
     ];
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
     const { POST } = await import("@/app/api/admin/pending-clients/route");
-    const res = await POST(authReq("http://localhost/api/admin/pending-clients", {
+    const res = await POST(authReq(PENDING_URL, {
       method: "POST",
       admin: true,
       body: JSON.stringify({ email: "f@x.com" }),
@@ -385,7 +389,7 @@ describe("DELETE /api/admin/pending-clients", () => {
       .mockResolvedValue({});
 
     const { DELETE } = await import("@/app/api/admin/pending-clients/route");
-    const res = await DELETE(authReq("http://localhost/api/admin/pending-clients", {
+    const res = await DELETE(authReq(PENDING_URL, {
       method: "DELETE",
       admin: true,
       body: JSON.stringify({ email: "g@x.com" }),
@@ -397,7 +401,7 @@ describe("DELETE /api/admin/pending-clients", () => {
 
   it("returns 400 when email is missing", async () => {
     const { DELETE } = await import("@/app/api/admin/pending-clients/route");
-    const res = await DELETE(authReq("http://localhost/api/admin/pending-clients", {
+    const res = await DELETE(authReq(PENDING_URL, {
       method: "DELETE",
       admin: true,
       body: JSON.stringify({}),

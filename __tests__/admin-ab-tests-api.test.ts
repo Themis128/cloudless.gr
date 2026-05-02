@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { DEFAULT_FLAGS } from "@/lib/ab-flags";
+const ABTEST_URL = "http://localhost/api/admin/ab-tests";
 
 // ---------------------------------------------------------------------------
 // Hoist mocks
@@ -82,19 +83,19 @@ describe("GET /api/admin/ab-tests", () => {
 
   it("returns 401 without token", async () => {
     const { GET } = await import("@/app/api/admin/ab-tests/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/ab-tests"));
+    const res = await GET(new NextRequest(ABTEST_URL));
     expect(res.status).toBe(401);
   });
 
   it("returns 403 for non-admin", async () => {
     const { GET } = await import("@/app/api/admin/ab-tests/route");
-    const res = await GET(userReq("http://localhost/api/admin/ab-tests"));
+    const res = await GET(userReq(ABTEST_URL));
     expect(res.status).toBe(403);
   });
 
   it("returns flags array for admin", async () => {
     const { GET } = await import("@/app/api/admin/ab-tests/route");
-    const res = await GET(adminReq("http://localhost/api/admin/ab-tests"));
+    const res = await GET(adminReq(ABTEST_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.flags)).toBe(true);
@@ -107,7 +108,7 @@ describe("GET /api/admin/ab-tests", () => {
   it("falls back to DEFAULT_FLAGS when SSM throws", async () => {
     mockSSMSend.mockRejectedValue(new Error("SSM unavailable"));
     const { GET } = await import("@/app/api/admin/ab-tests/route");
-    const res = await GET(adminReq("http://localhost/api/admin/ab-tests"));
+    const res = await GET(adminReq(ABTEST_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.flags).toEqual(DEFAULT_FLAGS);
@@ -124,7 +125,7 @@ describe("PATCH /api/admin/ab-tests", () => {
 
   it("returns 400 when id is missing", async () => {
     const { PATCH } = await import("@/app/api/admin/ab-tests/route");
-    const res = await PATCH(adminReq("http://localhost/api/admin/ab-tests", {
+    const res = await PATCH(adminReq(ABTEST_URL, {
       method: "PATCH",
       body: JSON.stringify({ enabled: true }),
     }));
@@ -133,7 +134,7 @@ describe("PATCH /api/admin/ab-tests", () => {
 
   it("returns 404 when flag id is unknown", async () => {
     const { PATCH } = await import("@/app/api/admin/ab-tests/route");
-    const res = await PATCH(adminReq("http://localhost/api/admin/ab-tests", {
+    const res = await PATCH(adminReq(ABTEST_URL, {
       method: "PATCH",
       body: JSON.stringify({ id: "does-not-exist", enabled: true }),
     }));
@@ -142,7 +143,7 @@ describe("PATCH /api/admin/ab-tests", () => {
 
   it("updates a flag and returns updated flags", async () => {
     const { PATCH } = await import("@/app/api/admin/ab-tests/route");
-    const res = await PATCH(adminReq("http://localhost/api/admin/ab-tests", {
+    const res = await PATCH(adminReq(ABTEST_URL, {
       method: "PATCH",
       body: JSON.stringify({ id: "hero-cta", enabled: true, trafficSplit: 60 }),
     }));
@@ -163,7 +164,7 @@ describe("POST /api/admin/ab-tests (reset)", () => {
 
   it("resets to default flags", async () => {
     const { POST } = await import("@/app/api/admin/ab-tests/route");
-    const res = await POST(adminReq("http://localhost/api/admin/ab-tests", {
+    const res = await POST(adminReq(ABTEST_URL, {
       method: "POST",
       body: JSON.stringify({ action: "reset" }),
     }));
@@ -174,7 +175,7 @@ describe("POST /api/admin/ab-tests (reset)", () => {
 
   it("returns 400 for unknown action", async () => {
     const { POST } = await import("@/app/api/admin/ab-tests/route");
-    const res = await POST(adminReq("http://localhost/api/admin/ab-tests", {
+    const res = await POST(adminReq(ABTEST_URL, {
       method: "POST",
       body: JSON.stringify({ action: "invalid" }),
     }));

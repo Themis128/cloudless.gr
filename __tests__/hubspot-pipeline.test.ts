@@ -13,6 +13,7 @@ import {
   getPipelineStats,
 } from "@/lib/hubspot";
 
+const DEAL_ID = "deal_1";
 const STAGE_CLOSEDWON = "closedwon";
 const STAGE_APPT_SCHEDULED = "appointmentscheduled";
 
@@ -29,10 +30,10 @@ describe("hubspot.ts — pipeline extensions", () => {
     it("PATCHes the deal and returns the result", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: "deal_1" }),
+        json: async () => ({ id: DEAL_ID }),
       });
-      const result = await updateDeal("deal_1", { dealname: "Updated" });
-      expect(result?.id).toBe("deal_1");
+      const result = await updateDeal(DEAL_ID, { dealname: "Updated" });
+      expect(result?.id).toBe(DEAL_ID);
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining("/crm/v3/objects/deals/deal_1"),
         expect.objectContaining({ method: "PATCH" }),
@@ -41,7 +42,7 @@ describe("hubspot.ts — pipeline extensions", () => {
 
     it("returns null on API error", async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
-      const result = await updateDeal("deal_1", {});
+      const result = await updateDeal(DEAL_ID, {});
       expect(result).toBeNull();
     });
   });
@@ -52,10 +53,10 @@ describe("hubspot.ts — pipeline extensions", () => {
     it("updates dealstage property", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: "deal_1" }),
+        json: async () => ({ id: DEAL_ID }),
       });
-      const result = await moveDealStage("deal_1", STAGE_CLOSEDWON);
-      expect(result?.id).toBe("deal_1");
+      const result = await moveDealStage(DEAL_ID, STAGE_CLOSEDWON);
+      expect(result?.id).toBe(DEAL_ID);
       const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
       expect(body.properties.dealstage).toBe(STAGE_CLOSEDWON);
     });
@@ -129,7 +130,7 @@ describe("hubspot.ts — pipeline extensions", () => {
             ],
           }),
         });
-      const notes = await listNotes("deal_1");
+      const notes = await listNotes(DEAL_ID);
       expect(notes).toHaveLength(2);
       expect(mockFetch).toHaveBeenCalledTimes(2);
       const batchCall = mockFetch.mock.calls[1];
@@ -144,14 +145,14 @@ describe("hubspot.ts — pipeline extensions", () => {
         ok: true,
         json: async () => ({ results: [] }),
       });
-      const notes = await listNotes("deal_1");
+      const notes = await listNotes(DEAL_ID);
       expect(notes).toEqual([]);
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
     it("returns [] when associations fetch fails", async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({}) });
-      const notes = await listNotes("deal_1");
+      const notes = await listNotes(DEAL_ID);
       expect(notes).toEqual([]);
     });
 
@@ -162,7 +163,7 @@ describe("hubspot.ts — pipeline extensions", () => {
           json: async () => ({ results: [{ id: "n1" }] }),
         })
         .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
-      const notes = await listNotes("deal_1");
+      const notes = await listNotes(DEAL_ID);
       expect(notes).toEqual([]);
     });
   });
@@ -175,7 +176,7 @@ describe("hubspot.ts — pipeline extensions", () => {
         ok: true,
         json: async () => ({ id: "note_1" }),
       });
-      const result = await createNote("deal_1", "Test note");
+      const result = await createNote(DEAL_ID, "Test note");
       expect(result?.id).toBe("note_1");
       const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
       expect(body.properties.hs_note_body).toBe("Test note");
@@ -183,7 +184,7 @@ describe("hubspot.ts — pipeline extensions", () => {
 
     it("returns null on failure", async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({}) });
-      const result = await createNote("deal_1", "Test");
+      const result = await createNote(DEAL_ID, "Test");
       expect(result).toBeNull();
     });
   });

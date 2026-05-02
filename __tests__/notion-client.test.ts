@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+const PAGE_ID = "page-1";
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -671,11 +672,11 @@ describe("notion.ts — Shared Client", () => {
     it("sends PATCH with properties", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ id: "page-1" }),
+        json: () => Promise.resolve({ id: PAGE_ID }),
       });
 
       const { updatePage } = await import("@/lib/notion");
-      const result = await updatePage("page-1", { Status: { select: { name: "Done" } } });
+      const result = await updatePage(PAGE_ID, { Status: { select: { name: "Done" } } });
 
       expect(result).toBe(true);
       expect(mockFetch.mock.calls[0][1].method).toBe("PATCH");
@@ -694,11 +695,11 @@ describe("notion.ts — Shared Client", () => {
     it("sends PATCH with archived: true", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ id: "page-1", archived: true }),
+        json: () => Promise.resolve({ id: PAGE_ID, archived: true }),
       });
 
       const { archivePage } = await import("@/lib/notion");
-      const result = await archivePage("page-1");
+      const result = await archivePage(PAGE_ID);
       expect(result).toBe(true);
       const body = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(body.archived).toBe(true);
@@ -709,11 +710,11 @@ describe("notion.ts — Shared Client", () => {
     it("sends PATCH with archived: false", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ id: "page-1", archived: false }),
+        json: () => Promise.resolve({ id: PAGE_ID, archived: false }),
       });
 
       const { restorePage } = await import("@/lib/notion");
-      const result = await restorePage("page-1");
+      const result = await restorePage(PAGE_ID);
       expect(result).toBe(true);
       const body = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(body.archived).toBe(false);
