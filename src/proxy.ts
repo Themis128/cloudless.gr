@@ -130,15 +130,15 @@ function cleanupStaleEntries() {
  */
 const CSP_REPORT_ONLY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com",
   // fonts.googleapis.com is allowlisted because next/font/google emits a
   // @font-face stylesheet whose src URLs hit Google's CDN even though the
   // font binaries themselves are self-hosted under /_next/static/media.
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://p.typekit.net",
   "img-src 'self' data: blob: https:",
   // fonts.gstatic.com — Google Fonts binary CDN. next/font/google falls back
   // to it for the woff2 files when the build cannot inline them.
-  "font-src 'self' data: https://fonts.gstatic.com",
+  "font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net",
   "connect-src 'self' https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://cognito-idp.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com https://api.hubapi.com",
   "frame-src https://js.stripe.com https://hooks.stripe.com https://www.facebook.com",
   "worker-src 'self' blob:",
