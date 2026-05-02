@@ -7,12 +7,7 @@ import {
   getEmailStats,
 } from "@/lib/activecampaign";
 import { getStripe } from "@/lib/stripe";
-
-function cronAuth(req: NextRequest): boolean {
-  return (
-    req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`
-  );
-}
+import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 
 async function safeCall<T>(fn: () => Promise<T>): Promise<T | null> {
   try {
@@ -85,8 +80,8 @@ async function buildBriefText(
 }
 
 export async function GET(request: NextRequest) {
-  if (!cronAuth(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorized();
   }
 
   const cfg = (await getConfig()) as unknown as Record<
