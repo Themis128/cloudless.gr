@@ -35,7 +35,7 @@ async function readChunks(
   for (const line of chunk.split("\n")) {
     forwardSseLine(line, controller);
   }
-  return readChunks(reader, decoder, controller);
+  await readChunks(reader, decoder, controller);
 }
 
 function forwardSseLine(
