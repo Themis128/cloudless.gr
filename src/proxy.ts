@@ -211,7 +211,11 @@ export function proxy(request: NextRequest) {
       RATE_LIMITS[pathname] ??
       (pathname.startsWith("/api/admin/") ? ADMIN_RATE_LIMIT : null);
     const isAdminRoute = pathname.startsWith("/api/admin/");
-    if (limit && (isAdminRoute || (request.method !== "GET" && request.method !== "OPTIONS"))) {
+    if (
+      limit &&
+      (isAdminRoute ||
+        (request.method !== "GET" && request.method !== "OPTIONS"))
+    ) {
       cleanupStaleEntries();
 
       const ip = getClientIp(request);

@@ -65,7 +65,8 @@ export async function verifyToken(token: string): Promise<DecodedToken | null> {
         ...(CLIENT_ID ? { audience: CLIENT_ID } : {}),
       });
       // Only accept ID tokens — access tokens use a different audience claim
-      if ((payload as Record<string, unknown>)["token_use"] !== "id") return null;
+      if ((payload as Record<string, unknown>)["token_use"] !== "id")
+        return null;
       return payload as unknown as DecodedToken;
     } catch {
       return null;

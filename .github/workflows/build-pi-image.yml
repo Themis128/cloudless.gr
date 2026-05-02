@@ -1,0 +1,96 @@
+name: build pi image
+
+# Builds an arm64 image for the Pi HA standby and pushes it to ECR
+# (cloudless-pi-app in us-east-1). Triggered on every push to main and
+# on manual dispatch.
+#
+# Auth: OIDC role arn:aws:iam::278585680617:role/cloudless-github-actions
+# (trust restricted to repo Themis128/cloudless.gr).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'next.config.ts'
+      - 'patches/**'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/build-pi-image.yml'
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/build-pi-image.yml'
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REPO: cloudless-pi-app
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: pi-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    name: build arm64 + push to ECR
+    # GitHub-hosted ARM runner — native arm64, no QEMU. First build ~5-10 min,
+    # subsequent cached builds ~2-3 min. Cross-compile via QEMU on x86 runners
+    # was unviable (pnpm install alone exceeded 60min).
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: configure AWS credentials (OIDC)
+        if: github.event_name != 'pull_request'
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: arn:aws:iam::278585680617:role/cloudless-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: login to ECR
+        if: github.event_name != 'pull_request'
+        uses: aws-actions/amazon-ecr-login@19d944daaa35f0fa1d3f7f8af1d3f2e5de25c5b7 # v2
+
+      - name: set up Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: compute tags
+        id: tags
+        run: |
+          SHA="${GITHUB_SHA::12}"
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "push=true" >> "$GITHUB_OUTPUT"
+            echo "tags=${ECR_REGISTRY}/${ECR_REPO}:${SHA},${ECR_REGISTRY}/${ECR_REPO}:latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "push=false" >> "$GITHUB_OUTPUT"
+            echo "tags=cloudless-pi-app:pr-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: build (and push if main)
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/arm64
+          push: ${{ steps.tags.outputs.push == 'true' }}
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
+            NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
+            NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
+            NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}

@@ -25,7 +25,10 @@ import type { Report } from "@/lib/reports";
 
 async function getDb(): Promise<{ apiKey: string; dbId: string } | null> {
   // Empty string means explicitly disabled -- don't let SSM override a cleared env var.
-  if (process.env.NOTION_API_KEY === "" || process.env.NOTION_REPORTS_DB_ID === "")
+  if (
+    process.env.NOTION_API_KEY === "" ||
+    process.env.NOTION_REPORTS_DB_ID === ""
+  )
     return null;
   const cfg = await getIntegrationsAsync();
   if (!cfg.NOTION_API_KEY || !cfg.NOTION_REPORTS_DB_ID) return null;
