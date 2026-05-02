@@ -313,8 +313,12 @@ export interface NotionBlock {
  * Fetch all blocks under a parent, recursively expanding any block that
  * has `has_children: true` (e.g. toggle, callout, column_list).
  */
-export async function fetchBlocksDeep(parentId: string): Promise<NotionBlock[]> {
-  const blocks = await notionListAll<NotionBlock>(`/blocks/${parentId}/children`);
+export async function fetchBlocksDeep(
+  parentId: string,
+): Promise<NotionBlock[]> {
+  const blocks = await notionListAll<NotionBlock>(
+    `/blocks/${parentId}/children`,
+  );
   for (const block of blocks) {
     if (block.has_children) {
       block.children = await fetchBlocksDeep(block.id);

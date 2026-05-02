@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 
 const REFRESH_INTERVAL = 10_000;
-const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
+const TH_CLASS =
+  "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
 
 interface Company {
   id: string;
@@ -136,7 +137,9 @@ export default function AdminCompaniesPage() {
                   </td>
                   <td className="px-6 py-4 font-mono text-slate-500">
                     {c.properties.createdate
-                      ? new Date(c.properties.createdate).toLocaleDateString("en-IE")
+                      ? new Date(c.properties.createdate).toLocaleDateString(
+                          "en-IE",
+                        )
                       : "—"}
                   </td>
                 </tr>
@@ -147,7 +150,9 @@ export default function AdminCompaniesPage() {
                     colSpan={4}
                     className="px-6 py-12 text-center font-mono text-slate-600"
                   >
-                    {search ? "No companies match your search" : "No companies yet"}
+                    {search
+                      ? "No companies match your search"
+                      : "No companies yet"}
                   </td>
                 </tr>
               )}
@@ -166,8 +171,12 @@ export default function AdminCompaniesPage() {
             <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
             <span className="text-neon-magenta font-mono text-xs">CRM</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">Companies</h1>
-          <p className="font-body mt-1 text-slate-400">Company accounts synced from HubSpot.</p>
+          <h1 className="font-heading text-2xl font-bold text-white">
+            Companies
+          </h1>
+          <p className="font-body mt-1 text-slate-400">
+            Company accounts synced from HubSpot.
+          </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <button
@@ -197,7 +206,9 @@ export default function AdminCompaniesPage() {
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
           <p className="font-mono text-xs text-slate-500">With Domain</p>
           <p className="font-heading text-neon-cyan mt-1 text-2xl font-bold">
-            {loading ? "…" : companies.filter((c) => c.properties.domain).length}
+            {loading
+              ? "…"
+              : companies.filter((c) => c.properties.domain).length}
           </p>
         </div>
       </div>

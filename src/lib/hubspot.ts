@@ -579,7 +579,9 @@ export async function listNotes(dealId: string): Promise<unknown[]> {
       method: "POST",
       body: JSON.stringify({
         properties: ["hs_note_body", "hs_timestamp"],
-        inputs: noteIds.slice(0, HUBSPOT_BATCH_NOTE_LIMIT).map((id) => ({ id })),
+        inputs: noteIds
+          .slice(0, HUBSPOT_BATCH_NOTE_LIMIT)
+          .map((id) => ({ id })),
       }),
     });
     if (!batchRes.ok) return [];

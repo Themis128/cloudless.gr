@@ -7,7 +7,8 @@ const CACHE_MAX_AGE_SECS = 3_300; // 55 min — Notion signed URLs last ~1 h
 const CACHE_SWR_SECS = 600; // stale-while-revalidate
 
 /** Notion UUIDs: 32 hex digits, optionally hyphenated (8-4-4-4-12). */
-const NOTION_ID_RE = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
+const NOTION_ID_RE =
+  /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
 const ALLOWED_TYPES = new Set(["block", "cover"]);
 
 interface NotionPage {
@@ -25,8 +26,10 @@ export async function GET(request: NextRequest): Promise<Response> {
   const type = searchParams.get("type") ?? "block";
 
   if (!id) return new Response("Missing id", { status: 400 });
-  if (!NOTION_ID_RE.test(id)) return new Response("Invalid id", { status: 400 });
-  if (!ALLOWED_TYPES.has(type)) return new Response("Invalid type", { status: 400 });
+  if (!NOTION_ID_RE.test(id))
+    return new Response("Invalid id", { status: 400 });
+  if (!ALLOWED_TYPES.has(type))
+    return new Response("Invalid type", { status: 400 });
 
   try {
     let fileUrl: string | undefined;
@@ -36,7 +39,9 @@ export async function GET(request: NextRequest): Promise<Response> {
       fileUrl = page.cover?.type === "file" ? page.cover.file?.url : undefined;
     } else {
       const block = await notionFetch<NotionBlock>(`/blocks/${id}`);
-      const blockData = block[block.type] as { file?: { url: string } } | undefined;
+      const blockData = block[block.type] as
+        | { file?: { url: string } }
+        | undefined;
       fileUrl = blockData?.file?.url;
     }
 

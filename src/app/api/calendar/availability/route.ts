@@ -14,7 +14,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const DEFAULT_DAYS = 7;
     const MAX_DAYS = 30;
-    const days = Math.max(1, Math.min(Number(searchParams.get("days") || DEFAULT_DAYS), MAX_DAYS));
+    const days = Math.max(
+      1,
+      Math.min(Number(searchParams.get("days") || DEFAULT_DAYS), MAX_DAYS),
+    );
     const slots = await getAvailableSlots(days);
 
     return NextResponse.json(

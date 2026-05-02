@@ -57,7 +57,11 @@ export type IssueStatus = "resolved" | "ignored" | "unresolved"; // NOSONAR — 
 const STATUS_RESOLVED: IssueStatus = "resolved"; // NOSONAR — constant extracted from type annotation
 const STATUS_IGNORED: IssueStatus = "ignored"; // NOSONAR — constant extracted from type annotation
 
-export type SentryTokenStatus = "valid" | "rejected" | "not_configured" | "error";
+export type SentryTokenStatus =
+  | "valid"
+  | "rejected"
+  | "not_configured"
+  | "error";
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -143,17 +147,21 @@ export async function verifySentryToken(): Promise<{
   if (!cfg) return { status: "not_configured" };
 
   try {
-    const res = await fetch(`${SENTRY_API}/projects/${cfg.org}/${cfg.project}/`, {
-      headers: { Authorization: `Bearer ${cfg.token}` },
-      signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
-    });
+    const res = await fetch(
+      `${SENTRY_API}/projects/${cfg.org}/${cfg.project}/`,
+      {
+        headers: { Authorization: `Bearer ${cfg.token}` },
+        signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
+      },
+    );
     if (res.status === 401 || res.status === 403) {
       return {
         status: "rejected",
         message: `Token rejected (${res.status}) — check SENTRY_AUTH_TOKEN scopes (project:read required).`,
       };
     }
-    if (!res.ok) return { status: "error", message: `API returned ${res.status}` };
+    if (!res.ok)
+      return { status: "error", message: `API returned ${res.status}` };
     return { status: "valid" };
   } catch {
     return { status: "error", message: "Connection failed." };

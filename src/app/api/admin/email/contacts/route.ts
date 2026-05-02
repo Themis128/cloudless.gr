@@ -19,7 +19,13 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const DEFAULT_LIMIT = 20;
   const MAX_LIMIT = 100;
-  const limit = Math.max(1, Math.min(Number.parseInt(searchParams.get("limit") ?? String(DEFAULT_LIMIT), 10), MAX_LIMIT));
+  const limit = Math.max(
+    1,
+    Math.min(
+      Number.parseInt(searchParams.get("limit") ?? String(DEFAULT_LIMIT), 10),
+      MAX_LIMIT,
+    ),
+  );
   const contacts = await listACContacts(limit);
   return NextResponse.json({
     contacts,

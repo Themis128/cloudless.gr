@@ -112,10 +112,7 @@ async function onContactCreated(token: string, id: number): Promise<void> {
             `*Service:* ${service}`,
           ].join("\n"),
         },
-        accessory: viewButton(
-          OPEN_IN_HUBSPOT,
-          `${PORTAL_BASE}/contact/${id}`,
-        ),
+        accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/contact/${id}`),
       },
       {
         type: CONTEXT,
@@ -189,7 +186,9 @@ async function onDealClosedWon(token: string, id: number): Promise<void> {
   const amount = p?.amount
     ? `€${Number.parseFloat(p.amount).toLocaleString("en-IE")}`
     : "";
-  const closedWonText = amount ? `Deal closed won: ${name} — ${amount}` : `Deal closed won: ${name}`;
+  const closedWonText = amount
+    ? `Deal closed won: ${name} — ${amount}`
+    : `Deal closed won: ${name}`;
 
   await slack.post({
     text: closedWonText,
@@ -304,10 +303,7 @@ async function onCompanyCreated(token: string, id: number): Promise<void> {
             `*Location:* ${location}`,
           ].join("\n"),
         },
-        accessory: viewButton(
-          OPEN_IN_HUBSPOT,
-          `${PORTAL_BASE}/company/${id}`,
-        ),
+        accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/company/${id}`),
       },
       {
         type: CONTEXT,

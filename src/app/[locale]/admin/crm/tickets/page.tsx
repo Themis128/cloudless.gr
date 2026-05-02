@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 
 const REFRESH_INTERVAL = 10_000;
-const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
+const TH_CLASS =
+  "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
 
 interface Ticket {
   id: string;
@@ -87,7 +88,7 @@ export default function AdminTicketsPage() {
     (t) => t.properties.hs_pipeline_stage !== "4",
   ).length;
 
-  let mainContent: JSX.Element;
+  let mainContent: React.ReactElement;
   if (loading) {
     mainContent = (
       <div className="bg-void-light/50 flex items-center justify-center rounded-xl border border-slate-800 py-16">
@@ -120,7 +121,8 @@ export default function AdminTicketsPage() {
             </thead>
             <tbody>
               {filtered.map((t) => {
-                const priority = t.properties.hs_ticket_priority?.toUpperCase() ?? "";
+                const priority =
+                  t.properties.hs_ticket_priority?.toUpperCase() ?? "";
                 const stage = t.properties.hs_pipeline_stage ?? "";
                 return (
                   <tr
@@ -128,11 +130,15 @@ export default function AdminTicketsPage() {
                     className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
                   >
                     <td className="max-w-xs px-6 py-4 text-white">
-                      <span className="line-clamp-2">{t.properties.subject || "—"}</span>
+                      <span className="line-clamp-2">
+                        {t.properties.subject || "—"}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       {priority ? (
-                        <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${priorityClasses[priority] ?? "text-slate-400 bg-slate-800/50"}`}>
+                        <span
+                          className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${priorityClasses[priority] ?? "text-slate-400 bg-slate-800/50"}`}
+                        >
                           {priority}
                         </span>
                       ) : (
@@ -140,13 +146,17 @@ export default function AdminTicketsPage() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${stage === "4" ? "text-neon-green bg-neon-green/10" : "text-yellow-400 bg-yellow-400/10"}`}>
+                      <span
+                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${stage === "4" ? "text-neon-green bg-neon-green/10" : "text-yellow-400 bg-yellow-400/10"}`}
+                      >
                         {stageLabels[stage] ?? (stage || "—")}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-slate-500">
                       {t.properties.createdate
-                        ? new Date(t.properties.createdate).toLocaleDateString("en-IE")
+                        ? new Date(t.properties.createdate).toLocaleDateString(
+                            "en-IE",
+                          )
                         : "—"}
                     </td>
                   </tr>
@@ -154,7 +164,10 @@ export default function AdminTicketsPage() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center font-mono text-slate-600">
+                  <td
+                    colSpan={4}
+                    className="px-6 py-12 text-center font-mono text-slate-600"
+                  >
                     {search ? "No tickets match your search" : "No tickets yet"}
                   </td>
                 </tr>
