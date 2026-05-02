@@ -15,9 +15,12 @@ vi.mock("@/context/AuthContext", () => ({
 const usePathnameMock = vi.mocked(usePathname);
 const useAuthMock = vi.mocked(useAuth);
 
+const STORAGE_KEY = "cloudless-theme-pref";
+
 describe("ThemePreferenceSync", () => {
   beforeEach(() => {
     document.documentElement.setAttribute("data-theme", "dark");
+    window.localStorage.clear();
 
     Object.defineProperty(window, "matchMedia", {
       writable: true,
@@ -64,6 +67,32 @@ describe("ThemePreferenceSync", () => {
 
     await waitFor(() => {
       expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    });
+  });
+
+  it("applies an anonymous visitor's localStorage override", async () => {
+    usePathnameMock.mockReturnValue("/en/services");
+    useAuthMock.mockReturnValue({ user: null } as never);
+    window.localStorage.setItem(STORAGE_KEY, "dark");
+
+    render(<ThemePreferenceSync />);
+
+    await waitFor(() => {
+      expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    });
+  });
+
+  it("authenticated user preference wins over localStorage override", async () => {
+    usePathnameMock.mockReturnValue("/en/dashboard");
+    useAuthMock.mockReturnValue({
+      user: { preferences: { theme: "light" } },
+    } as never);
+    window.localStorage.setItem(STORAGE_KEY, "dark");
+
+    render(<ThemePreferenceSync />);
+
+    await waitFor(() => {
+      expect(document.documentElement.getAttribute("data-theme")).toBe("light");
     });
   });
 });

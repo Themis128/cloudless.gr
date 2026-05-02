@@ -14,7 +14,11 @@
     "notFound": "Δεν βρέθηκε",
     "learnMore": "Μάθετε περισσότερα",
     "getStarted": "Ξεκινήστε",
-    "viewAll": "Δείτε όλα"
+    "viewAll": "Δείτε όλα",
+    "theme": "Θέμα",
+    "themeSystem": "Σύστημα",
+    "themeLight": "Φωτεινό",
+    "themeDark": "Σκούρο"
   },
   "navbar": {
     "cloudless": "Cloudless",
