@@ -105,10 +105,13 @@ jobs:
           REQUIRED_ACTIONS="iam:SimulatePrincipalPolicy iam:GetRole iam:TagRole iam:UntagRole iam:ListRoleTags"
 
           set +e
+          # Simulate against the prefix SST actually manages (cloudl-production-*).
+          # Testing against arn:aws:iam::*:role/* would require admin perms we
+          # do not need or want to grant.
           SIMULATION=$(aws iam simulate-principal-policy \
             --policy-source-arn "$ROLE_ARN" \
             --action-names $REQUIRED_ACTIONS \
-            --resource-arns "arn:aws:iam::*:role/*" \
+            --resource-arns "arn:aws:iam::${ACCOUNT_ID}:role/cloudl-production-example" \
             --output json 2> /tmp/simulate-principal-policy.err)
           SIMULATION_EXIT_CODE=$?
           set -e
