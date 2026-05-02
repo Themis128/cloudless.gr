@@ -67,7 +67,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const fileUrl = validateNotionFileUrl(rawUrl);
     if (!fileUrl) return new Response("File URL not trusted", { status: 403 });
 
-    const img = await fetch(fileUrl);
+    const img = await fetch(fileUrl, { signal: AbortSignal.timeout(10_000) });
     if (!img.ok) return new Response("Image unavailable", { status: 502 });
 
     return new Response(img.body, {
