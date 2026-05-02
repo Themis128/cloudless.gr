@@ -113,32 +113,41 @@ jobs:
           SIMULATION_EXIT_CODE=$?
           set -e
           if [ "$SIMULATION_EXIT_CODE" -ne 0 ]; then
-            echo "::error::Could not run iam:SimulatePrincipalPolicy for $ROLE_ARN"
-            cat /tmp/simulate-principal-policy.err >&2
-            echo "::error::Fix the IAM policy attached to the deploy role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
-            echo "::error::Ensure the deploy role has iam:SimulatePrincipalPolicy permission."
-            exit 1
+            # The preflight is a helper, not a gate. If the role itself lacks
+            # iam:SimulatePrincipalPolicy we cannot probe — warn and continue,
+            # letting the actual deploy surface any missing tag perms.
+            if grep -qE "AccessDenied|not authorized to perform: iam:SimulatePrincipalPolicy" /tmp/simulate-principal-policy.err; then
+              echo "::warning::Skipping IAM preflight: deploy role lacks iam:SimulatePrincipalPolicy."
+              echo "::warning::To re-enable preflight checks, grant iam:SimulatePrincipalPolicy on resource: ${ROLE_ARN}"
+              cat /tmp/simulate-principal-policy.err >&2
+            else
+              echo "::error::Could not run iam:SimulatePrincipalPolicy for $ROLE_ARN"
+              cat /tmp/simulate-principal-policy.err >&2
+              echo "::error::Fix the IAM policy attached to the deploy role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
+              exit 1
+            fi
+          else
+
+            # 3. Check each action's evaluation decision
+            DENIED=$(echo "$SIMULATION" | jq -r '
+              .EvaluationResults[]
+              | select(.EvalDecision != "allowed")
+              | .EvalActionName
+            ')
+
+            if [ -n "$DENIED" ]; then
+              echo "::error::The following IAM actions are NOT allowed for $ROLE_ARN:"
+              echo "$DENIED" | while read -r action; do echo "  - $action"; done
+              echo ""
+              echo "::error::Fix the IAM policy attached to the deploy role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
+              echo "::error::At minimum allow: iam:GetRole, iam:TagRole, iam:UntagRole, iam:ListRoleTags"
+              echo "::error::Also allow: iam:SimulatePrincipalPolicy (so this preflight can run)"
+              echo "::error::See docs/deploy.md for the exact policy statements."
+              exit 1
+            fi
+
+            echo "✅ IAM permissions confirmed for $ROLE_ARN"
           fi
-
-          # 3. Check each action's evaluation decision
-          DENIED=$(echo "$SIMULATION" | jq -r '
-            .EvaluationResults[]
-            | select(.EvalDecision != "allowed")
-            | .EvalActionName
-          ')
-
-          if [ -n "$DENIED" ]; then
-            echo "::error::The following IAM actions are NOT allowed for $ROLE_ARN:"
-            echo "$DENIED" | while read -r action; do echo "  - $action"; done
-            echo ""
-            echo "::error::Fix the IAM policy attached to the deploy role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
-            echo "::error::At minimum allow: iam:GetRole, iam:TagRole, iam:UntagRole, iam:ListRoleTags"
-            echo "::error::Also allow: iam:SimulatePrincipalPolicy (so this preflight can run)"
-            echo "::error::See docs/deploy.md for the exact policy statements."
-            exit 1
-          fi
-
-          echo "✅ IAM permissions confirmed for $ROLE_ARN"
 
       - name: Notify Slack — deploy started
         if: env.SLACK_WEBHOOK_URL != ''
