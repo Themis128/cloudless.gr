@@ -90,13 +90,12 @@ describe("notion-docs.ts", () => {
     });
 
     it("returns empty array when not configured", async () => {
-      vi.doMock("@/lib/integrations", () => ({
+      vi.doMock("@/lib/integrations", () => ({ // NOSONAR
         getIntegrations: vi.fn().mockReturnValue({}),
       }));
 
-      const mod = await import("@/lib/notion-docs");
-      // With empty config the guard returns []
-      // We verify notionFetchAll is not called
+      await import("@/lib/notion-docs");
+      // With empty config the guard returns [] without calling the API
       expect(mockNotionFetchAll).not.toHaveBeenCalled();
     });
 

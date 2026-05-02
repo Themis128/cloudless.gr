@@ -18,6 +18,7 @@ import {
 const CONFIGURED_CONFIG = { ANTHROPIC_API_KEY: "sk-ant-test-key" };
 const TEST_API_KEY = "sk-ant-key";
 const TEST_API_SECRET = "sk-ant-secret";
+const TEST_PROMPT = "prompt";
 
 describe("anthropic.ts", () => {
   beforeEach(() => {
@@ -112,7 +113,7 @@ describe("anthropic.ts", () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify({ content: [{ text: "ok" }] }), { status: 200 }),
       );
-      await callClaude("prompt", TEST_API_KEY, { system: "You are a helpful assistant." });
+      await callClaude(TEST_PROMPT, TEST_API_KEY, { system: "You are a helpful assistant." });
       const body = JSON.parse(
         (vi.mocked(global.fetch).mock.calls[0][1] as RequestInit).body as string,
       );
@@ -123,7 +124,7 @@ describe("anthropic.ts", () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify({ content: [{ text: "ok" }] }), { status: 200 }),
       );
-      await callClaude("prompt", TEST_API_SECRET);
+      await callClaude(TEST_PROMPT, TEST_API_SECRET);
       const headers = (vi.mocked(global.fetch).mock.calls[0][1] as RequestInit)
         .headers as Record<string, string>;
       expect(headers["x-api-key"]).toBe(TEST_API_SECRET);
@@ -133,7 +134,7 @@ describe("anthropic.ts", () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
         new Response("Bad request", { status: 400 }),
       );
-      await expect(callClaude("prompt", TEST_API_KEY)).rejects.toThrow(
+      await expect(callClaude(TEST_PROMPT, TEST_API_KEY)).rejects.toThrow(
         "Anthropic API error 400",
       );
     });
@@ -142,7 +143,7 @@ describe("anthropic.ts", () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify({ content: [] }), { status: 200 }),
       );
-      expect(await callClaude("prompt", TEST_API_KEY)).toBe("");
+      expect(await callClaude(TEST_PROMPT, TEST_API_KEY)).toBe("");
     });
   });
 });

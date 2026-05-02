@@ -347,9 +347,7 @@ describe("notion.ts — Shared Client", () => {
       expect(html).toContain('class="todo"');
       expect(html).toContain(TEXT_BUY_MILK);
       expect(html).toContain("disabled");
-      // First todo should NOT have checked
       expect(html).toContain('<input type="checkbox" disabled  /> Buy milk');
-      // Second todo SHOULD have checked
       expect(html).toContain('<input type="checkbox" disabled checked /> Write tests');
     });
 
@@ -632,7 +630,7 @@ describe("notion.ts — Shared Client", () => {
         });
 
       const { notionListAll } = await import("@/lib/notion");
-      const results = await notionListAll("/blocks/id/children?some=param");
+      await notionListAll("/blocks/id/children?some=param");
 
       // Second URL should use & instead of ? since the path already has query params
       const secondUrl = mockFetch.mock.calls[1][0];

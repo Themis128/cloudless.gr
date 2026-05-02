@@ -21,6 +21,8 @@ const DEFAULT_MAX_TOKENS = 1_000;
 
 export type AnthropicTokenStatus = "valid" | "rejected" | "not_configured" | "error";
 
+const ERROR_STATUS: AnthropicTokenStatus = "error";
+
 // ---------------------------------------------------------------------------
 // Key loading
 // ---------------------------------------------------------------------------
@@ -70,10 +72,10 @@ export async function verifyAnthropicKey(): Promise<{
         message: `API key rejected (${res.status}) — check key validity or billing.`,
       };
     }
-    if (!res.ok) return { status: "error", message: `API returned ${res.status}` };
+    if (!res.ok) return { status: ERROR_STATUS, message: `API returned ${res.status}` };
     return { status: "valid" };
   } catch {
-    return { status: "error", message: "Connection failed." };
+    return { status: ERROR_STATUS, message: "Connection failed." };
   }
 }
 

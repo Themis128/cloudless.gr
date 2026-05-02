@@ -54,7 +54,8 @@ async function hubspotListAll<T = unknown>(path: string): Promise<T[]> {
 
   do {
     const sep = path.includes("?") ? "&" : "?";
-    const url = `${path}${sep}limit=${HUBSPOT_PAGE_SIZE}${after ? `&after=${encodeURIComponent(after)}` : ""}`;
+    const afterParam = after ? "&after=" + encodeURIComponent(after) : "";
+    const url = `${path}${sep}limit=${HUBSPOT_PAGE_SIZE}${afterParam}`;
     const res = await hubspotFetch(url);
     if (!res.ok) break;
     const data = (await res.json()) as {

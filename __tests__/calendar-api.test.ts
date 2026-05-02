@@ -36,6 +36,7 @@ vi.mock("@/lib/slack-notify", () => ({
 // ---------------------------------------------------------------------------
 const TEST_USER_NAME = "Test User";
 const TEST_USER_EMAIL = "test@example.com";
+const AVAILABILITY_URL = "http://localhost/api/calendar/availability";
 
 describe("GET /api/calendar/availability", () => {
   beforeEach(() => {
@@ -60,7 +61,7 @@ describe("GET /api/calendar/availability", () => {
     resetIntegrationCache();
     const { GET } = await import("@/app/api/calendar/availability/route");
     const res = await GET(
-      new Request("http://localhost/api/calendar/availability"),
+      new Request(AVAILABILITY_URL),
     );
     expect(res.status).toBe(503);
     const data = await res.json();
@@ -70,7 +71,7 @@ describe("GET /api/calendar/availability", () => {
   it("returns slots array when configured", async () => {
     const { GET } = await import("@/app/api/calendar/availability/route");
     const res = await GET(
-      new Request("http://localhost/api/calendar/availability"),
+      new Request(AVAILABILITY_URL),
     );
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -80,7 +81,7 @@ describe("GET /api/calendar/availability", () => {
   it("slot objects have start and end fields", async () => {
     const { GET } = await import("@/app/api/calendar/availability/route");
     const res = await GET(
-      new Request("http://localhost/api/calendar/availability"),
+      new Request(AVAILABILITY_URL),
     );
     const data = await res.json();
     const slot = data.slots[0];
@@ -99,7 +100,7 @@ describe("GET /api/calendar/availability", () => {
   it("defaults to 7 days when no param provided", async () => {
     const { GET } = await import("@/app/api/calendar/availability/route");
     await GET(
-      new Request("http://localhost/api/calendar/availability"),
+      new Request(AVAILABILITY_URL),
     );
     expect(mockGetAvailableSlots).toHaveBeenCalledWith(7);
   });
@@ -108,7 +109,7 @@ describe("GET /api/calendar/availability", () => {
     mockGetAvailableSlots.mockRejectedValue(new Error("Google API error"));
     const { GET } = await import("@/app/api/calendar/availability/route");
     const res = await GET(
-      new Request("http://localhost/api/calendar/availability"),
+      new Request(AVAILABILITY_URL),
     );
     expect(res.status).toBe(500);
   });

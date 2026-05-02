@@ -167,8 +167,9 @@ export function blocksToHtml(blocks: any[]): string {
         break;
       case "callout": {
         const calloutBody = block.children ? blocksToHtml(block.children) : "";
+        const calloutSuffix = calloutBody ? "\n" + calloutBody : "";
         lines.push(
-          `<div class="callout">${data.icon?.emoji ?? ""} ${text}${calloutBody ? `\n${calloutBody}` : ""}</div>`,
+          `<div class="callout">${data.icon?.emoji ?? ""} ${text}${calloutSuffix}</div>`,
         );
         break;
       }
@@ -204,8 +205,9 @@ export function blocksToHtml(blocks: any[]): string {
         break;
       case "toggle": {
         const toggleBody = block.children ? blocksToHtml(block.children) : "";
+        const toggleSuffix = toggleBody ? "\n" + toggleBody : "";
         lines.push(
-          `<details><summary>${text}</summary>${toggleBody ? `\n${toggleBody}` : ""}</details>`,
+          `<details><summary>${text}</summary>${toggleSuffix}</details>`,
         );
         break;
       }
