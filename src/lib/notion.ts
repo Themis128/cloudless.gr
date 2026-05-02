@@ -13,6 +13,10 @@ import { getIntegrationsAsync } from "@/lib/integrations";
 export const NOTION_API = "https://api.notion.com/v1";
 export const NOTION_VERSION = "2022-06-28";
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // ---------------------------------------------------------------------------
 // Headers
 // ---------------------------------------------------------------------------
@@ -35,20 +39,37 @@ export async function notionFetch<T = unknown>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const res = await fetch(`${NOTION_API}${path}`, {
+  const MAX_RETRIES = 3;
+  const headers = await notionHeaders();
+  const url = `${NOTION_API}${path}`;
+  const reqInit: RequestInit = {
     ...init,
-    headers: {
-      ...(await notionHeaders()),
-      ...(init?.headers ?? {}),
-    },
-  });
+    headers: { ...headers, ...(init?.headers ?? {}) },
+  };
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Notion API error ${res.status} on ${path}: ${body}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const res = await fetch(url, reqInit);
+
+    if (res.status === 429 && attempt < MAX_RETRIES) {
+      const retryAfterRaw = parseInt(res.headers.get("Retry-After") ?? "1", 10);
+      await sleep((isNaN(retryAfterRaw) ? 1 : retryAfterRaw) * 1000);
+      continue;
+    }
+
+    if (res.status >= 500 && attempt < MAX_RETRIES) {
+      await sleep(2 ** attempt * 500);
+      continue;
+    }
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Notion API error ${res.status} on ${path}: ${body}`);
+    }
+
+    return res.json() as Promise<T>;
   }
 
-  return res.json() as Promise<T>;
+  throw new Error(`Notion API: max retries exceeded for ${path}`);
 }
 
 // ---------------------------------------------------------------------------

@@ -51,6 +51,7 @@ function makeUserToken(opts?: { email?: string; admin?: boolean }): string {
     sub: "user-sub",
     email: opts?.email ?? "client@example.com",
     "cognito:groups": opts?.admin ? ["admin"] : [],
+    token_use: "id",
     aud: "client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
     iat: Math.floor(Date.now() / 1000) - 10,

@@ -18,7 +18,7 @@
  * └──────────────┴──────────────────────────────┘
  */
 
-import { notionFetch } from "@/lib/notion";
+import { notionFetch, notionFetchAll } from "@/lib/notion";
 import { getIntegrationsAsync } from "@/lib/integrations";
 
 export interface ContactSubmission {
@@ -102,6 +102,8 @@ export async function saveSubmission(
 
 /**
  * List recent submissions from Notion (for the admin panel).
+ * Fetches all pages via pagination then slices to `limit` — correctly
+ * handles databases with more than 100 entries (old code silently truncated).
  * Returns empty array if Notion is not configured.
  */
 export async function listSubmissions(limit = 50): Promise<SubmissionRecord[]> {
@@ -111,18 +113,12 @@ export async function listSubmissions(limit = 50): Promise<SubmissionRecord[]> {
 
   try {
     /* eslint-disable @typescript-eslint/no-explicit-any */
-    const data = await notionFetch<{ results: any[] }>(
+    const pages = await notionFetchAll<any>(
       `/databases/${NOTION_SUBMISSIONS_DB_ID}/query`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          page_size: Math.min(limit, 100),
-          sorts: [{ property: "Submitted At", direction: "descending" }],
-        }),
-      },
+      { sorts: [{ property: "Submitted At", direction: "descending" }] },
     );
 
-    return (data.results ?? []).map((page: any) => {
+    return pages.slice(0, limit).map((page: any) => {
       const p = page.properties ?? {};
       return {
         id: page.id,

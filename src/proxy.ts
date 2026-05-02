@@ -196,7 +196,7 @@ export function proxy(request: NextRequest) {
       );
       response.headers.set(
         "Access-Control-Allow-Headers",
-        "Content-Type, stripe-signature",
+        "Content-Type, Authorization, stripe-signature",
       );
     }
 
@@ -210,7 +210,12 @@ export function proxy(request: NextRequest) {
     const limit =
       RATE_LIMITS[pathname] ??
       (pathname.startsWith("/api/admin/") ? ADMIN_RATE_LIMIT : null);
-    if (limit && request.method !== "GET" && request.method !== "OPTIONS") {
+    const isAdminRoute = pathname.startsWith("/api/admin/");
+    if (
+      limit &&
+      (isAdminRoute ||
+        (request.method !== "GET" && request.method !== "OPTIONS"))
+    ) {
       cleanupStaleEntries();
 
       const ip = getClientIp(request);
@@ -260,14 +265,9 @@ export function proxy(request: NextRequest) {
         );
       }
     } else {
-      const hasAnyAmplifySession = request.cookies
-        .getAll()
-        .some((c) => c.name.startsWith("CognitoIdentityServiceProvider."));
-      if (hasAnyAmplifySession) {
-        const loginUrl = new URL(`${prefix}/auth/login`, request.url);
-        loginUrl.searchParams.set("redirect", pathname);
-        return NextResponse.redirect(loginUrl);
-      }
+      const loginUrl = new URL(`${prefix}/auth/login`, request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
     }
   }
 

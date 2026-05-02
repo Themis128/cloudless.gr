@@ -145,88 +145,31 @@ export async function getAllPosts(): Promise<NotionPost[]> {
 
 /**
  * Fetch featured posts only (for homepage hero).
+ * Reuses the cached getPosts() result to avoid a redundant Notion query.
  */
 export async function getFeaturedPosts(): Promise<NotionPost[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
-    return [];
-
-  const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
-  try {
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_BLOG_DB_ID}/query`,
-      {
-        filter: {
-          and: [
-            { property: "Published", checkbox: { equals: true } },
-            { property: "Featured", checkbox: { equals: true } },
-          ],
-        },
-        sorts: [{ property: "Date", direction: "descending" }],
-      },
-    );
-    return pages.map(mapPage);
-  } catch (err) {
-    console.error("[Notion Blog] Failed to fetch featured posts:", err);
-    return [];
-  }
+  const posts = await getPosts();
+  return posts.filter((p) => p.featured);
 }
 
 /**
  * Fetch posts filtered by category.
+ * Reuses the cached getPosts() result to avoid a redundant Notion query.
  */
 export async function getPostsByCategory(
   category: string,
 ): Promise<NotionPost[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
-    return [];
-
-  const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
-  try {
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_BLOG_DB_ID}/query`,
-      {
-        filter: {
-          and: [
-            { property: "Published", checkbox: { equals: true } },
-            { property: "Category", select: { equals: category } },
-          ],
-        },
-        sorts: [{ property: "Date", direction: "descending" }],
-      },
-    );
-    return pages.map(mapPage);
-  } catch (err) {
-    console.error("[Notion Blog] Failed to fetch posts by category:", err);
-    return [];
-  }
+  const posts = await getPosts();
+  return posts.filter((p) => p.category === category);
 }
 
 /**
  * Fetch posts filtered by tag.
+ * Reuses the cached getPosts() result to avoid a redundant Notion query.
  */
 export async function getPostsByTag(tag: string): Promise<NotionPost[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
-    return [];
-
-  const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
-  try {
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_BLOG_DB_ID}/query`,
-      {
-        filter: {
-          and: [
-            { property: "Published", checkbox: { equals: true } },
-            { property: "Tags", multi_select: { contains: tag } },
-          ],
-        },
-        sorts: [{ property: "Date", direction: "descending" }],
-      },
-    );
-    return pages.map(mapPage);
-  } catch (err) {
-    console.error("[Notion Blog] Failed to fetch posts by tag:", err);
-    return [];
-  }
+  const posts = await getPosts();
+  return posts.filter((p) => p.tags.includes(tag));
 }
 
 /**
@@ -270,24 +213,11 @@ export async function getPostBySlug(
 
 /**
  * Get all published slugs (for sitemap / static generation).
+ * Reuses the cached getPosts() result to avoid a redundant Notion query.
  */
 export async function getAllSlugs(): Promise<string[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")))
-    return [];
-
-  const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
-  try {
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_BLOG_DB_ID}/query`,
-      {
-        filter: { property: "Published", checkbox: { equals: true } },
-      },
-    );
-    return pages.map((p) => mapPage(p).slug).filter(Boolean);
-  } catch (err) {
-    console.error("[Notion Blog] Failed to fetch slugs:", err);
-    return [];
-  }
+  const posts = await getPosts();
+  return posts.map((p) => p.slug).filter(Boolean);
 }
 
 /**

@@ -37,6 +37,7 @@ function makeAdminToken(): string {
   const payload = {
     sub: "admin-sub",
     "cognito:groups": ["admin"],
+    token_use: "id",
     aud: "client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
     iat: Math.floor(Date.now() / 1000) - 10,

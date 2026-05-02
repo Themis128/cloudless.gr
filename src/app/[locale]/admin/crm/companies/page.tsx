@@ -36,9 +36,7 @@ export default function AdminCompaniesPage() {
       setFetchedAt(new Date().toISOString());
       setError(null);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load companies",
-      );
+      setError(err instanceof Error ? err.message : "Failed to load companies");
     } finally {
       setLoading(false);
       setRefreshing(false);
