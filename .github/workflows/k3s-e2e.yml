@@ -1,0 +1,86 @@
+name: k3s standby E2E
+
+# Runs the Playwright suite against the live Pi standby (cloudless.online,
+# always served via APIGW → Lambda → Funnel → Pi). Acts as a post-deploy
+# smoke gate — catches regressions in the failover serving path that
+# wouldn't show up in localhost tests.
+#
+# Triggers:
+#   - workflow_run after "Deploy to Production" completes (passes or fails)
+#   - workflow_run after "build pi image" completes (image rolled to standby)
+#   - daily cron (catches drift introduced by SSM / Notion / Pi-side changes
+#     that didn't go through cloudless.gr CI)
+#   - manual dispatch with optional baseURL override
+#
+# Failures don't block deploys (the deploy already finished by the time
+# this fires), but they do open a GitHub issue via the existing
+# create-issue-on-fail action workflow if configured. For now we just rely
+# on the failure email + the visible red ✗ on the run page.
+
+on:
+  workflow_run:
+    workflows: ["Deploy to Production", "build pi image"]
+    types: [completed]
+  schedule:
+    # 04:00 UTC daily (07:00 Athens) — well before any business activity
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Override target (e.g. https://cloudless.gr)"
+        required: false
+        default: "https://cloudless.online"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: k3s-e2e
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: playwright (chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: install playwright chromium (cached)
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: pre-warm standby (drives Lambda from cold)
+        continue-on-error: true
+        run: |
+          for i in 1 2 3; do
+            curl -fsS --max-time 10 "${BASE_URL:-https://cloudless.online}/api/health" > /dev/null && break
+            sleep 5
+          done
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+
+      - name: run k3s suite
+        env:
+          CI: "1"
+          K3S_BASE_URL: ${{ inputs.base_url || 'https://cloudless.online' }}
+        run: pnpm exec playwright test --config=playwright.k3s.config.mts
+
+      - name: upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-k3s
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
