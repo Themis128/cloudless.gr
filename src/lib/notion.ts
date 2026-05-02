@@ -251,6 +251,12 @@ export function blocksToHtml(blocks: any[]): string {
 // Pagination helper — fetches ALL pages of a paginated Notion response
 // ---------------------------------------------------------------------------
 
+interface NotionPagedResponse<T> {
+  results: T[];
+  has_more: boolean;
+  next_cursor?: string;
+}
+
 /**
  * Paginated POST — for database queries (POST /databases/{id}/query).
  */
@@ -267,12 +273,8 @@ export async function notionFetchAll<T = unknown>(
       page_size: 100,
       ...(cursor ? { start_cursor: cursor } : {}),
     };
-    const data = await notionFetch<{
-      // NOSONAR — cursor-based pagination requires sequential reads
-      results: T[];
-      has_more: boolean;
-      next_cursor?: string;
-    }>(path, { method: "POST", body: JSON.stringify(payload) });
+    const opts: RequestInit = { method: "POST", body: JSON.stringify(payload) };
+    const data = await notionFetch<NotionPagedResponse<T>>(path, opts); // NOSONAR — cursor-based pagination requires sequential reads
     results.push(...data.results);
     cursor = data.has_more ? data.next_cursor : undefined;
   } while (cursor);
@@ -290,12 +292,7 @@ export async function notionListAll<T = unknown>(path: string): Promise<T[]> {
   do {
     const sep = path.includes("?") ? "&" : "?";
     const url = `${path}${sep}page_size=100${cursor ? `&start_cursor=${cursor}` : ""}`;
-    const data = await notionFetch<{
-      // NOSONAR — cursor-based pagination requires sequential reads
-      results: T[];
-      has_more: boolean;
-      next_cursor?: string;
-    }>(url);
+    const data = await notionFetch<NotionPagedResponse<T>>(url); // NOSONAR — cursor-based pagination requires sequential reads
     results.push(...data.results);
     cursor = data.has_more ? data.next_cursor : undefined;
   } while (cursor);
