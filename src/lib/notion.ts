@@ -150,6 +150,22 @@ function renderImageBlock(data: any, blockId: string): string {
     : `<figure>${fig}</figure>`;
 }
 
+function renderCalloutBlock(data: any, text: string, block: any): string {
+  const body = block.children ? blocksToHtml(block.children) : "";
+  const icon = data.icon?.emoji ?? "";
+  return `<div class="callout">${icon} ${text}${body ? "\n" + body : ""}</div>`;
+}
+
+function renderVideoBlock(data: any): string {
+  const url = data.type === "external" ? data.external?.url : data.file?.url;
+  return url ? `<video controls src="${url}"></video>` : "";
+}
+
+function renderToggleBlock(text: string, block: any): string {
+  const body = block.children ? blocksToHtml(block.children) : "";
+  return `<details><summary>${text}</summary>${body ? "\n" + body : ""}</details>`;
+}
+
 function renderBlockItem(
   type: string,
   data: any,
@@ -172,26 +188,19 @@ function renderBlockItem(
       return `<blockquote>${text}</blockquote>`;
     case "divider":
       return "<hr />";
-    case "callout": {
-      const body = block.children ? blocksToHtml(block.children) : "";
-      return `<div class="callout">${data.icon?.emoji ?? ""} ${text}${body ? "\n" + body : ""}</div>`;
-    }
+    case "callout":
+      return renderCalloutBlock(data, text, block);
     case "image":
       return renderImageBlock(data, block.id);
-    case "video": {
-      const url =
-        data.type === "external" ? data.external?.url : data.file?.url;
-      return url ? `<video controls src="${url}"></video>` : "";
-    }
+    case "video":
+      return renderVideoBlock(data);
     case "embed":
     case "bookmark":
       return `<a href="${data.url}" target="_blank" rel="noopener">${data.url}</a>`;
     case "to_do":
       return `<label class="todo"><input type="checkbox" disabled ${data.checked ? "checked" : ""} /> ${text}</label>`;
-    case "toggle": {
-      const body = block.children ? blocksToHtml(block.children) : "";
-      return `<details><summary>${text}</summary>${body ? "\n" + body : ""}</details>`;
-    }
+    case "toggle":
+      return renderToggleBlock(text, block);
     default:
       return text ? `<p>${text}</p>` : "";
   }
