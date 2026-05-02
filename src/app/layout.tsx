@@ -7,6 +7,8 @@ import "./globals.css";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
 const HS_PORTAL_ID = process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ?? "";
+const SHOULD_LOAD_HUBSPOT =
+  process.env.NODE_ENV === "production" && HS_PORTAL_ID.length > 0;
 
 const instrumentSans = Instrument_Sans({
   variable: "--font-instrument-sans",
@@ -115,7 +117,7 @@ export default async function RootLayout({
             </noscript>
           </>
         ) : null}
-        {HS_PORTAL_ID ? (
+        {SHOULD_LOAD_HUBSPOT ? (
           <Script
             id="hs-script-loader"
             src={`https://js-eu1.hs-scripts.com/${HS_PORTAL_ID}.js`}
