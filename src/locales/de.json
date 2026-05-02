@@ -14,7 +14,11 @@
     "notFound": "Nicht gefunden",
     "learnMore": "Mehr erfahren",
     "getStarted": "Loslegen",
-    "viewAll": "Alle anzeigen"
+    "viewAll": "Alle anzeigen",
+    "theme": "Design",
+    "themeSystem": "System",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel"
   },
   "navbar": {
     "cloudless": "Cloudless",

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "@/i18n/navigation";
 import CartButton from "@/components/store/CartButton";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
+import ThemeSwitcher, { ThemeSwitcherInline } from "@/components/ThemeSwitcher";
 import Logo from "@/components/Logo";
 import { translate, locales, localeLabels, type Locale } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
@@ -26,6 +27,7 @@ export default function Navbar() {
   const toggleMenuLabel = translate(locale, "navbar.toggleMenu", "Toggle menu");
   const cartLabel = translate(locale, "common.cart", "Cart");
   const languageLabel = translate(locale, "navbar.language", "Language");
+  const themeLabel = translate(locale, "common.theme", "Theme");
   // Close user menu on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -68,6 +70,7 @@ export default function Navbar() {
             ))}
             <div className="ml-2 flex items-center gap-2">
               <CartButton />
+              <ThemeSwitcher />
               <LocaleSwitcher />
             </div>
             {!isLoading && (
@@ -220,6 +223,12 @@ export default function Navbar() {
             </div>
             <div className="mt-2 border-t border-slate-800 pt-1 pb-1">
               <span className="mb-2 block font-mono text-xs text-slate-500">
+                {themeLabel}
+              </span>
+              <ThemeSwitcherInline />
+            </div>
+            <div className="mt-2 border-t border-slate-800 pt-1 pb-1">
+              <span className="mb-2 block font-mono text-xs text-slate-500">
                 {languageLabel}
               </span>
               <div className="flex flex-wrap gap-2">
@@ -233,7 +242,7 @@ export default function Navbar() {
                     }}
                     aria-label={`Set language to ${localeLabels[l]}`}
                     aria-pressed={l === locale}
-                    className={`min-h-11 min-w-[64px] rounded-lg border px-3 py-2 font-mono text-sm transition-all active:scale-95 ${
+                    className={`min-h-11 min-w-16 rounded-lg border px-3 py-2 font-mono text-sm transition-all active:scale-95 ${
                       l === locale
                         ? "border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan"
                         : "border-slate-700 text-slate-400 hover:border-slate-600 hover:text-white"
