@@ -60,9 +60,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (e) {
     console.error("[admin/voice-brief] generation failed:", e);
-    return NextResponse.json(
-      { error: "Generation failed" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Generation failed" }, { status: 500 });
   }
 }
