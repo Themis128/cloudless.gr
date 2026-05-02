@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { resetIntegrationCache } from "@/lib/integrations";
-
-const mockFetch = vi.fn();
-globalThis.fetch = mockFetch as unknown as typeof fetch;
-
 import {
   updateDeal,
   moveDealStage,
@@ -12,6 +8,9 @@ import {
   createNote,
   getPipelineStats,
 } from "@/lib/hubspot";
+
+const mockFetch = vi.fn();
+globalThis.fetch = mockFetch as unknown as typeof fetch;
 
 const DEAL_ID = "deal_1";
 const STAGE_CLOSEDWON = "closedwon";

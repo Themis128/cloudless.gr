@@ -76,19 +76,19 @@ describe("slack-notify.ts", () => {
     });
   });
 
-  describe("slackNotify()", () => {
+  describe("SlackClient.post() (legacy slackNotify behaviour)", () => {
     it("returns false when Slack is not configured", async () => {
       mockSlackConfig();
-      const { slackNotify } = await import("@/lib/slack-notify");
-      const result = await slackNotify({ text: "msg" });
+      const { SlackClient } = await import("@/lib/slack-notify");
+      const result = await new SlackClient().post({ text: "msg" });
       expect(result).toBe(false);
     });
 
     it("returns true when send succeeds via webhook", async () => {
       mockSlackConfig("", "https://hooks.slack.com/services/test");
       vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("ok", { status: 200 }));
-      const { slackNotify } = await import("@/lib/slack-notify");
-      const result = await slackNotify({ text: "hello" });
+      const { SlackClient } = await import("@/lib/slack-notify");
+      const result = await new SlackClient().post({ text: "hello" });
       expect(result).toBe(true);
     });
   });
