@@ -142,7 +142,8 @@ async function notionQuery(
   return data.results;
 }
 
-function rt(text: string) {
+/** Returns a rich_text array (pass directly as value of a rich_text property). */
+function rtArr(text: string) {
   return [{ text: { content: (text ?? "").slice(0, 2000) } }];
 }
 
@@ -163,11 +164,11 @@ async function upsertDigest(
 
   const properties: Record<string, unknown> = {
     Name: { title: [{ text: { content: title } }] },
-    ReportID: { rich_text: rt(reportId) },
+    ReportID: { rich_text: rtArr(reportId) },
     Status: { select: { name: status } },
     DateStart: { date: { start: dateStart } },
-    DateEnd: { rich_text: rt(dateEnd) },
-    Sections: { rich_text: rt(sections) },
+    DateEnd: { rich_text: rtArr(dateEnd) },
+    Sections: { rich_text: rtArr(sections) },
     CreatedAt: { date: { start: new Date().toISOString() } },
   };
 

@@ -252,11 +252,21 @@ async function notifySlack(
     updated: number;
     skipped: number;
     total: number;
-    revenue: number;
+    revenueByCurrency: Record<string, number>;
   },
   error?: string,
   runUrl?: string,
 ): Promise<void> {
+  const revenueText =
+    stats && Object.keys(stats.revenueByCurrency).length > 0
+      ? Object.entries(stats.revenueByCurrency)
+          .map(
+            ([cur, amt]) =>
+              `${cur.toUpperCase()} ${(amt / 100).toFixed(2)}`,
+          )
+          .join(", ")
+      : "—";
+
   const body = success
     ? {
         text: "💳 Stripe → Notion orders sync complete",
@@ -277,7 +287,7 @@ async function notifySlack(
               { type: "mrkdwn", text: `*Updated:* ${stats!.updated}` },
               {
                 type: "mrkdwn",
-                text: `*Revenue (24h):* ${(stats!.revenue / 100).toFixed(2)}`,
+                text: `*Revenue (24h):* ${revenueText}`,
               },
             ],
           },
@@ -353,20 +363,26 @@ async function main(): Promise<void> {
     updated: 0,
     skipped: 0,
     total: sessions.length,
-    revenue: 0,
+    revenueByCurrency: {} as Record<string, number>,
   };
 
   for (const session of sessions) {
     const result = await upsertSession(notionApiKey, notionDbId, session);
     stats[result]++;
-    if (session.payment_status === "paid") {
-      stats.revenue += session.amount_total ?? 0;
+    if (session.payment_status === "paid" && (session.amount_total ?? 0) > 0) {
+      const cur = (session.currency ?? "eur").toLowerCase();
+      stats.revenueByCurrency[cur] =
+        (stats.revenueByCurrency[cur] ?? 0) + (session.amount_total ?? 0);
     }
     console.log(`[stripe-notion-sync] ${result}: ${session.id}`);
   }
 
+  const revenueStr = Object.entries(stats.revenueByCurrency)
+    .map(([cur, amt]) => `${cur.toUpperCase()} ${(amt / 100).toFixed(2)}`)
+    .join(", ") || "0";
+
   console.log(
-    `[stripe-notion-sync] done — created=${stats.created} updated=${stats.updated} skipped=${stats.skipped} revenue=${(stats.revenue / 100).toFixed(2)}`,
+    `[stripe-notion-sync] done — created=${stats.created} updated=${stats.updated} skipped=${stats.skipped} revenue=${revenueStr}`,
   );
 
   if (slackUrl) {
