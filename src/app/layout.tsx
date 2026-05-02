@@ -31,7 +31,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  manifest: "/api/pwa-manifest",
+  manifest: "/manifest.webmanifest",
   metadataBase: new URL("https://cloudless.gr"),
   title: {
     default: "Cloudless — Cloud Computing, Serverless & AI Marketing",
