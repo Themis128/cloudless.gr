@@ -25,11 +25,19 @@ The role referenced by the `AWS_DEPLOY_ROLE_ARN` repository secret must have, at
 the permissions below. This list is **in addition to** the standard permissions SST needs
 (CloudFormation, Lambda, S3, CloudFront, Route 53, ACM, etc.).
 
-### IAM role-tagging (required by SST `defaultTags`)
+### IAM role read + tagging (required by SST + `defaultTags`)
 
-`sst.config.ts` sets `defaultTags` on the AWS provider, which causes SST/Pulumi to call
-`iam:TagRole` / `iam:UntagRole` on every IAM Role it manages (e.g., Lambda execution
+SST/Pulumi calls `iam:GetRole` on every managed IAM Role to read its current state,
+and `sst.config.ts` sets `defaultTags` on the AWS provider, which causes
+`iam:TagRole` / `iam:UntagRole` on every Role it manages (e.g., Lambda execution
 roles, warmer roles). Without these permissions the deploy fails with:
+
+```
+CloudlessSiteWarmerUseast1HandlerRole aws:iam:Role
+  reading IAM Role ... operation error IAM: GetRole, ... AccessDenied
+```
+
+or:
 
 ```
 CloudlessSiteWarmerUseast1HandlerRole aws:iam:Role
@@ -40,9 +48,10 @@ CloudlessSiteWarmerUseast1HandlerRole aws:iam:Role
 
 ```json
 {
-  "Sid": "AllowSSTIAMTagging",
+  "Sid": "AllowSSTIAMRoleManagement",
   "Effect": "Allow",
   "Action": [
+    "iam:GetRole",
     "iam:TagRole",
     "iam:UntagRole",
     "iam:ListRoleTags"
@@ -56,9 +65,10 @@ app name and stage):
 
 ```json
 {
-  "Sid": "AllowSSTIAMTagging",
+  "Sid": "AllowSSTIAMRoleManagement",
   "Effect": "Allow",
   "Action": [
+    "iam:GetRole",
     "iam:TagRole",
     "iam:UntagRole",
     "iam:ListRoleTags"
@@ -73,9 +83,17 @@ app name and stage):
 
 ## Troubleshooting
 
-### Deploy fails with `AccessDenied` on `iam:TagRole` / `iam:UntagRole`
+### Deploy fails with `AccessDenied` on `iam:GetRole` / `iam:TagRole` / `iam:UntagRole`
 
 **Symptom** (from the deploy log):
+
+```
+CloudlessSiteWarmerUseast1HandlerRole aws:iam:Role
+  sdk-v2/provider2.go:572: ... reading IAM Role ...
+  operation error IAM: GetRole, AccessDenied
+```
+
+or:
 
 ```
 CloudlessSiteWarmerUseast1HandlerRole aws:iam:Role
@@ -84,16 +102,17 @@ CloudlessSiteWarmerUseast1HandlerRole aws:iam:Role
 ```
 
 **Root cause:** The IAM role assumed during the GitHub Actions deploy
-(`AWS_DEPLOY_ROLE_ARN`) is missing `iam:TagRole`, `iam:UntagRole`, and/or
-`iam:ListRoleTags` permissions. SST's `defaultTags` feature tags every managed resource,
-including IAM Roles.
+(`AWS_DEPLOY_ROLE_ARN`) is missing one or more of `iam:GetRole`, `iam:TagRole`,
+`iam:UntagRole`, `iam:ListRoleTags`. SST's `defaultTags` feature tags every managed
+resource (including IAM Roles), and SST/Pulumi reads each managed Role's state via
+`iam:GetRole` before updating it.
 
 **Fix:**
 
 1. In the AWS Console go to **IAM → Roles** and open the role whose ARN matches
    `AWS_DEPLOY_ROLE_ARN` (check the repo secret in GitHub → Settings → Secrets).
 2. Attach or inline the policy statement shown above in
-   [IAM role-tagging](#iam-role-tagging-required-by-sst-defaulttags).
+   [IAM role read + tagging](#iam-role-read--tagging-required-by-sst--defaulttags).
 3. Re-run the failed workflow.
 
 **Reference:** [Example failing run (historical)](https://github.com/Themis128/cloudless.gr/actions/runs/25247664393/job/74034538240)
@@ -119,11 +138,11 @@ aws sts get-caller-identity
 # The workflow automatically converts the STS ARN to the IAM role ARN before simulating.
 aws iam simulate-principal-policy \
   --policy-source-arn ROLE_ARN \
-  --action-names iam:TagRole iam:UntagRole iam:ListRoleTags \
+  --action-names iam:GetRole iam:TagRole iam:UntagRole iam:ListRoleTags \
   --resource-arns "arn:aws:iam::*:role/*"
 ```
 
-The output field `EvalDecision` should be `"allowed"` for all three actions.
+The output field `EvalDecision` should be `"allowed"` for all four actions.
 
 ## See also
 
