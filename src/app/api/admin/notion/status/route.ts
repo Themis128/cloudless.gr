@@ -2,6 +2,7 @@ import { isConfiguredAsync, getIntegrationsAsync } from "@/lib/integrations";
 import { requireAdmin } from "@/lib/api-auth";
 import { notionFetch } from "@/lib/notion";
 import { NextRequest, NextResponse } from "next/server";
+import { mapIntegrationError } from "@/lib/api-errors";
 
 interface DbStatus {
   name: string;
@@ -125,7 +126,8 @@ export async function GET(request: NextRequest) {
       bot?: { owner?: { user?: { name?: string } } };
     }>("/users/me");
     botName = me.name ?? me.bot?.owner?.user?.name ?? "bot";
-  } catch {
+  } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     return NextResponse.json(
       {
         authenticated: false,

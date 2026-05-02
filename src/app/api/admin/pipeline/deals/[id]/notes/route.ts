@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { isHubSpotConfigured, createNote, listNotes } from "@/lib/hubspot";
+import { mapIntegrationError } from "@/lib/api-errors";
 
 export async function GET(
   request: NextRequest,
@@ -41,7 +42,8 @@ export async function POST(
     const payload = await request.json();
     body = payload.body;
     if (!body) throw new Error("missing body");
-  } catch {
+  } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     return NextResponse.json({ error: "body is required." }, { status: 400 });
   }
 

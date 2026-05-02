@@ -14,6 +14,7 @@ import {
   associateDealWithContact,
 } from "@/lib/hubspot";
 import type Stripe from "stripe";
+import { mapIntegrationError } from "@/lib/api-errors";
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
     const stripe = await getStripe();
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error(`Webhook signature verification failed: ${message}`);
     return Response.json({ error: "Invalid signature" }, { status: 400 });
@@ -112,6 +114,7 @@ export async function POST(request: NextRequest) {
                 await associateDealWithContact(dealId, contactId);
               }
             } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
               console.error("[Stripe→HubSpot] Deal creation failed:", err);
             }
           })();
@@ -201,6 +204,7 @@ export async function POST(request: NextRequest) {
         console.warn(`[Stripe] Unhandled event type: ${event.type}`);
     }
   } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     console.error(`[Stripe] Error handling ${event.type}:`, err);
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       await import("@sentry/nextjs")

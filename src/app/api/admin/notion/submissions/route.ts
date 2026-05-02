@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { listSubmissions, updateSubmissionStatus } from "@/lib/notion-forms";
 import { isConfiguredAsync } from "@/lib/integrations";
+import { mapIntegrationError } from "@/lib/api-errors";
 
 /**
  * GET /api/admin/notion/submissions
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest) {
     const submissions = await listSubmissions(limit);
     return NextResponse.json({ submissions, count: submissions.length });
   } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     console.error("[Admin] Failed to list submissions:", err);
     return NextResponse.json(
       { error: "Failed to fetch submissions" },
@@ -58,7 +60,8 @@ export async function PATCH(request: NextRequest) {
   let body: { pageId?: string; status?: string };
   try {
     body = await request.json();
-  } catch {
+  } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
@@ -92,6 +95,7 @@ export async function PATCH(request: NextRequest) {
     }
     return NextResponse.json({ success: true });
   } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     console.error("[Admin] Failed to update submission status:", err);
     return NextResponse.json(
       { error: "Failed to update submission status" },

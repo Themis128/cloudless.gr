@@ -7,6 +7,7 @@ import {
   getEmailStats,
 } from "@/lib/activecampaign";
 import { getConfig } from "@/lib/ssm-config";
+import { mapIntegrationError } from "@/lib/api-errors";
 
 async function generateInsights(
   data: Record<string, unknown>,
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest) {
     if (!clientName || !dateStart || !dateEnd)
       throw new Error("clientName, dateStart, dateEnd required");
   } catch (e) {
+    const _r = mapIntegrationError(e); if (_r) return _r;
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Invalid input" },
       { status: 400 },

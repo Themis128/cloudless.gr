@@ -14,6 +14,7 @@ import { trackEvent } from "@/lib/notion-analytics";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendLeadEvent } from "@/lib/meta-capi";
 import { generateEventId } from "@/lib/meta-pixel";
+import { mapIntegrationError } from "@/lib/api-errors";
 
 export async function POST(request: Request) {
   // Rate limit: 5 contact submissions per IP per 10 minutes
@@ -166,6 +167,7 @@ export async function POST(request: Request) {
 
     return Response.json({ success: true, eventId });
   } catch (error) {
+    const _r = mapIntegrationError(error); if (_r) return _r;
     console.error("SES send error:", error);
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       await import("@sentry/nextjs")

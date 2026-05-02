@@ -8,6 +8,7 @@ import {
 } from "@/lib/activecampaign";
 import { getStripe } from "@/lib/stripe";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
+import { mapIntegrationError } from "@/lib/api-errors";
 
 async function safeCall<T>(fn: () => Promise<T>): Promise<T | null> {
   try {
@@ -118,7 +119,8 @@ export async function GET(request: NextRequest) {
         const data = await res.json();
         enhancedText = data.content?.[0]?.text ?? rawText;
       }
-    } catch {
+    } catch (err) {
+      const _r = mapIntegrationError(err); if (_r) return _r;
       // fall back to raw text
     }
   }
@@ -141,7 +143,8 @@ export async function GET(request: NextRequest) {
         Overwrite: true,
       }),
     );
-  } catch {
+  } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     // SSM unavailable — still return the brief
   }
 
