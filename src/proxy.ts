@@ -11,9 +11,9 @@ function getLocaleFromPath(pathname: string): string {
 }
 
 function stripLocale(pathname: string): string {
-  const locale = getLocaleFromPath(pathname);
-  if (locale === DEFAULT_LOCALE) return pathname;
-  return pathname.slice(locale.length + 1) || "/";
+  const segment = pathname.split("/")[1];
+  if (!LOCALES.includes(segment)) return pathname;
+  return pathname.slice(segment.length + 1) || "/";
 }
 
 function readCognitoToken(request: NextRequest): {
@@ -31,8 +31,10 @@ function readCognitoToken(request: NextRequest): {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return { valid: false, isAdmin: false };
+    const base64Url = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const base64 = base64Url.padEnd(Math.ceil(base64Url.length / 4) * 4, "=");
     const payload = JSON.parse(
-      Buffer.from(parts[1], "base64").toString("utf-8"),
+      Buffer.from(base64, "base64").toString("utf-8"),
     ) as { exp?: number; "cognito:groups"?: string[] };
     if (payload.exp && Date.now() >= payload.exp * 1000)
       return { valid: false, isAdmin: false };
@@ -250,7 +252,7 @@ export function proxy(request: NextRequest) {
   // --- Page routes: Cognito auth guard + next-intl locale routing + security headers ---
   const bare = stripLocale(pathname);
   const locale = getLocaleFromPath(pathname);
-  const prefix = locale === DEFAULT_LOCALE ? "" : `/${locale}`;
+  const prefix = `/${locale}`;
 
   const isAdminPath = bare === "/admin" || bare.startsWith("/admin/");
   const isDashboardPath =
