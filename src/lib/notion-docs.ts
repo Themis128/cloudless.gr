@@ -25,7 +25,7 @@ import {
   blocksToHtml,
   type TocEntry,
 } from "@/lib/notion";
-import { getIntegrationsAsync } from "@/lib/integrations";
+import { requireIntegrationAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
 const DOCS_PUBLISHED_FILTER = {
@@ -89,8 +89,10 @@ function mapPage(page: any): DocRecord {
  * List all docs (published and unpublished) for admin use. Not cached.
  */
 export async function getAllDocs(): Promise<DocRecord[]> {
-  const { NOTION_API_KEY, NOTION_DOCS_DB_ID } = await getIntegrationsAsync();
-  if (!NOTION_API_KEY || !NOTION_DOCS_DB_ID) return [];
+  const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
+    "NOTION_API_KEY",
+    "NOTION_DOCS_DB_ID",
+  );
 
   try {
     const results = await notionFetchAll<unknown>(
@@ -113,8 +115,10 @@ export async function getAllDocs(): Promise<DocRecord[]> {
  * Returns empty array if Notion is not configured.
  */
 export async function getDocs(): Promise<DocRecord[]> {
-  const { NOTION_API_KEY, NOTION_DOCS_DB_ID } = await getIntegrationsAsync();
-  if (!NOTION_API_KEY || !NOTION_DOCS_DB_ID) return [];
+  const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
+    "NOTION_API_KEY",
+    "NOTION_DOCS_DB_ID",
+  );
 
   return cached("docs:all", async () => {
     try {
@@ -141,8 +145,10 @@ export async function getDocs(): Promise<DocRecord[]> {
  * Returns null if not found or Notion is not configured.
  */
 export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
-  const { NOTION_API_KEY, NOTION_DOCS_DB_ID } = await getIntegrationsAsync();
-  if (!NOTION_API_KEY || !NOTION_DOCS_DB_ID) return null;
+  const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
+    "NOTION_API_KEY",
+    "NOTION_DOCS_DB_ID",
+  );
 
   try {
     const data = await notionFetch<{ results: unknown[] }>(
@@ -180,8 +186,7 @@ export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
 export async function getDocContent(
   pageId: string,
 ): Promise<DocContent | null> {
-  const { NOTION_API_KEY } = await getIntegrationsAsync();
-  if (!NOTION_API_KEY) return null;
+  await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
     // Fetch the page metadata
@@ -255,8 +260,10 @@ function mapWikiPage(page: any): WikiDocRecord {
  * Falls back to regular docs if wiki properties don't exist.
  */
 export async function getWikiDocs(): Promise<WikiDocRecord[]> {
-  const { NOTION_API_KEY, NOTION_DOCS_DB_ID } = await getIntegrationsAsync();
-  if (!NOTION_API_KEY || !NOTION_DOCS_DB_ID) return [];
+  const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
+    "NOTION_API_KEY",
+    "NOTION_DOCS_DB_ID",
+  );
 
   try {
     const results = await notionFetchAll<unknown>(
@@ -320,8 +327,7 @@ export async function searchDocs(query: string): Promise<DocRecord[]> {
 export async function getDocContentWithToc(
   pageId: string,
 ): Promise<(DocContent & { toc: TocEntry[] }) | null> {
-  const { NOTION_API_KEY } = await getIntegrationsAsync();
-  if (!NOTION_API_KEY) return null;
+  await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
     const page = await notionFetch<unknown>(`/pages/${pageId}`);

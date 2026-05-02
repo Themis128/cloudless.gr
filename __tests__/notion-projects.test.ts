@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { resetIntegrationCache } from "@/lib/integrations";
+import { resetIntegrationCache, IntegrationNotConfiguredError } from "@/lib/integrations";
 
 const mockNotionFetch = vi.fn();
 const mockNotionFetchAll = vi.fn();
@@ -86,12 +86,11 @@ describe("notion-projects.ts", () => {
       });
     });
 
-    it("returns empty when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-
       const { listProjects } = await import("@/lib/notion-projects");
-      expect(await listProjects()).toEqual([]);
+      await expect(listProjects()).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
   });
 
@@ -254,12 +253,11 @@ describe("notion-projects.ts", () => {
       expect(await getProject("bad-id")).toBeNull();
     });
 
-    it("returns null when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-
       const { getProject } = await import("@/lib/notion-projects");
-      expect(await getProject("proj-1")).toBeNull();
+      await expect(getProject("proj-1")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
   });
 
@@ -282,12 +280,11 @@ describe("notion-projects.ts", () => {
       expect(await updateTaskStatus("task-1", "Done")).toBe(false);
     });
 
-    it("returns false when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-
       const { updateTaskStatus } = await import("@/lib/notion-projects");
-      expect(await updateTaskStatus("task-1", "Done")).toBe(false);
+      await expect(updateTaskStatus("task-1", "Done")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
   });
 
@@ -305,12 +302,11 @@ describe("notion-projects.ts", () => {
       ).toBe(false);
     });
 
-    it("returns false when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-
       const { updateProjectStatus } = await import("@/lib/notion-projects");
-      expect(await updateProjectStatus("proj-1", "Completed")).toBe(false);
+      await expect(updateProjectStatus("proj-1", "Completed")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
   });
 
@@ -337,12 +333,11 @@ describe("notion-projects.ts", () => {
       expect(callBody.filter).toBeUndefined();
     });
 
-    it("returns empty when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-
       const { listTasks } = await import("@/lib/notion-projects");
-      expect(await listTasks()).toEqual([]);
+      await expect(listTasks()).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
 
     it("returns empty on error", async () => {
@@ -368,12 +363,11 @@ describe("notion-projects.ts", () => {
       expect(body.properties.Description).toBeUndefined();
     });
 
-    it("returns null when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-
       const { createProject } = await import("@/lib/notion-projects");
-      expect(await createProject({ name: "X" })).toBeNull();
+      await expect(createProject({ name: "X" })).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
   });
 
@@ -400,12 +394,11 @@ describe("notion-projects.ts", () => {
       expect(await createTask({ task: "X" })).toBeNull();
     });
 
-    it("returns null when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-
       const { createTask } = await import("@/lib/notion-projects");
-      expect(await createTask({ task: "X" })).toBeNull();
+      await expect(createTask({ task: "X" })).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
   });
 

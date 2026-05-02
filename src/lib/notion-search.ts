@@ -11,7 +11,7 @@
  */
 
 import { notionFetch } from "@/lib/notion";
-import { isConfiguredAsync } from "@/lib/integrations";
+import { requireIntegrationAsync } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -144,9 +144,7 @@ export async function searchPages(
     startCursor?: string;
   },
 ): Promise<{ results: SearchResult[]; hasMore: boolean; nextCursor?: string }> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
-    return { results: [], hasMore: false };
-  }
+  await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
     /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -206,7 +204,7 @@ export async function searchDatabases(
  * List all users in the workspace.
  */
 export async function listUsers(): Promise<NotionUser[]> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY"))) return [];
+  await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
     /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -225,7 +223,7 @@ export async function listUsers(): Promise<NotionUser[]> {
  * Get the bot user (the integration itself).
  */
 export async function getBotUser(): Promise<NotionUser | null> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY"))) return null;
+  await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
     /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -242,7 +240,7 @@ export async function getBotUser(): Promise<NotionUser | null> {
  * Get a specific user by ID.
  */
 export async function getUser(userId: string): Promise<NotionUser | null> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY"))) return null;
+  await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
     /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -266,7 +264,7 @@ export async function getUser(userId: string): Promise<NotionUser | null> {
 export async function getDatabaseSchema(
   databaseId: string,
 ): Promise<DatabaseSchema | null> {
-  if (!(await isConfiguredAsync("NOTION_API_KEY"))) return null;
+  await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
     /* eslint-disable @typescript-eslint/no-explicit-any */

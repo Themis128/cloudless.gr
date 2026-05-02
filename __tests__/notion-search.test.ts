@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { resetIntegrationCache } from "@/lib/integrations";
+import { resetIntegrationCache, IntegrationNotConfiguredError } from "@/lib/integrations";
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -77,12 +77,10 @@ describe("notion-search.ts", () => {
       expect(body.start_cursor).toBe("cursor-abc");
     });
 
-    it("returns empty when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-      const result = await searchPages("test");
-      expect(result.results).toEqual([]);
-      expect(result.hasMore).toBe(false);
+      await expect(searchPages("test")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
 
     it("returns empty on API error", async () => {
@@ -181,11 +179,10 @@ describe("notion-search.ts", () => {
       expect(users[1].type).toBe("bot");
     });
 
-    it("returns empty when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-      const users = await listUsers();
-      expect(users).toEqual([]);
+      await expect(listUsers()).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
 
     it("returns empty on error", async () => {
@@ -216,10 +213,10 @@ describe("notion-search.ts", () => {
       expect(bot?.type).toBe("bot");
     });
 
-    it("returns null when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-      expect(await getBotUser()).toBeNull();
+      await expect(getBotUser()).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
   });
 
@@ -297,10 +294,10 @@ describe("notion-search.ts", () => {
       expect(tags?.options).toHaveLength(1);
     });
 
-    it("returns null when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-      expect(await getDatabaseSchema("db-id")).toBeNull();
+      await expect(getDatabaseSchema("db-id")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
 
     it("returns null on error", async () => {

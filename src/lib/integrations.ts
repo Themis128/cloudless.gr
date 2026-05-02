@@ -295,6 +295,38 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
 }
 
 /**
+ * Thrown by lib helpers when a required integration env var / SSM key is
+ * unset. Distinguishes "operator misconfiguration" from "upstream API
+ * failure" so route handlers can map it to a 503 instead of a generic 500.
+ */
+export class IntegrationNotConfiguredError extends Error {
+  readonly keys: (keyof IntegrationConfig)[];
+  constructor(keys: (keyof IntegrationConfig)[]) {
+    super(
+      `Integration not configured: missing ${keys.join(", ")}. ` +
+        "Set the env var(s) or add them to AWS SSM under /cloudless/production/.",
+    );
+    this.name = "IntegrationNotConfiguredError";
+    this.keys = keys;
+  }
+}
+
+/**
+ * Throws IntegrationNotConfiguredError if any of the requested keys is unset.
+ * Use as the first line of any lib function that depends on those keys —
+ * replaces the older `if (!isConfiguredAsync(...)) return null/[]` pattern,
+ * which silently masked misconfiguration.
+ */
+export async function requireIntegrationAsync(
+  ...keys: (keyof IntegrationConfig)[]
+): Promise<IntegrationConfig> {
+  const config = await getIntegrationsAsync();
+  const missing = keys.filter((k) => !config[k]);
+  if (missing.length > 0) throw new IntegrationNotConfiguredError(missing);
+  return config;
+}
+
+/**
  * Async version of isConfigured() — uses SSM fallback.
  * Use in API routes instead of the sync isConfigured().
  */

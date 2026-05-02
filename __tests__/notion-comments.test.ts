@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { resetIntegrationCache } from "@/lib/integrations";
+import { resetIntegrationCache, IntegrationNotConfiguredError } from "@/lib/integrations";
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -67,11 +67,10 @@ describe("notion-comments.ts", () => {
       expect(mockFetch.mock.calls[0][0]).toContain("block_id=block-xyz");
     });
 
-    it("returns empty when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-      const comments = await listComments("page-1");
-      expect(comments).toEqual([]);
+      await expect(listComments("page-1")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
 
     it("returns empty on error", async () => {
@@ -134,10 +133,10 @@ describe("notion-comments.ts", () => {
       expect(body.rich_text[0].text.content.length).toBe(2000);
     });
 
-    it("returns null when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-      expect(await addComment("page-1", "text")).toBeNull();
+      await expect(addComment("page-1", "text")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
 
     it("returns null on error", async () => {
@@ -176,10 +175,10 @@ describe("notion-comments.ts", () => {
       expect(body.rich_text[0].text.content).toBe("Reply text");
     });
 
-    it("returns null when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-      expect(await replyToDiscussion("disc-1", "text")).toBeNull();
+      await expect(replyToDiscussion("disc-1", "text")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
   });
 

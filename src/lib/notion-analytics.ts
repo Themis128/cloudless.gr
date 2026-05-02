@@ -8,10 +8,11 @@
  */
 
 import { notionFetch, notionFetchAll, extractText } from "@/lib/notion";
-import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
+import { getIntegrationsAsync, requireIntegrationAsync } from "@/lib/integrations";
 
-const isAnalyticsConfigured = () =>
-  isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID");
+async function requireAnalyticsIntegration(): Promise<void> {
+  await requireIntegrationAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID");
+}
 
 const EVENT_PAGE_VIEW = "page_view";
 const EVENT_BLOG_VIEW = "blog_view";
@@ -78,7 +79,7 @@ function mapEvent(page: any): AnalyticsEvent {
 type EventData = Parameters<typeof trackEvent>[0];
 
 async function writeEventToNotion(data: EventData): Promise<string | null> {
-  if (!(await isAnalyticsConfigured())) return null;
+  await requireAnalyticsIntegration();
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
@@ -209,7 +210,7 @@ export async function getRecentEvents(
   type?: AnalyticsEventType,
   limit = 50,
 ): Promise<AnalyticsEvent[]> {
-  if (!(await isAnalyticsConfigured())) return [];
+  await requireAnalyticsIntegration();
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
@@ -239,7 +240,7 @@ export async function getEventsByDateRange(
   startDate: string,
   endDate: string,
 ): Promise<AnalyticsEvent[]> {
-  if (!(await isAnalyticsConfigured())) return [];
+  await requireAnalyticsIntegration();
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
@@ -323,7 +324,7 @@ export async function getAnalyticsSummary(days = 7): Promise<AnalyticsSummary> {
 export async function archiveOldEvents(
   daysToKeep = 30,
 ): Promise<{ archived: number; errors: number }> {
-  if (!(await isAnalyticsConfigured())) return { archived: 0, errors: 0 };
+  await requireAnalyticsIntegration();
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   const cutoff = new Date();

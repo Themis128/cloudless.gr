@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { resetIntegrationCache } from "@/lib/integrations";
+import {
+  resetIntegrationCache,
+  IntegrationNotConfiguredError,
+} from "@/lib/integrations";
 import { resetEventQueue } from "@/lib/notion-analytics"; // NOSONAR — import path repeated across dynamic imports in test suite
 
 const mockNotionFetch = vi.fn();
@@ -65,17 +68,18 @@ describe("notion-analytics.ts", () => {
       expect(body.properties.Type.select.name).toBe(EVENT_FORM_SUBMIT);
     });
 
-    it("returns null when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { trackEvent } = await import("@/lib/notion-analytics");
-      const id = await trackEvent(
-        { event: "test", type: EVENT_PAGE_VIEW },
-        { immediate: true },
-      );
+      await expect(
+        trackEvent(
+          { event: "test", type: EVENT_PAGE_VIEW },
+          { immediate: true },
+        ),
+      ).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
 
-      expect(id).toBeNull();
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
@@ -171,12 +175,14 @@ describe("notion-analytics.ts", () => {
       });
     });
 
-    it("returns empty when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { getRecentEvents } = await import("@/lib/notion-analytics");
-      expect(await getRecentEvents()).toEqual([]);
+      await expect(getRecentEvents()).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError,
+      );
     });
   });
 
@@ -252,12 +258,14 @@ describe("notion-analytics.ts", () => {
       ]);
     });
 
-    it("returns empty when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { getEventsByDateRange } = await import("@/lib/notion-analytics");
-      expect(await getEventsByDateRange(DATE_START, DATE_END)).toEqual([]);
+      await expect(
+        getEventsByDateRange(DATE_START, DATE_END),
+      ).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
 
     it("returns empty on error", async () => {
@@ -403,14 +411,14 @@ describe("notion-analytics.ts", () => {
       expect(result).toEqual({ archived: 0, errors: 1 });
     });
 
-    it("returns zeros when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
 
       const { archiveOldEvents } = await import("@/lib/notion-analytics");
-      const result = await archiveOldEvents();
-
-      expect(result).toEqual({ archived: 0, errors: 0 });
+      await expect(archiveOldEvents()).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError,
+      );
       expect(mockNotionFetchAll).not.toHaveBeenCalled();
     });
 
