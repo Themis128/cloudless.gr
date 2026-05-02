@@ -92,6 +92,23 @@ weekly CI health routine, so any failure is reported in the Monday summary.
 `trig_01WQ7NdStiHu4Ab3DpBrRuiV` checks all six monitored workflows on Monday
 morning Athens time. Output is `ALL_HEALTHY` or a per-workflow failure report.
 
+### 4. SNS failover alerts
+
+CloudWatch alarms on the two R53 health checks publish to SNS topic
+`arn:aws:sns:us-east-1:278585680617:cloudless-failover-alerts`. Email
+subscriber: `tbaltzakis@cloudless.gr`. Notifications fire **only on edge
+events** — i.e. PRIMARY → SECONDARY transitions and back — not on every
+probe failure, so a flapping check doesn't spam the inbox.
+
+Together with #2 (daily proactive APIGW probe) this gives both
+*pre-incident* and *during-incident* signals:
+
+- Daily 06:30 UTC TLS+health check: "the failover path is currently usable"
+- SNS edge alert: "we just flipped to (or from) failover RIGHT NOW"
+
+The CI health routine catches workflow-level regressions on a weekly cadence;
+SNS catches the production-traffic-level state change in real time.
+
 ## What's not yet enforced
 
 These were proposed but not shipped — see the conversation that generated this
@@ -123,6 +140,7 @@ doc for context. Listed in priority order:
 - **PRIMARY R53 health check**: `e239ad5c-dd17-40d7-8045-a153715168cf` (probes CloudFront)
 - **SECONDARY R53 health check**: `30a69f1c-8d48-49bd-9067-cabec979478b` (probes APIGW frontend)
 - **R53 hosted zone**: `Z079608614L53CC4EAZM3`
+- **SNS failover alerts topic**: `arn:aws:sns:us-east-1:278585680617:cloudless-failover-alerts` (edge-event only, fires on PRIMARY↔SECONDARY transitions)
 - **ECR repo**: `278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app` (tag-immutable)
 - **IAM users in the Pi orbit**: `cloudless-pi-standby`, `cloudless-pi-proxy`, `cloudless-failover-monitor`, `cloudless-ddns-updater`
 - **SSM SHA pointer**: `/cloudless/production/current-image-sha`
