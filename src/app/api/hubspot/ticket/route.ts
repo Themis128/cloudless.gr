@@ -5,6 +5,7 @@ import {
   searchContacts,
 } from "@/lib/hubspot";
 import { isValidEmail } from "@/lib/validation";
+import { mapIntegrationError } from "@/lib/api-errors";
 
 /**
  * POST /api/hubspot/ticket
@@ -62,7 +63,8 @@ export async function POST(request: NextRequest) {
         if (result.total > 0) {
           contactId = result.results[0].id;
         }
-      } catch {
+      } catch (err) {
+        const _r = mapIntegrationError(err); if (_r) return _r;
         // Contact not found — ticket will be unassociated
       }
     }
@@ -91,6 +93,7 @@ export async function POST(request: NextRequest) {
       contactId: contactId || null,
     });
   } catch (error) {
+    const _r = mapIntegrationError(error); if (_r) return _r;
     console.error("[HubSpot] Ticket error:", error);
     const errMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(

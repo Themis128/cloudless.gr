@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { invalidateCache } from "@/lib/notion-cache";
+import { mapIntegrationError } from "@/lib/api-errors";
 
 /**
  * POST /api/admin/cache
@@ -19,7 +20,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     prefix = typeof body.prefix === "string" ? body.prefix : undefined;
-  } catch {
+  } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     // No body -- clear everything
   }
 

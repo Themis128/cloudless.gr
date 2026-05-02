@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import { NextResponse } from "next/server";
 import { isConfiguredAsync } from "@/lib/integrations";
 import { listContacts } from "@/lib/hubspot";
+import { mapIntegrationError } from "@/lib/api-errors";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
       fetchedAt: new Date().toISOString(),
     });
   } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     console.error("[HubSpot] Error listing contacts:", err);
     return NextResponse.json(
       { error: "Failed to fetch contacts." },

@@ -6,6 +6,7 @@ import { sendEmail } from "@/lib/email";
 import { getConfig } from "@/lib/ssm-config";
 import { invalidateCache } from "@/lib/notion-cache";
 import { escapeHtml } from "@/lib/escape-html";
+import { mapIntegrationError } from "@/lib/api-errors";
 
 const SITEMAP_PATH = "/sitemap.xml";
 
@@ -249,7 +250,8 @@ export async function POST(request: NextRequest) {
   let body: WebhookPayload;
   try {
     body = await request.json();
-  } catch {
+  } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
@@ -291,6 +293,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true, type: body.type, ...result });
   } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     console.error("[Webhook] Error processing event:", err);
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       await import("@sentry/nextjs")

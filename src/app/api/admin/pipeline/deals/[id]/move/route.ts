@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { isHubSpotConfigured, moveDealStage } from "@/lib/hubspot";
+import { mapIntegrationError } from "@/lib/api-errors";
 
 export async function POST(
   request: NextRequest,
@@ -22,7 +23,8 @@ export async function POST(
     const body = await request.json();
     stageId = body.stageId;
     if (!stageId) throw new Error("missing stageId");
-  } catch {
+  } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     return NextResponse.json(
       { error: "stageId is required." },
       { status: 400 },
@@ -38,7 +40,8 @@ export async function POST(
       );
     }
     return NextResponse.json({ deal });
-  } catch {
+  } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     return NextResponse.json(
       { error: "Failed to move deal." },
       { status: 500 },

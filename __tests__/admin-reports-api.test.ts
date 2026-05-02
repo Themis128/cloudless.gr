@@ -36,13 +36,17 @@ vi.mock("@/lib/notion-reports", () => ({
   notionDeleteReport: vi.fn().mockResolvedValue(false),
 }));
 
-vi.mock("@/lib/integrations", () => ({
-  getIntegrationsAsync: vi.fn().mockResolvedValue({}),
-  isConfiguredAsync: vi.fn().mockResolvedValue(false),
-  isConfigured: vi.fn().mockReturnValue(false),
-  getIntegrations: vi.fn().mockReturnValue({}),
-  resetIntegrationCacheAsync: vi.fn(),
-}));
+vi.mock("@/lib/integrations", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/integrations")>();
+  return {
+    ...actual,
+    getIntegrationsAsync: vi.fn().mockResolvedValue({}),
+    isConfiguredAsync: vi.fn().mockResolvedValue(false),
+    isConfigured: vi.fn().mockReturnValue(false),
+    getIntegrations: vi.fn().mockReturnValue({}),
+    resetIntegrationCacheAsync: vi.fn(),
+  };
+});
 
 function makeGet(path: string): NextRequest {
   return new NextRequest(`http://localhost:4500${path}`, { method: "GET" });

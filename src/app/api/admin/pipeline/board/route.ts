@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { mapIntegrationError } from "@/lib/api-errors";
 import {
   isHubSpotConfigured,
   getDealsByStage,
@@ -28,7 +29,8 @@ export async function GET(request: NextRequest) {
       pipelines,
       fetchedAt: new Date().toISOString(),
     });
-  } catch {
+  } catch (err) {
+    const _r = mapIntegrationError(err); if (_r) return _r;
     return NextResponse.json(
       { error: "Failed to fetch pipeline board." },
       { status: 500 },
