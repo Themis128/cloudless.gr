@@ -205,6 +205,21 @@ export async function getConfig(): Promise<AppConfig> {
       console.warn("[SSM] Fetch failed, serving stale config:", err);
       return cached;
     }
+    // Dev-only fallback: when AWS creds aren't available locally (no
+    // ~/.aws/credentials, no SSO session, no env keys), don't crash every
+    // API route. Build config from .env.local directly. In production,
+    // throwing is correct — Lambda always has IAM role creds, so a failure
+    // there is real.
+    if (process.env.NODE_ENV !== "production") {
+      const errName = (err as { name?: string })?.name ?? "Error";
+      console.warn(
+        `[SSM] ${errName} in dev — falling back to .env.local. ` +
+          "Set AWS_PROFILE or use IAM env keys to talk to real SSM.",
+      );
+      cached = buildConfigFromEnv();
+      cachedAt = Date.now();
+      return cached;
+    }
     throw err;
   }
 
