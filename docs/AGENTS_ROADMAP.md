@@ -26,20 +26,20 @@ Cost: zero (runs locally inside Claude Code sessions). Reversible: delete the fi
 
 Today `/api/chat` is a single-turn proxy to Claude Haiku for pre-sales chat. Real agents would let it (and a few new endpoints) take actions.
 
-### Phase 2a — chatbot tool use (smallest first PR)
+### Phase 2a — chatbot tool use — SHIPPED
 
-Wire two read-only tools into `/api/chat`:
+Two read-only tools wired into `/api/chat`:
 
-1. `lookup_product(query: string)` — searches `getProducts()` (already cached for 5 min) and returns name + price + URL. Lets the bot answer "do you have a Stripe migration playbook?" with a real link.
-2. `check_calendar_availability(week: string)` — wraps `/api/calendar/availability`. Lets the bot say "I have Wednesday 14:00 or Thursday 10:00 — book one?".
+1. `lookup_product(query: string)` — searches `getProducts()` (5 min cache, Stripe-backed when configured) and returns up to 3 matches with name, price, category, `/store/<id>` URL.
+2. `check_calendar_availability(days_ahead?: integer)` — wraps `getAvailableSlots()` and returns up to 5 30-minute Athens-local slots with a `/book` CTA. Days clamped to `[1, 14]`. Returns a graceful contact-page nudge when Google Calendar isn't configured.
 
-Implementation: keep the streaming SSE response shape, but switch from one-shot completion to the SDK's tool-use loop with a max-iteration cap (e.g. 4). Add per-IP rate limit on tool call count, not just request count, so a hostile prompt can't burn 100 tools per request.
+Implementation: replaced the single-turn streaming proxy with a non-streaming tool-use loop capped at 4 iterations / 20s upstream timeout. The final assistant text is chunk-encoded back to the browser as SSE so the existing `ChatWidget` event handlers keep working unchanged. Tools live in `src/lib/chat-tools.ts`; the `runTool` dispatcher always resolves to a string — errors are converted to user-facing nudges so a thrown tool can't crash the loop.
 
-**Cost model**: each chat session today is ~$0.001 (Haiku). Tool use adds 1–3 extra round trips per session, so call it ~$0.003. With current traffic that's pocket change; with viral traffic, cap it.
+Trade-off: lost the typewriter streaming effect on responses that *use* a tool — text now arrives as one SSE event after the tool round trip completes. Direct text responses with no tool call still chunk in real time.
 
-**Risk**: a bad system prompt + tool use can leak data the tool returns. Both proposed tools return only public info, so this is low.
+**Tests** (19 added): see `docs/ANTHROPIC.md` for the full table. Covers tool round-trip with `tool_result`, iteration-cap fallback, schema declarations, and per-tool match / no-match / no-config / throw paths.
 
-**First PR scope**: `src/app/api/chat/route.ts` (tool-use loop), `src/lib/chat-tools.ts` (tool definitions), tests. ~250 LOC.
+Detail: see [`docs/ANTHROPIC.md`](ANTHROPIC.md#tools-phase-2a-of-docsagents_roadmapmd) for the loop diagram and tool table.
 
 ### Phase 2b — booking agent
 
@@ -101,7 +101,7 @@ You already use `/schedule` for one-off cleanup of feature flags / experiments. 
 
 ## Order I'd actually pick
 
-1. **2a chatbot tool use** — highest user-visible upside, contained scope, costs are tiny.
+1. ~~**2a chatbot tool use**~~ — SHIPPED.
 2. **4a PR review agent** — protects the codebase as we move faster, and dogfooding it reveals which dev-time agents need tightening.
 3. **3 voice-brief agent** — lowest risk of the runtime agents because it's not user-facing.
 4. **2b booking agent / 2c admin assistant / 4b CI babysitter / 4c stale-gate sweeper** — order by what you're actually feeling pain about.
