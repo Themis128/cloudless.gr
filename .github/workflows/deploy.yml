@@ -140,7 +140,7 @@ jobs:
               echo "$DENIED" | while read -r action; do echo "  - $action"; done
               echo ""
               echo "::error::Fix the IAM policy attached to the deploy role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
-              echo "::error::At minimum allow: iam:GetRole, iam:TagRole, iam:UntagRole, iam:ListRoleTags"
+              echo "::error::At minimum allow: iam:GetRole, iam:TagRole, iam:UntagRole, iam:ListRoleTags on the role(s) SST manages (cloudl-production-*)"
               echo "::error::Also allow: iam:SimulatePrincipalPolicy (so this preflight can run)"
               echo "::error::See docs/deploy.md for the exact policy statements."
               exit 1
