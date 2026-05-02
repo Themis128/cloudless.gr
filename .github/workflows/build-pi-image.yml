@@ -94,3 +94,27 @@ jobs:
             NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
             NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
             NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
+
+      # Trigger the Pi standby's image-sync CronJob immediately so we don't
+      # wait up to 60s for the next scheduled poll. HMAC-signed POST through
+      # Tailscale Funnel; the webhook validates and creates a one-off Job.
+      # If the Pi is unreachable, the cron-based fallback covers within 60s,
+      # so this step is non-fatal.
+      - name: trigger Pi sync-webhook
+        if: steps.tags.outputs.push == 'true'
+        continue-on-error: true
+        env:
+          SECRET: ${{ secrets.SYNC_HMAC_SECRET }}
+        run: |
+          set -euo pipefail
+          BODY=$(jq -nc \
+            --arg sha "$GITHUB_SHA" \
+            --argjson ts "$(date +%s)" \
+            '{job:"image-sync", ts:$ts, sha:$sha}')
+          SIG="sha256=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')"
+          echo "POST /_sync/image (sha=${GITHUB_SHA::8})"
+          curl -fsS --max-time 10 \
+            -X POST "https://omv.tail8eb71.ts.net/_sync/image" \
+            -H "Content-Type: application/json" \
+            -H "X-Hub-Signature-256: $SIG" \
+            -d "$BODY"
