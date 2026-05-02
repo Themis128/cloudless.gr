@@ -11,9 +11,9 @@ function getLocaleFromPath(pathname: string): string {
 }
 
 function stripLocale(pathname: string): string {
-  const locale = getLocaleFromPath(pathname);
-  if (locale === DEFAULT_LOCALE) return pathname;
-  return pathname.slice(locale.length + 1) || "/";
+  const segment = pathname.split("/")[1];
+  if (!LOCALES.includes(segment)) return pathname;
+  return pathname.slice(segment.length + 1) || "/";
 }
 
 function readCognitoToken(request: NextRequest): {
@@ -31,8 +31,10 @@ function readCognitoToken(request: NextRequest): {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return { valid: false, isAdmin: false };
+    const base64Url = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const base64 = base64Url.padEnd(Math.ceil(base64Url.length / 4) * 4, "=");
     const payload = JSON.parse(
-      Buffer.from(parts[1], "base64").toString("utf-8"),
+      Buffer.from(base64, "base64").toString("utf-8"),
     ) as { exp?: number; "cognito:groups"?: string[] };
     if (payload.exp && Date.now() >= payload.exp * 1000)
       return { valid: false, isAdmin: false };
@@ -66,12 +68,33 @@ const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
 // being hammered. windowMs: 60s, max: 120 req/min per IP across all /api/admin/*.
 const ADMIN_RATE_LIMIT = { windowMs: 60_000, max: 120 };
 
+function normalizeIpHeader(value: string | null): string | null {
+  if (value === null) return null;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  return trimmed;
+}
+
+function firstForwardedIp(header: string | null): string | null {
+  const normalized = normalizeIpHeader(header);
+  if (normalized === null) return null;
+
+  const comma = normalized.indexOf(",");
+  if (comma === -1) return normalized;
+
+  const first = normalized.slice(0, comma).trim();
+  if (first === "") return null;
+  return first;
+}
+
 function getClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip") ??
-    "unknown"
-  );
+  const forwardedIp = firstForwardedIp(request.headers.get("x-forwarded-for"));
+  if (forwardedIp !== null) return forwardedIp;
+
+  const realIp = normalizeIpHeader(request.headers.get("x-real-ip"));
+  if (realIp !== null) return realIp;
+
+  return "unknown";
 }
 
 function isRateLimited(
@@ -130,15 +153,15 @@ function cleanupStaleEntries() {
  */
 const CSP_REPORT_ONLY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com",
   // fonts.googleapis.com is allowlisted because next/font/google emits a
   // @font-face stylesheet whose src URLs hit Google's CDN even though the
   // font binaries themselves are self-hosted under /_next/static/media.
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://p.typekit.net",
   "img-src 'self' data: blob: https:",
   // fonts.gstatic.com — Google Fonts binary CDN. next/font/google falls back
   // to it for the woff2 files when the build cannot inline them.
-  "font-src 'self' data: https://fonts.gstatic.com",
+  "font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net",
   "connect-src 'self' https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://cognito-idp.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com https://api.hubapi.com",
   "frame-src https://js.stripe.com https://hooks.stripe.com https://www.facebook.com",
   "worker-src 'self' blob:",
@@ -250,7 +273,7 @@ export function proxy(request: NextRequest) {
   // --- Page routes: Cognito auth guard + next-intl locale routing + security headers ---
   const bare = stripLocale(pathname);
   const locale = getLocaleFromPath(pathname);
-  const prefix = locale === DEFAULT_LOCALE ? "" : `/${locale}`;
+  const prefix = `/${locale}`;
 
   const isAdminPath = bare === "/admin" || bare.startsWith("/admin/");
   const isDashboardPath =

@@ -411,5 +411,10 @@
     "marketingDesc": "Pour la publicité ciblée.",
     "savePreferences": "Enregistrer",
     "cancel": "Annuler"
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "body": "La page que vous recherchez n'existe pas ou a été déplacée.",
+    "cta": "Retour à l'accueil"
   }
 }

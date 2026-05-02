@@ -273,8 +273,11 @@ User Groups:
 Page Route Protection (src/proxy.ts middleware):
   - All requests to /dashboard/* and /admin/* without a valid
     Cognito cookie are redirected to /auth/login server-side.
+  - Locale-prefixed paths (e.g. /en/dashboard, /fr/admin/orders) are
+    normalized before auth checks, so localized routes follow the same
+    protection rules.
   - Admin paths with a valid cookie but no admin group are
-    redirected to /dashboard.
+    redirected to /dashboard (with locale preserved).
 
 API Route Protection (src/lib/api-auth.ts):
   requireAuth(req)   → 401 if missing/invalid JWT
@@ -791,6 +794,8 @@ pnpm test:e2e      # Playwright E2E
 | `__tests__/components.test.tsx` | Navbar, Footer, CookieConsent, NewsletterForm, etc. |
 | `__tests__/locale-routes-smoke.test.ts` | next-intl locale contract, required route files |
 | `__tests__/locales-parity.test.ts` | All four locale files have identical key sets |
+| `__tests__/proxy-access.test.ts` | Middleware auth routing for `/dashboard/*` and `/admin/*` (localized + admin/non-admin cases) |
+| `__tests__/theme-preference-sync.test.tsx` | Runtime `<html data-theme>` sync from saved user theme preference |
 | `e2e/*.spec.ts` | Full browser flows via Playwright + axe-core accessibility |
 
 ### Key testing rules

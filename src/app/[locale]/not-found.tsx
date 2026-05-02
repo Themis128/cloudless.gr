@@ -2,30 +2,28 @@ export const dynamic = "force-dynamic";
 
 import { getLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import {
+  translate,
+  type Locale,
+  isSupportedLocale,
+  defaultLocale,
+} from "@/lib/i18n";
+
+const FALLBACK = {
+  title: "Page not found",
+  body: "The page you're looking for doesn't exist or has been moved.",
+  cta: "Back to Home",
+};
 
 export default async function LocaleNotFound() {
-  const locale = await getLocale();
+  const raw = await getLocale();
+  const locale: Locale = isSupportedLocale(raw) ? raw : defaultLocale;
 
-  const messages: Record<string, { title: string; body: string; cta: string }> =
-    {
-      en: {
-        title: "Page not found",
-        body: "The page you're looking for doesn't exist or has been moved.",
-        cta: "Back to Home",
-      },
-      el: {
-        title: "Η σελίδα δεν βρέθηκε",
-        body: "Η σελίδα που ψάχνετε δεν υπάρχει ή έχει μεταφερθεί.",
-        cta: "Πίσω στην Αρχική",
-      },
-      fr: {
-        title: "Page introuvable",
-        body: "La page que vous recherchez n'existe pas ou a été déplacée.",
-        cta: "Retour à l'accueil",
-      },
-    };
-
-  const m = messages[locale] ?? messages.en;
+  const m = {
+    title: translate(locale, "notFound.title", FALLBACK.title),
+    body: translate(locale, "notFound.body", FALLBACK.body),
+    cta: translate(locale, "notFound.cta", FALLBACK.cta),
+  };
 
   return (
     <section className="bg-void flex flex-1 items-center justify-center px-6 py-24">
