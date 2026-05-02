@@ -1,14 +1,14 @@
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { getConfig } from "@/lib/ssm-config";
 import { escapeHtml } from "@/lib/escape-html";
 import { DEFAULT_LOCALE } from "@/lib/locale-defaults";
 
-let sesClient: SESClient | null = null;
+let sesClient: SESv2Client | null = null;
 
-async function getSES(): Promise<SESClient> {
+async function getSES(): Promise<SESv2Client> {
   if (sesClient) return sesClient;
   const config = await getConfig();
-  sesClient = new SESClient({ region: config.AWS_SES_REGION });
+  sesClient = new SESv2Client({ region: config.AWS_SES_REGION });
   return sesClient;
 }
 
@@ -19,25 +19,42 @@ interface SendEmailOptions {
   text: string;
   replyTo?: string[];
   fromLabel?: string;
+  /** When set, adds List-Unsubscribe + List-Unsubscribe-Post headers (RFC 8058). */
+  listUnsubscribeUrl?: string;
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
   const config = await getConfig();
   const ses = await getSES();
 
+  const fromAddress = options.fromLabel
+    ? `${options.fromLabel} <${config.SES_FROM_EMAIL}>`
+    : config.SES_FROM_EMAIL;
+
+  const extraHeaders = options.listUnsubscribeUrl
+    ? [
+        {
+          Name: "List-Unsubscribe",
+          Value: `<${options.listUnsubscribeUrl}>`,
+        },
+        { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" },
+      ]
+    : [];
+
   try {
     await ses.send(
       new SendEmailCommand({
-        Source: options.fromLabel
-          ? `${options.fromLabel} <${config.SES_FROM_EMAIL}>`
-          : config.SES_FROM_EMAIL,
+        FromEmailAddress: fromAddress,
         Destination: { ToAddresses: [options.to] },
-        ...(options.replyTo && { ReplyToAddresses: options.replyTo }),
-        Message: {
-          Subject: { Data: options.subject, Charset: "UTF-8" },
-          Body: {
-            Html: { Data: options.html, Charset: "UTF-8" },
-            Text: { Data: options.text, Charset: "UTF-8" },
+        ...(options.replyTo ? { ReplyToAddresses: options.replyTo } : {}),
+        Content: {
+          Simple: {
+            Subject: { Data: options.subject, Charset: "UTF-8" },
+            Body: {
+              Html: { Data: options.html, Charset: "UTF-8" },
+              Text: { Data: options.text, Charset: "UTF-8" },
+            },
+            ...(extraHeaders.length ? { Headers: extraHeaders } : {}),
           },
         },
       }),
@@ -151,6 +168,7 @@ export async function sendSubscriberWelcome(
   await sendEmail({
     to: subscriberEmail,
     subject: "Welcome to the Cloudless newsletter",
+    listUnsubscribeUrl: unsubscribeUrl,
     html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #00fff5;">You're in.</h2>

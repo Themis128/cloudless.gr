@@ -3,6 +3,7 @@ name: Stale Issues & PRs
 on:
   schedule:
     - cron: '0 8 * * *' # Daily at 08:00 UTC
+  workflow_dispatch:
 
 permissions:
   issues: write
@@ -13,6 +14,8 @@ jobs:
     name: Close Stale
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
       - uses: actions/stale@v9

@@ -105,6 +105,8 @@ export async function saveSubmission(
 
 /**
  * List recent submissions from Notion (for the admin panel).
+ * Fetches all pages via pagination then slices to `limit` — correctly
+ * handles databases with more than 100 entries (old code silently truncated).
  * Returns empty array if Notion is not configured.
  */
 export async function listSubmissions(limit = 50): Promise<SubmissionRecord[]> {

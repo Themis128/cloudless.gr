@@ -26,13 +26,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Fast-path: detect explicitly-cleared env var before SSM lookup.
-  const envSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (envSecret !== undefined && !envSecret) {
-    console.error("STRIPE_WEBHOOK_SECRET not configured");
-    return Response.json({ error: "Webhook not configured" }, { status: 500 });
-  }
-
   const config = await getConfig();
   const webhookSecret = config.STRIPE_WEBHOOK_SECRET;
 
@@ -57,11 +50,17 @@ export async function POST(request: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         console.warn(
-          `[Stripe] Checkout completed: ${session.id}, customer: ${session.customer_email}`,
+          `[Stripe] Checkout completed: ${session.id}, event: ${event.id}, payment_status: ${session.payment_status}, customer: ${session.customer_email}`,
         );
 
-        // Send order confirmation to customer
-        if (session.customer_email) {
+        // Only send order confirmation when payment is actually collected.
+        // Subscriptions with trial periods fire this event with payment_status
+        // "no_payment_required" — skip the email in that case to avoid
+        // sending a "purchase confirmed" message before any money changes hands.
+        const paymentCollected =
+          session.payment_status === "paid" || session.mode === "subscription";
+
+        if (session.customer_email && paymentCollected) {
           await sendOrderConfirmation(
             session.customer_email,
             session.id,

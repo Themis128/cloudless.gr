@@ -14,7 +14,9 @@ import {
 } from "@aws-sdk/client-ssm";
 
 const SSM_KEY = "/cloudless/PENDING_CLIENTS_JSON";
-const REGION = process.env.AWS_REGION ?? "eu-central-1";
+const REGION = process.env.AWS_REGION || "eu-central-1";
+
+const ssmClient = new SSMClient({ region: REGION });
 
 export type PendingStatus = "waiting" | "approved" | "declined";
 
@@ -47,8 +49,9 @@ export const PLAN_LABELS: Record<string, string> = {
 
 export async function readPendingClients(): Promise<PendingClient[]> {
   try {
-    const client = new SSMClient({ region: REGION });
-    const res = await client.send(new GetParameterCommand({ Name: SSM_KEY }));
+    const res = await ssmClient.send(
+      new GetParameterCommand({ Name: SSM_KEY }),
+    );
     return JSON.parse(res.Parameter?.Value ?? "[]");
   } catch {
     return [];
@@ -58,8 +61,7 @@ export async function readPendingClients(): Promise<PendingClient[]> {
 export async function writePendingClients(
   clients: PendingClient[],
 ): Promise<void> {
-  const client = new SSMClient({ region: REGION });
-  await client.send(
+  await ssmClient.send(
     new PutParameterCommand({
       Name: SSM_KEY,
       Value: JSON.stringify(clients),

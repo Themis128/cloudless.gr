@@ -44,6 +44,7 @@ function makeAdminToken(): string {
     email: "admin@cloudless.gr",
     "cognito:username": "admin-user",
     "cognito:groups": ["admin"],
+    token_use: "id",
     aud: "test-client-id",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TestPool",
     iat: Math.floor(Date.now() / 1000) - 60,

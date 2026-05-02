@@ -28,7 +28,7 @@ describe("locale route smoke coverage", () => {
   it("keeps next-intl locale contract stable", () => {
     expect(routing.locales).toEqual(["en", "el", "fr", "de"]);
     expect(routing.defaultLocale).toBe("en");
-    expect(routing.localePrefix).toBe("as-needed");
+    expect(routing.localePrefix).toBe("always");
   });
 
   it("contains all key locale route group page files", () => {

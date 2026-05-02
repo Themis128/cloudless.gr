@@ -45,4 +45,20 @@ describe("ssm-config.ts", () => {
   it("resetSsmCache() does not throw", () => {
     expect(() => resetSsmCache()).not.toThrow();
   });
+
+  it("successive getConfig() calls return the same object (cached)", async () => {
+    const cfg1 = await getConfig();
+    const cfg2 = await getConfig();
+    expect(cfg1).toBe(cfg2);
+  });
+
+  it("resetSsmCache() causes next getConfig() to rebuild config", async () => {
+    const cfg1 = await getConfig();
+    resetSsmCache();
+    const cfg2 = await getConfig();
+    // Different object reference after cache reset
+    expect(cfg2).not.toBe(cfg1);
+    // But same shape
+    expect(cfg2.SENTRY_ORG).toBe(cfg1.SENTRY_ORG);
+  });
 });

@@ -97,6 +97,7 @@ async function onContactCreated(token: string, id: number): Promise<void> {
   await slack.post({
     text: `New contact: ${name} (${email})`,
     blocks: [
+
       {
         type: "header",
         text: { type: PLAIN_TEXT, text: "New Contact", emoji: true },

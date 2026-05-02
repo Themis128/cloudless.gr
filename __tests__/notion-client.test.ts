@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const PAGE_ID = "page-1";
 
 // Mock global fetch
@@ -657,12 +657,84 @@ describe("notion.ts — Shared Client", () => {
     it("handles text() rejection gracefully", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
-        status: 500,
+        status: 404,
         text: () => Promise.reject(new Error("stream error")),
       });
 
       const { notionFetch } = await import("@/lib/notion");
-      await expect(notionFetch("/pages/123")).rejects.toThrow("Notion API error 500");
+      await expect(notionFetch("/pages/123")).rejects.toThrow("Notion API error 404");
+    });
+  });
+
+  describe("notionFetch retry behavior", () => {
+    beforeEach(() => {
+      // Make sleep() resolve immediately so tests don't wait for real delays
+      vi.spyOn(globalThis, "setTimeout").mockImplementation((cb: TimerHandler) => {
+        if (typeof cb === "function") queueMicrotask(cb as () => void);
+        return 0 as unknown as ReturnType<typeof globalThis.setTimeout>;
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks(); // restores setTimeout spy
+      mockFetch.mockReset(); // prevents persistent mock bleed to later tests
+    });
+
+    it("retries on 429 and respects Retry-After header", async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          headers: { get: (h: string) => (h === "Retry-After" ? "1" : null) },
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ id: "retry-ok" }),
+        });
+
+      const { notionFetch } = await import("@/lib/notion");
+      const result = await notionFetch("/pages/123");
+
+      expect(result).toEqual({ id: "retry-ok" });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("retries on 5xx with exponential backoff", async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 503,
+          headers: { get: () => null },
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ id: "recovered" }),
+        });
+
+      const { notionFetch } = await import("@/lib/notion");
+      const result = await notionFetch("/pages/123");
+
+      expect(result).toEqual({ id: "recovered" });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("throws after exhausting all retries on 5xx", async () => {
+      // 4 attempts: 0,1,2 hit the retry path; attempt 3 falls through to !res.ok
+      const errorResp = {
+        ok: false,
+        status: 503,
+        headers: { get: () => null },
+        text: () => Promise.resolve("service unavailable"),
+      };
+      mockFetch
+        .mockResolvedValueOnce(errorResp)
+        .mockResolvedValueOnce(errorResp)
+        .mockResolvedValueOnce(errorResp)
+        .mockResolvedValueOnce(errorResp);
+
+      const { notionFetch } = await import("@/lib/notion");
+      await expect(notionFetch("/pages/123")).rejects.toThrow("Notion API error 503");
+      expect(mockFetch).toHaveBeenCalledTimes(4);
     });
   });
 

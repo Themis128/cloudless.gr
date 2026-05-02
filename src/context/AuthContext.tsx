@@ -14,7 +14,7 @@ import {
 
 interface UserPreferences {
   theme: "system" | "dark" | "light";
-  language: "en" | "el" | "fr";
+  language: "en" | "el" | "fr" | "de";
   emailOrders: boolean;
   emailNewsletter: boolean;
   emailMarketing: boolean;
