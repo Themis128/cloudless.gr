@@ -24,15 +24,19 @@ export async function probeHealth(req: APIRequestContext, host = STANDBY_HOST) {
 }
 
 /**
- * Tries to extract a "this came from the standby path" signal. The Lambda
- * proxy forwards Pi response headers (CSP, X-Frame-Options, etc.) and
- * the Pi's Next.js app stamps `Strict-Transport-Security` only when fronted
- * by Traefik (which it always is in the standby path).
+ * Verifies the response carries the cloudless.gr Next.js app's own CSP
+ * (rather than a generic LB / 502 page). The same app runs on PRIMARY
+ * and SECONDARY, so this is a "this is *our* app responding" check, not
+ * a "this is the Pi specifically" check. Network-path verification lives
+ * in standby-path.spec.ts via the APIGW request-id assertion.
  */
-export function isLikelyStandbyResponse(headers: Record<string, string>): boolean {
+export function isLikelyAppResponse(headers: Record<string, string>): boolean {
   const csp = headers["content-security-policy-report-only"] ?? "";
-  // The Pi Next.js app's CSP includes a stable signature.
-  return csp.includes("o4509865549561856.ingest");
+  return (
+    csp.includes("frame-ancestors 'none'") &&
+    csp.includes("object-src 'none'") &&
+    csp.includes("https://*.sentry.io")
+  );
 }
 
 /**
