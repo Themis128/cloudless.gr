@@ -49,26 +49,31 @@ async function hubspotFetch(
  * Stops when `paging.next.after` is absent in the response.
  */
 async function hubspotListAll<T = unknown>(path: string): Promise<T[]> {
-  const results: T[] = [];
-  let after: string | undefined;
+  return hubspotListAllPages<T>(path, []);
+}
 
-  do {
-    const sep = path.includes("?") ? "&" : "?";
-    const afterParam = after ? "&after=" + encodeURIComponent(after) : "";
-    const url = `${path}${sep}limit=${HUBSPOT_PAGE_SIZE}${afterParam}`;
-    const res = await hubspotFetch(url); // NOSONAR — cursor-based pagination requires sequential reads
-    if (!res.ok) break;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = (await res.json()) as any; // NOSONAR — cursor-based pagination, cast to avoid multi-line type
-    const typed = data as {
-      results: T[];
-      paging?: { next?: { after: string } };
-    };
-    results.push(...typed.results);
-    after = typed.paging?.next?.after;
-  } while (after);
-
-  return results;
+async function hubspotListAllPages<T>(
+  path: string,
+  results: T[],
+  after?: string,
+): Promise<T[]> {
+  const sep = path.includes("?") ? "&" : "?";
+  const afterParam = after ? "&after=" + encodeURIComponent(after) : "";
+  const url = `${path}${sep}limit=${HUBSPOT_PAGE_SIZE}${afterParam}`;
+  const res = await hubspotFetch(url);
+  if (!res.ok) return results;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as any;
+  const typed = data as {
+    results: T[];
+    paging?: { next?: { after: string } };
+  };
+  const merged = [...results, ...typed.results];
+  const nextAfter = typed.paging?.next?.after;
+  if (nextAfter) {
+    return hubspotListAllPages<T>(path, merged, nextAfter);
+  }
+  return merged;
 }
 
 /**

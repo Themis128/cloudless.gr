@@ -24,6 +24,20 @@ Keep answers concise (2–4 sentences max). If someone asks about pricing, give 
 const MAX_USER_MESSAGE = 500;
 const ROLE_ASSISTANT = "assistant";
 
+async function readChunks(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  decoder: TextDecoder,
+  controller: ReadableStreamDefaultController,
+): Promise<void> {
+  const { done, value } = await reader.read();
+  if (done) return;
+  const chunk = decoder.decode(value, { stream: true });
+  for (const line of chunk.split("\n")) {
+    forwardSseLine(line, controller);
+  }
+  return readChunks(reader, decoder, controller);
+}
+
 function forwardSseLine(
   line: string,
   controller: ReadableStreamDefaultController,
@@ -110,14 +124,7 @@ export async function POST(request: NextRequest) {
       const reader = anthropicRes.body!.getReader();
       const decoder = new TextDecoder();
       try {
-        while (true) {
-          const { done, value } = await reader.read(); // NOSONAR — streaming reader must be read sequentially
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          for (const line of chunk.split("\n")) {
-            forwardSseLine(line, controller);
-          }
-        }
+        await readChunks(reader, decoder, controller);
       } finally {
         controller.close();
       }

@@ -39,7 +39,6 @@ export async function notionFetch<T = unknown>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const MAX_RETRIES = 3;
   const headers = await notionHeaders();
   const url = `${NOTION_API}${path}`;
   // Validate the constructed URL stays on the Notion API origin (SSRF guard)
@@ -50,30 +49,35 @@ export async function notionFetch<T = unknown>(
     ...init,
     headers: { ...headers, ...(init?.headers ?? {}) },
   };
+  return notionFetchAttempt<T>(url, path, reqInit, 0);
+}
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const res = await fetch(url, reqInit); // NOSONAR — sequential retry requires loop
+async function notionFetchAttempt<T>(
+  url: string,
+  path: string,
+  reqInit: RequestInit,
+  attempt: number,
+): Promise<T> {
+  const MAX_RETRIES = 3;
+  const res = await fetch(url, reqInit);
 
-    if (res.status === 429 && attempt < MAX_RETRIES) {
-      const retryAfterRaw = parseInt(res.headers.get("Retry-After") ?? "1", 10);
-      await sleep((isNaN(retryAfterRaw) ? 1 : retryAfterRaw) * 1000); // NOSONAR — rate-limit backoff
-      continue;
-    }
-
-    if (res.status >= 500 && attempt < MAX_RETRIES) {
-      await sleep(2 ** attempt * 500); // NOSONAR — exponential backoff
-      continue;
-    }
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => ""); // NOSONAR — error body read inside retry loop
-      throw new Error(`Notion API error ${res.status} on ${path}: ${body}`);
-    }
-
-    return res.json() as Promise<T>;
+  if (res.status === 429 && attempt < MAX_RETRIES) {
+    const retryAfterRaw = parseInt(res.headers.get("Retry-After") ?? "1", 10);
+    await sleep((isNaN(retryAfterRaw) ? 1 : retryAfterRaw) * 1000);
+    return notionFetchAttempt<T>(url, path, reqInit, attempt + 1);
   }
 
-  throw new Error(`Notion API: max retries exceeded for ${path}`);
+  if (res.status >= 500 && attempt < MAX_RETRIES) {
+    await sleep(2 ** attempt * 500);
+    return notionFetchAttempt<T>(url, path, reqInit, attempt + 1);
+  }
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Notion API error ${res.status} on ${path}: ${body}`);
+  }
+
+  return res.json() as Promise<T>;
 }
 
 // ---------------------------------------------------------------------------
@@ -264,40 +268,49 @@ export async function notionFetchAll<T = unknown>(
   path: string,
   body?: Record<string, unknown>,
 ): Promise<T[]> {
-  const results: T[] = [];
-  let cursor: string | undefined;
+  return notionFetchAllPages<T>(path, body ?? {}, []);
+}
 
-  do {
-    const payload = {
-      ...(body ?? {}),
-      page_size: 100,
-      ...(cursor ? { start_cursor: cursor } : {}),
-    };
-    const opts: RequestInit = { method: "POST", body: JSON.stringify(payload) };
-    const data = await notionFetch<NotionPagedResponse<T>>(path, opts); // NOSONAR — cursor-based pagination requires sequential reads
-    results.push(...data.results);
-    cursor = data.has_more ? data.next_cursor : undefined;
-  } while (cursor);
-
-  return results;
+async function notionFetchAllPages<T>(
+  path: string,
+  body: Record<string, unknown>,
+  results: T[],
+  cursor?: string,
+): Promise<T[]> {
+  const payload = {
+    ...body,
+    page_size: 100,
+    ...(cursor ? { start_cursor: cursor } : {}),
+  };
+  const opts: RequestInit = { method: "POST", body: JSON.stringify(payload) };
+  const data = await notionFetch<NotionPagedResponse<T>>(path, opts);
+  const merged = [...results, ...data.results];
+  if (data.has_more && data.next_cursor) {
+    return notionFetchAllPages<T>(path, body, merged, data.next_cursor);
+  }
+  return merged;
 }
 
 /**
  * Paginated GET — for list endpoints (GET /blocks/{id}/children).
  */
 export async function notionListAll<T = unknown>(path: string): Promise<T[]> {
-  const results: T[] = [];
-  let cursor: string | undefined;
+  return notionListAllPages<T>(path, []);
+}
 
-  do {
-    const sep = path.includes("?") ? "&" : "?";
-    const url = `${path}${sep}page_size=100${cursor ? `&start_cursor=${cursor}` : ""}`;
-    const data = await notionFetch<NotionPagedResponse<T>>(url); // NOSONAR — cursor-based pagination requires sequential reads
-    results.push(...data.results);
-    cursor = data.has_more ? data.next_cursor : undefined;
-  } while (cursor);
-
-  return results;
+async function notionListAllPages<T>(
+  path: string,
+  results: T[],
+  cursor?: string,
+): Promise<T[]> {
+  const sep = path.includes("?") ? "&" : "?";
+  const url = `${path}${sep}page_size=100${cursor ? `&start_cursor=${cursor}` : ""}`;
+  const data = await notionFetch<NotionPagedResponse<T>>(url);
+  const merged = [...results, ...data.results];
+  if (data.has_more && data.next_cursor) {
+    return notionListAllPages<T>(path, merged, data.next_cursor);
+  }
+  return merged;
 }
 
 // ---------------------------------------------------------------------------

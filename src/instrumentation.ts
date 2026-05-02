@@ -29,23 +29,22 @@ export async function register() {
     });
 
     const params = new Map<string, string>();
-    let nextToken: string | undefined;
 
-    do {
+    async function fetchPage(nextToken?: string): Promise<void> {
       const cmd = new GetParametersByPathCommand({
         Path: prefix,
         WithDecryption: true,
         NextToken: nextToken,
       });
-      const res = await ssm.send(cmd); // NOSONAR — SSM pagination requires sequential reads (NextToken cursor)
-
+      const res = await ssm.send(cmd);
       for (const p of res.Parameters ?? []) {
         const key = p.Name?.replace(`${prefix}/`, "") ?? "";
         if (key && p.Value) params.set(key, p.Value);
       }
+      if (res.NextToken) await fetchPage(res.NextToken);
+    }
 
-      nextToken = res.NextToken;
-    } while (nextToken);
+    await fetchPage();
 
     // Inject SSM secrets into process.env (only if not already set)
     // This makes them available to integrations.ts / getIntegrations()

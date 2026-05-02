@@ -78,26 +78,30 @@ export class SlackClient {
       return false;
     }
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      try {
-        const result = await this.postOnce(payload, token, webhookUrl); // NOSONAR — sequential retry requires loop
-        if (result === true) return true;
-        // result === null → terminal API error, don't retry
-        if (result === null) return false;
-        // result === false → ratelimited or transient failure, fall through to backoff
-      } catch (err) {
-        const isLastAttempt = attempt === MAX_RETRIES - 1;
-        if (isLastAttempt) {
-          console.error("[Slack] All retries exhausted:", err);
-          return false;
-        }
-      }
+    return this.postWithRetry(payload, token, webhookUrl, 0);
+  }
 
-      // Exponential backoff: 500 ms, 1 000 ms, 2 000 ms
-      await sleep(RETRY_BASE_MS * 2 ** attempt); // NOSONAR — sequential retry backoff
+  private async postWithRetry(
+    payload: PostMessagePayload,
+    token: string | undefined,
+    webhookUrl: string | undefined,
+    attempt: number,
+  ): Promise<boolean> {
+    try {
+      const result = await this.postOnce(payload, token, webhookUrl);
+      if (result === true) return true;
+      if (result === null) return false;
+    } catch (err) {
+      if (attempt >= MAX_RETRIES - 1) {
+        console.error("[Slack] All retries exhausted:", err);
+        return false;
+      }
     }
 
-    return false;
+    if (attempt >= MAX_RETRIES - 1) return false;
+    // Exponential backoff: 500 ms, 1 000 ms, 2 000 ms
+    await sleep(RETRY_BASE_MS * 2 ** attempt);
+    return this.postWithRetry(payload, token, webhookUrl, attempt + 1);
   }
 
   /**

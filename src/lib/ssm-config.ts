@@ -160,6 +160,26 @@ function buildConfigFromEnv(): AppConfig {
   };
 }
 
+async function fetchSsmParams(
+  ssm: SSMClient,
+  params: Map<string, string>,
+  nextToken?: string,
+): Promise<void> {
+  const cmd = new GetParametersByPathCommand({
+    Path: SSM_PREFIX,
+    WithDecryption: true,
+    NextToken: nextToken,
+  });
+  const res = await ssm.send(cmd);
+  for (const p of res.Parameters ?? []) {
+    const key = p.Name?.replace(`${SSM_PREFIX}/`, "") ?? "";
+    if (key && p.Value) params.set(key, p.Value);
+  }
+  if (res.NextToken) {
+    await fetchSsmParams(ssm, params, res.NextToken);
+  }
+}
+
 /**
  * Fetches all /cloudless/production/* parameters from SSM.
  * Cache expires after 5 minutes to pick up rotated secrets without redeploy.
@@ -182,22 +202,7 @@ export async function getConfig(): Promise<AppConfig> {
   const params = new Map<string, string>();
 
   try {
-    let nextToken: string | undefined;
-    do {
-      const cmd = new GetParametersByPathCommand({
-        Path: SSM_PREFIX,
-        WithDecryption: true,
-        NextToken: nextToken,
-      });
-      const res = await ssm.send(cmd); // NOSONAR — SSM pagination requires sequential reads (NextToken cursor)
-
-      for (const p of res.Parameters ?? []) {
-        const key = p.Name?.replace(`${SSM_PREFIX}/`, "") ?? "";
-        if (key && p.Value) params.set(key, p.Value);
-      }
-
-      nextToken = res.NextToken;
-    } while (nextToken);
+    await fetchSsmParams(ssm, params);
   } catch (err) {
     // Transient SSM failure — serve stale cache rather than crashing all requests
     if (cached) {
