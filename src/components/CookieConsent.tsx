@@ -9,6 +9,10 @@ import {
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
+const FLEX_BETWEEN = "flex items-center justify-between";
+const HELP_TEXT_CLASS = "mt-1 text-xs text-slate-400";
+const CATEGORY_TITLE_CLASS = "text-sm font-semibold text-white";
+
 /* ── Cookie banner + settings modal ──────────────────────── */
 
 export default function CookieConsent() {
@@ -128,12 +132,12 @@ export default function CookieConsent() {
 
         {/* Necessary — always on */}
         <div className="mb-4 rounded-lg border border-slate-700 p-4">
-          <div className="flex items-center justify-between">
+          <div className={FLEX_BETWEEN}>
             <div>
-              <p className="text-sm font-semibold text-white">
+              <p className={CATEGORY_TITLE_CLASS}>
                 {t("cookies.necessary", "Necessary")}
               </p>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className={HELP_TEXT_CLASS}>
                 {t(
                   "cookies.necessaryDesc",
                   "Essential for the website to function. Includes session cookies, security tokens, and consent preferences.",
@@ -148,12 +152,12 @@ export default function CookieConsent() {
 
         {/* Analytics */}
         <div className="mb-4 rounded-lg border border-slate-700 p-4">
-          <div className="flex items-center justify-between">
+          <div className={FLEX_BETWEEN}>
             <div className="mr-4">
-              <p className="text-sm font-semibold text-white">
+              <p className={CATEGORY_TITLE_CLASS}>
                 {t("cookies.analytics", "Analytics")}
               </p>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className={HELP_TEXT_CLASS}>
                 {t(
                   "cookies.analyticsDesc",
                   "Help us understand how visitors use our site so we can improve the experience. Data is anonymised.",
@@ -183,12 +187,12 @@ export default function CookieConsent() {
 
         {/* Marketing */}
         <div className="mb-6 rounded-lg border border-slate-700 p-4">
-          <div className="flex items-center justify-between">
+          <div className={FLEX_BETWEEN}>
             <div className="mr-4">
-              <p className="text-sm font-semibold text-white">
+              <p className={CATEGORY_TITLE_CLASS}>
                 {t("cookies.marketing", "Marketing")}
               </p>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className={HELP_TEXT_CLASS}>
                 {t(
                   "cookies.marketingDesc",
                   "Used to deliver relevant ads and track campaign effectiveness across platforms.",

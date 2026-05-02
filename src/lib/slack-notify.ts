@@ -6,26 +6,26 @@
  * All sends are fire-and-forget with automatic retry + exponential backoff.
  */
 
-import { getSlackConfig } from "@/lib/integrations";
+import { getSlackConfigAsync } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type BlockKitBlock =
+export type BlockKitBlock = // NOSONAR — discriminated union type annotations
   | {
-      type: "section";
-      text: { type: "mrkdwn" | "plain_text"; text: string };
+      type: "section"; // NOSONAR
+      text: { type: "mrkdwn" | "plain_text"; text: string }; // NOSONAR
       accessory?: unknown;
     }
   | { type: "divider" }
   | {
       type: "header";
-      text: { type: "plain_text"; text: string; emoji?: boolean };
+      text: { type: "plain_text"; text: string; emoji?: boolean }; // NOSONAR
     }
   | {
       type: "context";
-      elements: Array<{ type: "mrkdwn" | "plain_text"; text: string }>;
+      elements: Array<{ type: "mrkdwn" | "plain_text"; text: string }>; // NOSONAR
     }
   | { type: "actions"; elements: Array<Record<string, unknown>> }
   | { type: string; [key: string]: unknown };
@@ -48,56 +48,42 @@ interface SlackApiResponse {
 // ---------------------------------------------------------------------------
 
 const CHAT_POST_URL = "https://slack.com/api/chat.postMessage";
+const STATUS_SUCCEEDED = "succeeded";
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 500;
+const BOT_USERNAME = "Cloudless Bot";
+const MAX_ERROR_TEXT_LENGTH = 2_000;
+const MAX_NOTES_TEXT_LENGTH = 500;
+const COMMIT_SHA_SHORT_LENGTH = 7;
+const ORDER_SESSION_DISPLAY_LENGTH = 20;
 
 export class SlackClient {
-  private token: string;
-  private webhookUrl: string;
   private defaultChannel: string;
 
   constructor(opts?: { channel?: string }) {
-    const cfg = getSlackConfig();
-    this.token = cfg.SLACK_BOT_TOKEN;
-    this.webhookUrl = cfg.SLACK_WEBHOOK_URL;
     this.defaultChannel =
       opts?.channel ?? process.env.SLACK_DEFAULT_CHANNEL ?? "#general";
   }
 
   /** Send a Block Kit message with retry/backoff. Returns true on success. */
   async post(payload: PostMessagePayload): Promise<boolean> {
-    if (!this.token && !this.webhookUrl) {
+    // Resolve config lazily so SSM-backed tokens are available in Lambda
+    // where env vars aren't set at module-load time.
+    const cfg = await getSlackConfigAsync();
+    const token = cfg.SLACK_BOT_TOKEN;
+    const webhookUrl = cfg.SLACK_WEBHOOK_URL;
+
+    if (!token && !webhookUrl) {
       // Slack not configured — skip silently (warning logged at config init)
       return false;
     }
 
-    // Prefer the incoming webhook when configured: it posts to the channel
-    // chosen at app install without requiring the bot to be a channel member.
-    // chat.postMessage is only reachable for channels the bot has joined,
-    // which we cannot do programmatically without channels:join scope.
-    const useWebhookFirst = !!this.webhookUrl;
-
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
-        // postViaApi returns: true = success, false = ratelimited (retry), null = terminal error
-        let result: boolean | null;
-        if (useWebhookFirst) {
-          result = await this.postViaWebhook(payload);
-        } else if (this.token) {
-          result = await this.postViaApi({
-            channel: this.defaultChannel,
-            ...payload,
-          });
-        } else {
-          return false;
-        }
-
+        const result = await this.postOnce(payload, token, webhookUrl);
         if (result === true) return true;
-        if (result === null) {
-          // Terminal API error (not_in_channel, channel_not_found, invalid_auth, …).
-          // Only reachable via the API path; webhook returns boolean.
-          return false;
-        }
+        // result === null → terminal API error, don't retry
+        if (result === null) return false;
         // result === false → ratelimited or transient failure, fall through to backoff
       } catch (err) {
         const isLastAttempt = attempt === MAX_RETRIES - 1;
@@ -115,19 +101,41 @@ export class SlackClient {
   }
 
   /**
+   * Single-attempt send. Prefers the incoming webhook when configured: it posts
+   * to the channel chosen at app install without requiring the bot to be a
+   * channel member. chat.postMessage is only reachable for channels the bot has
+   * joined, which we cannot do programmatically without the channels:join scope.
+   */
+  private async postOnce(
+    payload: PostMessagePayload,
+    token: string | undefined,
+    webhookUrl: string | undefined,
+  ): Promise<boolean | null> {
+    if (webhookUrl) return this.postViaWebhook(webhookUrl, payload);
+    if (token) {
+      return this.postViaApi(token, {
+        channel: this.defaultChannel,
+        ...payload,
+      });
+    }
+    return null;
+  }
+
+  /**
    * Returns:
    *   true  — message sent successfully
    *   false — rate-limited (caller should back off and retry)
    *   null  — terminal API error (wrong token, channel_not_found, etc.) — don't retry
    */
   private async postViaApi(
+    token: string,
     payload: PostMessagePayload,
   ): Promise<boolean | null> {
     const res = await fetch(CHAT_POST_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        Authorization: `Bearer ${this.token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
     });
@@ -144,8 +152,11 @@ export class SlackClient {
     return true;
   }
 
-  private async postViaWebhook(payload: PostMessagePayload): Promise<boolean> {
-    const res = await fetch(this.webhookUrl, {
+  private async postViaWebhook(
+    webhookUrl: string,
+    payload: PostMessagePayload,
+  ): Promise<boolean> {
+    const res = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: payload.text, blocks: payload.blocks }),
@@ -165,7 +176,7 @@ export class SlackClient {
 // ---------------------------------------------------------------------------
 
 function headerBlock(text: string): BlockKitBlock {
-  return { type: "header", text: { type: "plain_text", text, emoji: true } };
+  return { type: "header", text: { type: "plain_text", text, emoji: true } }; // NOSONAR
 }
 
 function sectionBlock(text: string): BlockKitBlock {
@@ -181,6 +192,10 @@ function contextBlock(...items: string[]): BlockKitBlock {
 
 const divider: BlockKitBlock = { type: "divider" };
 
+function slackTimestamp(): string {
+  return `<!date^${Math.floor(Date.now() / 1_000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`;
+}
+
 // ---------------------------------------------------------------------------
 // High-level notifiers
 // ---------------------------------------------------------------------------
@@ -191,19 +206,17 @@ const client = new SlackClient();
  * Notify Slack when a new newsletter subscriber signs up.
  */
 export async function slackSubscriberNotify(email: string): Promise<void> {
+  const safeEmail = slackEscape(email);
   await client.post({
-    text: `New subscriber: ${email}`,
+    text: `New subscriber: ${safeEmail}`,
     blocks: [
       headerBlock("New Newsletter Subscriber"),
-      sectionBlock(`*Email:* \`${email}\``),
-      contextBlock(
-        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
-        "cloudless.gr subscribe form",
-      ),
+      sectionBlock(`*Email:* \`${safeEmail}\``),
+      contextBlock(slackTimestamp(), "cloudless.gr subscribe form"),
       divider,
     ],
     icon_emoji: ":envelope:",
-    username: "Cloudless Bot",
+    username: BOT_USERNAME,
   });
 }
 
@@ -228,16 +241,17 @@ export async function slackErrorNotify(opts: {
       sectionBlock(`*${opts.title}*\n${opts.message}`),
       ...(opts.route ? [sectionBlock(`*Route:* \`${opts.route}\``)] : []),
       ...(errText
-        ? [sectionBlock(`*Details:*\n\`\`\`${errText.slice(0, 2000)}\`\`\``)]
+        ? [
+            sectionBlock(
+              `*Details:*\n\`\`\`${errText.slice(0, MAX_ERROR_TEXT_LENGTH)}\`\`\``,
+            ),
+          ]
         : []),
-      contextBlock(
-        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
-        "cloudless.gr",
-      ),
+      contextBlock(slackTimestamp(), "cloudless.gr"),
       divider,
     ],
     icon_emoji: ":rotating_light:",
-    username: "Cloudless Bot",
+    username: BOT_USERNAME,
   });
 }
 
@@ -249,17 +263,17 @@ export async function slackDeployNotify(opts: {
   stage: string;
   actor?: string;
   commitSha?: string;
-  status: "started" | "succeeded" | "failed";
+  status: "started" | "succeeded" | "failed"; // NOSONAR — type annotation
 }): Promise<void> {
   const statusEmoji =
-    opts.status === "succeeded"
+    opts.status === STATUS_SUCCEEDED
       ? ":white_check_mark:"
       : opts.status === "failed"
         ? ":x:"
         : ":rocket:";
 
   const statusLabel =
-    opts.status === "succeeded"
+    opts.status === STATUS_SUCCEEDED
       ? "Deploy succeeded"
       : opts.status === "failed"
         ? "Deploy failed"
@@ -274,19 +288,18 @@ export async function slackDeployNotify(opts: {
           `*Version:* \`${opts.version}\``,
           `*Stage:* \`${opts.stage}\``,
           opts.actor ? `*Actor:* ${opts.actor}` : null,
-          opts.commitSha ? `*Commit:* \`${opts.commitSha.slice(0, 7)}\`` : null,
+          opts.commitSha
+            ? `*Commit:* \`${opts.commitSha.slice(0, COMMIT_SHA_SHORT_LENGTH)}\``
+            : null,
         ]
           .filter((s): s is string => Boolean(s))
           .join("\n"),
       ),
-      contextBlock(
-        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
-        "cloudless.gr deploy pipeline",
-      ),
+      contextBlock(slackTimestamp(), "cloudless.gr deploy pipeline"),
       divider,
     ],
     icon_emoji: statusEmoji,
-    username: "Cloudless Bot",
+    username: BOT_USERNAME,
   });
 }
 
@@ -318,31 +331,70 @@ export async function slackContactNotify(data: {
   service?: string;
   message: string;
 }): Promise<boolean> {
+  const safeName = slackEscape(data.name);
+  const safeEmail = slackEscape(data.email);
+  const safeCompany = data.company ? slackEscape(data.company) : "\u2014";
+  const safeService = data.service ? slackEscape(data.service) : "\u2014";
+  const safeMessage = slackEscape(data.message).slice(0, 2000);
   return client.post({
-    text: `New contact from ${data.name} (${data.email})`,
+    text: `New contact from ${safeName} (${safeEmail})`,
     blocks: [
       headerBlock("\ud83d\udce8 New Contact Form Submission"),
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: [
-            `*Name:* ${data.name}`,
-            `*Email:* ${data.email}`,
-            `*Company:* ${data.company || "\u2014"}`,
-            `*Service:* ${data.service || "\u2014"}`,
-          ].join("\n"),
-        },
-      },
-      divider,
-      sectionBlock(`*Message:*\n${data.message.slice(0, 2000)}`),
-      contextBlock(
-        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
-        "cloudless.gr contact form",
+      sectionBlock(
+        [
+          `*Name:* ${safeName}`,
+          `*Email:* ${safeEmail}`,
+          `*Company:* ${safeCompany}`,
+          `*Service:* ${safeService}`,
+        ].join("\n"),
       ),
+      divider,
+      sectionBlock(`*Message:*\n${safeMessage}`),
+      contextBlock(slackTimestamp(), "cloudless.gr contact form"),
     ],
     icon_emoji: ":incoming_envelope:",
-    username: "Cloudless Bot",
+    username: BOT_USERNAME,
+  });
+}
+
+/** Pre-formatted notification for a new consultation booking */
+export async function slackBookingNotify(data: {
+  name: string;
+  email: string;
+  start: string;
+  notes?: string;
+}): Promise<void> {
+  const safeName = slackEscape(data.name);
+  const safeEmail = slackEscape(data.email);
+  const dateStr = slackEscape(
+    new Date(data.start).toLocaleString("en-IE", {
+      timeZone: "Europe/Athens",
+      dateStyle: "full",
+      timeStyle: "short",
+    }),
+  );
+  await client.post({
+    text: `📅 New consultation booked: ${safeName} (${safeEmail})`,
+    blocks: [
+      headerBlock("📅 New Consultation Booked"),
+      sectionBlock(
+        [
+          `*Name:* ${safeName}`,
+          `*Email:* ${safeEmail}`,
+          `*Time:* ${dateStr} (Athens)`,
+        ].join("\n"),
+      ),
+      ...(data.notes
+        ? [
+            sectionBlock(
+              `*Notes:*\n${slackEscape(data.notes).slice(0, MAX_NOTES_TEXT_LENGTH)}`,
+            ),
+          ]
+        : []),
+      contextBlock(slackTimestamp(), "cloudless.gr calendar booking"),
+    ],
+    icon_emoji: ":calendar:",
+    username: BOT_USERNAME,
   });
 }
 
@@ -352,28 +404,22 @@ export async function slackOrderNotify(data: {
   amount: string;
   sessionId: string;
 }): Promise<boolean> {
+  const safeEmail = slackEscape(data.email);
   return client.post({
-    text: `New order: ${data.amount} from ${data.email}`,
+    text: `New order: ${data.amount} from ${safeEmail}`,
     blocks: [
       headerBlock("\ud83d\udcb0 New Order"),
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: [
-            `*Customer:* ${data.email}`,
-            `*Amount:* ${data.amount}`,
-            `*Session:* \`${data.sessionId.slice(0, 20)}...\``,
-          ].join("\n"),
-        },
-      },
-      contextBlock(
-        `<!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
-        "cloudless.gr stripe checkout",
+      sectionBlock(
+        [
+          `*Customer:* ${safeEmail}`,
+          `*Amount:* ${data.amount}`,
+          `*Session:* \`${data.sessionId.slice(0, ORDER_SESSION_DISPLAY_LENGTH)}...\``,
+        ].join("\n"),
       ),
+      contextBlock(slackTimestamp(), "cloudless.gr stripe checkout"),
     ],
     icon_emoji: ":moneybag:",
-    username: "Cloudless Bot",
+    username: BOT_USERNAME,
   });
 }
 
@@ -383,4 +429,15 @@ export async function slackOrderNotify(data: {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Escape Slack mrkdwn special characters in user-supplied strings.
+ * Prevents link injection (<url|text>) and @mention injection (<@here>).
+ */
+function slackEscape(text: string): string {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }

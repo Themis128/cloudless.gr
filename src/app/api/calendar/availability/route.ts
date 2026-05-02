@@ -12,14 +12,19 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const days = Math.min(Number(searchParams.get("days") || 7), 30);
+    const DEFAULT_DAYS = 7;
+    const MAX_DAYS = 30;
+    const days = Math.max(
+      1,
+      Math.min(Number(searchParams.get("days") || DEFAULT_DAYS), MAX_DAYS),
+    );
     const slots = await getAvailableSlots(days);
 
     return NextResponse.json(
       { slots },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60", // NOSONAR — cache TTL values
         },
       },
     );

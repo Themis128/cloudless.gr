@@ -3,6 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 
 const REFRESH_INTERVAL = 10_000;
+const SECTION_LABEL_CLASS =
+  "mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600";
+const TH_CLASS =
+  "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
+const COLOR_WHITE = "text-white";
+const RECENT_CONTACTS_LIMIT = 5;
 
 interface Contact {
   id: string;
@@ -56,13 +62,60 @@ interface Stats {
   fetchedAt: string | null;
 }
 
-export default function HubSpotOverviewPage() {
-  const [stats, setStats] = useState<Stats>({
-    contacts: { total: 0, newLeads: 0, qualified: 0, recent: [] },
-    deals: { total: 0, pipelineValue: 0, won: 0 },
-    tickets: { total: 0, open: 0 },
-    fetchedAt: null,
-  });
+function computeContactStats(contacts: Contact[]): Stats["contacts"] {
+  return {
+    total: contacts.length,
+    newLeads: contacts.filter((c) => c.properties.hs_lead_status === "NEW")
+      .length,
+    qualified: contacts.filter(
+      (c) => c.properties.hs_lead_status === "OPEN_DEAL",
+    ).length,
+    recent: contacts
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(b.properties.createdate ?? 0).getTime() -
+          new Date(a.properties.createdate ?? 0).getTime(),
+      )
+      .slice(0, RECENT_CONTACTS_LIMIT),
+  };
+}
+
+function computeDealStats(deals: Deal[]): Stats["deals"] {
+  return {
+    total: deals.length,
+    pipelineValue: deals.reduce(
+      (sum, d) => sum + (Number.parseFloat(d.properties.amount ?? "0") || 0),
+      0,
+    ),
+    won: deals.filter((d) => d.properties.dealstage === "closedwon").length,
+  };
+}
+
+function computeTicketStats(tickets: Ticket[]): Stats["tickets"] {
+  return {
+    total: tickets.length,
+    open: tickets.filter((t) => t.properties.hs_pipeline_stage !== "4").length,
+  };
+}
+
+function fmt(n: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+const INITIAL_STATS: Stats = {
+  contacts: { total: 0, newLeads: 0, qualified: 0, recent: [] },
+  deals: { total: 0, pipelineValue: 0, won: 0 },
+  tickets: { total: 0, open: 0 },
+  fetchedAt: null,
+};
+
+function useHubSpotStats() {
+  const [stats, setStats] = useState<Stats>(INITIAL_STATS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -75,59 +128,18 @@ export default function HubSpotOverviewPage() {
         fetch("/api/admin/crm/deals?limit=100"),
         fetch("/api/admin/crm/tickets?limit=100"),
       ]);
-
       if (!contactsRes.ok && contactsRes.status === 503) {
         throw new Error("HubSpot not configured");
       }
-
       const [contactsData, dealsData, ticketsData] = await Promise.all([
         contactsRes.ok ? contactsRes.json() : { contacts: [] },
         dealsRes.ok ? dealsRes.json() : { deals: [] },
         ticketsRes.ok ? ticketsRes.json() : { tickets: [] },
       ]);
-
-      const contacts: Contact[] = contactsData.contacts ?? [];
-      const deals: Deal[] = dealsData.deals ?? [];
-      const tickets: Ticket[] = ticketsData.tickets ?? [];
-
-      const pipelineValue = deals.reduce(
-        (sum, d) => sum + (parseFloat(d.properties.amount ?? "0") || 0),
-        0,
-      );
-      const wonDeals = deals.filter(
-        (d) => d.properties.dealstage === "closedwon",
-      ).length;
-      const openTickets = tickets.filter(
-        (t) => t.properties.hs_pipeline_stage !== "4",
-      ).length;
-
       setStats({
-        contacts: {
-          total: contacts.length,
-          newLeads: contacts.filter(
-            (c) => c.properties.hs_lead_status === "NEW",
-          ).length,
-          qualified: contacts.filter(
-            (c) => c.properties.hs_lead_status === "OPEN_DEAL",
-          ).length,
-          recent: contacts
-            .slice()
-            .sort(
-              (a, b) =>
-                new Date(b.properties.createdate ?? 0).getTime() -
-                new Date(a.properties.createdate ?? 0).getTime(),
-            )
-            .slice(0, 5),
-        },
-        deals: {
-          total: deals.length,
-          pipelineValue,
-          won: wonDeals,
-        },
-        tickets: {
-          total: tickets.length,
-          open: openTickets,
-        },
+        contacts: computeContactStats(contactsData.contacts ?? []),
+        deals: computeDealStats(dealsData.deals ?? []),
+        tickets: computeTicketStats(ticketsData.tickets ?? []),
         fetchedAt: new Date().toISOString(),
       });
       setError(null);
@@ -141,10 +153,14 @@ export default function HubSpotOverviewPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchAll();
-    const interval = setInterval(() => void fetchAll(), REFRESH_INTERVAL);
+    fetchAll().catch(() => {});
+    const interval = setInterval(() => {
+      fetchAll().catch(() => {});
+    }, REFRESH_INTERVAL);
     const onVisible = () => {
-      if (document.visibilityState === "visible") void fetchAll();
+      if (document.visibilityState === "visible") {
+        fetchAll().catch(() => {});
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
@@ -155,12 +171,74 @@ export default function HubSpotOverviewPage() {
     };
   }, [fetchAll]);
 
-  const fmt = (n: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(n);
+  return { stats, loading, error, refreshing, fetchAll };
+}
+
+function RecentLeadsTable({
+  loading,
+  contacts,
+}: Readonly<{ loading: boolean; contacts: Contact[] }>) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="border-neon-magenta h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+      </div>
+    );
+  }
+  if (contacts.length === 0) {
+    return (
+      <p className="px-6 py-12 text-center font-mono text-slate-600">
+        No contacts yet
+      </p>
+    );
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-slate-800">
+            <th className={TH_CLASS}>Name</th>
+            <th className={TH_CLASS}>Email</th>
+            <th className={TH_CLASS}>Status</th>
+            <th className={TH_CLASS}>Added</th>
+          </tr>
+        </thead>
+        <tbody>
+          {contacts.map((c) => (
+            <tr
+              key={c.id}
+              className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+            >
+              <td className="px-6 py-4 text-white">
+                {[c.properties.firstname, c.properties.lastname]
+                  .filter(Boolean)
+                  .join(" ") || "—"}
+              </td>
+              <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
+                {c.properties.email ?? "—"}
+              </td>
+              <td className="px-6 py-4">
+                <span className="rounded-full bg-neon-cyan/10 px-2 py-0.5 font-mono text-[10px] text-neon-cyan">
+                  {c.properties.hs_lead_status ?? "—"}
+                </span>
+              </td>
+              <td className="px-6 py-4 font-mono text-slate-500">
+                {c.properties.createdate
+                  ? new Date(c.properties.createdate).toLocaleDateString(
+                      "en-IE",
+                    )
+                  : "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default function HubSpotOverviewPage() {
+  const { stats, loading, error, refreshing, fetchAll } = useHubSpotStats();
 
   return (
     <div>
@@ -206,15 +284,12 @@ export default function HubSpotOverviewPage() {
         </div>
       ) : (
         <>
-          {/* Contacts stats */}
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600">
-            Contacts
-          </p>
+          <p className={SECTION_LABEL_CLASS}>Contacts</p>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatCard
               label="Total Contacts"
               value={loading ? "…" : stats.contacts.total}
-              color="text-white"
+              color={COLOR_WHITE}
             />
             <StatCard
               label="New Leads"
@@ -228,15 +303,12 @@ export default function HubSpotOverviewPage() {
             />
           </div>
 
-          {/* Deals stats */}
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600">
-            Deals
-          </p>
+          <p className={SECTION_LABEL_CLASS}>Deals</p>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatCard
               label="Total Deals"
               value={loading ? "…" : stats.deals.total}
-              color="text-white"
+              color={COLOR_WHITE}
             />
             <StatCard
               label="Pipeline Value"
@@ -250,15 +322,12 @@ export default function HubSpotOverviewPage() {
             />
           </div>
 
-          {/* Tickets stats */}
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600">
-            Support Tickets
-          </p>
+          <p className={SECTION_LABEL_CLASS}>Support Tickets</p>
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <StatCard
               label="Total Tickets"
               value={loading ? "…" : stats.tickets.total}
-              color="text-white"
+              color={COLOR_WHITE}
             />
             <StatCard
               label="Open"
@@ -267,70 +336,12 @@ export default function HubSpotOverviewPage() {
             />
           </div>
 
-          {/* Recent leads */}
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600">
-            Recent Leads
-          </p>
+          <p className={SECTION_LABEL_CLASS}>Recent Leads</p>
           <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="border-neon-magenta h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
-              </div>
-            ) : stats.contacts.recent.length === 0 ? (
-              <p className="px-6 py-12 text-center font-mono text-slate-600">
-                No contacts yet
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-800">
-                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                        Added
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.contacts.recent.map((c) => (
-                      <tr
-                        key={c.id}
-                        className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
-                      >
-                        <td className="px-6 py-4 text-white">
-                          {[c.properties.firstname, c.properties.lastname]
-                            .filter(Boolean)
-                            .join(" ") || "—"}
-                        </td>
-                        <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
-                          {c.properties.email ?? "—"}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="rounded-full bg-neon-cyan/10 px-2 py-0.5 font-mono text-[10px] text-neon-cyan">
-                            {c.properties.hs_lead_status ?? "—"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-slate-500">
-                          {c.properties.createdate
-                            ? new Date(
-                                c.properties.createdate,
-                              ).toLocaleDateString("en-IE")
-                            : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <RecentLeadsTable
+              loading={loading}
+              contacts={stats.contacts.recent}
+            />
           </div>
         </>
       )}
@@ -342,11 +353,11 @@ function StatCard({
   label,
   value,
   color,
-}: {
+}: Readonly<{
   label: string;
   value: string | number;
   color: string;
-}) {
+}>) {
   return (
     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
       <p className="font-mono text-xs text-slate-500">{label}</p>

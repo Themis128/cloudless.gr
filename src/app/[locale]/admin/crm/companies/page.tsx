@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 
 const REFRESH_INTERVAL = 10_000;
+const TH_CLASS =
+  "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
 
 interface Company {
   id: string;
@@ -45,10 +47,14 @@ export default function AdminCompaniesPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchCompanies();
-    const interval = setInterval(() => void fetchCompanies(), REFRESH_INTERVAL);
+    fetchCompanies().catch(() => {});
+    const interval = setInterval(() => {
+      fetchCompanies().catch(() => {});
+    }, REFRESH_INTERVAL);
     const onVisible = () => {
-      if (document.visibilityState === "visible") void fetchCompanies();
+      if (document.visibilityState === "visible") {
+        fetchCompanies().catch(() => {});
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
@@ -69,6 +75,93 @@ export default function AdminCompaniesPage() {
       (p.country ?? "").toLowerCase().includes(q)
     );
   });
+
+  let mainContent: React.ReactElement;
+  if (loading) {
+    mainContent = (
+      <div className="bg-void-light/50 flex items-center justify-center rounded-xl border border-slate-800 py-16">
+        <div className="border-neon-magenta h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+      </div>
+    );
+  } else if (error) {
+    mainContent = (
+      <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
+        <p className="font-mono text-sm text-red-400">{error}</p>
+        <p className="mt-2 text-xs text-slate-500">
+          {error === "HubSpot not configured"
+            ? "Set HUBSPOT_API_KEY in your environment to enable CRM."
+            : "Check your HubSpot API key configuration."}
+        </p>
+      </div>
+    );
+  } else {
+    mainContent = (
+      <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-800">
+                <th className={TH_CLASS}>Company</th>
+                <th className={TH_CLASS}>Domain</th>
+                <th className={TH_CLASS}>Location</th>
+                <th className={TH_CLASS}>Added</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((c) => (
+                <tr
+                  key={c.id}
+                  className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                >
+                  <td className="px-6 py-4 font-medium text-white">
+                    {c.properties.name || "—"}
+                  </td>
+                  <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
+                    {c.properties.domain ? (
+                      <a
+                        href={`https://${c.properties.domain}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        {c.properties.domain}
+                      </a>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-slate-300">
+                    {[c.properties.city, c.properties.country]
+                      .filter(Boolean)
+                      .join(", ") || "—"}
+                  </td>
+                  <td className="px-6 py-4 font-mono text-slate-500">
+                    {c.properties.createdate
+                      ? new Date(c.properties.createdate).toLocaleDateString(
+                          "en-IE",
+                        )
+                      : "—"}
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-6 py-12 text-center font-mono text-slate-600"
+                  >
+                    {search
+                      ? "No companies match your search"
+                      : "No companies yet"}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -127,97 +220,11 @@ export default function AdminCompaniesPage() {
           placeholder="Search by name, domain, or location…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="bg-void-light focus:border-neon-magenta/50 w-full max-w-md rounded-lg border border-slate-800 px-4 py-3 font-mono text-sm text-white transition-colors placeholder:text-slate-600 focus:outline-none"
+          className="bg-void-light focus:border-neon-magenta/50 w-full max-w-md rounded-lg border border-slate-800 px-4 py-3 font-mono text-sm text-white transition-colors placeholder:text-slate-[...]"
         />
       </div>
 
-      {loading ? (
-        <div className="bg-void-light/50 flex items-center justify-center rounded-xl border border-slate-800 py-16">
-          <div className="border-neon-magenta h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
-        </div>
-      ) : error ? (
-        <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
-          <p className="font-mono text-sm text-red-400">{error}</p>
-          <p className="mt-2 text-xs text-slate-500">
-            {error === "HubSpot not configured"
-              ? "Set HUBSPOT_API_KEY in your environment to enable CRM."
-              : "Check your HubSpot API key configuration."}
-          </p>
-        </div>
-      ) : (
-        <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-800">
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Company
-                  </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Domain
-                  </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Location
-                  </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Added
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
-                  >
-                    <td className="px-6 py-4 font-medium text-white">
-                      {c.properties.name || "—"}
-                    </td>
-                    <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
-                      {c.properties.domain ? (
-                        <a
-                          href={`https://${c.properties.domain}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:underline"
-                        >
-                          {c.properties.domain}
-                        </a>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-slate-300">
-                      {[c.properties.city, c.properties.country]
-                        .filter(Boolean)
-                        .join(", ") || "—"}
-                    </td>
-                    <td className="px-6 py-4 font-mono text-slate-500">
-                      {c.properties.createdate
-                        ? new Date(c.properties.createdate).toLocaleDateString(
-                            "en-IE",
-                          )
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-12 text-center font-mono text-slate-600"
-                    >
-                      {search
-                        ? "No companies match your search"
-                        : "No companies yet"}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {mainContent}
     </div>
   );
 }

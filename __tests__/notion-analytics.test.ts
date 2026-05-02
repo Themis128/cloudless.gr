@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { resetIntegrationCache } from "@/lib/integrations";
+import { resetEventQueue } from "@/lib/notion-analytics"; // NOSONAR — import path repeated across dynamic imports in test suite
 
 const mockNotionFetch = vi.fn();
 const mockNotionFetchAll = vi.fn();
@@ -17,11 +18,11 @@ function makeEventPage(overrides: Record<string, unknown> = {}) {
     created_time: "2026-04-10T12:00:00Z",
     properties: {
       Event: { title: [{ plain_text: "Page View: /blog" }] },
-      Type: { select: { name: "page_view" } },
+      Type: { select: { name: EVENT_PAGE_VIEW } },
       Page: { rich_text: [{ plain_text: "/blog" }] },
       Source: { rich_text: [{ plain_text: "google" }] },
       Count: { number: 1 },
-      Date: { date: { start: "2026-04-10" } },
+      Date: { date: { start: DATE_END } },
       Country: { rich_text: [{ plain_text: "GR" }] },
       Metadata: { rich_text: [] },
     },
@@ -29,10 +30,17 @@ function makeEventPage(overrides: Record<string, unknown> = {}) {
   };
 }
 
+const EVENT_PAGE_VIEW = "page_view";
+const EVENT_FORM_SUBMIT = "form_submit";
+const DATE_START = "2026-04-01";
+const DATE_END = "2026-04-10";
+const FORM_CONTACT_EVENT = "Form: Contact";
+
 describe("notion-analytics.ts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetIntegrationCache();
+    resetEventQueue();
   });
 
   describe("trackEvent", () => {
@@ -40,12 +48,10 @@ describe("notion-analytics.ts", () => {
       mockNotionFetch.mockResolvedValueOnce({ id: "evt-new" });
 
       const { trackEvent } = await import("@/lib/notion-analytics");
-      const id = await trackEvent({
-        event: "Form: Contact",
-        type: "form_submit",
-        page: "/contact",
-        source: "direct",
-      });
+      const id = await trackEvent(
+        { event: FORM_CONTACT_EVENT, type: EVENT_FORM_SUBMIT, page: "/contact", source: "direct" },
+        { immediate: true },
+      );
 
       expect(id).toBe("evt-new");
       expect(mockNotionFetch).toHaveBeenCalledWith(
@@ -55,8 +61,8 @@ describe("notion-analytics.ts", () => {
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
       expect(body.parent.database_id).toBe("analytics-db-123");
-      expect(body.properties.Event.title[0].text.content).toBe("Form: Contact");
-      expect(body.properties.Type.select.name).toBe("form_submit");
+      expect(body.properties.Event.title[0].text.content).toBe(FORM_CONTACT_EVENT);
+      expect(body.properties.Type.select.name).toBe(EVENT_FORM_SUBMIT);
     });
 
     it("returns null when not configured", async () => {
@@ -64,7 +70,10 @@ describe("notion-analytics.ts", () => {
       resetIntegrationCache();
 
       const { trackEvent } = await import("@/lib/notion-analytics");
-      const id = await trackEvent({ event: "test", type: "page_view" });
+      const id = await trackEvent(
+        { event: "test", type: EVENT_PAGE_VIEW },
+        { immediate: true },
+      );
 
       expect(id).toBeNull();
       expect(mockNotionFetch).not.toHaveBeenCalled();
@@ -74,7 +83,10 @@ describe("notion-analytics.ts", () => {
       mockNotionFetch.mockRejectedValueOnce(new Error("fail"));
 
       const { trackEvent } = await import("@/lib/notion-analytics");
-      const id = await trackEvent({ event: "test", type: "error" });
+      const id = await trackEvent(
+        { event: "test", type: "error" },
+        { immediate: true },
+      );
 
       expect(id).toBeNull();
     });
@@ -83,7 +95,10 @@ describe("notion-analytics.ts", () => {
       mockNotionFetch.mockResolvedValueOnce({ id: "evt" });
 
       const { trackEvent } = await import("@/lib/notion-analytics");
-      await trackEvent({ event: "x".repeat(300), type: "page_view" });
+      await trackEvent(
+        { event: "x".repeat(300), type: EVENT_PAGE_VIEW },
+        { immediate: true },
+      );
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
       expect(body.properties.Event.title[0].text.content.length).toBe(200);
@@ -93,11 +108,10 @@ describe("notion-analytics.ts", () => {
       mockNotionFetch.mockResolvedValueOnce({ id: "evt" });
 
       const { trackEvent } = await import("@/lib/notion-analytics");
-      await trackEvent({
-        event: "Error",
-        type: "error",
-        metadata: { code: 500, message: "Internal error" },
-      });
+      await trackEvent(
+        { event: "Error", type: "error", metadata: { code: 500, message: "Internal error" } },
+        { immediate: true },
+      );
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
       const metaContent = body.properties.Metadata.rich_text[0].text.content;
@@ -113,8 +127,8 @@ describe("notion-analytics.ts", () => {
       await trackFormSubmission("Contact", "google");
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
-      expect(body.properties.Event.title[0].text.content).toBe("Form: Contact");
-      expect(body.properties.Type.select.name).toBe("form_submit");
+      expect(body.properties.Event.title[0].text.content).toBe(FORM_CONTACT_EVENT);
+      expect(body.properties.Type.select.name).toBe(EVENT_FORM_SUBMIT);
     });
   });
 
@@ -140,7 +154,7 @@ describe("notion-analytics.ts", () => {
 
       expect(events).toHaveLength(1);
       expect(events[0].event).toBe("Page View: /blog");
-      expect(events[0].type).toBe("page_view");
+      expect(events[0].type).toBe(EVENT_PAGE_VIEW);
       expect(events[0].page).toBe("/blog");
     });
 
@@ -174,7 +188,7 @@ describe("notion-analytics.ts", () => {
           id: "evt-2",
           properties: {
             ...makeEventPage().properties,
-            Type: { select: { name: "form_submit" } },
+            Type: { select: { name: EVENT_FORM_SUBMIT } },
             Page: { rich_text: [{ plain_text: "/contact" }] },
             Count: { number: 3 },
           },
@@ -228,13 +242,13 @@ describe("notion-analytics.ts", () => {
       mockNotionFetchAll.mockResolvedValueOnce([makeEventPage()]);
 
       const { getEventsByDateRange } = await import("@/lib/notion-analytics");
-      const events = await getEventsByDateRange("2026-04-01", "2026-04-10");
+      const events = await getEventsByDateRange(DATE_START, DATE_END);
 
       expect(events).toHaveLength(1);
       const callBody = mockNotionFetchAll.mock.calls[0][1];
       expect(callBody.filter.and).toEqual([
-        { property: "Date", date: { on_or_after: "2026-04-01" } },
-        { property: "Date", date: { on_or_before: "2026-04-10" } },
+        { property: "Date", date: { on_or_after: DATE_START } },
+        { property: "Date", date: { on_or_before: DATE_END } },
       ]);
     });
 
@@ -243,14 +257,14 @@ describe("notion-analytics.ts", () => {
       resetIntegrationCache();
 
       const { getEventsByDateRange } = await import("@/lib/notion-analytics");
-      expect(await getEventsByDateRange("2026-04-01", "2026-04-10")).toEqual([]);
+      expect(await getEventsByDateRange(DATE_START, DATE_END)).toEqual([]);
     });
 
     it("returns empty on error", async () => {
       mockNotionFetchAll.mockRejectedValueOnce(new Error("fail"));
 
       const { getEventsByDateRange } = await import("@/lib/notion-analytics");
-      expect(await getEventsByDateRange("2026-04-01", "2026-04-10")).toEqual([]);
+      expect(await getEventsByDateRange(DATE_START, DATE_END)).toEqual([]);
     });
   });
 
@@ -286,7 +300,7 @@ describe("notion-analytics.ts", () => {
       mockNotionFetch.mockResolvedValueOnce({ id: "evt" });
 
       const { trackEvent } = await import("@/lib/notion-analytics");
-      await trackEvent({ event: "Simple", type: "page_view" });
+      await trackEvent({ event: "Simple", type: EVENT_PAGE_VIEW }, { immediate: true });
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
       expect(body.properties.Page).toBeUndefined();
@@ -300,15 +314,18 @@ describe("notion-analytics.ts", () => {
       mockNotionFetch.mockResolvedValueOnce({ id: "evt" });
 
       const { trackEvent } = await import("@/lib/notion-analytics");
-      await trackEvent({
-        event: "Full Event",
-        type: "page_view",
-        page: "/about",
-        source: "google",
-        count: 5,
-        country: "US",
-        metadata: { key: "value" },
-      });
+      await trackEvent(
+        {
+          event: "Full Event",
+          type: EVENT_PAGE_VIEW,
+          page: "/about",
+          source: "google",
+          count: 5,
+          country: "US",
+          metadata: { key: "value" },
+        },
+        { immediate: true },
+      );
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
       expect(body.properties.Page.rich_text[0].text.content).toBe("/about");
@@ -352,7 +369,7 @@ describe("notion-analytics.ts", () => {
       const queryTypes = mockNotionFetchAll.mock.calls.map(
         (c: any) => c[1].filter.and[0].select.equals,
       );
-      expect(queryTypes).toEqual(["page_view", "blog_view", "doc_view"]);
+      expect(queryTypes).toEqual([EVENT_PAGE_VIEW, "blog_view", "doc_view"]);
     });
 
     it("counts errors when individual archive fails", async () => {
@@ -429,7 +446,7 @@ describe("notion-analytics.ts", () => {
       const { getRecentEvents } = await import("@/lib/notion-analytics");
       const events = await getRecentEvents();
 
-      expect(events[0].type).toBe("page_view");
+      expect(events[0].type).toBe(EVENT_PAGE_VIEW);
     });
 
     it("defaults count to 1 when missing", async () => {

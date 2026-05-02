@@ -7,10 +7,12 @@ const { mockSlackPost } = vi.hoisted(() => ({
 
 const mockCreateWeeklyRollup = vi.fn();
 const mockArchiveOldEvents = vi.fn();
+const mockFlushEventQueue = vi.fn();
 
 vi.mock("@/lib/notion-analytics", () => ({
   createWeeklyRollup: () => mockCreateWeeklyRollup(),
   archiveOldEvents: (...args: unknown[]) => mockArchiveOldEvents(...args),
+  flushEventQueue: () => mockFlushEventQueue(),
 }));
 
 vi.mock("@/lib/slack-notify", () => ({
@@ -34,6 +36,7 @@ describe("GET /api/cron/analytics-rollup", () => {
     mockSlackPost.mockResolvedValue(true);
     mockCreateWeeklyRollup.mockResolvedValue("rollup-page-id-123");
     mockArchiveOldEvents.mockResolvedValue({ archived: 42, errors: 0 });
+    mockFlushEventQueue.mockResolvedValue({ written: 0, errors: 0 });
   });
 
   it("returns 401 when authorization header is missing", async () => {

@@ -5,11 +5,15 @@ import { Link } from "@/i18n/navigation";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
+const STATUS_LOADING = "loading";
+const STATUS_SUCCESS = "success";
+const STATUS_ERROR = "error";
+
 export default function NewsletterForm() {
   const [locale] = useCurrentLocale();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<
-    "idle" | "loading" | "success" | "error"
+    "idle" | "loading" | "success" | "error" // NOSONAR — type annotation
   >("idle");
   const [message, setMessage] = useState("");
 
@@ -17,7 +21,7 @@ export default function NewsletterForm() {
     e.preventDefault();
     if (!email) return;
 
-    setStatus("loading");
+    setStatus(STATUS_LOADING);
     try {
       const res = await fetch("/api/subscribe", {
         method: "POST",
@@ -26,7 +30,7 @@ export default function NewsletterForm() {
       });
 
       if (res.ok) {
-        setStatus("success");
+        setStatus(STATUS_SUCCESS);
         setMessage(
           translate(
             locale,
@@ -37,7 +41,7 @@ export default function NewsletterForm() {
         setEmail("");
       } else {
         const data = await res.json().catch(() => ({}));
-        setStatus("error");
+        setStatus(STATUS_ERROR);
         setMessage(
           data.error ||
             translate(
@@ -48,7 +52,7 @@ export default function NewsletterForm() {
         );
       }
     } catch {
-      setStatus("error");
+      setStatus(STATUS_ERROR);
       setMessage(
         translate(
           locale,
@@ -93,10 +97,10 @@ export default function NewsletterForm() {
         />
         <button
           type="submit"
-          disabled={status === "loading"}
+          disabled={status === STATUS_LOADING}
           className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 shrink-0 rounded-lg border px-4 py-2 font-mono text-xs font-semibold transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,255,245,0.15)] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {status === "loading"
+          {status === STATUS_LOADING
             ? translate(locale, "newsletter.subscribing", "Subscribing...")
             : translate(locale, "newsletter.cta", "Subscribe")}
         </button>
@@ -116,10 +120,10 @@ export default function NewsletterForm() {
         {". "}
         {translate(locale, "newsletter.unsubscribe", "Unsubscribe anytime.")}
       </p>
-      {status === "success" && (
+      {status === STATUS_SUCCESS && (
         <p className="text-neon-green mt-2 font-mono text-xs">{message}</p>
       )}
-      {status === "error" && (
+      {status === STATUS_ERROR && (
         <p className="mt-2 font-mono text-xs text-red-400">{message}</p>
       )}
     </div>

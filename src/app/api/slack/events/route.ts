@@ -15,7 +15,7 @@
  */
 
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
-import { getSlackConfig } from "@/lib/integrations";
+import { getSlackConfigAsync } from "@/lib/integrations";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 
 // ---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ async function handleEvent(event: SlackEvent): Promise<void> {
 }
 
 async function handleAppMention(event: SlackEvent): Promise<void> {
-  const { SLACK_BOT_TOKEN } = getSlackConfig();
+  const { SLACK_BOT_TOKEN } = await getSlackConfigAsync();
   if (!SLACK_BOT_TOKEN || !event.channel) return;
 
   const userText = (event.text ?? "").toLowerCase();
@@ -177,7 +177,7 @@ async function handleAppMention(event: SlackEvent): Promise<void> {
 }
 
 async function handleDirectMessage(event: SlackEvent): Promise<void> {
-  const { SLACK_BOT_TOKEN } = getSlackConfig();
+  const { SLACK_BOT_TOKEN } = await getSlackConfigAsync();
   if (!SLACK_BOT_TOKEN || !event.channel) return;
 
   await fetch("https://slack.com/api/chat.postMessage", {

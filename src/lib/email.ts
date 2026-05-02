@@ -60,8 +60,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
       }),
     );
   } catch (err: unknown) {
-    // AWS SDK v3 XML parser throws a deserialization error on SES success
-    // responses that contain &#xD; entities. HTTP 200 = email delivered.
+    // AWS SDK v3 XML parser throws a deserialization error on SES success responses
+    // that contain &#xD; entities. If HTTP status is 200 the email was delivered —
+    // swallow the parse error and continue.
     const meta = (err as { $metadata?: { httpStatusCode?: number } })
       ?.$metadata;
     if (meta?.httpStatusCode !== 200) throw err;

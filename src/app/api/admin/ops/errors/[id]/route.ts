@@ -18,7 +18,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!isSentryConfigured()) {
+  if (!(await isSentryConfigured())) {
     return NextResponse.json(
       { error: "Sentry not configured." },
       { status: 503 },

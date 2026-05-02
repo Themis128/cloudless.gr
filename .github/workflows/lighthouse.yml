@@ -13,6 +13,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   audit:
     name: Performance Audit
@@ -21,7 +24,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run Lighthouse
         id: lighthouse
@@ -30,6 +33,9 @@ jobs:
           urls: |
             ${{ github.event.inputs.url || 'https://cloudless.gr' }}
             ${{ github.event.inputs.url || 'https://cloudless.gr/en' }}
+            ${{ github.event.inputs.url || 'https://cloudless.gr/services' }}
+            ${{ github.event.inputs.url || 'https://cloudless.gr/contact' }}
+            ${{ github.event.inputs.url || 'https://cloudless.gr/store' }}
           budgetPath: .github/lighthouse-budget.json
           uploadArtifacts: true
           temporaryPublicStorage: true

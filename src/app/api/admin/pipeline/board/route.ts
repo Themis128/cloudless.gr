@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const [dealsByStage, pipelines] = await Promise.all([
-      getDealsByStage(100),
+      getDealsByStage(),
       getPipelines("deals"),
     ]);
 

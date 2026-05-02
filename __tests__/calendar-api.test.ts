@@ -26,14 +26,17 @@ vi.mock("@/lib/google-calendar", () => ({
   bookConsultation: vi.fn(),
 }));
 
-const mockSlackNotify = vi.fn().mockResolvedValue(true);
+const mockSlackBookingNotify = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/slack-notify", () => ({
-  slackNotify: mockSlackNotify,
+  slackBookingNotify: mockSlackBookingNotify,
 }));
 
 // ---------------------------------------------------------------------------
 // GET /api/calendar/availability
 // ---------------------------------------------------------------------------
+const TEST_USER_NAME = "Test User";
+const TEST_USER_EMAIL = "test@example.com";
+const AVAILABILITY_URL = "http://localhost/api/calendar/availability";
 
 describe("GET /api/calendar/availability", () => {
   beforeEach(() => {
@@ -58,7 +61,7 @@ describe("GET /api/calendar/availability", () => {
     resetIntegrationCache();
     const { GET } = await import("@/app/api/calendar/availability/route");
     const res = await GET(
-      new Request("http://localhost/api/calendar/availability"),
+      new Request(AVAILABILITY_URL),
     );
     expect(res.status).toBe(503);
     const data = await res.json();
@@ -68,7 +71,7 @@ describe("GET /api/calendar/availability", () => {
   it("returns slots array when configured", async () => {
     const { GET } = await import("@/app/api/calendar/availability/route");
     const res = await GET(
-      new Request("http://localhost/api/calendar/availability"),
+      new Request(AVAILABILITY_URL),
     );
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -78,7 +81,7 @@ describe("GET /api/calendar/availability", () => {
   it("slot objects have start and end fields", async () => {
     const { GET } = await import("@/app/api/calendar/availability/route");
     const res = await GET(
-      new Request("http://localhost/api/calendar/availability"),
+      new Request(AVAILABILITY_URL),
     );
     const data = await res.json();
     const slot = data.slots[0];
@@ -97,7 +100,7 @@ describe("GET /api/calendar/availability", () => {
   it("defaults to 7 days when no param provided", async () => {
     const { GET } = await import("@/app/api/calendar/availability/route");
     await GET(
-      new Request("http://localhost/api/calendar/availability"),
+      new Request(AVAILABILITY_URL),
     );
     expect(mockGetAvailableSlots).toHaveBeenCalledWith(7);
   });
@@ -106,7 +109,7 @@ describe("GET /api/calendar/availability", () => {
     mockGetAvailableSlots.mockRejectedValue(new Error("Google API error"));
     const { GET } = await import("@/app/api/calendar/availability/route");
     const res = await GET(
-      new Request("http://localhost/api/calendar/availability"),
+      new Request(AVAILABILITY_URL),
     );
     expect(res.status).toBe(500);
   });
@@ -149,8 +152,8 @@ describe("POST /api/calendar/book", () => {
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
       bookRequest({
-        name: "Test User",
-        email: "test@example.com",
+        name: TEST_USER_NAME,
+        email: TEST_USER_EMAIL,
         start: futureStart,
         end: futureEnd,
       }),
@@ -160,7 +163,7 @@ describe("POST /api/calendar/book", () => {
 
   it("returns 400 when required fields are missing", async () => {
     const { POST } = await import("@/app/api/calendar/book/route");
-    const res = await POST(bookRequest({ name: "Test User" }));
+    const res = await POST(bookRequest({ name: TEST_USER_NAME }));
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data).toHaveProperty("error");
@@ -170,7 +173,7 @@ describe("POST /api/calendar/book", () => {
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
       bookRequest({
-        name: "Test User",
+        name: TEST_USER_NAME,
         email: "not-an-email",
         start: futureStart,
         end: futureEnd,
@@ -185,8 +188,8 @@ describe("POST /api/calendar/book", () => {
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
       bookRequest({
-        name: "Test User",
-        email: "test@example.com",
+        name: TEST_USER_NAME,
+        email: TEST_USER_EMAIL,
         start: "2020-01-01T10:00:00Z",
         end: "2020-01-01T10:30:00Z",
       }),
@@ -200,8 +203,8 @@ describe("POST /api/calendar/book", () => {
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
       bookRequest({
-        name: "Test User",
-        email: "test@example.com",
+        name: TEST_USER_NAME,
+        email: TEST_USER_EMAIL,
         start: futureStart,
         end: futureEnd,
         notes: "Looking forward to the call",
@@ -226,8 +229,14 @@ describe("POST /api/calendar/book", () => {
     );
     // Give the fire-and-forget promise a tick to resolve
     await new Promise((r) => setTimeout(r, 0));
-    expect(mockSlackNotify).toHaveBeenCalledOnce();
-    expect(mockSlackNotify.mock.calls[0][0].text).toContain("Notify Test");
+    expect(mockSlackBookingNotify).toHaveBeenCalledOnce();
+    const call = mockSlackBookingNotify.mock.calls[0][0] as {
+      name: string;
+      email: string;
+      start: string;
+    };
+    expect(call.name).toBe("Notify Test");
+    expect(call.email).toBe("notify@example.com");
   });
 
   it("returns 500 when bookConsultation returns null", async () => {
@@ -241,8 +250,8 @@ describe("POST /api/calendar/book", () => {
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
       bookRequest({
-        name: "Test User",
-        email: "test@example.com",
+        name: TEST_USER_NAME,
+        email: TEST_USER_EMAIL,
         start: futureStart,
         end: futureEnd,
       }),
