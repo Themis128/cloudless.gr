@@ -6,7 +6,7 @@
  * fail, every other test in this suite will too — so they're the canary.
  */
 import { test, expect } from "@playwright/test";
-import { isHealthBody, isLikelyStandbyResponse, probeHealth } from "./_helpers";
+import { isHealthBody, isLikelyAppResponse, probeHealth } from "./_helpers";
 
 test.describe("k3s smoke", () => {
   test("/api/health returns 200 with valid app body", async ({ request }) => {
@@ -24,11 +24,11 @@ test.describe("k3s smoke", () => {
     expect(r.headers["permissions-policy"]).toContain("camera=()");
   });
 
-  test("response signature matches Pi's Next.js app", async ({ request }) => {
+  test("response signature is the cloudless.gr Next.js app", async ({ request }) => {
     const r = await probeHealth(request);
     expect(
-      isLikelyStandbyResponse(r.headers),
-      "expected Pi-side CSP signature; the proxy may have rewritten headers",
+      isLikelyAppResponse(r.headers),
+      "expected app's CSP; got something else (proxy/LB error page?)",
     ).toBe(true);
   });
 
