@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import ThemePreferenceSync from "@/components/ThemePreferenceSync";
 
 const LenisInitializer = dynamic(
   () => import("@/components/LenisInitializer"),
@@ -19,6 +20,7 @@ const KonamiEasterEgg = dynamic(() => import("@/components/KonamiEasterEgg"), {
 export default function ClientDecorators() {
   return (
     <>
+      <ThemePreferenceSync />
       <LenisInitializer />
       <CommandPalette />
       <NeonCursor />
