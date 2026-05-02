@@ -127,18 +127,90 @@ function richTextToHtml(richText: RichTextItem[]): string {
 // ---------------------------------------------------------------------------
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+function renderCodeBlock(data: any, rt: RichTextItem[]): string {
+  const lang = data.language ?? "plain";
+  const escaped = extractText(rt)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return `<pre><code class="language-${lang}">${escaped}</code></pre>`;
+}
+
+function renderImageBlock(data: any, blockId: string): string {
+  const url =
+    data.type === "external"
+      ? data.external?.url
+      : notionImageProxyUrl(blockId);
+  if (!url) return "";
+  const caption = extractText(data.caption);
+  const fig = `<img src="${url}" alt="${caption}" loading="lazy" />`;
+  return caption
+    ? `<figure>${fig}<figcaption>${caption}</figcaption></figure>`
+    : `<figure>${fig}</figure>`;
+}
+
+function renderBlockItem(
+  type: string,
+  data: any,
+  rt: RichTextItem[],
+  text: string,
+  block: any,
+): string {
+  switch (type) {
+    case "paragraph":
+      return text ? `<p>${text}</p>` : "<br />";
+    case "heading_1":
+      return `<h1>${text}</h1>`;
+    case "heading_2":
+      return `<h2>${text}</h2>`;
+    case "heading_3":
+      return `<h3>${text}</h3>`;
+    case "code":
+      return renderCodeBlock(data, rt);
+    case "quote":
+      return `<blockquote>${text}</blockquote>`;
+    case "divider":
+      return "<hr />";
+    case "callout": {
+      const body = block.children ? blocksToHtml(block.children) : "";
+      return `<div class="callout">${data.icon?.emoji ?? ""} ${text}${body ? "\n" + body : ""}</div>`;
+    }
+    case "image":
+      return renderImageBlock(data, block.id);
+    case "video": {
+      const url =
+        data.type === "external" ? data.external?.url : data.file?.url;
+      return url ? `<video controls src="${url}"></video>` : "";
+    }
+    case "embed":
+    case "bookmark":
+      return `<a href="${data.url}" target="_blank" rel="noopener">${data.url}</a>`;
+    case "to_do":
+      return `<label class="todo"><input type="checkbox" disabled ${data.checked ? "checked" : ""} /> ${text}</label>`;
+    case "toggle": {
+      const body = block.children ? blocksToHtml(block.children) : "";
+      return `<details><summary>${text}</summary>${body ? "\n" + body : ""}</details>`;
+    }
+    default:
+      return text ? `<p>${text}</p>` : "";
+  }
+}
+
+function flushListBuffer(
+  lines: string[],
+  listBuffer: string[],
+  listType: "ul" | "ol" | null,
+): void {
+  if (listBuffer.length === 0) return;
+  const tag = listType === "ol" ? "ol" : "ul";
+  lines.push(`<${tag}>${listBuffer.join("")}</${tag}>`);
+}
+
 export function blocksToHtml(blocks: any[]): string {
   const lines: string[] = [];
-  let listBuffer: string[] = [];
+  const listBuffer: string[] = [];
   let listType: "ul" | "ol" | null = null;
-
-  function flushList() {
-    if (listBuffer.length === 0) return;
-    const tag = listType === "ol" ? "ol" : "ul";
-    lines.push(`<${tag}>${listBuffer.join("")}</${tag}>`);
-    listBuffer = [];
-    listType = null;
-  }
 
   for (const block of blocks) {
     const type: string = block.type;
@@ -146,108 +218,26 @@ export function blocksToHtml(blocks: any[]): string {
     const rt: RichTextItem[] = data.rich_text ?? [];
     const text = richTextToHtml(rt);
 
-    // List items need buffering so we can wrap in <ul>/<ol>
-    if (type === "bulleted_list_item") {
-      if (listType !== "ul") {
-        flushList();
-        listType = "ul";
-      }
-      listBuffer.push(`<li>${text}</li>`);
-      continue;
-    }
-    if (type === "numbered_list_item") {
-      if (listType !== "ol") {
-        flushList();
-        listType = "ol";
+    const isBulleted = type === "bulleted_list_item";
+    const isNumbered = type === "numbered_list_item";
+    if (isBulleted || isNumbered) {
+      const newListType = isBulleted ? "ul" : "ol";
+      if (listType !== newListType) {
+        flushListBuffer(lines, listBuffer.splice(0), listType);
+        listType = newListType;
       }
       listBuffer.push(`<li>${text}</li>`);
       continue;
     }
 
-    flushList();
+    flushListBuffer(lines, listBuffer.splice(0), listType);
+    listType = null;
 
-    switch (type) {
-      case "paragraph":
-        lines.push(text ? `<p>${text}</p>` : "<br />");
-        break;
-      case "heading_1":
-        lines.push(`<h1>${text}</h1>`);
-        break;
-      case "heading_2":
-        lines.push(`<h2>${text}</h2>`);
-        break;
-      case "heading_3":
-        lines.push(`<h3>${text}</h3>`);
-        break;
-      case "code":
-        lines.push(
-          `<pre><code class="language-${data.language ?? "plain"}">${extractText(
-            rt,
-          )
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")}</code></pre>`,
-        );
-        break;
-      case "quote":
-        lines.push(`<blockquote>${text}</blockquote>`);
-        break;
-      case "divider":
-        lines.push("<hr />");
-        break;
-      case "callout": {
-        const calloutBody = block.children ? blocksToHtml(block.children) : "";
-        const calloutSuffix = calloutBody ? "\n" + calloutBody : "";
-        lines.push(
-          `<div class="callout">${data.icon?.emoji ?? ""} ${text}${calloutSuffix}</div>`,
-        );
-        break;
-      }
-      case "image": {
-        const url =
-          data.type === "external"
-            ? data.external?.url
-            : notionImageProxyUrl(block.id);
-        const caption = extractText(data.caption);
-        if (url) {
-          lines.push(
-            `<figure><img src="${url}" alt="${caption}" loading="lazy" />${caption ? `<figcaption>${caption}</figcaption>` : ""}</figure>`,
-          );
-        }
-        break;
-      }
-      case "video": {
-        const url =
-          data.type === "external" ? data.external?.url : data.file?.url;
-        if (url) lines.push(`<video controls src="${url}"></video>`);
-        break;
-      }
-      case "embed":
-      case "bookmark":
-        lines.push(
-          `<a href="${data.url}" target="_blank" rel="noopener">${data.url}</a>`,
-        );
-        break;
-      case "to_do":
-        lines.push(
-          `<label class="todo"><input type="checkbox" disabled ${data.checked ? "checked" : ""} /> ${text}</label>`,
-        );
-        break;
-      case "toggle": {
-        const toggleBody = block.children ? blocksToHtml(block.children) : "";
-        const toggleSuffix = toggleBody ? "\n" + toggleBody : "";
-        lines.push(
-          `<details><summary>${text}</summary>${toggleSuffix}</details>`,
-        );
-        break;
-      }
-      default:
-        // Unknown block type — render plain text if present
-        if (text) lines.push(`<p>${text}</p>`);
-    }
+    const html = renderBlockItem(type, data, rt, text, block);
+    if (html) lines.push(html);
   }
 
-  flushList();
+  flushListBuffer(lines, listBuffer.splice(0), listType);
   return lines.join("\n");
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
