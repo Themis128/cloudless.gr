@@ -32,7 +32,7 @@ import {
   notionImageProxyUrl,
   type TocEntry,
 } from "@/lib/notion";
-import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
+import { getIntegrationsAsync, requireIntegrationAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
 const BLOG_PUBLISHED_FILTER = {
@@ -40,8 +40,9 @@ const BLOG_PUBLISHED_FILTER = {
   checkbox: { equals: true },
 };
 const BLOG_DATE_SORT = [{ property: "Date", direction: "descending" }];
-const isBlogConfigured = () =>
-  isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+async function requireBlogIntegration(): Promise<void> {
+  await requireIntegrationAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -114,7 +115,7 @@ function mapPage(page: any): NotionPost {
  * Returns empty array when Notion is not configured.
  */
 export async function getPosts(): Promise<NotionPost[]> {
-  if (!(await isBlogConfigured())) return [];
+  await requireBlogIntegration();
 
   return cached("blog:posts", async () => {
     const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
@@ -138,7 +139,7 @@ export async function getPosts(): Promise<NotionPost[]> {
  * Fetch all posts (published and drafts) for admin use. Not cached.
  */
 export async function getAllPosts(): Promise<NotionPost[]> {
-  if (!(await isBlogConfigured())) return [];
+  await requireBlogIntegration();
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
@@ -188,7 +189,7 @@ export async function getPostsByTag(tag: string): Promise<NotionPost[]> {
 export async function getPostBySlug(
   slug: string,
 ): Promise<NotionPostWithContent | null> {
-  if (!(await isBlogConfigured())) return null;
+  await requireBlogIntegration();
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
@@ -299,7 +300,7 @@ export async function getRelatedPosts(
 export async function getPostWithToc(
   slug: string,
 ): Promise<(NotionPostWithContent & { toc: TocEntry[] }) | null> {
-  if (!(await isBlogConfigured())) return null;
+  await requireBlogIntegration();
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {

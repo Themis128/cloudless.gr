@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { resetIntegrationCache } from "@/lib/integrations";
+import { resetIntegrationCache, IntegrationNotConfiguredError } from "@/lib/integrations";
 
 // Bypass the in-memory cache so every test hits the mock directly
 vi.mock("@/lib/notion-cache", () => ({
@@ -88,15 +88,12 @@ describe("notion-blog.ts", () => {
       );
     });
 
-    it("returns empty array when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-
       const { getPosts } = await import("@/lib/notion-blog");
-      const posts = await getPosts();
-
-      expect(posts).toEqual([]);
       expect(mockNotionFetchAll).not.toHaveBeenCalled();
+      await expect(getPosts()).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
 
     it("returns empty array on error", async () => {
@@ -216,14 +213,11 @@ describe("notion-blog.ts", () => {
       expect(post).toBeNull();
     });
 
-    it("returns null when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-
       const { getPostBySlug } = await import("@/lib/notion-blog");
-      const post = await getPostBySlug(TEST_SLUG);
-
-      expect(post).toBeNull();
+      await expect(getPostBySlug(TEST_SLUG)).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
   });
 
@@ -241,12 +235,11 @@ describe("notion-blog.ts", () => {
       expect(slugs).toContain("second-post");
     });
 
-    it("returns empty when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-
       const { getAllSlugs } = await import("@/lib/notion-blog");
-      expect(await getAllSlugs()).toEqual([]);
+      await expect(getAllSlugs()).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
   });
 
@@ -465,15 +458,12 @@ describe("notion-blog.ts", () => {
       expect(body.sorts).toEqual([{ property: "Date", direction: "descending" }]);
     });
 
-    it("returns empty array when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-
       const { getAllPosts } = await import("@/lib/notion-blog");
-      const posts = await getAllPosts();
-
-      expect(posts).toEqual([]);
       expect(mockNotionFetchAll).not.toHaveBeenCalled();
+      await expect(getAllPosts()).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
 
     it("returns empty array on error", async () => {

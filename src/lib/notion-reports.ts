@@ -16,23 +16,32 @@
  */
 
 import { notionFetch } from "@/lib/notion";
-import { getIntegrationsAsync } from "@/lib/integrations";
+import {
+  IntegrationNotConfiguredError,
+  requireIntegrationAsync,
+} from "@/lib/integrations";
 import type { Report } from "@/lib/reports";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function getDb(): Promise<{ apiKey: string; dbId: string } | null> {
+async function getDb(): Promise<{ apiKey: string; dbId: string }> {
   // Empty string means explicitly disabled -- don't let SSM override a cleared env var.
   if (
     process.env.NOTION_API_KEY === "" ||
     process.env.NOTION_REPORTS_DB_ID === ""
-  )
-    return null;
-  const cfg = await getIntegrationsAsync();
-  if (!cfg.NOTION_API_KEY || !cfg.NOTION_REPORTS_DB_ID) return null;
-  return { apiKey: cfg.NOTION_API_KEY, dbId: cfg.NOTION_REPORTS_DB_ID };
+  ) {
+    throw new IntegrationNotConfiguredError([
+      "NOTION_API_KEY",
+      "NOTION_REPORTS_DB_ID",
+    ]);
+  }
+  const cfg = await requireIntegrationAsync(
+    "NOTION_API_KEY",
+    "NOTION_REPORTS_DB_ID",
+  );
+  return { apiKey: cfg.NOTION_API_KEY!, dbId: cfg.NOTION_REPORTS_DB_ID! };
 }
 
 function rt(text: string) {
@@ -97,7 +106,6 @@ function pageToReport(page: Record<string, unknown>): Report | null {
 
 export async function notionListReports(): Promise<Report[] | null> {
   const db = await getDb();
-  if (!db) return null;
 
   try {
     const res = await notionFetch<{ results: unknown[] }>(
@@ -120,7 +128,6 @@ export async function notionListReports(): Promise<Report[] | null> {
 
 export async function notionGetReport(id: string): Promise<Report | null> {
   const db = await getDb();
-  if (!db) return null;
 
   try {
     const res = await notionFetch<{ results: unknown[] }>(
@@ -146,7 +153,6 @@ export async function notionCreateReport(
   report: Report,
 ): Promise<string | null> {
   const db = await getDb();
-  if (!db) return null;
 
   try {
     const page = await notionFetch<{ id: string }>("/pages", {
@@ -175,7 +181,6 @@ export async function notionUpdateReport(
   updates: Partial<Report>,
 ): Promise<boolean> {
   const db = await getDb();
-  if (!db) return false;
 
   try {
     const search = await notionFetch<{ results: { id: string }[] }>(
@@ -212,7 +217,6 @@ export async function notionUpdateReport(
 
 export async function notionDeleteReport(id: string): Promise<boolean> {
   const db = await getDb();
-  if (!db) return false;
 
   try {
     const search = await notionFetch<{ results: { id: string }[] }>(

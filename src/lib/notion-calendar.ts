@@ -17,23 +17,32 @@
  */
 
 import { notionFetch } from "@/lib/notion";
-import { getIntegrationsAsync } from "@/lib/integrations";
+import {
+  IntegrationNotConfiguredError,
+  requireIntegrationAsync,
+} from "@/lib/integrations";
 import type { CalendarItem } from "@/lib/content-calendar";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function getDb(): Promise<{ apiKey: string; dbId: string } | null> {
+async function getDb(): Promise<{ apiKey: string; dbId: string }> {
   // Empty string means explicitly disabled -- don't let SSM override a cleared env var.
   if (
     process.env.NOTION_API_KEY === "" ||
     process.env.NOTION_CALENDAR_DB_ID === ""
-  )
-    return null;
-  const cfg = await getIntegrationsAsync();
-  if (!cfg.NOTION_API_KEY || !cfg.NOTION_CALENDAR_DB_ID) return null;
-  return { apiKey: cfg.NOTION_API_KEY, dbId: cfg.NOTION_CALENDAR_DB_ID };
+  ) {
+    throw new IntegrationNotConfiguredError([
+      "NOTION_API_KEY",
+      "NOTION_CALENDAR_DB_ID",
+    ]);
+  }
+  const cfg = await requireIntegrationAsync(
+    "NOTION_API_KEY",
+    "NOTION_CALENDAR_DB_ID",
+  );
+  return { apiKey: cfg.NOTION_API_KEY!, dbId: cfg.NOTION_CALENDAR_DB_ID! };
 }
 
 function rt(text: string) {
@@ -104,7 +113,6 @@ export async function notionGetCalendarItems(
   to?: string,
 ): Promise<CalendarItem[] | null> {
   const db = await getDb();
-  if (!db) return null;
 
   const filter: Record<string, unknown>[] = [];
   if (from) {
@@ -144,7 +152,6 @@ export async function notionCreateCalendarItem(
   item: CalendarItem,
 ): Promise<string | null> {
   const db = await getDb();
-  if (!db) return null;
 
   const properties: Record<string, unknown> = {
     Name: { title: rt(item.title) },
@@ -181,7 +188,6 @@ export async function notionUpdateCalendarItem(
   item: CalendarItem,
 ): Promise<boolean> {
   const db = await getDb();
-  if (!db) return false;
 
   // Find the Notion page by CalID
   try {
@@ -221,7 +227,6 @@ export async function notionUpdateCalendarItem(
 
 export async function notionDeleteCalendarItem(id: string): Promise<boolean> {
   const db = await getDb();
-  if (!db) return false;
 
   try {
     const search = await notionFetch<{ results: { id: string }[] }>(

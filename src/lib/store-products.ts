@@ -297,6 +297,9 @@ export const defaultProducts: StoreProduct[] = [
   },
 ];
 
+// Backward-compatible alias for older imports.
+export const demoProducts = defaultProducts;
+
 export const categoryLabels: Record<ProductCategory, string> = {
   service: "Services",
   digital: "Digital Products",

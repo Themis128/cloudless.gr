@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { resetIntegrationCache, resetIntegrationCacheAsync } from "@/lib/integrations";
+import {
+  resetIntegrationCache,
+  resetIntegrationCacheAsync,
+  IntegrationNotConfiguredError,
+} from "@/lib/integrations";
 
 const mockNotionFetch = vi.fn();
 
@@ -57,27 +61,27 @@ describe("notion-calendar.ts", () => {
       );
     });
 
-    it("returns null when NOTION_CALENDAR_DB_ID not configured", async () => {
+    it("throws when NOTION_CALENDAR_DB_ID not configured", async () => {
       process.env.NOTION_CALENDAR_DB_ID = "";
       resetIntegrationCache();
       resetIntegrationCacheAsync();
 
       const { notionGetCalendarItems } = await import("@/lib/notion-calendar");
-      const items = await notionGetCalendarItems();
-
-      expect(items).toBeNull();
+      await expect(notionGetCalendarItems()).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError,
+      );
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
-    it("returns null when NOTION_API_KEY not configured", async () => {
+    it("throws when NOTION_API_KEY not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
       resetIntegrationCacheAsync();
 
       const { notionGetCalendarItems } = await import("@/lib/notion-calendar");
-      const items = await notionGetCalendarItems();
-
-      expect(items).toBeNull();
+      await expect(notionGetCalendarItems()).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError,
+      );
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
@@ -223,22 +227,22 @@ describe("notion-calendar.ts", () => {
       expect(body.properties.Date.date.end).toBe("2026-06-30");
     });
 
-    it("returns null when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_CALENDAR_DB_ID = "";
       resetIntegrationCache();
       resetIntegrationCacheAsync();
 
       const { notionCreateCalendarItem } = await import("@/lib/notion-calendar");
-      const result = await notionCreateCalendarItem({
-        id: "cal_1",
-        title: "T",
-        type: "social_post",
-        platform: "x",
-        date: "2026-06-01",
-        status: "draft",
-      });
-
-      expect(result).toBeNull();
+      await expect(
+        notionCreateCalendarItem({
+          id: "cal_1",
+          title: "T",
+          type: "social_post",
+          platform: "x",
+          date: "2026-06-01",
+          status: "draft",
+        }),
+      ).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
@@ -307,22 +311,22 @@ describe("notion-calendar.ts", () => {
       expect(ok).toBe(false);
     });
 
-    it("returns false when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_CALENDAR_DB_ID = "";
       resetIntegrationCache();
       resetIntegrationCacheAsync();
 
       const { notionUpdateCalendarItem } = await import("@/lib/notion-calendar");
-      const ok = await notionUpdateCalendarItem({
-        id: "cal_1",
-        title: "T",
-        type: "social_post",
-        platform: "x",
-        date: "2026-06-01",
-        status: "draft",
-      });
-
-      expect(ok).toBe(false);
+      await expect(
+        notionUpdateCalendarItem({
+          id: "cal_1",
+          title: "T",
+          type: "social_post",
+          platform: "x",
+          date: "2026-06-01",
+          status: "draft",
+        }),
+      ).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
   });
@@ -355,15 +359,15 @@ describe("notion-calendar.ts", () => {
       expect(ok).toBe(false);
     });
 
-    it("returns false when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_CALENDAR_DB_ID = "";
       resetIntegrationCache();
       resetIntegrationCacheAsync();
 
       const { notionDeleteCalendarItem } = await import("@/lib/notion-calendar");
-      const ok = await notionDeleteCalendarItem("cal_1");
-
-      expect(ok).toBe(false);
+      await expect(
+        notionDeleteCalendarItem("cal_1"),
+      ).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 

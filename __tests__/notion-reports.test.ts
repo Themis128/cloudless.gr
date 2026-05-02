@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { resetIntegrationCache, resetIntegrationCacheAsync } from "@/lib/integrations";
+import {
+  resetIntegrationCache,
+  resetIntegrationCacheAsync,
+  IntegrationNotConfiguredError,
+} from "@/lib/integrations";
 
 const mockNotionFetch = vi.fn();
 
@@ -55,27 +59,27 @@ describe("notion-reports.ts", () => {
       );
     });
 
-    it("returns null when NOTION_REPORTS_DB_ID not configured", async () => {
+    it("throws when NOTION_REPORTS_DB_ID not configured", async () => {
       process.env.NOTION_REPORTS_DB_ID = "";
       resetIntegrationCache();
       resetIntegrationCacheAsync();
 
       const { notionListReports } = await import("@/lib/notion-reports");
-      const reports = await notionListReports();
-
-      expect(reports).toBeNull();
+      await expect(notionListReports()).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError,
+      );
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
-    it("returns null when NOTION_API_KEY not configured", async () => {
+    it("throws when NOTION_API_KEY not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
       resetIntegrationCacheAsync();
 
       const { notionListReports } = await import("@/lib/notion-reports");
-      const reports = await notionListReports();
-
-      expect(reports).toBeNull();
+      await expect(notionListReports()).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError,
+      );
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
@@ -162,15 +166,15 @@ describe("notion-reports.ts", () => {
       expect(report).toBeNull();
     });
 
-    it("returns null when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_REPORTS_DB_ID = "";
       resetIntegrationCache();
       resetIntegrationCacheAsync();
 
       const { notionGetReport } = await import("@/lib/notion-reports");
-      const report = await notionGetReport("report_1");
-
-      expect(report).toBeNull();
+      await expect(notionGetReport("report_1")).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError,
+      );
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
@@ -236,22 +240,22 @@ describe("notion-reports.ts", () => {
       expect(JSON.parse(body.properties.Sections.rich_text[0].text.content)).toEqual(sections);
     });
 
-    it("returns null when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_REPORTS_DB_ID = "";
       resetIntegrationCache();
       resetIntegrationCacheAsync();
 
       const { notionCreateReport } = await import("@/lib/notion-reports");
-      const result = await notionCreateReport({
-        id: "report_1",
-        clientName: "T",
-        status: "generating",
-        dateRange: { start: "2026-04-01", end: "2026-04-30" },
-        sections: [],
-        createdAt: "2026-04-01T00:00:00.000Z",
-      });
-
-      expect(result).toBeNull();
+      await expect(
+        notionCreateReport({
+          id: "report_1",
+          clientName: "T",
+          status: "generating",
+          dateRange: { start: "2026-04-01", end: "2026-04-30" },
+          sections: [],
+          createdAt: "2026-04-01T00:00:00.000Z",
+        }),
+      ).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
@@ -316,15 +320,15 @@ describe("notion-reports.ts", () => {
       expect(ok).toBe(false);
     });
 
-    it("returns false when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_REPORTS_DB_ID = "";
       resetIntegrationCache();
       resetIntegrationCacheAsync();
 
       const { notionUpdateReport } = await import("@/lib/notion-reports");
-      const ok = await notionUpdateReport("report_1", { status: "ready" });
-
-      expect(ok).toBe(false);
+      await expect(
+        notionUpdateReport("report_1", { status: "ready" }),
+      ).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
@@ -366,15 +370,15 @@ describe("notion-reports.ts", () => {
       expect(ok).toBe(false);
     });
 
-    it("returns false when not configured", async () => {
+    it("throws when not configured", async () => {
       process.env.NOTION_REPORTS_DB_ID = "";
       resetIntegrationCache();
       resetIntegrationCacheAsync();
 
       const { notionDeleteReport } = await import("@/lib/notion-reports");
-      const ok = await notionDeleteReport("report_1");
-
-      expect(ok).toBe(false);
+      await expect(notionDeleteReport("report_1")).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError,
+      );
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
