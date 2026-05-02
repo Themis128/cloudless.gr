@@ -1,16 +1,28 @@
 #!/usr/bin/env python3
 """
-Grant the IAM permissions our CI workflows need.
+Grant the IAM permissions our CI workflows need (bootstrap helper).
+
+⚠ Note on the deploy-role half:
+  The recommended path for adding/updating IAM perms on the deploy role is
+  to version-bump the managed policy `cloudless-sst-deploy-iam-tagging` —
+  that can be done by `cloudless-ops` without root. See docs/iam.md for the
+  ~10-line boto3 snippet. This script's inline-policy approach is kept for
+  bootstrap scenarios where the managed policy doesn't exist yet, and as a
+  belt-and-suspenders backup.
 
 Two roles, two policies:
   1. The deploy role (from AWS_DEPLOY_ROLE_ARN env or --deploy-role flag) needs
      iam:GetRole, iam:TagRole, iam:UntagRole, iam:ListRoleTags, and
      iam:SimulatePrincipalPolicy so SST can manage roles + the preflight can
-     probe permissions.
+     probe permissions. This script applies an inline policy CICDSstRoleManagement
+     to that role; functionally redundant with the managed policy in the live
+     account, but harmless (overlapping allows are not denies).
 
   2. The Pi-image build role (default: cloudless-github-actions) needs
      ecr:BatchDeleteImage on cloudless-pi-app so the workflow can untag the
-     existing :latest before pushing under tag-immutable mutability.
+     existing :latest before pushing under tag-immutable mutability. This
+     IS still the recommended path for that role — the inline policy
+     CICDEcrUntagLatest is the only place this perm lives.
 
 Idempotent — uses put_role_policy (upsert). Verifies with
 simulate_principal_policy after applying.
