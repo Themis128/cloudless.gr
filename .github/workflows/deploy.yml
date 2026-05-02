@@ -81,6 +81,55 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
 
+      - name: Preflight — verify IAM role-tagging permissions
+        run: |
+          set -euo pipefail
+
+          # 1. Confirm the role was assumed successfully
+          CALLER=$(aws sts get-caller-identity --output json)
+          CALLER_ARN=$(echo "$CALLER" | jq -r '.Arn')
+          echo "Assumed identity: $CALLER_ARN"
+
+          # 2. Simulate the three IAM tagging actions required by SST defaultTags.
+          #    simulate-principal-policy is read-only and does not modify any resource.
+          REQUIRED_ACTIONS="iam:TagRole iam:UntagRole iam:ListRoleTags"
+          SIMULATION=$(
+            aws iam simulate-principal-policy \
+              --policy-source-arn "$CALLER_ARN" \
+              --action-names $REQUIRED_ACTIONS \
+              --resource-arns "arn:aws:iam::*:role/*" \
+              --output json 2>&1
+          ) || {
+            # simulate-principal-policy itself may be denied — print diagnostics
+            # and allow the deploy to proceed (the real error will surface there).
+            echo "::warning::Could not run iam:SimulatePrincipalPolicy (permission not granted). Skipping preflight check."
+            echo "::warning::If the deploy fails with an IAM tagging error, add iam:TagRole / iam:UntagRole / iam:ListRoleTags to the deploy role."
+            echo "::warning::Deploy role ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
+            echo "::warning::See docs/deploy.md for the required policy statement."
+            exit 0
+          }
+
+          # 3. Check each action's evaluation decision
+          DENIED=$(echo "$SIMULATION" | jq -r '
+            .EvaluationResults[]
+            | select(.EvalDecision != "allowed")
+            | .EvalActionName
+          ')
+
+          if [ -n "$DENIED" ]; then
+            echo "::error::The following IAM actions are NOT allowed for $CALLER_ARN:"
+            echo "$DENIED" | while read -r action; do echo "  - $action"; done
+            echo ""
+            echo "::error::SST applies defaultTags to every AWS resource it manages (including IAM Roles)."
+            echo "::error::Add the following permissions to the deploy role (${{ secrets.AWS_DEPLOY_ROLE_ARN }}):"
+            echo "::error::  iam:TagRole, iam:UntagRole, iam:ListRoleTags"
+            echo "::error::See docs/deploy.md for the full required policy statement."
+            echo "::error::Reference: https://github.com/Themis128/cloudless.gr/actions/runs/25247664393/job/74034538240"
+            exit 1
+          fi
+
+          echo "✅ IAM role-tagging permissions confirmed for $CALLER_ARN"
+
       - name: Notify Slack — deploy started
         if: env.SLACK_WEBHOOK_URL != ''
         run: |
