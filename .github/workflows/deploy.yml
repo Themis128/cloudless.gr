@@ -90,22 +90,23 @@ jobs:
           CALLER_ARN=$(echo "$CALLER" | jq -r '.Arn')
           echo "Assumed identity: $CALLER_ARN"
 
-          # 2. If this is an assumed role ARN, simulate the attached role instead.
-          if [[ "$CALLER_ARN" =~ ^arn:aws:sts::([0-9]+):assumed-role/([^/]+)/([^/]+)$ ]]; then
-            ACCOUNT_ID="${BASH_REMATCH[1]}"
-            ROLE_NAME="${BASH_REMATCH[2]}"
-            SIMULATION_PRINCIPAL="arn:aws:iam::$ACCOUNT_ID:role/$ROLE_NAME"
-            echo "Simulating policy for role ARN: $SIMULATION_PRINCIPAL"
+          # 2. simulate-principal-policy requires an IAM principal ARN (NOT an STS assumed-role ARN).
+          #    Convert arn:aws:sts::<acct>:assumed-role/<RoleName>/session → arn:aws:iam::<acct>:role/<RoleName>
+          ACCOUNT_ID=$(echo "$CALLER" | jq -r '.Account')
+          if [[ "$CALLER_ARN" =~ ^arn:aws:sts::[0-9]+:assumed-role/([^/]+)/ ]]; then
+            ROLE_NAME="${BASH_REMATCH[1]}"
+            ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${ROLE_NAME}"
+            echo "Simulating policy for role: $ROLE_ARN"
           else
-            SIMULATION_PRINCIPAL="$CALLER_ARN"
-            echo "Simulating policy for principal ARN: $SIMULATION_PRINCIPAL"
+            ROLE_ARN="$CALLER_ARN"
+            echo "Simulating policy for principal: $ROLE_ARN"
           fi
 
           REQUIRED_ACTIONS="iam:SimulatePrincipalPolicy iam:GetRole iam:TagRole iam:UntagRole iam:ListRoleTags"
 
           set +e
           SIMULATION=$(aws iam simulate-principal-policy \
-            --policy-source-arn "$SIMULATION_PRINCIPAL" \
+            --policy-source-arn "$ROLE_ARN" \
             --action-names $REQUIRED_ACTIONS \
             --resource-arns "arn:aws:iam::*:role/*" \
             --output json 2> /tmp/simulate-principal-policy.err)
@@ -127,7 +128,7 @@ jobs:
           ')
 
           if [ -n "$DENIED" ]; then
-            echo "::error::The following IAM actions are NOT allowed for $CALLER_ARN:"
+            echo "::error::The following IAM actions are NOT allowed for $ROLE_ARN:"
             echo "$DENIED" | while read -r action; do echo "  - $action"; done
             echo ""
             echo "::error::Fix the IAM policy attached to the deploy role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
@@ -137,7 +138,7 @@ jobs:
             exit 1
           fi
 
-          echo "✅ IAM permissions confirmed for $CALLER_ARN"
+          echo "✅ IAM permissions confirmed for $ROLE_ARN"
 
       - name: Notify Slack — deploy started
         if: env.SLACK_WEBHOOK_URL != ''
