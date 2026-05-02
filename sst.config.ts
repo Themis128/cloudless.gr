@@ -1,17 +1,26 @@
-/* global $app, sst */
+/* global $app, sst, aws */
 
 /// <reference path="./.sst/platform/config.d.ts" />
 
 export default {
   app(input) {
+    const stage = input?.stage ?? "";
     return {
       name: "cloudless",
-      removal: input?.stage === "production" ? "retain" : "remove",
-      protect: ["production"].includes(input?.stage ?? ""),
+      removal: stage === "production" ? "retain" : "remove",
+      protect: ["production"].includes(stage),
       home: "aws",
       providers: {
         aws: {
           region: "us-east-1",
+          defaultTags: {
+            tags: {
+              Project: "cloudless",
+              Environment: stage || "unknown",
+              Owner: "tbaltzakis",
+              ManagedBy: "sst",
+            },
+          },
         },
       },
     };
@@ -25,11 +34,15 @@ export default {
     const isProd = stage === "production";
 
     const site = new sst.aws.Nextjs("CloudlessSite", {
-      // Domain: cloudless.gr with existing Route53 zone + ACM cert
+      // Domain: cloudless.gr with existing Route53 zone + ACM cert.
+      // dns: false — we manage Route 53 records explicitly below to support
+      // failover routing (PRIMARY=CloudFront, SECONDARY=Pi). If we left this
+      // as `sst.aws.dns()`, SST would create plain alias records and clobber
+      // the failover SetIdentifier on every deploy.
       domain: {
         name: isProd ? "cloudless.gr" : `${stage}.cloudless.gr`,
         redirects: isProd ? ["www.cloudless.gr"] : [],
-        dns: sst.aws.dns(),
+        dns: false,
         cert: "arn:aws:acm:us-east-1:278585680617:certificate/f505905a-97b4-46b0-a2b0-fb1900f425b2",
       },
       environment: {
@@ -62,6 +75,82 @@ export default {
         wait: true,
       },
     });
+
+    // ---------------------------------------------------------------------
+    // Route 53 failover records (production only)
+    // ---------------------------------------------------------------------
+    // Architecture: cloudless.gr is dual-homed.
+    //   - PRIMARY: CloudFront distributions (this SST stack), health-checked
+    //     against https://cloudless.gr/api/health
+    //   - SECONDARY: Pi 5 standby at WAN 150.228.63.192 (cloudless.online HA)
+    //
+    // Route 53 returns the primary while it's healthy and flips to the
+    // secondary when the health check fails. CloudFront's hosted zone ID is
+    // the well-known constant Z2FDTNDATAQYW2 for all alias records.
+    if (isProd) {
+      const zoneId = "Z079608614L53CC4EAZM3"; // cloudless.gr hosted zone
+      const healthCheckId = "e239ad5c-dd17-40d7-8045-a153715168cf";
+      const piWanIp = "150.228.63.192";
+      const cfZoneId = "Z2FDTNDATAQYW2";
+      const apexCfDomain = "d3k7muo3c6lw6s.cloudfront.net";
+      const wwwCfDomain = "dgrxxatzrgxfi.cloudfront.net";
+
+      // Apex — PRIMARY (CloudFront alias)
+      new aws.route53.Record("ApexPrimary", {
+        zoneId,
+        name: "cloudless.gr",
+        type: "A",
+        setIdentifier: "primary",
+        failoverRoutingPolicies: [{ type: "PRIMARY" }],
+        healthCheckId,
+        aliases: [
+          {
+            name: apexCfDomain,
+            zoneId: cfZoneId,
+            evaluateTargetHealth: false,
+          },
+        ],
+      });
+
+      // Apex — SECONDARY (Pi A record)
+      new aws.route53.Record("ApexSecondary", {
+        zoneId,
+        name: "cloudless.gr",
+        type: "A",
+        setIdentifier: "secondary",
+        failoverRoutingPolicies: [{ type: "SECONDARY" }],
+        ttl: 60,
+        records: [piWanIp],
+      });
+
+      // www — PRIMARY (CloudFront alias)
+      new aws.route53.Record("WwwPrimary", {
+        zoneId,
+        name: "www.cloudless.gr",
+        type: "A",
+        setIdentifier: "primary",
+        failoverRoutingPolicies: [{ type: "PRIMARY" }],
+        healthCheckId,
+        aliases: [
+          {
+            name: wwwCfDomain,
+            zoneId: cfZoneId,
+            evaluateTargetHealth: false,
+          },
+        ],
+      });
+
+      // www — SECONDARY (Pi A record)
+      new aws.route53.Record("WwwSecondary", {
+        zoneId,
+        name: "www.cloudless.gr",
+        type: "A",
+        setIdentifier: "secondary",
+        failoverRoutingPolicies: [{ type: "SECONDARY" }],
+        ttl: 60,
+        records: [piWanIp],
+      });
+    }
 
     return {
       url: site.url,
