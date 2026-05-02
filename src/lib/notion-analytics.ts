@@ -333,42 +333,51 @@ export async function archiveOldEvents(
   // Only archive high-volume granular events
   const archivableTypes = [EVENT_PAGE_VIEW, EVENT_BLOG_VIEW, "doc_view"];
 
-  let archived = 0;
-  let errors = 0;
-
-  for (const eventType of archivableTypes) {
-    try {
-      const pages = await notionFetchAll(
-        `/databases/${NOTION_ANALYTICS_DB_ID}/query`,
-        {
-          filter: {
-            and: [
-              { property: "Type", select: { equals: eventType } },
-              { property: "Date", date: { before: cutoffStr } },
-            ],
+  const typeResults = await Promise.all(
+    archivableTypes.map(async (eventType) => {
+      try {
+        const pages = await notionFetchAll(
+          `/databases/${NOTION_ANALYTICS_DB_ID}/query`,
+          {
+            filter: {
+              and: [
+                { property: "Type", select: { equals: eventType } },
+                { property: "Date", date: { before: cutoffStr } },
+              ],
+            },
           },
-        },
-      );
+        );
 
-      for (const page of pages) {
-        try {
-          await notionFetch(`/pages/${(page as { id: string }).id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ archived: true }),
-          });
-          archived++;
-        } catch {
-          errors++;
-        }
+        const pageResults = await Promise.all(
+          pages.map(async (page) => {
+            try {
+              await notionFetch(`/pages/${(page as { id: string }).id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ archived: true }),
+              });
+              return 1;
+            } catch {
+              return -1;
+            }
+          }),
+        );
+
+        return {
+          archived: pageResults.filter((r) => r === 1).length,
+          errors: pageResults.filter((r) => r === -1).length,
+        };
+      } catch (err) {
+        console.error(
+          `[Notion Analytics] Failed to archive ${eventType} events:`,
+          err,
+        );
+        return { archived: 0, errors: 1 };
       }
-    } catch (err) {
-      console.error(
-        `[Notion Analytics] Failed to archive ${eventType} events:`,
-        err,
-      );
-      errors++;
-    }
-  }
+    }),
+  );
+
+  const archived = typeResults.reduce((sum, r) => sum + r.archived, 0);
+  const errors = typeResults.reduce((sum, r) => sum + r.errors, 0);
 
   console.warn(
     `[Notion Analytics] Archived ${archived} old events (${errors} errors)`,

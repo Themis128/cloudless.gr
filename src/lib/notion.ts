@@ -48,16 +48,16 @@ export async function notionFetch<T = unknown>(
   };
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const res = await fetch(url, reqInit);
+    const res = await fetch(url, reqInit); // NOSONAR — sequential retry requires loop
 
     if (res.status === 429 && attempt < MAX_RETRIES) {
       const retryAfterRaw = parseInt(res.headers.get("Retry-After") ?? "1", 10);
-      await sleep((isNaN(retryAfterRaw) ? 1 : retryAfterRaw) * 1000);
+      await sleep((isNaN(retryAfterRaw) ? 1 : retryAfterRaw) * 1000); // NOSONAR — rate-limit backoff
       continue;
     }
 
     if (res.status >= 500 && attempt < MAX_RETRIES) {
-      await sleep(2 ** attempt * 500);
+      await sleep(2 ** attempt * 500); // NOSONAR — exponential backoff
       continue;
     }
 
@@ -264,6 +264,7 @@ export async function notionFetchAll<T = unknown>(
       ...(cursor ? { start_cursor: cursor } : {}),
     };
     const data = await notionFetch<{
+      // NOSONAR — cursor-based pagination requires sequential reads
       results: T[];
       has_more: boolean;
       next_cursor?: string;
@@ -286,6 +287,7 @@ export async function notionListAll<T = unknown>(path: string): Promise<T[]> {
     const sep = path.includes("?") ? "&" : "?";
     const url = `${path}${sep}page_size=100${cursor ? `&start_cursor=${cursor}` : ""}`;
     const data = await notionFetch<{
+      // NOSONAR — cursor-based pagination requires sequential reads
       results: T[];
       has_more: boolean;
       next_cursor?: string;
