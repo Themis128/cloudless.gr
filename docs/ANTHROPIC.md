@@ -9,7 +9,7 @@ All surfaces share a single `ANTHROPIC_API_KEY` loaded through `src/lib/anthropi
 
 > **Status:** Optional — `/api/chat` returns 503 when the key is absent (widget shows a graceful error). Admin AI routes return 503 similarly. The rest of the site is unaffected.
 >
-> **Last verified:** 2026-05-01 — 13 unit tests pass (anthropic.ts lib) + 12 existing admin-ai-api tests + 7 chat-api tests
+> **Last verified:** 2026-05-03 — 33 tests pass (13 anthropic lib + 7 chat API + 13 admin AI API)
 
 ---
 
@@ -201,7 +201,7 @@ Test coverage:
 |------|-------|---------------|
 | `anthropic.test.ts` | 13 | `isAnthropicConfigured`, `verifyAnthropicKey` (5 paths), `callClaude` (6 paths: success, model/tokens, system prompt, api-key header, non-OK throws, empty content) |
 | `chat-api.test.ts` | 7 | 400 validation, 503 no key, 200 streaming, correct model/stream flag, history capped at 10 |
-| `admin-ai-api.test.ts` | 12 | 401, 400, 503, 200 for campaign + copy + audience routes |
+| `admin-ai-api.test.ts` | 13 | 401, 400, 503, 200 for campaign + copy + audience routes |
 
 ---
 
