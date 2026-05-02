@@ -4,6 +4,10 @@ const PENDING_URL = "http://localhost/api/admin/pending-clients";
 const ENROLL_URL = "http://localhost/api/portal/enroll";
 const PORTAL_ME_URL = "http://localhost/api/portal/me";
 const TEST_EMAIL = "eve@example.com";
+const PLAN_BUNDLE = "bundle";
+const PLAN_CLOUD = "cloud";
+const STATUS_WAITING = "waiting";
+const STATUS_APPROVED = "approved";
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks
@@ -104,7 +108,7 @@ describe("POST /api/portal/enroll", () => {
     const { POST } = await import("@/app/api/portal/enroll/route");
     const res = await POST(unauthReq(ENROLL_URL, {
       method: "POST",
-      body: JSON.stringify({ plan: "bundle" }),
+      body: JSON.stringify({ plan: PLAN_BUNDLE }),
     }));
     expect(res.status).toBe(401);
   });
@@ -132,14 +136,14 @@ describe("POST /api/portal/enroll", () => {
     const res = await POST(authReq(ENROLL_URL, {
       method: "POST",
       email: "alice@example.com",
-      body: JSON.stringify({ plan: "bundle", name: "Alice" }),
+      body: JSON.stringify({ plan: PLAN_BUNDLE, name: "Alice" }),
     }));
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.pending).toMatchObject({
       email: "alice@example.com",
-      plan: "bundle",
-      status: "waiting",
+      plan: PLAN_BUNDLE,
+      status: STATUS_WAITING,
     });
     expect(data.pending.planLabel).toContain("Bundle");
   });
@@ -193,10 +197,10 @@ describe("GET /api/portal/me", () => {
       {
         email: "bob@example.com",
         name: "Bob",
-        plan: "cloud",
+        plan: PLAN_CLOUD,
         planLabel: "Cloud Architecture & Migration",
         submittedAt: new Date().toISOString(),
-        status: "waiting",
+        status: STATUS_WAITING,
       },
     ];
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
@@ -205,8 +209,8 @@ describe("GET /api/portal/me", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toMatchObject({
-      status: "waiting",
-      plan: "cloud",
+      status: STATUS_WAITING,
+      plan: PLAN_CLOUD,
       planLabel: "Cloud Architecture & Migration",
       name: "Bob",
     });
@@ -216,9 +220,9 @@ describe("GET /api/portal/me", () => {
     const pending = [
       {
         email: "carol@example.com",
-        plan: "bundle",
+        plan: PLAN_BUNDLE,
         submittedAt: new Date().toISOString(),
-        status: "approved",
+        status: STATUS_APPROVED,
         portalToken: "abc-portal-token-1234567890",
       },
     ];
@@ -227,7 +231,7 @@ describe("GET /api/portal/me", () => {
     const res = await GET(authReq(PORTAL_ME_URL, { email: "carol@example.com" }));
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.status).toBe("approved");
+    expect(data.status).toBe(STATUS_APPROVED);
     expect(data.portalToken).toBe("abc-portal-token-1234567890");
   });
 
@@ -237,14 +241,14 @@ describe("GET /api/portal/me", () => {
         email: "Dan@Example.com",
         plan: "marketing",
         submittedAt: new Date().toISOString(),
-        status: "waiting",
+        status: STATUS_WAITING,
       },
     ];
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
     const { GET } = await import("@/app/api/portal/me/route");
     const res = await GET(authReq(PORTAL_ME_URL, { email: "dan@example.com" }));
     const data = await res.json();
-    expect(data.status).toBe("waiting");
+    expect(data.status).toBe(STATUS_WAITING);
   });
 });
 
@@ -271,9 +275,9 @@ describe("GET /api/admin/pending-clients", () => {
   it("returns pending clients sorted (waiting first, newest first)", async () => {
     const now = new Date();
     const pending = [
-      { email: "a@x.com", plan: "cloud", status: "approved", submittedAt: new Date(now.getTime() - 86400000).toISOString() },
-      { email: "b@x.com", plan: "bundle", status: "waiting", submittedAt: new Date(now.getTime() - 3600000).toISOString() },
-      { email: "c@x.com", plan: "web", status: "waiting", submittedAt: now.toISOString() },
+      { email: "a@x.com", plan: PLAN_CLOUD, status: STATUS_APPROVED, submittedAt: new Date(now.getTime() - 86400000).toISOString() },
+      { email: "b@x.com", plan: PLAN_BUNDLE, status: STATUS_WAITING, submittedAt: new Date(now.getTime() - 3600000).toISOString() },
+      { email: "c@x.com", plan: "web", status: STATUS_WAITING, submittedAt: now.toISOString() },
     ];
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
     const { GET } = await import("@/app/api/admin/pending-clients/route");
@@ -325,7 +329,7 @@ describe("POST /api/admin/pending-clients (approve)", () => {
 
   it("approves a pending client and creates portal", async () => {
     const pending = [
-      { email: TEST_EMAIL, name: "Eve", plan: "bundle", planLabel: "Bundle", status: "waiting", submittedAt: new Date().toISOString() },
+      { email: TEST_EMAIL, name: "Eve", plan: PLAN_BUNDLE, planLabel: "Bundle", status: STATUS_WAITING, submittedAt: new Date().toISOString() },
     ];
     // Need to track call count to set up the right mock for each call
     // 1. readPendingClients (find pending)
@@ -361,7 +365,7 @@ describe("POST /api/admin/pending-clients (approve)", () => {
 
   it("returns 409 when client already approved", async () => {
     const pending = [
-      { email: "f@x.com", plan: "cloud", status: "approved", portalToken: "existing-token", submittedAt: new Date().toISOString() },
+      { email: "f@x.com", plan: PLAN_CLOUD, status: STATUS_APPROVED, portalToken: "existing-token", submittedAt: new Date().toISOString() },
     ];
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
     const { POST } = await import("@/app/api/admin/pending-clients/route");
@@ -381,8 +385,8 @@ describe("DELETE /api/admin/pending-clients", () => {
 
   it("declines a pending client (removes from list)", async () => {
     const pending = [
-      { email: "g@x.com", plan: "web", status: "waiting", submittedAt: new Date().toISOString() },
-      { email: "h@x.com", plan: "hosting", status: "waiting", submittedAt: new Date().toISOString() },
+      { email: "g@x.com", plan: "web", status: STATUS_WAITING, submittedAt: new Date().toISOString() },
+      { email: "h@x.com", plan: "hosting", status: STATUS_WAITING, submittedAt: new Date().toISOString() },
     ];
     mockSSMSend
       .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify(pending) } })
