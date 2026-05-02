@@ -319,11 +319,13 @@ export async function fetchBlocksDeep(
   const blocks = await notionListAll<NotionBlock>(
     `/blocks/${parentId}/children`,
   );
-  for (const block of blocks) {
-    if (block.has_children) {
-      block.children = await fetchBlocksDeep(block.id);
-    }
-  }
+  await Promise.all(
+    blocks.map(async (block) => {
+      if (block.has_children) {
+        block.children = await fetchBlocksDeep(block.id);
+      }
+    }),
+  );
   return blocks;
 }
 
