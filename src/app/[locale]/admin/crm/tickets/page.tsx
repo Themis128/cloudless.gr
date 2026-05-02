@@ -86,6 +86,85 @@ export default function AdminTicketsPage() {
     (t) => t.properties.hs_pipeline_stage !== "4",
   ).length;
 
+  let mainContent: JSX.Element;
+  if (loading) {
+    mainContent = (
+      <div className="bg-void-light/50 flex items-center justify-center rounded-xl border border-slate-800 py-16">
+        <div className="border-neon-magenta h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+      </div>
+    );
+  } else if (error) {
+    mainContent = (
+      <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
+        <p className="font-mono text-sm text-red-400">{error}</p>
+        <p className="mt-2 text-xs text-slate-500">
+          {error === "HubSpot not configured"
+            ? "Set HUBSPOT_API_KEY in your environment to enable CRM."
+            : "Check your HubSpot API key configuration."}
+        </p>
+      </div>
+    );
+  } else {
+    mainContent = (
+      <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-800">
+                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Subject</th>
+                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Priority</th>
+                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Stage</th>
+                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((t) => {
+                const priority = t.properties.hs_ticket_priority?.toUpperCase() ?? "";
+                const stage = t.properties.hs_pipeline_stage ?? "";
+                return (
+                  <tr
+                    key={t.id}
+                    className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                  >
+                    <td className="max-w-xs px-6 py-4 text-white">
+                      <span className="line-clamp-2">{t.properties.subject || "—"}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {priority ? (
+                        <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${priorityClasses[priority] ?? "text-slate-400 bg-slate-800/50"}`}>
+                          {priority}
+                        </span>
+                      ) : (
+                        <span className="font-mono text-slate-600">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${stage === "4" ? "text-neon-green bg-neon-green/10" : "text-yellow-400 bg-yellow-400/10"}`}>
+                        {stageLabels[stage] ?? (stage || "—")}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 font-mono text-slate-500">
+                      {t.properties.createdate
+                        ? new Date(t.properties.createdate).toLocaleDateString("en-IE")
+                        : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center font-mono text-slate-600">
+                    {search ? "No tickets match your search" : "No tickets yet"}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-8 flex items-start justify-between gap-4">
@@ -151,103 +230,7 @@ export default function AdminTicketsPage() {
         />
       </div>
 
-      {loading ? (
-        <div className="bg-void-light/50 flex items-center justify-center rounded-xl border border-slate-800 py-16">
-          <div className="border-neon-magenta h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
-        </div>
-      ) : error ? (
-        <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
-          <p className="font-mono text-sm text-red-400">{error}</p>
-          <p className="mt-2 text-xs text-slate-500">
-            {error === "HubSpot not configured"
-              ? "Set HUBSPOT_API_KEY in your environment to enable CRM."
-              : "Check your HubSpot API key configuration."}
-          </p>
-        </div>
-      ) : (
-        <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-800">
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Subject
-                  </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Priority
-                  </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Stage
-                  </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Created
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((t) => {
-                  const priority =
-                    t.properties.hs_ticket_priority?.toUpperCase() ?? "";
-                  const stage = t.properties.hs_pipeline_stage ?? "";
-                  return (
-                    <tr
-                      key={t.id}
-                      className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
-                    >
-                      <td className="max-w-xs px-6 py-4 text-white">
-                        <span className="line-clamp-2">
-                          {t.properties.subject || "—"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {priority ? (
-                          <span
-                            className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${priorityClasses[priority] ?? "text-slate-400 bg-slate-800/50"}`}
-                          >
-                            {priority}
-                          </span>
-                        ) : (
-                          <span className="font-mono text-slate-600">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${
-                            stage === "4"
-                              ? "text-neon-green bg-neon-green/10"
-                              : "text-yellow-400 bg-yellow-400/10"
-                          }`}
-                        >
-                          {stageLabels[stage] ?? (stage || "—")}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 font-mono text-slate-500">
-                        {t.properties.createdate
-                          ? new Date(
-                              t.properties.createdate,
-                            ).toLocaleDateString("en-IE")
-                          : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-12 text-center font-mono text-slate-600"
-                    >
-                      {search
-                        ? "No tickets match your search"
-                        : "No tickets yet"}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {mainContent}
     </div>
   );
 }

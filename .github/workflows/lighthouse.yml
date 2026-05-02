@@ -33,6 +33,9 @@ jobs:
           urls: |
             ${{ github.event.inputs.url || 'https://cloudless.gr' }}
             ${{ github.event.inputs.url || 'https://cloudless.gr/en' }}
+            ${{ github.event.inputs.url || 'https://cloudless.gr/services' }}
+            ${{ github.event.inputs.url || 'https://cloudless.gr/contact' }}
+            ${{ github.event.inputs.url || 'https://cloudless.gr/store' }}
           budgetPath: .github/lighthouse-budget.json
           uploadArtifacts: true
           temporaryPublicStorage: true
