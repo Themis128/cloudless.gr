@@ -35,6 +35,15 @@ jobs:
         run: |
           set -euo pipefail
 
+          echo "→ Pre-check: TCP reachability of ${PI_HOST}:443"
+          if ! timeout 10 bash -c "exec 3<>/dev/tcp/${PI_HOST}/443" 2>/dev/null; then
+            echo "::error::Pi TCP port 443 is not reachable from the runner."
+            echo "::error::This is a critical HA failure — Route 53 secondary points at ${PI_HOST} but nothing is listening (or a firewall/NAT is blocking external 443)."
+            echo "::error::Possible causes: (1) Pi offline, (2) NAT not forwarding 443, (3) WAN IP changed, (4) firewall blocks the GitHub runner IP range."
+            exit 1
+          fi
+          echo "  ✓ TCP 443 open"
+
           echo "→ Connecting to ${PI_HOST}:443 with SNI=${PI_SNI}"
           # `-verify_return_error` forces a non-zero exit if the chain is
           # invalid (self-signed, expired, untrusted CA, etc.).
@@ -44,7 +53,9 @@ jobs:
               -showcerts -verify_return_error \
               < /dev/null 2> /tmp/openssl.err); then
             echo "::error::TLS handshake failed for ${PI_HOST} (SNI=${PI_SNI})"
+            echo "::group::openssl stderr"
             cat /tmp/openssl.err >&2
+            echo "::endgroup::"
             exit 1
           fi
 
