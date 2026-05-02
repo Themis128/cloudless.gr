@@ -44,15 +44,15 @@ export async function notionFetch<T = unknown>(
   const url = `${NOTION_API}${path}`;
   const reqInit: RequestInit = {
     ...init,
-    headers: { ...headers, ...(init?.headers ?? {}) },
+    headers: { ...headers, ...(init?.headers) },
   };
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const res = await fetch(url, reqInit);
 
     if (res.status === 429 && attempt < MAX_RETRIES) {
-      const retryAfterRaw = parseInt(res.headers.get("Retry-After") ?? "1", 10);
-      await sleep((isNaN(retryAfterRaw) ? 1 : retryAfterRaw) * 1000);
+      const retryAfterRaw = Number.parseInt(res.headers.get("Retry-After") ?? "1", 10);
+      await sleep((Number.isNaN(retryAfterRaw) ? 1 : retryAfterRaw) * 1000);
       continue;
     }
 

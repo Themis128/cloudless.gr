@@ -56,6 +56,46 @@ interface Stats {
   fetchedAt: string | null;
 }
 
+function computeStats(
+  contacts: Contact[],
+  deals: Deal[],
+  tickets: Ticket[],
+): Omit<Stats, "fetchedAt"> {
+  const pipelineValue = deals.reduce(
+    (sum, d) => sum + (parseFloat(d.properties.amount ?? "0") || 0),
+    0,
+  );
+  const recentContacts = contacts
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(b.properties.createdate ?? 0).getTime() -
+        new Date(a.properties.createdate ?? 0).getTime(),
+    )
+    .slice(0, 5);
+  return {
+    contacts: {
+      total: contacts.length,
+      newLeads: contacts.filter((c) => c.properties.hs_lead_status === "NEW")
+        .length,
+      qualified: contacts.filter(
+        (c) => c.properties.hs_lead_status === "OPEN_DEAL",
+      ).length,
+      recent: recentContacts,
+    },
+    deals: {
+      total: deals.length,
+      pipelineValue,
+      won: deals.filter((d) => d.properties.dealstage === "closedwon").length,
+    },
+    tickets: {
+      total: tickets.length,
+      open: tickets.filter((t) => t.properties.hs_pipeline_stage !== "4")
+        .length,
+    },
+  };
+}
+
 export default function HubSpotOverviewPage() {
   const [stats, setStats] = useState<Stats>({
     contacts: { total: 0, newLeads: 0, qualified: 0, recent: [] },
@@ -90,44 +130,8 @@ export default function HubSpotOverviewPage() {
       const deals: Deal[] = dealsData.deals ?? [];
       const tickets: Ticket[] = ticketsData.tickets ?? [];
 
-      const pipelineValue = deals.reduce(
-        (sum, d) => sum + (parseFloat(d.properties.amount ?? "0") || 0),
-        0,
-      );
-      const wonDeals = deals.filter(
-        (d) => d.properties.dealstage === "closedwon",
-      ).length;
-      const openTickets = tickets.filter(
-        (t) => t.properties.hs_pipeline_stage !== "4",
-      ).length;
-
       setStats({
-        contacts: {
-          total: contacts.length,
-          newLeads: contacts.filter(
-            (c) => c.properties.hs_lead_status === "NEW",
-          ).length,
-          qualified: contacts.filter(
-            (c) => c.properties.hs_lead_status === "OPEN_DEAL",
-          ).length,
-          recent: contacts
-            .slice()
-            .sort(
-              (a, b) =>
-                new Date(b.properties.createdate ?? 0).getTime() -
-                new Date(a.properties.createdate ?? 0).getTime(),
-            )
-            .slice(0, 5),
-        },
-        deals: {
-          total: deals.length,
-          pipelineValue,
-          won: wonDeals,
-        },
-        tickets: {
-          total: tickets.length,
-          open: openTickets,
-        },
+        ...computeStats(contacts, deals, tickets),
         fetchedAt: new Date().toISOString(),
       });
       setError(null);

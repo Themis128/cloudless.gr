@@ -111,7 +111,7 @@ export default {
       // dual-stack clients fall back to v4 via the A SECONDARY.
 
       // Apex — PRIMARY A (CloudFront alias)
-      new aws.route53.Record(
+      const apexPrimary = new aws.route53.Record(
         "ApexPrimary",
         {
           zoneId,
@@ -132,7 +132,7 @@ export default {
       );
 
       // Apex — SECONDARY A (Pi A record)
-      new aws.route53.Record(
+      const apexSecondary = new aws.route53.Record(
         "ApexSecondary",
         {
           zoneId,
@@ -147,7 +147,7 @@ export default {
       );
 
       // Apex — PRIMARY AAAA (CloudFront alias). No SECONDARY — Pi has no v6.
-      new aws.route53.Record(
+      const apexPrimaryAAAA = new aws.route53.Record(
         "ApexPrimaryAAAA",
         {
           zoneId,
@@ -168,7 +168,7 @@ export default {
       );
 
       // www — PRIMARY A (CloudFront alias)
-      new aws.route53.Record(
+      const wwwPrimary = new aws.route53.Record(
         "WwwPrimary",
         {
           zoneId,
@@ -189,7 +189,7 @@ export default {
       );
 
       // www — SECONDARY A (Pi A record)
-      new aws.route53.Record(
+      const wwwSecondary = new aws.route53.Record(
         "WwwSecondary",
         {
           zoneId,
@@ -204,7 +204,7 @@ export default {
       );
 
       // www — PRIMARY AAAA (CloudFront alias). No SECONDARY — Pi has no v6.
-      new aws.route53.Record(
+      const wwwPrimaryAAAA = new aws.route53.Record(
         "WwwPrimaryAAAA",
         {
           zoneId,
@@ -223,6 +223,9 @@ export default {
         },
         { import: `${zoneId}_www.cloudless.gr_AAAA_primary` },
       );
+
+      // expose records so downstream stacks can reference them if needed
+      void [apexPrimary, apexSecondary, apexPrimaryAAAA, wwwPrimary, wwwSecondary, wwwPrimaryAAAA];
     }
 
     return {
