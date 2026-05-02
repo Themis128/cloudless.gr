@@ -3,7 +3,7 @@ import * as hubspot from '../src/lib/hubspot';
 import { resetIntegrationCache } from '../src/lib/integrations';
 
 const mockFetch = vi.fn();
-global.fetch = mockFetch as unknown as typeof fetch;
+globalThis.fetch = mockFetch as unknown as typeof fetch;
 
 describe('hubspot.ts', () => {
   beforeEach(() => {

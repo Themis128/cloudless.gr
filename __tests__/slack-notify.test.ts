@@ -33,19 +33,19 @@ describe("slack-notify.ts", () => {
       const client = new SlackClient();
       const result = await client.post({ text: "hello" });
       expect(result).toBe(false);
-      expect(global.fetch).not.toHaveBeenCalled();
+      expect(globalThis.fetch).not.toHaveBeenCalled();
     });
 
     it("sends via bot API when SLACK_BOT_TOKEN is set", async () => {
       mockSlackConfig("xoxb-test-token");
-      vi.mocked(global.fetch).mockResolvedValueOnce(
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify({ ok: true }), { status: 200 }),
       );
       const { SlackClient } = await import("@/lib/slack-notify");
       const client = new SlackClient();
       const result = await client.post({ text: "test message" });
       expect(result).toBe(true);
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         "https://slack.com/api/chat.postMessage",
         expect.objectContaining({ method: "POST" }),
       );
@@ -53,12 +53,12 @@ describe("slack-notify.ts", () => {
 
     it("sends via webhook when SLACK_WEBHOOK_URL is set (no token)", async () => {
       mockSlackConfig("", "https://hooks.slack.com/services/test");
-      vi.mocked(global.fetch).mockResolvedValueOnce(new Response("ok", { status: 200 }));
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("ok", { status: 200 }));
       const { SlackClient } = await import("@/lib/slack-notify");
       const client = new SlackClient();
       const result = await client.post({ text: "webhook message" });
       expect(result).toBe(true);
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         "https://hooks.slack.com/services/test",
         expect.objectContaining({ method: "POST" }),
       );
@@ -66,7 +66,7 @@ describe("slack-notify.ts", () => {
 
     it("returns false when API returns ok:false with terminal error", async () => {
       mockSlackConfig("xoxb-bad-token");
-      vi.mocked(global.fetch).mockResolvedValueOnce(
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify({ ok: false, error: "invalid_auth" }), { status: 200 }),
       );
       const { SlackClient } = await import("@/lib/slack-notify");
@@ -86,7 +86,7 @@ describe("slack-notify.ts", () => {
 
     it("returns true when send succeeds via webhook", async () => {
       mockSlackConfig("", "https://hooks.slack.com/services/test");
-      vi.mocked(global.fetch).mockResolvedValueOnce(new Response("ok", { status: 200 }));
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("ok", { status: 200 }));
       const { slackNotify } = await import("@/lib/slack-notify");
       const result = await slackNotify({ text: "hello" });
       expect(result).toBe(true);
@@ -96,10 +96,10 @@ describe("slack-notify.ts", () => {
   describe("slackSubscriberNotify()", () => {
     it("calls post with subscriber email in text", async () => {
       mockSlackConfig("", "https://hooks.slack.com/services/test");
-      vi.mocked(global.fetch).mockResolvedValueOnce(new Response("ok", { status: 200 }));
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("ok", { status: 200 }));
       const { slackSubscriberNotify } = await import("@/lib/slack-notify");
       await slackSubscriberNotify("user@example.com");
-      const body = JSON.parse(vi.mocked(global.fetch).mock.calls[0][1]!.body as string);
+      const body = JSON.parse(vi.mocked(globalThis.fetch).mock.calls[0][1]!.body as string);
       expect(body.text).toContain("user@example.com");
     });
   });
@@ -107,10 +107,10 @@ describe("slack-notify.ts", () => {
   describe("slackErrorNotify()", () => {
     it("calls post when webhook is configured", async () => {
       mockSlackConfig("", "https://hooks.slack.com/services/test");
-      vi.mocked(global.fetch).mockResolvedValueOnce(new Response("ok", { status: 200 }));
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("ok", { status: 200 }));
       const { slackErrorNotify } = await import("@/lib/slack-notify");
       await slackErrorNotify({ title: "Oops", message: "Something broke" });
-      expect(global.fetch).toHaveBeenCalledOnce();
+      expect(globalThis.fetch).toHaveBeenCalledOnce();
     });
   });
 });

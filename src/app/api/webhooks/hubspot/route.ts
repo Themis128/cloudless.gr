@@ -376,7 +376,7 @@ export async function POST(request: NextRequest) {
 
   // Dispatch all events in parallel — fire-and-forget so HubSpot always gets 200
   if (token) {
-    void Promise.allSettled(events.map((e) => dispatch(token, e)));
+    Promise.allSettled(events.map((e) => dispatch(token, e))).catch(() => {});
   }
 
   return NextResponse.json({ received: events.length });

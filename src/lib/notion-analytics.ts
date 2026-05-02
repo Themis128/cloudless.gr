@@ -184,11 +184,11 @@ export async function trackEvent(
       clearTimeout(flushTimer);
       flushTimer = null;
     }
-    void flushEventQueue();
+    flushEventQueue().catch(() => {});
   } else if (!flushTimer) {
     flushTimer = setTimeout(() => {
       flushTimer = null;
-      void flushEventQueue();
+      flushEventQueue().catch(() => {});
     }, FLUSH_DELAY_MS);
   }
 
