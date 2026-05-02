@@ -30,7 +30,7 @@ export async function register() {
 
     const params = new Map<string, string>();
 
-    async function fetchPage(nextToken?: string): Promise<void> {
+    const fetchPage = async (nextToken?: string): Promise<void> => {
       const cmd = new GetParametersByPathCommand({
         Path: prefix,
         WithDecryption: true,
@@ -42,7 +42,7 @@ export async function register() {
         if (key && p.Value) params.set(key, p.Value);
       }
       if (res.NextToken) await fetchPage(res.NextToken);
-    }
+    };
 
     await fetchPage();
 
