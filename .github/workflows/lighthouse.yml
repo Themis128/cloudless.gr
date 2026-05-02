@@ -36,6 +36,10 @@ jobs:
             ${{ github.event.inputs.url || 'https://cloudless.gr/services' }}
             ${{ github.event.inputs.url || 'https://cloudless.gr/contact' }}
             ${{ github.event.inputs.url || 'https://cloudless.gr/store' }}
+          # 3 runs per URL → median absorbs single-run CI variance (TBT
+          # alone has been observed to swing 11x between runs on identical
+          # infra). Threshold step below asserts on the median.
+          runs: 3
           budgetPath: .github/lighthouse-budget.json
           uploadArtifacts: true
           temporaryPublicStorage: true
@@ -55,48 +59,49 @@ jobs:
             exit 1
           fi
 
-          echo "## 🔦 Lighthouse Results" >> "$GITHUB_STEP_SUMMARY"
+          # Group multi-run manifest by URL and reduce to the median per metric.
+          MEDIANS=$(echo "$MANIFEST" | jq '[
+            group_by(.url)[]
+            | {
+                url: .[0].url,
+                perf: ([.[].summary.performance]        | sort | .[(length / 2) | floor]),
+                a11y: ([.[].summary.accessibility]      | sort | .[(length / 2) | floor]),
+                bp:   ([.[].summary["best-practices"]]  | sort | .[(length / 2) | floor]),
+                seo:  ([.[].summary.seo]                | sort | .[(length / 2) | floor])
+              }
+          ]')
+
+          echo "## 🔦 Lighthouse Results (median of 3 runs)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Route | Perf | A11y | Best Practices | SEO |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------|------|------|----------------|-----|" >> "$GITHUB_STEP_SUMMARY"
 
-          ROWS=$(echo "$MANIFEST" | jq -r '.[] |
-            .url as $url |
-            (.summary.performance        * 100 | round) as $perf |
-            (.summary.accessibility      * 100 | round) as $a11y |
-            (.summary["best-practices"]  * 100 | round) as $bp   |
-            (.summary.seo                * 100 | round) as $seo  |
-            "| \($url) | \($perf) | \($a11y) | \($bp) | \($seo) |"
+          ROWS=$(echo "$MEDIANS" | jq -r '.[] |
+            "| \(.url) | \((.perf * 100) | round) | \((.a11y * 100) | round) | \((.bp * 100) | round) | \((.seo * 100) | round) |"
           ')
           echo "$ROWS" >> "$GITHUB_STEP_SUMMARY"
           echo "$ROWS"
 
-          # Fail if any route scores below thresholds
-          FAILED_URLS=$(echo "$MANIFEST" | jq -r '[.[] | select(
-            .summary.performance       < 0.65 or
-            .summary.accessibility     < 0.90 or
-            .summary["best-practices"] < 0.90 or
-            .summary.seo               < 0.90
+          # Fail if any route's median falls below thresholds
+          FAILED_URLS=$(echo "$MEDIANS" | jq -r '[.[] | select(
+            .perf < 0.65 or .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
           ) | .url] | .[]')
 
-          FAILED=$(echo "$MANIFEST" | jq '[.[] | select(
-            .summary.performance       < 0.65 or
-            .summary.accessibility     < 0.90 or
-            .summary["best-practices"] < 0.90 or
-            .summary.seo               < 0.90
+          FAILED=$(echo "$MEDIANS" | jq '[.[] | select(
+            .perf < 0.65 or .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
           ) | .url] | length')
 
           if [ "$FAILED" -gt 0 ]; then
             echo ""
-            echo "❌ $FAILED route(s) fell below score thresholds:"
+            echo "❌ $FAILED route(s) fell below score thresholds (median of 3 runs):"
             echo "$FAILED_URLS"
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "❌ **$FAILED route(s) fell below score thresholds.**" >> "$GITHUB_STEP_SUMMARY"
+            echo "❌ **$FAILED route(s) fell below score thresholds (median of 3 runs).**" >> "$GITHUB_STEP_SUMMARY"
             echo "Thresholds: Performance ≥ 65 · Accessibility ≥ 90 · Best Practices ≥ 90 · SEO ≥ 90" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
           echo ""
-          echo "✅ All routes passed."
+          echo "✅ All routes passed (median of 3 runs)."
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "✅ All routes passed Lighthouse thresholds (Perf ≥ 65 · A11y ≥ 90 · BP ≥ 90 · SEO ≥ 90)." >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ All routes passed Lighthouse thresholds (median of 3 runs; Perf ≥ 65 · A11y ≥ 90 · BP ≥ 90 · SEO ≥ 90)." >> "$GITHUB_STEP_SUMMARY"

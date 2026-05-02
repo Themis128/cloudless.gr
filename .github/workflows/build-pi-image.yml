@@ -65,32 +65,51 @@ jobs:
         uses: aws-actions/amazon-ecr-login@19d944daaa35f0fa1d3f7f8af1d3f2e5de25c5b7 # v2
 
       - name: untag previous :latest (ECR repo is tag-immutable)
+        id: untag
         if: github.event_name != 'pull_request'
         run: |
           # ECR's image tag mutability is set to IMMUTABLE on this repo, so a
-          # second push of :latest would fail with "tag is immutable". Remove
-          # the existing :latest association first; the underlying image is
-          # preserved via its SHA tag. Missing tag is not an error.
+          # second push of :latest would fail with "tag is immutable". Try to
+          # remove the existing :latest association first; the underlying
+          # image is preserved via its SHA tag.
+          set +e
           aws ecr batch-delete-image \
             --repository-name "${ECR_REPO}" \
             --image-ids imageTag=latest \
             --region "${AWS_REGION}" \
-            --output json > /tmp/untag.json || true
-          cat /tmp/untag.json
+            --output json > /tmp/untag.json 2> /tmp/untag.err
+          rc=$?
+          set -e
+          cat /tmp/untag.json 2>/dev/null || true
+          cat /tmp/untag.err 2>/dev/null >&2 || true
+          if [ "$rc" -eq 0 ]; then
+            echo "latest_writable=true" >> "$GITHUB_OUTPUT"
+          elif grep -q "AccessDeniedException" /tmp/untag.err; then
+            echo "::warning::ecr:BatchDeleteImage denied — pushing SHA-only. Grant ecr:BatchDeleteImage on cloudless-pi-app to restore :latest tracking."
+            echo "latest_writable=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Untag failed unexpectedly"
+            exit 1
+          fi
 
       - name: set up Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: compute tags
         id: tags
+        env:
+          LATEST_WRITABLE: ${{ steps.untag.outputs.latest_writable }}
         run: |
           SHA="${GITHUB_SHA::12}"
-          if [ "${GITHUB_EVENT_NAME}" = "push" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            echo "push=false" >> "$GITHUB_OUTPUT"
+            echo "tags=cloudless-pi-app:pr-${SHA}" >> "$GITHUB_OUTPUT"
+          elif [ "${LATEST_WRITABLE}" = "true" ]; then
             echo "push=true" >> "$GITHUB_OUTPUT"
             echo "tags=${ECR_REGISTRY}/${ECR_REPO}:${SHA},${ECR_REGISTRY}/${ECR_REPO}:latest" >> "$GITHUB_OUTPUT"
           else
-            echo "push=false" >> "$GITHUB_OUTPUT"
-            echo "tags=cloudless-pi-app:pr-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+            echo "push=true" >> "$GITHUB_OUTPUT"
+            echo "tags=${ECR_REGISTRY}/${ECR_REPO}:${SHA}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: build (and push if main)
