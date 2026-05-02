@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   getProductById,
   getProductsByCategory,
-  demoProducts,
+  defaultProducts,
   categoryLabels,
   categoryColors,
 } from "@/lib/store-products-client";
@@ -57,16 +57,16 @@ describe("store-products-client.ts", () => {
     });
   });
 
-  describe("demoProducts", () => {
+  describe("defaultProducts", () => {
     it("contains products from all three categories", () => {
-      const cats = new Set(demoProducts.map((p) => p.category));
+      const cats = new Set(defaultProducts.map((p) => p.category));
       expect(cats.has("service")).toBe(true);
       expect(cats.has("digital")).toBe(true);
       expect(cats.has("physical")).toBe(true);
     });
 
     it("all products have required fields with valid values", () => {
-      for (const p of demoProducts) {
+      for (const p of defaultProducts) {
         expect(p.id).toBeTruthy();
         expect(p.name).toBeTruthy();
         expect(p.description).toBeTruthy();

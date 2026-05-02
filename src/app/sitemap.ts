@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { posts } from "@/lib/blog";
-import { demoProducts } from "@/lib/store-products";
+import { defaultProducts } from "@/lib/store-products";
 
 // ---------------------------------------------------------------------------
 // Static page last-modified dates
@@ -82,7 +82,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Products don't carry an individual last-modified date; share the
   // catalogue date so it only resets when the catalogue is actually updated
   const catalogueDate = new Date(LAST_MODIFIED["/store/products"]);
-  const productPages: MetadataRoute.Sitemap = demoProducts.map((product) => ({
+  const productPages: MetadataRoute.Sitemap = defaultProducts.map((product) => ({
     url: `${baseUrl}/store/${product.id}`,
     lastModified: catalogueDate,
     changeFrequency: "monthly" as const,

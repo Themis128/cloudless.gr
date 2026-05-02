@@ -54,7 +54,9 @@ export const PLATFORM_LABELS: Record<CalendarPlatform, string> = {
   google_calendar: "Calendar",
 };
 
-// In-memory fallback store (used when Notion is not configured)
+// In-process fallback store. Used when NOTION_API_KEY / NOTION_CALENDAR_DB_ID
+// are not configured (typically local dev) so the calendar UI is exercisable
+// without a Notion workspace. Resets on every cold start; not durable.
 let store: CalendarItem[] = [];
 
 async function notionEnabled(): Promise<boolean> {
