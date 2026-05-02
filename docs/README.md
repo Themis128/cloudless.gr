@@ -6,7 +6,8 @@
 |---|---|
 | [deploy.md](deploy.md) | Production deploy workflow, IAM perms required, troubleshooting AccessDenied on `iam:GetRole`/`TagRole`. |
 | [iam.md](iam.md) | IAM principals (deploy role, Pi-image role, `cloudless-ops` user), the managed policy hierarchy, and the no-root permission-update path. |
-| [ci-health-routine.md](ci-health-routine.md) | The weekly Claude Code routine that checks all 5 workflows on `main` are green. |
+| [pi-cloud-sync.md](pi-cloud-sync.md) | Contract between the Pi K3s standby and the SST cloud — what's in sync, how, and what to monitor. |
+| [ci-health-routine.md](ci-health-routine.md) | The weekly Claude Code routine that checks all 6 workflows on `main` are green. |
 | [SECURITY_ENHANCEMENTS_ROADMAP.md](SECURITY_ENHANCEMENTS_ROADMAP.md) | Standing security backlog. |
 
 ## Application integrations
