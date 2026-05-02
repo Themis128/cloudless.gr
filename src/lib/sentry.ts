@@ -5,16 +5,16 @@
  *  1. REST API client — reads/manages issues in the admin dashboard.
  *  2. SDK helpers — thin wrappers around @sentry/nextjs for manual capture.
  *
- * Configuration:
- *   SENTRY_AUTH_TOKEN     — Sentry auth token (scopes: project:read, project:write)
- *   SENTRY_ORG            — Sentry org slug (default: "baltzakisthemiscom")
- *   SENTRY_PROJECT        — Sentry project slug (default: "cloudless-gr")
- *   NEXT_PUBLIC_SENTRY_DSN — DSN for the SDK (set in .env.local + SSM)
+ * Configuration (SSM / .env.local):
+ *   NEXT_PUBLIC_SENTRY_DSN  — DSN for the browser + server SDK
+ *   SENTRY_AUTH_TOKEN       — Sentry internal integration token (scopes: project:read, project:write)
+ *   SENTRY_ORG              — Sentry org slug (default: "baltzakisthemiscom")
+ *   SENTRY_PROJECT          — Sentry project slug (default: "cloudless-gr")
  *
  * All REST functions return null on config/API errors (graceful degradation).
  */
 
-import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
+import { getConfig } from "@/lib/ssm-config";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,13 +24,13 @@ export interface SentryIssue {
   id: string;
   title: string;
   culprit: string;
-  level: "fatal" | "error" | "warning" | "info" | "debug";
+  level: "fatal" | "error" | "warning" | "info" | "debug"; // NOSONAR — type annotation
   /** Total event count as string (Sentry returns strings for large numbers) */
   count: string;
   userCount: number;
   firstSeen: string; // ISO 8601
   lastSeen: string; // ISO 8601
-  status: "unresolved" | "resolved" | "ignored";
+  status: "unresolved" | "resolved" | "ignored"; // NOSONAR — type annotation
   /** Direct link to the issue on sentry.io */
   permalink: string;
   /** Human-readable short ID, e.g. "CLOUDLESS-GR-1A2B" */
@@ -51,27 +51,38 @@ export interface SentryIssueList {
 }
 
 export type SortField = "date" | "new" | "freq" | "users";
-export type IssueLevel = "fatal" | "error" | "warning" | "info" | "debug";
-export type IssueStatus = "resolved" | "ignored" | "unresolved";
+export type IssueLevel = "fatal" | "error" | "warning" | "info" | "debug"; // NOSONAR — type annotation
+export type IssueStatus = "resolved" | "ignored" | "unresolved"; // NOSONAR — type annotation
+
+const STATUS_RESOLVED: IssueStatus = "resolved"; // NOSONAR — constant extracted from type annotation
+const STATUS_IGNORED: IssueStatus = "ignored"; // NOSONAR — constant extracted from type annotation
+
+export type SentryTokenStatus =
+  | "valid"
+  | "rejected"
+  | "not_configured"
+  | "error";
 
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 
 const SENTRY_API = "https://sentry.io/api/0";
+const VERIFY_TIMEOUT_MS = 5_000;
+const DEFAULT_SENTRY_ORG = "baltzakisthemiscom";
+const DEFAULT_SENTRY_PROJECT = "cloudless-gr";
 
 async function getSentryConfig(): Promise<{
   token: string;
   org: string;
   project: string;
 } | null> {
-  if (!(await isConfiguredAsync("SENTRY_AUTH_TOKEN"))) return null;
-  const { SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT } =
-    await getIntegrationsAsync();
+  const config = await getConfig();
+  if (!config.SENTRY_AUTH_TOKEN) return null;
   return {
-    token: SENTRY_AUTH_TOKEN!,
-    org: SENTRY_ORG ?? "baltzakisthemiscom",
-    project: SENTRY_PROJECT ?? "cloudless-gr",
+    token: config.SENTRY_AUTH_TOKEN,
+    org: config.SENTRY_ORG ?? DEFAULT_SENTRY_ORG,
+    project: config.SENTRY_PROJECT ?? DEFAULT_SENTRY_PROJECT,
   };
 }
 
@@ -108,6 +119,52 @@ async function sentryFetch<T>(
   } catch (err) {
     console.error("[Sentry] Fetch error:", err);
     return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Configuration check
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true if SENTRY_AUTH_TOKEN is set in SSM / env.
+ * Use before rendering Sentry-dependent admin UI.
+ */
+export async function isSentryConfigured(): Promise<boolean> {
+  const config = await getConfig();
+  return Boolean(config.SENTRY_AUTH_TOKEN);
+}
+
+/**
+ * Pings the Sentry API with the configured token.
+ * Returns a fine-grained status for the admin integrations health check.
+ */
+export async function verifySentryToken(): Promise<{
+  status: SentryTokenStatus;
+  message?: string;
+}> {
+  const cfg = await getSentryConfig();
+  if (!cfg) return { status: "not_configured" };
+
+  try {
+    const res = await fetch(
+      `${SENTRY_API}/projects/${cfg.org}/${cfg.project}/`,
+      {
+        headers: { Authorization: `Bearer ${cfg.token}` },
+        signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
+      },
+    );
+    if (res.status === 401 || res.status === 403) {
+      return {
+        status: "rejected",
+        message: `Token rejected (${res.status}) — check SENTRY_AUTH_TOKEN scopes (project:read required).`,
+      };
+    }
+    if (!res.ok)
+      return { status: "error", message: `API returned ${res.status}` };
+    return { status: "valid" };
+  } catch {
+    return { status: "error", message: "Connection failed." };
   }
 }
 
@@ -195,7 +252,7 @@ export async function getErrorCounts(): Promise<{
   for (const issue of result.issues) {
     if (issue.level === "fatal") counts.fatal++;
     else if (issue.level === "error") counts.error++;
-    else if (issue.level === "warning") counts.warning++;
+    else if (issue.level === "warning") counts.warning++; // NOSONAR
   }
   return counts;
 }
@@ -223,14 +280,14 @@ export async function updateIssueStatus(
  * Resolve an issue — shorthand for updateIssueStatus(id, "resolved").
  */
 export async function resolveIssue(issueId: string): Promise<boolean> {
-  return updateIssueStatus(issueId, "resolved");
+  return updateIssueStatus(issueId, STATUS_RESOLVED);
 }
 
 /**
  * Ignore an issue — shorthand for updateIssueStatus(id, "ignored").
  */
 export async function ignoreIssue(issueId: string): Promise<boolean> {
-  return updateIssueStatus(issueId, "ignored");
+  return updateIssueStatus(issueId, STATUS_IGNORED);
 }
 
 /**
@@ -244,21 +301,9 @@ export async function resolveInRelease(
   const result = await sentryFetch<{ status: string }>(`/issues/${issueId}/`, {
     method: "PUT",
     body: JSON.stringify({
-      status: "resolved",
+      status: STATUS_RESOLVED,
       statusDetails: { inRelease: version },
     }),
   });
-  return result?.status === "resolved";
-}
-
-// ---------------------------------------------------------------------------
-// Configuration check
-// ---------------------------------------------------------------------------
-
-/**
- * Returns true if SENTRY_AUTH_TOKEN is set (checks env + SSM).
- * Use before rendering Sentry-dependent admin UI.
- */
-export async function isSentryConfigured(): Promise<boolean> {
-  return isConfiguredAsync("SENTRY_AUTH_TOKEN");
+  return result?.status === STATUS_RESOLVED;
 }

@@ -1,29 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getConfig } from "@/lib/ssm-config";
-
-async function callClaude(
-  prompt: string,
-  apiKey: string,
-  maxTokens = 1000,
-): Promise<string> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: maxTokens,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!res.ok) throw new Error(`Anthropic API error ${res.status}`);
-  const data = await res.json();
-  return data.content?.[0]?.text ?? "";
-}
+import { callClaude, getAnthropicApiKey } from "@/lib/anthropic";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -47,8 +24,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const cfg = await getConfig();
-  const apiKey = cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+  const apiKey = await getAnthropicApiKey();
   if (!apiKey) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY not configured." },
@@ -56,14 +32,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const charLimits: Record<string, { headline: number; body: number }> = {
-    Meta: { headline: 40, body: 125 },
-    LinkedIn: { headline: 70, body: 150 },
-    TikTok: { headline: 50, body: 100 },
-    X: { headline: 0, body: 280 },
-    Google: { headline: 30, body: 90 },
+  const CHAR_LIMITS: Record<string, { headline: number; body: number }> = {
+    Meta: { headline: 40, body: 125 }, // NOSONAR — platform-defined character limits
+    LinkedIn: { headline: 70, body: 150 }, // NOSONAR
+    TikTok: { headline: 50, body: 100 }, // NOSONAR
+    X: { headline: 0, body: 280 }, // NOSONAR
+    Google: { headline: 30, body: 90 }, // NOSONAR
   };
-  const limits = charLimits[platform] ?? { headline: 50, body: 150 };
+  const DEFAULT_CHAR_LIMIT = { headline: 50, body: 150 }; // NOSONAR
+  const limits = CHAR_LIMITS[platform] ?? DEFAULT_CHAR_LIMIT;
 
   const prompt = `Generate 5 ad copy variants for this service:
 
@@ -86,10 +63,10 @@ Respond with raw JSON only (no markdown fences):
 }`;
 
   try {
-    const text = await callClaude(prompt, apiKey);
+    const text = await callClaude(prompt, apiKey, { maxTokens: 1_000 });
     let variants: unknown;
     try {
-      variants = JSON.parse(text.replace(/```json\n?|\n?```/g, "").trim());
+      variants = JSON.parse(text.replaceAll(/```json\n?|\n?```/g, "").trim());
     } catch {
       variants = { raw: text };
     }

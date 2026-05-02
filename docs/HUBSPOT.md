@@ -64,6 +64,33 @@ sequenceDiagram
 
 ---
 
+## Internal helpers
+
+### `hubspotFetch(path, options?)`
+
+Authenticated `fetch` wrapper. Prepends the HubSpot base URL, sets the
+`Authorization: Bearer …` header, and ensures `Content-Type: application/json`.
+All exported functions go through this helper, so the token is resolved exactly
+once per request thanks to the integration cache.
+
+### `hubspotListAll<T>(path)`
+
+Cursor-paginated walker for HubSpot list endpoints. Appends `limit=100` and
+`after=<cursor>` to the URL on each iteration, accumulating `results` until
+`paging.next.after` is absent.
+
+Used internally by `getPipelineStats()` and `getDealsByStage()` so that stats /
+boards reflect every deal in the portal rather than the first 100.
+
+### Token-resolution guard
+
+`upsertContact`, `createDeal`, and `createTicket` early-exit with `null` when
+HubSpot is not configured. They use `isHubSpotConfigured()` for that guard
+instead of an explicit `getHubSpotToken()` call — `hubspotFetch` resolves the
+token itself, and the integration cache makes the second resolution free.
+
+---
+
 ## Environment Variables
 
 ### Local development (`.env.local`)
@@ -144,7 +171,7 @@ sequenceDiagram
 
 Fetch recent contacts with key properties.
 
-**Default limit:** 10
+**Default limit:** 10 (clamped to the range 1–100; non-finite values fall back to 10)
 
 **Properties returned:** `email`, `firstname`, `lastname`, `company`, `createdate`, `hs_lead_status`
 
@@ -356,16 +383,18 @@ await moveDealStage("deal_1", "closedwon");
 
 ---
 
-### `getDealsByStage(limit?): Promise<Record<string, unknown[]>>`
+### `getDealsByStage(): Promise<Record<string, unknown[]>>`
 
-Fetch up to `limit` deals (default 100) and group them by their `dealstage` property.
+Fetch **all** deals (cursor-paginated 100-at-a-time via `hubspotListAll()`) and group
+them by their `dealstage` property.
 
 ```typescript
 const board = await getDealsByStage();
 // { "appointmentscheduled": [...], "closedwon": [...] }
 ```
 
-Returns `{}` on API error.
+Returns `{}` on API error. The previous `limit` parameter was removed — pagination
+now fetches every deal in the portal so the kanban board reflects ground truth.
 
 ---
 
@@ -383,7 +412,13 @@ Returns `null` on failure.
 
 ### `listNotes(dealId): Promise<unknown[]>`
 
-Fetch all notes associated with a deal.
+Fetch all notes associated with a deal in two requests total:
+
+1. `GET /crm/v3/objects/deals/:id/associations/notes` to collect note IDs
+2. `POST /crm/v3/objects/notes/batch/read` to resolve all bodies in a single batch call
+
+This avoids the previous N+1 pattern (one GET per note). HubSpot caps batch reads
+at 100 inputs per request, so the helper slices accordingly.
 
 ```typescript
 const notes = await listNotes("deal_1");
@@ -395,7 +430,7 @@ Returns `[]` on failure.
 
 ### `getPipelineStats(): Promise<PipelineStats>`
 
-Aggregate totals across all deals.
+Aggregate totals across **all** deals via `hubspotListAll()` cursor pagination.
 
 ```typescript
 const stats = await getPipelineStats();
@@ -410,6 +445,10 @@ const stats = await getPipelineStats();
 ```
 
 Deals with no `amount` contribute `0` to the value totals. Returns zeroed stats on API error.
+
+> **Note:** Earlier versions capped at `limit=100` with no pagination — stats were
+> silently wrong on portals with more than 100 deals. The current implementation
+> walks `paging.next.after` cursors until exhausted.
 
 ---
 

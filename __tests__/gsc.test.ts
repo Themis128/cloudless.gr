@@ -2,12 +2,11 @@
  * Unit tests for src/lib/gsc.ts
  *
  * Strategy:
- * - Mock `jose` (dynamic-imported inside getAccessToken) globally
- * - Mock `@/lib/ssm-config` to provide Google credentials
+ * - Mock `jose` (dynamic-imported inside createGoogleAuth in google-auth.ts)
+ * - Credentials come from process.env set in __tests__/setup.ts
  * - Stub `fetch` per-test with ordered return values (token call first,
  *   then GSC searchAnalytics calls)
- * - `vi.resetModules()` in beforeEach so the module-level `cachedToken`
- *   is reset between tests
+ * - `vi.resetModules()` in beforeEach resets the token cache in the closure
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -79,6 +78,8 @@ function dateRow(date: string) {
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
+
+const GSC_RETURNS_EMPTY_ON_FAIL = "returns [] when GSC call fails";
 
 describe("getSeoSnapshot", () => {
   beforeEach(() => {
@@ -184,7 +185,7 @@ describe("getTopKeywords", () => {
     });
   });
 
-  it("returns [] when GSC call fails", async () => {
+  it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
       vi
@@ -245,7 +246,7 @@ describe("getPerformanceHistory", () => {
     });
   });
 
-  it("returns [] when GSC call fails", async () => {
+  it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
       vi
@@ -412,7 +413,7 @@ describe("getCtrOpportunities", () => {
     expect(opps[0].ctr).toBe(2);
   });
 
-  it("returns [] when GSC call fails", async () => {
+  it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
       vi
@@ -483,7 +484,7 @@ describe("getDeviceBreakdown", () => {
     });
   });
 
-  it("returns [] when GSC call fails", async () => {
+  it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
       vi
@@ -530,7 +531,7 @@ describe("getProductPageMetrics", () => {
     expect(products[0].ctr).toBeCloseTo(4.2, 1);
   });
 
-  it("returns [] when GSC call fails", async () => {
+  it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
       vi
@@ -582,7 +583,7 @@ describe("getQueryPageMapping", () => {
     });
   });
 
-  it("returns [] when GSC call fails", async () => {
+  it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
       vi
@@ -687,7 +688,7 @@ describe("getTrafficByCountry", () => {
     });
   });
 
-  it("returns [] when GSC call fails", async () => {
+  it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
       vi

@@ -151,18 +151,18 @@ export async function POST(request: Request) {
     const userAgent = request.headers.get("user-agent") ?? undefined;
     const fbp = request.headers.get("cookie")?.match(/_fbp=([^;]+)/)?.[1];
     const fbc = request.headers.get("cookie")?.match(/_fbc=([^;]+)/)?.[1];
-    void sendLeadEvent({
+    sendLeadEvent({
       eventId,
       email,
       firstName: nameParts[0],
       lastName: nameParts.slice(1).join(" ") || undefined,
-      clientIpAddress: ip !== "unknown" ? ip : undefined,
+      clientIpAddress: ip === "unknown" ? undefined : ip,
       clientUserAgent: userAgent,
       fbp,
       fbc,
       eventSourceUrl: "https://cloudless.gr/contact",
       source: service ?? undefined,
-    });
+    }).catch(() => {});
 
     return Response.json({ success: true, eventId });
   } catch (error) {
