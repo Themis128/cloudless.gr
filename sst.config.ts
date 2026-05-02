@@ -223,9 +223,6 @@ export default {
         },
         { import: `${zoneId}_www.cloudless.gr_AAAA_primary` },
       );
-
-      // expose records so downstream stacks can reference them if needed
-      void [apexPrimary, apexSecondary, apexPrimaryAAAA, wwwPrimary, wwwSecondary, wwwPrimaryAAAA];
     }
 
     return {
