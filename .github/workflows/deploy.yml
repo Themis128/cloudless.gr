@@ -90,24 +90,15 @@ jobs:
           CALLER_ARN=$(echo "$CALLER" | jq -r '.Arn')
           echo "Assumed identity: $CALLER_ARN"
 
-          # 2. Simulate the three IAM tagging actions required by SST defaultTags.
-          #    simulate-principal-policy is read-only and does not modify any resource.
-          REQUIRED_ACTIONS="iam:TagRole iam:UntagRole iam:ListRoleTags"
-          SIMULATION=$(
-            aws iam simulate-principal-policy \
-              --policy-source-arn "$CALLER_ARN" \
-              --action-names $REQUIRED_ACTIONS \
-              --resource-arns "arn:aws:iam::*:role/*" \
-              --output json 2>&1
-          ) || {
-            # simulate-principal-policy itself may be denied — print diagnostics
-            # and allow the deploy to proceed (the real error will surface there).
-            echo "::warning::Could not run iam:SimulatePrincipalPolicy (permission not granted). Skipping preflight check."
-            echo "::warning::If the deploy fails with an IAM tagging error, add iam:TagRole / iam:UntagRole / iam:ListRoleTags to the deploy role."
-            echo "::warning::Deploy role ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
-            echo "::warning::See docs/deploy.md for the required policy statement."
-            exit 0
-          }
+          # 2. Simulate the IAM actions required by SST defaultTags.
+          #    If we cannot run the simulation, fail early with actionable guidance.
+          REQUIRED_ACTIONS="iam:SimulatePrincipalPolicy iam:GetRole iam:TagRole iam:UntagRole iam:ListRoleTags"
+
+          SIMULATION=$(aws iam simulate-principal-policy \
+            --policy-source-arn "$CALLER_ARN" \
+            --action-names $REQUIRED_ACTIONS \
+            --resource-arns "arn:aws:iam::*:role/*" \
+            --output json)
 
           # 3. Check each action's evaluation decision
           DENIED=$(echo "$SIMULATION" | jq -r '
@@ -120,15 +111,14 @@ jobs:
             echo "::error::The following IAM actions are NOT allowed for $CALLER_ARN:"
             echo "$DENIED" | while read -r action; do echo "  - $action"; done
             echo ""
-            echo "::error::SST applies defaultTags to every AWS resource it manages (including IAM Roles)."
-            echo "::error::Add the following permissions to the deploy role (${{ secrets.AWS_DEPLOY_ROLE_ARN }}):"
-            echo "::error::  iam:TagRole, iam:UntagRole, iam:ListRoleTags"
-            echo "::error::See docs/deploy.md for the full required policy statement."
-            echo "::error::Reference: https://github.com/Themis128/cloudless.gr/actions/runs/25247664393/job/74034538240"
+            echo "::error::Fix the IAM policy attached to the deploy role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
+            echo "::error::At minimum allow: iam:GetRole, iam:TagRole, iam:UntagRole, iam:ListRoleTags"
+            echo "::error::Also allow: iam:SimulatePrincipalPolicy (so this preflight can run)"
+            echo "::error::See docs/deploy.md for the exact policy statements."
             exit 1
           fi
 
-          echo "✅ IAM role-tagging permissions confirmed for $CALLER_ARN"
+          echo "✅ IAM permissions confirmed for $CALLER_ARN"
 
       - name: Notify Slack — deploy started
         if: env.SLACK_WEBHOOK_URL != ''
@@ -140,7 +130,7 @@ jobs:
               \"blocks\": [
                 {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \":rocket: Deploy Started\", \"emoji\": true}},
                 {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\"}},
-                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
+                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]} 
               ]
             }"
 
@@ -163,7 +153,7 @@ jobs:
               \"blocks\": [
                 {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \":white_check_mark: Deploy Succeeded\", \"emoji\": true}},
                 {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\n*URL:* <https://cloudless.gr|cloudless.gr>\"}},
-                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
+                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]} 
               ]
             }"
 
@@ -177,6 +167,6 @@ jobs:
               \"blocks\": [
                 {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \":x: Deploy Failed\", \"emoji\": true}},
                 {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\"}},
-                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
+                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]} 
               ]
             }"
