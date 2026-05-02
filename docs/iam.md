@@ -25,7 +25,7 @@ Assumed by the `Deploy to Production` workflow. Its trust policy restricts
 - **`cloudless-sst-deploy-iam-tagging`** (customer managed, default version
   `v4`) — fills the IAM gap. Grants the actions SST/Pulumi needs on roles
   matching `cloudl*` and policies matching `cloudl*` (the prefix SST emits
-  for stack outputs — see [`memory/sst_role_prefix.md`](../../home/.claude/projects/-mnt-d-Nuxt-Projects-Cloudless-cloudless-gr/memory/sst_role_prefix.md)).
+  for stack outputs — see the local Claude memory note `sst_role_prefix.md`).
 - **`CICDSstRoleManagement`** (inline, legacy) — superseded by `v4` of the
   managed policy above. Safe to keep; safe to remove if anyone has
   `iam:DeleteRolePolicy` on the role (cloudless-ops does not).
@@ -40,9 +40,8 @@ Assumed by the `build pi image` workflow to push images to the
 
 - **`ecr:BatchDeleteImage`** on `cloudless-pi-app` — granted in this session
   via inline policy `CICDEcrUntagLatest`. Lets the workflow untag the existing
-  `:latest` before re-tagging the new image. See
-  [skill: ecr-immutable-tags-ci](../../home/.claude/skills/ecr-immutable-tags-ci/SKILL.md)
-  for the why.
+  `:latest` before re-tagging the new image. See the project-aware Claude
+  skill `ecr-immutable-tags-ci` (in `~/.claude/skills/`) for the why.
 
 If this permission is ever revoked, the workflow [falls back to SHA-only push](../.github/workflows/build-pi-image.yml) and warns — it does not break.
 
@@ -107,7 +106,7 @@ next deploy — no role edit, no Console click, no root key.
 When writing IAM policies for this project, scope `Resource` to:
 
 - **SST-managed roles**: `arn:aws:iam::278585680617:role/cloudl*`
-  (NOT `cloudless-*` — SST truncates the prefix, see [memory](../../home/.claude/projects/-mnt-d-Nuxt-Projects-Cloudless-cloudless-gr/memory/sst_role_prefix.md))
+  (NOT `cloudless-*` — SST truncates the prefix, see the local Claude memory note `sst_role_prefix.md`)
 - **SST-managed policies**: `arn:aws:iam::278585680617:policy/cloudl*`
 - **CI-related ECR repos**: `arn:aws:ecr:us-east-1:278585680617:repository/cloudless-*`
 - **Application Lambda/etc.**: existing `cloudless-*` prefix on most other
@@ -138,5 +137,4 @@ The bootstrap admin path that does require root, *if you ever need one*, is:
 - [docs/deploy.md](deploy.md) — what the deploy role needs and why
 - [docs/ci-health-routine.md](ci-health-routine.md) — the weekly green-pipeline check
 - [scripts/grant-ci-iam-permissions.py](../scripts/grant-ci-iam-permissions.py) — boto3 helper that applies the recommended scoped policies
-- [skill: lighthouse-perf-debug](../../home/.claude/skills/lighthouse-perf-debug/SKILL.md)
-- [skill: ecr-immutable-tags-ci](../../home/.claude/skills/ecr-immutable-tags-ci/SKILL.md)
+- Project-aware Claude skills (`~/.claude/skills/`): `lighthouse-perf-debug`, `ecr-immutable-tags-ci`
