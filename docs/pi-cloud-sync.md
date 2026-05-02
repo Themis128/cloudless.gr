@@ -3,11 +3,22 @@
 `cloudless.gr` is dual-homed:
 
 - **Primary**: SST stack on AWS (Lambda + CloudFront + Route 53 alias)
-- **Secondary**: Raspberry Pi 5 (running OMV → K3s) at WAN `150.228.63.192`
+- **Secondary**: APIGW HTTP API (`cloudless-pi-frontend`, id `dwtp9xt4dd`) →
+  Lambda IPv6 proxy (`cloudless-pi-proxy`) → Raspberry Pi 5 on Starlink CGNAT
+  via global IPv6, port 18443.
 
-Route 53 failover routing flips DNS to the Pi when the primary health check on
-`/api/health` goes red. The two surfaces serve the same Next.js bundle, but
-they run independently — so anything stateful or version-sensitive can drift.
+The Pi has **no public IPv4** (Starlink CGNAT). The SECONDARY path used to
+point straight at the Pi WAN IP, but as of PR #100 it goes through APIGW
+custom domains (`d-uy6dmk95il.execute-api.us-east-1.amazonaws.com` for apex,
+`d-2msx2z5q7d…` for www) so dual-stack clients can reach it. The Lambda
+proxy bridges from AWS-side dual-stack to Pi-side IPv6.
+
+Route 53 failover flips DNS to the APIGW alias when the primary health check
+on `/api/health` (probing CloudFront) goes red. A separate SECONDARY health
+check (`30a69f1c-8d48-49bd-9067-cabec979478b`) probes the APIGW frontend
+directly so a SECONDARY-path outage isn't masked by the PRIMARY check. Both
+surfaces serve the same Next.js bundle, but they run independently — so
+anything stateful or version-sensitive can drift.
 
 This doc is the contract for what's kept in sync, how, and what to monitor.
 
@@ -49,25 +60,31 @@ kubectl set image deployment/cloudless cloudless=278585680617.dkr.ecr.us-east-1.
   --record
 ```
 
-### 2. TLS cert monitoring — `Pi TLS Cert Check` workflow
+### 2. SECONDARY-path health monitoring — `Pi TLS Cert Check` workflow
 
 [.github/workflows/pi-tls-cert-check.yml](../.github/workflows/pi-tls-cert-check.yml)
-runs daily at 06:30 UTC and asserts:
+runs daily at 06:30 UTC against the APIGW SECONDARY frontend
+(`d-uy6dmk95il.execute-api.us-east-1.amazonaws.com`) and asserts:
 
-- TLS handshake succeeds against `https://150.228.63.192` with SNI `cloudless.gr`
-- The cert chain is trusted (no self-signed, no expired CA)
-- Cert SAN/CN matches `cloudless.gr`
-- `notAfter` is more than **14 days** away
+- TCP/443 reachable
+- TLS handshake succeeds with SNI `cloudless.gr` (chain valid, ACM cert)
+- Cert SAN includes `cloudless.gr`
+- `notAfter` is more than **14 days** away (ACM auto-renews; this catches
+  rotation failures)
+- **End-to-end** `GET /api/health` returns 200 — exercising the full path:
+  client → APIGW → Lambda proxy → Pi (over IPv6:18443) → response
 
-Failure modes that this catches:
+Failure modes this catches:
 
-- Pi's Let's Encrypt renewal stopped working
-- Cert was renewed but never reloaded into ingress
-- Pi accidentally serving the wrong certificate (mis-config)
-- Pi serving HTTP-only because cert-manager crashed
+- APIGW custom domain disabled / detached
+- ACM cert rotation broke
+- Lambda proxy errored out (cold-start failure, code regression, IAM drift)
+- Pi unreachable on its IPv6:18443 socket (Starlink IPv6 lease changed,
+  firewall, K3s pod down, listener not bound)
 
-The job is included in the weekly CI health routine, so any failure is reported
-in the Monday morning summary.
+Because this probes the SECONDARY path *directly*, it surfaces issues
+*before* a real PRIMARY outage forces failover. The job is included in the
+weekly CI health routine, so any failure is reported in the Monday summary.
 
 ### 3. Weekly CI health routine
 
@@ -96,8 +113,15 @@ doc for context. Listed in priority order:
 
 ## Operational pointers
 
-- **Pi WAN IP**: `150.228.63.192` (apex/A SECONDARY in [sst.config.ts:96](../sst.config.ts))
-- **R53 health check**: `e239ad5c-dd17-40d7-8045-a153715168cf` (probes `https://cloudless.gr/api/health`)
+- **APIGW HTTP API**: `cloudless-pi-frontend` (id `dwtp9xt4dd`, us-east-1)
+- **APIGW custom domains** (SECONDARY targets):
+  - apex: `d-uy6dmk95il.execute-api.us-east-1.amazonaws.com`
+  - www:  `d-2msx2z5q7d.execute-api.us-east-1.amazonaws.com`
+- **APIGW regional zone ID**: `Z1UJRXOUMOOFQ8` (well-known)
+- **Pi backend**: IPv6:18443 (Starlink global v6 lease — current address
+  is whatever `cloudless-ddns-updater` last wrote into the Lambda env)
+- **PRIMARY R53 health check**: `e239ad5c-dd17-40d7-8045-a153715168cf` (probes CloudFront)
+- **SECONDARY R53 health check**: `30a69f1c-8d48-49bd-9067-cabec979478b` (probes APIGW frontend)
 - **R53 hosted zone**: `Z079608614L53CC4EAZM3`
 - **ECR repo**: `278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app` (tag-immutable)
 - **IAM users in the Pi orbit**: `cloudless-pi-standby`, `cloudless-pi-proxy`, `cloudless-failover-monitor`, `cloudless-ddns-updater`

@@ -1,14 +1,24 @@
 name: Pi TLS Cert Check
 
-# Probes the Pi standby's WAN endpoint and asserts:
-#   - TLS handshake succeeds with SNI=cloudless.gr
-#   - Cert SAN/CN matches cloudless.gr
-#   - notAfter is more than 14 days away
+# Probes the SECONDARY failover frontend end-to-end and asserts:
+#   1. APIGW custom domain resolves
+#   2. TLS handshake succeeds with SNI=cloudless.gr
+#   3. Cert SAN matches cloudless.gr (the APIGW custom-domain ACM cert)
+#   4. /api/health returns 200 from behind the Lambda IPv6 proxy
 #
-# This catches the failure mode where the Pi cert expires silently while
-# CloudFront is healthy. The R53 primary health check would never notice
-# (it always probes whatever's currently routed) — so without this, you
-# discover the dead Pi cert at 3am during a real failover.
+# Architecture (post PR #100, sst.config.ts:83-200):
+#   Public client
+#     ↓ DNS: cloudless.gr → R53 alias to APIGW (when PRIMARY/CloudFront red)
+#     ↓ TLS to APIGW custom domain (ACM cert, AWS-managed)
+#     ↓ Lambda 'cloudless-pi-proxy' (dual-stack VPC)
+#     ↓ HTTPS over IPv6:18443
+#   Pi (Starlink CGNAT — IPv4 unusable, IPv6 only)
+#
+# Why probe APIGW directly instead of cloudless.gr: while CloudFront is
+# healthy, R53 returns CloudFront. Probing cloudless.gr would never
+# exercise the SECONDARY path. Hitting the APIGW custom domain directly
+# with SNI=cloudless.gr gives us "the failover endpoint is healthy" on
+# every run, not just during real outages.
 #
 # Schedule: daily at 06:30 UTC. Also runnable on demand.
 
@@ -21,48 +31,42 @@ permissions:
   contents: read
 
 env:
-  # Probing the Pi by raw WAN IP. If the WAN IP becomes dynamic (the
-  # existence of the `cloudless-ddns-updater` IAM user hints at this),
-  # create a DNS record like `pi-standby.cloudless.gr` and switch
-  # PI_HOST to that name — SNI must remain `cloudless.gr` either way.
-  PI_HOST: '150.228.63.192'
-  PI_SNI: 'cloudless.gr'
+  # APIGW custom domain backing the SECONDARY failover (apex). The www
+  # variant has its own custom domain (d-2msx2z5q7d.execute-api...);
+  # apex covers the canonical traffic.
+  APIGW_HOST: 'd-uy6dmk95il.execute-api.us-east-1.amazonaws.com'
+  SNI: 'cloudless.gr'
   MIN_DAYS_REMAINING: 14
 
 jobs:
   probe:
-    name: Probe Pi TLS
+    name: Probe SECONDARY failover
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Fetch and validate cert
+      - name: TLS handshake + cert validity
         run: |
           set -euo pipefail
 
-          echo "→ Pre-check: TCP reachability of ${PI_HOST}:443"
-          if ! timeout 10 bash -c "exec 3<>/dev/tcp/${PI_HOST}/443" 2>/dev/null; then
-            echo "::error::Pi TCP port 443 is not reachable from the runner."
-            echo "::error::This is a critical HA failure — Route 53 secondary points at ${PI_HOST} but nothing is listening (or a firewall/NAT is blocking external 443)."
-            echo "::error::Possible causes: (1) Pi offline, (2) NAT not forwarding 443, (3) WAN IP changed, (4) firewall blocks the GitHub runner IP range."
+          echo "→ Pre-check: TCP/443 reachability of ${APIGW_HOST}"
+          if ! timeout 10 bash -c "exec 3<>/dev/tcp/${APIGW_HOST}/443" 2>/dev/null; then
+            echo "::error::APIGW frontend ${APIGW_HOST}:443 not reachable from runner."
+            echo "::error::This is a critical HA failure — the SECONDARY R53 health check should be probing this; if it's red the failover path is unusable."
             exit 1
           fi
           echo "  ✓ TCP 443 open"
 
-          echo "→ Connecting to ${PI_HOST}:443 with SNI=${PI_SNI}"
-          # `-verify_return_error` forces a non-zero exit if the chain is
-          # invalid (self-signed, expired, untrusted CA, etc.). Stream both
-          # stdout and stderr to the same file so the partial PEM output and
-          # the verification error context are both captured for diagnosis.
+          echo "→ Connecting with SNI=${SNI}"
           set +e
           timeout 15 openssl s_client \
-            -connect "${PI_HOST}:443" \
-            -servername "${PI_SNI}" \
+            -connect "${APIGW_HOST}:443" \
+            -servername "${SNI}" \
             -showcerts -verify_return_error \
             < /dev/null > /tmp/openssl.out 2>&1
           rc=$?
           set -e
           if [ "$rc" -ne 0 ]; then
-            echo "::error::TLS handshake failed for ${PI_HOST} (SNI=${PI_SNI}, exit=${rc})"
+            echo "::error::TLS handshake failed (exit=${rc})"
             echo "::group::openssl combined output"
             cat /tmp/openssl.out >&2
             echo "::endgroup::"
@@ -70,43 +74,64 @@ jobs:
           fi
           cert=$(cat /tmp/openssl.out)
 
-          # Extract the leaf cert (first BEGIN/END block)
+          # Extract leaf cert
           leaf=$(echo "$cert" | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' | awk '/-----BEGIN/{i++} i==1')
 
-          # Validity window
+          # Validity window — APIGW + ACM auto-renew, but the workflow still
+          # asserts the bound cert is current in case rotation broke.
           not_after=$(echo "$leaf" | openssl x509 -noout -enddate | cut -d= -f2)
           not_after_epoch=$(date -d "$not_after" +%s)
-          now_epoch=$(date +%s)
-          days_left=$(( (not_after_epoch - now_epoch) / 86400 ))
-          echo "→ Cert notAfter: ${not_after} (${days_left} days remaining)"
+          days_left=$(( (not_after_epoch - $(date +%s)) / 86400 ))
+          echo "→ notAfter: ${not_after} (${days_left} days remaining)"
 
           if [ "$days_left" -lt "${MIN_DAYS_REMAINING}" ]; then
-            echo "::error::Pi cert expires in ${days_left} days (< ${MIN_DAYS_REMAINING}). Renew now."
+            echo "::error::Cert expires in ${days_left} days (< ${MIN_DAYS_REMAINING}). ACM auto-renewal may have failed."
             exit 1
           fi
 
-          # SAN / CN match
+          # SAN match
           san=$(echo "$leaf" | openssl x509 -noout -text | grep -A1 "Subject Alternative Name" | tail -1 | tr ',' '\n' | tr -d ' ')
-          cn=$(echo "$leaf" | openssl x509 -noout -subject | grep -oE 'CN[ ]?=[ ]?[^,/]+' | sed 's/CN[ ]*=[ ]*//')
-          echo "→ Subject CN: ${cn}"
-          echo "→ SAN: ${san}"
-
-          if echo "$san" | grep -q "DNS:${PI_SNI}\b" || [ "${cn}" = "${PI_SNI}" ]; then
-            echo "✅ Cert valid for ${PI_SNI}, ${days_left} days remaining"
+          if echo "$san" | grep -q "DNS:${SNI}\b"; then
+            echo "✅ Cert valid for ${SNI} on APIGW frontend, ${days_left} days remaining"
           else
-            echo "::error::Cert at ${PI_HOST} does not match ${PI_SNI} (CN=${cn}, SAN=${san})"
+            echo "::error::Cert at ${APIGW_HOST} does not include ${SNI} in SAN: ${san}"
             exit 1
           fi
 
-          # Add a step summary line for the routine to scrape
+          # Save for next step
+          echo "DAYS_LEFT=${days_left}" >> "$GITHUB_ENV"
+
+      - name: End-to-end /api/health through Lambda proxy → Pi
+        run: |
+          set -euo pipefail
+          echo "→ GET /api/health via SECONDARY (Host: ${SNI}, target: ${APIGW_HOST})"
+          # --resolve forces curl to TCP-connect to APIGW while presenting
+          # SNI/Host = cloudless.gr. This is exactly how a failover client
+          # would resolve cloudless.gr when R53 returns the APIGW alias.
+          response=$(timeout 20 curl -fsS \
+            --resolve "${SNI}:443:$(getent ahosts "${APIGW_HOST}" | awk 'NR==1{print $1}')" \
+            -H "User-Agent: pi-tls-cert-check (gh-actions)" \
+            "https://${SNI}/api/health" -o /tmp/body -w "%{http_code}|%{time_total}s")
+          code="${response%%|*}"
+          time="${response#*|}"
+          echo "  → HTTP ${code} in ${time}"
+          cat /tmp/body
+          echo
+          if [ "${code}" != "200" ]; then
+            echo "::error::SECONDARY /api/health returned ${code} (Lambda proxy or Pi unreachable)."
+            exit 1
+          fi
+
+      - name: Step summary
+        if: success()
+        run: |
           {
-            echo "## Pi TLS Cert Check"
+            echo "## SECONDARY Failover Health"
             echo ""
             echo "| Field | Value |"
             echo "|---|---|"
-            echo "| Host | ${PI_HOST} |"
-            echo "| SNI | ${PI_SNI} |"
-            echo "| Subject CN | ${cn} |"
-            echo "| Days remaining | ${days_left} |"
-            echo "| Status | ✅ valid |"
+            echo "| APIGW frontend | \`${APIGW_HOST}\` |"
+            echo "| SNI | ${SNI} |"
+            echo "| Cert days remaining | ${DAYS_LEFT} |"
+            echo "| /api/health | ✅ 200 |"
           } >> "$GITHUB_STEP_SUMMARY"
