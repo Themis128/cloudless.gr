@@ -63,7 +63,7 @@ kubectl set image deployment/cloudless cloudless=278585680617.dkr.ecr.us-east-1.
 ### 2. SECONDARY-path health monitoring — `Pi TLS Cert Check` workflow
 
 [.github/workflows/pi-tls-cert-check.yml](../.github/workflows/pi-tls-cert-check.yml)
-runs daily at 06:30 UTC against the APIGW SECONDARY frontend
+runs every 6h (00:30, 06:30, 12:30, 18:30 UTC) against the APIGW SECONDARY frontend
 (`d-uy6dmk95il.execute-api.us-east-1.amazonaws.com`) and asserts:
 
 - TCP/443 reachable
@@ -103,7 +103,7 @@ probe failure, so a flapping check doesn't spam the inbox.
 Together with #2 (daily proactive APIGW probe) this gives both
 *pre-incident* and *during-incident* signals:
 
-- Daily 06:30 UTC TLS+health check: "the failover path is currently usable"
+- 6-hourly TLS+health check (00:30, 06:30, 12:30, 18:30 UTC): "the failover path is currently usable"
 - SNS edge alert: "we just flipped to (or from) failover RIGHT NOW"
 
 The CI health routine catches workflow-level regressions on a weekly cadence;
