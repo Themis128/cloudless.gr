@@ -8,7 +8,7 @@ const mockVerify = vi.fn();
 
 vi.mock("@/lib/slack-verify", () => ({
   verifySlackRequest: (...args: unknown[]) => mockVerify(...args),
-  unauthorizedSlack: vi.fn((reason: string) => {
+  unauthorizedSlack: vi.fn((_reason: string) => {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }),
 }));

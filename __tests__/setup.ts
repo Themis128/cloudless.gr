@@ -87,7 +87,6 @@ process.env.COGNITO_CLIENT_ID = "test-client-id";
 beforeEach(() => {
   // Prevent the CI job-level SLACK_WEBHOOK_URL secret from leaking into tests.
   // Tests that need it set use process.env assignment directly.
-  // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
   delete process.env.SLACK_WEBHOOK_URL;
   // Restore credentials that 503 "not configured" tests may clear.
   process.env.GOOGLE_CLIENT_EMAIL = "svc@project.iam.gserviceaccount.com";

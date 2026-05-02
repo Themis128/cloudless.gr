@@ -296,7 +296,13 @@ describe("notion-projects.ts", () => {
       mockNotionFetch.mockRejectedValueOnce(new Error("fail"));
 
       const { updateProjectStatus } = await import("@/lib/notion-projects");
-      expect(await updateProjectStatus("proj-1", "Done" as any)).toBe(false);
+      // Intentionally pass an out-of-domain status to verify the catch path.
+      expect(
+        await updateProjectStatus(
+          "proj-1",
+          "Done" as unknown as Parameters<typeof updateProjectStatus>[1],
+        ),
+      ).toBe(false);
     });
 
     it("returns false when not configured", async () => {

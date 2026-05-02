@@ -34,7 +34,7 @@ describe("POST /api/subscribe", () => {
     const { POST } = await import("@/app/api/subscribe/route");
     const request = new globalThis.Request(SUBSCRIBE_URL, {
       method: "POST",
-      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
+      headers: { [HEADER_CONTENT_TYPE]: CONTENT_TYPE_JSON },
       body: JSON.stringify({ email: "not-an-email" }),
     });
 
@@ -50,7 +50,7 @@ describe("POST /api/subscribe", () => {
     const { POST } = await import("@/app/api/subscribe/route");
     const request = new globalThis.Request(SUBSCRIBE_URL, {
       method: "POST",
-      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
+      headers: { [HEADER_CONTENT_TYPE]: CONTENT_TYPE_JSON },
       body: JSON.stringify({ email: "hello@cloudless.gr" }),
     });
 
@@ -68,7 +68,7 @@ describe("POST /api/subscribe", () => {
     const { POST } = await import("@/app/api/subscribe/route");
     const request = new globalThis.Request(SUBSCRIBE_URL, {
       method: "POST",
-      headers: { HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON },
+      headers: { [HEADER_CONTENT_TYPE]: CONTENT_TYPE_JSON },
       body: JSON.stringify({ email: "hello@cloudless.gr" }),
     });
 
