@@ -43,6 +43,7 @@ const HEADER_CONTENT_TYPE = "content-type";
 const CONTENT_TYPE_JSON = "application/json";
 const SLACK_HERE_MENTION = "<@here>";
 const BOOKING_DATE = "2026-06-10T09:00:00Z";
+const ACTOR_THEMIS = "Themis";
 
 describe("SlackClient", () => {
   let SlackClient: (typeof import("@/lib/slack-notify"))["SlackClient"];
@@ -318,7 +319,7 @@ describe("slackContactNotify", () => {
     vi.stubGlobal("fetch", mockFetch);
 
     const result = await slackContactNotify({
-      name: "Themis",
+      name: ACTOR_THEMIS,
       email: "themis@cloudless.gr",
       company: "Cloudless",
       service: "AI consulting",
@@ -328,7 +329,7 @@ describe("slackContactNotify", () => {
     expect(result).toBe(true);
     const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(opts.body as string);
-    expect(body.text).toContain("Themis");
+    expect(body.text).toContain(ACTOR_THEMIS);
     expect(body.text).toContain("themis@cloudless.gr");
   });
 });
@@ -524,12 +525,12 @@ describe("slackDeployNotify", () => {
       version: "1.0.0",
       stage: "production",
       status: STATUS_SUCCEEDED,
-      actor: "Themis",
+      actor: ACTOR_THEMIS,
     });
 
     const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(opts.body as string);
     const bodyStr = JSON.stringify(body);
-    expect(bodyStr).toContain("Themis");
+    expect(bodyStr).toContain(ACTOR_THEMIS);
   });
 });
