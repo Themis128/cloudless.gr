@@ -24,7 +24,11 @@ const getSnapshot = (): boolean =>
 const getServerSnapshot = (): boolean => false;
 
 export function HubSpotScript() {
-  const shouldLoad = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const shouldLoad = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
   if (!shouldLoad) return null;
   return (
     <Script

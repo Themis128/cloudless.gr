@@ -2,7 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { getLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { translate, type Locale, isSupportedLocale, defaultLocale } from "@/lib/i18n";
+import {
+  translate,
+  type Locale,
+  isSupportedLocale,
+  defaultLocale,
+} from "@/lib/i18n";
 
 const FALLBACK = {
   title: "Page not found",
