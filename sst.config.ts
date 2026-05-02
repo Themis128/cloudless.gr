@@ -85,33 +85,47 @@ export default {
     // Architecture: cloudless.gr is dual-homed.
     //   - PRIMARY: CloudFront distributions (this SST stack), health-checked
     //     against https://cloudless.gr/api/health
-    //   - SECONDARY: Pi 5 standby at WAN 150.228.63.192 (cloudless.online HA)
+    //   - SECONDARY: API Gateway HTTP API → Lambda IPv6 proxy → Pi 5
+    //
+    // Starlink/CGNAT pivot (2026-05-02): the Pi has no public IPv4 (Starlink
+    // CGNAT) but has a global IPv6. The SECONDARY path is now an APIGW HTTP
+    // API (`cloudless-pi-frontend`, id `dwtp9xt4dd`) with custom domains for
+    // cloudless.gr + www.cloudless.gr, fronted by a Lambda function
+    // (`cloudless-pi-proxy`) that runs in a dual-stack VPC and forwards each
+    // request to the Pi over IPv6 on port 18443. The Pi's current global v6
+    // is kept fresh in SSM by `cloudless-ddns-updater` (every 5 min); the
+    // Lambda caches the lookup with a 5 min TTL.
+    //
+    // SECONDARY records are bound to a dedicated R53 health check that
+    // probes the APIGW frontend (NOT CloudFront) so an outage on the AWS
+    // SECONDARY path itself doesn't get masked by the PRIMARY health check.
     //
     // Route 53 returns the primary while it's healthy and flips to the
-    // secondary when the health check fails. CloudFront's hosted zone ID is
-    // the well-known constant Z2FDTNDATAQYW2 for all alias records.
+    // secondary when the PRIMARY health check fails. CloudFront's hosted zone
+    // ID is the well-known constant Z2FDTNDATAQYW2 for all alias records.
+    // APIGW regional has its own well-known zone ID Z1UJRXOUMOOFQ8.
     if (isProd) {
       const zoneId = "Z079608614L53CC4EAZM3"; // cloudless.gr hosted zone
-      const healthCheckId = "e239ad5c-dd17-40d7-8045-a153715168cf";
-      const piWanIp = "150.228.63.192";
+      const healthCheckId = "e239ad5c-dd17-40d7-8045-a153715168cf"; // PRIMARY (CloudFront)
+      const secondaryHealthCheckId = "30a69f1c-8d48-49bd-9067-cabec979478b"; // SECONDARY (APIGW frontend)
       const cfZoneId = "Z2FDTNDATAQYW2";
+      const apigwZoneId = "Z1UJRXOUMOOFQ8"; // APIGW regional, us-east-1
       const apexCfDomain = "d3k7muo3c6lw6s.cloudfront.net";
       const wwwCfDomain = "dgrxxatzrgxfi.cloudfront.net";
+      const apexApigwDomain = "d-uy6dmk95il.execute-api.us-east-1.amazonaws.com";
+      const wwwApigwDomain = "d-2msx2z5q7d.execute-api.us-east-1.amazonaws.com";
 
       // IMPORTANT — pre-deploy migration required.
       // The Route 53 records below are *adopted*, not *created*, on first
-      // deploy. Before merging this PR + running `sst deploy`, the operator
-      // must run `scripts/migrate-route53-failover.sh` to atomically convert
-      // the four pre-existing simple alias records (apex+www × A+AAAA) into
-      // the six failover records declared here. The `import:` resource option
-      // tells Pulumi to read state from R53 instead of creating duplicates
-      // (which would fail with "RRSet already exists"). Pulumi import ID
-      // format for Route 53 records:  ZONEID_NAME_TYPE_SETIDENTIFIER
-      // (underscore-separated).
+      // deploy. The `import:` resource option tells Pulumi to read state from
+      // R53 instead of creating duplicates. Pulumi import ID format for
+      // Route 53 records: ZONEID_NAME_TYPE_SETIDENTIFIER (underscore-sep).
       //
-      // Pi has no IPv6, so AAAA SECONDARY is intentionally omitted. While the
-      // primary is healthy, AAAA resolves normally; if the primary fails,
-      // dual-stack clients fall back to v4 via the A SECONDARY.
+      // SECONDARY records (apex+www × A+AAAA, all 4 alias to APIGW) MUST be
+      // pre-applied to Route 53 before `sst deploy` runs against this branch.
+      // The orchestrator will land them via aws-cli prior to merging this PR.
+      //
+      // PRIMARY records were already migrated by PR #90.
 
       // Apex — PRIMARY A (CloudFront alias)
       new aws.route53.Record(
@@ -134,7 +148,7 @@ export default {
         { import: `${zoneId}_cloudless.gr_A_primary` },
       );
 
-      // Apex — SECONDARY A (Pi A record)
+      // Apex — SECONDARY A (alias to APIGW custom domain, dual-stack)
       new aws.route53.Record(
         "ApexSecondary",
         {
@@ -143,13 +157,40 @@ export default {
           type: "A",
           setIdentifier: "secondary",
           failoverRoutingPolicies: [{ type: "SECONDARY" }],
-          ttl: 60,
-          records: [piWanIp],
+          healthCheckId: secondaryHealthCheckId,
+          aliases: [
+            {
+              name: apexApigwDomain,
+              zoneId: apigwZoneId,
+              evaluateTargetHealth: true,
+            },
+          ],
         },
         { import: `${zoneId}_cloudless.gr_A_secondary` },
       );
 
-      // Apex — PRIMARY AAAA (CloudFront alias). No SECONDARY — Pi has no v6.
+      // Apex — SECONDARY AAAA (alias to APIGW custom domain, dual-stack)
+      new aws.route53.Record(
+        "ApexSecondaryAAAA",
+        {
+          zoneId,
+          name: "cloudless.gr",
+          type: "AAAA",
+          setIdentifier: "secondary",
+          failoverRoutingPolicies: [{ type: "SECONDARY" }],
+          healthCheckId: secondaryHealthCheckId,
+          aliases: [
+            {
+              name: apexApigwDomain,
+              zoneId: apigwZoneId,
+              evaluateTargetHealth: true,
+            },
+          ],
+        },
+        { import: `${zoneId}_cloudless.gr_AAAA_secondary` },
+      );
+
+      // Apex — PRIMARY AAAA (CloudFront alias).
       new aws.route53.Record(
         "ApexPrimaryAAAA",
         {
@@ -191,7 +232,7 @@ export default {
         { import: `${zoneId}_www.cloudless.gr_A_primary` },
       );
 
-      // www — SECONDARY A (Pi A record)
+      // www — SECONDARY A (alias to APIGW custom domain, dual-stack)
       new aws.route53.Record(
         "WwwSecondary",
         {
@@ -200,13 +241,40 @@ export default {
           type: "A",
           setIdentifier: "secondary",
           failoverRoutingPolicies: [{ type: "SECONDARY" }],
-          ttl: 60,
-          records: [piWanIp],
+          healthCheckId: secondaryHealthCheckId,
+          aliases: [
+            {
+              name: wwwApigwDomain,
+              zoneId: apigwZoneId,
+              evaluateTargetHealth: true,
+            },
+          ],
         },
         { import: `${zoneId}_www.cloudless.gr_A_secondary` },
       );
 
-      // www — PRIMARY AAAA (CloudFront alias). No SECONDARY — Pi has no v6.
+      // www — SECONDARY AAAA (alias to APIGW custom domain, dual-stack)
+      new aws.route53.Record(
+        "WwwSecondaryAAAA",
+        {
+          zoneId,
+          name: "www.cloudless.gr",
+          type: "AAAA",
+          setIdentifier: "secondary",
+          failoverRoutingPolicies: [{ type: "SECONDARY" }],
+          healthCheckId: secondaryHealthCheckId,
+          aliases: [
+            {
+              name: wwwApigwDomain,
+              zoneId: apigwZoneId,
+              evaluateTargetHealth: true,
+            },
+          ],
+        },
+        { import: `${zoneId}_www.cloudless.gr_AAAA_secondary` },
+      );
+
+      // www — PRIMARY AAAA (CloudFront alias).
       new aws.route53.Record(
         "WwwPrimaryAAAA",
         {
