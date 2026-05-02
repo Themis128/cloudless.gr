@@ -33,34 +33,60 @@ const SSE_DATA_PREFIX = "data: ";
 
 const encoder = new TextEncoder();
 
-function forwardSseLine(
-  line: string,
-  controller: ReadableStreamDefaultController,
-): void {
-  if (!line.startsWith(SSE_DATA_PREFIX)) return;
-  const data = line.slice(SSE_DATA_PREFIX.length).trim();
-  if (data === "" || data === "[DONE]") return;
+function sanitizeDeltaText(input: string | undefined): string {
+  return escapeHtml(input ?? "");
+}
+
+type ParsedSseEvent =
+  | { kind: "text"; text: string }
+  | { kind: "done" }
+  | null;
+
+function parseSseEvent(data: string): ParsedSseEvent {
   try {
     const parsed = JSON.parse(data) as {
       type?: string;
       delta?: { type?: string; text?: string };
     };
+
     if (
       parsed.type === "content_block_delta" &&
       parsed.delta?.type === "text_delta"
     ) {
-      const text = escapeHtml(parsed.delta.text ?? "");
-      controller.enqueue(
-        encoder.encode(`data: ${JSON.stringify({ text })}\n\n`),
-      );
-      return;
+      return { kind: "text", text: sanitizeDeltaText(parsed.delta.text) };
     }
+
     if (parsed.type === "message_stop") {
-      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      return { kind: "done" };
     }
+
+    return null;
   } catch {
     // skip malformed SSE lines
+    return null;
   }
+}
+
+function forwardSseLine(
+  line: string,
+  controller: ReadableStreamDefaultController,
+): void {
+  if (!line.startsWith(SSE_DATA_PREFIX)) return;
+
+  const data = line.slice(SSE_DATA_PREFIX.length).trim();
+  if (data === "" || data === "[DONE]") return;
+
+  const event = parseSseEvent(data);
+  if (!event) return;
+
+  if (event.kind === "text") {
+    controller.enqueue(
+      encoder.encode(`data: ${JSON.stringify({ text: event.text })}\n\n`),
+    );
+    return;
+  }
+
+  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
 }
 
 interface RawMessage {
