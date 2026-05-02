@@ -469,24 +469,26 @@ export async function rolloverSprintTasks(
   const tasks = await getSprintTasks(fromSprint);
   const incomplete = tasks.filter((t) => t.status !== "Done");
 
-  let moved = 0;
-  for (const task of incomplete) {
-    try {
-      await notionFetch(`/pages/${task.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          properties: {
-            Sprint: { rich_text: [{ text: { content: toSprint } }] },
-          },
-        }),
-      });
-      moved++;
-    } catch (err) {
-      console.error(`[Notion Tasks] Failed to move task ${task.id}:`, err);
-    }
-  }
+  const results = await Promise.all(
+    incomplete.map(async (task) => {
+      try {
+        await notionFetch(`/pages/${task.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            properties: {
+              Sprint: { rich_text: [{ text: { content: toSprint } }] },
+            },
+          }),
+        });
+        return true;
+      } catch (err) {
+        console.error(`[Notion Tasks] Failed to move task ${task.id}:`, err);
+        return false;
+      }
+    }),
+  );
 
-  return moved;
+  return results.filter(Boolean).length;
 }
 
 /**
@@ -498,12 +500,10 @@ export async function bulkUpdateTaskStatus(
 ): Promise<number> {
   if (!(await isConfiguredAsync("NOTION_API_KEY"))) return 0;
 
-  let updated = 0;
-  for (const id of taskIds) {
-    const ok = await updateTaskStatus(id, status);
-    if (ok) updated++;
-  }
-  return updated;
+  const results = await Promise.all(
+    taskIds.map((id) => updateTaskStatus(id, status)),
+  );
+  return results.filter(Boolean).length;
 }
 
 /**

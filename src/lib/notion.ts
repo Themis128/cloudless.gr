@@ -42,6 +42,10 @@ export async function notionFetch<T = unknown>(
   const MAX_RETRIES = 3;
   const headers = await notionHeaders();
   const url = `${NOTION_API}${path}`;
+  // Validate the constructed URL stays on the Notion API origin (SSRF guard)
+  if (new URL(url).origin !== new URL(NOTION_API).origin) {
+    throw new Error(`[Notion] Path resolves outside Notion API: ${path}`);
+  }
   const reqInit: RequestInit = {
     ...init,
     headers: { ...headers, ...(init?.headers ?? {}) },
@@ -263,8 +267,8 @@ export async function notionFetchAll<T = unknown>(
       page_size: 100,
       ...(cursor ? { start_cursor: cursor } : {}),
     };
+    // NOSONAR — cursor-based pagination requires sequential reads (cursor from previous page)
     const data = await notionFetch<{
-      // NOSONAR — cursor-based pagination requires sequential reads
       results: T[];
       has_more: boolean;
       next_cursor?: string;
@@ -286,8 +290,8 @@ export async function notionListAll<T = unknown>(path: string): Promise<T[]> {
   do {
     const sep = path.includes("?") ? "&" : "?";
     const url = `${path}${sep}page_size=100${cursor ? `&start_cursor=${cursor}` : ""}`;
+    // NOSONAR — cursor-based pagination requires sequential reads (cursor from previous page)
     const data = await notionFetch<{
-      // NOSONAR — cursor-based pagination requires sequential reads
       results: T[];
       has_more: boolean;
       next_cursor?: string;

@@ -80,7 +80,7 @@ export class SlackClient {
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
-        const result = await this.postOnce(payload, token, webhookUrl);
+        const result = await this.postOnce(payload, token, webhookUrl); // NOSONAR — sequential retry requires loop
         if (result === true) return true;
         // result === null → terminal API error, don't retry
         if (result === null) return false;
