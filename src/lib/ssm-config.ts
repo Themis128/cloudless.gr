@@ -79,6 +79,7 @@ interface AppConfig {
   META_PAGE_ID: string;
   // AI
   ANTHROPIC_API_KEY: string;
+  ANTHROPIC_CHAT_MODEL: string;
 }
 
 let cached: AppConfig | null = null;
@@ -157,6 +158,7 @@ function buildConfigFromEnv(): AppConfig {
     META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN || "",
     META_PAGE_ID: process.env.META_PAGE_ID || "",
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
+    ANTHROPIC_CHAT_MODEL: process.env.ANTHROPIC_CHAT_MODEL || "",
   };
 }
 
@@ -304,6 +306,7 @@ export async function getConfig(): Promise<AppConfig> {
     META_ACCESS_TOKEN: params.get("META_ACCESS_TOKEN") ?? "",
     META_PAGE_ID: params.get("META_PAGE_ID") ?? "",
     ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
+    ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",
   };
   cachedAt = Date.now();
 

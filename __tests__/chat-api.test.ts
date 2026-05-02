@@ -47,8 +47,12 @@ describe("POST /api/chat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
+    process.env.ANTHROPIC_CHAT_MODEL = "claude-3-5-haiku-latest";
     mockGetConfig.mockImplementation(() =>
-      Promise.resolve({ ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "" }),
+      Promise.resolve({
+        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
+        ANTHROPIC_CHAT_MODEL: process.env.ANTHROPIC_CHAT_MODEL ?? "",
+      }),
     );
   });
 
@@ -100,7 +104,7 @@ describe("POST /api/chat", () => {
       expect.objectContaining({ method: "POST" })
     );
     const callBody = JSON.parse((mockFetch.mock.calls[0][1] as RequestInit).body as string);
-    expect(callBody.model).toBe("claude-haiku-4-5-20251001");
+    expect(callBody.model).toBe("claude-3-5-haiku-latest");
     expect(callBody.stream).toBe(true);
   });
 
