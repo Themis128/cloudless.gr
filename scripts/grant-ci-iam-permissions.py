@@ -49,13 +49,30 @@ DEPLOY_POLICY = {
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid": "AllowSSTIAMRoleManagement",
+            "Sid": "AllowSSTIAMRoleLifecycle",
             "Effect": "Allow",
             "Action": [
+                # Read state (refresh)
                 "iam:GetRole",
+                "iam:ListRoleTags",
+                "iam:ListRolePolicies",
+                "iam:GetRolePolicy",
+                "iam:ListAttachedRolePolicies",
+                # Update tags (defaultTags)
                 "iam:TagRole",
                 "iam:UntagRole",
-                "iam:ListRoleTags",
+                # Manage inline + attached policies
+                "iam:PutRolePolicy",
+                "iam:DeleteRolePolicy",
+                "iam:AttachRolePolicy",
+                "iam:DetachRolePolicy",
+                # Create/delete roles when stack changes Lambdas
+                "iam:CreateRole",
+                "iam:DeleteRole",
+                "iam:UpdateRole",
+                "iam:UpdateAssumeRolePolicy",
+                # Pass roles to Lambda/etc.
+                "iam:PassRole",
             ],
             "Resource": f"arn:aws:iam::*:role/{SST_ROLE_PREFIX}*",
         },
@@ -174,10 +191,19 @@ def main() -> int:
     deploy_ok = pi_ok = True
 
     if not args.skip_deploy:
+        sst_actions = [
+            "iam:GetRole", "iam:ListRoleTags", "iam:ListRolePolicies",
+            "iam:GetRolePolicy", "iam:ListAttachedRolePolicies",
+            "iam:TagRole", "iam:UntagRole",
+            "iam:PutRolePolicy", "iam:DeleteRolePolicy",
+            "iam:AttachRolePolicy", "iam:DetachRolePolicy",
+            "iam:CreateRole", "iam:DeleteRole", "iam:UpdateRole",
+            "iam:UpdateAssumeRolePolicy", "iam:PassRole",
+        ]
         deploy_ok = verify(
             iam,
             args.deploy_role,
-            ["iam:GetRole", "iam:TagRole", "iam:UntagRole", "iam:ListRoleTags"],
+            sst_actions,
             [f"arn:aws:iam::{ACCOUNT_ID}:role/{SST_ROLE_PREFIX}example"],
         ) and verify(
             iam,
