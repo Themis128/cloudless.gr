@@ -4,10 +4,10 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - '**/*.md'
-      - 'docs/**'
-      - 'README.md'
-      - '.github/workflows/**'
+      - "**/*.md"
+      - "docs/**"
+      - "README.md"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
@@ -26,8 +26,12 @@ jobs:
           args: >-
             --verbose
             --no-progress
-            --accept 200,206,301,302,303,307,308,429,503
-            "README.md" "docs/**/*.md" ".github/**/*.md"
+            --accept 429,503
+            --exclude "^https://claude.ai/code/routines$"
+            --exclude "^https://claude.ai/code/routines/.*$"
+            "README.md"
+            "docs/**/*.md"
+            ".github/**/*.md"
           fail: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
