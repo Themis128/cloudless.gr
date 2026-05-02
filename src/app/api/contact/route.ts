@@ -156,7 +156,7 @@ export async function POST(request: Request) {
       email,
       firstName: nameParts[0],
       lastName: nameParts.slice(1).join(" ") || undefined,
-      clientIpAddress: ip !== "unknown" ? ip : undefined,
+      clientIpAddress: ip === "unknown" ? undefined : ip,
       clientUserAgent: userAgent,
       fbp,
       fbc,

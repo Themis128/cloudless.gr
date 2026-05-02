@@ -63,7 +63,7 @@ describe('hubspot.ts', () => {
 
   it('listContacts uses default 10 for NaN', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: [] }) });
-    await hubspot.listContacts(NaN);
+    await hubspot.listContacts(Number.NaN);
     const url: string = mockFetch.mock.calls[0][0];
     expect(url).toContain('limit=10');
   });

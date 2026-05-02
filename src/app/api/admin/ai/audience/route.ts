@@ -92,7 +92,7 @@ Only include the platforms that were requested. Tailor recommendations for the G
     const text = await callClaude(prompt, apiKey, { maxTokens: 1_500 });
     let targeting: unknown;
     try {
-      targeting = JSON.parse(text.replace(/```json\n?|\n?```/g, "").trim());
+      targeting = JSON.parse(text.replaceAll(/```json\n?|\n?```/g, "").trim());
     } catch {
       targeting = { raw: text };
     }

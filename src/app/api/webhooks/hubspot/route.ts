@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { getIntegrationsAsync } from "@/lib/integrations";
 import { SlackClient } from "@/lib/slack-notify";
 
@@ -33,7 +33,7 @@ async function verifySignatureV3(
   const timestamp = request.headers.get("x-hubspot-signature-timestamp");
   if (!signature || !timestamp) return false;
   const age = Date.now() - Number(timestamp);
-  if (isNaN(age) || age > MAX_TIMESTAMP_AGE_MS || age < 0) return false;
+  if (Number.isNaN(age) || age > MAX_TIMESTAMP_AGE_MS || age < 0) return false;
   const input = `${request.method}${request.url}${body}${timestamp}`;
   const expected = createHmac("sha256", clientSecret)
     .update(input)
@@ -143,7 +143,7 @@ async function onDealCreated(token: string, id: number): Promise<void> {
 
   const name = p?.dealname ?? "Untitled Deal";
   const amount = p?.amount
-    ? `€${parseFloat(p.amount).toLocaleString("en-IE")}`
+    ? `€${Number.parseFloat(p.amount).toLocaleString("en-IE")}`
     : "—";
   const stage = p?.dealstage ?? "—";
 
@@ -187,11 +187,12 @@ async function onDealClosedWon(token: string, id: number): Promise<void> {
 
   const name = p?.dealname ?? "Untitled Deal";
   const amount = p?.amount
-    ? `€${parseFloat(p.amount).toLocaleString("en-IE")}`
+    ? `€${Number.parseFloat(p.amount).toLocaleString("en-IE")}`
     : "";
+  const closedWonText = amount ? `Deal closed won: ${name} — ${amount}` : `Deal closed won: ${name}`;
 
   await slack.post({
-    text: `Deal closed won: ${name}${amount ? ` — ${amount}` : ""}`,
+    text: closedWonText,
     blocks: [
       {
         type: "header",
@@ -231,12 +232,14 @@ async function onTicketCreated(token: string, id: number): Promise<void> {
 
   const subject = p?.subject ?? "No subject";
   const priority = (p?.hs_ticket_priority ?? "MEDIUM").toUpperCase();
-  const priorityEmoji =
-    priority === "HIGH"
-      ? ":red_circle:"
-      : priority === "LOW"
-        ? ":large_green_circle:"
-        : ":large_yellow_circle:";
+  let priorityEmoji: string;
+  if (priority === "HIGH") {
+    priorityEmoji = ":red_circle:";
+  } else if (priority === "LOW") {
+    priorityEmoji = ":large_green_circle:";
+  } else {
+    priorityEmoji = ":large_yellow_circle:";
+  }
 
   await slack.post({
     text: `New support ticket: ${subject}`,

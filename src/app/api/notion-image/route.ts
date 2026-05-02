@@ -12,7 +12,7 @@ interface NotionPage {
 
 interface NotionBlock {
   type: string;
-  [key: string]: { file?: { url: string } } | string | unknown;
+  [key: string]: unknown;
 }
 
 export async function GET(request: NextRequest): Promise<Response> {

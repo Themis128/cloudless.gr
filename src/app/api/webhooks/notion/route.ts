@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "crypto";
+import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getIntegrations } from "@/lib/integrations";
 import { slackContactNotify } from "@/lib/slack-notify";

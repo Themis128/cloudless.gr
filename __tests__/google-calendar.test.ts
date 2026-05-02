@@ -76,7 +76,7 @@ describe("google-calendar.ts", () => {
       // 09:00 Athens = 06:00 UTC in summer (UTC+3)
       expect(slots[0]?.start).toBe("2026-06-15T06:00:00.000Z");
       // 16:30 Athens = 13:30 UTC
-      expect(slots[slots.length - 1]?.start).toBe("2026-06-15T13:30:00.000Z");
+      expect(slots.at(-1)?.start).toBe("2026-06-15T13:30:00.000Z");
 
       vi.useRealTimers();
     });
@@ -101,7 +101,7 @@ describe("google-calendar.ts", () => {
       // 09:00 Athens = 07:00 UTC in winter (UTC+2)
       expect(slots[0]?.start).toBe("2026-01-05T07:00:00.000Z");
       // 16:30 Athens = 14:30 UTC
-      expect(slots[slots.length - 1]?.start).toBe("2026-01-05T14:30:00.000Z");
+      expect(slots.at(-1)?.start).toBe("2026-01-05T14:30:00.000Z");
 
       vi.useRealTimers();
     });

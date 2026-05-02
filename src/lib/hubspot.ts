@@ -607,7 +607,7 @@ export async function getPipelineStats(): Promise<{
     let totalValue = 0;
     for (const deal of allDeals) {
       const { dealstage, amount } = deal.properties;
-      const val = parseFloat(amount || "0") || 0;
+      const val = Number.parseFloat(amount || "0") || 0;
       if (!byStage[dealstage]) byStage[dealstage] = { count: 0, value: 0 };
       byStage[dealstage].count++;
       byStage[dealstage].value += val;

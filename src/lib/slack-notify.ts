@@ -444,5 +444,5 @@ function sleep(ms: number): Promise<void> {
  * Prevents link injection (<url|text>) and @mention injection (<@here>).
  */
 function slackEscape(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }

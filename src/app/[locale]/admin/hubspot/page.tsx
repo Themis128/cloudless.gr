@@ -83,7 +83,7 @@ function computeDealStats(deals: Deal[]): Stats["deals"] {
   return {
     total: deals.length,
     pipelineValue: deals.reduce(
-      (sum, d) => sum + (parseFloat(d.properties.amount ?? "0") || 0),
+      (sum, d) => sum + (Number.parseFloat(d.properties.amount ?? "0") || 0),
       0,
     ),
     won: deals.filter((d) => d.properties.dealstage === "closedwon").length,
@@ -172,7 +172,7 @@ function useHubSpotStats() {
   return { stats, loading, error, refreshing, fetchAll };
 }
 
-function RecentLeadsTable({ loading, contacts }: { loading: boolean; contacts: Contact[] }) {
+function RecentLeadsTable({ loading, contacts }: Readonly<{ loading: boolean; contacts: Contact[] }>) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -311,11 +311,11 @@ function StatCard({
   label,
   value,
   color,
-}: {
+}: Readonly<{
   label: string;
   value: string | number;
   color: string;
-}) {
+}>) {
   return (
     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
       <p className="font-mono text-xs text-slate-500">{label}</p>

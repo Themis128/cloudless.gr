@@ -62,7 +62,7 @@ Respond with a JSON object (no markdown fences, just the raw JSON) with this str
     const text = await callClaude(prompt, apiKey, { maxTokens: 1_500 });
     let strategy: unknown;
     try {
-      strategy = JSON.parse(text.replace(/```json\n?|\n?```/g, "").trim());
+      strategy = JSON.parse(text.replaceAll(/```json\n?|\n?```/g, "").trim());
     } catch {
       strategy = { raw: text };
     }

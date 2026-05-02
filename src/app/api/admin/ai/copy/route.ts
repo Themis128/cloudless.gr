@@ -66,7 +66,7 @@ Respond with raw JSON only (no markdown fences):
     const text = await callClaude(prompt, apiKey, { maxTokens: 1_000 });
     let variants: unknown;
     try {
-      variants = JSON.parse(text.replace(/```json\n?|\n?```/g, "").trim());
+      variants = JSON.parse(text.replaceAll(/```json\n?|\n?```/g, "").trim());
     } catch {
       variants = { raw: text };
     }
