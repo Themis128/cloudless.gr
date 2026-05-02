@@ -90,12 +90,21 @@ jobs:
           CALLER_ARN=$(echo "$CALLER" | jq -r '.Arn')
           echo "Assumed identity: $CALLER_ARN"
 
-          # 2. Simulate the IAM actions required by SST defaultTags.
-          #    If we cannot run the simulation, fail early with actionable guidance.
+          # 2. If this is an assumed role ARN, simulate the attached role instead.
+          if [[ "$CALLER_ARN" =~ ^arn:aws:sts::([0-9]+):assumed-role/([^/]+)/([^/]+)$ ]]; then
+            ACCOUNT_ID="${BASH_REMATCH[1]}"
+            ROLE_NAME="${BASH_REMATCH[2]}"
+            SIMULATION_PRINCIPAL="arn:aws:iam::$ACCOUNT_ID:role/$ROLE_NAME"
+            echo "Simulating policy for role ARN: $SIMULATION_PRINCIPAL"
+          else
+            SIMULATION_PRINCIPAL="$CALLER_ARN"
+            echo "Simulating policy for principal ARN: $SIMULATION_PRINCIPAL"
+          fi
+
           REQUIRED_ACTIONS="iam:SimulatePrincipalPolicy iam:GetRole iam:TagRole iam:UntagRole iam:ListRoleTags"
 
           SIMULATION=$(aws iam simulate-principal-policy \
-            --policy-source-arn "$CALLER_ARN" \
+            --policy-source-arn "$SIMULATION_PRINCIPAL" \
             --action-names $REQUIRED_ACTIONS \
             --resource-arns "arn:aws:iam::*:role/*" \
             --output json)
