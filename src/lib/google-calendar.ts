@@ -110,9 +110,14 @@ export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
         slotStart.setUTCHours(0, 0, 0, 0);
         const offset = athensOffsetMs(slotStart);
         slotStart.setTime(
-          slotStart.getTime() + hour * MS_PER_HOUR + minute * MS_PER_MINUTE - offset,
+          slotStart.getTime() +
+            hour * MS_PER_HOUR +
+            minute * MS_PER_MINUTE -
+            offset,
         );
-        const slotEnd = new Date(slotStart.getTime() + SLOT_DURATION_MINUTES * MS_PER_MINUTE);
+        const slotEnd = new Date(
+          slotStart.getTime() + SLOT_DURATION_MINUTES * MS_PER_MINUTE,
+        );
 
         if (slotStart < now) continue;
 
@@ -211,8 +216,12 @@ export async function getConsultationsByEmail(
   const calendarId = GOOGLE_CALENDAR_ID ?? DEFAULT_CALENDAR_ID;
 
   const now = new Date();
-  const timeMin = new Date(now.getTime() - LOOKBACK_DAYS * MS_PER_DAY).toISOString();
-  const timeMax = new Date(now.getTime() + LOOKAHEAD_DAYS * MS_PER_DAY).toISOString();
+  const timeMin = new Date(
+    now.getTime() - LOOKBACK_DAYS * MS_PER_DAY,
+  ).toISOString();
+  const timeMax = new Date(
+    now.getTime() + LOOKAHEAD_DAYS * MS_PER_DAY,
+  ).toISOString();
 
   try {
     const params = new URLSearchParams({

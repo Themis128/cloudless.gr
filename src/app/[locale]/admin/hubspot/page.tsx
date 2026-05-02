@@ -3,8 +3,10 @@
 import { useEffect, useState, useCallback } from "react";
 
 const REFRESH_INTERVAL = 10_000;
-const SECTION_LABEL_CLASS = "mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600";
-const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
+const SECTION_LABEL_CLASS =
+  "mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600";
+const TH_CLASS =
+  "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
 const COLOR_WHITE = "text-white";
 const RECENT_CONTACTS_LIMIT = 5;
 
@@ -172,7 +174,10 @@ function useHubSpotStats() {
   return { stats, loading, error, refreshing, fetchAll };
 }
 
-function RecentLeadsTable({ loading, contacts }: Readonly<{ loading: boolean; contacts: Contact[] }>) {
+function RecentLeadsTable({
+  loading,
+  contacts,
+}: Readonly<{ loading: boolean; contacts: Contact[] }>) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -219,7 +224,9 @@ function RecentLeadsTable({ loading, contacts }: Readonly<{ loading: boolean; co
               </td>
               <td className="px-6 py-4 font-mono text-slate-500">
                 {c.properties.createdate
-                  ? new Date(c.properties.createdate).toLocaleDateString("en-IE")
+                  ? new Date(c.properties.createdate).toLocaleDateString(
+                      "en-IE",
+                    )
                   : "—"}
               </td>
             </tr>
@@ -279,27 +286,62 @@ export default function HubSpotOverviewPage() {
         <>
           <p className={SECTION_LABEL_CLASS}>Contacts</p>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard label="Total Contacts" value={loading ? "…" : stats.contacts.total} color={COLOR_WHITE} />
-            <StatCard label="New Leads" value={loading ? "…" : stats.contacts.newLeads} color="text-neon-cyan" />
-            <StatCard label="Open Deal" value={loading ? "…" : stats.contacts.qualified} color="text-neon-magenta" />
+            <StatCard
+              label="Total Contacts"
+              value={loading ? "…" : stats.contacts.total}
+              color={COLOR_WHITE}
+            />
+            <StatCard
+              label="New Leads"
+              value={loading ? "…" : stats.contacts.newLeads}
+              color="text-neon-cyan"
+            />
+            <StatCard
+              label="Open Deal"
+              value={loading ? "…" : stats.contacts.qualified}
+              color="text-neon-magenta"
+            />
           </div>
 
           <p className={SECTION_LABEL_CLASS}>Deals</p>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard label="Total Deals" value={loading ? "…" : stats.deals.total} color={COLOR_WHITE} />
-            <StatCard label="Pipeline Value" value={loading ? "…" : fmt(stats.deals.pipelineValue)} color="text-neon-green" />
-            <StatCard label="Won" value={loading ? "…" : stats.deals.won} color="text-neon-cyan" />
+            <StatCard
+              label="Total Deals"
+              value={loading ? "…" : stats.deals.total}
+              color={COLOR_WHITE}
+            />
+            <StatCard
+              label="Pipeline Value"
+              value={loading ? "…" : fmt(stats.deals.pipelineValue)}
+              color="text-neon-green"
+            />
+            <StatCard
+              label="Won"
+              value={loading ? "…" : stats.deals.won}
+              color="text-neon-cyan"
+            />
           </div>
 
           <p className={SECTION_LABEL_CLASS}>Support Tickets</p>
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <StatCard label="Total Tickets" value={loading ? "…" : stats.tickets.total} color={COLOR_WHITE} />
-            <StatCard label="Open" value={loading ? "…" : stats.tickets.open} color="text-yellow-400" />
+            <StatCard
+              label="Total Tickets"
+              value={loading ? "…" : stats.tickets.total}
+              color={COLOR_WHITE}
+            />
+            <StatCard
+              label="Open"
+              value={loading ? "…" : stats.tickets.open}
+              color="text-yellow-400"
+            />
           </div>
 
           <p className={SECTION_LABEL_CLASS}>Recent Leads</p>
           <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
-            <RecentLeadsTable loading={loading} contacts={stats.contacts.recent} />
+            <RecentLeadsTable
+              loading={loading}
+              contacts={stats.contacts.recent}
+            />
           </div>
         </>
       )}

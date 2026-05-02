@@ -28,7 +28,10 @@ import {
 import { getIntegrationsAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
-const DOCS_PUBLISHED_FILTER = { property: "Published", checkbox: { equals: true } };
+const DOCS_PUBLISHED_FILTER = {
+  property: "Published",
+  checkbox: { equals: true },
+};
 const DOCS_SORT = [
   { property: "Category", direction: "ascending" },
   { property: "Order", direction: "ascending" },

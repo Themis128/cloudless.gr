@@ -212,10 +212,7 @@ export async function slackSubscriberNotify(email: string): Promise<void> {
     blocks: [
       headerBlock("New Newsletter Subscriber"),
       sectionBlock(`*Email:* \`${safeEmail}\``),
-      contextBlock(
-        slackTimestamp(),
-        "cloudless.gr subscribe form",
-      ),
+      contextBlock(slackTimestamp(), "cloudless.gr subscribe form"),
       divider,
     ],
     icon_emoji: ":envelope:",
@@ -244,12 +241,13 @@ export async function slackErrorNotify(opts: {
       sectionBlock(`*${opts.title}*\n${opts.message}`),
       ...(opts.route ? [sectionBlock(`*Route:* \`${opts.route}\``)] : []),
       ...(errText
-        ? [sectionBlock(`*Details:*\n\`\`\`${errText.slice(0, MAX_ERROR_TEXT_LENGTH)}\`\`\``)]
+        ? [
+            sectionBlock(
+              `*Details:*\n\`\`\`${errText.slice(0, MAX_ERROR_TEXT_LENGTH)}\`\`\``,
+            ),
+          ]
         : []),
-      contextBlock(
-        slackTimestamp(),
-        "cloudless.gr",
-      ),
+      contextBlock(slackTimestamp(), "cloudless.gr"),
       divider,
     ],
     icon_emoji: ":rotating_light:",
@@ -290,15 +288,14 @@ export async function slackDeployNotify(opts: {
           `*Version:* \`${opts.version}\``,
           `*Stage:* \`${opts.stage}\``,
           opts.actor ? `*Actor:* ${opts.actor}` : null,
-          opts.commitSha ? `*Commit:* \`${opts.commitSha.slice(0, COMMIT_SHA_SHORT_LENGTH)}\`` : null,
+          opts.commitSha
+            ? `*Commit:* \`${opts.commitSha.slice(0, COMMIT_SHA_SHORT_LENGTH)}\``
+            : null,
         ]
           .filter((s): s is string => Boolean(s))
           .join("\n"),
       ),
-      contextBlock(
-        slackTimestamp(),
-        "cloudless.gr deploy pipeline",
-      ),
+      contextBlock(slackTimestamp(), "cloudless.gr deploy pipeline"),
       divider,
     ],
     icon_emoji: statusEmoji,
@@ -353,10 +350,7 @@ export async function slackContactNotify(data: {
       ),
       divider,
       sectionBlock(`*Message:*\n${safeMessage}`),
-      contextBlock(
-        slackTimestamp(),
-        "cloudless.gr contact form",
-      ),
+      contextBlock(slackTimestamp(), "cloudless.gr contact form"),
     ],
     icon_emoji: ":incoming_envelope:",
     username: BOT_USERNAME,
@@ -391,12 +385,13 @@ export async function slackBookingNotify(data: {
         ].join("\n"),
       ),
       ...(data.notes
-        ? [sectionBlock(`*Notes:*\n${slackEscape(data.notes).slice(0, MAX_NOTES_TEXT_LENGTH)}`)]
+        ? [
+            sectionBlock(
+              `*Notes:*\n${slackEscape(data.notes).slice(0, MAX_NOTES_TEXT_LENGTH)}`,
+            ),
+          ]
         : []),
-      contextBlock(
-        slackTimestamp(),
-        "cloudless.gr calendar booking",
-      ),
+      contextBlock(slackTimestamp(), "cloudless.gr calendar booking"),
     ],
     icon_emoji: ":calendar:",
     username: BOT_USERNAME,
@@ -421,10 +416,7 @@ export async function slackOrderNotify(data: {
           `*Session:* \`${data.sessionId.slice(0, ORDER_SESSION_DISPLAY_LENGTH)}...\``,
         ].join("\n"),
       ),
-      contextBlock(
-        slackTimestamp(),
-        "cloudless.gr stripe checkout",
-      ),
+      contextBlock(slackTimestamp(), "cloudless.gr stripe checkout"),
     ],
     icon_emoji: ":moneybag:",
     username: BOT_USERNAME,
@@ -444,5 +436,8 @@ function sleep(ms: number): Promise<void> {
  * Prevents link injection (<url|text>) and @mention injection (<@here>).
  */
 function slackEscape(text: string): string {
-  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }

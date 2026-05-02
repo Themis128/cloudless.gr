@@ -19,7 +19,12 @@ export async function GET(request: NextRequest) {
   const MAX_WEEKS = 52;
   const weeks = Math.max(
     1,
-    Math.min(Number(request.nextUrl.searchParams.get("weeks") ?? String(DEFAULT_WEEKS)), MAX_WEEKS),
+    Math.min(
+      Number(
+        request.nextUrl.searchParams.get("weeks") ?? String(DEFAULT_WEEKS),
+      ),
+      MAX_WEEKS,
+    ),
   );
 
   try {

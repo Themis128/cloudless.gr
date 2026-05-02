@@ -78,8 +78,7 @@ function mapEvent(page: any): AnalyticsEvent {
 type EventData = Parameters<typeof trackEvent>[0];
 
 async function writeEventToNotion(data: EventData): Promise<string | null> {
-  if (!(await isAnalyticsConfigured()))
-    return null;
+  if (!(await isAnalyticsConfigured())) return null;
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
@@ -158,7 +157,7 @@ export async function trackEvent(
     country?: string;
     metadata?: Record<string, unknown>;
   },
-  opts?: { immediate?: boolean },
+  _opts?: { immediate?: boolean },
 ): Promise<string | null> {
   return writeEventToNotion(data);
 }
@@ -210,8 +209,7 @@ export async function getRecentEvents(
   type?: AnalyticsEventType,
   limit = 50,
 ): Promise<AnalyticsEvent[]> {
-  if (!(await isAnalyticsConfigured()))
-    return [];
+  if (!(await isAnalyticsConfigured())) return [];
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
@@ -241,8 +239,7 @@ export async function getEventsByDateRange(
   startDate: string,
   endDate: string,
 ): Promise<AnalyticsEvent[]> {
-  if (!(await isAnalyticsConfigured()))
-    return [];
+  if (!(await isAnalyticsConfigured())) return [];
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
@@ -326,8 +323,7 @@ export async function getAnalyticsSummary(days = 7): Promise<AnalyticsSummary> {
 export async function archiveOldEvents(
   daysToKeep = 30,
 ): Promise<{ archived: number; errors: number }> {
-  if (!(await isAnalyticsConfigured()))
-    return { archived: 0, errors: 0 };
+  if (!(await isAnalyticsConfigured())) return { archived: 0, errors: 0 };
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   const cutoff = new Date();
