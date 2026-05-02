@@ -104,11 +104,21 @@ jobs:
 
           REQUIRED_ACTIONS="iam:SimulatePrincipalPolicy iam:GetRole iam:TagRole iam:UntagRole iam:ListRoleTags"
 
+          set +e
           SIMULATION=$(aws iam simulate-principal-policy \
             --policy-source-arn "$ROLE_ARN" \
             --action-names $REQUIRED_ACTIONS \
             --resource-arns "arn:aws:iam::*:role/*" \
-            --output json)
+            --output json 2> /tmp/simulate-principal-policy.err)
+          SIMULATION_EXIT_CODE=$?
+          set -e
+          if [ "$SIMULATION_EXIT_CODE" -ne 0 ]; then
+            echo "::error::Could not run iam:SimulatePrincipalPolicy for $SIMULATION_PRINCIPAL"
+            cat /tmp/simulate-principal-policy.err >&2
+            echo "::error::Fix the IAM policy attached to the deploy role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
+            echo "::error::Ensure the deploy role has iam:SimulatePrincipalPolicy permission."
+            exit 1
+          fi
 
           # 3. Check each action's evaluation decision
           DENIED=$(echo "$SIMULATION" | jq -r '
