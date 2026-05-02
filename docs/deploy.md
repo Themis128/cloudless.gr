@@ -113,7 +113,10 @@ catch permission gaps before the deploy starts.
 # Get the ARN of the assumed role from a recent workflow run
 aws sts get-caller-identity
 
-# Simulate the three required actions (replace ROLE_ARN with the actual ARN)
+# Simulate the three required actions (replace ROLE_ARN with the actual IAM role ARN)
+# Note: simulate-principal-policy requires an IAM role ARN (arn:aws:iam::<acct>:role/<name>),
+# NOT the STS assumed-role ARN (arn:aws:sts::<acct>:assumed-role/...) returned by get-caller-identity.
+# The workflow automatically converts the STS ARN to the IAM role ARN before simulating.
 aws iam simulate-principal-policy \
   --policy-source-arn ROLE_ARN \
   --action-names iam:TagRole iam:UntagRole iam:ListRoleTags \
