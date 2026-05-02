@@ -72,15 +72,10 @@ function mapEvent(page: any): AnalyticsEvent {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
-// Write — Track events (with queue-based batching to stay under 3 req/s)
+// Write — Track events
 // ---------------------------------------------------------------------------
 
 type EventData = Parameters<typeof trackEvent>[0];
-
-const writeQueue: EventData[] = [];
-let flushTimer: ReturnType<typeof setTimeout> | null = null;
-const FLUSH_THRESHOLD = 10;
-const FLUSH_DELAY_MS = 5000;
 
 async function writeEventToNotion(data: EventData): Promise<string | null> {
   if (!(await isAnalyticsConfigured()))
@@ -129,39 +124,29 @@ async function writeEventToNotion(data: EventData): Promise<string | null> {
   }
 }
 
-/** Clear the pending event queue without writing — for use in tests only. */
-export function resetEventQueue(): void {
-  writeQueue.splice(0);
-  if (flushTimer) {
-    clearTimeout(flushTimer);
-    flushTimer = null;
-  }
-}
+/** No-op kept for backward compatibility; the queue has been removed. */
+export function resetEventQueue(): void {}
 
 /**
- * Flush the pending event queue — writes each event to Notion sequentially.
- * Called automatically when the queue reaches FLUSH_THRESHOLD or after FLUSH_DELAY_MS.
+ * No-op kept for backward compatibility; events are now written immediately.
+ * Previously flushed a pending queue; in serverless environments a module-level
+ * timer cannot reliably fire before the process freezes, so batching is removed.
  */
 export async function flushEventQueue(): Promise<{
   written: number;
   errors: number;
 }> {
-  const events = writeQueue.splice(0);
-  if (!events.length) return { written: 0, errors: 0 };
-  let written = 0;
-  let errors = 0;
-  for (const event of events) {
-    const id = await writeEventToNotion(event);
-    if (id) written++;
-    else errors++;
-  }
-  return { written, errors };
+  return { written: 0, errors: 0 };
 }
 
 /**
  * Track an analytics event in Notion.
- * By default queues the write and batches flushes to avoid hitting 3 req/s.
- * Pass `{ immediate: true }` to bypass the queue (e.g. for weekly rollups).
+ * Writes immediately (fire-and-forget safe). The `opts.immediate` flag is
+ * accepted for backward compatibility but has no effect — all writes are direct.
+ *
+ * In serverless (Lambda/Edge) environments a module-level setTimeout cannot
+ * reliably flush before the process is frozen, so queue-based batching has been
+ * removed in favour of direct writes.
  */
 export async function trackEvent(
   data: {
@@ -175,24 +160,7 @@ export async function trackEvent(
   },
   opts?: { immediate?: boolean },
 ): Promise<string | null> {
-  if (opts?.immediate) return writeEventToNotion(data);
-
-  writeQueue.push(data);
-
-  if (writeQueue.length >= FLUSH_THRESHOLD) {
-    if (flushTimer) {
-      clearTimeout(flushTimer);
-      flushTimer = null;
-    }
-    flushEventQueue().catch(() => {});
-  } else if (!flushTimer) {
-    flushTimer = setTimeout(() => {
-      flushTimer = null;
-      flushEventQueue().catch(() => {});
-    }, FLUSH_DELAY_MS);
-  }
-
-  return null;
+  return writeEventToNotion(data);
 }
 
 /**
