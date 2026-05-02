@@ -11,15 +11,24 @@ import { TEST_USERS, TEST_DATA } from "../fixtures/test-user";
 export async function loginAsUser(
   page: Page,
   email: string,
-  password: string
+  password: string,
+  expectedRedirect: string = "/dashboard",
 ): Promise<void> {
   await page.goto("/auth/login");
-  await page.fill('input[name="email"]', email);
-  await page.fill('input[name="password"]', password);
+  await page.waitForLoadState("networkidle");
+
+  const emailLocator = page.getByLabel(/email/i);
+  const passwordLocator = page.getByLabel(/password/i);
+  await expect(emailLocator).toBeVisible({ timeout: 15000 });
+  await expect(passwordLocator).toBeVisible({ timeout: 15000 });
+
+  await emailLocator.fill(email);
+  await passwordLocator.fill(password);
   await page.click('button[type="submit"]');
 
-  // Wait for navigation or dashboard to load
-  await page.waitForLoadState("networkidle").catch(() => {});
+  await page.waitForURL(`**${expectedRedirect}`, { timeout: 30000 }).catch(async () => {
+    await page.waitForLoadState("networkidle");
+  });
 }
 
 /**
