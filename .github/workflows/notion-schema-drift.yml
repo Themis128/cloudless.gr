@@ -6,8 +6,10 @@ on:
       - "scripts/notion-schema-sync.ts"
       - ".github/workflows/notion-schema-drift.yml"
   schedule:
-    # Daily at 06:30 UTC (catches drift introduced via the Notion UI)
-    - cron: "30 6 * * *"
+    # Daily at 06:15 UTC (catches drift introduced via the Notion UI).
+    # Spaced 15 min off the Pi TLS Cert Check (which fires every 6h at :30)
+    # so the two don't compete for the same runner slot at 06:30.
+    - cron: "15 6 * * *"
   workflow_dispatch:
 
 permissions:
