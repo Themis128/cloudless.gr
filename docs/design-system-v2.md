@@ -111,8 +111,59 @@ The current visual language (deep void background, hard neon glow, scanlines, gl
 | **3.x Marketing surface light** | `/blog`, `/contact`, `/store`, `/docs`, `/privacy`, `/terms`, `/cookies`, `/refund` flipped. Additional overrides for placeholder text, kbd, decorative gradient overlays. | [#55](https://github.com/Themis128/cloudless.gr/pull/55) | ✅ open |
 | **4. Homepage hero** | `/` flipped to light with gradient-mesh hero replacing the scanlines + cyber-grid + neon orbs. Three.js particle field calmed to 30% opacity. Section padding bumped to v2 96px on tablet+. | [#56](https://github.com/Themis128/cloudless.gr/pull/56) | ✅ open |
 | **5. Cleanup** *(this commit)* | Retired the deprecated v1 effect utilities (`glow-*`, `box-glow-*`, `scanlines`, `cyber-grid`, `dot-matrix`, `glitch`, `typing-cursor`, `animate-gradient-shift`, `animate-neon-pulse`, `scan-line`). The class hooks remain so existing markup parses, but they collapse to no-ops or to v2-styled subtle equivalents. `neon-border` is preserved as a calm v2-styled border for terminal blocks. | this PR | ✅ done |
+| **6. User theme switcher** | Navbar-level toggle (popover desktop, inline mobile) shipped as the first user-facing surface for choosing System / Light / Dark. Persists to `localStorage["cloudless-theme-pref"]` for anonymous visitors and to `user.preferences.theme` for authenticated users. Switcher is hidden on `/admin/*` (admin stays locked to dark). | `0a354365` | ✅ done |
 
-Each PR is independently mergeable, stacked in order: `#53 → #54 → #55 → #56 → this`.
+Each PR is independently mergeable, stacked in order: `#53 → #54 → #55 → #56 → cleanup → theme switcher`.
+
+## Theme switcher
+
+The route-driven default in `themeForRoute()` is what an unfamiliar visitor sees on first paint. The switcher lets that visitor override the default for the rest of their session and lets logged-in users pin their preferred mode across devices.
+
+### Selection priority
+
+```
+admin path (locked dark)
+  ↓
+user.preferences.theme   (authenticated; lives in Cognito + AuthContext)
+  ↓
+localStorage["cloudless-theme-pref"]   (anonymous override)
+  ↓
+themeForRoute(pathname)   (route default)
+```
+
+`ThemePreferenceSync` (mounted globally via `ClientDecorators` in the root layout) walks this list every time the pathname or any of the higher-priority sources change, then writes the final value to `<html data-theme=...>`.
+
+### Where it lives in the chrome
+
+| Surface | Component | Variant | Notes |
+|---|---|---|---|
+| Desktop nav (>= `lg` breakpoint) | `<ThemeSwitcher />` | Popover trigger between `<CartButton />` and `<LocaleSwitcher />` | Sun / moon / system icon shows current selection. |
+| Mobile menu (<` lg` breakpoint) | `<ThemeSwitcherInline />` | Three radio buttons in their own bordered row, above the Language section | Inline because the mobile menu is inside an `overflow-y-auto` container that would clip an absolute-positioned popover. |
+| Dashboard settings | Existing `/dashboard/settings` form | Buttons that call `updatePreferences({ theme })` | Pre-existed; flows through the same `user.preferences.theme` source as the navbar switcher. |
+
+Both navbar variants render `null` on `/admin/*` paths.
+
+### Persistence + cross-tab sync
+
+When a click happens, the switcher:
+
+1. Writes the new value to `localStorage["cloudless-theme-pref"]`.
+2. Dispatches a same-tab `cloudless:theme-pref` `CustomEvent`.
+3. If a user is logged in, calls `AuthContext.updatePreferences({ theme })` (best-effort; failures fall back to the localStorage write that already applied).
+
+`ThemePreferenceSync` and the inline switcher both subscribe to that custom event AND the standard cross-tab `storage` event via `useSyncExternalStore`, so changing the theme on one tab updates other open tabs without a reload.
+
+### Files
+
+| File | Purpose |
+|---|---|
+| `src/components/ThemeSwitcher.tsx` | Default export = popover; named export `ThemeSwitcherInline` = mobile inline radio group. |
+| `src/components/ThemePreferenceSync.tsx` | Resolves the priority chain and writes `data-theme` on `<html>`. |
+| `src/components/ThemeProvider.tsx` | `themeForRoute()` mapping (route default). |
+| `src/components/Navbar.tsx` | Mounts both switcher variants. |
+| `src/locales/{en,el,fr,de}.json` | `common.theme`, `common.themeSystem|Light|Dark`. |
+| `__tests__/theme-switcher.test.tsx` | 8 tests — admin hide on both variants, popover persistence, custom event dispatch, authenticated `updatePreferences`, user-pref seeding, localStorage-wins-over-user-pref ordering. |
+| `__tests__/theme-preference-sync.test.tsx` | 5 tests — original 3 (route default, user pref, admin lock) plus 2 new (anonymous localStorage override, auth-pref-wins-over-localStorage). |
 
 ## Open questions
 
