@@ -2,13 +2,15 @@
 
 /// <reference path="./.sst/platform/config.d.ts" />
 
+const STAGE_PRODUCTION = "production";
+
 export default {
   app(input) {
     const stage = input?.stage ?? "";
     return {
       name: "cloudless",
-      removal: stage === "production" ? "retain" : "remove",
-      protect: ["production"].includes(stage),
+      removal: input?.stage === STAGE_PRODUCTION ? "retain" : "remove",
+      protect: [STAGE_PRODUCTION].includes(input?.stage ?? ""),
       home: "aws",
       providers: {
         aws: {
@@ -31,7 +33,7 @@ export default {
     // Only pass non-secret configuration that varies per stage.
 
     const stage = $app.stage;
-    const isProd = stage === "production";
+    const isProd = stage === STAGE_PRODUCTION;
 
     const site = new sst.aws.Nextjs("CloudlessSite", {
       // Domain: cloudless.gr with existing Route53 zone + ACM cert.
@@ -67,6 +69,7 @@ export default {
       server: {
         memory: "1024 MB",
         architecture: "arm64",
+        runtime: "nodejs22.x",
         timeout: "30 seconds",
       },
       // Invalidate CloudFront cache on every deployment for fresh content

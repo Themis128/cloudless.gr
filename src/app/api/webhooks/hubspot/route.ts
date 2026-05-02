@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { getIntegrationsAsync } from "@/lib/integrations";
 import { SlackClient } from "@/lib/slack-notify";
 
 const MAX_TIMESTAMP_AGE_MS = 5 * 60 * 1000;
 const HUBSPOT_API = "https://api.hubapi.com";
 const PORTAL_BASE = "https://app-eu1.hubspot.com/contacts/147639927";
+const PLAIN_TEXT = "plain_text";
+const SECTION = "section";
+const CONTEXT = "context";
+const OPEN_IN_HUBSPOT = "Open in HubSpot";
+const CRM_BOT_NAME = "Cloudless CRM";
 
 type HubSpotEvent = {
   eventId: number;
@@ -28,7 +33,7 @@ async function verifySignatureV3(
   const timestamp = request.headers.get("x-hubspot-signature-timestamp");
   if (!signature || !timestamp) return false;
   const age = Date.now() - Number(timestamp);
-  if (isNaN(age) || age > MAX_TIMESTAMP_AGE_MS || age < 0) return false;
+  if (Number.isNaN(age) || age > MAX_TIMESTAMP_AGE_MS || age < 0) return false;
   const input = `${request.method}${request.url}${body}${timestamp}`;
   const expected = createHmac("sha256", clientSecret)
     .update(input)
@@ -66,7 +71,7 @@ function ts(): number {
 function viewButton(label: string, url: string) {
   return {
     type: "button",
-    text: { type: "plain_text", text: label },
+    text: { type: PLAIN_TEXT, text: label },
     url,
   };
 }
@@ -94,10 +99,10 @@ async function onContactCreated(token: string, id: number): Promise<void> {
     blocks: [
       {
         type: "header",
-        text: { type: "plain_text", text: "New Contact", emoji: true },
+        text: { type: PLAIN_TEXT, text: "New Contact", emoji: true },
       },
       {
-        type: "section",
+        type: SECTION,
         text: {
           type: "mrkdwn",
           text: [
@@ -107,13 +112,10 @@ async function onContactCreated(token: string, id: number): Promise<void> {
             `*Service:* ${service}`,
           ].join("\n"),
         },
-        accessory: viewButton(
-          "Open in HubSpot",
-          `${PORTAL_BASE}/contact/${id}`,
-        ),
+        accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/contact/${id}`),
       },
       {
-        type: "context",
+        type: CONTEXT,
         elements: [
           {
             type: "mrkdwn",
@@ -124,7 +126,7 @@ async function onContactCreated(token: string, id: number): Promise<void> {
       },
     ],
     icon_emoji: ":bust_in_silhouette:",
-    username: "Cloudless CRM",
+    username: CRM_BOT_NAME,
   });
 }
 
@@ -138,7 +140,7 @@ async function onDealCreated(token: string, id: number): Promise<void> {
 
   const name = p?.dealname ?? "Untitled Deal";
   const amount = p?.amount
-    ? `€${parseFloat(p.amount).toLocaleString("en-IE")}`
+    ? `€${Number.parseFloat(p.amount).toLocaleString("en-IE")}`
     : "—";
   const stage = p?.dealstage ?? "—";
 
@@ -147,10 +149,10 @@ async function onDealCreated(token: string, id: number): Promise<void> {
     blocks: [
       {
         type: "header",
-        text: { type: "plain_text", text: "New Deal", emoji: true },
+        text: { type: PLAIN_TEXT, text: "New Deal", emoji: true },
       },
       {
-        type: "section",
+        type: SECTION,
         text: {
           type: "mrkdwn",
           text: [
@@ -159,10 +161,10 @@ async function onDealCreated(token: string, id: number): Promise<void> {
             `*Stage:* \`${stage}\``,
           ].join("\n"),
         },
-        accessory: viewButton("Open in HubSpot", `${PORTAL_BASE}/deal/${id}`),
+        accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/deal/${id}`),
       },
       {
-        type: "context",
+        type: CONTEXT,
         elements: [
           {
             type: "mrkdwn",
@@ -173,7 +175,7 @@ async function onDealCreated(token: string, id: number): Promise<void> {
       },
     ],
     icon_emoji: ":handshake:",
-    username: "Cloudless CRM",
+    username: CRM_BOT_NAME,
   });
 }
 
@@ -182,28 +184,31 @@ async function onDealClosedWon(token: string, id: number): Promise<void> {
 
   const name = p?.dealname ?? "Untitled Deal";
   const amount = p?.amount
-    ? `€${parseFloat(p.amount).toLocaleString("en-IE")}`
+    ? `€${Number.parseFloat(p.amount).toLocaleString("en-IE")}`
     : "";
+  const closedWonText = amount
+    ? `Deal closed won: ${name} — ${amount}`
+    : `Deal closed won: ${name}`;
 
   await slack.post({
-    text: `Deal closed won: ${name}${amount ? ` — ${amount}` : ""}`,
+    text: closedWonText,
     blocks: [
       {
         type: "header",
-        text: { type: "plain_text", text: "Deal Closed Won!", emoji: true },
+        text: { type: PLAIN_TEXT, text: "Deal Closed Won!", emoji: true },
       },
       {
-        type: "section",
+        type: SECTION,
         text: {
           type: "mrkdwn",
           text: [`*Deal:* ${name}`, amount ? `*Amount:* *${amount}*` : ""]
             .filter(Boolean)
             .join("\n"),
         },
-        accessory: viewButton("Open in HubSpot", `${PORTAL_BASE}/deal/${id}`),
+        accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/deal/${id}`),
       },
       {
-        type: "context",
+        type: CONTEXT,
         elements: [
           {
             type: "mrkdwn",
@@ -214,7 +219,7 @@ async function onDealClosedWon(token: string, id: number): Promise<void> {
       },
     ],
     icon_emoji: ":trophy:",
-    username: "Cloudless CRM",
+    username: CRM_BOT_NAME,
   });
 }
 
@@ -226,22 +231,24 @@ async function onTicketCreated(token: string, id: number): Promise<void> {
 
   const subject = p?.subject ?? "No subject";
   const priority = (p?.hs_ticket_priority ?? "MEDIUM").toUpperCase();
-  const priorityEmoji =
-    priority === "HIGH"
-      ? ":red_circle:"
-      : priority === "LOW"
-        ? ":large_green_circle:"
-        : ":large_yellow_circle:";
+  let priorityEmoji: string;
+  if (priority === "HIGH") {
+    priorityEmoji = ":red_circle:";
+  } else if (priority === "LOW") {
+    priorityEmoji = ":large_green_circle:";
+  } else {
+    priorityEmoji = ":large_yellow_circle:";
+  }
 
   await slack.post({
     text: `New support ticket: ${subject}`,
     blocks: [
       {
         type: "header",
-        text: { type: "plain_text", text: "New Support Ticket", emoji: true },
+        text: { type: PLAIN_TEXT, text: "New Support Ticket", emoji: true },
       },
       {
-        type: "section",
+        type: SECTION,
         text: {
           type: "mrkdwn",
           text: [
@@ -249,10 +256,10 @@ async function onTicketCreated(token: string, id: number): Promise<void> {
             `*Priority:* ${priorityEmoji} ${priority}`,
           ].join("\n"),
         },
-        accessory: viewButton("Open in HubSpot", `${PORTAL_BASE}/ticket/${id}`),
+        accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/ticket/${id}`),
       },
       {
-        type: "context",
+        type: CONTEXT,
         elements: [
           {
             type: "mrkdwn",
@@ -263,7 +270,7 @@ async function onTicketCreated(token: string, id: number): Promise<void> {
       },
     ],
     icon_emoji: ":ticket:",
-    username: "Cloudless CRM",
+    username: CRM_BOT_NAME,
   });
 }
 
@@ -284,10 +291,10 @@ async function onCompanyCreated(token: string, id: number): Promise<void> {
     blocks: [
       {
         type: "header",
-        text: { type: "plain_text", text: "New Company", emoji: true },
+        text: { type: PLAIN_TEXT, text: "New Company", emoji: true },
       },
       {
-        type: "section",
+        type: SECTION,
         text: {
           type: "mrkdwn",
           text: [
@@ -296,13 +303,10 @@ async function onCompanyCreated(token: string, id: number): Promise<void> {
             `*Location:* ${location}`,
           ].join("\n"),
         },
-        accessory: viewButton(
-          "Open in HubSpot",
-          `${PORTAL_BASE}/company/${id}`,
-        ),
+        accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/company/${id}`),
       },
       {
-        type: "context",
+        type: CONTEXT,
         elements: [
           {
             type: "mrkdwn",
@@ -313,7 +317,7 @@ async function onCompanyCreated(token: string, id: number): Promise<void> {
       },
     ],
     icon_emoji: ":office:",
-    username: "Cloudless CRM",
+    username: CRM_BOT_NAME,
   });
 }
 
@@ -371,7 +375,7 @@ export async function POST(request: NextRequest) {
 
   // Dispatch all events in parallel — fire-and-forget so HubSpot always gets 200
   if (token) {
-    void Promise.allSettled(events.map((e) => dispatch(token, e)));
+    Promise.allSettled(events.map((e) => dispatch(token, e))).catch(() => {});
   }
 
   return NextResponse.json({ received: events.length });

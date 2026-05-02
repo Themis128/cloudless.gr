@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+const SUBSCRIPTIONS_URL = "http://localhost/api/admin/subscriptions";
+const TEST_SUB_ID = "sub_test_1";
 
 // ---------------------------------------------------------------------------
 // Hoist mocks
@@ -74,7 +76,7 @@ function userReq(url: string): NextRequest {
 }
 
 const MOCK_SUB = {
-  id: "sub_test_1",
+  id: TEST_SUB_ID,
   customer: { id: "cus_test_1", email: "customer@test.com", name: "Test Customer" },
   status: "active",
   items: {
@@ -104,26 +106,26 @@ describe("GET /api/admin/subscriptions", () => {
 
   it("returns 401 without token", async () => {
     const { GET } = await import("@/app/api/admin/subscriptions/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/subscriptions"));
+    const res = await GET(new NextRequest(SUBSCRIPTIONS_URL));
     expect(res.status).toBe(401);
   });
 
   it("returns 403 for non-admin", async () => {
     const { GET } = await import("@/app/api/admin/subscriptions/route");
-    const res = await GET(userReq("http://localhost/api/admin/subscriptions"));
+    const res = await GET(userReq(SUBSCRIPTIONS_URL));
     expect(res.status).toBe(403);
   });
 
   it("returns subscriptions list for admin", async () => {
     const { GET } = await import("@/app/api/admin/subscriptions/route");
-    const res = await GET(adminReq("http://localhost/api/admin/subscriptions"));
+    const res = await GET(adminReq(SUBSCRIPTIONS_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.subscriptions)).toBe(true);
     expect(typeof data.hasMore).toBe("boolean");
     expect(typeof data.total).toBe("number");
     const sub = data.subscriptions[0];
-    expect(sub.id).toBe("sub_test_1");
+    expect(sub.id).toBe(TEST_SUB_ID);
     expect(sub.status).toBe("active");
     expect(sub.planName).toBe("Pro Plan");
     expect(sub.amount).toBe(4900);
@@ -157,12 +159,12 @@ describe("POST /api/admin/subscriptions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPortalCreate.mockResolvedValue({ url: "https://billing.stripe.com/session/test" });
-    mockSubsUpdate.mockResolvedValue({ id: "sub_test_1", cancel_at_period_end: true });
+    mockSubsUpdate.mockResolvedValue({ id: TEST_SUB_ID, cancel_at_period_end: true });
   });
 
   it("returns 400 for invalid action", async () => {
     const { POST } = await import("@/app/api/admin/subscriptions/route");
-    const res = await POST(adminReq("http://localhost/api/admin/subscriptions", {
+    const res = await POST(adminReq(SUBSCRIPTIONS_URL, {
       method: "POST",
       body: JSON.stringify({ action: "refund" }),
     }));
@@ -171,7 +173,7 @@ describe("POST /api/admin/subscriptions", () => {
 
   it("returns portal URL for portal action", async () => {
     const { POST } = await import("@/app/api/admin/subscriptions/route");
-    const res = await POST(adminReq("http://localhost/api/admin/subscriptions", {
+    const res = await POST(adminReq(SUBSCRIPTIONS_URL, {
       method: "POST",
       body: JSON.stringify({ action: "portal", customerId: "cus_test_1" }),
     }));
@@ -182,14 +184,14 @@ describe("POST /api/admin/subscriptions", () => {
 
   it("cancels subscription at period end", async () => {
     const { POST } = await import("@/app/api/admin/subscriptions/route");
-    const res = await POST(adminReq("http://localhost/api/admin/subscriptions", {
+    const res = await POST(adminReq(SUBSCRIPTIONS_URL, {
       method: "POST",
-      body: JSON.stringify({ action: "cancel", subscriptionId: "sub_test_1" }),
+      body: JSON.stringify({ action: "cancel", subscriptionId: TEST_SUB_ID }),
     }));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.ok).toBe(true);
     expect(data.cancelAtPeriodEnd).toBe(true);
-    expect(mockSubsUpdate).toHaveBeenCalledWith("sub_test_1", { cancel_at_period_end: true });
+    expect(mockSubsUpdate).toHaveBeenCalledWith(TEST_SUB_ID, { cancel_at_period_end: true });
   });
 });

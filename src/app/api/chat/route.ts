@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getConfig } from "@/lib/ssm-config";
+import { getAnthropicApiKey } from "@/lib/anthropic";
 import { escapeHtml } from "@/lib/escape-html";
 
 const SYSTEM_PROMPT = `You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency run by Themistoklis Baltzakis (AWS Certified Cloud Architect, 8+ years experience).
@@ -22,9 +22,39 @@ Key facts:
 Keep answers concise (2–4 sentences max). If someone asks about pricing, give ranges and suggest booking a free audit. Never make up specific technical details not listed above. If you don't know something, say so and suggest they book a call.`;
 
 const MAX_USER_MESSAGE = 500;
+const ROLE_ASSISTANT = "assistant";
+
+function forwardSseLine(
+  line: string,
+  controller: ReadableStreamDefaultController,
+): void {
+  if (!line.startsWith("data: ")) return;
+  const data = line.slice(6).trim();
+  if (data === "[DONE]") return;
+  try {
+    const parsed = JSON.parse(data) as {
+      type?: string;
+      delta?: { type?: string; text?: string };
+    };
+    if (
+      parsed.type === "content_block_delta" &&
+      parsed.delta?.type === "text_delta"
+    ) {
+      const text = escapeHtml(parsed.delta.text ?? "");
+      controller.enqueue(
+        new TextEncoder().encode(`data: ${JSON.stringify({ text })}\n\n`),
+      );
+    }
+    if (parsed.type === "message_stop") {
+      controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+    }
+  } catch {
+    // skip malformed SSE lines
+  }
+}
 
 export async function POST(request: NextRequest) {
-  let messages: { role: "user" | "assistant"; content: string }[];
+  let messages: { role: "user" | "assistant"; content: string }[]; // NOSONAR — type annotation
   try {
     const body = await request.json();
     if (!Array.isArray(body.messages)) throw new Error("messages required");
@@ -35,7 +65,7 @@ export async function POST(request: NextRequest) {
       )
       .slice(-10) // keep last 10 turns for context
       .map((m: { role: string; content: string }) => ({
-        role: m.role === "assistant" ? "assistant" : "user",
+        role: m.role === ROLE_ASSISTANT ? ROLE_ASSISTANT : "user",
         content: String(m.content).slice(0, MAX_USER_MESSAGE),
       }));
     if (messages.length === 0) throw new Error("No valid messages");
@@ -46,8 +76,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const cfg = await getConfig();
-  const apiKey = cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+  const apiKey = await getAnthropicApiKey();
   if (!apiKey) {
     return Response.json(
       { error: "Chat not available right now. Please use the Contact page." },
@@ -85,32 +114,8 @@ export async function POST(request: NextRequest) {
           const { done, value } = await reader.read();
           if (done) break;
           const chunk = decoder.decode(value, { stream: true });
-          // Parse SSE lines and forward only text_delta events
           for (const line of chunk.split("\n")) {
-            if (!line.startsWith("data: ")) continue;
-            const data = line.slice(6).trim();
-            if (data === "[DONE]") continue;
-            try {
-              const parsed = JSON.parse(data);
-              if (
-                parsed.type === "content_block_delta" &&
-                parsed.delta?.type === "text_delta"
-              ) {
-                const text = escapeHtml(parsed.delta.text ?? "");
-                controller.enqueue(
-                  new TextEncoder().encode(
-                    `data: ${JSON.stringify({ text })}\n\n`,
-                  ),
-                );
-              }
-              if (parsed.type === "message_stop") {
-                controller.enqueue(
-                  new TextEncoder().encode("data: [DONE]\n\n"),
-                );
-              }
-            } catch {
-              // skip malformed lines
-            }
+            forwardSseLine(line, controller);
           }
         }
       } finally {

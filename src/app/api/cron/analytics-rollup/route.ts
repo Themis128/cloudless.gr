@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createWeeklyRollup, archiveOldEvents } from "@/lib/notion-analytics";
+import {
+  createWeeklyRollup,
+  archiveOldEvents,
+  flushEventQueue,
+} from "@/lib/notion-analytics";
 import { SlackClient } from "@/lib/slack-notify";
 
 function cronAuth(req: NextRequest): boolean {
@@ -12,6 +16,9 @@ export async function GET(request: NextRequest) {
   if (!cronAuth(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Flush any queued events before creating the rollup so counts are accurate
+  await flushEventQueue();
 
   const [rollupId, archiveResult] = await Promise.all([
     createWeeklyRollup(),
