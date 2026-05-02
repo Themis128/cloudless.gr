@@ -6,6 +6,8 @@ on:
     paths:
       - 'src/**'
       - 'public/**'
+      - 'e2e/**'
+      - '__tests__/**'
       - 'sst.config.ts'
       - 'next.config.ts'
       - 'package.json'
