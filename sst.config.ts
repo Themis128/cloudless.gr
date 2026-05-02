@@ -93,7 +93,7 @@ export default {
     if (isProd) {
       const zoneId = "Z079608614L53CC4EAZM3"; // cloudless.gr hosted zone
       const healthCheckId = "e239ad5c-dd17-40d7-8045-a153715168cf";
-      const piWanIp = "150.228.63.192";
+      const piWanIp = "150.228.63.192"; // NOSONAR — public WAN IP for Route 53 DNS failover, not an internal service address
       const cfZoneId = "Z2FDTNDATAQYW2";
       const apexCfDomain = "d3k7muo3c6lw6s.cloudfront.net";
       const wwwCfDomain = "dgrxxatzrgxfi.cloudfront.net";
