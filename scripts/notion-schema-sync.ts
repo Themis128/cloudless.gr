@@ -13,10 +13,16 @@
  * Adds (idempotent — re-running is safe):
  *   Blog Posts:                Locale, Updated At, Status
  *   Contact Form Submissions:  Locale, Replied At, Notes, HubSpot Contact ID
+ *   Site Analytics:            Locale
+ *   Content Calendar:          Locale, Target Blog Post (relation → Blog Posts)
+ *   Tasks:                     Related Blog Post (relation → Blog Posts)
+ *   Internal Docs:             Stale After
  *
  * Existing properties are never modified or removed. Schema additions are safe
  * for the running cloudless.gr Lambda (existing reads ignore unknown props).
  */
+
+const BLOG_POSTS_DB_ID = "0ac591657ee44063bbbc8004ea7ccd6c";
 
 import { config } from "dotenv";
 config({ path: ".env.local" });
@@ -33,20 +39,18 @@ if (!KEY) {
 
 type PropSchema = Record<string, unknown>;
 
+const LOCALE_OPTIONS = [
+  { name: "en", color: "blue" },
+  { name: "el", color: "green" },
+  { name: "fr", color: "purple" },
+];
+
 const PLAN: { db: string; id: string; props: Record<string, PropSchema> }[] = [
   {
     db: "Blog Posts",
-    id: "0ac591657ee44063bbbc8004ea7ccd6c",
+    id: BLOG_POSTS_DB_ID,
     props: {
-      Locale: {
-        select: {
-          options: [
-            { name: "en", color: "blue" },
-            { name: "el", color: "green" },
-            { name: "fr", color: "purple" },
-          ],
-        },
-      },
+      Locale: { select: { options: LOCALE_OPTIONS } },
       "Updated At": { last_edited_time: {} },
       Status: {
         select: {
@@ -64,18 +68,39 @@ const PLAN: { db: string; id: string; props: Record<string, PropSchema> }[] = [
     db: "Contact Form Submissions",
     id: "9abe0a5614d64b759d44a45cee2d0bbc",
     props: {
-      Locale: {
-        select: {
-          options: [
-            { name: "en", color: "blue" },
-            { name: "el", color: "green" },
-            { name: "fr", color: "purple" },
-          ],
-        },
-      },
+      Locale: { select: { options: LOCALE_OPTIONS } },
       "Replied At": { date: {} },
       Notes: { rich_text: {} },
       "HubSpot Contact ID": { rich_text: {} },
+    },
+  },
+  {
+    db: "Site Analytics",
+    id: "cc4287fcb42a42dc92a7053d6f1199c7",
+    props: {
+      Locale: { select: { options: LOCALE_OPTIONS } },
+    },
+  },
+  {
+    db: "Content Calendar",
+    id: "dcff73b9317b4ed69a450f200db0f629",
+    props: {
+      Locale: { select: { options: LOCALE_OPTIONS } },
+      "Target Blog Post": { relation: { database_id: BLOG_POSTS_DB_ID, single_property: {} } },
+    },
+  },
+  {
+    db: "Tasks",
+    id: "14ce4ff6c400437597b13e70ac909354",
+    props: {
+      "Related Blog Post": { relation: { database_id: BLOG_POSTS_DB_ID, single_property: {} } },
+    },
+  },
+  {
+    db: "Internal Docs",
+    id: "b45af6ed5bb64d89b9a92a8aff4a9b29",
+    props: {
+      "Stale After": { date: {} },
     },
   },
 ];
