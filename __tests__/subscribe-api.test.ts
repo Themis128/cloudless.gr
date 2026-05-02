@@ -13,7 +13,6 @@ const sendSubscriberWelcomeMock = vi.fn();
 vi.mock("@/lib/email", () => ({
   notifyTeam: notifyTeamMock,
   sendSubscriberWelcome: sendSubscriberWelcomeMock,
-
 }));
 
 vi.mock("@/lib/slack-notify", () => ({
