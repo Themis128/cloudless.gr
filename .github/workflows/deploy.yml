@@ -113,7 +113,7 @@ jobs:
           SIMULATION_EXIT_CODE=$?
           set -e
           if [ "$SIMULATION_EXIT_CODE" -ne 0 ]; then
-            echo "::error::Could not run iam:SimulatePrincipalPolicy for $SIMULATION_PRINCIPAL"
+            echo "::error::Could not run iam:SimulatePrincipalPolicy for $ROLE_ARN"
             cat /tmp/simulate-principal-policy.err >&2
             echo "::error::Fix the IAM policy attached to the deploy role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
             echo "::error::Ensure the deploy role has iam:SimulatePrincipalPolicy permission."
