@@ -1,8 +1,10 @@
 /**
  * Store product catalog.
  *
- * Fetches live products from Stripe when configured.
- * Falls back to local demo data when Stripe products aren't set up yet.
+ * The catalog is sourced from Stripe when configured (live prices, real SKUs).
+ * Otherwise, the site renders the static defaultProducts list defined below —
+ * it is the authoritative product copy and pricing, not test data, and is the
+ * source the storefront uses until Stripe is seeded with the same SKUs.
  */
 
 import { listStripeProducts, type StripeProduct } from "@/lib/stripe";
@@ -64,8 +66,9 @@ function mapStripeProduct(sp: StripeProduct): StoreProduct {
 }
 
 /**
- * Get all store products. Tries Stripe first, falls back to demo data.
- * Results are cached for 5 minutes.
+ * Get all store products. Tries Stripe first, falls back to defaultProducts
+ * when Stripe is not configured or returns no SKUs. Results are cached for
+ * 5 minutes.
  */
 export async function getProducts(): Promise<StoreProduct[]> {
   // Return cache if fresh
@@ -82,9 +85,9 @@ export async function getProducts(): Promise<StoreProduct[]> {
     return mapped;
   }
 
-  // Fall back to demo data
-  productCache = { products: demoProducts, fetchedAt: Date.now() };
-  return demoProducts;
+  // Stripe not configured / returned no SKUs — serve the default catalog.
+  productCache = { products: defaultProducts, fetchedAt: Date.now() };
+  return defaultProducts;
 }
 
 // ---------------------------------------------------------------------------
@@ -106,7 +109,9 @@ export async function getProductsByCategoryAsync(
 }
 
 // ---------------------------------------------------------------------------
-// Synchronous lookups (demo data only — used by checkout for validation)
+// Synchronous lookups — read from the in-process cache when warm, otherwise
+// fall back to the static defaultProducts catalog. Used by checkout and
+// product detail rendering where an async hop would be wasteful.
 // ---------------------------------------------------------------------------
 
 export function getProductById(id: string): StoreProduct | undefined {
@@ -114,7 +119,7 @@ export function getProductById(id: string): StoreProduct | undefined {
   if (productCache) {
     return productCache.products.find((p) => p.id === id);
   }
-  return demoProducts.find((p) => p.id === id);
+  return defaultProducts.find((p) => p.id === id);
 }
 
 export function getProductsByCategory(
@@ -123,14 +128,15 @@ export function getProductsByCategory(
   if (productCache) {
     return productCache.products.filter((p) => p.category === category);
   }
-  return demoProducts.filter((p) => p.category === category);
+  return defaultProducts.filter((p) => p.category === category);
 }
 
 // ---------------------------------------------------------------------------
-// Demo / fallback product catalog
+// Default product catalog (authoritative copy; mirrored into Stripe when
+// Stripe is configured)
 // ---------------------------------------------------------------------------
 
-export const demoProducts: StoreProduct[] = [
+export const defaultProducts: StoreProduct[] = [
   // --- Services ---
   {
     id: "srv-cloud",

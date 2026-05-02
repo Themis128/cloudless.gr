@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import {
-  demoProducts,
+  defaultProducts,
   categoryLabels,
   categoryColors,
   type ProductCategory,
@@ -30,10 +30,10 @@ const sortLabels: Record<SortOption, string> = {
 };
 
 const categoryCounts: Record<"all" | ProductCategory, number> = {
-  all: demoProducts.length,
-  service: demoProducts.filter((p) => p.category === "service").length,
-  digital: demoProducts.filter((p) => p.category === "digital").length,
-  physical: demoProducts.filter((p) => p.category === "physical").length,
+  all: defaultProducts.length,
+  service: defaultProducts.filter((p) => p.category === "service").length,
+  digital: defaultProducts.filter((p) => p.category === "digital").length,
+  physical: defaultProducts.filter((p) => p.category === "physical").length,
 };
 
 function ProductCard({ product }: { product: StoreProduct }) {
@@ -133,8 +133,8 @@ export default function StoreGrid() {
   const filtered = useMemo(() => {
     let products =
       activeCategory === "all"
-        ? demoProducts
-        : demoProducts.filter((p) => p.category === activeCategory);
+        ? defaultProducts
+        : defaultProducts.filter((p) => p.category === activeCategory);
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();

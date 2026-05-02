@@ -1,5 +1,7 @@
 /**
- * Client-safe store product types and demo data.
+ * Client-safe store product types and the default product catalog.
+ * The catalog here is the authoritative copy used by client-rendered surfaces
+ * (StoreGrid, sitemap) and is mirrored into Stripe when Stripe is configured.
  * This file contains no server-side imports or functions.
  */
 
@@ -35,10 +37,10 @@ export const categoryColors: Record<ProductCategory, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Demo / fallback product catalog
+// Default product catalog (mirrored into Stripe when Stripe is configured)
 // ---------------------------------------------------------------------------
 
-export const demoProducts: StoreProduct[] = [
+export const defaultProducts: StoreProduct[] = [
   // --- Services ---
   {
     id: "srv-cloud",
@@ -199,17 +201,19 @@ export const demoProducts: StoreProduct[] = [
 ];
 
 /**
- * Synchronous product lookup (demo data only — used by checkout for validation)
+ * Synchronous product lookup against the default catalog.
+ * Used by checkout for fast validation in environments where the live Stripe
+ * cache (see store-products.ts) is not yet warm.
  */
 export function getProductById(id: string): StoreProduct | undefined {
-  return demoProducts.find((p) => p.id === id);
+  return defaultProducts.find((p) => p.id === id);
 }
 
 /**
- * Synchronous category lookup (demo data only)
+ * Synchronous category lookup against the default catalog.
  */
 export function getProductsByCategory(
   category: ProductCategory,
 ): StoreProduct[] {
-  return demoProducts.filter((p) => p.category === category);
+  return defaultProducts.filter((p) => p.category === category);
 }

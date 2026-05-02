@@ -1,22 +1,22 @@
 import { describe, it, expect } from "vitest";
 import {
-  demoProducts,
+  defaultProducts,
   getProductById,
   getProductsByCategory,
   categoryLabels,
   categoryColors,
 } from "@/lib/store-products";
 
-describe("demoProducts catalog", () => {
+describe("defaultProducts catalog", () => {
   it("contains products in all three categories", () => {
-    const categories = new Set(demoProducts.map((p) => p.category));
+    const categories = new Set(defaultProducts.map((p) => p.category));
     expect(categories).toContain("service");
     expect(categories).toContain("digital");
     expect(categories).toContain("physical");
   });
 
   it("every product has required fields", () => {
-    for (const p of demoProducts) {
+    for (const p of defaultProducts) {
       expect(p.id).toBeTruthy();
       expect(p.name).toBeTruthy();
       expect(p.description).toBeTruthy();
@@ -27,7 +27,7 @@ describe("demoProducts catalog", () => {
   });
 
   it("all product IDs are unique", () => {
-    const ids = demoProducts.map((p) => p.id);
+    const ids = defaultProducts.map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
