@@ -60,9 +60,9 @@ function extractTitle(prop: any): string {
   return extractText(prop?.title);
 }
 
-const OK = "\x1b[32mβœ"\x1b[0m";
-const FAIL = "\x1b[31mβœ—\x1b[0m";
-const WARN = "\x1b[33m⚠\x1b[0m";
+const OK = "\x1b[32m[OK]\x1b[0m";
+const FAIL = "\x1b[31m[FAIL]\x1b[0m";
+const WARN = "\x1b[33m[WARN]\x1b[0m";
 const CYAN = "\x1b[36m";
 const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
