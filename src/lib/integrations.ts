@@ -24,6 +24,7 @@ export interface IntegrationConfig {
   NOTION_REPORTS_DB_ID?: string;
   NOTION_CRM_SYNC_DB_ID?: string;
   NOTION_ORDERS_DB_ID?: string;
+  NOTION_GSC_REPORTS_DB_ID?: string;
   GOOGLE_CLIENT_EMAIL?: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
   GOOGLE_PRIVATE_KEY?: string;
@@ -88,6 +89,7 @@ export function getIntegrations(): IntegrationConfig {
     NOTION_REPORTS_DB_ID: process.env.NOTION_REPORTS_DB_ID,
     NOTION_CRM_SYNC_DB_ID: process.env.NOTION_CRM_SYNC_DB_ID,
     NOTION_ORDERS_DB_ID: process.env.NOTION_ORDERS_DB_ID,
+    NOTION_GSC_REPORTS_DB_ID: process.env.NOTION_GSC_REPORTS_DB_ID,
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
     GOOGLE_SERVICE_ACCOUNT_EMAIL:
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
@@ -204,6 +206,10 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
         envCfg.NOTION_CRM_SYNC_DB_ID || ssm.NOTION_CRM_SYNC_DB_ID || undefined,
       NOTION_ORDERS_DB_ID:
         envCfg.NOTION_ORDERS_DB_ID || ssm.NOTION_ORDERS_DB_ID || undefined,
+      NOTION_GSC_REPORTS_DB_ID:
+        envCfg.NOTION_GSC_REPORTS_DB_ID ||
+        ssm.NOTION_GSC_REPORTS_DB_ID ||
+        undefined,
       GOOGLE_CLIENT_EMAIL:
         envCfg.GOOGLE_CLIENT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
       GOOGLE_SERVICE_ACCOUNT_EMAIL:
