@@ -37,10 +37,7 @@ function sanitizeDeltaText(input: string | undefined): string {
   return escapeHtml(input ?? "");
 }
 
-type ParsedSseEvent =
-  | { kind: "text"; text: string }
-  | { kind: "done" }
-  | null;
+type ParsedSseEvent = { kind: "text"; text: string } | { kind: "done" } | null;
 
 function parseSseEvent(data: string): ParsedSseEvent {
   try {
@@ -171,7 +168,9 @@ export async function POST(request: NextRequest) {
   if (!anthropicRes.ok || !anthropicRes.body) {
     const status = anthropicRes.status;
     const detail = await anthropicRes.text().catch(() => "");
-    console.error(`[chat] anthropic returned ${status}: ${detail.slice(0, 500)}`);
+    console.error(
+      `[chat] anthropic returned ${status}: ${detail.slice(0, 500)}`,
+    );
     return Response.json({ error: "AI service unavailable." }, { status: 502 });
   }
 
