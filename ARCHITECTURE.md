@@ -22,7 +22,8 @@
 12. [Marketing & Analytics Stack](#12-marketing--analytics-stack)
 13. [AI Marketing Roadmap](#13-ai-marketing-roadmap)
 14. [Testing Strategy](#14-testing-strategy)
-15. [What's Working vs What's Staged](#15-whats-working-vs-whats-staged)
+15. [SonarCloud Code Analysis](#15-sonarcloud-code-analysis)
+16. [What's Working vs What's Staged](#16-whats-working-vs-whats-staged)
 
 ---
 
@@ -799,7 +800,69 @@ pnpm test:e2e      # Playwright E2E
 
 ---
 
-## 15. What's Working vs What's Staged
+## 15. SonarCloud Code Analysis
+
+SonarCloud performs continuous static analysis on every pull request and push to `main`, enforcing a **Quality Gate** before merge. It is the primary tool for tracking code quality, security hotspots, and maintainability trends over time.
+
+### Configuration
+
+| File | Purpose |
+|---|---|
+| `.sonarcloud.properties` | Project-level analysis parameters |
+
+```properties
+# .sonarcloud.properties
+sonar.cpd.exclusions=**/__tests__/**,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx
+```
+
+Test files are excluded from **Copy-Paste Detection (CPD)** because unit test suites intentionally repeat `describe/it/expect/vi.mock` scaffolding across files — this is structural repetition, not meaningful duplication.
+
+### Quality Gate
+
+The default SonarCloud Quality Gate blocks merges when any of the following thresholds are breached on **new code**:
+
+| Metric | Threshold |
+|---|---|
+| Bugs | 0 |
+| Vulnerabilities | 0 |
+| Security Hotspots reviewed | 100 % |
+| Code Smells (new) | ≤ A rating |
+| Coverage (new code) | ≥ 80 % |
+| Duplicated lines (new code) | ≤ 3 % |
+
+### What SonarCloud checks
+
+- **Bugs** — logic errors, null dereferences, incorrect async patterns
+- **Vulnerabilities** — injection risks, hardcoded secrets, insecure crypto
+- **Security Hotspots** — code requiring manual review (e.g. `Math.random`, `innerHTML`, unvalidated redirects)
+- **Code Smells** — complexity, dead code, naming, cognitive load
+- **Duplications** — copy-pasted logic outside excluded test paths
+- **Coverage** — line/branch coverage reported from the Vitest lcov output
+
+### Workflow integration
+
+SonarCloud analysis is triggered automatically by the SonarCloud GitHub App (no dedicated workflow file required). It posts inline annotations directly on pull request diffs and updates the PR status check named **SonarCloud Code Analysis**.
+
+The analysis runs **in addition to** the following static-analysis workflows defined under `.github/workflows/`:
+
+| Workflow | Tool | Trigger |
+|---|---|---|
+| `codeql.yml` | GitHub CodeQL (`security-extended` query suite) | PR · push `main` · weekly Monday 06:00 UTC |
+| `secret-scan.yml` | Gitleaks | PR · push `main` |
+| `mcp-security-scan.yml` | Custom MCP scanner | PR · push `main` (informational, `continue-on-error`) |
+
+### Addressing failures
+
+1. Open the **SonarCloud Code Analysis** status check link on the PR.
+2. Review issues under **New Code** — only new-code issues block the Quality Gate.
+3. Fix bugs and vulnerabilities first; mark hotspots as **Reviewed / Won't Fix** with a comment if they are false positives.
+4. Re-push — SonarCloud re-analyses automatically on the next commit.
+
+> **Note:** Coverage data is not yet uploaded to SonarCloud (no `sonar.javascript.lcov.reportPaths` configured). The coverage gate is therefore inactive. To enable it, add `pnpm test:ci --coverage` to the CI pipeline and set `sonar.javascript.lcov.reportPaths=coverage/lcov.info` in `.sonarcloud.properties`.
+
+---
+
+## 16. What's Working vs What's Staged
 
 ### ✅ Fully Live
 
