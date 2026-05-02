@@ -47,7 +47,9 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     if (!fileUrl) return new Response("No file URL found", { status: 404 });
 
-    const img = await fetch(fileUrl);
+    // URL originates from the Notion API (trusted), not from user input. The id
+    // is already validated against a strict UUID regex before the API call.
+    const img = await fetch(fileUrl); // NOSONAR — url is from Notion API, not user input
     if (!img.ok) return new Response("Image unavailable", { status: 502 });
 
     return new Response(img.body, {

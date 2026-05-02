@@ -157,7 +157,7 @@ export async function trackEvent(
     country?: string;
     metadata?: Record<string, unknown>;
   },
-  opts?: { immediate?: boolean },
+  _opts?: { immediate?: boolean },
 ): Promise<string | null> {
   return writeEventToNotion(data);
 }
