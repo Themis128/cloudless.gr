@@ -93,13 +93,18 @@ async function probeDatabase(
       sample,
     };
   } catch (err: unknown) {
+    // Log the raw error server-side (Sentry scrubber redacts secrets) but
+    // return a generic public message — the upstream Notion error text can
+    // include URLs, request IDs, and account-internal hints we don't want
+    // to expose even to admin clients.
+    console.error(`[notion-status] ${name} failed:`, err);
     return {
       name,
       configured: true,
       connected: false,
       count: 0,
       sample: [],
-      error: err instanceof Error ? err.message : String(err),
+      error: "upstream-notion-error",
     };
   }
 }
