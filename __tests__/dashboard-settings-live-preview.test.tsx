@@ -64,8 +64,11 @@ describe("dashboard /settings — theme button live preview", () => {
   });
 
   it("does NOT call updatePreferences until the Save button is clicked", async () => {
-    const auth = authMock("dark");
-    useAuthMock.mockReturnValue(auth);
+    const updatePreferences = vi.fn().mockResolvedValue(undefined);
+    useAuthMock.mockReturnValue({
+      ...(authMock("dark") as { user: unknown }),
+      updatePreferences,
+    } as never);
 
     const SettingsPage = (await import(
       "@/app/[locale]/dashboard/settings/page"
@@ -73,6 +76,6 @@ describe("dashboard /settings — theme button live preview", () => {
     render(<SettingsPage />);
 
     fireEvent.click(screen.getByRole("button", { name: /^Light$/i }));
-    expect(auth.updatePreferences).not.toHaveBeenCalled();
+    expect(updatePreferences).not.toHaveBeenCalled();
   });
 });
