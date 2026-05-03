@@ -167,7 +167,9 @@ async function executeToolBlocks(
 function extractFinalText(blocks: ContentBlock[] | undefined): string {
   if (!blocks) return "";
   return blocks
-    .filter((b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text")
+    .filter(
+      (b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text",
+    )
     .map((b) => b.text)
     .join("");
 }

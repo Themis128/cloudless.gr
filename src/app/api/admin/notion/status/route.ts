@@ -132,7 +132,8 @@ export async function GET(request: NextRequest) {
     }>("/users/me");
     botName = me.name ?? me.bot?.owner?.user?.name ?? "bot";
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     return NextResponse.json(
       {
         authenticated: false,

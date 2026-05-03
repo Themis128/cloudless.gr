@@ -62,7 +62,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, contactId });
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     console.error("[CRM] Error:", err);
     return NextResponse.json(
       { error: "CRM operation failed." },

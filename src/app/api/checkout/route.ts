@@ -76,56 +76,60 @@ export async function POST(request: NextRequest) {
 
     const stripe = await getStripe();
     const idempotencyKey = getIdempotencyKey(request);
-    const session = await stripe.checkout.sessions.create({
-      mode: mode as "payment" | "subscription",
-      line_items: lineItems as never[],
-      success_url: `${origin}/store/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/store`,
-      ...(authUser?.email ? { customer_email: authUser.email } : {}),
-      billing_address_collection: "required",
-      metadata: {
-        source: "cloudless.gr",
-        ...(authUser?.sub ? { userId: authUser.sub } : {}),
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: mode as "payment" | "subscription",
+        line_items: lineItems as never[],
+        success_url: `${origin}/store/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/store`,
+        ...(authUser?.email ? { customer_email: authUser.email } : {}),
+        billing_address_collection: "required",
+        metadata: {
+          source: "cloudless.gr",
+          ...(authUser?.sub ? { userId: authUser.sub } : {}),
+        },
+        shipping_address_collection: resolvedProducts.some(
+          ({ product }) =>
+            !product.recurring && product.category === "physical",
+        )
+          ? {
+              allowed_countries: [
+                "GR",
+                "DE",
+                "FR",
+                "IT",
+                "ES",
+                "NL",
+                "BE",
+                "AT",
+                "PT",
+                "IE",
+                "FI",
+                "SE",
+                "DK",
+                "PL",
+                "CZ",
+                "RO",
+                "BG",
+                "HR",
+                "SK",
+                "SI",
+                "LT",
+                "LV",
+                "EE",
+                "LU",
+                "MT",
+                "CY",
+                "US",
+                "GB",
+                "CA",
+                "AU",
+              ],
+            }
+          : undefined,
       },
-      shipping_address_collection: resolvedProducts.some(
-        ({ product }) => !product.recurring && product.category === "physical",
-      )
-        ? {
-            allowed_countries: [
-              "GR",
-              "DE",
-              "FR",
-              "IT",
-              "ES",
-              "NL",
-              "BE",
-              "AT",
-              "PT",
-              "IE",
-              "FI",
-              "SE",
-              "DK",
-              "PL",
-              "CZ",
-              "RO",
-              "BG",
-              "HR",
-              "SK",
-              "SI",
-              "LT",
-              "LV",
-              "EE",
-              "LU",
-              "MT",
-              "CY",
-              "US",
-              "GB",
-              "CA",
-              "AU",
-            ],
-          }
-        : undefined,
-    }, idempotencyKey ? { idempotencyKey } : undefined);
+      idempotencyKey ? { idempotencyKey } : undefined,
+    );
 
     return Response.json({ url: session.url });
   } catch (error) {

@@ -30,7 +30,8 @@ export async function GET(request: NextRequest) {
       fetchedAt: new Date().toISOString(),
     });
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     return NextResponse.json(
       { error: "Failed to fetch pipeline board." },
       { status: 500 },

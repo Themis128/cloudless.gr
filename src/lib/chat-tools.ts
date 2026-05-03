@@ -106,7 +106,8 @@ async function runLookupProduct(input: LookupProductInput): Promise<string> {
 }
 
 function clampDaysAhead(raw: unknown): number {
-  const n = typeof raw === "number" && Number.isFinite(raw) ? raw : DEFAULT_DAYS_AHEAD;
+  const n =
+    typeof raw === "number" && Number.isFinite(raw) ? raw : DEFAULT_DAYS_AHEAD;
   return Math.max(MIN_DAYS_AHEAD, Math.min(MAX_DAYS_AHEAD, Math.trunc(n)));
 }
 
@@ -165,15 +166,17 @@ async function runCheckCalendarAvailability(
  * because a thrown tool result would crash the chat loop.
  */
 export async function runTool(name: string, input: unknown): Promise<string> {
-  const safeInput = (typeof input === "object" && input !== null ? input : {}) as
-    | LookupProductInput
-    | CheckCalendarInput;
+  const safeInput = (
+    typeof input === "object" && input !== null ? input : {}
+  ) as LookupProductInput | CheckCalendarInput;
   try {
     if (name === "lookup_product") {
       return await runLookupProduct(safeInput as LookupProductInput);
     }
     if (name === "check_calendar_availability") {
-      return await runCheckCalendarAvailability(safeInput as CheckCalendarInput);
+      return await runCheckCalendarAvailability(
+        safeInput as CheckCalendarInput,
+      );
     }
     return `Unknown tool: ${name}`;
   } catch (err) {

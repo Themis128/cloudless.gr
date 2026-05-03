@@ -10,7 +10,10 @@
  */
 
 import { notionFetch, notionFetchAll, extractText } from "@/lib/notion";
-import { getIntegrationsAsync, requireIntegrationAsync } from "@/lib/integrations";
+import {
+  getIntegrationsAsync,
+  requireIntegrationAsync,
+} from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Types
