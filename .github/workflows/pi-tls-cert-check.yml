@@ -5,6 +5,7 @@ name: Pi TLS Cert Check
 #   2. TLS handshake succeeds with SNI=cloudless.gr
 #   3. Cert SAN matches cloudless.gr (the APIGW custom-domain ACM cert)
 #   4. /api/health returns 200 from behind the Lambda IPv6 proxy
+#   5. Legacy TLS 1.0/1.1 are rejected; TLS 1.2+ remains available
 #
 # Architecture (post PR #100, sst.config.ts:83-200):
 #   Public client
@@ -77,6 +78,24 @@ jobs:
           fi
           cert=$(cat /tmp/openssl.out)
 
+          echo "→ Verifying protocol floor (reject TLS 1.0 / 1.1, allow TLS 1.2+)"
+          if timeout 10 openssl s_client -tls1 -connect "${APIGW_HOST}:443" -servername "${SNI}" < /dev/null > /tmp/tls10.out 2>&1; then
+            echo "::error::TLS 1.0 handshake unexpectedly succeeded. Minimum protocol is too weak."
+            exit 1
+          fi
+          if timeout 10 openssl s_client -tls1_1 -connect "${APIGW_HOST}:443" -servername "${SNI}" < /dev/null > /tmp/tls11.out 2>&1; then
+            echo "::error::TLS 1.1 handshake unexpectedly succeeded. Minimum protocol is too weak."
+            exit 1
+          fi
+          if ! timeout 10 openssl s_client -tls1_2 -connect "${APIGW_HOST}:443" -servername "${SNI}" < /dev/null > /tmp/tls12.out 2>&1; then
+            echo "::error::TLS 1.2 handshake failed."
+            echo "::group::openssl tls1.2 output"
+            cat /tmp/tls12.out >&2
+            echo "::endgroup::"
+            exit 1
+          fi
+          echo "  ✓ TLS 1.0/1.1 rejected, TLS 1.2 accepted"
+
           # Extract leaf cert
           leaf=$(echo "$cert" | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' | awk '/-----BEGIN/{i++} i==1')
 
@@ -135,6 +154,7 @@ jobs:
             echo "|---|---|"
             echo "| APIGW frontend | \`${APIGW_HOST}\` |"
             echo "| SNI | ${SNI} |"
+            echo "| TLS policy | TLS 1.0/1.1 rejected; TLS 1.2 accepted |"
             echo "| Cert days remaining | ${DAYS_LEFT} |"
             echo "| /api/health | ✅ 200 |"
           } >> "$GITHUB_STEP_SUMMARY"
