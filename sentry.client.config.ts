@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { scrubEvent, scrubBreadcrumb } from "@/lib/sentry-scrub";
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -21,5 +22,8 @@ Sentry.init({
     "NetworkError when attempting to fetch resource.",
     "Failed to fetch",
   ],
+  // Strip token-shaped values from URLs and breadcrumb data before sending.
+  beforeSend: scrubEvent,
+  beforeBreadcrumb: scrubBreadcrumb,
   tunnel: "/monitoring",
 });

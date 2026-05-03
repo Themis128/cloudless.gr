@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { scrubEvent, scrubBreadcrumb } from "@/lib/sentry-scrub";
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -13,5 +14,9 @@ Sentry.init({
       "aws.region": process.env.AWS_REGION ?? "us-east-1",
     },
   },
+  // Strip sensitive values from headers, query strings, request bodies, and
+  // breadcrumb data before events leave the runtime.
+  beforeSend: scrubEvent,
+  beforeBreadcrumb: scrubBreadcrumb,
   debug: false,
 });

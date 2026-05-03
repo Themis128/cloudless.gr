@@ -5,6 +5,14 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
+  // Compression of HTTP responses (gzip via the Next.js server). On Lambda
+  // the compression is applied before CloudFront passes through; on the Pi
+  // the in-process compression is what users actually receive (Pi nginx
+  // doesn't recompress what's already compressed). Default is true; set
+  // explicitly so anyone reading config sees that compression is on.
+  compress: true,
+  // Strip the X-Powered-By: Next.js header — small attack-surface reduction.
+  poweredByHeader: false,
   // For Docker builds (Pi HA standby): emit a self-contained .next/standalone
   // bundle. SST/Vercel deploys leave this unset.
   output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
