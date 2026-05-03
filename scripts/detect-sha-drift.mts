@@ -17,12 +17,13 @@
  */
 
 import { request as httpsRequest } from "node:https";
-// `.js` extension (not `.ts`) is the ESM-standard form for TypeScript
-// source — Node strict-ESM resolution requires an extension, and tsx
-// rewrites `.js` to `.ts` at module-load time. Using `.ts` literally
-// works in tsx's CommonJS path but breaks Node's native ESM loader,
-// which is what tsx now uses by default.
-import { evaluateDrift, type DriftSnapshot } from "../src/lib/sha-drift.js";
+// Use the project's path alias (configured in tsconfig.json paths) so
+// tsx's loader resolves through the same map vitest uses for the unit
+// tests. Earlier attempts with relative `.ts` and `.js` extensions
+// each broke a different runtime: relative `.ts` failed Node strict
+// ESM, relative `.js` confused tsx into not transforming the source.
+// The alias path works in tsx + vitest + tsc strict mode.
+import { evaluateDrift, type DriftSnapshot } from "@/lib/sha-drift";
 
 const HEALTH_URLS = {
   cloud: "https://cloudless.gr/api/health",
