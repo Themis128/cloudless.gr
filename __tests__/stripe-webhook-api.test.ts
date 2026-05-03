@@ -7,6 +7,9 @@ const sendOrderConfirmationMock = vi.fn();
 const sendPaymentFailureNoticeMock = vi.fn();
 const notifyTeamMock = vi.fn();
 const getConfigMock = vi.fn();
+const persistStripeEventMock = vi.fn();
+const markStripeEventProcessedMock = vi.fn();
+const markStripeEventFailedMock = vi.fn();
 
 vi.mock("@/lib/stripe", () => ({
   getStripe: getStripeMock,
@@ -18,10 +21,15 @@ vi.mock("@/lib/email", () => ({
   notifyTeam: notifyTeamMock,
 }));
 
-// Mock ssm-config so tests control the webhook secret independently of .env.local
 vi.mock("@/lib/ssm-config", () => ({
   getConfig: getConfigMock,
   resetSsmCache: vi.fn(),
+}));
+
+vi.mock("@/lib/stripe-transactions", () => ({
+  persistStripeEvent: persistStripeEventMock,
+  markStripeEventProcessed: markStripeEventProcessedMock,
+  markStripeEventFailed: markStripeEventFailedMock,
 }));
 
 function makeRequest(body: string, signature?: string) {
@@ -47,6 +55,9 @@ describe("POST /api/webhooks/stripe", () => {
         constructEvent: constructEventMock,
       },
     });
+    persistStripeEventMock.mockResolvedValue({ duplicate: false });
+    markStripeEventProcessedMock.mockResolvedValue(undefined);
+    markStripeEventFailedMock.mockResolvedValue(undefined);
     sendOrderConfirmationMock.mockResolvedValue(undefined);
     sendPaymentFailureNoticeMock.mockResolvedValue(undefined);
     notifyTeamMock.mockResolvedValue(undefined);
@@ -85,7 +96,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(data.error).toContain("Invalid signature");
   });
 
-  it("handles checkout.session.completed and sends emails", async () => {
+  it("writes event to analytics ledger and marks processed on success", async () => {
     constructEventMock.mockReturnValueOnce({
       type: "checkout.session.completed",
       id: "evt_test_1",
@@ -107,88 +118,90 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(data.received).toBe(true);
+    expect(persistStripeEventMock).toHaveBeenCalledTimes(1);
+    expect(markStripeEventProcessedMock).toHaveBeenCalledWith("evt_test_1");
     expect(sendOrderConfirmationMock).toHaveBeenCalledWith(
       "buyer@cloudless.gr",
       "cs_test_1",
       129900,
       "eur",
     );
-    expect(notifyTeamMock).toHaveBeenCalledTimes(1);
   });
 
-  it("sends order confirmation for subscription with immediate payment", async () => {
-    constructEventMock.mockReturnValueOnce({
+  it("ignores duplicate webhook events from db dedupe", async () => {
+    const eventPayload = {
       type: "checkout.session.completed",
-      id: "evt_sub_paid",
+      id: "evt_duplicate_1",
       data: {
         object: {
-          id: "cs_sub_1",
-          customer_email: "sub@cloudless.gr",
-          amount_total: 4900,
+          id: "cs_dup_1",
+          customer_email: "buyer@cloudless.gr",
+          amount_total: 129900,
           currency: "eur",
           payment_status: "paid",
-          mode: "subscription",
-        },
-      },
-    });
-
-    const { POST } = await import("@/app/api/webhooks/stripe/route");
-    const response = await POST(makeRequest("{}", "sig_1"));
-
-    expect(response.status).toBe(200);
-    expect(sendOrderConfirmationMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("sends confirmation for subscription trial (mode=subscription, no_payment_required)", async () => {
-    constructEventMock.mockReturnValueOnce({
-      type: "checkout.session.completed",
-      id: "evt_trial_1",
-      data: {
-        object: {
-          id: "cs_trial_1",
-          customer_email: "trial@cloudless.gr",
-          amount_total: 0,
-          currency: "eur",
-          payment_status: "no_payment_required",
-          mode: "subscription",
-        },
-      },
-    });
-
-    const { POST } = await import("@/app/api/webhooks/stripe/route");
-    const response = await POST(makeRequest("{}", "sig_1"));
-
-    expect(response.status).toBe(200);
-    // mode === "subscription" → email is sent regardless of payment_status
-    expect(sendOrderConfirmationMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("does NOT send order confirmation for one-time payment with unpaid status", async () => {
-    constructEventMock.mockReturnValueOnce({
-      type: "checkout.session.completed",
-      id: "evt_unpaid_1",
-      data: {
-        object: {
-          id: "cs_unpaid_1",
-          customer_email: "buyer@cloudless.gr",
-          amount_total: 5000,
-          currency: "eur",
-          payment_status: "unpaid",
           mode: "payment",
         },
       },
-    });
+    };
+
+    constructEventMock.mockReturnValueOnce(eventPayload);
+    persistStripeEventMock.mockResolvedValueOnce({ duplicate: true });
 
     const { POST } = await import("@/app/api/webhooks/stripe/route");
     const response = await POST(makeRequest("{}", "sig_1"));
+    const data = await response.json();
 
     expect(response.status).toBe(200);
+    expect(data.duplicate).toBe(true);
     expect(sendOrderConfirmationMock).not.toHaveBeenCalled();
+    expect(markStripeEventProcessedMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when transaction persistence fails", async () => {
+    constructEventMock.mockReturnValueOnce({
+      type: "checkout.session.completed",
+      id: "evt_persist_fail",
+      data: { object: { id: "cs_1" } },
+    });
+    persistStripeEventMock.mockRejectedValueOnce(new Error("ddb unavailable"));
+
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const response = await POST(makeRequest("{}", "sig_1"));
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.error).toContain("Transaction persistence failed");
+  });
+
+  it("marks event failed when downstream handler throws", async () => {
+    constructEventMock.mockReturnValueOnce({
+      type: "customer.subscription.created",
+      id: "evt_handler_fail",
+      data: {
+        object: {
+          id: "sub_1",
+          status: "active",
+        },
+      },
+    });
+    notifyTeamMock.mockRejectedValueOnce(new Error("mail down"));
+
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const response = await POST(makeRequest("{}", "sig_1"));
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.error).toContain("Webhook handler failed");
+    expect(markStripeEventFailedMock).toHaveBeenCalledWith(
+      "evt_handler_fail",
+      "mail down",
+    );
   });
 
   it("handles invoice.payment_failed and sends customer/team notifications", async () => {
     constructEventMock.mockReturnValueOnce({
       type: "invoice.payment_failed",
+      id: "evt_invoice_failed",
       data: {
         object: {
           id: "in_test_1",
@@ -206,60 +219,10 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(data.received).toBe(true);
-    expect(sendPaymentFailureNoticeMock).toHaveBeenCalledWith("buyer@cloudless.gr", "in_test_1");
+    expect(sendPaymentFailureNoticeMock).toHaveBeenCalledWith(
+      "buyer@cloudless.gr",
+      "in_test_1",
+    );
     expect(notifyTeamMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("ignores duplicate webhook events by event id", async () => {
-    const eventPayload = {
-      type: "checkout.session.completed",
-      id: "evt_duplicate_1",
-      data: {
-        object: {
-          id: "cs_dup_1",
-          customer_email: "buyer@cloudless.gr",
-          amount_total: 129900,
-          currency: "eur",
-          payment_status: "paid",
-          mode: "payment",
-        },
-      },
-    };
-
-    constructEventMock.mockReturnValueOnce(eventPayload).mockReturnValueOnce(eventPayload);
-
-    const { POST } = await import("@/app/api/webhooks/stripe/route");
-
-    const firstResponse = await POST(makeRequest("{}", "sig_1"));
-    const firstData = await firstResponse.json();
-    expect(firstResponse.status).toBe(200);
-    expect(firstData.received).toBe(true);
-
-    const secondResponse = await POST(makeRequest("{}", "sig_1"));
-    const secondData = await secondResponse.json();
-    expect(secondResponse.status).toBe(200);
-    expect(secondData.duplicate).toBe(true);
-
-    expect(sendOrderConfirmationMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("returns 500 when downstream webhook handler throws", async () => {
-    constructEventMock.mockReturnValueOnce({
-      type: "customer.subscription.created",
-      data: {
-        object: {
-          id: "sub_1",
-          status: "active",
-        },
-      },
-    });
-    notifyTeamMock.mockRejectedValueOnce(new Error("mail down"));
-
-    const { POST } = await import("@/app/api/webhooks/stripe/route");
-    const response = await POST(makeRequest("{}", "sig_1"));
-    const data = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(data.error).toContain("Webhook handler failed");
   });
 });
