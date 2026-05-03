@@ -63,10 +63,13 @@ describe("scrubEvent", () => {
 
   it("always redacts cookies on the request object", () => {
     const out = scrubEvent(
-      event({ request: { cookies: { session: "abc" } as unknown as string } }),
+      event({ request: { cookies: { session: "abc", theme: "dark" } } }),
       HINT,
     );
-    expect(out?.request?.cookies).toBe("[REDACTED]");
+    expect(out?.request?.cookies).toEqual({
+      session: "[REDACTED]",
+      theme: "[REDACTED]",
+    });
   });
 
   it("redacts token-shaped values (AKIA, JWT, sk_live, gh_*, secret_*)", () => {
