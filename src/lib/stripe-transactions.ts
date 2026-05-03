@@ -9,6 +9,7 @@ import type Stripe from "stripe";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const APP_SOURCE_TAG = "cloudless.gr";
+const ANALYTICS_RETENTION_DAYS = 400;
 
 let dynamoClient: DynamoDBClient | null = null;
 
@@ -84,6 +85,14 @@ export function getStripeEventTags(eventType: string): StripeEventTags {
   };
 }
 
+function toEventDay(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toISOString().slice(0, 10);
+}
+
+function toExpiryEpoch(unixSeconds: number): number {
+  return unixSeconds + ANALYTICS_RETENTION_DAYS * 24 * 60 * 60;
+}
+
 function buildItem(event: Stripe.Event): Record<string, AttributeValue> {
   const object = event.data.object as unknown as Record<string, unknown>;
   const amountMinor =
@@ -99,6 +108,8 @@ function buildItem(event: Stripe.Event): Record<string, AttributeValue> {
   const customerEmail = asString(object.customer_email);
   const mode = asString(object.mode);
   const tags = getStripeEventTags(event.type);
+  const eventDay = toEventDay(event.created);
+  const stageCategory = `${tags.tagStage}#${tags.tagCategory}`;
 
   const item: Record<string, AttributeValue> = {
     eventId: { S: event.id },
@@ -106,8 +117,11 @@ function buildItem(event: Stripe.Event): Record<string, AttributeValue> {
     tagSource: { S: tags.tagSource },
     tagStage: { S: tags.tagStage },
     tagCategory: { S: tags.tagCategory },
+    stageCategory: { S: stageCategory },
+    eventDay: { S: eventDay },
     receivedAt: { N: `${Date.now()}` },
     stripeCreatedAt: { N: `${event.created}` },
+    expiresAt: { N: `${toExpiryEpoch(event.created)}` },
     processingStatus: { S: "received" },
     livemode: { BOOL: event.livemode },
     payloadJson: { S: toJson(event.data.object) },

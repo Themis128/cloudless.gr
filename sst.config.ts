@@ -80,6 +80,9 @@ export default {
         eventType: "string",
         tagCategory: "string",
         tagStage: "string",
+        stageCategory: "string",
+        eventDay: "string",
+        customerId: "string",
         processingStatus: "string",
         receivedAt: "number",
       },
@@ -88,7 +91,10 @@ export default {
         ByTypeAndTime: { hashKey: "eventType", rangeKey: "receivedAt" },
         ByCategoryAndTime: { hashKey: "tagCategory", rangeKey: "receivedAt" },
         ByStageAndTime: { hashKey: "tagStage", rangeKey: "receivedAt" },
+        ByStageCategoryAndTime: { hashKey: "stageCategory", rangeKey: "receivedAt" },
         ByStatusAndTime: { hashKey: "processingStatus", rangeKey: "receivedAt" },
+        ByDayAndTime: { hashKey: "eventDay", rangeKey: "receivedAt" },
+        ByCustomerAndTime: { hashKey: "customerId", rangeKey: "receivedAt" },
       },
     });
 
