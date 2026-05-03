@@ -37,10 +37,14 @@ ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_COGNITO_USER_POOL_ID
 ARG NEXT_PUBLIC_COGNITO_CLIENT_ID
 ARG NEXT_PUBLIC_HUBSPOT_PORTAL_ID
+# APP_VERSION is the deployed commit SHA — exposed via /api/health so the
+# HA speed-sync orchestrator can compare cloud vs Pi served versions.
+ARG APP_VERSION=dev
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} \
     NEXT_PUBLIC_COGNITO_USER_POOL_ID=${NEXT_PUBLIC_COGNITO_USER_POOL_ID} \
     NEXT_PUBLIC_COGNITO_CLIENT_ID=${NEXT_PUBLIC_COGNITO_CLIENT_ID} \
     NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${NEXT_PUBLIC_HUBSPOT_PORTAL_ID} \
+    APP_VERSION=${APP_VERSION} \
     NEXT_OUTPUT_STANDALONE=1 \
     NEXT_TELEMETRY_DISABLED=1
 
@@ -56,10 +60,17 @@ RUN pnpm build
 FROM node:${NODE_VERSION} AS runner
 WORKDIR /app
 
+# Re-declare APP_VERSION here so the runtime stage receives the build-arg.
+# Multi-stage builds don't inherit ARGs across FROM boundaries — without
+# this re-declaration + ENV pass-through, /api/health.version would
+# silently fall back to the static "0.1.0" default in src/app/api/health
+# even though the workflow passed --build-arg APP_VERSION=<sha>.
+ARG APP_VERSION=dev
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
-    HOSTNAME=0.0.0.0
+    HOSTNAME=0.0.0.0 \
+    APP_VERSION=${APP_VERSION}
 
 # node:22-alpine ships with a non-root `node` user at uid/gid 1000 — reuse it
 # (matches the k3s Deployment's runAsUser: 1000). --chmod=0555 drops write bits
