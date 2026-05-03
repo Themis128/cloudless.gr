@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
     const comments = await listComments(pageId);
     return NextResponse.json({ comments });
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     console.error("[API] Comments error:", err);
     return NextResponse.json(
       { error: "Failed to fetch comments" },
@@ -62,7 +63,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ comment }, { status: 201 });
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     console.error("[API] Add comment error:", err);
     return NextResponse.json(
       { error: "Failed to add comment" },

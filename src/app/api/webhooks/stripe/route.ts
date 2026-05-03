@@ -130,7 +130,10 @@ export async function POST(request: NextRequest) {
                 await associateDealWithContact(dealId, contactId);
               }
             } catch (hubspotError) {
-              console.error("[Stripe→HubSpot] Deal creation failed:", hubspotError);
+              console.error(
+                "[Stripe→HubSpot] Deal creation failed:",
+                hubspotError,
+              );
             }
           })();
         }
@@ -199,7 +202,10 @@ export async function POST(request: NextRequest) {
             : null;
 
         if (customerEmail) {
-          await sendPaymentFailureNotice(customerEmail, invoice.id ?? "unknown");
+          await sendPaymentFailureNotice(
+            customerEmail,
+            invoice.id ?? "unknown",
+          );
         }
 
         await notifyTeam(
@@ -219,7 +225,8 @@ export async function POST(request: NextRequest) {
     const integrationResponse = mapIntegrationError(err);
     if (integrationResponse) return integrationResponse;
 
-    const message = err instanceof Error ? err.message : "Unknown handler error";
+    const message =
+      err instanceof Error ? err.message : "Unknown handler error";
     await markStripeEventFailed(event.id, message).catch((markErr) => {
       console.error("[Stripe] Failed to mark event as failed:", markErr);
     });

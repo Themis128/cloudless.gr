@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
     const submissions = await listSubmissions(limit);
     return NextResponse.json({ submissions, count: submissions.length });
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     console.error("[Admin] Failed to list submissions:", err);
     return NextResponse.json(
       { error: "Failed to fetch submissions" },
@@ -61,7 +62,8 @@ export async function PATCH(request: NextRequest) {
   try {
     body = await request.json();
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
@@ -95,7 +97,8 @@ export async function PATCH(request: NextRequest) {
     }
     return NextResponse.json({ success: true });
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     console.error("[Admin] Failed to update submission status:", err);
     return NextResponse.json(
       { error: "Failed to update submission status" },

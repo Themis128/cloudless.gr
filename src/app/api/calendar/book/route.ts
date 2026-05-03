@@ -102,7 +102,8 @@ export async function POST(request: Request) {
           await associateDealWithContact(dealId, contactId);
         }
       } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+        const _r = mapIntegrationError(err);
+        if (_r) return _r;
         console.error("[Calendar→HubSpot] Deal creation failed:", err);
       }
     })();
@@ -113,7 +114,8 @@ export async function POST(request: Request) {
       meetingLink: result.htmlLink,
     });
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     console.error("[Calendar] Booking error:", err);
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       await import("@sentry/nextjs")

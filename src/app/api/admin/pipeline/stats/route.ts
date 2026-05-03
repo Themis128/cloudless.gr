@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
     const stats = await getPipelineStats();
     return NextResponse.json({ ...stats, fetchedAt: new Date().toISOString() });
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     return NextResponse.json(
       { error: "Failed to fetch pipeline stats." },
       { status: 500 },

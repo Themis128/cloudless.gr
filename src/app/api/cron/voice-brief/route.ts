@@ -120,7 +120,8 @@ export async function GET(request: NextRequest) {
         enhancedText = data.content?.[0]?.text ?? rawText;
       }
     } catch (err) {
-      const _r = mapIntegrationError(err); if (_r) return _r;
+      const _r = mapIntegrationError(err);
+      if (_r) return _r;
       // fall back to raw text
     }
   }
@@ -144,7 +145,8 @@ export async function GET(request: NextRequest) {
       }),
     );
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     // SSM unavailable — still return the brief
   }
 
