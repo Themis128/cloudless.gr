@@ -8,6 +8,15 @@ interface CheckoutItem {
   quantity: number;
 }
 
+function getIdempotencyKey(request: NextRequest): string | undefined {
+  const key = request.headers.get("idempotency-key")?.trim();
+  if (!key) return undefined;
+
+  // Stripe allows up to 255 chars. Keep format strict to avoid log/header abuse.
+  if (!/^[A-Za-z0-9:_-]{8,255}$/.test(key)) return undefined;
+  return key;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { items } = (await request.json()) as { items: CheckoutItem[] };
@@ -66,6 +75,7 @@ export async function POST(request: NextRequest) {
       : null;
 
     const stripe = await getStripe();
+    const idempotencyKey = getIdempotencyKey(request);
     const session = await stripe.checkout.sessions.create({
       mode: mode as "payment" | "subscription",
       line_items: lineItems as never[],
@@ -115,7 +125,7 @@ export async function POST(request: NextRequest) {
             ],
           }
         : undefined,
-    });
+    }, idempotencyKey ? { idempotencyKey } : undefined);
 
     return Response.json({ url: session.url });
   } catch (error) {

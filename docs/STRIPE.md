@@ -228,3 +228,42 @@ curl -X POST http://localhost:4000/api/checkout \
 | `src/app/api/webhooks/stripe/route.ts` | Webhook handler for 6 event types |
 | `src/lib/email.ts` | `sendOrderConfirmation()`, `sendPaymentFailureNotice()`, `notifyTeam()` |
 | `src/lib/slack-notify.ts` | `slackOrderNotify()` — fire-and-forget Slack notification |
+
+
+## Compliance And Legal Alignment (EU + US)
+
+The payment flow is hardened for cross-region operation across the primary application and HA/failover path with a common baseline aligned to GDPR (EU), CCPA/CPRA (US-CA), and PCI-DSS operational expectations.
+
+### Technical controls implemented
+
+- **Idempotent checkout creation:** `POST /api/checkout` accepts a validated `Idempotency-Key` header and forwards it to Stripe request options to prevent duplicate charge/session creation on retries.
+- **Webhook replay protection:** `POST /api/webhooks/stripe` tracks recently processed Stripe event IDs and returns success for duplicates without reprocessing side effects.
+- **PII minimization in logs:** Checkout webhook logs omit customer email in top-level operational log lines.
+- **In-transit encryption:** HTTPS enforcement + HSTS applies at edge/proxy; webhook signing verifies payload integrity/authenticity.
+- **At-rest encryption:** Stripe secrets are stored in AWS SSM Parameter Store (`SecureString`) and loaded server-side.
+
+### EU (GDPR) mapping
+
+- **Data minimization (Art. 5(1)(c))**: Avoids unnecessary logging of personal data in webhook processing.
+- **Integrity and confidentiality (Art. 5(1)(f), Art. 32)**: TLS + signature verification + secret management controls reduce unauthorized access and tampering risk.
+- **Accountability (Art. 5(2))**: Deterministic dedupe/idempotency behavior supports auditable, predictable payment processing.
+
+### US (CCPA/CPRA) mapping
+
+- **Reasonable security procedures**: Encrypted transport, secret management, and replay/idempotency controls reduce risk of unauthorized processing and duplicate transactions.
+- **Data minimization / purpose limitation**: Operational logs avoid collecting excess customer identifiers where not needed.
+
+### PCI-DSS scope posture
+
+- cloudless.gr uses **Stripe-hosted Checkout** and does not directly handle raw card PAN/CVV in application code.
+- Security controls above support SAQ-A style architecture assumptions, but merchant obligations remain (access control, incident response, key rotation, least privilege, retention controls).
+
+### Primary and failover parity requirements
+
+For payment readiness, both primary and HA app paths must keep equivalent controls for:
+
+- HTTPS/TLS policy floor and HSTS behavior.
+- Secret sourcing from encrypted stores (no plaintext checked into repo).
+- Stripe webhook signature validation before event handling.
+- Idempotent request handling and webhook replay suppression.
+- PII-safe observability and log redaction standards.

@@ -210,6 +210,39 @@ describe("POST /api/webhooks/stripe", () => {
     expect(notifyTeamMock).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores duplicate webhook events by event id", async () => {
+    const eventPayload = {
+      type: "checkout.session.completed",
+      id: "evt_duplicate_1",
+      data: {
+        object: {
+          id: "cs_dup_1",
+          customer_email: "buyer@cloudless.gr",
+          amount_total: 129900,
+          currency: "eur",
+          payment_status: "paid",
+          mode: "payment",
+        },
+      },
+    };
+
+    constructEventMock.mockReturnValueOnce(eventPayload).mockReturnValueOnce(eventPayload);
+
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+
+    const firstResponse = await POST(makeRequest("{}", "sig_1"));
+    const firstData = await firstResponse.json();
+    expect(firstResponse.status).toBe(200);
+    expect(firstData.received).toBe(true);
+
+    const secondResponse = await POST(makeRequest("{}", "sig_1"));
+    const secondData = await secondResponse.json();
+    expect(secondResponse.status).toBe(200);
+    expect(secondData.duplicate).toBe(true);
+
+    expect(sendOrderConfirmationMock).toHaveBeenCalledTimes(1);
+  });
+
   it("returns 500 when downstream webhook handler throws", async () => {
     constructEventMock.mockReturnValueOnce({
       type: "customer.subscription.created",
