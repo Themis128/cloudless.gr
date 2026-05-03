@@ -170,6 +170,7 @@ jobs:
             NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
             NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
             NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
+            APP_VERSION=${{ github.event.inputs.target_sha || github.sha }}
 
       # Trigger the Pi standby's image-sync CronJob immediately so we don't
       # wait up to 60s for the next scheduled poll. HMAC-signed POST through
