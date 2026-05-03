@@ -1,67 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
+import {
+  type ThemePref,
+  useStoredPref,
+  writeStoredPref,
+} from "@/lib/theme-pref";
 
-type ThemePref = "system" | "light" | "dark";
-
-const STORAGE_KEY = "cloudless-theme-pref";
 const ADMIN_PATH_RE = /^\/(?:en|el|fr|de)?\/?admin(?:\/|$)/;
-const PREF_EVENT = "cloudless:theme-pref";
 
 const OPTIONS: { value: ThemePref; iconKey: string; labelKey: string; fallback: string }[] = [
   { value: "system", iconKey: "system", labelKey: "common.themeSystem", fallback: "System" },
   { value: "light", iconKey: "sun", labelKey: "common.themeLight", fallback: "Light" },
   { value: "dark", iconKey: "moon", labelKey: "common.themeDark", fallback: "Dark" },
 ];
-
-function readStoredPref(): ThemePref | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const v = window.localStorage.getItem(STORAGE_KEY);
-    if (v === "system" || v === "light" || v === "dark") return v;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredPref(value: ThemePref): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, value);
-    // Same-tab listeners for ThemePreferenceSync + the inline switcher.
-    window.dispatchEvent(new CustomEvent(PREF_EVENT, { detail: value }));
-  } catch {
-    /* localStorage may be disabled — applying via the data-theme attribute is enough */
-  }
-}
-
-function subscribeStored(callback: () => void): () => void {
-  const onPref = () => callback();
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY) callback();
-  };
-  window.addEventListener(PREF_EVENT, onPref);
-  window.addEventListener("storage", onStorage);
-  return () => {
-    window.removeEventListener(PREF_EVENT, onPref);
-    window.removeEventListener("storage", onStorage);
-  };
-}
-
-const getServerStoredPref = (): ThemePref | null => null;
-
-function useStoredPref(): ThemePref | null {
-  return useSyncExternalStore<ThemePref | null>(
-    subscribeStored,
-    readStoredPref,
-    getServerStoredPref,
-  );
-}
 
 function ThemeIcon({ kind }: { kind: string }) {
   if (kind === "sun") {

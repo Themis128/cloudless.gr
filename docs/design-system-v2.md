@@ -112,6 +112,7 @@ The current visual language (deep void background, hard neon glow, scanlines, gl
 | **4. Homepage hero** | `/` flipped to light with gradient-mesh hero replacing the scanlines + cyber-grid + neon orbs. Three.js particle field calmed to 30% opacity. Section padding bumped to v2 96px on tablet+. | [#56](https://github.com/Themis128/cloudless.gr/pull/56) | ✅ open |
 | **5. Cleanup** *(this commit)* | Retired the deprecated v1 effect utilities (`glow-*`, `box-glow-*`, `scanlines`, `cyber-grid`, `dot-matrix`, `glitch`, `typing-cursor`, `animate-gradient-shift`, `animate-neon-pulse`, `scan-line`). The class hooks remain so existing markup parses, but they collapse to no-ops or to v2-styled subtle equivalents. `neon-border` is preserved as a calm v2-styled border for terminal blocks. | this PR | ✅ done |
 | **6. User theme switcher** | Navbar-level toggle (popover desktop, inline mobile) shipped as the first user-facing surface for choosing System / Light / Dark. Persists to `localStorage["cloudless-theme-pref"]` for anonymous visitors and to `user.preferences.theme` for authenticated users. Switcher is hidden on `/admin/*` (admin stays locked to dark). | `0a354365` | ✅ done |
+| **6.1 Shared theme-pref helper + dashboard live preview** | Extracted `readStoredPref` / `writeStoredPref` / `useStoredPref` into `src/lib/theme-pref.ts` so navbar, `ThemePreferenceSync`, and the dashboard form share one source of truth. `/dashboard/settings` theme buttons now apply immediately (live preview) via the same localStorage + custom-event channel — Save still flushes the rest of the form to the server. | this PR | ✅ done |
 
 Each PR is independently mergeable, stacked in order: `#53 → #54 → #55 → #56 → cleanup → theme switcher`.
 
@@ -139,7 +140,7 @@ themeForRoute(pathname)   (route default)
 |---|---|---|---|
 | Desktop nav (>= `lg` breakpoint) | `<ThemeSwitcher />` | Popover trigger between `<CartButton />` and `<LocaleSwitcher />` | Sun / moon / system icon shows current selection. |
 | Mobile menu (<` lg` breakpoint) | `<ThemeSwitcherInline />` | Three radio buttons in their own bordered row, above the Language section | Inline because the mobile menu is inside an `overflow-y-auto` container that would clip an absolute-positioned popover. |
-| Dashboard settings | Existing `/dashboard/settings` form | Buttons that call `updatePreferences({ theme })` | Pre-existed; flows through the same `user.preferences.theme` source as the navbar switcher. |
+| Dashboard settings | `/dashboard/settings` form | Buttons that call `writeStoredPref(value)` immediately (live preview) and update local form state | Save still flushes everything (theme + language + email prefs) to the server via `updatePreferences`. The button click no longer waits for Save to apply the theme — it flows through the same localStorage + custom-event channel as the navbar. |
 
 Both navbar variants render `null` on `/admin/*` paths.
 
@@ -157,13 +158,17 @@ When a click happens, the switcher:
 
 | File | Purpose |
 |---|---|
+| `src/lib/theme-pref.ts` | Shared persistence: `THEME_STORAGE_KEY`, `THEME_PREF_EVENT`, `readStoredPref`, `writeStoredPref`, `useStoredPref`. Single source of truth for navbar + dashboard + sync. |
 | `src/components/ThemeSwitcher.tsx` | Default export = popover; named export `ThemeSwitcherInline` = mobile inline radio group. |
 | `src/components/ThemePreferenceSync.tsx` | Resolves the priority chain and writes `data-theme` on `<html>`. |
 | `src/components/ThemeProvider.tsx` | `themeForRoute()` mapping (route default). |
 | `src/components/Navbar.tsx` | Mounts both switcher variants. |
+| `src/app/[locale]/dashboard/settings/page.tsx` | Calls `writeStoredPref` on each theme button click for live preview; `updatePreferences` still runs on Save for the rest of the form. |
 | `src/locales/{en,el,fr,de}.json` | `common.theme`, `common.themeSystem|Light|Dark`. |
 | `__tests__/theme-switcher.test.tsx` | 8 tests — admin hide on both variants, popover persistence, custom event dispatch, authenticated `updatePreferences`, user-pref seeding, localStorage-wins-over-user-pref ordering. |
 | `__tests__/theme-preference-sync.test.tsx` | 5 tests — original 3 (route default, user pref, admin lock) plus 2 new (anonymous localStorage override, auth-pref-wins-over-localStorage). |
+| `__tests__/dashboard-settings-live-preview.test.tsx` | 3 tests — click writes localStorage, click dispatches the custom event, Save is still required for `updatePreferences`. |
+| `e2e/theme-switcher.spec.ts` | 5 Playwright cases against `pnpm dev` — popover renders + 3 options, Light + Dark write `data-theme`, override survives reload, mobile inline radios persist clicks. |
 
 ## Open questions
 
