@@ -170,7 +170,33 @@ jobs:
             NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
             NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
             NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
-            APP_VERSION=${{ github.event.inputs.target_sha || github.sha }}
+
+      # Record the pushed image digest in SSM so the Pi's image-sync CronJob
+      # can compare without needing ecr:DescribeImages (omv-main-cli is
+      # scoped and lacks that permission; GitHub Actions role has it).
+      # Works for both fresh builds and short-circuit re-runs (SHA tag exists).
+      - name: record ECR digest in SSM
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          SHA="${GITHUB_SHA::12}"
+          DIGEST=$(aws ecr describe-images \
+            --repository-name "${ECR_REPO}" \
+            --image-ids imageTag="${SHA}" \
+            --query 'imageDetails[0].imageDigest' \
+            --output text 2>/dev/null || echo "")
+          if [ -z "$DIGEST" ] || [ "$DIGEST" = "None" ]; then
+            echo "::warning::Could not resolve digest for tag ${SHA} — SSM not updated"
+            exit 0
+          fi
+          echo "digest=${DIGEST}"
+          aws ssm put-parameter \
+            --name "/cloudless/production/ECR_LATEST_DIGEST" \
+            --value "${DIGEST}" \
+            --type String \
+            --overwrite \
+            --region "${AWS_REGION}"
+          echo "SSM /cloudless/production/ECR_LATEST_DIGEST updated"
 
       # Trigger the Pi standby's image-sync CronJob immediately so we don't
       # wait up to 60s for the next scheduled poll. HMAC-signed POST through
