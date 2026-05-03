@@ -177,6 +177,10 @@ jobs:
       # Works for both fresh builds and short-circuit re-runs (SHA tag exists).
       - name: record ECR digest in SSM
         if: github.event_name != 'pull_request'
+        # Non-fatal: cloudless-github-actions lacks ssm:PutParameter until the
+        # IAM policy is updated. The webhook step below covers real-time sync;
+        # this step is a best-effort fallback for the CronJob.
+        continue-on-error: true
         run: |
           set -euo pipefail
           SHA="${GITHUB_SHA::12}"
