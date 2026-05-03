@@ -52,24 +52,33 @@ function readCognitoToken(request: NextRequest): {
 const intlMiddleware = createIntlMiddleware(routing);
 
 // --- In-memory rate limiter (per-process; resets on restart) ---
+//
+// Caveat (worth understanding before changing the numbers below):
+// In Lambda each warm container has its own copy of `rateLimitMap`. With N
+// concurrent containers warm, the effective per-IP ceiling is roughly N ×
+// `max`. For burst protection at scale, the right answer is AWS WAF's
+// rate-based rule (or APIGW usage plans) — this in-process limiter is a
+// best-effort first line that catches accidental loops and small-scale
+// spam, not a real shield against a coordinated attacker. The numbers
+// below are conservative on purpose.
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
-  "/api/contact": { windowMs: 60_000, max: 5 },
-  "/api/subscribe": { windowMs: 60_000, max: 3 },
-  "/api/unsubscribe": { windowMs: 60_000, max: 5 },
-  "/api/checkout": { windowMs: 60_000, max: 10 },
-  "/api/calendar/book": { windowMs: 60_000, max: 5 },
-  "/api/hubspot/ticket": { windowMs: 60_000, max: 5 },
-  "/api/crm/contact": { windowMs: 60_000, max: 5 },
+  "/api/contact": { windowMs: 60_000, max: 3 },
+  "/api/subscribe": { windowMs: 60_000, max: 2 },
+  "/api/unsubscribe": { windowMs: 60_000, max: 3 },
+  "/api/checkout": { windowMs: 60_000, max: 6 },
+  "/api/calendar/book": { windowMs: 60_000, max: 3 },
+  "/api/hubspot/ticket": { windowMs: 60_000, max: 3 },
+  "/api/crm/contact": { windowMs: 60_000, max: 3 },
   // LLM proxy — each call hits the Anthropic API and costs money. Tighter cap.
-  "/api/chat": { windowMs: 60_000, max: 20 },
+  "/api/chat": { windowMs: 60_000, max: 12 },
 };
 
 // Admin endpoints are JWT-auth-gated, but we still rate-limit them to cap
 // abuse from stolen tokens and prevent expensive AI/report operations from
-// being hammered. windowMs: 60s, max: 120 req/min per IP across all /api/admin/*.
-const ADMIN_RATE_LIMIT = { windowMs: 60_000, max: 120 };
+// being hammered. windowMs: 60s, per-IP across all /api/admin/*.
+const ADMIN_RATE_LIMIT = { windowMs: 60_000, max: 90 };
 
 function isRateLimited(
   key: string,
@@ -144,6 +153,11 @@ const CSP_REPORT_ONLY = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
+  // Browsers POST violation reports here. Same-origin so it works on
+  // both cloud (cloudless.gr) and Pi (cloudless.online) without a CORS
+  // dance. Endpoint logs to stdout → Sentry/CloudWatch.
+  "report-uri /api/csp-report",
+  "report-to csp-endpoint",
   // Note: upgrade-insecure-requests is intentionally OMITTED here.
   // Browsers ignore it inside Content-Security-Policy-Report-Only and log
   // a "directive ignored" warning to the console (Lighthouse Best-Practices
@@ -151,19 +165,60 @@ const CSP_REPORT_ONLY = [
   // Report-Only mode (see scheduled agent: trig_01Lwqaf2cUrs3rZPXSdWhdkM).
 ].join("; ");
 
+/**
+ * Reporting-API endpoint group. Modern browsers prefer this over the
+ * legacy report-uri directive, but they fall back to report-uri when
+ * the report-to group is unknown — so we ship both in the CSP above.
+ */
+const REPORT_TO = JSON.stringify({
+  group: "csp-endpoint",
+  max_age: 86400,
+  endpoints: [{ url: "/api/csp-report" }],
+  include_subdomains: true,
+});
+
 /** Security headers applied to all responses */
 function addSecurityHeaders(response: NextResponse): void {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  // Defense-in-depth: deny every powerful feature this marketing/storefront
+  // app does not need. payment=(self) keeps Stripe Payment Request API
+  // working; everything else is hard-blocked. Browsers that don't recognize
+  // a directive ignore it.
   response.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()",
+    [
+      "accelerometer=()",
+      "ambient-light-sensor=()",
+      "autoplay=(self)",
+      "battery=()",
+      "camera=()",
+      "display-capture=()",
+      "encrypted-media=()",
+      "fullscreen=(self)",
+      "geolocation=()",
+      "gyroscope=()",
+      "hid=()",
+      "idle-detection=()",
+      "magnetometer=()",
+      "microphone=()",
+      "midi=()",
+      "payment=(self)",
+      "picture-in-picture=()",
+      "publickey-credentials-get=(self)",
+      "screen-wake-lock=()",
+      "serial=()",
+      "usb=()",
+      "web-share=(self)",
+      "xr-spatial-tracking=()",
+    ].join(", "),
   );
   response.headers.set(
     "Strict-Transport-Security",
     "max-age=63072000; includeSubDomains; preload",
   );
+  response.headers.set("Report-To", REPORT_TO);
   response.headers.set("Content-Security-Policy-Report-Only", CSP_REPORT_ONLY);
 }
 
