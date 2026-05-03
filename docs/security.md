@@ -1,0 +1,180 @@
+# Security posture
+
+Single source of truth for the security controls protecting the cloudless.gr
+app — both the cloud Lambda primary and the Pi K3s standby (which runs the
+same image, so all controls below apply identically to both).
+
+## Snapshot
+
+| Layer | Control | Where |
+|---|---|---|
+| Transport | HTTPS at every public edge (ACM certs on CloudFront + APIGW), HSTS preload | `src/proxy.ts`, AWS infra |
+| Transport | Production HTTP→HTTPS 308 redirect | `src/proxy.ts` |
+| Auth (user) | Cognito JWT, RS256-verified against pool JWKS, ID-token-only via `token_use` claim | `src/lib/api-auth.ts` |
+| Auth (admin) | All 71 `/api/admin/*` routes gated by `requireAdmin`/`requireAuth` | `src/app/api/admin/**` |
+| Auth (cron) | `Bearer ${CRON_SECRET}`, constant-time compare | `src/lib/cron-auth.ts` |
+| Auth (webhook) | Stripe `constructEvent`, HubSpot v3 timing-safe HMAC, Notion HMAC, Pi-sync HMAC-SHA256 | `src/app/api/webhooks/**`, `.github/workflows/build-pi-image.yml` |
+| Headers | HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin | `src/proxy.ts` |
+| Headers | Permissions-Policy with 24 directives — most denied, only payment/fullscreen/autoplay/web-share/publickey-credentials-get kept as `(self)` | `src/proxy.ts` |
+| Headers | Content-Security-Policy-Report-Only (full directive set; `report-uri /api/csp-report` + `report-to csp-endpoint`) | `src/proxy.ts` |
+| CORS | Strict allowlist: `cloudless.gr`, `www.cloudless.gr` | `src/proxy.ts` |
+| Rate limit | Per-IP, per-route in-memory token bucket; conservative caps acknowledging per-Lambda × N concurrency | `src/proxy.ts` |
+| SSRF guard | `/api/notion-image` validates URL hostname against allowlist (`*.amazonaws.com`, `files.notion.so`) before fetching | `src/app/api/notion-image/route.ts` |
+| Secrets at rest | SSM Parameter Store SecureString (AWS-managed KMS) | SSM `/cloudless/production/*` |
+| Secrets in flight | Read at runtime via SSM SDK (Lambda IAM role on cloud, `cloudless-pi-standby` IAM user on Pi) | `src/lib/ssm-config.ts` |
+| Error reporting | Sentry events + breadcrumbs scrubbed for sensitive headers, query keys, request body keys, token-shaped strings, cookies | `src/lib/sentry-scrub.ts` |
+| Push protection | GitHub Secret Scanning blocks pushes containing AWS keys, JWTs, Stripe keys, etc. | repo-level setting |
+| Dep vulns | `pnpm audit` clean (0 advisories at last check); Dependabot configured | `package.json`, `.github/workflows/dependabot-automerge.yml` |
+| File uploads | None — no `formData`/multipart routes in `/api/*` | (absence-as-control) |
+| Cookies | None set by app code; auth is Bearer-token via `Authorization` header — minimal CSRF surface | (absence-as-control) |
+| Stack-trace leak | API errors return generic codes; raw error logged server-side where Sentry scrubber redacts | `src/app/api/admin/notion/status/route.ts` and similar |
+
+## Detailed controls
+
+### Authentication
+
+- **User auth** uses Cognito User Pool `us-east-1_JQWwFbO9a`. ID tokens (not
+  access tokens) are required — checked via the `token_use` claim. Signature
+  is verified against the pool's published JWKS (`createRemoteJWKSet`), with
+  issuer + audience asserted.
+- **Admin gate** — `requireAdmin()` decodes the verified token and asserts
+  the user is in the admin Cognito group. Used by every route under
+  `src/app/api/admin/*` (verified by audit script in this repo).
+- **Cron / scheduled jobs** — protected by `CRON_SECRET` Bearer token,
+  compared with `safeEqual` (constant time) to defeat timing oracles.
+
+### Webhook signatures
+
+| Source | Algorithm | Verifier |
+|---|---|---|
+| Stripe | HMAC via `stripe.webhooks.constructEvent` (canonical, includes timestamp) | `src/app/api/webhooks/stripe/route.ts` |
+| HubSpot | v3 HMAC-SHA256 over `${method}${url}${body}${timestamp}`, `timingSafeEqual` | `src/app/api/webhooks/hubspot/route.ts` |
+| Notion | HMAC-SHA256 of body | `src/app/api/webhooks/notion/route.ts` |
+| Pi sync (build → Pi) | HMAC-SHA256 over JSON body, sent as `X-Hub-Signature-256` | `.github/workflows/build-pi-image.yml` |
+
+### Transport headers
+
+```
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: accelerometer=(), ambient-light-sensor=(), autoplay=(self),
+  battery=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self),
+  geolocation=(), gyroscope=(), hid=(), idle-detection=(), magnetometer=(),
+  microphone=(), midi=(), payment=(self), picture-in-picture=(),
+  publickey-credentials-get=(self), screen-wake-lock=(), serial=(), usb=(),
+  web-share=(self), xr-spatial-tracking=()
+Content-Security-Policy-Report-Only: <see src/proxy.ts:CSP_REPORT_ONLY>
+Report-To: {"group":"csp-endpoint","max_age":86400,"endpoints":[{"url":"/api/csp-report"}],"include_subdomains":true}
+```
+
+### CSP — current state and roadmap
+
+The CSP is currently shipped as `Content-Security-Policy-Report-Only`. This
+gathers violation data without blocking. Reports land at `/api/csp-report`
+(handles both legacy `application/csp-report` and modern
+`application/reports+json` payloads) and emit a single structured log line
+per violation: `[csp-violation] dir=<directive> blocked=<uri> source=<file>
+doc=<documentURL> disp=<enforce|report>`.
+
+**Roadmap to enforce**:
+1. Run with `Report-Only` for ~1 week of representative traffic.
+2. Group reports by `(directive, blocked-uri)` from the log stream.
+3. Allowlist any legitimate sources that surface; remove anything that
+   doesn't have a clear business need.
+4. Flip the header from `Content-Security-Policy-Report-Only` →
+   `Content-Security-Policy` and add `upgrade-insecure-requests` (currently
+   omitted since it's silently ignored in Report-Only mode).
+
+### Rate limiting
+
+The in-process limiter in `src/proxy.ts` is **per-Lambda-container**, meaning
+the effective ceiling is roughly `(concurrent containers) × max`. Caps were
+chosen to keep the worst case bounded for accidental loops and small-scale
+spam:
+
+| Route | Window | Max / container / window |
+|---|---|---|
+| `/api/contact` | 60s | 3 |
+| `/api/subscribe` | 60s | 2 |
+| `/api/unsubscribe` | 60s | 3 |
+| `/api/checkout` | 60s | 6 |
+| `/api/calendar/book` | 60s | 3 |
+| `/api/hubspot/ticket` | 60s | 3 |
+| `/api/crm/contact` | 60s | 3 |
+| `/api/chat` (LLM proxy) | 60s | 12 |
+| `/api/admin/*` (any) | 60s | 90 |
+
+For real burst protection (DDoS, distributed attackers), the right answer is
+AWS WAF rate-based rules at the CloudFront edge or APIGW usage plans. The
+in-process limiter is a best-effort first line, not a shield.
+
+### Sentry secret scrubber
+
+`src/lib/sentry-scrub.ts` runs as `beforeSend` and `beforeBreadcrumb` on all
+three Sentry runtimes (server, client, edge). It redacts:
+
+- **Headers**: `Authorization`, `Cookie`, `Set-Cookie`, `X-API-Key`,
+  `X-Cron-Secret`, `Stripe-Signature`, `*Hub-Signature*`, `*Notion-Signature*`
+- **Object keys** matching `/^(password|token|secret|key|api_-?key|access[_-]?token|...|nonce|bearer)$/i` — recursive into nested objects/arrays
+- **Token-shaped strings** anywhere in the payload (regardless of key):
+  AWS AKID `AKIA...`, AWS secret key shape, JWT triple, GitHub PAT (`ghp_...`,
+  `gho_...`, `ghs_...`, `ghu_...`, `ghr_...`), Stripe live key (`sk_live_...`),
+  Notion v2 secret (`secret_...`)
+- **Cookies on the request object** — every value replaced regardless of shape
+- **Query strings + URL params** with sensitive keys/values
+
+Coverage is locked in by `__tests__/sentry-scrub.test.ts` (8 tests).
+
+### CSP report endpoint contract
+
+`POST /api/csp-report`
+- Accepts both `application/csp-report` (legacy) and `application/reports+json`
+  (modern Reporting-API) shapes.
+- Returns `204 No Content` always (errors are silently ignored to avoid
+  retry storms from misbehaving browsers).
+- Logs one line per violation; tested by `__tests__/csp-report.test.ts` (5 tests).
+
+### IAM scopes for the Pi
+
+The Pi standby reads from the same SSM tree, sends mail via the same SES
+identity, and pulls the same Cognito user metadata as the cloud Lambda. See
+[docs/iam.md](iam.md) for the full IAM principal map and the
+permission-update path that doesn't require root keys.
+
+## What's deliberately out of scope
+
+| Topic | Why skipped |
+|---|---|
+| **CSRF tokens** | App uses Bearer tokens in `Authorization` header, not cookies. CORS allowlist further restricts cross-origin requests. CSRF surface is minimal. |
+| **SRI on third-party scripts** | HubSpot's tracking script is loaded dynamically by another HubSpot loader. CSP allowlist already constrains the scripts that can run; SRI on Stripe/Sentry is feasible if needed. |
+| **WAF / DDoS protection at edge** | Not currently configured. CloudFront's built-in DDoS protection (Shield Standard) is on by default. AWS WAF is the next step if needed. |
+| **`'unsafe-inline'` / `'unsafe-eval'` in CSP** | Required by HubSpot's tracking script. Removing them would break HubSpot. CSP nonces could narrow this if HubSpot is ever removed. |
+
+## Verifying
+
+```bash
+# Headers on prod
+curl -sI https://cloudless.gr/ | grep -iE "strict-transport|content-security|permissions|x-frame|x-content|referrer|report-to"
+
+# CSP report endpoint reachable
+curl -sS -o /dev/null -w "HTTP %{http_code}\n" \
+  -X POST https://cloudless.gr/api/csp-report \
+  -H "Content-Type: application/csp-report" \
+  -d '{"csp-report":{"violated-directive":"test"}}'
+# expect: HTTP 204
+
+# Run the unit-test suite
+pnpm exec vitest run __tests__/sentry-scrub.test.ts __tests__/csp-report.test.ts
+
+# Dep vuln check
+pnpm audit
+```
+
+## See also
+
+- [docs/deploy.md](deploy.md) — how production deploys and what IAM perms the deploy role has
+- [docs/iam.md](iam.md) — IAM principals and the no-root permission-update path
+- [docs/pi-cloud-sync.md](pi-cloud-sync.md) — what's kept identical between the cloud and Pi apps
+- [docs/SECURITY_ENHANCEMENTS_ROADMAP.md](SECURITY_ENHANCEMENTS_ROADMAP.md) — longer-horizon backlog
