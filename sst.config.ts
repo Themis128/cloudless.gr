@@ -35,6 +35,24 @@ export default {
     const stage = $app.stage;
     const isProd = stage === STAGE_PRODUCTION;
 
+    const stripeTransactionsTable = new sst.aws.Dynamo("StripeTransactions", {
+      fields: {
+        eventId: "string",
+        eventType: "string",
+        tagCategory: "string",
+        tagStage: "string",
+        processingStatus: "string",
+        receivedAt: "number",
+      },
+      primaryIndex: { hashKey: "eventId" },
+      globalIndexes: {
+        ByTypeAndTime: { hashKey: "eventType", rangeKey: "receivedAt" },
+        ByCategoryAndTime: { hashKey: "tagCategory", rangeKey: "receivedAt" },
+        ByStageAndTime: { hashKey: "tagStage", rangeKey: "receivedAt" },
+        ByStatusAndTime: { hashKey: "processingStatus", rangeKey: "receivedAt" },
+      },
+    });
+
     const site = new sst.aws.Nextjs("CloudlessSite", {
       // Domain: cloudless.gr with existing Route53 zone + ACM cert.
       // dns: false — we manage Route 53 records explicitly below to support
@@ -55,6 +73,7 @@ export default {
           ? "https://cloudless.gr"
           : `https://${stage}.cloudless.gr`,
         NEXT_PUBLIC_STAGE: stage,
+        STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTable.name,
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: "us-east-1_JQWwFbO9a",
         NEXT_PUBLIC_COGNITO_CLIENT_ID: "2qq6i24oc48391cmuv4kfl1rm2",
         // Notion database IDs (non-secret, safe to inline)
@@ -65,6 +84,7 @@ export default {
         NOTION_TASKS_DB_ID: "14ce4ff6c400437597b13e70ac909354",
         NOTION_ANALYTICS_DB_ID: "cc4287fcb42a42dc92a7053d6f1199c7",
       },
+      link: [stripeTransactionsTable],
       warm: isProd ? 5 : 0,
       server: {
         memory: "1024 MB",

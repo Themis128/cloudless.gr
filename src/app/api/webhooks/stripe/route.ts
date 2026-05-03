@@ -15,24 +15,11 @@ import {
 } from "@/lib/hubspot";
 import type Stripe from "stripe";
 import { mapIntegrationError } from "@/lib/api-errors";
-
-const PROCESSED_EVENT_TTL_MS = 24 * 60 * 60 * 1000;
-const processedEvents = new Map<string, number>();
-
-function cleanupProcessedEvents() {
-  const now = Date.now();
-  for (const [eventId, expiresAt] of processedEvents.entries()) {
-    if (expiresAt <= now) processedEvents.delete(eventId);
-  }
-}
-
-function isDuplicateEvent(eventId: string | undefined): boolean {
-  if (!eventId) return false;
-  cleanupProcessedEvents();
-  if (processedEvents.has(eventId)) return true;
-  processedEvents.set(eventId, Date.now() + PROCESSED_EVENT_TTL_MS);
-  return false;
-}
+import {
+  persistStripeEvent,
+  markStripeEventProcessed,
+  markStripeEventFailed,
+} from "@/lib/stripe-transactions";
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -66,9 +53,20 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  if (isDuplicateEvent(event.id)) {
-    console.warn(`[Stripe] Duplicate event ignored: ${event.id}`);
-    return Response.json({ received: true, duplicate: true });
+  try {
+    const persistedEvent = await persistStripeEvent(event);
+    if (persistedEvent.duplicate) {
+      console.warn(`[Stripe] Duplicate event ignored: ${event.id}`);
+      return Response.json({ received: true, duplicate: true });
+    }
+  } catch (err) {
+    const integrationResponse = mapIntegrationError(err);
+    if (integrationResponse) return integrationResponse;
+    console.error("[Stripe] Failed to persist event for analytics:", err);
+    return Response.json(
+      { error: "Transaction persistence failed" },
+      { status: 500 },
+    );
   }
 
   try {
@@ -79,10 +77,6 @@ export async function POST(request: NextRequest) {
           `[Stripe] Checkout completed: ${session.id}, event: ${event.id}, payment_status: ${session.payment_status}`,
         );
 
-        // Only send order confirmation when payment is actually collected.
-        // Subscriptions with trial periods fire this event with payment_status
-        // "no_payment_required" — skip the email in that case to avoid
-        // sending a "purchase confirmed" message before any money changes hands.
         const paymentCollected =
           session.payment_status === "paid" || session.mode === "subscription";
 
@@ -94,7 +88,7 @@ export async function POST(request: NextRequest) {
             session.currency ?? "eur",
           );
         }
-        // Notify the team
+
         await notifyTeam(
           `[Order] New purchase: ${session.id}`,
           `<h3>New order received</h3>
@@ -103,14 +97,12 @@ export async function POST(request: NextRequest) {
           <p><strong>Session:</strong> ${escapeHtml(session.id)}</p>`,
         );
 
-        // Fire-and-forget Slack notification
         slackOrderNotify({
           sessionId: session.id,
           email: session.customer_email ?? "N/A",
           amount: String((session.amount_total ?? 0) / 100),
         }).catch(() => {});
 
-        // HubSpot: upsert contact + create deal (fire-and-forget)
         if (session.customer_email) {
           (async () => {
             try {
@@ -137,10 +129,8 @@ export async function POST(request: NextRequest) {
               if (dealId && contactId) {
                 await associateDealWithContact(dealId, contactId);
               }
-            } catch (err) {
-    const integrationResponse = mapIntegrationError(err);
-    if (integrationResponse) return integrationResponse;
-              console.error("[Stripe→HubSpot] Deal creation failed:", err);
+            } catch (hubspotError) {
+              console.error("[Stripe→HubSpot] Deal creation failed:", hubspotError);
             }
           })();
         }
@@ -209,10 +199,7 @@ export async function POST(request: NextRequest) {
             : null;
 
         if (customerEmail) {
-          await sendPaymentFailureNotice(
-            customerEmail,
-            invoice.id ?? "unknown",
-          );
+          await sendPaymentFailureNotice(customerEmail, invoice.id ?? "unknown");
         }
 
         await notifyTeam(
@@ -231,6 +218,12 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const integrationResponse = mapIntegrationError(err);
     if (integrationResponse) return integrationResponse;
+
+    const message = err instanceof Error ? err.message : "Unknown handler error";
+    await markStripeEventFailed(event.id, message).catch((markErr) => {
+      console.error("[Stripe] Failed to mark event as failed:", markErr);
+    });
+
     console.error(`[Stripe] Error handling ${event.type}:`, err);
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       await import("@sentry/nextjs")
@@ -246,7 +239,10 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Webhook handler failed" }, { status: 500 });
   }
 
-  // Flush Sentry before Lambda returns — events are buffered
+  await markStripeEventProcessed(event.id).catch((markErr) => {
+    console.error("[Stripe] Failed to mark event as processed:", markErr);
+  });
+
   if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
     await import("@sentry/nextjs")
       .then(({ flush }) => flush(2000))
