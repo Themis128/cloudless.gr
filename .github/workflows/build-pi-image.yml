@@ -71,9 +71,42 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: aws-actions/amazon-ecr-login@19d944daaa35f0fa1d3f7f8af1d3f2e5de25c5b7 # v2
 
+      - name: short-circuit if SHA tag already exists in ECR
+        # Push-trigger and HA-orchestrator-dispatch can both fire for the
+        # same SHA, racing into ECR. Whichever loses gets "tag is immutable"
+        # and fails the workflow — even though the image is fine.
+        # If our SHA is already pushed, skip the rebuild entirely and just
+        # trigger the Pi sync webhook. This makes the workflow idempotent
+        # under repeated dispatches for the same SHA.
+        id: existing
+        if: github.event_name != 'pull_request'
+        run: |
+          SHA="${GITHUB_SHA::12}"
+          set +e
+          aws ecr describe-images \
+            --repository-name "${ECR_REPO}" \
+            --image-ids imageTag="${SHA}" \
+            --region "${AWS_REGION}" \
+            --output json > /tmp/describe.json 2> /tmp/describe.err
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            digest=$(jq -r '.imageDetails[0].imageDigest // empty' /tmp/describe.json)
+            echo "  ✓ SHA tag ${SHA} already exists in ECR (digest: ${digest:-unknown})"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            if grep -qiE "ImageNotFoundException|not found" /tmp/describe.err; then
+              echo "  → SHA tag ${SHA} not in ECR yet, proceeding with build"
+            else
+              echo "::warning::ecr:DescribeImages call failed; assuming tag does not exist"
+              cat /tmp/describe.err >&2
+            fi
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: untag previous :latest (ECR repo is tag-immutable)
         id: untag
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.existing.outputs.exists != 'true'
         run: |
           # ECR's image tag mutability is set to IMMUTABLE on this repo, so a
           # second push of :latest would fail with "tag is immutable". Try to
@@ -100,10 +133,12 @@ jobs:
           fi
 
       - name: set up Buildx
+        if: steps.existing.outputs.exists != 'true' || github.event_name == 'pull_request'
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: compute tags
         id: tags
+        if: steps.existing.outputs.exists != 'true' || github.event_name == 'pull_request'
         env:
           LATEST_WRITABLE: ${{ steps.untag.outputs.latest_writable }}
         run: |
@@ -120,6 +155,7 @@ jobs:
           fi
 
       - name: build (and push if main)
+        if: steps.existing.outputs.exists != 'true' || github.event_name == 'pull_request'
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
@@ -141,7 +177,11 @@ jobs:
       # If the Pi is unreachable, the cron-based fallback covers within 60s,
       # so this step is non-fatal.
       - name: trigger Pi sync-webhook
-        if: steps.tags.outputs.push == 'true'
+        # Fire on either a fresh push OR a short-circuit re-run for an
+        # already-existing SHA — in both cases we want the Pi to pull,
+        # because the orchestrator may have re-dispatched precisely to
+        # nudge the Pi toward a self-consistent state.
+        if: github.event_name != 'pull_request' && (steps.tags.outputs.push == 'true' || steps.existing.outputs.exists == 'true')
         continue-on-error: true
         env:
           SECRET: ${{ secrets.SYNC_HMAC_SECRET }}
