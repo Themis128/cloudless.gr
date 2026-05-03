@@ -3,6 +3,16 @@ import { test, expect } from "@playwright/test";
 const STORAGE_KEY = "cloudless-theme-pref";
 
 test.describe("ThemeSwitcher (desktop popover)", () => {
+  // Desktop-only: the navbar's ThemeSwitcher renders as a popover at
+  // lg+ viewports. On mobile-chrome (Pixel 7), the navbar collapses
+  // and the same control lives inline inside the hamburger menu — a
+  // different DOM shape that this describe doesn't cover. Skip on
+  // the mobile project.
+  test.skip(
+    ({ viewport }) => (viewport?.width ?? Infinity) < 1024,
+    "Desktop-only popover; mobile uses inline variant",
+  );
+
   // Browser context starts with a clean localStorage in Playwright; the
   // addInitScript pattern would clear it on every navigation including
   // page.reload(), which breaks the persistence assertion.
