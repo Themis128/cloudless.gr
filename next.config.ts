@@ -29,6 +29,20 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "files.stripe.com" },
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
+    // AVIF first, WebP fallback. AVIF is ~20-30% smaller than WebP at the
+    // same perceptual quality and ~50% smaller than JPEG. Browsers that
+    // don't accept AVIF (Safari < 16.4, ancient Firefox) get WebP. The
+    // few left after that get the original via Next.js' content
+    // negotiation. On every <Image> request the optimizer picks the
+    // smallest format the client accepts.
+    formats: ["image/avif", "image/webp"],
+    // Drop the 3840 ladder rung (8K). On real traffic almost nothing hits
+    // it (laptops cap at 2560, phones at ~1440), so removing it just
+    // saves one generation per image without anyone noticing. The default
+    // is [640, 750, 828, 1080, 1200, 1920, 2048, 3840].
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    // Cache optimized variants for 30 days at the edge.
+    minimumCacheTTL: 60 * 60 * 24 * 30,
   },
   experimental: {
     // Tree-shake heavy barrel packages — reduces client bundle for Amplify, GSAP, cmdk
