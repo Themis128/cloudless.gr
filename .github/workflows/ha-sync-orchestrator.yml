@@ -1,0 +1,131 @@
+name: HA sync orchestrator
+
+# Ensures Pi standby image builds stay in lockstep with successful
+# production deploy SHAs. If a deploy completes for a SHA that does not
+# already have a successful "build pi image" run, this workflow dispatches
+# one for that exact SHA and waits for completion.
+
+on:
+  workflow_run:
+    workflows: ["Deploy to Production"]
+    types: [completed]
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: ha-sync-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  ensure-pi-build:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: resolve deploy metadata
+        id: meta
+        run: |
+          echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          echo "branch=${{ github.event.workflow_run.head_branch }}" >> "$GITHUB_OUTPUT"
+          echo "url=${{ github.event.workflow_run.html_url }}" >> "$GITHUB_OUTPUT"
+
+      - name: check for existing successful pi build
+        id: check
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const deploySha = '${{ steps.meta.outputs.sha }}';
+            const { owner, repo } = context.repo;
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              owner,
+              repo,
+              workflow_id: 'build-pi-image.yml',
+              per_page: 100,
+            });
+
+            const found = runs.find((run) => run.head_sha === deploySha && run.conclusion === 'success');
+            core.info(`Deploy SHA: ${deploySha}`);
+            core.info(found
+              ? `Found matching successful pi build run: ${found.html_url}`
+              : 'No matching successful pi build run found.');
+
+            core.setOutput('exists', found ? 'true' : 'false');
+
+      - name: dispatch pi image build for deploy SHA
+        if: steps.check.outputs.exists != 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const deploySha = '${{ steps.meta.outputs.sha }}';
+            const { owner, repo } = context.repo;
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'build-pi-image.yml',
+              ref: deploySha,
+            });
+
+            core.info(`Dispatched build-pi-image.yml for ${deploySha}`);
+
+      - name: wait for pi build completion
+        if: steps.check.outputs.exists != 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const deploySha = '${{ steps.meta.outputs.sha }}';
+            const { owner, repo } = context.repo;
+
+            const maxAttempts = 60; // 15m at 15s intervals
+            const delayMs = 15000;
+
+            function sleep(ms) {
+              return new Promise((resolve) => setTimeout(resolve, ms));
+            }
+
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+              const response = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: 'build-pi-image.yml',
+                per_page: 50,
+              });
+
+              const candidates = response.data.workflow_runs
+                .filter((run) => run.head_sha === deploySha)
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+              if (candidates.length > 0) {
+                const run = candidates[0];
+                core.info(`Attempt ${attempt}: run ${run.id} status=${run.status} conclusion=${run.conclusion ?? 'n/a'} ${run.html_url}`);
+
+                if (run.status === 'completed') {
+                  if (run.conclusion === 'success') {
+                    core.info('Pi build completed successfully.');
+                    return;
+                  }
+                  core.setFailed(`Pi build completed with conclusion=${run.conclusion}. Run: ${run.html_url}`);
+                  return;
+                }
+              } else {
+                core.info(`Attempt ${attempt}: no run found yet for SHA ${deploySha}`);
+              }
+
+              await sleep(delayMs);
+            }
+
+            core.setFailed(`Timed out waiting for pi build run for SHA ${deploySha}`);
+
+      - name: summary
+        run: |
+          if [ "${{ steps.check.outputs.exists }}" = "true" ]; then
+            echo "Pi build already existed for deploy SHA ${{ steps.meta.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Pi build was missing and has now been orchestrated for deploy SHA ${{ steps.meta.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "Deploy run: ${{ steps.meta.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
