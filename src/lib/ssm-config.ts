@@ -166,12 +166,14 @@ function buildConfigFromEnv(): AppConfig {
  * Fetches all /cloudless/production/* parameters from SSM.
  * Cache expires after 5 minutes to pick up rotated secrets without redeploy.
  * In test environments (NODE_ENV=test), reads from process.env directly.
+ * When SSM_DISABLED=1 (e.g. K3s Pi deployment where all config is injected
+ * via Kubernetes secret), skips SSM entirely and reads from process.env.
  */
 export async function getConfig(): Promise<AppConfig> {
   // In tests, skip SSM entirely and read from process.env. Still cache the
   // result so successive getConfig() calls return the same object reference;
   // resetSsmCache() clears `cached` so per-test vi.stubEnv() changes are picked up.
-  if (process.env.NODE_ENV === "test") {
+  if (process.env.NODE_ENV === "test" || process.env.SSM_DISABLED === "1") {
     if (cached) return cached;
     cached = buildConfigFromEnv();
     cachedAt = Date.now();
