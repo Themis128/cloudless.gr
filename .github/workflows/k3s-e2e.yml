@@ -18,8 +18,14 @@ name: k3s standby E2E
 # on the failure email + the visible red ✗ on the run page.
 
 on:
+  # Only fire after the HA sync orchestrator has confirmed (or just
+  # finished dispatching) a Pi build for the deploy SHA. Triggering on
+  # "Deploy to Production" or raw "build pi image" races the Pi-side
+  # rollout — Pi serves HTML referencing chunks from the new SHA before
+  # those chunks have actually rolled out, producing 500/502 ChunkLoadError
+  # and a confusing red E2E.
   workflow_run:
-    workflows: ["Deploy to Production", "build pi image"]
+    workflows: ["HA sync orchestrator"]
     types: [completed]
   schedule:
     # 04:00 UTC daily (07:00 Athens) — well before any business activity
@@ -59,13 +65,38 @@ jobs:
       - name: install playwright chromium (cached)
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: pre-warm standby (drives Lambda from cold)
-        continue-on-error: true
+      - name: wait for Pi standby to converge on a self-consistent bundle
+        # /api/health is served by Lambda, not by the Pi-side Next.js bundle, so
+        # 200 there does NOT prove the Pi has finished rolling out the new SHA.
+        # We need the Pi's homepage HTML to reference a chunk that itself
+        # returns 200 — i.e. the Pi is serving HTML+chunks from the same
+        # build. Up to 3min of polling covers the K3s rolling update window.
         run: |
-          for i in 1 2 3; do
-            curl -fsS --max-time 10 "${BASE_URL:-https://cloudless.online}/api/health" > /dev/null && break
-            sleep 5
+          set -euo pipefail
+          BASE="${BASE_URL:-https://cloudless.online}"
+          deadline=$(( $(date +%s) + 180 ))
+          attempt=0
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            attempt=$((attempt + 1))
+            html=$(curl -fsS --max-time 15 "${BASE}/en" 2>/dev/null || echo "")
+            if [ -z "$html" ]; then
+              echo "  [$attempt] homepage not serving yet"
+              sleep 10; continue
+            fi
+            chunk=$(echo "$html" | grep -oE '/_next/static/chunks/[^"]+\.js' | head -n 1 || true)
+            if [ -z "$chunk" ]; then
+              echo "  [$attempt] no chunk reference found in HTML"
+              sleep 10; continue
+            fi
+            code=$(curl -o /dev/null -s -w "%{http_code}" --max-time 15 "${BASE}${chunk}")
+            if [ "$code" = "200" ]; then
+              echo "  ✓ Pi is self-consistent (HTML and chunk ${chunk##*/chunks/} both 200) after ${attempt} attempt(s)"
+              exit 0
+            fi
+            echo "  [$attempt] chunk ${chunk##*/chunks/} returned ${code}; Pi still rolling out"
+            sleep 10
           done
+          echo "::warning::Pi did not converge within 3min — running tests anyway; failures may reflect mid-rollout state"
         env:
           BASE_URL: ${{ inputs.base_url }}
 
