@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { getConfigMock, getSnapshotMock, runOrchestrationMock } = vi.hoisted(() => ({
-  getConfigMock: vi.fn(),
-  getSnapshotMock: vi.fn(),
-  runOrchestrationMock: vi.fn(),
-}));
+const { getConfigMock, getSnapshotMock, runOrchestrationMock } = vi.hoisted(
+  () => ({
+    getConfigMock: vi.fn(),
+    getSnapshotMock: vi.fn(),
+    runOrchestrationMock: vi.fn(),
+  }),
+);
 
 vi.mock("jose", async () => {
   const actual = await vi.importActual<typeof import("jose")>("jose");
@@ -14,8 +16,11 @@ vi.mock("jose", async () => {
     jwtVerify: async (jwt: string) => {
       const parts = jwt.split(".");
       if (parts.length !== 3) throw new Error("Invalid JWT structure");
-      const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
-      if (payload.exp && Date.now() >= payload.exp * 1000) throw new Error("JWT expired");
+      const payload = JSON.parse(
+        Buffer.from(parts[1], "base64").toString("utf-8"),
+      );
+      if (payload.exp && Date.now() >= payload.exp * 1000)
+        throw new Error("JWT expired");
       return { payload, protectedHeader: { alg: "RS256" } };
     },
   };
@@ -44,36 +49,44 @@ function makeAdminToken(): string {
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
-  const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString(
-    "base64url",
-  );
+  const header = Buffer.from(
+    JSON.stringify({ alg: "RS256", typ: "JWT" }),
+  ).toString("base64url");
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `${header}.${body}.fake-sig`;
 }
 
 function adminReq(body?: Record<string, unknown>): NextRequest {
-  return new NextRequest("http://localhost/api/admin/ai/analytics-orchestration", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${makeAdminToken()}`,
-      "Content-Type": "application/json",
+  return new NextRequest(
+    "http://localhost/api/admin/ai/analytics-orchestration",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${makeAdminToken()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body ?? {}),
     },
-    body: JSON.stringify(body ?? {}),
-  });
+  );
 }
 
 function unauthReq(): NextRequest {
-  return new NextRequest("http://localhost/api/admin/ai/analytics-orchestration", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({}),
-  });
+  return new NextRequest(
+    "http://localhost/api/admin/ai/analytics-orchestration",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    },
+  );
 }
 
 describe("POST /api/admin/ai/analytics-orchestration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getConfigMock.mockResolvedValue({ ANTHROPIC_API_KEY: "test-anthropic-key" });
+    getConfigMock.mockResolvedValue({
+      ANTHROPIC_API_KEY: "test-anthropic-key",
+    });
     getSnapshotMock.mockResolvedValue({
       windowDays: 30,
       generatedAt: new Date().toISOString(),
@@ -82,8 +95,20 @@ describe("POST /api/admin/ai/analytics-orchestration", () => {
       byStatus: { processed: 2, handler_failed: 1 },
       byCurrency: { eur: 4500 },
       dailyTrend: [
-        { day: "2026-05-01", revenueMinor: 2000, events: 1, processed: 1, failed: 0 },
-        { day: "2026-05-02", revenueMinor: 2500, events: 2, processed: 1, failed: 1 },
+        {
+          day: "2026-05-01",
+          revenueMinor: 2000,
+          events: 1,
+          processed: 1,
+          failed: 0,
+        },
+        {
+          day: "2026-05-02",
+          revenueMinor: 2500,
+          events: 2,
+          processed: 1,
+          failed: 1,
+        },
       ],
     });
     runOrchestrationMock.mockResolvedValue({
@@ -112,10 +137,19 @@ describe("POST /api/admin/ai/analytics-orchestration", () => {
         averageDailyEvents: 1.5,
         revenuePerProcessedEventMinor: 2250,
         topRevenueCategories: [
-          { category: "checkout", events: 2, revenueMinor: 4500, revenueSharePct: 100 },
+          {
+            category: "checkout",
+            events: 2,
+            revenueMinor: 4500,
+            revenueSharePct: 100,
+          },
         ],
-        topFailureDays: [{ day: "2026-05-02", failed: 1, events: 2, failureRatePct: 50 }],
-        strongestRevenueDays: [{ day: "2026-05-02", revenueMinor: 2500, events: 2 }],
+        topFailureDays: [
+          { day: "2026-05-02", failed: 1, events: 2, failureRatePct: 50 },
+        ],
+        strongestRevenueDays: [
+          { day: "2026-05-02", revenueMinor: 2500, events: 2 },
+        ],
         momentum: {
           comparisonWindowDays: 2,
           recentRevenueMinor: 4500,
@@ -125,7 +159,10 @@ describe("POST /api/admin/ai/analytics-orchestration", () => {
           priorFailureRatePct: null,
           failureRateDeltaPct: null,
         },
-        dataQuality: { sparseWindow: true, notes: ["Sample size is sparse for the selected window."] },
+        dataQuality: {
+          sparseWindow: true,
+          notes: ["Sample size is sparse for the selected window."],
+        },
       },
       report: {
         executiveSummary: "test summary",
@@ -139,26 +176,30 @@ describe("POST /api/admin/ai/analytics-orchestration", () => {
   });
 
   it("returns 401 when not authenticated", async () => {
-    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
+    const { POST } =
+      await import("@/app/api/admin/ai/analytics-orchestration/route");
     const response = await POST(unauthReq());
     expect(response.status).toBe(401);
   });
 
   it("returns 400 when windowDays is invalid", async () => {
-    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
+    const { POST } =
+      await import("@/app/api/admin/ai/analytics-orchestration/route");
     const response = await POST(adminReq({ windowDays: 0 }));
     expect(response.status).toBe(400);
   });
 
   it("returns 503 when ANTHROPIC_API_KEY is missing", async () => {
     getConfigMock.mockResolvedValue({});
-    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
+    const { POST } =
+      await import("@/app/api/admin/ai/analytics-orchestration/route");
     const response = await POST(adminReq({ windowDays: 30 }));
     expect(response.status).toBe(503);
   });
 
   it("returns orchestrated analytics report with connector payloads", async () => {
-    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
+    const { POST } =
+      await import("@/app/api/admin/ai/analytics-orchestration/route");
     const response = await POST(
       adminReq({
         windowDays: 14,
@@ -182,7 +223,8 @@ describe("POST /api/admin/ai/analytics-orchestration", () => {
 
   it("returns 500 when orchestration step fails", async () => {
     runOrchestrationMock.mockRejectedValue(new Error("orchestration boom"));
-    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
+    const { POST } =
+      await import("@/app/api/admin/ai/analytics-orchestration/route");
     const response = await POST(adminReq({ windowDays: 30 }));
     const body = await response.json();
 

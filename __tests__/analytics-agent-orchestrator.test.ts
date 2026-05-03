@@ -14,9 +14,8 @@ describe("analytics-agent-orchestrator", () => {
   });
 
   it("preprocesses trend and category metrics before orchestration", async () => {
-    const { preprocessStripeAnalyticsSnapshot } = await import(
-      "@/lib/analytics-agent-orchestrator"
-    );
+    const { preprocessStripeAnalyticsSnapshot } =
+      await import("@/lib/analytics-agent-orchestrator");
 
     const result = preprocessStripeAnalyticsSnapshot({
       windowDays: 7,
@@ -29,13 +28,55 @@ describe("analytics-agent-orchestrator", () => {
       byStatus: { processed: 8, handler_failed: 2 },
       byCurrency: { eur: 10000 },
       dailyTrend: [
-        { day: "2026-04-27", revenueMinor: 1000, events: 1, processed: 1, failed: 0 },
-        { day: "2026-04-28", revenueMinor: 500, events: 1, processed: 0, failed: 1 },
-        { day: "2026-04-29", revenueMinor: 1500, events: 2, processed: 2, failed: 0 },
-        { day: "2026-04-30", revenueMinor: 2000, events: 2, processed: 2, failed: 0 },
-        { day: "2026-05-01", revenueMinor: 2500, events: 2, processed: 2, failed: 0 },
-        { day: "2026-05-02", revenueMinor: 1000, events: 1, processed: 0, failed: 1 },
-        { day: "2026-05-03", revenueMinor: 1500, events: 1, processed: 1, failed: 0 },
+        {
+          day: "2026-04-27",
+          revenueMinor: 1000,
+          events: 1,
+          processed: 1,
+          failed: 0,
+        },
+        {
+          day: "2026-04-28",
+          revenueMinor: 500,
+          events: 1,
+          processed: 0,
+          failed: 1,
+        },
+        {
+          day: "2026-04-29",
+          revenueMinor: 1500,
+          events: 2,
+          processed: 2,
+          failed: 0,
+        },
+        {
+          day: "2026-04-30",
+          revenueMinor: 2000,
+          events: 2,
+          processed: 2,
+          failed: 0,
+        },
+        {
+          day: "2026-05-01",
+          revenueMinor: 2500,
+          events: 2,
+          processed: 2,
+          failed: 0,
+        },
+        {
+          day: "2026-05-02",
+          revenueMinor: 1000,
+          events: 1,
+          processed: 0,
+          failed: 1,
+        },
+        {
+          day: "2026-05-03",
+          revenueMinor: 1500,
+          events: 1,
+          processed: 1,
+          failed: 0,
+        },
       ],
     });
 
@@ -55,9 +96,8 @@ describe("analytics-agent-orchestrator", () => {
 
   it("falls back to deterministic insights when Claude returns invalid JSON", async () => {
     callClaudeMock.mockResolvedValue("not json");
-    const { runAnalyticsAgentOrchestration } = await import(
-      "@/lib/analytics-agent-orchestrator"
-    );
+    const { runAnalyticsAgentOrchestration } =
+      await import("@/lib/analytics-agent-orchestrator");
 
     const result = await runAnalyticsAgentOrchestration({
       snapshot: {
@@ -71,10 +111,34 @@ describe("analytics-agent-orchestrator", () => {
         byStatus: { processed: 3, handler_failed: 1 },
         byCurrency: { eur: 8000 },
         dailyTrend: [
-          { day: "2026-04-30", revenueMinor: 2000, events: 1, processed: 1, failed: 0 },
-          { day: "2026-05-01", revenueMinor: 1000, events: 1, processed: 0, failed: 1 },
-          { day: "2026-05-02", revenueMinor: 2500, events: 1, processed: 1, failed: 0 },
-          { day: "2026-05-03", revenueMinor: 2500, events: 1, processed: 1, failed: 0 },
+          {
+            day: "2026-04-30",
+            revenueMinor: 2000,
+            events: 1,
+            processed: 1,
+            failed: 0,
+          },
+          {
+            day: "2026-05-01",
+            revenueMinor: 1000,
+            events: 1,
+            processed: 0,
+            failed: 1,
+          },
+          {
+            day: "2026-05-02",
+            revenueMinor: 2500,
+            events: 1,
+            processed: 1,
+            failed: 0,
+          },
+          {
+            day: "2026-05-03",
+            revenueMinor: 2500,
+            events: 1,
+            processed: 1,
+            failed: 0,
+          },
         ],
       },
       connectors: ["quicksight", "metabase"],
@@ -92,8 +156,8 @@ describe("analytics-agent-orchestrator", () => {
     expect(result.preprocessed.failureRatePct).toBe(25);
     expect(result.report.executiveSummary).toContain("Processed 3 of 4 events");
     expect(result.connectorPayloads).toHaveLength(2);
-    expect(result.connectorPayloads[0].summaryMetrics.topRevenueCategories[0]).toBe(
-      "checkout",
-    );
+    expect(
+      result.connectorPayloads[0].summaryMetrics.topRevenueCategories[0],
+    ).toBe("checkout");
   });
 });

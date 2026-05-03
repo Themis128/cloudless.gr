@@ -119,7 +119,10 @@ function emptySnapshot(days: number): StripeAnalyticsSnapshot {
   };
 }
 
-function applyItem(snapshot: StripeAnalyticsSnapshot, item: Record<string, AttributeValue>): void {
+function applyItem(
+  snapshot: StripeAnalyticsSnapshot,
+  item: Record<string, AttributeValue>,
+): void {
   const day = deriveDay(item);
   const category = attrToString(item.tagCategory) || "other";
   const status = attrToString(item.processingStatus) || "unknown";
@@ -139,7 +142,8 @@ function applyItem(snapshot: StripeAnalyticsSnapshot, item: Record<string, Attri
   snapshot.byCategory[category].revenueMinor += amountMinor;
 
   snapshot.byStatus[status] = (snapshot.byStatus[status] || 0) + 1;
-  snapshot.byCurrency[currency] = (snapshot.byCurrency[currency] || 0) + amountMinor;
+  snapshot.byCurrency[currency] =
+    (snapshot.byCurrency[currency] || 0) + amountMinor;
 
   if (!day) return;
   const point = snapshot.dailyTrend.find((entry) => entry.day === day);
@@ -162,7 +166,9 @@ function isMissingIndexError(error: unknown): boolean {
   );
 }
 
-async function queryByDayOrScan(days: number): Promise<Array<Record<string, AttributeValue>>> {
+async function queryByDayOrScan(
+  days: number,
+): Promise<Array<Record<string, AttributeValue>>> {
   const tableName = getTransactionsTableName();
   const client = getDynamoClient();
   const dayRange = getDayRange(days);
