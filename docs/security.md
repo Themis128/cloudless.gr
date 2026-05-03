@@ -87,6 +87,49 @@ doc=<documentURL> disp=<enforce|report>`.
    `Content-Security-Policy` and add `upgrade-insecure-requests` (currently
    omitted since it's silently ignored in Report-Only mode).
 
+### Compression — current posture (verified live)
+
+Posture is optimal for the typical Next.js + Lambda + CloudFront stack. The
+table below records what each layer does and why; the live values are
+verifiable any time via `pnpm tsx scripts/verify-prod-posture.mts`.
+
+| Layer | Behavior | Notes |
+|---|---|---|
+| CloudFront edge | On-the-fly Brotli for HTML/CSS/JS/JSON; falls back to gzip if client doesn't accept br | `Compress Objects Automatically` is on by default in SST's `Nextjs` construct. Confirmed live: `Content-Encoding: br` on `/en` HTML, body 24,554 B after decode. |
+| Next.js server (Lambda) | `compress: true` (gzip) — redundant when behind CloudFront, but the explicit setting documents intent for the Pi standby path. | `next.config.ts` |
+| Next.js static assets | Precompressed at build time; CloudFront serves the precompressed variant. | `public/_next/static/**` get long-cache headers automatically. |
+| Pi K3s standby | In-process gzip via Next.js `compress: true` (no edge in front of Pi). | If the Pi standby ever needs Brotli, add it at the K3s ingress (Traefik supports `compress` middleware). |
+| Tiny endpoints (e.g. `/api/health` 72B) | Correctly NOT compressed — gzip framing alone exceeds the body. | This is the right behavior; compressing 72B inflates it to ~90B. |
+| Images | Optimizer transcodes to AVIF when client supports it, WebP fallback. | `next.config.ts` `formats: ["image/avif", "image/webp"]`. AVIF is 20-30% smaller than WebP at equal perceptual quality. |
+| Image cache | 30-day TTL on optimized variants. | `next.config.ts` `minimumCacheTTL: 60*60*24*30`. Variants are content-addressed by URL so a long TTL is safe. |
+
+### Encryption — current posture (verified live)
+
+| Layer | Behavior | Verified |
+|---|---|---|
+| TLS protocol floor | TLSv1.2 minimum (TLSv1.3 negotiated in practice) | ✓ live: TLSv1.3 |
+| TLS cipher | AEAD only (AES-GCM or ChaCha20-Poly1305) | ✓ live: `TLS_AES_128_GCM_SHA256` |
+| HTTP version | HTTP/2 over TLS (HTTP/3 may be available too) | ✓ live: ALPN negotiated `h2` |
+| HSTS | `max-age=63072000` (2 years) + `includeSubDomains` + `preload` | ✓ live; preload-list eligible |
+| Cert source | ACM (CloudFront) + ACM (APIGW SECONDARY) — both auto-renewing | ✓ APIGW cert has 197 days remaining as of last `pi-tls-cert-check` run |
+| Secrets at rest | SSM Parameter Store SecureString (AWS-managed KMS) | — |
+| Secrets in flight | Read at runtime by the runtime IAM role (Lambda task role for cloud, `cloudless-pi-standby` IAM user for Pi) | — |
+| `Authorization` / Cookies / `*-Signature` headers | Scrubbed before leaving Sentry runtime | covered by `__tests__/sentry-scrub.test.ts` |
+
+### Verifying
+
+```bash
+# Single command — checks 8 properties against prod
+pnpm tsx scripts/verify-prod-posture.mts            # cloudless.gr
+pnpm tsx scripts/verify-prod-posture.mts cloudless.online   # standby
+
+# Or manually:
+echo | openssl s_client -connect cloudless.gr:443 -servername cloudless.gr 2>/dev/null \
+  | grep -E "Protocol|Cipher"
+curl -sI --http2 -H "Accept-Encoding: br, gzip" https://cloudless.gr/en \
+  | grep -iE "HTTP/|content-encoding|strict-transport"
+```
+
 ### Rate limiting
 
 The in-process limiter in `src/proxy.ts` is **per-Lambda-container**, meaning
