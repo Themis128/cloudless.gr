@@ -27,33 +27,27 @@ interface NotionProp {
   bot?: { owner?: { user?: { name?: string } } };
 }
 
-/**
- * Helper: extract a human-readable value from a Notion property object.
- */
+type Extractor = (prop: NotionProp) => unknown;
+
+const joinPlainText = (parts?: Array<{ plain_text: string }>): string =>
+  (parts ?? []).map((t) => t.plain_text).join("");
+
+const EXTRACTORS: Record<string, Extractor> = {
+  title: (p) => joinPlainText(p.title),
+  rich_text: (p) => joinPlainText(p.rich_text),
+  select: (p) => p.select?.name ?? null,
+  multi_select: (p) => (p.multi_select ?? []).map((s) => s.name),
+  checkbox: (p) => p.checkbox ?? false,
+  number: (p) => p.number ?? null,
+  date: (p) => p.date?.start ?? null,
+  url: (p) => p.url ?? null,
+  email: (p) => p.email ?? null,
+};
+
 function extractValue(prop: NotionProp): unknown {
   if (!prop) return null;
-  switch (prop.type) {
-    case "title":
-      return prop.title?.map((t) => t.plain_text).join("") ?? "";
-    case "rich_text":
-      return prop.rich_text?.map((t) => t.plain_text).join("") ?? "";
-    case "select":
-      return prop.select?.name ?? null;
-    case "multi_select":
-      return (prop.multi_select ?? []).map((s) => s.name);
-    case "checkbox":
-      return prop.checkbox ?? false;
-    case "number":
-      return prop.number ?? null;
-    case "date":
-      return prop.date?.start ?? null;
-    case "url":
-      return prop.url ?? null;
-    case "email":
-      return prop.email ?? null;
-    default:
-      return `(${prop.type})`;
-  }
+  const fn = EXTRACTORS[prop.type];
+  return fn ? fn(prop) : `(${prop.type})`;
 }
 
 async function probeDatabase(
@@ -109,49 +103,64 @@ async function probeDatabase(
   }
 }
 
-export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (!auth.ok) return auth.response;
+function unauthenticated(error: string) {
+  return NextResponse.json(
+    { authenticated: false, error, databases: [] },
+    { status: 200 },
+  );
+}
 
-  if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
-    return NextResponse.json(
-      {
-        authenticated: false,
-        error: "NOTION_API_KEY not configured. Add it to .env.local",
-        databases: [],
-      },
-      { status: 200 },
-    );
-  }
-
-  let botName = "";
+async function resolveBotName(): Promise<
+  { ok: true; botName: string } | { ok: false; response: NextResponse }
+> {
   try {
     const me = await notionFetch<{
       name?: string;
       bot?: { owner?: { user?: { name?: string } } };
     }>("/users/me");
-    botName = me.name ?? me.bot?.owner?.user?.name ?? "bot";
+    return {
+      ok: true,
+      botName: me.name ?? me.bot?.owner?.user?.name ?? "bot",
+    };
   } catch (err) {
-    const _r = mapIntegrationError(err);
-    if (_r) return _r;
-    return NextResponse.json(
-      {
-        authenticated: false,
-        error: "NOTION_API_KEY is invalid or expired",
-        databases: [],
-      },
-      { status: 200 },
+    const mapped = mapIntegrationError(err);
+    return {
+      ok: false,
+      response:
+        mapped ?? unauthenticated("NOTION_API_KEY is invalid or expired"),
+    };
+  }
+}
+
+const PROBE_TARGETS: Array<[string, string]> = [
+  ["Blog", "NOTION_BLOG_DB_ID"],
+  ["Docs", "NOTION_DOCS_DB_ID"],
+  ["Projects", "NOTION_PROJECTS_DB_ID"],
+  ["Tasks", "NOTION_TASKS_DB_ID"],
+  ["Submissions", "NOTION_SUBMISSIONS_DB_ID"],
+  ["Analytics", "NOTION_ANALYTICS_DB_ID"],
+];
+
+export async function GET(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
+  if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
+    return unauthenticated(
+      "NOTION_API_KEY not configured. Add it to .env.local",
     );
   }
 
-  const databases = await Promise.all([
-    probeDatabase("Blog", "NOTION_BLOG_DB_ID"),
-    probeDatabase("Docs", "NOTION_DOCS_DB_ID"),
-    probeDatabase("Projects", "NOTION_PROJECTS_DB_ID"),
-    probeDatabase("Tasks", "NOTION_TASKS_DB_ID"),
-    probeDatabase("Submissions", "NOTION_SUBMISSIONS_DB_ID"),
-    probeDatabase("Analytics", "NOTION_ANALYTICS_DB_ID"),
-  ]);
+  const bot = await resolveBotName();
+  if (!bot.ok) return bot.response;
 
-  return NextResponse.json({ authenticated: true, botName, databases });
+  const databases = await Promise.all(
+    PROBE_TARGETS.map(([name, key]) => probeDatabase(name, key)),
+  );
+
+  return NextResponse.json({
+    authenticated: true,
+    botName: bot.botName,
+    databases,
+  });
 }
