@@ -162,7 +162,7 @@ jobs:
               \"blocks\": [
                 {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \":rocket: Deploy Started\", \"emoji\": true}},
                 {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\"}},
-                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]} 
+                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
               ]
             }"
 
@@ -206,7 +206,7 @@ jobs:
               \"blocks\": [
                 {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \":white_check_mark: Deploy Succeeded\", \"emoji\": true}},
                 {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\n*URL:* <https://cloudless.gr|cloudless.gr>\"}},
-                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]} 
+                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
               ]
             }"
 
@@ -220,6 +220,6 @@ jobs:
               \"blocks\": [
                 {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \":x: Deploy Failed\", \"emoji\": true}},
                 {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\"}},
-                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]} 
+                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
               ]
             }"
