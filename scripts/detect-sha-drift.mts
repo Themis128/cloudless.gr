@@ -3,27 +3,97 @@
  * against the SHA each surface (cloud cloudless.gr, Pi cloudless.online)
  * actually reports via /api/health → version field.
  *
- * Pure comparison logic lives in src/lib/sha-drift.ts (unit-tested).
- * This file is the I/O wrapper + CLI entry.
- *
  * Run:
  *   pnpm tsx scripts/detect-sha-drift.mts
- *   pnpm tsx scripts/detect-sha-drift.mts --json  # machine-readable
+ *   pnpm tsx scripts/detect-sha-drift.mts --json   # machine-readable
  *
  * Exit:
  *   0 — all surfaces agree (or grace window applies)
  *   1 — drift detected outside the grace window
  *   2 — could not read SSM (no AWS creds, network, etc.)
+ *
+ * NOTE on duplication
+ * -------------------
+ * The `shaEquivalent` + `evaluateDrift` logic below is intentionally
+ * duplicated from src/lib/sha-drift.ts. The lib copy is what the unit
+ * tests in __tests__/detect-sha-drift.test.ts exercise; the inline
+ * copy here is what the CLI runs. Cross-importing through tsx in CI
+ * has been brittle (tsx's loader doesn't always transform imported
+ * .ts files when invoked via pnpm exec — the same export disappears
+ * with `.ts`, `.js`, and the `@/` alias forms), so the script is
+ * deliberately self-contained. The static check in
+ * __tests__/sha-drift-inline-parity.test.ts pins the two copies to
+ * stay in sync.
  */
 
 import { request as httpsRequest } from "node:https";
-// Use the project's path alias (configured in tsconfig.json paths) so
-// tsx's loader resolves through the same map vitest uses for the unit
-// tests. Earlier attempts with relative `.ts` and `.js` extensions
-// each broke a different runtime: relative `.ts` failed Node strict
-// ESM, relative `.js` confused tsx into not transforming the source.
-// The alias path works in tsx + vitest + tsc strict mode.
-import { evaluateDrift, type DriftSnapshot } from "@/lib/sha-drift";
+
+// ───────────────────────────────────────────────────────────────────────
+// Inlined pure logic — keep in sync with src/lib/sha-drift.ts
+// ───────────────────────────────────────────────────────────────────────
+
+interface DriftSnapshot {
+  expected: string;
+  cloud: string | null;
+  pi: string | null;
+  ssmModifiedAt: Date | null;
+}
+interface SurfaceStatus {
+  name: "cloud" | "pi";
+  actual: string | null;
+  matches: boolean;
+  reason: string;
+}
+interface DriftReport {
+  drifted: boolean;
+  ageMs: number | null;
+  withinGrace: boolean;
+  surfaces: SurfaceStatus[];
+}
+const GRACE_WINDOW_MS = 10 * 60 * 1000;
+
+function shaEquivalent(a: string | null, b: string | null): boolean {
+  if (!a || !b) return false;
+  const lo = a.toLowerCase();
+  const hi = b.toLowerCase();
+  return lo.startsWith(hi) || hi.startsWith(lo);
+}
+
+function classifySurface(
+  name: "cloud" | "pi",
+  expected: string,
+  actual: string | null,
+): SurfaceStatus {
+  const matches = shaEquivalent(expected, actual);
+  let reason = "matches expected";
+  if (actual === null) reason = "endpoint unreachable or no version field";
+  else if (actual === "0.1.0" || actual === "dev") {
+    reason =
+      "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
+  } else if (!matches) reason = "SHA differs from SSM source of truth";
+  return { name, actual, matches, reason };
+}
+
+function evaluateDrift(
+  snapshot: DriftSnapshot,
+  now: number = Date.now(),
+): DriftReport {
+  const ageMs = snapshot.ssmModifiedAt
+    ? now - snapshot.ssmModifiedAt.getTime()
+    : null;
+  const withinGrace = ageMs !== null && ageMs < GRACE_WINDOW_MS;
+  const surfaces: SurfaceStatus[] = [
+    classifySurface("cloud", snapshot.expected, snapshot.cloud),
+    classifySurface("pi", snapshot.expected, snapshot.pi),
+  ];
+  const anyMismatch = surfaces.some((s) => !s.matches);
+  const drifted = anyMismatch && !withinGrace;
+  return { drifted, ageMs, withinGrace, surfaces };
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// I/O
+// ───────────────────────────────────────────────────────────────────────
 
 const HEALTH_URLS = {
   cloud: "https://cloudless.gr/api/health",
