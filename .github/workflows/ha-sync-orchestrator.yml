@@ -31,7 +31,7 @@ jobs:
           echo "branch=${{ github.event.workflow_run.head_branch }}" >> "$GITHUB_OUTPUT"
           echo "url=${{ github.event.workflow_run.html_url }}" >> "$GITHUB_OUTPUT"
 
-      - name: check for existing successful pi build
+      - name: inspect existing pi build runs for deploy SHA
         id: check
         uses: actions/github-script@v7
         with:
@@ -46,16 +46,23 @@ jobs:
               per_page: 100,
             });
 
-            const found = runs.find((run) => run.head_sha === deploySha && run.conclusion === 'success');
-            core.info(`Deploy SHA: ${deploySha}`);
-            core.info(found
-              ? `Found matching successful pi build run: ${found.html_url}`
-              : 'No matching successful pi build run found.');
+            const candidates = runs
+              .filter((run) => run.head_sha === deploySha)
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-            core.setOutput('exists', found ? 'true' : 'false');
+            const success = candidates.find((run) => run.conclusion === 'success');
+            const active = candidates.find((run) => run.status !== 'completed');
+
+            core.info(`Deploy SHA: ${deploySha}`);
+            core.info(`Matching runs: ${candidates.length}`);
+            if (success) core.info(`Existing successful build: ${success.html_url}`);
+            if (active) core.info(`Existing active build: ${active.html_url}`);
+
+            core.setOutput('exists', success ? 'true' : 'false');
+            core.setOutput('active', active ? 'true' : 'false');
 
       - name: dispatch pi image build for deploy SHA
-        if: steps.check.outputs.exists != 'true'
+        if: steps.check.outputs.exists != 'true' && steps.check.outputs.active != 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -104,31 +111,37 @@ jobs:
                 .filter((run) => run.head_sha === deploySha)
                 .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-              if (candidates.length > 0) {
-                const run = candidates[0];
-                core.info(`Attempt ${attempt}: run ${run.id} status=${run.status} conclusion=${run.conclusion ?? 'n/a'} ${run.html_url}`);
-
-                if (run.status === 'completed') {
-                  if (run.conclusion === 'success') {
-                    core.info('Pi build completed successfully.');
-                    return;
-                  }
-                  core.setFailed(`Pi build completed with conclusion=${run.conclusion}. Run: ${run.html_url}`);
-                  return;
-                }
-              } else {
-                core.info(`Attempt ${attempt}: no run found yet for SHA ${deploySha}`);
+              const success = candidates.find((run) => run.conclusion === 'success');
+              if (success) {
+                core.info(`Pi build completed successfully: ${success.html_url}`);
+                return;
               }
 
+              const active = candidates.find((run) => run.status !== 'completed');
+              if (active) {
+                core.info(`Attempt ${attempt}: waiting on active run ${active.id} ${active.html_url}`);
+                await sleep(delayMs);
+                continue;
+              }
+
+              if (candidates.length > 0) {
+                const latest = candidates[0];
+                core.setFailed(`Pi build has no successful run for SHA ${deploySha}. Latest conclusion=${latest.conclusion}. Run: ${latest.html_url}`);
+                return;
+              }
+
+              core.info(`Attempt ${attempt}: no run found yet for SHA ${deploySha}`);
               await sleep(delayMs);
             }
 
-            core.setFailed(`Timed out waiting for pi build run for SHA ${deploySha}`);
+            core.setFailed(`Timed out waiting for successful pi build run for SHA ${deploySha}`);
 
       - name: summary
         run: |
           if [ "${{ steps.check.outputs.exists }}" = "true" ]; then
             echo "Pi build already existed for deploy SHA ${{ steps.meta.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ steps.check.outputs.active }}" = "true" ]; then
+            echo "Pi build was already running for deploy SHA ${{ steps.meta.outputs.sha }}; orchestrator waited for completion" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "Pi build was missing and has now been orchestrated for deploy SHA ${{ steps.meta.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
           fi
