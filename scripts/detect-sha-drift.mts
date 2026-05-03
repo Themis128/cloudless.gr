@@ -17,7 +17,12 @@
  */
 
 import { request as httpsRequest } from "node:https";
-import { evaluateDrift, type DriftSnapshot } from "../src/lib/sha-drift.ts";
+// `.js` extension (not `.ts`) is the ESM-standard form for TypeScript
+// source — Node strict-ESM resolution requires an extension, and tsx
+// rewrites `.js` to `.ts` at module-load time. Using `.ts` literally
+// works in tsx's CommonJS path but breaks Node's native ESM loader,
+// which is what tsx now uses by default.
+import { evaluateDrift, type DriftSnapshot } from "../src/lib/sha-drift.js";
 
 const HEALTH_URLS = {
   cloud: "https://cloudless.gr/api/health",
