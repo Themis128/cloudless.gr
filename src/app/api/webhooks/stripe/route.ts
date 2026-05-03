@@ -16,6 +16,24 @@ import {
 import type Stripe from "stripe";
 import { mapIntegrationError } from "@/lib/api-errors";
 
+const PROCESSED_EVENT_TTL_MS = 24 * 60 * 60 * 1000;
+const processedEvents = new Map<string, number>();
+
+function cleanupProcessedEvents() {
+  const now = Date.now();
+  for (const [eventId, expiresAt] of processedEvents.entries()) {
+    if (expiresAt <= now) processedEvents.delete(eventId);
+  }
+}
+
+function isDuplicateEvent(eventId: string | undefined): boolean {
+  if (!eventId) return false;
+  cleanupProcessedEvents();
+  if (processedEvents.has(eventId)) return true;
+  processedEvents.set(eventId, Date.now() + PROCESSED_EVENT_TTL_MS);
+  return false;
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
@@ -41,10 +59,16 @@ export async function POST(request: NextRequest) {
     const stripe = await getStripe();
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const integrationResponse = mapIntegrationError(err);
+    if (integrationResponse) return integrationResponse;
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error(`Webhook signature verification failed: ${message}`);
     return Response.json({ error: "Invalid signature" }, { status: 400 });
+  }
+
+  if (isDuplicateEvent(event.id)) {
+    console.warn(`[Stripe] Duplicate event ignored: ${event.id}`);
+    return Response.json({ received: true, duplicate: true });
   }
 
   try {
@@ -52,7 +76,7 @@ export async function POST(request: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         console.warn(
-          `[Stripe] Checkout completed: ${session.id}, event: ${event.id}, payment_status: ${session.payment_status}, customer: ${session.customer_email}`,
+          `[Stripe] Checkout completed: ${session.id}, event: ${event.id}, payment_status: ${session.payment_status}`,
         );
 
         // Only send order confirmation when payment is actually collected.
@@ -114,7 +138,8 @@ export async function POST(request: NextRequest) {
                 await associateDealWithContact(dealId, contactId);
               }
             } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const integrationResponse = mapIntegrationError(err);
+    if (integrationResponse) return integrationResponse;
               console.error("[Stripe→HubSpot] Deal creation failed:", err);
             }
           })();
@@ -204,7 +229,8 @@ export async function POST(request: NextRequest) {
         console.warn(`[Stripe] Unhandled event type: ${event.type}`);
     }
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const integrationResponse = mapIntegrationError(err);
+    if (integrationResponse) return integrationResponse;
     console.error(`[Stripe] Error handling ${event.type}:`, err);
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       await import("@sentry/nextjs")

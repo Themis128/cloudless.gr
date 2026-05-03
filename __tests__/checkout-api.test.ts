@@ -177,6 +177,40 @@ describe("POST /api/checkout", () => {
     expect(createCall.metadata?.source).toBe("cloudless.gr");
   });
 
+  it("passes Stripe idempotency options when Idempotency-Key header is valid", async () => {
+    const request = new NextRequest("http://localhost/api/checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "checkout_2025_abc12345",
+      },
+      body: JSON.stringify({ items: [{ id: "srv-cloud", quantity: 1 }] }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+
+    const createOptions = mockCreate.mock.calls[0][1];
+    expect(createOptions).toEqual({ idempotencyKey: "checkout_2025_abc12345" });
+  });
+
+  it("ignores invalid Idempotency-Key header format", async () => {
+    const request = new NextRequest("http://localhost/api/checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "not valid!",
+      },
+      body: JSON.stringify({ items: [{ id: "srv-cloud", quantity: 1 }] }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+
+    const createOptions = mockCreate.mock.calls[0][1];
+    expect(createOptions).toBeUndefined();
+  });
+
   it("pre-fills customer_email and includes userId in metadata when user is authenticated", async () => {
     const { getTokenFromHeader, verifyToken } = await import("@/lib/api-auth");
     vi.mocked(getTokenFromHeader).mockReturnValueOnce("fake-token");
