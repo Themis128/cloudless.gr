@@ -58,7 +58,7 @@ Key features of the auth system:
 - Password manager support — all auth forms include `autoComplete` attributes (`email`, `current-password`, `new-password`, `one-time-code`).
 - Admin detection — client-side via decoded JWT `cognito:groups` claim. Admin routes redirect non-admins to the dashboard.
 - Route protection is **server-side** via `src/proxy.ts` middleware (all unauthenticated requests to `/dashboard` and `/admin` are redirected to login before the page renders) and additionally client-side via layout guards. Locale-prefixed routes (e.g. `/en/dashboard`, `/el/admin/orders`) are normalized before authorization checks.
-- Dashboard settings theme preference (`dark`/`light`/`system`) is now applied at runtime to `<html data-theme="...">` for signed-in users, with admin routes pinned to dark mode.
+- Theme preference (`dark` / `light` / `system`) is exposed via a navbar `ThemeSwitcher` (popover on desktop, inline radios on mobile) and the dashboard settings form. Anonymous visitors persist to `localStorage["cloudless-theme-pref"]`; signed-in users also sync to `user.preferences.theme`. Selection priority: admin path (locked dark) → user preference → localStorage → route default. Cross-tab sync via the `storage` event. See `docs/design-system-v2.md` § "Theme switcher".
 - JWT hardening — `verifyToken` in `src/lib/api-auth.ts` enforces `issuer`, `audience` (Cognito client ID), and `token_use: "id"` claims so only ID tokens issued for this app are accepted.
 
 ## Architecture
