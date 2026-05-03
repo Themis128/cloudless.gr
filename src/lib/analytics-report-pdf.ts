@@ -131,7 +131,7 @@ function drawSectionTitle(params: {
   text: string;
   font: PDFFont;
 }): DrawState {
-  let state = ensureSpace(params.pdf, params.state, 28);
+  const state = ensureSpace(params.pdf, params.state, 28);
   state.page.drawText(params.text, {
     x: PAGE_MARGIN,
     y: state.y,
@@ -231,7 +231,12 @@ export async function renderAnalyticsReportPdf(params: {
   });
   state = { ...state, y: state.y - 8 };
 
-  state = drawSectionTitle({ pdf, state, text: "Key Insights", font: boldFont });
+  state = drawSectionTitle({
+    pdf,
+    state,
+    text: "Key Insights",
+    font: boldFont,
+  });
   state = drawBulletList({
     pdf,
     state,

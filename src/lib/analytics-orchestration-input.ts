@@ -39,7 +39,8 @@ function normalizeConnectors(value: unknown): AnalyticsConnector[] {
 export function parseAnalyticsOrchestrationRequestBody(
   body: unknown,
 ): AnalyticsOrchestrationInput {
-  const payload = body && typeof body === "object" && !Array.isArray(body) ? body : {};
+  const payload =
+    body && typeof body === "object" && !Array.isArray(body) ? body : {};
   const record = payload as Record<string, unknown>;
 
   let windowDays = 30;
@@ -60,7 +61,9 @@ export function parseAnalyticsOrchestrationRequestBody(
     ? record.goals.map((value) => String(value).trim()).filter(Boolean)
     : [];
   const reportTitle =
-    record.reportTitle === undefined ? "Stripe Analytics Report" : String(record.reportTitle).trim();
+    record.reportTitle === undefined
+      ? "Stripe Analytics Report"
+      : String(record.reportTitle).trim();
 
   if (!reportTitle) {
     throw new Error("reportTitle cannot be empty");
