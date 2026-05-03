@@ -85,7 +85,11 @@ export async function POST(request: NextRequest): Promise<Response> {
         b.disposition,
       );
     }
-  } else if (payload && typeof payload === "object" && "csp-report" in payload) {
+  } else if (
+    payload &&
+    typeof payload === "object" &&
+    "csp-report" in payload
+  ) {
     // Legacy report-uri payload
     const r = (payload as CspReportLegacy)["csp-report"] ?? {};
     logViolation(

@@ -43,7 +43,8 @@ export async function POST(
     body = payload.body;
     if (!body) throw new Error("missing body");
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     return NextResponse.json({ error: "body is required." }, { status: 400 });
   }
 
