@@ -103,6 +103,12 @@ function redactUrl(url: string): string {
   return `${url.slice(0, qIdx)}?${redactQueryString(url.slice(qIdx + 1))}`;
 }
 
+function redactCookies(cookies: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const k of Object.keys(cookies)) out[k] = REDACT;
+  return out;
+}
+
 function scrubRequest(req: NonNullable<ErrorEvent["request"]>): void {
   if (req.headers) req.headers = redactHeaders(req.headers);
   if (typeof req.url === "string") req.url = redactUrl(req.url);
@@ -110,7 +116,7 @@ function scrubRequest(req: NonNullable<ErrorEvent["request"]>): void {
     req.query_string = redactQueryString(req.query_string);
   }
   if (req.data !== undefined) req.data = redactObject(req.data);
-  if (req.cookies !== undefined) req.cookies = REDACT as unknown as typeof req.cookies;
+  if (req.cookies !== undefined) req.cookies = redactCookies(req.cookies);
 }
 
 export function scrubEvent(event: ErrorEvent, _hint: EventHint): ErrorEvent | null {
