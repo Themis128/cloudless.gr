@@ -92,7 +92,41 @@ weekly CI health routine, so any failure is reported in the Monday summary.
 `trig_01WQ7NdStiHu4Ab3DpBrRuiV` checks all six monitored workflows on Monday
 morning Athens time. Output is `ALL_HEALTHY` or a per-workflow failure report.
 
-### 4. SNS failover alerts
+### 4. SHA drift detector
+
+[.github/workflows/sha-drift-detector.yml](../.github/workflows/sha-drift-detector.yml)
+runs every 6h (00:45, 06:45, 12:45, 18:45 UTC) and after every HA sync
+orchestrator completion. It compares three values:
+
+1. **Expected** — `/cloudless/production/current-image-sha` in SSM (written
+   by the deploy workflow on every successful production deploy).
+2. **Cloud actual** — `cloudless.gr/api/health.version`. Wired to the
+   deploy SHA via SST Lambda env (`APP_VERSION=$GITHUB_SHA`).
+3. **Pi actual** — `cloudless.online/api/health.version`. Wired to the
+   build SHA via Docker `ARG APP_VERSION=${target_sha || github.sha}`
+   passed from the Pi-image workflow.
+
+Tolerances:
+
+- A 10-minute **grace window** runs from the moment SSM was last updated
+  — drift inside that window is normal mid-rollout (Lambda cold start +
+  Pi K3s rolling update) and doesn't fail the run.
+- SHA equivalence is **prefix-tolerant**: 7-char abbreviated, 12-char
+  Docker tag, and 40-char full SHA all compare equal.
+
+The pure comparison logic lives in [`src/lib/sha-drift.ts`](../src/lib/sha-drift.ts)
+and is exercised by 16 unit tests in `__tests__/detect-sha-drift.test.ts`.
+The CLI wrapper is [`scripts/detect-sha-drift.mts`](../scripts/detect-sha-drift.mts);
+run it on demand with:
+
+```bash
+pnpm tsx scripts/detect-sha-drift.mts            # human-readable
+pnpm tsx scripts/detect-sha-drift.mts --json     # machine-readable
+```
+
+Exit codes: `0` agree, `1` drifted past grace, `2` couldn't read SSM.
+
+### 5. SNS failover alerts
 
 CloudWatch alarms on the two R53 health checks publish to SNS topic
 `arn:aws:sns:us-east-1:278585680617:cloudless-failover-alerts`. Email
@@ -118,13 +152,11 @@ doc for context. Listed in priority order:
 
 2. **Pi-side SSM scope assertion** — extend the routine to verify `cloudless-pi-standby` IAM user has `ssm:GetParametersByPath` on the full `/cloudless/production/*` tree. Catches the case where someone adds a new SSM prefix and forgets the Pi.
 
-3. **SHA drift detector** — weekly job that compares the SSM-published SHA with what `kubectl get deploy cloudless` actually shows on the Pi. Alert if drift > 24h.
+3. **Sentry environment tagging** — confirm Pi runs with `SENTRY_ENVIRONMENT=pi-standby` so Pi errors don't false-blame the cloud during failover.
 
-4. **Sentry environment tagging** — confirm Pi runs with `SENTRY_ENVIRONMENT=pi-standby` so Pi errors don't false-blame the cloud during failover.
+4. **Periodic failover drill** — monthly automated test that disables the primary R53 health check for 90 seconds, hits `cloudless.gr` from outside, asserts Pi served correctly, then re-enables. Risky — keep behind manual-dispatch first.
 
-5. **Periodic failover drill** — monthly automated test that disables the primary R53 health check for 90 seconds, hits `cloudless.gr` from outside, asserts Pi served correctly, then re-enables. Risky — keep behind manual-dispatch first.
-
-6. **Cron de-duplication during failover** — audit `src/app/api/webhooks/*` for handlers that depend on local persistence (none today, but worth a check before adding queue-based features).
+5. **Cron de-duplication during failover** — audit `src/app/api/webhooks/*` for handlers that depend on local persistence (none today, but worth a check before adding queue-based features).
 
 7. **CDN fallback** — `${NEXT_PUBLIC_CDN_URL}` resolves to CloudFront. During a CloudFront outage that triggered failover, embedded asset URLs would 404. A Pi-side nginx that proxies `/_next/static/*` to S3 origin would close this gap. Low priority; rare scenario.
 

@@ -4,6 +4,45 @@
 
 const STAGE_PRODUCTION = "production";
 
+/**
+ * Lambda runtime environment for the Next.js site.
+ *
+ * Hoisted out of run() so the function stays under the cyclomatic /
+ * line-count limit. Returned object is passed verbatim to
+ * sst.aws.Nextjs.environment — no Pulumi inputs are wrapped here, so
+ * the Output<string> for the DynamoDB table name is passed through.
+ */
+function buildSiteEnvironment(
+  stage: string,
+  isProd: boolean,
+  stripeTransactionsTableName: $util.Output<string>,
+) {
+  return {
+    NODE_ENV: "production",
+    SSM_PREFIX: isProd ? "/cloudless/production" : `/cloudless/${stage}`,
+    // AWS_REGION is set automatically by Lambda — do not override it
+    NEXT_PUBLIC_SITE_URL: isProd
+      ? "https://cloudless.gr"
+      : `https://${stage}.cloudless.gr`,
+    NEXT_PUBLIC_STAGE: stage,
+    // Carry the deploy SHA into runtime so /api/health.version reports
+    // what's actually deployed (instead of the static "0.1.0" fallback
+    // in src/app/api/health/route.ts). Used by scripts/detect-sha-drift
+    // to compare cloud actual vs SSM expected.
+    APP_VERSION: process.env.GITHUB_SHA ?? "local",
+    STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
+    NEXT_PUBLIC_COGNITO_USER_POOL_ID: "us-east-1_JQWwFbO9a",
+    NEXT_PUBLIC_COGNITO_CLIENT_ID: "2qq6i24oc48391cmuv4kfl1rm2",
+    // Notion database IDs (non-secret, safe to inline)
+    NOTION_BLOG_DB_ID: "0ac591657ee44063bbbc8004ea7ccd6c",
+    NOTION_SUBMISSIONS_DB_ID: "9abe0a5614d64b759d44a45cee2d0bbc",
+    NOTION_DOCS_DB_ID: "b45af6ed5bb64d89b9a92a8aff4a9b29",
+    NOTION_PROJECTS_DB_ID: "a9bab34b945e484fb6b0aa6034086e5c",
+    NOTION_TASKS_DB_ID: "14ce4ff6c400437597b13e70ac909354",
+    NOTION_ANALYTICS_DB_ID: "cc4287fcb42a42dc92a7053d6f1199c7",
+  };
+}
+
 export default {
   app(input) {
     const stage = input?.stage ?? "";
@@ -65,25 +104,7 @@ export default {
         dns: false,
         cert: "arn:aws:acm:us-east-1:278585680617:certificate/f505905a-97b4-46b0-a2b0-fb1900f425b2",
       },
-      environment: {
-        NODE_ENV: "production",
-        SSM_PREFIX: isProd ? "/cloudless/production" : `/cloudless/${stage}`,
-        // AWS_REGION is set automatically by Lambda — do not override it
-        NEXT_PUBLIC_SITE_URL: isProd
-          ? "https://cloudless.gr"
-          : `https://${stage}.cloudless.gr`,
-        NEXT_PUBLIC_STAGE: stage,
-        STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTable.name,
-        NEXT_PUBLIC_COGNITO_USER_POOL_ID: "us-east-1_JQWwFbO9a",
-        NEXT_PUBLIC_COGNITO_CLIENT_ID: "2qq6i24oc48391cmuv4kfl1rm2",
-        // Notion database IDs (non-secret, safe to inline)
-        NOTION_BLOG_DB_ID: "0ac591657ee44063bbbc8004ea7ccd6c",
-        NOTION_SUBMISSIONS_DB_ID: "9abe0a5614d64b759d44a45cee2d0bbc",
-        NOTION_DOCS_DB_ID: "b45af6ed5bb64d89b9a92a8aff4a9b29",
-        NOTION_PROJECTS_DB_ID: "a9bab34b945e484fb6b0aa6034086e5c",
-        NOTION_TASKS_DB_ID: "14ce4ff6c400437597b13e70ac909354",
-        NOTION_ANALYTICS_DB_ID: "cc4287fcb42a42dc92a7053d6f1199c7",
-      },
+      environment: buildSiteEnvironment(stage, isProd, stripeTransactionsTable.name),
       link: [stripeTransactionsTable],
       warm: isProd ? 5 : 0,
       server: {
