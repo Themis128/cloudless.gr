@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
+import { writeStoredPref, type ThemePref } from "@/lib/theme-pref";
 
 export default function SettingsPage() {
   const [locale] = useCurrentLocale();
@@ -102,10 +103,16 @@ export default function SettingsPage() {
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() =>
-                      setTheme(opt.value as "system" | "dark" | "light")
-                    }
-                    className={`min-h-[36px] rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
+                    onClick={() => {
+                      const value = opt.value as ThemePref;
+                      setTheme(value);
+                      // Live preview: apply immediately via the same
+                      // localStorage + custom-event channel the navbar uses,
+                      // so the theme flips without waiting for Save and
+                      // ThemeSwitcher in the navbar stays in sync.
+                      writeStoredPref(value);
+                    }}
+                    className={`min-h-9 rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
                       theme === opt.value
                         ? "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 border"
                         : "border border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
@@ -126,7 +133,7 @@ export default function SettingsPage() {
                     key={opt.value}
                     type="button"
                     onClick={() => setLanguage(opt.value as "en" | "el" | "fr")}
-                    className={`min-h-[36px] rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
+                    className={`min-h-9 rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
                       language === opt.value
                         ? "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 border"
                         : "border border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
