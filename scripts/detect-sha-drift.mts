@@ -104,7 +104,21 @@ const REGION = process.env.AWS_REGION ?? "us-east-1";
 
 function fetchJson(url: string): Promise<Record<string, unknown> | null> {
   return new Promise((resolve) => {
-    const req = httpsRequest(url, { method: "GET", timeout: 10_000 }, (res) => {
+    // Happy Eyeballs (RFC 8305): if the host is dual-stack but the runner
+    // can't connect over IPv6 (GitHub Actions runners are IPv4-only by
+    // default), fall through to IPv4 after 250 ms instead of hanging the
+    // full 10 s timeout. cloudless.online's APIGW alias publishes both
+    // A and AAAA — without this, every CI run trips the IPv6 path and
+    // reports the Pi as unreachable.
+    const req = httpsRequest(
+      url,
+      {
+        method: "GET",
+        timeout: 10_000,
+        autoSelectFamily: true,
+        autoSelectFamilyAttemptTimeout: 250,
+      },
+      (res) => {
       const chunks: Buffer[] = [];
       res.on("data", (c: Buffer) => chunks.push(c));
       res.on("end", () => {
