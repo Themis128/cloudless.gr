@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { headers } from "next/headers";
 import { getLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import {
@@ -15,9 +16,30 @@ const FALLBACK = {
   cta: "Back to Home",
 };
 
-export default async function LocaleNotFound() {
+/**
+ * In Next.js App Router + next-intl, getLocale() inside a not-found.tsx
+ * occasionally returns the default locale instead of the URL-segment
+ * locale — the not-found render boundary doesn't always inherit the
+ * request scope set by the layout's setRequestLocale call. Parsing
+ * x-pathname (set by proxy.ts middleware) is a robust fallback that
+ * works across dev and prod.
+ */
+async function resolveLocale(): Promise<Locale> {
+  // Try x-pathname first — most reliable across the not-found boundary.
+  try {
+    const h = await headers();
+    const pathname = h.get("x-pathname") ?? "";
+    const segment = pathname.split("/")[1] ?? "";
+    if (isSupportedLocale(segment)) return segment;
+  } catch {
+    // headers() can throw outside a request scope; fall through.
+  }
   const raw = await getLocale();
-  const locale: Locale = isSupportedLocale(raw) ? raw : defaultLocale;
+  return isSupportedLocale(raw) ? raw : defaultLocale;
+}
+
+export default async function LocaleNotFound() {
+  const locale = await resolveLocale();
 
   const m = {
     title: translate(locale, "notFound.title", FALLBACK.title),

@@ -1,8 +1,51 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { headers } from "next/headers";
+import {
+  translate,
+  type Locale,
+  isSupportedLocale,
+  defaultLocale,
+} from "@/lib/i18n";
 
-export default function NotFound() {
+const FALLBACK = {
+  title: "Page not found",
+  body: "The page you're looking for doesn't exist or has been moved.",
+  cta: "Back to Home",
+};
+
+/**
+ * Root not-found.tsx is the LAST-RESORT 404 page that Next.js renders
+ * for any path the App Router can't resolve at all (including paths
+ * with a valid locale prefix that don't match any leaf route under
+ * [locale] — `app/[locale]/not-found.tsx` only triggers when notFound()
+ * is called from a server component, NOT for purely-missing routes).
+ *
+ * To stay locale-aware here, parse the locale from x-pathname (set by
+ * proxy.ts middleware). If parsing fails, fall back to English.
+ */
+async function localeFromPath(): Promise<Locale> {
+  try {
+    const h = await headers();
+    const pathname = h.get("x-pathname") ?? "";
+    const segment = pathname.split("/")[1] ?? "";
+    return isSupportedLocale(segment) ? segment : defaultLocale;
+  } catch {
+    return defaultLocale;
+  }
+}
+
+export default async function NotFound() {
+  const locale = await localeFromPath();
+  const m = {
+    title: translate(locale, "notFound.title", FALLBACK.title),
+    body: translate(locale, "notFound.body", FALLBACK.body),
+    cta: translate(locale, "notFound.cta", FALLBACK.cta),
+  };
+  // Build a locale-prefixed home href when possible.
+  const homeHref = locale === defaultLocale ? "/" : `/${locale}`;
+
   return (
     <section className="bg-void flex flex-1 items-center justify-center px-6 py-24">
       <div className="text-center">
@@ -10,16 +53,14 @@ export default function NotFound() {
           404
         </p>
         <h1 className="font-heading mt-4 text-3xl font-bold text-white">
-          Page not found
+          {m.title}
         </h1>
-        <p className="mt-3 font-mono text-sm text-slate-400">
-          The page you&apos;re looking for doesn&apos;t exist or has been moved.
-        </p>
+        <p className="mt-3 font-mono text-sm text-slate-400">{m.body}</p>
         <Link
-          href="/"
+          href={homeHref}
           className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 mt-8 inline-block rounded-lg border px-8 py-3 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
         >
-          Back to Home
+          {m.cta}
         </Link>
       </div>
     </section>
