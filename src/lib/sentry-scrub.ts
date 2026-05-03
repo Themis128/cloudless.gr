@@ -38,7 +38,8 @@ function looksLikeToken(value: string): boolean {
   // AWS secret access key (40 chars, base64-ish)
   if (/^[A-Za-z0-9/+]{40}$/.test(value)) return true;
   // JWT (three base64url segments separated by dots)
-  if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value)) return true;
+  if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value))
+    return true;
   // GitHub PAT / OAuth token shapes
   if (/^gh[pousr]_[A-Za-z0-9]{30,}$/.test(value)) return true;
   // Stripe live keys
@@ -103,7 +104,9 @@ function redactUrl(url: string): string {
   return `${url.slice(0, qIdx)}?${redactQueryString(url.slice(qIdx + 1))}`;
 }
 
-function redactCookies(cookies: Record<string, string>): Record<string, string> {
+function redactCookies(
+  cookies: Record<string, string>,
+): Record<string, string> {
   const out: Record<string, string> = {};
   for (const k of Object.keys(cookies)) out[k] = REDACT;
   return out;
@@ -119,10 +122,15 @@ function scrubRequest(req: NonNullable<ErrorEvent["request"]>): void {
   if (req.cookies !== undefined) req.cookies = redactCookies(req.cookies);
 }
 
-export function scrubEvent(event: ErrorEvent, _hint: EventHint): ErrorEvent | null {
+export function scrubEvent(
+  event: ErrorEvent,
+  _hint: EventHint,
+): ErrorEvent | null {
   if (event.request) scrubRequest(event.request);
-  if (event.extra) event.extra = redactObject(event.extra) as typeof event.extra;
-  if (event.contexts) event.contexts = redactObject(event.contexts) as typeof event.contexts;
+  if (event.extra)
+    event.extra = redactObject(event.extra) as typeof event.extra;
+  if (event.contexts)
+    event.contexts = redactObject(event.contexts) as typeof event.contexts;
   return event;
 }
 

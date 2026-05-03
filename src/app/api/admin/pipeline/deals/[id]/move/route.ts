@@ -24,7 +24,8 @@ export async function POST(
     stageId = body.stageId;
     if (!stageId) throw new Error("missing stageId");
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     return NextResponse.json(
       { error: "stageId is required." },
       { status: 400 },
@@ -41,7 +42,8 @@ export async function POST(
     }
     return NextResponse.json({ deal });
   } catch (err) {
-    const _r = mapIntegrationError(err); if (_r) return _r;
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
     return NextResponse.json(
       { error: "Failed to move deal." },
       { status: 500 },

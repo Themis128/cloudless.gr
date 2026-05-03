@@ -42,7 +42,9 @@ function asString(value: unknown): string | undefined {
 }
 
 function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
 }
 
 function toJson(value: unknown): string {
@@ -66,12 +68,14 @@ export interface StripeEventTags {
 }
 
 export function getStripeEventTags(eventType: string): StripeEventTags {
-  const stage = process.env.NEXT_PUBLIC_STAGE || process.env.NODE_ENV || "unknown";
+  const stage =
+    process.env.NEXT_PUBLIC_STAGE || process.env.NODE_ENV || "unknown";
   let tagCategory = "other";
 
   if (eventType.startsWith("checkout.")) tagCategory = "checkout";
   else if (eventType.startsWith("invoice.")) tagCategory = "invoice";
-  else if (eventType.startsWith("customer.subscription.")) tagCategory = "subscription";
+  else if (eventType.startsWith("customer.subscription."))
+    tagCategory = "subscription";
 
   return {
     tagSource: APP_SOURCE_TAG,
@@ -89,7 +93,8 @@ function buildItem(event: Stripe.Event): Record<string, AttributeValue> {
 
   const objectId = asString(object.id);
   const currency = asString(object.currency);
-  const paymentStatus = asString(object.payment_status) ?? asString(object.status);
+  const paymentStatus =
+    asString(object.payment_status) ?? asString(object.status);
   const customerId = asString(object.customer);
   const customerEmail = asString(object.customer_email);
   const mode = asString(object.mode);
@@ -114,7 +119,8 @@ function buildItem(event: Stripe.Event): Record<string, AttributeValue> {
   if (customerId) item.customerId = { S: customerId };
   if (customerEmail) item.customerEmail = { S: customerEmail };
   if (mode) item.checkoutMode = { S: mode };
-  if (typeof amountMinor === "number") item.amountMinor = { N: `${amountMinor}` };
+  if (typeof amountMinor === "number")
+    item.amountMinor = { N: `${amountMinor}` };
 
   return item;
 }

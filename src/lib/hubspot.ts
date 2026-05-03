@@ -77,7 +77,6 @@ async function hubspotListAll<T = unknown>(path: string): Promise<T[]> {
 export async function upsertContact(
   contact: HubSpotContact,
 ): Promise<string | null> {
-
   try {
     const createRes = await hubspotFetch("/crm/v3/objects/contacts", {
       method: "POST",
@@ -203,7 +202,6 @@ export async function createTicket(
   data: TicketData,
   contactId?: string,
 ): Promise<{ id: string } | null> {
-
   const properties: Record<string, string> = {
     subject: data.subject,
     content: data.content,
@@ -396,7 +394,6 @@ interface DealData {
  * Fire-and-forget safe — never throws.
  */
 export async function createDeal(data: DealData): Promise<string | null> {
-
   const closedate =
     data.closedate ?? new Date().toISOString().split("T")[0] + "T00:00:00.000Z";
 
