@@ -61,16 +61,20 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const deploySha = '${{ steps.meta.outputs.sha }}';
+            const deployBranch = '${{ steps.meta.outputs.branch }}';
             const { owner, repo } = context.repo;
 
             await github.rest.actions.createWorkflowDispatch({
               owner,
               repo,
               workflow_id: 'build-pi-image.yml',
-              ref: deploySha,
+              ref: deployBranch,
+              inputs: {
+                target_sha: deploySha,
+              },
             });
 
-            core.info(`Dispatched build-pi-image.yml for ${deploySha}`);
+            core.info(`Dispatched build-pi-image.yml for ${deploySha} via ref=${deployBranch}`);
 
       - name: wait for pi build completion
         if: steps.check.outputs.exists != 'true'
