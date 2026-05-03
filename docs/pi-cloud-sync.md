@@ -144,3 +144,19 @@ doc for context. Listed in priority order:
 - **ECR repo**: `278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app` (tag-immutable)
 - **IAM users in the Pi orbit**: `cloudless-pi-standby`, `cloudless-pi-proxy`, `cloudless-failover-monitor`, `cloudless-ddns-updater`
 - **SSM SHA pointer**: `/cloudless/production/current-image-sha`
+
+## Cryptography parity
+
+Primary and secondary paths should maintain equivalent cryptographic posture:
+
+- In transit
+  - TLS termination on both paths (CloudFront and APIGW custom domain).
+  - Strict transport handling in app middleware (HTTPS redirect + HSTS).
+  - Automated secondary checks now assert legacy TLS 1.0/1.1 are rejected and TLS 1.2 is accepted.
+
+- At rest
+  - Shared secrets for both paths stay in SSM SecureString under /cloudless/production/*.
+  - Both runtime paths read the same encrypted values from SSM.
+
+Operational rule:
+- Any new secret, webhook token, or API credential required for failover must be stored as SecureString in SSM before rollout.

@@ -150,3 +150,21 @@ The output field `EvalDecision` should be `"allowed"` for all four actions.
 - [`sst.config.ts`](../sst.config.ts) — this project's tag keys (`Project`, `Environment`, `Owner`, `ManagedBy`)
 - [AWS IAM policy simulator docs](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_testing-policies.html)
 - [GitHub Actions OIDC with AWS](https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services)
+
+## Cryptography controls (at rest and in transit)
+
+This project enforces cryptography at two layers:
+
+- In transit:
+  - HTTPS/TLS is enforced at the edge (ACM + CloudFront/APIGW custom domains).
+  - Middleware applies Strict-Transport-Security (HSTS) to all responses.
+  - Middleware now redirects any production HTTP request to HTTPS with a 308 redirect.
+
+- At rest:
+  - Secrets are stored in AWS SSM Parameter Store as SecureString values.
+  - Runtime secret reads use AWS-managed encryption/decryption paths from SSM.
+  - Lambda environment and temporary storage are encrypted at rest by AWS-managed controls.
+
+Operational recommendation:
+- Keep all new secrets under the existing SSM prefix and store them as SecureString.
+- Do not add plaintext secrets to repository files or non-encrypted environment variables.
