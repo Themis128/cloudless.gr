@@ -292,6 +292,7 @@ vi.mock("@/lib/sentry", () => ({
     total: 0,
     fetchedAt: new Date().toISOString(),
   }),
+  verifySentryToken: vi.fn().mockResolvedValue({ status: "error" }),
 }));
 
 

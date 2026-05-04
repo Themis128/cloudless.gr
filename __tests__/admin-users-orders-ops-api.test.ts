@@ -9,11 +9,13 @@ const {
   getStripeMock,
   isSentryConfiguredMock,
   getUnresolvedIssuesMock,
+  verifySentryTokenMock,
 } = vi.hoisted(() => ({
   cognitoSendMock: vi.fn(),
   getStripeMock: vi.fn(),
   isSentryConfiguredMock: vi.fn(),
   getUnresolvedIssuesMock: vi.fn(),
+  verifySentryTokenMock: vi.fn().mockResolvedValue({ status: "error" }),
 }));
 
 vi.mock("jose", async () => {
@@ -49,6 +51,7 @@ vi.mock("@/lib/stripe", () => ({
 vi.mock("@/lib/sentry", () => ({
   isSentryConfigured: isSentryConfiguredMock,
   getUnresolvedIssues: getUnresolvedIssuesMock,
+  verifySentryToken: verifySentryTokenMock,
 }));
 
 // ---------------------------------------------------------------------------
