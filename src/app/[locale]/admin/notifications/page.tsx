@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 export default function AdminNotificationsPage() {
   const [message, setMessage] = useState("");
@@ -20,7 +21,7 @@ export default function AdminNotificationsPage() {
     setResult(null);
 
     try {
-      const res = await fetch("/api/admin/notifications/test", {
+      const res = await fetchWithAuth("/api/admin/notifications/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: message.trim() }),
