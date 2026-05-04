@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 const REFRESH_INTERVAL = 10_000;
 const SECTION_LABEL_CLASS =
@@ -124,9 +125,9 @@ function useHubSpotStats() {
     if (isManual) setRefreshing(true);
     try {
       const [contactsRes, dealsRes, ticketsRes] = await Promise.all([
-        fetch("/api/admin/crm/contacts?limit=100"),
-        fetch("/api/admin/crm/deals?limit=100"),
-        fetch("/api/admin/crm/tickets?limit=100"),
+        fetchWithAuth("/api/admin/crm/contacts?limit=100"),
+        fetchWithAuth("/api/admin/crm/deals?limit=100"),
+        fetchWithAuth("/api/admin/crm/tickets?limit=100"),
       ]);
       if (!contactsRes.ok && contactsRes.status === 503) {
         throw new Error("HubSpot not configured");

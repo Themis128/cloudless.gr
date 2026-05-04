@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 const REFRESH_INTERVAL = 10_000;
 const TH_CLASS =
@@ -42,7 +43,7 @@ export default function AdminTicketsPage() {
   const fetchTickets = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
     try {
-      const res = await fetch("/api/admin/crm/tickets?limit=100");
+      const res = await fetchWithAuth("/api/admin/crm/tickets?limit=100");
       if (!res.ok) {
         if (res.status === 503) throw new Error("HubSpot not configured");
         throw new Error(`HTTP ${res.status}`);
