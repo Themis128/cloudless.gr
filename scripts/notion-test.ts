@@ -73,7 +73,10 @@ function heading(text: string) {
 }
 
 function row(label: string, value: string | number | boolean | null) {
-  const v = value === null || value === undefined || value === "" ? `${DIM}(empty)${RESET}` : String(value);
+  const v =
+    value === null || value === undefined || value === ""
+      ? `${DIM}(empty)${RESET}`
+      : String(value);
   console.log(`  ${label}: ${v}`);
 }
 
@@ -85,17 +88,21 @@ async function testAuth(): Promise<boolean> {
     console.log(`  ${FAIL} NOTION_API_KEY not set β€" edit .env.local first`);
     return false;
   }
-  console.log(`  API Key: ${KEY.slice(0, 8)}...${KEY.slice(-4)}`);
+  console.log(`  API Key: [set, ${KEY.length} chars]`);
 
   try {
     const res = await fetch(`${API}/users/me`, { headers: headers() });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      console.log(`  ${FAIL} Auth failed (${res.status}): ${body.message ?? "unknown"}`);
+      console.log(
+        `  ${FAIL} Auth failed (${res.status}): ${body.message ?? "unknown"}`,
+      );
       return false;
     }
     const me = await res.json();
-    console.log(`  ${OK} Authenticated as: ${me.name ?? me.bot?.owner?.user?.name ?? "bot"}`);
+    console.log(
+      `  ${OK} Authenticated as: ${me.name ?? me.bot?.owner?.user?.name ?? "bot"}`,
+    );
     console.log(`  Type: ${me.type}`);
     return true;
   } catch (err: any) {
@@ -127,9 +134,13 @@ async function queryDatabase(
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      console.log(`  ${FAIL} Query failed (${res.status}): ${body.message ?? "unknown"}`);
+      console.log(
+        `  ${FAIL} Query failed (${res.status}): ${body.message ?? "unknown"}`,
+      );
       if (res.status === 404) {
-        console.log(`  ${DIM}  β†' Make sure you shared this database with your integration${RESET}`);
+        console.log(
+          `  ${DIM}  β†' Make sure you shared this database with your integration${RESET}`,
+        );
       }
       return false;
     }
@@ -137,7 +148,9 @@ async function queryDatabase(
     const data = await res.json();
     const total = data.results?.length ?? 0;
     const hasMore = data.has_more;
-    console.log(`  ${OK} Connected β€" ${total} rows returned${hasMore ? " (more available)" : ""}`);
+    console.log(
+      `  ${OK} Connected β€" ${total} rows returned${hasMore ? " (more available)" : ""}`,
+    );
 
     if (total === 0) {
       console.log(`  ${DIM}  (database is empty)${RESET}`);
@@ -200,7 +213,10 @@ function mapProject(page: any) {
     Priority: extractSelect(p.Priority),
     Type: extractSelect(p.Type),
     Owner: extractText(p.Owner?.rich_text),
-    Progress: extractNumber(p.Progress) !== null ? `${extractNumber(p.Progress)}%` : null,
+    Progress:
+      extractNumber(p.Progress) !== null
+        ? `${extractNumber(p.Progress)}%`
+        : null,
     "Start Date": extractDate(p["Start Date"]),
     "Due Date": extractDate(p["Due Date"]),
   };
@@ -213,7 +229,8 @@ function mapTask(page: any) {
     Status: extractSelect(p.Status),
     Priority: extractSelect(p.Priority),
     Assignee: extractText(p.Assignee?.rich_text),
-    Project: p.Project?.relation?.map((r: { id: string }) => r.id).join(", ") ?? "",
+    Project:
+      p.Project?.relation?.map((r: { id: string }) => r.id).join(", ") ?? "",
     "Due Date": extractDate(p["Due Date"]),
     Type: extractSelect(p.Type),
     Estimate: extractSelect(p.Estimate),
@@ -225,7 +242,11 @@ function mapSubmission(page: any) {
   const p = page.properties;
   return {
     Name: extractTitle(p.Name),
-    Email: extractText(p.Email?.rich_text ?? p.Email?.email ? [{ plain_text: p.Email.email }] : []),
+    Email: extractText(
+      (p.Email?.rich_text ?? p.Email?.email)
+        ? [{ plain_text: p.Email.email }]
+        : [],
+    ),
     Company: extractText(p.Company?.rich_text),
     Service: extractSelect(p.Service),
     Status: extractSelect(p.Status),
@@ -247,7 +268,10 @@ function mapAnalytics(page: any) {
 
 // ── Main ─────────────────────────────────────────────────────
 
-const DB_MAP: Record<string, { envKey: string; mapper: (p: any) => Record<string, any> }> = {
+const DB_MAP: Record<
+  string,
+  { envKey: string; mapper: (p: any) => Record<string, any> }
+> = {
   blog: { envKey: "NOTION_BLOG_DB_ID", mapper: mapBlogPost },
   docs: { envKey: "NOTION_DOCS_DB_ID", mapper: mapDoc },
   projects: { envKey: "NOTION_PROJECTS_DB_ID", mapper: mapProject },
@@ -267,10 +291,16 @@ async function main() {
   if (!authed) {
     console.log(`\n${FAIL} Cannot continue without authentication.`);
     console.log(`\nSteps to fix:`);
-    console.log(`  1. Go to ${CYAN}https://www.notion.so/my-integrations${RESET}`);
+    console.log(
+      `  1. Go to ${CYAN}https://www.notion.so/my-integrations${RESET}`,
+    );
     console.log(`  2. Create an Internal Integration`);
-    console.log(`  3. Copy the secret and paste it in .env.local as NOTION_API_KEY`);
-    console.log(`  4. Share each database with the integration (DB β†' … β†' Connections)`);
+    console.log(
+      `  3. Copy the secret and paste it in .env.local as NOTION_API_KEY`,
+    );
+    console.log(
+      `  4. Share each database with the integration (DB β†' … β†' Connections)`,
+    );
     process.exit(1);
   }
 
@@ -282,7 +312,9 @@ async function main() {
   for (const name of targets) {
     const entry = DB_MAP[name];
     if (!entry) {
-      console.log(`\n${WARN} Unknown database: "${name}". Options: ${Object.keys(DB_MAP).join(", ")}`);
+      console.log(
+        `\n${WARN} Unknown database: "${name}". Options: ${Object.keys(DB_MAP).join(", ")}`,
+      );
       continue;
     }
     const ok = await queryDatabase(
