@@ -235,7 +235,10 @@ function applyInsights(
     if (m) {
       stats.impressions = m.impressions ?? 0;
       stats.clicks = m.clicks ?? 0;
-      stats.spend = { amount: (m.costMicros ?? 0) / 1_000_000, currency: "EUR" };
+      stats.spend = {
+        amount: (m.costMicros ?? 0) / 1_000_000,
+        currency: "EUR",
+      };
     }
   } else if (id === "linkedin") {
     const i = root.insights as
@@ -349,8 +352,7 @@ function useCampaignsHub() {
       fetchAll().catch(() => {});
     }, REFRESH_INTERVAL);
     const onVisible = () => {
-      if (document.visibilityState === "visible")
-        fetchAll().catch(() => {});
+      if (document.visibilityState === "visible") fetchAll().catch(() => {});
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
@@ -579,7 +581,8 @@ function PlatformCard({
         <div
           className="flex items-center gap-1.5"
           title={
-            stats.statusMessage ?? STATUS_LABEL[stats.status as ConnectionStatus]
+            stats.statusMessage ??
+            STATUS_LABEL[stats.status as ConnectionStatus]
           }
         >
           <span
@@ -614,9 +617,7 @@ function PlatformCard({
           <Kpi
             label="Impressions"
             value={
-              stats.impressions !== null
-                ? formatNumber(stats.impressions)
-                : "—"
+              stats.impressions !== null ? formatNumber(stats.impressions) : "—"
             }
           />
           <Kpi

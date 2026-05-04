@@ -96,6 +96,12 @@ function isRejectionCached(): boolean {
   return rejectionCache !== null && Date.now() < rejectionCache.until;
 }
 
+/** Test-only: clear the in-process rejection cache between cases. */
+export function __resetSentryRejectionCache(): void {
+  rejectionCache = null;
+  lastAuthLogAt = 0;
+}
+
 async function getSentryConfig(): Promise<{
   token: string;
   org: string;
