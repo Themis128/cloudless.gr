@@ -61,7 +61,7 @@ export async function listComments(blockId: string): Promise<NotionComment[]> {
     return results.map(mapComment);
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
-    console.error("[Notion Comments] Failed to list comments:", err);
+    console.error("[Notion Comments] Failed to list comments:", (err as Error)?.message ?? "unknown error");
     return [];
   }
 }
@@ -90,7 +90,7 @@ export async function addComment(
     return mapComment(result);
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
-    console.error("[Notion Comments] Failed to add comment:", err);
+    console.error("[Notion Comments] Failed to add comment:", (err as Error)?.message ?? "unknown error");
     return null;
   }
 }
@@ -116,7 +116,7 @@ export async function replyToDiscussion(
     return mapComment(result);
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
-    console.error("[Notion Comments] Failed to reply to discussion:", err);
+    console.error("[Notion Comments] Failed to reply to discussion:", (err as Error)?.message ?? "unknown error");
     return null;
   }
 }

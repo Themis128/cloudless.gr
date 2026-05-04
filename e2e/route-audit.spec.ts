@@ -60,7 +60,13 @@ for (const route of ROUTES) {
     page.on("pageerror", (err) => pageErrors.push(err.message));
     page.on("requestfailed", (req) => {
       const url = req.url();
-      if (url.includes("hs-scripts.com") || url.includes("typekit.net")) return;
+      try {
+        const hostname = new URL(url).hostname;
+        if (hostname === "js.hs-scripts.com" || hostname.endsWith(".hs-scripts.com") ||
+            hostname === "p.typekit.net" || hostname === "use.typekit.net") return;
+      } catch {
+        // malformed URL — fall through and log it
+      }
       failedRequests.push(`${req.method()} ${url} - ${req.failure()?.errorText}`);
     });
 

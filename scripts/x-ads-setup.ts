@@ -6,7 +6,7 @@
  */
 
 import { bypassFetch } from "./dns-bypass.js";
-import { createHmac } from "crypto";
+import { createHmac, randomBytes } from "crypto";
 import { config } from "dotenv";
 import { resolve } from "path";
 
@@ -23,17 +23,18 @@ function oauthSign(method: string, url: string, params: Record<string, string>, 
   ).join("&");
   const base = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(sorted)}`;
   const key  = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
+  // lgtm[js/weak-cryptographic-algorithm] -- HMAC-SHA1 required by OAuth 1.0a spec
   return createHmac("sha1", key).update(base).digest("base64");
 }
 
 function buildAuthHeader(method: string, url: string): string {
-  const nonce     = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+  const nonce     = randomBytes(16).toString("hex");
   const timestamp = String(Math.floor(Date.now() / 1000));
 
   const oauthParams: Record<string, string> = {
     oauth_consumer_key:     API_KEY,
     oauth_nonce:            nonce,
-    oauth_signature_method: "HMAC-SHA1",
+    oauth_signature_method: "HMAC-SHA1", // lgtm[js/weak-cryptographic-algorithm] -- required by OAuth 1.0a spec (X Ads API mandates HMAC-SHA1)
     oauth_timestamp:        timestamp,
     oauth_token:            ACCESS_TOKEN,
     oauth_version:          "1.0",

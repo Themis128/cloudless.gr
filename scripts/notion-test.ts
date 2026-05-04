@@ -85,7 +85,7 @@ async function testAuth(): Promise<boolean> {
     console.log(`  ${FAIL} NOTION_API_KEY not set β€" edit .env.local first`);
     return false;
   }
-  console.log(`  API Key: ${KEY.slice(0, 8)}...${KEY.slice(-4)}`);
+  console.log(`  API Key: [set, ${KEY.length} chars]`);
 
   try {
     const res = await fetch(`${API}/users/me`, { headers: headers() });

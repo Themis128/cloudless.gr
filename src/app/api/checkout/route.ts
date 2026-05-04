@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ url: session.url });
   } catch (error) {
-    console.error("Checkout error:", error);
+    console.error("Checkout error:", (error as Error)?.message ?? "unknown error");
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       await import("@sentry/nextjs")
         .then(({ captureException, withScope }) =>

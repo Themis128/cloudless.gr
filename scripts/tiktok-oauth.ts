@@ -14,7 +14,7 @@
 
 import { bypassFetch } from "./dns-bypass.js";
 import http from "http";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { URL } from "url";
 
 const APP_ID = process.env.TIKTOK_APP_ID ?? "awtn8vvhotyxe9oc";
@@ -65,9 +65,15 @@ function openBrowser(url: string) {
       "MAP www.tiktok.com 2.21.69.9",
     ].join(",");
     const profileDir = `C:\\Users\\baltz\\AppData\\Local\\Temp\\chrome-bypass-tiktok`;
-    exec(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --host-resolver-rules="${rules}" --user-data-dir="${profileDir}" "${url}"`);
+    const chromePath = `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`;
+    execFile(chromePath, [
+      `--host-resolver-rules=${rules}`,
+      `--user-data-dir=${profileDir}`,
+      url,
+    ]);
   } else {
-    exec(process.platform === "darwin" ? `open "${url}"` : `xdg-open "${url}"`);
+    const opener = process.platform === "darwin" ? "open" : "xdg-open";
+    execFile(opener, [url]);
   }
 }
 

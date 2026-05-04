@@ -103,11 +103,22 @@ test.describe("HubSpot loader gate (only on real cloudless.gr hosts)", () => {
   });
 
   test("no network requests to hs-scripts.com from localhost", async ({ page }) => {
+    const HS_HOSTNAMES = new Set([
+      "js.hs-scripts.com",
+      "forms.hsforms.net",
+      "p.typekit.net",
+      "use.typekit.net",
+    ]);
     const hsRequests: string[] = [];
     page.on("request", (req) => {
       const url = req.url();
-      if (/hs-scripts\.com|hsforms\.net|p\.typekit\.net|use\.typekit\.net/.test(url)) {
-        hsRequests.push(url);
+      try {
+        const { hostname } = new URL(url);
+        if (HS_HOSTNAMES.has(hostname) || hostname.endsWith(".hs-scripts.com") || hostname.endsWith(".hsforms.net")) {
+          hsRequests.push(url);
+        }
+      } catch {
+        // malformed URL — ignore
       }
     });
     await page.goto("/en");

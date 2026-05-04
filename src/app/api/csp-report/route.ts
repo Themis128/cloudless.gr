@@ -49,6 +49,13 @@ interface CspReportModernEntry {
   };
 }
 
+/** Strip newlines and control characters to prevent log injection. */
+function sanitizeLogField(value: string | undefined): string {
+  if (!value) return "?";
+  // Replace newlines, carriage returns, and other control characters
+  return value.replace(/[\r\n\x00-\x1f\x7f]/g, "_").slice(0, 500);
+}
+
 function logViolation(
   directive: string | undefined,
   blocked: string | undefined,
@@ -57,9 +64,10 @@ function logViolation(
   disposition: string | undefined,
 ): void {
   // Single-line structured log so Sentry/CloudWatch can group cleanly.
+  // Fields are sanitized to prevent log injection from browser-supplied values.
   console.warn(
-    `[csp-violation] dir=${directive ?? "?"} blocked=${blocked ?? "?"} ` +
-      `source=${source ?? "?"} doc=${doc ?? "?"} disp=${disposition ?? "?"}`,
+    `[csp-violation] dir=${sanitizeLogField(directive)} blocked=${sanitizeLogField(blocked)} ` +
+      `source=${sanitizeLogField(source)} doc=${sanitizeLogField(doc)} disp=${sanitizeLogField(disposition)}`,
   );
 }
 
