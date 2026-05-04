@@ -62,23 +62,39 @@ for (const route of ROUTES) {
       const url = req.url();
       try {
         const hostname = new URL(url).hostname;
-        if (hostname === "js.hs-scripts.com" || hostname.endsWith(".hs-scripts.com") ||
-            hostname === "p.typekit.net" || hostname === "use.typekit.net") return;
+        if (
+          hostname === "js.hs-scripts.com" ||
+          hostname.endsWith(".hs-scripts.com") ||
+          hostname === "p.typekit.net" ||
+          hostname === "use.typekit.net"
+        )
+          return;
       } catch {
         // malformed URL — fall through and log it
       }
-      failedRequests.push(`${req.method()} ${url} - ${req.failure()?.errorText}`);
+      failedRequests.push(
+        `${req.method()} ${url} - ${req.failure()?.errorText}`,
+      );
     });
 
-    const response = await page.goto(route, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    const response = await page.goto(route, {
+      waitUntil: "domcontentloaded",
+      timeout: 60_000,
+    });
     const status = response?.status() ?? 0;
 
     if (status >= 400) {
       issues.push({ route, type: "bad-status", detail: `HTTP ${status}` });
     }
-    consoleErrors.forEach((e) => issues.push({ route, type: "console-error", detail: e }));
-    pageErrors.forEach((e) => issues.push({ route, type: "page-error", detail: e }));
-    failedRequests.forEach((e) => issues.push({ route, type: "request-failed", detail: e }));
+    consoleErrors.forEach((e) =>
+      issues.push({ route, type: "console-error", detail: e }),
+    );
+    pageErrors.forEach((e) =>
+      issues.push({ route, type: "page-error", detail: e }),
+    );
+    failedRequests.forEach((e) =>
+      issues.push({ route, type: "request-failed", detail: e }),
+    );
 
     expect(status, `${route} returned HTTP ${status}`).toBeLessThan(400);
   });

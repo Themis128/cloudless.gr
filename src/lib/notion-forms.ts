@@ -99,7 +99,10 @@ export async function saveSubmission(
     return page.id;
   } catch (err) {
     // Non-blocking — log but don't surface to the user
-    console.error("[Notion] Failed to save submission:", (err as Error)?.message ?? "unknown error");
+    console.error(
+      "[Notion] Failed to save submission:",
+      (err as Error)?.message ?? "unknown error",
+    );
     return null;
   }
 }
@@ -146,7 +149,10 @@ export async function listSubmissions(limit = 50): Promise<SubmissionRecord[]> {
     });
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
-    console.error("[Notion] Failed to list submissions:", (err as Error)?.message ?? "unknown error");
+    console.error(
+      "[Notion] Failed to list submissions:",
+      (err as Error)?.message ?? "unknown error",
+    );
     return [];
   }
 }
@@ -171,7 +177,10 @@ export async function updateSubmissionStatus(
     });
     return true;
   } catch (err) {
-    console.error("[Notion] Failed to update submission status:", (err as Error)?.message ?? "unknown error");
+    console.error(
+      "[Notion] Failed to update submission status:",
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }

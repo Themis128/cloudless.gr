@@ -363,7 +363,10 @@ export async function updatePage(
     });
     return true;
   } catch (err) {
-    console.error(`[Notion] Failed to update page ${pageId}:`, (err as Error)?.message ?? "unknown error");
+    console.error(
+      `[Notion] Failed to update page ${pageId}:`,
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }
@@ -379,7 +382,10 @@ export async function archivePage(pageId: string): Promise<boolean> {
     });
     return true;
   } catch (err) {
-    console.error(`[Notion] Failed to archive page ${pageId}:`, (err as Error)?.message ?? "unknown error");
+    console.error(
+      `[Notion] Failed to archive page ${pageId}:`,
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }
@@ -395,7 +401,10 @@ export async function restorePage(pageId: string): Promise<boolean> {
     });
     return true;
   } catch (err) {
-    console.error(`[Notion] Failed to restore page ${pageId}:`, (err as Error)?.message ?? "unknown error");
+    console.error(
+      `[Notion] Failed to restore page ${pageId}:`,
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }
@@ -421,7 +430,10 @@ export async function appendBlocks(
     });
     return true;
   } catch (err) {
-    console.error(`[Notion] Failed to append blocks to ${parentId}:`, (err as Error)?.message ?? "unknown error");
+    console.error(
+      `[Notion] Failed to append blocks to ${parentId}:`,
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }
@@ -434,7 +446,10 @@ export async function deleteBlock(blockId: string): Promise<boolean> {
     await notionFetch(`/blocks/${blockId}`, { method: "DELETE" });
     return true;
   } catch (err) {
-    console.error(`[Notion] Failed to delete block ${blockId}:`, (err as Error)?.message ?? "unknown error");
+    console.error(
+      `[Notion] Failed to delete block ${blockId}:`,
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }

@@ -61,7 +61,9 @@ async function fetchObject(
 ): Promise<Record<string, string> | null> {
   // Validate objectType against allowlist to prevent request forgery
   if (!ALLOWED_OBJECT_TYPES.has(objectType)) {
-    console.warn(`[HubSpot Webhook] Blocked unsupported objectType: ${objectType}`);
+    console.warn(
+      `[HubSpot Webhook] Blocked unsupported objectType: ${objectType}`,
+    );
     return null;
   }
   try {

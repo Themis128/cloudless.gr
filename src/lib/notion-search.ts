@@ -180,7 +180,10 @@ export async function searchPages(
       nextCursor: data.next_cursor ?? undefined,
     };
   } catch (err) {
-    console.error("[Notion Search] Failed to search:", (err as Error)?.message ?? "unknown error");
+    console.error(
+      "[Notion Search] Failed to search:",
+      (err as Error)?.message ?? "unknown error",
+    );
     return { results: [], hasMore: false };
   }
 }
@@ -214,7 +217,10 @@ export async function listUsers(): Promise<NotionUser[]> {
     return data.results.map(mapUser);
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
-    console.error("[Notion Users] Failed to list users:", (err as Error)?.message ?? "unknown error");
+    console.error(
+      "[Notion Users] Failed to list users:",
+      (err as Error)?.message ?? "unknown error",
+    );
     return [];
   }
 }
@@ -231,7 +237,10 @@ export async function getBotUser(): Promise<NotionUser | null> {
     return mapUser(data);
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
-    console.error("[Notion Users] Failed to get bot user:", (err as Error)?.message ?? "unknown error");
+    console.error(
+      "[Notion Users] Failed to get bot user:",
+      (err as Error)?.message ?? "unknown error",
+    );
     return null;
   }
 }
@@ -248,7 +257,10 @@ export async function getUser(userId: string): Promise<NotionUser | null> {
     return mapUser(data);
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
-    console.error("[Notion Users] Failed to get user:", (err as Error)?.message ?? "unknown error");
+    console.error(
+      "[Notion Users] Failed to get user:",
+      (err as Error)?.message ?? "unknown error",
+    );
     return null;
   }
 }
@@ -283,7 +295,10 @@ export async function getDatabaseSchema(
     };
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
-    console.error("[Notion Schema] Failed to get database schema:", (err as Error)?.message ?? "unknown error");
+    console.error(
+      "[Notion Schema] Failed to get database schema:",
+      (err as Error)?.message ?? "unknown error",
+    );
     return null;
   }
 }

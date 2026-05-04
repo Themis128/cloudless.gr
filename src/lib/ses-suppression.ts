@@ -44,7 +44,10 @@ export async function addToSuppressionList(email: string): Promise<boolean> {
     return true;
   } catch (err) {
     const domain = email.includes("@") ? email.split("@")[1] : "(no-domain)";
-    console.error(`[SES] Failed to suppress *@${domain}:`, (err as Error)?.message ?? "unknown error");
+    console.error(
+      `[SES] Failed to suppress *@${domain}:`,
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }

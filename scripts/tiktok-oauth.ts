@@ -33,13 +33,22 @@ async function exchangeAuthCode(authCode: string) {
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ app_id: APP_ID, secret: APP_SECRET, auth_code: authCode }),
-    }
+      body: JSON.stringify({
+        app_id: APP_ID,
+        secret: APP_SECRET,
+        auth_code: authCode,
+      }),
+    },
   );
   return res.json() as Promise<{
     code: number;
     message: string;
-    data?: { access_token: string; refresh_token: string; advertiser_ids: number[]; expires_in: number };
+    data?: {
+      access_token: string;
+      refresh_token: string;
+      advertiser_ids: number[];
+      expires_in: number;
+    };
   }>;
 }
 
@@ -101,7 +110,7 @@ async function main() {
         console.log("\nauth_code received:", authCode.substring(0, 20) + "...");
         res.writeHead(200, { "Content-Type": "text/html" });
         res.end(
-          "<h2>Authorization successful!</h2><p>You can close this tab.</p>"
+          "<h2>Authorization successful!</h2><p>You can close this tab.</p>",
         );
         server.close();
 
@@ -123,7 +132,9 @@ async function main() {
         console.log("\n========== RESULTS ==========");
         console.log(`TIKTOK_ACCESS_TOKEN=${access_token}`);
         console.log(`TIKTOK_REFRESH_TOKEN=${refresh_token}`);
-        console.log(`Token expires in: ${expires_in}s (~${Math.round(expires_in / 3600)}h)`);
+        console.log(
+          `Token expires in: ${expires_in}s (~${Math.round(expires_in / 3600)}h)`,
+        );
 
         if (advRes.data?.list?.length) {
           advRes.data.list.forEach((adv) => {
@@ -146,7 +157,9 @@ async function main() {
     });
 
     server.listen(PORT, () => {
-      console.log(`\nOpen this URL in your browser to authorize:\n\n${AUTH_URL}\n`);
+      console.log(
+        `\nOpen this URL in your browser to authorize:\n\n${AUTH_URL}\n`,
+      );
       openBrowser(AUTH_URL);
     });
 
