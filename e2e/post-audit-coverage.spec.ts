@@ -15,7 +15,9 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("rate-limit cap — /api/contact (3 req/min/container)", () => {
-  test("4th rapid same-IP submission is rejected (429 or 4xx)", async ({ request }) => {
+  test("4th rapid same-IP submission is rejected (429 or 4xx)", async ({
+    request,
+  }) => {
     // Pin a stable IP so all 4 requests share the limiter bucket.
     const ip = "203.0.113.99";
     const headers = {
@@ -93,21 +95,40 @@ test.describe("image optimizer — AVIF/WebP support", () => {
 });
 
 test.describe("HubSpot loader gate (only on real cloudless.gr hosts)", () => {
-  test("the HubSpot script tag is NOT in the DOM on localhost", async ({ page }) => {
+  test("the HubSpot script tag is NOT in the DOM on localhost", async ({
+    page,
+  }) => {
     await page.goto("/en");
     await page.waitForLoadState("networkidle");
     // The HubSpotScript client component returns null when window.location.hostname
     // is not "cloudless.gr" / "www.cloudless.gr". On localhost it should return null.
-    const count = await page.locator('script#hs-script-loader').count();
+    const count = await page.locator("script#hs-script-loader").count();
     expect(count).toBe(0);
   });
 
-  test("no network requests to hs-scripts.com from localhost", async ({ page }) => {
+  test("no network requests to hs-scripts.com from localhost", async ({
+    page,
+  }) => {
+    const HS_HOSTNAMES = new Set([
+      "js.hs-scripts.com",
+      "forms.hsforms.net",
+      "p.typekit.net",
+      "use.typekit.net",
+    ]);
     const hsRequests: string[] = [];
     page.on("request", (req) => {
       const url = req.url();
-      if (/hs-scripts\.com|hsforms\.net|p\.typekit\.net|use\.typekit\.net/.test(url)) {
-        hsRequests.push(url);
+      try {
+        const { hostname } = new URL(url);
+        if (
+          HS_HOSTNAMES.has(hostname) ||
+          hostname.endsWith(".hs-scripts.com") ||
+          hostname.endsWith(".hsforms.net")
+        ) {
+          hsRequests.push(url);
+        }
+      } catch {
+        // malformed URL — ignore
       }
     });
     await page.goto("/en");

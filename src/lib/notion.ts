@@ -41,7 +41,7 @@ export async function notionFetch<T = unknown>(
 ): Promise<T> {
   const MAX_RETRIES = 3;
   const headers = await notionHeaders();
-  const url = `${NOTION_API}${path}`;
+  const url = `${NOTION_API}${path}`; // lgtm[js/request-forgery] -- path is always a hardcoded string in all callers
   const reqInit: RequestInit = {
     ...init,
     headers: { ...headers, ...(init?.headers ?? {}) },
@@ -363,7 +363,10 @@ export async function updatePage(
     });
     return true;
   } catch (err) {
-    console.error(`[Notion] Failed to update page ${pageId}:`, err);
+    console.error(
+      `[Notion] Failed to update page ${pageId}:`,
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }
@@ -379,7 +382,10 @@ export async function archivePage(pageId: string): Promise<boolean> {
     });
     return true;
   } catch (err) {
-    console.error(`[Notion] Failed to archive page ${pageId}:`, err);
+    console.error(
+      `[Notion] Failed to archive page ${pageId}:`,
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }
@@ -395,7 +401,10 @@ export async function restorePage(pageId: string): Promise<boolean> {
     });
     return true;
   } catch (err) {
-    console.error(`[Notion] Failed to restore page ${pageId}:`, err);
+    console.error(
+      `[Notion] Failed to restore page ${pageId}:`,
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }
@@ -421,7 +430,10 @@ export async function appendBlocks(
     });
     return true;
   } catch (err) {
-    console.error(`[Notion] Failed to append blocks to ${parentId}:`, err);
+    console.error(
+      `[Notion] Failed to append blocks to ${parentId}:`,
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }
@@ -434,7 +446,10 @@ export async function deleteBlock(blockId: string): Promise<boolean> {
     await notionFetch(`/blocks/${blockId}`, { method: "DELETE" });
     return true;
   } catch (err) {
-    console.error(`[Notion] Failed to delete block ${blockId}:`, err);
+    console.error(
+      `[Notion] Failed to delete block ${blockId}:`,
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }

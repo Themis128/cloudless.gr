@@ -45,12 +45,27 @@ async function verifySignatureV3(
   }
 }
 
+/** Allowlist of HubSpot CRM object types that may be fetched. */
+const ALLOWED_OBJECT_TYPES = new Set([
+  "contacts",
+  "deals",
+  "tickets",
+  "companies",
+]);
+
 async function fetchObject(
   token: string,
   objectType: string,
   objectId: number,
   properties: string[],
 ): Promise<Record<string, string> | null> {
+  // Validate objectType against allowlist to prevent request forgery
+  if (!ALLOWED_OBJECT_TYPES.has(objectType)) {
+    console.warn(
+      `[HubSpot Webhook] Blocked unsupported objectType: ${objectType}`,
+    );
+    return null;
+  }
   try {
     const res = await fetch(
       `${HUBSPOT_API}/crm/v3/objects/${objectType}/${objectId}?properties=${properties.join(",")}`,
