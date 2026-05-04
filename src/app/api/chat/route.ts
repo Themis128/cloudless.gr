@@ -155,6 +155,9 @@ async function executeToolBlocks(
     (b): b is Extract<ContentBlock, { type: "tool_use" }> =>
       b.type === "tool_use",
   );
+  // Log each tool invocation so CloudWatch Logs Insights can count tool-call
+  // rates per session (required for Phase 2a soak metrics — see issue #104).
+  toolUses.forEach((b) => console.info("[chat] tool_use", b.name));
   return Promise.all(
     toolUses.map(async (b) => ({
       type: "tool_result" as const,
