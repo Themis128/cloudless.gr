@@ -1,0 +1,6 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": ["powerbi", "quicksight"],
+  "ignorePaths": ["node_modules/**", ".next/**", "dist/**", "build/**", "coverage/**", "*.lock", "pnpm-lock.yaml"]
+}
