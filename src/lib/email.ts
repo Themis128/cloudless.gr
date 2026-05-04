@@ -200,6 +200,12 @@ export async function notifyTeam(subject: string, body: string): Promise<void> {
     to: config.SES_TO_EMAIL,
     subject,
     html: `<div style="font-family: sans-serif;">${body}</div>`,
-    text: body.replace(/<[^>]+>/g, ""),
+    // Strip HTML tags for the plain-text part. We split on "<" and discard
+    // everything up to and including the next ">" in each segment, which avoids
+    // regex backtracking patterns that static analysers flag as ReDoS-prone.
+    text: body
+      .split("<")
+      .map((seg, i) => (i === 0 ? seg : seg.includes(">") ? seg.slice(seg.indexOf(">") + 1) : ""))
+      .join(""),
   });
 }
