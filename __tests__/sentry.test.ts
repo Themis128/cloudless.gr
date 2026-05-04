@@ -16,6 +16,7 @@ import {
   getTopErrors,
   getErrorCounts,
   updateIssueStatus,
+  __resetSentryRejectionCache,
 } from "@/lib/sentry";
 
 const CONFIGURED_CONFIG = {
@@ -51,6 +52,7 @@ describe("sentry.ts", () => {
     vi.clearAllMocks();
     vi.stubGlobal("fetch", vi.fn());
     mockGetConfig.mockResolvedValue(CONFIGURED_CONFIG);
+    __resetSentryRejectionCache();
   });
 
   // ── isSentryConfigured ───────────────────────────────────────────────────────

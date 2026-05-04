@@ -190,9 +190,7 @@ function addSecurityHeaders(response: NextResponse): void {
     "Permissions-Policy",
     [
       "accelerometer=()",
-      "ambient-light-sensor=()",
       "autoplay=(self)",
-      "battery=()",
       "camera=()",
       "display-capture=()",
       "encrypted-media=()",

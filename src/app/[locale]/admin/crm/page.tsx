@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 interface Contact {
   id: string;
@@ -34,7 +35,7 @@ export default function AdminCRMPage() {
   useEffect(() => {
     async function fetchContacts() {
       try {
-        const res = await fetch("/api/admin/crm/contacts?limit=50");
+        const res = await fetchWithAuth("/api/admin/crm/contacts?limit=50");
         if (!res.ok) {
           if (res.status === 503) throw new Error("HubSpot not configured");
           throw new Error(`HTTP ${res.status}`);
