@@ -69,8 +69,38 @@ export type SentryTokenStatus =
 
 const SENTRY_API = "https://sentry.io/api/0";
 const VERIFY_TIMEOUT_MS = 5_000;
+const REJECTION_CACHE_TTL_MS = 60_000;
 const DEFAULT_SENTRY_ORG = "baltzakisthemiscom";
 const DEFAULT_SENTRY_PROJECT = "cloudless-gr";
+
+/**
+ * Short-lived negative cache: once Sentry rejects the token, fail fast for
+ * RESCUE_CACHE_TTL_MS so the admin dashboard doesn't pay the round-trip per
+ * call. Reset by token rotation or process restart.
+ */
+let rejectionCache: { until: number; status: number } | null = null;
+let lastAuthLogAt = 0;
+
+function recordRejection(status: number) {
+  rejectionCache = { until: Date.now() + REJECTION_CACHE_TTL_MS, status };
+  // Throttle the auth-error log to once per TTL window.
+  if (Date.now() - lastAuthLogAt > REJECTION_CACHE_TTL_MS) {
+    console.error(
+      `[Sentry] Auth error ${status} — check SENTRY_AUTH_TOKEN scopes (project:read required). Suppressing further logs for ${Math.round(REJECTION_CACHE_TTL_MS / 1000)}s.`,
+    );
+    lastAuthLogAt = Date.now();
+  }
+}
+
+function isRejectionCached(): boolean {
+  return rejectionCache !== null && Date.now() < rejectionCache.until;
+}
+
+/** Test-only: clear the in-process rejection cache between cases. */
+export function __resetSentryRejectionCache(): void {
+  rejectionCache = null;
+  lastAuthLogAt = 0;
+}
 
 async function getSentryConfig(): Promise<{
   token: string;
@@ -93,6 +123,8 @@ async function sentryFetch<T>(
   const cfg = await getSentryConfig();
   if (!cfg) return null;
 
+  if (isRejectionCached()) return null;
+
   try {
     const res = await fetch(`${SENTRY_API}${path}`, {
       ...options,
@@ -104,9 +136,7 @@ async function sentryFetch<T>(
     });
 
     if (res.status === 401 || res.status === 403) {
-      console.error(
-        `[Sentry] Auth error ${res.status} — check SENTRY_AUTH_TOKEN scopes.`,
-      );
+      recordRejection(res.status);
       return null;
     }
 
@@ -146,6 +176,13 @@ export async function verifySentryToken(): Promise<{
   const cfg = await getSentryConfig();
   if (!cfg) return { status: "not_configured" };
 
+  if (isRejectionCached() && rejectionCache) {
+    return {
+      status: "rejected",
+      message: `Token rejected (${rejectionCache.status}) — check SENTRY_AUTH_TOKEN scopes (project:read required).`,
+    };
+  }
+
   try {
     const res = await fetch(
       `${SENTRY_API}/projects/${cfg.org}/${cfg.project}/`,
@@ -155,6 +192,7 @@ export async function verifySentryToken(): Promise<{
       },
     );
     if (res.status === 401 || res.status === 403) {
+      recordRejection(res.status);
       return {
         status: "rejected",
         message: `Token rejected (${res.status}) — check SENTRY_AUTH_TOKEN scopes (project:read required).`,

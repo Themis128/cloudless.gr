@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 interface Order {
   id: string;
@@ -46,7 +47,7 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     async function fetchOrders() {
       try {
-        const res = await fetch("/api/admin/orders?limit=20");
+        const res = await fetchWithAuth("/api/admin/orders?limit=20");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setOrders(data.orders ?? []);
