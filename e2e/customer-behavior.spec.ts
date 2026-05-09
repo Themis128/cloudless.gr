@@ -216,22 +216,31 @@ test.describe("Blog", () => {
 
   test("at least one article link is present", async ({ page }) => {
     await page.goto("/blog");
+    await page.waitForLoadState("networkidle");
     const links = await page.getByRole("link").all();
     const blogLinks = [];
     for (const link of links) {
       const href = await link.getAttribute("href");
-      if (href && /\/blog\/[a-z]/.test(href)) blogLinks.push(href);
+      // Match any /blog/<slug> link — slugs may start with digits or letters,
+      // and may be absolute (https://...) or locale-prefixed (/en/blog/...)
+      if (href && /\/blog\/.+/.test(href) && !/\/blog\/?$/.test(href)) {
+        blogLinks.push(href);
+      }
     }
     expect(blogLinks.length).toBeGreaterThan(0);
   });
 
   test("clicking a blog post navigates to the article page", async ({ page }) => {
     await page.goto("/blog");
+    await page.waitForLoadState("networkidle");
     const links = await page.getByRole("link").all();
     let postHref: string | null = null;
     for (const link of links) {
       const href = await link.getAttribute("href");
-      if (href && /\/blog\/[a-z]/.test(href)) { postHref = href; break; }
+      if (href && /\/blog\/.+/.test(href) && !/\/blog\/?$/.test(href)) {
+        postHref = href;
+        break;
+      }
     }
     if (postHref) {
       await page.goto(postHref);
@@ -304,7 +313,7 @@ test.describe("Contact form API", () => {
     expect(res.status()).toBeLessThan(500);
   });
 
-  test("valid submission passes validation (not 4xx except rate-limit)", async ({ request }) => {
+  test("valid submission passes validation (not 4xx except rate-limit) @mutating", async ({ request }) => {
     const res = await request.post("/api/contact", {
       data: {
         name: "Playwright Test",
@@ -393,7 +402,7 @@ test.describe("Auth – Forgot Password page", () => {
 // ─── Newsletter subscribe API ─────────────────────────────────────────────────
 
 test.describe("Newsletter subscribe API", () => {
-  test("valid email returns non-500", async ({ request }) => {
+  test("valid email returns non-500 @mutating", async ({ request }) => {
     const res = await request.post("/api/subscribe", {
       data: { email: `playwright-${Date.now()}@example.com` },
     });
@@ -535,13 +544,17 @@ test.describe("End-to-end visitor journeys", () => {
 
   test("visitor reads a blog post from the blog index", async ({ page }) => {
     await page.goto("/blog");
+    await page.waitForLoadState("networkidle");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
     const links = await page.getByRole("link").all();
     let postHref: string | null = null;
     for (const link of links) {
       const href = await link.getAttribute("href");
-      if (href && /\/blog\/[a-z]/.test(href)) { postHref = href; break; }
+      if (href && /\/blog\/.+/.test(href) && !/\/blog\/?$/.test(href)) {
+        postHref = href;
+        break;
+      }
     }
     if (postHref) {
       await page.goto(postHref);
