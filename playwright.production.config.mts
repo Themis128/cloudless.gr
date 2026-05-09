@@ -17,10 +17,7 @@ const rootDir = import.meta.dirname ?? path.resolve();
 export default defineConfig({
   testDir: path.join(rootDir, "e2e"),
 
-  // Only run the customer-behavior suite against production
-  testMatch: ["**/customer-behavior.spec.ts"],
-
-  // Skip tests that POST real data (contact form submit, newsletter signup)
+  // Skip tests that POST real data or require local dev setup
   grep: /^(?!.*@mutating)/,
 
   fullyParallel: true,
@@ -36,6 +33,12 @@ export default defineConfig({
   use: {
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+  },
+
+  // Enable infrastructure smoke tests (they skip unless this is set)
+  // and pass admin credentials if available via environment
+  env: {
+    INFRA_SMOKE: "1",
   },
 
   projects: [

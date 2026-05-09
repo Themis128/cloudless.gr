@@ -27,7 +27,12 @@ export async function POST(request: NextRequest) {
 
     // Validate origin against allowlist to prevent open redirect
     const rawOrigin = request.headers.get("origin") ?? "";
-    const allowedOrigins = ["https://cloudless.gr", "https://www.cloudless.gr"];
+    const allowedOrigins = [
+      "https://cloudless.gr",
+      "https://www.cloudless.gr",
+      "https://cloudless.online",
+      "https://www.cloudless.online",
+    ];
     if (
       process.env.NODE_ENV === "development" &&
       rawOrigin.startsWith("http://localhost")

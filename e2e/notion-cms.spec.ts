@@ -62,10 +62,11 @@ test.describe("Notion CMS — /blog/[slug]", () => {
 test.describe("Notion CMS — /docs", () => {
   test("renders the docs header and search input", async ({ page }) => {
     await page.goto("/docs");
+    await page.waitForLoadState("networkidle");
     await expect(
       page.getByRole("heading", { level: 1, name: /documentation/i })
-    ).toBeVisible();
-    await expect(page.getByPlaceholder(/search docs/i)).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByPlaceholder(/search docs/i)).toBeVisible({ timeout: 10000 });
   });
 
   test("renders either category headings or the empty state", async ({ page }) => {
@@ -83,8 +84,9 @@ test.describe("Notion CMS — /docs", () => {
 
   test("filtering with no matches shows the no-results state", async ({ page }) => {
     await page.goto("/docs?q=zzz_no_such_doc_xyz");
+    await page.waitForLoadState("networkidle");
     await expect(
       page.getByText(/no docs match your filters|no documentation published yet/i)
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
   });
 });

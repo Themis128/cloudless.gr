@@ -237,7 +237,12 @@ export function proxy(request: NextRequest) {
     addSecurityHeaders(response);
 
     const origin = request.headers.get("origin") ?? "";
-    const allowedOrigins = ["https://cloudless.gr", "https://www.cloudless.gr"];
+    const allowedOrigins = [
+      "https://cloudless.gr",
+      "https://www.cloudless.gr",
+      "https://cloudless.online",
+      "https://www.cloudless.online",
+    ];
 
     if (
       process.env.NODE_ENV === "development" &&

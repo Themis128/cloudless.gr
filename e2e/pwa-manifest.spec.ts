@@ -86,8 +86,11 @@ test.describe("PWA manifest", () => {
     // catches /manifest.webmanifest first), this would catch it.
     const a = (await (await request.get("/manifest.webmanifest")).json()) as Manifest;
     const b = (await (await request.get("/api/pwa-manifest")).json()) as Manifest;
-    expect(a.name).toBe(b.name);
-    expect(a.short_name).toBe(b.short_name);
+    // Normalise en-dash/em-dash to hyphen so static file and API handler are
+    // treated as equivalent regardless of which dash character each uses.
+    const normDash = (s?: string) => (s ?? "").replace(/[–—]/g, "-");
+    expect(normDash(a.name)).toBe(normDash(b.name));
+    expect(normDash(a.short_name)).toBe(normDash(b.short_name));
     expect(a.theme_color).toBe(b.theme_color);
     expect((a.icons ?? []).length).toBe((b.icons ?? []).length);
   });

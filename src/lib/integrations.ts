@@ -320,6 +320,14 @@ export class IntegrationNotConfiguredError extends Error {
 export async function requireIntegrationAsync(
   ...keys: (keyof IntegrationConfig)[]
 ): Promise<IntegrationConfig> {
+  // Fast-path: if any env var is explicitly set to empty string we know it's
+  // not configured without needing an SSM round-trip. Same logic as
+  // isConfiguredAsync — ensures tests that stub env vars are not bypassed by
+  // the SSM cache returning real production values.
+  for (const k of keys) {
+    const val = process.env[k as string];
+    if (val !== undefined && !val) throw new IntegrationNotConfiguredError([k]);
+  }
   const config = await getIntegrationsAsync();
   const missing = keys.filter((k) => !config[k]);
   if (missing.length > 0) throw new IntegrationNotConfiguredError(missing);

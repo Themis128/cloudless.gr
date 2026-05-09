@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
@@ -163,7 +163,8 @@ export default function AdminLayoutClient({
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
-        router.push("/auth/login");
+        // Include ?next so the login page can bounce back after sign-in
+        router.push("/auth/login?next=/admin");
       } else if (!isAdmin) {
         router.push("/dashboard");
       }
