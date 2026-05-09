@@ -119,6 +119,16 @@ export default {
         runtime: "nodejs22.x",
         timeout: "30 seconds",
       },
+      transform: {
+        // Force arm64 on SST-internal functions (warmer + revalidation).
+        // The server function above is already arm64; these default to x86_64.
+        warmer: (args) => {
+          args.architectures = ["arm64"];
+        },
+        revalidation: (args) => {
+          args.architectures = ["arm64"];
+        },
+      },
       // Invalidate CloudFront cache on every deployment for fresh content
       invalidation: {
         paths: "all",
