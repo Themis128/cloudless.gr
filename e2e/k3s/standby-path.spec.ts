@@ -58,18 +58,15 @@ test.describe("k3s standby path", () => {
     expect(median, `warm median RTT ${median}ms (budget 1500ms)`).toBeLessThan(1_500);
   });
 
-  test("APIGW custom domain returns expected x-amzn headers", async ({ request }) => {
-    // APIGW always stamps Apigw-Requestid (or x-amzn-RequestId) on responses
-    // it produces — useful as a positive signal that the request actually
-    // went through APIGW.
+  test("cloudless.online response is stamped by Cloudflare Tunnel (not direct Pi)", async ({
+    request,
+  }) => {
+    // cloudless.online is always proxied by Cloudflare — the tunnel from
+    // CF edge → Pi is what keeps the Pi reachable under Starlink CGNAT.
+    // CF stamps CF-RAY on every response it proxies; its presence proves
+    // traffic went CF → Pi rather than somehow bypassing the tunnel.
     const r = await request.get("https://cloudless.online/api/health");
-    const reqId =
-      r.headers()["apigw-requestid"] ??
-      r.headers()["x-amzn-requestid"] ??
-      r.headers()["x-amzn-trace-id"];
-    expect(
-      reqId,
-      "expected an APIGW request-id header on a SECONDARY-served response",
-    ).toBeTruthy();
+    const cfRay = r.headers()["cf-ray"];
+    expect(cfRay, "expected CF-RAY header proving traffic went through Cloudflare Tunnel").toBeTruthy();
   });
 });
