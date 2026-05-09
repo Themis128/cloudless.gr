@@ -35,12 +35,6 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
 
-  // Enable infrastructure smoke tests (they skip unless this is set)
-  // and pass admin credentials if available via environment
-  env: {
-    INFRA_SMOKE: "1",
-  },
-
   projects: [
     {
       name: "cloudless-gr-desktop",
