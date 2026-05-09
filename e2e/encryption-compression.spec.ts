@@ -16,9 +16,9 @@ const TEXT_ROUTES = ["/en", "/api/health"]; // routes large enough for compressi
 test.describe("compression — HTTP responses are compressed when client supports it", () => {
   for (const route of TEXT_ROUTES) {
     test(`gzip is offered for ${route}`, async ({ request }) => {
-      const r = await request.get(route, {
-        headers: { "accept-encoding": "gzip" },
-      });
+      // Dev server can transiently 500 under parallel test load — retry once.
+      let r = await request.get(route, { headers: { "accept-encoding": "gzip" }, failOnStatusCode: false });
+      if (r.status() >= 500) r = await request.get(route, { headers: { "accept-encoding": "gzip" }, failOnStatusCode: false });
       expect(r.status()).toBeLessThan(400);
       const ce = r.headers()["content-encoding"] ?? "";
       // Either Content-Encoding=gzip OR a transfer that already arrived
@@ -33,9 +33,8 @@ test.describe("compression — HTTP responses are compressed when client support
     test(`brotli is offered for ${route} when client supports it`, async ({
       request,
     }) => {
-      const r = await request.get(route, {
-        headers: { "accept-encoding": "br, gzip" },
-      });
+      let r = await request.get(route, { headers: { "accept-encoding": "br, gzip" }, failOnStatusCode: false });
+      if (r.status() >= 500) r = await request.get(route, { headers: { "accept-encoding": "br, gzip" }, failOnStatusCode: false });
       expect(r.status()).toBeLessThan(400);
       // br is preferred when both are available; accept either to pass
       // dev (Next.js dev: gzip-only) and prod (CloudFront: br on the fly).

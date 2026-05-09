@@ -167,10 +167,13 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             APP_VERSION=${{ github.event.inputs.target_sha || github.sha }}
-            NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
+            NEXT_PUBLIC_SITE_URL=https://cloudless.gr
+            NEXT_PUBLIC_STAGE=production
             NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
             NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
             NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+            NEXT_PUBLIC_META_PIXEL_ID=${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
 
       # Record the pushed image digest in SSM so the Pi's image-sync CronJob
       # can compare without needing ecr:DescribeImages (omv-main-cli is

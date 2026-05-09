@@ -4,8 +4,9 @@ test.describe("Dashboard", () => {
   test("login page is accessible", async ({ page }) => {
     await page.goto("/auth/login");
     await expect(page).toHaveURL(/\/auth\/login/);
-    await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i).first()).toBeVisible();
+    // Suspense + AuthContext init — wait for the form to hydrate.
+    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByLabel(/password/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("/dashboard redirects unauthenticated users to login", async ({ page }) => {

@@ -9,7 +9,7 @@ import {
   categoryColors,
   type ProductCategory,
   type StoreProduct,
-} from "@/lib/store-products";
+} from "@/lib/store-products-client";
 import { formatPrice } from "@/lib/format-price";
 import ProductIcon from "@/components/store/ProductIcon";
 

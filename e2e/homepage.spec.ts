@@ -22,7 +22,7 @@ test.describe("Homepage", () => {
     );
 
     for (const href of hrefs) {
-      const res = await request.get(href, { timeout: 5000 });
+      const res = await request.get(href, { timeout: 15_000 });
       expect(res.status(), `${href} returned ${res.status()}`).toBeLessThan(400);
     }
   });

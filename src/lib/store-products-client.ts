@@ -31,9 +31,9 @@ export const categoryLabels: Record<ProductCategory, string> = {
 };
 
 export const categoryColors: Record<ProductCategory, string> = {
-  service: "from-neon-blue/10 to-neon-blue/5",
-  digital: "from-neon-cyan/10 to-neon-cyan/5",
-  physical: "from-neon-magenta/10 to-neon-magenta/5",
+  service: "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20",
+  digital: "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
+  physical: "bg-neon-green/10 text-neon-green border border-neon-green/20",
 };
 
 // ---------------------------------------------------------------------------

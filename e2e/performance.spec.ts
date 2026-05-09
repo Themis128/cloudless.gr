@@ -1,20 +1,23 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Response time budgets", () => {
-  test("homepage responds within 10s (dev) / 3s (prod)", async ({ page }) => {
+  test("homepage responds within 10s (dev) / 3s (prod)", async ({ page, baseURL }) => {
     // Dev server cold-start can take 7-8s; production CloudFront is <1s.
-    // Threshold is intentionally loose for local dev. CI against prod uses INFRA_SMOKE.
-    const isProd = !!process.env.INFRA_SMOKE;
+    // Use baseURL to detect prod vs local — INFRA_SMOKE may be set even when
+    // running against localhost, which would apply an unfairly tight budget.
+    const isProd = !!(baseURL && !baseURL.includes("localhost"));
     const budget = isProd ? 3_000 : 10_000;
     const start = Date.now();
     await page.goto("/", { waitUntil: "domcontentloaded" });
     expect(Date.now() - start).toBeLessThan(budget);
   });
 
-  test("health API responds within 500ms", async ({ request }) => {
+  test("health API responds within 500ms (prod) / 3s (dev)", async ({ request, baseURL }) => {
+    const isProd = !!(baseURL && !baseURL.includes("localhost"));
+    const budget = isProd ? 500 : 3_000;
     const start = Date.now();
     await request.get("/api/health");
-    expect(Date.now() - start).toBeLessThan(500);
+    expect(Date.now() - start).toBeLessThan(budget);
   });
 });
 

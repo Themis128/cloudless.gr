@@ -26,9 +26,12 @@ export async function loginAsUser(
   await passwordLocator.fill(password);
   await page.click('button[type="submit"]');
 
-  await page.waitForURL(`**${expectedRedirect}`, { timeout: 30000 }).catch(async () => {
-    await page.waitForLoadState("networkidle");
-  });
+  await page.waitForURL(new RegExp(expectedRedirect.replace(/\//g, "\\/")), { timeout: 30000 })
+    .catch(async () => {
+      await page.waitForLoadState("networkidle");
+    });
+  // Wait for Cognito session to hydrate so isAdmin is resolved before test body runs
+  await page.waitForLoadState("networkidle");
 }
 
 /**
