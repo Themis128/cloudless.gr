@@ -1,14 +1,15 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Blog API", () => {
-  test("GET /api/blog/posts returns array", async ({ request }) => {
+  test("GET /api/blog/posts returns posts array", async ({ request }) => {
     const res = await request.get("/api/blog/posts");
-    // Either 200 with posts or 200 with empty array — never 5xx
     expect(res.status()).toBeLessThan(500);
 
     if (res.status() === 200) {
       const body = await res.json();
-      expect(Array.isArray(body)).toBe(true);
+      // Response shape: { posts: [...], source: "notion" | "static" }
+      expect(Array.isArray(body.posts)).toBe(true);
+      expect(typeof body.source).toBe("string");
     }
   });
 });
