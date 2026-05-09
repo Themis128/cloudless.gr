@@ -1,16 +1,35 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Performance & Loading", () => {
-  test("homepage reaches networkidle within 15s", async ({ page }) => {
-    const startTime = Date.now();
-    await page.goto("/", { waitUntil: "networkidle" });
-    const loadTime = Date.now() - startTime;
-    expect(loadTime).toBeLessThan(15_000);
+test.describe("Response time budgets", () => {
+  test("homepage responds within 3s", async ({ page }) => {
+    const start = Date.now();
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    expect(Date.now() - start).toBeLessThan(3_000);
   });
 
-  test("homepage renders meaningful content (h1 and links)", async ({ page }) => {
+  test("health API responds within 500ms", async ({ request }) => {
+    const start = Date.now();
+    await request.get("/api/health");
+    expect(Date.now() - start).toBeLessThan(500);
+  });
+});
+
+test.describe("SEO basics", () => {
+  test("homepage has exactly one H1", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    expect(await page.getByRole("link").count()).toBeGreaterThan(0);
+    await page.waitForLoadState("domcontentloaded");
+    const h1Count = await page.locator("h1").count();
+    expect(h1Count).toBe(1);
+  });
+
+  test("all images have alt text", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("domcontentloaded");
+    const missing = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("img"))
+        .filter((img) => !img.alt && !img.getAttribute("aria-hidden"))
+        .map((img) => img.src),
+    );
+    expect(missing, `Images missing alt: ${missing.join(", ")}`).toHaveLength(0);
   });
 });
