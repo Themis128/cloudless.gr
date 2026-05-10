@@ -36,6 +36,7 @@ interface PostMessagePayload {
   blocks?: BlockKitBlock[];
   username?: string;
   icon_emoji?: string;
+  icon_url?: string;
 }
 
 interface SlackApiResponse {
@@ -51,7 +52,8 @@ const CHAT_POST_URL = "https://slack.com/api/chat.postMessage";
 const STATUS_SUCCEEDED = "succeeded";
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 500;
-const BOT_USERNAME = "Cloudless Bot";
+const BOT_USERNAME = "Cloudless";
+const BOT_ICON_URL = "https://cloudless.gr/favicon.ico";
 const MAX_ERROR_TEXT_LENGTH = 2_000;
 const MAX_NOTES_TEXT_LENGTH = 500;
 const COMMIT_SHA_SHORT_LENGTH = 7;
@@ -226,7 +228,7 @@ export async function slackSubscriberNotify(email: string): Promise<void> {
       contextBlock(slackTimestamp(), "cloudless.gr subscribe form"),
       divider,
     ],
-    icon_emoji: ":envelope:",
+    icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
 }
@@ -261,7 +263,7 @@ export async function slackErrorNotify(opts: {
       contextBlock(slackTimestamp(), "cloudless.gr"),
       divider,
     ],
-    icon_emoji: ":rotating_light:",
+    icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
 }
@@ -309,7 +311,7 @@ export async function slackDeployNotify(opts: {
       contextBlock(slackTimestamp(), "cloudless.gr deploy pipeline"),
       divider,
     ],
-    icon_emoji: statusEmoji,
+    icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
 }
@@ -363,7 +365,7 @@ export async function slackContactNotify(data: {
       sectionBlock(`*Message:*\n${safeMessage}`),
       contextBlock(slackTimestamp(), "cloudless.gr contact form"),
     ],
-    icon_emoji: ":incoming_envelope:",
+    icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
 }
@@ -406,7 +408,7 @@ export async function slackBookingNotify(data: {
         : []),
       contextBlock(slackTimestamp(), "cloudless.gr calendar booking"),
     ],
-    icon_emoji: ":calendar:",
+    icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
 }
@@ -431,7 +433,7 @@ export async function slackOrderNotify(data: {
       ),
       contextBlock(slackTimestamp(), "cloudless.gr stripe checkout"),
     ],
-    icon_emoji: ":moneybag:",
+    icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
 }
