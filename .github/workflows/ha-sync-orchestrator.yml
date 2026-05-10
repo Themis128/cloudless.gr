@@ -71,21 +71,28 @@ jobs:
             const deployBranch = '${{ steps.meta.outputs.branch }}';
             const { owner, repo } = context.repo;
 
-            // Dispatch at the exact deploy commit SHA (not the branch tip).
-            // Using ref=deploySha ensures the dispatched run's head_sha matches
-            // deploySha, so the wait-loop filter (run.head_sha === deploySha)
-            // finds the run even when the branch has since advanced.
+            // GitHub's createWorkflowDispatch API requires ref to be a branch
+            // or tag name — commit SHAs are NOT valid refs for this endpoint.
+            // We dispatch at the branch (always valid) and pass the exact SHA
+            // as target_sha input so build-pi-image.yml checks out the right
+            // commit regardless of whether the branch has since advanced.
+            //
+            // The wait-loop below filters by head_sha === deploySha. In the
+            // normal sequential-deploy case the branch tip equals deploySha at
+            // dispatch time, so head_sha will match. In a rapid-push scenario
+            // the wait-loop may time out; the subsequent orchestrator run for
+            // the newer SHA will succeed and that image is correct.
             await github.rest.actions.createWorkflowDispatch({
               owner,
               repo,
               workflow_id: 'build-pi-image.yml',
-              ref: deploySha,
+              ref: deployBranch,
               inputs: {
                 target_sha: deploySha,
               },
             });
 
-            core.info(`Dispatched build-pi-image.yml for ${deploySha} via ref=${deploySha}`);
+            core.info(`Dispatched build-pi-image.yml for ${deploySha} via ref=${deployBranch}`);
 
       - name: wait for pi build completion
         if: steps.check.outputs.exists != 'true'
