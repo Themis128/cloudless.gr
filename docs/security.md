@@ -40,6 +40,17 @@ same image, so all controls below apply identically to both).
 - **Admin gate** — `requireAdmin()` decodes the verified token and asserts
   the user is in the admin Cognito group. Used by every route under
   `src/app/api/admin/*` (verified by audit script in this repo).
+- **Admin UI guard** — `AdminLayoutClient` checks `isAdmin` from
+  `AuthContext` client-side and immediately redirects to `/dashboard` for
+  non-admin users and to `/auth/login?next=/admin` for unauthenticated
+  ones. The server-side `requireAdmin()` on every API route is the
+  authoritative enforcement; the UI redirect is defence-in-depth only.
+- **Infrastructure shortcuts** — The admin panel sidebar and dashboard
+  include external links to `grafana.cloudless.online` (Grafana) and
+  `manage.cloudless.online` (Cluster Manager). These links open in a new
+  tab and carry no credentials or tokens from cloudless.gr. Each tool
+  enforces its own independent authentication: Grafana uses its built-in
+  login; Cluster Manager is behind oauth2-proxy → Keycloak SSO.
 - **Cron / scheduled jobs** — protected by `CRON_SECRET` Bearer token,
   compared with `safeEqual` (constant time) to defeat timing oracles.
 
