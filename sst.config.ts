@@ -364,6 +364,33 @@ export default {
       );
     }
 
+    // -------------------------------------------------------------------------
+    // Grant omv-main-cli (Pi k3s IAM user) Bedrock access for the chat widget.
+    // The Pi runs the same Next.js image as Lambda but uses IAM user credentials
+    // (not the Lambda execution role), so it needs its own Bedrock policy.
+    // This is production-only; the user doesn't exist in staging.
+    // -------------------------------------------------------------------------
+    if (isProd) {
+      new aws.iam.UserPolicy("OmvMainCliBedrockPolicy", {
+        user: "omv-main-cli",
+        name: "BedrockChatAccess",
+        policy: JSON.stringify({
+          Version: "2012-10-17",
+          Statement: [
+            {
+              Sid: "BedrockChatWidget",
+              Effect: "Allow",
+              Action: ["bedrock:InvokeModel", "bedrock:Converse"],
+              Resource: [
+                "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
+                "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0",
+              ],
+            },
+          ],
+        }),
+      });
+    }
+
     return {
       url: site.url,
     };
