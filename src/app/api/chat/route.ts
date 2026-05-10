@@ -258,9 +258,10 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";
     console.error("[chat] tool-use loop failed:", err);
-    // ANTHROPIC_4xx → billing / auth issue on our side; surface as 503 with a
-    // user-friendly message so the client can suggest using the Contact page.
-    if (/^ANTHROPIC_4\d\d$/.test(msg)) {
+    // ANTHROPIC_400/401/403 → billing or auth config issue on our side; surface
+    // as 503 so the client can suggest using the Contact page. Transient errors
+    // (429 rate-limit, 5xx upstream) stay as 502.
+    if (/^ANTHROPIC_(400|401|403)$/.test(msg)) {
       return Response.json(
         { error: "Chat not available right now. Please use the Contact page." },
         { status: 503 },
