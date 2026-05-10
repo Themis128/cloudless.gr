@@ -140,7 +140,7 @@ export async function runBedrockChatLoop(
     );
 
     toolUseBlocks.forEach((b) =>
-      console.info("[chat] tool_use", b.toolUse.name),
+      console.warn("[chat] tool_use", b.toolUse.name),
     );
 
     const toolResults: ToolResultBlock[] = await Promise.all(
