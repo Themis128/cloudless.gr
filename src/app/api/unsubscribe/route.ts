@@ -1,5 +1,5 @@
 import { isValidEmail } from "@/lib/validation";
-import { notifyTeam } from "@/lib/email";
+import { notifyTeam, sendUnsubscribeConfirmation } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { addToSuppressionList } from "@/lib/ses-suppression";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     // Add to SES suppression list — this prevents all future SES sends to this address
     const suppressed = await addToSuppressionList(email);
 
-    // Notify team for audit trail (fire-and-forget)
+    // Notify team + confirm to subscriber (both fire-and-forget)
     notifyTeam(
       `[Newsletter] Unsubscribe: ${email.slice(0, 80)}`,
       `<h2>Newsletter unsubscribe</h2>
@@ -32,6 +32,9 @@ export async function POST(request: Request) {
       <p><strong>SES suppressed:</strong> ${suppressed ? "Yes" : "Failed (manual removal needed)"}</p>
       <p><strong>Date:</strong> ${new Date().toISOString()}</p>`,
     ).catch(() => {});
+    sendUnsubscribeConfirmation(email).catch((err) =>
+      console.warn("[unsubscribe] Confirmation email failed:", err),
+    );
 
     return Response.json({
       success: true,
@@ -73,7 +76,7 @@ export async function GET(request: Request) {
   try {
     const suppressed = await addToSuppressionList(email);
 
-    // Notify team (fire-and-forget)
+    // Notify team + confirm to subscriber (both fire-and-forget)
     notifyTeam(
       `[Newsletter] Unsubscribe (via link): ${email.slice(0, 80)}`,
       `<h2>Newsletter unsubscribe (via email link)</h2>
@@ -81,6 +84,9 @@ export async function GET(request: Request) {
       <p><strong>SES suppressed:</strong> ${suppressed ? "Yes" : "Failed"}</p>
       <p><strong>Date:</strong> ${new Date().toISOString()}</p>`,
     ).catch(() => {});
+    sendUnsubscribeConfirmation(email).catch((err) =>
+      console.warn("[unsubscribe-link] Confirmation email failed:", err),
+    );
 
     return new Response(unsubscribePage(email, true), {
       headers: { "Content-Type": "text/html; charset=utf-8" },
