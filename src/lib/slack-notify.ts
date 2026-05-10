@@ -103,10 +103,18 @@ export class SlackClient {
   }
 
   /**
-   * Single-attempt send. Prefers the bot token (chat.postMessage) when available
-   * so each SlackClient instance can route to its own channel. Falls back to the
-   * incoming webhook when no bot token is configured; the webhook always posts to
-   * the channel chosen at app install regardless of `defaultChannel`.
+   * Single-attempt send.
+   *
+   * Priority:
+   *   1. Bot token (chat.postMessage) → enables per-channel routing once the bot
+   *      is a member of the target channel.
+   *   2. If bot token returns a terminal error (not_in_channel, channel_not_found,
+   *      account_inactive, etc.) → fall back to the incoming webhook so messages
+   *      are never silently dropped while channels are being set up.
+   *   3. If no bot token → webhook only.
+   *
+   * Rate-limit (false) is returned to the caller so the retry loop can back off
+   * and try the token again rather than immediately hitting the webhook.
    */
   private async postOnce(
     payload: PostMessagePayload,
@@ -114,10 +122,15 @@ export class SlackClient {
     webhookUrl: string | undefined,
   ): Promise<boolean | null> {
     if (token) {
-      return this.postViaApi(token, {
+      const apiResult = await this.postViaApi(token, {
         channel: this.defaultChannel,
         ...payload,
       });
+      if (apiResult === true) return true;
+      if (apiResult === false) return false; // rate-limited — let caller back off and retry token
+      // null → terminal (not_in_channel, wrong token, etc.) — fall back to webhook
+      if (webhookUrl) return this.postViaWebhook(webhookUrl, payload);
+      return null;
     }
     if (webhookUrl) return this.postViaWebhook(webhookUrl, payload);
     return null;
