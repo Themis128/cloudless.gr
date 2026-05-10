@@ -363,6 +363,7 @@ export async function slackBookingNotify(data: {
   email: string;
   start: string;
   notes?: string;
+  meetLink?: string;
 }): Promise<void> {
   const safeName = slackEscape(data.name);
   const safeEmail = slackEscape(data.email);
@@ -382,6 +383,7 @@ export async function slackBookingNotify(data: {
           `*Name:* ${safeName}`,
           `*Email:* ${safeEmail}`,
           `*Time:* ${dateStr} (Athens)`,
+          ...(data.meetLink ? [`*Meet:* <${data.meetLink}|Join Google Meet>`] : []),
         ].join("\n"),
       ),
       ...(data.notes
