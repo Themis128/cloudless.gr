@@ -104,12 +104,15 @@ Look for startup messages confirming the Next.js server started on port 3000.
 
 ## Bedrock Chat After Rollout
 
-The new pod uses `omv-main-cli` IAM credentials from `pi-standby-aws-creds` secret.
-For Bedrock chat (`/api/chat`) to work on cloudless.online, `omv-main-cli` must have `bedrock:InvokeModel` + `bedrock:Converse`. Run this with admin credentials if not yet applied:
+The new pod uses `cloudless-pi-standby` IAM credentials from `pi-standby-aws-creds` secret
+(key `AKIAUBXIAELU7NG7LBAQ`). Note: `omv-main-cli` is the Pi **node's** own IAM user for CLI
+operations — the k3s pod credentials belong to `cloudless-pi-standby`.
+For Bedrock chat (`/api/chat`) to work on cloudless.online, `cloudless-pi-standby` must have
+`bedrock:InvokeModel` + `bedrock:Converse`. Run this with admin credentials if not yet applied:
 
 ```bash
 aws iam put-user-policy \
-  --user-name omv-main-cli \
+  --user-name cloudless-pi-standby \
   --policy-name BedrockChatAccess \
   --policy-document '{
     "Version":"2012-10-17",
