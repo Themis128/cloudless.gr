@@ -60,7 +60,7 @@ Sentry.init({
   },
   // Strip sensitive values from headers, query strings, request bodies, and
   // breadcrumb data before events leave the runtime.
-  beforeSend(event: ErrorEvent, hint?: EventHint) {
+  beforeSend(event: ErrorEvent, hint: EventHint) {
     maybeAlertSlack(event, hint);
     return scrubEvent(event, hint);
   },
