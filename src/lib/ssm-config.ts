@@ -39,6 +39,10 @@ interface AppConfig {
   NOTION_GSC_REPORTS_DB_ID: string;
   NOTION_CALENDAR_DB_ID: string;
   NOTION_REPORTS_DB_ID: string;
+  NOTION_TESTIMONIALS_DB_ID: string;
+  NOTION_CASE_STUDIES_DB_ID: string;
+  NOTION_SERVICES_DB_ID: string;
+  NOTION_FAQS_DB_ID: string;
   GOOGLE_CLIENT_EMAIL: string;
   GOOGLE_PRIVATE_KEY: string;
   GOOGLE_CALENDAR_ID: string;
@@ -124,6 +128,10 @@ function buildConfigFromEnv(): AppConfig {
     NOTION_GSC_REPORTS_DB_ID: process.env.NOTION_GSC_REPORTS_DB_ID || "",
     NOTION_CALENDAR_DB_ID: process.env.NOTION_CALENDAR_DB_ID || "",
     NOTION_REPORTS_DB_ID: process.env.NOTION_REPORTS_DB_ID || "",
+    NOTION_TESTIMONIALS_DB_ID: process.env.NOTION_TESTIMONIALS_DB_ID || "",
+    NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID || "",
+    NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID || "",
+    NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID || "",
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL || "",
     GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replace(
       /\\n/g,
@@ -274,6 +282,10 @@ export async function getConfig(): Promise<AppConfig> {
     NOTION_GSC_REPORTS_DB_ID: params.get("NOTION_GSC_REPORTS_DB_ID") ?? "",
     NOTION_CALENDAR_DB_ID: params.get("NOTION_CALENDAR_DB_ID") ?? "",
     NOTION_REPORTS_DB_ID: params.get("NOTION_REPORTS_DB_ID") ?? "",
+    NOTION_TESTIMONIALS_DB_ID: params.get("NOTION_TESTIMONIALS_DB_ID") ?? "",
+    NOTION_CASE_STUDIES_DB_ID: params.get("NOTION_CASE_STUDIES_DB_ID") ?? "",
+    NOTION_SERVICES_DB_ID: params.get("NOTION_SERVICES_DB_ID") ?? "",
+    NOTION_FAQS_DB_ID: params.get("NOTION_FAQS_DB_ID") ?? "",
     GOOGLE_CLIENT_EMAIL: params.get("GOOGLE_CLIENT_EMAIL") ?? "",
     GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replace(
       /\\n/g,

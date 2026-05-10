@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { scrubEvent, scrubBreadcrumb } from "@/lib/sentry-scrub";
-import type { Event, EventHint } from "@sentry/nextjs";
+import type { ErrorEvent, EventHint } from "@sentry/nextjs";
 
 // ---------------------------------------------------------------------------
 // Slack error alerting — rate-limited to avoid spam
@@ -18,7 +18,7 @@ function shouldAlert(fingerprint: string): boolean {
   return true;
 }
 
-function maybeAlertSlack(event: Event, hint?: EventHint): void {
+function maybeAlertSlack(event: ErrorEvent, hint?: EventHint): void {
   // Only alert for error-level and fatal events, not warnings or info
   if (event.level !== "error" && event.level !== "fatal") return;
 
@@ -60,7 +60,7 @@ Sentry.init({
   },
   // Strip sensitive values from headers, query strings, request bodies, and
   // breadcrumb data before events leave the runtime.
-  beforeSend(event: Event, hint?: EventHint) {
+  beforeSend(event: ErrorEvent, hint?: EventHint) {
     maybeAlertSlack(event, hint);
     return scrubEvent(event, hint);
   },
