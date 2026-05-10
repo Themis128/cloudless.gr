@@ -156,7 +156,7 @@ describe("POST /api/chat", () => {
     expect(res.status).toBe(503);
   });
 
-  it("returns 502 when Anthropic returns a non-2xx", async () => {
+  it("returns 502 when Anthropic returns a transient error (429)", async () => {
     mockFetch.mockResolvedValueOnce(
       new Response("rate limited", { status: 429 }),
     );
@@ -165,6 +165,19 @@ describe("POST /api/chat", () => {
       makeRequest({ messages: [{ role: "user", content: "Hi" }] }),
     );
     expect(res.status).toBe(502);
+  });
+
+  it("returns 503 when Anthropic returns 400 (credit exhaustion / billing)", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response("credit balance too low", { status: 400 }),
+    );
+    const { POST } = await import("@/app/api/chat/route");
+    const res = await POST(
+      makeRequest({ messages: [{ role: "user", content: "Hi" }] }),
+    );
+    expect(res.status).toBe(503);
+    const data = await res.json();
+    expect(data.error).toMatch(/contact page/i);
   });
 
   it("dispatches tool_use blocks, feeds results back, then streams the final text", async () => {
