@@ -101,23 +101,23 @@ export class SlackClient {
   }
 
   /**
-   * Single-attempt send. Prefers the incoming webhook when configured: it posts
-   * to the channel chosen at app install without requiring the bot to be a
-   * channel member. chat.postMessage is only reachable for channels the bot has
-   * joined, which we cannot do programmatically without the channels:join scope.
+   * Single-attempt send. Prefers the bot token (chat.postMessage) when available
+   * so each SlackClient instance can route to its own channel. Falls back to the
+   * incoming webhook when no bot token is configured; the webhook always posts to
+   * the channel chosen at app install regardless of `defaultChannel`.
    */
   private async postOnce(
     payload: PostMessagePayload,
     token: string | undefined,
     webhookUrl: string | undefined,
   ): Promise<boolean | null> {
-    if (webhookUrl) return this.postViaWebhook(webhookUrl, payload);
     if (token) {
       return this.postViaApi(token, {
         channel: this.defaultChannel,
         ...payload,
       });
     }
+    if (webhookUrl) return this.postViaWebhook(webhookUrl, payload);
     return null;
   }
 
@@ -200,7 +200,18 @@ function slackTimestamp(): string {
 // High-level notifiers
 // ---------------------------------------------------------------------------
 
+/** Default client — used for subscriber sign-ups and generic contact forms. */
 const client = new SlackClient();
+
+/** Dedicated per-channel clients. Each maps to a Slack channel the bot must be
+ *  a member of. Create the channels in Slack, invite @cloudless_bot, and these
+ *  will route automatically. Falls back gracefully (channel_not_found → null →
+ *  no retry) if the channel hasn't been created yet.
+ */
+const bookingsClient = new SlackClient({ channel: "#bookings" });
+const ordersClient = new SlackClient({ channel: "#orders" });
+const errorsClient = new SlackClient({ channel: "#errors" });
+const deploymentsClient = new SlackClient({ channel: "#deployments" });
 
 /**
  * Notify Slack when a new newsletter subscriber signs up.
@@ -234,7 +245,7 @@ export async function slackErrorNotify(opts: {
       ? `${opts.error.name}: ${opts.error.message}`
       : String(opts.error ?? "");
 
-  await client.post({
+  await errorsClient.post({
     text: `Error: ${opts.title}`,
     blocks: [
       headerBlock("Application Error"),
@@ -279,7 +290,7 @@ export async function slackDeployNotify(opts: {
         ? "Deploy failed"
         : "Deploy started";
 
-  await client.post({
+  await deploymentsClient.post({
     text: `${statusLabel} — v${opts.version} (${opts.stage})`,
     blocks: [
       headerBlock(`${statusEmoji} ${statusLabel}`),
@@ -374,7 +385,7 @@ export async function slackBookingNotify(data: {
       timeStyle: "short",
     }),
   );
-  await client.post({
+  await bookingsClient.post({
     text: `📅 New consultation booked: ${safeName} (${safeEmail})`,
     blocks: [
       headerBlock("📅 New Consultation Booked"),
@@ -407,7 +418,7 @@ export async function slackOrderNotify(data: {
   sessionId: string;
 }): Promise<boolean> {
   const safeEmail = slackEscape(data.email);
-  return client.post({
+  return ordersClient.post({
     text: `New order: ${data.amount} from ${safeEmail}`,
     blocks: [
       headerBlock("\ud83d\udcb0 New Order"),

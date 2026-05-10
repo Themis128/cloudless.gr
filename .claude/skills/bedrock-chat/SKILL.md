@@ -71,7 +71,10 @@ The `as ToolConfiguration["tools"]` cast is required because Bedrock's `Tool` ty
 | Tool | Trigger | Implementation |
 |------|---------|----------------|
 | `lookup_product` | Visitor asks about services/pricing | Searches live Stripe catalog, returns name/price/URL |
-| `check_calendar_availability` | Visitor asks to book/see slots | Queries Google Calendar free slots |
+| `check_calendar_availability` | Visitor asks to book/see slots | Queries Google Calendar free slots (SSM creds required — uses `isConfiguredAsync`) |
+| `book_slot` | Visitor picks a slot + provides name/email | Calls `bookConsultation()` → GCal event + Meet link + email invite |
+
+See `.claude/skills/chat-booking/SKILL.md` for full booking flow and debugging.
 
 ## Error Handling (route.ts)
 
@@ -98,11 +101,13 @@ permissions: [
 ],
 ```
 
-### omv-main-cli (SECONDARY — cloudless.online via Pi k3s)
-**Must be added manually** — the GH Actions OIDC role cannot call `iam:PutUserPolicy` on IAM users:
+### cloudless-pi-standby (SECONDARY — cloudless.online via Pi k3s)
+**Must be added manually** — the GH Actions OIDC role cannot call `iam:PutUserPolicy` on IAM users.
+Note: the k3s pod credential is `cloudless-pi-standby` (key `AKIAUBXIAELU7NG7LBAQ` in the
+`pi-standby-aws-creds` secret). `omv-main-cli` is the Pi **node's** own IAM user — different user.
 ```bash
 aws iam put-user-policy \
-  --user-name omv-main-cli \
+  --user-name cloudless-pi-standby \
   --policy-name BedrockChatAccess \
   --policy-document '{
     "Version":"2012-10-17",
