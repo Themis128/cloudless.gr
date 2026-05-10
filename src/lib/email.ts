@@ -254,6 +254,76 @@ export async function sendBookingConfirmation(data: {
   });
 }
 
+/**
+ * Auto-reply to a contact form submitter.
+ * Sent fire-and-forget — never blocks the contact form response.
+ */
+export async function sendContactAcknowledgment(data: {
+  name: string;
+  email: string;
+  service?: string;
+}): Promise<void> {
+  const safeName = escapeHtml(data.name);
+  const safeService = data.service ? escapeHtml(data.service) : null;
+
+  await sendEmail({
+    to: data.email,
+    subject: "Thanks for reaching out — Cloudless",
+    fromLabel: "Themis at Cloudless",
+    replyTo: ["tbaltzakis@cloudless.gr"],
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0f; padding: 32px; border-radius: 12px;">
+        <h2 style="color: #00fff5; margin-top: 0;">Got your message ✉️</h2>
+        <p>Hi ${safeName},</p>
+        <p>Thanks for getting in touch${safeService ? ` about <strong>${safeService}</strong>` : ""}. I'll review your message and get back to you within <strong>1 business day</strong>.</p>
+        <p>In the meantime, feel free to <a href="https://cloudless.gr/store" style="color: #00fff5;">browse our services</a> or <a href="https://cloudless.gr/blog" style="color: #00fff5;">read the blog</a>.</p>
+        <p>Talk soon,<br/><strong>Themistoklis Baltzakis</strong><br/>AWS Certified Cloud Architect · <a href="https://cloudless.gr" style="color: #00fff5;">cloudless.gr</a></p>
+        <hr style="border: none; border-top: 1px solid #222; margin: 24px 0;" />
+        <p style="color: #555; font-size: 12px;">You're receiving this because you submitted the contact form at cloudless.gr. This is an automated acknowledgment — no action required.</p>
+      </div>
+    `,
+    text: [
+      `Hi ${data.name},`,
+      "",
+      `Thanks for getting in touch${data.service ? ` about ${data.service}` : ""}. I'll review your message and get back to you within 1 business day.`,
+      "",
+      "Talk soon,",
+      "Themistoklis Baltzakis",
+      "AWS Certified Cloud Architect · cloudless.gr",
+    ].join("\n"),
+  });
+}
+
+/**
+ * Confirmation email sent when a subscriber successfully unsubscribes.
+ */
+export async function sendUnsubscribeConfirmation(
+  email: string,
+): Promise<void> {
+  await sendEmail({
+    to: email,
+    subject: "You've been unsubscribed — Cloudless",
+    fromLabel: "Cloudless",
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0f; padding: 32px; border-radius: 12px;">
+        <h2 style="color: #00fff5; margin-top: 0;">Unsubscribed ✓</h2>
+        <p>You've been successfully removed from the Cloudless newsletter. You won't receive any further emails from us.</p>
+        <p>If this was a mistake, you can <a href="https://cloudless.gr/#newsletter" style="color: #00fff5;">re-subscribe here</a>.</p>
+        <hr style="border: none; border-top: 1px solid #222; margin: 24px 0;" />
+        <p style="color: #555; font-size: 12px;">Cloudless · <a href="https://cloudless.gr" style="color: #555;">cloudless.gr</a></p>
+      </div>
+    `,
+    text: [
+      "Unsubscribed",
+      "",
+      "You've been successfully removed from the Cloudless newsletter.",
+      "If this was a mistake, visit https://cloudless.gr/#newsletter to re-subscribe.",
+      "",
+      "Cloudless · cloudless.gr",
+    ].join("\n"),
+  });
+}
+
 export async function notifyTeam(subject: string, body: string): Promise<void> {
   const config = await getConfig();
   await sendEmail({
