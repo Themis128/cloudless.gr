@@ -466,7 +466,7 @@ export default async function Home({
                     ↗ {t("credibility.badgeAws", "AWS Certified")}
                   </a>
                   <a
-                    href="https://github.com/Themis128"
+                    href="https://github.com/cloudless-gr"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/20 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors"
