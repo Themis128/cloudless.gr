@@ -37,6 +37,7 @@ vi.mock("@/lib/chat-tools", () => ({
   CHAT_TOOLS: [
     { name: "lookup_product", description: "", input_schema: {} },
     { name: "check_calendar_availability", description: "", input_schema: {} },
+    { name: "book_slot", description: "", input_schema: {} },
   ],
   runTool: (...args: unknown[]) => mockRunTool(...args),
 }));
@@ -133,17 +134,17 @@ describe("POST /api/chat", () => {
     expect(await readSseText(res)).toBe("Hello there!");
   });
 
-  it("declares both tools when calling Bedrock", async () => {
+  it("declares all three tools when calling Bedrock", async () => {
     mockSend.mockResolvedValueOnce(bedrockTextResponse("ok"));
     const { POST } = await import("@/app/api/chat/route");
     await POST(makeRequest({ messages: [{ role: "user", content: "Hi" }] }));
     const cmdInput = MockConverseCommand.mock.calls[0][0] as {
       toolConfig: { tools: { toolSpec: { name: string } }[] };
     };
-    expect(cmdInput.toolConfig.tools).toHaveLength(2);
+    expect(cmdInput.toolConfig.tools).toHaveLength(3);
     expect(
       cmdInput.toolConfig.tools.map((t) => t.toolSpec.name),
-    ).toEqual(["lookup_product", "check_calendar_availability"]);
+    ).toEqual(["lookup_product", "check_calendar_availability", "book_slot"]);
   });
 
   it("caps history to last 10 turns", async () => {

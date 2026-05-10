@@ -194,6 +194,66 @@ export async function sendSubscriberWelcome(
   });
 }
 
+export async function sendBookingConfirmation(data: {
+  name: string;
+  email: string;
+  slotLabel: string; // e.g. "Mon, 12 May, 10:00–10:30 Athens"
+  meetLink: string;
+  notes?: string;
+}): Promise<void> {
+  const safeName = escapeHtml(data.name);
+  const safeSlot = escapeHtml(data.slotLabel);
+  const safeMeet = escapeHtml(data.meetLink);
+  const safeNotes = data.notes ? escapeHtml(data.notes) : null;
+
+  await sendEmail({
+    to: data.email,
+    subject: "Your Cloudless consultation is confirmed",
+    fromLabel: "Themis at Cloudless",
+    replyTo: ["tbaltzakis@cloudless.gr"],
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0f; padding: 32px; border-radius: 12px;">
+        <h2 style="color: #00fff5; margin-top: 0;">Your consultation is confirmed ✅</h2>
+        <p>Hi ${safeName},</p>
+        <p>Your free 30-minute cloud audit with Themistoklis Baltzakis is all set.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #222; color: #888; width: 120px;">📅 When</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #222; font-weight: bold;">${safeSlot}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #222; color: #888;">📹 Google Meet</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #222;">
+              <a href="${safeMeet}" style="color: #00fff5;">Join the call</a>
+            </td>
+          </tr>
+          ${safeNotes ? `<tr><td style="padding: 10px 0; color: #888; vertical-align: top;">📝 Notes</td><td style="padding: 10px 0;">${safeNotes}</td></tr>` : ""}
+        </table>
+        <p style="margin-top: 24px;">A calendar invite has been sent to this address. If you need to reschedule, just reply to this email.</p>
+        <p>In the meantime, feel free to jot down any specific questions about your cloud setup — we'll cover as much ground as possible in 30 minutes.</p>
+        <hr style="border: none; border-top: 1px solid #222; margin: 24px 0;" />
+        <p style="color: #555; font-size: 12px;">
+          Themistoklis Baltzakis · AWS Certified Cloud Architect ·
+          <a href="https://cloudless.gr" style="color: #00fff5;">cloudless.gr</a>
+        </p>
+      </div>
+    `,
+    text: [
+      `Hi ${data.name},`,
+      "",
+      "Your free 30-minute cloud audit with Themistoklis Baltzakis is confirmed.",
+      "",
+      `When: ${data.slotLabel}`,
+      `Google Meet: ${data.meetLink}`,
+      ...(data.notes ? [`Notes: ${data.notes}`, ""] : [""]),
+      "A calendar invite has been sent to this address.",
+      "To reschedule, reply to this email.",
+      "",
+      "Themistoklis Baltzakis · AWS Certified Cloud Architect · cloudless.gr",
+    ].join("\n"),
+  });
+}
+
 export async function notifyTeam(subject: string, body: string): Promise<void> {
   const config = await getConfig();
   await sendEmail({
