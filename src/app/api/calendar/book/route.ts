@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { bookConsultation } from "@/lib/google-calendar";
-import { isConfigured } from "@/lib/integrations";
+import { isConfiguredAsync } from "@/lib/integrations";
 import { isValidEmail } from "@/lib/validation";
 import { slackBookingNotify } from "@/lib/slack-notify";
 import {
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   const rl = rateLimit(`calendar-book:${ip}`, 5, 10 * 60_000);
   if (!rl.ok) return rl.response;
 
-  if (!isConfigured("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY")) {
+  if (!(await isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"))) {
     return NextResponse.json(
       { error: "Calendar booking is not yet available." },
       { status: 503 },
