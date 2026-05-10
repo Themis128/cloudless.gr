@@ -44,7 +44,7 @@ export function getOrganizationSchema(): OrganizationSchema {
     },
     sameAs: [
       "https://www.linkedin.com/company/cloudless-gr",
-      "https://github.com/Themis128",
+      "https://github.com/cloudless-gr",
     ],
   };
 }
