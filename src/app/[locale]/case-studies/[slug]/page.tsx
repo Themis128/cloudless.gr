@@ -199,7 +199,7 @@ export default async function CaseStudyPage({
           <div className="mt-16 rounded-2xl border border-[#00fff5]/20 bg-[#00fff5]/5 p-8 text-center">
             <h2 className="mb-3 text-2xl font-bold">Want similar results?</h2>
             <p className="mb-6 text-gray-400">
-              Book a free 30-minute call and let's talk about your cloud setup.
+              Book a free 30-minute call and let&apos;s talk about your cloud setup.
             </p>
             <Link
               href="/contact"

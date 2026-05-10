@@ -101,7 +101,7 @@ export default async function CaseStudiesPage() {
             Case Studies
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-gray-400">
-            Real engagements, real numbers. Here's how Cloudless helped
+            Real engagements, real numbers. Here&apos;s how Cloudless helped
             businesses reduce cloud spend, modernise infrastructure, and ship
             faster.
           </p>
@@ -136,7 +136,7 @@ export default async function CaseStudiesPage() {
         <ScrollReveal>
           <h2 className="mb-4 text-3xl font-bold">Ready to be next?</h2>
           <p className="mb-8 text-gray-400">
-            Book a free 30-minute cloud audit and see what's possible.
+            Book a free 30-minute cloud audit and see what&apos;s possible.
           </p>
           <Link
             href="/contact"
