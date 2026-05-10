@@ -13,6 +13,7 @@
 import {
   BedrockRuntimeClient,
   ConverseCommand,
+  type ToolConfiguration,
 } from "@aws-sdk/client-bedrock-runtime";
 import { CHAT_TOOLS, runTool } from "@/lib/chat-tools";
 
@@ -39,15 +40,22 @@ function getClient(): BedrockRuntimeClient {
 // ---------------------------------------------------------------------------
 // Tool config — convert Anthropic input_schema format → Bedrock toolSpec
 // ---------------------------------------------------------------------------
+// The Bedrock SDK represents Tool/ToolInputSchema as smithy-generated
+// discriminated unions that require an explicit `$unknown` member for
+// forward-compatibility. We satisfy the type by annotating as ToolConfiguration
+// and casting the input_schema to the expected document type.
 
-const BEDROCK_TOOL_CONFIG = {
+const BEDROCK_TOOL_CONFIG: ToolConfiguration = {
   tools: CHAT_TOOLS.map((t) => ({
     toolSpec: {
       name: t.name,
       description: t.description,
-      inputSchema: { json: t.input_schema },
+      inputSchema: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        json: t.input_schema as unknown as Record<string, any>,
+      },
     },
-  })),
+  })) as ToolConfiguration["tools"],
 };
 
 // ---------------------------------------------------------------------------
