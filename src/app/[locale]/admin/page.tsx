@@ -218,6 +218,75 @@ export default function AdminDashboard() {
         ))}
       </div>
 
+      {/* Infrastructure shortcuts */}
+      <div className="mt-8">
+        <h2 className="font-heading mb-4 font-semibold text-white">
+          Infrastructure
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <a
+            href="https://grafana.cloudless.online"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-void-light/50 hover:border-neon-cyan/30 group flex items-center gap-4 rounded-xl border border-slate-800 p-5 transition-all"
+          >
+            <div className="bg-neon-cyan/10 border-neon-cyan/20 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-lg">
+              📊
+            </div>
+            <div className="min-w-0">
+              <p className="font-heading font-semibold text-white">Grafana</p>
+              <p className="font-body truncate text-sm text-slate-500">
+                grafana.cloudless.online
+              </p>
+            </div>
+            <svg
+              className="ml-auto shrink-0 text-slate-600 transition-colors group-hover:text-slate-400"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </a>
+          <a
+            href="https://manage.cloudless.online"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-void-light/50 hover:border-neon-cyan/30 group flex items-center gap-4 rounded-xl border border-slate-800 p-5 transition-all"
+          >
+            <div className="bg-neon-cyan/10 border-neon-cyan/20 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-lg">
+              🖥
+            </div>
+            <div className="min-w-0">
+              <p className="font-heading font-semibold text-white">
+                Cluster Manager
+              </p>
+              <p className="font-body truncate text-sm text-slate-500">
+                manage.cloudless.online
+              </p>
+            </div>
+            <svg
+              className="ml-auto shrink-0 text-slate-600 transition-colors group-hover:text-slate-400"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </a>
+        </div>
+      </div>
+
       {/* System Status */}
       <div className="bg-void-light/50 mt-8 rounded-xl border border-slate-800 p-6">
         <h2 className="font-heading mb-4 font-semibold text-white">
