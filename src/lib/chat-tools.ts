@@ -203,7 +203,7 @@ async function runCheckCalendarAvailability(
   const lines = slots
     .slice(0, MAX_SLOT_RESULTS)
     .map((s) => `- ${formatSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`);
-  return `Available slots (next ${days} day(s)):\n${lines.join("\n")}\nAsk the visitor which slot they prefer, then collect their name and email to call book_slot.`;
+  return `Available slots (next ${days} day(s)):\n${lines.join("\n")}\nAsk the visitor which slot they prefer, then collect their name and email to call book_slot. They can also book directly at https://cloudless.gr/book.`;
 }
 
 async function runBookSlot(input: BookSlotInput): Promise<string> {
