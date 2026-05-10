@@ -4,13 +4,35 @@ import { NextRequest } from "next/server";
 // ---------------------------------------------------------------------------
 // Hoist mocks
 // ---------------------------------------------------------------------------
-const { mockGetConfig, mockFetch, mockRunTool } = vi.hoisted(() => ({
-  mockGetConfig: vi.fn(),
-  mockFetch: vi.fn(),
-  mockRunTool: vi.fn(),
-}));
 
-vi.mock("@/lib/ssm-config", () => ({ getConfig: mockGetConfig }));
+// vi.hoisted values must use `function` (not arrow) so they can be called
+// with `new` — the Bedrock SDK uses `new BedrockRuntimeClient()` and
+// `new ConverseCommand()` at runtime, and arrow functions can't be constructors.
+const { mockSend, MockConverseCommand, mockRunTool } = vi.hoisted(() => {
+  const mockSend = vi.fn();
+  const mockRunTool = vi.fn();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function MockConverseCommandImpl(this: unknown, input: any) {
+    void input; // args tracked via MockConverseCommand.mock.calls
+  }
+  const MockConverseCommand = vi.fn(MockConverseCommandImpl);
+
+  return { mockSend, MockConverseCommand, mockRunTool };
+});
+
+vi.mock("@aws-sdk/client-bedrock-runtime", () => {
+  // Must be a regular function so `new BedrockRuntimeClient()` succeeds.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function BedrockRuntimeClientImpl(this: any) {
+    this.send = mockSend;
+  }
+  return {
+    BedrockRuntimeClient: vi.fn(BedrockRuntimeClientImpl),
+    ConverseCommand: MockConverseCommand,
+  };
+});
+
 vi.mock("@/lib/chat-tools", () => ({
   CHAT_TOOLS: [
     { name: "lookup_product", description: "", input_schema: {} },
@@ -18,17 +40,34 @@ vi.mock("@/lib/chat-tools", () => ({
   ],
   runTool: (...args: unknown[]) => mockRunTool(...args),
 }));
-vi.stubGlobal("fetch", mockFetch);
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function jsonResponse(body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { "content-type": "application/json" },
-  });
+function bedrockTextResponse(text: string) {
+  return {
+    stopReason: "end_turn",
+    output: {
+      message: { role: "assistant", content: [{ text }] },
+    },
+  };
+}
+
+function bedrockToolResponse(
+  toolUseId: string,
+  name: string,
+  input: object,
+) {
+  return {
+    stopReason: "tool_use",
+    output: {
+      message: {
+        role: "assistant",
+        content: [{ toolUse: { toolUseId, name, input } }],
+      },
+    },
+  };
 }
 
 function makeRequest(body: unknown): NextRequest {
@@ -41,8 +80,6 @@ function makeRequest(body: unknown): NextRequest {
 
 async function readSseText(res: Response): Promise<string> {
   const text = await res.text();
-  // The route emits `data: {"text":"..."}\n\n` chunks then `data: [DONE]\n\n`.
-  // Concatenate the text fields for a quick assertion target.
   const decoded: string[] = [];
   for (const line of text.split("\n")) {
     if (!line.startsWith("data: ")) continue;
@@ -65,14 +102,6 @@ async function readSseText(res: Response): Promise<string> {
 describe("POST /api/chat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
-    process.env.ANTHROPIC_CHAT_MODEL = "claude-3-5-haiku-latest";
-    mockGetConfig.mockImplementation(() =>
-      Promise.resolve({
-        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
-        ANTHROPIC_CHAT_MODEL: process.env.ANTHROPIC_CHAT_MODEL ?? "",
-      }),
-    );
   });
 
   it("returns 400 when messages array is missing", async () => {
@@ -94,12 +123,7 @@ describe("POST /api/chat", () => {
   });
 
   it("streams plain text when the model returns text directly (no tools)", async () => {
-    mockFetch.mockResolvedValueOnce(
-      jsonResponse({
-        stop_reason: "end_turn",
-        content: [{ type: "text", text: "Hello there!" }],
-      }),
-    );
+    mockSend.mockResolvedValueOnce(bedrockTextResponse("Hello there!"));
     const { POST } = await import("@/app/api/chat/route");
     const res = await POST(
       makeRequest({ messages: [{ role: "user", content: "Hi" }] }),
@@ -109,68 +133,38 @@ describe("POST /api/chat", () => {
     expect(await readSseText(res)).toBe("Hello there!");
   });
 
-  it("declares both tools when calling Anthropic", async () => {
-    mockFetch.mockResolvedValueOnce(
-      jsonResponse({
-        stop_reason: "end_turn",
-        content: [{ type: "text", text: "ok" }],
-      }),
-    );
+  it("declares both tools when calling Bedrock", async () => {
+    mockSend.mockResolvedValueOnce(bedrockTextResponse("ok"));
     const { POST } = await import("@/app/api/chat/route");
     await POST(makeRequest({ messages: [{ role: "user", content: "Hi" }] }));
-    const body = JSON.parse(
-      (mockFetch.mock.calls[0][1] as RequestInit).body as string,
-    );
-    expect(body.tools).toHaveLength(2);
-    expect(body.tools.map((t: { name: string }) => t.name)).toEqual([
-      "lookup_product",
-      "check_calendar_availability",
-    ]);
+    const cmdInput = MockConverseCommand.mock.calls[0][0] as {
+      toolConfig: { tools: { toolSpec: { name: string } }[] };
+    };
+    expect(cmdInput.toolConfig.tools).toHaveLength(2);
+    expect(
+      cmdInput.toolConfig.tools.map((t) => t.toolSpec.name),
+    ).toEqual(["lookup_product", "check_calendar_availability"]);
   });
 
   it("caps history to last 10 turns", async () => {
-    mockFetch.mockResolvedValueOnce(
-      jsonResponse({
-        stop_reason: "end_turn",
-        content: [{ type: "text", text: "ok" }],
-      }),
-    );
+    mockSend.mockResolvedValueOnce(bedrockTextResponse("ok"));
     const { POST } = await import("@/app/api/chat/route");
     const messages = Array.from({ length: 15 }, (_, i) => ({
       role: i % 2 === 0 ? "user" : "assistant",
       content: `m${i}`,
     }));
     await POST(makeRequest({ messages }));
-    const body = JSON.parse(
-      (mockFetch.mock.calls[0][1] as RequestInit).body as string,
-    );
-    expect(body.messages).toHaveLength(10);
+    const cmdInput = MockConverseCommand.mock.calls[0][0] as {
+      messages: unknown[];
+    };
+    expect(cmdInput.messages).toHaveLength(10);
   });
 
-  it("returns 503 when Anthropic API key is not configured", async () => {
-    delete process.env.ANTHROPIC_API_KEY;
-    const { POST } = await import("@/app/api/chat/route");
-    const res = await POST(
-      makeRequest({ messages: [{ role: "user", content: "Hi" }] }),
-    );
-    expect(res.status).toBe(503);
-  });
-
-  it("returns 502 when Anthropic returns a transient error (429)", async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response("rate limited", { status: 429 }),
-    );
-    const { POST } = await import("@/app/api/chat/route");
-    const res = await POST(
-      makeRequest({ messages: [{ role: "user", content: "Hi" }] }),
-    );
-    expect(res.status).toBe(502);
-  });
-
-  it("returns 503 when Anthropic returns 400 (credit exhaustion / billing)", async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response("credit balance too low", { status: 400 }),
-    );
+  it("returns 503 when Bedrock access is denied", async () => {
+    const err = Object.assign(new Error("Access denied"), {
+      name: "AccessDeniedException",
+    });
+    mockSend.mockRejectedValueOnce(err);
     const { POST } = await import("@/app/api/chat/route");
     const res = await POST(
       makeRequest({ messages: [{ role: "user", content: "Hi" }] }),
@@ -180,28 +174,39 @@ describe("POST /api/chat", () => {
     expect(data.error).toMatch(/contact page/i);
   });
 
+  it("returns 502 when Bedrock throttles", async () => {
+    const err = Object.assign(new Error("Throttled"), {
+      name: "ThrottlingException",
+    });
+    mockSend.mockRejectedValueOnce(err);
+    const { POST } = await import("@/app/api/chat/route");
+    const res = await POST(
+      makeRequest({ messages: [{ role: "user", content: "Hi" }] }),
+    );
+    expect(res.status).toBe(502);
+  });
+
+  it("returns 502 when Bedrock returns a transient service error", async () => {
+    const err = Object.assign(new Error("Service unavailable"), {
+      name: "ServiceUnavailableException",
+    });
+    mockSend.mockRejectedValueOnce(err);
+    const { POST } = await import("@/app/api/chat/route");
+    const res = await POST(
+      makeRequest({ messages: [{ role: "user", content: "Hi" }] }),
+    );
+    expect(res.status).toBe(502);
+  });
+
   it("dispatches tool_use blocks, feeds results back, then streams the final text", async () => {
-    mockFetch.mockResolvedValueOnce(
-      jsonResponse({
-        stop_reason: "tool_use",
-        content: [
-          {
-            type: "tool_use",
-            id: "tu-1",
-            name: "lookup_product",
-            input: { query: "serverless" },
-          },
-        ],
-      }),
+    mockSend.mockResolvedValueOnce(
+      bedrockToolResponse("tu-1", "lookup_product", { query: "serverless" }),
     );
     mockRunTool.mockResolvedValueOnce(
       "Found 1 match: Serverless Starter (€2400).",
     );
-    mockFetch.mockResolvedValueOnce(
-      jsonResponse({
-        stop_reason: "end_turn",
-        content: [{ type: "text", text: "Serverless Starter is €2400." }],
-      }),
+    mockSend.mockResolvedValueOnce(
+      bedrockTextResponse("Serverless Starter is €2400."),
     );
 
     const { POST } = await import("@/app/api/chat/route");
@@ -217,30 +222,26 @@ describe("POST /api/chat", () => {
     });
     expect(await readSseText(res)).toBe("Serverless Starter is €2400.");
 
-    const secondBody = JSON.parse(
-      (mockFetch.mock.calls[1][1] as RequestInit).body as string,
+    // Second ConverseCommand should include original user msg + assistant
+    // tool_use turn + user tool_result turn.
+    const secondCmdInput = MockConverseCommand.mock.calls[1][0] as {
+      messages: {
+        role: string;
+        content: { toolResult?: { toolUseId: string } }[];
+      }[];
+    };
+    expect(secondCmdInput.messages).toHaveLength(3);
+    expect(secondCmdInput.messages[1].role).toBe("assistant");
+    expect(secondCmdInput.messages[2].role).toBe("user");
+    expect(secondCmdInput.messages[2].content[0].toolResult?.toolUseId).toBe(
+      "tu-1",
     );
-    expect(secondBody.messages).toHaveLength(3);
-    expect(secondBody.messages[1].role).toBe("assistant");
-    expect(secondBody.messages[2].role).toBe("user");
-    expect(secondBody.messages[2].content[0].type).toBe("tool_result");
-    expect(secondBody.messages[2].content[0].tool_use_id).toBe("tu-1");
   });
 
   it("falls back to a contact-page nudge if the loop exceeds the iteration cap", async () => {
     for (let i = 0; i < 5; i++) {
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({
-          stop_reason: "tool_use",
-          content: [
-            {
-              type: "tool_use",
-              id: `tu-${i}`,
-              name: "lookup_product",
-              input: { query: "loop" },
-            },
-          ],
-        }),
+      mockSend.mockResolvedValueOnce(
+        bedrockToolResponse(`tu-${i}`, "lookup_product", { query: "loop" }),
       );
     }
     mockRunTool.mockResolvedValue("no match");
@@ -252,6 +253,6 @@ describe("POST /api/chat", () => {
     expect(res.status).toBe(200);
     const text = await readSseText(res);
     expect(text.toLowerCase()).toContain("contact page");
-    expect(mockFetch).toHaveBeenCalledTimes(4);
+    expect(mockSend).toHaveBeenCalledTimes(4);
   });
 });
