@@ -19,7 +19,10 @@
  */
 
 import { notionFetchAll, extractText } from "@/lib/notion";
-import { getIntegrationsAsync, requireIntegrationAsync } from "@/lib/integrations";
+import {
+  getIntegrationsAsync,
+  requireIntegrationAsync,
+} from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
 // ---------------------------------------------------------------------------
@@ -94,7 +97,8 @@ function mapPage(page: any): Testimonial {
     quote: extractText(p.Quote?.rich_text) || "",
     avatar: p.Avatar?.url ?? undefined,
     service: p.Service?.select?.name ?? undefined,
-    rating: typeof rating === "number" ? Math.min(5, Math.max(1, rating)) : undefined,
+    rating:
+      typeof rating === "number" ? Math.min(5, Math.max(1, rating)) : undefined,
     featured: p.Featured?.checkbox ?? false,
   };
 }

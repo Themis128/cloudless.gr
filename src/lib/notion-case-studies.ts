@@ -35,7 +35,10 @@ import {
   extractText,
   notionImageProxyUrl,
 } from "@/lib/notion";
-import { getIntegrationsAsync, requireIntegrationAsync } from "@/lib/integrations";
+import {
+  getIntegrationsAsync,
+  requireIntegrationAsync,
+} from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
 // ---------------------------------------------------------------------------

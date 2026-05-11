@@ -15,7 +15,9 @@ interface TrainingBannerProps {
   locale?: string;
 }
 
-export default function TrainingBanner({ locale }: Readonly<TrainingBannerProps>) {
+export default function TrainingBanner({
+  locale,
+}: Readonly<TrainingBannerProps>) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -37,7 +39,9 @@ export default function TrainingBanner({ locale }: Readonly<TrainingBannerProps>
   return (
     <div
       role="note"
-      aria-label={isEl ? "Σημείωση εκπαιδευτικού έργου" : "Training project notice"}
+      aria-label={
+        isEl ? "Σημείωση εκπαιδευτικού έργου" : "Training project notice"
+      }
       className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5"
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
@@ -45,17 +49,23 @@ export default function TrainingBanner({ locale }: Readonly<TrainingBannerProps>
           <span className="mr-1.5 font-bold">⚠</span>
           {isEl ? (
             <>
-              <span className="font-semibold">Εκπαιδευτικό &amp; Portfolio Project</span>
+              <span className="font-semibold">
+                Εκπαιδευτικό &amp; Portfolio Project
+              </span>
               {" — "}
-              Αυτή η ιστοσελίδα δημιουργήθηκε αποκλειστικά για εκπαιδευτικούς και portfolio σκοπούς.
-              Δεν αποτελεί εμπορική υπηρεσία, δεν παρέχει πραγματικές υπηρεσίες και δεν δέχεται πελάτες.
+              Αυτή η ιστοσελίδα δημιουργήθηκε αποκλειστικά για εκπαιδευτικούς
+              και portfolio σκοπούς. Δεν αποτελεί εμπορική υπηρεσία, δεν παρέχει
+              πραγματικές υπηρεσίες και δεν δέχεται πελάτες.
             </>
           ) : (
             <>
-              <span className="font-semibold">Training &amp; Portfolio Project</span>
+              <span className="font-semibold">
+                Training &amp; Portfolio Project
+              </span>
               {" — "}
               This website is built for educational and portfolio purposes only.
-              It is not a commercial service, does not provide real services, and does not accept clients.
+              It is not a commercial service, does not provide real services,
+              and does not accept clients.
             </>
           )}
         </p>

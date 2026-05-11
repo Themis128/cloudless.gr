@@ -133,7 +133,8 @@ export async function listChannels(token: string): Promise<SlackChannel[]> {
       },
       token,
     );
-    if (!res.ok) throw new Error(`[SlackAdmin] conversations.list: ${res.error}`);
+    if (!res.ok)
+      throw new Error(`[SlackAdmin] conversations.list: ${res.error}`);
     all.push(...(res.channels ?? []));
     cursor = res.response_metadata?.next_cursor ?? "";
   } while (cursor);
@@ -151,7 +152,10 @@ export async function createChannel(
   token: string,
 ): Promise<SlackChannel> {
   const res = await slackPost("conversations.create", { name }, token);
-  if (!res.ok) throw new Error(`[SlackAdmin] conversations.create "${name}": ${res.error}`);
+  if (!res.ok)
+    throw new Error(
+      `[SlackAdmin] conversations.create "${name}": ${res.error}`,
+    );
   return res.channel!;
 }
 
@@ -169,7 +173,8 @@ export async function setChannelTopic(
     { channel: channelId, topic },
     token,
   );
-  if (!res.ok) throw new Error(`[SlackAdmin] conversations.setTopic: ${res.error}`);
+  if (!res.ok)
+    throw new Error(`[SlackAdmin] conversations.setTopic: ${res.error}`);
 }
 
 /**
@@ -177,8 +182,15 @@ export async function setChannelTopic(
  * isn't a member yet).
  * Docs: https://docs.slack.dev/reference/methods/conversations.join
  */
-export async function joinChannel(channelId: string, token: string): Promise<void> {
-  const res = await slackPost("conversations.join", { channel: channelId }, token);
+export async function joinChannel(
+  channelId: string,
+  token: string,
+): Promise<void> {
+  const res = await slackPost(
+    "conversations.join",
+    { channel: channelId },
+    token,
+  );
   if (!res.ok && res.error !== "already_in_channel") {
     throw new Error(`[SlackAdmin] conversations.join: ${res.error}`);
   }
@@ -193,11 +205,16 @@ export async function inviteToChannel(
   userIds: string[],
   token: string,
 ): Promise<void> {
-  const res = await slackPost("conversations.invite", {
-    channel: channelId,
-    users: userIds.join(","),
-  }, token);
-  if (!res.ok) throw new Error(`[SlackAdmin] conversations.invite: ${res.error}`);
+  const res = await slackPost(
+    "conversations.invite",
+    {
+      channel: channelId,
+      users: userIds.join(","),
+    },
+    token,
+  );
+  if (!res.ok)
+    throw new Error(`[SlackAdmin] conversations.invite: ${res.error}`);
 }
 
 /**

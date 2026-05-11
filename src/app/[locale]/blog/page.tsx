@@ -176,7 +176,10 @@ export default async function BlogPage({
             </span>
           </h1>
           <p className="animate-fade-in-up mt-6 max-w-xl text-lg text-slate-400 delay-200">
-            {t("blog.subtitle", "Cloud architecture, serverless, analytics, and AI marketing — written for founders and technical teams who want to move fast.")}
+            {t(
+              "blog.subtitle",
+              "Cloud architecture, serverless, analytics, and AI marketing — written for founders and technical teams who want to move fast.",
+            )}
           </p>
 
           {/* Search bar */}
@@ -257,13 +260,18 @@ export default async function BlogPage({
               {/* Results count */}
               {filteredPosts.length !== allPosts.length && (
                 <p className="mb-4 font-mono text-xs text-slate-500">
-                  {total} {total !== 1 ? t("blog.results", "results") : t("blog.result", "result")}
+                  {total}{" "}
+                  {total !== 1
+                    ? t("blog.results", "results")
+                    : t("blog.result", "result")}
                 </p>
               )}
 
               {posts.length === 0 ? (
                 <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
-                  <p className="font-mono text-slate-500">{t("blog.noPostsFound", "No posts found.")}</p>
+                  <p className="font-mono text-slate-500">
+                    {t("blog.noPostsFound", "No posts found.")}
+                  </p>
                   <Link
                     href="/blog"
                     className="text-neon-cyan mt-2 inline-block font-mono text-sm hover:underline"

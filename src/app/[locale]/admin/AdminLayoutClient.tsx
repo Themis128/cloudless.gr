@@ -40,7 +40,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-type AdminLink = { href: string; label: string; Icon: LucideIcon; external?: boolean };
+type AdminLink = {
+  href: string;
+  label: string;
+  Icon: LucideIcon;
+  external?: boolean;
+};
 type AdminGroup = { label: string; links: AdminLink[] };
 
 const adminGroups: AdminGroup[] = [
@@ -157,7 +162,10 @@ function NavList({
                 >
                   <Icon size={15} className="shrink-0" />
                   {label}
-                  <ExternalLink size={11} className="ml-auto shrink-0 opacity-40" />
+                  <ExternalLink
+                    size={11}
+                    className="ml-auto shrink-0 opacity-40"
+                  />
                 </a>
               ) : (
                 <Link

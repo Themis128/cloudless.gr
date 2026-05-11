@@ -23,10 +23,7 @@
  */
 
 import { notionFetchAll, extractText } from "@/lib/notion";
-import {
-  getIntegrationsAsync,
-  isConfiguredAsync,
-} from "@/lib/integrations";
+import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
 // ---------------------------------------------------------------------------

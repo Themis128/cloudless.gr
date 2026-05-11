@@ -23,7 +23,9 @@ export async function GET(request: Request) {
 
   try {
     const all = await getServices();
-    const services = category ? all.filter((s) => s.category === category) : all;
+    const services = category
+      ? all.filter((s) => s.category === category)
+      : all;
     return NextResponse.json(
       { services, source: "notion" },
       {
