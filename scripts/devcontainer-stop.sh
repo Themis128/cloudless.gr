@@ -13,5 +13,5 @@ fi
 
 echo "Removing devcontainer(s):"
 echo "${container_ids}"
-docker rm -f ${container_ids}
+docker rm -f "${container_ids}"
 echo "Devcontainer cleanup complete."
