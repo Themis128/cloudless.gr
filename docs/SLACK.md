@@ -95,6 +95,7 @@ under `/cloudless/production/`:
 > after the first SSM lookup). It does **not** capture the token in the
 > constructor, so the module-level `const client = new SlackClient()` works
 > correctly even when env vars aren't populated at module-load time.
+
 ---
 
 ## Slack App Setup
@@ -206,6 +207,7 @@ Returns an ephemeral message (visible only to the user — `response_type: ephem
 - Context: "Requested by @user"
 
 > To show live order data, wire up a Stripe API call in `handleOrders()` inside `src/app/api/slack/commands/route.ts`.
+
 ---
 
 ## Events Handled

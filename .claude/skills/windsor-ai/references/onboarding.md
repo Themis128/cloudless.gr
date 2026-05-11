@@ -61,7 +61,7 @@ After onboarding, verify through one of these methods (in increasing detail):
 
 1. **MCP:** `get_connectors()` — returns a list of all active connectors + account IDs
 2. **REST:** `./scripts/windsor-api.sh accounts <connector_id>` — same info via curl
-3. **Dashboard:** https://onboard.windsor.ai/app/data-preview — UI showing all connectors and status
+3. **Dashboard:** <https://onboard.windsor.ai/app/data-preview> — UI showing all connectors and status
 4. **Smoke-test query:** `get_data(connector="<id>", accounts=["<id>"], fields=["date"], date_preset="last_7d")` — if rows come back, the pipeline is live
 
 If `get_connectors()` doesn't list the connector but OAuth succeeded, you hit Step 2 skip — re-onboard.
@@ -76,7 +76,7 @@ These share a **Meta Business Portfolio** (formerly Business Manager). Before on
 
 - The Meta user must be an **admin** on the Portfolio.
 - The Portfolio must contain the Page, Instagram Business account, and/or ad account you want to connect. An EMPTY portfolio (no assets) will give OAuth success but zero selectable accounts in Step 1.
-- Pages connected in **lite mode** (shared into the portfolio via "Request access" rather than "Add") will NOT expose Insights API data. Check at https://business.facebook.com/settings/pages — pages must show "Added" not "Requested".
+- Pages connected in **lite mode** (shared into the portfolio via "Request access" rather than "Add") will NOT expose Insights API data. Check at <https://business.facebook.com/settings/pages> — pages must show "Added" not "Requested".
 - Instagram accounts need to be:
   1. Converted to **Business** or **Creator** account (in the IG app: Settings → Account → Switch to Professional Account)
   2. **Linked to a Facebook Page** via the Page's Instagram tab — NOT via the IG app's "Linked accounts" because that produces a lite-mode link
@@ -114,7 +114,7 @@ Prerequisites:
 
 - Free tier of X API has severe rate limits — data pulls may show gaps
 - Paid tier (Basic/Pro) recommended for daily refresh
-- `x_organic` and `twitter` (ads) both require **Developer account** provisioning on https://developer.twitter.com — this can take 1-2 business days
+- `x_organic` and `twitter` (ads) both require **Developer account** provisioning on <https://developer.twitter.com> — this can take 1-2 business days
 
 ### Threads
 
@@ -154,11 +154,11 @@ Paid plans raise these limits. Check `subscription-info-limits-and-usage` on the
 To fully disconnect:
 1. Windsor side: onboard.windsor.ai/app/data-preview → find connector → "Delete connection"
 2. Third-party side: revoke Windsor's OAuth grant in the provider's security settings
-   - Meta: https://accounts.meta.com/security/business-apps
-   - LinkedIn: https://www.linkedin.com/psettings/permitted-services
-   - Google: https://myaccount.google.com/permissions
+   - Meta: <https://accounts.meta.com/security/business-apps>
+   - LinkedIn: <https://www.linkedin.com/psettings/permitted-services>
+   - Google: <https://myaccount.google.com/permissions>
    - TikTok: TikTok app → Settings → Security → Connected Apps
-   - X: https://twitter.com/settings/connected_apps
+   - X: <https://twitter.com/settings/connected_apps>
 
 **Both sides required** — deleting Windsor's record without revoking at the provider leaves the grant dangling, and revoking at the provider without deleting the Windsor record leaves a stale (broken) connector in Windsor's list that will eat against your plan quota.
 

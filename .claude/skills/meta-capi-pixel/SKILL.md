@@ -221,9 +221,9 @@ parameter when first integrating, then remove the test code before shipping.
 
 ## Reference
 
-- CAPI overview: https://developers.facebook.com/docs/marketing-api/conversions-api
-- User data params: https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/customer-information-parameters
-- Standard events: https://developers.facebook.com/docs/meta-pixel/reference
-- Dedup: https://developers.facebook.com/docs/marketing-api/conversions-api/deduplicate-pixel-and-server-events
+- CAPI overview: <https://developers.facebook.com/docs/marketing-api/conversions-api>
+- User data params: <https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/customer-information-parameters>
+- Standard events: <https://developers.facebook.com/docs/meta-pixel/reference>
+- Dedup: <https://developers.facebook.com/docs/marketing-api/conversions-api/deduplicate-pixel-and-server-events>
 - App code: [src/lib/meta-capi.ts](src/lib/meta-capi.ts), [src/lib/meta-pixel.ts](src/lib/meta-pixel.ts)
 - Activation runbook: [meta-account-runbook.md](meta-account-runbook.md)

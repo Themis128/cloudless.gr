@@ -44,7 +44,7 @@ click before the hydrated link is interactive.
 
 ## 4. Blog link regex missing digit-leading slugs
 
-**Test**: `customer-behavior.spec.ts` — "lists at least one post card linking to /blog/[slug]"
+**Test**: `customer-behavior.spec.ts` — "lists at least one post card linking to /blog/\[slug\]"
 
 **Root cause**: Original regex `/\/blog\/[a-z]/` required the slug to start with a letter.
 Production slugs can start with digits or be absolute URLs with locale prefix.

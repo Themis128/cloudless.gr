@@ -47,6 +47,7 @@ import json
 import os
 import re
 import sys
+from typing import List
 
 import boto3
 from botocore.exceptions import ClientError
@@ -112,13 +113,15 @@ PI_IMAGE_POLICY = {
 
 
 def role_name_from_arn(arn: str) -> str:
-    m = re.match(r"^arn:aws:iam::\d+:role/(.+)$", arn)
-    if not m:
+    """Extract the role name from an IAM role ARN."""
+    match = re.match(r"^arn:aws:iam::\d+:role/(.+)$", arn)
+    if not match:
         raise SystemExit(f"Not an IAM role ARN: {arn}")
-    return m.group(1)
+    return match.group(1)
 
 
 def put_inline(iam, role_arn: str, policy_name: str, policy_doc: dict, dry: bool) -> None:
+    """Apply an inline policy to the given IAM role (upsert via put_role_policy)."""
     role = role_name_from_arn(role_arn)
     print(f"\n→ Role: {role_arn}")
     print(f"  Policy: {policy_name}")
@@ -131,10 +134,11 @@ def put_inline(iam, role_arn: str, policy_name: str, policy_doc: dict, dry: bool
         PolicyName=policy_name,
         PolicyDocument=json.dumps(policy_doc),
     )
-    print(f"  ✓ put_role_policy ok")
+    print("  ✓ put_role_policy ok")
 
 
-def verify(iam, role_arn: str, actions: list[str], resources: list[str]) -> bool:
+def verify(iam, role_arn: str, actions: List[str], resources: List[str]) -> bool:
+    """Simulate the given IAM actions against role_arn and print per-action decisions."""
     print(f"\n→ Simulating {actions} on {role_arn}")
     try:
         resp = iam.simulate_principal_policy(
@@ -142,36 +146,37 @@ def verify(iam, role_arn: str, actions: list[str], resources: list[str]) -> bool
             ActionNames=actions,
             ResourceArns=resources,
         )
-    except ClientError as e:
-        print(f"  ! simulate_principal_policy failed: {e.response['Error']['Code']}")
+    except ClientError as exc:
+        print(f"  ! simulate_principal_policy failed: {exc.response['Error']['Code']}")
         return False
-    ok = True
-    for r in resp["EvaluationResults"]:
-        action = r["EvalActionName"]
-        decision = r["EvalDecision"]
+    all_allowed = True
+    for result in resp["EvaluationResults"]:
+        action = result["EvalActionName"]
+        decision = result["EvalDecision"]
         marker = "✓" if decision == "allowed" else "✗"
         print(f"  {marker} {action}: {decision}")
         if decision != "allowed":
-            ok = False
-    return ok
+            all_allowed = False
+    return all_allowed
 
 
 def main() -> int:
-    p = argparse.ArgumentParser()
-    p.add_argument(
+    """Parse arguments, apply inline policies to CI roles, and verify them."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
         "--deploy-role",
         default=os.environ.get("AWS_DEPLOY_ROLE_ARN"),
         help="ARN of the deploy role (or set AWS_DEPLOY_ROLE_ARN)",
     )
-    p.add_argument(
+    parser.add_argument(
         "--pi-image-role",
         default=f"arn:aws:iam::{ACCOUNT_ID}:role/cloudless-github-actions",
         help="ARN of the Pi-image build role",
     )
-    p.add_argument("--dry-run", action="store_true", help="Print intended changes; do not apply")
-    p.add_argument("--skip-deploy", action="store_true")
-    p.add_argument("--skip-pi-image", action="store_true")
-    args = p.parse_args()
+    parser.add_argument("--dry-run", action="store_true", help="Print intended changes; do not apply")
+    parser.add_argument("--skip-deploy", action="store_true")
+    parser.add_argument("--skip-pi-image", action="store_true")
+    args = parser.parse_args()
 
     if not args.skip_deploy and not args.deploy_role:
         sys.exit("error: --deploy-role or AWS_DEPLOY_ROLE_ARN is required (or use --skip-deploy)")

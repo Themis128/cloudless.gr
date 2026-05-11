@@ -43,7 +43,7 @@ Provision all required Slack channels for cloudless.gr and ensure the bot is a m
 
 4. Report which channels were **created**, which were **joined** (existed but bot wasn't a member), and which were **already ok**.
 
-5. If any channel fails with a scope error, tell the user exactly which OAuth scope is missing and where to add it in the Slack App settings (https://api.slack.com/apps → OAuth & Permissions → Bot Token Scopes).
+5. If any channel fails with a scope error, tell the user exactly which OAuth scope is missing and where to add it in the Slack App settings (<https://api.slack.com/apps> → OAuth & Permissions → Bot Token Scopes).
 
 6. After all channels are provisioned, confirm that `slack-notify.ts` already routes every notification type to the correct channel:
    - `slackSubscriberNotify` → `#subscribers`

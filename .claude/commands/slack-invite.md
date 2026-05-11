@@ -20,12 +20,12 @@ If `--channels` is omitted the user is invited to all 6 channels: bookings, orde
 3. For each email provided:
 
    a. Call `lookupUserByEmail(email, token)` to resolve the Slack user ID.
-      - If the result is `null`, report "User not found for `{email}` — they may not be in the workspace yet."
-      - If the error is `missing_scope`, tell the user to add `users:read.email` at https://api.slack.com/apps → OAuth & Permissions.
+     - If the result is `null`, report "User not found for `{email}` — they may not be in the workspace yet."
+     - If the error is `missing_scope`, tell the user to add `users:read.email` at <https://api.slack.com/apps> → OAuth & Permissions.
 
    b. Call `inviteToChannel(channelId, [userId], token)` for each target channel.
-      - Use `listChannels(token)` to map channel names to IDs.
-      - Skip channels where the user is already a member (error `already_in_channel` → not a failure).
+     - Use `listChannels(token)` to map channel names to IDs.
+     - Skip channels where the user is already a member (error `already_in_channel` → not a failure).
 
 4. Report a table:
 
@@ -34,7 +34,7 @@ If `--channels` is omitted the user is invited to all 6 channels: bookings, orde
    | … | … | #bookings | ✅ invited / ⚠️ already member / ❌ error |
 
 5. If the bot token lacks `channels:write.invites` scope, tell the user exactly where to add it:
-   - https://api.slack.com/apps → select your app → OAuth & Permissions → Bot Token Scopes → Add `channels:write.invites`
+   - <https://api.slack.com/apps> → select your app → OAuth & Permissions → Bot Token Scopes → Add `channels:write.invites`
    - Reinstall the app to the workspace after saving.
 
 ## Example script

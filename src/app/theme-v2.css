@@ -22,7 +22,7 @@
   /* Surfaces */
   --surface-canvas: #fcfcfd;
   --surface-subtle: #f4f6f9;
-  --surface-raised: #ffffff;
+  --surface-raised: #fff;
   --surface-glass: rgb(255 255 255 / 0.7);
 
   /* Borders */
@@ -32,6 +32,7 @@
   /* Text */
   --ink-primary: #0f1822;
   --ink-body: #475467;
+
   /* --ink-muted darkened in Phase 6.1 from #7a8aa0 (3.5:1 on white)
      to #5b6776 so it clears WCAG AA on small captions. */
   --ink-muted: #5b6776;
@@ -41,7 +42,7 @@
   --accent: #0a7785;
   --accent-hover: #086370;
   --accent-soft: #e0f2f5;
-  --accent-on: #ffffff;
+  --accent-on: #fff;
 
   /* Semantic */
   --success: #0a8a52;
@@ -53,6 +54,7 @@
   --secondary: #7c3aed;
   --secondary-hover: #6d28d9;
   --secondary-soft: #ede9fe;
+
   /* Info strong (blue) — used for neon-blue. #1d4ed8 on white = 9.3:1 WCAG AA. */
   --info-strong: #1d4ed8;
   --info-soft: #dbeafe;
@@ -61,7 +63,8 @@
   --shadow-sm: 0 1px 2px rgb(15 24 34 / 0.04), 0 1px 1px rgb(15 24 34 / 0.06);
   --shadow-md: 0 4px 12px rgb(15 24 34 / 0.06), 0 2px 4px rgb(15 24 34 / 0.04);
   --shadow-lg:
-    0 12px 32px rgb(15 24 34 / 0.08), 0 6px 12px rgb(15 24 34 / 0.06);
+    0 12px 32px rgb(15 24 34 / 0.08),
+    0 6px 12px rgb(15 24 34 / 0.06);
 
   /* Hero gradient mesh (sky → mist → off-white) */
   --gradient-hero:
@@ -107,6 +110,7 @@
   --secondary: #a78bfa;
   --secondary-hover: #c4b5fd;
   --secondary-soft: rgb(167 139 250 / 0.12);
+
   /* Info strong (blue) — #60a5fa on #0b0f15 = 4.9:1 WCAG AA. */
   --info-strong: #60a5fa;
   --info-soft: rgb(96 165 250 / 0.12);
@@ -285,6 +289,7 @@
     opacity var(--motion-slow) var(--ease-default),
     transform var(--motion-slow) var(--ease-default);
 }
+
 .v2-reveal[data-revealed="true"] {
   opacity: 1;
   transform: translateY(0);
@@ -311,14 +316,17 @@
 [data-theme="light"] .text-white {
   color: var(--ink-primary);
 }
+
 [data-theme="light"] .text-slate-100,
 [data-theme="light"] .text-slate-200 {
   color: var(--ink-primary);
 }
+
 [data-theme="light"] .text-slate-300,
 [data-theme="light"] .text-slate-400 {
   color: var(--ink-body);
 }
+
 [data-theme="light"] .text-slate-500,
 [data-theme="light"] .text-slate-600 {
   color: var(--ink-muted);
@@ -330,6 +338,7 @@
 [data-theme="light"] .bg-slate-900 {
   background-color: var(--surface-subtle);
 }
+
 [data-theme="light"] .bg-slate-800\/50,
 [data-theme="light"] .bg-slate-900\/50 {
   background-color: color-mix(in srgb, var(--surface-subtle) 50%, transparent);
@@ -340,6 +349,7 @@
 [data-theme="light"] .border-slate-800 {
   border-color: var(--border-subtle);
 }
+
 [data-theme="light"] .border-slate-600 {
   border-color: var(--border-strong);
 }
@@ -350,11 +360,12 @@
 
 /* Mobile tap highlight — accent-soft instead of high-saturation cyan. */
 [data-theme="light"] {
-  -webkit-tap-highlight-color: color-mix(
-    in srgb,
-    var(--accent) 18%,
-    transparent
-  );
+  -webkit-tap-highlight-color:
+    color-mix(
+      in srgb,
+      var(--accent) 18%,
+      transparent
+    );
 }
 
 /* Selection — calmer accent on light. */
@@ -403,6 +414,7 @@
    selectors so the rules survive into the bundled CSS.
    On light theme each alpha variant collapses to --accent-soft so the badge
    stays visible without a neon halo. */
+
 /* Cyan + green share the teal accent-soft. */
 [data-theme="light"] .bg-neon-cyan\/5,
 [data-theme="light"] .bg-neon-cyan\/10,
@@ -445,11 +457,13 @@
 [data-theme="light"] .bg-neon-cyan\/20 .text-white {
   color: var(--accent);
 }
+
 [data-theme="light"] .bg-neon-magenta\/5 .text-white,
 [data-theme="light"] .bg-neon-magenta\/10 .text-white,
 [data-theme="light"] .bg-neon-magenta\/20 .text-white {
   color: var(--secondary);
 }
+
 [data-theme="light"] .bg-neon-blue\/5 .text-white,
 [data-theme="light"] .bg-neon-blue\/10 .text-white,
 [data-theme="light"] .bg-neon-blue\/20 .text-white {
@@ -521,6 +535,7 @@
    Also covers .text-neon-green/* (decorative category badges in blog cards)
    which Phase 6.1 missed.
    ────────────────────────────────────────────────────────────────── */
+
 /* Cyan low-alpha → muted (teal fades fast on light backgrounds). */
 [data-theme="light"] .text-neon-cyan\/20,
 [data-theme="light"] .text-neon-cyan\/30,
@@ -572,10 +587,11 @@
   [data-theme="light"] button,
   [data-theme="light"] [role="button"],
   [data-theme="light"] summary {
-    -webkit-tap-highlight-color: color-mix(
-      in srgb,
-      var(--accent) 18%,
-      transparent
-    );
+    -webkit-tap-highlight-color:
+      color-mix(
+        in srgb,
+        var(--accent) 18%,
+        transparent
+      );
   }
 }

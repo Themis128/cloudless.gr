@@ -190,7 +190,7 @@ Click Next. On "Choose a business portfolio": confirm `1558125105019725`.
 
 ## Step B.2 — Assign yourself as Admin + add Page
 
-Still in the ad account creation flow (or via Settings → Ad accounts → [new account] → People):
+Still in the ad account creation flow (or via Settings → Ad accounts → \[new account\] → People):
 
 - Assign yourself **Admin**
 - Under "Business info / Page": attach Page `116436681562585` (cloudless.gr)
@@ -466,7 +466,7 @@ Once Phase C has ~7 days of Lead events accumulated, run the first real campaign
 | Phase | Rollback action |
 |-------|----------------|
 | A | Re-adding a lite link is a click in IG app → Account Center → Add Facebook. Does NOT restore the Full-mode link — you'd need to repeat A.3–A.5 to get back to clean state. |
-| B | Ad accounts can be deactivated (Settings → Ad accounts → [account] → Deactivate) but not deleted. Leave deactivated if unused. |
+| B | Ad accounts can be deactivated (Settings → Ad accounts → \[account\] → Deactivate) but not deleted. Leave deactivated if unused. |
 | C | Remove the Pixel `<Script>` tag, unset env vars, revoke CAPI token in Events Manager. Pixel itself can stay — no harm in an unused one. |
 
 ---

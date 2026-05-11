@@ -86,7 +86,7 @@ For custom analysis, ML models, notebooks.
 
 Destinations are configured on the Windsor dashboard (not via MCP):
 
-1. Log in to https://onboard.windsor.ai
+1. Log in to <https://onboard.windsor.ai>
 2. Go to "Destinations" in the sidebar
 3. Click the destination tile (e.g., Google Sheets)
 4. Authenticate if needed (Google OAuth for Sheets, API key for Postgres, etc.)
@@ -110,7 +110,7 @@ For cloudless.gr:
 
 - Most destinations bill **per destination slot**, not per row — a Sheets pipe and a Looker pipe are two slots
 - MCP access does NOT count against destination slots
-- TRIAL plan typically includes 1-2 destination slots; check https://onboard.windsor.ai/billing for current plan limits
+- TRIAL plan typically includes 1-2 destination slots; check <https://onboard.windsor.ai/billing> for current plan limits
 
 ## Current cloudless.gr destinations (2026-04-21)
 

@@ -158,7 +158,7 @@ doc for context. Listed in priority order:
 
 5. **Cron de-duplication during failover** — audit `src/app/api/webhooks/*` for handlers that depend on local persistence (none today, but worth a check before adding queue-based features).
 
-7. **CDN fallback** — `${NEXT_PUBLIC_CDN_URL}` resolves to CloudFront. During a CloudFront outage that triggered failover, embedded asset URLs would 404. A Pi-side nginx that proxies `/_next/static/*` to S3 origin would close this gap. Low priority; rare scenario.
+6. **CDN fallback** — `${NEXT_PUBLIC_CDN_URL}` resolves to CloudFront. During a CloudFront outage that triggered failover, embedded asset URLs would 404. A Pi-side nginx that proxies `/_next/static/*` to S3 origin would close this gap. Low priority; rare scenario.
 
 ## Operational pointers
 
