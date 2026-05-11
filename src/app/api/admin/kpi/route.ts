@@ -22,19 +22,23 @@ export async function GET(request: NextRequest) {
   ]);
   const gscConf = !!(cfg.GOOGLE_CLIENT_EMAIL && cfg.GOOGLE_PRIVATE_KEY);
 
-  const [analyticsResult, gscResult, projectsResult, taskSummaryResult, overdueResult] =
-    await Promise.allSettled([
-      analyticsConf ? getAnalyticsSummary(7) : Promise.resolve(null),
-      gscConf ? getSeoSnapshot() : Promise.resolve(null),
-      projectsConf ? listProjects() : Promise.resolve([]),
-      tasksConf ? getTaskSummary() : Promise.resolve({}),
-      tasksConf ? getOverdueTasks() : Promise.resolve([]),
-    ]);
+  const [
+    analyticsResult,
+    gscResult,
+    projectsResult,
+    taskSummaryResult,
+    overdueResult,
+  ] = await Promise.allSettled([
+    analyticsConf ? getAnalyticsSummary(7) : Promise.resolve(null),
+    gscConf ? getSeoSnapshot() : Promise.resolve(null),
+    projectsConf ? listProjects() : Promise.resolve([]),
+    tasksConf ? getTaskSummary() : Promise.resolve({}),
+    tasksConf ? getOverdueTasks() : Promise.resolve([]),
+  ]);
 
   const analytics =
     analyticsResult.status === "fulfilled" ? analyticsResult.value : null;
-  const gsc =
-    gscResult.status === "fulfilled" ? gscResult.value : null;
+  const gsc = gscResult.status === "fulfilled" ? gscResult.value : null;
   const projects =
     projectsResult.status === "fulfilled" ? projectsResult.value : [];
   const taskSummary =
