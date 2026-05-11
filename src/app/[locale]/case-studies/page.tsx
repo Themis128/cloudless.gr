@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import {
@@ -46,11 +47,13 @@ function CaseStudyCard({ cs }: { cs: CaseStudy }) {
         className="group flex flex-col rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-[#00fff5]/40 hover:bg-white/10"
       >
         {cs.coverImage && (
-          <div className="mb-4 h-48 overflow-hidden rounded-xl">
-            <img
+          <div className="relative mb-4 h-48 overflow-hidden rounded-xl">
+            <Image
               src={cs.coverImage}
               alt={cs.title}
-              className="h-full w-full object-cover transition group-hover:scale-105"
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="object-cover transition group-hover:scale-105"
             />
           </div>
         )}

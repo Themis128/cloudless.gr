@@ -28,6 +28,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "files.stripe.com" },
       { protocol: "https", hostname: "images.unsplash.com" },
+      // Notion cover images: Notion-uploaded files land on S3; external URLs
+      // set via Notion properties can be any subdomain of these two.
+      { protocol: "https", hostname: "**.amazonaws.com" },
+      { protocol: "https", hostname: "**.notion.so" },
+      { protocol: "https", hostname: "notion.so" },
     ],
     // AVIF first, WebP fallback. AVIF is ~20-30% smaller than WebP at the
     // same perceptual quality and ~50% smaller than JPEG. Browsers that
