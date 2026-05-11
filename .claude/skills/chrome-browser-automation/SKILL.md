@@ -165,7 +165,7 @@ refer to the screenshot taken BEFORE the batch call. Cannot be nested.
 | `scroll` | Scroll in a direction | `coordinate`, `scroll_direction`, `tabId` |
 | `scroll_to` | Scroll element into view | `ref`, `tabId` |
 | `hover` | Move mouse without clicking | `coordinate` or `ref`, `tabId` |
-| `zoom` | Capture a region close-up | `region` [x0,y0,x1,y1], `tabId` |
+| `zoom` | Capture a region close-up | `region` \[x0,y0,x1,y1\], `tabId` |
 | `left_click_drag` | Drag from start to end | `start_coordinate`, `coordinate`, `tabId` |
 | `wait` | Wait N seconds (max 10) | `duration`, `tabId` |
 

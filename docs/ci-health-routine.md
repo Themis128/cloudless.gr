@@ -31,8 +31,8 @@ or re-run workflows. Triage and fix actions remain manual.
 
 Each invocation is visible in the routines dashboard:
 
-- **Routine page**: https://claude.ai/code/routines/trig_01WQ7NdStiHu4Ab3DpBrRuiV
-- **All routines**: https://claude.ai/code/routines
+- **Routine page**: <https://claude.ai/code/routines/trig_01WQ7NdStiHu4Ab3DpBrRuiV>
+- **All routines**: <https://claude.ai/code/routines>
 
 The routine page shows the full transcript of every prior run (silent success
 runs will show only the `ALL_HEALTHY` line).
@@ -65,7 +65,7 @@ Use the `/schedule` skill in Claude Code, or the routines dashboard:
 - **Change schedule**: update with a new `cron_expression`
 - **Change prompt**: update with new `job_config.ccr.events`
 - **Delete**: only available via the dashboard (the API does not expose
-  delete) — go to https://claude.ai/code/routines
+  delete) — go to <https://claude.ai/code/routines>
 
 ## Why a routine instead of a workflow?
 

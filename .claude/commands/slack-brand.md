@@ -19,7 +19,7 @@ This is already wired in `src/lib/slack-notify.ts`. No action needed.
 The Slack App's icon and name shown in the workspace sidebar / app directory.
 **Cannot be set via the bot token API** — must be done at:
 
-👉 **https://api.slack.com/apps → select your app → Basic Information → Display Information**
+👉 **<https://api.slack.com/apps> → select your app → Basic Information → Display Information**
 
 Steps:
 1. App Name: `Cloudless`

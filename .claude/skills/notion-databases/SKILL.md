@@ -82,7 +82,7 @@ Relations connect pages **between two databases** (or within the same database).
 | Mode      | Behaviour                                              |
 |-----------|-------------------------------------------------------|
 | **One-way** (default) | Relation column only in the source database.  |
-| **Two-way** | Toggle "Show on [target DB]" → creates a matching column in the target database. Edits sync both ways. |
+| **Two-way** | Toggle "Show on \[target DB\]" → creates a matching column in the target database. Edits sync both ways. |
 
 ### Self-relations
 A database can relate to **itself** (e.g., task → subtask). Recommendation:
@@ -186,7 +186,7 @@ Earliest date, Latest date, Date range
 
 ## Sources
 
-- https://www.notion.com/help/database-properties
-- https://www.notion.com/help/relations-and-rollups
-- https://www.notion.com/help/optimize-database-load-times-and-performance
-- https://developers.notion.com/reference/property-object
+- <https://www.notion.com/help/database-properties>
+- <https://www.notion.com/help/relations-and-rollups>
+- <https://www.notion.com/help/optimize-database-load-times-and-performance>
+- <https://developers.notion.com/reference/property-object>

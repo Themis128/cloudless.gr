@@ -11,6 +11,7 @@
  * to avoid breaking text-white-on-dark contrasts. Phase 3 introduces light
  * mode page by page.
  */
+/* stylelint-disable-next-line at-rule-no-unknown */
 @theme inline {
   /* ── Surfaces (was "void" family) ── */
   --color-void: var(--surface-canvas);
@@ -68,6 +69,7 @@ body {
   font-family: var(--font-body), system-ui, sans-serif;
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
+
   /* Safe area — notch / Dynamic Island / home bar (iOS) */
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
@@ -89,6 +91,7 @@ body {
   font-weight: 600;
   transition: top 0.15s;
 }
+
 .skip-nav:focus {
   top: 1rem;
 }
@@ -159,6 +162,7 @@ h6 {
 .scan-line::before {
   content: none;
 }
+
 .cyber-grid,
 .cyber-grid-dense,
 .dot-matrix {
@@ -170,6 +174,7 @@ h6 {
 .neon-border {
   border: 1px solid var(--border-subtle);
 }
+
 .neon-border:hover {
   border-color: var(--accent);
   box-shadow: var(--shadow-md);
@@ -188,6 +193,7 @@ h6 {
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0;
   }
@@ -220,6 +226,7 @@ h6 {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -230,6 +237,7 @@ h6 {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -240,6 +248,7 @@ h6 {
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -261,24 +270,31 @@ h6 {
 .delay-100 {
   animation-delay: 100ms;
 }
+
 .delay-200 {
   animation-delay: 200ms;
 }
+
 .delay-300 {
   animation-delay: 300ms;
 }
+
 .delay-400 {
   animation-delay: 400ms;
 }
+
 .delay-500 {
   animation-delay: 500ms;
 }
+
 .delay-600 {
   animation-delay: 600ms;
 }
+
 .delay-700 {
   animation-delay: 700ms;
 }
+
 .delay-800 {
   animation-delay: 800ms;
 }
@@ -289,16 +305,20 @@ h6 {
   100% {
     transform: translate(0, 0) scale(1);
   }
+
   33% {
     transform: translate(10px, -22px) scale(1.04);
   }
+
   66% {
     transform: translate(-8px, -12px) scale(0.97);
   }
 }
+
 .animate-float {
   animation: float-orb 12s ease-in-out infinite;
 }
+
 .animate-float-slow {
   animation: float-orb 18s ease-in-out infinite;
 }
@@ -311,6 +331,7 @@ h6 {
     opacity: 0;
   }
 }
+
 .animate-ping-slow {
   animation: ping-slow 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
@@ -320,17 +341,20 @@ h6 {
   0% {
     background-position: -200% center;
   }
+
   100% {
     background-position: 200% center;
   }
 }
+
 .animate-shimmer-text {
-  background: linear-gradient(
-    90deg,
-    var(--accent) 20%,
-    color-mix(in srgb, var(--accent) 35%, #fff) 50%,
-    var(--accent) 80%
-  );
+  background:
+    linear-gradient(
+      90deg,
+      var(--accent) 20%,
+      color-mix(in srgb, var(--accent) 35%, #fff) 50%,
+      var(--accent) 80%
+    );
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
@@ -345,10 +369,12 @@ h6 {
   100% {
     box-shadow: 0 0 0 0 transparent;
   }
+
   50% {
     box-shadow: 0 0 22px 5px color-mix(in srgb, var(--accent) 28%, transparent);
   }
 }
+
 .animate-glow-pulse {
   animation: glow-pulse-accent 3s ease-in-out infinite;
 }
@@ -362,9 +388,11 @@ h6 {
     100% {
       transform: translate(0, 0) scale(1);
     }
+
     33% {
       transform: translate(4px, -10px) scale(1.02);
     }
+
     66% {
       transform: translate(-4px, -6px) scale(0.99);
     }

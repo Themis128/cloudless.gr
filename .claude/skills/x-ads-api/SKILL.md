@@ -176,8 +176,8 @@ input by 1_000_000 before sending.
 
 ## Reference
 
-- Official docs: https://developer.x.com/en/docs/x-ads-api
-- API endpoints: https://developer.x.com/en/docs/x-ads-api/api-reference-index
-- OAuth1 spec: https://datatracker.ietf.org/doc/html/rfc5849
+- Official docs: <https://developer.x.com/en/docs/x-ads-api>
+- API endpoints: <https://developer.x.com/en/docs/x-ads-api/api-reference-index>
+- OAuth1 spec: <https://datatracker.ietf.org/doc/html/rfc5849>
 - App code: [src/lib/campaigns/x-ads.ts](src/lib/campaigns/x-ads.ts)
 - Setup script: [scripts/x-ads-setup.ts](scripts/x-ads-setup.ts)

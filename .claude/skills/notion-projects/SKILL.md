@@ -231,8 +231,8 @@ if(
 
 ## Sources
 
-- https://www.notion.com/help/sprints
-- https://www.notion.com/help/guides/getting-started-with-projects-and-tasks
-- https://www.notion.com/help/guides/product-engineering-notion-sprint-planning
-- https://www.notion.com/help/guides/sprints-simplified-notions-sprint-tracking-system
-- https://www.notion.com/help/guides/timeline-view-unlocks-high-output-planning-for-your-team
+- <https://www.notion.com/help/sprints>
+- <https://www.notion.com/help/guides/getting-started-with-projects-and-tasks>
+- <https://www.notion.com/help/guides/product-engineering-notion-sprint-planning>
+- <https://www.notion.com/help/guides/sprints-simplified-notions-sprint-tracking-system>
+- <https://www.notion.com/help/guides/timeline-view-unlocks-high-output-planning-for-your-team>

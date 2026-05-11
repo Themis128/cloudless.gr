@@ -162,9 +162,9 @@ reference each other — store these, not numeric IDs alone.
 
 ## Reference
 
-- Official docs: https://developers.google.com/google-ads/api/docs/start
-- REST guide: https://developers.google.com/google-ads/api/rest/overview
-- GAQL: https://developers.google.com/google-ads/api/docs/query/overview
-- Field reference: https://developers.google.com/google-ads/api/fields/v17/overview
+- Official docs: <https://developers.google.com/google-ads/api/docs/start>
+- REST guide: <https://developers.google.com/google-ads/api/rest/overview>
+- GAQL: <https://developers.google.com/google-ads/api/docs/query/overview>
+- Field reference: <https://developers.google.com/google-ads/api/fields/v17/overview>
 - App code: [src/lib/campaigns/google-ads.ts](src/lib/campaigns/google-ads.ts)
 - Setup script: [scripts/google-ads-setup.ts](scripts/google-ads-setup.ts)

@@ -24,7 +24,7 @@ automation fires when **any** trigger occurs or when **all** triggers occur.
 | Trigger | Description | Notes |
 |---------|-------------|-------|
 | **Page added** | Fires when a new page is added to the database | — |
-| **Property edited** | Fires when a specific property changes | Can narrow to: "is set to [value]" for select, person, number, text, relation properties |
+| **Property edited** | Fires when a specific property changes | Can narrow to: "is set to \[value\]" for select, person, number, text, relation properties |
 | **Every {frequency}** | Recurring on a schedule (daily, weekly, monthly, etc.) | Configurable start/end dates and timezone. **Cannot** be combined with other trigger types |
 
 ### Multi-trigger timing
@@ -174,7 +174,7 @@ They can only be created through the Notion UI. However, you can:
 
 ## Sources
 
-- https://www.notion.com/help/database-automations
-- https://www.notion.com/help/webhook-actions
-- https://www.notion.com/help/notion-academy/lesson/using-data-automations
-- https://www.notion.com/help/guides/connect-tools-to-notion-api
+- <https://www.notion.com/help/database-automations>
+- <https://www.notion.com/help/webhook-actions>
+- <https://www.notion.com/help/notion-academy/lesson/using-data-automations>
+- <https://www.notion.com/help/guides/connect-tools-to-notion-api>

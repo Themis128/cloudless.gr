@@ -1,7 +1,7 @@
 ---
 name: deploy-pipeline
 description: Monitor and debug the full cloudless.gr deploy pipeline — GitHub Actions deploy, ha-sync-orchestrator, Pi image build, and k3s rollout. Use when the user asks about deploy status, whether Lambda/Pi are in sync, orchestrator failures, SHA drift, or "is the deploy done?". Triggers on "deploy", "pipeline", "orchestrator", "Pi image", "ha-sync", "SHA drift", "in sync", "rollout".
-argument-hint: "[SHA or 'latest']"
+argument-hint: "SHA or 'latest'"
 allowed-tools: mcp__cloudless-infra__aws_get_ssm_parameters, mcp__cloudless-infra__k3s_get_pods, mcp__cloudless-infra__cluster_run_command, mcp__cloudless-infra__k3s_get_pod_logs
 ---
 

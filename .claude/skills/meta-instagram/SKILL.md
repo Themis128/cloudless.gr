@@ -8,7 +8,7 @@ The MCP server enables Claude to post content, read analytics, manage audiences,
 **App credentials (already created):**
 - App ID: `1936126137016578`
 - App Secret: `2d77630ff18b1cea3e4e00ba2f9a7b73`
-- App Dashboard: https://developers.facebook.com/apps/1936126137016578
+- App Dashboard: <https://developers.facebook.com/apps/1936126137016578>
 
 **MCP server:** `D:\Nuxt Projects\Cloudless\.claude\mcp-servers\instagram\src\index.js`
 **Config file:** `C:\Users\baltz\AppData\Roaming\Claude\claude_desktop_config.json`
@@ -101,7 +101,7 @@ All permissions have been added to the app and are "Ready for testing":
 
 ### Step 1 — Get Short-Lived Token from Graph API Explorer
 
-1. Go to: https://developers.facebook.com/tools/explorer/
+1. Go to: <https://developers.facebook.com/tools/explorer/>
 2. In the top-right dropdown, select your app: **cloudless-marketing** (App ID 1936126137016578)
 3. Click **"Generate Access Token"** → approve all permissions listed above
 4. Copy the short-lived User Access Token (valid ~1 hour)

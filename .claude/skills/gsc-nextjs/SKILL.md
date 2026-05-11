@@ -88,7 +88,7 @@ The site URL must be `encodeURIComponent`-encoded. Default site: `sc-domain:clou
 ### `getSeoSnapshot(siteUrl?)` → `SeoSnapshot | null`
 28-day rolling window. Makes **two** GSC calls:
 1. Totals (no dimensions) → clicks, impressions, CTR, avgPosition
-2. All keywords (dimensions: ["query"], rowLimit: 25000) → count for organicKeywords
+2. All keywords (dimensions: `["query"]`, rowLimit: 25000) → count for organicKeywords
 
 ### `getTopKeywords(siteUrl?, limit=20)` → `KeywordData[]`
 Top keywords sorted by clicks. Each row: `{ keyword, clicks, impressions, ctr, position }`.

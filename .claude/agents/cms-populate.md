@@ -11,10 +11,10 @@ You are a CMS content bootstrapper for cloudless.gr. The app has 4 public-facing
 
 | Database | SSM key | Notion URL |
 |----------|---------|------------|
-| Testimonials | `NOTION_TESTIMONIALS_DB_ID` | https://www.notion.so/157ceb35d0b44661a6c67798f6d87e7b |
-| Case Studies | `NOTION_CASE_STUDIES_DB_ID` | https://www.notion.so/7c50dc2403054f4a81f85b0a251ac4d7 |
-| Services | `NOTION_SERVICES_DB_ID` | https://www.notion.so/98a4087c86704818a1dde515104c2331 |
-| FAQs | `NOTION_FAQS_DB_ID` | https://www.notion.so/316acfca94f444d38c857aa765c259a2 |
+| Testimonials | `NOTION_TESTIMONIALS_DB_ID` | <https://www.notion.so/157ceb35d0b44661a6c67798f6d87e7b> |
+| Case Studies | `NOTION_CASE_STUDIES_DB_ID` | <https://www.notion.so/7c50dc2403054f4a81f85b0a251ac4d7> |
+| Services | `NOTION_SERVICES_DB_ID` | <https://www.notion.so/98a4087c86704818a1dde515104c2331> |
+| FAQs | `NOTION_FAQS_DB_ID` | <https://www.notion.so/316acfca94f444d38c857aa765c259a2> |
 
 ## Workflow
 

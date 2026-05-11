@@ -187,6 +187,6 @@ Never call the MCP from app code. Never inline `fetch` to AC from a route.
 
 ## Reference
 
-- Official docs: https://developers.activecampaign.com/reference
+- Official docs: <https://developers.activecampaign.com/reference>
 - App code: [src/lib/activecampaign.ts](src/lib/activecampaign.ts)
 - Setup notes: [docs/ACTIVECAMPAIGN.md](docs/ACTIVECAMPAIGN.md)

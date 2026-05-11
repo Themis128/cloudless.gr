@@ -17,7 +17,7 @@ Notion-Version: 2022-06-28
 Content-Type: application/json
 ```
 
-The API key is an "Internal Integration Secret" from https://www.notion.so/my-integrations. Each database must be shared with the integration (database → … → Connections → add your integration).
+The API key is an "Internal Integration Secret" from <https://www.notion.so/my-integrations>. Each database must be shared with the integration (database → … → Connections → add your integration).
 
 Base URL: `https://api.notion.com/v1`
 

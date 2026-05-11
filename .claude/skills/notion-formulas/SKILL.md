@@ -242,7 +242,7 @@ length(prop("Tags"))
 
 ## Sources
 
-- https://www.notion.com/help/formula-syntax
-- https://www.notion.com/help/formulas
-- https://www.notion.com/help/common-formula-errors
-- https://www.notion.com/help/guides/new-formulas-whats-changed
+- <https://www.notion.com/help/formula-syntax>
+- <https://www.notion.com/help/formulas>
+- <https://www.notion.com/help/common-formula-errors>
+- <https://www.notion.com/help/guides/new-formulas-whats-changed>
