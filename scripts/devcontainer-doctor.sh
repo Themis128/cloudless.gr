@@ -51,7 +51,7 @@ for _ in 1 2 3; do
   end_ms=$(date +%s%3N)
   samples+=("$((end_ms-start_ms))")
 done
-sorted=($(printf '%s\n' "${samples[@]}" | sort -n))
+mapfile -t sorted < <(printf '%s\n' "${samples[@]}" | sort -n)
 median_ms="${sorted[1]}"
 info "bash -lic probe startup median ms (3 samples): $median_ms [${samples[*]}]"
 if [[ -n "$median_ms" ]]; then
