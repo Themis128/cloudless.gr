@@ -9,12 +9,21 @@ import { resetSsmCache } from "@/lib/ssm-config";
 // Hoist mock variables so vi.mock() factories can reference them safely.
 // ---------------------------------------------------------------------------
 
-const { mockGetConfig, mockIsConfiguredAsync, mockResetIntegrationCache } =
-  vi.hoisted(() => ({
-    mockGetConfig: vi.fn(),
-    mockIsConfiguredAsync: vi.fn().mockResolvedValue(true),
-    mockResetIntegrationCache: vi.fn(),
-  }));
+const {
+  mockGetConfig,
+  mockIsConfiguredAsync,
+  mockResetIntegrationCache,
+  mockGetSlackConfigAsync,
+} = vi.hoisted(() => ({
+  mockGetConfig: vi.fn(),
+  mockIsConfiguredAsync: vi.fn().mockResolvedValue(true),
+  mockResetIntegrationCache: vi.fn(),
+  mockGetSlackConfigAsync: vi.fn().mockResolvedValue({
+    SLACK_BOT_TOKEN: "xoxb-test",
+    SLACK_WEBHOOK_URL: "",
+    SLACK_SIGNING_SECRET: "signing-secret-test",
+  }),
+}));
 
 // ---------------------------------------------------------------------------
 // Mock ssm-config so tests never touch AWS SSM and getConfig() is controllable.
@@ -35,6 +44,7 @@ vi.mock("@/lib/integrations", () => ({
   resetIntegrationCache: mockResetIntegrationCache,
   getIntegrations: vi.fn().mockReturnValue({}),
   getIntegrationsAsync: vi.fn().mockResolvedValue({}),
+  getSlackConfigAsync: mockGetSlackConfigAsync,
 }));
 
 const GSC_CONFIGURED_CONFIG = {
@@ -105,6 +115,11 @@ mockGetConfig.mockResolvedValue(GSC_CONFIGURED_CONFIG);
 beforeEach(() => {
   mockGetConfig.mockResolvedValue(GSC_CONFIGURED_CONFIG);
   mockIsConfiguredAsync.mockResolvedValue(true);
+  mockGetSlackConfigAsync.mockResolvedValue({
+    SLACK_BOT_TOKEN: "xoxb-test",
+    SLACK_WEBHOOK_URL: "",
+    SLACK_SIGNING_SECRET: "signing-secret-test",
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -282,6 +297,10 @@ vi.mock("@/lib/hubspot", () => ({
 // Slack notify
 vi.mock("@/lib/slack-notify", () => ({
   slackNotify: vi.fn().mockResolvedValue(true),
+  slackErrorNotify: vi.fn().mockResolvedValue(undefined),
+  SlackClient: vi.fn().mockImplementation(() => ({
+    post: vi.fn().mockResolvedValue(true),
+  })),
 }));
 
 // Sentry
@@ -610,11 +629,25 @@ describe("POST /api/admin/notifications/test", () => {
     vi.clearAllMocks();
     vi.resetModules(); // prevents stale integrations module instance leaking from prior describe
     resetIntegrationCache();
+    // Stub fetch so SlackClient.post() doesn't make real HTTP calls
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) }),
+    );
+    // Default: Slack is configured (overridden per-test where needed)
+    mockGetSlackConfigAsync.mockResolvedValue({
+      SLACK_BOT_TOKEN: "xoxb-test",
+      SLACK_WEBHOOK_URL: "",
+      SLACK_SIGNING_SECRET: "signing-secret-test",
+    });
   });
 
   it("returns 503 when Slack is not configured", async () => {
-    vi.stubEnv("SLACK_WEBHOOK_URL", "");
-    resetIntegrationCache();
+    mockGetSlackConfigAsync.mockResolvedValue({
+      SLACK_BOT_TOKEN: "",
+      SLACK_WEBHOOK_URL: "",
+      SLACK_SIGNING_SECRET: "",
+    });
     const { POST } = await import("@/app/api/admin/notifications/test/route");
     const res = await POST(adminRequest("http://localhost/api/admin/notifications/test"));
     expect(res.status).toBe(503);
