@@ -24,6 +24,8 @@ jobs:
   build-and-push:
     name: Build arm64 image and push to ECR
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ github.sha }}
 
     steps:
       - name: Checkout
@@ -52,9 +54,10 @@ jobs:
           context: .
           platforms: linux/arm64
           push: true
-          tags: |
-            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
-            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          # Push SHA tag only — ECR has immutable tags so :latest is never
+          # overwritten from CI. The rollout job uses kubectl set image with
+          # the SHA tag so every deploy is pinned and fully reproducible.
+          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -73,14 +76,6 @@ jobs:
             --name "/cloudless/production/current-image-sha" \
             --value "${{ github.sha }}" \
             --type String --overwrite
-          DIGEST=$(aws ecr describe-images \
-            --repository-name ${{ env.ECR_REPOSITORY }} \
-            --image-ids imageTag=${{ github.sha }} \
-            --query 'imageDetails[0].imageDigest' --output text)
-          aws ssm put-parameter \
-            --name "/cloudless/production/ECR_LATEST_DIGEST" \
-            --value "$DIGEST" \
-            --type String --overwrite
 
   rollout:
     name: Rollout restart on k3s
@@ -97,9 +92,10 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Rollout restart
+      - name: Set image and rollout
         run: |
-          kubectl rollout restart deployment/${{ env.K3S_DEPLOYMENT }} \
+          kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
+            ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.sha }} \
             -n ${{ env.K3S_NAMESPACE }}
           kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} \
             -n ${{ env.K3S_NAMESPACE }} --timeout=300s
