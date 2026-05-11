@@ -92,6 +92,14 @@ const adminCards = [
     render: () => "Dashboard →",
   },
   {
+    title: "KPI Dashboard",
+    description: "GSC · Notion analytics · Projects · Tasks in one view",
+    icon: "📊",
+    href: "/admin/kpi",
+    statKey: null,
+    render: () => "View KPIs →",
+  },
+  {
     title: "Integrations",
     description: "Live status of all connected external services",
     icon: "🔌",
