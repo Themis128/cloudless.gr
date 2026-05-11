@@ -297,11 +297,7 @@ export default function KpiDashboard() {
 
           {/* Tasks */}
           <section>
-            <SectionHeader
-              title="Tasks"
-              icon="✅"
-              href="/admin/notion/tasks"
-            />
+            <SectionHeader title="Tasks" icon="✅" href="/admin/notion/tasks" />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <KpiCard
                 label="In Progress"
