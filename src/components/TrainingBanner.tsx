@@ -1,13 +1,6 @@
 "use client";
 
-/**
- * TrainingBanner — sitewide non-compete / educational-purpose notice.
- * Appears above the Navbar on every page. Dismissible per browser session
- * via sessionStorage so it reappears on a new tab/visit without being
- * obnoxious mid-session.
- */
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const DISMISS_KEY = "cloudless-training-banner-dismissed";
 
@@ -21,13 +14,10 @@ interface TrainingBannerProps {
 export default function TrainingBanner({
   locale,
 }: Readonly<TrainingBannerProps>) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (!sessionStorage.getItem(DISMISS_KEY)) {
-      setVisible(true);
-    }
-  }, []);
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !sessionStorage.getItem(DISMISS_KEY);
+  });
 
   if (!visible) return null;
 
