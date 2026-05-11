@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 const DISMISS_KEY = "cloudless-training-banner-dismissed";
 
 const QUOTE_EN = "Pardon our pixels — we're remodeling the universe.";
 const QUOTE_EL = "Ζητάμε συγγνώμη για τα pixels — ανακαινίζουμε το σύμπαν.";
+
+// useSyncExternalStore wiring for sessionStorage dismiss flag.
+// Server snapshot returns false so SSR renders nothing (no hydration mismatch).
+// Client snapshot reads sessionStorage after mount.
+const subscribe = () => () => {};
+const getSnapshot = () => !sessionStorage.getItem(DISMISS_KEY);
+const getServerSnapshot = () => false;
 
 interface TrainingBannerProps {
   locale?: string;
@@ -14,18 +21,20 @@ interface TrainingBannerProps {
 export default function TrainingBanner({
   locale,
 }: Readonly<TrainingBannerProps>) {
-  const [visible, setVisible] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return !sessionStorage.getItem(DISMISS_KEY);
-  });
+  const shouldShow = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
+  const [dismissed, setDismissed] = useState(false);
 
-  if (!visible) return null;
+  if (!shouldShow || dismissed) return null;
 
   const isEl = locale === "el";
 
   const dismiss = () => {
     sessionStorage.setItem(DISMISS_KEY, "1");
-    setVisible(false);
+    setDismissed(true);
   };
 
   return (
