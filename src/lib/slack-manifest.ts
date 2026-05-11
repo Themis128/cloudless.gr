@@ -62,7 +62,7 @@ async function slackPost(
       "Content-Type": "application/json; charset=utf-8",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(body), // codeql[js/file-data-network-request] -- manifest JSON is sent intentionally to Slack API; loaded from a versioned local config file, not user input
   });
   if (!res.ok)
     throw new Error(`[SlackManifest] HTTP ${res.status} on ${method}`);

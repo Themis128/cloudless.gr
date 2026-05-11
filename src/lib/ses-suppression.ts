@@ -39,14 +39,14 @@ export async function addToSuppressionList(email: string): Promise<boolean> {
       }),
     );
     // Log domain only to avoid leaking full email addresses into logs
-    const domain = email.includes("@") ? email.split("@")[1] : "(no-domain)";
+    const domain = (email.includes("@") ? email.split("@")[1] : "(no-domain)").replace(/[\r\n]/g, "_");
     console.warn(`[SES] Added to suppression list: *@${domain}`);
     return true;
   } catch (err) {
-    const domain = email.includes("@") ? email.split("@")[1] : "(no-domain)";
+    const domain = (email.includes("@") ? email.split("@")[1] : "(no-domain)").replace(/[\r\n]/g, "_");
     console.error(
       `[SES] Failed to suppress *@${domain}:`,
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return false;
   }

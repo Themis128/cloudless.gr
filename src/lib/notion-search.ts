@@ -297,7 +297,7 @@ export async function getDatabaseSchema(
   } catch (err) {
     console.error(
       "[Notion Schema] Failed to get database schema:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return null;
   }

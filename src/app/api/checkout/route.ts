@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error(
       "Checkout error:",
-      (error as Error)?.message ?? "unknown error",
+      ((error as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       await import("@sentry/nextjs")

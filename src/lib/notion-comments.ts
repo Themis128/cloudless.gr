@@ -63,7 +63,7 @@ export async function listComments(blockId: string): Promise<NotionComment[]> {
   } catch (err) {
     console.error(
       "[Notion Comments] Failed to list comments:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return [];
   }

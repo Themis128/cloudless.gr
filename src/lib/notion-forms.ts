@@ -179,7 +179,7 @@ export async function updateSubmissionStatus(
   } catch (err) {
     console.error(
       "[Notion] Failed to update submission status:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return false;
   }

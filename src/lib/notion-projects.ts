@@ -145,7 +145,7 @@ export async function listProjects(
   } catch (err) {
     console.error(
       "[Notion Projects] Failed to list projects:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return [];
   }
@@ -159,7 +159,7 @@ export async function getProject(pageId: string): Promise<Project | null> {
   } catch (err) {
     console.error(
       "[Notion Projects] Failed to get project:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return null;
   }
@@ -207,7 +207,7 @@ export async function createProject(data: {
   } catch (err) {
     console.error(
       "[Notion Projects] Failed to create project:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return null;
   }
@@ -229,7 +229,7 @@ export async function updateProjectStatus(
   } catch (err) {
     console.error(
       "[Notion Projects] Failed to update project status:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return false;
   }
@@ -253,7 +253,7 @@ export async function updateProjectProgress(
   } catch (err) {
     console.error(
       "[Notion Projects] Failed to update project progress:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return false;
   }
@@ -313,7 +313,7 @@ export async function listTasks(filters?: {
   } catch (err) {
     console.error(
       "[Notion Tasks] Failed to list tasks:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return [];
   }
@@ -368,7 +368,7 @@ export async function createTask(data: {
   } catch (err) {
     console.error(
       "[Notion Tasks] Failed to create task:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return null;
   }
@@ -390,7 +390,7 @@ export async function updateTaskStatus(
   } catch (err) {
     console.error(
       "[Notion Tasks] Failed to update task status:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return false;
   }
@@ -455,7 +455,7 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
   } catch (err) {
     console.error(
       "[Notion Tasks] Failed to get sprint tasks:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return [];
   }
@@ -509,7 +509,7 @@ export async function rolloverSprintTasks(
     } catch (err) {
       console.error(
         `[Notion Tasks] Failed to move task:`,
-        (err as Error)?.message ?? "unknown error",
+        ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
       );
     }
   }
@@ -563,7 +563,7 @@ export async function getOverdueTasks(): Promise<Task[]> {
   } catch (err) {
     console.error(
       "[Notion Tasks] Failed to get overdue tasks:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return [];
   }
