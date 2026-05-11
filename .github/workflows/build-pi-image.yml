@@ -62,7 +62,7 @@ jobs:
 
       - name: configure AWS credentials (OIDC)
         if: github.event_name != 'pull_request'
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
         with:
           role-to-assume: arn:aws:iam::278585680617:role/cloudless-github-actions
           aws-region: ${{ env.AWS_REGION }}
