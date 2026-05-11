@@ -4,7 +4,7 @@ import JsonLd from "@/components/JsonLd";
 import { getFAQSchema } from "@/lib/structured-data";
 import ScrollReveal from "@/components/ScrollReveal";
 
-export const revalidate = 3600; // products change infrequently; cache for 1h
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Store",
