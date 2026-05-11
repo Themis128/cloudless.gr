@@ -215,25 +215,27 @@ function slackTimestamp(): string {
 // High-level notifiers
 // ---------------------------------------------------------------------------
 
-/** Default client — used for subscriber sign-ups and generic contact forms. */
-const client = new SlackClient();
-
-/** Dedicated per-channel clients. Each maps to a Slack channel the bot must be
- *  a member of. Create the channels in Slack, invite @cloudless_bot, and these
- *  will route automatically. Falls back gracefully (channel_not_found → null →
- *  no retry) if the channel hasn't been created yet.
+/**
+ * Per-channel clients — each maps to a dedicated Slack channel.
+ * Run `/slack-channels-setup` to provision missing channels automatically.
+ * Falls back gracefully (channel_not_found → null) if a channel doesn't exist.
  */
-const bookingsClient = new SlackClient({ channel: "#bookings" });
-const ordersClient = new SlackClient({ channel: "#orders" });
-const errorsClient = new SlackClient({ channel: "#errors" });
+const bookingsClient    = new SlackClient({ channel: "#bookings" });
+const ordersClient      = new SlackClient({ channel: "#orders" });
+const errorsClient      = new SlackClient({ channel: "#errors" });
 const deploymentsClient = new SlackClient({ channel: "#deployments" });
+const contactsClient    = new SlackClient({ channel: "#contacts" });
+const subscribersClient = new SlackClient({ channel: "#subscribers" });
+
+/** Fallback client for unrouted / legacy messages. */
+const client = new SlackClient();
 
 /**
  * Notify Slack when a new newsletter subscriber signs up.
  */
 export async function slackSubscriberNotify(email: string): Promise<void> {
   const safeEmail = slackEscape(email);
-  await client.post({
+  await subscribersClient.post({
     text: `New subscriber: ${safeEmail}`,
     blocks: [
       headerBlock("New Newsletter Subscriber"),
@@ -362,7 +364,7 @@ export async function slackContactNotify(data: {
   const safeCompany = data.company ? slackEscape(data.company) : "\u2014";
   const safeService = data.service ? slackEscape(data.service) : "\u2014";
   const safeMessage = slackEscape(data.message).slice(0, 2000);
-  return client.post({
+  return contactsClient.post({
     text: `New contact from ${safeName} (${safeEmail})`,
     blocks: [
       headerBlock("\ud83d\udce8 New Contact Form Submission"),
