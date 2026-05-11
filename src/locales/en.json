@@ -420,5 +420,24 @@
     "title": "Page not found",
     "body": "The page you're looking for doesn't exist or has been moved.",
     "cta": "Back to Home"
+  },
+  "blog": {
+    "label": "[ BLOG ]",
+    "titleStatic": "Insights &",
+    "titleHighlight": "practical guides",
+    "subtitle": "Cloud architecture, serverless, analytics, and AI marketing — written for founders and technical teams who want to move fast.",
+    "searchPlaceholder": "Search posts…",
+    "filtering": "Filtering:",
+    "clearAll": "Clear all",
+    "noPostsFound": "No posts found.",
+    "viewAllPosts": "View all posts",
+    "readMore": "Read more",
+    "prevPage": "← Prev",
+    "nextPage": "Next →",
+    "categories": "Categories",
+    "tags": "Tags",
+    "by": "by",
+    "result": "result",
+    "results": "results"
   }
 }
