@@ -61,6 +61,7 @@ export async function listComments(blockId: string): Promise<NotionComment[]> {
     return results.map(mapComment);
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
+    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
     console.error(
       "[Notion Comments] Failed to list comments:",
       ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),

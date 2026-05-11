@@ -138,6 +138,7 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ url: session.url });
   } catch (error) {
+    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
     console.error(
       "Checkout error:",
       ((error as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),

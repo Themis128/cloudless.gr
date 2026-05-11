@@ -295,6 +295,7 @@ export async function getDatabaseSchema(
     };
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
+    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
     console.error(
       "[Notion Schema] Failed to get database schema:",
       ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
