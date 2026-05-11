@@ -157,11 +157,13 @@ async function handleAppMention(event: SlackEvent): Promise<void> {
 
   let text: string;
   if (userText.includes("status")) {
-    text = ":white_check_mark: cloudless.gr is *online*. All systems operational.";
+    text =
+      ":white_check_mark: cloudless.gr is *online*. All systems operational.";
   } else if (userText.includes("help")) {
     text = HELP_TEXT;
   } else {
-    text = "Hey! I'm the Cloudless bot. Try mentioning me with *status* or *help*.";
+    text =
+      "Hey! I'm the Cloudless bot. Try mentioning me with *status* or *help*.";
   }
 
   await client.post({ text, thread_ts: event.ts });
