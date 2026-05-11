@@ -50,6 +50,7 @@ export async function notionFetch<T = unknown>(
   };
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // codeql[js/server-side-request-forgery] -- url is NOTION_API (constant) + path; path is validated above (no :// or //)
     const res = await fetch(url, reqInit);
 
     if (res.status === 429 && attempt < MAX_RETRIES) {

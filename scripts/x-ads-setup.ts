@@ -30,7 +30,8 @@ function oauthSign(
     .join("&");
   const base = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(sorted)}`;
   const key = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
-  // codeql[js/weak-cryptographic-algorithm] codeql[js/insufficient-password-hash] -- HMAC-SHA1 is mandated by OAuth 1.0a spec (RFC 5849 §3.4.2); not a password hash
+  // codeql[js/weak-cryptographic-algorithm] -- HMAC-SHA1 is mandated by OAuth 1.0a spec (RFC 5849 §3.4.2)
+  // codeql[js/insufficient-password-hash] -- this is an OAuth 1.0a message signature, not a password hash
   return createHmac("sha1", key).update(base).digest("base64");
 }
 

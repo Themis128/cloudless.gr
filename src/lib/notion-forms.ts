@@ -98,10 +98,10 @@ export async function saveSubmission(
 
     return page.id;
   } catch (err) {
-    // Non-blocking — log but don't surface to the user
+    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
     console.error(
       "[Notion] Failed to save submission:",
-      (err as Error)?.message ?? "unknown error",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
     );
     return null;
   }
@@ -177,6 +177,7 @@ export async function updateSubmissionStatus(
     });
     return true;
   } catch (err) {
+    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
     console.error(
       "[Notion] Failed to update submission status:",
       ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),

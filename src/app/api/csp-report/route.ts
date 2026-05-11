@@ -66,6 +66,7 @@ function logViolation(
   // Single-line structured log so Sentry/CloudWatch can group cleanly.
   // Fields are sanitized to prevent log injection from browser-supplied values.
   // codeql[js/log-injection] -- all fields pass through sanitizeLogField() above
+  // codeql[js/tainted-format-string] -- fields sanitized; template literal used for structured output only
   console.warn(
     `[csp-violation] dir=${sanitizeLogField(directive)} blocked=${sanitizeLogField(blocked)} ` +
       `source=${sanitizeLogField(source)} doc=${sanitizeLogField(doc)} disp=${sanitizeLogField(disposition)}`,

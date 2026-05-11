@@ -227,6 +227,7 @@ export async function updateProjectStatus(
     });
     return true;
   } catch (err) {
+    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
     console.error(
       "[Notion Projects] Failed to update project status:",
       ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
@@ -251,6 +252,7 @@ export async function updateProjectProgress(
     });
     return true;
   } catch (err) {
+    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
     console.error(
       "[Notion Projects] Failed to update project progress:",
       ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
@@ -388,6 +390,7 @@ export async function updateTaskStatus(
     });
     return true;
   } catch (err) {
+    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
     console.error(
       "[Notion Tasks] Failed to update task status:",
       ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
