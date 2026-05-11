@@ -3,6 +3,10 @@ name: Deploy to Pi (ECR + k3s rollout)
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".claude/**"
+      - "docs/**"
   workflow_dispatch:
 
 concurrency:
