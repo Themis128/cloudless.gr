@@ -46,7 +46,7 @@ function buildOAuthHeader(
     .join("&");
   const baseStr = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramStr)}`;
   const sigKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessSecret)}`;
-  // lgtm[js/weak-cryptographic-algorithm] -- HMAC-SHA1 required by OAuth 1.0a spec
+  // codeql[js/weak-cryptographic-algorithm] codeql[js/insufficient-password-hash] -- HMAC-SHA1 is mandated by OAuth 1.0a spec (RFC 5849 §3.4.2); not a password hash
   const sig = createHmac("sha1", sigKey).update(baseStr).digest("base64");
   params.oauth_signature = sig;
   const header =

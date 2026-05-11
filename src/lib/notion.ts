@@ -41,7 +41,9 @@ export async function notionFetch<T = unknown>(
 ): Promise<T> {
   const MAX_RETRIES = 3;
   const headers = await notionHeaders();
-  const url = `${NOTION_API}${path}`; // lgtm[js/request-forgery] -- path is always a hardcoded string in all callers
+  if (path.includes("://") || path.startsWith("//"))
+    throw new Error(`notionFetch: invalid path "${path}"`);
+  const url = `${NOTION_API}${path}`;
   const reqInit: RequestInit = {
     ...init,
     headers: { ...headers, ...(init?.headers ?? {}) },
