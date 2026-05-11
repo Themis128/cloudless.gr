@@ -253,9 +253,7 @@ async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
   }
 }
 
-async function handleChannels(
-  payload: SlashCommandPayload,
-): Promise<Response> {
+async function handleChannels(payload: SlashCommandPayload): Promise<Response> {
   try {
     const { SLACK_BOT_TOKEN: token } = await getSlackConfigAsync();
     if (!token) {
@@ -281,7 +279,8 @@ async function handleChannels(
 
     const rows = MANAGED.map((name) => {
       const ch = channels.find((c) => c.name === name);
-      if (!ch) return `❌ \`#${name}\` — *missing* (run \`/slack-channels-setup\`)`;
+      if (!ch)
+        return `❌ \`#${name}\` — *missing* (run \`/slack-channels-setup\`)`;
       const member = ch.is_member ? "✅ member" : "⚠️ not a member";
       return `• <#${ch.id}> — ${member}`;
     });
