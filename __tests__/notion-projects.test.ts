@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { resetIntegrationCache, IntegrationNotConfiguredError } from "@/lib/integrations";
 
 const mockNotionFetch = vi.fn();
@@ -53,9 +53,16 @@ function makeTaskPage(overrides: Record<string, unknown> = {}) {
 }
 
 describe("notion-projects.ts", () => {
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     resetIntegrationCache();
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    errorSpy.mockRestore();
   });
 
   describe("listProjects", () => {
