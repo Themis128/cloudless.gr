@@ -79,19 +79,12 @@ jobs:
 
   rollout:
     name: Rollout restart on k3s
-    runs-on: ubuntu-latest
+    # Runs on the self-hosted runner on omv-main — has direct kubectl access
+    # to the local k3s API (192.168.1.128:6443) without any VPN or tunnel.
+    runs-on: [self-hosted, omv]
     needs: build-and-push
 
     steps:
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Write kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-
       - name: Set image and rollout
         run: |
           kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
