@@ -30,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ github.sha }}
+      image_exists: ${{ steps.check_ecr.outputs.exists }}
 
     steps:
       - name: Checkout
@@ -44,23 +45,41 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Check if image tag already exists in ECR
+        id: check_ecr
+        run: |
+          if aws ecr describe-images \
+            --repository-name ${{ env.ECR_REPOSITORY }} \
+            --image-ids imageTag=${{ github.sha }} \
+            --region ${{ env.AWS_REGION }} \
+            --query 'imageDetails[0].imageTags' \
+            --output text 2>/dev/null | grep -q "${{ github.sha }}"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Image ${{ github.sha }} already in ECR — skipping build."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Image ${{ github.sha }} not found — will build and push."
+          fi
+
       - name: Set up QEMU (arm64 emulation)
+        if: steps.check_ecr.outputs.exists != 'true'
         uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64
 
       - name: Set up Docker Buildx
+        if: steps.check_ecr.outputs.exists != 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push Docker image
+        if: steps.check_ecr.outputs.exists != 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/arm64
           push: true
-          # Push SHA tag only — ECR has immutable tags so :latest is never
-          # overwritten from CI. The rollout job uses kubectl set image with
-          # the SHA tag so every deploy is pinned and fully reproducible.
+          # SHA tag only — ECR has immutable tags, :latest is never pushed.
+          # Rollout uses kubectl set image with this SHA for pinned, reproducible deploys.
           tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -85,8 +104,11 @@ jobs:
     name: Rollout restart on k3s
     # Runs on the self-hosted runner on omv-main — has direct kubectl access
     # to the local k3s API (192.168.1.128:6443) without any VPN or tunnel.
+    # Runs even if image already existed (build skipped) so re-dispatch always
+    # repoints the deployment to the correct SHA.
     runs-on: [self-hosted, omv]
     needs: build-and-push
+    if: always() && needs.build-and-push.result != 'cancelled'
 
     steps:
       - name: Set image and rollout
