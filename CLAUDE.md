@@ -28,6 +28,18 @@ When spawning sub-agents, follow these rules for optimal orchestration:
 - Agents return a **single summary message** — raw tool output stays out of the main context.
 - Use `run_in_background: true` only for genuinely independent work that does not block the next step.
 
+## Deployment to Pi (cloudless.online)
+
+**Workflow:** `.github/workflows/deploy-pi.yml` — triggers on every push to `main`.
+
+- **Job 1 `build-and-push`** (`ubuntu-latest`): builds `linux/arm64` Docker image via QEMU, pushes SHA-only tag to ECR (`278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:<sha>`). ECR repo has **immutable tags** — never push `:latest` from CI.
+- **Job 2 `rollout`** (`[self-hosted, omv]`): runs `kubectl set image` + `kubectl rollout status`. Must run on self-hosted runner — GitHub-hosted runners cannot reach the private LAN (`192.168.1.128:6443`).
+- **Auth:** OIDC via `AWS_DEPLOY_ROLE_ARN` secret — no static AWS keys.
+- **`NEXT_PUBLIC_*` vars** are baked into the Next.js client bundle at Docker build time as `--build-arg`. They are NOT available as runtime env vars — changes require a full image rebuild.
+- **SSM config** (API keys, Notion DB IDs, etc.) is fetched at runtime by the app via `getIntegrationsAsync()` using the `pi-standby-aws-creds` k8s Secret.
+
+**GitHub Secrets needed:** `AWS_DEPLOY_ROLE_ARN`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_COGNITO_USER_POOL_ID`, `NEXT_PUBLIC_COGNITO_CLIENT_ID`, `NEXT_PUBLIC_HUBSPOT_PORTAL_ID`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_META_PIXEL_ID`
+
 ## SonarCloud
 
 - Target: **0 new issues** on every PR before merge.
