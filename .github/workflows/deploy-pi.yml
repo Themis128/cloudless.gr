@@ -111,10 +111,30 @@ jobs:
     if: always() && needs.build-and-push.result != 'cancelled'
 
     steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Pre-pull image into containerd (k8s.io namespace)
+        # Pull the image directly into the containerd namespace that k3s uses
+        # (k8s.io) before triggering the rollout. This means the pod starts
+        # immediately rather than waiting 4+ min for in-rollout ECR pull.
+        # Uses sudo ctr (bundled with k3s) which correctly handles the k8s.io
+        # namespace and ECR auth. k3s ctr and crictl both ignore ECR credentials.
+        run: |
+          IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.sha }}"
+          ECR_TOKEN=$(aws ecr get-login-password --region ${{ env.AWS_REGION }})
+          echo "Pre-pulling ${IMAGE} into containerd k8s.io namespace..."
+          sudo ctr -n k8s.io images pull -u "AWS:${ECR_TOKEN}" "${IMAGE}"
+          echo "Pre-pull complete."
+
       - name: Set image and rollout
         run: |
           kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
             ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.sha }} \
             -n ${{ env.K3S_NAMESPACE }}
+          # Image is already local — rollout completes in <30s
           kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} \
-            -n ${{ env.K3S_NAMESPACE }} --timeout=600s
+            -n ${{ env.K3S_NAMESPACE }} --timeout=180s
