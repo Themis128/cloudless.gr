@@ -7,7 +7,10 @@ export async function GET(request: Request) {
   const locale = searchParams.get("locale") ?? undefined;
   const category = searchParams.get("category") ?? undefined;
 
-  const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_FAQS_DB_ID");
+  const configured = await isConfiguredAsync(
+    "NOTION_API_KEY",
+    "NOTION_FAQS_DB_ID",
+  );
 
   if (!configured) {
     let data = locale

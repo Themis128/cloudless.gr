@@ -18,10 +18,7 @@
  */
 
 import { notionFetchAll, extractText } from "@/lib/notion";
-import {
-  getIntegrationsAsync,
-  isConfiguredAsync,
-} from "@/lib/integrations";
+import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
 // ---------------------------------------------------------------------------
@@ -119,7 +116,10 @@ function mapPage(page: any): Faq {
  * Falls back to staticFaqs when Notion is not configured.
  */
 export async function getFaqs(locale?: string): Promise<Faq[]> {
-  const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_FAQS_DB_ID");
+  const configured = await isConfiguredAsync(
+    "NOTION_API_KEY",
+    "NOTION_FAQS_DB_ID",
+  );
   if (!configured) {
     return locale
       ? staticFaqs.filter(

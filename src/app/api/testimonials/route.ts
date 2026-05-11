@@ -20,7 +20,11 @@ export async function GET(request: Request) {
       ? staticTestimonials.filter((t) => t.featured)
       : staticTestimonials;
     return NextResponse.json(
-      { testimonials: data, source: "static", fallbackReason: "not-configured" },
+      {
+        testimonials: data,
+        source: "static",
+        fallbackReason: "not-configured",
+      },
       { headers: { "x-cms-source": "static" } },
     );
   }

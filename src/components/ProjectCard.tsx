@@ -101,7 +101,9 @@ export default function ProjectCard({
         <div className="h-1 w-full overflow-hidden rounded-full bg-slate-800">
           <div
             className={`h-full rounded-full transition-all ${statusStyle.bar}`}
-            style={{ width: `${Math.min(100, Math.max(0, project.progress))}%` }}
+            style={{
+              width: `${Math.min(100, Math.max(0, project.progress))}%`,
+            }}
           />
         </div>
       </div>
@@ -135,7 +137,9 @@ export default function ProjectCard({
           >
             {project.type}
           </span>
-          <span className={`font-mono text-[10px] font-semibold ${priorityColor}`}>
+          <span
+            className={`font-mono text-[10px] font-semibold ${priorityColor}`}
+          >
             {priorityIcon} {project.priority}
           </span>
         </div>
@@ -143,7 +147,7 @@ export default function ProjectCard({
           <span className="font-mono text-[10px] text-slate-600">
             {startFmt && dueFmt
               ? `${startFmt} → ${dueFmt}`
-              : startFmt ?? dueFmt}
+              : (startFmt ?? dueFmt)}
           </span>
         )}
       </div>

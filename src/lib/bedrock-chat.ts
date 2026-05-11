@@ -23,8 +23,7 @@ import { CHAT_TOOLS, runTool } from "@/lib/chat-tools";
 
 const BEDROCK_REGION = process.env.AWS_REGION ?? "us-east-1";
 const BEDROCK_MODEL_ID =
-  process.env.BEDROCK_MODEL_ID ??
-  "us.anthropic.claude-3-5-haiku-20241022-v1:0";
+  process.env.BEDROCK_MODEL_ID ?? "us.anthropic.claude-3-5-haiku-20241022-v1:0";
 
 const MAX_TOKENS = 600;
 const MAX_TOOL_ITERATIONS = 4;

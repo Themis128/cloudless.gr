@@ -97,9 +97,7 @@ export default async function CaseStudiesPage() {
           <span className="mb-4 inline-block rounded-full border border-[#00fff5]/30 bg-[#00fff5]/10 px-4 py-1 text-sm text-[#00fff5]">
             Results that speak for themselves
           </span>
-          <h1 className="mb-4 text-4xl font-bold md:text-5xl">
-            Case Studies
-          </h1>
+          <h1 className="mb-4 text-4xl font-bold md:text-5xl">Case Studies</h1>
           <p className="mx-auto max-w-2xl text-lg text-gray-400">
             Real engagements, real numbers. Here&apos;s how Cloudless helped
             businesses reduce cloud spend, modernise infrastructure, and ship

@@ -220,11 +220,11 @@ function slackTimestamp(): string {
  * Run `/slack-channels-setup` to provision missing channels automatically.
  * Falls back gracefully (channel_not_found → null) if a channel doesn't exist.
  */
-const bookingsClient    = new SlackClient({ channel: "#bookings" });
-const ordersClient      = new SlackClient({ channel: "#orders" });
-const errorsClient      = new SlackClient({ channel: "#errors" });
+const bookingsClient = new SlackClient({ channel: "#bookings" });
+const ordersClient = new SlackClient({ channel: "#orders" });
+const errorsClient = new SlackClient({ channel: "#errors" });
 const deploymentsClient = new SlackClient({ channel: "#deployments" });
-const contactsClient    = new SlackClient({ channel: "#contacts" });
+const contactsClient = new SlackClient({ channel: "#contacts" });
 const subscribersClient = new SlackClient({ channel: "#subscribers" });
 
 /** Fallback client for unrouted / legacy messages. */
@@ -411,7 +411,9 @@ export async function slackBookingNotify(data: {
           `*Name:* ${safeName}`,
           `*Email:* ${safeEmail}`,
           `*Time:* ${dateStr} (Athens)`,
-          ...(data.meetLink ? [`*Meet:* <${data.meetLink}|Join Google Meet>`] : []),
+          ...(data.meetLink
+            ? [`*Meet:* <${data.meetLink}|Join Google Meet>`]
+            : []),
         ].join("\n"),
       ),
       ...(data.notes
