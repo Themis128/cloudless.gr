@@ -420,5 +420,24 @@
     "title": "Page introuvable",
     "body": "La page que vous recherchez n'existe pas ou a été déplacée.",
     "cta": "Retour à l'accueil"
+  },
+  "blog": {
+    "label": "[ BLOG ]",
+    "titleStatic": "Insights &",
+    "titleHighlight": "guides pratiques",
+    "subtitle": "Architecture cloud, serverless, analytics et marketing IA — rédigés pour les fondateurs et équipes techniques qui veulent avancer vite.",
+    "searchPlaceholder": "Rechercher des articles…",
+    "filtering": "Filtrage :",
+    "clearAll": "Tout effacer",
+    "noPostsFound": "Aucun article trouvé.",
+    "viewAllPosts": "Voir tous les articles",
+    "readMore": "Lire la suite",
+    "prevPage": "← Préc.",
+    "nextPage": "Suiv. →",
+    "categories": "Catégories",
+    "tags": "Étiquettes",
+    "by": "par",
+    "result": "résultat",
+    "results": "résultats"
   }
 }
