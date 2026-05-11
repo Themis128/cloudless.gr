@@ -363,7 +363,7 @@ describe("slackBookingNotify", () => {
     const bodyStr = JSON.stringify(body);
     expect(bodyStr).toContain("Alice");
     expect(bodyStr).toContain("alice@example.com");
-    expect(body.icon_url).toBe("https://cloudless.gr/favicon.ico");
+    expect(body.icon_url).toBe("https://cloudless.gr/icons/icon-512.png");
   });
 
   it("includes notes when provided", async () => {
@@ -484,7 +484,7 @@ describe("slackDeployNotify", () => {
 
     const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(opts.body as string);
-    expect(body.icon_url).toBe("https://cloudless.gr/favicon.ico");
+    expect(body.icon_url).toBe("https://cloudless.gr/icons/icon-512.png");
   });
 
   it("truncates commitSha to 7 characters", async () => {

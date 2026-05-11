@@ -197,6 +197,78 @@ export async function joinChannel(
 }
 
 /**
+ * Fetch metadata for a single channel by ID.
+ * Docs: https://api.slack.com/methods/conversations.info
+ */
+export async function getChannelInfo(
+  channelId: string,
+  token: string,
+): Promise<SlackChannel> {
+  const res = await slackGet(
+    "conversations.info",
+    { channel: channelId },
+    token,
+  );
+  if (!res.ok || !res.channel)
+    throw new Error(`[SlackAdmin] conversations.info: ${res.error}`);
+  return res.channel;
+}
+
+/**
+ * Set the purpose (description) of a channel.
+ * Docs: https://api.slack.com/methods/conversations.setPurpose
+ */
+export async function setChannelPurpose(
+  channelId: string,
+  purpose: string,
+  token: string,
+): Promise<void> {
+  const res = await slackPost(
+    "conversations.setPurpose",
+    { channel: channelId, purpose },
+    token,
+  );
+  if (!res.ok)
+    throw new Error(`[SlackAdmin] conversations.setPurpose: ${res.error}`);
+}
+
+/**
+ * Rename a channel.
+ * Docs: https://api.slack.com/methods/conversations.rename
+ */
+export async function renameChannel(
+  channelId: string,
+  name: string,
+  token: string,
+): Promise<SlackChannel> {
+  const res = await slackPost(
+    "conversations.rename",
+    { channel: channelId, name },
+    token,
+  );
+  if (!res.ok || !res.channel)
+    throw new Error(`[SlackAdmin] conversations.rename: ${res.error}`);
+  return res.channel;
+}
+
+/**
+ * Archive a channel (bot must be a member or have channels:manage scope).
+ * Docs: https://api.slack.com/methods/conversations.archive
+ */
+export async function archiveChannel(
+  channelId: string,
+  token: string,
+): Promise<void> {
+  const res = await slackPost(
+    "conversations.archive",
+    { channel: channelId },
+    token,
+  );
+  if (!res.ok && res.error !== "already_archived")
+    throw new Error(`[SlackAdmin] conversations.archive: ${res.error}`);
+}
+
+/**
  * Invite one or more users (by Slack user ID) to a channel.
  * Docs: https://docs.slack.dev/reference/methods/conversations.invite
  */
