@@ -9,21 +9,24 @@ test.describe("Authentication", () => {
   test("login page exposes email and password fields", async ({ page }) => {
     await page.goto("/auth/login");
     await expect(page).toHaveURL(/\/auth\/login/);
-    await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i).first()).toBeVisible();
+    // Page has Suspense + AuthContext init — wait for the form to hydrate.
+    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByLabel(/password/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("signup page exposes name, email and password fields", async ({ page }) => {
     await page.goto("/auth/signup");
     await expect(page).toHaveURL(/\/auth\/signup/);
-    await expect(page.getByLabel(/name/i)).toBeVisible();
-    await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/^password/i)).toBeVisible();
+    await expect(page.getByLabel(/name/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByLabel(/^password/i)).toBeVisible({ timeout: 10_000 });
   });
 
   test("forgot-password page is reachable from login", async ({ page }) => {
     await page.goto("/auth/login");
+    // Wait for Suspense + AuthContext to resolve before the link appears.
+    await page.getByRole("link", { name: /forgot/i }).waitFor({ state: "visible", timeout: 10_000 });
     await page.getByRole("link", { name: /forgot/i }).click();
-    await expect(page).toHaveURL(/\/auth\/forgot-password/);
+    await expect(page).toHaveURL(/\/auth\/forgot-password/, { timeout: 10_000 });
   });
 });

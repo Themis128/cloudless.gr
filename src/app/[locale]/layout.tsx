@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { routing } from "@/i18n/routing";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import TrainingBanner from "@/components/TrainingBanner";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import JsonLd from "@/components/JsonLd";
@@ -70,6 +71,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         <CartProvider>
           <CookieConsentProvider>
             <JsonLd data={getOrganizationSchema()} />
+            <TrainingBanner locale={locale} />
             <Navbar />
             <main id="main-content" className="flex-1">
               {children}

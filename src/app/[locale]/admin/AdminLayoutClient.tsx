@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
@@ -34,10 +34,18 @@ import {
   Settings,
   LayoutGrid,
   Ticket,
+  Activity,
+  Server,
+  ExternalLink,
   type LucideIcon,
 } from "lucide-react";
 
-type AdminLink = { href: string; label: string; Icon: LucideIcon };
+type AdminLink = {
+  href: string;
+  label: string;
+  Icon: LucideIcon;
+  external?: boolean;
+};
 type AdminGroup = { label: string; links: AdminLink[] };
 
 const adminGroups: AdminGroup[] = [
@@ -103,6 +111,23 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/settings", label: "Settings", Icon: Settings },
     ],
   },
+  {
+    label: "Infrastructure",
+    links: [
+      {
+        href: "https://grafana.cloudless.online",
+        label: "Grafana",
+        Icon: Activity,
+        external: true,
+      },
+      {
+        href: "https://manage.cloudless.online",
+        label: "Cluster Manager",
+        Icon: Server,
+        external: true,
+      },
+    ],
+  },
 ];
 
 function NavList({
@@ -120,18 +145,34 @@ function NavList({
             {group.label}
           </p>
           <div className="space-y-0.5">
-            {group.links.map(({ href, label, Icon }) => {
-              const active = isActive(href);
-              return (
+            {group.links.map(({ href, label, Icon, external }) => {
+              const active = !external && isActive(href);
+              const cls = `flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 font-mono text-sm transition-all ${
+                active
+                  ? "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20 border"
+                  : "text-slate-400 hover:bg-void-lighter/50 hover:text-white"
+              }`;
+              return external ? (
+                <a
+                  key={href}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cls}
+                >
+                  <Icon size={15} className="shrink-0" />
+                  {label}
+                  <ExternalLink
+                    size={11}
+                    className="ml-auto shrink-0 opacity-40"
+                  />
+                </a>
+              ) : (
                 <Link
                   key={href}
                   href={href}
                   onClick={onLinkClick}
-                  className={`flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 font-mono text-sm transition-all ${
-                    active
-                      ? "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20 border"
-                      : "text-slate-400 hover:bg-void-lighter/50 hover:text-white"
-                  }`}
+                  className={cls}
                 >
                   <Icon size={15} className="shrink-0" />
                   {label}
@@ -163,7 +204,8 @@ export default function AdminLayoutClient({
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
-        router.push("/auth/login");
+        // Include ?next so the login page can bounce back after sign-in
+        router.push("/auth/login?next=/admin");
       } else if (!isAdmin) {
         router.push("/dashboard");
       }

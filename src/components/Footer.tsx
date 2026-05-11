@@ -157,7 +157,19 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-neon-cyan/10 mt-6 flex flex-col items-center justify-between gap-4 border-t pt-6 font-mono text-xs sm:flex-row">
+        {/* Training / non-commercial notice — always visible */}
+        <div className="border-neon-cyan/10 mt-6 border-t pt-6">
+          <p className="text-center font-mono text-[10px] leading-relaxed text-amber-500/70">
+            ⚠{" "}
+            {translate(
+              locale,
+              "footer.trainingNotice",
+              "This website is a training and portfolio project built for educational purposes only. It is not a commercial service and does not accept clients.",
+            )}
+          </p>
+        </div>
+
+        <div className="border-neon-cyan/10 mt-4 flex flex-col items-center justify-between gap-4 border-t pt-5 font-mono text-xs sm:flex-row">
           <p className="text-slate-400">
             &copy; {new Date().getFullYear()} Cloudless.{" "}
             {translate(locale, "footer.rightsReserved", "All rights reserved.")}

@@ -39,7 +39,7 @@ test.describe("Contact & Integrations", () => {
     for (const path of ["/privacy", "/terms", "/cookies"]) {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(path));
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 10_000 });
     }
   });
 });

@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
-import { getAnthropicApiKey, getAnthropicChatModel } from "@/lib/anthropic";
 import { escapeHtml } from "@/lib/escape-html";
-import { CHAT_TOOLS, runTool } from "@/lib/chat-tools";
+import { runBedrockChatLoop } from "@/lib/bedrock-chat";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,9 +22,12 @@ Key facts:
 - Based in Greece, serves EU and international clients
 - Contact: via the Contact page or book a free audit
 
-You have two tools:
+You have three tools:
 - lookup_product(query): search the storefront for a service or product. Use this when the visitor asks about a specific service, package, or pricing.
-- check_calendar_availability(days_ahead): look up open consultation slots. Use this when the visitor asks to book or see availability.
+- check_calendar_availability(days_ahead?): look up open 30-minute consultation slots. Use this when the visitor asks to book or see availability.
+- book_slot(name, email, start, end, notes?): confirm a booking. Call ONLY after the visitor has picked a specific slot from check_calendar_availability AND provided their name and email. Use start/end exactly as returned by check_calendar_availability.
+
+Booking flow: (1) call check_calendar_availability → show slots → (2) ask visitor to pick one and share their name + email → (3) call book_slot → confirm with Meet link. Never invent slot times. Collect name and email before calling book_slot.
 
 Use tools when their output would be more accurate than your memory (specific prices, real availability). Don't call a tool just to confirm what you already know. After a tool returns, summarize the result in plain language and include any URLs the tool gave you so the visitor can click through.
 
@@ -33,42 +35,8 @@ Keep answers concise (2–4 sentences max). If someone asks about pricing not su
 
 const MAX_USER_MESSAGE = 500;
 const MAX_TURNS = 10;
-const MAX_TOKENS = 600;
-const MAX_TOOL_ITERATIONS = 4;
-const ANTHROPIC_TIMEOUT_MS = 20_000;
-const ROLE_ASSISTANT = "assistant";
 
 const encoder = new TextEncoder();
-
-// ---------------------------------------------------------------------------
-// Anthropic message-shape types — narrow versions of the SDK's Message type.
-// We only model what we read.
-// ---------------------------------------------------------------------------
-
-type ContentBlock =
-  | { type: "text"; text: string }
-  | {
-      type: "tool_use";
-      id: string;
-      name: string;
-      input: unknown;
-    };
-
-type ToolResultBlock = {
-  type: "tool_result";
-  tool_use_id: string;
-  content: string;
-};
-
-interface AnthropicResponse {
-  stop_reason?: string;
-  content?: ContentBlock[];
-}
-
-interface ConversationMessage {
-  role: "user" | "assistant";
-  content: string | ContentBlock[] | ToolResultBlock[];
-}
 
 // ---------------------------------------------------------------------------
 // Input parsing
@@ -102,100 +70,13 @@ function parseMessages(
     )
     .slice(-MAX_TURNS)
     .map((m): { role: "user" | "assistant"; content: string } => ({
-      role: m.role === ROLE_ASSISTANT ? "assistant" : "user",
+      role: m.role === "assistant" ? "assistant" : "user",
       content: m.content.slice(0, MAX_USER_MESSAGE).trim(),
     }))
     .filter((m) => m.content.length > 0);
 
   if (result.length === 0) throw new Error("INVALID_BODY");
   return result;
-}
-
-// ---------------------------------------------------------------------------
-// Tool-use loop — non-streaming, calls Anthropic until stop_reason !== tool_use
-// ---------------------------------------------------------------------------
-
-async function callAnthropic(
-  apiKey: string,
-  model: string,
-  messages: ConversationMessage[],
-): Promise<AnthropicResponse> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      tools: CHAT_TOOLS,
-      messages,
-    }),
-    signal: AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS),
-  });
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    console.error(
-      `[chat] anthropic returned ${res.status}: ${detail.slice(0, 500)}`,
-    );
-    throw new Error(`ANTHROPIC_${res.status}`);
-  }
-
-  return (await res.json()) as AnthropicResponse;
-}
-
-async function executeToolBlocks(
-  blocks: ContentBlock[],
-): Promise<ToolResultBlock[]> {
-  const toolUses = blocks.filter(
-    (b): b is Extract<ContentBlock, { type: "tool_use" }> =>
-      b.type === "tool_use",
-  );
-  return Promise.all(
-    toolUses.map(async (b) => ({
-      type: "tool_result" as const,
-      tool_use_id: b.id,
-      content: await runTool(b.name, b.input),
-    })),
-  );
-}
-
-function extractFinalText(blocks: ContentBlock[] | undefined): string {
-  if (!blocks) return "";
-  return blocks
-    .filter(
-      (b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text",
-    )
-    .map((b) => b.text)
-    .join("");
-}
-
-async function runChatLoop(
-  apiKey: string,
-  model: string,
-  initialMessages: { role: "user" | "assistant"; content: string }[],
-): Promise<string> {
-  const messages: ConversationMessage[] = [...initialMessages];
-  for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-    const response = await callAnthropic(apiKey, model, messages);
-    const blocks = response.content ?? [];
-
-    if (response.stop_reason !== "tool_use") {
-      return extractFinalText(blocks);
-    }
-
-    messages.push({ role: "assistant", content: blocks });
-    const toolResults = await executeToolBlocks(blocks);
-    messages.push({ role: "user", content: toolResults });
-  }
-
-  // Hit iteration cap without a final answer.
-  console.warn("[chat] hit MAX_TOOL_ITERATIONS without a final response");
-  return "I'm having trouble pulling that together right now. Could you share a bit more detail or use the Contact page to reach Themis directly?";
 }
 
 // ---------------------------------------------------------------------------
@@ -239,21 +120,20 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const apiKey = await getAnthropicApiKey();
-  if (!apiKey) {
-    return Response.json(
-      { error: "Chat not available right now. Please use the Contact page." },
-      { status: 503 },
-    );
-  }
-
-  const model = await getAnthropicChatModel();
-
   let finalText: string;
   try {
-    finalText = await runChatLoop(apiKey, model, messages);
+    finalText = await runBedrockChatLoop(SYSTEM_PROMPT, messages);
   } catch (err) {
-    console.error("[chat] tool-use loop failed:", err);
+    const name = err instanceof Error ? err.name : "";
+    console.error("[chat] bedrock loop failed:", err);
+    // Access/auth errors → config issue on our side; surface as 503.
+    // Transient errors (throttling, model unavailable, etc.) → 502.
+    if (name === "AccessDeniedException" || name === "UnauthorizedException") {
+      return Response.json(
+        { error: "Chat not available right now. Please use the Contact page." },
+        { status: 503 },
+      );
+    }
     return Response.json({ error: "AI service unavailable." }, { status: 502 });
   }
 

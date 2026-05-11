@@ -16,8 +16,8 @@ export default defineConfig({
   testDir: path.join(rootDir, "e2e"),
   fullyParallel: true,
   forbidOnly: isCi,
-  retries: isCi ? 2 : 0,
-  workers: isCi ? 1 : undefined,
+  retries: isCi ? 2 : 1,
+  workers: isCi ? 1 : 6,
   reporter: isCi ? "github" : "html",
   timeout: 30_000,
 

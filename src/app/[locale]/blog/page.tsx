@@ -8,6 +8,8 @@ import { isConfigured } from "@/lib/integrations";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { translate } from "@/lib/i18n";
+import { getServerLocale } from "@/lib/server-locale";
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
@@ -41,6 +43,8 @@ export default async function BlogPage({
 }: {
   searchParams: SearchParams;
 }) {
+  const locale = await getServerLocale();
+  const t = (key: string, fallback: string) => translate(locale, key, fallback);
   const resolvedParams = await searchParams;
   const currentPage = Math.max(
     1,
@@ -163,17 +167,19 @@ export default async function BlogPage({
         <div className="bg-neon-cyan/5 animate-float-slow absolute top-0 left-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl" />
         <div className="relative z-10 mx-auto max-w-6xl px-6">
           <p className="animate-shimmer-text mb-3 font-mono text-xs font-medium tracking-[0.3em]">
-            [ BLOG ]
+            {t("blog.label", "[ BLOG ]")}
           </p>
           <h1 className="font-heading animate-fade-in-up text-3xl leading-tight font-bold text-white delay-100 md:text-5xl">
-            Insights &amp;{" "}
+            {t("blog.titleStatic", "Insights &")}{" "}
             <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
-              practical guides
+              {t("blog.titleHighlight", "practical guides")}
             </span>
           </h1>
           <p className="animate-fade-in-up mt-6 max-w-xl text-lg text-slate-400 delay-200">
-            Cloud architecture, serverless, analytics, and AI marketing —
-            written for founders and technical teams who want to move fast.
+            {t(
+              "blog.subtitle",
+              "Cloud architecture, serverless, analytics, and AI marketing — written for founders and technical teams who want to move fast.",
+            )}
           </p>
 
           {/* Search bar */}
@@ -187,7 +193,7 @@ export default async function BlogPage({
                 type="text"
                 name="q"
                 defaultValue={searchQuery}
-                placeholder="Search posts…"
+                placeholder={t("blog.searchPlaceholder", "Search posts…")}
                 className="w-full rounded-lg border border-slate-700 bg-void-light/50 px-4 py-2.5 pl-10 font-mono text-sm text-white placeholder-slate-600 backdrop-blur-sm transition-colors focus:border-neon-cyan/50 focus:outline-none"
               />
               <svg
@@ -216,7 +222,7 @@ export default async function BlogPage({
               {(activeCategory || activeTag || searchQuery) && (
                 <div className="mb-6 flex flex-wrap items-center gap-2">
                   <span className="font-mono text-xs text-slate-500">
-                    Filtering:
+                    {t("blog.filtering", "Filtering:")}
                   </span>
                   {searchQuery && (
                     <Link
@@ -246,7 +252,7 @@ export default async function BlogPage({
                     href="/blog"
                     className="font-mono text-xs text-slate-500 hover:text-slate-300"
                   >
-                    Clear all
+                    {t("blog.clearAll", "Clear all")}
                   </Link>
                 </div>
               )}
@@ -254,18 +260,23 @@ export default async function BlogPage({
               {/* Results count */}
               {filteredPosts.length !== allPosts.length && (
                 <p className="mb-4 font-mono text-xs text-slate-500">
-                  {total} result{total !== 1 ? "s" : ""}
+                  {total}{" "}
+                  {total !== 1
+                    ? t("blog.results", "results")
+                    : t("blog.result", "result")}
                 </p>
               )}
 
               {posts.length === 0 ? (
                 <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
-                  <p className="font-mono text-slate-500">No posts found.</p>
+                  <p className="font-mono text-slate-500">
+                    {t("blog.noPostsFound", "No posts found.")}
+                  </p>
                   <Link
                     href="/blog"
                     className="text-neon-cyan mt-2 inline-block font-mono text-sm hover:underline"
                   >
-                    View all posts
+                    {t("blog.viewAllPosts", "View all posts")}
                   </Link>
                 </div>
               ) : (
@@ -312,12 +323,12 @@ export default async function BlogPage({
                             </time>
                             {post.author && (
                               <span className="font-mono text-xs text-slate-600">
-                                by {post.author}
+                                {t("blog.by", "by")} {post.author}
                               </span>
                             )}
                           </div>
                           <span className="text-neon-cyan inline-flex items-center gap-1 font-mono text-sm font-semibold transition-all group-hover:gap-2">
-                            Read more
+                            {t("blog.readMore", "Read more")}
                             <svg
                               width="14"
                               height="14"
@@ -355,7 +366,7 @@ export default async function BlogPage({
                       href={pageUrl(currentPage - 1)}
                       className="rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-slate-400 transition-colors hover:border-neon-cyan/30 hover:text-neon-cyan"
                     >
-                      ← Prev
+                      {t("blog.prevPage", "← Prev")}
                     </Link>
                   )}
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(
@@ -378,7 +389,7 @@ export default async function BlogPage({
                       href={pageUrl(currentPage + 1)}
                       className="rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-slate-400 transition-colors hover:border-neon-cyan/30 hover:text-neon-cyan"
                     >
-                      Next →
+                      {t("blog.nextPage", "Next →")}
                     </Link>
                   )}
                 </nav>
@@ -393,7 +404,7 @@ export default async function BlogPage({
                   {categories.length > 0 && (
                     <div>
                       <h3 className="mb-3 font-mono text-xs font-medium tracking-widest text-slate-500 uppercase">
-                        Categories
+                        {t("blog.categories", "Categories")}
                       </h3>
                       <ul className="space-y-1">
                         {categories.map(([cat, count]) => (
@@ -423,7 +434,7 @@ export default async function BlogPage({
                   {tags.length > 0 && (
                     <div>
                       <h3 className="mb-3 font-mono text-xs font-medium tracking-widest text-slate-500 uppercase">
-                        Tags
+                        {t("blog.tags", "Tags")}
                       </h3>
                       <div className="flex flex-wrap gap-1.5">
                         {tags.slice(0, 20).map(([tag, count]) => (

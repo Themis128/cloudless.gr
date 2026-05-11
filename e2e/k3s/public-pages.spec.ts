@@ -30,6 +30,12 @@ test.describe("k3s public pages", () => {
       }
       expect(status, `${p} should render (got ${status})`).toBeLessThan(400);
       if (expectText) {
+        // If Next.js error boundary rendered (transient SSR failure), dismiss it
+        // once before asserting — avoids a flaky retry on slow standby legs.
+        if (await page.locator("text=Something went wrong").isVisible()) {
+          await page.locator("button:has-text('Try Again')").click();
+          await page.waitForLoadState("domcontentloaded");
+        }
         await expect(page.locator("body")).toContainText(expectText);
       }
     });

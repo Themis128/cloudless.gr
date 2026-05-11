@@ -10,7 +10,7 @@ import { type NextRequest, NextResponse } from "next/server";
  */
 export function GET(_req: NextRequest) {
   const manifest = {
-    name: "Cloudless \u2014 Cloud Computing, Serverless & AI Marketing",
+    name: "Cloudless - Cloud Computing, Serverless & AI Marketing",
     short_name: "Cloudless",
     description:
       "Cloud architecture, serverless development, data analytics, and AI-powered marketing for startups and SMBs.",

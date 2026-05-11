@@ -35,7 +35,7 @@ function buildOAuthHeader(
   const params: Record<string, string> = {
     oauth_consumer_key: apiKey,
     oauth_nonce: nonce,
-    oauth_signature_method: "HMAC-SHA1",
+    oauth_signature_method: "HMAC-SHA1", // lgtm[js/weak-cryptographic-algorithm] -- required by OAuth 1.0a spec (X Ads API mandates HMAC-SHA1)
     oauth_timestamp: ts,
     oauth_token: accessToken,
     oauth_version: "1.0",
@@ -46,6 +46,7 @@ function buildOAuthHeader(
     .join("&");
   const baseStr = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramStr)}`;
   const sigKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessSecret)}`;
+  // lgtm[js/weak-cryptographic-algorithm] -- HMAC-SHA1 required by OAuth 1.0a spec
   const sig = createHmac("sha1", sigKey).update(baseStr).digest("base64");
   params.oauth_signature = sig;
   const header =

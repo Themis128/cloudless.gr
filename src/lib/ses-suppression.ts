@@ -38,10 +38,16 @@ export async function addToSuppressionList(email: string): Promise<boolean> {
         Reason: "COMPLAINT",
       }),
     );
-    console.warn(`[SES] Added to suppression list: ${email}`);
+    // Log domain only to avoid leaking full email addresses into logs
+    const domain = email.includes("@") ? email.split("@")[1] : "(no-domain)";
+    console.warn(`[SES] Added to suppression list: *@${domain}`);
     return true;
   } catch (err) {
-    console.error(`[SES] Failed to suppress ${email}:`, err);
+    const domain = email.includes("@") ? email.split("@")[1] : "(no-domain)";
+    console.error(
+      `[SES] Failed to suppress *@${domain}:`,
+      (err as Error)?.message ?? "unknown error",
+    );
     return false;
   }
 }

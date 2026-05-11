@@ -74,6 +74,15 @@ interface TimeSlot {
  * during business hours (09:00-17:00 Athens time, weekdays only).
  */
 export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
+  // Fast-path: check env vars before SSM so tests that stub them to "" don't
+  // get real credentials from SSM. Mirrors the pattern in isConfiguredAsync.
+  if (
+    process.env.GOOGLE_CLIENT_EMAIL === "" ||
+    process.env.GOOGLE_PRIVATE_KEY === ""
+  ) {
+    throw new Error("Google service account not configured");
+  }
+
   const { GOOGLE_CALENDAR_ID } = await getConfig();
   const calendarId = GOOGLE_CALENDAR_ID ?? DEFAULT_CALENDAR_ID;
 

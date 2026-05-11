@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
@@ -13,8 +14,8 @@ function LoginContent() {
   const { signIn, completeNewPassword, user, isAdmin, isLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  // ?next=/portal/waiting%3Fplan%3Dbundle — forwarded from signup or services page CTA
-  const nextParam = searchParams.get("next");
+  // ?next= (preferred) or ?redirect= (legacy / AdminLayoutClient compat)
+  const nextParam = searchParams.get("next") ?? searchParams.get("redirect");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");

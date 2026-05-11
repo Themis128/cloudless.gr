@@ -82,10 +82,61 @@ Three config files initialise the SDK for each Next.js runtime:
 | File | Runtime | Sample rate | Notes |
 |------|---------|-------------|-------|
 | `sentry.client.config.ts` | Browser | traces 10 %, replays 10 % (errors 100 %) | Session replay with `maskAllText` + `blockAllMedia`; `ignoreErrors` list for benign browser noise; tunnelled through `/monitoring` |
-| `sentry.server.config.ts` | Node.js | traces 10 % | `skipOpenTelemetrySetup: true` in dev (Turbopack + OTel incompatibility) |
+| `sentry.server.config.ts` | Node.js | traces 10 % | `skipOpenTelemetrySetup: true` in dev (Turbopack + OTel incompatibility); `beforeSend` wires Slack alerting + PII scrubbing; `beforeBreadcrumb` scrubs breadcrumbs |
 | `sentry.edge.config.ts` | Edge runtime | traces 5 % | Minimal config |
 
 All three read `NEXT_PUBLIC_SENTRY_DSN`, `NODE_ENV`, and `NEXT_PUBLIC_APP_VERSION`.
+
+---
+
+## Slack Error Alerting (`beforeSend`)
+
+`sentry.server.config.ts` wires a `beforeSend` callback that **automatically forwards server errors to Slack** without any manual calls from route handlers.
+
+### How it works
+
+```mermaid
+sequenceDiagram
+    participant Route as Any Server Route
+    participant Sentry as Sentry SDK
+    participant BS as beforeSend (sentry.server.config.ts)
+    participant Dedup as maybeAlertSlack() — rate limiter
+    participant Slack as slackErrorNotify()
+
+    Route->>Sentry: Unhandled exception / captureException
+    Sentry->>BS: beforeSend(event, hint)
+    BS->>Dedup: Check fingerprint cooldown (5 min)
+    alt Already alerted within 5 min
+        Dedup-->>BS: skip
+    else New or expired fingerprint
+        Dedup->>Slack: slackErrorNotify({ title, message, route, error })
+        Note over Slack: Posts to #errors channel
+    end
+    BS->>BS: scrubEvent(event, hint)
+    BS-->>Sentry: Return scrubbed event
+```
+
+### `maybeAlertSlack(event, hint)` — rate-limited Slack alert
+
+| Behaviour | Detail |
+|-----------|--------|
+| **Trigger** | `event.level === "error"` or `"fatal"` only — warnings and info are ignored |
+| **Rate limit** | One alert per unique fingerprint per **5 minutes** (`ALERT_COOLDOWN_MS = 300_000`) |
+| **Fingerprint** | `event.fingerprint` joined as string, falling back to `event.message` |
+| **Route tagging** | Strips `https://cloudless.gr` from `event.request.url` for a clean path label |
+| **Lazy import** | `@/lib/slack-notify` is imported dynamically to avoid circular dependency at module load |
+| **Never blocks** | Wrapped in `.catch(() => {})` — Slack failure never suppresses the Sentry event |
+
+### PII Scrubbing (`src/lib/sentry-scrub.ts`)
+
+`scrubEvent()` and `scrubBreadcrumb()` are applied in `beforeSend` / `beforeBreadcrumb` respectively. They strip sensitive values from:
+
+- Request headers (`Authorization`, `Cookie`, `Set-Cookie`, `X-Api-Key`, etc.)
+- Query string parameters (`token`, `key`, `secret`, `password`, etc.)
+- Request body fields (`password`, `card`, `cvv`, `ssn`, etc.)
+- Breadcrumb data with the same patterns
+
+No PII leaves the runtime in Sentry events.
 
 ---
 
@@ -229,8 +280,9 @@ Test coverage (15 tests):
 | File | Purpose |
 |------|---------|
 | `src/lib/sentry.ts` | REST API client — issue queries, status updates, token verification |
+| `src/lib/sentry-scrub.ts` | `scrubEvent()` and `scrubBreadcrumb()` — PII removal before events leave the runtime |
 | `sentry.client.config.ts` | Browser SDK: session replay, ignoreErrors, tunnel |
-| `sentry.server.config.ts` | Node.js SDK: OTel workaround for dev/Turbopack |
+| `sentry.server.config.ts` | Node.js SDK: OTel workaround for dev/Turbopack; `beforeSend` Slack alerting + scrubbing |
 | `sentry.edge.config.ts` | Edge runtime SDK |
 | `src/app/api/admin/ops/errors/route.ts` | GET unresolved issues |
 | `src/app/api/admin/ops/errors/[id]/route.ts` | PUT update issue status |

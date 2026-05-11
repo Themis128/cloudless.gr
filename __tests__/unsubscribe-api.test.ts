@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const notifyTeamMock = vi.fn();
+const sendUnsubscribeConfirmationMock = vi.fn();
 const addToSuppressionListMock = vi.fn();
 
 vi.mock("@/lib/email", () => ({
   notifyTeam: notifyTeamMock,
+  sendUnsubscribeConfirmation: sendUnsubscribeConfirmationMock,
 }));
 
 vi.mock("@/lib/ses-suppression", () => ({
@@ -21,6 +23,7 @@ describe("POST /api/unsubscribe", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     notifyTeamMock.mockResolvedValue(undefined);
+    sendUnsubscribeConfirmationMock.mockResolvedValue(undefined);
     addToSuppressionListMock.mockResolvedValue(true);
   });
 
@@ -94,6 +97,7 @@ describe("GET /api/unsubscribe", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     notifyTeamMock.mockResolvedValue(undefined);
+    sendUnsubscribeConfirmationMock.mockResolvedValue(undefined);
     addToSuppressionListMock.mockResolvedValue(true);
   });
 

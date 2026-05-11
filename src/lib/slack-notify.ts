@@ -36,6 +36,9 @@ interface PostMessagePayload {
   blocks?: BlockKitBlock[];
   username?: string;
   icon_emoji?: string;
+  icon_url?: string;
+  /** Reply in thread — pass the parent message's `ts` value. */
+  thread_ts?: string;
 }
 
 interface SlackApiResponse {
@@ -51,7 +54,8 @@ const CHAT_POST_URL = "https://slack.com/api/chat.postMessage";
 const STATUS_SUCCEEDED = "succeeded";
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 500;
-const BOT_USERNAME = "Cloudless Bot";
+const BOT_USERNAME = "Cloudless";
+const BOT_ICON_URL = "https://cloudless.gr/icons/icon-512.png";
 const MAX_ERROR_TEXT_LENGTH = 2_000;
 const MAX_NOTES_TEXT_LENGTH = 500;
 const COMMIT_SHA_SHORT_LENGTH = 7;
@@ -101,23 +105,36 @@ export class SlackClient {
   }
 
   /**
-   * Single-attempt send. Prefers the incoming webhook when configured: it posts
-   * to the channel chosen at app install without requiring the bot to be a
-   * channel member. chat.postMessage is only reachable for channels the bot has
-   * joined, which we cannot do programmatically without the channels:join scope.
+   * Single-attempt send.
+   *
+   * Priority:
+   *   1. Bot token (chat.postMessage) → enables per-channel routing once the bot
+   *      is a member of the target channel.
+   *   2. If bot token returns a terminal error (not_in_channel, channel_not_found,
+   *      account_inactive, etc.) → fall back to the incoming webhook so messages
+   *      are never silently dropped while channels are being set up.
+   *   3. If no bot token → webhook only.
+   *
+   * Rate-limit (false) is returned to the caller so the retry loop can back off
+   * and try the token again rather than immediately hitting the webhook.
    */
   private async postOnce(
     payload: PostMessagePayload,
     token: string | undefined,
     webhookUrl: string | undefined,
   ): Promise<boolean | null> {
-    if (webhookUrl) return this.postViaWebhook(webhookUrl, payload);
     if (token) {
-      return this.postViaApi(token, {
+      const apiResult = await this.postViaApi(token, {
         channel: this.defaultChannel,
         ...payload,
       });
+      if (apiResult === true) return true;
+      if (apiResult === false) return false; // rate-limited — let caller back off and retry token
+      // null → terminal (not_in_channel, wrong token, etc.) — fall back to webhook
+      if (webhookUrl) return this.postViaWebhook(webhookUrl, payload);
+      return null;
     }
+    if (webhookUrl) return this.postViaWebhook(webhookUrl, payload);
     return null;
   }
 
@@ -200,6 +217,19 @@ function slackTimestamp(): string {
 // High-level notifiers
 // ---------------------------------------------------------------------------
 
+/**
+ * Per-channel clients — each maps to a dedicated Slack channel.
+ * Run `/slack-channels-setup` to provision missing channels automatically.
+ * Falls back gracefully (channel_not_found → null) if a channel doesn't exist.
+ */
+const bookingsClient = new SlackClient({ channel: "#bookings" });
+const ordersClient = new SlackClient({ channel: "#orders" });
+const errorsClient = new SlackClient({ channel: "#errors" });
+const deploymentsClient = new SlackClient({ channel: "#deployments" });
+const contactsClient = new SlackClient({ channel: "#contacts" });
+const subscribersClient = new SlackClient({ channel: "#subscribers" });
+
+/** Fallback client for unrouted / legacy messages. */
 const client = new SlackClient();
 
 /**
@@ -207,7 +237,7 @@ const client = new SlackClient();
  */
 export async function slackSubscriberNotify(email: string): Promise<void> {
   const safeEmail = slackEscape(email);
-  await client.post({
+  await subscribersClient.post({
     text: `New subscriber: ${safeEmail}`,
     blocks: [
       headerBlock("New Newsletter Subscriber"),
@@ -215,7 +245,7 @@ export async function slackSubscriberNotify(email: string): Promise<void> {
       contextBlock(slackTimestamp(), "cloudless.gr subscribe form"),
       divider,
     ],
-    icon_emoji: ":envelope:",
+    icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
 }
@@ -234,7 +264,7 @@ export async function slackErrorNotify(opts: {
       ? `${opts.error.name}: ${opts.error.message}`
       : String(opts.error ?? "");
 
-  await client.post({
+  await errorsClient.post({
     text: `Error: ${opts.title}`,
     blocks: [
       headerBlock("Application Error"),
@@ -250,7 +280,7 @@ export async function slackErrorNotify(opts: {
       contextBlock(slackTimestamp(), "cloudless.gr"),
       divider,
     ],
-    icon_emoji: ":rotating_light:",
+    icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
 }
@@ -279,7 +309,7 @@ export async function slackDeployNotify(opts: {
         ? "Deploy failed"
         : "Deploy started";
 
-  await client.post({
+  await deploymentsClient.post({
     text: `${statusLabel} — v${opts.version} (${opts.stage})`,
     blocks: [
       headerBlock(`${statusEmoji} ${statusLabel}`),
@@ -298,7 +328,7 @@ export async function slackDeployNotify(opts: {
       contextBlock(slackTimestamp(), "cloudless.gr deploy pipeline"),
       divider,
     ],
-    icon_emoji: statusEmoji,
+    icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
 }
@@ -336,7 +366,7 @@ export async function slackContactNotify(data: {
   const safeCompany = data.company ? slackEscape(data.company) : "\u2014";
   const safeService = data.service ? slackEscape(data.service) : "\u2014";
   const safeMessage = slackEscape(data.message).slice(0, 2000);
-  return client.post({
+  return contactsClient.post({
     text: `New contact from ${safeName} (${safeEmail})`,
     blocks: [
       headerBlock("\ud83d\udce8 New Contact Form Submission"),
@@ -352,7 +382,7 @@ export async function slackContactNotify(data: {
       sectionBlock(`*Message:*\n${safeMessage}`),
       contextBlock(slackTimestamp(), "cloudless.gr contact form"),
     ],
-    icon_emoji: ":incoming_envelope:",
+    icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
 }
@@ -363,6 +393,7 @@ export async function slackBookingNotify(data: {
   email: string;
   start: string;
   notes?: string;
+  meetLink?: string;
 }): Promise<void> {
   const safeName = slackEscape(data.name);
   const safeEmail = slackEscape(data.email);
@@ -373,7 +404,7 @@ export async function slackBookingNotify(data: {
       timeStyle: "short",
     }),
   );
-  await client.post({
+  await bookingsClient.post({
     text: `📅 New consultation booked: ${safeName} (${safeEmail})`,
     blocks: [
       headerBlock("📅 New Consultation Booked"),
@@ -382,6 +413,9 @@ export async function slackBookingNotify(data: {
           `*Name:* ${safeName}`,
           `*Email:* ${safeEmail}`,
           `*Time:* ${dateStr} (Athens)`,
+          ...(data.meetLink
+            ? [`*Meet:* <${data.meetLink}|Join Google Meet>`]
+            : []),
         ].join("\n"),
       ),
       ...(data.notes
@@ -393,7 +427,7 @@ export async function slackBookingNotify(data: {
         : []),
       contextBlock(slackTimestamp(), "cloudless.gr calendar booking"),
     ],
-    icon_emoji: ":calendar:",
+    icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
 }
@@ -405,7 +439,7 @@ export async function slackOrderNotify(data: {
   sessionId: string;
 }): Promise<boolean> {
   const safeEmail = slackEscape(data.email);
-  return client.post({
+  return ordersClient.post({
     text: `New order: ${data.amount} from ${safeEmail}`,
     blocks: [
       headerBlock("\ud83d\udcb0 New Order"),
@@ -418,7 +452,7 @@ export async function slackOrderNotify(data: {
       ),
       contextBlock(slackTimestamp(), "cloudless.gr stripe checkout"),
     ],
-    icon_emoji: ":moneybag:",
+    icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
 }
