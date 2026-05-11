@@ -2,8 +2,10 @@
  * Slack slash commands endpoint.
  *
  * Handles:
- *   /cloudless-status  — app health + version
- *   /cloudless-orders  — recent store activity from Stripe
+ *   /cloudless-status    — app health + version
+ *   /cloudless-orders    — recent store activity from Stripe
+ *   /cloudless-channels  — list notification channels and bot membership
+ *   /cloudless-help      — show all available commands
  *
  * Slack delivers slash command payloads as application/x-www-form-urlencoded.
  * Slack app setup:
@@ -14,6 +16,9 @@
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
+import { listChannels } from "@/lib/slack-admin";
+import { getBotInfo } from "@/lib/slack-workspace";
+import { getSlackConfigAsync } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -60,10 +65,16 @@ export async function POST(request: Request): Promise<Response> {
     case "/cloudless-orders":
       return handleOrders(payload);
 
+    case "/cloudless-channels":
+      return handleChannels(payload);
+
+    case "/cloudless-help":
+      return handleHelp();
+
     default:
       return slackResponse({
         response_type: "ephemeral",
-        text: `Unknown command: \`${payload.command}\``,
+        text: `Unknown command: \`${payload.command}\`. Try \`/cloudless-help\` to see what's available.`,
       });
   }
 }
@@ -240,6 +251,111 @@ async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
       text: ":warning: Failed to fetch orders from Stripe. Check that STRIPE_SECRET_KEY is configured in SSM.",
     });
   }
+}
+
+async function handleChannels(
+  payload: SlashCommandPayload,
+): Promise<Response> {
+  try {
+    const { SLACK_BOT_TOKEN: token } = await getSlackConfigAsync();
+    if (!token) {
+      return slackResponse({
+        response_type: "ephemeral",
+        text: ":warning: SLACK_BOT_TOKEN is not configured.",
+      });
+    }
+
+    const [channels, bot] = await Promise.all([
+      listChannels(token),
+      getBotInfo(token),
+    ]);
+
+    const MANAGED = [
+      "bookings",
+      "orders",
+      "errors",
+      "deployments",
+      "contacts",
+      "subscribers",
+    ];
+
+    const rows = MANAGED.map((name) => {
+      const ch = channels.find((c) => c.name === name);
+      if (!ch) return `❌ \`#${name}\` — *missing* (run \`/slack-channels-setup\`)`;
+      const member = ch.is_member ? "✅ member" : "⚠️ not a member";
+      return `• <#${ch.id}> — ${member}`;
+    });
+
+    return slackResponse({
+      response_type: "ephemeral",
+      blocks: [
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: ":hash: cloudless.gr Notification Channels",
+            emoji: true,
+          },
+        },
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: rows.join("\n") },
+        },
+        {
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text: `Bot: *${bot.botName}* | Workspace: *${bot.team}* | Requested by <@${payload.user_id}>`,
+            },
+          ],
+        },
+      ],
+    });
+  } catch (err) {
+    console.error("[Slack Commands] /cloudless-channels error:", err);
+    return slackResponse({
+      response_type: "ephemeral",
+      text: ":warning: Failed to fetch channel list. Check SLACK_BOT_TOKEN and `channels:read` scope.",
+    });
+  }
+}
+
+function handleHelp(): Response {
+  return slackResponse({
+    response_type: "ephemeral",
+    blocks: [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: ":robot_face: Cloudless Bot — Available Commands",
+          emoji: true,
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: [
+            "• `/cloudless-status` — app health, version, and uptime",
+            "• `/cloudless-orders [N]` — last N Stripe orders (default 5, max 20)",
+            "• `/cloudless-channels` — notification channel status",
+            "• `/cloudless-help` — show this message",
+          ].join("\n"),
+        },
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: "All commands are ephemeral — only you can see the response.",
+          },
+        ],
+      },
+    ],
+  });
 }
 
 // ---------------------------------------------------------------------------

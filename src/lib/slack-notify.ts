@@ -37,6 +37,8 @@ interface PostMessagePayload {
   username?: string;
   icon_emoji?: string;
   icon_url?: string;
+  /** Reply in thread — pass the parent message's `ts` value. */
+  thread_ts?: string;
 }
 
 interface SlackApiResponse {
