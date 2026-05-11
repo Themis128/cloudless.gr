@@ -56,8 +56,10 @@ export default function TrainingBanner({
               Αυτή η ιστοσελίδα δημιουργήθηκε αποκλειστικά για εκπαιδευτικούς
               και portfolio σκοπούς. Δεν αποτελεί εμπορική υπηρεσία, δεν παρέχει
               πραγματικές υπηρεσίες και δεν δέχεται πελάτες.
-              {" · "}
-              <span className="font-semibold">🚧 Υπό κατασκευή</span>
+              <span className="mx-2 opacity-30">·</span>
+              <span className="italic opacity-50">
+                {isEl ? "υπό κατασκευή" : "under construction"}
+              </span>
             </>
           ) : (
             <>
@@ -68,8 +70,8 @@ export default function TrainingBanner({
               This website is built for educational and portfolio purposes only.
               It is not a commercial service, does not provide real services,
               and does not accept clients.
-              {" · "}
-              <span className="font-semibold">🚧 Under Construction</span>
+              <span className="mx-2 opacity-30">·</span>
+              <span className="italic opacity-50">under construction</span>
             </>
           )}
         </p>
