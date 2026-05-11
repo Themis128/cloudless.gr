@@ -46,7 +46,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50">
       {/* QD-inspired top accent bar */}
       <div className="bg-neon-cyan h-px shadow-[0_0_10px_rgba(0,255,245,0.5)]" />
-      <div className="bg-void/90 border-neon-cyan/10 border-b backdrop-blur-xl">
+      <div className="bg-void/90 border-neon-cyan/10 overflow-x-hidden border-b backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           {/* Logo */}
           <Link
@@ -197,7 +197,7 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         <div
-          className={`bg-void/95 border-neon-cyan/10 overflow-y-auto border-t px-6 backdrop-blur-xl transition-all duration-300 ease-in-out lg:hidden ${
+          className={`bg-void/95 border-neon-cyan/10 overflow-x-hidden overflow-y-auto border-t px-6 backdrop-blur-xl transition-all duration-300 ease-in-out lg:hidden ${
             mobileOpen
               ? "max-h-[calc(100svh-4rem)] py-4 opacity-100"
               : "max-h-0 py-0 opacity-0"
