@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
@@ -119,12 +120,16 @@ export default async function CaseStudyPage({
 
       {/* Cover image */}
       {cs.coverImage && (
-        <div className="mx-auto mb-12 max-w-4xl overflow-hidden rounded-2xl px-4">
-          <img
-            src={cs.coverImage}
-            alt={cs.title}
-            className="h-80 w-full rounded-2xl object-cover"
-          />
+        <div className="mx-auto mb-12 max-w-4xl px-4">
+          <div className="relative h-80 overflow-hidden rounded-2xl">
+            <Image
+              src={cs.coverImage}
+              alt={cs.title}
+              fill
+              sizes="(max-width: 1024px) 100vw, 896px"
+              className="object-cover"
+            />
+          </div>
         </div>
       )}
 
