@@ -173,7 +173,9 @@ def main() -> int:
         default=f"arn:aws:iam::{ACCOUNT_ID}:role/cloudless-github-actions",
         help="ARN of the Pi-image build role",
     )
-    parser.add_argument("--dry-run", action="store_true", help="Print intended changes; do not apply")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print intended changes; do not apply"
+    )
     parser.add_argument("--skip-deploy", action="store_true")
     parser.add_argument("--skip-pi-image", action="store_true")
     args = parser.parse_args()
