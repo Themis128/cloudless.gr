@@ -47,6 +47,12 @@ concurrency:
 jobs:
   e2e:
     name: playwright (chromium)
+    # When triggered by workflow_run, only run if the upstream succeeded.
+    # HA sync failing means the pi build/rollout chain is broken — no point
+    # running E2E against a stale image and generating noise.
+    if: |
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
