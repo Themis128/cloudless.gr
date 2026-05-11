@@ -52,8 +52,7 @@ export default async function WorkPage() {
           <span className="text-neon-magenta font-mono text-xs">OUR WORK</span>
         </div>
         <h1 className="font-heading text-4xl font-bold leading-tight text-white sm:text-5xl">
-          Projects that{" "}
-          <span className="text-neon-cyan">actually shipped</span>
+          Projects that <span className="text-neon-cyan">actually shipped</span>
         </h1>
         <p className="font-body mt-4 max-w-2xl text-slate-400">
           Serverless migrations, analytics pipelines, and AI-powered marketing
