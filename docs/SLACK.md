@@ -2,7 +2,7 @@
 
 cloudless.gr uses a Slack app for two-way communication: outbound notifications (contact form submissions, new subscribers, orders, errors, deploys) and inbound commands (status checks, order lookups).
 
-> **Last verified:** 2026-04-30 — 74 Slack unit tests pass (signed requests, unsigned rejection, webhook delivery, mrkdwn escaping, lazy SSM config resolution).
+> **Last verified:** 2026-05-10 — Slack unit tests pass (signed requests, unsigned rejection, webhook delivery, mrkdwn escaping, lazy SSM config resolution, brand icon assertions, per-channel routing).
 
 ---
 
@@ -15,17 +15,19 @@ graph TB
         C_API["/api/contact"] -->|fire-and-forget| SCN["slackContactNotify()"]
         S_API["/api/subscribe"] -->|parallel| SSN["slackSubscriberNotify()"]
         W_API["/api/webhooks/stripe"] -->|fire-and-forget| SON["slackOrderNotify()"]
-        ANY["Any route"] -->|catch block| SEN["slackErrorNotify()"]
-        CI["GitHub Actions"] -->|post-deploy| SDN["slackDeployNotify()"]
+        CT["chat-tools book_slot"] -->|fire-and-forget| SBN["slackBookingNotify()"]
+        Sentry["sentry.server.config.ts beforeSend"] -->|rate-limited| SEN["slackErrorNotify()"]
+        Instr["instrumentation.ts cold start"] -->|SHA-deduped| SDN["slackDeployNotify()"]
     end
-    subgraph Transport["SlackClient Transport"]
-        SCN --> SC["SlackClient"]
-        SSN --> SC
-        SON --> SC
-        SEN --> SC
-        SDN --> SC
+    subgraph Channels["Per-Channel Routing"]
+        SCN -->|#general| SC["SlackClient"]
+        SSN -->|#general| SC
+        SON -->|#orders| SC
+        SBN -->|#bookings| SC
+        SEN -->|#errors| SC
+        SDN -->|#deployments| SC
         SC -->|bot token| API["chat.postMessage"]
-        SC -->|webhook URL| WH["Incoming Webhook"]
+        SC -->|webhook URL fallback| WH["Incoming Webhook"]
     end
 
     subgraph Inbound["Inbound: Slack to cloudless.gr"]
@@ -309,41 +311,64 @@ Block Kit message includes:
 - Customer email, amount, and truncated Stripe session ID
 - Slack-formatted timestamp + source label
 
+### `slackBookingNotify({ name, email, start, notes?, meetLink? })`
+
+Called from `chat-tools.ts:runBookSlot()` as **fire-and-forget** after a consultation booking is confirmed via the AI chat assistant.
+
+Block Kit message includes:
+- Header: "📅 New Consultation Booked"
+- Visitor name, email, slot time (Athens local), Google Meet link
+- Optional notes the visitor shared
+- Brand icon: `https://cloudless.gr/favicon.ico`
+- Channel: `#bookings`
+
 ### `slackErrorNotify({ title, message, route?, error? })`
 
-Call this from any route handler to surface unexpected errors in Slack.
+**Wired automatically via Sentry `beforeSend`** — do not call manually from route handlers for unhandled errors. Sentry captures the error first, then `maybeAlertSlack()` in `sentry.server.config.ts` calls this function with rate-limiting (one alert per fingerprint per 5 minutes).
+
+For expected errors that Sentry won't capture, you may still call it directly:
 
 ```typescript
 import { slackErrorNotify } from "@/lib/slack-notify";
 
-try {
-  // ...
-} catch (err) {
-  await slackErrorNotify({
-    title: "Checkout failed",
-    message: "Stripe session could not be created",
-    route: "/api/checkout",
-    error: err,
-  });
-}
-```
-### `slackDeployNotify({ version, stage, status, actor?, commitSha? })`
-
-Call from your CI/CD pipeline (GitHub Actions, SST, etc.) to post deploy status.
-
-```typescript
-import { slackDeployNotify } from "@/lib/slack-notify";
-
-await slackDeployNotify({
-  version: process.env.APP_VERSION ?? "unknown",
-  stage: "production",
-  status: "succeeded",
-  actor: "github-actions",
-  commitSha: process.env.GITHUB_SHA,
+// Only for expected/caught errors you want to surface in Slack
+// Unhandled errors are automatically forwarded via Sentry beforeSend
+await slackErrorNotify({
+  title: "Checkout failed",
+  message: "Stripe session could not be created",
+  route: "/api/checkout",
+  error: err,
 });
 ```
 
+Channel: `#errors`
+
+### `slackDeployNotify({ version, stage, status, actor?, commitSha? })`
+
+**Fires automatically from `src/instrumentation.ts`** on every Lambda cold start. A SHA-based deduplication check (`lastNotifiedVersion`) ensures only one notification per unique deployment version.
+
 Status values: `"started"` | `"succeeded"` | `"failed"`
+
+Channel: `#deployments`
+
+> **Note:** Do not call `slackDeployNotify` from GitHub Actions — it now fires from the instrumentation module when the new Lambda version first initialises. This means the notification arrives when the code is actually running, not when CI finishes deploying.
+
+---
+
+## Channel Routing
+
+Each notifier posts to a dedicated Slack channel. Create these channels and invite `@cloudless_bot` to each before enabling notifications:
+
+| Channel | Notifier | Trigger |
+|---------|----------|---------|
+| `#general` | `slackContactNotify` | New contact form submission |
+| `#general` | `slackSubscriberNotify` | New newsletter subscriber |
+| `#orders` | `slackOrderNotify` | Stripe checkout completed |
+| `#bookings` | `slackBookingNotify` | Consultation booked via AI chat |
+| `#errors` | `slackErrorNotify` | Server error (rate-limited via Sentry) |
+| `#deployments` | `slackDeployNotify` | Lambda cold start on new version |
+
+All notifiers use `icon_url: "https://cloudless.gr/favicon.ico"` (Cloudless brand logo) as the bot icon rather than per-notifier emoji.
 
 ---
 
@@ -439,17 +464,17 @@ pnpm test -- __tests__/slack/slack-events.test.ts
 pnpm test -- __tests__/slack/slack-commands.test.ts
 pnpm test -- __tests__/slack/slack-interactions.test.ts
 ```
-Test coverage (74 tests total across 7 files):
+Test coverage:
 
-| File | Tests | What is tested |
-|------|-------|---------------|
-| `slack-verify.test.ts` | 10 | Valid signature, expired timestamp, wrong secret, missing headers, future timestamp, 401 helper |
-| `slack/slack-notify.test.ts` | 24 | SlackClient via API and webhook, retry with backoff, no-config no-op, all five notifiers' Block Kit output, **mrkdwn escaping for user-supplied fields** |
-| `slack-notify.test.ts` (top-level) | 8 | SlackClient with mocked `getSlackConfigAsync`, transport selection, terminal-error handling |
-| `slack-events.test.ts` | 9 | URL challenge, app_mention responses (status/help/default), bot loop prevention, DM handling, unknown events, invalid JSON, rate-limit |
-| `slack-commands.test.ts` | 8 | /cloudless-status fields + response_type, /cloudless-orders buttons + response_type, unknown command, 401 on bad signature |
-| `slack-interactions.test.ts` | 9 | Button actions (open_stripe_dashboard, open_store), empty actions, view_submission, unknown type, missing/invalid payload field |
-| `slack-rate-limit.test.ts` | 6 | Sliding-window rate limiter — under/over threshold, key isolation, reset |
+| File | What is tested |
+|------|---------------|
+| `slack-verify.test.ts` | Valid signature, expired timestamp, wrong secret, missing headers, future timestamp, 401 helper |
+| `slack/slack-notify.test.ts` | SlackClient via API and webhook, retry with backoff, no-config no-op, all notifiers' Block Kit output (including `slackBookingNotify`), brand `icon_url` assertion, **mrkdwn escaping for user-supplied fields** |
+| `slack-notify.test.ts` (top-level) | SlackClient with mocked `getSlackConfigAsync`, transport selection, terminal-error handling |
+| `slack-events.test.ts` | URL challenge, app_mention responses (status/help/default), bot loop prevention, DM handling, unknown events, invalid JSON, rate-limit |
+| `slack-commands.test.ts` | /cloudless-status fields + response_type, /cloudless-orders buttons + response_type, unknown command, 401 on bad signature |
+| `slack-interactions.test.ts` | Button actions (open_stripe_dashboard, open_store), empty actions, view_submission, unknown type, missing/invalid payload field |
+| `slack-rate-limit.test.ts` | Sliding-window rate limiter — under/over threshold, key isolation, reset |
 
 ### Integration tests (curl/Node.js against running dev server)
 

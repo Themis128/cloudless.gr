@@ -363,7 +363,7 @@ describe("slackBookingNotify", () => {
     const bodyStr = JSON.stringify(body);
     expect(bodyStr).toContain("Alice");
     expect(bodyStr).toContain("alice@example.com");
-    expect(body.icon_emoji).toBe(":calendar:");
+    expect(body.icon_url).toBe("https://cloudless.gr/icons/icon-512.png");
   });
 
   it("includes notes when provided", async () => {
@@ -473,10 +473,10 @@ describe("slackDeployNotify", () => {
   });
 
   it.each([
-    ["started", ":rocket:"],
-    [STATUS_SUCCEEDED, ":white_check_mark:"],
-    ["failed", ":x:"],
-  ] as const)("uses correct emoji for status=%s", async (status, expectedEmoji) => {
+    ["started"],
+    [STATUS_SUCCEEDED],
+    ["failed"],
+  ] as const)("uses Cloudless brand icon for status=%s", async (status) => {
     const mockFetch = okFetch({ ok: true });
     vi.stubGlobal("fetch", mockFetch);
 
@@ -484,7 +484,7 @@ describe("slackDeployNotify", () => {
 
     const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(opts.body as string);
-    expect(body.icon_emoji).toBe(expectedEmoji);
+    expect(body.icon_url).toBe("https://cloudless.gr/icons/icon-512.png");
   });
 
   it("truncates commitSha to 7 characters", async () => {

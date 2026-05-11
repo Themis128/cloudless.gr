@@ -1,6 +1,6 @@
 # AWS SES Email Integration
 
-cloudless.gr uses Amazon Simple Email Service (SES) for all transactional email: contact form acknowledgments, order confirmations, payment failure notices, and internal team notifications.
+cloudless.gr uses Amazon Simple Email Service (SES) for all transactional email: contact form auto-replies, subscriber welcome emails, booking confirmations, unsubscribe confirmations, order confirmations, payment failure notices, and internal team notifications.
 
 > **Status:** Required for contact form and Stripe webhook fulfillment. The SES client is lazy-initialized with cached credentials from SSM.
 
@@ -11,12 +11,14 @@ cloudless.gr uses Amazon Simple Email Service (SES) for all transactional email:
 ```mermaid
 graph TB
     subgraph Callers["Email Callers"]
-        Contact["/api/contact"] -->|sendEmail| EmailLib["email.ts"]
-        Subscribe["/api/subscribe"] -->|sendEmail| EmailLib
+        Contact["/api/contact"] -->|sendContactAcknowledgment| EmailLib["email.ts"]
+        Contact -->|notifyTeam| EmailLib
+        Subscribe["/api/subscribe"] -->|sendSubscriberWelcome| EmailLib
+        Unsub["/api/unsubscribe"] -->|sendUnsubscribeConfirmation| EmailLib
+        ChatTools["chat-tools.ts (book_slot)"] -->|sendBookingConfirmation| EmailLib
         StripeWH["/api/webhooks/stripe"] -->|sendOrderConfirmation| EmailLib
         StripeWH -->|sendPaymentFailureNotice| EmailLib
         StripeWH -->|notifyTeam| EmailLib
-        Contact -->|notifyTeam| EmailLib
     end
 
     subgraph Email["email.ts"]
@@ -106,6 +108,39 @@ Sends payment failure alert to the customer.
 - Notes that automatic retry will occur
 - Reply-to: `tbaltzakis@cloudless.gr`
 
+### `sendSubscriberWelcome(subscriberEmail): Promise<void>`
+
+Sends a welcome email to new newsletter subscribers. Includes an unsubscribe link (`/api/unsubscribe?email=...`) and next-steps messaging.
+
+### `sendContactAcknowledgment({ name, email, service? }): Promise<void>`
+
+Auto-reply sent to contact form submitters confirming receipt. Fires as **fire-and-forget** from `/api/contact` — never blocks the API response.
+
+- Personalised with the submitter's first name
+- Includes the service they enquired about (when provided)
+- Escapes all user input via `escapeHtml()`
+
+### `sendUnsubscribeConfirmation(email): Promise<void>`
+
+Confirmation email sent when a subscriber unsubscribes. Called from both `POST /api/unsubscribe` (JSON body) and `GET /api/unsubscribe` (query param) handlers.
+
+- Subject: "You've been unsubscribed — Cloudless"
+- Confirms the address has been removed from all future sends
+
+### `sendBookingConfirmation({ name, email, slotLabel, meetLink, notes? }): Promise<void>`
+
+Sends a booking confirmation email to the visitor after the `book_slot` chat tool succeeds.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | string | Visitor's full name |
+| `email` | string | Destination address |
+| `slotLabel` | string | Human-readable slot string, e.g. "Mon, 12 May, 10:00–10:30 Athens" |
+| `meetLink` | string | Google Meet URL from the Calendar event |
+| `notes` | string? | Optional notes the visitor shared |
+
+Fires as **fire-and-forget** from `chat-tools.ts:runBookSlot()`.
+
 ### `notifyTeam(subject, body): Promise<void>`
 
 Sends internal notification to the team inbox (`SES_TO_EMAIL`).
@@ -125,7 +160,11 @@ All emails use inline CSS for maximum email client compatibility.
 | Order Confirmation | `checkout.session.completed` | Customer | Cyberpunk (cyan `#00fff5` header) |
 | Payment Failure | `invoice.payment_failed` | Customer | Alert (red `#ff4444` header) |
 | Team Notification | Multiple events | Internal team | Basic sans-serif |
-| Contact Form | `/api/contact` | Internal team | HTML with escaped user input |
+| Contact Notification | `/api/contact` | Internal team | HTML with escaped user input |
+| Contact Acknowledgment | `/api/contact` | Customer (auto-reply) | Branded, personalised with name + service |
+| Subscriber Welcome | `/api/subscribe` | New subscriber | Branded, includes unsubscribe link |
+| Unsubscribe Confirmation | `/api/unsubscribe` (GET + POST) | Unsubscribed user | Minimal, confirms removal |
+| Booking Confirmation | `book_slot` chat tool | Visitor who booked | Branded, includes slot time + Meet link |
 ---
 
 ## SES Client Initialization
@@ -160,8 +199,11 @@ This ensures the SSM config is loaded before the client is created, and subseque
 
 | File | Purpose |
 |------|---------|
-| `src/lib/email.ts` | SES client, `sendEmail()`, `sendOrderConfirmation()`, `sendPaymentFailureNotice()`, `notifyTeam()` |
+| `src/lib/email.ts` | SES client, `sendEmail()`, `sendOrderConfirmation()`, `sendPaymentFailureNotice()`, `sendSubscriberWelcome()`, `sendContactAcknowledgment()`, `sendUnsubscribeConfirmation()`, `sendBookingConfirmation()`, `notifyTeam()` |
 | `src/lib/escape-html.ts` | `escapeHtml()` utility for email body sanitization |
 | `src/lib/ssm-config.ts` | SSM config loader for SES credentials and region |
-| `src/app/api/contact/route.ts` | Primary `sendEmail()` caller |
+| `src/lib/chat-tools.ts` | `runBookSlot()` calls `sendBookingConfirmation` fire-and-forget |
+| `src/app/api/contact/route.ts` | Calls `sendContactAcknowledgment` (auto-reply) + `notifyTeam` |
+| `src/app/api/subscribe/route.ts` | Calls `sendSubscriberWelcome` |
+| `src/app/api/unsubscribe/route.ts` | Calls `sendUnsubscribeConfirmation` (both GET + POST handlers) |
 | `src/app/api/webhooks/stripe/route.ts` | Calls order confirmation, payment failure, and team notifications |

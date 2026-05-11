@@ -10,13 +10,16 @@ The shipped phase is dev-time only and free; subsequent phases add real Anthropi
 
 Defined under `.claude/agents/`:
 
-| Agent                  | When it runs                                | What it does                                                                        |
-| ---------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `sonarcloud-cleanup`   | Before merge / when SonarCloud flags issues | Scopes to changed files, fixes S1192/S3776/S3699/global.fetch inline, reruns lint   |
-| `api-security-audit`   | Touching `src/app/api/` routes              | Checks auth/rate-limit/timeout/error-leakage drift; mechanical fixes inline         |
-| `notion-schema-drift`  | After Notion DB ID changes / on-demand      | Read-only diff between `src/lib/notion-*.ts` schema comments and the live workspace |
-| `lighthouse-triage`    | Failing Lighthouse CI run                   | Distinguishes variance vs regression, points at the offending PR                    |
-| `release-notes`        | Cutting a release / weekly recap            | Groups commits since last tag into Features / Fixes / Performance / Internal       |
+| Agent                   | When it runs                                 | What it does                                                                                     |
+| ----------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `sonarcloud-cleanup`    | Before merge / when SonarCloud flags issues  | Scopes to changed files, fixes S1192/S3776/S3699/global.fetch inline, reruns lint                |
+| `api-security-audit`    | Touching `src/app/api/` routes               | Checks auth/rate-limit/timeout/error-leakage drift; mechanical fixes inline                      |
+| `notion-schema-drift`   | After Notion DB ID changes / on-demand       | Read-only diff across all 12 Notion DBs between lib schema comments and the live workspace        |
+| `lighthouse-triage`     | Failing Lighthouse CI run                    | Distinguishes variance vs regression, points at the offending PR                                  |
+| `release-notes`         | Cutting a release / weekly recap             | Groups commits since last tag into Features / Fixes / Performance / Internal                      |
+| `cms-populate`          | After new CMS DB IDs added to SSM            | Seeds Testimonials / Case Studies / Services / FAQs DBs from static fallback arrays              |
+| `slack-routing-verify`  | After Slack channel setup or missing alerts  | Verifies channels exist, bot invited, SSM params set, notifier wiring correct                    |
+| `pr-review-debug`       | PR review comment missing or too noisy       | Debugs workflow triggers, OIDC key fetch, diff scope; tunes model/prompt/cap                     |
 
 Cost: zero (runs locally inside Claude Code sessions). Reversible: delete the file under `.claude/agents/`.
 
@@ -79,15 +82,15 @@ Today there are 4 cron routes (analytics-rollup, calendar-digest, report-cleanup
 
 Three concrete additions, in increasing order of risk:
 
-### 4a — PR review by `/ultrareview`-style agent
+### 4a — PR review agent — SHIPPED
 
-On every PR open / push, dispatch a Claude Sonnet agent that:
+On every PR open / push that touches `src/**` or root config files, a workflow dispatches a Claude Haiku agent that:
 
-- Reads the diff.
-- Runs the existing dev-time agents (`api-security-audit`, `sonarcloud-cleanup`) against the changed files.
-- Posts a single PR comment with findings (no auto-fix, no auto-merge).
+- Reads the diff (capped at 80k chars, src/ + root configs only).
+- Applies the same rules as `api-security-audit` and `sonarcloud-cleanup` dev-time agents.
+- Posts (or updates) a single PR comment with findings — no auto-fix, no auto-merge.
 
-Implementation: a GitHub Actions workflow that uses the Anthropic SDK directly (don't try to drive Claude Code from CI). Cost: ~$0.05–0.20 per PR. Skipped for `dependabot/*` and `revert/*` branches.
+Implementation: `.github/workflows/pr-review.yml` + `scripts/pr-review.mjs`. Anthropic key fetched from SSM via the existing OIDC role — no new secrets needed. Skipped for `dependabot/*` and `revert/*` branches. Default model: `claude-haiku-4-5` (override with `REVIEW_MODEL` env var). Cost: ~$0.02–0.10 per PR. Use `pr-review-debug` agent to tune.
 
 ### 4b — Failing-CI babysitter
 

@@ -16,11 +16,13 @@ test.describe("k3s i18n", () => {
 
     test(`/${locale} sets some html[lang]`, async ({ page }) => {
       await page.goto(`/${locale}`, { waitUntil: "domcontentloaded" });
+      // Wait for html[lang] to be set — SSR should populate it immediately,
+      // but the standby path has a Cloudflare + Pi hop that can delay the
+      // initial byte. Waiting for the attribute avoids flakes on slow legs.
+      await page.locator("html[lang]").waitFor({ state: "attached", timeout: 10_000 });
       const lang = await page.locator("html").getAttribute("lang");
-      // The app currently sets `html[lang]` from a default rather than the
-      // route's locale segment — that's an app-side choice, not a routing
-      // failure. Just verify SOMETHING is set so robots/screen-readers get
-      // a usable value.
+      // The app sets html[lang] from a default; just verify SOMETHING is set
+      // so robots/screen-readers get a usable value.
       expect(lang, `html[lang] should be present for /${locale}`).toBeTruthy();
     });
   }

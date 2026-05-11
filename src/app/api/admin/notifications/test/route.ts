@@ -1,27 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { slackNotify } from "@/lib/slack-notify";
+import { slackErrorNotify } from "@/lib/slack-notify";
 import { requireAdmin } from "@/lib/api-auth";
+import { getSlackConfigAsync } from "@/lib/integrations";
 
 /**
- * POST /api/admin/notifications/test — send a test Slack message
- *
- * Returns 503 when SLACK_WEBHOOK_URL is explicitly set to "" (intentionally
- * disabled). Requires admin authentication.
+ * POST /api/admin/notifications/test — send a test Slack message to #errors.
+ * Requires admin authentication.
  */
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (process.env.SLACK_WEBHOOK_URL === "") {
+  const cfg = await getSlackConfigAsync();
+  if (!cfg.SLACK_BOT_TOKEN && !cfg.SLACK_WEBHOOK_URL) {
     return NextResponse.json(
-      { error: "Slack not configured." },
+      {
+        error:
+          "Slack not configured — set SLACK_BOT_TOKEN or SLACK_WEBHOOK_URL.",
+      },
       { status: 503 },
     );
   }
 
-  const ok = await slackNotify({
-    text: "✅ Cloudless notification test — Slack webhook is working!",
+  await slackErrorNotify({
+    title: "Notification test",
+    message: "Slack notifications are working correctly.",
+    route: "/api/admin/notifications/test",
   });
 
-  return NextResponse.json({ success: ok });
+  return NextResponse.json({ success: true });
 }

@@ -27,7 +27,12 @@ export async function POST(request: NextRequest) {
 
     // Validate origin against allowlist to prevent open redirect
     const rawOrigin = request.headers.get("origin") ?? "";
-    const allowedOrigins = ["https://cloudless.gr", "https://www.cloudless.gr"];
+    const allowedOrigins = [
+      "https://cloudless.gr",
+      "https://www.cloudless.gr",
+      "https://cloudless.online",
+      "https://www.cloudless.online",
+    ];
     if (
       process.env.NODE_ENV === "development" &&
       rawOrigin.startsWith("http://localhost")
@@ -133,7 +138,10 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ url: session.url });
   } catch (error) {
-    console.error("Checkout error:", error);
+    console.error(
+      "Checkout error:",
+      (error as Error)?.message ?? "unknown error",
+    );
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       await import("@sentry/nextjs")
         .then(({ captureException, withScope }) =>

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -18,6 +19,8 @@ const REQUIRED_ROUTE_FILES = [
   path.join("auth", "forgot-password", "page.tsx"),
   path.join("dashboard", "page.tsx"),
   path.join("admin", "page.tsx"),
+  path.join("admin", "kpi", "page.tsx"),
+  path.join("work", "page.tsx"),
   path.join("privacy", "page.tsx"),
   path.join("terms", "page.tsx"),
   path.join("cookies", "page.tsx"),

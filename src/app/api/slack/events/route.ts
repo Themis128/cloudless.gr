@@ -15,8 +15,8 @@
  */
 
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
-import { getSlackConfigAsync } from "@/lib/integrations";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
+import { SlackClient } from "@/lib/slack-notify";
 
 // ---------------------------------------------------------------------------
 // Event deduplication
@@ -142,55 +142,38 @@ async function handleEvent(event: SlackEvent): Promise<void> {
   }
 }
 
-async function handleAppMention(event: SlackEvent): Promise<void> {
-  const { SLACK_BOT_TOKEN } = await getSlackConfigAsync();
-  if (!SLACK_BOT_TOKEN || !event.channel) return;
+const HELP_TEXT =
+  "Available slash commands:\n" +
+  "• `/cloudless-status` — app health check\n" +
+  "• `/cloudless-orders [N]` — recent Stripe orders (default 5, max 20)\n" +
+  "• `/cloudless-channels` — list provisioned notification channels\n" +
+  "• `/cloudless-help` — show this list";
 
+async function handleAppMention(event: SlackEvent): Promise<void> {
+  if (!event.channel) return;
+
+  const client = new SlackClient({ channel: event.channel });
   const userText = (event.text ?? "").toLowerCase();
 
-  let replyText: string;
+  let text: string;
   if (userText.includes("status")) {
-    replyText =
+    text =
       ":white_check_mark: cloudless.gr is *online*. All systems operational.";
   } else if (userText.includes("help")) {
-    replyText =
-      "Available slash commands:\n" +
-      "• `/cloudless-status` — app health check\n" +
-      "• `/cloudless-orders` — recent store orders";
+    text = HELP_TEXT;
   } else {
-    replyText =
+    text =
       "Hey! I'm the Cloudless bot. Try mentioning me with *status* or *help*.";
   }
 
-  await fetch("https://slack.com/api/chat.postMessage", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
-    },
-    body: JSON.stringify({
-      channel: event.channel,
-      thread_ts: event.ts,
-      text: replyText,
-    }),
-    signal: AbortSignal.timeout(5_000),
-  });
+  await client.post({ text, thread_ts: event.ts });
 }
 
 async function handleDirectMessage(event: SlackEvent): Promise<void> {
-  const { SLACK_BOT_TOKEN } = await getSlackConfigAsync();
-  if (!SLACK_BOT_TOKEN || !event.channel) return;
+  if (!event.channel) return;
 
-  await fetch("https://slack.com/api/chat.postMessage", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
-    },
-    body: JSON.stringify({
-      channel: event.channel,
-      text: "Hi! I respond to slash commands — try `/cloudless-status` or `/cloudless-orders`.",
-    }),
-    signal: AbortSignal.timeout(5_000),
+  const client = new SlackClient({ channel: event.channel });
+  await client.post({
+    text: `Hi! I respond to slash commands:\n${HELP_TEXT}`,
   });
 }

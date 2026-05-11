@@ -112,12 +112,33 @@ export default {
       },
       environment: buildSiteEnvironment(stage, isProd, stripeTransactionsTable.name),
       link: [stripeTransactionsTable],
+      permissions: [
+        {
+          // Allow the Lambda server to invoke Bedrock Converse for the chat widget.
+          // The us.* prefix is required for cross-region inference profiles.
+          actions: ["bedrock:InvokeModel", "bedrock:Converse"],
+          resources: [
+            "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
+            "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0",
+          ],
+        },
+      ],
       warm: isProd ? 5 : 0,
       server: {
         memory: "1024 MB",
         architecture: "arm64",
         runtime: "nodejs22.x",
         timeout: "30 seconds",
+      },
+      transform: {
+        // Force arm64 on SST-internal functions (warmer + revalidation).
+        // The server function above is already arm64; these default to x86_64.
+        warmer: (args) => {
+          args.architectures = ["arm64"];
+        },
+        revalidation: (args) => {
+          args.architectures = ["arm64"];
+        },
       },
       // Invalidate CloudFront cache on every deployment for fresh content
       invalidation: {

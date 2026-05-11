@@ -11,9 +11,11 @@
  */
 
 import { getProducts } from "@/lib/store-products";
-import { getAvailableSlots } from "@/lib/google-calendar";
-import { isConfigured } from "@/lib/integrations";
+import { getAvailableSlots, bookConsultation } from "@/lib/google-calendar";
+import { isConfiguredAsync } from "@/lib/integrations";
 import { formatPrice } from "@/lib/format-price";
+import { slackBookingNotify } from "@/lib/slack-notify";
+import { sendBookingConfirmation } from "@/lib/email";
 
 const SITE_BASE_URL = "https://cloudless.gr";
 const MAX_PRODUCT_RESULTS = 3;
@@ -61,6 +63,41 @@ export const CHAT_TOOLS = [
       required: [],
     },
   },
+  {
+    name: "book_slot",
+    description:
+      "Confirm a consultation booking. Call this ONLY after the visitor has chosen a specific slot from check_calendar_availability and provided their name and email. Creates a Google Calendar event with a Google Meet link and emails a calendar invite to the visitor.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "Full name of the person booking the consultation.",
+        },
+        email: {
+          type: "string",
+          description:
+            "Email address for the calendar invite and Google Meet link.",
+        },
+        start: {
+          type: "string",
+          description:
+            "Slot start time in ISO 8601 format, exactly as returned by check_calendar_availability.",
+        },
+        end: {
+          type: "string",
+          description:
+            "Slot end time in ISO 8601 format, exactly as returned by check_calendar_availability.",
+        },
+        notes: {
+          type: "string",
+          description:
+            "Optional notes or context the visitor shared about their needs.",
+        },
+      },
+      required: ["name", "email", "start", "end"],
+    },
+  },
 ] as const;
 
 export type ChatToolName = (typeof CHAT_TOOLS)[number]["name"];
@@ -75,6 +112,14 @@ interface LookupProductInput {
 
 interface CheckCalendarInput {
   days_ahead?: unknown;
+}
+
+interface BookSlotInput {
+  name?: unknown;
+  email?: unknown;
+  start?: unknown;
+  end?: unknown;
+  notes?: unknown;
 }
 
 async function runLookupProduct(input: LookupProductInput): Promise<string> {
@@ -138,7 +183,7 @@ function formatSlot(start: string, end: string): string {
 async function runCheckCalendarAvailability(
   input: CheckCalendarInput,
 ): Promise<string> {
-  if (!isConfigured("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY")) {
+  if (!(await isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"))) {
     return "Calendar booking is not yet wired up. Suggest the visitor use the Contact page to request a time.";
   }
 
@@ -157,8 +202,68 @@ async function runCheckCalendarAvailability(
 
   const lines = slots
     .slice(0, MAX_SLOT_RESULTS)
-    .map((s) => `- ${formatSlot(s.start, s.end)}`);
-  return `Available slots (next ${days} day(s)):\n${lines.join("\n")}\nBook via ${SITE_BASE_URL}/book.`;
+    .map(
+      (s) => `- ${formatSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`,
+    );
+  return `Available slots (next ${days} day(s)):\n${lines.join("\n")}\nAsk the visitor which slot they prefer, then collect their name and email to call book_slot. They can also book directly at https://cloudless.gr/book.`;
+}
+
+async function runBookSlot(input: BookSlotInput): Promise<string> {
+  if (!(await isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"))) {
+    return "Booking is not yet configured. Suggest the visitor use the Contact page to request a time.";
+  }
+
+  const name = typeof input.name === "string" ? input.name.trim() : "";
+  const email =
+    typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+  const start = typeof input.start === "string" ? input.start.trim() : "";
+  const end = typeof input.end === "string" ? input.end.trim() : "";
+  const notes =
+    typeof input.notes === "string" && input.notes.trim()
+      ? input.notes.trim()
+      : undefined;
+
+  if (!name) return "Missing visitor name. Ask them for their full name first.";
+  if (!email || !email.includes("@"))
+    return "Missing or invalid email address. Ask the visitor for a valid email.";
+  if (!start || !end)
+    return "Missing slot times. Call check_calendar_availability first and let the visitor pick a slot.";
+
+  const result = await bookConsultation({ name, email, start, end, notes });
+  if (!result) {
+    return "Booking failed — the slot may no longer be available. Call check_calendar_availability again and ask the visitor to pick another slot.";
+  }
+
+  const slotLabel = formatSlot(start, end);
+
+  // Fire-and-forget notifications — never block or fail the booking confirmation
+  void slackBookingNotify({
+    name,
+    email,
+    start,
+    notes,
+    meetLink: result.htmlLink,
+  }).catch((err) =>
+    console.warn("[chat-tools] slackBookingNotify failed:", err),
+  );
+  void sendBookingConfirmation({
+    name,
+    email,
+    slotLabel,
+    meetLink: result.htmlLink,
+    notes,
+  }).catch((err) =>
+    console.warn("[chat-tools] sendBookingConfirmation failed:", err),
+  );
+
+  return [
+    `Booking confirmed!`,
+    `Slot: ${slotLabel}`,
+    `Name: ${name}`,
+    `Email: ${email}`,
+    `Google Meet: ${result.htmlLink}`,
+    `A calendar invite and confirmation email have been sent to ${email}.`,
+  ].join("\n");
 }
 
 /**
@@ -168,7 +273,7 @@ async function runCheckCalendarAvailability(
 export async function runTool(name: string, input: unknown): Promise<string> {
   const safeInput = (
     typeof input === "object" && input !== null ? input : {}
-  ) as LookupProductInput | CheckCalendarInput;
+  ) as LookupProductInput | CheckCalendarInput | BookSlotInput;
   try {
     if (name === "lookup_product") {
       return await runLookupProduct(safeInput as LookupProductInput);
@@ -177,6 +282,9 @@ export async function runTool(name: string, input: unknown): Promise<string> {
       return await runCheckCalendarAvailability(
         safeInput as CheckCalendarInput,
       );
+    }
+    if (name === "book_slot") {
+      return await runBookSlot(safeInput as BookSlotInput);
     }
     return `Unknown tool: ${name}`;
   } catch (err) {

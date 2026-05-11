@@ -81,6 +81,10 @@ for (const route of ROUTES) {
 
     test("page has a non-empty <title>", async ({ page }) => {
       await page.goto(route);
+      // Root path redirects to locale prefix; wait for title to settle.
+      await page.waitForFunction(() => document.title.trim().length > 0, {
+        timeout: 10_000,
+      });
       const title = await page.title();
       expect(
         title.trim().length,

@@ -194,12 +194,154 @@ export async function sendSubscriberWelcome(
   });
 }
 
+export async function sendBookingConfirmation(data: {
+  name: string;
+  email: string;
+  slotLabel: string; // e.g. "Mon, 12 May, 10:00–10:30 Athens"
+  meetLink: string;
+  notes?: string;
+}): Promise<void> {
+  const safeName = escapeHtml(data.name);
+  const safeSlot = escapeHtml(data.slotLabel);
+  const safeMeet = escapeHtml(data.meetLink);
+  const safeNotes = data.notes ? escapeHtml(data.notes) : null;
+
+  await sendEmail({
+    to: data.email,
+    subject: "Your Cloudless consultation is confirmed",
+    fromLabel: "Themis at Cloudless",
+    replyTo: ["tbaltzakis@cloudless.gr"],
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0f; padding: 32px; border-radius: 12px;">
+        <h2 style="color: #00fff5; margin-top: 0;">Your consultation is confirmed ✅</h2>
+        <p>Hi ${safeName},</p>
+        <p>Your free 30-minute cloud audit with Themistoklis Baltzakis is all set.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #222; color: #888; width: 120px;">📅 When</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #222; font-weight: bold;">${safeSlot}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #222; color: #888;">📹 Google Meet</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #222;">
+              <a href="${safeMeet}" style="color: #00fff5;">Join the call</a>
+            </td>
+          </tr>
+          ${safeNotes ? `<tr><td style="padding: 10px 0; color: #888; vertical-align: top;">📝 Notes</td><td style="padding: 10px 0;">${safeNotes}</td></tr>` : ""}
+        </table>
+        <p style="margin-top: 24px;">A calendar invite has been sent to this address. If you need to reschedule, just reply to this email.</p>
+        <p>In the meantime, feel free to jot down any specific questions about your cloud setup — we'll cover as much ground as possible in 30 minutes.</p>
+        <hr style="border: none; border-top: 1px solid #222; margin: 24px 0;" />
+        <p style="color: #555; font-size: 12px;">
+          Themistoklis Baltzakis · AWS Certified Cloud Architect ·
+          <a href="https://cloudless.gr" style="color: #00fff5;">cloudless.gr</a>
+        </p>
+      </div>
+    `,
+    text: [
+      `Hi ${data.name},`,
+      "",
+      "Your free 30-minute cloud audit with Themistoklis Baltzakis is confirmed.",
+      "",
+      `When: ${data.slotLabel}`,
+      `Google Meet: ${data.meetLink}`,
+      ...(data.notes ? [`Notes: ${data.notes}`, ""] : [""]),
+      "A calendar invite has been sent to this address.",
+      "To reschedule, reply to this email.",
+      "",
+      "Themistoklis Baltzakis · AWS Certified Cloud Architect · cloudless.gr",
+    ].join("\n"),
+  });
+}
+
+/**
+ * Auto-reply to a contact form submitter.
+ * Sent fire-and-forget — never blocks the contact form response.
+ */
+export async function sendContactAcknowledgment(data: {
+  name: string;
+  email: string;
+  service?: string;
+}): Promise<void> {
+  const safeName = escapeHtml(data.name);
+  const safeService = data.service ? escapeHtml(data.service) : null;
+
+  await sendEmail({
+    to: data.email,
+    subject: "Thanks for reaching out — Cloudless",
+    fromLabel: "Themis at Cloudless",
+    replyTo: ["tbaltzakis@cloudless.gr"],
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0f; padding: 32px; border-radius: 12px;">
+        <h2 style="color: #00fff5; margin-top: 0;">Got your message ✉️</h2>
+        <p>Hi ${safeName},</p>
+        <p>Thanks for getting in touch${safeService ? ` about <strong>${safeService}</strong>` : ""}. I'll review your message and get back to you within <strong>1 business day</strong>.</p>
+        <p>In the meantime, feel free to <a href="https://cloudless.gr/store" style="color: #00fff5;">browse our services</a> or <a href="https://cloudless.gr/blog" style="color: #00fff5;">read the blog</a>.</p>
+        <p>Talk soon,<br/><strong>Themistoklis Baltzakis</strong><br/>AWS Certified Cloud Architect · <a href="https://cloudless.gr" style="color: #00fff5;">cloudless.gr</a></p>
+        <hr style="border: none; border-top: 1px solid #222; margin: 24px 0;" />
+        <p style="color: #555; font-size: 12px;">You're receiving this because you submitted the contact form at cloudless.gr. This is an automated acknowledgment — no action required.</p>
+      </div>
+    `,
+    text: [
+      `Hi ${data.name},`,
+      "",
+      `Thanks for getting in touch${data.service ? ` about ${data.service}` : ""}. I'll review your message and get back to you within 1 business day.`,
+      "",
+      "Talk soon,",
+      "Themistoklis Baltzakis",
+      "AWS Certified Cloud Architect · cloudless.gr",
+    ].join("\n"),
+  });
+}
+
+/**
+ * Confirmation email sent when a subscriber successfully unsubscribes.
+ */
+export async function sendUnsubscribeConfirmation(
+  email: string,
+): Promise<void> {
+  await sendEmail({
+    to: email,
+    subject: "You've been unsubscribed — Cloudless",
+    fromLabel: "Cloudless",
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0f; padding: 32px; border-radius: 12px;">
+        <h2 style="color: #00fff5; margin-top: 0;">Unsubscribed ✓</h2>
+        <p>You've been successfully removed from the Cloudless newsletter. You won't receive any further emails from us.</p>
+        <p>If this was a mistake, you can <a href="https://cloudless.gr/#newsletter" style="color: #00fff5;">re-subscribe here</a>.</p>
+        <hr style="border: none; border-top: 1px solid #222; margin: 24px 0;" />
+        <p style="color: #555; font-size: 12px;">Cloudless · <a href="https://cloudless.gr" style="color: #555;">cloudless.gr</a></p>
+      </div>
+    `,
+    text: [
+      "Unsubscribed",
+      "",
+      "You've been successfully removed from the Cloudless newsletter.",
+      "If this was a mistake, visit https://cloudless.gr/#newsletter to re-subscribe.",
+      "",
+      "Cloudless · cloudless.gr",
+    ].join("\n"),
+  });
+}
+
 export async function notifyTeam(subject: string, body: string): Promise<void> {
   const config = await getConfig();
   await sendEmail({
     to: config.SES_TO_EMAIL,
     subject,
     html: `<div style="font-family: sans-serif;">${body}</div>`,
-    text: body.replace(/<[^>]+>/g, ""),
+    // Strip HTML tags for the plain-text part. We split on "<" and discard
+    // everything up to and including the next ">" in each segment, which avoids
+    // regex backtracking patterns that static analysers flag as ReDoS-prone.
+    text: body
+      .split("<")
+      .map((seg, i) =>
+        i === 0
+          ? seg
+          : seg.includes(">")
+            ? seg.slice(seg.indexOf(">") + 1)
+            : "",
+      )
+      .join(""),
   });
 }

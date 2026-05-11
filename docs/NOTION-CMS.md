@@ -1,6 +1,6 @@
 # Notion Integration
 
-cloudless.gr uses **Notion as a workspace hub** with 8 databases powering the blog CMS, contact form storage, project tracking, task management, internal documentation, site analytics, content calendar, and client reports. The integration includes **search**, **comments**, **wiki features**, **sprint management**, **block building**, **content calendar**, and **report persistence** utilities. All integrations degrade gracefully when Notion is not configured.
+cloudless.gr uses **Notion as a workspace hub** with 12 databases powering the blog CMS, contact form storage, project tracking, task management, internal documentation, site analytics, content calendar, client reports, and four public-facing CMS content types (testimonials, case studies, services, FAQs). The integration includes **search**, **comments**, **wiki features**, **sprint management**, **block building**, **content calendar**, **report persistence**, and **live CMS** utilities. All integrations degrade gracefully when Notion is not configured.
 
 > **Status:** Optional integration — all features fall back to empty/static data when `NOTION_API_KEY` is missing.
 
@@ -29,6 +29,10 @@ graph TB
         NotionComments["notion-comments.ts"]
         NotionCalendar["notion-calendar.ts"]
         NotionReports["notion-reports.ts"]
+        NotionTestimonials["notion-testimonials.ts"]
+        NotionCaseStudies["notion-case-studies.ts"]
+        NotionServices["notion-services.ts"]
+        NotionFaqs["notion-faqs.ts"]
     end
 
     subgraph Notion["Notion Workspace"]
@@ -40,6 +44,10 @@ graph TB
         DB6["Analytics DB"]
         DB7["Content Calendar DB"]
         DB8["Reports DB"]
+        DB9["Testimonials DB"]
+        DB10["Case Studies DB"]
+        DB11["Services DB"]
+        DB12["FAQs DB"]
     end
 
     Blog --> NotionBlog --> NotionClient --> DB1
@@ -52,6 +60,10 @@ graph TB
     Admin --> NotionComments --> NotionClient
     Admin --> NotionCalendar --> NotionClient --> DB7
     Admin --> NotionReports --> NotionClient --> DB8
+    App --> NotionTestimonials --> NotionClient --> DB9
+    App --> NotionCaseStudies --> NotionClient --> DB10
+    App --> NotionServices --> NotionClient --> DB11
+    App --> NotionFaqs --> NotionClient --> DB12
     Webhooks --> |Slack alerts| Slack["Slack"]
 ```
 
@@ -75,6 +87,12 @@ NOTION_ANALYTICS_DB_ID=cc4287fcb42a42dc92a7053d6f1199c7
 NOTION_CALENDAR_DB_ID=your-calendar-database-id
 NOTION_REPORTS_DB_ID=your-reports-database-id
 
+# CMS content databases (public-facing, degrade to static fallbacks)
+NOTION_TESTIMONIALS_DB_ID=your-testimonials-database-id
+NOTION_CASE_STUDIES_DB_ID=your-case-studies-database-id
+NOTION_SERVICES_DB_ID=your-services-database-id
+NOTION_FAQS_DB_ID=your-faqs-database-id
+
 # Webhook authentication
 NOTION_WEBHOOK_SECRET=your_random_secret_here
 ```
@@ -85,8 +103,12 @@ NOTION_WEBHOOK_SECRET=your_random_secret_here
 |----------------|------|
 | `/cloudless/production/NOTION_API_KEY` | SecureString |
 | `/cloudless/production/NOTION_WEBHOOK_SECRET` | SecureString |
+| `/cloudless/production/NOTION_TESTIMONIALS_DB_ID` | String |
+| `/cloudless/production/NOTION_CASE_STUDIES_DB_ID` | String |
+| `/cloudless/production/NOTION_SERVICES_DB_ID` | String |
+| `/cloudless/production/NOTION_FAQS_DB_ID` | String |
 
-Database IDs are set as regular environment variables in `sst.config.ts` and passed directly to the Lambda function. Secrets are stored in SSM and loaded at Lambda cold start via `src/instrumentation.ts`.
+Database IDs are stored in SSM (loaded at Lambda cold start via `src/instrumentation.ts`) and injected into `process.env`. Secrets are stored as SecureString. The `SSM_PREFIX` env var is set by `sst.config.ts`.
 
 #### How secrets reach Lambda
 
@@ -243,6 +265,111 @@ Stores generated client reports for the Marketing Hub reports view. Used by `src
 **Routes:** `src/app/api/admin/reports/`
 **Fallback:** In-memory store when `NOTION_REPORTS_DB_ID` is not set
 
+### 9. Testimonials (`NOTION_TESTIMONIALS_DB_ID`)
+
+Public-facing CMS for client testimonials. Falls back to `staticTestimonials` when not configured. The CMS API uses the 3-branch pattern: not-configured → static; Notion success → live data; Notion error → static with `fallbackReason`.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| Name | Title | Client full name |
+| Company | Rich text | Company name |
+| Role | Rich text | Job title / role |
+| Quote | Rich text | Testimonial text |
+| Avatar | URL | Optional absolute URL to head shot |
+| Service | Select | Cloudless service they used |
+| Rating | Number | 1–5 star rating (optional) |
+| Featured | Checkbox | Show on homepage hero |
+| Published | Checkbox | Publication gate |
+| Order | Number | Ascending display order |
+
+**Library:** `src/lib/notion-testimonials.ts`
+**Routes:** `src/app/api/testimonials/`
+**Fallback:** `staticTestimonials` array (4 Greek-market client testimonials)
+
+### 10. Case Studies (`NOTION_CASE_STUDIES_DB_ID`)
+
+Public-facing CMS for client case studies with rich block content. Uses `fetchBlocksDeep()` + `blocksToHtml()` for full page content rendering.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| Title | Title | Case study title |
+| Slug | Rich text | URL-safe identifier |
+| Client | Rich text | Client company name |
+| Industry | Select | Client industry |
+| Services | Multi-select | Cloudless services delivered |
+| Summary | Rich text | 1–2 sentence teaser |
+| Challenge | Rich text | Problem statement |
+| Solution | Rich text | What was built |
+| Results | Rich text | Outcomes paragraph |
+| Metric1Label | Rich text | e.g. "Cost reduction" |
+| Metric1Value | Rich text | e.g. "55%" |
+| Metric2Label | Rich text | Second metric label |
+| Metric2Value | Rich text | Second metric value |
+| Metric3Label | Rich text | Third metric label |
+| Metric3Value | Rich text | Third metric value |
+| CoverImage | URL | Absolute cover image URL |
+| Tags | Multi-select | Content tags |
+| Published | Checkbox | Publication gate |
+| Featured | Checkbox | Show in featured slots |
+| Date | Date | Project completion date |
+
+**Library:** `src/lib/notion-case-studies.ts`
+**Routes:** `src/app/api/case-studies/` · **Page:** `src/app/[locale]/case-studies/`
+**Fallback:** `staticCaseStudies` array
+
+### 11. Services (`NOTION_SERVICES_DB_ID`)
+
+Public-facing CMS for Cloudless service offerings. Allows pricing, features, and CTAs to be updated from Notion without a code deploy.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| Name | Title | Service name |
+| Slug | Rich text | URL-safe identifier |
+| Description | Rich text | Short paragraph |
+| Price | Rich text | e.g. "From €2,000" or "€299/mo" |
+| Category | Select | `audit` / `devops` / `consulting` / `training` |
+| Features | Rich text | Newline-separated bullet points |
+| CTA | Rich text | Button label, e.g. "Book a call" |
+| Icon | Rich text | Emoji, e.g. "🔍" |
+| StripePriceId | Rich text | Optional Stripe price ID |
+| Published | Checkbox | Publication gate |
+| Order | Number | Ascending display order |
+
+**Library:** `src/lib/notion-services.ts`
+**Routes:** `src/app/api/services/`
+**Fallback:** `staticServices` array
+
+### 12. FAQs (`NOTION_FAQS_DB_ID`)
+
+Public-facing CMS for FAQ content. Supports locale filtering so different languages can have different FAQs without managing separate translation files.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| Question | Title | FAQ question text |
+| Answer | Rich text | FAQ answer text |
+| Category | Select | `general` / `pricing` / `technical` / `process` |
+| Locale | Multi-select | `en`, `el`, `fr`, `de` — blank = all locales |
+| Published | Checkbox | Publication gate |
+| Order | Number | Ascending display order |
+
+**Library:** `src/lib/notion-faqs.ts`
+**Routes:** `src/app/api/faqs/`
+**Fallback:** `staticFaqs` array
+
+---
+
+## CMS API Pattern
+
+All 4 public CMS routes (`/api/testimonials`, `/api/case-studies`, `/api/services`, `/api/faqs`) implement the same **3-branch pattern**:
+
+```
+Not configured → 200 { data: staticFallback, source: "static", fallbackReason: "Notion not configured" }
+Notion success → 200 { data: liveData, source: "notion" }  +  Cache-Control: s-maxage=300
+Notion error   → 200 { data: staticFallback, source: "static", fallbackReason: "Notion query failed" }
+```
+
+This ensures the site always returns valid data even if Notion is down or the database doesn't exist yet.
+
 ---
 
 ## Shared Client (`src/lib/notion.ts`)
@@ -261,6 +388,7 @@ All Notion modules use a shared client:
 | `restorePage(pageId)` | Restore an archived page |
 | `appendBlocks(parentId, children)` | Append child blocks (max 100) |
 | `deleteBlock(blockId)` | Delete (archive) a block |
+| `fetchBlocksDeep(pageId)` | Recursively fetch all child blocks for full-page rendering |
 | `extractToc(blocks)` | Extract table of contents from heading blocks |
 | `paragraphBlock(text)` | Build a paragraph block object |
 | `headingBlock(level, text)` | Build a heading block (h1/h2/h3) |
@@ -416,6 +544,11 @@ All Notion-backed admin pages live under the **Content** section of the admin si
 | `/api/admin/reports/[id]` | GET, DELETE | Get or delete a report |
 | `/api/admin/reports/[id]/pdf` | GET | Export report as PDF |
 | `/api/webhooks/notion` | POST | Webhook handler |
+| `/api/testimonials` | GET | Live testimonials (Notion → static fallback) |
+| `/api/case-studies` | GET | Live case studies list (Notion → static fallback) |
+| `/api/case-studies/[slug]` | GET | Single case study with full block content |
+| `/api/services` | GET | Live services catalog (Notion → static fallback) |
+| `/api/faqs` | GET | Live FAQs with optional `?locale=` filter (Notion → static fallback) |
 
 ---
 
@@ -452,7 +585,7 @@ The project includes 8 skill reference files under `.claude/skills/`:
 
 | File | Purpose |
 |------|---------|
-| `src/lib/notion.ts` | Shared Notion API client + block builders + TOC |
+| `src/lib/notion.ts` | Shared Notion API client + block builders + TOC + `fetchBlocksDeep` |
 | `src/lib/notion-blog.ts` | Blog CMS with search, related posts, pagination |
 | `src/lib/notion-forms.ts` | Contact form storage |
 | `src/lib/notion-docs.ts` | Internal docs + wiki verification features |
@@ -462,6 +595,10 @@ The project includes 8 skill reference files under `.claude/skills/`:
 | `src/lib/notion-comments.ts` | Page comments and discussions |
 | `src/lib/notion-calendar.ts` | Content calendar Notion CRUD |
 | `src/lib/notion-reports.ts` | Client reports Notion CRUD |
+| `src/lib/notion-testimonials.ts` | Testimonials CMS (public) |
+| `src/lib/notion-case-studies.ts` | Case studies CMS (public) — uses `fetchBlocksDeep` |
+| `src/lib/notion-services.ts` | Services catalog CMS (public) |
+| `src/lib/notion-faqs.ts` | FAQs CMS (public) with locale filtering |
 | `src/lib/content-calendar.ts` | Calendar CRUD (Notion + in-memory fallback) |
 | `src/lib/reports.ts` | Reports CRUD (Notion + in-memory fallback) |
 | `src/lib/blog.ts` | Static blog fallback |
@@ -469,4 +606,10 @@ The project includes 8 skill reference files under `.claude/skills/`:
 | `src/lib/notion-cache.ts` | In-memory TTL cache for Notion queries |
 | `src/instrumentation.ts` | Lambda cold-start SSM secret loader |
 | `src/app/api/webhooks/notion/route.ts` | Webhook handler |
+| `src/app/api/testimonials/route.ts` | CMS testimonials endpoint |
+| `src/app/api/case-studies/route.ts` | CMS case studies list endpoint |
+| `src/app/api/services/route.ts` | CMS services catalog endpoint |
+| `src/app/api/faqs/route.ts` | CMS FAQs endpoint |
+| `src/app/[locale]/case-studies/page.tsx` | Case studies listing page |
+| `src/app/[locale]/case-studies/[slug]/page.tsx` | Case study detail page |
 | `.env.local.example` | Environment variable reference |

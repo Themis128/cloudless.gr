@@ -1,6 +1,6 @@
 import { escapeHtml } from "@/lib/escape-html";
 import { isValidEmail } from "@/lib/validation";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, sendContactAcknowledgment } from "@/lib/email";
 import { getConfig } from "@/lib/ssm-config";
 import { slackContactNotify } from "@/lib/slack-notify";
 import {
@@ -82,6 +82,11 @@ export async function POST(request: Request) {
     const serviceSlug = service
       ? (SERVICE_SLUG[service] ?? undefined)
       : undefined;
+
+    // Auto-reply to the visitor — fire-and-forget, never blocks response
+    sendContactAcknowledgment({ name, email, service }).catch((err) =>
+      console.warn("[contact] Auto-reply failed:", err),
+    );
 
     const nameParts = String(name).trim().split(" ");
     Promise.allSettled([

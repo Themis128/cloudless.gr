@@ -420,5 +420,24 @@
     "title": "Seite nicht gefunden",
     "body": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
     "cta": "Zurück zur Startseite"
+  },
+  "blog": {
+    "label": "[ BLOG ]",
+    "titleStatic": "Einblicke &",
+    "titleHighlight": "praktische Guides",
+    "subtitle": "Cloud-Architektur, Serverless, Analytics und KI-Marketing — für Gründer und technische Teams, die schnell vorankommen wollen.",
+    "searchPlaceholder": "Artikel suchen…",
+    "filtering": "Filtern:",
+    "clearAll": "Alle löschen",
+    "noPostsFound": "Keine Artikel gefunden.",
+    "viewAllPosts": "Alle Artikel anzeigen",
+    "readMore": "Weiterlesen",
+    "prevPage": "← Zurück",
+    "nextPage": "Weiter →",
+    "categories": "Kategorien",
+    "tags": "Tags",
+    "by": "von",
+    "result": "Ergebnis",
+    "results": "Ergebnisse"
   }
 }

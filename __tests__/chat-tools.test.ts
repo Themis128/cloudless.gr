@@ -20,6 +20,10 @@ vi.mock("@/lib/integrations", async (importOriginal) => {
       (...keys: string[]) =>
         keys.every((k) => Boolean(process.env[k])),
     ),
+    isConfiguredAsync: vi.fn(
+      async (...keys: string[]) =>
+        keys.every((k) => Boolean(process.env[k])),
+    ),
   };
 });
 

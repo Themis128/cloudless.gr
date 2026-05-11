@@ -35,6 +35,31 @@
 | [design-system-v2.md](design-system-v2.md) | Design tokens, components, layout primitives. |
 | [mcp-manager-bridge.md](mcp-manager-bridge.md) | The MCP server bridge. |
 
+### Admin panel quick reference
+
+`/admin` is gated by Cognito admin-group membership (server **and** client). Key surfaces:
+
+| Section | Path | Notes |
+|---|---|---|
+| Dashboard | `/admin` | Stat cards (orders, contacts, errors) + Infrastructure shortcuts |
+| Analytics | `/admin/analytics`, `/admin/analytics/unified` | GSC + web metrics |
+| HubSpot | `/admin/hubspot`, `/admin/crm/**` | Contacts, companies, tickets |
+| Marketing | `/admin/campaigns/**`, `/admin/email`, `/admin/calendar` | Campaigns, email, content calendar |
+| Notion | `/admin/notion/**` | Submissions, projects, tasks, analytics |
+| System | `/admin/orders`, `/admin/errors`, `/admin/integrations`, `/admin/settings` | Ops and config |
+| Infrastructure | external links | Grafana (`grafana.cloudless.online`) + Cluster Manager (`manage.cloudless.online`) — open in new tab, each tool has its own auth |
+
+### Social links
+
+`src/components/SocialLinks.tsx` renders the shared icon row used in Footer, ContactFormSection, and the home page. It links to cloudless.gr brand accounts:
+
+| Icon | URL |
+|---|---|
+| LinkedIn | `https://www.linkedin.com/company/cloudless-gr` |
+| GitHub | `https://github.com/cloudless-gr` |
+
+`src/lib/structured-data.ts` → `getOrganizationSchema().sameAs` mirrors the same two URLs for Schema.org JSON-LD.
+
 ## Project-aware Claude skills
 
 These skills live in the local Claude installation (`~/.claude/skills/`) — they auto-load in future Claude sessions to apply context that doesn't belong in the repo. Names are stable; if you don't have them locally, future sessions will rebuild them from the corresponding docs above.

@@ -26,6 +26,10 @@ export interface IntegrationConfig {
   NOTION_CALENDAR_DB_ID?: string;
   NOTION_REPORTS_DB_ID?: string;
   NOTION_GSC_REPORTS_DB_ID?: string;
+  NOTION_TESTIMONIALS_DB_ID?: string;
+  NOTION_CASE_STUDIES_DB_ID?: string;
+  NOTION_SERVICES_DB_ID?: string;
+  NOTION_FAQS_DB_ID?: string;
   GOOGLE_CLIENT_EMAIL?: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
   GOOGLE_PRIVATE_KEY?: string;
@@ -89,6 +93,10 @@ export function getIntegrations(): IntegrationConfig {
     NOTION_CALENDAR_DB_ID: process.env.NOTION_CALENDAR_DB_ID,
     NOTION_REPORTS_DB_ID: process.env.NOTION_REPORTS_DB_ID,
     NOTION_GSC_REPORTS_DB_ID: process.env.NOTION_GSC_REPORTS_DB_ID,
+    NOTION_TESTIMONIALS_DB_ID: process.env.NOTION_TESTIMONIALS_DB_ID,
+    NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID,
+    NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID,
+    NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID,
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
     GOOGLE_SERVICE_ACCOUNT_EMAIL:
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
@@ -205,6 +213,18 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
         envCfg.NOTION_GSC_REPORTS_DB_ID ||
         ssm.NOTION_GSC_REPORTS_DB_ID ||
         undefined,
+      NOTION_TESTIMONIALS_DB_ID:
+        envCfg.NOTION_TESTIMONIALS_DB_ID ||
+        ssm.NOTION_TESTIMONIALS_DB_ID ||
+        undefined,
+      NOTION_CASE_STUDIES_DB_ID:
+        envCfg.NOTION_CASE_STUDIES_DB_ID ||
+        ssm.NOTION_CASE_STUDIES_DB_ID ||
+        undefined,
+      NOTION_SERVICES_DB_ID:
+        envCfg.NOTION_SERVICES_DB_ID || ssm.NOTION_SERVICES_DB_ID || undefined,
+      NOTION_FAQS_DB_ID:
+        envCfg.NOTION_FAQS_DB_ID || ssm.NOTION_FAQS_DB_ID || undefined,
       GOOGLE_CLIENT_EMAIL:
         envCfg.GOOGLE_CLIENT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
       GOOGLE_SERVICE_ACCOUNT_EMAIL:
@@ -320,6 +340,14 @@ export class IntegrationNotConfiguredError extends Error {
 export async function requireIntegrationAsync(
   ...keys: (keyof IntegrationConfig)[]
 ): Promise<IntegrationConfig> {
+  // Fast-path: if any env var is explicitly set to empty string we know it's
+  // not configured without needing an SSM round-trip. Same logic as
+  // isConfiguredAsync — ensures tests that stub env vars are not bypassed by
+  // the SSM cache returning real production values.
+  for (const k of keys) {
+    const val = process.env[k as string];
+    if (val !== undefined && !val) throw new IntegrationNotConfiguredError([k]);
+  }
   const config = await getIntegrationsAsync();
   const missing = keys.filter((k) => !config[k]);
   if (missing.length > 0) throw new IntegrationNotConfiguredError(missing);

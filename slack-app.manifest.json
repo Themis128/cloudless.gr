@@ -1,0 +1,78 @@
+{
+  "_comment": "Slack App Manifest — source of truth for cloudless.gr Slack app configuration.",
+  "_docs": "https://api.slack.com/reference/manifests",
+  "_apply": "Run /slack-manifest-apply to push this file to the Slack API, or apply manually at api.slack.com/apps.",
+  "display_information": {
+    "name": "Cloudless",
+    "description": "Notifications from cloudless.gr — bookings, orders, errors & deploys",
+    "background_color": "#0B1D51",
+    "long_description": "The Cloudless bot delivers real-time notifications to your workspace: new consultation bookings, Stripe orders, application errors, deploy events, contact form submissions, and newsletter sign-ups. It also provides slash commands for quick status checks and operational visibility."
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Cloudless",
+      "always_online": false
+    },
+    "slash_commands": [
+      {
+        "command": "/cloudless-status",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "App health check — version and uptime",
+        "usage_hint": "",
+        "should_escape": false
+      },
+      {
+        "command": "/cloudless-orders",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "Recent Stripe orders",
+        "usage_hint": "[count]",
+        "should_escape": false
+      },
+      {
+        "command": "/cloudless-channels",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "List notification channel status and bot membership",
+        "usage_hint": "",
+        "should_escape": false
+      },
+      {
+        "command": "/cloudless-help",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "Show all available Cloudless slash commands",
+        "usage_hint": "",
+        "should_escape": false
+      }
+    ]
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "channels:manage",
+        "channels:read",
+        "channels:write.invites",
+        "chat:write",
+        "chat:write.customize",
+        "commands",
+        "groups:read",
+        "groups:write",
+        "groups:write.invites",
+        "team:read",
+        "users:read",
+        "users:read.email"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://cloudless.gr/api/slack/events",
+      "bot_events": ["app_mention", "message.im"]
+    },
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://cloudless.gr/api/slack/interactions"
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}
