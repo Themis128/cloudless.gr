@@ -125,7 +125,7 @@ export default {
       ],
       warm: isProd ? 5 : 0,
       server: {
-        memory: "1024 MB",
+        memory: "512 MB",
         architecture: "arm64",
         runtime: "nodejs22.x",
         timeout: "30 seconds",
@@ -146,6 +146,60 @@ export default {
         wait: true,
       },
     });
+
+    // ---------------------------------------------------------------------
+    // Cron jobs (production only)
+    // ---------------------------------------------------------------------
+    // Each cron triggers src/lambda/cron-invoker.ts, which fetches
+    // CRON_SECRET from SSM and POSTs to the corresponding API route.
+    // Schedules are in UTC; Athens is UTC+2 (EET) / UTC+3 (EEST summer).
+    if (isProd) {
+      const ssmPrefix = "/cloudless/production";
+      const cronJobConfig = (route: string) => ({
+        handler: "src/lambda/cron-invoker.handler",
+        memory: "256 MB",
+        timeout: "60 seconds",
+        architecture: "arm64" as const,
+        runtime: "nodejs22.x" as const,
+        environment: {
+          SITE_URL: site.url,
+          SSM_PREFIX: ssmPrefix,
+          CRON_ROUTE: route,
+        },
+        permissions: [
+          {
+            actions: ["ssm:GetParameter"],
+            resources: [
+              `arn:aws:ssm:us-east-1:278585680617:parameter${ssmPrefix}/CRON_SECRET`,
+            ],
+          },
+        ],
+      });
+
+      // Daily 01:00 UTC — flush event queue, weekly rollup, archive old events
+      new sst.aws.Cron("CronAnalyticsRollup", {
+        schedule: "cron(0 1 * * ? *)",
+        job: cronJobConfig("/api/cron/analytics-rollup"),
+      });
+
+      // Weekdays 06:00 UTC (≈08:00-09:00 Athens) — Google Calendar daily agenda to Slack
+      new sst.aws.Cron("CronCalendarDigest", {
+        schedule: "cron(0 6 ? * MON-FRI *)",
+        job: cronJobConfig("/api/cron/calendar-digest"),
+      });
+
+      // Sunday 02:00 UTC — delete generated reports older than 90 days
+      new sst.aws.Cron("CronReportCleanup", {
+        schedule: "cron(0 2 ? * SUN *)",
+        job: cronJobConfig("/api/cron/report-cleanup"),
+      });
+
+      // Monday 05:00 UTC (≈07:00-08:00 Athens) — assemble + store weekly voice brief
+      new sst.aws.Cron("CronVoiceBrief", {
+        schedule: "cron(0 5 ? * MON *)",
+        job: cronJobConfig("/api/cron/voice-brief"),
+      });
+    }
 
     // ---------------------------------------------------------------------
     // Route 53 failover records (production only)
