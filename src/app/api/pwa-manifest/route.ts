@@ -1,28 +1,27 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-/** Serves the PWA web app manifest at /manifest.webmanifest.
- *
- * Exists as an API route + next.config.ts rewrite because Turbopack's dev-mode
- * router matches [locale] before the App Router metadata-file convention
- * (app/manifest.ts), so the metadata route returns a 404 HTML page instead of
- * JSON.  The rewrite intercepts the request here first; app/manifest.ts still
- * generates the <link rel="manifest"> tag in <head>.
- */
+/** Serves the PWA web app manifest at /manifest.webmanifest. */
 export function GET(_req: NextRequest) {
   const manifest = {
-    name: "Cloudless - Cloud Computing, Serverless & AI Marketing",
+    id: "/",
+    name: "Cloudless — Cloud Computing, Serverless & AI Marketing",
     short_name: "Cloudless",
     description:
       "Cloud architecture, serverless development, data analytics, and AI-powered marketing for startups and SMBs.",
-    start_url: "/",
+    start_url: "/?source=pwa",
+    scope: "/",
+    lang: "el",
+    dir: "ltr",
     display: "standalone",
-    background_color: "#0a0a0f",
-    theme_color: "#0a0a0f",
-    orientation: "portrait-primary",
+    display_override: ["window-controls-overlay", "standalone", "minimal-ui"],
+    background_color: "#fcfcfd",
+    theme_color: "#0a7785",
+    orientation: "natural",
+    prefer_related_applications: false,
     categories: ["business", "technology"],
     icons: [
-      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       {
         src: "/icons/icon-512-maskable.png",
         sizes: "512x512",
@@ -32,22 +31,25 @@ export function GET(_req: NextRequest) {
     ],
     shortcuts: [
       {
-        name: "Contact Us",
-        short_name: "Contact",
-        url: "/contact",
+        name: "Free Cloud Audit",
+        short_name: "Audit",
+        url: "/contact?source=pwa-shortcut",
         description: "Book a free 30-minute cloud audit",
+        icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
       },
       {
         name: "Our Services",
         short_name: "Services",
         url: "/services",
         description: "Cloud, serverless, analytics & AI marketing",
+        icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
       },
       {
         name: "Read Blog",
         short_name: "Blog",
         url: "/blog",
         description: "Tech insights and guides",
+        icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
       },
     ],
   };

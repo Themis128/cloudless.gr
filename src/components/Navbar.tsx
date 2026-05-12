@@ -20,6 +20,7 @@ const navLinks = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [locale, setLocale] = useCurrentLocale();
@@ -41,9 +42,19 @@ export default function Navbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  useEffect(() => {
+    const onResize = () => { if (window.innerWidth >= 1024) setMobileOpen(false); };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-50">
+    <header className={`sticky top-0 z-50 transition-shadow duration-200${scrolled ? " [box-shadow:var(--shadow-md)]" : ""}`}>
       {/* QD-inspired top accent bar */}
       <div className="bg-neon-cyan h-px shadow-[0_0_10px_rgba(0,255,245,0.5)]" />
       <div className="bg-void/90 border-neon-cyan/10 overflow-x-hidden border-b backdrop-blur-xl">
@@ -52,7 +63,7 @@ export default function Navbar() {
           <Link
             href="/"
             className="group flex shrink-0 items-center text-white transition-opacity hover:opacity-90"
-            aria-label="cloudless.gr — home"
+            aria-label={translate(locale, "common.home", "Home")}
           >
             <Logo variant="wordmark" size="md" />
           </Link>
@@ -80,6 +91,8 @@ export default function Navbar() {
                     <button
                       type="button"
                       onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      aria-expanded={userMenuOpen}
+                      aria-haspopup="true"
                       className="hover:border-neon-cyan/30 flex min-h-11 items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-slate-300 transition-all hover:text-white"
                     >
                       <span className="bg-neon-cyan/20 border-neon-cyan/30 text-neon-cyan flex h-6 w-6 items-center justify-center rounded-full border text-xs">
@@ -147,16 +160,16 @@ export default function Navbar() {
                 ) : (
                   <>
                     <Link
+                      href="/contact"
+                      className="bg-accent hover:bg-accent/90 rounded-lg px-5 py-2.5 font-mono text-sm font-semibold whitespace-nowrap text-white transition-all duration-300"
+                    >
+                      {translate(locale, "navbar.freeAudit", "Get a Free Audit")}
+                    </Link>
+                    <Link
                       href="/auth/login"
                       className="border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/10 relative rounded-lg border bg-transparent px-5 py-2.5 font-mono text-sm font-semibold whitespace-nowrap transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,255,245,0.2)]"
                     >
                       {translate(locale, "navbar.signIn", "Sign In")}
-                    </Link>
-                    <Link
-                      href="/auth/signup"
-                      className="hover:border-neon-cyan/30 hover:text-neon-cyan relative rounded-lg border border-slate-700 bg-transparent px-5 py-2.5 font-mono text-sm font-semibold whitespace-nowrap text-slate-300 transition-all duration-300"
-                    >
-                      {translate(locale, "navbar.signUp", "Sign Up")}
                     </Link>
                   </>
                 )}
@@ -170,6 +183,7 @@ export default function Navbar() {
             className="text-neon-cyan p-2 lg:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label={toggleMenuLabel}
+            aria-expanded={mobileOpen}
           >
             {mobileOpen ? (
               <svg
@@ -300,6 +314,13 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
+                    <Link
+                      href="/contact"
+                      className="bg-accent hover:bg-accent/90 mt-2 block min-h-11 rounded-lg px-5 py-3 text-center font-mono text-sm font-semibold text-white transition-all"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      {translate(locale, "navbar.freeAudit", "Get a Free Audit")}
+                    </Link>
                     <Link
                       href="/auth/login"
                       className="border-neon-cyan/50 text-neon-cyan active:bg-neon-cyan/10 mt-2 block min-h-11 rounded-lg border px-5 py-3 text-center font-mono text-sm font-semibold transition-all"
