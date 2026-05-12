@@ -91,8 +91,14 @@ export default {
         ByTypeAndTime: { hashKey: "eventType", rangeKey: "receivedAt" },
         ByCategoryAndTime: { hashKey: "tagCategory", rangeKey: "receivedAt" },
         ByStageAndTime: { hashKey: "tagStage", rangeKey: "receivedAt" },
-        ByStageCategoryAndTime: { hashKey: "stageCategory", rangeKey: "receivedAt" },
-        ByStatusAndTime: { hashKey: "processingStatus", rangeKey: "receivedAt" },
+        ByStageCategoryAndTime: {
+          hashKey: "stageCategory",
+          rangeKey: "receivedAt",
+        },
+        ByStatusAndTime: {
+          hashKey: "processingStatus",
+          rangeKey: "receivedAt",
+        },
         ByDayAndTime: { hashKey: "eventDay", rangeKey: "receivedAt" },
         ByCustomerAndTime: { hashKey: "customerId", rangeKey: "receivedAt" },
       },
@@ -110,7 +116,11 @@ export default {
         dns: false,
         cert: "arn:aws:acm:us-east-1:278585680617:certificate/f505905a-97b4-46b0-a2b0-fb1900f425b2",
       },
-      environment: buildSiteEnvironment(stage, isProd, stripeTransactionsTable.name),
+      environment: buildSiteEnvironment(
+        stage,
+        isProd,
+        stripeTransactionsTable.name,
+      ),
       link: [stripeTransactionsTable],
       permissions: [
         {
@@ -234,7 +244,8 @@ export default {
       const apigwZoneId = "Z1UJRXOUMOOFQ8"; // APIGW regional, us-east-1
       const apexCfDomain = "d3k7muo3c6lw6s.cloudfront.net";
       const wwwCfDomain = "dgrxxatzrgxfi.cloudfront.net";
-      const apexApigwDomain = "d-uy6dmk95il.execute-api.us-east-1.amazonaws.com";
+      const apexApigwDomain =
+        "d-uy6dmk95il.execute-api.us-east-1.amazonaws.com";
       const wwwApigwDomain = "d-2msx2z5q7d.execute-api.us-east-1.amazonaws.com";
 
       // IMPORTANT — pre-deploy migration required.
