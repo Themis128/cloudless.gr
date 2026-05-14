@@ -277,7 +277,7 @@ async function handleTicketSubmission(
     icon_url: BOT_ICON_URL,
   });
 
-  console.log(
+  console.warn(
     `[Slack Interactions] Ticket created: ${issueType} / ${priority} from ${email}`,
   );
 }
@@ -428,7 +428,7 @@ async function handleDeploySubmission(
         icon_url: BOT_ICON_URL,
       });
     } else {
-      console.log(
+      console.warn(
         `[Slack Interactions] Workflow dispatched by ${triggerUsername}`,
       );
     }
