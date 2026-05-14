@@ -39,6 +39,12 @@ interface PostMessagePayload {
   icon_url?: string;
   /** Reply in thread — pass the parent message's `ts` value. */
   thread_ts?: string;
+  /**
+   * Suppress Slack's automatic URL unfurling so bot messages stay clean.
+   * Default: false (pass true to allow unfurls on specific messages).
+   */
+  unfurl_links?: boolean;
+  unfurl_media?: boolean;
 }
 
 interface SlackApiResponse {
@@ -148,13 +154,20 @@ export class SlackClient {
     token: string,
     payload: PostMessagePayload,
   ): Promise<boolean | null> {
+    const body = {
+      ...payload,
+      // Suppress URL unfurling by default — keeps bot messages clean.
+      // Callers can opt in by setting unfurl_links: true on the payload.
+      unfurl_links: payload.unfurl_links ?? false,
+      unfurl_media: payload.unfurl_media ?? false,
+    };
     const res = await fetch(CHAT_POST_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
 
     const data = (await res.json()) as SlackApiResponse;
@@ -250,6 +263,33 @@ export async function slackSubscriberNotify(email: string): Promise<void> {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Error deduplication
+//
+// Prevents alert fatigue when the same error fires repeatedly. Identical
+// errors (same title + first 120 chars of error text) are suppressed for
+// ERROR_DEDUP_TTL_MS after the first occurrence. Map is lazily pruned.
+// ---------------------------------------------------------------------------
+
+const ERROR_DEDUP_TTL_MS = 10 * 60 * 1_000; // 10 minutes
+const errorFingerprints = new Map<string, number>();
+
+function errorFingerprint(title: string, errorText: string): string {
+  return `${title}::${errorText.slice(0, 120)}`;
+}
+
+function isDuplicateError(title: string, errorText: string): boolean {
+  const now = Date.now();
+  // Lazy-prune stale entries
+  for (const [key, ts] of errorFingerprints) {
+    if (now - ts > ERROR_DEDUP_TTL_MS) errorFingerprints.delete(key);
+  }
+  const fp = errorFingerprint(title, errorText);
+  if (errorFingerprints.has(fp)) return true;
+  errorFingerprints.set(fp, now);
+  return false;
+}
+
 /**
  * Notify Slack of an application error / exception.
  */
@@ -263,6 +303,9 @@ export async function slackErrorNotify(opts: {
     opts.error instanceof Error
       ? `${opts.error.name}: ${opts.error.message}`
       : String(opts.error ?? "");
+
+  // Suppress repeated identical errors within the dedup window.
+  if (isDuplicateError(opts.title, errText)) return;
 
   await errorsClient.post({
     text: `Error: ${opts.title}`,
