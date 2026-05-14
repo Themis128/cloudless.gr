@@ -6,9 +6,14 @@
     "name": "Cloudless",
     "description": "Notifications from cloudless.gr — bookings, orders, errors & deploys",
     "background_color": "#0B1D51",
-    "long_description": "The Cloudless bot delivers real-time notifications to your workspace: new consultation bookings, Stripe orders, application errors, deploy events, contact form submissions, and newsletter sign-ups. It also provides slash commands for quick status checks and operational visibility."
+    "long_description": "The Cloudless bot delivers real-time notifications to your workspace: new consultation bookings, Stripe orders, application errors, deploy events, contact form submissions, and newsletter sign-ups. It also provides slash commands for quick status checks and operational visibility, a modal-based support ticket form, analytics summaries, and a guided production deploy flow."
   },
   "features": {
+    "app_home": {
+      "home_tab_enabled": true,
+      "messages_tab_enabled": false,
+      "messages_tab_read_only_enabled": false
+    },
     "bot_user": {
       "display_name": "Cloudless",
       "always_online": false
@@ -36,6 +41,27 @@
         "should_escape": false
       },
       {
+        "command": "/cloudless-ticket",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "Create a support ticket via modal form",
+        "usage_hint": "",
+        "should_escape": false
+      },
+      {
+        "command": "/cloudless-analytics",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "7-day and 30-day revenue & order summary",
+        "usage_hint": "",
+        "should_escape": false
+      },
+      {
+        "command": "/cloudless-deploy",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "Trigger a production deployment via confirmation modal",
+        "usage_hint": "",
+        "should_escape": false
+      },
+      {
         "command": "/cloudless-help",
         "url": "https://cloudless.gr/api/slack/commands",
         "description": "Show all available Cloudless slash commands",
@@ -56,6 +82,7 @@
         "groups:read",
         "groups:write",
         "groups:write.invites",
+        "im:write",
         "team:read",
         "users:read",
         "users:read.email"
@@ -65,7 +92,12 @@
   "settings": {
     "event_subscriptions": {
       "request_url": "https://cloudless.gr/api/slack/events",
-      "bot_events": ["app_mention", "message.im"]
+      "bot_events": [
+        "app_home_opened",
+        "app_mention",
+        "member_joined_channel",
+        "message.im"
+      ]
     },
     "interactivity": {
       "is_enabled": true,
