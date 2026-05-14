@@ -74,7 +74,7 @@ async function postOrderDigest(): Promise<void> {
 
   // Filter to paid sessions from the last 24 hours
   const yesterdaysOrders = orders.filter((o) => {
-    const created = o.createdAt ? new Date(o.createdAt).getTime() : 0;
+    const created = o.created ? new Date(o.created).getTime() : 0;
     return o.paymentStatus === "paid" && created >= yesterdayStart;
   });
 
