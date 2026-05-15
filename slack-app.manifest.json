@@ -1,7 +1,4 @@
 {
-  "_comment": "Slack App Manifest — source of truth for cloudless.gr Slack app configuration.",
-  "_docs": "https://api.slack.com/reference/manifests",
-  "_apply": "Run /slack-manifest-apply to push this file to the Slack API, or apply manually at api.slack.com/apps.",
   "display_information": {
     "name": "Cloudless",
     "description": "Notifications from cloudless.gr — bookings, orders, errors & deploys",
@@ -23,7 +20,7 @@
         "command": "/cloudless-status",
         "url": "https://cloudless.gr/api/slack/commands",
         "description": "App health check — version and uptime",
-        "usage_hint": "",
+        "usage_hint": "(no arguments)",
         "should_escape": false
       },
       {
@@ -37,35 +34,35 @@
         "command": "/cloudless-channels",
         "url": "https://cloudless.gr/api/slack/commands",
         "description": "List notification channel status and bot membership",
-        "usage_hint": "",
+        "usage_hint": "(no arguments)",
         "should_escape": false
       },
       {
         "command": "/cloudless-ticket",
         "url": "https://cloudless.gr/api/slack/commands",
         "description": "Create a support ticket via modal form",
-        "usage_hint": "",
+        "usage_hint": "(no arguments)",
         "should_escape": false
       },
       {
         "command": "/cloudless-analytics",
         "url": "https://cloudless.gr/api/slack/commands",
         "description": "7-day and 30-day revenue & order summary",
-        "usage_hint": "",
+        "usage_hint": "(no arguments)",
         "should_escape": false
       },
       {
         "command": "/cloudless-deploy",
         "url": "https://cloudless.gr/api/slack/commands",
         "description": "Trigger a production deployment via confirmation modal",
-        "usage_hint": "",
+        "usage_hint": "(no arguments)",
         "should_escape": false
       },
       {
         "command": "/cloudless-help",
         "url": "https://cloudless.gr/api/slack/commands",
         "description": "Show all available Cloudless slash commands",
-        "usage_hint": "",
+        "usage_hint": "(no arguments)",
         "should_escape": false
       }
     ]
@@ -73,6 +70,7 @@
   "oauth_config": {
     "scopes": {
       "bot": [
+        "app_mentions:read",
         "channels:manage",
         "channels:read",
         "channels:write.invites",
@@ -82,6 +80,7 @@
         "groups:read",
         "groups:write",
         "groups:write.invites",
+        "im:history",
         "im:write",
         "team:read",
         "users:read",
