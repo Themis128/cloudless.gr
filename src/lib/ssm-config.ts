@@ -81,6 +81,8 @@ interface AppConfig {
   META_CAPI_ACCESS_TOKEN: string;
   META_ACCESS_TOKEN: string;
   META_PAGE_ID: string;
+  // GitHub Actions
+  GITHUB_TOKEN: string;
   // AI
   ANTHROPIC_API_KEY: string;
   ANTHROPIC_CHAT_MODEL: string;
@@ -165,6 +167,7 @@ function buildConfigFromEnv(): AppConfig {
     META_CAPI_ACCESS_TOKEN: process.env.META_CAPI_ACCESS_TOKEN || "",
     META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN || "",
     META_PAGE_ID: process.env.META_PAGE_ID || "",
+    GITHUB_TOKEN: process.env.GITHUB_TOKEN || "",
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
     ANTHROPIC_CHAT_MODEL: process.env.ANTHROPIC_CHAT_MODEL || "",
   };
@@ -319,6 +322,7 @@ export async function getConfig(): Promise<AppConfig> {
     META_CAPI_ACCESS_TOKEN: params.get("META_CAPI_ACCESS_TOKEN") ?? "",
     META_ACCESS_TOKEN: params.get("META_ACCESS_TOKEN") ?? "",
     META_PAGE_ID: params.get("META_PAGE_ID") ?? "",
+    GITHUB_TOKEN: params.get("GITHUB_TOKEN") ?? "",
     ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
     ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",
   };

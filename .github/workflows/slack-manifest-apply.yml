@@ -1,0 +1,69 @@
+name: Apply Slack App Manifest
+
+# Pushes slack-app.manifest.json to the Slack API whenever the file changes
+# on main, or on manual dispatch.
+#
+# Prerequisites:
+#   Add SLACK_APP_CONFIG_TOKEN as a GitHub Actions secret.
+#   Generate it at: https://api.slack.com/apps → your app → "App-Level Tokens"
+#   Required scope: apps:write
+#
+# To get SLACK_APP_ID: api.slack.com/apps → your app → Basic Information → App ID
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "slack-app.manifest.json"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (validate only, do not apply)"
+        required: false
+        default: "false"
+
+jobs:
+  apply-manifest:
+    name: Apply Slack Manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate manifest JSON
+        run: |
+          echo "Validating slack-app.manifest.json..."
+          python3 -m json.tool slack-app.manifest.json > /dev/null
+          echo "✓ JSON is valid"
+
+      - name: Validate manifest with Slack API
+        run: |
+          RESULT=$(curl -s -X POST https://slack.com/api/apps.manifest.validate \
+            -H "Authorization: Bearer ${{ secrets.SLACK_APP_CONFIG_TOKEN }}" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            --data-binary @slack-app.manifest.json)
+          echo "$RESULT"
+          OK=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ok','false'))")
+          if [ "$OK" != "True" ]; then
+            echo "::error::Manifest validation failed"
+            exit 1
+          fi
+          echo "✓ Manifest is valid"
+
+      - name: Apply manifest to Slack app
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          RESULT=$(curl -s -X POST https://slack.com/api/apps.manifest.update \
+            -H "Authorization: Bearer ${{ secrets.SLACK_APP_CONFIG_TOKEN }}" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d "{\"app_id\": \"${{ secrets.SLACK_APP_ID }}\", \"manifest\": $(cat slack-app.manifest.json)}")
+          echo "$RESULT"
+          OK=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ok','false'))")
+          if [ "$OK" != "True" ]; then
+            echo "::error::Manifest apply failed"
+            exit 1
+          fi
+          echo "✓ Manifest applied successfully"
+
+      - name: Dry run notice
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "Dry run — manifest validated but not applied."

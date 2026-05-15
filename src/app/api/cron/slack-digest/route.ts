@@ -24,6 +24,11 @@
 
 import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 import { SlackClient } from "@/lib/slack-notify";
+import {
+  isSentryConfigured,
+  getErrorCounts,
+  getTopErrors,
+} from "@/lib/sentry";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -194,12 +199,11 @@ async function postOrderDigest(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Error digest — posts overnight error summary to #errors (only if any)
+// Error digest — posts overnight error summary to #errors
 //
-// NOTE: For a full implementation, wire this to a persistent error store
-// (e.g. Sentry, a DB table, or Redis). The current in-process error dedup
-// map in slack-notify.ts does not survive Lambda cold starts. This stub
-// posts a daily health check confirming the errors channel is active.
+// When SENTRY_AUTH_TOKEN is configured, queries live issue counts and surfaces
+// the top unresolved errors. Falls back to a static health-check ping when
+// Sentry is not configured so the channel stays active regardless.
 // ---------------------------------------------------------------------------
 
 async function postErrorDigest(): Promise<void> {
@@ -207,18 +211,157 @@ async function postErrorDigest(): Promise<void> {
   const ts = Math.floor(Date.now() / 1_000);
   const dateLabel = `<!date^${ts}^{date_long_pretty} at {time}|${new Date().toISOString()}>`;
 
-  // Post a lightweight daily health-check ping.
-  // To add real error counts, query Sentry or your error DB here.
+  const sentryReady = await isSentryConfigured();
+
+  if (!sentryReady) {
+    // Sentry not configured — post a lightweight health-check ping so the
+    // channel stays active and operators know the cron is running.
+    await errorsClient.post({
+      text: ":white_check_mark: Daily health check — errors channel active",
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:white_check_mark: *Daily health check* — errors channel active.\nNo Sentry integration configured; skipping error counts.\n\n_${dateLabel}_`,
+          },
+        },
+      ],
+      username: BOT_USERNAME,
+      icon_url: BOT_ICON_URL,
+    });
+    return;
+  }
+
+  // Fetch live error counts and top issues concurrently.
+  const [counts, topErrors] = await Promise.all([
+    getErrorCounts(),
+    getTopErrors(3),
+  ]);
+
+  // Sentry unreachable / token invalid — still post so the channel gets a
+  // daily message and operators know something is wrong.
+  if (!counts) {
+    await errorsClient.post({
+      text: ":warning: Daily error digest — Sentry unavailable",
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:warning: *Daily error digest* — could not reach Sentry API. Check \`SENTRY_AUTH_TOKEN\` scopes.\n\n_${dateLabel}_`,
+          },
+        },
+      ],
+      username: BOT_USERNAME,
+      icon_url: BOT_ICON_URL,
+    });
+    return;
+  }
+
+  // All clear — no unresolved errors or warnings.
+  if (counts.total === 0) {
+    await errorsClient.post({
+      text: ":white_check_mark: Daily error digest — no unresolved issues",
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:white_check_mark: *Daily error digest* — no unresolved issues in Sentry.\n\n_${dateLabel}_`,
+          },
+        },
+      ],
+      username: BOT_USERNAME,
+      icon_url: BOT_ICON_URL,
+    });
+    return;
+  }
+
+  // Build summary line.
+  const parts: string[] = [];
+  if (counts.fatal > 0) parts.push(`${counts.fatal} fatal`);
+  if (counts.error > 0) parts.push(`${counts.error} error${counts.error === 1 ? "" : "s"}`);
+  if (counts.warning > 0) parts.push(`${counts.warning} warning${counts.warning === 1 ? "" : "s"}`);
+  const summaryLine = parts.join(", ");
+
+  // Build top-issues list (up to 3).
+  const issueLines =
+    topErrors.length > 0
+      ? topErrors.map((issue) => {
+          const level =
+            issue.level === "fatal"
+              ? ":red_circle:"
+              : issue.level === "error"
+                ? ":large_orange_circle:"
+                : ":yellow_circle:";
+          const title = slackEscape(issue.title.slice(0, 80));
+          const count = Number(issue.count).toLocaleString();
+          return `${level} <${issue.permalink}|${title}> — ${count} event${Number(issue.count) === 1 ? "" : "s"}`;
+        })
+      : ["_No recent high-frequency issues found._"];
+
   await errorsClient.post({
-    text: ":white_check_mark: Daily health check — errors channel active",
+    text: `:rotating_light: Daily error digest — ${summaryLine} unresolved`,
     blocks: [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: ":rotating_light: Daily Error Digest",
+          emoji: true,
+        },
+      },
+      {
+        type: "section",
+        fields: [
+          {
+            type: "mrkdwn",
+            text: `*Fatal:*\n${counts.fatal}`,
+          },
+          {
+            type: "mrkdwn",
+            text: `*Errors:*\n${counts.error}`,
+          },
+          {
+            type: "mrkdwn",
+            text: `*Warnings:*\n${counts.warning}`,
+          },
+          {
+            type: "mrkdwn",
+            text: `*Total unresolved:*\n${counts.total}`,
+          },
+        ],
+      },
       {
         type: "section",
         text: {
           type: "mrkdwn",
-          text: `:white_check_mark: *Daily health check* — errors channel active.\nNo critical alerts in the last 24 hours.\n\n_${dateLabel}_`,
+          text: `*Top issues by frequency:*\n${issueLines.join("\n")}`,
         },
       },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: { type: "plain_text", text: "Open Sentry", emoji: true },
+            url: "https://sentry.io/organizations/baltzakisthemiscom/issues/?project=cloudless-gr&query=is%3Aunresolved&sort=freq",
+            action_id: "open_sentry_issues",
+            style: "danger",
+          },
+        ],
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `${dateLabel} • cloudless.gr daily digest`,
+          },
+        ],
+      },
+      { type: "divider" },
     ],
     username: BOT_USERNAME,
     icon_url: BOT_ICON_URL,
