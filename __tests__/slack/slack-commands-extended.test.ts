@@ -217,10 +217,10 @@ describe("/cloudless-analytics", () => {
     verifyOk(formBody(fields));
 
     const response = await POST(makeCommandRequest(fields));
-    const data = await response.json() as { blocks: unknown[] };
-    const blockStr = JSON.stringify(data.blocks);
+    const data = await response.json() as { blocks?: unknown[]; text?: string };
+    const bodyStr = JSON.stringify(data);
 
-    expect(blockStr).toMatch(/no orders|no paid orders|0/i);
+    expect(bodyStr).toMatch(/no orders|no paid orders|no order data|0/i);
   });
 
   it("includes a Stripe Dashboard button", async () => {

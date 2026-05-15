@@ -229,7 +229,7 @@ async function handleTicketSubmission(
 
   const contactsClient = new SlackClient({ channel: "#contacts" });
   await contactsClient.post({
-    text: `New support ticket: ${issueLabel[issueType] ?? issueType} from ${email}`,
+    text: `New support ticket: ${issueLabel[issueType] ?? issueType} from ${slackEscape(email)}`,
     blocks: [
       {
         type: "header",

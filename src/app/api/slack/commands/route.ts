@@ -377,21 +377,21 @@ async function handleTicket(payload: SlashCommandPayload): Promise<Response> {
     blocks: [
       {
         type: "input",
-        block_id: "customer_email",
+        block_id: "ticket_email",
         label: { type: "plain_text", text: "Customer Email", emoji: true },
         element: {
           type: "plain_text_input",
-          action_id: "value",
+          action_id: "ticket_email_input",
           placeholder: { type: "plain_text", text: "customer@example.com" },
         },
       },
       {
         type: "input",
-        block_id: "issue_type",
+        block_id: "ticket_issue_type",
         label: { type: "plain_text", text: "Issue Type", emoji: true },
         element: {
           type: "static_select",
-          action_id: "value",
+          action_id: "ticket_issue_type_select",
           placeholder: { type: "plain_text", text: "Select a category" },
           options: [
             {
@@ -425,11 +425,11 @@ async function handleTicket(payload: SlashCommandPayload): Promise<Response> {
       },
       {
         type: "input",
-        block_id: "priority",
+        block_id: "ticket_priority",
         label: { type: "plain_text", text: "Priority", emoji: true },
         element: {
           type: "static_select",
-          action_id: "value",
+          action_id: "ticket_priority_select",
           initial_option: {
             text: { type: "plain_text", text: ":large_yellow_circle: Medium" },
             value: "medium",
@@ -452,11 +452,11 @@ async function handleTicket(payload: SlashCommandPayload): Promise<Response> {
       },
       {
         type: "input",
-        block_id: "description",
+        block_id: "ticket_description",
         label: { type: "plain_text", text: "Description", emoji: true },
         element: {
           type: "plain_text_input",
-          action_id: "value",
+          action_id: "ticket_description_input",
           multiline: true,
           min_length: 10,
           max_length: 3000,
@@ -691,7 +691,7 @@ async function handleDeploy(payload: SlashCommandPayload): Promise<Response> {
         },
         element: {
           type: "plain_text_input",
-          action_id: "value",
+          action_id: "deploy_notes_input",
           multiline: true,
           max_length: 500,
           placeholder: {
