@@ -19,6 +19,7 @@ import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 import { SlackClient } from "@/lib/slack-notify";
+import { getConfig } from "@/lib/ssm-config";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -365,7 +366,7 @@ async function handleDeploySubmission(
   });
 
   // Trigger the GitHub Actions workflow
-  const githubToken = process.env.GITHUB_TOKEN;
+  const { GITHUB_TOKEN: githubToken } = await getConfig();
   if (!githubToken) {
     console.error(
       "[Slack Interactions] GITHUB_TOKEN not set — skipping workflow dispatch",
@@ -377,7 +378,7 @@ async function handleDeploySubmission(
           type: "section",
           text: {
             type: "mrkdwn",
-            text: ":x: *Deploy failed* — `GITHUB_TOKEN` is not configured on the server. Add it to SSM at `/cloudless/prod/GITHUB_TOKEN`.",
+            text: ":x: *Deploy failed* — `GITHUB_TOKEN` is not configured on the server. Add it to SSM at `/cloudless/production/GITHUB_TOKEN`.",
           },
         },
       ],
