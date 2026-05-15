@@ -43,6 +43,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Anthropic SDK (CI-only dep for review script)
+        run: pnpm add -D @anthropic-ai/sdk --no-lockfile
+
       # Reuse the OIDC role already configured for deploys
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v6

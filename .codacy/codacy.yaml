@@ -4,3 +4,5 @@ tools:
     - lizard@1.17.31
     - opengrep@1.16.4
     - trivy@0.69.3
+exclude_paths:
+    - scripts/**
