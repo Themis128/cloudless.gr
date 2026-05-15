@@ -25,7 +25,7 @@ import { getConfig } from "@/lib/ssm-config";
 // Constants
 // ---------------------------------------------------------------------------
 
-const GITHUB_OWNER = "baltzakis-themis"; // update to your GitHub org/username
+const GITHUB_OWNER = "Themis128";
 const GITHUB_REPO = "cloudless.gr";
 const GITHUB_WORKFLOW = "deploy.yml";
 const GITHUB_REF = "main";
