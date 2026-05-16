@@ -22,7 +22,11 @@ jobs:
   ensure-pi-build:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: [self-hosted, omv]
-    timeout-minutes: 20
+    # Pi builds can sit queued on the self-hosted runner for 30+ min on a busy
+    # day before doing ~1 min of actual work. Job timeout must cover the
+    # combined Pi-build wait (max ~45 min, see below) plus the k3s-rollout
+    # wait (max ~10 min).
+    timeout-minutes: 60
     steps:
       - name: resolve deploy metadata
         id: meta
@@ -103,7 +107,10 @@ jobs:
             const deploySha = '${{ steps.meta.outputs.sha }}';
             const { owner, repo } = context.repo;
 
-            const maxAttempts = 60; // 15m at 15s intervals
+            // Pi builds frequently spend 20-30 min queued on the omv
+            // self-hosted runner before doing ~1 min of work. 45 min covers
+            // a worst-case queue without bailing on healthy builds.
+            const maxAttempts = 180; // 45m at 15s intervals
             const delayMs = 15000;
 
             function sleep(ms) {
