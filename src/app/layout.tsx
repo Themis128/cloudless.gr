@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Instrument_Sans, Work_Sans, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { headers } from "next/headers";
+import { routing } from "@/i18n/routing";
 import { themeForRoute } from "@/components/ThemeProvider";
 import { HubSpotScript } from "@/components/HubSpotScript";
 import "./globals.css";
@@ -27,8 +28,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
-  // Hero badge, CTAs, and TerminalBlock all use font-mono above-the-fold
-  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -79,10 +78,12 @@ export default async function RootLayout({
   // Falls back to "/" for routes outside the matcher (which we don't render).
   const pathname = (await headers()).get("x-pathname") ?? "/";
   const theme = themeForRoute(pathname);
+  const _seg = pathname.split("/")[1];
+  const locale = (routing.locales as readonly string[]).includes(_seg) ? _seg : routing.defaultLocale;
 
   return (
     <html
-      lang="en"
+      lang={locale}
       data-scroll-behavior="smooth"
       data-theme={theme}
       className={`${instrumentSans.variable} ${workSans.variable} ${geistMono.variable} h-full antialiased`}

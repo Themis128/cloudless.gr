@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
+
+const _upId=process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID??'';
+const _reg=_upId.split('_')[0]||'us-east-1';
+const JWKS=_upId?createRemoteJWKSet(new URL(`https://cognito-idp.${_reg}.amazonaws.com/${_upId}/.well-known/jwks.json`)):null;
 
 const LOCALES = routing.locales as readonly string[];
 const DEFAULT_LOCALE = routing.defaultLocale;
@@ -17,36 +22,29 @@ function stripLocale(pathname: string): string {
   return pathname.slice(segment.length + 1) || "/";
 }
 
-function readCognitoToken(request: NextRequest): {
-  valid: boolean;
-  isAdmin: boolean;
-} {
+async function readCognitoToken(req: NextRequest): Promise<{valid:boolean;isAdmin:boolean}> {
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  if (!clientId) return { valid: false, isAdmin: false };
+  if (!clientId || !JWKS) return { valid: false, isAdmin: false };
   const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
-  const username = request.cookies.get(lastAuthKey)?.value;
+  const username = req.cookies.get(lastAuthKey)?.value;
   if (!username) return { valid: false, isAdmin: false };
   const tokenKey = `CognitoIdentityServiceProvider.${clientId}.${username}.accessToken`;
-  const token = request.cookies.get(tokenKey)?.value;
+  const token = req.cookies.get(tokenKey)?.value;
   if (!token) return { valid: false, isAdmin: false };
   try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return { valid: false, isAdmin: false };
-    const base64Url = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const base64 = base64Url.padEnd(Math.ceil(base64Url.length / 4) * 4, "=");
-    const payload = JSON.parse(
-      Buffer.from(base64, "base64").toString("utf-8"),
-    ) as { exp?: number; "cognito:groups"?: string[] };
-    if (payload.exp && Date.now() >= payload.exp * 1000)
-      return { valid: false, isAdmin: false };
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: `https://cognito-idp.${_reg}.amazonaws.com/${_upId}`,
+      audience: clientId,
+    });
     return {
       valid: true,
-      isAdmin: payload["cognito:groups"]?.includes("admin") ?? false,
+      isAdmin: (payload["cognito:groups"] as string[]|undefined)?.includes("admin") ?? false,
     };
   } catch {
     return { valid: false, isAdmin: false };
   }
 }
+
 
 // --- next-intl locale middleware ---
 const intlMiddleware = createIntlMiddleware(routing);
@@ -117,7 +115,7 @@ function cleanupStaleEntries() {
 }
 
 /**
- * Content-Security-Policy — shipped in Report-Only mode for an initial soak.
+ * Content-Security-Policy — enforced. Reports sent to /api/csp-report.
  *
  * Allowlists every third-party host the site currently loads:
  *   - Stripe (checkout + redirect)
@@ -131,10 +129,8 @@ function cleanupStaleEntries() {
  * components until we wire nonce-per-request via the App Router. 'unsafe-eval'
  * is kept for Three.js / WebGL helpers that compile shaders dynamically.
  *
- * Once we've watched DevTools / Sentry CSP reports for a week with no
- * legitimate violations, promote this to "Content-Security-Policy" (enforce).
  */
-const CSP_REPORT_ONLY = [
+const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com",
   // fonts.googleapis.com is allowlisted because next/font/google emits a
@@ -158,11 +154,7 @@ const CSP_REPORT_ONLY = [
   // dance. Endpoint logs to stdout → Sentry/CloudWatch.
   "report-uri /api/csp-report",
   "report-to csp-endpoint",
-  // Note: upgrade-insecure-requests is intentionally OMITTED here.
-  // Browsers ignore it inside Content-Security-Policy-Report-Only and log
-  // a "directive ignored" warning to the console (Lighthouse Best-Practices
-  // -1). Re-add it inside the enforcing CSP once we promote out of
-  // Report-Only mode (see scheduled agent: trig_01Lwqaf2cUrs3rZPXSdWhdkM).
+  "upgrade-insecure-requests",
 ].join("; ");
 
 /**
@@ -217,10 +209,10 @@ function addSecurityHeaders(response: NextResponse): void {
     "max-age=63072000; includeSubDomains; preload",
   );
   response.headers.set("Report-To", REPORT_TO);
-  response.headers.set("Content-Security-Policy-Report-Only", CSP_REPORT_ONLY);
+  response.headers.set("Content-Security-Policy", CSP);
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Enforce HTTPS in production so all traffic stays encrypted in transit.
   const forwardedProto = request.headers.get("x-forwarded-proto");
   if (process.env.NODE_ENV === "production" && forwardedProto === "http") {
@@ -320,7 +312,7 @@ export function proxy(request: NextRequest) {
     bare === "/dashboard" || bare.startsWith("/dashboard/");
 
   if (isAdminPath || isDashboardPath) {
-    const { valid, isAdmin: hasAdminGroup } = readCognitoToken(request);
+    const { valid, isAdmin: hasAdminGroup } = await readCognitoToken(request);
     if (valid) {
       if (isAdminPath && !hasAdminGroup) {
         return NextResponse.redirect(
