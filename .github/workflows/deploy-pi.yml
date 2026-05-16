@@ -71,6 +71,10 @@ jobs:
         if: steps.check_ecr.outputs.exists != 'true'
         uses: docker/setup-buildx-action@v3
 
+      - name: Prune stale buildx cache
+        if: steps.check_ecr.outputs.exists != 'true'
+        run: docker buildx prune -f --filter until=48h || true
+
       - name: Build and push Docker image
         if: steps.check_ecr.outputs.exists != 'true'
         uses: docker/build-push-action@v6
@@ -108,7 +112,7 @@ jobs:
     # repoints the deployment to the correct SHA.
     runs-on: [self-hosted, omv]
     needs: build-and-push
-    if: always() && needs.build-and-push.result != 'cancelled'
+    if: always() && needs.build-and-push.result != 'cancelled' && (needs.build-and-push.result == 'success' || needs.build-and-push.outputs.image_exists == 'true')
 
     steps:
       - name: Configure AWS credentials (OIDC)
