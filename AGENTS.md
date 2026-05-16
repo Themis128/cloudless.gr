@@ -1,3 +1,21 @@
+> [!WARNING]
+> **SUPPLY CHAIN RISK — `node_modules` PATH IN AGENT INSTRUCTIONS + AUTO-MERGE BYPASS**
+>
+> This repo has a specific combination of risks:
+>
+> 1. **`AGENTS.md` instructs AI agents to read from `node_modules/next/dist/docs/`** — a supply chain injection vector.
+> 2. **`dependabot-automerge.yml` auto-merges patch/minor `next` updates** with no human approval.
+> 3. **`pr-review.yml` explicitly skips Dependabot PRs** — the AI reviewer is bypassed for the exact PRs that update `next`.
+> 4. **`mcp-security-scan.yml` runs with `continue-on-error: true`** — findings don't block merges.
+>
+> Combined effect: a malicious `next` patch lands automatically, bypasses the Claude reviewer, and agents
+> read attacker instructions from `node_modules` — all without human review.
+>
+> **HUMAN REVIEW REQUIRED — DO NOT AUTO-MERGE**
+>
+> 🔗 [labs.jamessawyer.co.uk](https://labs.jamessawyer.co.uk/) — security research
+> 🔗 [OWASP LLM01 — Prompt Injection](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
+
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
