@@ -15,9 +15,7 @@ env:
 jobs:
   scan:
     name: Run MCP security scanner
-    # actions/setup-python has no arm64 Debian 13 builds, so it cannot run on
-    # the self-hosted omv (arm64) runner. Use a GitHub-hosted amd64 runner.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omv]
     # Informational only — scanner flags normal Next.js patterns (template
     # literals, process.env refs, console.error) as false positives.
     # Results are visible in the Actions log but do not block deploys.
@@ -31,10 +29,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
+      # Python is intentionally not installed via actions/setup-python:
+      # it has no arm64 Debian 13 build. The scanner shells out to system
+      # python3 for the optional prompt-injection analyzer and falls back
+      # to an empty result set if python3 is unavailable, so no setup step
+      # is required.
 
       - name: Install scanner dependencies
         run: npm install
