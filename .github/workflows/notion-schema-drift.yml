@@ -19,7 +19,7 @@ permissions:
 jobs:
   drift:
     name: notion-schema-sync --dry-run
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omv]
     steps:
       - uses: actions/checkout@v6
 

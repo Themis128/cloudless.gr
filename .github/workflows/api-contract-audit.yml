@@ -23,7 +23,7 @@ env:
 jobs:
   contract-tests:
     name: API Contract Test Suite
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omv]
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v6

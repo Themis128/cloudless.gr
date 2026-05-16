@@ -11,7 +11,7 @@ on:
 jobs:
   build:
     name: Build & Validate
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omv]
     timeout-minutes: 20
     steps:
       - name: Checkout

@@ -16,7 +16,7 @@ env:
 jobs:
   audit:
     name: Dependency Audit
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omv]
     timeout-minutes: 10
 
     steps:

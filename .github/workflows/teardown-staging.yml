@@ -23,7 +23,7 @@ permissions:
 jobs:
   teardown:
     name: Destroy Staging Stack
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omv]
     timeout-minutes: 15
 
     steps:
