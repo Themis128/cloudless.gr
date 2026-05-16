@@ -17,6 +17,12 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+concurrency:
+  # Cancel earlier in-flight runs for the same branch on a new push. The PR
+  # only cares about the latest commit, so older queued runs are wasted.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pwa:
     name: Service Worker Runtime Tests
