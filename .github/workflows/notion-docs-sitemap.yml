@@ -18,7 +18,7 @@ env:
 jobs:
   sync:
     name: Sync Notion docs & blog slugs into sitemap
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omv]
 
     steps:
       - uses: actions/checkout@v6

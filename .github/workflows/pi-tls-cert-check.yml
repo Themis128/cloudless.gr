@@ -45,7 +45,7 @@ env:
 jobs:
   probe:
     name: Probe SECONDARY failover
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omv]
     timeout-minutes: 3
     steps:
       - name: TLS handshake + cert validity

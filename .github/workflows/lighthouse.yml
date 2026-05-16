@@ -19,7 +19,7 @@ env:
 jobs:
   audit:
     name: Performance Audit
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omv]
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     timeout-minutes: 10
 
