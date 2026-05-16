@@ -10,9 +10,12 @@ declare module "sst" {
       "type": "sst.aws.Nextjs"
       "url": string
     }
+    "StripeTransactions": {
+      "name": string
+      "type": "sst.aws.Dynamo"
+    }
   }
 }
-/// <reference path="sst-env.d.ts" />
 
 import "sst"
 export {}
