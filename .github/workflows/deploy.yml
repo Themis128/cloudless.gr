@@ -95,6 +95,9 @@ jobs:
               ]
             }"
 
+      - name: Clear any stale SST lock
+        run: pnpm sst unlock --stage production || true
+
       - name: Deploy (SST)
         run: pnpm sst deploy --stage production
         env:
