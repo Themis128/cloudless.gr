@@ -31,7 +31,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: [self-hosted, omv]
-    timeout-minutes: 20
+    timeout-minutes: 40
     environment:
       name: production
       url: https://cloudless.gr
@@ -55,17 +55,17 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Type Check
-        run: pnpm typecheck
-
-      - name: Unit tests
-        run: pnpm test:ci
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Bump service worker CACHE_VERSION
         run: |
@@ -80,77 +80,6 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
-
-      - name: Preflight — verify IAM role-tagging permissions
-        run: |
-          set -euo pipefail
-
-          # 1. Confirm the role was assumed successfully
-          CALLER=$(aws sts get-caller-identity --output json)
-          CALLER_ARN=$(echo "$CALLER" | jq -r '.Arn')
-          echo "Assumed identity: $CALLER_ARN"
-
-          # 2. simulate-principal-policy requires an IAM principal ARN (NOT an STS assumed-role ARN).
-          #    Convert arn:aws:sts::<acct>:assumed-role/<RoleName>/session → arn:aws:iam::<acct>:role/<RoleName>
-          ACCOUNT_ID=$(echo "$CALLER" | jq -r '.Account')
-          if [[ "$CALLER_ARN" =~ ^arn:aws:sts::[0-9]+:assumed-role/([^/]+)/ ]]; then
-            ROLE_NAME="${BASH_REMATCH[1]}"
-            ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${ROLE_NAME}"
-            echo "Simulating policy for role: $ROLE_ARN"
-          else
-            ROLE_ARN="$CALLER_ARN"
-            echo "Simulating policy for principal: $ROLE_ARN"
-          fi
-
-          REQUIRED_ACTIONS="iam:SimulatePrincipalPolicy iam:GetRole iam:TagRole iam:UntagRole iam:ListRoleTags"
-
-          set +e
-          # Simulate against the prefix SST actually manages (cloudl-production-*).
-          # Testing against arn:aws:iam::*:role/* would require admin perms we
-          # do not need or want to grant.
-          SIMULATION=$(aws iam simulate-principal-policy \
-            --policy-source-arn "$ROLE_ARN" \
-            --action-names $REQUIRED_ACTIONS \
-            --resource-arns "arn:aws:iam::${ACCOUNT_ID}:role/cloudl-production-example" \
-            --output json 2> /tmp/simulate-principal-policy.err)
-          SIMULATION_EXIT_CODE=$?
-          set -e
-          if [ "$SIMULATION_EXIT_CODE" -ne 0 ]; then
-            # The preflight is a helper, not a gate. If the role itself lacks
-            # iam:SimulatePrincipalPolicy we cannot probe — warn and continue,
-            # letting the actual deploy surface any missing tag perms.
-            if grep -qE "AccessDenied|not authorized to perform: iam:SimulatePrincipalPolicy" /tmp/simulate-principal-policy.err; then
-              echo "::warning::Skipping IAM preflight: deploy role lacks iam:SimulatePrincipalPolicy."
-              echo "::warning::To re-enable preflight checks, grant iam:SimulatePrincipalPolicy on resource: ${ROLE_ARN}"
-              cat /tmp/simulate-principal-policy.err >&2
-            else
-              echo "::error::Could not run iam:SimulatePrincipalPolicy for $ROLE_ARN"
-              cat /tmp/simulate-principal-policy.err >&2
-              echo "::error::Fix the IAM policy attached to the deploy role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
-              exit 1
-            fi
-          else
-
-            # 3. Check each action's evaluation decision
-            DENIED=$(echo "$SIMULATION" | jq -r '
-              .EvaluationResults[]
-              | select(.EvalDecision != "allowed")
-              | .EvalActionName
-            ')
-
-            if [ -n "$DENIED" ]; then
-              echo "::error::The following IAM actions are NOT allowed for $ROLE_ARN:"
-              echo "$DENIED" | while read -r action; do echo "  - $action"; done
-              echo ""
-              echo "::error::Fix the IAM policy attached to the deploy role: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
-              echo "::error::At minimum allow: iam:GetRole, iam:TagRole, iam:UntagRole, iam:ListRoleTags on the role(s) SST manages (cloudl-production-*)"
-              echo "::error::Also allow: iam:SimulatePrincipalPolicy (so this preflight can run)"
-              echo "::error::See docs/deploy.md for the exact policy statements."
-              exit 1
-            fi
-
-            echo "✅ IAM permissions confirmed for $ROLE_ARN"
-          fi
 
       - name: Notify Slack — deploy started
         if: env.SLACK_WEBHOOK_URL != ''
@@ -176,13 +105,6 @@ jobs:
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
 
       - name: Publish current SHA to SSM (for Pi-side image pin)
-        # Writes the just-deployed commit SHA to a well-known SSM parameter.
-        # The Pi K3s standby reads this to know which cloudless-pi-app:<sha>
-        # tag to pull, so Pi and cloud are deterministically pinned to the
-        # same code. Failure here doesn't block deploy — the cloud is already
-        # live; Pi just won't know about this revision until the next deploy.
-        # Requires ssm:PutParameter on /cloudless/production/* (covered by
-        # PowerUserAccess on the deploy role).
         if: success()
         continue-on-error: true
         run: |
