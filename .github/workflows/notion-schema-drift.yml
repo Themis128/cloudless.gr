@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
       - uses: actions/setup-node@v4
         with:
@@ -33,7 +33,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6
         with:
           role-to-assume: arn:aws:iam::278585680617:role/cloudless-github-actions
           aws-region: us-east-1
