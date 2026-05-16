@@ -57,7 +57,7 @@ export default function Navbar() {
     <header className={`sticky top-0 z-50 transition-shadow duration-200${scrolled ? " [box-shadow:var(--shadow-md)]" : ""}`}>
       {/* QD-inspired top accent bar */}
       <div className="bg-neon-cyan h-px shadow-[0_0_10px_rgba(0,255,245,0.5)]" />
-      <div className="bg-void/90 border-neon-cyan/10 overflow-x-hidden border-b backdrop-blur-xl">
+      <div className="bg-void/90 border-neon-cyan/10 border-b backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           {/* Logo */}
           <Link
