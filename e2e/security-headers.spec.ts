@@ -93,6 +93,16 @@ test.describe("security headers — cloud", () => {
     }
   });
 
+  test("CSP allows Google Analytics and GTM hosts", async ({ request }) => {
+    const r = await request.get(PROBE);
+    const csp = r.headers()["content-security-policy-report-only"] ?? "";
+    // script-src must allow the GTM loader
+    expect(csp).toContain("https://www.googletagmanager.com");
+    // connect-src must allow GA4 collection endpoints
+    expect(csp).toContain("https://www.google-analytics.com");
+    expect(csp).toContain("https://analytics.google.com");
+  });
+
   test("Report-To header advertises the csp-endpoint group", async ({ request }) => {
     const r = await request.get(PROBE);
     const reportTo = r.headers()["report-to"] ?? "";

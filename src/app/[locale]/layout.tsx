@@ -13,6 +13,7 @@ import { getOrganizationSchema } from "@/lib/structured-data";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { CookieConsentProvider } from "@/context/CookieConsentContext";
 import CookieConsent from "@/components/CookieConsent";
+import GoogleAnalyticsConsent from "@/components/GoogleAnalyticsConsent";
 
 const CartSlideOver = dynamic(() => import("@/components/store/CartSlideOver"));
 const ChatWidget = dynamic(() => import("@/components/ChatWidget"));
@@ -70,6 +71,7 @@ export default async function LocaleLayout({ children, params }: Props) {
       <AuthProvider>
         <CartProvider>
           <CookieConsentProvider>
+            <GoogleAnalyticsConsent />
             <JsonLd data={getOrganizationSchema()} />
             <TrainingBanner locale={locale} />
             <Navbar />

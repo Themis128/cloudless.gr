@@ -7,6 +7,7 @@ import { HubSpotScript } from "@/components/HubSpotScript";
 import "./globals.css";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
+const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "";
 
 const instrumentSans = Instrument_Sans({
   variable: "--font-instrument-sans",
@@ -116,6 +117,30 @@ export default async function RootLayout({
           </>
         ) : null}
         <HubSpotScript />
+        {GA_ID ? (
+          <>
+            {/* Consent Mode v2 — default to denied before user responds to banner */}
+            <Script id="gtag-consent-init" strategy="beforeInteractive">{`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){window.dataLayer.push(arguments);}
+              gtag('consent', 'default', {
+                analytics_storage: 'denied',
+                ad_storage: 'denied',
+                wait_for_update: 500
+              });
+            `}</Script>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="gtag-init" strategy="afterInteractive">{`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){window.dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_ID}');
+            `}</Script>
+          </>
+        ) : null}
         {children}
       </body>
     </html>
