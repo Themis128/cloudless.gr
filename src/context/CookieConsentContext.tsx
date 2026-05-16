@@ -130,7 +130,7 @@ export interface CookieConsentState {
   closeSettings: () => void;
 }
 
-const CookieConsentContext = createContext<CookieConsentState | null>(null);
+export const CookieConsentContext = createContext<CookieConsentState | null>(null);
 
 export function useCookieConsent(): CookieConsentState {
   const ctx = useContext(CookieConsentContext);
