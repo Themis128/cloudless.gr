@@ -348,13 +348,12 @@ h6 {
 }
 
 .animate-shimmer-text {
-  background:
-    linear-gradient(
-      90deg,
-      var(--accent) 20%,
-      color-mix(in srgb, var(--accent) 35%, #fff) 50%,
-      var(--accent) 80%
-    );
+  background: linear-gradient(
+    90deg,
+    var(--accent) 20%,
+    color-mix(in srgb, var(--accent) 35%, #fff) 50%,
+    var(--accent) 80%
+  );
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
