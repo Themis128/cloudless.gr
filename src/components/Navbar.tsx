@@ -101,7 +101,7 @@ export default function Navbar() {
                           user.username ||
                           "U")[0].toUpperCase()}
                       </span>
-                      <span className="hidden max-w-[120px] truncate xl:inline">
+                      <span className="hidden max-w-30 truncate xl:inline">
                         {user.name ||
                           user.email?.split("@")[0] ||
                           user.username}
