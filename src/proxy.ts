@@ -321,7 +321,7 @@ export async function proxy(request: NextRequest) {
       }
     } else {
       const loginUrl = new URL(`${prefix}/auth/login`, request.url);
-      loginUrl.searchParams.set("redirect", pathname);
+      loginUrl.searchParams.set("redirect", bare);
       return NextResponse.redirect(loginUrl);
     }
   }

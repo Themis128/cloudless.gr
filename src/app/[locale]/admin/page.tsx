@@ -2,7 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 
 interface DashStats {
   orders: { total: number; revenue: number } | null;
