@@ -29,13 +29,13 @@ jobs:
       id-token: write  # for OIDC → AWS (to fetch ANTHROPIC_API_KEY from SSM)
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v5
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
