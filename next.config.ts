@@ -51,7 +51,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     // Tree-shake heavy barrel packages — reduces client bundle for Amplify, GSAP, cmdk
-    optimizePackageImports: ["aws-amplify", "gsap", "cmdk", "lenis"],
+    optimizePackageImports: ["aws-amplify", "gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
   },
 };
 
