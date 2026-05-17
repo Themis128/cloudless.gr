@@ -47,3 +47,27 @@ When spawning sub-agents, follow these rules for optimal orchestration:
 - Fix pattern for `void asyncFn()`: replace with `asyncFn().catch(() => {})`.
 - Fix pattern for `global.fetch`: replace with `globalThis.fetch`.
 - Fix cognitive complexity by extracting helper functions outside the component/class.
+
+## Locale-Aware Navigation (CRITICAL)
+
+**Always use `@/i18n/navigation`, never `next/link` or `next/navigation` for internal links.**
+
+The app uses `localePrefix: "always"` — every route requires a locale prefix (`/en/`, `/el/`, etc.).
+
+```ts
+// ✅ Correct
+import { Link, useRouter, usePathname, redirect } from "@/i18n/navigation"
+router.push("/admin")         // → /en/admin  ✓
+
+// ❌ Wrong — produces 404
+import Link from "next/link"
+router.push("/en/admin")      // → /en/en/admin  ✗
+```
+
+**Middleware redirect params must use the bare (locale-stripped) path:**
+```ts
+// ✅
+loginUrl.searchParams.set("redirect", bare)      // "/admin"
+// ❌
+loginUrl.searchParams.set("redirect", pathname)  // "/en/admin" → double-locale after router.push
+```
