@@ -16,7 +16,7 @@ permissions:
 jobs:
   sync:
     name: Sync GSC data to Notion
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     env:
@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v4 # v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

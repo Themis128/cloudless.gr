@@ -14,12 +14,16 @@ permissions:
   contents: read
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+concurrency:
+  # Cancel earlier in-flight runs for the same branch on a new push. The PR
+  # only cares about the latest commit, so older queued runs are wasted.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   bundle:
     name: Bundle Budget
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
@@ -32,7 +36,7 @@ jobs:
       BUNDLE_MAX_KB: "1900"
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4 # v5
       - uses: actions/setup-node@v4
         with:
           node-version: 22

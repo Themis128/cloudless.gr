@@ -1,6 +1,6 @@
 {
   "version": "0.2",
   "language": "en",
-  "words": ["powerbi", "quicksight"],
+  "words": ["baltzakisthemiscom", "capi", "gstatic", "hubspot", "nosniff", "opengraph", "powerbi", "quicksight", "sntrys", "wordmark"],
   "ignorePaths": ["node_modules/**", ".next/**", "dist/**", "build/**", "coverage/**", "*.lock", "pnpm-lock.yaml"]
 }

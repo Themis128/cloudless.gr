@@ -16,14 +16,20 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  # Cancel earlier in-flight runs for the same branch on a new push. The PR
+  # only cares about the latest commit, so older queued runs are wasted.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   drift:
     name: notion-schema-sync --dry-run
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4 # v4
 
       - uses: actions/setup-node@v4
         with:
@@ -33,7 +39,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v4 # v6
         with:
           role-to-assume: arn:aws:iam::278585680617:role/cloudless-github-actions
           aws-region: us-east-1

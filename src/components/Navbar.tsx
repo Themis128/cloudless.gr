@@ -61,7 +61,7 @@ export default function Navbar() {
     >
       {/* QD-inspired top accent bar */}
       <div className="bg-neon-cyan h-px shadow-[0_0_10px_rgba(0,255,245,0.5)]" />
-      <div className="bg-void/90 border-neon-cyan/10 overflow-x-hidden border-b backdrop-blur-xl">
+      <div className="bg-void/90 border-neon-cyan/10 border-b backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           {/* Logo */}
           <Link
@@ -105,7 +105,7 @@ export default function Navbar() {
                           user.username ||
                           "U")[0].toUpperCase()}
                       </span>
-                      <span className="hidden max-w-[120px] truncate xl:inline">
+                      <span className="hidden max-w-30 truncate xl:inline">
                         {user.name ||
                           user.email?.split("@")[0] ||
                           user.username}

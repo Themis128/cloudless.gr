@@ -11,12 +11,10 @@ permissions:
   security-events: write
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   audit:
     name: Dependency Audit
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
@@ -24,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v4 # v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
