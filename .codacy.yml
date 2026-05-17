@@ -1,0 +1,18 @@
+---
+engines:
+  eslint:
+    enabled: false
+  pmd:
+    enabled: false
+  pylint:
+    enabled: false
+  dartanalyzer:
+    enabled: false
+  revive:
+    enabled: false
+  opengrep:
+    enabled: true
+  trivy:
+    enabled: true
+  lizard:
+    enabled: true
