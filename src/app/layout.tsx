@@ -79,7 +79,9 @@ export default async function RootLayout({
   const pathname = (await headers()).get("x-pathname") ?? "/";
   const theme = themeForRoute(pathname);
   const _seg = pathname.split("/")[1];
-  const locale = (routing.locales as readonly string[]).includes(_seg) ? _seg : routing.defaultLocale;
+  const locale = (routing.locales as readonly string[]).includes(_seg)
+    ? _seg
+    : routing.defaultLocale;
 
   return (
     <html

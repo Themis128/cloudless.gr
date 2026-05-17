@@ -38,9 +38,9 @@ describe("web app manifest", () => {
     expect(data.name).toContain("Cloudless");
     expect(data.short_name).toBe("Cloudless");
     expect(data.display).toBe("standalone");
-    expect(data.start_url).toBe("/");
-    expect(data.theme_color).toBe("#0a0a0f");
-    expect(data.background_color).toBe("#0a0a0f");
+    expect(data.start_url).toBe("/?source=pwa");
+    expect(data.theme_color).toBe("#0a7785");
+    expect(data.background_color).toBe("#fcfcfd");
   });
 
   it("references expected app icons with correct MIME and sizes", async () => {
@@ -62,7 +62,7 @@ describe("web app manifest", () => {
     const data = await fetchManifest();
     const urls = new Set((data.shortcuts ?? []).map((item) => item.url));
 
-    expect(urls.has("/contact")).toBe(true);
+    expect(urls.has("/contact?source=pwa-shortcut")).toBe(true);
     expect(urls.has("/services")).toBe(true);
     expect(urls.has("/blog")).toBe(true);
   });
