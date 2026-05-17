@@ -19,7 +19,7 @@ env:
 jobs:
   i18n:
     name: Locale Parity and Placeholder Consistency
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v6

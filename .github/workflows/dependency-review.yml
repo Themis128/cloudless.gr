@@ -11,7 +11,7 @@ permissions:
 jobs:
   dependency-review:
     name: Dependency Risk Review
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v6

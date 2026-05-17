@@ -22,7 +22,7 @@ on:
 jobs:
   apply-manifest:
     name: Apply Slack Manifest
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 

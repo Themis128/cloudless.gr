@@ -38,7 +38,7 @@ permissions:
 jobs:
   lint:
     name: Lint
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
@@ -54,7 +54,7 @@ jobs:
 
   typecheck:
     name: Type Check
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
@@ -70,7 +70,7 @@ jobs:
 
   format:
     name: Format Check
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
@@ -86,7 +86,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
@@ -110,7 +110,7 @@ jobs:
 
   test:
     name: Unit Tests
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6

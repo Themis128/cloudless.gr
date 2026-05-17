@@ -19,7 +19,7 @@ env:
 jobs:
   schema:
     name: JSON-LD Tests
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v6
