@@ -26,7 +26,7 @@ permissions:
 jobs:
   preview:
     name: Deploy Preview
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
