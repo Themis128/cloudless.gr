@@ -8,7 +8,9 @@ on:
       - 'public/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
-      - '.github/workflows/**'
+      # Self-reference only — editing unrelated workflows should not
+      # trigger the 15-min Playwright a11y run.
+      - '.github/workflows/a11y-audit.yml'
   workflow_dispatch:
 
 permissions:

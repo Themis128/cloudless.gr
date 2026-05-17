@@ -7,7 +7,9 @@ on:
       - "**/*.md"
       - "docs/**"
       - "README.md"
-      - ".github/workflows/**"
+      # Self-reference only — markdown changes already match **/*.md above,
+      # so editing unrelated workflows need not re-run the link checker.
+      - ".github/workflows/links-audit.yml"
   workflow_dispatch:
 
 permissions:
