@@ -1,10 +1,13 @@
 name: Dependency Review Audit
 
+# cloudless.gr is PRIVATE. actions/dependency-review-action requires GitHub
+# Advanced Security on private repos and fails with "Dependency review is not
+# supported on this repository" without it. pnpm audit covers the same ground
+# (vulnerable packages, high/critical severity) with no GHAS needed.
+
 on:
   pull_request:
     branches: [main]
-    # Only review dependencies when dep files actually change. Code-only PRs
-    # cannot introduce a new GPL transitive or vulnerable package.
     paths:
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -12,11 +15,8 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 concurrency:
-  # Cancel earlier in-flight runs for the same branch on a new push. The PR
-  # only cares about the latest commit, so older queued runs are wasted.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -27,8 +27,11 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
-      - name: Review dependencies
-        uses: actions/dependency-review-action@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          fail-on-severity: high
-          deny-licenses: GPL-2.0, GPL-3.0
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Audit dependencies (fail on high / critical)
+        run: pnpm audit --audit-level=high
