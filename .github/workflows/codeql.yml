@@ -32,7 +32,7 @@ concurrency:
 jobs:
   analyze:
     name: Analyze
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     strategy:

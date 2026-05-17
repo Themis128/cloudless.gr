@@ -16,7 +16,7 @@ permissions:
 jobs:
   sync:
     name: Sync GSC data to Notion
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     env:

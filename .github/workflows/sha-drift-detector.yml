@@ -33,7 +33,7 @@ concurrency:
 jobs:
   detect:
     name: detect-sha-drift
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6

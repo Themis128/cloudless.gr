@@ -29,7 +29,7 @@ concurrency:
 jobs:
   contract-tests:
     name: API Contract Test Suite
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v6

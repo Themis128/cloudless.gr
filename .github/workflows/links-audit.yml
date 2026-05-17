@@ -24,7 +24,7 @@ concurrency:
 jobs:
   links:
     name: Markdown Link Checker
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v6
