@@ -43,6 +43,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -57,6 +59,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -71,6 +75,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -93,6 +99,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -107,6 +115,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
       - uses: actions/setup-node@v6
         with:
           node-version: 22
