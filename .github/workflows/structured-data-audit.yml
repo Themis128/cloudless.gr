@@ -29,4 +29,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:ci -- __tests__/structured-data.test.ts
+      # See api-contract-audit.yml: dropping `--` so vitest sees the file as
+      # a filter rather than a stray positional arg that triggers a full run.
+      - run: pnpm test:ci __tests__/structured-data.test.ts
