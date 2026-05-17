@@ -32,6 +32,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
