@@ -4,9 +4,15 @@ import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
 
-const _upId=process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID??'';
-const _reg=_upId.split('_')[0]||'us-east-1';
-const JWKS=_upId?createRemoteJWKSet(new URL(`https://cognito-idp.${_reg}.amazonaws.com/${_upId}/.well-known/jwks.json`)):null;
+const _upId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
+const _reg = _upId.split("_")[0] || "us-east-1";
+const JWKS = _upId
+  ? createRemoteJWKSet(
+      new URL(
+        `https://cognito-idp.${_reg}.amazonaws.com/${_upId}/.well-known/jwks.json`,
+      ),
+    )
+  : null;
 
 const LOCALES = routing.locales as readonly string[];
 const DEFAULT_LOCALE = routing.defaultLocale;
@@ -22,7 +28,9 @@ function stripLocale(pathname: string): string {
   return pathname.slice(segment.length + 1) || "/";
 }
 
-async function readCognitoToken(req: NextRequest): Promise<{valid:boolean;isAdmin:boolean}> {
+async function readCognitoToken(
+  req: NextRequest,
+): Promise<{ valid: boolean; isAdmin: boolean }> {
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   if (!clientId || !JWKS) return { valid: false, isAdmin: false };
   const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
@@ -38,13 +46,15 @@ async function readCognitoToken(req: NextRequest): Promise<{valid:boolean;isAdmi
     });
     return {
       valid: true,
-      isAdmin: (payload["cognito:groups"] as string[]|undefined)?.includes("admin") ?? false,
+      isAdmin:
+        (payload["cognito:groups"] as string[] | undefined)?.includes(
+          "admin",
+        ) ?? false,
     };
   } catch {
     return { valid: false, isAdmin: false };
   }
 }
-
 
 // --- next-intl locale middleware ---
 const intlMiddleware = createIntlMiddleware(routing);
