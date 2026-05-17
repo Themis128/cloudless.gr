@@ -206,6 +206,15 @@ self.addEventListener("push", (event) => {
   );
 });
 
+// Message handler — handles SKIP_WAITING from Next.js and prevents
+// "message channel closed before response was received" errors.
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+  // All other messages are intentionally ignored; no async return needed.
+});
+
 // Notification click handler
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
