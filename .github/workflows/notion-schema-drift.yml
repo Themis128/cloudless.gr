@@ -21,7 +21,7 @@ jobs:
     name: notion-schema-sync --dry-run
     runs-on: [self-hosted, omv]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
 
