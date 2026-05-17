@@ -16,7 +16,7 @@ concurrency:
 jobs:
   review:
     name: Claude code review
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     # Skip bots, dependabot, and revert branches
     if: |
       github.actor != 'dependabot[bot]' &&
