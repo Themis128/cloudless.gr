@@ -37,9 +37,9 @@ jobs:
       #     /portal/[token] timeline, admin pending-clients UI, lucide-react icons (~25KB).
       BUNDLE_MAX_KB: "1900"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
