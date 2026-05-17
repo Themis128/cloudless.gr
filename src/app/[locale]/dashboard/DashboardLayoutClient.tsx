@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 const sidebarLinks = [
@@ -55,10 +54,10 @@ export default function DashboardLayoutClient({
               </div>
               <nav className="space-y-1">
                 {sidebarLinks.map((link) => {
+                  // usePathname from @/i18n/navigation returns the un-localized path
                   const isActive =
                     link.href === "/dashboard"
-                      ? pathname === "/dashboard" ||
-                        pathname?.match(/^\/[a-z]{2}\/dashboard$/)
+                      ? pathname === "/dashboard"
                       : pathname?.includes(link.href);
                   return (
                     <Link

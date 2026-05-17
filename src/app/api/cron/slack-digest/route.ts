@@ -24,11 +24,7 @@
 
 import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 import { SlackClient } from "@/lib/slack-notify";
-import {
-  isSentryConfigured,
-  getErrorCounts,
-  getTopErrors,
-} from "@/lib/sentry";
+import { isSentryConfigured, getErrorCounts, getTopErrors } from "@/lib/sentry";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -281,8 +277,10 @@ async function postErrorDigest(): Promise<void> {
   // Build summary line.
   const parts: string[] = [];
   if (counts.fatal > 0) parts.push(`${counts.fatal} fatal`);
-  if (counts.error > 0) parts.push(`${counts.error} error${counts.error === 1 ? "" : "s"}`);
-  if (counts.warning > 0) parts.push(`${counts.warning} warning${counts.warning === 1 ? "" : "s"}`);
+  if (counts.error > 0)
+    parts.push(`${counts.error} error${counts.error === 1 ? "" : "s"}`);
+  if (counts.warning > 0)
+    parts.push(`${counts.warning} warning${counts.warning === 1 ? "" : "s"}`);
   const summaryLine = parts.join(", ");
 
   // Build top-issues list (up to 3).
