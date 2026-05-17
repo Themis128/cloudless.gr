@@ -15,9 +15,6 @@ on:
   schedule:
     - cron: '0 6 * * 1' # Every Monday at 06:00 UTC
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 permissions:
   security-events: write
   actions: read
@@ -41,7 +38,7 @@ jobs:
         language: ['javascript-typescript']
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
