@@ -53,7 +53,7 @@ jobs:
   typecheck:
     name: Type Check
     runs-on: [self-hosted, omv]
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5
@@ -81,7 +81,7 @@ jobs:
   build:
     name: Build
     runs-on: [self-hosted, omv]
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
       NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
