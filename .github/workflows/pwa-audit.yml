@@ -14,7 +14,6 @@ on:
 permissions:
   contents: read
 
-env:
 concurrency:
   # Cancel earlier in-flight runs for the same branch on a new push. The PR
   # only cares about the latest commit, so older queued runs are wasted.
@@ -28,7 +27,7 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4 # v5
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22

@@ -13,7 +13,6 @@ on:
 permissions:
   contents: read
 
-env:
 jobs:
   audit:
     name: Performance Audit

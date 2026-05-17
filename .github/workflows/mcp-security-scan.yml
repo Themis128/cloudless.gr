@@ -19,7 +19,6 @@ on:
 permissions:
   contents: read
 
-env:
 concurrency:
   # Cancel earlier in-flight runs for the same branch on a new push. The PR
   # only cares about the latest commit, so older queued runs are wasted.
