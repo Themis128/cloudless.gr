@@ -27,7 +27,9 @@ env:
 jobs:
   build-and-push:
     name: Build arm64 image and push to ECR
-    runs-on: [self-hosted, omv, pi]
+    # GitHub-hosted native arm64 runner — no QEMU, and no build load on the
+    # Pi. Only the rollout job below needs a self-hosted runner (local k3s API).
+    runs-on: ubuntu-24.04-arm
     outputs:
       sha: ${{ github.sha }}
       image_exists: ${{ steps.check_ecr.outputs.exists }}
