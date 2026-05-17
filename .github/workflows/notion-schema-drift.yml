@@ -21,7 +21,7 @@ jobs:
     name: notion-schema-sync --dry-run
     runs-on: [self-hosted, omv]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
 
@@ -33,7 +33,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::278585680617:role/cloudless-github-actions
           aws-region: us-east-1

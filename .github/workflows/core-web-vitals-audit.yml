@@ -19,7 +19,7 @@ jobs:
     runs-on: [self-hosted, omv]
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - name: Run Lighthouse on key routes
         id: lhci
         uses: treosh/lighthouse-ci-action@v12
