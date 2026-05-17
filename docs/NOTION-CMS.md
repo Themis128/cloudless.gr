@@ -84,14 +84,14 @@ NOTION_DOCS_DB_ID=b45af6ed5bb64d89b9a92a8aff4a9b29
 NOTION_PROJECTS_DB_ID=a9bab34b945e484fb6b0aa6034086e5c
 NOTION_TASKS_DB_ID=14ce4ff6c400437597b13e70ac909354
 NOTION_ANALYTICS_DB_ID=cc4287fcb42a42dc92a7053d6f1199c7
-NOTION_CALENDAR_DB_ID=your-calendar-database-id
-NOTION_REPORTS_DB_ID=your-reports-database-id
+NOTION_CALENDAR_DB_ID=dcff73b9317b4ed69a450f200db0f629
+NOTION_REPORTS_DB_ID=3d2851e41daa4904ab0f4099a9c10d19
 
 # CMS content databases (public-facing, degrade to static fallbacks)
-NOTION_TESTIMONIALS_DB_ID=your-testimonials-database-id
-NOTION_CASE_STUDIES_DB_ID=your-case-studies-database-id
-NOTION_SERVICES_DB_ID=your-services-database-id
-NOTION_FAQS_DB_ID=your-faqs-database-id
+NOTION_TESTIMONIALS_DB_ID=157ceb35d0b44661a6c67798f6d87e7b
+NOTION_CASE_STUDIES_DB_ID=7c50dc2403054f4a81f85b0a251ac4d7
+NOTION_SERVICES_DB_ID=98a4087c86704818a1dde515104c2331
+NOTION_FAQS_DB_ID=316acfca94f444d38c857aa765c259a2
 
 # Webhook authentication
 NOTION_WEBHOOK_SECRET=your_random_secret_here
@@ -99,16 +99,14 @@ NOTION_WEBHOOK_SECRET=your_random_secret_here
 
 ### Production (AWS SSM Parameter Store)
 
+Only secrets go to SSM. Non-secret DB IDs are baked into the Lambda as env vars by `sst.config.ts`.
+
 | Parameter path | Type |
 |----------------|------|
 | `/cloudless/production/NOTION_API_KEY` | SecureString |
 | `/cloudless/production/NOTION_WEBHOOK_SECRET` | SecureString |
-| `/cloudless/production/NOTION_TESTIMONIALS_DB_ID` | String |
-| `/cloudless/production/NOTION_CASE_STUDIES_DB_ID` | String |
-| `/cloudless/production/NOTION_SERVICES_DB_ID` | String |
-| `/cloudless/production/NOTION_FAQS_DB_ID` | String |
 
-Database IDs are stored in SSM (loaded at Lambda cold start via `src/instrumentation.ts`) and injected into `process.env`. Secrets are stored as SecureString. The `SSM_PREFIX` env var is set by `sst.config.ts`.
+All 12 database IDs are set directly in `sst.config.ts` as hardcoded env vars (non-secret, safe to inline). Secrets are stored as SecureString in SSM. The `SSM_PREFIX` env var is set by `sst.config.ts`.
 
 #### How secrets reach Lambda
 
