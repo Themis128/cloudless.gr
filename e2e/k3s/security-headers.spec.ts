@@ -41,10 +41,10 @@ test.describe("k3s security headers", () => {
     expect(pp).toContain("geolocation=()");
   });
 
-  test("CSP report-only is set with allowed integrations", async ({ request }) => {
+  test("CSP (enforced) is set with required directives", async ({ request }) => {
     const r = await request.get(URL);
-    const csp = r.headers()["content-security-policy-report-only"] ?? "";
-    expect(csp.length, "expected CSP-Report-Only header").toBeGreaterThan(0);
+    const csp = r.headers()["content-security-policy"] ?? "";
+    expect(csp.length, "expected Content-Security-Policy header").toBeGreaterThan(0);
     // Stamp a few known directives — these are pinned to the app's source
     // and would change only on a deliberate CSP edit.
     expect(csp).toContain("frame-ancestors 'none'");

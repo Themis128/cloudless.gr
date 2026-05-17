@@ -17,7 +17,7 @@ Configured servers:
 
 - `project` — launches `project-mcp`
 - `mcp-tool-shop` — launches `mcp-tool-shop`
-- `codeglide-mcp-server` — launches the CodeGlide MCP server via Docker
+- `notion` — launches `@notionhq/notion-mcp-server` (official Notion MCP); reads `NOTION_API_KEY` from the environment via `OPENAPI_MCP_HEADERS`
 
 ## Setup
 
@@ -34,5 +34,5 @@ Configured servers:
 
 ## Notes
 
-- `codeglide-mcp-server` uses `bash` and Docker. Windows users should run VS Code from WSL or adjust the command to their shell environment.
+- The `notion` server requires `NOTION_API_KEY` to be set in the environment. The `OPENAPI_MCP_HEADERS` value in `mcp.json` interpolates `${NOTION_API_KEY}` at launch time.
 - If the extension detects this workspace config, it should be able to launch the selected server by name.
