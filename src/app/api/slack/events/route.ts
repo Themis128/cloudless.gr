@@ -307,14 +307,22 @@ async function handleAppHomeOpened(event: SlackEvent): Promise<void> {
         elements: [
           {
             type: "button",
-            text: { type: "plain_text", text: "Open Stripe Dashboard", emoji: true },
+            text: {
+              type: "plain_text",
+              text: "Open Stripe Dashboard",
+              emoji: true,
+            },
             url: "https://dashboard.stripe.com/payments",
             action_id: "home_open_stripe",
             style: "primary",
           },
           {
             type: "button",
-            text: { type: "plain_text", text: "Visit cloudless.gr", emoji: true },
+            text: {
+              type: "plain_text",
+              text: "Visit cloudless.gr",
+              emoji: true,
+            },
             url: "https://cloudless.gr",
             action_id: "home_open_site",
           },
