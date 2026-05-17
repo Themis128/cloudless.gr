@@ -32,8 +32,9 @@ When spawning sub-agents, follow these rules for optimal orchestration:
 
 **Workflow:** `.github/workflows/deploy-pi.yml` — triggers on every push to `main`.
 
-- **Job 1 `build-and-push`** (`ubuntu-latest`): builds `linux/arm64` Docker image via QEMU, pushes SHA-only tag to ECR (`278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:<sha>`). ECR repo has **immutable tags** — never push `:latest` from CI.
-- **Job 2 `rollout`** (`[self-hosted, omv]`): runs `kubectl set image` + `kubectl rollout status`. Must run on self-hosted runner — GitHub-hosted runners cannot reach the private LAN (`192.168.1.128:6443`).
+- **Job 1 `build-and-push`** (`[self-hosted, omv, pi]`): builds `linux/arm64` Docker image **natively on a Pi runner** (no real QEMU work — the host is already arm64; the `setup-qemu-action` step is left in for portability but is a no-op here). Pushes SHA-only tag to ECR (`278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:<sha>`). ECR repo has **immutable tags** — never push `:latest` from CI.
+- **Job 2 `rollout`** (`[self-hosted, omv, pi]`): runs `kubectl set image` + `kubectl rollout status` against the local k3s API (`192.168.1.128:6443`).
+- **Runner labels:** Both jobs require `[self-hosted, omv, pi]` (PR #167, merged 2026-05-17). The `pi` label gates them to the 3 Pi runners (`omv`, `omv-2`, `omv-3`) so an added non-Pi `omv` runner (e.g. `legion` in WSL2) can't accidentally take a cluster-bound job it can't perform. Cross-compile via QEMU on `ubuntu-latest` was tried and abandoned — `pnpm install` alone exceeded 60 min under emulation.
 - **Auth:** OIDC via `AWS_DEPLOY_ROLE_ARN` secret — no static AWS keys.
 - **`NEXT_PUBLIC_*` vars** are baked into the Next.js client bundle at Docker build time as `--build-arg`. They are NOT available as runtime env vars — changes require a full image rebuild.
 - **SSM config** (API keys, Notion DB IDs, etc.) is fetched at runtime by the app via `getIntegrationsAsync()` using the `pi-standby-aws-creds` k8s Secret.
@@ -47,3 +48,27 @@ When spawning sub-agents, follow these rules for optimal orchestration:
 - Fix pattern for `void asyncFn()`: replace with `asyncFn().catch(() => {})`.
 - Fix pattern for `global.fetch`: replace with `globalThis.fetch`.
 - Fix cognitive complexity by extracting helper functions outside the component/class.
+
+## Locale-Aware Navigation (CRITICAL)
+
+**Always use `@/i18n/navigation`, never `next/link` or `next/navigation` for internal links.**
+
+The app uses `localePrefix: "always"` — every route requires a locale prefix (`/en/`, `/el/`, etc.).
+
+```ts
+// ✅ Correct
+import { Link, useRouter, usePathname, redirect } from "@/i18n/navigation"
+router.push("/admin")         // → /en/admin  ✓
+
+// ❌ Wrong — produces 404
+import Link from "next/link"
+router.push("/en/admin")      // → /en/en/admin  ✗
+```
+
+**Middleware redirect params must use the bare (locale-stripped) path:**
+```ts
+// ✅
+loginUrl.searchParams.set("redirect", bare)      // "/admin"
+// ❌
+loginUrl.searchParams.set("redirect", pathname)  // "/en/admin" → double-locale after router.push
+```

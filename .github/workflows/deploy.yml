@@ -30,7 +30,7 @@ permissions:
 jobs:
   deploy:
     name: Deploy
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 40
     environment:
       name: production

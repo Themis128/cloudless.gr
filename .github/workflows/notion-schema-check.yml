@@ -19,7 +19,7 @@ env:
 jobs:
   validate:
     name: Validate Notion DB schemas
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v6

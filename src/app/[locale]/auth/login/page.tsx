@@ -1,12 +1,24 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { translate } from "@/lib/i18n";
+import { translate, type Locale, isSupportedLocale } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
+
+function normalizeRedirectPath(path: string): string {
+  if (!path.startsWith("/")) return path;
+
+  const match = path.match(/^\/([^/]+)(\/.*|$)/);
+  if (!match) return path;
+
+  const potentialLocale = match[1] as Locale;
+  const suffix = match[2] || "/";
+
+  return isSupportedLocale(potentialLocale) ? suffix : path;
+}
 
 function LoginContent() {
   const [locale] = useCurrentLocale();
@@ -26,7 +38,7 @@ function LoginContent() {
   useEffect(() => {
     if (!isLoading && user) {
       if (nextParam && nextParam.startsWith("/")) {
-        router.push(nextParam);
+        router.push(normalizeRedirectPath(nextParam));
       } else {
         router.push(isAdmin ? "/admin" : "/dashboard");
       }

@@ -27,7 +27,7 @@ env:
 jobs:
   build-and-push:
     name: Build arm64 image and push to ECR
-    runs-on: [self-hosted, omv]
+    runs-on: [self-hosted, omv, pi]
     outputs:
       sha: ${{ github.sha }}
       image_exists: ${{ steps.check_ecr.outputs.exists }}
@@ -110,7 +110,7 @@ jobs:
     # to the local k3s API (192.168.1.128:6443) without any VPN or tunnel.
     # Runs even if image already existed (build skipped) so re-dispatch always
     # repoints the deployment to the correct SHA.
-    runs-on: [self-hosted, omv]
+    runs-on: [self-hosted, omv, pi]
     needs: build-and-push
     if: always() && needs.build-and-push.result != 'cancelled' && (needs.build-and-push.result == 'success' || needs.build-and-push.outputs.image_exists == 'true')
 

@@ -16,10 +16,16 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+concurrency:
+  # Cancel earlier in-flight runs for the same branch on a new push. The PR
+  # only cares about the latest commit, so older queued runs are wasted.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   i18n:
     name: Locale Parity and Placeholder Consistency
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v6
@@ -29,5 +35,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:ci -- __tests__/locales-parity.test.ts
+      # See api-contract-audit.yml: dropping `--` so vitest sees the file as
+      # a filter rather than a stray positional arg that triggers a full run.
+      - run: pnpm test:ci __tests__/locales-parity.test.ts
       - run: node scripts/audit/check-i18n-placeholders.mjs
