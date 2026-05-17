@@ -7,11 +7,19 @@ on:
       - "**/*.md"
       - "docs/**"
       - "README.md"
-      - ".github/workflows/**"
+      # Self-reference only — markdown changes already match **/*.md above,
+      # so editing unrelated workflows need not re-run the link checker.
+      - ".github/workflows/links-audit.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  # Cancel earlier in-flight runs for the same branch on a new push. The PR
+  # only cares about the latest commit, so older queued runs are wasted.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   links:
