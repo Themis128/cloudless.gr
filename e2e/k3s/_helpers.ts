@@ -31,7 +31,7 @@ export async function probeHealth(req: APIRequestContext, host = STANDBY_HOST) {
  * in standby-path.spec.ts via the APIGW request-id assertion.
  */
 export function isLikelyAppResponse(headers: Record<string, string>): boolean {
-  const csp = headers["content-security-policy-report-only"] ?? "";
+  const csp = headers["content-security-policy"] ?? "";
   return (
     csp.includes("frame-ancestors 'none'") &&
     csp.includes("object-src 'none'") &&
