@@ -369,8 +369,14 @@ async function handleTicket(payload: SlashCommandPayload): Promise<Response> {
               action_id: "ticket_issue_type_select",
               options: [
                 { text: { type: "plain_text", text: "Bug" }, value: "bug" },
-                { text: { type: "plain_text", text: "Feature Request" }, value: "feature" },
-                { text: { type: "plain_text", text: "Billing" }, value: "billing" },
+                {
+                  text: { type: "plain_text", text: "Feature Request" },
+                  value: "feature",
+                },
+                {
+                  text: { type: "plain_text", text: "Billing" },
+                  value: "billing",
+                },
                 { text: { type: "plain_text", text: "Other" }, value: "other" },
               ],
             },
@@ -384,7 +390,10 @@ async function handleTicket(payload: SlashCommandPayload): Promise<Response> {
               action_id: "ticket_priority_select",
               options: [
                 { text: { type: "plain_text", text: "High" }, value: "high" },
-                { text: { type: "plain_text", text: "Medium" }, value: "medium" },
+                {
+                  text: { type: "plain_text", text: "Medium" },
+                  value: "medium",
+                },
                 { text: { type: "plain_text", text: "Low" }, value: "low" },
               ],
             },
@@ -409,7 +418,9 @@ async function handleTicket(payload: SlashCommandPayload): Promise<Response> {
   return new Response(null, { status: 200 });
 }
 
-async function handleAnalytics(payload: SlashCommandPayload): Promise<Response> {
+async function handleAnalytics(
+  payload: SlashCommandPayload,
+): Promise<Response> {
   try {
     const { orders, hasMore } = await listRecentCheckoutSessions(10);
 
