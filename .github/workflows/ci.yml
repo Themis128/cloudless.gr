@@ -25,9 +25,6 @@ on:
       - '.prettierrc*'
       - 'prettier.config.*'
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 concurrency:
   group: ci-${{ github.head_ref }}
   cancel-in-progress: true
@@ -42,7 +39,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v4
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
       - uses: actions/setup-node@v4
@@ -58,7 +55,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v4
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
       - uses: actions/setup-node@v4
@@ -74,7 +71,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v4
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
       - uses: actions/setup-node@v4
@@ -98,7 +95,7 @@ jobs:
       NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v4
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
       - uses: actions/setup-node@v4
@@ -114,7 +111,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v4
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
       - uses: actions/setup-node@v4
