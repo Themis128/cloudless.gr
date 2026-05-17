@@ -17,19 +17,25 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+concurrency:
+  # Cancel earlier in-flight runs for the same branch on a new push. The PR
+  # only cares about the latest commit, so older queued runs are wasted.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pwa:
     name: Service Worker Runtime Tests
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
-        with:
-          dest: ~/setup-pnpm-${{ runner.name }}
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:ci -- __tests__/sw-runtime.test.ts __tests__/service-worker.test.tsx
+      # See api-contract-audit.yml: dropping `--` so vitest sees the files as
+      # filters rather than stray positional args that trigger a full run.
+      - run: pnpm test:ci __tests__/sw-runtime.test.ts __tests__/service-worker.test.tsx

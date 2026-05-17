@@ -2,8 +2,18 @@ name: MCP Security Scan
 
 on:
   pull_request:
+    # Scanner only inspects src/**/*.{ts,tsx,js,jsx,py,md}, so non-source PRs
+    # (docs, workflow tweaks, .env templates) can skip the scan.
+    paths:
+      - 'src/**'
+      - 'tools/mcp-security-scanner/**'
+      - '.github/workflows/mcp-security-scan.yml'
   push:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'tools/mcp-security-scanner/**'
+      - '.github/workflows/mcp-security-scan.yml'
   workflow_dispatch:
 
 permissions:
@@ -12,10 +22,16 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+concurrency:
+  # Cancel earlier in-flight runs for the same branch on a new push. The PR
+  # only cares about the latest commit, so older queued runs are wasted.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   scan:
     name: Run MCP security scanner
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     # Informational only — scanner flags normal Next.js patterns (template
     # literals, process.env refs, console.error) as false positives.
     # Results are visible in the Actions log but do not block deploys.

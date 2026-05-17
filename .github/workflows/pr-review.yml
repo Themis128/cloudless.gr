@@ -16,7 +16,7 @@ concurrency:
 jobs:
   review:
     name: Claude code review
-    runs-on: [self-hosted, omv]
+    runs-on: ubuntu-latest
     # Skip bots, dependabot, and revert branches
     if: |
       github.actor != 'dependabot[bot]' &&
@@ -34,8 +34,6 @@ jobs:
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v5
-        with:
-          dest: ~/setup-pnpm-${{ runner.name }}
 
       - uses: actions/setup-node@v6
         with:
