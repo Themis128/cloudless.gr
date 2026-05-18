@@ -127,7 +127,7 @@ async function fetchAllBlocks(pageId: string): Promise<NotionBlock[]> {
       has_more?: boolean;
     };
     blocks.push(...data.results);
-    cursor = data.has_more ? data.next_cursor ?? undefined : undefined;
+    cursor = data.has_more ? (data.next_cursor ?? undefined) : undefined;
   } while (cursor);
   return blocks;
 }
@@ -265,6 +265,44 @@ function blocksToHtml(blocks: NotionBlock[]): {
 
 // ── Email render ──────────────────────────────────────────────────────────────
 
+interface ServiceOffer {
+  title: string;
+  desc: string;
+  cta: string;
+  url: string;
+}
+
+function categoryOffer(category: string, siteUrl: string): ServiceOffer {
+  const contactUrl = `${siteUrl}/en/contact`;
+  const offers: Record<string, ServiceOffer> = {
+    Cloud: {
+      title: "Free Cloud Cost Audit",
+      desc: "We review your AWS bill and find savings — typically 20-40% of monthly spend. 30 minutes, no commitment.",
+      cta: "Book a free audit",
+      url: contactUrl,
+    },
+    Serverless: {
+      title: "Serverless Migration Assessment",
+      desc: "Is serverless the right move for your workload? We give you an honest answer in a free 30-minute architecture review.",
+      cta: "Book a free review",
+      url: contactUrl,
+    },
+    Analytics: {
+      title: "Analytics Stack Review",
+      desc: "Fragmented dashboards and slow queries? We scope a clean data pipeline in a single free session.",
+      cta: "Book a free session",
+      url: contactUrl,
+    },
+    "AI Marketing": {
+      title: "AI Marketing Strategy Session",
+      desc: "We map your funnel and identify the 2-3 AI automation wins that pay back fastest, with an implementation plan.",
+      cta: "Book a free session",
+      url: contactUrl,
+    },
+  };
+  return offers[category] ?? offers["Cloud"];
+}
+
 function renderNewsletter(post: ApprovedPost, body: string): string {
   const siteUrl = process.env.SITE_URL || SITE_URL_DEFAULT;
   const postUrl = `${siteUrl}/en/blog/${post.slug}`;
@@ -272,6 +310,10 @@ function renderNewsletter(post: ApprovedPost, body: string): string {
   const safeExcerpt = escapeHtml(post.excerpt);
   const safeCategory = escapeHtml(post.category);
   const safeReadTime = escapeHtml(post.readTime);
+  const offer = categoryOffer(post.category, siteUrl);
+  const safeOfferTitle = escapeHtml(offer.title);
+  const safeOfferDesc = escapeHtml(offer.desc);
+  const safeOfferCta = escapeHtml(offer.cta);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -290,6 +332,19 @@ function renderNewsletter(post: ApprovedPost, body: string): string {
           ${body}
           <p style="margin-top:32px;"><a href="${escapeAttr(postUrl)}" style="color:#0066cc;">Continue reading on cloudless.gr →</a></p>
         </td></tr>
+        <tr><td style="padding:0 32px 24px 32px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="3" style="background:#0a0a0a;border-radius:3px 0 0 3px;">&nbsp;</td>
+              <td style="padding:16px 20px;background:#f9fafb;border-radius:0 8px 8px 0;">
+                <p style="margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#666;">This Week at Cloudless</p>
+                <h3 style="margin:0 0 8px;font-size:17px;color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${safeOfferTitle}</h3>
+                <p style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${safeOfferDesc}</p>
+                <a href="${escapeAttr(offer.url)}" style="display:inline-block;padding:10px 22px;background:#0a0a0a;color:#ffffff;text-decoration:none;border-radius:6px;font-size:13px;font-weight:600;">${safeOfferCta} &rarr;</a>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
         <tr><td style="padding:24px 32px;background:#fafafa;border-top:1px solid #eaeaea;font-size:13px;color:#666;text-align:center;">
           You're receiving this because you subscribed at cloudless.gr.<br />
           <a href="%UNSUBSCRIBELINK%" style="color:#666;">Unsubscribe</a> · Cloudless, Athens, Greece
@@ -304,6 +359,7 @@ function renderNewsletter(post: ApprovedPost, body: string): string {
 function renderPlaintext(post: ApprovedPost, body: string): string {
   const siteUrl = process.env.SITE_URL || SITE_URL_DEFAULT;
   const postUrl = `${siteUrl}/en/blog/${post.slug}`;
+  const offer = categoryOffer(post.category, siteUrl);
   return [
     `${post.title}`,
     `${post.category} · ${post.readTime}`,
@@ -314,6 +370,10 @@ function renderPlaintext(post: ApprovedPost, body: string): string {
     "",
     `Read on cloudless.gr: ${postUrl}`,
     "",
+    "---",
+    `THIS WEEK AT CLOUDLESS: ${offer.title}`,
+    offer.desc,
+    `${offer.cta}: ${offer.url}`,
     "---",
     "You're receiving this because you subscribed at cloudless.gr.",
     "Unsubscribe: %UNSUBSCRIBELINK%",
