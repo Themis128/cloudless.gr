@@ -22,8 +22,18 @@ export async function POST(request: Request) {
   const rl = rateLimit(`contact:${ip}`, 5, 10 * 60_000);
   if (!rl.ok) return rl.response;
 
+  // Parse the body in its own guard: a malformed JSON payload is a client
+  // error (400), not a 500 — and must not be logged as a "SES send error"
+  // or reported to Sentry as an exception (CLOUDLESS-GR-3).
+  let parsed;
   try {
-    const { name, email, company, service, message } = await request.json();
+    parsed = await request.json();
+  } catch {
+    return Response.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  try {
+    const { name, email, company, service, message } = parsed;
 
     if (!name || !email || !message) {
       return Response.json(
