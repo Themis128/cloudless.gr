@@ -97,4 +97,22 @@ describe("POST /api/hubspot/ticket", () => {
       "contact_1",
     );
   });
+
+  it("does not leak the internal error message in the 500 response", async () => {
+    createTicketMock.mockRejectedValueOnce(
+      new Error("HubSpot internal leaked detail"),
+    );
+
+    const { POST } = await import("@/app/api/hubspot/ticket/route");
+    const response = await POST(
+      makeRequest({ subject: "Need support", content: "Issue details" }),
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.error).toBe("Failed to create ticket.");
+    // The internal error.message must not be echoed back to the client.
+    expect(data.detail).toBeUndefined();
+    expect(JSON.stringify(data)).not.toContain("leaked detail");
+  });
 });
