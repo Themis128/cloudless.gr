@@ -335,13 +335,13 @@ export async function notifyTeam(subject: string, body: string): Promise<void> {
     // regex backtracking patterns that static analysers flag as ReDoS-prone.
     text: body
       .split("<")
-      .map((seg, i) =>
-        i === 0
-          ? seg
-          : seg.includes(">")
-            ? seg.slice(seg.indexOf(">") + 1)
-            : "",
-      )
+      .map((seg, i) => {
+        // First segment is plain text before any tag — keep as-is.
+        if (i === 0) return seg;
+        // Later segments start mid-tag: drop up to and including the ">".
+        if (seg.includes(">")) return seg.slice(seg.indexOf(">") + 1);
+        return "";
+      })
       .join(""),
   });
 }
