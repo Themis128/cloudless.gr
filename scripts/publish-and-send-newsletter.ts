@@ -2,38 +2,40 @@
  * Publisher + Newsletter Sender
  *
  * Finds Notion Blog rows with Status=Approved, promotes them to Published,
- * triggers ISR revalidation on the public blog, then creates + sends an
- * ActiveCampaign campaign for each post from noreply@cloudless.gr.
+ * triggers ISR revalidation on the public blog, then asks the site's
+ * newsletter send endpoint to email each post to every HubSpot subscriber.
  *
  * Designed to run from .github/workflows/weekly-newsletter.yml on Mondays
- * at 09:00 UTC — three hours after the draft generator. Self-contained:
- * reads env directly, talks to Notion / Anthropic / ActiveCampaign / the
- * site's webhook revalidator via raw fetch (no src/lib/* imports).
+ * at 09:00 UTC, three hours after the draft generator (the human review
+ * SLA). Self-contained: reads env directly, talks to Notion and the site's
+ * own API via raw fetch (no src/lib/* imports).
+ *
+ * Why a server endpoint for the send: delivery runs through SES, and the
+ * Lambda the site runs on already holds SES permissions. Posting the
+ * rendered email to /api/newsletter/send keeps AWS keys out of CI; the
+ * endpoint resolves the recipient list from HubSpot and sends.
  *
  * Flow per approved post:
- *   1. Fetch full block tree → render to HTML + plaintext.
- *   2. Atomically: Status=Published, Published=true, Date=today, PublishedAt=today.
+ *   1. Fetch full block tree, render to HTML + plaintext.
+ *   2. Atomically set Status=Published, Published=true, Date + PublishedAt.
  *   3. POST /api/webhooks/notion (page.updated, blog) to revalidate.
- *   4. Create AC campaign linked to NEWSLETTER list, schedule immediate send.
- *   5. Slack-ping with subject + recipient count + AC campaign id.
+ *   4. POST /api/newsletter/send with the rendered email.
+ *   5. Slack-ping with subject, slug, and delivered/failed counts.
  *
- * If zero rows match, exit 0 with a "skipped — nothing approved" log line.
+ * If zero rows match, exit 0 with a "nothing approved" log line.
  * No empty newsletters.
  *
  * Required env:
  *   NOTION_API_KEY, NOTION_BLOG_DB_ID, NOTION_WEBHOOK_SECRET
- *   ACTIVECAMPAIGN_API_URL, ACTIVECAMPAIGN_API_TOKEN, ACTIVECAMPAIGN_NEWSLETTER_LIST_ID
- *   SES_FROM_EMAIL              (default: noreply@cloudless.gr)
+ *   NEWSLETTER_SEND_SECRET
  *   SITE_URL                    (default: https://cloudless.gr)
  *   SLACK_WEBHOOK_URL           (optional)
  *
- * Exit codes: 0 success / nothing-to-do  •  1 hard failure
+ * Exit codes: 0 success or nothing-to-do, 1 hard failure
  */
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
-const FROM_EMAIL_DEFAULT = "noreply@cloudless.gr";
-const FROM_NAME = "Cloudless";
 const SITE_URL_DEFAULT = "https://cloudless.gr";
 
 function requireEnv(name: string): string {
@@ -318,69 +320,41 @@ function renderPlaintext(post: ApprovedPost, body: string): string {
   ].join("\n");
 }
 
-// ── ActiveCampaign ────────────────────────────────────────────────────────────
+// ── Newsletter send endpoint ──────────────────────────────────────────────────
 
-interface ACCampaign {
-  id: string;
+interface SendResult {
+  sent: number;
+  failed: number;
+  total: number;
 }
 
-async function acFetch(
-  path: string,
-  init: RequestInit = {},
-): Promise<Response> {
-  const url = requireEnv("ACTIVECAMPAIGN_API_URL").replace(/\/$/, "");
-  return fetch(`${url}/api/3${path}`, {
-    ...init,
-    headers: {
-      "Api-Token": requireEnv("ACTIVECAMPAIGN_API_TOKEN"),
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
-  });
-}
-
-async function createAndSendCampaign(
-  post: ApprovedPost,
+/**
+ * Hands the rendered email to the site's /api/newsletter/send endpoint, which
+ * resolves the HubSpot subscriber list and delivers via SES. Authenticated
+ * with the shared NEWSLETTER_SEND_SECRET.
+ */
+async function postNewsletter(
+  subject: string,
   html: string,
   text: string,
-): Promise<ACCampaign> {
-  const listId = requireEnv("ACTIVECAMPAIGN_NEWSLETTER_LIST_ID");
-  const fromEmail = process.env.SES_FROM_EMAIL || FROM_EMAIL_DEFAULT;
-  // ISO 8601 with timezone offset is what AC accepts; "now" works as a simple proxy.
-  const now = new Date().toISOString();
-
-  const res = await acFetch("/campaigns", {
+): Promise<SendResult> {
+  const siteUrl = (process.env.SITE_URL || SITE_URL_DEFAULT).replace(/\/$/, "");
+  const res = await fetch(`${siteUrl}/api/newsletter/send`, {
     method: "POST",
-    body: JSON.stringify({
-      campaign: {
-        type: "single",
-        name: `Weekly Newsletter — ${post.title}`,
-        subject: post.title,
-        fromname: FROM_NAME,
-        fromemail: fromEmail,
-        // status: 1 schedules the send; sdate=now means immediate.
-        status: 1,
-        public: 1,
-        tracklinks: "all",
-        htmlcontent: html,
-        textcontent: text,
-        sdate: now,
-        lists: [{ id: listId }],
-      },
-    }),
+    headers: {
+      "Content-Type": "application/json",
+      "x-newsletter-secret": requireEnv("NEWSLETTER_SEND_SECRET"),
+    },
+    body: JSON.stringify({ subject, html, text }),
   });
   if (!res.ok) {
     throw new Error(
-      `AC create campaign failed: ${res.status} ${await res
+      `Newsletter send endpoint failed: ${res.status} ${await res
         .text()
         .catch(() => "")}`,
     );
   }
-  const data = (await res.json()) as { campaign: ACCampaign };
-  if (!data.campaign?.id) {
-    throw new Error("AC create campaign returned no id");
-  }
-  return data.campaign;
+  return (await res.json()) as SendResult;
 }
 
 // ── ISR revalidation ──────────────────────────────────────────────────────────
@@ -471,15 +445,16 @@ async function main(): Promise<void> {
 
       const fullHtml = renderNewsletter(post, bodyHtml);
       const fullText = renderPlaintext(post, bodyText);
-      const campaign = await createAndSendCampaign(post, fullHtml, fullText);
+      const result = await postNewsletter(post.title, fullHtml, fullText);
 
       console.log(
-        `[publish-and-send-newsletter] AC campaign ${campaign.id} scheduled for "${post.title}"`,
+        `[publish-and-send-newsletter] "${post.title}" delivered to ` +
+          `${result.sent}/${result.total} subscriber(s), ${result.failed} failed`,
       );
       await slackPing(
         `:rocket: Newsletter sent: *${post.title}*\n` +
           `Category: ${post.category} · Slug: ${post.slug}\n` +
-          `AC campaign id: ${campaign.id}`,
+          `Delivered: ${result.sent} · Failed: ${result.failed}`,
       );
     } catch (err) {
       console.error(

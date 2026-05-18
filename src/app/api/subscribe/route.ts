@@ -1,10 +1,9 @@
-import { addContactToList } from "@/lib/activecampaign";
 import { notifyTeam, sendSubscriberWelcome } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
+import { upsertContact } from "@/lib/hubspot";
 import { isValidEmail } from "@/lib/validation";
 import { slackSubscriberNotify } from "@/lib/slack-notify";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
-import { getConfig } from "@/lib/ssm-config";
 
 export async function POST(request: Request) {
   // Rate limit: 3 subscribe attempts per IP per 10 minutes
@@ -22,18 +21,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const config = await getConfig();
-    const listId = config.ACTIVECAMPAIGN_NEWSLETTER_LIST_ID;
-
-    // AC subscribe is the source of truth for the newsletter list. If it fails
-    // we still surface success to the user (team-notify + Slack run in parallel
-    // so we have a manual fallback path), but the failure is logged.
-    const acPromise = listId
-      ? addContactToList(email, listId)
-      : Promise.resolve(null);
-
+    // HubSpot is the source of truth for the newsletter contact list.
+    // upsertContact swallows its own errors and returns null, so a HubSpot
+    // outage never fails the subscriber; team-notify and Slack provide a
+    // manual fallback path.
     await Promise.all([
-      acPromise,
+      upsertContact({ email, lead_source: "newsletter_signup" }),
       notifyTeam(
         `[Newsletter] New subscriber: ${email.slice(0, 80)}`,
         `<h2>New newsletter subscriber</h2>
@@ -41,7 +34,7 @@ export async function POST(request: Request) {
         <p><strong>Date:</strong> ${new Date().toISOString()}</p>
         <hr />
         <p style="color: #666; font-size: 12px;">
-          Subscriber added to ActiveCampaign list ${escapeHtml(listId || "(unconfigured)")}.
+          Subscriber upserted as a HubSpot contact (lead_source: newsletter_signup).
           This notification was sent from the cloudless.gr subscribe form.
         </p>`,
       ),

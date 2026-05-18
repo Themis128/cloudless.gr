@@ -16,6 +16,8 @@ interface AppConfig {
   SES_FROM_EMAIL: string;
   SES_TO_EMAIL: string;
   AWS_SES_REGION: string;
+  /** Shared secret authenticating the weekly newsletter send endpoint. */
+  NEWSLETTER_SEND_SECRET: string;
   STRIPE_SECRET_KEY: string;
   STRIPE_PUBLISHABLE_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
@@ -55,7 +57,6 @@ interface AppConfig {
   // ActiveCampaign
   ACTIVECAMPAIGN_API_URL: string;
   ACTIVECAMPAIGN_API_TOKEN: string;
-  ACTIVECAMPAIGN_NEWSLETTER_LIST_ID: string;
   // Google Ads
   GOOGLE_ADS_DEVELOPER_TOKEN: string;
   GOOGLE_ADS_CUSTOMER_ID: string;
@@ -107,6 +108,7 @@ function buildConfigFromEnv(): AppConfig {
     SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "noreply@cloudless.gr",
     SES_TO_EMAIL: process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
     AWS_SES_REGION: process.env.AWS_SES_REGION || "us-east-1",
+    NEWSLETTER_SEND_SECRET: process.env.NEWSLETTER_SEND_SECRET || "",
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
@@ -147,8 +149,6 @@ function buildConfigFromEnv(): AppConfig {
     SENTRY_PROJECT: process.env.SENTRY_PROJECT || "cloudless-gr",
     ACTIVECAMPAIGN_API_URL: process.env.ACTIVECAMPAIGN_API_URL || "",
     ACTIVECAMPAIGN_API_TOKEN: process.env.ACTIVECAMPAIGN_API_TOKEN || "",
-    ACTIVECAMPAIGN_NEWSLETTER_LIST_ID:
-      process.env.ACTIVECAMPAIGN_NEWSLETTER_LIST_ID || "",
     GOOGLE_ADS_DEVELOPER_TOKEN: process.env.GOOGLE_ADS_DEVELOPER_TOKEN || "",
     GOOGLE_ADS_CUSTOMER_ID: process.env.GOOGLE_ADS_CUSTOMER_ID || "",
     LINKEDIN_CLIENT_ID: process.env.LINKEDIN_CLIENT_ID || "",
@@ -267,6 +267,7 @@ export async function getConfig(): Promise<AppConfig> {
     SES_FROM_EMAIL: sesFrom,
     SES_TO_EMAIL: sesTo,
     AWS_SES_REGION: sesRegion,
+    NEWSLETTER_SEND_SECRET: params.get("NEWSLETTER_SEND_SECRET") ?? "",
     STRIPE_SECRET_KEY: params.get("STRIPE_SECRET_KEY")!,
     STRIPE_PUBLISHABLE_KEY: params.get("STRIPE_PUBLISHABLE_KEY") ?? "",
     STRIPE_WEBHOOK_SECRET: params.get("STRIPE_WEBHOOK_SECRET")!,
@@ -304,8 +305,6 @@ export async function getConfig(): Promise<AppConfig> {
     SENTRY_PROJECT: params.get("SENTRY_PROJECT") ?? "cloudless-gr",
     ACTIVECAMPAIGN_API_URL: params.get("ACTIVECAMPAIGN_API_URL") ?? "",
     ACTIVECAMPAIGN_API_TOKEN: params.get("ACTIVECAMPAIGN_API_TOKEN") ?? "",
-    ACTIVECAMPAIGN_NEWSLETTER_LIST_ID:
-      params.get("ACTIVECAMPAIGN_NEWSLETTER_LIST_ID") ?? "",
     GOOGLE_ADS_DEVELOPER_TOKEN: params.get("GOOGLE_ADS_DEVELOPER_TOKEN") ?? "",
     GOOGLE_ADS_CUSTOMER_ID: params.get("GOOGLE_ADS_CUSTOMER_ID") ?? "",
     LINKEDIN_CLIENT_ID: params.get("LINKEDIN_CLIENT_ID") ?? "",

@@ -146,6 +146,54 @@ export async function upsertContact(
   }
 }
 
+/**
+ * Fetch the email address of every newsletter subscriber.
+ *
+ * Subscribers are contacts created by the /api/subscribe route with
+ * lead_source = "newsletter_signup". Uses the search API with cursor
+ * pagination. Returns a de-duplicated list, or [] on any failure.
+ */
+export async function listNewsletterSubscribers(): Promise<string[]> {
+  const emails: string[] = [];
+  let after: string | undefined;
+  try {
+    do {
+      const res = await hubspotFetch("/crm/v3/objects/contacts/search", {
+        method: "POST",
+        body: JSON.stringify({
+          filterGroups: [
+            {
+              filters: [
+                {
+                  propertyName: "lead_source",
+                  operator: "EQ",
+                  value: "newsletter_signup",
+                },
+              ],
+            },
+          ],
+          properties: ["email"],
+          limit: HUBSPOT_PAGE_SIZE,
+          ...(after ? { after } : {}),
+        }),
+      });
+      if (!res.ok) break;
+      const data = (await res.json()) as {
+        results: { properties?: { email?: string } }[];
+        paging?: { next?: { after?: string } };
+      };
+      for (const contact of data.results) {
+        const email = contact.properties?.email;
+        if (email) emails.push(email);
+      }
+      after = data.paging?.next?.after;
+    } while (after);
+  } catch (err) {
+    console.error("[HubSpot] listNewsletterSubscribers error:", err);
+  }
+  return [...new Set(emails)];
+}
+
 /** List recent contacts */
 export async function listContacts(limit = 10): Promise<unknown[]> {
   const safeLimit = Number.isFinite(limit)

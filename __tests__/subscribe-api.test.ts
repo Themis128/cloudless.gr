@@ -20,18 +20,10 @@ vi.mock("@/lib/slack-notify", () => ({
   slackSubscriberNotify: slackSubscriberNotifyMock,
 }));
 
-const addContactToListMock = vi.fn();
-vi.mock("@/lib/activecampaign", () => ({
-  addContactToList: addContactToListMock,
+const upsertContactMock = vi.fn();
+vi.mock("@/lib/hubspot", () => ({
+  upsertContact: upsertContactMock,
 }));
-
-const getConfigMock = vi.fn();
-vi.mock("@/lib/ssm-config", () => ({
-  getConfig: getConfigMock,
-  resetSsmCache: vi.fn(),
-}));
-
-const TEST_LIST_ID = "42";
 
 function makeRequest(body: unknown): Request {
   return new globalThis.Request("http://localhost:4000/api/subscribe", {
@@ -47,10 +39,7 @@ describe("POST /api/subscribe", () => {
     notifyTeamMock.mockResolvedValue(undefined);
     sendSubscriberWelcomeMock.mockResolvedValue(undefined);
     slackSubscriberNotifyMock.mockResolvedValue(undefined);
-    addContactToListMock.mockResolvedValue("ac-contact-id-1");
-    getConfigMock.mockResolvedValue({
-      ACTIVECAMPAIGN_NEWSLETTER_LIST_ID: TEST_LIST_ID,
-    });
+    upsertContactMock.mockResolvedValue("hs-contact-id-1");
   });
 
   it("returns 400 for invalid email payload", async () => {
@@ -61,7 +50,7 @@ describe("POST /api/subscribe", () => {
     expect(response.status).toBe(400);
     expect(data.error).toContain("Invalid email");
     expect(notifyTeamMock).not.toHaveBeenCalled();
-    expect(addContactToListMock).not.toHaveBeenCalled();
+    expect(upsertContactMock).not.toHaveBeenCalled();
   });
 
   it("returns success for valid email", async () => {
@@ -75,27 +64,24 @@ describe("POST /api/subscribe", () => {
     expect(notifyTeamMock.mock.calls[0][0]).toContain("New subscriber");
   });
 
-  it("adds subscriber to the configured ActiveCampaign list", async () => {
+  it("upserts the subscriber as a HubSpot contact", async () => {
     const { POST } = await import("@/app/api/subscribe/route");
     await POST(makeRequest({ email: "hello@cloudless.gr" }));
 
-    expect(addContactToListMock).toHaveBeenCalledTimes(1);
-    expect(addContactToListMock).toHaveBeenCalledWith(
-      "hello@cloudless.gr",
-      TEST_LIST_ID,
-    );
+    expect(upsertContactMock).toHaveBeenCalledTimes(1);
+    expect(upsertContactMock).toHaveBeenCalledWith({
+      email: "hello@cloudless.gr",
+      lead_source: "newsletter_signup",
+    });
   });
 
-  it("skips ActiveCampaign call when newsletter list id is unconfigured", async () => {
-    getConfigMock.mockResolvedValueOnce({
-      ACTIVECAMPAIGN_NEWSLETTER_LIST_ID: "",
-    });
+  it("still returns success when the HubSpot upsert fails", async () => {
+    upsertContactMock.mockResolvedValueOnce(null);
     const { POST } = await import("@/app/api/subscribe/route");
     const response = await POST(makeRequest({ email: "hello@cloudless.gr" }));
 
     expect(response.status).toBe(200);
-    expect(addContactToListMock).not.toHaveBeenCalled();
-    // Team still notified so the subscription isn't silently dropped on misconfig
+    // Team still notified so the subscription isn't silently dropped
     expect(notifyTeamMock).toHaveBeenCalledTimes(1);
   });
 
