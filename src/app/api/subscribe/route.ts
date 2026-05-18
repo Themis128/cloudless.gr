@@ -1,6 +1,7 @@
 import { notifyTeam, sendSubscriberWelcome } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
-import { upsertContact } from "@/lib/hubspot";
+import { setNewsletterStatus } from "@/lib/hubspot";
+import { removeFromSuppressionList } from "@/lib/ses-suppression";
 import { isValidEmail } from "@/lib/validation";
 import { slackSubscriberNotify } from "@/lib/slack-notify";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
@@ -21,12 +22,16 @@ export async function POST(request: Request) {
       );
     }
 
+    // Clear any stale SES suppression first, so a previously-unsubscribed
+    // user re-subscribing can receive the welcome email below.
+    await removeFromSuppressionList(email);
+
     // HubSpot is the source of truth for the newsletter contact list.
-    // upsertContact swallows its own errors and returns null, so a HubSpot
-    // outage never fails the subscriber; team-notify and Slack provide a
-    // manual fallback path.
+    // setNewsletterStatus swallows its own errors and returns false, so a
+    // HubSpot outage never fails the subscriber; team-notify and Slack
+    // provide a manual fallback path.
     await Promise.all([
-      upsertContact({ email, lead_source: "newsletter_signup" }),
+      setNewsletterStatus(email, "newsletter_signup"),
       notifyTeam(
         `[Newsletter] New subscriber: ${email.slice(0, 80)}`,
         `<h2>New newsletter subscriber</h2>
@@ -34,7 +39,7 @@ export async function POST(request: Request) {
         <p><strong>Date:</strong> ${new Date().toISOString()}</p>
         <hr />
         <p style="color: #666; font-size: 12px;">
-          Subscriber upserted as a HubSpot contact (lead_source: newsletter_signup).
+          Subscriber recorded as a HubSpot contact (lead_source: newsletter_signup).
           This notification was sent from the cloudless.gr subscribe form.
         </p>`,
       ),

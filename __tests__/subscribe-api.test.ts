@@ -20,9 +20,14 @@ vi.mock("@/lib/slack-notify", () => ({
   slackSubscriberNotify: slackSubscriberNotifyMock,
 }));
 
-const upsertContactMock = vi.fn();
+const setNewsletterStatusMock = vi.fn();
 vi.mock("@/lib/hubspot", () => ({
-  upsertContact: upsertContactMock,
+  setNewsletterStatus: setNewsletterStatusMock,
+}));
+
+const removeFromSuppressionListMock = vi.fn();
+vi.mock("@/lib/ses-suppression", () => ({
+  removeFromSuppressionList: removeFromSuppressionListMock,
 }));
 
 function makeRequest(body: unknown): Request {
@@ -39,7 +44,8 @@ describe("POST /api/subscribe", () => {
     notifyTeamMock.mockResolvedValue(undefined);
     sendSubscriberWelcomeMock.mockResolvedValue(undefined);
     slackSubscriberNotifyMock.mockResolvedValue(undefined);
-    upsertContactMock.mockResolvedValue("hs-contact-id-1");
+    setNewsletterStatusMock.mockResolvedValue(true);
+    removeFromSuppressionListMock.mockResolvedValue(true);
   });
 
   it("returns 400 for invalid email payload", async () => {
@@ -50,7 +56,7 @@ describe("POST /api/subscribe", () => {
     expect(response.status).toBe(400);
     expect(data.error).toContain("Invalid email");
     expect(notifyTeamMock).not.toHaveBeenCalled();
-    expect(upsertContactMock).not.toHaveBeenCalled();
+    expect(setNewsletterStatusMock).not.toHaveBeenCalled();
   });
 
   it("returns success for valid email", async () => {
@@ -64,19 +70,28 @@ describe("POST /api/subscribe", () => {
     expect(notifyTeamMock.mock.calls[0][0]).toContain("New subscriber");
   });
 
-  it("upserts the subscriber as a HubSpot contact", async () => {
+  it("marks the subscriber as a newsletter signup in HubSpot", async () => {
     const { POST } = await import("@/app/api/subscribe/route");
     await POST(makeRequest({ email: "hello@cloudless.gr" }));
 
-    expect(upsertContactMock).toHaveBeenCalledTimes(1);
-    expect(upsertContactMock).toHaveBeenCalledWith({
-      email: "hello@cloudless.gr",
-      lead_source: "newsletter_signup",
-    });
+    expect(setNewsletterStatusMock).toHaveBeenCalledTimes(1);
+    expect(setNewsletterStatusMock).toHaveBeenCalledWith(
+      "hello@cloudless.gr",
+      "newsletter_signup",
+    );
   });
 
-  it("still returns success when the HubSpot upsert fails", async () => {
-    upsertContactMock.mockResolvedValueOnce(null);
+  it("clears SES suppression so a re-subscriber can receive email", async () => {
+    const { POST } = await import("@/app/api/subscribe/route");
+    await POST(makeRequest({ email: "hello@cloudless.gr" }));
+
+    expect(removeFromSuppressionListMock).toHaveBeenCalledWith(
+      "hello@cloudless.gr",
+    );
+  });
+
+  it("still returns success when the HubSpot update fails", async () => {
+    setNewsletterStatusMock.mockResolvedValueOnce(false);
     const { POST } = await import("@/app/api/subscribe/route");
     const response = await POST(makeRequest({ email: "hello@cloudless.gr" }));
 

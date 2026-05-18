@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const notifyTeamMock = vi.fn();
 const sendUnsubscribeConfirmationMock = vi.fn();
 const addToSuppressionListMock = vi.fn();
+const setNewsletterStatusMock = vi.fn();
 
 vi.mock("@/lib/email", () => ({
   notifyTeam: notifyTeamMock,
@@ -11,6 +12,10 @@ vi.mock("@/lib/email", () => ({
 
 vi.mock("@/lib/ses-suppression", () => ({
   addToSuppressionList: addToSuppressionListMock,
+}));
+
+vi.mock("@/lib/hubspot", () => ({
+  setNewsletterStatus: setNewsletterStatusMock,
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -25,6 +30,7 @@ describe("POST /api/unsubscribe", () => {
     notifyTeamMock.mockResolvedValue(undefined);
     sendUnsubscribeConfirmationMock.mockResolvedValue(undefined);
     addToSuppressionListMock.mockResolvedValue(true);
+    setNewsletterStatusMock.mockResolvedValue(true);
   });
 
   it("returns 400 for missing email", async () => {
@@ -65,6 +71,20 @@ describe("POST /api/unsubscribe", () => {
     expect(addToSuppressionListMock).toHaveBeenCalledWith("user@cloudless.gr");
   });
 
+  it("flips the HubSpot contact to unsubscribed", async () => {
+    const { POST } = await import("@/app/api/unsubscribe/route");
+    const req = new Request("http://localhost:4000/api/unsubscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "user@cloudless.gr" }),
+    });
+    await POST(req);
+    expect(setNewsletterStatusMock).toHaveBeenCalledWith(
+      "user@cloudless.gr",
+      "newsletter_unsubscribed",
+    );
+  });
+
   it("notifies team on successful unsubscribe (fire-and-forget)", async () => {
     const { POST } = await import("@/app/api/unsubscribe/route");
     const req = new Request("http://localhost:4000/api/unsubscribe", {
@@ -99,6 +119,7 @@ describe("GET /api/unsubscribe", () => {
     notifyTeamMock.mockResolvedValue(undefined);
     sendUnsubscribeConfirmationMock.mockResolvedValue(undefined);
     addToSuppressionListMock.mockResolvedValue(true);
+    setNewsletterStatusMock.mockResolvedValue(true);
   });
 
   it("returns 400 HTML for missing email param", async () => {
@@ -129,6 +150,10 @@ describe("GET /api/unsubscribe", () => {
     expect(body).toContain("Unsubscribed");
     expect(body).toContain("user@cloudless.gr");
     expect(addToSuppressionListMock).toHaveBeenCalledWith("user@cloudless.gr");
+    expect(setNewsletterStatusMock).toHaveBeenCalledWith(
+      "user@cloudless.gr",
+      "newsletter_unsubscribed",
+    );
   });
 
   it("returns 500 HTML when suppression throws", async () => {

@@ -194,6 +194,72 @@ export async function listNewsletterSubscribers(): Promise<string[]> {
   return [...new Set(emails)];
 }
 
+/**
+ * Set a contact's newsletter subscription state.
+ *
+ * Subscription is tracked on the `lead_source` property: "newsletter_signup"
+ * while subscribed, "newsletter_unsubscribed" once they opt out.
+ * listNewsletterSubscribers() filters on the subscribed value, so flipping
+ * this property is what adds or removes a contact from the send audience.
+ *
+ * Creates the contact for a new signup; an unsubscribe of an unknown email
+ * is a no-op success. Returns true on success, false on failure (logged,
+ * never thrown).
+ */
+export async function setNewsletterStatus(
+  email: string,
+  status: "newsletter_signup" | "newsletter_unsubscribed",
+): Promise<boolean> {
+  try {
+    const searchRes = await hubspotFetch("/crm/v3/objects/contacts/search", {
+      method: "POST",
+      body: JSON.stringify({
+        filterGroups: [
+          {
+            filters: [{ propertyName: "email", operator: "EQ", value: email }],
+          },
+        ],
+        properties: ["email"],
+        limit: 1,
+      }),
+    });
+    const existingId = searchRes.ok
+      ? ((await searchRes.json()) as { results?: { id?: string }[] })
+          .results?.[0]?.id
+      : undefined;
+
+    if (existingId) {
+      const patchRes = await hubspotFetch(
+        `/crm/v3/objects/contacts/${existingId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ properties: { lead_source: status } }),
+        },
+      );
+      return patchRes.ok;
+    }
+
+    // No existing contact: an unsubscribe of an unknown email is a no-op,
+    // only an active signup needs a new contact record.
+    if (status === "newsletter_unsubscribed") return true;
+
+    const createRes = await hubspotFetch("/crm/v3/objects/contacts", {
+      method: "POST",
+      body: JSON.stringify({
+        properties: {
+          email,
+          lead_source: status,
+          lifecyclestage: "subscriber",
+        },
+      }),
+    });
+    return createRes.ok;
+  } catch (err) {
+    console.error("[HubSpot] setNewsletterStatus error:", err);
+    return false;
+  }
+}
+
 /** List recent contacts */
 export async function listContacts(limit = 10): Promise<unknown[]> {
   const safeLimit = Number.isFinite(limit)

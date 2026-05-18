@@ -11,6 +11,7 @@
 import {
   SESv2Client,
   PutSuppressedDestinationCommand,
+  DeleteSuppressedDestinationCommand,
 } from "@aws-sdk/client-sesv2";
 import { getConfig } from "@/lib/ssm-config";
 
@@ -21,6 +22,14 @@ async function getSESv2(): Promise<SESv2Client> {
   const config = await getConfig();
   sesv2Client = new SESv2Client({ region: config.AWS_SES_REGION });
   return sesv2Client;
+}
+
+/** Domain portion of an email, newline-stripped, for safe logging. */
+function logSafeDomain(email: string): string {
+  return (email.includes("@") ? email.split("@")[1] : "(no-domain)").replace(
+    /[\r\n]/g,
+    "_",
+  );
 }
 
 /**
@@ -38,23 +47,52 @@ export async function addToSuppressionList(email: string): Promise<boolean> {
         Reason: "COMPLAINT",
       }),
     );
-    // Log domain only to avoid leaking full email addresses into logs
-    const domain = (
-      email.includes("@") ? email.split("@")[1] : "(no-domain)"
-    ).replace(/[\r\n]/g, "_");
-    // codeql[js/log-injection] -- domain sanitized (newlines stripped) above
-    console.warn(`[SES] Added to suppression list: *@${domain}`);
+    // codeql[js/log-injection] -- domain sanitized (newlines stripped) in logSafeDomain
+    console.warn(`[SES] Added to suppression list: *@${logSafeDomain(email)}`);
     return true;
   } catch (err) {
-    const domain = (
-      email.includes("@") ? email.split("@")[1] : "(no-domain)"
-    ).replace(/[\r\n]/g, "_");
     const msg = ((err as Error)?.message ?? "unknown error").replace(
       /[\r\n]/g,
       " ",
     );
-    // codeql[js/log-injection] codeql[js/tainted-format-string] -- domain and msg are sanitized (newlines stripped) above
-    console.error(`[SES] Failed to suppress *@${domain}:`, msg);
+    // codeql[js/log-injection] codeql[js/tainted-format-string] -- domain and msg sanitized (newlines stripped) above
+    console.error(`[SES] Failed to suppress *@${logSafeDomain(email)}:`, msg);
+    return false;
+  }
+}
+
+/**
+ * Remove an email address from the SES account-level suppression list, so a
+ * re-subscribing user can receive email again. A "not suppressed" result
+ * counts as success. Returns true on success, false on failure (logged,
+ * not thrown).
+ */
+export async function removeFromSuppressionList(
+  email: string,
+): Promise<boolean> {
+  try {
+    const client = await getSESv2();
+    await client.send(
+      new DeleteSuppressedDestinationCommand({ EmailAddress: email }),
+    );
+    // codeql[js/log-injection] -- domain sanitized (newlines stripped) in logSafeDomain
+    console.warn(
+      `[SES] Removed from suppression list: *@${logSafeDomain(email)}`,
+    );
+    return true;
+  } catch (err) {
+    // SES throws NotFoundException when the address was never suppressed;
+    // for a brand-new subscriber that is the normal case, treat as success.
+    if ((err as { name?: string })?.name === "NotFoundException") return true;
+    const msg = ((err as Error)?.message ?? "unknown error").replace(
+      /[\r\n]/g,
+      " ",
+    );
+    // codeql[js/log-injection] codeql[js/tainted-format-string] -- domain and msg sanitized (newlines stripped) above
+    console.error(
+      `[SES] Failed to remove *@${logSafeDomain(email)} from suppression:`,
+      msg,
+    );
     return false;
   }
 }

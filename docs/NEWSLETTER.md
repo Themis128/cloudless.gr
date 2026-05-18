@@ -30,9 +30,10 @@ If nothing is approved by 09:00 UTC, the publisher exits cleanly with no newslet
 
 ## Components
 
-### Subscriber capture
-- [src/app/api/subscribe/route.ts](../src/app/api/subscribe/route.ts) upserts the email as a HubSpot contact via `upsertContact()` with `lead_source = "newsletter_signup"`. Team-notify email and Slack ping run in parallel as a manual fallback if the HubSpot call fails.
-- [src/lib/hubspot.ts](../src/lib/hubspot.ts) — `upsertContact()` creates or updates a contact by email; `listNewsletterSubscribers()` returns every contact with `lead_source = "newsletter_signup"` (cursor-paginated search).
+### Subscriber capture and lifecycle
+- [src/app/api/subscribe/route.ts](../src/app/api/subscribe/route.ts) records the email in HubSpot via `setNewsletterStatus(email, "newsletter_signup")`, and clears any stale SES suppression so a returning subscriber can be emailed again. Team-notify email and Slack ping run in parallel as a manual fallback if the HubSpot call fails.
+- [src/app/api/unsubscribe/route.ts](../src/app/api/unsubscribe/route.ts) (POST for the in-app form, GET for the one-click `List-Unsubscribe` link) adds the address to the SES suppression list and flips the HubSpot contact to `lead_source = "newsletter_unsubscribed"`, which removes it from the send audience.
+- [src/lib/hubspot.ts](../src/lib/hubspot.ts) — `setNewsletterStatus()` creates or updates a contact and sets the subscription state; `listNewsletterSubscribers()` returns every contact with `lead_source = "newsletter_signup"` (cursor-paginated search).
 
 ### Send endpoint
 - [src/app/api/newsletter/send/route.ts](../src/app/api/newsletter/send/route.ts) — `POST` authenticated with the `x-newsletter-secret` header against `NEWSLETTER_SEND_SECRET`. Accepts `{ subject, html, text }`, resolves the subscriber list from HubSpot, and delivers one email per recipient via `sendEmail()` (SES). Returns `{ sent, failed, total }`. The `%UNSUBSCRIBELINK%` token in the body is replaced per recipient with `/api/unsubscribe?email=...`, and a matching `List-Unsubscribe` header is added.
@@ -104,7 +105,8 @@ The `/api/newsletter/send` route reads all three from SSM at runtime. SES is rea
   - Publisher with a send error: Slack ping; the post is still flipped to Published in Notion. Re-running the publisher finds no Approved rows, so re-trigger the send manually via `workflow_dispatch` only after re-approving, or call `/api/newsletter/send` directly.
   - Per-recipient SES failures do not abort the batch; they are counted in `failed` and logged.
 - **From address**: SES sends from `SES_FROM_EMAIL` (default `noreply@cloudless.gr`), resolved from SSM inside `sendEmail()`.
-- **Unsubscribe**: the `%UNSUBSCRIBELINK%` token in the email template is replaced per recipient with `/api/unsubscribe?email=...`, and a one-click `List-Unsubscribe` header is attached.
+- **Unsubscribe**: the `%UNSUBSCRIBELINK%` token in the email template is replaced per recipient with `/api/unsubscribe?email=...`, and a one-click `List-Unsubscribe` header is attached. Unsubscribing both suppresses the address in SES and flips the HubSpot contact to `newsletter_unsubscribed`, so the next weekly send no longer targets it.
+- **Re-subscribe**: subscribing again clears the SES suppression entry and flips the HubSpot contact back to `newsletter_signup`, so a returning subscriber is fully restored without manual cleanup.
 - **Scale**: the send loop is sequential, one SES call per subscriber. This is fine for the current list size. For a large list the route should move to a batched or queued send.
 
 ## Smoke test sequence
