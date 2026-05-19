@@ -27,7 +27,7 @@ export default function ChunkReloadGuard() {
       if (!CHUNK_ERROR_PATTERN.test(message)) return;
       if (sessionStorage.getItem(CHUNK_RELOAD_FLAG)) return;
       sessionStorage.setItem(CHUNK_RELOAD_FLAG, "1");
-      window.location.reload();
+      globalThis.location.reload();
     }
 
     function onError(event: ErrorEvent): void {
@@ -38,18 +38,18 @@ export default function ChunkReloadGuard() {
       recover(reason instanceof Error ? reason.message : String(reason ?? ""));
     }
 
-    window.addEventListener("error", onError);
-    window.addEventListener("unhandledrejection", onRejection);
+    globalThis.addEventListener("error", onError);
+    globalThis.addEventListener("unhandledrejection", onRejection);
     // Once the page has been stable for 10s, allow a future recovery reload.
-    const clearTimer = window.setTimeout(
+    const clearTimer = globalThis.setTimeout(
       () => sessionStorage.removeItem(CHUNK_RELOAD_FLAG),
       10_000,
     );
 
     return () => {
-      window.clearTimeout(clearTimer);
-      window.removeEventListener("error", onError);
-      window.removeEventListener("unhandledrejection", onRejection);
+      globalThis.clearTimeout(clearTimer);
+      globalThis.removeEventListener("error", onError);
+      globalThis.removeEventListener("unhandledrejection", onRejection);
     };
   }, []);
 
