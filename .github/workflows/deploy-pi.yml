@@ -122,7 +122,7 @@ jobs:
           authkey: ${{ secrets.TS_AUTHKEY }}
       - name: Set up SSH deploy key
         run: |
-          install -m 600 /dev/null ~/.ssh/deploy_key
+          mkdir -p ~/.ssh && install -m 600 /dev/null ~/.ssh/deploy_key
           echo "${{ secrets.SSH_DEPLOY_KEY }}" > ~/.ssh/deploy_key
       - name: Set image and roll out
         run: |
