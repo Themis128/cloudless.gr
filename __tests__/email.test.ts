@@ -128,6 +128,49 @@ describe("email.ts", () => {
       const [cmd] = mockSend.mock.calls[0] as [{ input: { Content: { Simple: { Body: { Html: { Data: string } } } } } }];
       expect(cmd.input.Content.Simple.Body.Html.Data).toContain("unsubscribe");
     });
+
+    it("sends from 'Themis at Cloudless' with branded subject", async () => {
+      const { sendSubscriberWelcome } = await import("@/lib/email");
+      await sendSubscriberWelcome("sub@example.com");
+      const [cmd] = mockSend.mock.calls[0] as [{
+        input: {
+          FromEmailAddress: string;
+          Content: { Simple: { Subject: { Data: string } } };
+        };
+      }];
+      expect(cmd.input.FromEmailAddress).toContain("Themis at Cloudless");
+      expect(cmd.input.Content.Simple.Subject.Data).toContain("Welcome");
+      expect(cmd.input.Content.Simple.Subject.Data).toContain("Monday");
+    });
+
+    it("includes what-to-expect content areas in the HTML", async () => {
+      const { sendSubscriberWelcome } = await import("@/lib/email");
+      await sendSubscriberWelcome("sub@example.com");
+      const [cmd] = mockSend.mock.calls[0] as [{ input: { Content: { Simple: { Body: { Html: { Data: string } } } } } }];
+      const html = cmd.input.Content.Simple.Body.Html.Data;
+      expect(html).toContain("Cloud and Serverless");
+      expect(html).toContain("Analytics and AI Marketing");
+      expect(html).toContain("Company Updates and Offers");
+    });
+
+    it("encodes the subscriber email in the unsubscribe URL", async () => {
+      const { sendSubscriberWelcome } = await import("@/lib/email");
+      await sendSubscriberWelcome("user+test@example.com");
+      const [cmd] = mockSend.mock.calls[0] as [{ input: { Content: { Simple: { Body: { Html: { Data: string } } } } } }];
+      expect(cmd.input.Content.Simple.Body.Html.Data).toContain(
+        encodeURIComponent("user+test@example.com"),
+      );
+    });
+
+    it("adds List-Unsubscribe header for RFC 8058 one-click", async () => {
+      const { sendSubscriberWelcome } = await import("@/lib/email");
+      await sendSubscriberWelcome("sub@example.com");
+      const [cmd] = mockSend.mock.calls[0] as [{
+        input: { Content: { Simple: { Headers?: Array<{ Name: string }> } } };
+      }];
+      const headers = cmd.input.Content.Simple.Headers ?? [];
+      expect(headers.some((h) => h.Name === "List-Unsubscribe")).toBe(true);
+    });
   });
 
   describe("notifyTeam()", () => {
