@@ -1,0 +1,68 @@
+name: Weekly Subscriber Report
+
+on:
+  schedule:
+    # Every Monday at 10:00 UTC (12:00 Athens) — one hour after the newsletter
+    # send. Captures the week's subscribe/unsubscribe numbers and posts them
+    # to Slack (#subscribers) and a Notion tracking database.
+    - cron: "0 10 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: weekly-subscriber-report
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Post weekly subscriber report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      HUBSPOT_API_KEY: ${{ secrets.HUBSPOT_API_KEY }}
+      NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Generate and post subscriber report
+        run: pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/weekly-subscriber-report.ts
+
+      - name: Notify Slack on failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": "❌ Weekly subscriber report failed",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": { "type": "plain_text", "text": "❌ Subscriber Report Failed", "emoji": true }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "The Monday subscriber report failed to run. Check HubSpot and Notion manually.\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View logs>"
+                  }
+                }
+              ]
+            }'

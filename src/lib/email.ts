@@ -165,29 +165,78 @@ export async function sendSubscriberWelcome(
   subscriberEmail: string,
 ): Promise<void> {
   const unsubscribeUrl = `https://cloudless.gr/api/unsubscribe?email=${encodeURIComponent(subscriberEmail)}`;
+  const safeUnsub = escapeHtml(unsubscribeUrl);
   await sendEmail({
     to: subscriberEmail,
-    subject: "Welcome to the Cloudless newsletter",
+    subject: "Welcome to Cloudless — your first issue lands Monday",
+    fromLabel: "Themis at Cloudless",
     listUnsubscribeUrl: unsubscribeUrl,
     html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #00fff5;">You're in.</h2>
-        <p>Thanks for subscribing to the Cloudless newsletter.</p>
-        <p>You'll get cloud tips, cost-saving strategies, and growth hacks. No spam.</p>
-        <hr style="border: none; border-top: 1px solid #333; margin: 24px 0;" />
-        <p style="color: #888; font-size: 12px;">
-          You received this email because you subscribed at
-          <a href="https://cloudless.gr" style="color: #00fff5;">cloudless.gr</a>.
-          <br />
-          <a href="${escapeHtml(unsubscribeUrl)}" style="color: #888;">Unsubscribe</a>
-        </p>
-      </div>
-    `,
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0f;color:#e2e8f0;border-radius:12px;overflow:hidden;">
+        <div style="padding:36px 40px 24px;border-bottom:1px solid #1e293b;">
+          <p style="margin:0 0 8px;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#00fff5;">Cloudless Newsletter</p>
+          <h1 style="margin:0;font-size:30px;font-weight:700;color:#f1f5f9;line-height:1.25;">You're subscribed.</h1>
+        </div>
+        <div style="padding:28px 40px 32px;">
+          <p style="margin:0 0 20px;font-size:16px;color:#94a3b8;line-height:1.7;">Every Monday morning you'll get one practical article on cloud infrastructure, serverless, analytics, or AI marketing. No filler, no hype. Written for technical decision-makers who are busy and skeptical.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+            <tr><td style="padding:0 0 10px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-left:3px solid #00fff5;background:#0f172a;border-radius:0 6px 6px 0;">
+                <tr><td style="padding:12px 16px;">
+                  <p style="margin:0 0 2px;font-size:12px;font-weight:700;letter-spacing:0.5px;color:#00fff5;text-transform:uppercase;">Cloud and Serverless</p>
+                  <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.5;">Real-world cost-cutting and architecture decisions. AWS, eu-regions, actual numbers.</p>
+                </td></tr>
+              </table>
+            </td></tr>
+            <tr><td style="padding:0 0 10px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-left:3px solid #6366f1;background:#0f172a;border-radius:0 6px 6px 0;">
+                <tr><td style="padding:12px 16px;">
+                  <p style="margin:0 0 2px;font-size:12px;font-weight:700;letter-spacing:0.5px;color:#6366f1;text-transform:uppercase;">Analytics and AI Marketing</p>
+                  <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.5;">Data pipelines, attribution, and AI tools that move the needle for startups and SMBs.</p>
+                </td></tr>
+              </table>
+            </td></tr>
+            <tr><td>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-left:3px solid #f59e0b;background:#0f172a;border-radius:0 6px 6px 0;">
+                <tr><td style="padding:12px 16px;">
+                  <p style="margin:0 0 2px;font-size:12px;font-weight:700;letter-spacing:0.5px;color:#f59e0b;text-transform:uppercase;">Company Updates and Offers</p>
+                  <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.5;">Service announcements, free audits, and limited-time offers from Cloudless.</p>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
+          <div style="text-align:center;margin:0 0 28px;">
+            <a href="https://cloudless.gr/en/blog" style="display:inline-block;padding:14px 32px;background:#00fff5;color:#0a0a0f;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.3px;">Browse past issues</a>
+          </div>
+          <p style="margin:0 0 4px;font-size:15px;color:#94a3b8;line-height:1.7;">Your first issue arrives this Monday. Until then, feel free to reply if you have a burning cloud question.</p>
+          <p style="margin:20px 0 0;font-size:14px;color:#64748b;">
+            Themistoklis Baltzakis<br/>
+            <span style="font-size:12px;color:#475569;">AWS Certified Cloud Architect · cloudless.gr</span>
+          </p>
+        </div>
+        <div style="padding:16px 40px;background:#080811;border-top:1px solid #1e293b;">
+          <p style="margin:0;font-size:12px;color:#475569;line-height:1.8;">
+            You're receiving this because you subscribed at <a href="https://cloudless.gr" style="color:#00fff5;text-decoration:none;">cloudless.gr</a>.<br/>
+            <a href="${safeUnsub}" style="color:#475569;">Unsubscribe</a> · Cloudless, Athens, Greece
+          </p>
+        </div>
+      </div>`,
     text: [
-      "You're in.",
+      "You're subscribed.",
       "",
-      "Thanks for subscribing to the Cloudless newsletter.",
-      "You'll get cloud tips, cost-saving strategies, and growth hacks. No spam.",
+      "Every Monday morning you'll get one practical article on cloud infrastructure, serverless, analytics, or AI marketing. No filler, no hype.",
+      "",
+      "WHAT TO EXPECT:",
+      "Cloud and Serverless: Real-world cost-cutting and architecture decisions. AWS, eu-regions, actual numbers.",
+      "Analytics and AI Marketing: Data pipelines, attribution, and AI tools that move the needle.",
+      "Company Updates and Offers: Service announcements, free audits, and limited-time offers from Cloudless.",
+      "",
+      "Browse past issues: https://cloudless.gr/en/blog",
+      "",
+      "Your first issue arrives this Monday.",
+      "",
+      "Themistoklis Baltzakis",
+      "AWS Certified Cloud Architect · cloudless.gr",
       "",
       `Unsubscribe: ${unsubscribeUrl}`,
     ].join("\n"),
