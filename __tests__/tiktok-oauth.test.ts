@@ -158,7 +158,7 @@ describe("GET /api/admin/oauth/tiktok/callback", () => {
   it("returns 200 HTML with token and advertiser IDs on success", async () => {
     // Generate a valid state by importing the initiation route's helper
     const { createHmac } = await import("crypto");
-    const secret = process.env.CRON_SECRET!;
+    const secret = baseConfig.TIKTOK_APP_SECRET;
     const nonce = "test-nonce-123";
     const sig = createHmac("sha256", secret)
       .update(nonce)
@@ -193,7 +193,7 @@ describe("GET /api/admin/oauth/tiktok/callback", () => {
 
   it("returns 502 HTML when TikTok token exchange fails", async () => {
     const { createHmac } = await import("crypto");
-    const secret = process.env.CRON_SECRET!;
+    const secret = baseConfig.TIKTOK_APP_SECRET;
     const nonce = "test-nonce-456";
     const sig = createHmac("sha256", secret)
       .update(nonce)
@@ -227,12 +227,10 @@ describe("verifyActiveCampaignToken", () => {
 
   it("returns not_configured when URL and token are missing", async () => {
     vi.doMock("@/lib/ssm-config", () => ({
-      getConfig: vi
-        .fn()
-        .mockResolvedValue({
-          ACTIVECAMPAIGN_API_URL: "",
-          ACTIVECAMPAIGN_API_TOKEN: "",
-        }),
+      getConfig: vi.fn().mockResolvedValue({
+        ACTIVECAMPAIGN_API_URL: "",
+        ACTIVECAMPAIGN_API_TOKEN: "",
+      }),
     }));
     const { verifyActiveCampaignToken } = await import("@/lib/activecampaign");
     const result = await verifyActiveCampaignToken();
