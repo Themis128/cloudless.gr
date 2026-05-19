@@ -37,9 +37,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const secret = process.env.CRON_SECRET ?? cfg.TIKTOK_APP_SECRET;
+  // Sign the CSRF state with the TikTok app secret only. CRON_SECRET belongs
+  // to a different trust domain and must not be reused for OAuth state.
   const nonce = crypto.randomUUID();
-  const sig = signState(nonce, secret);
+  const sig = signState(nonce, cfg.TIKTOK_APP_SECRET);
   const state = `${nonce}.${sig}`;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:4000";

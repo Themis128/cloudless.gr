@@ -411,6 +411,7 @@ async function handleTicket(payload: SlashCommandPayload): Promise<Response> {
         ],
       },
     }),
+    signal: AbortSignal.timeout(5_000),
   }).catch((err) =>
     console.error("[Slack Commands] views.open (ticket) error:", err),
   );
@@ -562,6 +563,7 @@ async function handleDeploy(payload: SlashCommandPayload): Promise<Response> {
         ],
       },
     }),
+    signal: AbortSignal.timeout(5_000),
   }).catch((err) =>
     console.error("[Slack Commands] views.open (deploy) error:", err),
   );

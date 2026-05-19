@@ -84,6 +84,12 @@ COPY --from=builder --chown=node:node --chmod=0555 /app/.next/standalone ./
 COPY --from=builder --chown=node:node --chmod=0555 /app/.next/static ./.next/static
 COPY --from=builder --chown=node:node --chmod=0555 /app/public ./public
 
+# The Next.js image optimizer (/_next/image) writes optimized variants to
+# .next/cache/images at request time. The bundle above is copied --chmod=0555
+# (read-only), so without a writable cache dir owned by the runtime user the
+# first /_next/image request fails with EACCES on mkdir (Sentry CLOUDLESS-GR-5).
+RUN mkdir -p .next/cache/images && chown -R node:node .next/cache
+
 USER node
 EXPOSE 3000
 

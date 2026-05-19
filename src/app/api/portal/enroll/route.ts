@@ -4,6 +4,7 @@ import { upsertPendingClient, PLAN_LABELS } from "@/lib/pending-clients";
 import { sendEmail } from "@/lib/email";
 import { SlackClient } from "@/lib/slack-notify";
 import { escapeHtml } from "@/lib/escape-html";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 const ALLOWED_PLANS = new Set(Object.keys(PLAN_LABELS));
 
@@ -19,6 +20,11 @@ const ADMIN_NOTIFY_EMAIL = "tbaltzakis@cloudless.gr";
  * notifies the admin via email + Slack with all relevant info.
  */
 export async function POST(request: NextRequest) {
+  // Enrollment is a rare action and triggers admin email + Slack notifications,
+  // so cap it per IP to prevent the waiting list from being flooded.
+  const rl = rateLimit(`portal-enroll:${getClientIp(request)}`, 10, 60_000);
+  if (!rl.ok) return rl.response;
+
   const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
