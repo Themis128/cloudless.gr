@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-pi
+  group: deploy-pi-2
   cancel-in-progress: true
 
 permissions:
