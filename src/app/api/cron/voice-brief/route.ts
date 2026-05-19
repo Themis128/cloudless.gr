@@ -92,7 +92,7 @@ async function buildBriefText(
 }
 
 export async function GET(request: NextRequest) {
-  if (!isCronAuthorized(request)) {
+  if (!(await isCronAuthorized(request))) {
     return cronUnauthorized();
   }
 
