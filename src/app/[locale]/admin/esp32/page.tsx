@@ -54,7 +54,22 @@ interface LogEntry {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const ALERT_API_WS = "ws://192.168.1.128:30800/ws/esp32-logs";
+/** Returns the WebSocket URL for the alert-api based on current hostname.
+ *  - cloudless.online / LAN / localhost → Pi alert-api
+ *  - cloudless.gr (AWS Lambda) → '' (WebSocket disabled)
+ */
+function getAlertApiWsUrl(): string {
+  if (typeof window === "undefined") return "";
+  const h = window.location.hostname;
+  if (
+    h === "cloudless.online" ||
+    h.startsWith("192.168.") ||
+    h === "localhost"
+  ) {
+    return "ws://192.168.1.128:30800/ws/esp32-logs";
+  }
+  return "";
+}
 const POLL_INTERVAL = 30_000;
 const MAX_WS_LINES = 200;
 
@@ -126,7 +141,7 @@ export default function AdminEsp32Page() {
   const [offline, setOffline] = useState(false);
   const [wsLogs, setWsLogs] = useState<LogEntry[]>([]);
   const [wsStatus, setWsStatus] = useState<"connecting" | "open" | "closed">(
-    "connecting",
+    () => (getAlertApiWsUrl() ? "connecting" : "closed"),
   );
   const [logFilter, setLogFilter] = useState<string>("ALL");
   const wsRef = useRef<WebSocket | null>(null);
@@ -187,10 +202,13 @@ export default function AdminEsp32Page() {
     let ws: WebSocket;
     let retryTimer: ReturnType<typeof setTimeout>;
 
+    const wsUrl = getAlertApiWsUrl();
+
     function connect() {
+      if (!wsUrl) return;
       try {
         setWsStatus("connecting");
-        ws = new WebSocket(ALERT_API_WS);
+        ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onopen = () => setWsStatus("open");
@@ -527,7 +545,9 @@ export default function AdminEsp32Page() {
               ? `ws/esp32-logs — connected`
               : wsStatus === "connecting"
                 ? "Connecting to log stream…"
-                : "Disconnected — retrying in 5s"}
+                : getAlertApiWsUrl()
+                  ? "Disconnected — retrying in 5s"
+                  : "WebSocket unavailable on this deployment"}
           </span>
         </div>
 
@@ -537,7 +557,9 @@ export default function AdminEsp32Page() {
             <p className="text-slate-600">
               {wsStatus === "open"
                 ? "Waiting for log entries…"
-                : "Not connected."}
+                : getAlertApiWsUrl()
+                  ? "Not connected — will retry in 5s…"
+                  : "WebSocket stream not available on this deployment."}
             </p>
           ) : (
             filteredLogs.map((entry, i) => (
@@ -567,7 +589,7 @@ export default function AdminEsp32Page() {
       </div>
 
       <p className="mt-4 font-mono text-[10px] text-slate-600">
-        Polls every {POLL_INTERVAL / 1000}s · WebSocket reconnects automatically
+        Polls every {POLL_INTERVAL / 1000}s{getAlertApiWsUrl() ? " · WebSocket reconnects automatically" : ""}
         · Last fetched: {esp32 ? fmtTs(esp32.last_heartbeat) : "—"}
       </p>
     </div>
