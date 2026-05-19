@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
+import { getConfig } from "@/lib/ssm-config";
 
 const BEARER_PREFIX = "Bearer ";
 
@@ -10,8 +11,11 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(aBuf, bBuf);
 }
 
-export function isCronAuthorized(request: NextRequest): boolean {
-  const expected = process.env.CRON_SECRET;
+export async function isCronAuthorized(
+  request: NextRequest,
+): Promise<boolean> {
+  const config = await getConfig();
+  const expected = config.CRON_SECRET || process.env.CRON_SECRET;
   if (!expected) return false;
   const header = request.headers.get("authorization");
   if (!header || !header.startsWith(BEARER_PREFIX)) return false;
