@@ -86,8 +86,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.warn("[HubSpot] Ticket created:", ticket.id);
-
     return NextResponse.json({
       success: true,
       ticketId: ticket.id,
@@ -97,9 +95,8 @@ export async function POST(request: NextRequest) {
     const _r = mapIntegrationError(error);
     if (_r) return _r;
     console.error("[HubSpot] Ticket error:", error);
-    const errMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Failed to create ticket.", detail: errMsg },
+      { error: "Failed to create ticket." },
       { status: 500 },
     );
   }

@@ -118,25 +118,26 @@ export async function GET(request: NextRequest) {
   }
 
   const cfg = await getConfig();
-  const secret = process.env.CRON_SECRET ?? cfg.TIKTOK_APP_SECRET;
-
-  if (!verifyState(state, secret)) {
-    return new NextResponse(
-      errorHtml(
-        "Invalid state parameter — possible CSRF. Restart the OAuth flow.",
-      ),
-      {
-        status: 400,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      },
-    );
-  }
 
   if (!cfg.TIKTOK_APP_ID || !cfg.TIKTOK_APP_SECRET) {
     return new NextResponse(
       errorHtml("TIKTOK_APP_ID or TIKTOK_APP_SECRET not configured."),
       {
         status: 503,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      },
+    );
+  }
+
+  // Verify the CSRF state with the TikTok app secret only. Using CRON_SECRET
+  // here would let any holder of the cron token forge a valid OAuth state.
+  if (!verifyState(state, cfg.TIKTOK_APP_SECRET)) {
+    return new NextResponse(
+      errorHtml(
+        "Invalid state parameter — possible CSRF. Restart the OAuth flow.",
+      ),
+      {
+        status: 400,
         headers: { "Content-Type": "text/html; charset=utf-8" },
       },
     );

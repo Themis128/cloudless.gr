@@ -39,11 +39,19 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  // Trigger on-demand generation by calling the cron route internally
-  const baseUrl =
-    process.env.NEXTAUTH_URL ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "https://cloudless.gr";
+  // Trigger on-demand generation by calling the cron route internally.
+  // Pin the base URL to a known allowlist so a misconfigured or tampered env
+  // var cannot redirect this server-side fetch to an attacker host (SSRF guard).
+  const ALLOWED_BASE_URLS = [
+    "https://cloudless.gr",
+    "https://cloudless.online",
+    "http://localhost:3000",
+  ];
+  const envBase =
+    process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const baseUrl = ALLOWED_BASE_URLS.includes(envBase)
+    ? envBase
+    : "https://cloudless.gr";
   try {
     const res = await fetch(`${baseUrl}/api/cron/voice-brief`, {
       headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
@@ -59,7 +67,12 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (e) {
-    console.error("[admin/voice-brief] generation failed:", e);
+    // Log only the message — the raw error may carry the internal fetch's
+    // Authorization header (CRON_SECRET) in its request context.
+    console.error(
+      "[admin/voice-brief] generation failed:",
+      e instanceof Error ? e.message : String(e),
+    );
     return NextResponse.json({ error: "Generation failed" }, { status: 500 });
   }
 }

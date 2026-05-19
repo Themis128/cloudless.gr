@@ -106,13 +106,11 @@ jobs:
             --value "${{ github.sha }}" \
             --type String --overwrite
 
+
   rollout:
     name: Rollout restart on k3s
-    # Runs on a GitHub-hosted runner that joins the tailnet via Tailscale and
-    # reaches the k3s API over it (omv-main = 100.113.41.119:6443). No
-    # self-hosted runner on the Pi is required.
-    # Runs even if image already existed (build skipped) so re-dispatch always
-    # repoints the deployment to the correct SHA.
+    # GH-hosted runner joins tailnet, SSHes to omv-main, runs kubectl locally.
+    # Avoids exposing k3s port 6443 over Tailscale.
     runs-on: ubuntu-latest
     needs: build-and-push
     if: always() && needs.build-and-push.result != 'cancelled' && (needs.build-and-push.result == 'success' || needs.build-and-push.outputs.image_exists == 'true')
@@ -122,21 +120,21 @@ jobs:
         uses: tailscale/github-action@v3
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
-
-      - name: Configure kubectl
-        # KUBECONFIG_B64 is base64 of /etc/rancher/k3s/k3s.yaml with the server
-        # rewritten to the tailnet address https://100.113.41.119:6443.
+      - name: Verify Tailscale path to omv-main
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-
+          tailscale ping -c 3 --timeout=15s 100.113.41.119
+          nc -zv -w 10 100.113.41.119 22
+      - name: Set up SSH deploy key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "${{ secrets.SSH_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
       - name: Set image and roll out
         run: |
-          kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
-            ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.sha }} \
-            -n ${{ env.K3S_NAMESPACE }}
-          # No local ctr pre-pull when running off-Pi — the pod pulls the image
-          # from ECR via the in-cluster ecr-cred-refresher. Allow time for that.
-          kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} \
-            -n ${{ env.K3S_NAMESPACE }} --timeout=420s
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+            -i ~/.ssh/deploy_key tbaltzakis@100.113.41.119 \
+            "sudo k3s kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
+              ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.sha }} \
+              -n ${{ env.K3S_NAMESPACE }} && \
+              sudo k3s kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} \
+              -n ${{ env.K3S_NAMESPACE }} --timeout=420s"
