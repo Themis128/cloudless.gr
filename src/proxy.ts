@@ -224,14 +224,20 @@ function addSecurityHeaders(response: NextResponse): void {
 
 export async function proxy(request: NextRequest) {
   // Enforce HTTPS in production so all traffic stays encrypted in transit.
+  // Exclude /api/* routes: k8s health probes hit the pod directly over HTTP
+  // (Next.js sets x-forwarded-proto:http on plain HTTP connections), and
+  // HTTPS enforcement for browser API calls is handled by CF/Traefik at ingress.
   const forwardedProto = request.headers.get("x-forwarded-proto");
-  if (process.env.NODE_ENV === "production" && forwardedProto === "http") {
+  const { pathname } = request.nextUrl;
+  if (
+    process.env.NODE_ENV === "production" &&
+    forwardedProto === "http" &&
+    !pathname.startsWith("/api/")
+  ) {
     const httpsUrl = request.nextUrl.clone();
     httpsUrl.protocol = "https:";
     return NextResponse.redirect(httpsUrl, 308);
   }
-
-  const { pathname } = request.nextUrl;
 
   // --- API routes: CORS + rate limiting + security headers ---
   if (pathname.startsWith("/api/")) {
