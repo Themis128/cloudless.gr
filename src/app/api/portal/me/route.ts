@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 import { findPendingByEmail } from "@/lib/pending-clients";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * GET /api/portal/me
@@ -14,6 +15,11 @@ import { findPendingByEmail } from "@/lib/pending-clients";
  * approved their portal and the portalToken is available.
  */
 export async function GET(request: NextRequest) {
+  // The waiting room polls this endpoint; 120/min is well above any sane poll
+  // rate (even multi-tab) while still bounding gross abuse.
+  const rl = rateLimit(`portal-me:${getClientIp(request)}`, 120, 60_000);
+  if (!rl.ok) return rl.response;
+
   const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 

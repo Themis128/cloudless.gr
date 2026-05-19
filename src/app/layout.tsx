@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
 import { themeForRoute } from "@/components/ThemeProvider";
 import { HubSpotScript } from "@/components/HubSpotScript";
+import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import "./globals.css";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
@@ -95,6 +96,7 @@ export default async function RootLayout({
         <a href="#main-content" className="skip-nav">
           Skip to content
         </a>
+        <ChunkReloadGuard />
         {META_PIXEL_ID ? (
           <>
             <Script id="meta-pixel-init" strategy="afterInteractive">
