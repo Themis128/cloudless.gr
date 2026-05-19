@@ -108,35 +108,17 @@ jobs:
 
   rollout:
     name: Rollout restart on k3s
-    # Runs on a GitHub-hosted runner that joins the tailnet via Tailscale and
-    # reaches the k3s API over it (omv-main = 100.113.41.119:6443). No
-    # self-hosted runner on the Pi is required.
-    # Runs even if image already existed (build skipped) so re-dispatch always
-    # repoints the deployment to the correct SHA.
-    runs-on: ubuntu-latest
+    # Runs on the self-hosted omv runner — same machine as k3s.
+    # No Tailscale tunnel or remote kubeconfig needed.
+    runs-on: [self-hosted, omv]
     needs: build-and-push
     if: always() && needs.build-and-push.result != 'cancelled' && (needs.build-and-push.result == 'success' || needs.build-and-push.outputs.image_exists == 'true')
 
     steps:
-      - name: Connect to tailnet
-        uses: tailscale/github-action@v3
-        with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
-
-      - name: Configure kubectl
-        # KUBECONFIG_B64 is base64 of /etc/rancher/k3s/k3s.yaml with the server
-        # rewritten to the tailnet address https://100.113.41.119:6443.
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-
       - name: Set image and roll out
         run: |
-          kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
+          sudo k3s kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
             ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.sha }} \
             -n ${{ env.K3S_NAMESPACE }}
-          # No local ctr pre-pull when running off-Pi — the pod pulls the image
-          # from ECR via the in-cluster ecr-cred-refresher. Allow time for that.
-          kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} \
+          sudo k3s kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} \
             -n ${{ env.K3S_NAMESPACE }} --timeout=420s
