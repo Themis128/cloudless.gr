@@ -114,6 +114,8 @@ const adminGroups: AdminGroup[] = [
   {
     label: "Infrastructure",
     links: [
+      { href: "/admin/monitor", label: "Monitor", Icon: Activity },
+      { href: "/admin/esp32", label: "ESP32", Icon: Server },
       {
         href: "https://grafana.cloudless.online",
         label: "Grafana",
