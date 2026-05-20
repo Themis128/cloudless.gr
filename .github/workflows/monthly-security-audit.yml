@@ -30,7 +30,8 @@ jobs:
           cache: pnpm
 
       - name: Set audit date
-        run: echo "AUDIT_DATE=$(date +%Y-%m-%d)" >> "$GITHUB_ENV"
+        id: audit_date
+        run: echo "value=$(date +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
 
       - name: Run security audit
         run: pnpm audit --json > audit-report.json
@@ -38,7 +39,7 @@ jobs:
 
       - name: Parse and summarise audit results
         run: |
-          echo "## 🔒 Monthly Security Audit — $AUDIT_DATE" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 🔒 Monthly Security Audit — ${{ steps.audit_date.outputs.value }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           CRITICAL=$(jq '.metadata.vulnerabilities.critical' audit-report.json)
           HIGH=$(jq '.metadata.vulnerabilities.high' audit-report.json)
@@ -54,7 +55,7 @@ jobs:
       - name: Upload audit report
         uses: actions/upload-artifact@v4
         with:
-          name: audit-report-${{ env.AUDIT_DATE }}
+          name: audit-report-${{ steps.audit_date.outputs.value }}
           path: audit-report.json
           retention-days: 90
 

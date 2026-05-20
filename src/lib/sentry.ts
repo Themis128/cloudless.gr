@@ -67,7 +67,7 @@ export type SentryTokenStatus =
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-const SENTRY_API = "https://sentry.io/api/0";
+const SENTRY_API = "https://de.sentry.io/api/0";
 const VERIFY_TIMEOUT_MS = 5_000;
 const REJECTION_CACHE_TTL_MS = 60_000;
 const DEFAULT_SENTRY_ORG = "baltzakisthemiscom";
