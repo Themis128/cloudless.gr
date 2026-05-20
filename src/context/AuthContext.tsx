@@ -183,7 +183,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      const { getCurrentUser, fetchAuthSession } = await import("aws-amplify/auth");
+      const { getCurrentUser, fetchAuthSession } =
+        await import("aws-amplify/auth");
       const [currentUser, session] = await Promise.all([
         getCurrentUser(),
         fetchAuthSession(),
