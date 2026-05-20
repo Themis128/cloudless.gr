@@ -589,8 +589,9 @@ export default function AdminEsp32Page() {
       </div>
 
       <p className="mt-4 font-mono text-[10px] text-slate-600">
-        Polls every {POLL_INTERVAL / 1000}s{getAlertApiWsUrl() ? " · WebSocket reconnects automatically" : ""}
-        · Last fetched: {esp32 ? fmtTs(esp32.last_heartbeat) : "—"}
+        Polls every {POLL_INTERVAL / 1000}s
+        {getAlertApiWsUrl() ? " · WebSocket reconnects automatically" : ""}·
+        Last fetched: {esp32 ? fmtTs(esp32.last_heartbeat) : "—"}
       </p>
     </div>
   );
