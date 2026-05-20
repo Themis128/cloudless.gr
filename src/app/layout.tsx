@@ -76,9 +76,14 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Pathname is forwarded via x-pathname by middleware (src/proxy.ts).
-  // Falls back to "/" for routes outside the matcher (which we don't render).
-  const pathname = (await headers()).get("x-pathname") ?? "/";
+  // Pathname and nonce are forwarded by middleware (src/proxy.ts).
+  // x-pathname falls back to "/" for routes outside the matcher.
+  // x-nonce is a per-request random value that matches the CSP nonce in the
+  // Content-Security-Policy header — every <Script> must carry it so the
+  // browser accepts the inline runtime scripts Next.js emits.
+  const requestHeaders = await headers();
+  const pathname = requestHeaders.get("x-pathname") ?? "/";
+  const nonce = requestHeaders.get("x-nonce") ?? "";
   const theme = themeForRoute(pathname);
   const _seg = pathname.split("/")[1];
   const locale = (routing.locales as readonly string[]).includes(_seg)
@@ -99,7 +104,7 @@ export default async function RootLayout({
         <ChunkReloadGuard />
         {META_PIXEL_ID ? (
           <>
-            <Script id="meta-pixel-init" strategy="afterInteractive">
+            <Script id="meta-pixel-init" strategy="afterInteractive" nonce={nonce}>
               {`
                 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
                 n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
@@ -122,11 +127,11 @@ export default async function RootLayout({
             </noscript>
           </>
         ) : null}
-        <HubSpotScript />
+        <HubSpotScript nonce={nonce} />
         {GA_ID ? (
           <>
             {/* Consent Mode v2 — default to denied before user responds to banner */}
-            <Script id="gtag-consent-init" strategy="beforeInteractive">{`
+            <Script id="gtag-consent-init" strategy="beforeInteractive" nonce={nonce}>{`
               window.dataLayer = window.dataLayer || [];
               function gtag(){window.dataLayer.push(arguments);}
               gtag('consent', 'default', {
@@ -138,8 +143,9 @@ export default async function RootLayout({
             <Script
               src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
               strategy="afterInteractive"
+              nonce={nonce}
             />
-            <Script id="gtag-init" strategy="afterInteractive">{`
+            <Script id="gtag-init" strategy="afterInteractive" nonce={nonce}>{`
               window.dataLayer = window.dataLayer || [];
               function gtag(){window.dataLayer.push(arguments);}
               gtag('js', new Date());
