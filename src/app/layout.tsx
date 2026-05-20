@@ -104,7 +104,11 @@ export default async function RootLayout({
         <ChunkReloadGuard />
         {META_PIXEL_ID ? (
           <>
-            <Script id="meta-pixel-init" strategy="afterInteractive" nonce={nonce}>
+            <Script
+              id="meta-pixel-init"
+              strategy="afterInteractive"
+              nonce={nonce}
+            >
               {`
                 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
                 n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
@@ -131,7 +135,11 @@ export default async function RootLayout({
         {GA_ID ? (
           <>
             {/* Consent Mode v2 — default to denied before user responds to banner */}
-            <Script id="gtag-consent-init" strategy="beforeInteractive" nonce={nonce}>{`
+            <Script
+              id="gtag-consent-init"
+              strategy="beforeInteractive"
+              nonce={nonce}
+            >{`
               window.dataLayer = window.dataLayer || [];
               function gtag(){window.dataLayer.push(arguments);}
               gtag('consent', 'default', {
