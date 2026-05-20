@@ -353,6 +353,7 @@ async function handleAppHomeOpened(event: SlackEvent): Promise<void> {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ user_id: userId, view }),
+    signal: AbortSignal.timeout(5_000),
   });
 }
 
@@ -388,8 +389,11 @@ async function handleMemberJoinedChannel(event: SlackEvent): Promise<void> {
   let channelName = "";
   try {
     const infoRes = await fetch(
-      `https://slack.com/api/conversations.info?channel=${channelId}`,
-      { headers: { Authorization: `Bearer ${token}` } },
+      `https://slack.com/api/conversations.info?channel=${encodeURIComponent(channelId)}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(5_000),
+      },
     );
     const infoData = (await infoRes.json()) as {
       ok: boolean;
@@ -414,6 +418,7 @@ async function handleMemberJoinedChannel(event: SlackEvent): Promise<void> {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ users: userId }),
+      signal: AbortSignal.timeout(5_000),
     });
     const openData = (await openRes.json()) as {
       ok: boolean;

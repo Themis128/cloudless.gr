@@ -39,6 +39,7 @@ ARG NEXT_PUBLIC_COGNITO_CLIENT_ID
 ARG NEXT_PUBLIC_HUBSPOT_PORTAL_ID
 ARG NEXT_PUBLIC_SENTRY_DSN
 ARG NEXT_PUBLIC_META_PIXEL_ID
+ARG NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
 # APP_VERSION is the deployed commit SHA — exposed via /api/health so the
 # HA speed-sync orchestrator can compare cloud vs Pi served versions.
 ARG APP_VERSION=dev
@@ -49,6 +50,7 @@ ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} \
     NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${NEXT_PUBLIC_HUBSPOT_PORTAL_ID} \
     NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
     NEXT_PUBLIC_META_PIXEL_ID=${NEXT_PUBLIC_META_PIXEL_ID} \
+    NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=${NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION} \
     APP_VERSION=${APP_VERSION} \
     NEXT_OUTPUT_STANDALONE=1 \
     NEXT_TELEMETRY_DISABLED=1
@@ -83,6 +85,12 @@ ENV NODE_ENV=production \
 COPY --from=builder --chown=node:node --chmod=0555 /app/.next/standalone ./
 COPY --from=builder --chown=node:node --chmod=0555 /app/.next/static ./.next/static
 COPY --from=builder --chown=node:node --chmod=0555 /app/public ./public
+
+# The Next.js image optimizer (/_next/image) writes optimized variants to
+# .next/cache/images at request time. The bundle above is copied --chmod=0555
+# (read-only), so without a writable cache dir owned by the runtime user the
+# first /_next/image request fails with EACCES on mkdir (Sentry CLOUDLESS-GR-5).
+RUN mkdir -p .next/cache/images && chown -R node:node .next/cache
 
 USER node
 EXPOSE 3000

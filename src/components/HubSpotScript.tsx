@@ -23,7 +23,7 @@ const getSnapshot = (): boolean =>
   HS_PORTAL_ID.length > 0 && PRODUCTION_HOSTS.has(window.location.hostname);
 const getServerSnapshot = (): boolean => false;
 
-export function HubSpotScript() {
+export function HubSpotScript({ nonce }: { nonce?: string }) {
   const shouldLoad = useSyncExternalStore(
     subscribe,
     getSnapshot,
@@ -35,6 +35,7 @@ export function HubSpotScript() {
       id="hs-script-loader"
       src={`https://js-eu1.hs-scripts.com/${HS_PORTAL_ID}.js`}
       strategy="afterInteractive"
+      nonce={nonce}
     />
   );
 }

@@ -45,7 +45,7 @@ permissions:
 
 concurrency:
   group: pi-image-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-and-push:
@@ -53,23 +53,23 @@ jobs:
     # GitHub-hosted ARM runner — native arm64, no QEMU. First build ~5-10 min,
     # subsequent cached builds ~2-3 min. Cross-compile via QEMU on x86 runners
     # was unviable (pnpm install alone exceeded 60min).
-    runs-on: [self-hosted, omv, pi]
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4 # v6.0.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.3.1
         with:
           ref: ${{ github.event.inputs.target_sha || github.sha }}
 
       - name: configure AWS credentials (OIDC)
         if: github.event_name != 'pull_request'
-        uses: aws-actions/configure-aws-credentials@v4 # v6.1.0
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: login to ECR
         if: github.event_name != 'pull_request'
-        uses: aws-actions/amazon-ecr-login@19d944daaa35f0fa1d3f7f8af1d3f2e5de25c5b7 # v2
+        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
 
       - name: short-circuit if SHA tag already exists in ECR
         # Push-trigger and HA-orchestrator-dispatch can both fire for the
@@ -134,7 +134,7 @@ jobs:
 
       - name: set up Buildx
         if: steps.existing.outputs.exists != 'true' || github.event_name == 'pull_request'
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
       - name: compute tags
         id: tags
@@ -156,7 +156,7 @@ jobs:
 
       - name: build (and push if main)
         if: steps.existing.outputs.exists != 'true' || github.event_name == 'pull_request'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
           file: ./Dockerfile
@@ -174,6 +174,7 @@ jobs:
             NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
             NEXT_PUBLIC_META_PIXEL_ID=${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
+            NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
 
       # Record the pushed image digest in SSM so the Pi's image-sync CronJob
       # can compare without needing ecr:DescribeImages (omv-main-cli is

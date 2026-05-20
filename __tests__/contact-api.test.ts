@@ -21,7 +21,6 @@ vi.mock("@aws-sdk/client-sesv2", () => {
   };
 });
 
-
 describe("POST /api/contact", () => {
   let POST: (request: Request) => Promise<Response>;
 
@@ -44,6 +43,22 @@ describe("POST /api/contact", () => {
 
     const data = await response.json();
     expect(data.error).toBeTruthy();
+  });
+
+  it("returns 400 on a malformed JSON body without sending email (CLOUDLESS-GR-3)", async () => {
+    const request = new Request("http://localhost/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "-not valid json",
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+
+    const data = await response.json();
+    expect(data.error).toBe("Invalid request body.");
+    // A malformed body must short-circuit before any SES work.
+    expect(mockSend).not.toHaveBeenCalled();
   });
 
   it("returns 200 with valid fields", async () => {

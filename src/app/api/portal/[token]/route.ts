@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import type { ClientPortal } from "@/app/api/admin/client-portals/route";
 
 const SSM_KEY = "/cloudless/CLIENT_PORTALS_JSON";
@@ -26,9 +27,15 @@ async function safeCall<T>(fn: () => Promise<T>): Promise<T | null> {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
+  // Rate limit by IP. The portal token is the sole credential, so this caps
+  // token-enumeration / scraping attempts. 30/min is generous for the UI's
+  // own polling while still bounding abuse.
+  const rl = rateLimit(`portal:${getClientIp(request)}`, 30, 60_000);
+  if (!rl.ok) return rl.response;
+
   const { token } = await params;
 
   if (!token || token.length < 10) {
