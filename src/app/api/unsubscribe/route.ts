@@ -135,5 +135,9 @@ function unsubscribePage(emailOrMessage: string, success: boolean): string {
 <body>
   <div class="card">
     <h1>${success ? "Unsubscribed" : "Error"}</h1>
-    <p>${success ? `<strong>${escapeHtml(emailOrMessage)}</strong> has been removed from our newsletter.` : escapeHtml(emailOrMessage)}</p>
-  
+    <p>${success ? "<strong>" + escapeHtml(emailOrMessage) + "</strong> has been removed from our newsletter." : escapeHtml(emailOrMessage)}</p>
+    <p style="margin-top: 1.5rem;"><a href="https://cloudless.gr">← Back to cloudless.gr</a></p>
+  </div>
+</body>
+</html>`;
+}
