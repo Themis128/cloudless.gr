@@ -50,7 +50,7 @@ function makeAuthCookies(isAdmin = false): string {
 
   return [
     `CognitoIdentityServiceProvider.${clientId}.LastAuthUser=${username}`,
-    `CognitoIdentityServiceProvider.${clientId}.${username}.accessToken=${token}`,
+    `CognitoIdentityServiceProvider.${clientId}.${username}.idToken=${token}`,
   ].join("; ");
 }
 
