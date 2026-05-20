@@ -369,16 +369,22 @@ export async function POST(request: NextRequest) {
   const cfg = await getIntegrationsAsync();
   const clientSecret = cfg.HUBSPOT_CLIENT_SECRET;
 
-  if (clientSecret) {
-    const valid = await verifySignatureV3(request, rawBody, clientSecret);
-    if (!valid) {
-      console.warn("[HubSpot Webhook] Signature verification failed");
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
-  } else {
-    console.warn(
-      "[HubSpot Webhook] HUBSPOT_CLIENT_SECRET not set — skipping signature check",
+  // Fail closed: without the secret we cannot verify the signature, so we must
+  // reject rather than silently process unauthenticated webhook events.
+  if (!clientSecret) {
+    console.error(
+      "[HubSpot Webhook] HUBSPOT_CLIENT_SECRET not configured — rejecting",
     );
+    return NextResponse.json(
+      { error: "Webhook not configured" },
+      { status: 500 },
+    );
+  }
+
+  const valid = await verifySignatureV3(request, rawBody, clientSecret);
+  if (!valid) {
+    console.warn("[HubSpot Webhook] Signature verification failed");
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   let events: HubSpotEvent[];

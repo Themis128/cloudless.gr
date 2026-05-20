@@ -130,7 +130,11 @@ jobs:
           # --resolve forces curl to TCP-connect to APIGW while presenting
           # SNI/Host = cloudless.gr. This is exactly how a failover client
           # would resolve cloudless.gr when R53 returns the APIGW alias.
+          # --retry-all-errors retries on 5xx (e.g. transient 504 from Lambda
+          # cold start or Pi wake-up); 3 attempts × 20 s + 2 × 15 s backoff
+          # = ~90 s max, well within the 3-min job timeout.
           response=$(timeout 20 curl -fsS \
+            --retry 3 --retry-delay 15 --retry-all-errors \
             --resolve "${SNI}:443:$(getent ahosts "${APIGW_HOST}" | awk 'NR==1{print $1}')" \
             -H "User-Agent: pi-tls-cert-check (gh-actions)" \
             "https://${SNI}/api/health" -o /tmp/body -w "%{http_code}|%{time_total}s")

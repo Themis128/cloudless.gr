@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
 import { themeForRoute } from "@/components/ThemeProvider";
 import { HubSpotScript } from "@/components/HubSpotScript";
+import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import "./globals.css";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
@@ -28,7 +29,7 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
-  preload: false,
+  preload: true,
 });
 
 export const metadata: Metadata = {
@@ -51,7 +52,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Cloudless" }],
   verification: {
-    google: "LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w",
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
   },
   openGraph: {
     title: "Cloudless — Training & Portfolio Project",
@@ -75,9 +76,14 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Pathname is forwarded via x-pathname by middleware (src/proxy.ts).
-  // Falls back to "/" for routes outside the matcher (which we don't render).
-  const pathname = (await headers()).get("x-pathname") ?? "/";
+  // Pathname and nonce are forwarded by middleware (src/proxy.ts).
+  // x-pathname falls back to "/" for routes outside the matcher.
+  // x-nonce is a per-request random value that matches the CSP nonce in the
+  // Content-Security-Policy header — every <Script> must carry it so the
+  // browser accepts the inline runtime scripts Next.js emits.
+  const requestHeaders = await headers();
+  const pathname = requestHeaders.get("x-pathname") ?? "/";
+  const nonce = requestHeaders.get("x-nonce") ?? "";
   const theme = themeForRoute(pathname);
   const _seg = pathname.split("/")[1];
   const locale = (routing.locales as readonly string[]).includes(_seg)
@@ -95,9 +101,14 @@ export default async function RootLayout({
         <a href="#main-content" className="skip-nav">
           Skip to content
         </a>
+        <ChunkReloadGuard />
         {META_PIXEL_ID ? (
           <>
-            <Script id="meta-pixel-init" strategy="afterInteractive">
+            <Script
+              id="meta-pixel-init"
+              strategy="afterInteractive"
+              nonce={nonce}
+            >
               {`
                 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
                 n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
@@ -120,11 +131,15 @@ export default async function RootLayout({
             </noscript>
           </>
         ) : null}
-        <HubSpotScript />
+        <HubSpotScript nonce={nonce} />
         {GA_ID ? (
           <>
             {/* Consent Mode v2 — default to denied before user responds to banner */}
-            <Script id="gtag-consent-init" strategy="beforeInteractive">{`
+            <Script
+              id="gtag-consent-init"
+              strategy="beforeInteractive"
+              nonce={nonce}
+            >{`
               window.dataLayer = window.dataLayer || [];
               function gtag(){window.dataLayer.push(arguments);}
               gtag('consent', 'default', {
@@ -136,8 +151,9 @@ export default async function RootLayout({
             <Script
               src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
               strategy="afterInteractive"
+              nonce={nonce}
             />
-            <Script id="gtag-init" strategy="afterInteractive">{`
+            <Script id="gtag-init" strategy="afterInteractive" nonce={nonce}>{`
               window.dataLayer = window.dataLayer || [];
               function gtag(){window.dataLayer.push(arguments);}
               gtag('js', new Date());

@@ -40,6 +40,10 @@ function buildSiteEnvironment(
     NOTION_PROJECTS_DB_ID: "a9bab34b945e484fb6b0aa6034086e5c",
     NOTION_TASKS_DB_ID: "14ce4ff6c400437597b13e70ac909354",
     NOTION_ANALYTICS_DB_ID: "cc4287fcb42a42dc92a7053d6f1199c7",
+    // Google Search Console site ownership verification — public token, safe to
+    // inline here; moved out of layout.tsx to keep source files config-free.
+    NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION:
+      "LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w",
     // CMS databases (Testimonials, Case Studies, Services, FAQs)
     NOTION_TESTIMONIALS_DB_ID: "157ceb35d0b44661a6c67798f6d87e7b",
     NOTION_CASE_STUDIES_DB_ID: "7c50dc2403054f4a81f85b0a251ac4d7",

@@ -22,9 +22,11 @@
  * }
  */
 
+import { NextRequest } from "next/server";
 import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 import { SlackClient } from "@/lib/slack-notify";
 import { isSentryConfigured, getErrorCounts, getTopErrors } from "@/lib/sentry";
+import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -38,19 +40,13 @@ const YESTERDAY_WINDOW_MS = 24 * 60 * 60 * 1_000;
 // Route handler — GET only
 // ---------------------------------------------------------------------------
 
-export async function GET(request: Request): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   // Verify the request is from an authorised cron caller.
   // Vercel Cron sets Authorization: Bearer <token> automatically.
-  const authHeader = request.headers.get("authorization") ?? "";
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret) {
-    console.error("[Slack Digest] CRON_SECRET env var not set — rejecting");
-    return Response.json({ error: "Not configured" }, { status: 500 });
-  }
-
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  // isCronAuthorized uses a timing-safe comparison and fails closed when
+  // CRON_SECRET is unset.
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorized();
   }
 
   try {

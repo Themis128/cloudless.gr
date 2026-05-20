@@ -1,0 +1,68 @@
+name: Weekly Article Draft
+
+on:
+  schedule:
+    # Every Monday at 06:00 UTC (08:00 Athens). Three hours before the
+    # publisher runs — that window is the human review SLA.
+    - cron: "0 6 * * 1"
+  workflow_dispatch: # Manual trigger from the Actions tab
+
+concurrency:
+  group: weekly-article-draft
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  draft:
+    name: Generate weekly blog draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+      NOTION_BLOG_DB_ID: ${{ secrets.NOTION_BLOG_DB_ID }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Generate weekly article draft
+        run: pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/generate-weekly-article.ts
+
+      - name: Notify Slack on failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": "❌ Weekly article draft generation failed",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": { "type": "plain_text", "text": "❌ Weekly Draft Failed", "emoji": true }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "The Monday-morning AI draft generator failed. No newsletter will be sent unless you draft something manually.\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View logs>"
+                  }
+                }
+              ]
+            }'
