@@ -1,5 +1,7 @@
 import { notifyTeam, sendSubscriberWelcome } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
+import { setNewsletterStatus } from "@/lib/hubspot";
+import { removeFromSuppressionList } from "@/lib/ses-suppression";
 import { isValidEmail } from "@/lib/validation";
 import { slackSubscriberNotify } from "@/lib/slack-notify";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
@@ -20,10 +22,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Both SES sends must succeed — if either fails the subscriber gets 500
-    // and can retry. Slack is non-critical: fire-and-forget so a Slack outage
-    // never causes a false failure for the subscriber.
+    // Clear any stale SES suppression first, so a previously-unsubscribed
+    // user re-subscribing can receive the welcome email below.
+    await removeFromSuppressionList(email);
+
+    // HubSpot is the source of truth for the newsletter contact list.
+    // setNewsletterStatus swallows its own errors and returns false, so a
+    // HubSpot outage never fails the subscriber; team-notify and Slack
+    // provide a manual fallback path.
     await Promise.all([
+      setNewsletterStatus(email, "newsletter_signup"),
       notifyTeam(
         `[Newsletter] New subscriber: ${email.slice(0, 80)}`,
         `<h2>New newsletter subscriber</h2>
@@ -31,8 +39,8 @@ export async function POST(request: Request) {
         <p><strong>Date:</strong> ${new Date().toISOString()}</p>
         <hr />
         <p style="color: #666; font-size: 12px;">
-          Add this email to your mailing list. This notification was sent
-          from the cloudless.gr subscribe form.
+          Subscriber recorded as a HubSpot contact (lead_source: newsletter_signup).
+          This notification was sent from the cloudless.gr subscribe form.
         </p>`,
       ),
       sendSubscriberWelcome(email),

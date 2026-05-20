@@ -16,6 +16,8 @@ interface AppConfig {
   SES_FROM_EMAIL: string;
   SES_TO_EMAIL: string;
   AWS_SES_REGION: string;
+  /** Shared secret authenticating the weekly newsletter send endpoint. */
+  NEWSLETTER_SEND_SECRET: string;
   STRIPE_SECRET_KEY: string;
   STRIPE_PUBLISHABLE_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
@@ -83,6 +85,8 @@ interface AppConfig {
   META_PAGE_ID: string;
   // GitHub Actions
   GITHUB_TOKEN: string;
+  // Cron auth
+  CRON_SECRET: string;
   // AI
   ANTHROPIC_API_KEY: string;
   ANTHROPIC_CHAT_MODEL: string;
@@ -106,6 +110,7 @@ function buildConfigFromEnv(): AppConfig {
     SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "noreply@cloudless.gr",
     SES_TO_EMAIL: process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
     AWS_SES_REGION: process.env.AWS_SES_REGION || "us-east-1",
+    NEWSLETTER_SEND_SECRET: process.env.NEWSLETTER_SEND_SECRET || "",
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
@@ -168,6 +173,7 @@ function buildConfigFromEnv(): AppConfig {
     META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN || "",
     META_PAGE_ID: process.env.META_PAGE_ID || "",
     GITHUB_TOKEN: process.env.GITHUB_TOKEN || "",
+    CRON_SECRET: process.env.CRON_SECRET || "",
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
     ANTHROPIC_CHAT_MODEL: process.env.ANTHROPIC_CHAT_MODEL || "",
   };
@@ -264,6 +270,7 @@ export async function getConfig(): Promise<AppConfig> {
     SES_FROM_EMAIL: sesFrom,
     SES_TO_EMAIL: sesTo,
     AWS_SES_REGION: sesRegion,
+    NEWSLETTER_SEND_SECRET: params.get("NEWSLETTER_SEND_SECRET") ?? "",
     STRIPE_SECRET_KEY: params.get("STRIPE_SECRET_KEY")!,
     STRIPE_PUBLISHABLE_KEY: params.get("STRIPE_PUBLISHABLE_KEY") ?? "",
     STRIPE_WEBHOOK_SECRET: params.get("STRIPE_WEBHOOK_SECRET")!,
@@ -323,6 +330,7 @@ export async function getConfig(): Promise<AppConfig> {
     META_ACCESS_TOKEN: params.get("META_ACCESS_TOKEN") ?? "",
     META_PAGE_ID: params.get("META_PAGE_ID") ?? "",
     GITHUB_TOKEN: params.get("GITHUB_TOKEN") ?? "",
+    CRON_SECRET: params.get("CRON_SECRET") ?? "",
     ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
     ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",
   };

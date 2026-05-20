@@ -18,6 +18,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -53,6 +55,7 @@ jobs:
         id: lhci
         uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
         with:
+          configPath: .github/lighthouserc.js
           urls: |
             https://cloudless.gr
             https://cloudless.gr/en

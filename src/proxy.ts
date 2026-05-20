@@ -125,47 +125,69 @@ function cleanupStaleEntries() {
 }
 
 /**
- * Content-Security-Policy — enforced. Reports sent to /api/csp-report.
+ * Generate a cryptographically random nonce for CSP.
+ * Uses Web Crypto (available in both Edge Runtime and Node.js ≥ 19).
+ */
+function generateNonce(): string {
+  const buf = new Uint8Array(16);
+  crypto.getRandomValues(buf);
+  // btoa over a latin-1 string — safe because all values are 0–255.
+  return btoa(String.fromCharCode(...buf));
+}
+
+/**
+ * Build a per-request Content-Security-Policy string.
+ *
+ * script-src uses a per-request nonce + 'strict-dynamic' instead of the
+ * blanket 'unsafe-inline'. This means:
+ *   - Inline scripts without the matching nonce attribute are blocked.
+ *   - Scripts loaded by a trusted (nonced) script are implicitly trusted,
+ *     so GTM / Stripe / HubSpot child scripts continue to work.
+ *   - 'unsafe-eval' is retained for Three.js WebGL shader compilation on
+ *     the home page — removing it would require pre-compiling all GLSL.
+ *
+ * The nonce is also forwarded to layout.tsx via the `x-nonce` response
+ * header, where it is applied to every Next.js <Script> component so that
+ * inline runtime scripts get the matching attribute.
  *
  * Allowlists every third-party host the site currently loads:
  *   - Stripe (checkout + redirect)
  *   - Sentry (browser SDK + ingest)
- *   - Meta Pixel (when wired — META_CAPI_ACCESS_TOKEN gating is server-side
- *     but the client pixel still loads connect.facebook.net)
+ *   - Meta Pixel (connect.facebook.net)
  *   - Cognito (Amplify auth flows)
  *   - HubSpot (forms + tracking)
- *
- * 'unsafe-inline' is required for Next.js inline runtime scripts and styled
- * components until we wire nonce-per-request via the App Router. 'unsafe-eval'
- * is kept for Three.js / WebGL helpers that compile shaders dynamically.
- *
+ *   - Google Analytics / GTM
  */
-const CSP = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com",
-  // fonts.googleapis.com is allowlisted because next/font/google emits a
-  // @font-face stylesheet whose src URLs hit Google's CDN even though the
-  // font binaries themselves are self-hosted under /_next/static/media.
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://p.typekit.net",
-  "img-src 'self' data: blob: https:",
-  // fonts.gstatic.com — Google Fonts binary CDN. next/font/google falls back
-  // to it for the woff2 files when the build cannot inline them.
-  "font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net",
-  "connect-src 'self' https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://cognito-idp.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
-  "frame-src https://js.stripe.com https://hooks.stripe.com https://www.facebook.com",
-  "worker-src 'self' blob:",
-  "media-src 'self'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  // Browsers POST violation reports here. Same-origin so it works on
-  // both cloud (cloudless.gr) and Pi (cloudless.online) without a CORS
-  // dance. Endpoint logs to stdout → Sentry/CloudWatch.
-  "report-uri /api/csp-report",
-  "report-to csp-endpoint",
-  "upgrade-insecure-requests",
-].join("; ");
+function buildCSP(nonce: string): string {
+  return [
+    "default-src 'self'",
+    // 'strict-dynamic' makes the explicit host list below redundant for
+    // modern browsers but we keep it for CSP Level 2 fallback (Safari < 15.4).
+    `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`,
+    // fonts.googleapis.com is allowlisted because next/font/google emits a
+    // @font-face stylesheet whose src URLs hit Google's CDN even though the
+    // font binaries themselves are self-hosted under /_next/static/media.
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://p.typekit.net",
+    "img-src 'self' data: blob: https:",
+    // fonts.gstatic.com — Google Fonts binary CDN. next/font/google falls back
+    // to it for the woff2 files when the build cannot inline them.
+    "font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net",
+    "connect-src 'self' https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://cognito-idp.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
+    "frame-src https://js.stripe.com https://hooks.stripe.com https://www.facebook.com",
+    "worker-src 'self' blob:",
+    "media-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    // Browsers POST violation reports here. Same-origin so it works on
+    // both cloud (cloudless.gr) and Pi (cloudless.online) without a CORS
+    // dance. Endpoint logs to stdout → Sentry/CloudWatch.
+    "report-uri /api/csp-report",
+    "report-to csp-endpoint",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
 
 /**
  * Reporting-API endpoint group. Modern browsers prefer this over the
@@ -180,7 +202,7 @@ const REPORT_TO = JSON.stringify({
 });
 
 /** Security headers applied to all responses */
-function addSecurityHeaders(response: NextResponse): void {
+function addSecurityHeaders(response: NextResponse, nonce: string): void {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -219,24 +241,36 @@ function addSecurityHeaders(response: NextResponse): void {
     "max-age=63072000; includeSubDomains; preload",
   );
   response.headers.set("Report-To", REPORT_TO);
-  response.headers.set("Content-Security-Policy", CSP);
+  response.headers.set("Content-Security-Policy", buildCSP(nonce));
+  // Forward nonce to server components (layout.tsx reads x-nonce via headers()).
+  response.headers.set("x-nonce", nonce);
 }
 
 export async function proxy(request: NextRequest) {
+  // One nonce per request — used both in the CSP header and forwarded to
+  // layout.tsx via x-nonce so <Script nonce={nonce}> matches the policy.
+  const nonce = generateNonce();
+
   // Enforce HTTPS in production so all traffic stays encrypted in transit.
+  // Exclude /api/* routes: k8s health probes hit the pod directly over HTTP
+  // (Next.js sets x-forwarded-proto:http on plain HTTP connections), and
+  // HTTPS enforcement for browser API calls is handled by CF/Traefik at ingress.
   const forwardedProto = request.headers.get("x-forwarded-proto");
-  if (process.env.NODE_ENV === "production" && forwardedProto === "http") {
+  const { pathname } = request.nextUrl;
+  if (
+    process.env.NODE_ENV === "production" &&
+    forwardedProto === "http" &&
+    !pathname.startsWith("/api/")
+  ) {
     const httpsUrl = request.nextUrl.clone();
     httpsUrl.protocol = "https:";
     return NextResponse.redirect(httpsUrl, 308);
   }
 
-  const { pathname } = request.nextUrl;
-
   // --- API routes: CORS + rate limiting + security headers ---
   if (pathname.startsWith("/api/")) {
     const response = NextResponse.next();
-    addSecurityHeaders(response);
+    addSecurityHeaders(response, nonce);
 
     const origin = request.headers.get("origin") ?? "";
     const allowedOrigins = [
@@ -342,7 +376,7 @@ export async function proxy(request: NextRequest) {
   request.headers.set("x-pathname", pathname);
 
   const response = intlMiddleware(request);
-  addSecurityHeaders(response);
+  addSecurityHeaders(response, nonce);
   return response;
 }
 
