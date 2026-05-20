@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
+  // Use the Host header to build a correct public URL — nextUrl.origin returns
+  // the internal pod address (e.g. 0.0.0.0:3000) on k3s, which breaks the
+  // fetch/redirect for Playwright and browsers hitting cloudless.online.
+  const host = request.headers.get("host") ?? "cloudless.online";
+  const publicOrigin = `${request.nextUrl.protocol}//${host}`;
+  const iconUrl = new URL("/icon", publicOrigin);
+
   try {
-    const iconUrl = new URL("/icon", request.nextUrl.origin);
     const res = await fetch(iconUrl.toString(), {
       signal: AbortSignal.timeout(5000),
     });
 
     if (!res.ok) {
-      // If /icon doesn't return 200, redirect to it instead of proxying
       return NextResponse.redirect(iconUrl, 302);
     }
 
@@ -20,8 +25,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch {
-    // Fallback: redirect to /icon directly
-    const iconUrl = new URL("/icon", request.nextUrl.origin);
     return NextResponse.redirect(iconUrl, 302);
   }
 }
