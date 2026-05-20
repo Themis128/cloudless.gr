@@ -149,21 +149,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [configError, setConfigError] = useState<string | null>(null);
 
-  const checkUserGroups = useCallback(async () => {
-    try {
-      const { fetchAuthSession } = await import("aws-amplify/auth");
-      const session = await fetchAuthSession();
-      const idToken = session.tokens?.idToken?.toString();
-      if (idToken) {
-        const payload = decodeJwtPayload(idToken);
-        const groups = (payload["cognito:groups"] as string[]) || [];
-        setIsAdmin(groups.includes("admin"));
-      }
-    } catch {
-      setIsAdmin(false);
-    }
-  }, []);
-
   const loadUserProfile = useCallback(
     async (username: string, email?: string): Promise<AuthUser> => {
       let name: string | undefined;
@@ -198,19 +183,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      const { getCurrentUser } = await import("aws-amplify/auth");
-      const currentUser = await getCurrentUser();
+      const { getCurrentUser, fetchAuthSession } = await import("aws-amplify/auth");
+      const [currentUser, session] = await Promise.all([
+        getCurrentUser(),
+        fetchAuthSession(),
+      ]);
       const email = currentUser.signInDetails?.loginId;
       const profile = await loadUserProfile(currentUser.username, email);
+      const idToken = session.tokens?.idToken?.toString();
+      const groups = idToken
+        ? ((decodeJwtPayload(idToken)["cognito:groups"] as string[]) ?? [])
+        : [];
       setUser(profile);
-      await checkUserGroups();
+      setIsAdmin(groups.includes("admin"));
     } catch {
       setUser(null);
       setIsAdmin(false);
     } finally {
       setIsLoading(false);
     }
-  }, [checkUserGroups, loadUserProfile]);
+  }, [loadUserProfile]);
 
   useEffect(() => {
     let cancelled = false;

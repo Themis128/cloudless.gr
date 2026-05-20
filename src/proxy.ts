@@ -36,7 +36,7 @@ async function readCognitoToken(
   const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
   const username = req.cookies.get(lastAuthKey)?.value;
   if (!username) return { valid: false, isAdmin: false };
-  const tokenKey = `CognitoIdentityServiceProvider.${clientId}.${username}.accessToken`;
+  const tokenKey = `CognitoIdentityServiceProvider.${clientId}.${username}.idToken`;
   const token = req.cookies.get(tokenKey)?.value;
   if (!token) return { valid: false, isAdmin: false };
   try {
