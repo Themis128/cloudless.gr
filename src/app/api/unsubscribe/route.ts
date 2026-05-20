@@ -12,6 +12,10 @@ import { rateLimit, getClientIp } from "@/lib/rate-limit";
  * Also notifies the team for audit purposes.
  */
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const rl = rateLimit(`unsubscribe:${ip}`, 5, 60_000);
+  if (!rl.ok) return rl.response;
+
   try {
     const { email } = await request.json();
 
@@ -132,8 +136,4 @@ function unsubscribePage(emailOrMessage: string, success: boolean): string {
   <div class="card">
     <h1>${success ? "Unsubscribed" : "Error"}</h1>
     <p>${success ? `<strong>${escapeHtml(emailOrMessage)}</strong> has been removed from our newsletter.` : escapeHtml(emailOrMessage)}</p>
-    <p style="margin-top: 1.5rem;"><a href="https://cloudless.gr">← Back to cloudless.gr</a></p>
-  </div>
-</body>
-</html>`;
-}
+  
