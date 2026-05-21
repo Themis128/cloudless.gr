@@ -60,8 +60,17 @@ esphome:
           red:   0%
           green: 0%
           blue:  100%
-      - delay: 5s
+      - delay: 10s          # wait for Wi-Fi + DHCP to settle before sending ntfy
       - script.execute: update_led
+      - http_request.post:
+          url:  ${ntfy_url}
+          request_headers:
+            Content-Type: text/plain
+            Authorization: "Bearer ${ntfy_token}"
+            Title: "✅ Cloudless watchdog online"
+            Priority: "low"
+            Tags: "white_check_mark,satellite"
+          body: "ESP32 cluster watchdog booted and connected. All probes starting."
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -126,6 +135,7 @@ http_request:
 # Global state — all three probe results
 # ---------------------------------------------------------------------------
 globals:
+  # ── Probe state ─────────────────────────────────────────────────────────────
   - id: omv_up
     type: bool
     restore_value: false
@@ -138,6 +148,35 @@ globals:
     type: bool
     restore_value: false
     initial_value: "true"
+
+  # ── Failure counters (increment on each probe error; reset on reboot) ───────
+  - id: omv_fail_count
+    type: int
+    restore_value: false
+    initial_value: "0"
+  - id: omv_ha_fail_count
+    type: int
+    restore_value: false
+    initial_value: "0"
+  - id: aws_fail_count
+    type: int
+    restore_value: false
+    initial_value: "0"
+
+  # ── Alert deduplication timestamps (millis() of last ntfy POST per target) ──
+  # Value 0 = never alerted. Re-alert only after 600 000 ms (10 min) of silence.
+  - id: omv_last_alerted
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+  - id: omv_ha_last_alerted
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+  - id: aws_last_alerted
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
 
 # ---------------------------------------------------------------------------
 # Virtual binary sensors — expose probe state to Prometheus / HA
@@ -253,18 +292,27 @@ interval:
               - lambda: |-
                   bool was = id(omv_up);
                   bool now = (response->status_code >= 200 && response->status_code < 400);
+                  if (!now) id(omv_fail_count)++;
                   if (was != now) {
                     id(omv_up) = now;
                     id(update_led).execute();
                     id(omv_reachable).publish_state(now);
+                    id(heartbeat_pulse).execute();
+                  }
+                  if (!was && now) {
+                    // Recovery — reset dedup timer and send recovery notification
+                    id(omv_last_alerted) = 0;
+                    id(send_omv_recovery).execute();
                   }
           on_error:
             then:
               - lambda: |-
+                  id(omv_fail_count)++;
                   if (id(omv_up)) {
                     id(omv_up) = false;
                     id(update_led).execute();
                     id(omv_reachable).publish_state(false);
+                    id(heartbeat_pulse).execute();
                   }
 
   # omv-ha probe — offset 15 s so it doesn't collide with omv probe
@@ -279,18 +327,26 @@ interval:
               - lambda: |-
                   bool was = id(omv_ha_up);
                   bool now = (response->status_code >= 200 && response->status_code < 400);
+                  if (!now) id(omv_ha_fail_count)++;
                   if (was != now) {
                     id(omv_ha_up) = now;
                     id(update_led).execute();
                     id(omv_ha_reachable).publish_state(now);
+                    id(heartbeat_pulse).execute();
+                  }
+                  if (!was && now) {
+                    id(omv_ha_last_alerted) = 0;
+                    id(send_omv_ha_recovery).execute();
                   }
           on_error:
             then:
               - lambda: |-
+                  id(omv_ha_fail_count)++;
                   if (id(omv_ha_up)) {
                     id(omv_ha_up) = false;
                     id(update_led).execute();
                     id(omv_ha_reachable).publish_state(false);
+                    id(heartbeat_pulse).execute();
                   }
 
   # AWS probe — fires every 60 s
@@ -304,28 +360,37 @@ interval:
               - lambda: |-
                   bool was = id(aws_up);
                   bool now = (response->status_code >= 200 && response->status_code < 400);
+                  if (!now) id(aws_fail_count)++;
                   if (was != now) {
                     id(aws_up) = now;
                     id(update_led).execute();
                     id(aws_app_reachable).publish_state(now);
+                    id(heartbeat_pulse).execute();
+                  }
+                  if (!was && now) {
+                    id(aws_last_alerted) = 0;
+                    id(send_aws_recovery).execute();
                   }
           on_error:
             then:
               - lambda: |-
+                  id(aws_fail_count)++;
                   if (id(aws_up)) {
                     id(aws_up) = false;
                     id(update_led).execute();
                     id(aws_app_reachable).publish_state(false);
+                    id(heartbeat_pulse).execute();
                   }
 
   # ntfy alerts — single combined interval every 60 s
-  # Sends one POST per down target; sequential so they don't pile up.
+  # Dedup: only re-alert per target if >10 minutes have passed since the last POST.
+  # First alert fires immediately (last_alerted == 0); subsequent ones every 10 min.
   - id: notify_alerts
     interval: 60s
     then:
       - if:
           condition:
-            lambda: "return !id(aws_up);"
+            lambda: "return !id(aws_up) && (id(aws_last_alerted) == 0 || (millis() - id(aws_last_alerted)) >= 600000);"
           then:
             - http_request.post:
                 url:  ${ntfy_url}
@@ -336,9 +401,10 @@ interval:
                   Priority: "high"
                   Tags: "warning,cloud"
                 body: "HTTP probe to cloudless.gr returned non-2xx or timed out."
+            - lambda: "id(aws_last_alerted) = millis();"
       - if:
           condition:
-            lambda: "return !id(omv_up);"
+            lambda: "return !id(omv_up) && (id(omv_last_alerted) == 0 || (millis() - id(omv_last_alerted)) >= 600000);"
           then:
             - http_request.post:
                 url:  ${ntfy_url}
@@ -349,9 +415,10 @@ interval:
                   Priority: "urgent"
                   Tags: "warning,skull"
                 body: "HTTP probe to omv:9100 failed. Node may be down."
+            - lambda: "id(omv_last_alerted) = millis();"
       - if:
           condition:
-            lambda: "return !id(omv_ha_up);"
+            lambda: "return !id(omv_ha_up) && (id(omv_ha_last_alerted) == 0 || (millis() - id(omv_ha_last_alerted)) >= 600000);"
           then:
             - http_request.post:
                 url:  ${ntfy_url}
@@ -362,6 +429,7 @@ interval:
                   Priority: "urgent"
                   Tags: "warning,skull"
                 body: "HTTP probe to omv-ha:9100 failed. Node may be down."
+            - lambda: "id(omv_ha_last_alerted) = millis();"
 
 # ---------------------------------------------------------------------------
 # LED update script — priority order (worst first):
@@ -373,6 +441,62 @@ interval:
 #  6. All healthy     → solid green
 # ---------------------------------------------------------------------------
 script:
+  # ── Heartbeat pulse ─────────────────────────────────────────────────────────
+  # Brief white flash on every probe state-change — visual proof the board is
+  # alive and actively processing results (not frozen).
+  - id: heartbeat_pulse
+    mode: single          # ignore re-triggers while pulse is in progress
+    then:
+      - light.turn_on:
+          id:         status_led
+          brightness: 80%
+          red:   100%
+          green: 100%
+          blue:  100%
+      - delay: 100ms
+      - script.execute: update_led   # restore correct color/effect
+
+  # ── Recovery notifications ──────────────────────────────────────────────────
+  - id: send_omv_recovery
+    mode: single
+    then:
+      - http_request.post:
+          url:  ${ntfy_url}
+          request_headers:
+            Content-Type: text/plain
+            Authorization: "Bearer ${ntfy_token}"
+            Title: "✅ omv (192.168.1.128) RECOVERED"
+            Priority: "default"
+            Tags: "white_check_mark,computer"
+          body: "HTTP probe to omv:9100 is responding again. Node is back online."
+
+  - id: send_omv_ha_recovery
+    mode: single
+    then:
+      - http_request.post:
+          url:  ${ntfy_url}
+          request_headers:
+            Content-Type: text/plain
+            Authorization: "Bearer ${ntfy_token}"
+            Title: "✅ omv-ha (192.168.1.130) RECOVERED"
+            Priority: "default"
+            Tags: "white_check_mark,computer"
+          body: "HTTP probe to omv-ha:9100 is responding again. Node is back online."
+
+  - id: send_aws_recovery
+    mode: single
+    then:
+      - http_request.post:
+          url:  ${ntfy_url}
+          request_headers:
+            Content-Type: text/plain
+            Authorization: "Bearer ${ntfy_token}"
+            Title: "✅ cloudless.gr (AWS) RECOVERED"
+            Priority: "default"
+            Tags: "white_check_mark,cloud"
+          body: "HTTPS probe to cloudless.gr is responding again. Service is back online."
+
+  # ── LED state machine ────────────────────────────────────────────────────────
   - id: update_led
     mode: restart
     then:
@@ -440,6 +564,34 @@ sensor:
   - platform:   internal_temperature
     name:       "ESP32 Temperature"
     update_interval: 30s
+    entity_category: diagnostic
+
+  # ── Probe failure counters — useful for rate-based Prometheus rules ──────────
+  - platform: template
+    id:         omv_failures
+    name:       "omv probe failures"
+    lambda:     "return id(omv_fail_count);"
+    update_interval: 30s
+    unit_of_measurement: "failures"
+    accuracy_decimals: 0
+    entity_category: diagnostic
+
+  - platform: template
+    id:         omv_ha_failures
+    name:       "omv-ha probe failures"
+    lambda:     "return id(omv_ha_fail_count);"
+    update_interval: 30s
+    unit_of_measurement: "failures"
+    accuracy_decimals: 0
+    entity_category: diagnostic
+
+  - platform: template
+    id:         aws_failures
+    name:       "cloudless.gr probe failures"
+    lambda:     "return id(aws_fail_count);"
+    update_interval: 30s
+    unit_of_measurement: "failures"
+    accuracy_decimals: 0
     entity_category: diagnostic
 
 text_sensor:
