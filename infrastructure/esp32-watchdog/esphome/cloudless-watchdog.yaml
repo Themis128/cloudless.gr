@@ -295,8 +295,8 @@ interval:
                   if (!now) id(omv_fail_count)++;
                   if (was != now) {
                     id(omv_up) = now;
-                    id(update_led).execute();
                     id(omv_reachable).publish_state(now);
+                    id(update_led).execute();
                     id(heartbeat_pulse).execute();
                   }
                   if (!was && now) {
@@ -310,8 +310,8 @@ interval:
                   id(omv_fail_count)++;
                   if (id(omv_up)) {
                     id(omv_up) = false;
-                    id(update_led).execute();
                     id(omv_reachable).publish_state(false);
+                    id(update_led).execute();
                     id(heartbeat_pulse).execute();
                   }
 
@@ -330,8 +330,8 @@ interval:
                   if (!now) id(omv_ha_fail_count)++;
                   if (was != now) {
                     id(omv_ha_up) = now;
-                    id(update_led).execute();
                     id(omv_ha_reachable).publish_state(now);
+                    id(update_led).execute();
                     id(heartbeat_pulse).execute();
                   }
                   if (!was && now) {
@@ -344,8 +344,8 @@ interval:
                   id(omv_ha_fail_count)++;
                   if (id(omv_ha_up)) {
                     id(omv_ha_up) = false;
-                    id(update_led).execute();
                     id(omv_ha_reachable).publish_state(false);
+                    id(update_led).execute();
                     id(heartbeat_pulse).execute();
                   }
 
@@ -363,8 +363,8 @@ interval:
                   if (!now) id(aws_fail_count)++;
                   if (was != now) {
                     id(aws_up) = now;
-                    id(update_led).execute();
                     id(aws_app_reachable).publish_state(now);
+                    id(update_led).execute();
                     id(heartbeat_pulse).execute();
                   }
                   if (!was && now) {
@@ -377,8 +377,8 @@ interval:
                   id(aws_fail_count)++;
                   if (id(aws_up)) {
                     id(aws_up) = false;
-                    id(update_led).execute();
                     id(aws_app_reachable).publish_state(false);
+                    id(update_led).execute();
                     id(heartbeat_pulse).execute();
                   }
 
@@ -430,6 +430,9 @@ interval:
                   Tags: "warning,skull"
                 body: "HTTP probe to omv-ha:9100 failed. Node may be down."
             - lambda: "id(omv_ha_last_alerted) = millis();"
+      # Periodic LED self-correction — ensures the LED always reflects the true
+      # probe state even if a prior update was interrupted or lost.
+      - script.execute: update_led
 
 # ---------------------------------------------------------------------------
 # LED update script — priority order (worst first):
@@ -446,15 +449,21 @@ script:
   # alive and actively processing results (not frozen).
   - id: heartbeat_pulse
     mode: single          # ignore re-triggers while pulse is in progress
+    # Called immediately AFTER update_led in probe transition blocks.
+    # Sequence: update_led runs (completes in ~1 ms) → heartbeat waits 50 ms →
+    # white flash → 150 ms → update_led again to restore the correct effect.
+    # update_led is mode:restart; no race here because the first update_led call
+    # finishes well before the 50 ms delay expires.
     then:
+      - delay: 50ms                  # let update_led finish before the flash
       - light.turn_on:
           id:         status_led
           brightness: 80%
           red:   100%
           green: 100%
           blue:  100%
-      - delay: 100ms
-      - script.execute: update_led   # restore correct color/effect
+      - delay: 150ms
+      - script.execute: update_led   # restore correct color/effect after flash
 
   # ── Recovery notifications ──────────────────────────────────────────────────
   - id: send_omv_recovery
@@ -542,6 +551,7 @@ script:
                                   else:
                                     - light.turn_on:
                                         id:         status_led
+                                        effect:     none
                                         brightness: 40%
                                         red:   0%
                                         green: 100%
