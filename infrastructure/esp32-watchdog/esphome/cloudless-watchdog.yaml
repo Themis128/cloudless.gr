@@ -29,6 +29,7 @@ substitutions:
   wifi_ssid:       !secret wifi_ssid
   wifi_pass:       !secret wifi_password
   ntfy_url:        "http://192.168.1.128:30080/cloudless-alerts"
+  ntfy_token:      !secret ntfy_token
   omv_probe:       "http://192.168.1.128:9100/metrics"   # node_exporter — always HTTP 200
   omv_ha_probe:    "http://192.168.1.130:9100/metrics"
   aws_health:      "https://cloudless.gr"
@@ -330,6 +331,7 @@ interval:
                 url:  ${ntfy_url}
                 request_headers:
                   Content-Type: text/plain
+                  Authorization: "Bearer ${ntfy_token}"
                   Title: "🟠 cloudless.gr (AWS) UNREACHABLE"
                   Priority: "high"
                   Tags: "warning,cloud"
@@ -342,6 +344,7 @@ interval:
                 url:  ${ntfy_url}
                 request_headers:
                   Content-Type: text/plain
+                  Authorization: "Bearer ${ntfy_token}"
                   Title: "🔴 omv (192.168.1.128) UNREACHABLE"
                   Priority: "urgent"
                   Tags: "warning,skull"
@@ -354,6 +357,7 @@ interval:
                 url:  ${ntfy_url}
                 request_headers:
                   Content-Type: text/plain
+                  Authorization: "Bearer ${ntfy_token}"
                   Title: "🔴 omv-ha (192.168.1.130) UNREACHABLE"
                   Priority: "urgent"
                   Tags: "warning,skull"
