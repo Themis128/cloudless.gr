@@ -1,0 +1,161 @@
+# ESP32 Cluster Watchdog
+
+**Board:** ESP32-S3-DevKitC-1 **v1.1** (RGB LED → GPIO38)  
+**Port:** COM5  
+**Static IP after flash:** `192.168.1.201`
+
+## What it does
+
+| Feature | How |
+|---|---|
+| External Pi probe | Pings `omv` (192.168.1.128) and `omv-ha` (192.168.1.130) every 30 s |
+| AWS app probe | HTTP GET `https://cloudless.gr` every 60 s |
+| RGB status LED | 8-state color matrix — see table below |
+| Push alerts | Posts to ntfy at `192.168.1.128:30080/cloudless-alerts` |
+| Prometheus `/metrics` | Scraped by kube-prometheus on port 9101 |
+| Grafana alerts | `PrometheusRule` fires for node-down, AWS-down, ESP32-down, weak Wi-Fi |
+
+### LED color matrix
+
+| AWS | omv | omv-ha | Color | Effect |
+|-----|-----|--------|-------|--------|
+| ✅ | ✅ | ✅ | 🟢 Green | Solid — everything healthy |
+| ❌ | ✅ | ✅ | 🟠 Orange | Slow blink — AWS only down |
+| ✅ | ❌ | ✅ | 🟡 Yellow | Slow blink — one Pi down |
+| ✅ | ✅ | ❌ | 🟡 Yellow | Slow blink — one Pi down |
+| ✅ | ❌ | ❌ | 🔴 Red | Fast blink — both Pi nodes down |
+| ❌ | ❌ | ✅ | 🔶 Deep orange | Fast blink — AWS + one Pi down |
+| ❌ | ✅ | ❌ | 🔶 Deep orange | Fast blink — AWS + one Pi down |
+| ❌ | ❌ | ❌ | 🟣 Magenta | Fast blink — total outage |
+
+Blue = booting / connecting to Wi-Fi.
+
+---
+
+## Step 1 — Install ESPHome (one-time, Windows)
+
+```powershell
+# uv is already installed at C:\Python314\Scripts\uv.exe
+C:\Python314\Scripts\uv.exe tool install esphome
+# Add to PATH for this session:
+$env:PATH = "C:\Users\baltz\.local\bin;$env:PATH"
+esphome version   # should print 2024.x.x
+```
+
+---
+
+## Step 2 — Fill in secrets
+
+Edit `esphome/secrets.yaml` — **never commit this file**:
+
+```yaml
+wifi_ssid:     "YourNetworkName"
+wifi_password: "YourWifiPassword"
+ap_password:   "watchdog-fallback"
+api_key:       "<base64 key — see below>"
+ota_password:  "<strong password>"
+```
+
+Generate the API key:
+```powershell
+python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())"
+```
+
+---
+
+## Step 3 — Flash the board
+
+The ESP32-S3 **must be in bootloader mode** for the first flash:
+
+1. Hold the **BOOT** button on the board
+2. While holding BOOT, press and release **RESET**
+3. Release BOOT — the board is now in DFU mode (COM5 may disappear and reappear)
+4. Run:
+
+```powershell
+$env:PATH = "C:\Users\baltz\.local\bin;$env:PATH"
+cd "D:\Nuxt Projects\Cloudless\cloudless.gr\infrastructure\esp32-watchdog\esphome"
+esphome run cloudless-watchdog.yaml --device COM5
+```
+
+ESPHome will compile (~2 min first time), flash, and open the log console.  
+After the first flash, OTA updates work over Wi-Fi — no USB needed.
+
+**OTA update (after first flash):**
+```powershell
+esphome run cloudless-watchdog.yaml
+# ESPHome auto-discovers the board at 192.168.1.201
+```
+
+---
+
+## Step 4 — Deploy Kubernetes manifests
+
+```bash
+# From WSL2 / a node with kubectl access
+kubectl apply -f infrastructure/esp32-watchdog/k8s/ntfy-topic.yaml
+kubectl apply -f infrastructure/esp32-watchdog/k8s/servicemonitor.yaml
+kubectl apply -f infrastructure/esp32-watchdog/k8s/prometheusrule.yaml
+```
+
+Verify the scrape target appears in Prometheus:
+```
+http://192.168.1.128:10000  (Grafana, port 10000)
+# or
+kubectl port-forward -n monitoring svc/monitoring-prometheus 9090:9090
+# → http://localhost:9090/targets  — look for "esp32-watchdog-metrics"
+```
+
+---
+
+## Step 5 — Verify
+
+After ~2 minutes, check:
+
+1. **LED is green** — both Pis and cloudless.gr responding
+2. **Prometheus target is UP** — Status → Targets in Prometheus UI
+3. **Metrics visible** — query `esphome_binary_sensor_value` in Grafana/Prometheus
+4. **ntfy alert works** — temporarily unplug one Pi and watch for a notification
+5. **AWS probe works** — query `esphome_binary_sensor_value{name="cloudless.gr_(aws)_reachable"}` in Prometheus
+
+---
+
+## Prometheus metric label format
+
+ESPHome lowercases sensor names and replaces spaces with underscores. The `name` labels in PrometheusRule alerts use this format:
+
+| Sensor | Prometheus label value |
+|--------|------------------------|
+| "omv (192.168.1.128) reachable" | `omv_(192.168.1.128)_reachable` |
+| "omv-ha (192.168.1.130) reachable" | `omv-ha_(192.168.1.130)_reachable` |
+| "cloudless.gr (AWS) reachable" | `cloudless.gr_(aws)_reachable` |
+| "Wi-Fi Signal" | `wi-fi_signal` |
+
+---
+
+## Optional: Hardware relay
+
+To add hard-reboot capability:
+
+1. Buy a **5V 1-channel relay module** (e.g. SRD-05VDC-SL-C)
+2. Wire: ESP32 `GPIO10` → relay `IN`, ESP32 `3.3V` → relay `VCC`, ESP32 `GND` → relay `GND`
+3. Wire relay `COM`/`NO` in series with omv's USB-C 5V power line
+4. Uncomment the `switch:` block at the bottom of `cloudless-watchdog.yaml`
+5. Set `relay_gpio: "10"` in the substitutions
+6. Re-flash
+
+---
+
+## File layout
+
+```
+infrastructure/esp32-watchdog/
+├── esphome/
+│   ├── cloudless-watchdog.yaml   ← firmware (commit this)
+│   └── secrets.yaml              ← credentials (DO NOT commit)
+├── k8s/
+│   ├── servicemonitor.yaml       ← Prometheus scrape target
+│   ├── prometheusrule.yaml       ← 6 alert rules (Pi + AWS + Wi-Fi)
+│   └── ntfy-topic.yaml           ← NodePort for ESP32 → ntfy
+└── README.md                     ← this file
+```

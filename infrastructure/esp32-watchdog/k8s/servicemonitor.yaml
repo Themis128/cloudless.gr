@@ -1,0 +1,81 @@
+# ServiceMonitor — tells the existing kube-prometheus-stack to scrape the ESP32
+# Prometheus operator in the monitoring namespace will pick this up automatically.
+#
+# The ESP32 has a static IP: 192.168.1.201  port: 9101
+# (set in cloudless-watchdog.yaml → wifi.manual_ip)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: esp32-watchdog
+  namespace: monitoring
+  labels:
+    app: esp32-watchdog
+    # This label is what the ServiceMonitor below selects
+spec:
+  type: ExternalName
+  # ExternalName doesn't support port forwarding for Prometheus — use Endpoints instead
+  # (ExternalName is replaced by the Endpoints object below)
+  clusterIP: ""
+  ports:
+    - name: metrics
+      port: 9101
+      protocol: TCP
+      targetPort: 9101
+---
+# Headless service + Endpoints for a static out-of-cluster IP
+apiVersion: v1
+kind: Service
+metadata:
+  name:      esp32-watchdog-metrics
+  namespace: monitoring
+  labels:
+    app:       esp32-watchdog
+    component: metrics
+spec:
+  clusterIP: None   # headless
+  ports:
+    - name:       metrics
+      port:       9101
+      protocol:   TCP
+      targetPort: 9101
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name:      esp32-watchdog-metrics
+  namespace: monitoring
+  labels:
+    app:       esp32-watchdog
+    component: metrics
+subsets:
+  - addresses:
+      - ip: 192.168.1.201   # ESP32 static IP
+    ports:
+      - name:     metrics
+        port:     9101
+        protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name:      esp32-watchdog
+  namespace: monitoring
+  labels:
+    # Must match the Prometheus CR's serviceMonitorSelector
+    # kube-prom-stack default uses release: kube-prom
+    release: kube-prom
+spec:
+  selector:
+    matchLabels:
+      app:       esp32-watchdog
+      component: metrics
+  namespaceSelector:
+    matchNames:
+      - monitoring
+  endpoints:
+    - port:            metrics
+      path:            /metrics
+      interval:        30s
+      scrapeTimeout:   10s
+      honorLabels:     true

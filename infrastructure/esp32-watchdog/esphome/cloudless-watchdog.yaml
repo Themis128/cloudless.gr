@@ -1,0 +1,455 @@
+# =============================================================================
+# Cloudless Cluster Watchdog — ESPHome firmware
+# Board : ESP32-S3-DevKitC-1 v1.1  (VID_303A / PID_4001, COM5)
+#         RGB LED → GPIO38  (v1.0 uses GPIO48 — do NOT swap)
+# Nodes : omv    192.168.1.128  — probed via HTTP :9100 (node_exporter)
+#         omv-ha 192.168.1.130  — probed via HTTP :9100 (node_exporter)
+# AWS   : cloudless.gr          — probed via HTTPS
+#
+# ESPHome 2026.5+ removed the `ping` binary_sensor platform.
+# We probe Pi nodes via HTTP GET to their Prometheus port (:9090).
+# Any 2xx/3xx response = reachable; timeout/error = unreachable.
+#
+# LED STATE MATRIX
+# ─────────────────────────────────────────────────────────────────────────────
+# AWS  omv  omv-ha │ Color          Effect
+# ─────────────────┼───────────────────────────────────────────────────────────
+#  ✓    ✓    ✓     │ Green          solid (40% brightness)
+#  ✗    ✓    ✓     │ Orange         slow blink — AWS only down
+#  ✓    ✗    ✓     │ Yellow         slow blink — one Pi down
+#  ✓    ✓    ✗     │ Yellow         slow blink — one Pi down
+#  ✓    ✗    ✗     │ Red            fast blink — both Pi nodes down
+#  ✗    ✗    ✓     │ Deep orange    fast blink — AWS + one Pi down
+#  ✗    ✓    ✗     │ Deep orange    fast blink — AWS + one Pi down
+#  ✗    ✗    ✗     │ Magenta        fast blink — total outage
+# ─────────────────────────────────────────────────────────────────────────────
+
+substitutions:
+  node_name:       cloudless-watchdog
+  wifi_ssid:       !secret wifi_ssid
+  wifi_pass:       !secret wifi_password
+  ntfy_url:        "http://192.168.1.128:30080/cloudless-alerts"
+  omv_probe:       "http://192.168.1.128:9100/metrics"   # node_exporter — always HTTP 200
+  omv_ha_probe:    "http://192.168.1.130:9100/metrics"
+  aws_health:      "https://cloudless.gr"
+  relay_gpio:      "none"
+
+esphome:
+  name: ${node_name}
+  friendly_name: "Cloudless Cluster Watchdog"
+  # ── PlatformIO best-practice: use locally-installed packages ──────────────
+  # ESPHome 2026.5 generates URL-based platform + platform_packages specs which
+  # force fresh network downloads every compile — causing MissingPackageManifest
+  # errors on slow/interrupted connections.
+  #
+  # Override all remote URLs with the locally-installed package names/versions.
+  # Packages must already be installed in ~/.platformio/packages/ (they are, as
+  # of the initial `pio pkg install --global` run on 2026-05-21).
+  #
+  # To update: `pio pkg install --global --platform "https://...zip"` then bump
+  # the version constraints below to match.
+  platformio_options:
+    platform: espressif32@~55.3.38
+  on_boot:
+    priority: -100
+    then:
+      - light.turn_on:
+          id:         status_led
+          brightness: 50%
+          red:   0%
+          green: 0%
+          blue:  100%
+      - delay: 5s
+      - script.execute: update_led
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: ESP32S3
+  framework:
+    type: arduino
+    sdkconfig_options:
+      # Disable reproducible builds: the -fdebug-prefix-map compiler flag it adds
+      # cannot handle paths with spaces and causes cc1plus.exe to error.
+      CONFIG_APP_REPRODUCIBLE_BUILD: "n"
+
+# ---------------------------------------------------------------------------
+# Wi-Fi
+# ---------------------------------------------------------------------------
+wifi:
+  ssid:     ${wifi_ssid}
+  password: ${wifi_pass}
+  manual_ip:
+    static_ip:  192.168.1.201
+    gateway:    192.168.1.1
+    subnet:     255.255.255.0
+    dns1:       1.1.1.1
+
+  ap:
+    ssid:     "${node_name}-fallback"
+    password: !secret ap_password
+
+captive_portal:
+
+# ---------------------------------------------------------------------------
+# Logging / API / OTA
+# ---------------------------------------------------------------------------
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+# ---------------------------------------------------------------------------
+# Web server (needed by prometheus component) + Prometheus metrics endpoint
+# /metrics served on port 9101
+# ---------------------------------------------------------------------------
+web_server:
+  port: 9101
+  include_internal: true
+
+prometheus:
+
+# ---------------------------------------------------------------------------
+# HTTP requests — ntfy alerts + health probes
+# ---------------------------------------------------------------------------
+http_request:
+  timeout: 8s
+  verify_ssl: false
+
+# ---------------------------------------------------------------------------
+# Global state — all three probe results
+# ---------------------------------------------------------------------------
+globals:
+  - id: omv_up
+    type: bool
+    restore_value: false
+    initial_value: "true"
+  - id: omv_ha_up
+    type: bool
+    restore_value: false
+    initial_value: "true"
+  - id: aws_up
+    type: bool
+    restore_value: false
+    initial_value: "true"
+
+# ---------------------------------------------------------------------------
+# Virtual binary sensors — expose probe state to Prometheus / HA
+# ---------------------------------------------------------------------------
+binary_sensor:
+  - platform: template
+    id:         omv_reachable
+    name:       "omv (192.168.1.128) reachable"
+    entity_category: diagnostic
+    lambda: "return id(omv_up);"
+
+  - platform: template
+    id:         omv_ha_reachable
+    name:       "omv-ha (192.168.1.130) reachable"
+    entity_category: diagnostic
+    lambda: "return id(omv_ha_up);"
+
+  - platform: template
+    id:         aws_app_reachable
+    name:       "cloudless.gr (AWS) reachable"
+    entity_category: diagnostic
+    lambda: "return id(aws_up);"
+
+# ---------------------------------------------------------------------------
+# On-board RGB LED  (GPIO38 = v1.1 — do NOT change to 48 for this board)
+# ---------------------------------------------------------------------------
+light:
+  - platform:   esp32_rmt_led_strip
+    id:         status_led
+    name:       "Status LED"
+    pin:        GPIO38
+    num_leds:   1
+    rmt_symbols: 64
+    chipset:    WS2812
+    rgb_order:  GRB
+    restore_mode: ALWAYS_OFF
+    effects:
+      # AWS only down — slow orange blink
+      - strobe:
+          name: "blink_orange"
+          colors:
+            - state: true
+              brightness: 80%
+              red:   100%
+              green: 40%
+              blue:  0%
+              duration: 600ms
+            - state: false
+              duration: 800ms
+      # One Pi node down — slow yellow blink
+      - strobe:
+          name: "blink_yellow"
+          colors:
+            - state: true
+              brightness: 70%
+              red:   100%
+              green: 80%
+              blue:  0%
+              duration: 600ms
+            - state: false
+              duration: 800ms
+      # Both Pi nodes down — fast red blink
+      - strobe:
+          name: "blink_red_fast"
+          colors:
+            - state: true
+              brightness: 100%
+              red:   100%
+              green: 0%
+              blue:  0%
+              duration: 250ms
+            - state: false
+              duration: 250ms
+      # AWS + one Pi — fast deep-orange blink
+      - strobe:
+          name: "blink_deep_orange_fast"
+          colors:
+            - state: true
+              brightness: 90%
+              red:   100%
+              green: 20%
+              blue:  0%
+              duration: 250ms
+            - state: false
+              duration: 300ms
+      # Total outage — magenta fast blink
+      - strobe:
+          name: "blink_magenta"
+          colors:
+            - state: true
+              brightness: 100%
+              red:   100%
+              green: 0%
+              blue:  100%
+              duration: 250ms
+            - state: false
+              duration: 250ms
+
+# ---------------------------------------------------------------------------
+# Health probes — poll every 30 s (Pi nodes) / 60 s (AWS)
+# Staggered to avoid simultaneous HTTP calls that cause "interval took a long
+# time" warnings: omv fires at 0s, omv-ha at 15s, AWS at 30s within each cycle.
+# ---------------------------------------------------------------------------
+interval:
+  # omv probe — fires immediately then every 30 s
+  - interval: 30s
+    then:
+      - http_request.get:
+          url: ${omv_probe}
+          on_response:
+            then:
+              - lambda: |-
+                  bool was = id(omv_up);
+                  bool now = (response->status_code >= 200 && response->status_code < 400);
+                  if (was != now) {
+                    id(omv_up) = now;
+                    id(update_led).execute();
+                    id(omv_reachable).publish_state(now);
+                  }
+          on_error:
+            then:
+              - lambda: |-
+                  if (id(omv_up)) {
+                    id(omv_up) = false;
+                    id(update_led).execute();
+                    id(omv_reachable).publish_state(false);
+                  }
+
+  # omv-ha probe — offset 15 s so it doesn't collide with omv probe
+  - interval: 30s
+    then:
+      - delay: 15s
+      - http_request.get:
+          url: ${omv_ha_probe}
+          on_response:
+            then:
+              - lambda: |-
+                  bool was = id(omv_ha_up);
+                  bool now = (response->status_code >= 200 && response->status_code < 400);
+                  if (was != now) {
+                    id(omv_ha_up) = now;
+                    id(update_led).execute();
+                    id(omv_ha_reachable).publish_state(now);
+                  }
+          on_error:
+            then:
+              - lambda: |-
+                  if (id(omv_ha_up)) {
+                    id(omv_ha_up) = false;
+                    id(update_led).execute();
+                    id(omv_ha_reachable).publish_state(false);
+                  }
+
+  # AWS probe — fires every 60 s
+  - interval: 60s
+    then:
+      - http_request.get:
+          url: ${aws_health}
+          on_response:
+            then:
+              - lambda: |-
+                  bool was = id(aws_up);
+                  bool now = (response->status_code >= 200 && response->status_code < 400);
+                  if (was != now) {
+                    id(aws_up) = now;
+                    id(update_led).execute();
+                    id(aws_app_reachable).publish_state(now);
+                  }
+          on_error:
+            then:
+              - lambda: |-
+                  if (id(aws_up)) {
+                    id(aws_up) = false;
+                    id(update_led).execute();
+                    id(aws_app_reachable).publish_state(false);
+                  }
+
+  # ntfy alerts — single combined interval every 60 s
+  # Sends one POST per down target; sequential so they don't pile up.
+  - interval: 60s
+    then:
+      - if:
+          condition:
+            lambda: "return !id(aws_up);"
+          then:
+            - http_request.post:
+                url:  ${ntfy_url}
+                request_headers:
+                  Content-Type: text/plain
+                  Title: "🟠 cloudless.gr (AWS) UNREACHABLE"
+                  Priority: "high"
+                  Tags: "warning,cloud"
+                body: "HTTP probe to cloudless.gr returned non-2xx or timed out."
+      - if:
+          condition:
+            lambda: "return !id(omv_up);"
+          then:
+            - http_request.post:
+                url:  ${ntfy_url}
+                request_headers:
+                  Content-Type: text/plain
+                  Title: "🔴 omv (192.168.1.128) UNREACHABLE"
+                  Priority: "urgent"
+                  Tags: "warning,skull"
+                body: "HTTP probe to omv:9100 failed. Node may be down."
+      - if:
+          condition:
+            lambda: "return !id(omv_ha_up);"
+          then:
+            - http_request.post:
+                url:  ${ntfy_url}
+                request_headers:
+                  Content-Type: text/plain
+                  Title: "🔴 omv-ha (192.168.1.130) UNREACHABLE"
+                  Priority: "urgent"
+                  Tags: "warning,skull"
+                body: "HTTP probe to omv-ha:9100 failed. Node may be down."
+
+# ---------------------------------------------------------------------------
+# LED update script — priority order (worst first):
+#  1. All three down  → magenta
+#  2. Both Pi down    → red fast
+#  3. AWS + one Pi    → deep orange fast
+#  4. AWS only        → orange slow
+#  5. One Pi only     → yellow slow
+#  6. All healthy     → solid green
+# ---------------------------------------------------------------------------
+script:
+  - id: update_led
+    mode: restart
+    then:
+      - if:
+          condition:
+            lambda: "return !id(omv_up) && !id(omv_ha_up) && !id(aws_up);"
+          then:
+            - light.turn_on:
+                id:     status_led
+                effect: "blink_magenta"
+          else:
+            - if:
+                condition:
+                  lambda: "return !id(omv_up) && !id(omv_ha_up);"
+                then:
+                  - light.turn_on:
+                      id:     status_led
+                      effect: "blink_red_fast"
+                else:
+                  - if:
+                      condition:
+                        lambda: "return !id(aws_up) && (!id(omv_up) || !id(omv_ha_up));"
+                      then:
+                        - light.turn_on:
+                            id:     status_led
+                            effect: "blink_deep_orange_fast"
+                      else:
+                        - if:
+                            condition:
+                              lambda: "return !id(aws_up);"
+                            then:
+                              - light.turn_on:
+                                  id:     status_led
+                                  effect: "blink_orange"
+                            else:
+                              - if:
+                                  condition:
+                                    lambda: "return !id(omv_up) || !id(omv_ha_up);"
+                                  then:
+                                    - light.turn_on:
+                                        id:     status_led
+                                        effect: "blink_yellow"
+                                  else:
+                                    - light.turn_on:
+                                        id:         status_led
+                                        brightness: 40%
+                                        red:   0%
+                                        green: 100%
+                                        blue:  0%
+
+# ---------------------------------------------------------------------------
+# Extra sensors
+# ---------------------------------------------------------------------------
+sensor:
+  - platform:   wifi_signal
+    name:       "Wi-Fi Signal"
+    update_interval: 60s
+    entity_category: diagnostic
+
+  - platform:   uptime
+    name:       "Uptime"
+    update_interval: 60s
+    entity_category: diagnostic
+
+  - platform:   internal_temperature
+    name:       "ESP32 Temperature"
+    update_interval: 30s
+    entity_category: diagnostic
+
+text_sensor:
+  - platform:   wifi_info
+    ip_address:
+      name:     "IP Address"
+    ssid:
+      name:     "Connected SSID"
+    mac_address:
+      name:     "MAC Address"
+
+# ---------------------------------------------------------------------------
+# Hardware relay  (uncomment when you wire a 5 V relay to the board)
+# ---------------------------------------------------------------------------
+# switch:
+#   - platform: gpio
+#     id:       pi_power_relay
+#     name:     "omv Power Relay"
+#     pin:      GPIO10
+#     restore_mode: ALWAYS_ON
+#     icon:     mdi:power-plug
