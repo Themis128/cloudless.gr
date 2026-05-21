@@ -242,7 +242,8 @@ light:
 # ---------------------------------------------------------------------------
 interval:
   # omv probe — fires immediately then every 30 s
-  - interval: 30s
+  - id: probe_omv
+    interval: 30s
     then:
       - http_request.get:
           url: ${omv_probe}
@@ -266,7 +267,8 @@ interval:
                   }
 
   # omv-ha probe — offset 15 s so it doesn't collide with omv probe
-  - interval: 30s
+  - id: probe_omv_ha
+    interval: 30s
     then:
       - delay: 15s
       - http_request.get:
@@ -291,7 +293,8 @@ interval:
                   }
 
   # AWS probe — fires every 60 s
-  - interval: 60s
+  - id: probe_aws
+    interval: 60s
     then:
       - http_request.get:
           url: ${aws_health}
@@ -316,7 +319,8 @@ interval:
 
   # ntfy alerts — single combined interval every 60 s
   # Sends one POST per down target; sequential so they don't pile up.
-  - interval: 60s
+  - id: notify_alerts
+    interval: 60s
     then:
       - if:
           condition:
