@@ -7,7 +7,7 @@
 # AWS   : cloudless.gr          — probed via HTTPS
 #
 # ESPHome 2026.5+ removed the `ping` binary_sensor platform.
-# We probe Pi nodes via HTTP GET to their Prometheus port (:9090).
+# We probe Pi nodes via HTTP GET to their Prometheus port (:9100).
 # Any 2xx/3xx response = reachable; timeout/error = unreachable.
 #
 # LED STATE MATRIX
@@ -128,7 +128,7 @@ prometheus:
 # HTTP requests — ntfy alerts + health probes
 # ---------------------------------------------------------------------------
 http_request:
-  timeout: 8s
+  timeout: 15s    # 15 s to handle HTTPS TLS handshake on AWS probe (was 8 s)
   verify_ssl: false
 
 # ---------------------------------------------------------------------------

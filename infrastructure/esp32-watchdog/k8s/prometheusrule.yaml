@@ -4,11 +4,20 @@
 #
 # Metric notes:
 #   esphome_binary_sensor_value — exported by ESPHome Prometheus component
-#   Label "name" matches the ESPHome sensor `name:` field, lowercased with
-#   spaces → underscores. Examples:
-#     "omv_(192.168.1.128)_reachable"
-#     "omv-ha_(192.168.1.130)_reachable"
-#     "cloudless.gr_(aws)_reachable"
+#   esphome_sensor_value        — exported by ESPHome Prometheus component
+#
+#   Label "id" is the slug ESPHome assigns (lowercase, spaces→underscores,
+#   special chars→double-underscores).  Examples:
+#     id="omv__192_168_1_128__reachable"
+#     id="omv-ha__192_168_1_130__reachable"
+#     id="cloudless_gr__aws__reachable"
+#     id="omv_probe_failures"
+#     id="omv-ha_probe_failures"
+#     id="cloudless_gr_probe_failures"
+#     id="wi-fi_signal"
+#
+#   ⚠️  Do NOT use the "name" label — it contains the human-readable sensor
+#       name and is NOT what ESPHome exports as a metric label.
 # ---------------------------------------------------------------------------
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -38,7 +47,7 @@ spec:
         - alert: OmvUnreachableFromESP32
           expr: >
             esphome_binary_sensor_value{
-              name="omv_(192.168.1.128)_reachable",
+              id="omv__192_168_1_128__reachable",
               job="esp32-watchdog-metrics"
             } == 0
           for:   1m
@@ -47,13 +56,13 @@ spec:
             node:     omv
           annotations:
             summary:     "omv (192.168.1.128) unreachable from ESP32 watchdog"
-            description: "The ESP32 external probe cannot ping omv. Likely a hard crash or power loss — independent of k3s."
+            description: "The ESP32 external probe cannot reach omv. Likely a hard crash or power loss — independent of k3s."
 
         # ── omv-ha unreachable as seen from ESP32 ─────────────────────────────
         - alert: OmvHaUnreachableFromESP32
           expr: >
             esphome_binary_sensor_value{
-              name="omv-ha_(192.168.1.130)_reachable",
+              id="omv-ha__192_168_1_130__reachable",
               job="esp32-watchdog-metrics"
             } == 0
           for:   1m
@@ -62,30 +71,30 @@ spec:
             node:     omv-ha
           annotations:
             summary:     "omv-ha (192.168.1.130) unreachable from ESP32 watchdog"
-            description: "The ESP32 external probe cannot ping omv-ha."
+            description: "The ESP32 external probe cannot reach omv-ha."
 
         # ── Both Pi nodes down — cluster-level emergency ──────────────────────
         - alert: BothNodesUnreachableFromESP32
           expr: >
             (
-              esphome_binary_sensor_value{name="omv_(192.168.1.128)_reachable",job="esp32-watchdog-metrics"} == 0
+              esphome_binary_sensor_value{id="omv__192_168_1_128__reachable",job="esp32-watchdog-metrics"} == 0
             )
             and
             (
-              esphome_binary_sensor_value{name="omv-ha_(192.168.1.130)_reachable",job="esp32-watchdog-metrics"} == 0
+              esphome_binary_sensor_value{id="omv-ha__192_168_1_130__reachable",job="esp32-watchdog-metrics"} == 0
             )
           for:   1m
           labels:
             severity: critical
           annotations:
             summary:     "BOTH cluster nodes unreachable from ESP32"
-            description: "Neither omv nor omv-ha responds to ping. Full cluster outage. Check power and network."
+            description: "Neither omv nor omv-ha responds to probe. Full cluster outage. Check power and network."
 
         # ── AWS app unreachable as seen from ESP32 ────────────────────────────
         - alert: AWSAppUnreachableFromESP32
           expr: >
             esphome_binary_sensor_value{
-              name="cloudless.gr_(aws)_reachable",
+              id="cloudless_gr__aws__reachable",
               job="esp32-watchdog-metrics"
             } == 0
           for:   2m
@@ -99,7 +108,7 @@ spec:
         - alert: ESP32WifiWeak
           expr: >
             esphome_sensor_value{
-              name="wi-fi_signal",
+              id="wi-fi_signal",
               job="esp32-watchdog-metrics"
             } < -80
           for:   5m
@@ -108,3 +117,55 @@ spec:
           annotations:
             summary:     "ESP32 watchdog Wi-Fi signal weak"
             description: "RSSI below -80 dBm. The watchdog may lose connectivity soon. Move it closer to the AP."
+
+        # ── omv probe failure rate elevated ───────────────────────────────────
+        # Fires if omv accumulates 3+ probe failures in any 5-minute window.
+        # The counter resets on reboot so use increase() not rate().
+        - alert: OmvProbeFailuresElevated
+          expr: >
+            increase(
+              esphome_sensor_value{
+                id="omv_probe_failures",
+                job="esp32-watchdog-metrics"
+              }[5m]
+            ) > 3
+          for:   0m
+          labels:
+            severity: warning
+            node:     omv
+          annotations:
+            summary:     "omv probe failure rate elevated"
+            description: "ESP32 recorded more than 3 failed probes to omv in the last 5 minutes. May indicate intermittent connectivity or service restarts."
+
+        # ── omv-ha probe failure rate elevated ────────────────────────────────
+        - alert: OmvHaProbeFailuresElevated
+          expr: >
+            increase(
+              esphome_sensor_value{
+                id="omv-ha_probe_failures",
+                job="esp32-watchdog-metrics"
+              }[5m]
+            ) > 3
+          for:   0m
+          labels:
+            severity: warning
+            node:     omv-ha
+          annotations:
+            summary:     "omv-ha probe failure rate elevated"
+            description: "ESP32 recorded more than 3 failed probes to omv-ha in the last 5 minutes."
+
+        # ── AWS probe failure rate elevated ───────────────────────────────────
+        - alert: AWSProbeFailuresElevated
+          expr: >
+            increase(
+              esphome_sensor_value{
+                id="cloudless_gr_probe_failures",
+                job="esp32-watchdog-metrics"
+              }[5m]
+            ) > 2
+          for:   0m
+          labels:
+            severity: warning
+          annotations:
+            summary:     "cloudless.gr probe failure rate elevated"
+            description: "ESP32 recorded more than 2 failed HTTPS probes to cloudless.gr in the last 5 minutes. May indicate TLS issues or transient AWS outage."
