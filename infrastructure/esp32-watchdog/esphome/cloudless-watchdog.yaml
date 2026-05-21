@@ -81,6 +81,10 @@ esp32:
       # Disable reproducible builds: the -fdebug-prefix-map compiler flag it adds
       # cannot handle paths with spaces and causes cc1plus.exe to error.
       CONFIG_APP_REPRODUCIBLE_BUILD: "n"
+      # Extend task watchdog to 10 s (default: 5 s in Arduino framework).
+      # http_request has a 5 s timeout; during a silent TCP drop the socket can
+      # hang until the timeout fires. 10 s gives a 5 s safety margin.
+      CONFIG_ESP_TASK_WDT_TIMEOUT_S: "10"
 
 # ---------------------------------------------------------------------------
 # Wi-Fi
@@ -128,7 +132,9 @@ prometheus:
 # HTTP requests — ntfy alerts + health probes
 # ---------------------------------------------------------------------------
 http_request:
-  timeout: 15s    # 15 s to handle HTTPS TLS handshake on AWS probe (was 8 s)
+  timeout: 5s     # 5 s — sufficient for LAN probes + HTTPS (verify_ssl:false = lightweight TLS)
+                  # MUST be < CONFIG_ESP_TASK_WDT_TIMEOUT_S (10 s) to avoid watchdog resets
+                  # when a probe target silently drops packets (no RST, no ICMP reject)
   verify_ssl: false
 
 # ---------------------------------------------------------------------------
