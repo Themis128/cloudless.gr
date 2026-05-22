@@ -113,6 +113,37 @@ async function breadcrumb(
   }
 }
 
+// Handles a non-retried response: error passthrough, 204, JSON, plain text.
+// Extracted to keep integrationFetchWithMeta under the cognitive-complexity limit.
+async function handleFinalResponse<T>(
+  res: Response,
+  integration: string,
+  latencyMs: number,
+  retries: number,
+  passthroughErrors: boolean,
+): Promise<IntegrationFetchResult<T>> {
+  if (!res.ok) {
+    if (passthroughErrors) {
+      return {
+        data: (await res.json().catch(() => null)) as T,
+        status: res.status,
+        latencyMs,
+        retries,
+      };
+    }
+    const body = await res.text().catch(() => "");
+    throw new IntegrationError(integration, res.status, body);
+  }
+  if (res.status === 204) {
+    return { data: undefined as unknown as T, status: 204, latencyMs, retries };
+  }
+  const contentType = res.headers.get("content-type") ?? "";
+  const data: T = contentType.includes("application/json")
+    ? ((await res.json()) as T)
+    : ((await res.text()) as unknown as T);
+  return { data, status: res.status, latencyMs, retries };
+}
+
 // --- Public API -------------------------------------------------------------
 
 /**
@@ -174,57 +205,17 @@ export async function integrationFetchWithMeta<T = unknown>(
       throw err;
     }
 
-    // 429: honor Retry-After when present, else exponential backoff
-    if (res.status === 429 && attempt < maxRetries) {
-      const ra = parseRetryAfter(res.headers.get("Retry-After"));
+    // 429 / 5xx: retry with exponential backoff (429 honors Retry-After)
+    if ((res.status === 429 || res.status >= 500) && attempt < maxRetries) {
+      const ra = res.status === 429 ? parseRetryAfter(res.headers.get("Retry-After")) : null;
       retries++;
       await sleep(ra ?? backoffMs * 2 ** attempt);
       continue;
     }
 
-    // 5xx: retry with exponential backoff
-    if (res.status >= 500 && attempt < maxRetries) {
-      retries++;
-      await sleep(backoffMs * 2 ** attempt);
-      continue;
-    }
-
     const latencyMs = Date.now() - started;
     await breadcrumb(integration, url, res.status, latencyMs, retries);
-
-    if (!res.ok) {
-      if (passthroughErrors) {
-        // Caller wants to handle the error body itself
-        return {
-          data: (await res.json().catch(() => null)) as T,
-          status: res.status,
-          latencyMs,
-          retries,
-        };
-      }
-      const body = await res.text().catch(() => "");
-      throw new IntegrationError(integration, res.status, body);
-    }
-
-    // 204 No Content
-    if (res.status === 204) {
-      return {
-        data: undefined as unknown as T,
-        status: 204,
-        latencyMs,
-        retries,
-      };
-    }
-
-    const contentType = res.headers.get("content-type") ?? "";
-    let data: T;
-    if (contentType.includes("application/json")) {
-      data = (await res.json()) as T;
-    } else {
-      data = (await res.text()) as unknown as T;
-    }
-
-    return { data, status: res.status, latencyMs, retries };
+    return handleFinalResponse<T>(res, integration, latencyMs, retries, passthroughErrors);
   }
 
   // Exhausted retries on 429/5xx — fall through to throw
