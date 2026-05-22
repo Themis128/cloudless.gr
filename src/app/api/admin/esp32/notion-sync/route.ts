@@ -21,7 +21,8 @@ import {
   type Esp32Status,
 } from "@/lib/notion-esp32";
 
-const ALERT_API_URL = process.env.ALERT_API_URL ?? "http://192.168.1.128:30800";
+// Internal Pi cluster endpoint — HTTP is intentional (LAN-only, not public internet). // NOSONAR
+const ALERT_API_URL = process.env.ALERT_API_URL ?? "http://192.168.1.128:30800"; // NOSONAR
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
