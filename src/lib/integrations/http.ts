@@ -170,7 +170,7 @@ export async function integrationFetchWithMeta<T = unknown>(
         continue;
       }
       const latencyMs = Date.now() - started;
-      void breadcrumb(integration, url, 0, latencyMs, retries);
+      await breadcrumb(integration, url, 0, latencyMs, retries);
       throw err;
     }
 
@@ -190,7 +190,7 @@ export async function integrationFetchWithMeta<T = unknown>(
     }
 
     const latencyMs = Date.now() - started;
-    void breadcrumb(integration, url, res.status, latencyMs, retries);
+    await breadcrumb(integration, url, res.status, latencyMs, retries);
 
     if (!res.ok) {
       if (passthroughErrors) {
@@ -229,7 +229,7 @@ export async function integrationFetchWithMeta<T = unknown>(
 
   // Exhausted retries on 429/5xx — fall through to throw
   const latencyMs = Date.now() - started;
-  void breadcrumb(integration, url, 0, latencyMs, retries);
+  await breadcrumb(integration, url, 0, latencyMs, retries);
   if (lastError) throw lastError;
   throw new Error(
     `${integration}: max retries (${maxRetries}) exceeded on ${url}`,

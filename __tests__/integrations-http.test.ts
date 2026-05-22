@@ -128,22 +128,22 @@ describe("integrationFetch", () => {
 
   it("throws IntegrationError on non-retried 4xx", async () => {
     globalThis.fetch = scriptedFetch(
-      new Response("nope", { status: 404, headers: { "x-debug": "1" } }),
+      () => new Response("nope", { status: 404, headers: { "x-debug": "1" } }),
     );
-    await expect(
-      integrationFetch("test", "https://example.test/x"),
-    ).rejects.toThrow(IntegrationError);
+    let caught: unknown;
     try {
       await integrationFetch("test", "https://example.test/x");
     } catch (err) {
-      expect(isIntegrationError(err)).toBe(true);
-      expect(isIntegrationError(err, 404)).toBe(true);
-      expect(isIntegrationError(err, 500)).toBe(false);
-      if (err instanceof IntegrationError) {
-        expect(err.integration).toBe("test");
-        expect(err.status).toBe(404);
-        expect(err.body).toBe("nope");
-      }
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(IntegrationError);
+    expect(isIntegrationError(caught)).toBe(true);
+    expect(isIntegrationError(caught, 404)).toBe(true);
+    expect(isIntegrationError(caught, 500)).toBe(false);
+    if (caught instanceof IntegrationError) {
+      expect(caught.integration).toBe("test");
+      expect(caught.status).toBe(404);
+      expect(caught.body).toBe("nope");
     }
   });
 
@@ -204,8 +204,9 @@ describe("integrationFetch", () => {
       backoffMs: 1,
       maxRetries: 2,
     });
+    const assertion = expect(promise).rejects.toThrow(IntegrationError);
     await vi.advanceTimersByTimeAsync(50);
-    await expect(promise).rejects.toThrow(IntegrationError);
+    await assertion;
     expect(fetchMock).toHaveBeenCalledTimes(3); // 1 initial + 2 retries
   });
 
@@ -218,8 +219,9 @@ describe("integrationFetch", () => {
       backoffMs: 1,
       maxRetries: 1,
     });
+    const assertion = expect(promise).rejects.toThrow("ECONNREFUSED");
     await vi.advanceTimersByTimeAsync(20);
-    await expect(promise).rejects.toThrow("ECONNREFUSED");
+    await assertion;
   });
 });
 
