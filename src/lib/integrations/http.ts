@@ -159,7 +159,12 @@ export async function integrationFetch<T = unknown>(
   init?: RequestInit,
   opts?: IntegrationFetchOptions,
 ): Promise<T> {
-  const result = await integrationFetchWithMeta<T>(integration, url, init, opts);
+  const result = await integrationFetchWithMeta<T>(
+    integration,
+    url,
+    init,
+    opts,
+  );
   return result.data;
 }
 
@@ -207,7 +212,10 @@ export async function integrationFetchWithMeta<T = unknown>(
 
     // 429 / 5xx: retry with exponential backoff (429 honors Retry-After)
     if ((res.status === 429 || res.status >= 500) && attempt < maxRetries) {
-      const ra = res.status === 429 ? parseRetryAfter(res.headers.get("Retry-After")) : null;
+      const ra =
+        res.status === 429
+          ? parseRetryAfter(res.headers.get("Retry-After"))
+          : null;
       retries++;
       await sleep(ra ?? backoffMs * 2 ** attempt);
       continue;
@@ -215,7 +223,13 @@ export async function integrationFetchWithMeta<T = unknown>(
 
     const latencyMs = Date.now() - started;
     await breadcrumb(integration, url, res.status, latencyMs, retries);
-    return handleFinalResponse<T>(res, integration, latencyMs, retries, passthroughErrors);
+    return handleFinalResponse<T>(
+      res,
+      integration,
+      latencyMs,
+      retries,
+      passthroughErrors,
+    );
   }
 
   // Exhausted retries on 429/5xx — fall through to throw
