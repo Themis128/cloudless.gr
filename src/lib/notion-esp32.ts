@@ -125,7 +125,7 @@ async function findDevicePageByDeviceId(
 ): Promise<string | null> {
   const body = {
     filter: {
-      property: "Device ID",
+      property: PROP_DEVICE_ID,
       rich_text: { equals: deviceId },
     },
     page_size: 1,
@@ -158,15 +158,12 @@ export async function upsertEsp32DeviceInNotion(
   if (!cfg.devicesDbId) return null;
   if (!status.device_id) return null; // can't upsert without a key
 
+  const heartbeat = isoOrNull(status.last_heartbeat);
   const properties: Record<string, unknown> = {
     Name: {
-      title: [
-        {
-          text: { content: `ESP32 ${status.device_id}` },
-        },
-      ],
+      title: [{ text: { content: `ESP32 ${status.device_id}` } }],
     },
-    "Device ID": {
+    [PROP_DEVICE_ID]: {
       rich_text: [{ text: { content: status.device_id } }],
     },
     IP: {
@@ -178,12 +175,10 @@ export async function upsertEsp32DeviceInNotion(
         : [],
     },
     RSSI: { number: status.rssi },
-    "Free RAM": { number: status.free_ram_bytes },
+    [PROP_FREE_RAM]: { number: status.free_ram_bytes },
     Uptime: { number: status.uptime_s },
-    "Last Heartbeat":
-      isoOrNull(status.last_heartbeat) != null
-        ? { date: { start: isoOrNull(status.last_heartbeat) } }
-        : { date: null },
+    [PROP_LAST_HEARTBEAT]:
+      heartbeat != null ? { date: { start: heartbeat } } : { date: null },
     Status: { select: { name: statusLabel(status) } },
   };
 
@@ -223,6 +218,8 @@ export async function appendEsp32TelemetryToNotion(
   const cfg = await getEsp32NotionConfig();
   if (!cfg.telemetryDbId) return null;
 
+  const firstSeen = isoOrNull(alert.first_seen);
+  const lastSeen = isoOrNull(alert.last_seen);
   const created = await notionFetch<{ id: string }>(`/pages`, {
     method: "POST",
     body: JSON.stringify({
@@ -236,14 +233,10 @@ export async function appendEsp32TelemetryToNotion(
           rich_text: [{ text: { content: alert.message.slice(0, 2000) } }],
         },
         Status: { select: { name: alert.status || "ACTIVE" } },
-        "First seen":
-          isoOrNull(alert.first_seen) != null
-            ? { date: { start: isoOrNull(alert.first_seen) } }
-            : { date: null },
-        "Last seen":
-          isoOrNull(alert.last_seen) != null
-            ? { date: { start: isoOrNull(alert.last_seen) } }
-            : { date: null },
+        [PROP_FIRST_SEEN]:
+          firstSeen != null ? { date: { start: firstSeen } } : { date: null },
+        [PROP_LAST_SEEN]:
+          lastSeen != null ? { date: { start: lastSeen } } : { date: null },
       },
     }),
   });
@@ -279,6 +272,13 @@ export async function readEsp32DevicesFromNotion(): Promise<Esp32Status[]> {
   return (res.results ?? []).map((page) => mapDevicePage(page));
 }
 
+// Property key constants — avoids S1192 duplicate-string violations.
+const PROP_DEVICE_ID = "Device ID";
+const PROP_FREE_RAM = "Free RAM";
+const PROP_LAST_HEARTBEAT = "Last Heartbeat";
+const PROP_FIRST_SEEN = "First seen";
+const PROP_LAST_SEEN = "Last seen";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapDevicePage(page: any): Esp32Status {
   const p = page.properties ?? {};
@@ -289,13 +289,13 @@ function mapDevicePage(page: any): Esp32Status {
     return arr.map((t) => t.plain_text ?? "").join("") || null;
   };
   return {
-    device_id: richText(p["Device ID"]),
+    device_id: richText(p[PROP_DEVICE_ID]),
     ip: richText(p.IP),
     firmware_ver: richText(p.Firmware),
     rssi: p.RSSI?.number ?? null,
-    free_ram_bytes: p["Free RAM"]?.number ?? null,
+    free_ram_bytes: p[PROP_FREE_RAM]?.number ?? null,
     uptime_s: p.Uptime?.number ?? null,
-    last_heartbeat: p["Last Heartbeat"]?.date?.start ?? null,
+    last_heartbeat: p[PROP_LAST_HEARTBEAT]?.date?.start ?? null,
     stale: p.Status?.select?.name === "Stale",
   };
 }

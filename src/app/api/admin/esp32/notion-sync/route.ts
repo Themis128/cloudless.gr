@@ -66,8 +66,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         configured: false,
-        message:
-          "NOTION_ESP32_DEVICES_DB_ID is not set. Sync skipped.",
+        message: "NOTION_ESP32_DEVICES_DB_ID is not set. Sync skipped.",
       },
       { status: 200 },
     );
@@ -92,10 +91,7 @@ export async function POST(request: NextRequest) {
     status = (await res.json()) as Esp32Status;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Alert API unreachable";
-    return NextResponse.json(
-      { error: msg, offline: true },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: msg, offline: true }, { status: 503 });
   }
 
   // 2) Push into Notion
