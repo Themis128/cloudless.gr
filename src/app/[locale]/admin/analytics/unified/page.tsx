@@ -229,7 +229,7 @@ export default function UnifiedAnalyticsPage() {
                 />
                 <KpiCard
                   label="Avg Position"
-                  value={data.seo.position.toFixed(1)}
+                  value={(data.seo.avgPosition ?? 0).toFixed(1)}
                   sub="lower is better"
                   color="text-neon-yellow"
                 />
