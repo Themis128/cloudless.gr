@@ -66,6 +66,7 @@ jobs:
             core.setOutput('active', active ? 'true' : 'false');
 
       - name: dispatch pi image build for deploy SHA
+        id: dispatch
         if: steps.check.outputs.exists != 'true' && steps.check.outputs.active != 'true'
         uses: actions/github-script@v7
         with:
@@ -80,23 +81,42 @@ jobs:
             // We dispatch at the branch (always valid) and pass the exact SHA
             // as target_sha input so build-pi-image.yml checks out the right
             // commit regardless of whether the branch has since advanced.
-            //
-            // The wait-loop below filters by head_sha === deploySha. In the
-            // normal sequential-deploy case the branch tip equals deploySha at
-            // dispatch time, so head_sha will match. In a rapid-push scenario
-            // the wait-loop may time out; the subsequent orchestrator run for
-            // the newer SHA will succeed and that image is correct.
+            const dispatchedAt = new Date().toISOString();
             await github.rest.actions.createWorkflowDispatch({
               owner,
               repo,
               workflow_id: 'build-pi-image.yml',
               ref: deployBranch,
-              inputs: {
-                target_sha: deploySha,
-              },
+              inputs: { target_sha: deploySha },
             });
-
             core.info(`Dispatched build-pi-image.yml for ${deploySha} via ref=${deployBranch}`);
+
+            // Capture the run ID by polling for the newly-created run. The
+            // dispatch API is fire-and-forget (no run ID in the response), so
+            // we wait up to 30s for the run to appear, then store its ID.
+            // Tracking by run ID instead of head_sha makes the wait-loop below
+            // immune to rapid pushes that advance the branch before the build
+            // completes (the old head_sha filter would silently miss the run).
+            function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+            let runId = null;
+            for (let i = 0; i < 10; i++) {
+              await sleep(3000);
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                owner, repo, workflow_id: 'build-pi-image.yml',
+                event: 'workflow_dispatch', per_page: 10,
+              });
+              const found = data.workflow_runs.find(
+                r => new Date(r.created_at) >= new Date(dispatchedAt)
+              );
+              if (found) { runId = found.id; break; }
+            }
+            if (runId) {
+              core.info(`Captured dispatched run ID: ${runId}`);
+              core.setOutput('run_id', String(runId));
+            } else {
+              core.warning('Could not capture dispatched run ID — wait step will fall back to SHA filter');
+              core.setOutput('run_id', '');
+            }
 
       - name: wait for pi build completion
         if: steps.check.outputs.exists != 'true'
@@ -105,49 +125,61 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const deploySha = '${{ steps.meta.outputs.sha }}';
+            const dispatchedRunId = Number('${{ steps.dispatch.outputs.run_id }}') || 0;
             const { owner, repo } = context.repo;
 
-            // Pi builds frequently spend 20-30 min queued on the omv
-            // self-hosted runner before doing ~1 min of work. 45 min covers
-            // a worst-case queue without bailing on healthy builds.
+            // Pi builds frequently spend 20-30 min queued on the GitHub ARM
+            // runner before doing ~2-3 min of actual work. 45 min covers the
+            // worst-case queue without bailing on healthy builds.
             const maxAttempts = 180; // 45m at 15s intervals
             const delayMs = 15000;
-
-            function sleep(ms) {
-              return new Promise((resolve) => setTimeout(resolve, ms));
-            }
+            function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-              const response = await github.rest.actions.listWorkflowRuns({
-                owner,
-                repo,
-                workflow_id: 'build-pi-image.yml',
-                per_page: 50,
-              });
+              // Prefer tracking by run ID (immune to branch-tip advances).
+              // Fall back to head_sha filter when the dispatch step couldn't
+              // capture the ID (e.g. the build already existed and was active).
+              if (dispatchedRunId) {
+                const { data: run } = await github.rest.actions.getWorkflowRun({
+                  owner, repo, run_id: dispatchedRunId,
+                });
+                if (run.conclusion === 'success') {
+                  core.info(`Pi build completed successfully: ${run.html_url}`);
+                  return;
+                }
+                if (run.status !== 'completed') {
+                  core.info(`Attempt ${attempt}: run ${dispatchedRunId} still ${run.status}`);
+                  await sleep(delayMs);
+                  continue;
+                }
+                core.setFailed(`Pi build run ${dispatchedRunId} ended with conclusion=${run.conclusion}. URL: ${run.html_url}`);
+                return;
+              }
 
+              // Fallback: filter by head_sha (original behaviour, works when
+              // the build was already active and no dispatch was needed).
+              const response = await github.rest.actions.listWorkflowRuns({
+                owner, repo, workflow_id: 'build-pi-image.yml', per_page: 50,
+              });
               const candidates = response.data.workflow_runs
-                .filter((run) => run.head_sha === deploySha)
+                .filter(r => r.head_sha === deploySha)
                 .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-              const success = candidates.find((run) => run.conclusion === 'success');
+              const success = candidates.find(r => r.conclusion === 'success');
               if (success) {
                 core.info(`Pi build completed successfully: ${success.html_url}`);
                 return;
               }
-
-              const active = candidates.find((run) => run.status !== 'completed');
+              const active = candidates.find(r => r.status !== 'completed');
               if (active) {
-                core.info(`Attempt ${attempt}: waiting on active run ${active.id} ${active.html_url}`);
+                core.info(`Attempt ${attempt}: waiting on active run ${active.id}`);
                 await sleep(delayMs);
                 continue;
               }
-
               if (candidates.length > 0) {
-                const latest = candidates[0];
-                core.setFailed(`Pi build has no successful run for SHA ${deploySha}. Latest conclusion=${latest.conclusion}. Run: ${latest.html_url}`);
+                core.setFailed(`Pi build for SHA ${deploySha} ended with: ${candidates[0].conclusion}`);
                 return;
               }
-
               core.info(`Attempt ${attempt}: no run found yet for SHA ${deploySha}`);
               await sleep(delayMs);
             }
