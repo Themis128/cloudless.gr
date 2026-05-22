@@ -27,6 +27,12 @@ export default defineConfig({
         __dirname,
         "__tests__/stubs/aws-cognito-stub.js",
       ),
+      // @aws-sdk/client-ssm (and its transitive dep @aws-sdk/util-endpoints) crash
+      // under JSDOM during module init. All SSM tests mock @/lib/ssm-config directly.
+      "@aws-sdk/client-ssm": path.resolve(
+        __dirname,
+        "__tests__/stubs/aws-ssm-stub.js",
+      ),
     },
   },
   define: {
