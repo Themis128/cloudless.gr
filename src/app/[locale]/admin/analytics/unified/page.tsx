@@ -8,7 +8,7 @@ interface SeoData {
   clicks: number;
   impressions: number;
   ctr: number;
-  position: number;
+  avgPosition: number;
 }
 
 interface PipelineData {
