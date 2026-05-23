@@ -126,6 +126,45 @@ async function runCheckAvailability(raw: unknown): Promise<string> {
   }
 }
 
+function asStringField(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+/**
+ * Convert the model's terminal `propose_slot` tool call into a ProposeResult.
+ * Centralised so the main loop stays at a low cognitive-complexity score.
+ */
+function resolveProposeBlock(block: ToolUseBlock): ProposeResult {
+  const input = block.toolUse.input ?? {};
+  const start = asStringField(input.start);
+  const end = asStringField(input.end);
+  const reasoning = asStringField(input.reasoning);
+  if (!start || !end) {
+    return {
+      status: STATUS_NO_MATCH,
+      reasoning: reasoning || "No matching slot.",
+    };
+  }
+  return {
+    status: STATUS_PROPOSED,
+    proposed: { start, end, formatted: formatAthensSlot(start, end) },
+    reasoning,
+  };
+}
+
+async function runPendingTool(block: ToolUseBlock): Promise<ToolResultBlock> {
+  const result =
+    block.toolUse.name === "check_calendar_availability"
+      ? await runCheckAvailability(block.toolUse.input)
+      : `Unknown tool: ${block.toolUse.name}`;
+  return {
+    toolResult: {
+      toolUseId: block.toolUse.toolUseId,
+      content: [{ text: result }] as [{ text: string }],
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -165,7 +204,7 @@ export async function proposeBookingSlot(
     { role: "user", content: [{ text: intent }] },
   ];
 
-  for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+  for (let attempt = 0; attempt < MAX_TOOL_ITERATIONS; attempt++) {
     const cmd = new ConverseCommand({
       modelId: BEDROCK_MODEL_ID,
       system: [{ text: SYSTEM_PROMPT }],
@@ -188,24 +227,7 @@ export async function proposeBookingSlot(
     const proposeBlock = toolUseBlocks.find(
       (b) => b.toolUse.name === "propose_slot",
     );
-    if (proposeBlock) {
-      const input = proposeBlock.toolUse.input ?? {};
-      const start = typeof input.start === "string" ? input.start : "";
-      const end = typeof input.end === "string" ? input.end : "";
-      const reasoning =
-        typeof input.reasoning === "string" ? input.reasoning : "";
-      if (!start || !end) {
-        return {
-          status: STATUS_NO_MATCH,
-          reasoning: reasoning || "No matching slot.",
-        };
-      }
-      return {
-        status: STATUS_PROPOSED,
-        proposed: { start, end, formatted: formatAthensSlot(start, end) },
-        reasoning,
-      };
-    }
+    if (proposeBlock) return resolveProposeBlock(proposeBlock);
 
     if (toolUseBlocks.length === 0) {
       // Model returned plain text without proposing — treat as no_match.
@@ -222,24 +244,7 @@ export async function proposeBookingSlot(
 
     // Append assistant turn + run pending availability tool calls.
     messages.push({ role: "assistant", content: assistantContent });
-
-    const toolResults: ToolResultBlock[] = await Promise.all(
-      toolUseBlocks.map(async (b) => {
-        let result: string;
-        if (b.toolUse.name === "check_calendar_availability") {
-          result = await runCheckAvailability(b.toolUse.input);
-        } else {
-          result = `Unknown tool: ${b.toolUse.name}`;
-        }
-        return {
-          toolResult: {
-            toolUseId: b.toolUse.toolUseId,
-            content: [{ text: result }] as [{ text: string }],
-          },
-        };
-      }),
-    );
-
+    const toolResults = await Promise.all(toolUseBlocks.map(runPendingTool));
     messages.push({ role: "user", content: toolResults });
   }
 

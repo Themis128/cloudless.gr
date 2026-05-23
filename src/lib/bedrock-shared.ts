@@ -57,7 +57,7 @@ export interface BedrockMessage {
 let _client: BedrockRuntimeClient | null = null;
 
 export function getBedrockClient(): BedrockRuntimeClient {
-  if (!_client) _client = new BedrockRuntimeClient({ region: BEDROCK_REGION });
+  _client ??= new BedrockRuntimeClient({ region: BEDROCK_REGION });
   return _client;
 }
 

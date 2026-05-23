@@ -107,7 +107,7 @@ async function handleConfirm(
 
   const startD = new Date(body.start);
   const endD = new Date(body.end);
-  if (isNaN(startD.getTime()) || isNaN(endD.getTime())) {
+  if (Number.isNaN(startD.getTime()) || Number.isNaN(endD.getTime())) {
     return jsonError(400, "Invalid date format for start or end.");
   }
   if (startD < new Date()) {
