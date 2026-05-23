@@ -27,11 +27,6 @@ jobs:
   preview:
     name: Deploy Preview
     runs-on: ubuntu-latest
-    # SST + CDK synth + Sentry sourcemap upload don't fit on the Pi runners
-    # (see docs/runners.md). Marked informational so a GH-hosted runner
-    # outage does not block merging; the preview environment is a
-    # convenience for review, not a merge gate.
-    continue-on-error: true
     timeout-minutes: 20
 
     steps:

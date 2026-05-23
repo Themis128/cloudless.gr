@@ -26,10 +26,6 @@ jobs:
   axe-playwright:
     name: Playwright A11y Checks
     runs-on: ubuntu-latest
-    # Needs system Chrome on x86_64 — cannot fail over to the Pi runners.
-    # Marked informational so a GH-hosted runner outage does not block
-    # merging unrelated PRs; real findings still surface in the Actions log.
-    continue-on-error: true
     timeout-minutes: 15
     env:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
