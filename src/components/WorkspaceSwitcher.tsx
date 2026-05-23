@@ -1,28 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import type { Workspace } from "@/app/api/admin/workspaces/route";
 
 export default function WorkspaceSwitcher() {
-  const { workspaces, current, switchTo, setWorkspaces } = useWorkspace();
+  const { workspaces, current, loaded, switchTo } = useWorkspace();
   const [open, setOpen] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (loaded) return;
-    fetchWithAuth("/api/admin/workspaces")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.workspaces?.length) {
-          setWorkspaces(data.workspaces as Workspace[]);
-        }
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true));
-  }, [loaded, setWorkspaces]);
 
   useEffect(() => {
     if (!open) return;

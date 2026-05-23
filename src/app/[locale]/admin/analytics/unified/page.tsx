@@ -14,7 +14,7 @@ interface SeoData {
 interface PipelineData {
   totalDeals: number;
   totalValue: number;
-  dealsByStage: Record<string, number>;
+  byStage: Record<string, { count: number; value: number }>;
 }
 
 interface EmailData {
@@ -255,7 +255,7 @@ export default function UnifiedAnalyticsPage() {
                 />
                 <KpiCard
                   label="Pipeline Value"
-                  value={`€${(data.pipeline.totalValue / 100).toLocaleString("en", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+                  value={`€${data.pipeline.totalValue.toLocaleString("en", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
                   color="text-neon-magenta"
                 />
                 <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
@@ -263,8 +263,8 @@ export default function UnifiedAnalyticsPage() {
                     By Stage
                   </div>
                   <div className="space-y-1">
-                    {Object.entries(data.pipeline.dealsByStage).map(
-                      ([stage, count]) => (
+                    {Object.entries(data.pipeline.byStage).map(
+                      ([stage, { count }]) => (
                         <div
                           key={stage}
                           className="flex justify-between font-mono text-xs"

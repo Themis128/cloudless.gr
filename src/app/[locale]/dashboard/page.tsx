@@ -31,9 +31,8 @@ export default function DashboardPage() {
     }
 
     async function fetchStats() {
-      const email = encodeURIComponent(user!.email!);
       const [purchasesRes, consultationsRes] = await Promise.allSettled([
-        fetch(`/api/user/purchases?email=${email}`),
+        fetchWithAuth("/api/user/purchases"),
         fetchWithAuth("/api/user/consultations"),
       ]);
 
