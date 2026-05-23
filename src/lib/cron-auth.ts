@@ -4,7 +4,7 @@ import { getConfig } from "@/lib/ssm-config";
 
 const BEARER_PREFIX = "Bearer ";
 
-function safeEqual(a: string, b: string): boolean {
+export function safeEqual(a: string, b: string): boolean {
   const aBuf = Buffer.from(a, "utf-8");
   const bBuf = Buffer.from(b, "utf-8");
   if (aBuf.length !== bBuf.length) return false;
