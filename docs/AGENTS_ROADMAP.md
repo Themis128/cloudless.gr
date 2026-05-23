@@ -44,13 +44,19 @@ Trade-off: lost the typewriter streaming effect on responses that *use* a tool �
 
 Detail: see [`docs/ANTHROPIC.md`](ANTHROPIC.md#tools-phase-2a-of-docsagents_roadmapmd) for the loop diagram and tool table.
 
-### Phase 2b — booking agent
+### Phase 2b — booking agent — SHIPPED
 
-A new `/api/agent/book` endpoint that takes natural-language intent ("schedule me for next Tuesday afternoon, 30 min") and creates the calendar event + sends the confirmation email. Internally calls `check_calendar_availability` + `create_calendar_event` + `send_email` tools.
+`POST /api/agent/book` takes natural-language intent ("schedule me for next Tuesday afternoon, 30 min") and runs a Bedrock tool-use loop with two tools (`check_calendar_availability`, `propose_slot`) to pick exactly one open slot. Two-phase:
 
-This needs more guardrails — auth required (Cognito), email/calendar tools limited to the authenticated user's address, and a confirm step before the agent fires the email.
+1. **Propose** — `POST { intent }` → `{ status: "proposed", proposed: { start, end, formatted }, reasoning }` (or `no_match`). Model never books on its own.
+2. **Confirm** — `POST { confirm: true, start, end, notes? }` → re-checks slot is free, creates the Google Calendar event with a Meet link, posts to Slack, emails confirmation.
 
-Skip this until Phase 2a has soaked for two weeks.
+Guardrails:
+- Auth required (Cognito ID token via Bearer). Email is forced to the authenticated user's email — the model cannot override it.
+- Rate-limited 5 / 10 min per IP for both propose and confirm.
+- Re-checks availability at confirm time (409 if slot no longer free).
+
+Implementation: `src/lib/agent-book.ts` + `src/app/api/agent/book/route.ts`. Tests in `__tests__/agent-book-api.test.ts`.
 
 ### Phase 2c — admin assistant
 
