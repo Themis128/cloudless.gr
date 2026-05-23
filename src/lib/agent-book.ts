@@ -35,6 +35,9 @@ const MAX_TOKENS = 400;
 const MAX_TOOL_ITERATIONS = 4;
 const MAX_SLOT_RESULTS = 8;
 
+const STATUS_PROPOSED = "proposed" as const;
+const STATUS_NO_MATCH = "no_match" as const;
+
 const SYSTEM_PROMPT = `You are the Cloudless scheduling agent. Your single job is to read the visitor's natural-language scheduling intent and pick ONE specific 30-minute consultation slot that best matches it.
 
 Workflow:
@@ -133,8 +136,8 @@ export interface ProposedSlot {
 }
 
 export type ProposeResult =
-  | { status: "proposed"; proposed: ProposedSlot; reasoning: string }
-  | { status: "no_match"; reasoning: string };
+  | { status: typeof STATUS_PROPOSED; proposed: ProposedSlot; reasoning: string }
+  | { status: typeof STATUS_NO_MATCH; reasoning: string };
 
 /**
  * Returns true when the slot lib + Bedrock are wired up.
@@ -187,10 +190,10 @@ export async function proposeBookingSlot(
       const reasoning =
         typeof input.reasoning === "string" ? input.reasoning : "";
       if (!start || !end) {
-        return { status: "no_match", reasoning: reasoning || "No matching slot." };
+        return { status: STATUS_NO_MATCH, reasoning: reasoning || "No matching slot." };
       }
       return {
-        status: "proposed",
+        status: STATUS_PROPOSED,
         proposed: { start, end, formatted: formatAthensSlot(start, end) },
         reasoning,
       };
@@ -204,7 +207,7 @@ export async function proposeBookingSlot(
         .join(" ")
         .trim();
       return {
-        status: "no_match",
+        status: STATUS_NO_MATCH,
         reasoning: textOut || "Model did not propose a slot.",
       };
     }
@@ -233,7 +236,7 @@ export async function proposeBookingSlot(
   }
 
   return {
-    status: "no_match",
+    status: STATUS_NO_MATCH,
     reasoning: "Agent exceeded its iteration budget without proposing a slot.",
   };
 }

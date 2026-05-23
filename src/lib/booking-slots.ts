@@ -11,21 +11,22 @@ export const MAX_DAYS_AHEAD = 14;
 export const DEFAULT_DAYS_AHEAD = 7;
 
 const ATHENS_TZ = "Europe/Athens";
+const TWO_DIGIT = "2-digit" as const;
 
 const ATHENS_DATE_FORMAT: Intl.DateTimeFormatOptions = {
   timeZone: ATHENS_TZ,
   weekday: "short",
   month: "short",
   day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
+  hour: TWO_DIGIT,
+  minute: TWO_DIGIT,
   hour12: false,
 };
 
 const ATHENS_TIME_ONLY_FORMAT: Intl.DateTimeFormatOptions = {
   timeZone: ATHENS_TZ,
-  hour: "2-digit",
-  minute: "2-digit",
+  hour: TWO_DIGIT,
+  minute: TWO_DIGIT,
   hour12: false,
 };
 

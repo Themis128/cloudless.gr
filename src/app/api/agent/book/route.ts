@@ -151,7 +151,7 @@ async function handleConfirm(
 
     const slotLabel = formatAthensSlot(body.start, body.end);
 
-    void slackBookingNotify({
+    slackBookingNotify({
       name: userName,
       email: userEmail,
       start: body.start,
@@ -160,7 +160,7 @@ async function handleConfirm(
     }).catch((err) =>
       console.warn("[agent-book] slackBookingNotify failed:", err),
     );
-    void sendBookingConfirmation({
+    sendBookingConfirmation({
       name: userName,
       email: userEmail,
       slotLabel,
