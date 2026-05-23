@@ -26,8 +26,8 @@ permissions:
 jobs:
   preview:
     name: Deploy Preview
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    timeout-minutes: 40
 
     steps:
       - uses: actions/checkout@v4
