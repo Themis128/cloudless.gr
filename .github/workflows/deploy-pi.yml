@@ -3,10 +3,18 @@ name: Deploy to Pi (ECR + k3s rollout)
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "**.md"
-      - ".claude/**"
-      - "docs/**"
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'next.config.ts'
+      - 'patches/**'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/deploy-pi.yml'
+      - '.github/workflows/build-pi-image.yml'
   workflow_dispatch:
 
 concurrency:
@@ -30,7 +38,7 @@ jobs:
     # GitHub-hosted native arm64 runner — no QEMU, and no build load on the Pi.
     runs-on: ubuntu-24.04-arm
     outputs:
-      sha: ${{ github.sha }}
+      short_sha: ${{ steps.check_ecr.outputs.short_sha }}
       image_exists: ${{ steps.check_ecr.outputs.exists }}
 
     steps:
@@ -49,18 +57,20 @@ jobs:
       - name: Check if image tag already exists in ECR
         id: check_ecr
         run: |
+          SHORT_SHA="${GITHUB_SHA::12}"
           if aws ecr describe-images \
             --repository-name ${{ env.ECR_REPOSITORY }} \
-            --image-ids imageTag=${{ github.sha }} \
+            --image-ids imageTag="${SHORT_SHA}" \
             --region ${{ env.AWS_REGION }} \
             --query 'imageDetails[0].imageTags' \
-            --output text 2>/dev/null | grep -q "${{ github.sha }}"; then
+            --output text 2>/dev/null | grep -q "${SHORT_SHA}"; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Image ${{ github.sha }} already in ECR — skipping build."
+            echo "Image ${SHORT_SHA} already in ECR — skipping build."
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Image ${{ github.sha }} not found — will build and push."
+            echo "Image ${SHORT_SHA} not found — will build and push."
           fi
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU (arm64 emulation)
         if: steps.check_ecr.outputs.exists != 'true'
@@ -85,7 +95,7 @@ jobs:
           push: true
           # SHA tag only — ECR has immutable tags, :latest is never pushed.
           # Rollout uses kubectl set image with this SHA for pinned, reproducible deploys.
-          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.check_ecr.outputs.short_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -103,7 +113,7 @@ jobs:
         run: |
           aws ssm put-parameter \
             --name "/cloudless/production/current-image-sha" \
-            --value "${{ github.sha }}" \
+            --value "${{ steps.check_ecr.outputs.short_sha }}" \
             --type String --overwrite
 
 
@@ -139,7 +149,7 @@ jobs:
       - name: Set image and roll out
         run: |
           kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
-            ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.sha }} \
+            ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.short_sha }} \
             -n ${{ env.K3S_NAMESPACE }}
           kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} \
             -n ${{ env.K3S_NAMESPACE }} --timeout=420s
