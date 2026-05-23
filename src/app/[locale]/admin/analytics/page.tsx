@@ -123,15 +123,15 @@ function positionColor(pos: number | null | undefined): string {
 
 function ctrColor(ctr: number | null | undefined): string {
   if (ctr == null) return "text-slate-500";
-  if (ctr >= 0.1) return "text-neon-green";
-  if (ctr >= 0.05) return "text-neon-cyan";
-  if (ctr >= 0.02) return "text-yellow-400";
+  if (ctr >= 10) return "text-neon-green";
+  if (ctr >= 5) return "text-neon-cyan";
+  if (ctr >= 2) return "text-yellow-400";
   return "text-slate-500";
 }
 
 function pct(v: number | undefined | null): string {
   if (v == null) return "—";
-  return `${(v * 100).toFixed(1)}%`;
+  return `${v.toFixed(1)}%`;
 }
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────

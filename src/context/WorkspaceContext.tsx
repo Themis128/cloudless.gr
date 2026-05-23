@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import type { Workspace } from "@/app/api/admin/workspaces/route";
 
 const LS_KEY = "cloudless_workspace_id";
@@ -15,6 +16,7 @@ const LS_KEY = "cloudless_workspace_id";
 interface WorkspaceContextValue {
   workspaces: Workspace[];
   current: Workspace | null;
+  loaded: boolean;
   switchTo: (id: string) => void;
   setWorkspaces: (ws: Workspace[]) => void;
 }
@@ -22,6 +24,7 @@ interface WorkspaceContextValue {
 const WorkspaceContext = createContext<WorkspaceContextValue>({
   workspaces: [],
   current: null,
+  loaded: false,
   switchTo: () => {},
   setWorkspaces: () => {},
 });
@@ -31,11 +34,28 @@ export function WorkspaceProvider({
 }: Readonly<{ children: React.ReactNode }>) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored) setCurrentId(stored);
+  }, []);
+
+  useEffect(() => {
+    fetchWithAuth("/api/admin/workspaces")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.workspaces?.length) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setWorkspaces(data.workspaces as Workspace[]);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setLoaded(true);
+      });
   }, []);
 
   // Auto-select first workspace once the list arrives if nothing is selected.
@@ -61,8 +81,8 @@ export function WorkspaceProvider({
     workspaces.find((w) => w.id === currentId) ?? workspaces[0] ?? null;
 
   const value = useMemo(
-    () => ({ workspaces, current, switchTo, setWorkspaces }),
-    [workspaces, current, switchTo, setWorkspaces],
+    () => ({ workspaces, current, loaded, switchTo, setWorkspaces }),
+    [workspaces, current, loaded, switchTo, setWorkspaces],
   );
 
   return (
