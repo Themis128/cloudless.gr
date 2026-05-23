@@ -71,6 +71,13 @@ function normalizeNotes(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function resolveUserName(claim: string | undefined, email: string): string {
+  if (claim && claim.length > 0) return claim;
+  const localPart = email.split("@")[0];
+  if (localPart.length > 0) return localPart;
+  return "Cloudless User";
+}
+
 async function handlePropose(
   body: ProposeBody,
   ip: string,
@@ -200,10 +207,7 @@ export async function POST(request: NextRequest) {
       "Authenticated token is missing an email claim — cannot book.",
     );
   }
-  const userName =
-    auth.user["cognito:username"] ||
-    userEmail.split("@")[0] ||
-    "Cloudless User";
+  const userName = resolveUserName(auth.user["cognito:username"], userEmail);
 
   if (!(await isAgentBookConfigured())) {
     return jsonError(503, "Booking is not configured.");
