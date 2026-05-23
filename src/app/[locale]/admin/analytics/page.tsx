@@ -412,7 +412,7 @@ export default function AdminAnalyticsPage() {
                   />
                   <StatCard
                     label="Avg Position"
-                    value={snapshot ? snapshot.position.toFixed(1) : "—"}
+                    value={snapshot ? (snapshot.avgPosition ?? 0).toFixed(1) : "—"}
                     accent="text-yellow-400"
                   />
                 </div>
