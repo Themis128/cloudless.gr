@@ -19,7 +19,7 @@ env:
 jobs:
   validate:
     name: Validate Notion DB schemas
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
 
     steps:
       - uses: actions/checkout@v4

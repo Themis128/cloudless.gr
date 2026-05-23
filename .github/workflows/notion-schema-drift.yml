@@ -25,7 +25,7 @@ concurrency:
 jobs:
   drift:
     name: notion-schema-sync --dry-run
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     steps:
       - uses: actions/checkout@v4
 
