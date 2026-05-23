@@ -91,33 +91,35 @@ The existing runner (`~/actions-runner`, labels `omv,pi`) stays put. We add a
 second runner (`~/actions-runner-build`, labels `omv,build`) so cluster jobs
 and generic jobs don't queue behind each other.
 
-On each of `omv`, `omv-2`, `omv-3`:
+On each Pi host (`omv` = omv-main Pi 5, `omv-ha` = secondary):
 
 1. Generate a registration token at
    <https://github.com/Themis128/cloudless.gr/settings/actions/runners> →
-   **New self-hosted runner**.
+   **New self-hosted runner** (or via CLI: `gh api -X POST repos/Themis128/cloudless.gr/actions/runners/registration-token --jq '.token'`).
 2. Run the bootstrap script (token expires in 1 hour, so do it inline):
    ```bash
    ./.github/scripts/register-build-runner.sh <REG_TOKEN> omv-build
    #                                                       omv-2-build
-   #                                                       omv-3-build
    ```
-3. Verify all six runners online:
+   The script handles download, config, systemd install, and start in one shot.
+   For hosts without `gh` installed, rsync the binaries from omv-main first:
+   ```bash
+   # On omv-main:
+   rsync -a --exclude '_work' --exclude '_diag' ~/actions-runner-build/ tbaltzakis@192.168.1.130:~/actions-runner-build/
+   ```
+3. Verify all runners online:
    ```bash
    gh api repos/Themis128/cloudless.gr/actions/runners \
      --jq '.runners[] | {name, status, labels: [.labels[].name]}'
    ```
 
-You should end up with two runners per host:
+Current active fleet (as of 2026-05-23):
 
-| Host  | Runner name   | Labels                                  |
-| ----- | ------------- | --------------------------------------- |
-| omv   | `omv`         | `self-hosted, Linux, ARM64, omv, pi`    |
-| omv   | `omv-build`   | `self-hosted, Linux, ARM64, omv, build` |
-| omv-2 | `omv-2`       | `self-hosted, Linux, ARM64, omv, pi`    |
-| omv-2 | `omv-2-build` | `self-hosted, Linux, ARM64, omv, build` |
-| omv-3 | `omv-3`       | `self-hosted, Linux, ARM64, omv, pi`    |
-| omv-3 | `omv-3-build` | `self-hosted, Linux, ARM64, omv, build` |
+| Host     | IP              | Runner name   | Labels                                  | Status  |
+| -------- | --------------- | ------------- | --------------------------------------- | ------- |
+| omv-main | 192.168.1.128   | `omv`         | `self-hosted, Linux, ARM64, omv, pi`    | online  |
+| omv-main | 192.168.1.128   | `omv-build`   | `self-hosted, Linux, ARM64, omv, build` | online  |
+| omv-ha   | 192.168.1.130   | `omv-2-build` | `self-hosted, Linux, ARM64, omv, build` | online  |
 
 The `pi` label is reserved for cluster-bound jobs (the `build-and-push` job in
 `deploy-pi.yml`) and must never overlap with `build` — that gating is what
