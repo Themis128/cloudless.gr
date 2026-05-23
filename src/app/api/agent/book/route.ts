@@ -16,7 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { isAgentBookConfigured, proposeBookingSlot } from "@/lib/agent-book";
-import { formatAthensSlot } from "@/lib/booking-slots";
+import { MAX_DAYS_AHEAD, formatAthensSlot } from "@/lib/booking-slots";
 import { bookConsultation, getAvailableSlots } from "@/lib/google-calendar";
 import { slackBookingNotify } from "@/lib/slack-notify";
 import { sendBookingConfirmation } from "@/lib/email";
@@ -137,7 +137,7 @@ async function handleConfirm(
     1,
     Math.ceil((startD.getTime() - Date.now()) / 86_400_000) + 1,
   );
-  const free = await getAvailableSlots(Math.min(daysAhead, 14));
+  const free = await getAvailableSlots(Math.min(daysAhead, MAX_DAYS_AHEAD));
   const stillFree = free.some((s) => {
     const sStart = new Date(s.start).getTime();
     return Math.abs(sStart - startD.getTime()) <= SLOT_OVERLAP_TOLERANCE_MS;
