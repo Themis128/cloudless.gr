@@ -1,4 +1,5 @@
 name: CI
+# runner: self-hosted via vars.RUNNER_GENERIC (toggle-runner.sh pi|hosted)
 
 on:
   pull_request:
