@@ -142,7 +142,7 @@ function resolveProposeBlock(block: ToolUseBlock): ProposeResult {
   if (!start || !end) {
     return {
       status: STATUS_NO_MATCH,
-      reasoning: reasoning || "No matching slot.",
+      reasoning: reasoning.length > 0 ? reasoning : "No matching slot.",
     };
   }
   return {
@@ -238,7 +238,8 @@ export async function proposeBookingSlot(
         .trim();
       return {
         status: STATUS_NO_MATCH,
-        reasoning: textOut || "Model did not propose a slot.",
+        reasoning:
+          textOut.length > 0 ? textOut : "Model did not propose a slot.",
       };
     }
 
