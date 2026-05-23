@@ -12,8 +12,8 @@
  * Returns the synced device id(s) or the cached snapshot list.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
 import { requireAdmin } from "@/lib/api-auth";
+import { safeEqual } from "@/lib/cron-auth";
 import {
   isEsp32NotionConfigured,
   getEsp32NotionConfig,
@@ -58,8 +58,7 @@ export async function POST(request: NextRequest) {
   const isCron =
     cronSecret &&
     headerSecret &&
-    headerSecret.length === cronSecret.length &&
-    timingSafeEqual(Buffer.from(headerSecret), Buffer.from(cronSecret));
+    safeEqual(headerSecret, cronSecret);
 
   if (!isCron) {
     const auth = await requireAdmin(request);
