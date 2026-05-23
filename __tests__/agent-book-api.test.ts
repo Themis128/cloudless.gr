@@ -33,8 +33,7 @@ vi.mock("@/lib/agent-book", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
-    proposeBookingSlot: (...args: unknown[]) =>
-      mockProposeBookingSlot(...args),
+    proposeBookingSlot: (...args: unknown[]) => mockProposeBookingSlot(...args),
     isAgentBookConfigured: (...args: unknown[]) =>
       mockIsAgentBookConfigured(...args),
   };

@@ -232,8 +232,7 @@ export async function proposeBookingSlot(
       // Model returned plain text without proposing — treat as no_match.
       const textOut = assistantContent
         .filter(
-          (b): b is TextBlock =>
-            "text" in b && typeof b.text === "string",
+          (b): b is TextBlock => "text" in b && typeof b.text === "string",
         )
         .map((b) => b.text)
         .join(" ")
