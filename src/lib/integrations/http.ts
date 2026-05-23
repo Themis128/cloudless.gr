@@ -191,7 +191,10 @@ export async function integrationFetchWithMeta<T = unknown>(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const reqInit: RequestInit = {
       ...init,
-      signal: init?.signal ?? AbortSignal.timeout(timeoutMs),
+      // Always create a fresh timeout signal per attempt. Reusing a
+      // caller-supplied signal that already aborted would cause every
+      // retry to fail immediately without any network attempt.
+      signal: AbortSignal.timeout(timeoutMs),
     };
 
     let res: Response;

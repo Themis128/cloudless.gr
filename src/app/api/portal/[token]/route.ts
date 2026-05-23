@@ -103,11 +103,18 @@ export async function GET(
     };
   });
 
-  // Fetch Notion projects
+  // Fetch Notion projects scoped to this client.
+  // listProjects() returns all projects; filter client-type ones whose owner
+  // matches the portal email so other clients' data is never returned.
   const projects = await safeCall(async () => {
     if (!cfg.NOTION_API_KEY || !cfg.NOTION_PROJECTS_DB_ID) return null;
     const { listProjects } = await import("@/lib/notion-projects");
-    return await listProjects();
+    const all = await listProjects();
+    const clientEmail = portal.clientEmail.toLowerCase();
+    return all.filter(
+      (p) =>
+        p.type === "Client" && p.owner.toLowerCase() === clientEmail,
+    );
   });
 
   return NextResponse.json({

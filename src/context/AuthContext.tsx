@@ -185,17 +185,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { getCurrentUser, fetchAuthSession } =
         await import("aws-amplify/auth");
-      const [currentUser, session] = await Promise.all([
-        getCurrentUser(),
-        fetchAuthSession(),
-      ]);
+      const currentUser = await getCurrentUser();
       const email = currentUser.signInDetails?.loginId;
       const profile = await loadUserProfile(currentUser.username, email);
-      const idToken = session.tokens?.idToken?.toString();
-      const groups = idToken
-        ? ((decodeJwtPayload(idToken)["cognito:groups"] as string[]) ?? [])
-        : [];
       setUser(profile);
+      // Fetch the session separately so a transient token-refresh failure
+      // doesn't clear an already-authenticated user's admin status.
+      let groups: string[] = [];
+      try {
+        const session = await fetchAuthSession();
+        const idToken = session.tokens?.idToken?.toString();
+        if (idToken) {
+          groups =
+            (decodeJwtPayload(idToken)["cognito:groups"] as string[]) ?? [];
+        }
+      } catch {
+        // Session fetch failed (network blip). Keep existing admin state if
+        // already set; otherwise default to non-admin.
+        groups = [];
+      }
       setIsAdmin(groups.includes("admin"));
     } catch {
       setUser(null);
