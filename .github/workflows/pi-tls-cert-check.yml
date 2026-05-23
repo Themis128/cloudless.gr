@@ -28,7 +28,7 @@ name: Pi TLS Cert Check
 
 on:
   schedule:
-    - cron: '30 */6 * * *'
+    - cron: "30 */6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -38,14 +38,14 @@ env:
   # APIGW custom domain backing the SECONDARY failover (apex). The www
   # variant has its own custom domain (d-2msx2z5q7d.execute-api...);
   # apex covers the canonical traffic.
-  APIGW_HOST: 'd-uy6dmk95il.execute-api.us-east-1.amazonaws.com'
-  SNI: 'cloudless.gr'
+  APIGW_HOST: "d-uy6dmk95il.execute-api.us-east-1.amazonaws.com"
+  SNI: "cloudless.gr"
   MIN_DAYS_REMAINING: 14
 
 jobs:
   probe:
     name: Probe SECONDARY failover
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 3
     steps:
       - name: TLS handshake + cert validity

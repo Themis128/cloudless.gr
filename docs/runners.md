@@ -1,0 +1,144 @@
+# CI Runner Failover
+
+GitHub Actions has no native runner failover — when GitHub-hosted billing
+breaks or hosted capacity is exhausted, `runs-on: ubuntu-latest` jobs are
+rejected by the GitHub control plane _before_ any YAML runs, so a workflow
+cannot self-detect or recover from it.
+
+This repo gets the same practical result by combining:
+
+1. A **repo variable** (`RUNNER_GENERIC`) that resolves into the `runs-on`
+   field at queue time via `fromJSON()`.
+2. A **second runner profile** on each Pi host (labels `omv,build`),
+   running alongside the existing `pi`-labelled cluster runner.
+3. A **one-command toggle** that flips every instrumented workflow between
+   GitHub-hosted and Pi-hosted runners.
+
+## How the toggle works
+
+Instrumented workflows declare:
+
+```yaml
+runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+```
+
+| `RUNNER_GENERIC` value          | Effective `runs-on`               |
+| ------------------------------- | --------------------------------- |
+| _unset_ (default)               | `ubuntu-latest`                   |
+| `["self-hosted","omv","build"]` | self-hosted Pi build runners      |
+| `["self-hosted","omv","foo"]`   | any matching label set you define |
+
+`fromJSON('"ubuntu-latest"')` resolves to the string literal; `fromJSON('[...]')`
+resolves to the array. Both shapes are accepted by `runs-on`.
+
+## Toggling
+
+```bash
+# Show current state + runner inventory
+.github/scripts/toggle-runner.sh status
+
+# Route generic jobs to the Pi build runners
+.github/scripts/toggle-runner.sh pi
+
+# Route them back to ubuntu-latest (clears the variable)
+.github/scripts/toggle-runner.sh hosted
+```
+
+**Already-queued jobs are not re-routed** — cancel and re-run them after
+flipping. New runs pick up the new value immediately.
+
+## Workflows opted in
+
+These read `vars.RUNNER_GENERIC` and fail over automatically:
+
+- `ci.yml` (lint, typecheck, format, build, test)
+- `deploy-pi.yml` (the `rollout` job — `build-and-push` stays pinned to `[self-hosted, omv, pi]`)
+- `ha-sync-orchestrator.yml`
+- `labeler.yml`
+- `links-audit.yml`
+- `pi-tls-cert-check.yml`
+- `pr-review.yml`
+- `secret-scan.yml`
+- `sha-drift-detector.yml`
+- `sha-drift-watchdog.yml`
+
+## Workflows that stay GitHub-hosted
+
+These pin `runs-on: ubuntu-latest` because they need x86_64, a system
+Chromium, more RAM than a Pi 4/5 has, or do not converge in a sensible
+time on ARM:
+
+- `deploy.yml` (SST → AWS Lambda) — tried failover on 2026-05-23 in run
+  [`26321031309`](https://github.com/Themis128/cloudless.gr/actions/runs/26321031309);
+  the `Deploy (SST)` step hung past the 40 min job timeout on the omv
+  Pi runner. SST + CDK synth + Sentry sourcemap upload don't fit on ARM
+  under cold-deploy conditions. **Lesson:** "mostly network-bound" was
+  the wrong heuristic — sourcemap upload alone is multi-hundred-MB
+  through Sentry's API and CDK synth is CPU-heavy on cold cache. When
+  billing is broken this workflow goes red and `cloudless.gr` (Lambda)
+  cannot be updated until billing is fixed. `cloudless.online` (Pi/k3s)
+  stays deployable via `deploy-pi.yml` and is the documented failover
+  surface, so user-visible features still ship through the secondary.
+- `lighthouse.yml` — needs system Chrome; ARM has no official Chromium binary in the runner image.
+- `k3s-e2e.yml` — Playwright + browser deps; runs against the live Pi standby so adding Pi-side load is also counterproductive.
+- `codeql.yml` — heavy memory + x86_64 analyzer.
+
+When billing is broken, these stay red until billing is fixed.
+
+## Setting up the second runner profile on each Pi host
+
+The existing runner (`~/actions-runner`, labels `omv,pi`) stays put. We add a
+second runner (`~/actions-runner-build`, labels `omv,build`) so cluster jobs
+and generic jobs don't queue behind each other.
+
+On each of `omv`, `omv-2`, `omv-3`:
+
+1. Generate a registration token at
+   <https://github.com/Themis128/cloudless.gr/settings/actions/runners> →
+   **New self-hosted runner**.
+2. Run the bootstrap script (token expires in 1 hour, so do it inline):
+   ```bash
+   ./.github/scripts/register-build-runner.sh <REG_TOKEN> omv-build
+   #                                                       omv-2-build
+   #                                                       omv-3-build
+   ```
+3. Verify all six runners online:
+   ```bash
+   gh api repos/Themis128/cloudless.gr/actions/runners \
+     --jq '.runners[] | {name, status, labels: [.labels[].name]}'
+   ```
+
+You should end up with two runners per host:
+
+| Host  | Runner name   | Labels                                  |
+| ----- | ------------- | --------------------------------------- |
+| omv   | `omv`         | `self-hosted, Linux, ARM64, omv, pi`    |
+| omv   | `omv-build`   | `self-hosted, Linux, ARM64, omv, build` |
+| omv-2 | `omv-2`       | `self-hosted, Linux, ARM64, omv, pi`    |
+| omv-2 | `omv-2-build` | `self-hosted, Linux, ARM64, omv, build` |
+| omv-3 | `omv-3`       | `self-hosted, Linux, ARM64, omv, pi`    |
+| omv-3 | `omv-3-build` | `self-hosted, Linux, ARM64, omv, build` |
+
+The `pi` label is reserved for cluster-bound jobs (the `build-and-push` job in
+`deploy-pi.yml`) and must never overlap with `build` — that gating is what
+keeps a future non-Pi host added to the `omv` group from accidentally taking
+a deploy job it can't run.
+
+## Caveat: Pi runners share resources with production
+
+Pi 4/5 hosts also run the `cloudless` k3s pod that serves `cloudless.online`.
+Heavy CI concurrency on the `build` runner will degrade prod latency. If you
+flip to `pi` mode for more than a short outage window, consider:
+
+- A `nice -n 19` wrapper on the runner systemd unit
+- `cpuset.cpus` cgroup limit on the runner service
+- Reducing CI concurrency by setting a smaller `jobs.<id>.strategy.max-parallel`
+
+For a short billing-block outage, none of this is needed — flip, ship the
+critical PR, flip back.
+
+## References
+
+- [GitHub Docs — Choosing the runner for a job](https://docs.github.com/en/actions/using-jobs/choosing-the-runner-for-a-job)
+- [GitHub Docs — Configuring the self-hosted runner application as a service](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/configuring-the-self-hosted-runner-application-as-a-service)
+- [GitHub Community — Dynamic runs-on labelling (Discussion #49302)](https://github.com/orgs/community/discussions/49302)

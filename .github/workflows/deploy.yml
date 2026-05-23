@@ -4,15 +4,15 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/**'
-      - '__tests__/**'
-      - 'public/**'
-      - 'sst.config.ts'
-      - 'next.config.ts'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'tsconfig.json'
-      - '.github/workflows/**'
+      - "src/**"
+      - "__tests__/**"
+      - "public/**"
+      - "sst.config.ts"
+      - "next.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig.json"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 concurrency:
@@ -27,6 +27,11 @@ permissions:
 jobs:
   deploy:
     name: Deploy
+    # Pinned to ubuntu-latest. SST + CDK synth + Sentry sourcemap upload
+    # do not fit on an ARM Pi runner under cold-deploy conditions — the
+    # Deploy (SST) step hung past the 40 min timeout when we tried the
+    # failover pattern here (2026-05-23, run 26321031309). See
+    # docs/runners.md "Workflows that stay GitHub-hosted".
     runs-on: ubuntu-latest
     timeout-minutes: 40
     environment:

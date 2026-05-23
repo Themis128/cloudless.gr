@@ -24,7 +24,7 @@ concurrency:
 jobs:
   links:
     name: Markdown Link Checker
-    runs-on: [self-hosted, omv, pi]
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +37,6 @@ jobs:
             --accept 200,206,301,302,303,307,308,429,503
             --exclude "^https://claude.ai/code/routines$"
             --exclude "^https://claude.ai/code/routines/.*$"
-            --exclude "^https://github\.com/[^/]+/[^/]+/settings/"
             "README.md"
             "docs/**/*.md"
             ".github/**/*.md"

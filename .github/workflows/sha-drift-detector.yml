@@ -14,12 +14,12 @@ on:
     # Every 6h on the half-hour (00:30, 06:30, 12:30, 18:30 UTC).
     # Spaced 15 min off the Pi TLS cert check so they don't share a
     # runner slot.
-    - cron: '45 */6 * * *'
+    - cron: "45 */6 * * *"
   workflow_dispatch:
   workflow_run:
     # Also after a deploy completes — gives the most useful signal
     # (right when convergence should be happening).
-    workflows: ['HA sync orchestrator']
+    workflows: ["HA sync orchestrator"]
     types: [completed]
 
 permissions:
@@ -33,7 +33,10 @@ concurrency:
 jobs:
   detect:
     name: detect-sha-drift
-    runs-on: [self-hosted, omv, pi]
+    # Failover-capable: defaults to ubuntu-latest. Flip via
+    #   .github/scripts/toggle-runner.sh pi
+    # to route onto the self-hosted build runners when billing is broken.
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
