@@ -23,7 +23,7 @@ concurrency:
 jobs:
   dependency-review:
     name: Dependency Risk Review
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4

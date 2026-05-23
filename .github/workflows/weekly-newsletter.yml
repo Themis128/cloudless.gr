@@ -18,7 +18,7 @@ permissions:
 jobs:
   publish:
     name: Publish approved posts and send newsletter
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 15
 
     env:
