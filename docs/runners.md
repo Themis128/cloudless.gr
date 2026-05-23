@@ -66,7 +66,6 @@ These read `vars.RUNNER_GENERIC` and fail over automatically:
 - `structured-data-audit.yml`
 - `seo-hygiene.yml`
 - `mcp-security-scan.yml` (pure JS/TS scanner, ARM-safe; informational-only via `continue-on-error: true`)
-- `a11y-audit.yml` (Playwright + axe; runs against ARM64 Chromium on Pi)
 - `codeql.yml` (CodeQL CLI v4 supports linux-arm64 for JS/TS analysis)
 - `preview.yml` (SST/CDK — prior Pi attempt in run [`26321031309`] hung past timeout under cold-deploy; retrying with 40-min timeout)
 
@@ -89,6 +88,7 @@ time on ARM:
   surface, so user-visible features still ship through the secondary.
 - `lighthouse.yml` — needs system Chrome; ARM has no official Chromium binary in the runner image.
 - `k3s-e2e.yml` — Playwright + browser deps; runs against the live Pi standby so adding Pi-side load is also counterproductive.
+- `a11y-audit.yml` — tried failover on 2026-05-23 in run [`26341722748`](https://github.com/Themis128/cloudless.gr/actions/runs/26341722748/job/77544838049); ran for 11 minutes on the omv-build Pi runner and failed. Playwright + Chromium accessibility checks need x86_64 Chrome behaviour; the ARM64 Chromium build does not produce the same axe-core results consistently. Pinned back to ubuntu-latest.
 
 When billing is broken, these stay red until billing is fixed.
 
