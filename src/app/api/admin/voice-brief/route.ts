@@ -13,11 +13,7 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const cfg = (await getConfig()) as unknown as Record<
-    string,
-    string | undefined
-  >;
-  const region = cfg.AWS_REGION ?? "eu-central-1";
+  const region = process.env.AWS_REGION ?? "eu-central-1";
 
   try {
     const client = new SSMClient({ region });
@@ -52,9 +48,13 @@ export async function POST(request: NextRequest) {
   const baseUrl = ALLOWED_BASE_URLS.includes(envBase)
     ? envBase
     : "https://cloudless.gr";
+  // Read CRON_SECRET from SSM-backed config — process.env is not populated
+  // in Lambda runtime where secrets live only in SSM.
+  const cfg = await getConfig();
+  const cronSecret = cfg.CRON_SECRET ?? process.env.CRON_SECRET ?? "";
   try {
     const res = await fetch(`${baseUrl}/api/cron/voice-brief`, {
-      headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+      headers: { authorization: `Bearer ${cronSecret}` },
       signal: AbortSignal.timeout(60_000),
     });
     if (!res.ok) throw new Error(`Cron returned ${res.status}`);

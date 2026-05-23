@@ -12,6 +12,7 @@
  * Returns the synced device id(s) or the cached snapshot list.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { requireAdmin } from "@/lib/api-auth";
 import {
   isEsp32NotionConfigured,
@@ -54,7 +55,11 @@ export async function POST(request: NextRequest) {
   // the shared secret. Cron path is used by cron-invoker.ts in Lambda.
   const cronSecret = process.env.CRON_SECRET;
   const headerSecret = request.headers.get("x-cron-secret");
-  const isCron = cronSecret && headerSecret && headerSecret === cronSecret;
+  const isCron =
+    cronSecret &&
+    headerSecret &&
+    headerSecret.length === cronSecret.length &&
+    timingSafeEqual(Buffer.from(headerSecret), Buffer.from(cronSecret));
 
   if (!isCron) {
     const auth = await requireAdmin(request);
