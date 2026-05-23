@@ -27,10 +27,12 @@ permissions:
 jobs:
   deploy:
     name: Deploy
-    # Failover-capable: flip via `.github/scripts/toggle-runner.sh pi`
-    # when hosted billing is down. SST deploy is mostly network-bound (S3, CFN
-    # waits) so a Pi runner is acceptable as a last resort.
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    # Pinned to ubuntu-latest. SST + CDK synth + Sentry sourcemap upload
+    # do not fit on an ARM Pi runner under cold-deploy conditions — the
+    # Deploy (SST) step hung past the 40 min timeout when we tried the
+    # failover pattern here (2026-05-23, run 26321031309). See
+    # docs/runners.md "Workflows that stay GitHub-hosted".
+    runs-on: ubuntu-latest
     timeout-minutes: 40
     environment:
       name: production
