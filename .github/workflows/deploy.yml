@@ -32,7 +32,7 @@ jobs:
     # Deploy (SST) step hung past the 40 min timeout when we tried the
     # failover pattern here (2026-05-23, run 26321031309). See
     # docs/runners.md "Workflows that stay GitHub-hosted".
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 40
     environment:
       name: production
