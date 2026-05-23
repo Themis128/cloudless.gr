@@ -69,6 +69,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
+        env:
+          NODE_OPTIONS: --max-old-space-size=3072
 
   format:
     name: Format Check
