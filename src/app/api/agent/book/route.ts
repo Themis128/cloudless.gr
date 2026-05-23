@@ -65,6 +65,12 @@ function jsonError(status: number, error: string) {
   return NextResponse.json({ error }, { status });
 }
 
+function normalizeNotes(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim().slice(0, MAX_NOTES_LENGTH);
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 async function handlePropose(
   body: ProposeBody,
   ip: string,
@@ -136,10 +142,7 @@ async function handleConfirm(
     );
   }
 
-  const notes =
-    typeof body.notes === "string"
-      ? body.notes.trim().slice(0, MAX_NOTES_LENGTH) || undefined
-      : undefined;
+  const notes = normalizeNotes(body.notes);
 
   try {
     const result = await bookConsultation({

@@ -219,8 +219,7 @@ export async function proposeBookingSlot(
 
     const toolUseBlocks = assistantContent.filter(
       (b): b is ToolUseBlock =>
-        "toolUse" in b &&
-        typeof (b as ToolUseBlock).toolUse?.toolUseId === "string",
+        "toolUse" in b && typeof b.toolUse?.toolUseId === "string",
     );
 
     // Terminal tool — propose_slot. Bind the result and return.
