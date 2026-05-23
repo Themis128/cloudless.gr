@@ -27,11 +27,9 @@ permissions:
 jobs:
   deploy:
     name: Deploy
-    # Intentionally NOT using RUNNER_GENERIC — SST + CDK synth + Sentry sourcemap
-    # upload hang on ARM Pi runners (timed out at 40 min, run 26321031309, 2026-05-23).
-    # This job stays on ubuntu-latest; it will be unavailable during billing locks.
-    # See docs/runners.md "Workflows that stay GitHub-hosted".
-    runs-on: ubuntu-latest
+    # RUNNER_GENERIC-capable. CDK synth previously hung on ARM (run 26321031309)
+    # due to Node heap exhaustion — fixed by NODE_OPTIONS on the Deploy step below.
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 40
     environment:
       name: production
@@ -107,6 +105,7 @@ jobs:
           SENTRY_ORG: baltzakisthemiscom
           SENTRY_PROJECT: cloudless-gr
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          NODE_OPTIONS: --max-old-space-size=3072
 
       - name: Publish current SHA to SSM (for Pi-side image pin)
         if: success()
