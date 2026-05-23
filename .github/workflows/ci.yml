@@ -4,27 +4,27 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'src/**'
-      - 'public/**'
-      - 'e2e/**'
-      - '__tests__/**'
-      - 'sst.config.ts'
-      - 'next.config.ts'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'tsconfig.json'
-      - 'mcp.json'
-      - '.mcp.json'
-      - '.github/workflows/**'
+      - "src/**"
+      - "public/**"
+      - "e2e/**"
+      - "__tests__/**"
+      - "sst.config.ts"
+      - "next.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig.json"
+      - "mcp.json"
+      - ".mcp.json"
+      - ".github/workflows/**"
       # Root-level config that affects build/lint/quality gates.
       # Without these, PRs editing only these files hang on the required
       # "Build" check because CI never triggers.
-      - '.codacy/**'
-      - '.sonarcloud.properties'
-      - '.eslintrc*'
-      - 'eslint.config.*'
-      - '.prettierrc*'
-      - 'prettier.config.*'
+      - ".codacy/**"
+      - ".sonarcloud.properties"
+      - ".eslintrc*"
+      - "eslint.config.*"
+      - ".prettierrc*"
+      - "prettier.config.*"
 
 concurrency:
   group: ci-${{ github.head_ref }}
@@ -36,7 +36,10 @@ permissions:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    # Failover-capable: defaults to ubuntu-latest. Flip via
+    #   .github/scripts/toggle-runner.sh pi
+    # when GH-hosted billing/capacity is broken.
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +55,7 @@ jobs:
 
   typecheck:
     name: Type Check
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -68,7 +71,7 @@ jobs:
 
   format:
     name: Format Check
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +87,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 30
     env:
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
@@ -108,7 +111,7 @@ jobs:
 
   test:
     name: Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4

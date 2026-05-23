@@ -4,15 +4,15 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/**'
-      - '__tests__/**'
-      - 'public/**'
-      - 'sst.config.ts'
-      - 'next.config.ts'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'tsconfig.json'
-      - '.github/workflows/**'
+      - "src/**"
+      - "__tests__/**"
+      - "public/**"
+      - "sst.config.ts"
+      - "next.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig.json"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 concurrency:
@@ -27,7 +27,10 @@ permissions:
 jobs:
   deploy:
     name: Deploy
-    runs-on: ubuntu-latest
+    # Failover-capable: flip via `.github/scripts/toggle-runner.sh pi`
+    # when hosted billing is down. SST deploy is mostly network-bound (S3, CFN
+    # waits) so a Pi runner is acceptable as a last resort.
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 40
     environment:
       name: production

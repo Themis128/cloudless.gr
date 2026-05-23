@@ -4,17 +4,17 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/**'
-      - 'public/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'next.config.ts'
-      - 'patches/**'
-      - 'Dockerfile'
-      - '.dockerignore'
-      - '.github/workflows/deploy-pi.yml'
-      - '.github/workflows/build-pi-image.yml'
+      - "src/**"
+      - "public/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "next.config.ts"
+      - "patches/**"
+      - "Dockerfile"
+      - ".dockerignore"
+      - ".github/workflows/deploy-pi.yml"
+      - ".github/workflows/build-pi-image.yml"
   workflow_dispatch:
 
 concurrency:
@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  id-token: write  # required for OIDC
+  id-token: write # required for OIDC
   contents: read
 
 env:
@@ -116,12 +116,17 @@ jobs:
             --value "${{ steps.check_ecr.outputs.short_sha }}" \
             --type String --overwrite
 
-
   rollout:
     name: Rollout restart on k3s
     # GH-hosted runner joins tailnet, uses KUBECONFIG_B64 to call k3s API
-    # directly over Tailscale — no SSH hop, no self-hosted runner dependency.
-    runs-on: ubuntu-latest
+    # directly over Tailscale — no SSH hop required.
+    # Failover-capable: when GH-hosted billing is broken, flip
+    #   .github/scripts/toggle-runner.sh pi
+    # to route this onto the self-hosted Pi build runners. The Pi runners are
+    # already inside the local network and can reach the k3s API directly
+    # (192.168.1.128:6443) without Tailscale, so the tailnet step becomes a
+    # no-op on them.
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     needs: build-and-push
     if: always() && needs.build-and-push.result != 'cancelled' && (needs.build-and-push.result == 'success' || needs.build-and-push.outputs.image_exists == 'true')
 

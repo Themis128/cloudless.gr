@@ -16,7 +16,10 @@ concurrency:
 jobs:
   review:
     name: Claude code review
-    runs-on: ubuntu-latest
+    # Failover-capable: defaults to ubuntu-latest. Flip via
+    #   .github/scripts/toggle-runner.sh pi
+    # when GH-hosted billing is broken.
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     # Skip bots, dependabot, and revert branches
     if: |
       github.actor != 'dependabot[bot]' &&
@@ -26,7 +29,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      id-token: write  # for OIDC → AWS (to fetch ANTHROPIC_API_KEY from SSM)
+      id-token: write # for OIDC → AWS (to fetch ANTHROPIC_API_KEY from SSM)
 
     steps:
       - uses: actions/checkout@v4
