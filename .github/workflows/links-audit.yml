@@ -37,6 +37,7 @@ jobs:
             --accept 200,206,301,302,303,307,308,429,503
             --exclude "^https://claude.ai/code/routines$"
             --exclude "^https://claude.ai/code/routines/.*$"
+            --exclude "^https://github\.com/[^/]+/[^/]+/settings/"
             "README.md"
             "docs/**/*.md"
             ".github/**/*.md"
