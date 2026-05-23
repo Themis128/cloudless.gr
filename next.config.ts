@@ -16,6 +16,17 @@ const nextConfig: NextConfig = {
   // For Docker builds (Pi HA standby): emit a self-contained .next/standalone
   // bundle. SST/Vercel deploys leave this unset.
   output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
+  // Turbopack (Next 16) fails to resolve `@smithy/core/*` subpath exports
+  // through pnpm's hoisted layout on Windows. Externalize the AWS SDK
+  // clients so Next uses Node's native resolver instead of bundling them.
+  serverExternalPackages: [
+    "@aws-sdk/client-bedrock-runtime",
+    "@aws-sdk/client-cognito-identity-provider",
+    "@aws-sdk/client-dynamodb",
+    "@aws-sdk/client-ses",
+    "@aws-sdk/client-sesv2",
+    "@aws-sdk/client-ssm",
+  ],
   // In WSL dev, set NEXT_DIST_DIR to a native Linux path (e.g. ~/next-cloudless)
   // to avoid the slow NTFS→WSL filesystem benchmark warning.
   // Production and CI leave this unset so the default .next dir is used.
