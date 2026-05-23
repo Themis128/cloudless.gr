@@ -68,6 +68,22 @@ These read `vars.RUNNER_GENERIC` and fail over automatically:
 - `mcp-security-scan.yml` (pure JS/TS scanner, ARM-safe; informational-only via `continue-on-error: true`)
 - `codeql.yml` (CodeQL CLI v4 supports linux-arm64 for JS/TS analysis)
 - `preview.yml` (SST/CDK — prior Pi attempt in run [`26321031309`] hung past timeout under cold-deploy; retrying with 40-min timeout)
+- `dependabot-automerge.yml`
+- `dependency-review.yml`
+- `ecr-lifecycle.yml`
+- `i18n-audit.yml`
+- `monthly-security-audit.yml`
+- `notion-docs-sitemap.yml`
+- `notion-schema-check.yml`
+- `notion-schema-drift.yml`
+- `release.yml`
+- `slack-manifest-apply.yml`
+- `stale.yml`
+- `teardown-staging.yml`
+- `weekly-article-draft.yml`
+- `weekly-gsc-sync.yml`
+- `weekly-newsletter.yml`
+- `weekly-subscriber-report.yml`
 
 ## Workflows that stay GitHub-hosted
 

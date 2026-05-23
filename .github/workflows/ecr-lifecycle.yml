@@ -10,7 +10,7 @@ env:
 jobs:
   ecr-cleanup:
     name: Set lifecycle policy and prune old images
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     steps:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4 # v4
