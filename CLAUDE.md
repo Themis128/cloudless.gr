@@ -11,20 +11,24 @@
 When spawning sub-agents, follow these rules for optimal orchestration:
 
 ### When to use agents
+
 - Use `subagent_type: "Explore"` for **read-only codebase searches** (grep, find, file reads). This protects the main context window.
 - Use `subagent_type: "general-purpose"` for **multi-step research + write tasks** that are independent of the main thread.
 - Use `subagent_type: "Plan"` before large refactors to get an implementation plan.
 
 ### Parallel dispatch
+
 - Launch **independent agents in a single message** (multiple Agent tool calls in one response) so they run concurrently.
 - Only run agents sequentially when one's output is required as input for the next.
 
 ### Prompt discipline
+
 - Keep agent prompts **short and focused** — long prompts cause "Prompt is too long" errors.
 - Give each agent exactly one task. If a search covers many files, split it into 2–3 agents with non-overlapping file lists.
 - For file searches: prefer direct `Bash` grep/find when the pattern is simple and the target set is small (≤ 5 files). Reserve agents for broader, open-ended exploration.
 
 ### Context protection
+
 - Agents return a **single summary message** — raw tool output stays out of the main context.
 - Use `run_in_background: true` only for genuinely independent work that does not block the next step.
 
@@ -40,6 +44,18 @@ When spawning sub-agents, follow these rules for optimal orchestration:
 - **SSM config** (API keys, Notion DB IDs, etc.) is fetched at runtime by the app via `getIntegrationsAsync()` using the `pi-standby-aws-creds` k8s Secret.
 
 **GitHub Secrets needed:** `AWS_DEPLOY_ROLE_ARN`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_COGNITO_USER_POOL_ID`, `NEXT_PUBLIC_COGNITO_CLIENT_ID`, `NEXT_PUBLIC_HUBSPOT_PORTAL_ID`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_META_PIXEL_ID`
+
+## CI Runner Failover
+
+When GH-hosted runner billing/capacity breaks, flip the `RUNNER_GENERIC` repo variable to re-route most workflows onto the self-hosted Pi `build` cluster:
+
+```bash
+.github/scripts/toggle-runner.sh status   # show mode + runner inventory
+.github/scripts/toggle-runner.sh pi       # → ["self-hosted","omv","build"]
+.github/scripts/toggle-runner.sh hosted   # → unset (ubuntu-latest)
+```
+
+Instrumented workflows use `runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}`. See [`docs/runners.md`](docs/runners.md) for the full design, the list of opted-in workflows, the ones that stay GH-hosted (Lighthouse, k3s-e2e, CodeQL — they need x86_64/Chrome), and the registration steps for the `omv,build` runner profile on each Pi host.
 
 ## SonarCloud
 
@@ -57,18 +73,19 @@ The app uses `localePrefix: "always"` — every route requires a locale prefix (
 
 ```ts
 // ✅ Correct
-import { Link, useRouter, usePathname, redirect } from "@/i18n/navigation"
-router.push("/admin")         // → /en/admin  ✓
+import { Link, useRouter, usePathname, redirect } from "@/i18n/navigation";
+router.push("/admin"); // → /en/admin  ✓
 
 // ❌ Wrong — produces 404
-import Link from "next/link"
-router.push("/en/admin")      // → /en/en/admin  ✗
+import Link from "next/link";
+router.push("/en/admin"); // → /en/en/admin  ✗
 ```
 
 **Middleware redirect params must use the bare (locale-stripped) path:**
+
 ```ts
 // ✅
-loginUrl.searchParams.set("redirect", bare)      // "/admin"
+loginUrl.searchParams.set("redirect", bare); // "/admin"
 // ❌
-loginUrl.searchParams.set("redirect", pathname)  // "/en/admin" → double-locale after router.push
+loginUrl.searchParams.set("redirect", pathname); // "/en/admin" → double-locale after router.push
 ```
