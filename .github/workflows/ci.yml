@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   lint:
-    name: Lint
+    name: Lint & Format
     # Failover-capable: defaults to ubuntu-latest. Flip via
     #   .github/scripts/toggle-runner.sh pi
     # when GH-hosted billing/capacity is broken.
@@ -47,12 +47,18 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
+      - name: pin pnpm store to persistent local path
+        run: |
+          sudo mkdir -p /opt/pnpm-store
+          sudo chmod 777 /opt/pnpm-store
+          pnpm config set store-dir /opt/pnpm-store
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm lint
+      - run: pnpm format:check
 
   typecheck:
     name: Type Check
@@ -63,30 +69,19 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
+      - name: pin pnpm store to persistent local path
+        run: |
+          sudo mkdir -p /opt/pnpm-store
+          sudo chmod 777 /opt/pnpm-store
+          pnpm config set store-dir /opt/pnpm-store
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm typecheck
         env:
           NODE_OPTIONS: --max-old-space-size=3072
-
-  format:
-    name: Format Check
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          dest: ~/setup-pnpm-${{ runner.name }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm format:check
 
   build:
     name: Build
@@ -105,11 +100,16 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
+      - name: pin pnpm store to persistent local path
+        run: |
+          sudo mkdir -p /opt/pnpm-store
+          sudo chmod 777 /opt/pnpm-store
+          pnpm config set store-dir /opt/pnpm-store
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm build
 
   test:
@@ -121,9 +121,14 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
+      - name: pin pnpm store to persistent local path
+        run: |
+          sudo mkdir -p /opt/pnpm-store
+          sudo chmod 777 /opt/pnpm-store
+          pnpm config set store-dir /opt/pnpm-store
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm test:ci
