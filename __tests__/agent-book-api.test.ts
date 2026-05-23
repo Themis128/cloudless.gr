@@ -63,6 +63,13 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 });
 
 // ---------------------------------------------------------------------------
+// Lazily-imported route module (dynamic import is required by vitest module
+// isolation; extracting the path constant silences sonarjs/no-duplicate-string).
+// ---------------------------------------------------------------------------
+
+const BOOK_ROUTE = "@/app/api/agent/book/route";
+
+// ---------------------------------------------------------------------------
 // Token + request helpers
 // ---------------------------------------------------------------------------
 
@@ -118,20 +125,20 @@ describe("POST /api/agent/book", () => {
   });
 
   it("returns 401 when no token is provided", async () => {
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const res = await POST(unauthPost({ intent: "tomorrow morning" }));
     expect(res.status).toBe(401);
   });
 
   it("returns 503 when calendar is not configured", async () => {
     mockIsAgentBookConfigured.mockResolvedValueOnce(false);
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const res = await POST(authPost({ intent: "tomorrow morning" }));
     expect(res.status).toBe(503);
   });
 
   it("returns 400 on invalid JSON", async () => {
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const req = new NextRequest("http://localhost/api/agent/book", {
       method: "POST",
       headers: {
@@ -145,7 +152,7 @@ describe("POST /api/agent/book", () => {
   });
 
   it("returns 400 when body matches neither propose nor confirm shape", async () => {
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const res = await POST(authPost({ random: "field" }));
     expect(res.status).toBe(400);
   });
@@ -159,7 +166,7 @@ describe("POST /api/agent/book", () => {
       reasoning: "Visitor asked for next-day morning.",
     });
 
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const res = await POST(authPost({ intent: "tomorrow morning, 30 min" }));
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -175,7 +182,7 @@ describe("POST /api/agent/book", () => {
       status: "no_match",
       reasoning: "No Tuesday slots available.",
     });
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const res = await POST(authPost({ intent: "Tuesday at 3am" }));
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -187,7 +194,7 @@ describe("POST /api/agent/book", () => {
       name: "AccessDeniedException",
     });
     mockProposeBookingSlot.mockRejectedValueOnce(err);
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const res = await POST(authPost({ intent: "anything" }));
     expect(res.status).toBe(503);
   });
@@ -199,7 +206,7 @@ describe("POST /api/agent/book", () => {
         status: 429,
       }),
     });
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const res = await POST(authPost({ intent: "tomorrow" }));
     expect(res.status).toBe(429);
   });
@@ -213,7 +220,7 @@ describe("POST /api/agent/book", () => {
       htmlLink: "https://meet.google.com/abc",
     });
 
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const res = await POST(
       authPost(
         { confirm: true, start, end, notes: "audit prep" },
@@ -237,7 +244,7 @@ describe("POST /api/agent/book", () => {
   it("confirm: rejects slots in the past", async () => {
     const start = new Date(Date.now() - 86_400_000).toISOString();
     const end = new Date(Date.now() - 86_400_000 + 1_800_000).toISOString();
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const res = await POST(authPost({ confirm: true, start, end }));
     expect(res.status).toBe(400);
     expect(mockBookConsultation).not.toHaveBeenCalled();
@@ -247,7 +254,7 @@ describe("POST /api/agent/book", () => {
     const start = new Date(Date.now() + 86_400_000).toISOString();
     const end = new Date(Date.now() + 86_400_000 + 1_800_000).toISOString();
     mockGetAvailableSlots.mockResolvedValueOnce([]); // no slots free anymore
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const res = await POST(authPost({ confirm: true, start, end }));
     expect(res.status).toBe(409);
     expect(mockBookConsultation).not.toHaveBeenCalled();
@@ -256,7 +263,7 @@ describe("POST /api/agent/book", () => {
   it("confirm: 400 when end <= start", async () => {
     const start = new Date(Date.now() + 86_400_000).toISOString();
     const end = start;
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const res = await POST(authPost({ confirm: true, start, end }));
     expect(res.status).toBe(400);
   });
@@ -272,7 +279,7 @@ describe("POST /api/agent/book", () => {
     mockSlackBookingNotify.mockResolvedValue(undefined);
     mockSendBookingConfirmation.mockResolvedValue(undefined);
 
-    const { POST } = await import("@/app/api/agent/book/route");
+    const { POST } = await import(BOOK_ROUTE);
     const res = await POST(authPost({ confirm: true, start, end }));
     expect(res.status).toBe(200);
     // Fire-and-forget — wait a microtask for the void chains.
