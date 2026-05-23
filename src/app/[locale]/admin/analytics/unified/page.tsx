@@ -2,7 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 
 interface SeoData {
   clicks: number;
@@ -224,7 +224,7 @@ export default function UnifiedAnalyticsPage() {
                 />
                 <KpiCard
                   label="Avg CTR"
-                  value={`${(data.seo.ctr * 100).toFixed(1)}%`}
+                  value={`${data.seo.ctr.toFixed(1)}%`}
                   color="text-neon-blue"
                 />
                 <KpiCard

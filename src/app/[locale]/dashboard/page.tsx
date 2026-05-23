@@ -3,7 +3,7 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
