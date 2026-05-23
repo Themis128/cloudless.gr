@@ -6,7 +6,7 @@ def ssm(key):
     r = subprocess.run(
         ['aws', 'ssm', 'get-parameter', '--name', f'/cloudless/production/{key}',
          '--with-decryption', '--query', 'Parameter.Value', '--output', 'text',
-         '--profile', 'omv-main-cli'],
+         '--region', 'us-east-1'],
         capture_output=True, text=True)
     return r.stdout.strip()
 
