@@ -52,25 +52,38 @@ flipping. New runs pick up the new value immediately.
 These read `vars.RUNNER_GENERIC` and fail over automatically:
 
 - `ci.yml` (lint, typecheck, format, build, test)
-- `deploy.yml` (SST → AWS Lambda)
 - `deploy-pi.yml` (the `rollout` job — `build-and-push` stays pinned to `[self-hosted, omv, pi]`)
 - `ha-sync-orchestrator.yml`
+- `labeler.yml`
+- `links-audit.yml`
 - `pi-tls-cert-check.yml`
 - `pr-review.yml`
+- `secret-scan.yml`
 - `sha-drift-detector.yml`
 - `sha-drift-watchdog.yml`
 
 ## Workflows that stay GitHub-hosted
 
 These pin `runs-on: ubuntu-latest` because they need x86_64, a system
-Chromium, or more RAM than a Pi 4/5 has:
+Chromium, more RAM than a Pi 4/5 has, or do not converge in a sensible
+time on ARM:
 
+- `deploy.yml` (SST → AWS Lambda) — tried failover on 2026-05-23 in run
+  [`26321031309`](https://github.com/Themis128/cloudless.gr/actions/runs/26321031309);
+  the `Deploy (SST)` step hung past the 40 min job timeout on the omv
+  Pi runner. SST + CDK synth + Sentry sourcemap upload don't fit on ARM
+  under cold-deploy conditions. **Lesson:** "mostly network-bound" was
+  the wrong heuristic — sourcemap upload alone is multi-hundred-MB
+  through Sentry's API and CDK synth is CPU-heavy on cold cache. When
+  billing is broken this workflow goes red and `cloudless.gr` (Lambda)
+  cannot be updated until billing is fixed. `cloudless.online` (Pi/k3s)
+  stays deployable via `deploy-pi.yml` and is the documented failover
+  surface, so user-visible features still ship through the secondary.
 - `lighthouse.yml` — needs system Chrome; ARM has no official Chromium binary in the runner image.
 - `k3s-e2e.yml` — Playwright + browser deps; runs against the live Pi standby so adding Pi-side load is also counterproductive.
 - `codeql.yml` — heavy memory + x86_64 analyzer.
 
-When billing is broken, these stay red until billing is fixed. They are
-**not** in the deploy critical path.
+When billing is broken, these stay red until billing is fixed.
 
 ## Setting up the second runner profile on each Pi host
 
