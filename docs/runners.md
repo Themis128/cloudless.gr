@@ -65,6 +65,7 @@ These read `vars.RUNNER_GENERIC` and fail over automatically:
 - `bundle-budget.yml`
 - `structured-data-audit.yml`
 - `seo-hygiene.yml`
+- `mcp-security-scan.yml` (pure JS/TS scanner, ARM-safe; informational-only via `continue-on-error: true`)
 
 ## Workflows that stay GitHub-hosted
 

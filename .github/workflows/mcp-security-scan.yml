@@ -28,7 +28,7 @@ concurrency:
 jobs:
   scan:
     name: Run MCP security scanner
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     # Informational only — scanner flags normal Next.js patterns (template
     # literals, process.env refs, console.error) as false positives.
     # Results are visible in the Actions log but do not block deploys.
