@@ -45,7 +45,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   // Vercel Cron sets Authorization: Bearer <token> automatically.
   // isCronAuthorized uses a timing-safe comparison and fails closed when
   // CRON_SECRET is unset.
-  if (!isCronAuthorized(request)) {
+  if (!(await isCronAuthorized(request))) {
     return cronUnauthorized();
   }
 
