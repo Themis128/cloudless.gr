@@ -233,7 +233,7 @@ export async function proposeBookingSlot(
       const textOut = assistantContent
         .filter(
           (b): b is TextBlock =>
-            "text" in b && typeof (b as TextBlock).text === "string",
+            "text" in b && typeof b.text === "string",
         )
         .map((b) => b.text)
         .join(" ")
