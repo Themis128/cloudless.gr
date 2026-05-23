@@ -16,7 +16,7 @@ permissions:
 jobs:
   recheck:
     name: recheck-if-drifted
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omv, pi]
     timeout-minutes: 2
     steps:
       - name: Re-trigger drift detector if last run failed
