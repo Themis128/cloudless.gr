@@ -86,7 +86,9 @@ time on ARM:
   surface, so user-visible features still ship through the secondary.
 - `lighthouse.yml` — needs system Chrome; ARM has no official Chromium binary in the runner image.
 - `k3s-e2e.yml` — Playwright + browser deps; runs against the live Pi standby so adding Pi-side load is also counterproductive.
-- `codeql.yml` — heavy memory + x86_64 analyzer.
+- `codeql.yml` — heavy memory + x86_64 analyzer. **Remains strictly required** for merge — security gate.
+- `a11y-audit.yml` — Playwright + Chrome; cannot run on Pi. Marked `continue-on-error: true` so a hosted-runner outage does not block merge; findings still surface in the Actions log.
+- `preview.yml` — SST/CDK; cannot run on Pi (see deploy.yml note above). Marked `continue-on-error: true` for the same reason — the preview is a review convenience, not a merge gate.
 
 When billing is broken, these stay red until billing is fixed.
 
