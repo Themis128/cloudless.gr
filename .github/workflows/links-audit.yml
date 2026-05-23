@@ -24,7 +24,7 @@ concurrency:
 jobs:
   links:
     name: Markdown Link Checker
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
