@@ -55,7 +55,9 @@ function isConfirmBody(b: unknown): b is ConfirmBody {
   if (typeof b !== "object" || b === null) return false;
   const o = b as { confirm?: unknown; start?: unknown; end?: unknown };
   return (
-    o.confirm === true && typeof o.start === "string" && typeof o.end === "string"
+    o.confirm === true &&
+    typeof o.start === "string" &&
+    typeof o.end === "string"
   );
 }
 
@@ -196,7 +198,9 @@ export async function POST(request: NextRequest) {
     );
   }
   const userName =
-    auth.user["cognito:username"] || userEmail.split("@")[0] || "Cloudless User";
+    auth.user["cognito:username"] ||
+    userEmail.split("@")[0] ||
+    "Cloudless User";
 
   if (!(await isAgentBookConfigured())) {
     return jsonError(503, "Booking is not configured.");

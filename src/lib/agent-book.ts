@@ -116,7 +116,8 @@ async function runCheckAvailability(raw: unknown): Promise<string> {
       return `No open slots in the next ${days} day(s).`;
     }
     const lines = slots.map(
-      (s) => `- ${formatAthensSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`,
+      (s) =>
+        `- ${formatAthensSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`,
     );
     return `Open slots (next ${days} day(s)):\n${lines.join("\n")}`;
   } catch (err) {
@@ -136,7 +137,11 @@ export interface ProposedSlot {
 }
 
 export type ProposeResult =
-  | { status: typeof STATUS_PROPOSED; proposed: ProposedSlot; reasoning: string }
+  | {
+      status: typeof STATUS_PROPOSED;
+      proposed: ProposedSlot;
+      reasoning: string;
+    }
   | { status: typeof STATUS_NO_MATCH; reasoning: string };
 
 /**
@@ -190,7 +195,10 @@ export async function proposeBookingSlot(
       const reasoning =
         typeof input.reasoning === "string" ? input.reasoning : "";
       if (!start || !end) {
-        return { status: STATUS_NO_MATCH, reasoning: reasoning || "No matching slot." };
+        return {
+          status: STATUS_NO_MATCH,
+          reasoning: reasoning || "No matching slot.",
+        };
       }
       return {
         status: STATUS_PROPOSED,
