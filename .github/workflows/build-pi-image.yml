@@ -50,10 +50,10 @@ concurrency:
 jobs:
   build-and-push:
     name: build arm64 + push to ECR
-    # GitHub-hosted ARM runner — native arm64, no QEMU. First build ~5-10 min,
-    # subsequent cached builds ~2-3 min. Cross-compile via QEMU on x86 runners
-    # was unviable (pnpm install alone exceeded 60min).
-    runs-on: ubuntu-24.04-arm
+    # Self-hosted Pi runner (arm64 native) — no QEMU, no paid GH runner minutes.
+    # Cross-compile via QEMU on x86 runners was unviable (pnpm install alone
+    # exceeded 60min); GH-hosted ARM runner costs money and hit billing limits.
+    runs-on: [self-hosted, omv, pi]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.3.1
