@@ -10,79 +10,23 @@
  * Region: us-east-1 (Lambda deployment region; falls back to AWS_REGION env var)
  */
 
-import {
-  BedrockRuntimeClient,
-  ConverseCommand,
-  type ToolConfiguration,
-} from "@aws-sdk/client-bedrock-runtime";
+import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import { CHAT_TOOLS, runTool } from "@/lib/chat-tools";
-
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
-
-const BEDROCK_REGION = process.env.AWS_REGION ?? "us-east-1";
-const BEDROCK_MODEL_ID =
-  process.env.BEDROCK_MODEL_ID ?? "us.anthropic.claude-3-5-haiku-20241022-v1:0";
+import {
+  BEDROCK_MODEL_ID,
+  buildBedrockToolConfig,
+  getBedrockClient,
+  type AnyBlock,
+  type BedrockMessage,
+  type TextBlock,
+  type ToolResultBlock,
+  type ToolUseBlock,
+} from "@/lib/bedrock-shared";
 
 const MAX_TOKENS = 600;
 const MAX_TOOL_ITERATIONS = 4;
 
-// Lazy singleton — created once per Lambda cold start.
-let _client: BedrockRuntimeClient | null = null;
-
-function getClient(): BedrockRuntimeClient {
-  if (!_client) _client = new BedrockRuntimeClient({ region: BEDROCK_REGION });
-  return _client;
-}
-
-// ---------------------------------------------------------------------------
-// Tool config — convert Anthropic input_schema format → Bedrock toolSpec
-// ---------------------------------------------------------------------------
-// The Bedrock SDK represents Tool/ToolInputSchema as smithy-generated
-// discriminated unions that require an explicit `$unknown` member for
-// forward-compatibility. We satisfy the type by annotating as ToolConfiguration
-// and casting the input_schema to the expected document type.
-
-const BEDROCK_TOOL_CONFIG: ToolConfiguration = {
-  tools: CHAT_TOOLS.map((t) => ({
-    toolSpec: {
-      name: t.name,
-      description: t.description,
-      inputSchema: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        json: t.input_schema as unknown as Record<string, any>,
-      },
-    },
-  })) as ToolConfiguration["tools"],
-};
-
-// ---------------------------------------------------------------------------
-// Narrow content-block types (only what we read / write)
-// ---------------------------------------------------------------------------
-
-type TextBlock = { text: string };
-type ToolUseBlock = {
-  toolUse: {
-    toolUseId: string;
-    name: string;
-    input: Record<string, unknown>;
-  };
-};
-type ToolResultBlock = {
-  toolResult: {
-    toolUseId: string;
-    content: [{ text: string }];
-  };
-};
-
-type AnyBlock = TextBlock | ToolUseBlock | ToolResultBlock;
-
-interface BedrockMessage {
-  role: "user" | "assistant";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  content: any[];
-}
+const BEDROCK_TOOL_CONFIG = buildBedrockToolConfig(CHAT_TOOLS);
 
 // ---------------------------------------------------------------------------
 // Core loop
@@ -98,7 +42,7 @@ export async function runBedrockChatLoop(
   systemPrompt: string,
   initialMessages: { role: "user" | "assistant"; content: string }[],
 ): Promise<string> {
-  const client = getClient();
+  const client = getBedrockClient();
 
   // Convert plain-string messages to Bedrock content arrays.
   const messages: BedrockMessage[] = initialMessages.map((m) => ({

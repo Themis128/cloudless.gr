@@ -15,7 +15,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
-import { isAgentBookConfigured, proposeBookingSlot, formatAthensSlot } from "@/lib/agent-book";
+import { isAgentBookConfigured, proposeBookingSlot } from "@/lib/agent-book";
+import { formatAthensSlot } from "@/lib/booking-slots";
 import { bookConsultation, getAvailableSlots } from "@/lib/google-calendar";
 import { slackBookingNotify } from "@/lib/slack-notify";
 import { sendBookingConfirmation } from "@/lib/email";

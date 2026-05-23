@@ -11,24 +11,29 @@
  *   - two-phase (propose → confirm) so the model can't fire the booking solo
  *   - tighter system prompt scoped to scheduling only
  */
-import {
-  BedrockRuntimeClient,
-  ConverseCommand,
-  type ToolConfiguration,
-} from "@aws-sdk/client-bedrock-runtime";
+import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import { getAvailableSlots } from "@/lib/google-calendar";
 import { isConfiguredAsync } from "@/lib/integrations";
-
-const BEDROCK_REGION = process.env.AWS_REGION ?? "us-east-1";
-const BEDROCK_MODEL_ID =
-  process.env.BEDROCK_MODEL_ID ?? "us.anthropic.claude-3-5-haiku-20241022-v1:0";
+import {
+  BEDROCK_MODEL_ID,
+  buildBedrockToolConfig,
+  getBedrockClient,
+  type AnyBlock,
+  type BedrockMessage,
+  type TextBlock,
+  type ToolResultBlock,
+  type ToolUseBlock,
+} from "@/lib/bedrock-shared";
+import {
+  MIN_DAYS_AHEAD,
+  MAX_DAYS_AHEAD,
+  clampDaysAhead,
+  formatAthensSlot,
+} from "@/lib/booking-slots";
 
 const MAX_TOKENS = 400;
 const MAX_TOOL_ITERATIONS = 4;
 const MAX_SLOT_RESULTS = 8;
-const MIN_DAYS_AHEAD = 1;
-const MAX_DAYS_AHEAD = 14;
-const DEFAULT_DAYS_AHEAD = 7;
 
 const SYSTEM_PROMPT = `You are the Cloudless scheduling agent. Your single job is to read the visitor's natural-language scheduling intent and pick ONE specific 30-minute consultation slot that best matches it.
 
@@ -91,81 +96,11 @@ const AGENT_TOOLS = [
   },
 ] as const;
 
-// ---------------------------------------------------------------------------
-// Bedrock plumbing (mirrors src/lib/bedrock-chat.ts structure)
-// ---------------------------------------------------------------------------
-
-const AGENT_TOOL_CONFIG: ToolConfiguration = {
-  tools: AGENT_TOOLS.map((t) => ({
-    toolSpec: {
-      name: t.name,
-      description: t.description,
-      inputSchema: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        json: t.input_schema as unknown as Record<string, any>,
-      },
-    },
-  })) as ToolConfiguration["tools"],
-};
-
-let _client: BedrockRuntimeClient | null = null;
-function getClient(): BedrockRuntimeClient {
-  if (!_client) _client = new BedrockRuntimeClient({ region: BEDROCK_REGION });
-  return _client;
-}
-
-type TextBlock = { text: string };
-type ToolUseBlock = {
-  toolUse: {
-    toolUseId: string;
-    name: string;
-    input: Record<string, unknown>;
-  };
-};
-type ToolResultBlock = {
-  toolResult: {
-    toolUseId: string;
-    content: [{ text: string }];
-  };
-};
-type AnyBlock = TextBlock | ToolUseBlock | ToolResultBlock;
-
-interface BedrockMessage {
-  role: "user" | "assistant";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  content: any[];
-}
+const AGENT_TOOL_CONFIG = buildBedrockToolConfig(AGENT_TOOLS);
 
 // ---------------------------------------------------------------------------
 // Slot fetching for the model
 // ---------------------------------------------------------------------------
-
-function clampDaysAhead(raw: unknown): number {
-  const n =
-    typeof raw === "number" && Number.isFinite(raw) ? raw : DEFAULT_DAYS_AHEAD;
-  return Math.max(MIN_DAYS_AHEAD, Math.min(MAX_DAYS_AHEAD, Math.trunc(n)));
-}
-
-const ATHENS_FORMAT: Intl.DateTimeFormatOptions = {
-  timeZone: "Europe/Athens",
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-};
-
-function formatSlot(start: string, end: string): string {
-  const startStr = new Date(start).toLocaleString("en-IE", ATHENS_FORMAT);
-  const endStr = new Date(end).toLocaleTimeString("en-IE", {
-    timeZone: "Europe/Athens",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  return `${startStr}–${endStr} Athens`;
-}
 
 async function runCheckAvailability(raw: unknown): Promise<string> {
   const input = (typeof raw === "object" && raw !== null ? raw : {}) as {
@@ -178,7 +113,7 @@ async function runCheckAvailability(raw: unknown): Promise<string> {
       return `No open slots in the next ${days} day(s).`;
     }
     const lines = slots.map(
-      (s) => `- ${formatSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`,
+      (s) => `- ${formatAthensSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`,
     );
     return `Open slots (next ${days} day(s)):\n${lines.join("\n")}`;
   } catch (err) {
@@ -217,7 +152,7 @@ export async function isAgentBookConfigured(): Promise<boolean> {
 export async function proposeBookingSlot(
   intent: string,
 ): Promise<ProposeResult> {
-  const client = getClient();
+  const client = getBedrockClient();
   const messages: BedrockMessage[] = [
     { role: "user", content: [{ text: intent }] },
   ];
@@ -256,7 +191,7 @@ export async function proposeBookingSlot(
       }
       return {
         status: "proposed",
-        proposed: { start, end, formatted: formatSlot(start, end) },
+        proposed: { start, end, formatted: formatAthensSlot(start, end) },
         reasoning,
       };
     }
@@ -301,9 +236,4 @@ export async function proposeBookingSlot(
     status: "no_match",
     reasoning: "Agent exceeded its iteration budget without proposing a slot.",
   };
-}
-
-/** Public helper to render a slot label the same way the agent does. */
-export function formatAthensSlot(start: string, end: string): string {
-  return formatSlot(start, end);
 }

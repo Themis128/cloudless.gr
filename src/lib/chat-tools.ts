@@ -16,13 +16,16 @@ import { isConfiguredAsync } from "@/lib/integrations";
 import { formatPrice } from "@/lib/format-price";
 import { slackBookingNotify } from "@/lib/slack-notify";
 import { sendBookingConfirmation } from "@/lib/email";
+import {
+  MIN_DAYS_AHEAD,
+  MAX_DAYS_AHEAD,
+  clampDaysAhead,
+  formatAthensSlot,
+} from "@/lib/booking-slots";
 
 const SITE_BASE_URL = "https://cloudless.gr";
 const MAX_PRODUCT_RESULTS = 3;
 const MAX_SLOT_RESULTS = 5;
-const MIN_DAYS_AHEAD = 1;
-const MAX_DAYS_AHEAD = 14;
-const DEFAULT_DAYS_AHEAD = 7;
 
 // ---------------------------------------------------------------------------
 // Schemas — what the model sees when deciding to call a tool
@@ -150,36 +153,6 @@ async function runLookupProduct(input: LookupProductInput): Promise<string> {
   return `Found ${matches.length} match(es):\n${lines.join("\n")}`;
 }
 
-function clampDaysAhead(raw: unknown): number {
-  const n =
-    typeof raw === "number" && Number.isFinite(raw) ? raw : DEFAULT_DAYS_AHEAD;
-  return Math.max(MIN_DAYS_AHEAD, Math.min(MAX_DAYS_AHEAD, Math.trunc(n)));
-}
-
-const ATHENS_FORMAT: Intl.DateTimeFormatOptions = {
-  timeZone: "Europe/Athens",
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-};
-
-function formatSlot(start: string, end: string): string {
-  const startD = new Date(start);
-  const endD = new Date(end);
-  const startStr = startD.toLocaleString("en-IE", ATHENS_FORMAT);
-  const endTimeFmt: Intl.DateTimeFormatOptions = {
-    timeZone: "Europe/Athens",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  };
-  const endStr = endD.toLocaleTimeString("en-IE", endTimeFmt);
-  return `${startStr}–${endStr} Athens`;
-}
-
 async function runCheckCalendarAvailability(
   input: CheckCalendarInput,
 ): Promise<string> {
@@ -203,7 +176,7 @@ async function runCheckCalendarAvailability(
   const lines = slots
     .slice(0, MAX_SLOT_RESULTS)
     .map(
-      (s) => `- ${formatSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`,
+      (s) => `- ${formatAthensSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`,
     );
   return `Available slots (next ${days} day(s)):\n${lines.join("\n")}\nAsk the visitor which slot they prefer, then collect their name and email to call book_slot. They can also book directly at https://cloudless.gr/book.`;
 }
@@ -234,7 +207,7 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
     return "Booking failed — the slot may no longer be available. Call check_calendar_availability again and ask the visitor to pick another slot.";
   }
 
-  const slotLabel = formatSlot(start, end);
+  const slotLabel = formatAthensSlot(start, end);
 
   // Fire-and-forget notifications — never block or fail the booking confirmation
   void slackBookingNotify({
