@@ -61,6 +61,10 @@ These read `vars.RUNNER_GENERIC` and fail over automatically:
 - `secret-scan.yml`
 - `sha-drift-detector.yml`
 - `sha-drift-watchdog.yml`
+- `api-contract-audit.yml`
+- `bundle-budget.yml`
+- `structured-data-audit.yml`
+- `seo-hygiene.yml`
 
 ## Workflows that stay GitHub-hosted
 
