@@ -152,6 +152,14 @@ jobs:
                   await sleep(delayMs);
                   continue;
                 }
+                if (run.conclusion === 'cancelled') {
+                  // A newer push cancelled this run — clear the captured ID and
+                  // fall through to the SHA-based search to find the replacement.
+                  core.warning(`Pi build run ${dispatchedRunId} was cancelled (superseded by a newer push). Searching by SHA for a replacement run.`);
+                  dispatchedRunId = null;
+                  await sleep(delayMs);
+                  continue;
+                }
                 core.setFailed(`Pi build run ${dispatchedRunId} ended with conclusion=${run.conclusion}. URL: ${run.html_url}`);
                 return;
               }
