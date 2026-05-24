@@ -1,0 +1,82 @@
+# Mosquitto MQTT broker — namespace: monitoring
+# ClusterIP: 1883 (internal) | NodePort: 31883 (LAN)
+# Used by Alert API v3.0 to publish homelab/alerts/status (retained, QoS 1)
+# and homelab/alerts/events (QoS 0) topics.
+# Display ESP32 (homelab_alert_led.ino) subscribes via NodePort 31883.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto-config
+  namespace: monitoring
+data:
+  mosquitto.conf: |
+    listener 1883
+    allow_anonymous true
+    persistence true
+    persistence_location /mosquitto/data/
+    log_dest stdout
+    log_type error
+    log_type warning
+    log_type notice
+    log_type information
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto
+  namespace: monitoring
+  labels:
+    app: mosquitto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mosquitto
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      containers:
+        - name: mosquitto
+          image: eclipse-mosquitto:2.0
+          ports:
+            - containerPort: 1883
+              name: mqtt
+          volumeMounts:
+            - name: config
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+            - name: data
+              mountPath: /mosquitto/data
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      volumes:
+        - name: config
+          configMap:
+            name: mosquitto-config
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mosquitto
+  namespace: monitoring
+  labels:
+    app: mosquitto
+spec:
+  selector:
+    app: mosquitto
+  type: NodePort
+  ports:
+    - port: 1883
+      targetPort: 1883
+      nodePort: 31883
+      name: mqtt

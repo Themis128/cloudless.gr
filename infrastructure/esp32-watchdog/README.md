@@ -32,33 +32,34 @@ Blue = booting / connecting to Wi-Fi.
 
 ---
 
-## Step 1 — Install ESPHome (one-time, Windows)
+## Step 1 — Install ESPHome (one-time, WSL2)
 
-```powershell
-# uv is already installed at C:\Python314\Scripts\uv.exe
-C:\Python314\Scripts\uv.exe tool install esphome
-# Add to PATH for this session:
-$env:PATH = "C:\Users\baltz\.local\bin;$env:PATH"
-esphome version   # should print 2024.x.x
+```bash
+# uv is already installed at ~/.local/bin/uv
+uv tool install esphome
+esphome version   # should print 2026.5.0
 ```
+
+> **Why WSL2, not Windows PowerShell?**  
+> The Windows project path (`D:\Nuxt Projects\...`) contains a space which crashes
+> the PlatformIO/CMake compiler flag `-fdebug-prefix-map`. Running ESPHome from
+> WSL2 uses `/home/tbaltzakis/code/cloudless.gr/...` — no spaces, no errors.
 
 ---
 
 ## Step 2 — Fill in secrets
 
-Edit `esphome/secrets.yaml` — **never commit this file**:
+`esphome/secrets.yaml` is already populated (gitignored). If starting fresh, copy
+the template and fill in values:
 
-```yaml
-wifi_ssid:     "YourNetworkName"
-wifi_password: "YourWifiPassword"
-ap_password:   "watchdog-fallback"
-api_key:       "<base64 key — see below>"
-ota_password:  "<strong password>"
+```bash
+cp esphome/secrets.yaml.template esphome/secrets.yaml
+# Edit secrets.yaml with your wifi_ssid, wifi_password, ntfy_token, api_key, ota_password
 ```
 
 Generate the API key:
-```powershell
-python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())"
+```bash
+python3 -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())"
 ```
 
 ---
@@ -70,21 +71,27 @@ The ESP32-S3 **must be in bootloader mode** for the first flash:
 1. Hold the **BOOT** button on the board
 2. While holding BOOT, press and release **RESET**
 3. Release BOOT — the board is now in DFU mode (COM3 may disappear and reappear)
-4. Run:
+4. Run from WSL2:
 
-```powershell
-$env:PATH = "C:\Users\baltz\.local\bin;$env:PATH"
-cd "D:\Nuxt Projects\Cloudless\cloudless.gr\infrastructure\esp32-watchdog\esphome"
-esphome run cloudless-watchdog.yaml --device COM3
+```bash
+cd ~/code/cloudless.gr/infrastructure/esp32-watchdog/esphome
+esphome run cloudless-watchdog.yaml --device /dev/ttyS3
 ```
 
-ESPHome will compile (~2 min first time), flash, and open the log console.  
-After the first flash, OTA updates work over Wi-Fi — no USB needed.
+ESPHome compiles (~4 min first time), flashes over `/dev/ttyS3` (= COM3), then
+opens the log console. After the first flash, OTA updates work over Wi-Fi — no
+USB needed.
 
 **OTA update (after first flash):**
-```powershell
+```bash
+cd ~/code/cloudless.gr/infrastructure/esp32-watchdog/esphome
 esphome run cloudless-watchdog.yaml
-# ESPHome auto-discovers the board at 192.168.1.201
+# ESPHome auto-discovers the board at 192.168.1.201 via mDNS
+```
+
+**Compile only (no flash):**
+```bash
+esphome compile cloudless-watchdog.yaml
 ```
 
 ---

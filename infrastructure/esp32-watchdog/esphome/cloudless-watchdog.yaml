@@ -1,7 +1,7 @@
 # =============================================================================
 # Cloudless Cluster Watchdog — ESPHome firmware
-# Board : ESP32-S3-DevKitC-1 v1.1  (VID_303A / PID_4001, COM3)
-#         RGB LED → GPIO38  (v1.0 uses GPIO48 — do NOT swap)
+# Board : ESP32-S3-DevKitC-1 v1.0  (VID_303A / PID_4001, COM3)
+#         RGB LED → GPIO48  (v1.1 uses GPIO38 — do NOT swap)
 # Nodes : omv    192.168.1.128  — probed via HTTP :9100 (node_exporter)
 #         omv-ha 192.168.1.130  — probed via HTTP :9100 (node_exporter)
 # AWS   : cloudless.gr          — probed via HTTPS
@@ -60,7 +60,7 @@ esphome:
           red:   0%
           green: 0%
           blue:  100%
-      - delay: 10s          # wait for Wi-Fi + DHCP to settle before sending ntfy
+      - delay: 20s          # wait for Wi-Fi + DHCP to settle before sending ntfy
       - script.execute: update_led
       - http_request.post:
           url:  ${ntfy_url}
@@ -213,7 +213,7 @@ light:
   - platform:   esp32_rmt_led_strip
     id:         status_led
     name:       "Status LED"
-    pin:        GPIO38
+    pin:        GPIO48
     num_leds:   1
     rmt_symbols: 64
     chipset:    WS2812
