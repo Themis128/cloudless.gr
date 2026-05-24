@@ -9,6 +9,9 @@ name: SHA drift detector
 # Pure comparison logic in src/lib/sha-drift.ts is unit-tested by
 # __tests__/detect-sha-drift.test.ts; this workflow is the I/O wrapper.
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   schedule:
     # Every 6h on the half-hour (00:30, 06:30, 12:30, 18:30 UTC).

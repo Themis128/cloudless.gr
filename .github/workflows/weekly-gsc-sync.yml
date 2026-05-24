@@ -1,5 +1,8 @@
 name: Weekly GSC → Notion Sync
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   schedule:
     # Every Monday at 07:00 UTC (09:00 Athens time)

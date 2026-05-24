@@ -11,6 +11,7 @@ permissions:
   pull-requests: write
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
   NOTION_DOCS_DB_ID: ${{ secrets.NOTION_DOCS_DB_ID }}
   NOTION_BLOG_DB_ID: ${{ secrets.NOTION_BLOG_DB_ID }}
