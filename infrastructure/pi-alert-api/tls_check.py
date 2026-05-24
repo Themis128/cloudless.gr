@@ -99,3 +99,7 @@ async def start_tls_checker() -> None:
             except Exception as exc:
                 logger.warning("tls_check %s: unexpected error: %s", domain, exc)
         await asyncio.sleep(CHECK_INTERVAL_S)
+
+
+# Alias for backwards compatibility with main.py lifespan that calls run_periodically()
+run_periodically = start_tls_checker
