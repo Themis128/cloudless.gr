@@ -9,6 +9,14 @@ async function proxyRequest(path: string, init?: RequestInit): Promise<NextRespo
       ...init,
       signal: AbortSignal.timeout(8000),
     });
+    // The Pi alert API only serves /api/esp32/status and /api/alerts.
+    // All ESP32 management endpoints (command, config, OTA) return 404
+    // because the MQTT bridge hasn't been wired up yet. Return a friendly
+    // offline signal so the frontend shows "Pi unreachable" rather than a
+    // raw 404 in the console.
+    if (res.status === 404) {
+      return NextResponse.json({ error: "ESP32 management unavailable", offline: true }, { status: 503 });
+    }
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch {
@@ -25,7 +33,35 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const deviceId = searchParams.get("device_id") ?? "esp32-leds";
 
   switch (action) {
-    case "devices": return proxyRequest("/api/esp32/devices");
+    case "devices": {
+      // The Pi alert API exposes /api/esp32/status (single device) but not
+      // /api/esp32/devices (list). Fetch the single status and wrap as an array.
+      try {
+        const res = await fetch(`${ALERT_API}/api/esp32/status`, {
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!res.ok) {
+          return NextResponse.json({ error: "No ESP32 devices found" }, { status: 404 });
+        }
+        const raw = await res.json();
+        // Pi /api/esp32/status returns { id, ip, rssi, ... } but the
+        // frontend expects device_id.  Map the fields so the device
+        // table renders correctly.
+        const device = {
+          device_id: raw.id != null ? `esp32-${raw.id}` : "esp32-leds",
+          ip: raw.ip,
+          rssi: raw.rssi,
+          firmware_ver: raw.firmware_ver,
+          uptime_s: raw.uptime_s,
+          free_ram_bytes: raw.free_ram_bytes,
+          last_heartbeat: raw.last_heartbeat,
+          stale: raw.stale ?? true,
+        };
+        return NextResponse.json([device]);
+      } catch {
+        return NextResponse.json({ error: "Pi unreachable", offline: true }, { status: 503 });
+      }
+    }
     case "config":  return proxyRequest(`/api/esp32/${deviceId}/config`);
     default:
       return NextResponse.json({ error: "Unknown action" }, { status: 400 });

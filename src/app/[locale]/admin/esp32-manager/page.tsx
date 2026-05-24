@@ -216,8 +216,8 @@ export default function Esp32ManagerPage() {
   }, [call]);
 
   useEffect(() => {
-    loadDevices();
-    const t = setInterval(loadDevices, POLL_MS);
+    loadDevices().catch(() => {});
+    const t = setInterval(() => { loadDevices().catch(() => {}); }, POLL_MS);
     return () => clearInterval(t);
   }, [loadDevices]);
 
@@ -231,7 +231,7 @@ export default function Esp32ManagerPage() {
   }, [call, selectedId]);
 
   useEffect(() => {
-    if (tab === "config") loadConfig();
+    if (tab === "config") loadConfig().catch(() => {});
   }, [tab, loadConfig]);
 
   const saveConfig = useCallback(async () => {
