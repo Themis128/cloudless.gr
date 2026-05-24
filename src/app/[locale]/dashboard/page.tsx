@@ -3,7 +3,7 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
@@ -31,9 +31,8 @@ export default function DashboardPage() {
     }
 
     async function fetchStats() {
-      const email = encodeURIComponent(user!.email!);
       const [purchasesRes, consultationsRes] = await Promise.allSettled([
-        fetch(`/api/user/purchases?email=${email}`),
+        fetchWithAuth("/api/user/purchases"),
         fetchWithAuth("/api/user/consultations"),
       ]);
 
