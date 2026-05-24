@@ -1,0 +1,257 @@
+/**
+ * Tests for GET /api/cron/voice-brief — Phase 3 voice-brief agent.
+ *
+ * Covers:
+ *   - cron auth gate
+ *   - default (agent) path: agent invoked, brief persisted to SSM, Slack notified
+ *   - legacy path (?legacy=true): linear pipeline + Anthropic narration kept
+ *   - failures in persist / Slack don't break the response (best-effort)
+ */
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
+
+// ---------------------------------------------------------------------------
+// Hoisted mocks
+// ---------------------------------------------------------------------------
+
+const {
+  mockRunAgent,
+  mockGetSeo,
+  mockIsHubSpot,
+  mockPipeline,
+  mockSubscribers,
+  mockGetStripe,
+  mockSSMSend,
+  mockSlackPost,
+  mockFetch,
+  mockGetConfig,
+  mockIsCronAuthorized,
+} = vi.hoisted(() => ({
+  mockRunAgent: vi.fn(),
+  mockGetSeo: vi.fn(),
+  mockIsHubSpot: vi.fn(),
+  mockPipeline: vi.fn(),
+  mockSubscribers: vi.fn(),
+  mockGetStripe: vi.fn(),
+  mockSSMSend: vi.fn(),
+  mockSlackPost: vi.fn(),
+  mockFetch: vi.fn(),
+  mockGetConfig: vi.fn(),
+  mockIsCronAuthorized: vi.fn(),
+}));
+
+vi.mock("@/lib/agent-voice-brief", () => ({
+  runVoiceBriefAgent: (...args: unknown[]) => mockRunAgent(...args),
+}));
+
+vi.mock("@/lib/gsc", () => ({
+  getSeoSnapshot: (...args: unknown[]) => mockGetSeo(...args),
+}));
+
+vi.mock("@/lib/hubspot", () => ({
+  isHubSpotConfigured: (...args: unknown[]) => mockIsHubSpot(...args),
+  getPipelineStats: (...args: unknown[]) => mockPipeline(...args),
+  listNewsletterSubscribers: (...args: unknown[]) => mockSubscribers(...args),
+}));
+
+vi.mock("@/lib/stripe", () => ({
+  getStripe: (...args: unknown[]) => mockGetStripe(...args),
+}));
+
+vi.mock("@/lib/slack-notify", () => ({
+  SlackClient: vi.fn(function (this: { post: unknown }) {
+    this.post = mockSlackPost;
+  }),
+}));
+
+vi.mock("@/lib/ssm-config", () => ({
+  getConfig: (...args: unknown[]) => mockGetConfig(...args),
+}));
+
+vi.mock("@/lib/cron-auth", () => ({
+  isCronAuthorized: (...args: unknown[]) => mockIsCronAuthorized(...args),
+  cronUnauthorized: () =>
+    new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }),
+}));
+
+vi.mock("@aws-sdk/client-ssm", () => {
+  function SSMClient(this: { send: unknown }) {
+    this.send = mockSSMSend;
+  }
+  return {
+    SSMClient,
+    PutParameterCommand: vi.fn((input: unknown) => ({ __cmd: "Put", input })),
+  };
+});
+
+// ---------------------------------------------------------------------------
+// Test helpers
+// ---------------------------------------------------------------------------
+
+const VOICE_BRIEF_ROUTE = "@/app/api/cron/voice-brief/route";
+
+function authedRequest(url = "http://localhost/api/cron/voice-brief") {
+  return new NextRequest(url, {
+    headers: { authorization: "Bearer test-cron-secret" },
+  });
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  globalThis.fetch = mockFetch as unknown as typeof fetch;
+  mockIsCronAuthorized.mockResolvedValue(true);
+  mockGetConfig.mockResolvedValue({
+    ANTHROPIC_API_KEY: "test-anthropic-key",
+    AWS_REGION: "eu-central-1",
+    STRIPE_SECRET_KEY: "sk_test_x",
+    GOOGLE_CLIENT_EMAIL: "svc@example.iam",
+    GOOGLE_PRIVATE_KEY: "fake-key",
+  });
+  mockSSMSend.mockResolvedValue({});
+  mockSlackPost.mockResolvedValue(true);
+});
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe("GET /api/cron/voice-brief", () => {
+  it("returns 401 when cron auth fails", async () => {
+    mockIsCronAuthorized.mockResolvedValueOnce(false);
+    const { GET } = await import(VOICE_BRIEF_ROUTE);
+    const res = await GET(authedRequest());
+    expect(res.status).toBe(401);
+  });
+
+  describe("agent mode (default)", () => {
+    it("invokes the agent, persists to SSM, posts Slack summary", async () => {
+      mockRunAgent.mockResolvedValueOnce({
+        text: "This week we landed three new deals and shipped two features.",
+        sources: [
+          { name: "get_pipeline_stats", status: "ok", detail: "3 deals" },
+          { name: "get_seo_metrics", status: "skipped", detail: "no data" },
+        ],
+      });
+
+      const { GET } = await import(VOICE_BRIEF_ROUTE);
+      const res = await GET(authedRequest());
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(body.mode).toBe("agent");
+      expect(body.text).toContain("three new deals");
+      expect(body.sources).toHaveLength(2);
+
+      expect(mockRunAgent).toHaveBeenCalledOnce();
+      expect(mockSlackPost).toHaveBeenCalledOnce();
+
+      const slackPayload = mockSlackPost.mock.calls[0][0];
+      expect(slackPayload.text).toContain("agent");
+      // The brief text and a per-source breakdown should both be in the blocks.
+      const blockText = JSON.stringify(slackPayload.blocks);
+      expect(blockText).toContain("three new deals");
+      expect(blockText).toContain("get_pipeline_stats");
+    });
+
+    it("still returns 200 if persistBrief throws (best-effort)", async () => {
+      mockRunAgent.mockResolvedValueOnce({
+        text: "brief text",
+        sources: [],
+      });
+      mockSSMSend.mockRejectedValueOnce(new Error("ssm down"));
+
+      const { GET } = await import(VOICE_BRIEF_ROUTE);
+      const res = await GET(authedRequest());
+
+      expect(res.status).toBe(200);
+      // Slack still fires even if SSM blew up.
+      expect(mockSlackPost).toHaveBeenCalledOnce();
+    });
+
+    it("does not break the response when Slack post fails", async () => {
+      mockRunAgent.mockResolvedValueOnce({
+        text: "brief",
+        sources: [],
+      });
+      mockSlackPost.mockRejectedValueOnce(new Error("slack down"));
+
+      const { GET } = await import(VOICE_BRIEF_ROUTE);
+      const res = await GET(authedRequest());
+
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe("legacy mode (?legacy=true)", () => {
+    beforeEach(() => {
+      mockIsHubSpot.mockResolvedValue(true);
+      mockPipeline.mockResolvedValue({
+        totalDeals: 5,
+        totalValue: 50_000_00,
+        byStage: {},
+      });
+      mockSubscribers.mockResolvedValue(["a@x.com", "b@x.com"]);
+      mockGetSeo.mockResolvedValue({
+        clicks: 1234,
+        impressions: 56_789,
+        ctr: 2.1,
+      });
+      mockGetStripe.mockResolvedValue({
+        checkout: {
+          sessions: {
+            list: vi.fn().mockResolvedValue({
+              data: [{ payment_status: "paid", amount_total: 25_000 }],
+            }),
+          },
+        },
+      });
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            content: [{ text: "Polished narration of the week." }],
+          }),
+      });
+    });
+
+    it("calls the linear pipeline and Anthropic, does NOT call the agent", async () => {
+      const { GET } = await import(VOICE_BRIEF_ROUTE);
+      const res = await GET(
+        authedRequest("http://localhost/api/cron/voice-brief?legacy=true"),
+      );
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(body.mode).toBe("legacy");
+      expect(body.text).toBe("Polished narration of the week.");
+      expect(body.sources).toEqual([]);
+
+      expect(mockRunAgent).not.toHaveBeenCalled();
+      // Linear pipeline ran all four primitives.
+      expect(mockGetSeo).toHaveBeenCalled();
+      expect(mockPipeline).toHaveBeenCalled();
+      expect(mockSubscribers).toHaveBeenCalled();
+      expect(mockGetStripe).toHaveBeenCalled();
+      // Direct Anthropic API call (not Bedrock) — that's the legacy path.
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://api.anthropic.com/v1/messages",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    it("falls back to raw metrics text if the Anthropic narration fails", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 502 });
+
+      const { GET } = await import(VOICE_BRIEF_ROUTE);
+      const res = await GET(
+        authedRequest("http://localhost/api/cron/voice-brief?legacy=true"),
+      );
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      // Without polishing we get the raw "Weekly brief for Cloudless.gr — …" prefix.
+      expect(body.text).toContain("Weekly brief for Cloudless.gr");
+      expect(body.text).toContain("5 open deals");
+    });
+  });
+});
