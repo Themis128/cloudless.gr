@@ -16,10 +16,29 @@ import StatCounter from "@/components/StatCounter";
 
 export const revalidate = 86400;
 
+const BASE_URL = "https://cloudless.gr";
+const canonical = `${BASE_URL}/services`;
+
 export const metadata: Metadata = {
   title: "Services",
   description:
     "Cloud architecture, serverless development, data analytics, and AI-powered digital marketing services for startups and SMBs.",
+  alternates: {
+    canonical,
+    languages: {
+      en: `${BASE_URL}/en/services`,
+      el: `${BASE_URL}/el/services`,
+      "x-default": `${BASE_URL}/en/services`,
+    },
+  },
+  openGraph: {
+    type: "website",
+    title: "Services",
+    description:
+      "Cloud architecture, serverless development, data analytics, and AI-powered digital marketing services for startups and SMBs.",
+    url: canonical,
+    siteName: "Cloudless",
+  },
 };
 
 /* ── Arrow SVG ─────────────────────────────────────────────── */

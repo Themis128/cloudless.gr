@@ -6,6 +6,8 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
+import JsonLd from "@/components/JsonLd";
+import { getBreadcrumbSchema } from "@/lib/structured-data";
 import {
   getCaseStudyBySlug,
   staticCaseStudies,
@@ -13,6 +15,8 @@ import {
   type CaseStudyWithContent,
 } from "@/lib/notion-case-studies";
 import { isConfiguredAsync } from "@/lib/integrations";
+
+const BASE_URL = "https://cloudless.gr";
 
 // ---------------------------------------------------------------------------
 // Static params for ISR
@@ -45,9 +49,28 @@ export async function generateMetadata({
   const { slug } = await params;
   const cs = await loadCaseStudy(slug);
   if (!cs) return { title: "Case Study Not Found" };
+  const canonical = `${BASE_URL}/case-studies/${slug}`;
   return {
     title: cs.title,
     description: cs.summary,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/case-studies/${slug}`,
+        el: `${BASE_URL}/el/case-studies/${slug}`,
+        "x-default": `${BASE_URL}/en/case-studies/${slug}`,
+      },
+    },
+    openGraph: {
+      type: "article",
+      title: cs.title,
+      description: cs.summary,
+      url: canonical,
+      siteName: "Cloudless",
+      ...(cs.coverImage && {
+        images: [{ url: cs.coverImage, width: 1200, height: 630, alt: cs.title }],
+      }),
+    },
   };
 }
 
@@ -87,6 +110,13 @@ export default async function CaseStudyPage({
 
   return (
     <main className="min-h-screen bg-[#0a0a0f] text-white">
+      <JsonLd
+        data={getBreadcrumbSchema([
+          { name: "Home", url: BASE_URL },
+          { name: "Case Studies", url: `${BASE_URL}/case-studies` },
+          { name: cs.title, url: `${BASE_URL}/case-studies/${cs.slug}` },
+        ])}
+      />
       {/* Hero */}
       <section className="px-4 pb-12 pt-24">
         <div className="mx-auto max-w-4xl">
