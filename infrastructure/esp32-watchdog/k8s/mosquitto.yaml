@@ -38,6 +38,7 @@ spec:
       labels:
         app: mosquitto
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: mosquitto
           image: eclipse-mosquitto:2.0
@@ -53,10 +54,12 @@ spec:
           resources:
             requests:
               cpu: 10m
-              memory: 32Mi
+              memory: 16Mi
+              ephemeral-storage: 32Mi
             limits:
               cpu: 100m
               memory: 64Mi
+              ephemeral-storage: 128Mi
       volumes:
         - name: config
           configMap:

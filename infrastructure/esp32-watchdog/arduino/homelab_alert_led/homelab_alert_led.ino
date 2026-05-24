@@ -1,197 +1,327 @@
 /*
- * homelab_alert_led — Display ESP32 firmware
- * Board  : ESP32 (any variant)
+ * homelab_alert_led — Display ESP32 firmware v1.0
+ * Board  : ESP32 Dev Module (4 MB flash, default partition)
  * LED    : WS2812B strip, 8 LEDs, GPIO 4
- * MQTT   : subscribes to homelab/alerts/status (retained, QoS 1)
+ * MQTT   : subscribes homelab/alerts/status (retained, QoS 1)
  *          broker: 192.168.1.128:31883 (Mosquitto K3s NodePort)
+ * LWT    : publishes "offline" to homelab/esp32/lwt on ungraceful disconnect
  *
- * Payload: {"severity":"info|warning|critical","count":N,"timestamp":T}
+ * Payload schema (homelab/alerts/status):
+ *   {"severity":"ok|info|warning|error|high|critical","count":N,"timestamp":T}
  *
- * LED STATE MATRIX
- * ─────────────────────────────────────────────────────────────────────────
- * severity │ count │ Effect
- * ─────────┼───────┼──────────────────────────────────────────────────────
- * (none)   │  0    │ Solid green (all healthy)
- * info     │  ≥1   │ Slow cyan pulse
- * warning  │  ≥1   │ Slow orange blink
- * critical │  ≥1   │ Fast red blink
- * (stale)  │  —    │ Dim blue breathing (broker unreachable > 60 s)
- * ─────────────────────────────────────────────────────────────────────────
+ * LED PATTERNS
+ * ────────────────────────────────────────────────────────────────────────────
+ * severity    color   pattern
+ * ok          Green   Solid
+ * info        Blue    Solid
+ * warning     Amber   Slow sine pulse (2 s period)
+ * error       Orange  Blink 500 ms on / 500 ms off
+ * high        Red     Fast blink 200 ms on / 200 ms off
+ * critical    Red     Strobe 80 ms on / 80 ms off
+ * disconnected White  Slow sine pulse (3 s period)
+ * muted        Blue   Rare blink every 5 s (dim)
+ * ────────────────────────────────────────────────────────────────────────────
  *
- * Dependencies (install via Arduino Library Manager):
- *   - PubSubClient by Nick O'Leary  (≥2.8)
- *   - FastLED by Daniel Garcia      (≥3.6)
- *   - ArduinoJson by Benoit Blanchon (≥7.0)
+ * IMPORTANT — Core 1 pinning:
+ *   FastLED uses the ESP32 RMT peripheral which shares interrupt priority with
+ *   WiFi DMA on Core 0. The LED task is pinned to Core 1 via
+ *   xTaskCreatePinnedToCore to prevent corrupted pixels under WiFi load.
+ *
+ * Dependencies (Arduino Library Manager):
+ *   AsyncMqttClient  — marvinroger/async-mqtt-client  (≥0.9)
+ *   AsyncTCP         — me-no-dev/AsyncTCP              (≥1.1)
+ *   FastLED          — FastLED/FastLED                 (≥3.6)
+ *   ArduinoJson      — bblanchon/ArduinoJson           (≥7.0)
  */
 
 #include <WiFi.h>
-#include <PubSubClient.h>
+#include <AsyncMqttClient.h>
 #include <FastLED.h>
 #include <ArduinoJson.h>
+#include <HTTPClient.h>
 
-// ── Configuration ────────────────────────────────────────────────────────────
-#define WIFI_SSID       "COSMOTE1"
-#define WIFI_PASSWORD   "YOUR_WIFI_PASSWORD"   // replace before flash
+// ── User configuration ────────────────────────────────────────────────────────
+#define WIFI_SSID           "COSMOTE1"
+#define WIFI_PASS           "YOUR_WIFI_PASSWORD"   // replace before flash
 
-#define MQTT_HOST       "192.168.1.128"
-#define MQTT_PORT       31883
-#define MQTT_CLIENT_ID  "homelab-alert-led"
-#define MQTT_TOPIC      "homelab/alerts/status"
+#define MQTT_HOST           "192.168.1.128"
+#define MQTT_PORT           31883
+#define ALERT_API_HOST      "192.168.1.128"
+#define ALERT_API_PORT      30800
 
-#define LED_PIN         4
-#define NUM_LEDS        8
-#define LED_TYPE        WS2812B
-#define COLOR_ORDER     GRB
-#define LED_BRIGHTNESS  80   // 0-255 global brightness
+#define LED_PIN             4
+#define NUM_LEDS            8
+#define LED_TYPE            WS2812B
+#define COLOR_ORDER         GRB
+#define MUTE_BUTTON_PIN     0    // boot button doubles as mute toggle
 
-// Stale threshold: if no MQTT message received in this many ms, go "stale" mode
-#define STALE_MS        60000UL
+#define HEARTBEAT_INTERVAL_MS  60000UL   // POST /api/esp32/heartbeat every 60 s
+#define STALE_THRESHOLD_MS     90000UL   // no MQTT message in 90 s → disconnected state
 
 // ── Globals ───────────────────────────────────────────────────────────────────
 CRGB leds[NUM_LEDS];
-WiFiClient   wifiClient;
-PubSubClient mqttClient(wifiClient);
+AsyncMqttClient mqttClient;
+TimerHandle_t   wifiReconnectTimer;
+TimerHandle_t   mqttReconnectTimer;
 
-enum AlertSeverity { SEV_NONE, SEV_INFO, SEV_WARNING, SEV_CRITICAL, SEV_STALE };
-volatile AlertSeverity currentSeverity = SEV_NONE;
-volatile int           alertCount      = 0;
-volatile unsigned long lastMsgMs       = 0;
+enum Severity { SEV_OK, SEV_INFO, SEV_WARNING, SEV_ERROR, SEV_HIGH, SEV_CRITICAL };
 
-// ── MQTT callback ─────────────────────────────────────────────────────────────
-void onMqttMessage(char* topic, byte* payload, unsigned int length) {
-  lastMsgMs = millis();
+volatile Severity  gSeverity       = SEV_OK;
+volatile bool      gMuted          = false;
+volatile bool      gMqttConnected  = false;
+volatile unsigned long gLastMsgMs  = 0;
+volatile unsigned long gLastHeartbeatMs = 0;
 
-  // Parse JSON payload
-  JsonDocument doc;
-  DeserializationError err = deserializeJson(doc, payload, length);
-  if (err) return;
+// ISR-safe mute toggle — debounced in the LED task
+volatile bool gMuteTogglePending = false;
+unsigned long gLastButtonMs = 0;
 
-  const char* sev = doc["severity"] | "";
-  int count = doc["count"] | 0;
+static TaskHandle_t ledTaskHandle = nullptr;
+static bool         ledTaskStarted = false;
 
-  alertCount = count;
-  if (count == 0) {
-    currentSeverity = SEV_NONE;
-  } else if (strcmp(sev, "critical") == 0) {
-    currentSeverity = SEV_CRITICAL;
-  } else if (strcmp(sev, "warning") == 0) {
-    currentSeverity = SEV_WARNING;
-  } else {
-    currentSeverity = SEV_INFO;
-  }
+// ── Severity helpers ──────────────────────────────────────────────────────────
+static Severity parseSeverity(const char* s) {
+  if (!s) return SEV_OK;
+  if (strcmp(s, "critical") == 0) return SEV_CRITICAL;
+  if (strcmp(s, "high")     == 0) return SEV_HIGH;
+  if (strcmp(s, "error")    == 0) return SEV_ERROR;
+  if (strcmp(s, "warning")  == 0) return SEV_WARNING;
+  if (strcmp(s, "info")     == 0) return SEV_INFO;
+  return SEV_OK;
 }
 
-// ── LED effects ───────────────────────────────────────────────────────────────
+// ── LED helpers ───────────────────────────────────────────────────────────────
 static void fillAll(CRGB color) {
   fill_solid(leds, NUM_LEDS, color);
   FastLED.show();
 }
 
-// Blink: on_ms on, off_ms off
-static void blinkEffect(CRGB color, uint16_t on_ms, uint16_t off_ms) {
-  fillAll(color);
-  delay(on_ms);
-  fillAll(CRGB::Black);
-  delay(off_ms);
-}
-
-// Breathing: fade in/out over period_ms
-static void breatheEffect(CRGB baseColor, uint16_t period_ms) {
-  uint16_t half = period_ms / 2;
-  unsigned long start = millis();
-  unsigned long elapsed = millis() - start;
-  while (elapsed < (unsigned long)period_ms) {
-    elapsed = millis() - start;
-    uint8_t phase = (elapsed < half)
-      ? map(elapsed, 0, half, 0, 255)
-      : map(elapsed - half, 0, half, 255, 0);
+// Sine pulse: fade between minBright and 255 over periodMs.
+// Returns after one full cycle. Checks for severity change mid-cycle.
+static void sinePulse(CRGB baseColor, uint32_t periodMs,
+                      Severity expectedSev, bool expectedMute) {
+  const uint32_t step = 10;
+  uint32_t elapsed = 0;
+  while (elapsed < periodMs) {
+    if (gSeverity != expectedSev || gMuted != expectedMute) return;
+    float angle = (float)elapsed / periodMs * 2.0f * PI;
+    uint8_t bright = (uint8_t)(128 + 127 * sinf(angle));
     CRGB c = baseColor;
-    c.nscale8(phase);
+    c.nscale8(bright);
     fillAll(c);
-    delay(10);
+    vTaskDelay(pdMS_TO_TICKS(step));
+    elapsed += step;
   }
 }
 
-// ── WiFi + MQTT setup ─────────────────────────────────────────────────────────
-void connectWiFi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  // Show yellow during connection
-  fillAll(CRGB(255, 180, 0));
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-  }
-}
+// ── LED task (pinned to Core 1) ───────────────────────────────────────────────
+static void ledTask(void* /*param*/) {
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
+  FastLED.setBrightness(80);
+  fillAll(CRGB::Black);
 
-void connectMQTT() {
-  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-  mqttClient.setCallback(onMqttMessage);
-  while (!mqttClient.connected()) {
-    if (mqttClient.connect(MQTT_CLIENT_ID)) {
-      mqttClient.subscribe(MQTT_TOPIC, 1);
-    } else {
-      delay(2000);
+  for (;;) {
+    // Debounce mute toggle
+    if (gMuteTogglePending) {
+      unsigned long now = millis();
+      if (now - gLastButtonMs > 300) {
+        gMuted = !gMuted;
+        gLastButtonMs = now;
+      }
+      gMuteTogglePending = false;
+    }
+
+    bool muted       = gMuted;
+    bool connected   = gMqttConnected;
+    unsigned long ms = millis();
+    bool stale       = connected && (ms - gLastMsgMs) > STALE_THRESHOLD_MS;
+    bool disconnected = !connected || stale;
+    Severity sev     = gSeverity;
+
+    if (muted) {
+      // Dim blue, rare blink every 5 s
+      fillAll(CRGB(0, 0, 20));
+      vTaskDelay(pdMS_TO_TICKS(4800));
+      fillAll(CRGB::Black);
+      vTaskDelay(pdMS_TO_TICKS(200));
+      continue;
+    }
+
+    if (disconnected) {
+      sinePulse(CRGB::White, 3000, sev, muted);
+      continue;
+    }
+
+    switch (sev) {
+      case SEV_OK:
+        fillAll(CRGB(0, 200, 0));
+        vTaskDelay(pdMS_TO_TICKS(100));
+        break;
+
+      case SEV_INFO:
+        fillAll(CRGB(0, 0, 200));
+        vTaskDelay(pdMS_TO_TICKS(100));
+        break;
+
+      case SEV_WARNING:
+        sinePulse(CRGB(255, 160, 0), 2000, sev, muted);
+        break;
+
+      case SEV_ERROR:
+        fillAll(CRGB(255, 80, 0));
+        vTaskDelay(pdMS_TO_TICKS(500));
+        fillAll(CRGB::Black);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        break;
+
+      case SEV_HIGH:
+        fillAll(CRGB(255, 0, 0));
+        vTaskDelay(pdMS_TO_TICKS(200));
+        fillAll(CRGB::Black);
+        vTaskDelay(pdMS_TO_TICKS(200));
+        break;
+
+      case SEV_CRITICAL:
+        fillAll(CRGB(255, 0, 0));
+        vTaskDelay(pdMS_TO_TICKS(80));
+        fillAll(CRGB::Black);
+        vTaskDelay(pdMS_TO_TICKS(80));
+        break;
     }
   }
-  // Show brief white flash on connect
-  fillAll(CRGB::White);
-  delay(200);
+}
+
+// ── Mute button ISR ───────────────────────────────────────────────────────────
+void IRAM_ATTR onMuteButton() {
+  gMuteTogglePending = true;
+}
+
+// ── Heartbeat ─────────────────────────────────────────────────────────────────
+static void sendHeartbeat() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  HTTPClient http;
+  char url[64];
+  snprintf(url, sizeof(url), "http://%s:%d/api/esp32/heartbeat",
+           ALERT_API_HOST, ALERT_API_PORT);
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+
+  char body[256];
+  snprintf(body, sizeof(body),
+    "{\"device_id\":\"homelab-alert-led\","
+    "\"ip\":\"%s\","
+    "\"rssi\":%d,"
+    "\"uptime_s\":%lu,"
+    "\"free_ram_bytes\":%lu,"
+    "\"firmware_ver\":\"1.0.0\"}",
+    WiFi.localIP().toString().c_str(),
+    WiFi.RSSI(),
+    (unsigned long)(millis() / 1000),
+    (unsigned long)ESP.getFreeHeap());
+
+  http.POST(body);
+  http.end();
+}
+
+// ── WiFi + MQTT reconnect timers ──────────────────────────────────────────────
+static void connectToWifi() {
+  Serial.println("[WiFi] Connecting...");
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+}
+
+static void connectToMqtt() {
+  Serial.println("[MQTT] Connecting...");
+  mqttClient.connect();
+}
+
+static void onWifiEvent(WiFiEvent_t event) {
+  switch (event) {
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+      Serial.printf("[WiFi] Connected, IP: %s\n",
+                    WiFi.localIP().toString().c_str());
+      connectToMqtt();
+      break;
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+      Serial.println("[WiFi] Disconnected");
+      gMqttConnected = false;
+      xTimerStop(mqttReconnectTimer, 0);
+      xTimerStart(wifiReconnectTimer, 0);
+      break;
+    default:
+      break;
+  }
+}
+
+// ── MQTT callbacks ────────────────────────────────────────────────────────────
+static void onMqttConnect(bool sessionPresent) {
+  Serial.println("[MQTT] Connected");
+  gMqttConnected = true;
+  gLastMsgMs = millis();
+  mqttClient.subscribe("homelab/alerts/status", 1);
+}
+
+static void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
+  Serial.printf("[MQTT] Disconnected, reason=%d\n", (int)reason);
+  gMqttConnected = false;
+  if (WiFi.isConnected()) {
+    xTimerStart(mqttReconnectTimer, 0);
+  }
+}
+
+static void onMqttMessage(char* topic, char* payload,
+                           AsyncMqttClientMessageProperties /*props*/,
+                           size_t len, size_t /*index*/, size_t /*total*/) {
+  gLastMsgMs = millis();
+
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, payload, len);
+  if (err) return;
+
+  const char* sev = doc["severity"] | "ok";
+  gSeverity = parseSeverity(sev);
+
+  Serial.printf("[MQTT] status: severity=%s count=%d\n",
+                sev, (int)doc["count"]);
 }
 
 // ── Arduino entry points ──────────────────────────────────────────────────────
 void setup() {
   Serial.begin(115200);
-  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
-  FastLED.setBrightness(LED_BRIGHTNESS);
-  fillAll(CRGB::Black);
 
-  connectWiFi();
-  connectMQTT();
-  lastMsgMs = millis();
+  pinMode(MUTE_BUTTON_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(MUTE_BUTTON_PIN), onMuteButton, FALLING);
+
+  // Reconnect timers (2 s WiFi, 5 s MQTT)
+  wifiReconnectTimer = xTimerCreate("wifiReconnect", pdMS_TO_TICKS(2000),
+                                    pdFALSE, nullptr,
+                                    [](TimerHandle_t) { connectToWifi(); });
+  mqttReconnectTimer = xTimerCreate("mqttReconnect", pdMS_TO_TICKS(5000),
+                                    pdFALSE, nullptr,
+                                    [](TimerHandle_t) { connectToMqtt(); });
+
+  // MQTT config
+  mqttClient.onConnect(onMqttConnect);
+  mqttClient.onDisconnect(onMqttDisconnect);
+  mqttClient.onMessage(onMqttMessage);
+  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+  mqttClient.setClientId("homelab-alert-led");
+  // LWT: broker publishes "offline" to homelab/esp32/lwt on ungraceful disconnect
+  mqttClient.setWill("homelab/esp32/lwt", 1, true, "offline");
+
+  // WiFi
+  WiFi.onEvent(onWifiEvent);
+  connectToWifi();
+
+  // LED task pinned to Core 1 (avoids RMT/WiFi DMA conflict on Core 0)
+  xTaskCreatePinnedToCore(
+    ledTask, "led", 4096, nullptr, 1, &ledTaskHandle, /*core=*/1);
 }
 
 void loop() {
-  // Reconnect if needed
-  if (WiFi.status() != WL_CONNECTED) {
-    connectWiFi();
+  // Heartbeat from Core 0 (safe — HTTPClient not used in LED task)
+  if (millis() - gLastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
+    gLastHeartbeatMs = millis();
+    sendHeartbeat();
   }
-  if (!mqttClient.connected()) {
-    connectMQTT();
-  }
-  mqttClient.loop();
-
-  // Check for stale broker connection
-  AlertSeverity sev = currentSeverity;
-  if ((millis() - lastMsgMs) > STALE_MS) {
-    sev = SEV_STALE;
-  }
-
-  // Render one frame of the current effect
-  switch (sev) {
-    case SEV_NONE:
-      // Solid green — all healthy
-      fillAll(CRGB(0, 200, 0));
-      delay(100);
-      break;
-
-    case SEV_INFO:
-      // Slow cyan pulse (breathe ~2 s)
-      breatheEffect(CRGB(0, 200, 200), 2000);
-      break;
-
-    case SEV_WARNING:
-      // Slow orange blink: 600 ms on, 800 ms off
-      blinkEffect(CRGB(255, 100, 0), 600, 800);
-      break;
-
-    case SEV_CRITICAL:
-      // Fast red blink: 250 ms on, 250 ms off
-      blinkEffect(CRGB(255, 0, 0), 250, 250);
-      break;
-
-    case SEV_STALE:
-      // Dim blue breathing — broker unreachable
-      breatheEffect(CRGB(0, 0, 180), 3000);
-      break;
-  }
+  delay(1000);
 }

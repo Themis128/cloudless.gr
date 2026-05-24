@@ -207,7 +207,7 @@ binary_sensor:
     lambda: "return id(aws_up);"
 
 # ---------------------------------------------------------------------------
-# On-board RGB LED  (GPIO38 = v1.1 — do NOT change to 48 for this board)
+# On-board RGB LED  (GPIO48 = v1.0 — v1.1 uses GPIO38, do NOT swap)
 # ---------------------------------------------------------------------------
 light:
   - platform:   esp32_rmt_led_strip
