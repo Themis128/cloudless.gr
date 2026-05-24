@@ -22,7 +22,7 @@ export async function fetchWithAuth(
       Authorization: `Bearer ${idToken}`,
     };
 
-    return fetch(url, {
+    return globalThis.fetch(url, {
       ...init,
       headers,
     });
