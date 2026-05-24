@@ -1,70 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  isActiveCampaignConfigured,
-  listCampaigns,
-  createCampaign,
-  type CreateCampaignInput,
-} from "@/lib/activecampaign";
 
+// Marketing Emails API requires the 'content' scope which is not granted
+// on this private app token. Return a clear 501 so the UI can surface it.
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!(await isActiveCampaignConfigured())) {
-    return NextResponse.json(
-      { error: "ActiveCampaign not configured." },
-      { status: 503 },
-    );
-  }
-
-  const { searchParams } = new URL(request.url);
-  const DEFAULT_LIMIT = 20;
-  const MAX_LIMIT = 100;
-  const limit = Math.max(
-    1,
-    Math.min(
-      Number.parseInt(searchParams.get("limit") ?? String(DEFAULT_LIMIT), 10),
-      MAX_LIMIT,
-    ),
+  return NextResponse.json(
+    { error: "Marketing Emails API requires 'content' scope — not available on current HubSpot private app token." },
+    { status: 501 },
   );
-  const campaigns = await listCampaigns(limit);
-  return NextResponse.json({
-    campaigns,
-    total: campaigns.length,
-    fetchedAt: new Date().toISOString(),
-  });
-}
-
-export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (!auth.ok) return auth.response;
-
-  if (!(await isActiveCampaignConfigured())) {
-    return NextResponse.json(
-      { error: "ActiveCampaign not configured." },
-      { status: 503 },
-    );
-  }
-
-  let input: CreateCampaignInput;
-  try {
-    input = await request.json();
-    if (!input.name || !input.subject || !input.listId)
-      throw new Error("missing fields");
-  } catch {
-    return NextResponse.json(
-      { error: "name, subject, listId are required." },
-      { status: 400 },
-    );
-  }
-
-  const campaign = await createCampaign(input);
-  if (!campaign) {
-    return NextResponse.json(
-      { error: "Failed to create campaign." },
-      { status: 500 },
-    );
-  }
-  return NextResponse.json({ campaign }, { status: 201 });
 }
