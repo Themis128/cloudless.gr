@@ -13,11 +13,7 @@ import ClientParticleField from "@/components/ClientParticleField";
 import StatCounter from "@/components/StatCounter";
 import SocialLinks from "@/components/SocialLinks";
 
-// Force-dynamic temporarily — turbopack prerender hits a "cannot read length of undefined"
-// inside framework frames during static generation. Switching to dynamic SSR unblocks the
-// build; revisit once the upstream issue is identified.
-// TODO(perf): restore `export const revalidate = 3600;` once prerender works.
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 function stepColorClass(color: string): string {
   if (color === "cyan")
