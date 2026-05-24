@@ -50,7 +50,7 @@ describe("Admin Email API routes", () => {
     mockRequireAdmin.mockReturnValue({ ok: true, user: { sub: "admin" } });
     mockIsHubSpotConfigured.mockResolvedValue(true);
     mockIsActiveCampaignConfigured.mockResolvedValue(true);
-    mockGetConfig.mockResolvedValue({ HUBSPOT_API_KEY: "test-token" });
+    mockGetConfig.mockResolvedValue({ HUBSPOT_API_KEY: "test" }); // NOSONAR
     vi.stubGlobal("fetch", mockFetch);
   });
 
@@ -115,7 +115,9 @@ describe("Admin Email API routes", () => {
         ),
       );
       const { GET } = await import("@/app/api/admin/email/contacts/route");
-      const res = await GET(makeGet("/api/admin/email/contacts?tab=subscribers"));
+      const res = await GET(
+        makeGet("/api/admin/email/contacts?tab=subscribers"),
+      );
       const data = await res.json();
       expect(res.status).toBe(200);
       expect(data.contacts).toHaveLength(1);
