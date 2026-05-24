@@ -102,7 +102,7 @@ export default function TypingText({
   ]);
 
   return (
-    <span className={className}>
+    <span className={className} suppressHydrationWarning>
       {displayed}
       {!reducedMotion && <span className="typing-cursor" />}
     </span>
