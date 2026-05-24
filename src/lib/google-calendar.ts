@@ -78,6 +78,57 @@ interface TimeSlot {
   end: string;
 }
 
+function slotOverlapsBusy(
+  slotStart: Date,
+  slotEnd: Date,
+  busySlots: TimeSlot[],
+): boolean {
+  return busySlots.some((busy) => {
+    const bs = new Date(busy.start);
+    const be = new Date(busy.end);
+    return slotStart < be && slotEnd > bs;
+  });
+}
+
+function slotsForDay(
+  day: Date,
+  now: Date,
+  busySlots: TimeSlot[],
+): TimeSlot[] {
+  const daySlots: TimeSlot[] = [];
+  for (let hour = BUSINESS_OPEN_HOUR; hour < BUSINESS_CLOSE_HOUR; hour++) {
+    for (const minute of [0, SLOT_DURATION_MINUTES]) {
+      const slotStart = new Date(day);
+      slotStart.setUTCHours(0, 0, 0, 0);
+      const offset = athensOffsetMs(slotStart);
+      slotStart.setTime(
+        slotStart.getTime() + hour * MS_PER_HOUR + minute * MS_PER_MINUTE - offset,
+      );
+      const slotEnd = new Date(slotStart.getTime() + SLOT_DURATION_MINUTES * MS_PER_MINUTE);
+      if (slotStart < now) continue;
+      if (!slotOverlapsBusy(slotStart, slotEnd, busySlots)) {
+        daySlots.push({ start: slotStart.toISOString(), end: slotEnd.toISOString() });
+      }
+    }
+  }
+  return daySlots;
+}
+
+function buildAvailableSlots(
+  now: Date,
+  daysAhead: number,
+  busySlots: TimeSlot[],
+): TimeSlot[] {
+  const slots: TimeSlot[] = [];
+  for (let d = 0; d < daysAhead; d++) {
+    const day = new Date(now.getTime() + d * MS_PER_DAY);
+    const dayOfWeek = day.getUTCDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) continue; // skip weekends
+    slots.push(...slotsForDay(day, now, busySlots));
+  }
+  return slots;
+}
+
 /**
  * Get free/busy info for the next N days and return available 30-min slots
  * during business hours (09:00-17:00 Athens time, weekdays only).
@@ -115,47 +166,7 @@ export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
   // Generate 30-min slots during business hours (09:00-17:00 Europe/Athens).
   // Athens is UTC+2 (EET) in winter and UTC+3 (EEST) in summer; the offset
   // is computed per-day so DST transitions are handled correctly.
-  const slots: TimeSlot[] = [];
-
-  for (let d = 0; d < daysAhead; d++) {
-    const day = new Date(now.getTime() + d * MS_PER_DAY);
-    const dayOfWeek = day.getUTCDay();
-    if (dayOfWeek === 0 || dayOfWeek === 6) continue; // skip weekends
-
-    for (let hour = BUSINESS_OPEN_HOUR; hour < BUSINESS_CLOSE_HOUR; hour++) {
-      for (const minute of [0, SLOT_DURATION_MINUTES]) {
-        const slotStart = new Date(day);
-        slotStart.setUTCHours(0, 0, 0, 0);
-        const offset = athensOffsetMs(slotStart);
-        slotStart.setTime(
-          slotStart.getTime() +
-            hour * MS_PER_HOUR +
-            minute * MS_PER_MINUTE -
-            offset,
-        );
-        const slotEnd = new Date(
-          slotStart.getTime() + SLOT_DURATION_MINUTES * MS_PER_MINUTE,
-        );
-
-        if (slotStart < now) continue;
-
-        const isBusy = busySlots.some((busy) => {
-          const bs = new Date(busy.start);
-          const be = new Date(busy.end);
-          return slotStart < be && slotEnd > bs;
-        });
-
-        if (!isBusy) {
-          slots.push({
-            start: slotStart.toISOString(),
-            end: slotEnd.toISOString(),
-          });
-        }
-      }
-    }
-  }
-
-  return slots;
+  return buildAvailableSlots(now, daysAhead, busySlots);
 }
 
 /** Book a consultation by creating a calendar event */

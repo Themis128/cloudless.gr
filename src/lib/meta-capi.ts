@@ -77,7 +77,7 @@ function hashMaybe(value: string | undefined): string | undefined {
  *   normalizePhone("(617) 555-0100")  -> "6175550100"
  */
 function normalizePhone(value: string): string {
-  return value.replace(/[^0-9]/g, "");
+  return value.replace(/\D/g, "");
 }
 
 function hashPhoneMaybe(value: string | undefined): string | undefined {
@@ -114,6 +114,27 @@ export function isCapiConfigured(): boolean {
   );
 }
 
+function buildUserData(opts: SendEventOptions): Record<string, unknown> {
+  const userData: Record<string, unknown> = {};
+  const emailHash = hashMaybe(opts.email);
+  const phoneHash = hashPhoneMaybe(opts.phone);
+  const firstNameHash = hashMaybe(opts.firstName);
+  const lastNameHash = hashMaybe(opts.lastName);
+  const countryHash = hashMaybe(opts.country);
+  const cityHash = hashMaybe(opts.city);
+  if (emailHash) userData.em = [emailHash];
+  if (phoneHash) userData.ph = [phoneHash];
+  if (firstNameHash) userData.fn = [firstNameHash];
+  if (lastNameHash) userData.ln = [lastNameHash];
+  if (countryHash) userData.country = [countryHash];
+  if (cityHash) userData.ct = [cityHash];
+  if (opts.clientIpAddress) userData.client_ip_address = opts.clientIpAddress;
+  if (opts.clientUserAgent) userData.client_user_agent = opts.clientUserAgent;
+  if (opts.fbp) userData.fbp = opts.fbp;
+  if (opts.fbc) userData.fbc = opts.fbc;
+  return userData;
+}
+
 /**
  * Send a single server-side event to the Meta Conversions API.
  *
@@ -135,23 +156,7 @@ export async function sendCapiEvent(
     return { ok: false, skipped: true, reason: "missing eventId" };
   }
 
-  const userData: Record<string, unknown> = {};
-  const emailHash = hashMaybe(opts.email);
-  const phoneHash = hashPhoneMaybe(opts.phone);
-  const firstNameHash = hashMaybe(opts.firstName);
-  const lastNameHash = hashMaybe(opts.lastName);
-  const countryHash = hashMaybe(opts.country);
-  const cityHash = hashMaybe(opts.city);
-  if (emailHash) userData.em = [emailHash];
-  if (phoneHash) userData.ph = [phoneHash];
-  if (firstNameHash) userData.fn = [firstNameHash];
-  if (lastNameHash) userData.ln = [lastNameHash];
-  if (countryHash) userData.country = [countryHash];
-  if (cityHash) userData.ct = [cityHash];
-  if (opts.clientIpAddress) userData.client_ip_address = opts.clientIpAddress;
-  if (opts.clientUserAgent) userData.client_user_agent = opts.clientUserAgent;
-  if (opts.fbp) userData.fbp = opts.fbp;
-  if (opts.fbc) userData.fbc = opts.fbc;
+  const userData = buildUserData(opts);
 
   const payload = {
     data: [
@@ -204,15 +209,15 @@ export async function sendCapiEvent(
       event_name: eventName,
       reason: isAbort ? "timeout" : "network_error",
     });
-    return {
-      ok: false,
-      status: 0,
-      error: isAbort
-        ? `Request aborted after ${CAPI_REQUEST_TIMEOUT_MS}ms`
-        : err instanceof Error
-          ? err.message
-          : String(err),
-    };
+    let errorMessage: string;
+    if (isAbort) {
+      errorMessage = `Request aborted after ${CAPI_REQUEST_TIMEOUT_MS}ms`;
+    } else if (err instanceof Error) {
+      errorMessage = err.message;
+    } else {
+      errorMessage = String(err);
+    }
+    return { ok: false, status: 0, error: errorMessage };
   } finally {
     clearTimeout(timer);
   }
@@ -230,7 +235,7 @@ export function sendLeadEvent(
   return sendCapiEvent("Lead", {
     ...rest,
     customData: {
-      ...(opts.customData ?? {}),
+      ...opts.customData,
       ...(source ? { lead_source: source } : {}),
     },
   });
@@ -259,7 +264,7 @@ export function sendPurchaseEvent(
   return sendCapiEvent("Purchase", {
     ...rest,
     customData: {
-      ...(opts.customData ?? {}),
+      ...opts.customData,
       value,
       currency,
       ...(contents ? { contents, content_type: "product" } : {}),

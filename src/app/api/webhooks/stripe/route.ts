@@ -21,6 +21,145 @@ import {
   markStripeEventFailed,
 } from "@/lib/stripe-transactions";
 
+async function syncHubSpotDeal(session: Stripe.Checkout.Session): Promise<void> {
+  try {
+    const amountEur = (session.amount_total ?? 0) / 100;
+    const currency = (session.currency ?? "eur").toUpperCase();
+    const contactId = await upsertContact({
+      email: session.customer_email ?? "",
+      firstname: session.customer_details?.name?.split(" ")[0] ?? "",
+      lastname:
+        session.customer_details?.name?.split(" ").slice(1).join(" ") ?? "",
+      lead_source: "stripe_checkout",
+    });
+    const dealId = await createDeal({
+      dealname: `Purchase – ${session.id}`,
+      amount: amountEur,
+      currency,
+      dealstage: "closedwon",
+      lead_source: "stripe_checkout",
+      description: `Stripe checkout session ${session.id}`,
+    });
+    if (dealId && contactId) {
+      await associateDealWithContact(dealId, contactId);
+    }
+  } catch (hubspotError) {
+    console.error("[Stripe→HubSpot] Deal creation failed:", hubspotError);
+  }
+}
+
+async function handleCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+  eventId: string,
+): Promise<void> {
+  console.warn(
+    `[Stripe] Checkout completed: ${session.id}, event: ${eventId}, payment_status: ${session.payment_status}`,
+  );
+
+  const paymentCollected =
+    session.payment_status === "paid" || session.mode === "subscription";
+
+  if (session.customer_email && paymentCollected) {
+    await sendOrderConfirmation(
+      session.customer_email,
+      session.id,
+      session.amount_total ?? 0,
+      session.currency ?? "eur",
+    );
+  }
+
+  await notifyTeam(
+    `[Order] New purchase: ${session.id}`,
+    `<h3>New order received</h3>
+    <p><strong>Customer:</strong> ${escapeHtml(session.customer_email ?? "N/A")}</p>
+    <p><strong>Amount:</strong> ${((session.amount_total ?? 0) / 100).toFixed(2)} ${escapeHtml((session.currency ?? "EUR").toUpperCase())}</p>
+    <p><strong>Session:</strong> ${escapeHtml(session.id)}</p>`,
+  );
+
+  slackOrderNotify({
+    sessionId: session.id,
+    email: session.customer_email ?? "N/A",
+    amount: String((session.amount_total ?? 0) / 100),
+  }).catch(() => {});
+
+  if (session.customer_email) {
+    syncHubSpotDeal(session).catch(() => {});
+  }
+}
+
+function invoiceCustomerString(invoice: Stripe.Invoice): string {
+  const c = invoice.customer;
+  if (!c) return "unknown";
+  if (typeof c === "string") return c;
+  return c.id;
+}
+
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
+  console.error(
+    `[Stripe] Invoice payment failed: ${invoice.id}, customer: ${invoiceCustomerString(invoice)}`,
+  );
+  const customerEmail =
+    typeof invoice.customer_email === "string" ? invoice.customer_email : null;
+  if (customerEmail) {
+    await sendPaymentFailureNotice(customerEmail, invoice.id ?? "unknown");
+  }
+  await notifyTeam(
+    `[Payment Failed] Invoice: ${invoice.id}`,
+    `<p style="color: #ff4444;"><strong>Payment failed</strong></p>
+    <p><strong>Invoice:</strong> ${escapeHtml(invoice.id ?? "unknown")}</p>
+    <p><strong>Customer:</strong> ${escapeHtml(customerEmail ?? invoiceCustomerString(invoice))}</p>
+    <p><strong>Amount:</strong> ${((invoice.amount_due ?? 0) / 100).toFixed(2)} ${escapeHtml((invoice.currency ?? "EUR").toUpperCase())}</p>`,
+  );
+}
+
+async function handleSubscriptionEvent(
+  action: "created" | "updated" | "deleted",
+  sub: Stripe.Subscription,
+): Promise<void> {
+  if (action === "deleted") {
+    console.warn(`[Stripe] Subscription cancelled: ${sub.id}`);
+    await notifyTeam(
+      `[Subscription] Cancelled: ${sub.id}`,
+      `<p>Subscription cancelled.</p><p><strong>ID:</strong> ${escapeHtml(sub.id)}</p>`,
+    );
+    return;
+  }
+  const label = action === "created" ? "New" : "Updated";
+  const verb = action === "created" ? "created" : "updated";
+  console.warn(`[Stripe] Subscription ${verb}: ${sub.id}, status: ${sub.status}`);
+  await notifyTeam(
+    `[Subscription] ${label}: ${sub.id}`,
+    `<p>Subscription ${verb}.</p>
+    <p><strong>ID:</strong> ${escapeHtml(sub.id)}</p>
+    <p><strong>Status:</strong> ${escapeHtml(sub.status)}</p>`,
+  );
+}
+
+async function handleStripeEvent(event: Stripe.Event): Promise<void> {
+  switch (event.type) {
+    case "checkout.session.completed":
+      await handleCheckoutCompleted(event.data.object, event.id);
+      break;
+    case "customer.subscription.created":
+      await handleSubscriptionEvent("created", event.data.object);
+      break;
+    case "customer.subscription.updated":
+      await handleSubscriptionEvent("updated", event.data.object);
+      break;
+    case "customer.subscription.deleted":
+      await handleSubscriptionEvent("deleted", event.data.object);
+      break;
+    case "invoice.payment_succeeded":
+      console.warn(`[Stripe] Invoice paid: ${event.data.object.id}, amount: ${event.data.object.amount_paid}`);
+      break;
+    case "invoice.payment_failed":
+      await handleInvoicePaymentFailed(event.data.object);
+      break;
+    default:
+      console.warn(`[Stripe] Unhandled event type: ${event.type}`);
+  }
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
@@ -70,157 +209,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        console.warn(
-          `[Stripe] Checkout completed: ${session.id}, event: ${event.id}, payment_status: ${session.payment_status}`,
-        );
-
-        const paymentCollected =
-          session.payment_status === "paid" || session.mode === "subscription";
-
-        if (session.customer_email && paymentCollected) {
-          await sendOrderConfirmation(
-            session.customer_email,
-            session.id,
-            session.amount_total ?? 0,
-            session.currency ?? "eur",
-          );
-        }
-
-        await notifyTeam(
-          `[Order] New purchase: ${session.id}`,
-          `<h3>New order received</h3>
-          <p><strong>Customer:</strong> ${escapeHtml(session.customer_email ?? "N/A")}</p>
-          <p><strong>Amount:</strong> ${((session.amount_total ?? 0) / 100).toFixed(2)} ${escapeHtml((session.currency ?? "EUR").toUpperCase())}</p>
-          <p><strong>Session:</strong> ${escapeHtml(session.id)}</p>`,
-        );
-
-        slackOrderNotify({
-          sessionId: session.id,
-          email: session.customer_email ?? "N/A",
-          amount: String((session.amount_total ?? 0) / 100),
-        }).catch(() => {});
-
-        if (session.customer_email) {
-          (async () => {
-            try {
-              const amountEur = (session.amount_total ?? 0) / 100;
-              const currency = (session.currency ?? "eur").toUpperCase();
-              const contactId = await upsertContact({
-                email: session.customer_email!,
-                firstname: session.customer_details?.name?.split(" ")[0] ?? "",
-                lastname:
-                  session.customer_details?.name
-                    ?.split(" ")
-                    .slice(1)
-                    .join(" ") ?? "",
-                lead_source: "stripe_checkout",
-              });
-              const dealId = await createDeal({
-                dealname: `Purchase – ${session.id}`,
-                amount: amountEur,
-                currency,
-                dealstage: "closedwon",
-                lead_source: "stripe_checkout",
-                description: `Stripe checkout session ${session.id}`,
-              });
-              if (dealId && contactId) {
-                await associateDealWithContact(dealId, contactId);
-              }
-            } catch (hubspotError) {
-              console.error(
-                "[Stripe→HubSpot] Deal creation failed:",
-                hubspotError,
-              );
-            }
-          })();
-        }
-        break;
-      }
-
-      case "customer.subscription.created": {
-        const subscription = event.data.object as Stripe.Subscription;
-        console.warn(
-          `[Stripe] Subscription created: ${subscription.id}, status: ${subscription.status}`,
-        );
-
-        await notifyTeam(
-          `[Subscription] New: ${subscription.id}`,
-          `<p>New subscription created.</p>
-          <p><strong>ID:</strong> ${escapeHtml(subscription.id)}</p>
-          <p><strong>Status:</strong> ${escapeHtml(subscription.status)}</p>`,
-        );
-        break;
-      }
-
-      case "customer.subscription.updated": {
-        const subscription = event.data.object as Stripe.Subscription;
-        console.warn(
-          `[Stripe] Subscription updated: ${subscription.id}, status: ${subscription.status}`,
-        );
-
-        await notifyTeam(
-          `[Subscription] Updated: ${subscription.id}`,
-          `<p>Subscription updated.</p>
-          <p><strong>ID:</strong> ${escapeHtml(subscription.id)}</p>
-          <p><strong>Status:</strong> ${escapeHtml(subscription.status)}</p>`,
-        );
-        break;
-      }
-
-      case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
-        console.warn(`[Stripe] Subscription cancelled: ${subscription.id}`);
-
-        await notifyTeam(
-          `[Subscription] Cancelled: ${subscription.id}`,
-          `<p>Subscription cancelled.</p>
-          <p><strong>ID:</strong> ${escapeHtml(subscription.id)}</p>`,
-        );
-        break;
-      }
-
-      case "invoice.payment_succeeded": {
-        const invoice = event.data.object as Stripe.Invoice;
-        console.warn(
-          `[Stripe] Invoice paid: ${invoice.id}, amount: ${invoice.amount_paid}`,
-        );
-        break;
-      }
-
-      case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        console.error(
-          `[Stripe] Invoice payment failed: ${invoice.id}, customer: ${invoice.customer}`,
-        );
-
-        const customerEmail =
-          typeof invoice.customer_email === "string"
-            ? invoice.customer_email
-            : null;
-
-        if (customerEmail) {
-          await sendPaymentFailureNotice(
-            customerEmail,
-            invoice.id ?? "unknown",
-          );
-        }
-
-        await notifyTeam(
-          `[Payment Failed] Invoice: ${invoice.id}`,
-          `<p style="color: #ff4444;"><strong>Payment failed</strong></p>
-          <p><strong>Invoice:</strong> ${escapeHtml(invoice.id ?? "unknown")}</p>
-          <p><strong>Customer:</strong> ${escapeHtml(customerEmail ?? String(invoice.customer))}</p>
-          <p><strong>Amount:</strong> ${((invoice.amount_due ?? 0) / 100).toFixed(2)} ${escapeHtml((invoice.currency ?? "EUR").toUpperCase())}</p>`,
-        );
-        break;
-      }
-
-      default:
-        console.warn(`[Stripe] Unhandled event type: ${event.type}`);
-    }
+    await handleStripeEvent(event);
   } catch (err) {
     const integrationResponse = mapIntegrationError(err);
     if (integrationResponse) return integrationResponse;

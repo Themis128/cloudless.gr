@@ -42,6 +42,26 @@ const levelDot: Record<string, string> = {
 
 type FilterLevel = "all" | "fatal" | "error" | "warning" | "info";
 
+const ACTION_LABELS: Record<string, string> = {
+  resolved: "Resolved",
+  ignored: "Ignored",
+  unresolved: "Reopened",
+};
+
+async function performErrorAction(
+  id: string,
+  status: "resolved" | "ignored" | "unresolved",
+): Promise<string> {
+  const res = await fetchWithAuth(`/api/admin/ops/errors/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+  return `${ACTION_LABELS[status]} successfully`;
+}
+
 export default function AdminErrorsPage() {
   const [issues, setIssues] = useState<SentryIssue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,23 +101,11 @@ export default function AdminErrorsPage() {
     id: string,
     status: "resolved" | "ignored" | "unresolved",
   ) => {
-    const labels: Record<string, string> = {
-      resolved: "Resolved",
-      ignored: "Ignored",
-      unresolved: "Reopened",
-    };
     setActionLoading(`${status}-${id}`);
     setActionMsg(null);
     try {
-      const res = await fetchWithAuth(`/api/admin/ops/errors/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
-      setActionMsg({ id, text: `${labels[status]} successfully`, ok: true });
-      // Remove resolved/ignored from list; re-add if reopened
+      const msg = await performErrorAction(id, status);
+      setActionMsg({ id, text: msg, ok: true });
       if (status !== "unresolved") {
         setIssues((prev) => prev.filter((i) => i.id !== id));
       } else {

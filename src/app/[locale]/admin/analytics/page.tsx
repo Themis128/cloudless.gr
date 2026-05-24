@@ -288,6 +288,37 @@ async function handleTabFetch<T>(
   }
 }
 
+// ─── Overview data loader ─────────────────────────────────────────────────────
+
+async function loadOverviewData(): Promise<{
+  snapshot: SeoSnapshot | null;
+  analytics: WebAnalytics | null;
+  overviewError: string | null;
+}> {
+  const [seoRes, webRes] = await Promise.allSettled([
+    fetchWithAuth("/api/admin/analytics/seo"),
+    fetchWithAuth("/api/admin/analytics/web"),
+  ]);
+
+  let snapshot: SeoSnapshot | null = null;
+  let analytics: WebAnalytics | null = null;
+  let overviewError: string | null = null;
+
+  if (seoRes.status === "fulfilled" && seoRes.value.ok) {
+    const d = await seoRes.value.json();
+    snapshot = d.snapshot ?? null;
+  } else {
+    overviewError = "Failed to load GSC overview";
+  }
+
+  if (webRes.status === "fulfilled" && webRes.value.ok) {
+    const d = await webRes.value.json();
+    analytics = d.analytics ?? null;
+  }
+
+  return { snapshot, analytics, overviewError };
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminAnalyticsPage() {
@@ -328,20 +359,13 @@ export default function AdminAnalyticsPage() {
     setLoading("overview", true);
     setError("overview", null);
     try {
-      const [seoRes, webRes] = await Promise.allSettled([
-        fetchWithAuth("/api/admin/analytics/seo"),
-        fetchWithAuth("/api/admin/analytics/web"),
-      ]);
-      if (seoRes.status === "fulfilled" && seoRes.value.ok) {
-        const d = await seoRes.value.json();
-        setSnapshot(d.snapshot ?? null);
+      const { snapshot, analytics, overviewError } = await loadOverviewData();
+      if (overviewError) {
+        setError("overview", overviewError);
       } else {
-        setError("overview", "Failed to load GSC overview");
+        setSnapshot(snapshot);
       }
-      if (webRes.status === "fulfilled" && webRes.value.ok) {
-        const d = await webRes.value.json();
-        setWeb(d.analytics ?? null);
-      }
+      setWeb(analytics);
     } finally {
       setLoading("overview", false);
       markFetched("overview");

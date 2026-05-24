@@ -246,120 +246,89 @@ function addSecurityHeaders(response: NextResponse, nonce: string): void {
   response.headers.set("x-nonce", nonce);
 }
 
-export async function proxy(request: NextRequest) {
-  // One nonce per request — used both in the CSP header and forwarded to
-  // layout.tsx via x-nonce so <Script nonce={nonce}> matches the policy.
-  const nonce = generateNonce();
+function handleApiRoute(
+  request: NextRequest,
+  pathname: string,
+  nonce: string,
+): NextResponse {
+  const response = NextResponse.next();
+  addSecurityHeaders(response, nonce);
 
-  // Enforce HTTPS in production so all traffic stays encrypted in transit.
-  // Exclude /api/* routes: k8s health probes hit the pod directly over HTTP
-  // (Next.js sets x-forwarded-proto:http on plain HTTP connections), and
-  // HTTPS enforcement for browser API calls is handled by CF/Traefik at ingress.
-  const forwardedProto = request.headers.get("x-forwarded-proto");
-  const { pathname } = request.nextUrl;
+  const origin = request.headers.get("origin") ?? "";
+  const allowedOrigins = ["https://cloudless.gr", "https://www.cloudless.gr"];
   if (
-    process.env.NODE_ENV === "production" &&
-    forwardedProto === "http" &&
-    !pathname.startsWith("/api/")
+    process.env.NODE_ENV === "development" &&
+    /^http:\/\/localhost:(3000|3001|4000)$/.test(origin)
   ) {
-    const httpsUrl = request.nextUrl.clone();
-    httpsUrl.protocol = "https:";
-    return NextResponse.redirect(httpsUrl, 308);
+    allowedOrigins.push(origin);
+  }
+  if (allowedOrigins.includes(origin)) {
+    response.headers.set("Access-Control-Allow-Origin", origin);
+    response.headers.set(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    );
+    response.headers.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, stripe-signature",
+    );
   }
 
-  // --- API routes: CORS + rate limiting + security headers ---
-  if (pathname.startsWith("/api/")) {
-    const response = NextResponse.next();
-    addSecurityHeaders(response, nonce);
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, { status: 204, headers: response.headers });
+  }
 
-    const origin = request.headers.get("origin") ?? "";
-    const allowedOrigins = [
-      "https://cloudless.gr",
-      "https://www.cloudless.gr",
-    ];
-
-    if (
-      process.env.NODE_ENV === "development" &&
-      /^http:\/\/localhost:(3000|3001|4000)$/.test(origin)
-    ) {
-      allowedOrigins.push(origin);
-    }
-
-    if (allowedOrigins.includes(origin)) {
-      response.headers.set("Access-Control-Allow-Origin", origin);
-      response.headers.set(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-      );
-      response.headers.set(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization, stripe-signature",
-      );
-    }
-
-    if (request.method === "OPTIONS") {
-      return new NextResponse(null, {
-        status: 204,
-        headers: response.headers,
-      });
-    }
-
-    const limit =
-      RATE_LIMITS[pathname] ??
-      (pathname.startsWith("/api/admin/") ? ADMIN_RATE_LIMIT : null);
-    const isAdminRoute = pathname.startsWith("/api/admin/");
-    if (
-      limit &&
-      (isAdminRoute ||
-        (request.method !== "GET" && request.method !== "OPTIONS"))
-    ) {
-      cleanupStaleEntries();
-
-      const ip = getSharedClientIp(request);
-      const key = `${ip}:${pathname}`;
-      const { limited, remaining } = isRateLimited(
-        key,
-        limit.windowMs,
-        limit.max,
-      );
-
-      response.headers.set("X-RateLimit-Limit", String(limit.max));
-      response.headers.set("X-RateLimit-Remaining", String(remaining));
-
-      if (limited) {
-        return NextResponse.json(
-          { error: "Too many requests. Please try again later." },
-          {
-            status: 429,
-            headers: {
-              "Retry-After": String(Math.ceil(limit.windowMs / 1000)),
-              "X-RateLimit-Limit": String(limit.max),
-              "X-RateLimit-Remaining": "0",
-            },
+  const limit =
+    RATE_LIMITS[pathname] ??
+    (pathname.startsWith("/api/admin/") ? ADMIN_RATE_LIMIT : null);
+  const isAdminRoute = pathname.startsWith("/api/admin/");
+  if (
+    limit &&
+    (isAdminRoute || (request.method !== "GET" && request.method !== "OPTIONS"))
+  ) {
+    cleanupStaleEntries();
+    const ip = getSharedClientIp(request);
+    const { limited, remaining } = isRateLimited(
+      `${ip}:${pathname}`,
+      limit.windowMs,
+      limit.max,
+    );
+    response.headers.set("X-RateLimit-Limit", String(limit.max));
+    response.headers.set("X-RateLimit-Remaining", String(remaining));
+    if (limited) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil(limit.windowMs / 1000)),
+            "X-RateLimit-Limit": String(limit.max),
+            "X-RateLimit-Remaining": "0",
           },
-        );
-      }
+        },
+      );
     }
-
-    return response;
   }
 
-  // --- Page routes: Cognito auth guard + next-intl locale routing + security headers ---
+  return response;
+}
+
+async function handlePageRoute(
+  request: NextRequest,
+  pathname: string,
+  nonce: string,
+): Promise<NextResponse> {
   const bare = stripLocale(pathname);
   const locale = getLocaleFromPath(pathname);
   const prefix = `/${locale}`;
-
   const isAdminPath = bare === "/admin" || bare.startsWith("/admin/");
-  const isDashboardPath =
-    bare === "/dashboard" || bare.startsWith("/dashboard/");
+  const isDashboardPath = bare === "/dashboard" || bare.startsWith("/dashboard/");
 
   if (isAdminPath || isDashboardPath) {
     const { valid, isAdmin: hasAdminGroup } = await readCognitoToken(request);
     if (valid) {
       if (isAdminPath && !hasAdminGroup) {
-        return NextResponse.redirect(
-          new URL(`${prefix}/dashboard`, request.url),
-        );
+        return NextResponse.redirect(new URL(`${prefix}/dashboard`, request.url));
       }
     } else {
       const loginUrl = new URL(`${prefix}/auth/login`, request.url);
@@ -372,10 +341,37 @@ export async function proxy(request: NextRequest) {
   // layout) can call themeForRoute() and render <html data-theme=...>
   // server-side with no first-paint flash. next/headers reads request-side.
   request.headers.set("x-pathname", pathname);
-
   const response = intlMiddleware(request);
   addSecurityHeaders(response, nonce);
   return response;
+}
+
+export async function proxy(request: NextRequest) {
+  // One nonce per request — used both in the CSP header and forwarded to
+  // layout.tsx via x-nonce so <Script nonce={nonce}> matches the policy.
+  const nonce = generateNonce();
+  const { pathname } = request.nextUrl;
+
+  // Enforce HTTPS in production so all traffic stays encrypted in transit.
+  // Exclude /api/* routes: k8s health probes hit the pod directly over HTTP
+  // (Next.js sets x-forwarded-proto:http on plain HTTP connections), and
+  // HTTPS enforcement for browser API calls is handled by CF/Traefik at ingress.
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  if (
+    process.env.NODE_ENV === "production" &&
+    forwardedProto === "http" &&
+    !pathname.startsWith("/api/")
+  ) {
+    const httpsUrl = request.nextUrl.clone();
+    httpsUrl.protocol = "https:";
+    return NextResponse.redirect(httpsUrl, 308);
+  }
+
+  if (pathname.startsWith("/api/")) {
+    return handleApiRoute(request, pathname, nonce);
+  }
+
+  return handlePageRoute(request, pathname, nonce);
 }
 
 export const config = {

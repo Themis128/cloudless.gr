@@ -18,6 +18,45 @@
 /** Tracks the last SHA that sent a deploy notification (module-level dedup). */
 let lastNotifiedVersion: string | undefined;
 
+async function loadSsmParams(prefix: string): Promise<Map<string, string>> {
+  const { SSMClient, GetParametersByPathCommand } =
+    await import("@aws-sdk/client-ssm");
+  const ssm = new SSMClient({ region: process.env.AWS_REGION ?? "us-east-1" });
+  const params = new Map<string, string>();
+  let nextToken: string | undefined;
+
+  do {
+    const res = await ssm.send(
+      new GetParametersByPathCommand({
+        Path: prefix,
+        WithDecryption: true,
+        NextToken: nextToken,
+      }),
+    );
+    for (const p of res.Parameters ?? []) {
+      const key = p.Name?.replace(`${prefix}/`, "") ?? "";
+      if (key && p.Value) params.set(key, p.Value);
+    }
+    nextToken = res.NextToken;
+  } while (nextToken);
+
+  return params;
+}
+
+async function fireDeployNotification(prefix: string, params: Map<string, string>): Promise<void> {
+  console.warn(
+    `[Instrumentation] Loaded ${params.size} SSM parameters from ${prefix}`,
+  );
+  const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "unknown";
+  const stage = process.env.SST_STAGE ?? process.env.NODE_ENV ?? "production";
+  if (version === "unknown" || version === lastNotifiedVersion) return;
+  lastNotifiedVersion = version;
+  const { slackDeployNotify } = await import("@/lib/slack-notify");
+  slackDeployNotify({ version, stage, status: "succeeded", commitSha: version }).catch(
+    (err) => console.warn("[Instrumentation] slackDeployNotify failed:", err),
+  );
+}
+
 export async function register() {
   // Only run on the server (Lambda), not during build or in the browser
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
@@ -30,31 +69,7 @@ export async function register() {
   if (!prefix) return;
 
   try {
-    const { SSMClient, GetParametersByPathCommand } =
-      await import("@aws-sdk/client-ssm");
-    const ssm = new SSMClient({
-      region: process.env.AWS_REGION ?? "us-east-1",
-    });
-
-    const params = new Map<string, string>();
-    let nextToken: string | undefined;
-
-    do {
-      const res = await ssm.send(
-        new GetParametersByPathCommand({
-          Path: prefix,
-          WithDecryption: true,
-          NextToken: nextToken,
-        }),
-      );
-
-      for (const p of res.Parameters ?? []) {
-        const key = p.Name?.replace(`${prefix}/`, "") ?? "";
-        if (key && p.Value) params.set(key, p.Value);
-      }
-
-      nextToken = res.NextToken;
-    } while (nextToken);
+    const params = await loadSsmParams(prefix);
 
     // Inject SSM secrets into process.env (only if not already set)
     // This makes them available to integrations.ts / getIntegrations()
@@ -64,26 +79,7 @@ export async function register() {
       }
     }
 
-    console.warn(
-      `[Instrumentation] Loaded ${params.size} SSM parameters from ${prefix}`,
-    );
-
-    // Fire deploy notification on first cold start of a new version.
-    // NEXT_PUBLIC_APP_VERSION is the git SHA set by sst.config.ts / CI.
-    const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "unknown";
-    const stage = process.env.SST_STAGE ?? process.env.NODE_ENV ?? "production";
-    if (version !== "unknown" && version !== lastNotifiedVersion) {
-      lastNotifiedVersion = version;
-      const { slackDeployNotify } = await import("@/lib/slack-notify");
-      slackDeployNotify({
-        version,
-        stage,
-        status: "succeeded",
-        commitSha: version,
-      }).catch((err) =>
-        console.warn("[Instrumentation] slackDeployNotify failed:", err),
-      );
-    }
+    await fireDeployNotification(prefix, params);
   } catch (err) {
     console.error("[Instrumentation] Failed to load SSM parameters:", err);
     // Don't throw — let the app start anyway; individual features will

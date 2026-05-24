@@ -36,7 +36,6 @@ export function readLocaleFromCookie(): Locale {
     : defaultLocale;
 }
 
-export function setAppLocale(locale: Locale): void {
+export function setAppLocale(_locale: Locale): void {
   // No-op: locale switching is now URL-based via useCurrentLocale
-  void locale;
 }

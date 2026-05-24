@@ -46,7 +46,7 @@ export async function notionFetch<T = unknown>(
   const url = `${NOTION_API}${path}`;
   const reqInit: RequestInit = {
     ...init,
-    headers: { ...headers, ...(init?.headers ?? {}) },
+    headers: { ...headers, ...init?.headers },
   };
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -54,8 +54,8 @@ export async function notionFetch<T = unknown>(
     const res = await fetch(url, reqInit);
 
     if (res.status === 429 && attempt < MAX_RETRIES) {
-      const retryAfterRaw = parseInt(res.headers.get("Retry-After") ?? "1", 10);
-      await sleep((isNaN(retryAfterRaw) ? 1 : retryAfterRaw) * 1000);
+      const retryAfterRaw = Number.parseInt(res.headers.get("Retry-After") ?? "1", 10);
+      await sleep((Number.isNaN(retryAfterRaw) ? 1 : retryAfterRaw) * 1000);
       continue;
     }
 
@@ -99,9 +99,9 @@ function richTextToHtml(richText: RichTextItem[]): string {
   return (richText ?? [])
     .map((t) => {
       let text = t.plain_text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
 
       if (t.annotations?.bold) text = `<strong>${text}</strong>`;
       if (t.annotations?.italic) text = `<em>${text}</em>`;
@@ -120,19 +120,94 @@ function richTextToHtml(richText: RichTextItem[]): string {
 // Block → HTML renderer
 // ---------------------------------------------------------------------------
 
+type ListTag = "ul" | "ol" | null;
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
+function renderBlockToHtml(block: any, type: string, data: any, text: string): string | null {
+  switch (type) {
+    case "paragraph":
+      return text ? `<p>${text}</p>` : "<br />";
+    case "heading_1":
+      return `<h1>${text}</h1>`;
+    case "heading_2":
+      return `<h2>${text}</h2>`;
+    case "heading_3":
+      return `<h3>${text}</h3>`;
+    case "code": {
+      const rt: RichTextItem[] = data.rich_text ?? [];
+      const escaped = extractText(rt)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+      return `<pre><code class="language-${data.language ?? "plain"}">${escaped}</code></pre>`;
+    }
+    case "quote":
+      return `<blockquote>${text}</blockquote>`;
+    case "divider":
+      return "<hr />";
+    case "callout": {
+      const body = block.children ? blocksToHtml(block.children) : "";
+      const suffix = body ? "\n" + body : "";
+      return `<div class="callout">${data.icon?.emoji ?? ""} ${text}${suffix}</div>`;
+    }
+    case "image": {
+      const url = data.type === "external" ? data.external?.url : notionImageProxyUrl(block.id);
+      if (!url) return null;
+      const caption = extractText(data.caption);
+      const figcaption = caption ? `<figcaption>${caption}</figcaption>` : "";
+      return `<figure><img src="${url}" alt="${caption}" loading="lazy" />${figcaption}</figure>`;
+    }
+    case "video": {
+      const url = data.type === "external" ? data.external?.url : data.file?.url;
+      return url ? `<video controls src="${url}"></video>` : null;
+    }
+    case "embed":
+    case "bookmark":
+      return `<a href="${data.url}" target="_blank" rel="noopener">${data.url}</a>`;
+    case "to_do":
+      return `<label class="todo"><input type="checkbox" disabled ${data.checked ? "checked" : ""} /> ${text}</label>`;
+    case "toggle": {
+      const body = block.children ? blocksToHtml(block.children) : "";
+      const suffix = body ? "\n" + body : "";
+      return `<details><summary>${text}</summary>${suffix}</details>`;
+    }
+    default:
+      return text ? `<p>${text}</p>` : null;
+  }
+}
+
+function appendListItem(
+  type: "bulleted_list_item" | "numbered_list_item",
+  text: string,
+  listBuffer: string[],
+  listTypeRef: { current: ListTag },
+  lines: string[],
+): void {
+  const wantedTag = type === "bulleted_list_item" ? "ul" : "ol";
+  if (listTypeRef.current !== wantedTag) {
+    if (listBuffer.length > 0) {
+      lines.push(`<${listTypeRef.current ?? "ul"}>${listBuffer.splice(0).join("")}</${listTypeRef.current ?? "ul"}>`);
+    }
+    listTypeRef.current = wantedTag;
+  }
+  listBuffer.push(`<li>${text}</li>`);
+}
+
+function flushListBuffer(
+  listBuffer: string[],
+  listTypeRef: { current: ListTag },
+  lines: string[],
+): void {
+  if (listBuffer.length === 0) return;
+  const tag = listTypeRef.current ?? "ul";
+  lines.push(`<${tag}>${listBuffer.splice(0).join("")}</${tag}>`);
+  listTypeRef.current = null;
+}
+
 export function blocksToHtml(blocks: any[]): string {
   const lines: string[] = [];
-  let listBuffer: string[] = [];
-  let listType: "ul" | "ol" | null = null;
-
-  function flushList() {
-    if (listBuffer.length === 0) return;
-    const tag = listType === "ol" ? "ol" : "ul";
-    lines.push(`<${tag}>${listBuffer.join("")}</${tag}>`);
-    listBuffer = [];
-    listType = null;
-  }
+  const listBuffer: string[] = [];
+  const listTypeRef: { current: ListTag } = { current: null };
 
   for (const block of blocks) {
     const type: string = block.type;
@@ -140,108 +215,17 @@ export function blocksToHtml(blocks: any[]): string {
     const rt: RichTextItem[] = data.rich_text ?? [];
     const text = richTextToHtml(rt);
 
-    // List items need buffering so we can wrap in <ul>/<ol>
-    if (type === "bulleted_list_item") {
-      if (listType !== "ul") {
-        flushList();
-        listType = "ul";
-      }
-      listBuffer.push(`<li>${text}</li>`);
-      continue;
-    }
-    if (type === "numbered_list_item") {
-      if (listType !== "ol") {
-        flushList();
-        listType = "ol";
-      }
-      listBuffer.push(`<li>${text}</li>`);
+    if (type === "bulleted_list_item" || type === "numbered_list_item") {
+      appendListItem(type, text, listBuffer, listTypeRef, lines);
       continue;
     }
 
-    flushList();
-
-    switch (type) {
-      case "paragraph":
-        lines.push(text ? `<p>${text}</p>` : "<br />");
-        break;
-      case "heading_1":
-        lines.push(`<h1>${text}</h1>`);
-        break;
-      case "heading_2":
-        lines.push(`<h2>${text}</h2>`);
-        break;
-      case "heading_3":
-        lines.push(`<h3>${text}</h3>`);
-        break;
-      case "code":
-        lines.push(
-          `<pre><code class="language-${data.language ?? "plain"}">${extractText(
-            rt,
-          )
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")}</code></pre>`,
-        );
-        break;
-      case "quote":
-        lines.push(`<blockquote>${text}</blockquote>`);
-        break;
-      case "divider":
-        lines.push("<hr />");
-        break;
-      case "callout": {
-        const calloutBody = block.children ? blocksToHtml(block.children) : "";
-        const calloutSuffix = calloutBody ? "\n" + calloutBody : "";
-        lines.push(
-          `<div class="callout">${data.icon?.emoji ?? ""} ${text}${calloutSuffix}</div>`,
-        );
-        break;
-      }
-      case "image": {
-        const url =
-          data.type === "external"
-            ? data.external?.url
-            : notionImageProxyUrl(block.id);
-        const caption = extractText(data.caption);
-        if (url) {
-          lines.push(
-            `<figure><img src="${url}" alt="${caption}" loading="lazy" />${caption ? `<figcaption>${caption}</figcaption>` : ""}</figure>`,
-          );
-        }
-        break;
-      }
-      case "video": {
-        const url =
-          data.type === "external" ? data.external?.url : data.file?.url;
-        if (url) lines.push(`<video controls src="${url}"></video>`);
-        break;
-      }
-      case "embed":
-      case "bookmark":
-        lines.push(
-          `<a href="${data.url}" target="_blank" rel="noopener">${data.url}</a>`,
-        );
-        break;
-      case "to_do":
-        lines.push(
-          `<label class="todo"><input type="checkbox" disabled ${data.checked ? "checked" : ""} /> ${text}</label>`,
-        );
-        break;
-      case "toggle": {
-        const toggleBody = block.children ? blocksToHtml(block.children) : "";
-        const toggleSuffix = toggleBody ? "\n" + toggleBody : "";
-        lines.push(
-          `<details><summary>${text}</summary>${toggleSuffix}</details>`,
-        );
-        break;
-      }
-      default:
-        // Unknown block type — render plain text if present
-        if (text) lines.push(`<p>${text}</p>`);
-    }
+    flushListBuffer(listBuffer, listTypeRef, lines);
+    const html = renderBlockToHtml(block, type, data, text);
+    if (html !== null) lines.push(html);
   }
 
-  flushList();
+  flushListBuffer(listBuffer, listTypeRef, lines);
   return lines.join("\n");
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -262,7 +246,7 @@ export async function notionFetchAll<T = unknown>(
 
   do {
     const payload = {
-      ...(body ?? {}),
+      ...body,
       page_size: 100,
       ...(cursor ? { start_cursor: cursor } : {}),
     };
@@ -287,7 +271,8 @@ export async function notionListAll<T = unknown>(path: string): Promise<T[]> {
 
   do {
     const sep = path.includes("?") ? "&" : "?";
-    const url = `${path}${sep}page_size=100${cursor ? `&start_cursor=${cursor}` : ""}`;
+    const cursorParam = cursor ? `&start_cursor=${cursor}` : "";
+    const url = `${path}${sep}page_size=100${cursorParam}`;
     const data = await notionFetch<{
       results: T[];
       has_more: boolean;

@@ -115,6 +115,28 @@ const INITIAL_STATS: Stats = {
   fetchedAt: null,
 };
 
+async function loadHubSpotStats(): Promise<Stats> {
+  const [contactsRes, dealsRes, ticketsRes] = await Promise.all([
+    fetchWithAuth("/api/admin/crm/contacts?limit=100"),
+    fetchWithAuth("/api/admin/crm/deals?limit=100"),
+    fetchWithAuth("/api/admin/crm/tickets?limit=100"),
+  ]);
+  if (!contactsRes.ok && contactsRes.status === 503) {
+    throw new Error("HubSpot not configured");
+  }
+  const [contactsData, dealsData, ticketsData] = await Promise.all([
+    contactsRes.ok ? contactsRes.json() : { contacts: [] },
+    dealsRes.ok ? dealsRes.json() : { deals: [] },
+    ticketsRes.ok ? ticketsRes.json() : { tickets: [] },
+  ]);
+  return {
+    contacts: computeContactStats(contactsData.contacts ?? []),
+    deals: computeDealStats(dealsData.deals ?? []),
+    tickets: computeTicketStats(ticketsData.tickets ?? []),
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
 function useHubSpotStats() {
   const [stats, setStats] = useState<Stats>(INITIAL_STATS);
   const [loading, setLoading] = useState(true);
@@ -124,25 +146,8 @@ function useHubSpotStats() {
   const fetchAll = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
     try {
-      const [contactsRes, dealsRes, ticketsRes] = await Promise.all([
-        fetchWithAuth("/api/admin/crm/contacts?limit=100"),
-        fetchWithAuth("/api/admin/crm/deals?limit=100"),
-        fetchWithAuth("/api/admin/crm/tickets?limit=100"),
-      ]);
-      if (!contactsRes.ok && contactsRes.status === 503) {
-        throw new Error("HubSpot not configured");
-      }
-      const [contactsData, dealsData, ticketsData] = await Promise.all([
-        contactsRes.ok ? contactsRes.json() : { contacts: [] },
-        dealsRes.ok ? dealsRes.json() : { deals: [] },
-        ticketsRes.ok ? ticketsRes.json() : { tickets: [] },
-      ]);
-      setStats({
-        contacts: computeContactStats(contactsData.contacts ?? []),
-        deals: computeDealStats(dealsData.deals ?? []),
-        tickets: computeTicketStats(ticketsData.tickets ?? []),
-        fetchedAt: new Date().toISOString(),
-      });
+      const nextStats = await loadHubSpotStats();
+      setStats(nextStats);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
