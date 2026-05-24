@@ -122,14 +122,19 @@ After ~2 minutes, check:
 
 ## Prometheus metric label format
 
-ESPHome lowercases sensor names and replaces spaces with underscores. The `name` labels in PrometheusRule alerts use this format:
+ESPHome lowercases sensor names, replaces spaces and dots with `_`, and replaces
+parentheses (and other special chars) with `__` (double underscore).
+Use the `id` label in PrometheusRule expressions — **not** the `name` label.
 
-| Sensor | Prometheus label value |
-|--------|------------------------|
-| "omv (192.168.1.128) reachable" | `omv_(192.168.1.128)_reachable` |
-| "omv-ha (192.168.1.130) reachable" | `omv-ha_(192.168.1.130)_reachable` |
-| "cloudless.gr (AWS) reachable" | `cloudless.gr_(aws)_reachable` |
+| Sensor name | `id` label value |
+|-------------|-----------------|
+| "omv (192.168.1.128) reachable" | `omv__192_168_1_128__reachable` |
+| "omv-ha (192.168.1.130) reachable" | `omv-ha__192_168_1_130__reachable` |
+| "cloudless.gr (AWS) reachable" | `cloudless_gr__aws__reachable` |
 | "Wi-Fi Signal" | `wi-fi_signal` |
+| "omv probe failures" | `omv_probe_failures` |
+| "omv-ha probe failures" | `omv-ha_probe_failures` |
+| "cloudless.gr probe failures" | `cloudless_gr_probe_failures` |
 
 ---
 
@@ -152,10 +157,14 @@ To add hard-reboot capability:
 infrastructure/esp32-watchdog/
 ├── esphome/
 │   ├── cloudless-watchdog.yaml   ← firmware (commit this)
-│   └── secrets.yaml              ← credentials (DO NOT commit)
+│   ├── secrets.yaml.template     ← secrets template (commit this)
+│   └── secrets.yaml              ← credentials (DO NOT commit — gitignored)
 ├── k8s/
 │   ├── servicemonitor.yaml       ← Prometheus scrape target
-│   ├── prometheusrule.yaml       ← 6 alert rules (Pi + AWS + Wi-Fi)
+│   ├── prometheusrule.yaml       ← alert rules (Pi + AWS + Wi-Fi + failure rate)
 │   └── ntfy-topic.yaml           ← NodePort for ESP32 → ntfy
+├── platformio/
+│   ├── platformio.ini            ← PlatformIO project (IntelliSense + direct flash)
+│   └── src/main.cpp              ← Arduino stub for PlatformIO builds
 └── README.md                     ← this file
 ```
