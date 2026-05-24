@@ -5,7 +5,7 @@
 import { test, expect } from "@playwright/test";
 import { getWithRetry } from "./_helpers";
 
-const BASE = "https://cloudless.online";
+const BASE = `https://${process.env.K3S_HOST ?? "cloudless.gr"}`;
 
 test.describe("k3s API routes", () => {
   test("/api/health → 200 JSON", async ({ request }) => {

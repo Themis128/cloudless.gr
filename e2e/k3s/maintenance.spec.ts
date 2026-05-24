@@ -21,7 +21,7 @@ test.describe("Prometheus (via Grafana proxy)", () => {
     const auth = Buffer.from(`${user}:${pass}`).toString("base64");
 
     const res = await request.get(
-      "https://grafana.cloudless.online/api/datasources/proxy/uid/prometheus/api/v1/query?query=up",
+      `https://grafana.${process.env.K3S_HOST ?? "cloudless.gr"}/api/datasources/proxy/uid/prometheus/api/v1/query?query=up`,
       { headers: { Authorization: `Basic ${auth}` } },
     );
     // 200 means Prometheus is reachable; 401 means creds wrong but Grafana is up
@@ -34,7 +34,7 @@ test.describe("Prometheus (via Grafana proxy)", () => {
     const auth = Buffer.from(`${user}:${pass}`).toString("base64");
 
     const res = await request.get(
-      "https://grafana.cloudless.online/api/v1/provisioning/alert-rules",
+      `https://grafana.${process.env.K3S_HOST ?? "cloudless.gr"}/api/v1/provisioning/alert-rules`,
       { headers: { Authorization: `Basic ${auth}` } },
     );
     expect([200, 401, 403]).toContain(res.status());
@@ -45,7 +45,7 @@ test.describe("Alertmanager reachability", () => {
   test.skip(!runInfra, "Set INFRA_SMOKE=1 to run infrastructure tests");
 
   test("Grafana health confirms alerting stack is up", async ({ request }) => {
-    const res = await request.get("https://grafana.cloudless.online/api/health");
+    const res = await request.get(`https://grafana.${process.env.K3S_HOST ?? "cloudless.gr"}/api/health`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body.database).toBe("ok");

@@ -3,14 +3,13 @@
  */
 import type { APIRequestContext } from "@playwright/test";
 
-export const STANDBY_HOST = "cloudless.online";
+export const STANDBY_HOST = process.env.K3S_HOST ?? "cloudless.gr";
 export const PRIMARY_HOST = "cloudless.gr";
 
 /**
  * Issue a raw GET against the standby's /api/health and return the
  * resolved server-side IP if discoverable from the response. The
- * cloudless.online apex always points at APIGW (no PRIMARY in that zone),
- * so any successful probe should be answering from an AWS-owned range.
+ * apex host that the k3s standby suite runs against.
  */
 export async function probeHealth(req: APIRequestContext, host = STANDBY_HOST) {
   const r = await req.get(`https://${host}/api/health`, {

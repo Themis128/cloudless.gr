@@ -30,8 +30,6 @@ export async function POST(request: NextRequest) {
     const allowedOrigins = [
       "https://cloudless.gr",
       "https://www.cloudless.gr",
-      "https://cloudless.online",
-      "https://www.cloudless.online",
     ];
     if (
       process.env.NODE_ENV === "development" &&

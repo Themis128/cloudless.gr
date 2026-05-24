@@ -11,7 +11,7 @@ export interface DriftSnapshot {
   expected: string;
   /** cloudless.gr/api/health.version, or null if unreachable. */
   cloud: string | null;
-  /** cloudless.online/api/health.version, or null if unreachable. */
+  /** Pi cluster /api/health.version, or null if unreachable. */
   pi: string | null;
   /** When SSM was last updated; null if unknown. */
   ssmModifiedAt: Date | null;
