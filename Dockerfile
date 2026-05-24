@@ -53,7 +53,8 @@ ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} \
     NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=${NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION} \
     APP_VERSION=${APP_VERSION} \
     NEXT_OUTPUT_STANDALONE=1 \
-    NEXT_TELEMETRY_DISABLED=1
+    NEXT_TELEMETRY_DISABLED=1 \
+    NODE_OPTIONS="--max-old-space-size=768"
 
 COPY --from=deps /app/node_modules ./node_modules
 # Recursive copy of the build context. Safe because .dockerignore excludes
