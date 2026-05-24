@@ -70,8 +70,9 @@ export default function EmailPage() {
   }
 
   useEffect(() => {
-    load(tab); // eslint-disable-line react-hooks/exhaustive-deps
-  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load(tab);
+  }, [tab]);
 
   if (notConfigured) {
     return (

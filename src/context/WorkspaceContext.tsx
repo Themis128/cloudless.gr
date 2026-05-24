@@ -47,13 +47,11 @@ export function WorkspaceProvider({
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.workspaces?.length) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
           setWorkspaces(data.workspaces as Workspace[]);
         }
       })
       .catch(() => {})
       .finally(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoaded(true);
       });
   }, []);
