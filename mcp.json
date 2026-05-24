@@ -5,8 +5,10 @@
       "args": ["tsx", "tools/ssh-mcp/src/index.ts"],
       "env": {
         "OMV_SSH_HOST": "192.168.1.128",
+        "OMV_SSH_HOST_TAILSCALE": "${OMV_SSH_HOST_TAILSCALE}",
         "OMV_SSH_USER": "omv",
-        "OMV_SSH_KEY": "${HOME}/.ssh/id_ed25519"
+        "OMV_SSH_KEY": "${HOME}/.ssh/id_ed25519",
+        "OMV_SSH_KEY_CONTENTS": "${OMV_SSH_KEY_CONTENTS}"
       }
     },
     "project": {

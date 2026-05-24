@@ -8,10 +8,12 @@
  * available.
  *
  * Required env vars:
- *   OMV_SSH_HOST      — IP or hostname (default: 192.168.1.128)
- *   OMV_SSH_USER      — SSH user (default: omv)
- *   OMV_SSH_KEY       — Path to private key file (default: ~/.ssh/id_ed25519)
- *   OMV_SSH_PORT      — SSH port (default: 22)
+ *   OMV_SSH_HOST           — LAN IP or hostname (default: 192.168.1.128)
+ *   OMV_SSH_HOST_TAILSCALE — Tailscale hostname/IP; used instead of OMV_SSH_HOST when set
+ *   OMV_SSH_USER           — SSH user (default: omv)
+ *   OMV_SSH_KEY            — Path to private key file (default: ~/.ssh/id_ed25519)
+ *   OMV_SSH_KEY_CONTENTS   — Base64-encoded private key (overrides OMV_SSH_KEY; use in cloud envs)
+ *   OMV_SSH_PORT           — SSH port (default: 22)
  *
  * Optional:
  *   OMV_SSH_PASSPHRASE — Passphrase for encrypted private keys
@@ -27,11 +29,16 @@ import { z } from "zod";
 
 // ── SSH config from env ────────────────────────────────────────────────────────
 
-const SSH_HOST = process.env.OMV_SSH_HOST ?? "192.168.1.128";
+// Tailscale host takes priority when set (allows cloud sessions to reach the Pi)
+const SSH_HOST = process.env.OMV_SSH_HOST_TAILSCALE ?? process.env.OMV_SSH_HOST ?? "192.168.1.128";
 const SSH_USER = process.env.OMV_SSH_USER ?? "omv";
 const SSH_PORT = parseInt(process.env.OMV_SSH_PORT ?? "22", 10);
 const SSH_KEY_PATH = process.env.OMV_SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
 const SSH_PASSPHRASE = process.env.OMV_SSH_PASSPHRASE;
+// Base64-encoded key content — set this in cloud envs instead of a file path
+const SSH_KEY_CONTENTS = process.env.OMV_SSH_KEY_CONTENTS
+  ? Buffer.from(process.env.OMV_SSH_KEY_CONTENTS, "base64")
+  : null;
 
 const RUNNER_REPO_SLUG = "Themis128-cloudless.gr";
 
@@ -50,12 +57,21 @@ function sshRun(command: string, timeoutMs = 60_000): Promise<string> {
       readyTimeout: 10_000,
     };
 
-    try {
-      const key = readFileSync(SSH_KEY_PATH);
-      config.privateKey = key;
+    if (SSH_KEY_CONTENTS) {
+      config.privateKey = SSH_KEY_CONTENTS;
       if (SSH_PASSPHRASE) config.passphrase = SSH_PASSPHRASE;
-    } catch {
-      return reject(new Error(`Cannot read SSH key at ${SSH_KEY_PATH}. Set OMV_SSH_KEY env var.`));
+    } else {
+      try {
+        config.privateKey = readFileSync(SSH_KEY_PATH);
+        if (SSH_PASSPHRASE) config.passphrase = SSH_PASSPHRASE;
+      } catch {
+        return reject(
+          new Error(
+            `Cannot read SSH key at ${SSH_KEY_PATH}. ` +
+            `Set OMV_SSH_KEY to the file path or OMV_SSH_KEY_CONTENTS to a base64-encoded key.`
+          )
+        );
+      }
     }
 
     const timer = setTimeout(() => {
