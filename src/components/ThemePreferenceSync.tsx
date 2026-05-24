@@ -29,12 +29,12 @@ export default function ThemePreferenceSync() {
     const root = document.documentElement;
 
     if (isAdminPath(pathname)) {
-      root.setAttribute("data-theme", "dark");
+      root.dataset.theme = "dark";
       return;
     }
 
     if (preferredTheme === "dark" || preferredTheme === "light") {
-      root.setAttribute("data-theme", preferredTheme);
+      root.dataset.theme = preferredTheme;
       return;
     }
 
@@ -44,7 +44,7 @@ export default function ThemePreferenceSync() {
     ) {
       const media = window.matchMedia("(prefers-color-scheme: dark)");
       const applySystemTheme = () => {
-        root.setAttribute("data-theme", media.matches ? "dark" : "light");
+        root.dataset.theme = media.matches ? "dark" : "light";
       };
 
       applySystemTheme();
@@ -52,7 +52,7 @@ export default function ThemePreferenceSync() {
       return () => media.removeEventListener("change", applySystemTheme);
     }
 
-    root.setAttribute("data-theme", themeForRoute(pathname));
+    root.dataset.theme = themeForRoute(pathname);
   }, [pathname, preferredTheme]);
 
   return null;
