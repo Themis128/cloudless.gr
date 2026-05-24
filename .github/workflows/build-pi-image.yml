@@ -54,7 +54,7 @@ jobs:
     # Cross-compile via QEMU on x86 runners was unviable (pnpm install alone
     # exceeded 60min); GH-hosted ARM runner costs money and hit billing limits.
     runs-on: [self-hosted, omv, pi]
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.3.1
         with:
@@ -178,6 +178,11 @@ jobs:
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=local,src=/opt/docker-cache
           cache-to: type=local,dest=/opt/docker-cache,mode=max
+          # Disable provenance/SBOM attestation manifests — they require a
+          # separate Buildx session push that times out on the Pi runner when
+          # ECR is slow (no active session / context deadline exceeded).
+          provenance: false
+          sbom: false
           build-args: |
             APP_VERSION=${{ github.event.inputs.target_sha || github.sha }}
             NEXT_PUBLIC_SITE_URL=https://cloudless.gr
