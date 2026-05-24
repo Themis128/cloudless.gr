@@ -652,7 +652,7 @@ function CtrTab({ opportunities }: { readonly opportunities: CtrOpportunity[] })
     <div className="space-y-4">
       <div className="bg-yellow-950/20 rounded-xl border border-yellow-900/30 p-4">
         <p className="font-mono text-xs text-yellow-400">
-          ⚡ These keywords rank position 4–20 with high impressions but low CTR (<5%). Improving your title/meta description for these queries could significantly boost organic traffic.
+          ⚡ These keywords rank position 4–20 with high impressions but low CTR (&lt;5%). Improving your title/meta description for these queries could significantly boost organic traffic.
         </p>
       </div>
 
