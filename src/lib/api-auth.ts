@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { createLocalJWKSet, createRemoteJWKSet, jwtVerify } from "jose";
 
 /**
  * Server-side authentication helpers for API routes.
- * Uses Cognito JWT tokens with full RS256 signature verification
- * via the pool's JWKS endpoint.
+ * Uses Cognito JWT tokens with full RS256 signature verification.
+ *
+ * Key resolution strategy:
+ *   1. If COGNITO_JWKS_JSON env var is set, use it as a local JWK set (no
+ *      outbound HTTPS required — ideal for dev environments where the runtime
+ *      can't reach cognito-idp.amazonaws.com from WSL2/containers).
+ *   2. Otherwise fall back to createRemoteJWKSet which fetches and caches the
+ *      JWKS from the Cognito endpoint (works in prod / Pi deployment).
  */
 
 const REGION = process.env.AWS_REGION ?? "us-east-1";
@@ -21,10 +27,21 @@ const COGNITO_ISSUER = USER_POOL_ID
   ? "https://cognito-idp." + REGION + ".amazonaws.com/" + USER_POOL_ID
   : "";
 
-// JWKS is cached in-process by jose (fetched once per key rotation)
-const getJWKS = USER_POOL_ID
-  ? createRemoteJWKSet(new URL(COGNITO_ISSUER + "/.well-known/jwks.json"))
-  : null;
+function buildJwks() {
+  if (!USER_POOL_ID) return null;
+  const raw = process.env.COGNITO_JWKS_JSON;
+  if (raw) {
+    try {
+      return createLocalJWKSet(JSON.parse(raw) as Parameters<typeof createLocalJWKSet>[0]);
+    } catch {
+      // fall through to remote
+    }
+  }
+  return createRemoteJWKSet(new URL(COGNITO_ISSUER + "/.well-known/jwks.json"));
+}
+
+// JWKS is cached in-process (local set is instant; remote set caches after first fetch)
+const getJWKS = buildJwks();
 
 export interface DecodedToken {
   sub: string;
