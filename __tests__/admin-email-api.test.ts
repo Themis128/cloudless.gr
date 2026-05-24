@@ -50,7 +50,7 @@ describe("Admin Email API routes", () => {
     mockRequireAdmin.mockReturnValue({ ok: true, user: { sub: "admin" } });
     mockIsHubSpotConfigured.mockResolvedValue(true);
     mockIsActiveCampaignConfigured.mockResolvedValue(true);
-    mockGetConfig.mockResolvedValue({ HUBSPOT_API_KEY: "test" }); // NOSONAR
+    mockGetConfig.mockResolvedValue({});
     vi.stubGlobal("fetch", mockFetch);
   });
 
