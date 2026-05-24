@@ -227,13 +227,27 @@ jobs:
           SECRET: ${{ secrets.SYNC_HMAC_SECRET }}
         run: |
           set -euo pipefail
+          # Guard: secret must be set or the receiver will reject with 401
+          # and the Pi will silently miss the sync nudge.
+          if [ -z "${SECRET:-}" ]; then
+            echo "::warning::SYNC_HMAC_SECRET is not configured — Pi sync webhook skipped (Pi will poll on its normal schedule)"
+            exit 0
+          fi
           BODY=$(jq -nc \
             --arg sha "$GITHUB_SHA" \
             --argjson ts "$(date +%s)" \
             '{job:"image-sync", ts:$ts, sha:$sha}')
-          SIG="sha256=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')"
+          HASH=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')
+          if [ -z "$HASH" ]; then
+            echo "::warning::HMAC computation produced empty result — skipping webhook"
+            exit 0
+          fi
+          SIG="sha256=${HASH}"
           echo "POST /_sync/image (sha=${GITHUB_SHA::8})"
-          curl -fsS --max-time 10 \
+          # 30s timeout covers DERP-relay round-trips; 2 retries handle transient
+          # Tailscale Funnel hiccups. Total worst-case: ~75s, still non-blocking
+          # because continue-on-error: true — Pi falls back to its 60s poll.
+          curl -fsS --max-time 30 --retry 2 --retry-delay 5 \
             -X POST "https://omv.tail8eb71.ts.net/_sync/image" \
             -H "Content-Type: application/json" \
             -H "X-Hub-Signature-256: $SIG" \
