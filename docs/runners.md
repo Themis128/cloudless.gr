@@ -33,6 +33,8 @@ resolves to the array. Both shapes are accepted by `runs-on`.
 
 ## Toggling
 
+**From the terminal** (requires `gh` CLI):
+
 ```bash
 # Show current state + runner inventory
 .github/scripts/toggle-runner.sh status
@@ -43,6 +45,13 @@ resolves to the array. Both shapes are accepted by `runs-on`.
 # Route them back to ubuntu-latest (clears the variable)
 .github/scripts/toggle-runner.sh hosted
 ```
+
+**From GitHub UI** (no `gh` CLI required — useful in cloud sessions):
+
+Actions → **Switch Runner Mode** → Run workflow → choose `hosted` or `pi`.
+
+This runs `.github/workflows/runner-mode.yml`, which uses `GITHUB_TOKEN`
+with `actions: write` to set or clear `RUNNER_GENERIC` directly.
 
 **Already-queued jobs are not re-routed** — cancel and re-run them after
 flipping. New runs pick up the new value immediately.
