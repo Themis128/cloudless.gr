@@ -112,7 +112,8 @@ export async function GET(
     const all = await listProjects();
     const clientEmail = portal.clientEmail.toLowerCase();
     return all.filter(
-      (p) => p.type === "Client" && p.owner.toLowerCase() === clientEmail,
+      (p) =>
+        p.type === "Client" && p.owner.toLowerCase() === clientEmail,
     );
   });
 

@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
 import { getSeoSnapshot } from "@/lib/gsc";
-import {
-  isHubSpotConfigured,
-  getPipelineStats,
-  listNewsletterSubscribers,
-} from "@/lib/hubspot";
+import { isHubSpotConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/hubspot";
 import { getStripe } from "@/lib/stripe";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 import { mapIntegrationError } from "@/lib/api-errors";

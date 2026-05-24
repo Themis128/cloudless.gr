@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   const headerSecret = request.headers.get("x-cron-secret");
   const isCron =
-    cronSecret && headerSecret && safeEqual(headerSecret, cronSecret);
+    cronSecret &&
+    headerSecret &&
+    safeEqual(headerSecret, cronSecret);
 
   if (!isCron) {
     const auth = await requireAdmin(request);
