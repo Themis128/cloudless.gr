@@ -9,11 +9,6 @@ async function proxyRequest(path: string, init?: RequestInit): Promise<NextRespo
       ...init,
       signal: AbortSignal.timeout(8000),
     });
-    // The Pi alert API only serves /api/esp32/status and /api/alerts.
-    // All ESP32 management endpoints (command, config, OTA) return 404
-    // because the MQTT bridge hasn't been wired up yet. Return a friendly
-    // offline signal so the frontend shows "Pi unreachable" rather than a
-    // raw 404 in the console.
     if (res.status === 404) {
       return NextResponse.json({ error: "ESP32 management unavailable", offline: true }, { status: 503 });
     }
