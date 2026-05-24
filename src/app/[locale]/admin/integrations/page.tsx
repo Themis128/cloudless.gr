@@ -105,7 +105,12 @@ function buildRows(apiMap: ApiMap): Row[] {
 function groupByCategory(rows: Row[]): Record<string, Row[]> {
   const map: Record<string, Row[]> = {};
   for (const row of rows) {
-    (map[row.category] ??= []).push(row);
+    const group = map[row.category];
+    if (group) {
+      group.push(row);
+    } else {
+      map[row.category] = [row];
+    }
   }
   return map;
 }

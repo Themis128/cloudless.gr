@@ -252,7 +252,7 @@ function applyInsights(
       stats.impressions = i.impressions ?? 0;
       stats.clicks = i.clicks ?? 0;
       stats.spend = {
-        amount: parseFloat(i.costInLocalCurrency ?? "0") || 0,
+        amount: Number.parseFloat(i.costInLocalCurrency ?? "0") || 0,
         currency: "EUR",
       };
     }
@@ -261,10 +261,10 @@ function applyInsights(
       | { impressions?: string; clicks?: string; spend?: string }
       | undefined;
     if (i) {
-      stats.impressions = parseInt(i.impressions ?? "0", 10) || 0;
-      stats.clicks = parseInt(i.clicks ?? "0", 10) || 0;
+      stats.impressions = Number.parseInt(i.impressions ?? "0", 10) || 0;
+      stats.clicks = Number.parseInt(i.clicks ?? "0", 10) || 0;
       stats.spend = {
-        amount: parseFloat(i.spend ?? "0") || 0,
+        amount: Number.parseFloat(i.spend ?? "0") || 0,
         currency: "USD",
       };
     }
@@ -315,7 +315,7 @@ function useCampaignsHub() {
       const entries = await Promise.all(
         platforms.map(async (p) => {
           const conn = statusMap[p.integrationId];
-          if (p.disabled || !conn || conn.status !== "configured") {
+          if (p.disabled || conn?.status !== "configured") {
             return [
               p.id,
               {
@@ -495,8 +495,8 @@ function TotalsStrip({
   totals,
   loading,
 }: {
-  totals: Totals;
-  loading: boolean;
+  readonly totals: Totals;
+  readonly loading: boolean;
 }) {
   return (
     <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -529,9 +529,9 @@ function Tile({
   value,
   loading,
 }: {
-  label: string;
-  value: string;
-  loading: boolean;
+  readonly label: string;
+  readonly value: string;
+  readonly loading: boolean;
 }) {
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/20 p-4">
@@ -554,9 +554,9 @@ function PlatformCard({
   stats,
   loading,
 }: {
-  platform: PlatformDef;
-  stats: PlatformStats;
-  loading: boolean;
+  readonly platform: PlatformDef;
+  readonly stats: PlatformStats;
+  readonly loading: boolean;
 }) {
   const showKpis =
     !platform.disabled && stats.status === "configured" && !loading;
@@ -582,7 +582,7 @@ function PlatformCard({
           className="flex items-center gap-1.5"
           title={
             stats.statusMessage ??
-            STATUS_LABEL[stats.status as ConnectionStatus]
+            STATUS_LABEL[stats.status]
           }
         >
           <span
@@ -601,9 +601,7 @@ function PlatformCard({
           <Kpi
             label="Active"
             value={
-              stats.activeCampaigns !== null
-                ? formatNumber(stats.activeCampaigns)
-                : "—"
+              stats.activeCampaigns === null ? "—" : formatNumber(stats.activeCampaigns)
             }
           />
           <Kpi
@@ -617,15 +615,16 @@ function PlatformCard({
           <Kpi
             label="Impressions"
             value={
-              stats.impressions !== null ? formatNumber(stats.impressions) : "—"
+              stats.impressions === null ? "—" : formatNumber(stats.impressions)
             }
           />
           <Kpi
             label="Clicks"
-            value={stats.clicks !== null ? formatNumber(stats.clicks) : "—"}
+            value={stats.clicks === null ? "—" : formatNumber(stats.clicks)}
           />
         </div>
-      ) : loading && !platform.disabled ? (
+      ) : null}
+      {loading && !platform.disabled && (
         <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-800/60 pt-3">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="space-y-1">
@@ -634,12 +633,12 @@ function PlatformCard({
             </div>
           ))}
         </div>
-      ) : null}
+      )}
     </>
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value }: { readonly label: string; readonly value: string }) {
   return (
     <div>
       <p className="font-mono text-[9px] uppercase tracking-wider text-slate-600">

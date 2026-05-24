@@ -75,6 +75,100 @@ export default function AdminCRMPage() {
     );
   });
 
+  let content;
+  if (loading) {
+    content = (
+      <div className="bg-void-light/50 flex items-center justify-center rounded-xl border border-slate-800 py-16">
+        <div className="border-neon-magenta h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+      </div>
+    );
+  } else if (error) {
+    content = (
+      <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
+        <p className="font-mono text-sm text-red-400">{error}</p>
+        <p className="mt-2 text-xs text-slate-500">
+          {error === "HubSpot not configured"
+            ? "Set HUBSPOT_API_KEY in your environment to enable CRM."
+            : "Check your HubSpot API key configuration."}
+        </p>
+      </div>
+    );
+  } else {
+    content = (
+      <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-800">
+                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                  Name
+                </th>
+                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                  Company
+                </th>
+                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                  Lead Status
+                </th>
+                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                  Added
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((c) => (
+                <tr
+                  key={c.id}
+                  className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                >
+                  <td className="px-6 py-4 text-white">
+                    {[c.properties.firstname, c.properties.lastname]
+                      .filter(Boolean)
+                      .join(" ") || "—"}
+                  </td>
+                  <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
+                    {c.properties.email ?? "—"}
+                  </td>
+                  <td className="px-6 py-4 text-slate-300">
+                    {c.properties.company || "—"}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${leadStatusClasses[c.properties.hs_lead_status ?? ""] ?? "text-slate-400 bg-slate-800/50"}`}
+                    >
+                      {c.properties.hs_lead_status ?? "—"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 font-mono text-slate-500">
+                    {c.properties.createdate
+                      ? new Date(c.properties.createdate).toLocaleDateString(
+                          "en-IE",
+                        )
+                      : "—"}
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-12 text-center font-mono text-slate-600"
+                  >
+                    {search
+                      ? "No contacts match your search"
+                      : "No contacts yet"}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-8">
@@ -130,92 +224,7 @@ export default function AdminCRMPage() {
         />
       </div>
 
-      {loading ? (
-        <div className="bg-void-light/50 flex items-center justify-center rounded-xl border border-slate-800 py-16">
-          <div className="border-neon-magenta h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
-        </div>
-      ) : error ? (
-        <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
-          <p className="font-mono text-sm text-red-400">{error}</p>
-          <p className="mt-2 text-xs text-slate-500">
-            {error === "HubSpot not configured"
-              ? "Set HUBSPOT_API_KEY in your environment to enable CRM."
-              : "Check your HubSpot API key configuration."}
-          </p>
-        </div>
-      ) : (
-        <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-800">
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Company
-                  </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Lead Status
-                  </th>
-                  <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Added
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-white">
-                      {[c.properties.firstname, c.properties.lastname]
-                        .filter(Boolean)
-                        .join(" ") || "—"}
-                    </td>
-                    <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
-                      {c.properties.email ?? "—"}
-                    </td>
-                    <td className="px-6 py-4 text-slate-300">
-                      {c.properties.company || "—"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${leadStatusClasses[c.properties.hs_lead_status ?? ""] ?? "text-slate-400 bg-slate-800/50"}`}
-                      >
-                        {c.properties.hs_lead_status ?? "—"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 font-mono text-slate-500">
-                      {c.properties.createdate
-                        ? new Date(c.properties.createdate).toLocaleDateString(
-                            "en-IE",
-                          )
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-6 py-12 text-center font-mono text-slate-600"
-                    >
-                      {search
-                        ? "No contacts match your search"
-                        : "No contacts yet"}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {content}
     </div>
   );
 }

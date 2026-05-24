@@ -93,7 +93,7 @@ export default function LinkedInPage() {
           <MetricCard label="Clicks" value={insights.clicks.toLocaleString()} />
           <MetricCard
             label="Spend"
-            value={`$${parseFloat(insights.costInLocalCurrency).toFixed(2)}`}
+            value={`$${Number.parseFloat(insights.costInLocalCurrency).toFixed(2)}`}
           />
           <MetricCard label="Leads" value={insights.leads.toLocaleString()} />
         </div>
@@ -177,7 +177,7 @@ function BackLink() {
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({ label, value }: { readonly label: string; readonly value: string }) {
   return (
     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-3">
       <p className="font-mono text-[10px] text-slate-500">{label}</p>
@@ -186,7 +186,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Spinner({ color = "border-neon-cyan" }: { color?: string }) {
+function Spinner({ color = "border-neon-cyan" }: { readonly color?: string }) {
   return (
     <div className="flex items-center gap-3 text-slate-400">
       <div
@@ -197,7 +197,7 @@ function Spinner({ color = "border-neon-cyan" }: { color?: string }) {
   );
 }
 
-function ErrorMsg({ msg }: { msg: string }) {
+function ErrorMsg({ msg }: { readonly msg: string }) {
   return (
     <div className="rounded-lg border border-red-900/30 bg-red-950/10 px-4 py-3 font-mono text-sm text-red-400">
       {msg}

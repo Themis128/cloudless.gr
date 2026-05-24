@@ -136,10 +136,11 @@ export default function AIAssistantPage() {
               Campaign Brief
             </h2>
             <div>
-              <label className="mb-1 block font-mono text-xs text-slate-400">
+              <label htmlFor="brief" className="mb-1 block font-mono text-xs text-slate-400">
                 What do you want to promote?
               </label>
               <textarea
+                id="brief"
                 required
                 value={brief}
                 onChange={(e) => setBrief(e.target.value)}
@@ -150,10 +151,11 @@ export default function AIAssistantPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block font-mono text-xs text-slate-400">
+                <label htmlFor="budget" className="mb-1 block font-mono text-xs text-slate-400">
                   Monthly Budget
                 </label>
                 <input
+                  id="budget"
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
                   placeholder="e.g. €1,000/month"
@@ -161,10 +163,11 @@ export default function AIAssistantPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block font-mono text-xs text-slate-400">
+                <label htmlFor="targetAudience" className="mb-1 block font-mono text-xs text-slate-400">
                   Target Audience
                 </label>
                 <input
+                  id="targetAudience"
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                   placeholder="e.g. Greek SMB owners, 30-55"
@@ -202,10 +205,11 @@ export default function AIAssistantPage() {
               Ad Copy Brief
             </h2>
             <div>
-              <label className="mb-1 block font-mono text-xs text-slate-400">
+              <label htmlFor="service" className="mb-1 block font-mono text-xs text-slate-400">
                 Service / Product
               </label>
               <input
+                id="service"
                 required
                 value={service}
                 onChange={(e) => setService(e.target.value)}
@@ -215,10 +219,11 @@ export default function AIAssistantPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block font-mono text-xs text-slate-400">
+                <label htmlFor="platform" className="mb-1 block font-mono text-xs text-slate-400">
                   Platform
                 </label>
                 <select
+                  id="platform"
                   value={platform}
                   onChange={(e) => setPlatform(e.target.value)}
                   className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-white focus:outline-none"
@@ -231,10 +236,11 @@ export default function AIAssistantPage() {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block font-mono text-xs text-slate-400">
+                <label htmlFor="objective" className="mb-1 block font-mono text-xs text-slate-400">
                   Objective
                 </label>
                 <select
+                  id="objective"
                   value={objective}
                   onChange={(e) => setObjective(e.target.value)}
                   className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-white focus:outline-none"
@@ -254,10 +260,11 @@ export default function AIAssistantPage() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block font-mono text-xs text-slate-400">
+              <label htmlFor="language" className="mb-1 block font-mono text-xs text-slate-400">
                 Language
               </label>
               <select
+                id="language"
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-white focus:outline-none"
@@ -280,7 +287,7 @@ export default function AIAssistantPage() {
             <div className="space-y-3">
               {copyVariants.map((v, i) => (
                 <div
-                  key={i}
+                  key={`variant-${i}`}
                   className="bg-void-light/50 rounded-xl border border-slate-800 p-4"
                 >
                   <div className="mb-2 flex items-center justify-between">
@@ -310,11 +317,11 @@ export default function AIAssistantPage() {
   );
 }
 
-function StrategyDisplay({ strategy }: { strategy: Record<string, unknown> }) {
-  if (strategy.raw) {
+function StrategyDisplay({ strategy }: { readonly strategy: Record<string, unknown> }) {
+  if (strategy.raw !== undefined && strategy.raw !== null) {
     return (
       <pre className="whitespace-pre-wrap font-mono text-xs text-slate-300">
-        {String(strategy.raw)}
+        {typeof strategy.raw === "string" ? strategy.raw : JSON.stringify(strategy.raw, null, 2)}
       </pre>
     );
   }
@@ -391,8 +398,8 @@ function StrategyDisplay({ strategy }: { strategy: Record<string, unknown> }) {
             Headline Suggestions
           </p>
           <ul className="space-y-1">
-            {copySuggestions.headline.map((h, i) => (
-              <li key={i} className="font-mono text-xs text-slate-300">
+              {copySuggestions.headline.map((h, i) => (
+              <li key={`headline-${i}`} className="font-mono text-xs text-slate-300">
                 {i + 1}. {h}
               </li>
             ))}

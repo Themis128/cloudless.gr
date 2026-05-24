@@ -93,27 +93,27 @@ export default function TikTokPage() {
         <div className="mb-8 grid grid-cols-3 gap-4 sm:grid-cols-6">
           <MetricCard
             label="Spend"
-            value={`$${parseFloat(insights.spend).toFixed(2)}`}
+            value={`$${Number.parseFloat(insights.spend).toFixed(2)}`}
           />
           <MetricCard
             label="Impressions"
-            value={parseInt(insights.impressions).toLocaleString()}
+            value={Number.parseInt(insights.impressions).toLocaleString()}
           />
           <MetricCard
             label="Clicks"
-            value={parseInt(insights.clicks).toLocaleString()}
+            value={Number.parseInt(insights.clicks).toLocaleString()}
           />
           <MetricCard
             label="CTR"
-            value={`${parseFloat(insights.ctr).toFixed(2)}%`}
+            value={`${Number.parseFloat(insights.ctr).toFixed(2)}%`}
           />
           <MetricCard
             label="CPC"
-            value={`$${parseFloat(insights.cpc).toFixed(2)}`}
+            value={`$${Number.parseFloat(insights.cpc).toFixed(2)}`}
           />
           <MetricCard
             label="Conversions"
-            value={parseInt(insights.conversions).toLocaleString()}
+            value={Number.parseInt(insights.conversions).toLocaleString()}
           />
         </div>
       )}
@@ -134,7 +134,7 @@ export default function TikTokPage() {
               {c.objective_type}
             </td>
             <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
-              {c.budget ? `$${parseFloat(c.budget).toLocaleString()}` : "—"}
+              {c.budget ? `$${Number.parseFloat(c.budget).toLocaleString()}` : "—"}
             </td>
           </tr>
         ))}
@@ -148,9 +148,9 @@ function CampaignTable({
   error,
   children,
 }: {
-  loading: boolean;
-  error: string | null;
-  children: React.ReactNode;
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly children: React.ReactNode;
 }) {
   if (loading) return <Spinner />;
   if (error) return <ErrorMsg msg={error} />;
@@ -179,7 +179,7 @@ function CampaignTable({
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: { readonly status: string }) {
   const isActive = ["CAMPAIGN_STATUS_ENABLE", "ACTIVE", "1"].includes(status);
   return (
     <span
@@ -194,7 +194,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({ label, value }: { readonly label: string; readonly value: string }) {
   return (
     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-3">
       <p className="font-mono text-[10px] text-slate-500">{label}</p>
@@ -212,7 +212,7 @@ function Spinner() {
   );
 }
 
-function ErrorMsg({ msg }: { msg: string }) {
+function ErrorMsg({ msg }: { readonly msg: string }) {
   return (
     <div className="rounded-lg border border-red-900/30 bg-red-950/10 px-4 py-3 font-mono text-sm text-red-400">
       {msg}
@@ -224,8 +224,8 @@ function NotConfiguredBanner({
   platform,
   keys,
 }: {
-  platform: string;
-  keys: string[];
+  readonly platform: string;
+  readonly keys: string[];
 }) {
   return (
     <div>
