@@ -34,7 +34,7 @@ test.describe("k3s i18n", () => {
   });
 
   test("unknown locale returns 404 (not silently routed)", async ({ request }) => {
-    const r = await request.get("https://cloudless.online/zz", {
+    const r = await request.get(`https://${process.env.K3S_HOST ?? "cloudless.gr"}/zz`, {
       failOnStatusCode: false,
       maxRedirects: 0,
     });

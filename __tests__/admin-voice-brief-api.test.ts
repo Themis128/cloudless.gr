@@ -219,7 +219,7 @@ describe("POST /api/admin/voice-brief", () => {
   });
 
   it("uses an allowlisted NEXTAUTH_URL when configured", async () => {
-    process.env.NEXTAUTH_URL = "https://cloudless.online";
+    process.env.NEXTAUTH_URL = "https://cloudless.gr";
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -231,6 +231,6 @@ describe("POST /api/admin/voice-brief", () => {
     await POST(adminReq(VOICE_BRIEF_URL, { method: "POST" }));
 
     const calledUrl = String(mockFetch.mock.calls[0][0]);
-    expect(calledUrl).toBe("https://cloudless.online/api/cron/voice-brief");
+    expect(calledUrl).toBe("https://cloudless.gr/api/cron/voice-brief");
   });
 });

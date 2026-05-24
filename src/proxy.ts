@@ -181,8 +181,8 @@ function buildCSP(nonce: string): string {
     "form-action 'self'",
     "frame-ancestors 'none'",
     // Browsers POST violation reports here. Same-origin so it works on
-    // both cloud (cloudless.gr) and Pi (cloudless.online) without a CORS
-    // dance. Endpoint logs to stdout → Sentry/CloudWatch.
+    // Same-origin so it works without a CORS dance.
+    // Endpoint logs to stdout → Sentry/CloudWatch.
     "report-uri /api/csp-report",
     "report-to csp-endpoint",
     "upgrade-insecure-requests",
@@ -276,8 +276,6 @@ export async function proxy(request: NextRequest) {
     const allowedOrigins = [
       "https://cloudless.gr",
       "https://www.cloudless.gr",
-      "https://cloudless.online",
-      "https://www.cloudless.online",
     ];
 
     if (

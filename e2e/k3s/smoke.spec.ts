@@ -1,12 +1,12 @@
 /**
  * Smoke tests — fastest possible "is the standby alive" gate.
  *
- * These hit the public surface of cloudless.online (the standby's vanity
- * hostname, always routes APIGW → Lambda → Funnel → Pi). If any of these
+ * These hit the public surface of the standby host
+ * (always routes APIGW → Lambda → Funnel → Pi). If any of these
  * fail, every other test in this suite will too — so they're the canary.
  */
 import { test, expect } from "@playwright/test";
-import { isHealthBody, isLikelyAppResponse, probeHealth } from "./_helpers";
+import { isHealthBody, isLikelyAppResponse, probeHealth, STANDBY_HOST } from "./_helpers";
 
 test.describe("k3s smoke", () => {
   test("/api/health returns 200 with valid app body", async ({ request }) => {
@@ -43,7 +43,7 @@ test.describe("k3s smoke", () => {
     // The standby always goes via APIGW. Any AWS-owned IPv4 range works
     // (3.x, 13.x, 18.x, 50.x, 52.x, 54.x). A LAN/CGNAT IP would mean DNS
     // resolution somehow bypassed Route 53 — that's a misconfiguration.
-    const r = await request.get("https://cloudless.online/api/health");
+    const r = await request.get(`https://${STANDBY_HOST}/api/health`);
     expect(r.status()).toBe(200);
     // Server header from APIGW or Lambda integration usually contains
     // "AmazonS3"/"awselb"/"Server: ..." — we just verify it's not nginx

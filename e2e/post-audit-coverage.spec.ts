@@ -21,8 +21,7 @@ test.describe("rate-limit cap — /api/contact (3 req/min/container)", () => {
     // CloudFront/Lambda distributes requests across containers — each has its
     // own in-memory bucket, so 4 rapid requests may never land in the same
     // container and the 429 will never fire.  Skip for cloudless.gr; the
-    // contract is still validated against cloudless.online (single process)
-    // and localhost.
+    // contract is validated against a single-process environment and localhost.
     const baseURL = test.info().project.use.baseURL ?? "";
     test.skip(
       baseURL.includes("cloudless.gr"),

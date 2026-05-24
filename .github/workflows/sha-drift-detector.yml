@@ -1,7 +1,7 @@
 name: SHA drift detector
 
 # Compares the SSM-published deploy SHA with what each surface
-# (cloud cloudless.gr, Pi cloudless.online) actually serves via
+# (cloud cloudless.gr, Pi cluster) actually serves via
 # /api/health.version. Fails the run when drift persists past the
 # 10-minute grace window so a stuck Pi rollout is caught before the
 # weekly CI health routine notices.
