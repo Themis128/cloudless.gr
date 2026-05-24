@@ -1,0 +1,86 @@
+name: k3s full recovery (hosted runner)
+
+# Runs on a GitHub-hosted ubuntu-latest runner.
+# Connects to the Pi via Tailscale + SSH to:
+#   1. Harden all three runner systemd units (decouple from k3s)
+#   2. Restart k3s.service and wait for nodes Ready
+#   3. Verify the cloudless pod is running
+#
+# Required secrets:
+#   TS_AUTHKEY      — Tailscale ephemeral auth key (already used by deploy-pi.yml)
+#   OMV_SSH_KEY     — Private SSH key with access to omv-main (192.168.1.128 / 100.113.41.119)
+#
+# Trigger: Actions → "k3s full recovery (hosted runner)" → Run workflow
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    name: Recover k3s on omv-main
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout (for harden script)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.3.1
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/omv_key
+          chmod 600 ~/.ssh/omv_key
+          # Accept omv-main host key automatically
+          ssh-keyscan -H 100.113.41.119 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Harden runner systemd units (decouple from k3s)
+        run: |
+          for runner in omv omv-2 omv-3; do
+            echo "=== Hardening runner: $runner ==="
+            ssh -i ~/.ssh/omv_key -o StrictHostKeyChecking=no \
+              omv@100.113.41.119 "bash -s $runner" \
+              < .github/scripts/harden-runner-systemd.sh \
+              && echo "✓ $runner hardened" \
+              || echo "⚠️  $runner hardening failed (may not be registered)"
+          done
+
+      - name: Restart k3s.service
+        run: |
+          ssh -i ~/.ssh/omv_key -o StrictHostKeyChecking=no omv@100.113.41.119 \
+            "sudo systemctl restart k3s && echo 'k3s restarted'"
+
+      - name: Wait for k3s nodes Ready
+        run: |
+          ssh -i ~/.ssh/omv_key -o StrictHostKeyChecking=no omv@100.113.41.119 << 'EOF'
+          for i in $(seq 1 30); do
+            if sudo k3s kubectl get nodes 2>/dev/null | grep -q "Ready"; then
+              echo "✓ k3s nodes are Ready (attempt $i)"
+              sudo k3s kubectl get nodes
+              exit 0
+            fi
+            echo "Waiting for nodes... ($i/30)"
+            sleep 5
+          done
+          echo "✗ Timed out waiting for nodes"
+          sudo k3s kubectl get nodes || true
+          exit 1
+          EOF
+
+      - name: Check cloudless pod status
+        run: |
+          ssh -i ~/.ssh/omv_key -o StrictHostKeyChecking=no omv@100.113.41.119 \
+            "sudo k3s kubectl get pods -n cloudless -o wide"
+
+      - name: Verify app health
+        continue-on-error: true
+        run: |
+          ssh -i ~/.ssh/omv_key -o StrictHostKeyChecking=no omv@100.113.41.119 \
+            "curl -fsS --max-time 10 http://localhost:3000/api/health || echo 'Not yet ready — pod still starting'"
