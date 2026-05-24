@@ -7,31 +7,53 @@
  * whether the full cloudless-infra server or this lightweight SSH shim is
  * available.
  *
- * Required env vars:
- *   OMV_SSH_HOST      — IP or hostname (default: 192.168.1.128)
- *   OMV_SSH_USER      — SSH user (default: omv)
- *   OMV_SSH_KEY       — Path to private key file (default: ~/.ssh/id_ed25519)
- *   OMV_SSH_PORT      — SSH port (default: 22)
+ * SSH key resolution (in priority order):
+ *   1. OMV_SSH_KEY_CONTENTS — base64-encoded private key (for cloud/CI sessions)
+ *   2. OMV_SSH_KEY          — path to private key file (default: ~/.ssh/id_ed25519)
  *
- * Optional:
+ * Host resolution:
+ *   OMV_SSH_HOST            — override host (default: 192.168.1.128 LAN)
+ *   OMV_SSH_HOST_TAILSCALE  — Tailscale IP/hostname used when OMV_SSH_HOST is not set
+ *                             and running outside the local network (default: 100.113.41.119)
+ *
+ * Other env vars:
+ *   OMV_SSH_USER       — SSH user (default: omv)
+ *   OMV_SSH_PORT       — SSH port (default: 22)
  *   OMV_SSH_PASSPHRASE — Passphrase for encrypted private keys
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { Client as SshClient, ConnectConfig } from "ssh2";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import { z } from "zod";
 
 // ── SSH config from env ────────────────────────────────────────────────────────
 
-const SSH_HOST = process.env.OMV_SSH_HOST ?? "192.168.1.128";
+// Host: explicit override → Tailscale IP → LAN IP
+const SSH_HOST =
+  process.env.OMV_SSH_HOST ??
+  process.env.OMV_SSH_HOST_TAILSCALE ??
+  "192.168.1.128";
 const SSH_USER = process.env.OMV_SSH_USER ?? "omv";
 const SSH_PORT = parseInt(process.env.OMV_SSH_PORT ?? "22", 10);
 const SSH_KEY_PATH = process.env.OMV_SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const SSH_KEY_CONTENTS = process.env.OMV_SSH_KEY_CONTENTS; // base64-encoded private key
 const SSH_PASSPHRASE = process.env.OMV_SSH_PASSPHRASE;
+
+function resolvePrivateKey(): Buffer {
+  if (SSH_KEY_CONTENTS) {
+    return Buffer.from(SSH_KEY_CONTENTS, "base64");
+  }
+  if (existsSync(SSH_KEY_PATH)) {
+    return readFileSync(SSH_KEY_PATH);
+  }
+  throw new Error(
+    `SSH key not found. Set OMV_SSH_KEY_CONTENTS (base64) or OMV_SSH_KEY (file path: ${SSH_KEY_PATH})`
+  );
+}
 
 const RUNNER_REPO_SLUG = "Themis128-cloudless.gr";
 
@@ -51,11 +73,10 @@ function sshRun(command: string, timeoutMs = 60_000): Promise<string> {
     };
 
     try {
-      const key = readFileSync(SSH_KEY_PATH);
-      config.privateKey = key;
+      config.privateKey = resolvePrivateKey();
       if (SSH_PASSPHRASE) config.passphrase = SSH_PASSPHRASE;
     } catch {
-      return reject(new Error(`Cannot read SSH key at ${SSH_KEY_PATH}. Set OMV_SSH_KEY env var.`));
+      return reject(new Error(`Cannot resolve SSH key. Set OMV_SSH_KEY_CONTENTS (base64) or OMV_SSH_KEY (path).`));
     }
 
     const timer = setTimeout(() => {
