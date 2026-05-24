@@ -33,7 +33,18 @@ When spawning sub-agents, follow these rules for optimal orchestration:
 - Agents return a **single summary message** — raw tool output stays out of the main context.
 - Use `run_in_background: true` only for genuinely independent work that does not block the next step.
 
-## Deployment to Pi (cloudless.online)
+## Cloud Session SSH Setup (one-time)
+
+The `cloudless-infra` MCP server connects to `omv-main` via SSH. In **local** sessions it reads `~/.ssh/id_ed25519` automatically. In **cloud** sessions (code.claude.com) the key file isn't present — supply it as a base64 secret instead:
+
+1. On your local machine: `base64 -w0 ~/.ssh/id_ed25519 | pbcopy`  (Linux: omit `| pbcopy`, copy manually)
+2. In the Claude Code web UI → session settings → **Environment → Secrets** → add:
+   - Name: `OMV_SSH_KEY_CONTENTS`
+   - Value: the base64 string from step 1
+
+Once set, `cluster_run_command`, `gh_runner_health`, `k3s_get_pods` and all other `mcp__cloudless-infra__*` tools become available in every cloud session. The Tailscale IP `100.113.41.119` is already baked into `mcp.json` so no host configuration is needed.
+
+## Deployment to Pi
 
 **Workflow:** `.github/workflows/deploy-pi.yml` — triggers on every push to `main`.
 
