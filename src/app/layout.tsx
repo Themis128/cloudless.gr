@@ -15,14 +15,18 @@ const instrumentSans = Instrument_Sans({
   variable: "--font-instrument-sans",
   subsets: ["latin"],
   display: "swap",
-  preload: false,
+  preload: true,
+  fallback: ["system-ui", "Arial"],
+  adjustFontFallback: false,
 });
 
 const workSans = Work_Sans({
   variable: "--font-work-sans",
   subsets: ["latin"],
   display: "swap",
-  preload: false,
+  preload: true,
+  fallback: ["system-ui", "Arial"],
+  adjustFontFallback: false,
 });
 
 const geistMono = Geist_Mono({
