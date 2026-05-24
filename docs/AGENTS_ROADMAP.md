@@ -10,16 +10,16 @@ The shipped phase is dev-time only and free; subsequent phases add real Anthropi
 
 Defined under `.claude/agents/`:
 
-| Agent                   | When it runs                                 | What it does                                                                                     |
-| ----------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `sonarcloud-cleanup`    | Before merge / when SonarCloud flags issues  | Scopes to changed files, fixes S1192/S3776/S3699/global.fetch inline, reruns lint                |
-| `api-security-audit`    | Touching `src/app/api/` routes               | Checks auth/rate-limit/timeout/error-leakage drift; mechanical fixes inline                      |
-| `notion-schema-drift`   | After Notion DB ID changes / on-demand       | Read-only diff across all 12 Notion DBs between lib schema comments and the live workspace        |
-| `lighthouse-triage`     | Failing Lighthouse CI run                    | Distinguishes variance vs regression, points at the offending PR                                  |
-| `release-notes`         | Cutting a release / weekly recap             | Groups commits since last tag into Features / Fixes / Performance / Internal                      |
-| `cms-populate`          | After new CMS DB IDs added to SSM            | Seeds Testimonials / Case Studies / Services / FAQs DBs from static fallback arrays              |
-| `slack-routing-verify`  | After Slack channel setup or missing alerts  | Verifies channels exist, bot invited, SSM params set, notifier wiring correct                    |
-| `pr-review-debug`       | PR review comment missing or too noisy       | Debugs workflow triggers, OIDC key fetch, diff scope; tunes model/prompt/cap                     |
+| Agent                  | When it runs                                | What it does                                                                               |
+| ---------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `sonarcloud-cleanup`   | Before merge / when SonarCloud flags issues | Scopes to changed files, fixes S1192/S3776/S3699/global.fetch inline, reruns lint          |
+| `api-security-audit`   | Touching `src/app/api/` routes              | Checks auth/rate-limit/timeout/error-leakage drift; mechanical fixes inline                |
+| `notion-schema-drift`  | After Notion DB ID changes / on-demand      | Read-only diff across all 12 Notion DBs between lib schema comments and the live workspace |
+| `lighthouse-triage`    | Failing Lighthouse CI run                   | Distinguishes variance vs regression, points at the offending PR                           |
+| `release-notes`        | Cutting a release / weekly recap            | Groups commits since last tag into Features / Fixes / Performance / Internal               |
+| `cms-populate`         | After new CMS DB IDs added to SSM           | Seeds Testimonials / Case Studies / Services / FAQs DBs from static fallback arrays        |
+| `slack-routing-verify` | After Slack channel setup or missing alerts | Verifies channels exist, bot invited, SSM params set, notifier wiring correct              |
+| `pr-review-debug`      | PR review comment missing or too noisy      | Debugs workflow triggers, OIDC key fetch, diff scope; tunes model/prompt/cap               |
 
 Cost: zero (runs locally inside Claude Code sessions). Reversible: delete the file under `.claude/agents/`.
 
@@ -38,7 +38,7 @@ Two read-only tools wired into `/api/chat`:
 
 Implementation: replaced the single-turn streaming proxy with a non-streaming tool-use loop capped at 4 iterations / 20s upstream timeout. The final assistant text is chunk-encoded back to the browser as SSE so the existing `ChatWidget` event handlers keep working unchanged. Tools live in `src/lib/chat-tools.ts`; the `runTool` dispatcher always resolves to a string — errors are converted to user-facing nudges so a thrown tool can't crash the loop.
 
-Trade-off: lost the typewriter streaming effect on responses that *use* a tool — text now arrives as one SSE event after the tool round trip completes. Direct text responses with no tool call still chunk in real time.
+Trade-off: lost the typewriter streaming effect on responses that _use_ a tool — text now arrives as one SSE event after the tool round trip completes. Direct text responses with no tool call still chunk in real time.
 
 **Tests** (19 added): see `docs/ANTHROPIC.md` for the full table. Covers tool round-trip with `tool_result`, iteration-cap fallback, schema declarations, and per-tool match / no-match / no-config / throw paths.
 
@@ -52,6 +52,7 @@ Detail: see [`docs/ANTHROPIC.md`](ANTHROPIC.md#tools-phase-2a-of-docsagents_road
 2. **Confirm** — `POST { confirm: true, start, end, notes? }` → re-checks slot is free, creates the Google Calendar event with a Meet link, posts to Slack, emails confirmation.
 
 Guardrails:
+
 - Auth required (Cognito ID token via Bearer). Email is forced to the authenticated user's email — the model cannot override it.
 - Rate-limited 5 / 10 min per IP for both propose and confirm.
 - Re-checks availability at confirm time (409 if slot no longer free).
