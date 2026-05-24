@@ -1,6 +1,6 @@
 """
-ESP32 command + config routes for alert-api/main.py
-====================================================
+ESP32 command + config + OTA routes for alert-api/main.py
+==========================================================
 Drop these routes into the FastAPI app in main.py.
 
 Bridges admin-panel commands (POST /api/esp32/{device_id}/command)
@@ -20,6 +20,11 @@ Command → ESPHome mapping:
   led_mute  false                  → turn_on (restores prior effect via update_led script)
   led_test                         → turn_on r=1 g=1 b=1 brightness=0.8 for 2 s then restore
   set_brightness <0-100>           → turn_on brightness=<value/100>
+  clear_override                   → turn_on solid green at 40% (resets to auto state)
+  reboot                           → POST /button/restart/press to the ESPHome restart button
+
+OTA endpoint:
+  POST /api/esp32/ota              → triggers ESPHome HTTP OTA via /update endpoint
 
 Usage
 -----
@@ -49,7 +54,7 @@ import os
 from typing import Any, Optional
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -84,6 +89,12 @@ class ConfigIn(BaseModel):
     brightness: Optional[int] = None
     heartbeat_interval_s: Optional[int] = None
     mqtt_qos: Optional[int] = None
+
+
+class OtaIn(BaseModel):
+    device_id: Optional[str] = None
+    firmware_url: str
+    version: Optional[str] = None
 
 
 # ── ESPHome helpers ────────────────────────────────────────────────────────────
@@ -186,6 +197,21 @@ async def _dispatch_command(action: str, value: Any) -> dict:
             )
         return {"ok": ok, "action": action, "mode": mode}
 
+    if action == "clear_override":
+        # Reset to the auto state: solid green at 40%.
+        # The ESPHome update_led script will correct the color on its next cycle.
+        ok = await _esphome_post(
+            f"/light/{LED_ENTITY}/turn_on",
+            {"brightness": "0.4", "r": "0", "g": "1", "b": "0"},
+        )
+        return {"ok": ok, "action": action}
+
+    if action == "reboot":
+        # ESPHome exposes a restart button via the web_server component.
+        # POST /button/restart/press triggers a safe software reboot.
+        ok = await _esphome_post("/button/restart/press", None)
+        return {"ok": ok, "action": action}
+
     raise HTTPException(status_code=400, detail=f"Unknown command action: {action!r}")
 
 
@@ -237,3 +263,38 @@ async def put_esp32_config(device_id: str, body: ConfigIn):
         )
 
     return existing
+
+
+@router.post("/api/esp32/ota")
+async def esp32_ota(body: OtaIn, background_tasks: BackgroundTasks):
+    """Trigger an HTTP OTA update on the ESP32.
+
+    ESPHome's web_server component exposes a /update endpoint that accepts a
+    firmware binary URL and flashes the device over WiFi.  The device will go
+    offline for ~30 s while flashing, then reboot into the new firmware.
+
+    The actual HTTP call is dispatched in a background task so this endpoint
+    returns immediately — the admin page should not wait for the device to
+    respond (it will disconnect mid-flash).
+    """
+    firmware_url = body.firmware_url.strip()
+    if not firmware_url:
+        raise HTTPException(status_code=422, detail="firmware_url is required")
+
+    async def _do_ota() -> None:
+        url = f"{ESPHOME_BASE}/update"
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                await client.post(url, data={"url": firmware_url})
+        except Exception:
+            pass  # device disconnects during flash — this is expected
+
+    background_tasks.add_task(_do_ota)
+    return {
+        "ok": True,
+        "action": "ota",
+        "device_id": body.device_id or "esp32-leds",
+        "firmware_url": firmware_url,
+        "version": body.version,
+        "message": "OTA triggered — device will reboot after flashing (~30 s)",
+    }
