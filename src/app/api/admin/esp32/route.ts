@@ -17,8 +17,8 @@ async function proxyRequest(path: string, init?: RequestInit): Promise<NextRespo
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const authErr = await requireAdmin(request);
-  if (authErr) return authErr;
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
 
   const { searchParams } = request.nextUrl;
   const action = searchParams.get("action");
@@ -33,8 +33,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const authErr = await requireAdmin(request);
-  if (authErr) return authErr;
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
 
   const { searchParams } = request.nextUrl;
   const action = searchParams.get("action");
@@ -53,8 +53,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function PUT(request: NextRequest): Promise<NextResponse> {
-  const authErr = await requireAdmin(request);
-  if (authErr) return authErr;
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
 
   const { searchParams } = request.nextUrl;
   const deviceId = searchParams.get("device_id") ?? "esp32-leds";
