@@ -10,7 +10,7 @@ import { test, expect } from "@playwright/test";
  * Requires GRAFANA_USER and GRAFANA_PASSWORD env vars for authenticated calls.
  */
 
-const K3S_HOST = K3S_HOST;
+const K3S_HOST = process.env.K3S_HOST ?? "cloudless.gr";
 const runInfra = !!process.env.INFRA_SMOKE;
 
 test.describe("Prometheus (via Grafana proxy)", () => {
