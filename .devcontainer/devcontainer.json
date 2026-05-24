@@ -18,16 +18,39 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        // TypeScript / Next.js
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
         "bradlc.vscode-tailwindcss",
         "ms-vscode.vscode-typescript-next",
+        "christian-kohler.path-intellisense",
+        "usernamehw.errorlens",
+        "wix.vscode-import-cost",
+        "lokalise.i18n-ally",
+        // Testing
         "vitest.explorer",
         "ms-playwright.playwright",
+        // AWS / SST
         "amazonwebservices.aws-toolkit-vscode",
+        "sst.ion",
+        // API testing
+        "humao.rest-client",
+        // Code quality
+        "sonarsource.sonarlint-vscode",
+        "streetsidesoftware.code-spell-checker",
+        // Git / GitHub
+        "eamodio.gitlens",
         "github.copilot",
         "github.vscode-pull-request-github",
-        "streetsidesoftware.code-spell-checker"
+        "github.vscode-github-actions",
+        // Docker / Kubernetes
+        "ms-azuretools.vscode-docker",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        // Cloudflare Workers
+        "cloudflare.cloudflare-workers-bindings",
+        // Productivity
+        "gruntfuggly.todo-tree",
+        "alefragnani.bookmarks"
       ],
       "settings": {
         "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -35,7 +58,15 @@
         "editor.codeActionsOnSave": {
           "source.fixAll.eslint": "explicit"
         },
-        "typescript.tsdk": "node_modules/typescript/lib"
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "i18n-ally.localesPaths": ["src/locales"],
+        "i18n-ally.keystyle": "nested",
+        "i18n-ally.sourceLanguage": "en",
+        "i18n-ally.enabledFrameworks": ["next-intl"],
+        "tailwindCSS.experimental.classRegex": [
+          ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^'\"`]*)(?:'|\"|`)"],
+          ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^'\"`]*)(?:'|\"|`)"]
+        ]
       }
     }
   },
