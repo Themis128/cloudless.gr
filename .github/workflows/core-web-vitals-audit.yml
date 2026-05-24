@@ -54,6 +54,16 @@ jobs:
           echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
           echo "Using CHROME_PATH=$CHROME_BIN"
 
+      - name: Warm CDN cache
+        run: |
+          for url in \
+            https://cloudless.gr/en \
+            https://cloudless.gr/en/services \
+            https://cloudless.gr/en/contact \
+            https://cloudless.gr/en/store; do
+            curl -s -o /dev/null -w "%{url_effective} → %{http_code} (%{time_total}s)\n" "$url"
+          done
+
       - name: Run Lighthouse on key routes
         id: lhci
         uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
