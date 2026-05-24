@@ -18,7 +18,7 @@ test.describe("k3s static assets", () => {
   });
 
   test("favicon is reachable", async ({ request }) => {
-    const r = await request.get("https://cloudless.online/favicon.ico", {
+    const r = await request.get(`https://${process.env.K3S_HOST ?? "cloudless.gr"}/favicon.ico`, {
       failOnStatusCode: false,
     });
     expect([200, 301, 302, 304].includes(r.status())).toBe(true);

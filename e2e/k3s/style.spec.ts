@@ -1,5 +1,5 @@
 /**
- * Style integrity tests — k3s cluster app (cloudless.online standby).
+ * Style integrity tests — k3s cluster app (live deployment).
  *
  * Mirrors e2e/style.spec.ts but runs against the live Pi k3s deployment
  * via the full standby path:

@@ -57,30 +57,6 @@ test.describe("CloudFront / CDN", () => {
   });
 });
 
-test.describe("Cloudflare Tunnel (cloudless.online)", () => {
-  test.skip(!runInfra, "Set INFRA_SMOKE=1 to run infrastructure tests");
-
-  test("manage.cloudless.online is reachable (redirects to auth)", async ({ request }) => {
-    const res = await request.get("https://manage.cloudless.online/", {
-      maxRedirects: 5,
-    });
-    // Either 200 (auth bypass) or redirected to login — never 5xx
-    expect(res.status()).toBeLessThan(500);
-  });
-
-  test("grafana.cloudless.online health returns 200", async ({ request }) => {
-    const res = await request.get("https://grafana.cloudless.online/api/health");
-    expect(res.status()).toBe(200);
-    const body = await res.json();
-    expect(body.database).toBe("ok");
-  });
-
-  test("n8n.cloudless.online healthz is reachable", async ({ request }) => {
-    const res = await request.get("https://n8n.cloudless.online/healthz");
-    expect(res.status()).toBe(200);
-  });
-});
-
 test.describe("Route 53 Failover", () => {
   test.skip(!runInfra, "Set INFRA_SMOKE=1 to run infrastructure tests");
 

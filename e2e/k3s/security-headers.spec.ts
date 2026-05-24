@@ -7,7 +7,7 @@
  */
 import { test, expect } from "@playwright/test";
 
-const URL = "https://cloudless.online/api/health";
+const URL = `https://${process.env.K3S_HOST ?? "cloudless.gr"}/api/health`;
 
 test.describe("k3s security headers", () => {
   test("HSTS preload-eligible", async ({ request }) => {

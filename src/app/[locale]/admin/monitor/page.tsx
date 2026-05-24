@@ -290,7 +290,7 @@ export default function AdminMonitorPage() {
             not have local network access.
           </p>
           <p className="mt-1 font-mono text-xs text-slate-500">
-            Dashboard data available only from cloudless.online (K3s Pi).
+            Dashboard data available only from the K3s Pi cluster.
           </p>
         </div>
       )}
