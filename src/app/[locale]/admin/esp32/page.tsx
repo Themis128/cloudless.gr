@@ -55,17 +55,13 @@ interface LogEntry {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 /** Returns the WebSocket URL for the alert-api based on current hostname.
- *  - cloudless.online / LAN / localhost → Pi alert-api
+ *  - LAN / localhost → Pi alert-api
  *  - cloudless.gr (AWS Lambda) → '' (WebSocket disabled)
  */
 function getAlertApiWsUrl(): string {
   if (typeof window === "undefined") return "";
   const h = window.location.hostname;
-  if (
-    h === "cloudless.online" ||
-    h.startsWith("192.168.") ||
-    h === "localhost"
-  ) {
+  if (h.startsWith("192.168.") || h === "localhost") {
     return "ws://192.168.1.128:30800/ws/esp32-logs";
   }
   return "";

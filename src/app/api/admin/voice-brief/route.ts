@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
   // var cannot redirect this server-side fetch to an attacker host (SSRF guard).
   const ALLOWED_BASE_URLS = [
     "https://cloudless.gr",
-    "https://cloudless.online",
     "http://localhost:3000",
   ];
   const envBase =
