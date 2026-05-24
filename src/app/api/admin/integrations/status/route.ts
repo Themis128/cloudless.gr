@@ -18,9 +18,10 @@ export type IntegrationReport = {
   setupUrl?: string;
 };
 
-async function pingHubSpot(
-  token: string,
-): Promise<{ status: IntegrationStatus; message?: string }> {
+type PingResult = { status: IntegrationStatus; message?: string };
+type Cfg = Awaited<ReturnType<typeof getConfig>>;
+
+async function pingHubSpot(token: string): Promise<PingResult> {
   try {
     const res = await fetch(
       "https://api.hubapi.com/crm/v3/objects/contacts?limit=1",
@@ -39,9 +40,7 @@ async function pingHubSpot(
   }
 }
 
-async function pingSlack(
-  token: string,
-): Promise<{ status: IntegrationStatus; message?: string }> {
+async function pingSlack(token: string): Promise<PingResult> {
   try {
     const res = await fetch("https://slack.com/api/auth.test", {
       method: "POST",
@@ -60,9 +59,7 @@ async function pingSlack(
   }
 }
 
-async function pingNotion(
-  token: string,
-): Promise<{ status: IntegrationStatus; message?: string }> {
+async function pingNotion(token: string): Promise<PingResult> {
   try {
     const res = await fetch("https://api.notion.com/v1/users/me", {
       headers: {
@@ -81,9 +78,7 @@ async function pingNotion(
   }
 }
 
-async function pingStripe(
-  secretKey: string,
-): Promise<{ status: IntegrationStatus; message?: string }> {
+async function pingStripe(secretKey: string): Promise<PingResult> {
   try {
     const res = await fetch("https://api.stripe.com/v1/balance", {
       headers: { Authorization: `Bearer ${secretKey}` },
@@ -99,270 +94,270 @@ async function pingStripe(
   }
 }
 
+const NOT_CONFIGURED: PingResult = { status: "not_configured" };
+
+function sentryStatus(cfg: Cfg): IntegrationStatus {
+  if (!process.env.NEXT_PUBLIC_SENTRY_DSN) return "not_configured";
+  if (cfg.SENTRY_AUTH_TOKEN) return "configured";
+  return "degraded";
+}
+
+function sentryReport(cfg: Cfg): IntegrationReport {
+  const dsnOnly = Boolean(
+    process.env.NEXT_PUBLIC_SENTRY_DSN && !cfg.SENTRY_AUTH_TOKEN,
+  );
+  return {
+    id: "sentry",
+    name: "Sentry",
+    category: "monitoring",
+    status: sentryStatus(cfg),
+    message: dsnOnly
+      ? "DSN configured (frontend capture active) but SENTRY_AUTH_TOKEN missing — source map uploads disabled."
+      : undefined,
+    setupUrl: "https://sentry.io/settings/auth-tokens/",
+  };
+}
+
+function tiktokStatus(
+  appReady: boolean,
+  fullyConfigured: boolean,
+): IntegrationStatus {
+  if (fullyConfigured) return "configured";
+  if (appReady) return "degraded";
+  return "not_configured";
+}
+
+function tiktokReport(cfg: Cfg): IntegrationReport {
+  const appReady = Boolean(cfg.TIKTOK_APP_ID && cfg.TIKTOK_APP_SECRET);
+  const fullyConfigured = Boolean(
+    appReady && cfg.TIKTOK_ACCESS_TOKEN && cfg.TIKTOK_ADVERTISER_ID,
+  );
+  const tiktokSetupUrl = appReady
+    ? `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/oauth/tiktok`
+    : "https://ads.tiktok.com/marketing_api/apps";
+  return {
+    id: "tiktok",
+    name: "TikTok Ads",
+    category: "social_ads",
+    status: tiktokStatus(appReady, fullyConfigured),
+    message:
+      appReady && !fullyConfigured
+        ? "App credentials set. Complete OAuth to get access token and advertiser ID."
+        : undefined,
+    setupUrl: tiktokSetupUrl,
+  };
+}
+
+function xAdsStatus(
+  tokensReady: boolean,
+  fullyConfigured: boolean,
+): IntegrationStatus {
+  if (fullyConfigured) return "configured";
+  if (tokensReady) return "degraded";
+  return "not_configured";
+}
+
+function xAdsReport(cfg: Cfg): IntegrationReport {
+  const tokensReady = Boolean(
+    cfg.X_API_KEY &&
+      cfg.X_ACCESS_TOKEN &&
+      cfg.X_API_SECRET &&
+      cfg.X_ACCESS_SECRET,
+  );
+  const fullyConfigured = Boolean(tokensReady && cfg.X_AD_ACCOUNT_ID);
+  return {
+    id: "x",
+    name: "X (Twitter) Ads",
+    category: "social_ads",
+    status: xAdsStatus(tokensReady, fullyConfigured),
+    message:
+      tokensReady && !fullyConfigured
+        ? "OAuth tokens set. X_AD_ACCOUNT_ID missing — X Ads API access pending approval. Apply at ads.x.com/help."
+        : undefined,
+    setupUrl: "https://ads.x.com/help",
+  };
+}
+
+function configuredIf(condition: unknown): IntegrationStatus {
+  return condition ? "configured" : "not_configured";
+}
+
+function buildCoreReports(cfg: Cfg): IntegrationReport[] {
+  return [
+    {
+      id: "ses",
+      name: "AWS SES",
+      category: "email",
+      status: configuredIf(cfg.SES_FROM_EMAIL && cfg.AWS_SES_REGION),
+    },
+    {
+      id: "cognito",
+      name: "AWS Cognito",
+      category: "auth",
+      status: configuredIf(cfg.COGNITO_USER_POOL_ID && cfg.COGNITO_CLIENT_ID),
+      setupUrl: "https://console.aws.amazon.com/cognito",
+    },
+    {
+      id: "google",
+      name: "Google (Calendar + Search Console)",
+      category: "productivity",
+      status: configuredIf(
+        cfg.GOOGLE_CLIENT_EMAIL &&
+          cfg.GOOGLE_PRIVATE_KEY &&
+          cfg.GOOGLE_CALENDAR_ID,
+      ),
+      setupUrl: "https://console.cloud.google.com/iam-admin/serviceaccounts",
+    },
+    sentryReport(cfg),
+    {
+      id: "anthropic",
+      name: "Anthropic (Claude AI)",
+      category: "ai",
+      status: configuredIf(cfg.ANTHROPIC_API_KEY),
+      message: cfg.ANTHROPIC_API_KEY
+        ? undefined
+        : "Add ANTHROPIC_API_KEY to SSM or .env.local to enable AI features (report insights, ad copy, audience analysis).",
+      setupUrl: "https://console.anthropic.com/settings/keys",
+    },
+  ];
+}
+
+function buildSocialAdsReports(cfg: Cfg): IntegrationReport[] {
+  const metaConfigured = Boolean(
+    cfg.META_AD_ACCOUNT_ID && cfg.META_ACCESS_TOKEN && cfg.META_PIXEL_ID,
+  );
+  const linkedInConfigured = Boolean(
+    cfg.LINKEDIN_ACCESS_TOKEN &&
+      cfg.LINKEDIN_AD_ACCOUNT_ID &&
+      cfg.LINKEDIN_ORGANIZATION_URN,
+  );
+  const googleAdsConfigured = Boolean(
+    cfg.GOOGLE_ADS_DEVELOPER_TOKEN && cfg.GOOGLE_ADS_CUSTOMER_ID,
+  );
+  const metaMessage = metaConfigured
+    ? "Instagram Business Account ID blocked — Meta ad policy violation on account 1558125105019725. Appeal required."
+    : undefined;
+  const googleAdsMessage = googleAdsConfigured
+    ? undefined
+    : "Needs GOOGLE_ADS_DEVELOPER_TOKEN (apply at ads.google.com/intl/en_us/home/tools/api-center/) and GOOGLE_ADS_CUSTOMER_ID. Google service account auth is already configured.";
+
+  return [
+    {
+      id: "meta",
+      name: "Meta (Facebook/Instagram)",
+      category: "social_ads",
+      status: configuredIf(metaConfigured),
+      message: metaMessage,
+      setupUrl: "https://business.facebook.com/settings/system-users",
+    },
+    {
+      id: "linkedin",
+      name: "LinkedIn Ads",
+      category: "social_ads",
+      status: configuredIf(linkedInConfigured),
+      setupUrl: "https://www.linkedin.com/campaignmanager",
+    },
+    tiktokReport(cfg),
+    xAdsReport(cfg),
+    {
+      id: "google_ads",
+      name: "Google Ads",
+      category: "social_ads",
+      status: configuredIf(googleAdsConfigured),
+      message: googleAdsMessage,
+      setupUrl: "https://ads.google.com/intl/en_us/home/tools/api-center/",
+    },
+  ];
+}
+
+function buildStaticReports(cfg: Cfg): IntegrationReport[] {
+  return [...buildCoreReports(cfg), ...buildSocialAdsReports(cfg)];
+}
+
+async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
+  const [stripeResult, hubspotResult, slackResult, notionResult, acResult] =
+    await Promise.all([
+      cfg.STRIPE_SECRET_KEY
+        ? pingStripe(cfg.STRIPE_SECRET_KEY)
+        : Promise.resolve(NOT_CONFIGURED),
+      cfg.HUBSPOT_API_KEY
+        ? pingHubSpot(cfg.HUBSPOT_API_KEY)
+        : Promise.resolve(NOT_CONFIGURED),
+      cfg.SLACK_BOT_TOKEN
+        ? pingSlack(cfg.SLACK_BOT_TOKEN)
+        : Promise.resolve(NOT_CONFIGURED),
+      cfg.NOTION_API_KEY
+        ? pingNotion(cfg.NOTION_API_KEY)
+        : Promise.resolve(NOT_CONFIGURED),
+      verifyActiveCampaignToken(),
+    ]);
+
+  const acStatusMap: Record<string, IntegrationStatus> = {
+    valid: "configured",
+    rejected: "degraded",
+    not_configured: "not_configured",
+    error: "error",
+  };
+  const acMissingToken =
+    acResult.status === "not_configured" &&
+    cfg.ACTIVECAMPAIGN_API_URL &&
+    !cfg.ACTIVECAMPAIGN_API_TOKEN;
+  const acMessage = acMissingToken
+    ? "URL configured but API token missing. Renew account then get token from Settings > Developer > API Access."
+    : acResult.message;
+
+  return [
+    {
+      id: "stripe",
+      name: "Stripe",
+      category: "payments",
+      ...stripeResult,
+      setupUrl: "https://dashboard.stripe.com/apikeys",
+    },
+    {
+      id: "hubspot",
+      name: "HubSpot CRM",
+      category: "crm",
+      ...hubspotResult,
+      setupUrl: "https://app.hubspot.com/private-apps",
+    },
+    {
+      id: "slack",
+      name: "Slack",
+      category: "communication",
+      ...slackResult,
+      setupUrl: "https://api.slack.com/apps",
+    },
+    {
+      id: "notion",
+      name: "Notion",
+      category: "content",
+      ...notionResult,
+      setupUrl: "https://www.notion.so/my-integrations",
+    },
+    {
+      id: "activecampaign",
+      name: "ActiveCampaign",
+      category: "email_marketing",
+      status: acStatusMap[acResult.status] ?? "error",
+      message: acMessage,
+      setupUrl: "https://www.activecampaign.com",
+    },
+  ];
+}
+
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   const cfg = await getConfig();
-  const results: IntegrationReport[] = [];
 
-  // ── AWS / SES ─────────────────────────────────────────────────────────────
-  results.push({
-    id: "ses",
-    name: "AWS SES",
-    category: "email",
-    status:
-      cfg.SES_FROM_EMAIL && cfg.AWS_SES_REGION
-        ? "configured"
-        : "not_configured",
-  });
+  const [staticReports, pingedReports] = await Promise.all([
+    Promise.resolve(buildStaticReports(cfg)),
+    buildPingedReports(cfg),
+  ]);
 
-  // ── Cognito ───────────────────────────────────────────────────────────────
-  results.push({
-    id: "cognito",
-    name: "AWS Cognito",
-    category: "auth",
-    status:
-      cfg.COGNITO_USER_POOL_ID && cfg.COGNITO_CLIENT_ID
-        ? "configured"
-        : "not_configured",
-    setupUrl: "https://console.aws.amazon.com/cognito",
-  });
-
-  // ── Stripe ────────────────────────────────────────────────────────────────
-  if (!cfg.STRIPE_SECRET_KEY) {
-    results.push({
-      id: "stripe",
-      name: "Stripe",
-      category: "payments",
-      status: "not_configured",
-      setupUrl: "https://dashboard.stripe.com/apikeys",
-    });
-  } else {
-    const ping = await pingStripe(cfg.STRIPE_SECRET_KEY);
-    results.push({
-      id: "stripe",
-      name: "Stripe",
-      category: "payments",
-      ...ping,
-    });
-  }
-
-  // ── HubSpot ───────────────────────────────────────────────────────────────
-  if (!cfg.HUBSPOT_API_KEY) {
-    results.push({
-      id: "hubspot",
-      name: "HubSpot CRM",
-      category: "crm",
-      status: "not_configured",
-      setupUrl: "https://app.hubspot.com/private-apps",
-    });
-  } else {
-    const ping = await pingHubSpot(cfg.HUBSPOT_API_KEY);
-    results.push({
-      id: "hubspot",
-      name: "HubSpot CRM",
-      category: "crm",
-      ...ping,
-    });
-  }
-
-  // ── Slack ─────────────────────────────────────────────────────────────────
-  if (!cfg.SLACK_BOT_TOKEN) {
-    results.push({
-      id: "slack",
-      name: "Slack",
-      category: "communication",
-      status: "not_configured",
-      setupUrl: "https://api.slack.com/apps",
-    });
-  } else {
-    const ping = await pingSlack(cfg.SLACK_BOT_TOKEN);
-    results.push({
-      id: "slack",
-      name: "Slack",
-      category: "communication",
-      ...ping,
-    });
-  }
-
-  // ── Notion ────────────────────────────────────────────────────────────────
-  if (!cfg.NOTION_API_KEY) {
-    results.push({
-      id: "notion",
-      name: "Notion",
-      category: "content",
-      status: "not_configured",
-      setupUrl: "https://www.notion.so/my-integrations",
-    });
-  } else {
-    const ping = await pingNotion(cfg.NOTION_API_KEY);
-    results.push({
-      id: "notion",
-      name: "Notion",
-      category: "content",
-      ...ping,
-    });
-  }
-
-  // ── Google Calendar + GSC ─────────────────────────────────────────────────
-  results.push({
-    id: "google",
-    name: "Google (Calendar + Search Console)",
-    category: "productivity",
-    status:
-      cfg.GOOGLE_CLIENT_EMAIL &&
-      cfg.GOOGLE_PRIVATE_KEY &&
-      cfg.GOOGLE_CALENDAR_ID
-        ? "configured"
-        : "not_configured",
-    setupUrl: "https://console.cloud.google.com/iam-admin/serviceaccounts",
-  });
-
-  // ── Sentry ────────────────────────────────────────────────────────────────
-  const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
-  results.push({
-    id: "sentry",
-    name: "Sentry",
-    category: "monitoring",
-    status: sentryDsn
-      ? cfg.SENTRY_AUTH_TOKEN
-        ? "configured"
-        : "degraded"
-      : "not_configured",
-    message:
-      sentryDsn && !cfg.SENTRY_AUTH_TOKEN
-        ? "DSN configured (frontend capture active) but SENTRY_AUTH_TOKEN missing — source map uploads disabled."
-        : undefined,
-    setupUrl: "https://sentry.io/settings/auth-tokens/",
-  });
-
-  // ── Anthropic ─────────────────────────────────────────────────────────────
-  results.push({
-    id: "anthropic",
-    name: "Anthropic (Claude AI)",
-    category: "ai",
-    status: cfg.ANTHROPIC_API_KEY ? "configured" : "not_configured",
-    message: !cfg.ANTHROPIC_API_KEY
-      ? "Add ANTHROPIC_API_KEY to SSM or .env.local to enable AI features (report insights, ad copy, audience analysis)."
-      : undefined,
-    setupUrl: "https://console.anthropic.com/settings/keys",
-  });
-
-  // ── ActiveCampaign ────────────────────────────────────────────────────────
-  {
-    const ac = await verifyActiveCampaignToken();
-    const statusMap: Record<string, IntegrationStatus> = {
-      valid: "configured",
-      rejected: "degraded",
-      not_configured: "not_configured",
-      error: "error",
-    };
-    results.push({
-      id: "activecampaign",
-      name: "ActiveCampaign",
-      category: "email_marketing",
-      status: statusMap[ac.status] ?? "error",
-      message:
-        ac.status === "not_configured" &&
-        cfg.ACTIVECAMPAIGN_API_URL &&
-        !cfg.ACTIVECAMPAIGN_API_TOKEN
-          ? "URL configured but API token missing. Renew account then get token from Settings > Developer > API Access."
-          : ac.message,
-      setupUrl: "https://www.activecampaign.com",
-    });
-  }
-
-  // ── Meta ──────────────────────────────────────────────────────────────────
-  const metaConfigured = Boolean(
-    cfg.META_AD_ACCOUNT_ID && cfg.META_ACCESS_TOKEN && cfg.META_PIXEL_ID,
-  );
-  results.push({
-    id: "meta",
-    name: "Meta (Facebook/Instagram)",
-    category: "social_ads",
-    status: metaConfigured ? "configured" : "not_configured",
-    message: metaConfigured
-      ? "Instagram Business Account ID blocked — Meta ad policy violation on account 1558125105019725. Appeal required."
-      : undefined,
-    setupUrl: "https://business.facebook.com/settings/system-users",
-  });
-
-  // ── LinkedIn Ads ──────────────────────────────────────────────────────────
-  const linkedInConfigured = Boolean(
-    cfg.LINKEDIN_ACCESS_TOKEN &&
-    cfg.LINKEDIN_AD_ACCOUNT_ID &&
-    cfg.LINKEDIN_ORGANIZATION_URN,
-  );
-  results.push({
-    id: "linkedin",
-    name: "LinkedIn Ads",
-    category: "social_ads",
-    status: linkedInConfigured ? "configured" : "not_configured",
-    setupUrl: "https://www.linkedin.com/campaignmanager",
-  });
-
-  // ── TikTok Ads ────────────────────────────────────────────────────────────
-  const tiktokAppReady = Boolean(cfg.TIKTOK_APP_ID && cfg.TIKTOK_APP_SECRET);
-  const tiktokFullyConfigured = Boolean(
-    tiktokAppReady && cfg.TIKTOK_ACCESS_TOKEN && cfg.TIKTOK_ADVERTISER_ID,
-  );
-  results.push({
-    id: "tiktok",
-    name: "TikTok Ads",
-    category: "social_ads",
-    status: tiktokFullyConfigured
-      ? "configured"
-      : tiktokAppReady
-        ? "degraded"
-        : "not_configured",
-    message:
-      tiktokAppReady && !tiktokFullyConfigured
-        ? "App credentials set. Complete OAuth to get access token and advertiser ID."
-        : undefined,
-    setupUrl: tiktokAppReady
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/oauth/tiktok`
-      : "https://ads.tiktok.com/marketing_api/apps",
-  });
-
-  // ── X (Twitter) Ads ───────────────────────────────────────────────────────
-  const xTokensReady = Boolean(
-    cfg.X_API_KEY &&
-    cfg.X_ACCESS_TOKEN &&
-    cfg.X_API_SECRET &&
-    cfg.X_ACCESS_SECRET,
-  );
-  const xFullyConfigured = Boolean(xTokensReady && cfg.X_AD_ACCOUNT_ID);
-  results.push({
-    id: "x",
-    name: "X (Twitter) Ads",
-    category: "social_ads",
-    status: xFullyConfigured
-      ? "configured"
-      : xTokensReady
-        ? "degraded"
-        : "not_configured",
-    message:
-      xTokensReady && !xFullyConfigured
-        ? "OAuth tokens set. X_AD_ACCOUNT_ID missing — X Ads API access pending approval. Apply at ads.x.com/help."
-        : undefined,
-    setupUrl: "https://ads.x.com/help",
-  });
-
-  // ── Google Ads ────────────────────────────────────────────────────────────
-  const googleAdsConfigured = Boolean(
-    cfg.GOOGLE_ADS_DEVELOPER_TOKEN && cfg.GOOGLE_ADS_CUSTOMER_ID,
-  );
-  results.push({
-    id: "google_ads",
-    name: "Google Ads",
-    category: "social_ads",
-    status: googleAdsConfigured ? "configured" : "not_configured",
-    message: !googleAdsConfigured
-      ? "Needs GOOGLE_ADS_DEVELOPER_TOKEN (apply at ads.google.com/intl/en_us/home/tools/api-center/) and GOOGLE_ADS_CUSTOMER_ID. Google service account auth is already configured."
-      : undefined,
-    setupUrl: "https://ads.google.com/intl/en_us/home/tools/api-center/",
-  });
+  const results: IntegrationReport[] = [...pingedReports, ...staticReports];
 
   const summary = {
     total: results.length,
