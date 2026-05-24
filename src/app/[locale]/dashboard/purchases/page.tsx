@@ -37,6 +37,28 @@ const statusClasses: Record<string, string> = {
   incomplete: "text-yellow-400 bg-yellow-400/10",
 };
 
+async function fetchPurchasesData(
+  setPurchases: (p: Purchase[]) => void,
+  setSubscriptions: (s: Subscription[]) => void,
+  setError: (e: string | null) => void,
+  setLoading: (v: boolean) => void,
+): Promise<void> {
+  try {
+    const res = await fetchWithAuth("/api/user/purchases");
+    if (!res.ok) {
+      if (res.status === 503) throw new Error("Stripe not configured");
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    setPurchases(data.purchases ?? []);
+    setSubscriptions(data.subscriptions ?? []);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Failed to load purchases");
+  } finally {
+    setLoading(false);
+  }
+}
+
 export default function PurchasesPage() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
@@ -53,26 +75,7 @@ export default function PurchasesPage() {
       setLoading(false);
       return;
     }
-
-    async function fetchData() {
-      try {
-        const res = await fetchWithAuth("/api/user/purchases");
-        if (!res.ok) {
-          if (res.status === 503) throw new Error("Stripe not configured");
-          throw new Error(`HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        setPurchases(data.purchases ?? []);
-        setSubscriptions(data.subscriptions ?? []);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to load purchases",
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
+    fetchPurchasesData(setPurchases, setSubscriptions, setError, setLoading);
   }, [user]);
 
   const totalSpent = purchases

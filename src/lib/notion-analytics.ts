@@ -128,7 +128,9 @@ async function writeEventToNotion(data: EventData): Promise<string | null> {
 }
 
 /** No-op kept for backward compatibility; the queue has been removed. */
-export function resetEventQueue(): void {}
+export function resetEventQueue(): void {
+  // intentional no-op: queue was removed in favour of immediate writes
+}
 
 /**
  * No-op kept for backward compatibility; events are now written immediately.

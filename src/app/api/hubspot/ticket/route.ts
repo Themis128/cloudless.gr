@@ -7,6 +7,40 @@ import {
 import { isValidEmail } from "@/lib/validation";
 import { mapIntegrationError } from "@/lib/api-errors";
 
+const VALID_PRIORITIES = new Set(["HIGH", "MEDIUM", "LOW"]);
+
+function parseTicketBody(body: Record<string, unknown>): {
+  subject: string;
+  content: string;
+  email: string | undefined;
+  normalizedPriority: string;
+} | null {
+  const subject =
+    typeof body.subject === "string" ? body.subject.trim().slice(0, 200) : "";
+  const content =
+    typeof body.content === "string" ? body.content.trim().slice(0, 2000) : "";
+  if (!subject || !content) return null;
+  const email = typeof body.email === "string" ? body.email : undefined;
+  const rawPriority = typeof body.priority === "string" ? body.priority : "";
+  const normalizedPriority = VALID_PRIORITIES.has(rawPriority.toUpperCase())
+    ? rawPriority.toUpperCase()
+    : "MEDIUM";
+  return { subject, content, email, normalizedPriority };
+}
+
+async function resolveContactId(
+  email: string,
+): Promise<{ contactId: string | undefined; integrationError: NextResponse | null }> {
+  try {
+    const result = await searchContacts("email", email);
+    const contactId = result.total > 0 ? result.results[0].id : undefined;
+    return { contactId, integrationError: null };
+  } catch (err) {
+    const integrationError = mapIntegrationError(err);
+    return { contactId: undefined, integrationError: integrationError ?? null };
+  }
+}
+
 /**
  * POST /api/hubspot/ticket
  *
@@ -23,22 +57,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+    const parsed = parseTicketBody(body as Record<string, unknown>);
 
-    const rawSubject =
-      typeof body.subject === "string" ? body.subject.trim().slice(0, 200) : "";
-    const rawContent =
-      typeof body.content === "string"
-        ? body.content.trim().slice(0, 2000)
-        : "";
-    const { email, priority } = body;
-    const subject = rawSubject;
-    const content = rawContent;
-    if (!subject || !content) {
+    if (!parsed) {
       return NextResponse.json(
         { error: "Missing required fields: subject, content" },
         { status: 400 },
       );
     }
+
+    const { subject, content, email, normalizedPriority } = parsed;
 
     if (email && !isValidEmail(email)) {
       return NextResponse.json(
@@ -47,35 +75,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalize priority — only HIGH/MEDIUM/LOW are valid HubSpot values
-    const VALID_PRIORITIES = ["HIGH", "MEDIUM", "LOW"];
-    const normalizedPriority = VALID_PRIORITIES.includes(
-      (priority || "").toUpperCase(),
-    )
-      ? (priority as string).toUpperCase()
-      : "MEDIUM";
-
     // Find contact by email if provided
     let contactId: string | undefined;
     if (email) {
-      try {
-        const result = await searchContacts("email", email);
-        if (result.total > 0) {
-          contactId = result.results[0].id;
-        }
-      } catch (err) {
-        const _r = mapIntegrationError(err);
-        if (_r) return _r;
-        // Contact not found — ticket will be unassociated
-      }
+      const resolved = await resolveContactId(email);
+      if (resolved.integrationError) return resolved.integrationError;
+      contactId = resolved.contactId;
     }
 
     const ticket = await createTicket(
-      {
-        subject,
-        content,
-        hs_ticket_priority: normalizedPriority,
-      },
+      { subject, content, hs_ticket_priority: normalizedPriority },
       contactId,
     );
 

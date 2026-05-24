@@ -14,6 +14,47 @@ interface DashboardStats {
   upcomingConsultations: number;
 }
 
+async function fetchDashboardStats(
+  setStats: (s: DashboardStats) => void,
+  setLoading: (v: boolean) => void,
+): Promise<void> {
+  const [purchasesRes, consultationsRes] = await Promise.allSettled([
+    fetchWithAuth("/api/user/purchases"),
+    fetchWithAuth("/api/user/consultations"),
+  ]);
+
+  let totalOrders = 0;
+  let totalSpent = 0;
+  let activeSubscriptions = 0;
+  let upcomingConsultations = 0;
+
+  if (purchasesRes.status === "fulfilled" && purchasesRes.value.ok) {
+    const data = await purchasesRes.value.json();
+    const purchases = data.purchases ?? [];
+    const subs = data.subscriptions ?? [];
+    totalOrders = purchases.length;
+    totalSpent = purchases
+      .filter(
+        (p: { status: string }) =>
+          p.status === "paid" || p.status === "complete",
+      )
+      .reduce((sum: number, p: { amount: number }) => sum + p.amount, 0);
+    activeSubscriptions = subs.filter(
+      (s: { status: string }) => s.status === "active",
+    ).length;
+  }
+
+  if (consultationsRes.status === "fulfilled" && consultationsRes.value.ok) {
+    const data = await consultationsRes.value.json();
+    upcomingConsultations = (data.consultations ?? []).filter(
+      (c: { status: string }) => c.status === "upcoming",
+    ).length;
+  }
+
+  setStats({ totalOrders, totalSpent, activeSubscriptions, upcomingConsultations });
+  setLoading(false);
+}
+
 export default function DashboardPage() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
@@ -29,54 +70,7 @@ export default function DashboardPage() {
       setLoading(false);
       return;
     }
-
-    async function fetchStats() {
-      const [purchasesRes, consultationsRes] = await Promise.allSettled([
-        fetchWithAuth("/api/user/purchases"),
-        fetchWithAuth("/api/user/consultations"),
-      ]);
-
-      let totalOrders = 0;
-      let totalSpent = 0;
-      let activeSubscriptions = 0;
-      let upcomingConsultations = 0;
-
-      if (purchasesRes.status === "fulfilled" && purchasesRes.value.ok) {
-        const data = await purchasesRes.value.json();
-        const purchases = data.purchases ?? [];
-        const subs = data.subscriptions ?? [];
-        totalOrders = purchases.length;
-        totalSpent = purchases
-          .filter(
-            (p: { status: string }) =>
-              p.status === "paid" || p.status === "complete",
-          )
-          .reduce((sum: number, p: { amount: number }) => sum + p.amount, 0);
-        activeSubscriptions = subs.filter(
-          (s: { status: string }) => s.status === "active",
-        ).length;
-      }
-
-      if (
-        consultationsRes.status === "fulfilled" &&
-        consultationsRes.value.ok
-      ) {
-        const data = await consultationsRes.value.json();
-        upcomingConsultations = (data.consultations ?? []).filter(
-          (c: { status: string }) => c.status === "upcoming",
-        ).length;
-      }
-
-      setStats({
-        totalOrders,
-        totalSpent,
-        activeSubscriptions,
-        upcomingConsultations,
-      });
-      setLoading(false);
-    }
-
-    fetchStats();
+    fetchDashboardStats(setStats, setLoading);
   }, [user]);
 
   // Time-based greeting

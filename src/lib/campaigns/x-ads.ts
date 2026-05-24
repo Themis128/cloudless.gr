@@ -41,7 +41,7 @@ function buildOAuthHeader(
     oauth_version: "1.0",
   };
   const paramStr = Object.keys(params)
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
     .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`)
     .join("&");
   const baseStr = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramStr)}`;

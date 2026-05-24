@@ -101,6 +101,119 @@ export function resetSsmCache(): void {
   cachedAt = 0;
 }
 
+async function fetchSsmParams(): Promise<Map<string, string>> {
+  const ssm = getSsmClient();
+  const params = new Map<string, string>();
+  let nextToken: string | undefined;
+  do {
+    const res = await ssm.send(
+      new GetParametersByPathCommand({
+        Path: SSM_PREFIX,
+        WithDecryption: true,
+        NextToken: nextToken,
+      }),
+    );
+    for (const p of res.Parameters ?? []) {
+      const key = p.Name?.replace(`${SSM_PREFIX}/`, "") ?? "";
+      if (key && p.Value) params.set(key, p.Value);
+    }
+    nextToken = res.NextToken;
+  } while (nextToken);
+  return params;
+}
+
+function validateRequiredKeys(params: Map<string, string>): void {
+  const required = [
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "COGNITO_USER_POOL_ID",
+    "COGNITO_CLIENT_ID",
+  ] as const;
+  for (const key of required) {
+    if (!params.get(key)) {
+      throw new Error(`Missing required SSM parameter: ${SSM_PREFIX}/${key}`);
+    }
+  }
+}
+
+function buildConfigFromParams(params: Map<string, string>): AppConfig {
+  const sesFrom = params.get("SES_FROM_EMAIL") || "noreply@cloudless.gr";
+  const sesTo = params.get("SES_TO_EMAIL") || "tbaltzakis@cloudless.gr";
+  const sesRegion = params.get("AWS_SES_REGION") || "us-east-1";
+
+  if (!sesFrom.includes("@") || !sesTo.includes("@")) {
+    console.warn(
+      `[SSM] SES email addresses look invalid — FROM: ${sesFrom}, TO: ${sesTo}. Using defaults.`,
+    );
+  }
+
+  return {
+    SES_FROM_EMAIL: sesFrom,
+    SES_TO_EMAIL: sesTo,
+    AWS_SES_REGION: sesRegion,
+    NEWSLETTER_SEND_SECRET: params.get("NEWSLETTER_SEND_SECRET") ?? "",
+    STRIPE_SECRET_KEY: params.get("STRIPE_SECRET_KEY") ?? "",
+    STRIPE_PUBLISHABLE_KEY: params.get("STRIPE_PUBLISHABLE_KEY") ?? "",
+    STRIPE_WEBHOOK_SECRET: params.get("STRIPE_WEBHOOK_SECRET") ?? "",
+    COGNITO_USER_POOL_ID: params.get("COGNITO_USER_POOL_ID") ?? "",
+    COGNITO_CLIENT_ID: params.get("COGNITO_CLIENT_ID") ?? "",
+    SLACK_WEBHOOK_URL: params.get("SLACK_WEBHOOK_URL") ?? "",
+    SLACK_BOT_TOKEN: params.get("SLACK_BOT_TOKEN") ?? "",
+    SLACK_SIGNING_SECRET: params.get("SLACK_SIGNING_SECRET") ?? "",
+    HUBSPOT_API_KEY: params.get("HUBSPOT_API_KEY") ?? "",
+    HUBSPOT_CLIENT_SECRET: params.get("HUBSPOT_CLIENT_SECRET") ?? "",
+    NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
+    NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
+    NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
+    NOTION_SUBMISSIONS_DB_ID: params.get("NOTION_SUBMISSIONS_DB_ID") ?? "",
+    NOTION_DOCS_DB_ID: params.get("NOTION_DOCS_DB_ID") ?? "",
+    NOTION_PROJECTS_DB_ID: params.get("NOTION_PROJECTS_DB_ID") ?? "",
+    NOTION_TASKS_DB_ID: params.get("NOTION_TASKS_DB_ID") ?? "",
+    NOTION_ANALYTICS_DB_ID: params.get("NOTION_ANALYTICS_DB_ID") ?? "",
+    NOTION_GSC_REPORTS_DB_ID: params.get("NOTION_GSC_REPORTS_DB_ID") ?? "",
+    NOTION_CALENDAR_DB_ID: params.get("NOTION_CALENDAR_DB_ID") ?? "",
+    NOTION_REPORTS_DB_ID: params.get("NOTION_REPORTS_DB_ID") ?? "",
+    NOTION_TESTIMONIALS_DB_ID: params.get("NOTION_TESTIMONIALS_DB_ID") ?? "",
+    NOTION_CASE_STUDIES_DB_ID: params.get("NOTION_CASE_STUDIES_DB_ID") ?? "",
+    NOTION_SERVICES_DB_ID: params.get("NOTION_SERVICES_DB_ID") ?? "",
+    NOTION_FAQS_DB_ID: params.get("NOTION_FAQS_DB_ID") ?? "",
+    GOOGLE_CLIENT_EMAIL: params.get("GOOGLE_CLIENT_EMAIL") ?? "",
+    GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replaceAll(String.raw`\n`, "\n"),
+    GOOGLE_CALENDAR_ID: params.get("GOOGLE_CALENDAR_ID") ?? "",
+    GSC_SITE_URL: params.get("GSC_SITE_URL") ?? "sc-domain:cloudless.gr",
+    SENTRY_AUTH_TOKEN: params.get("SENTRY_AUTH_TOKEN") ?? "",
+    SENTRY_ORG: params.get("SENTRY_ORG") ?? "baltzakisthemiscom",
+    SENTRY_PROJECT: params.get("SENTRY_PROJECT") ?? "cloudless-gr",
+    ACTIVECAMPAIGN_API_URL: params.get("ACTIVECAMPAIGN_API_URL") ?? "",
+    ACTIVECAMPAIGN_API_TOKEN: params.get("ACTIVECAMPAIGN_API_TOKEN") ?? "",
+    GOOGLE_ADS_DEVELOPER_TOKEN: params.get("GOOGLE_ADS_DEVELOPER_TOKEN") ?? "",
+    GOOGLE_ADS_CUSTOMER_ID: params.get("GOOGLE_ADS_CUSTOMER_ID") ?? "",
+    LINKEDIN_CLIENT_ID: params.get("LINKEDIN_CLIENT_ID") ?? "",
+    LINKEDIN_CLIENT_SECRET: params.get("LINKEDIN_CLIENT_SECRET") ?? "",
+    LINKEDIN_ACCESS_TOKEN: params.get("LINKEDIN_ACCESS_TOKEN") ?? "",
+    LINKEDIN_AD_ACCOUNT_ID: params.get("LINKEDIN_AD_ACCOUNT_ID") ?? "",
+    LINKEDIN_ORGANIZATION_URN: params.get("LINKEDIN_ORGANIZATION_URN") ?? "",
+    TIKTOK_APP_ID: params.get("TIKTOK_APP_ID") ?? "",
+    TIKTOK_APP_SECRET: params.get("TIKTOK_APP_SECRET") ?? "",
+    TIKTOK_ACCESS_TOKEN: params.get("TIKTOK_ACCESS_TOKEN") ?? "",
+    TIKTOK_ADVERTISER_ID: params.get("TIKTOK_ADVERTISER_ID") ?? "",
+    X_API_KEY: params.get("X_API_KEY") ?? "",
+    X_API_SECRET: params.get("X_API_SECRET") ?? "",
+    X_ACCESS_TOKEN: params.get("X_ACCESS_TOKEN") ?? "",
+    X_ACCESS_SECRET: params.get("X_ACCESS_SECRET") ?? "",
+    X_AD_ACCOUNT_ID: params.get("X_AD_ACCOUNT_ID") ?? "",
+    META_AD_ACCOUNT_ID: params.get("META_AD_ACCOUNT_ID") ?? "",
+    META_PIXEL_ID: params.get("META_PIXEL_ID") ?? "",
+    META_CAPI_ACCESS_TOKEN: params.get("META_CAPI_ACCESS_TOKEN") ?? "",
+    META_ACCESS_TOKEN: params.get("META_ACCESS_TOKEN") ?? "",
+    META_PAGE_ID: params.get("META_PAGE_ID") ?? "",
+    GITHUB_TOKEN: params.get("GITHUB_TOKEN") ?? "",
+    CRON_SECRET: params.get("CRON_SECRET") ?? "",
+    ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
+    ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",
+  };
+}
+
 /**
  * Builds an AppConfig purely from process.env — used in test environments
  * so tests never touch AWS SSM.
@@ -199,27 +312,9 @@ export async function getConfig(): Promise<AppConfig> {
 
   if (cached && Date.now() - cachedAt < CACHE_TTL_MS) return cached;
 
-  const ssm = getSsmClient();
-  const params = new Map<string, string>();
-
+  let params: Map<string, string>;
   try {
-    let nextToken: string | undefined;
-    do {
-      const res = await ssm.send(
-        new GetParametersByPathCommand({
-          Path: SSM_PREFIX,
-          WithDecryption: true,
-          NextToken: nextToken,
-        }),
-      );
-
-      for (const p of res.Parameters ?? []) {
-        const key = p.Name?.replace(`${SSM_PREFIX}/`, "") ?? "";
-        if (key && p.Value) params.set(key, p.Value);
-      }
-
-      nextToken = res.NextToken;
-    } while (nextToken);
+    params = await fetchSsmParams();
   } catch (err) {
     // Transient SSM failure — serve stale cache rather than crashing all requests
     if (cached) {
@@ -244,96 +339,9 @@ export async function getConfig(): Promise<AppConfig> {
     throw err;
   }
 
-  const required = [
-    "STRIPE_SECRET_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-    "COGNITO_USER_POOL_ID",
-    "COGNITO_CLIENT_ID",
-  ] as const;
-  for (const key of required) {
-    if (!params.get(key)) {
-      throw new Error(`Missing required SSM parameter: ${SSM_PREFIX}/${key}`);
-    }
-  }
+  validateRequiredKeys(params);
 
-  const sesFrom = params.get("SES_FROM_EMAIL") || "noreply@cloudless.gr";
-  const sesTo = params.get("SES_TO_EMAIL") || "tbaltzakis@cloudless.gr";
-  const sesRegion = params.get("AWS_SES_REGION") || "us-east-1";
-
-  if (!sesFrom.includes("@") || !sesTo.includes("@")) {
-    console.warn(
-      `[SSM] SES email addresses look invalid — FROM: ${sesFrom}, TO: ${sesTo}. Using defaults.`,
-    );
-  }
-
-  cached = {
-    SES_FROM_EMAIL: sesFrom,
-    SES_TO_EMAIL: sesTo,
-    AWS_SES_REGION: sesRegion,
-    NEWSLETTER_SEND_SECRET: params.get("NEWSLETTER_SEND_SECRET") ?? "",
-    STRIPE_SECRET_KEY: params.get("STRIPE_SECRET_KEY")!,
-    STRIPE_PUBLISHABLE_KEY: params.get("STRIPE_PUBLISHABLE_KEY") ?? "",
-    STRIPE_WEBHOOK_SECRET: params.get("STRIPE_WEBHOOK_SECRET")!,
-    COGNITO_USER_POOL_ID: params.get("COGNITO_USER_POOL_ID") ?? "",
-    COGNITO_CLIENT_ID: params.get("COGNITO_CLIENT_ID") ?? "",
-    SLACK_WEBHOOK_URL: params.get("SLACK_WEBHOOK_URL") ?? "",
-    SLACK_BOT_TOKEN: params.get("SLACK_BOT_TOKEN") ?? "",
-    SLACK_SIGNING_SECRET: params.get("SLACK_SIGNING_SECRET") ?? "",
-    HUBSPOT_API_KEY: params.get("HUBSPOT_API_KEY") ?? "",
-    HUBSPOT_CLIENT_SECRET: params.get("HUBSPOT_CLIENT_SECRET") ?? "",
-    NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
-    NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
-    NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
-    NOTION_SUBMISSIONS_DB_ID: params.get("NOTION_SUBMISSIONS_DB_ID") ?? "",
-    NOTION_DOCS_DB_ID: params.get("NOTION_DOCS_DB_ID") ?? "",
-    NOTION_PROJECTS_DB_ID: params.get("NOTION_PROJECTS_DB_ID") ?? "",
-    NOTION_TASKS_DB_ID: params.get("NOTION_TASKS_DB_ID") ?? "",
-    NOTION_ANALYTICS_DB_ID: params.get("NOTION_ANALYTICS_DB_ID") ?? "",
-    NOTION_GSC_REPORTS_DB_ID: params.get("NOTION_GSC_REPORTS_DB_ID") ?? "",
-    NOTION_CALENDAR_DB_ID: params.get("NOTION_CALENDAR_DB_ID") ?? "",
-    NOTION_REPORTS_DB_ID: params.get("NOTION_REPORTS_DB_ID") ?? "",
-    NOTION_TESTIMONIALS_DB_ID: params.get("NOTION_TESTIMONIALS_DB_ID") ?? "",
-    NOTION_CASE_STUDIES_DB_ID: params.get("NOTION_CASE_STUDIES_DB_ID") ?? "",
-    NOTION_SERVICES_DB_ID: params.get("NOTION_SERVICES_DB_ID") ?? "",
-    NOTION_FAQS_DB_ID: params.get("NOTION_FAQS_DB_ID") ?? "",
-    GOOGLE_CLIENT_EMAIL: params.get("GOOGLE_CLIENT_EMAIL") ?? "",
-    GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replace(
-      /\\n/g,
-      "\n",
-    ),
-    GOOGLE_CALENDAR_ID: params.get("GOOGLE_CALENDAR_ID") ?? "",
-    GSC_SITE_URL: params.get("GSC_SITE_URL") ?? "sc-domain:cloudless.gr",
-    SENTRY_AUTH_TOKEN: params.get("SENTRY_AUTH_TOKEN") ?? "",
-    SENTRY_ORG: params.get("SENTRY_ORG") ?? "baltzakisthemiscom",
-    SENTRY_PROJECT: params.get("SENTRY_PROJECT") ?? "cloudless-gr",
-    ACTIVECAMPAIGN_API_URL: params.get("ACTIVECAMPAIGN_API_URL") ?? "",
-    ACTIVECAMPAIGN_API_TOKEN: params.get("ACTIVECAMPAIGN_API_TOKEN") ?? "",
-    GOOGLE_ADS_DEVELOPER_TOKEN: params.get("GOOGLE_ADS_DEVELOPER_TOKEN") ?? "",
-    GOOGLE_ADS_CUSTOMER_ID: params.get("GOOGLE_ADS_CUSTOMER_ID") ?? "",
-    LINKEDIN_CLIENT_ID: params.get("LINKEDIN_CLIENT_ID") ?? "",
-    LINKEDIN_CLIENT_SECRET: params.get("LINKEDIN_CLIENT_SECRET") ?? "",
-    LINKEDIN_ACCESS_TOKEN: params.get("LINKEDIN_ACCESS_TOKEN") ?? "",
-    LINKEDIN_AD_ACCOUNT_ID: params.get("LINKEDIN_AD_ACCOUNT_ID") ?? "",
-    LINKEDIN_ORGANIZATION_URN: params.get("LINKEDIN_ORGANIZATION_URN") ?? "",
-    TIKTOK_APP_ID: params.get("TIKTOK_APP_ID") ?? "",
-    TIKTOK_APP_SECRET: params.get("TIKTOK_APP_SECRET") ?? "",
-    TIKTOK_ACCESS_TOKEN: params.get("TIKTOK_ACCESS_TOKEN") ?? "",
-    TIKTOK_ADVERTISER_ID: params.get("TIKTOK_ADVERTISER_ID") ?? "",
-    X_API_KEY: params.get("X_API_KEY") ?? "",
-    X_API_SECRET: params.get("X_API_SECRET") ?? "",
-    X_ACCESS_TOKEN: params.get("X_ACCESS_TOKEN") ?? "",
-    X_ACCESS_SECRET: params.get("X_ACCESS_SECRET") ?? "",
-    X_AD_ACCOUNT_ID: params.get("X_AD_ACCOUNT_ID") ?? "",
-    META_AD_ACCOUNT_ID: params.get("META_AD_ACCOUNT_ID") ?? "",
-    META_PIXEL_ID: params.get("META_PIXEL_ID") ?? "",
-    META_CAPI_ACCESS_TOKEN: params.get("META_CAPI_ACCESS_TOKEN") ?? "",
-    META_ACCESS_TOKEN: params.get("META_ACCESS_TOKEN") ?? "",
-    META_PAGE_ID: params.get("META_PAGE_ID") ?? "",
-    GITHUB_TOKEN: params.get("GITHUB_TOKEN") ?? "",
-    CRON_SECRET: params.get("CRON_SECRET") ?? "",
-    ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
-    ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",
-  };
+  cached = buildConfigFromParams(params);
   cachedAt = Date.now();
 
   return cached;

@@ -44,11 +44,10 @@ function loadManifest(): Record<string, unknown> {
   const raw = readFileSync(MANIFEST_PATH, "utf8");
   // Strip the _comment / _docs / _apply meta-fields before sending to Slack
   const parsed = JSON.parse(raw) as Record<string, unknown>;
-  const { _comment: _c, _docs: _d, _apply: _a, ...manifest } = parsed;
-  void _c;
-  void _d;
-  void _a;
-  return manifest;
+  delete parsed["_comment"];
+  delete parsed["_docs"];
+  delete parsed["_apply"];
+  return parsed;
 }
 
 async function slackPost(
