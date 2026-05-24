@@ -1,0 +1,25 @@
+name = "cloudless-esp32-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ── Local dev ──────────────────────────────────────────────────────────────────
+# `npx wrangler dev` runs on port 8787 by default.
+# The Next.js app (localhost:4000) can call the Worker at localhost:8787/api/esp32/*
+# during local development. In production, the Worker is deployed to Cloudflare
+# and called via its workers.dev URL or a custom route.
+
+[vars]
+# Pi alert-API base URL — overridden in Cloudflare dashboard for production
+ALERT_API_URL = "http://192.168.1.128:30800"
+# CORS origin for the admin panel — update to cloudless.gr in production
+ALLOWED_ORIGIN = "http://localhost:4000"
+
+# ── Production secrets (set via `wrangler secret put`, never in this file) ────
+# ADMIN_TOKEN  — Bearer token that the Next.js /api/admin/esp32 route also validates
+#                Set with: npx wrangler secret put ADMIN_TOKEN
+
+# ── Routes (uncomment when deploying to production) ───────────────────────────
+# routes = [
+#   { pattern = "cloudless.gr/workers/esp32/*", zone_name = "cloudless.gr" }
+# ]
