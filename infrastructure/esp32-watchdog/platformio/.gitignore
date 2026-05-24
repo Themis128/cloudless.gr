@@ -1,0 +1,18 @@
+# PlatformIO build artifacts
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# PlatformIO VS Code extension state
+.vscode/
+
+# Codacy AI instructions (local tooling only)
+.github/instructions/codacy.instructions.md
+
+# Windows PlatformIO home if it leaks into project dir when pio runs under WSL2
+# (C:\Users\baltz\.platformio resolves as a relative path in Linux)
+# Both slash variants are needed: git on Linux normalises to "/" internally.
+C:/
+C:\
+"C:\\Users*"
+C:\\Users*
