@@ -35,6 +35,7 @@ import {
   Ticket,
   Activity,
   Server,
+  Cpu,
   ExternalLink,
   type LucideIcon,
 } from "lucide-react";
@@ -115,6 +116,7 @@ const adminGroups: AdminGroup[] = [
     links: [
       { href: "/admin/monitor", label: "Monitor", Icon: Activity },
       { href: "/admin/esp32", label: "ESP32", Icon: Server },
+      { href: "/admin/esp32-manager", label: "ESP32 Mgr", Icon: Cpu },
     ],
   },
 ];
@@ -193,7 +195,6 @@ export default function AdminLayoutClient({
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
-        // Include ?next so the login page can bounce back after sign-in
         router.push("/auth/login?next=/admin");
       } else if (!isAdmin) {
         router.push("/dashboard");
