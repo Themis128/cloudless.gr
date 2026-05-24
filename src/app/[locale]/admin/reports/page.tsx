@@ -7,7 +7,7 @@ import type { Report } from "@/lib/reports";
 
 const SECTION_OPTIONS = [
   { id: "pipeline", label: "Lead Pipeline (HubSpot)" },
-  { id: "email", label: "Email Marketing (ActiveCampaign)" },
+  { id: "email", label: "Email Marketing (HubSpot)" },
 ];
 
 export default function ReportsPage() {

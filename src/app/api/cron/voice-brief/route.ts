@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
 import { getSeoSnapshot } from "@/lib/gsc";
-import { isHubSpotConfigured, getPipelineStats } from "@/lib/hubspot";
-import {
-  isActiveCampaignConfigured,
-  getEmailStats,
-} from "@/lib/activecampaign";
+import { isHubSpotConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/hubspot";
 import { getStripe } from "@/lib/stripe";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 import { mapIntegrationError } from "@/lib/api-errors";
@@ -47,8 +43,11 @@ async function buildBriefText(
     (await isHubSpotConfigured())
       ? safeCall(() => getPipelineStats())
       : Promise.resolve(null),
-    (await isActiveCampaignConfigured())
-      ? safeCall(() => getEmailStats())
+    (await isHubSpotConfigured())
+      ? safeCall(async () => {
+          const subs = await listNewsletterSubscribers();
+          return { totalContacts: subs.length, totalCampaigns: 0 };
+        })
       : Promise.resolve(null),
     cfg.STRIPE_SECRET_KEY
       ? safeCall(async () => {
@@ -70,7 +69,7 @@ async function buildBriefText(
   }
   if (seo) {
     lines.push(
-      `Search: ${seo.clicks.toLocaleString()} clicks, ${seo.impressions.toLocaleString()} impressions, average CTR ${(seo.ctr * 100).toFixed(1)}%.`,
+      `Search: ${seo.clicks.toLocaleString()} clicks, ${seo.impressions.toLocaleString()} impressions, average CTR ${seo.ctr.toFixed(1)}%.`,
     );
   }
   if (pipeline) {
