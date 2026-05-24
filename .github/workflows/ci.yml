@@ -49,9 +49,8 @@ jobs:
           dest: ~/setup-pnpm-${{ runner.name }}
       - name: pin pnpm store to persistent local path
         run: |
-          sudo mkdir -p /opt/pnpm-store
-          sudo chmod 777 /opt/pnpm-store
-          pnpm config set store-dir /opt/pnpm-store
+          mkdir -p "$HOME/.pnpm-store"
+          pnpm config set store-dir "$HOME/.pnpm-store"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -71,9 +70,8 @@ jobs:
           dest: ~/setup-pnpm-${{ runner.name }}
       - name: pin pnpm store to persistent local path
         run: |
-          sudo mkdir -p /opt/pnpm-store
-          sudo chmod 777 /opt/pnpm-store
-          pnpm config set store-dir /opt/pnpm-store
+          mkdir -p "$HOME/.pnpm-store"
+          pnpm config set store-dir "$HOME/.pnpm-store"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -102,9 +100,8 @@ jobs:
           dest: ~/setup-pnpm-${{ runner.name }}
       - name: pin pnpm store to persistent local path
         run: |
-          sudo mkdir -p /opt/pnpm-store
-          sudo chmod 777 /opt/pnpm-store
-          pnpm config set store-dir /opt/pnpm-store
+          mkdir -p "$HOME/.pnpm-store"
+          pnpm config set store-dir "$HOME/.pnpm-store"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -123,9 +120,8 @@ jobs:
           dest: ~/setup-pnpm-${{ runner.name }}
       - name: pin pnpm store to persistent local path
         run: |
-          sudo mkdir -p /opt/pnpm-store
-          sudo chmod 777 /opt/pnpm-store
-          pnpm config set store-dir /opt/pnpm-store
+          mkdir -p "$HOME/.pnpm-store"
+          pnpm config set store-dir "$HOME/.pnpm-store"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
