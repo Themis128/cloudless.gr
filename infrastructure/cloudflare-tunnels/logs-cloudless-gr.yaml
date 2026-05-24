@@ -1,0 +1,32 @@
+# Cloudflare Tunnel route: logs.cloudless.gr → alert-api on omv-main
+#
+# LIVE since 2026-05-24. Tunnel ID: e977a490-58c5-4fdb-9155-86832e3e636a
+# DNS: logs.cloudless.gr CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
+#
+# This route is part of the existing cloudflared tunnel on omv-main.
+# The full tunnel config lives at /etc/cloudflared/config.yml on omv-main.
+#
+# WebSocket endpoint:
+#   wss://logs.cloudless.gr/ws/esp32-logs  →  http://192.168.1.128:30800
+#
+# SSM param (baked at Next.js build time):
+#   /cloudless/production/NEXT_PUBLIC_ALERT_WS_URL = wss://logs.cloudless.gr/ws/esp32-logs
+#   Set 2026-05-24, deployed in run 26370944091.
+#
+# To update this route on omv-main:
+#   1. Edit /etc/cloudflared/config.yml — the logs.cloudless.gr ingress rule below
+#   2. sudo systemctl reload cloudflared
+#   3. Verify: curl -I https://logs.cloudless.gr/health
+#
+# Ingress rule (already live on omv-main as of 2026-05-24):
+---
+# This is the ingress rule fragment — paste into /etc/cloudflared/config.yml
+# under the "ingress:" key, before the catch-all rule.
+ingress_rule:
+  hostname: logs.cloudless.gr
+  service: http://192.168.1.128:30800
+  originRequest:
+    connectTimeout: 10s
+    tcpKeepAlive: 30s
+    keepAliveConnections: 10
+    keepAliveTimeout: 90s

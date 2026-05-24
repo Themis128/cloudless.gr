@@ -1,106 +1,139 @@
 """
 mqtt_publish.py — MQTT publisher for Alert API v3.0
 =====================================================
-Publishes alert status to Mosquitto broker on K3s.
+Publishes alert status to Mosquitto broker in K3s.
 
 Topics:
-  homelab/alerts/status  — retained, QoS 1, aggregate severity + count
+  homelab/alerts/status  — retained, QoS 1, aggregate worst severity + count
   homelab/alerts/events  — QoS 0, per-event JSON (non-retained)
 
 Payload schema (homelab/alerts/status):
-  {"severity": "info|warning|critical", "count": N, "timestamp": <unix_epoch>}
+  {"severity": "ok|info|warning|error|high|critical", "count": N, "timestamp": <unix_epoch>}
 
-Usage (import into main.py):
-  from mqtt_publish import publish_alert_status, publish_alert_event
+Usage (called from main.py):
+  from mqtt_publish import publish_alert_event, publish_resolved
 
 Environment variables:
-  MQTT_HOST  (default: 192.168.1.128)
-  MQTT_PORT  (default: 31883)
+  MQTT_BROKER_HOST  (default: mosquitto.monitoring.svc.cluster.local)
+  MQTT_BROKER_PORT  (default: 1883)
 """
 
+import asyncio
 import json
 import logging
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 
-import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
 
 logger = logging.getLogger(__name__)
 
-MQTT_HOST = os.getenv("MQTT_HOST", "192.168.1.128")
-MQTT_PORT = int(os.getenv("MQTT_PORT", "31883"))
+MQTT_BROKER_HOST = os.getenv("MQTT_BROKER_HOST", "mosquitto.monitoring.svc.cluster.local")
+MQTT_BROKER_PORT = int(os.getenv("MQTT_BROKER_PORT", "1883"))
 MQTT_TOPIC_STATUS = "homelab/alerts/status"
 MQTT_TOPIC_EVENTS = "homelab/alerts/events"
 
-# Severity ordering — highest wins for aggregate status
-_SEVERITY_RANK = {"info": 1, "warning": 2, "critical": 3}
+# Severity ordering worst-first — matches Notion spec
+_SEVERITY_RANK: dict[str, int] = {
+    "critical": 8,
+    "high":     7,
+    "error":    6,
+    "warning":  5,
+    "medium":   4,
+    "low":      3,
+    "info":     2,
+    "debug":    1,
+    "ok":       0,
+}
+
+_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="mqtt")
 
 
-def _highest_severity(severities: list[str]) -> str:
-    """Return the highest severity from a list."""
-    if not severities:
-        return "info"
-    return max(severities, key=lambda s: _SEVERITY_RANK.get(s, 0))
+def _worst_severity(active_alerts: list[dict]) -> str:
+    """Return the highest severity from the active alert list."""
+    if not active_alerts:
+        return "ok"
+    return max(
+        (a.get("severity", "info") for a in active_alerts),
+        key=lambda s: _SEVERITY_RANK.get(s, 0),
+    )
 
 
-def publish_alert_status(active_alerts: list[dict]) -> bool:
-    """Publish aggregate alert status as a retained message.
+def _publish_sync(msgs: list[dict]) -> None:
+    """Blocking paho publish — runs in the executor thread."""
+    try:
+        publish.multiple(
+            msgs,
+            hostname=MQTT_BROKER_HOST,
+            port=MQTT_BROKER_PORT,
+            client_id="alert-api-publisher",
+        )
+    except Exception as exc:
+        logger.warning("MQTT publish failed: %s", exc)
+
+
+async def _publish_async(msgs: list[dict]) -> None:
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(_executor, _publish_sync, msgs)
+
+
+async def publish_alert_event(alert: dict, active_alerts: list[dict]) -> None:
+    """Publish a new/updated alert event and refresh the retained status topic.
 
     Args:
-        active_alerts: list of active alert dicts with at least a "severity" key.
-
-    Returns:
-        True on success, False on failure.
+        alert: the alert that just fired or updated.
+        active_alerts: full list of currently active (non-resolved) alerts.
     """
+    severity = _worst_severity(active_alerts)
     count = len(active_alerts)
-    severity = _highest_severity([a.get("severity", "info") for a in active_alerts]) if count else "info"
+
+    status_payload = json.dumps({
+        "severity": severity,
+        "count": count,
+        "timestamp": int(time.time()),
+    })
+    event_payload = json.dumps(alert, default=str)
+
+    msgs = [
+        {
+            "topic": MQTT_TOPIC_STATUS,
+            "payload": status_payload,
+            "qos": 1,
+            "retain": True,
+        },
+        {
+            "topic": MQTT_TOPIC_EVENTS,
+            "payload": event_payload,
+            "qos": 0,
+            "retain": False,
+        },
+    ]
+    await _publish_async(msgs)
+    logger.debug("MQTT published: status=%s count=%d", severity, count)
+
+
+async def publish_resolved(active_alerts: list[dict]) -> None:
+    """Refresh the retained status topic after an alert is resolved.
+
+    Args:
+        active_alerts: remaining active alerts after the resolution.
+    """
+    severity = _worst_severity(active_alerts)
+    count = len(active_alerts)
 
     payload = json.dumps({
         "severity": severity,
         "count": count,
         "timestamp": int(time.time()),
     })
-
-    try:
-        publish.single(
-            topic=MQTT_TOPIC_STATUS,
-            payload=payload,
-            qos=1,
-            retain=True,
-            hostname=MQTT_HOST,
-            port=MQTT_PORT,
-            client_id="alert-api-status",
-        )
-        logger.debug("MQTT status published: %s", payload)
-        return True
-    except Exception as exc:
-        logger.warning("MQTT publish_status failed: %s", exc)
-        return False
-
-
-def publish_alert_event(alert: dict) -> bool:
-    """Publish a single alert event (non-retained, QoS 0).
-
-    Args:
-        alert: alert dict to serialize and publish.
-
-    Returns:
-        True on success, False on failure.
-    """
-    payload = json.dumps(alert, default=str)
-    try:
-        publish.single(
-            topic=MQTT_TOPIC_EVENTS,
-            payload=payload,
-            qos=0,
-            retain=False,
-            hostname=MQTT_HOST,
-            port=MQTT_PORT,
-            client_id="alert-api-events",
-        )
-        logger.debug("MQTT event published: %s", payload)
-        return True
-    except Exception as exc:
-        logger.warning("MQTT publish_event failed: %s", exc)
-        return False
+    msgs = [
+        {
+            "topic": MQTT_TOPIC_STATUS,
+            "payload": payload,
+            "qos": 1,
+            "retain": True,
+        }
+    ]
+    await _publish_async(msgs)
+    logger.debug("MQTT resolved: status=%s count=%d remaining", severity, count)

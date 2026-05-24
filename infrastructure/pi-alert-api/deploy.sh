@@ -32,9 +32,10 @@ done
 
 # ── 1. Copy Python modules ────────────────────────────────────────────────────
 if [[ "$ROUTES_ONLY" != "true" ]]; then
-  echo "==> Copying mqtt_publish.py to Pi..."
+  echo "==> Copying mqtt_publish.py and tls_check.py to Pi..."
   scp infrastructure/pi-alert-api/mqtt_publish.py \
-      "${PI}:${ALERT_API_DIR}/mqtt_publish.py"
+      infrastructure/pi-alert-api/tls_check.py \
+      "${PI}:${ALERT_API_DIR}/"
 fi
 
 if [[ "$MQTT_ONLY" != "true" ]]; then
