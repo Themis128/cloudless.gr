@@ -1,5 +1,8 @@
 name: Weekly Newsletter
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   schedule:
     # Every Monday at 09:00 UTC (11:00 Athens). Three hours after the draft

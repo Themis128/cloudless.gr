@@ -5,6 +5,9 @@ name: Dependency Review Audit
 # supported on this repository" without it. pnpm audit covers the same ground
 # (vulnerable packages, high/critical severity) with no GHAS needed.
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   pull_request:
     branches: [main]

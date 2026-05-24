@@ -7,6 +7,9 @@ name: Apply Slack App Manifest
 #   SLACK_APP_CONFIG_TOKEN — app configuration token from api.slack.com/apps
 #   SLACK_APP_ID           — app ID (Basic Information page)
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   push:
     branches: [main]

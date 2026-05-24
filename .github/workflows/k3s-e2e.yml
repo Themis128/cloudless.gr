@@ -16,6 +16,9 @@ name: k3s standby E2E
 # create-issue-on-fail action workflow if configured. For now we just rely
 # on the failure email + the visible red ✗ on the run page.
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   # Only fire after the HA sync orchestrator has confirmed (or just
   # finished dispatching) a Pi build for the deploy SHA. Triggering on

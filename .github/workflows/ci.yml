@@ -1,6 +1,9 @@
 name: CI
 # runner: self-hosted via vars.RUNNER_GENERIC (toggle-runner.sh pi|hosted)
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   pull_request:
     branches: [main]

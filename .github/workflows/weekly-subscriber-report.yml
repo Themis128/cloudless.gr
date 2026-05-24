@@ -1,5 +1,8 @@
 name: Weekly Subscriber Report
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   schedule:
     # Every Monday at 10:00 UTC (12:00 Athens) — one hour after the newsletter
