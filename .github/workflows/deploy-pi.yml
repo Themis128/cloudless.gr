@@ -82,9 +82,15 @@ jobs:
         if: steps.check_ecr.outputs.exists != 'true'
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
-      - name: Prune stale buildx cache
+      - name: ensure local cache dirs exist
         if: steps.check_ecr.outputs.exists != 'true'
-        run: docker buildx prune -f --filter until=48h || true
+        run: |
+          sudo mkdir -p /opt/docker-cache
+          sudo chmod 777 /opt/docker-cache
+
+      - name: warm base image into Docker daemon cache
+        if: steps.check_ecr.outputs.exists != 'true'
+        run: docker pull node:22-alpine
 
       - name: Build and push Docker image
         if: steps.check_ecr.outputs.exists != 'true'
@@ -96,8 +102,8 @@ jobs:
           # SHA tag only — ECR has immutable tags, :latest is never pushed.
           # Rollout uses kubectl set image with this SHA for pinned, reproducible deploys.
           tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.check_ecr.outputs.short_sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=local,src=/opt/docker-cache
+          cache-to: type=local,dest=/opt/docker-cache,mode=max
           build-args: |
             NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
             NEXT_PUBLIC_STAGE=production
@@ -132,6 +138,11 @@ jobs:
 
     steps:
       - name: Connect to tailnet
+        # continue-on-error: Pi runners are already Tailscale nodes — if
+        # tailscale-action fails to re-auth the existing daemon (e.g. ephemeral
+        # key consumed), the runner's pre-existing Tailscale connection still
+        # routes kubectl traffic to 100.113.41.119:6443 correctly.
+        continue-on-error: true
         uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
