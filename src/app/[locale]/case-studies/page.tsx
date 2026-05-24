@@ -12,10 +12,29 @@ import {
 } from "@/lib/notion-case-studies";
 import { isConfiguredAsync } from "@/lib/integrations";
 
+const BASE_URL = "https://cloudless.gr";
+const canonical = `${BASE_URL}/case-studies`;
+
 export const metadata: Metadata = {
   title: "Case Studies",
   description:
     "Real-world results: how Cloudless helped startups and growing businesses cut cloud costs, migrate to serverless, and ship faster.",
+  alternates: {
+    canonical,
+    languages: {
+      en: `${BASE_URL}/en/case-studies`,
+      el: `${BASE_URL}/el/case-studies`,
+      "x-default": `${BASE_URL}/en/case-studies`,
+    },
+  },
+  openGraph: {
+    type: "website",
+    title: "Case Studies",
+    description:
+      "Real-world results: how Cloudless helped startups and growing businesses cut cloud costs, migrate to serverless, and ship faster.",
+    url: canonical,
+    siteName: "Cloudless",
+  },
 };
 
 async function loadCaseStudies(): Promise<CaseStudy[]> {
