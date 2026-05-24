@@ -22,6 +22,26 @@ interface DrawState {
   y: number;
 }
 
+function splitOversizedWord(
+  word: string,
+  font: PDFFont,
+  size: number,
+  maxWidth: number,
+  lines: string[],
+): string {
+  let segment = "";
+  for (const character of word) {
+    const nextSegment = `${segment}${character}`;
+    if (font.widthOfTextAtSize(nextSegment, size) <= maxWidth) {
+      segment = nextSegment;
+    } else {
+      lines.push(segment);
+      segment = character;
+    }
+  }
+  return segment;
+}
+
 function wrapText(
   text: string,
   font: PDFFont,
@@ -47,17 +67,7 @@ function wrapText(
       continue;
     }
 
-    let segment = "";
-    for (const character of word) {
-      const nextSegment = `${segment}${character}`;
-      if (font.widthOfTextAtSize(nextSegment, size) <= maxWidth) {
-        segment = nextSegment;
-      } else {
-        lines.push(segment);
-        segment = character;
-      }
-    }
-    current = segment;
+    current = splitOversizedWord(word, font, size, maxWidth, lines);
   }
 
   if (current) lines.push(current);

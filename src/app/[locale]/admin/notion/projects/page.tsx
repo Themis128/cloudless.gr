@@ -68,6 +68,48 @@ function isOverdue(dueDate: string, status: string): boolean {
   return new Date(dueDate) < new Date();
 }
 
+function clampProgress(raw: string): number {
+  return Math.min(100, Math.max(0, parseInt(raw) || 0));
+}
+
+interface ProgressInputProps {
+  projectId: string;
+  progress: number;
+  disabled: boolean;
+  onProgressChange: (projectId: string, val: number) => void;
+  onBlur: (projectId: string, val: number) => void;
+}
+
+function ProgressInput({
+  projectId,
+  progress,
+  disabled,
+  onProgressChange,
+  onBlur,
+}: Readonly<ProgressInputProps>) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-800">
+        <div
+          className="h-full rounded-full bg-neon-cyan transition-all"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <input
+        type="number"
+        min="0"
+        max="100"
+        value={progress}
+        disabled={disabled}
+        onChange={(e) => onProgressChange(projectId, clampProgress(e.target.value))}
+        onBlur={(e) => onBlur(projectId, clampProgress(e.target.value))}
+        className="w-12 rounded border border-slate-700 bg-void px-1 py-0.5 text-center font-mono text-xs text-slate-300 focus:border-neon-cyan/50 focus:outline-none disabled:opacity-50"
+      />
+      <span className="font-mono text-[10px] text-slate-600">%</span>
+    </div>
+  );
+}
+
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -425,43 +467,17 @@ export default function ProjectsPage() {
                     </div>
 
                     {/* Progress bar */}
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-800">
-                        <div
-                          className="h-full rounded-full bg-neon-cyan transition-all"
-                          style={{ width: `${project.progress}%` }}
-                        />
-                      </div>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={project.progress}
-                        disabled={updating === project.id}
-                        onChange={(e) => {
-                          const val = Math.min(
-                            100,
-                            Math.max(0, parseInt(e.target.value) || 0),
-                          );
-                          setProjects((prev) =>
-                            prev.map((p) =>
-                              p.id === project.id ? { ...p, progress: val } : p,
-                            ),
-                          );
-                        }}
-                        onBlur={(e) => {
-                          const val = Math.min(
-                            100,
-                            Math.max(0, parseInt(e.target.value) || 0),
-                          );
-                          updateProgress(project.id, val);
-                        }}
-                        className="w-12 rounded border border-slate-700 bg-void px-1 py-0.5 text-center font-mono text-xs text-slate-300 focus:border-neon-cyan/50 focus:outline-none disabled:opacity-50"
-                      />
-                      <span className="font-mono text-[10px] text-slate-600">
-                        %
-                      </span>
-                    </div>
+                    <ProgressInput
+                      projectId={project.id}
+                      progress={project.progress}
+                      disabled={updating === project.id}
+                      onProgressChange={(id, val) =>
+                        setProjects((prev) =>
+                          prev.map((p) => (p.id === id ? { ...p, progress: val } : p)),
+                        )
+                      }
+                      onBlur={updateProgress}
+                    />
 
                     {project.url && (
                       <a
