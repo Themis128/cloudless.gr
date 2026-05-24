@@ -1,9 +1,8 @@
 name: k3s standby E2E
 
-# Runs the Playwright suite against the live Pi standby (cloudless.online,
-# always served via APIGW → Lambda → Funnel → Pi). Acts as a post-deploy
-# smoke gate — catches regressions in the failover serving path that
-# wouldn't show up in localhost tests.
+# Runs the Playwright suite against the live Pi cluster. Acts as a post-deploy
+# smoke gate — catches regressions in the serving path that wouldn't show up
+# in localhost tests.
 #
 # Triggers:
 #   - workflow_run after "Deploy to Production" completes (passes or fails)
@@ -35,7 +34,7 @@ on:
       base_url:
         description: "Override target (e.g. https://cloudless.gr)"
         required: false
-        default: "https://cloudless.online"
+        default: "https://cloudless.gr"
 
 permissions:
   contents: read
@@ -79,7 +78,7 @@ jobs:
         # build. Up to 3min of polling covers the K3s rolling update window.
         run: |
           set -euo pipefail
-          BASE="${BASE_URL:-https://cloudless.online}"
+          BASE="${BASE_URL:-https://cloudless.gr}"
           deadline=$(( $(date +%s) + 180 ))
           attempt=0
           while [ "$(date +%s)" -lt "$deadline" ]; do
@@ -109,7 +108,7 @@ jobs:
       - name: run k3s suite
         env:
           CI: "1"
-          K3S_BASE_URL: ${{ inputs.base_url || 'https://cloudless.online' }}
+          K3S_BASE_URL: ${{ inputs.base_url || 'https://cloudless.gr' }}
         run: pnpm exec playwright test --config=playwright.k3s.config.mts
 
       - name: upload report on failure
