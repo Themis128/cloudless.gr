@@ -6,16 +6,26 @@ name: k3s full recovery (hosted runner)
 #   2. Restart k3s.service and wait for nodes Ready
 #   3. Verify the cloudless pod is running
 #
-# Required secrets:
-#   TS_AUTHKEY      — Tailscale ephemeral auth key (already used by deploy-pi.yml)
-#   OMV_SSH_KEY     — Private SSH key with access to omv-main (192.168.1.128 / 100.113.41.119)
+# SSH key resolution (in priority order):
+#   1. OMV_SSH_KEY GitHub secret (paste private key contents)
+#   2. /cloudless/production/omv-ssh-key SSM parameter (SecureString)
+#
+# Other required secrets:
+#   TS_AUTHKEY         — Tailscale ephemeral auth key
+#   AWS_DEPLOY_ROLE_ARN — OIDC role (already used by deploy workflows)
 #
 # Trigger: Actions → "k3s full recovery (hosted runner)" → Run workflow
 
 on:
   workflow_dispatch:
+    inputs:
+      ssh_key_ssm_path:
+        description: "SSM parameter path for SSH key (leave blank to use OMV_SSH_KEY secret)"
+        required: false
+        default: "/cloudless/production/omv-ssh-key"
 
 permissions:
+  id-token: write
   contents: read
 
 jobs:
@@ -28,17 +38,40 @@ jobs:
       - name: Checkout (for harden script)
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.3.1
 
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
       - name: Connect to Tailscale
         uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      - name: Set up SSH key
+      - name: Resolve SSH key (secret → SSM fallback)
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/omv_key
+          chmod 700 ~/.ssh
+          if [ -n "${{ secrets.OMV_SSH_KEY }}" ]; then
+            echo "Using OMV_SSH_KEY secret"
+            printf '%s' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/omv_key
+          else
+            SSM_PATH="${{ github.event.inputs.ssh_key_ssm_path }}"
+            echo "OMV_SSH_KEY secret not set — fetching from SSM: ${SSM_PATH}"
+            aws ssm get-parameter \
+              --name "${SSM_PATH}" \
+              --with-decryption \
+              --query "Parameter.Value" \
+              --output text > ~/.ssh/omv_key
+          fi
           chmod 600 ~/.ssh/omv_key
-          # Accept omv-main host key automatically
+          # Validate key is non-empty
+          if [ ! -s ~/.ssh/omv_key ]; then
+            echo "::error::SSH key is empty — set OMV_SSH_KEY secret or store key in SSM at ${SSM_PATH}"
+            exit 1
+          fi
+          # Accept omv-main host key
           ssh-keyscan -H 100.113.41.119 >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Harden runner systemd units (decouple from k3s)
