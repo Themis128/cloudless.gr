@@ -321,7 +321,7 @@ export default function UnifiedAnalyticsPage() {
                 )}
               </div>
             ) : (
-              <EmptyState label="ActiveCampaign" />
+              <EmptyState label="HubSpot email" />
             )}
           </div>
         </div>
