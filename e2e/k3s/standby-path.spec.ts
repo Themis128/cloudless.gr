@@ -67,13 +67,14 @@ test.describe("k3s standby path", () => {
     expect(median, `warm median RTT ${median}ms (budget 1500ms)`).toBeLessThan(1_500);
   });
 
-  test("standby host response is stamped by Cloudflare Tunnel (not direct Pi)", async ({
+  test.skip("standby host response is stamped by Cloudflare Tunnel (not direct Pi)", async ({
     request,
   }) => {
-    // The standby host is always proxied by Cloudflare — the tunnel from
-    // CF edge → Pi is what keeps the Pi reachable under Starlink CGNAT.
-    // CF stamps CF-RAY on every response it proxies; its presence proves
-    // traffic went CF → Pi rather than somehow bypassing the tunnel.
+    // Skipped: cloudless.online (the Cloudflare Tunnel standby surface) was
+    // decommissioned. The current standby path is APIGW → Lambda → Tailscale
+    // Funnel → Pi, which goes through AWS CloudFront, not Cloudflare — so
+    // CF-RAY is never present. Re-enable if a Cloudflare-tunnelled hostname
+    // is reintroduced.
     const r = await request.get(`https://${STANDBY_HOST}/api/health`);
     const cfRay = r.headers()["cf-ray"];
     expect(cfRay, "expected CF-RAY header proving traffic went through Cloudflare Tunnel").toBeTruthy();
