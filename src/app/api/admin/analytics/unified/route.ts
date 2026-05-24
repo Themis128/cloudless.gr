@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getConfig } from "@/lib/ssm-config";
 import { getSeoSnapshot } from "@/lib/gsc";
-import { isHubSpotConfigured, getPipelineStats } from "@/lib/hubspot";
-import {
-  isActiveCampaignConfigured,
-  getEmailStats,
-} from "@/lib/activecampaign";
+import { isHubSpotConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/hubspot";
 import { getStripe } from "@/lib/stripe";
 
 async function safeCall<T>(fn: () => Promise<T>): Promise<T | null> {
@@ -32,8 +28,11 @@ export async function GET(request: NextRequest) {
       ? safeCall(() => getPipelineStats())
       : Promise.resolve(null),
 
-    (await isActiveCampaignConfigured())
-      ? safeCall(() => getEmailStats())
+    (await isHubSpotConfigured())
+      ? safeCall(async () => {
+          const subscribers = await listNewsletterSubscribers();
+          return { totalContacts: subscribers.length, totalCampaigns: 0 };
+        })
       : Promise.resolve(null),
 
     config.STRIPE_SECRET_KEY
