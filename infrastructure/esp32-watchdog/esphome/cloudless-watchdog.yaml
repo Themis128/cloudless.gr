@@ -32,7 +32,7 @@ substitutions:
   ntfy_token:      !secret ntfy_token
   omv_probe:       "http://192.168.1.128:9100/metrics"   # node_exporter — always HTTP 200
   omv_ha_probe:    "http://192.168.1.130:9100/metrics"
-  aws_health:      "https://cloudless.gr"
+  aws_health:      "https://cloudless.gr/api/health"   # direct 200 — avoids 307 redirect at root
   relay_gpio:      "none"
 
 esphome:
@@ -321,11 +321,14 @@ interval:
                     id(heartbeat_pulse).execute();
                   }
 
-  # omv-ha probe — offset 15 s so it doesn't collide with omv probe
+  # omv-ha probe — startup_delay staggers it 15 s after omv probe without
+  # blocking the scheduler (a delay: inside interval caused the [component:522]
+  # "took a long time" warnings because the delay held the interval callback
+  # for 15 s, well above the 30 ms threshold).
   - id: probe_omv_ha
     interval: 30s
+    startup_delay: 15s
     then:
-      - delay: 15s
       - http_request.get:
           url: ${omv_ha_probe}
           on_response:
