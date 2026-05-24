@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SSMClient, PutParameterCommand } from "@aws-sdk/client-ssm";
 import { getConfig } from "@/lib/ssm-config";
-import { getSeoSnapshot } from "@/lib/gsc";
 import {
-  isHubSpotConfigured,
-  getPipelineStats,
-  listNewsletterSubscribers,
-} from "@/lib/hubspot";
-import { getStripe } from "@/lib/stripe";
+  fetchSeoMetrics,
+  fetchPipelineMetrics,
+  fetchEmailMetrics,
+  fetchStripeMetrics,
+} from "@/lib/voice-brief-sources";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 import { mapIntegrationError } from "@/lib/api-errors";
 import { runVoiceBriefAgent } from "@/lib/agent-voice-brief";
@@ -57,25 +56,12 @@ async function buildLegacyBriefText(
 
   const [seo, pipeline, email, stripeData] = await Promise.all([
     cfg.GOOGLE_CLIENT_EMAIL && cfg.GOOGLE_PRIVATE_KEY
-      ? safeCall(() => getSeoSnapshot())
+      ? safeCall(fetchSeoMetrics)
       : Promise.resolve(null),
-    (await isHubSpotConfigured())
-      ? safeCall(() => getPipelineStats())
-      : Promise.resolve(null),
-    (await isHubSpotConfigured())
-      ? safeCall(async () => {
-          const subs = await listNewsletterSubscribers();
-          return { totalContacts: subs.length, totalCampaigns: 0 };
-        })
-      : Promise.resolve(null),
+    safeCall(fetchPipelineMetrics),
+    safeCall(fetchEmailMetrics),
     cfg.STRIPE_SECRET_KEY
-      ? safeCall(async () => {
-          const stripe = await getStripe();
-          const sessions = await stripe.checkout.sessions.list({ limit: 50 });
-          const paid = sessions.data.filter((s) => s.payment_status === "paid");
-          const rev = paid.reduce((a, s) => a + (s.amount_total ?? 0), 0) / 100;
-          return { orders: paid.length, revenue: rev };
-        })
+      ? safeCall(fetchStripeMetrics)
       : Promise.resolve(null),
   ]);
 
@@ -83,7 +69,7 @@ async function buildLegacyBriefText(
 
   if (stripeData) {
     lines.push(
-      `Revenue: ${stripeData.orders} paid orders this period, totalling €${stripeData.revenue.toFixed(0)}.`,
+      `Revenue: ${stripeData.orders} paid orders this period, totalling €${stripeData.revenueEuros.toFixed(0)}.`,
     );
   }
   if (seo) {
@@ -93,13 +79,11 @@ async function buildLegacyBriefText(
   }
   if (pipeline) {
     lines.push(
-      `Pipeline: ${pipeline.totalDeals} open deals valued at €${(pipeline.totalValue / 100).toFixed(0)}.`,
+      `Pipeline: ${pipeline.totalDeals} open deals valued at €${pipeline.totalValueEuros.toFixed(0)}.`,
     );
   }
   if (email) {
-    lines.push(
-      `Email: ${email.totalContacts.toLocaleString()} contacts across ${email.totalCampaigns} campaigns.`,
-    );
+    lines.push(`Email: ${email.totalContacts.toLocaleString()} contacts.`);
   }
 
   lines.push(

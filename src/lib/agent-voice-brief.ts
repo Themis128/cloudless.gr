@@ -15,13 +15,12 @@
  * for at least one full release cycle (per the roadmap risk note).
  */
 import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
-import { getSeoSnapshot } from "@/lib/gsc";
 import {
-  isHubSpotConfigured,
-  getPipelineStats,
-  listNewsletterSubscribers,
-} from "@/lib/hubspot";
-import { getStripe } from "@/lib/stripe";
+  fetchSeoMetrics,
+  fetchPipelineMetrics,
+  fetchEmailMetrics,
+  fetchStripeMetrics,
+} from "@/lib/voice-brief-sources";
 import {
   BEDROCK_MODEL_ID,
   buildBedrockToolConfig,
@@ -158,7 +157,7 @@ async function withRetry<T>(
 
 async function runSeoMetrics(): Promise<string> {
   try {
-    const snap = await withRetry(() => getSeoSnapshot());
+    const snap = await withRetry(fetchSeoMetrics);
     if (!snap) return "GSC returned no data this period.";
     return `GSC: ${snap.clicks.toLocaleString()} clicks, ${snap.impressions.toLocaleString()} impressions, avg CTR ${snap.ctr.toFixed(1)}%.`;
   } catch (err) {
@@ -168,10 +167,10 @@ async function runSeoMetrics(): Promise<string> {
 }
 
 async function runPipelineStats(): Promise<string> {
-  if (!(await isHubSpotConfigured())) return "HubSpot not configured.";
   try {
-    const p = await withRetry(() => getPipelineStats());
-    return `HubSpot pipeline: ${p.totalDeals} open deals worth €${(p.totalValue / 100).toFixed(0)}.`;
+    const p = await withRetry(fetchPipelineMetrics);
+    if (!p) return "HubSpot not configured.";
+    return `HubSpot pipeline: ${p.totalDeals} open deals worth €${p.totalValueEuros.toFixed(0)}.`;
   } catch (err) {
     console.warn("[agent-voice-brief] get_pipeline_stats failed:", err);
     return "HubSpot pipeline lookup failed after retries.";
@@ -179,10 +178,10 @@ async function runPipelineStats(): Promise<string> {
 }
 
 async function runEmailMetrics(): Promise<string> {
-  if (!(await isHubSpotConfigured())) return "HubSpot not configured.";
   try {
-    const subs = await withRetry(() => listNewsletterSubscribers());
-    return `Newsletter: ${subs.length.toLocaleString()} subscribers.`;
+    const email = await withRetry(fetchEmailMetrics);
+    if (!email) return "HubSpot not configured.";
+    return `Newsletter: ${email.totalContacts.toLocaleString()} subscribers.`;
   } catch (err) {
     console.warn("[agent-voice-brief] get_email_metrics failed:", err);
     return "Newsletter lookup failed after retries.";
@@ -191,13 +190,9 @@ async function runEmailMetrics(): Promise<string> {
 
 async function runStripeRevenue(): Promise<string> {
   try {
-    const stripe = await withRetry(async () => getStripe());
-    const sessions = await withRetry(() =>
-      stripe.checkout.sessions.list({ limit: 50 }),
-    );
-    const paid = sessions.data.filter((s) => s.payment_status === "paid");
-    const rev = paid.reduce((a, s) => a + (s.amount_total ?? 0), 0) / 100;
-    return `Stripe: ${paid.length} paid orders, €${rev.toFixed(0)} revenue.`;
+    const s = await withRetry(fetchStripeMetrics);
+    if (!s) return "Stripe returned no data.";
+    return `Stripe: ${s.orders} paid orders, €${s.revenueEuros.toFixed(0)} revenue.`;
   } catch (err) {
     console.warn("[agent-voice-brief] get_stripe_revenue failed:", err);
     return "Stripe lookup failed after retries.";
