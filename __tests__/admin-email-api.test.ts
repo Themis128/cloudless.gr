@@ -1,173 +1,145 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const requireAdminMock = vi.fn();
-const isActiveCampaignConfiguredMock = vi.fn();
-const listCampaignsMock = vi.fn();
-const createCampaignMock = vi.fn();
-const getEmailStatsMock = vi.fn();
-const listACContactsMock = vi.fn();
-const listACListsMock = vi.fn();
-const listAutomationsMock = vi.fn();
-const getCampaignMock = vi.fn();
+// ---------------------------------------------------------------------------
+// Hoist mock variables so vi.mock() factories can reference them safely.
+// ---------------------------------------------------------------------------
 
-vi.mock("@/lib/api-auth", () => ({
-  requireAdmin: requireAdminMock,
+const {
+  mockRequireAdmin,
+  mockIsHubSpotConfigured,
+  mockListNewsletterSubscribers,
+  mockIsActiveCampaignConfigured,
+  mockListACLists,
+  mockGetConfig,
+  mockFetch,
+} = vi.hoisted(() => ({
+  mockRequireAdmin: vi.fn(),
+  mockIsHubSpotConfigured: vi.fn(),
+  mockListNewsletterSubscribers: vi.fn(),
+  mockIsActiveCampaignConfigured: vi.fn(),
+  mockListACLists: vi.fn(),
+  mockGetConfig: vi.fn(),
+  mockFetch: vi.fn(),
+}));
+
+vi.mock("@/lib/api-auth", () => ({ requireAdmin: mockRequireAdmin }));
+
+vi.mock("@/lib/hubspot", () => ({
+  isHubSpotConfigured: mockIsHubSpotConfigured,
+  listNewsletterSubscribers: mockListNewsletterSubscribers,
 }));
 
 vi.mock("@/lib/activecampaign", () => ({
-  isActiveCampaignConfigured: isActiveCampaignConfiguredMock,
-  listCampaigns: listCampaignsMock,
-  createCampaign: createCampaignMock,
-  getEmailStats: getEmailStatsMock,
-  listACContacts: listACContactsMock,
-  listACLists: listACListsMock,
-  listAutomations: listAutomationsMock,
-  getCampaign: getCampaignMock,
+  isActiveCampaignConfigured: mockIsActiveCampaignConfigured,
+  listACLists: mockListACLists,
+}));
+
+vi.mock("@/lib/ssm-config", () => ({
+  getConfig: mockGetConfig,
+  resetSsmCache: vi.fn(),
 }));
 
 function makeGet(path: string): NextRequest {
   return new NextRequest(`http://localhost:4500${path}`, { method: "GET" });
 }
 
-function makePost(path: string, body: unknown): NextRequest {
-  return new NextRequest(`http://localhost:4500${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-const mockCampaign = {
-  id: "c1",
-  name: "Newsletter April",
-  subject: "Updates",
-  status: "1",
-  send_amt: "500",
-  opens: "100",
-  uniqueopens: "90",
-  linkclicks: "20",
-  sdate: "2026-04-01",
-  cdate: "2026-03-20",
-};
-
 describe("Admin Email API routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    requireAdminMock.mockReturnValue({ ok: true, user: { sub: "admin" } });
-    isActiveCampaignConfiguredMock.mockResolvedValue(true);
+    mockRequireAdmin.mockReturnValue({ ok: true, user: { sub: "admin" } });
+    mockIsHubSpotConfigured.mockResolvedValue(true);
+    mockIsActiveCampaignConfigured.mockResolvedValue(true);
+    mockGetConfig.mockResolvedValue({});
+    vi.stubGlobal("fetch", mockFetch);
   });
 
   // ── GET /api/admin/email/campaigns ───────────────────────────────────────────
+  // Route is a 501 stub — HubSpot Marketing Emails requires 'content' scope.
 
   describe("GET /api/admin/email/campaigns", () => {
-    it("returns 503 when ActiveCampaign not configured", async () => {
-      isActiveCampaignConfiguredMock.mockResolvedValueOnce(false);
+    it("returns 501 (HubSpot scope not available)", async () => {
       const { GET } = await import("@/app/api/admin/email/campaigns/route");
       const res = await GET(makeGet("/api/admin/email/campaigns"));
-      expect(res.status).toBe(503);
-      expect(await res.json()).toMatchObject({ error: expect.stringContaining("ActiveCampaign") });
-    });
-
-    it("returns campaigns list", async () => {
-      listCampaignsMock.mockResolvedValueOnce([mockCampaign]);
-      const { GET } = await import("@/app/api/admin/email/campaigns/route");
-      const res = await GET(makeGet("/api/admin/email/campaigns"));
+      expect(res.status).toBe(501);
       const data = await res.json();
-      expect(res.status).toBe(200);
-      expect(data.campaigns).toHaveLength(1);
-      expect(data.campaigns[0].id).toBe("c1");
-      expect(data.total).toBe(1);
-    });
-
-    it("respects limit query param", async () => {
-      listCampaignsMock.mockResolvedValueOnce([]);
-      const { GET } = await import("@/app/api/admin/email/campaigns/route");
-      await GET(makeGet("/api/admin/email/campaigns?limit=50"));
-      expect(listCampaignsMock).toHaveBeenCalledWith(50);
-    });
-  });
-
-  // ── POST /api/admin/email/campaigns ─────────────────────────────────────────
-
-  describe("POST /api/admin/email/campaigns", () => {
-    it("returns 400 when required fields missing", async () => {
-      const { POST } = await import("@/app/api/admin/email/campaigns/route");
-      const res = await POST(makePost("/api/admin/email/campaigns", { name: "Test" }));
-      expect(res.status).toBe(400);
-    });
-
-    it("creates campaign and returns 201", async () => {
-      createCampaignMock.mockResolvedValueOnce(mockCampaign);
-      const { POST } = await import("@/app/api/admin/email/campaigns/route");
-      const res = await POST(makePost("/api/admin/email/campaigns", {
-        name: "Newsletter April",
-        subject: "Updates",
-        listId: "1",
-        fromname: "Cloudless",
-        fromemail: "hello@cloudless.gr",
-      }));
-      const data = await res.json();
-      expect(res.status).toBe(201);
-      expect(data.campaign.id).toBe("c1");
-    });
-
-    it("returns 500 when createCampaign fails", async () => {
-      createCampaignMock.mockResolvedValueOnce(null);
-      const { POST } = await import("@/app/api/admin/email/campaigns/route");
-      const res = await POST(makePost("/api/admin/email/campaigns", {
-        name: "X",
-        subject: "Y",
-        listId: "1",
-        fromname: "Z",
-        fromemail: "z@z.com",
-      }));
-      expect(res.status).toBe(500);
+      expect(data.error).toMatch(/content.*scope/i);
     });
   });
 
   // ── GET /api/admin/email/stats ───────────────────────────────────────────────
+  // Route uses HubSpot: isHubSpotConfigured + listNewsletterSubscribers.
 
   describe("GET /api/admin/email/stats", () => {
-    it("returns 503 when not configured", async () => {
-      isActiveCampaignConfiguredMock.mockResolvedValueOnce(false);
+    it("returns 503 when HubSpot not configured", async () => {
+      mockIsHubSpotConfigured.mockResolvedValueOnce(false);
       const { GET } = await import("@/app/api/admin/email/stats/route");
       const res = await GET(makeGet("/api/admin/email/stats"));
       expect(res.status).toBe(503);
     });
 
-    it("returns aggregated stats", async () => {
-      getEmailStatsMock.mockResolvedValueOnce({ totalContacts: 500, totalCampaigns: 12, totalLists: 3 });
+    it("returns subscriber stats", async () => {
+      mockListNewsletterSubscribers.mockResolvedValueOnce([
+        { id: "1" },
+        { id: "2" },
+        { id: "3" },
+      ]);
       const { GET } = await import("@/app/api/admin/email/stats/route");
       const res = await GET(makeGet("/api/admin/email/stats"));
       const data = await res.json();
       expect(res.status).toBe(200);
-      expect(data.totalContacts).toBe(500);
-      expect(data.totalCampaigns).toBe(12);
+      expect(data.totalSubscribers).toBe(3);
       expect(data.fetchedAt).toBeTruthy();
     });
   });
 
   // ── GET /api/admin/email/contacts ────────────────────────────────────────────
+  // Route uses HubSpot: isHubSpotConfigured + getConfig + raw fetch to HubSpot API.
 
   describe("GET /api/admin/email/contacts", () => {
-    it("returns contacts", async () => {
-      listACContactsMock.mockResolvedValueOnce([
-        { id: "1", email: "a@b.com", firstName: "Alice", lastName: "Smith", cdate: "", udate: "" },
-      ]);
+    it("returns 503 when HubSpot not configured", async () => {
+      mockIsHubSpotConfigured.mockResolvedValueOnce(false);
       const { GET } = await import("@/app/api/admin/email/contacts/route");
       const res = await GET(makeGet("/api/admin/email/contacts"));
+      expect(res.status).toBe(503);
+    });
+
+    it("returns contacts from HubSpot", async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            results: [{ id: "1", properties: { email: "a@b.com" } }],
+            total: 1,
+          }),
+          { status: 200 },
+        ),
+      );
+      const { GET } = await import("@/app/api/admin/email/contacts/route");
+      const res = await GET(
+        makeGet("/api/admin/email/contacts?tab=subscribers"),
+      );
       const data = await res.json();
       expect(res.status).toBe(200);
-      expect(data.contacts[0].email).toBe("a@b.com");
+      expect(data.contacts).toHaveLength(1);
+      expect(data.contacts[0].properties.email).toBe("a@b.com");
     });
   });
 
   // ── GET /api/admin/email/lists ───────────────────────────────────────────────
+  // Route uses ActiveCampaign: isActiveCampaignConfigured + listACLists.
 
   describe("GET /api/admin/email/lists", () => {
+    it("returns 503 when ActiveCampaign not configured", async () => {
+      mockIsActiveCampaignConfigured.mockResolvedValueOnce(false);
+      const { GET } = await import("@/app/api/admin/email/lists/route");
+      const res = await GET(makeGet("/api/admin/email/lists"));
+      expect(res.status).toBe(503);
+    });
+
     it("returns lists", async () => {
-      listACListsMock.mockResolvedValueOnce([{ id: "1", name: "Main", subscriber_count: "200" }]);
+      mockListACLists.mockResolvedValueOnce([
+        { id: "1", name: "Main", subscriber_count: "200" },
+      ]);
       const { GET } = await import("@/app/api/admin/email/lists/route");
       const res = await GET(makeGet("/api/admin/email/lists"));
       const data = await res.json();
@@ -177,15 +149,15 @@ describe("Admin Email API routes", () => {
   });
 
   // ── GET /api/admin/email/automations ─────────────────────────────────────────
+  // Route is a stub returning an empty array until ActiveCampaign automations are wired.
 
   describe("GET /api/admin/email/automations", () => {
-    it("returns automations", async () => {
-      listAutomationsMock.mockResolvedValueOnce([{ id: "1", name: "Welcome", status: "1", entered: "50", exited: "10" }]);
+    it("returns empty automations list", async () => {
       const { GET } = await import("@/app/api/admin/email/automations/route");
       const res = await GET(makeGet("/api/admin/email/automations"));
       const data = await res.json();
       expect(res.status).toBe(200);
-      expect(data.automations[0].name).toBe("Welcome");
+      expect(data.automations).toEqual([]);
     });
   });
 });

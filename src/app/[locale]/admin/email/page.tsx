@@ -55,7 +55,9 @@ export default function EmailPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(`/api/admin/email/contacts?tab=${t}&limit=100`);
+      const res = await fetchWithAuth(
+        `/api/admin/email/contacts?tab=${t}&limit=100`,
+      );
       if (res.status === 503) {
         setNotConfigured(true);
         return;
@@ -70,8 +72,9 @@ export default function EmailPage() {
   }
 
   useEffect(() => {
-    load(tab); // eslint-disable-line react-hooks/exhaustive-deps
-  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load(tab);
+  }, [tab]);
 
   if (notConfigured) {
     return (
@@ -98,7 +101,9 @@ export default function EmailPage() {
         <div className="mb-8 inline-flex items-center gap-6 rounded-xl border border-slate-800 bg-slate-900/50 px-6 py-4">
           <div>
             <p className="font-mono text-xs text-slate-500">
-              {tab === "subscribers" ? "Newsletter Subscribers" : "CRM Contacts"}
+              {tab === "subscribers"
+                ? "Newsletter Subscribers"
+                : "CRM Contacts"}
             </p>
             <p className="font-mono text-2xl font-bold text-white">
               {data.total.toLocaleString()}
@@ -239,7 +244,9 @@ function PageHeader() {
     <div className="mb-8">
       <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
         <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-        <span className="text-neon-cyan font-mono text-xs">EMAIL MARKETING</span>
+        <span className="text-neon-cyan font-mono text-xs">
+          EMAIL MARKETING
+        </span>
       </div>
       <h1 className="font-heading text-2xl font-bold text-white">Email</h1>
       <p className="font-body mt-1 text-slate-400">
