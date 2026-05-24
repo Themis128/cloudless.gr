@@ -92,19 +92,18 @@ export class SlackClient {
       try {
         const result = await this.postOnce(payload, token, webhookUrl);
         if (result === true) return true;
-        // result === null → terminal API error, don't retry
+        // null → terminal API error, don't retry
         if (result === null) return false;
-        // result === false → ratelimited or transient failure, fall through to backoff
+        // number → rate-limited; respect Retry-After header delay
+        await sleep(result);
       } catch (err) {
-        const isLastAttempt = attempt === MAX_RETRIES - 1;
-        if (isLastAttempt) {
+        if (attempt === MAX_RETRIES - 1) {
           console.error("[Slack] All retries exhausted:", err);
           return false;
         }
+        // Exponential backoff for exception path
+        await sleep(RETRY_BASE_MS * 2 ** attempt);
       }
-
-      // Exponential backoff: 500 ms, 1 000 ms, 2 000 ms
-      await sleep(RETRY_BASE_MS * 2 ** attempt);
     }
 
     return false;
@@ -121,39 +120,42 @@ export class SlackClient {
    *      are never silently dropped while channels are being set up.
    *   3. If no bot token → webhook only.
    *
-   * Rate-limit (false) is returned to the caller so the retry loop can back off
-   * and try the token again rather than immediately hitting the webhook.
+   * Returns:
+   *   true    — sent
+   *   number  — rate-limited; value is ms to wait before retrying
+   *   null    — terminal error, do not retry
    */
   private async postOnce(
     payload: PostMessagePayload,
     token: string | undefined,
     webhookUrl: string | undefined,
-  ): Promise<boolean | null> {
+  ): Promise<true | number | null> {
     if (token) {
       const apiResult = await this.postViaApi(token, {
         channel: this.defaultChannel,
         ...payload,
       });
       if (apiResult === true) return true;
-      if (apiResult === false) return false; // rate-limited — let caller back off and retry token
+      // number → rate-limited with Retry-After delay — propagate to caller
+      if (typeof apiResult === "number") return apiResult;
       // null → terminal (not_in_channel, wrong token, etc.) — fall back to webhook
-      if (webhookUrl) return this.postViaWebhook(webhookUrl, payload);
+      if (webhookUrl) return (await this.postViaWebhook(webhookUrl, payload)) ? true : null;
       return null;
     }
-    if (webhookUrl) return this.postViaWebhook(webhookUrl, payload);
+    if (webhookUrl) return (await this.postViaWebhook(webhookUrl, payload)) ? true : null;
     return null;
   }
 
   /**
    * Returns:
-   *   true  — message sent successfully
-   *   false — rate-limited (caller should back off and retry)
-   *   null  — terminal API error (wrong token, channel_not_found, etc.) — don't retry
+   *   true    — message sent successfully
+   *   number  — rate-limited; value is ms to delay before retrying (from Retry-After header)
+   *   null    — terminal API error (wrong token, channel_not_found, etc.) — don't retry
    */
   private async postViaApi(
     token: string,
     payload: PostMessagePayload,
-  ): Promise<boolean | null> {
+  ): Promise<true | number | null> {
     const body = {
       ...payload,
       // Suppress URL unfurling by default — keeps bot messages clean.
@@ -174,9 +176,12 @@ export class SlackClient {
 
     if (!data.ok) {
       console.error(`[Slack] chat.postMessage error: ${data.error}`);
-      // ratelimited → retryable (return false so caller backs off)
-      // any other error is terminal (wrong token, channel_not_found, etc.) → return null
-      return data.error === "ratelimited" ? false : null;
+      if (data.error === "ratelimited") {
+        // Respect Retry-After header; fall back to 1s if absent
+        const retryAfterSec = Number.parseInt(res.headers.get("Retry-After") ?? "1", 10);
+        return (Number.isNaN(retryAfterSec) ? 1 : retryAfterSec) * 1_000;
+      }
+      return null;
     }
 
     return true;
