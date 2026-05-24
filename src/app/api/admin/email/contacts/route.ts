@@ -12,7 +12,10 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isHubSpotConfigured())) {
-    return NextResponse.json({ error: "HubSpot not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "HubSpot not configured." },
+      { status: 503 },
+    );
   }
 
   const config = await getConfig();
@@ -21,7 +24,10 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const tab = searchParams.get("tab") ?? "subscribers";
   const limit = Math.min(
-    Math.max(1, Number.parseInt(searchParams.get("limit") ?? String(DEFAULT_LIMIT), 10)),
+    Math.max(
+      1,
+      Number.parseInt(searchParams.get("limit") ?? String(DEFAULT_LIMIT), 10),
+    ),
     MAX_LIMIT,
   );
 
@@ -38,7 +44,11 @@ export async function GET(request: NextRequest) {
           filterGroups: [
             {
               filters: [
-                { propertyName: "lead_source", operator: "EQ", value: "newsletter_signup" },
+                {
+                  propertyName: "lead_source",
+                  operator: "EQ",
+                  value: "newsletter_signup",
+                },
               ],
             },
           ],
@@ -72,7 +82,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to fetch contacts" },
+      {
+        error: err instanceof Error ? err.message : "Failed to fetch contacts",
+      },
       { status: 500 },
     );
   }

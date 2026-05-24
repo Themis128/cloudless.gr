@@ -7,7 +7,10 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isHubSpotConfigured())) {
-    return NextResponse.json({ error: "HubSpot not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "HubSpot not configured." },
+      { status: 503 },
+    );
   }
 
   const subscribers = await listNewsletterSubscribers();

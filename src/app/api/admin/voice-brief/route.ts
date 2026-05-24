@@ -38,10 +38,7 @@ export async function POST(request: NextRequest) {
   // Trigger on-demand generation by calling the cron route internally.
   // Pin the base URL to a known allowlist so a misconfigured or tampered env
   // var cannot redirect this server-side fetch to an attacker host (SSRF guard).
-  const ALLOWED_BASE_URLS = [
-    "https://cloudless.gr",
-    "http://localhost:3000",
-  ];
+  const ALLOWED_BASE_URLS = ["https://cloudless.gr", "http://localhost:3000"];
   const envBase =
     process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   const baseUrl = ALLOWED_BASE_URLS.includes(envBase)

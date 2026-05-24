@@ -32,7 +32,9 @@ function buildJwks() {
   const raw = process.env.COGNITO_JWKS_JSON;
   if (raw) {
     try {
-      return createLocalJWKSet(JSON.parse(raw) as Parameters<typeof createLocalJWKSet>[0]);
+      return createLocalJWKSet(
+        JSON.parse(raw) as Parameters<typeof createLocalJWKSet>[0],
+      );
     } catch {
       // fall through to remote
     }

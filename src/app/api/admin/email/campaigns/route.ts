@@ -8,7 +8,10 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   return NextResponse.json(
-    { error: "Marketing Emails API requires 'content' scope — not available on current HubSpot private app token." },
+    {
+      error:
+        "Marketing Emails API requires 'content' scope — not available on current HubSpot private app token.",
+    },
     { status: 501 },
   );
 }
