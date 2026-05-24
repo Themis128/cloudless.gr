@@ -1,6 +1,5 @@
 "use client";
 
-import MetricCard from "./MetricCard";
 import { useEffect, useState } from "react";
 
 interface Campaign {
@@ -113,6 +112,15 @@ export default function GoogleCampaignsPage() {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+function MetricCard({ label, value }: { readonly label: string; readonly value: string | number }) {
+  return (
+    <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
+      <p className="font-mono text-xs text-slate-500">{label}</p>
+      <p className="mt-1 font-mono text-xl font-semibold text-white">{value}</p>
     </div>
   );
 }
