@@ -155,55 +155,59 @@ async function withRetry<T>(
 // can decide whether to skip the source rather than crashing the loop.
 // ---------------------------------------------------------------------------
 
-async function runSeoMetrics(): Promise<string> {
-  try {
-    const snap = await withRetry(fetchSeoMetrics);
-    if (!snap) return "GSC returned no data this period.";
-    return `GSC: ${snap.clicks.toLocaleString()} clicks, ${snap.impressions.toLocaleString()} impressions, avg CTR ${snap.ctr.toFixed(1)}%.`;
-  } catch (err) {
-    console.warn("[agent-voice-brief] get_seo_metrics failed:", err);
-    return "GSC lookup failed after retries.";
-  }
+interface ToolSpec<T> {
+  toolName: string;
+  fetch: () => Promise<T | null>;
+  format: (data: T) => string;
+  emptyMessage: string;
+  failMessage: string;
 }
 
-async function runPipelineStats(): Promise<string> {
-  try {
-    const p = await withRetry(fetchPipelineMetrics);
-    if (!p) return "HubSpot not configured.";
-    return `HubSpot pipeline: ${p.totalDeals} open deals worth €${p.totalValueEuros.toFixed(0)}.`;
-  } catch (err) {
-    console.warn("[agent-voice-brief] get_pipeline_stats failed:", err);
-    return "HubSpot pipeline lookup failed after retries.";
-  }
-}
-
-async function runEmailMetrics(): Promise<string> {
-  try {
-    const email = await withRetry(fetchEmailMetrics);
-    if (!email) return "HubSpot not configured.";
-    return `Newsletter: ${email.totalContacts.toLocaleString()} subscribers.`;
-  } catch (err) {
-    console.warn("[agent-voice-brief] get_email_metrics failed:", err);
-    return "Newsletter lookup failed after retries.";
-  }
-}
-
-async function runStripeRevenue(): Promise<string> {
-  try {
-    const s = await withRetry(fetchStripeMetrics);
-    if (!s) return "Stripe returned no data.";
-    return `Stripe: ${s.orders} paid orders, €${s.revenueEuros.toFixed(0)} revenue.`;
-  } catch (err) {
-    console.warn("[agent-voice-brief] get_stripe_revenue failed:", err);
-    return "Stripe lookup failed after retries.";
-  }
+function makeToolHandler<T>(spec: ToolSpec<T>): () => Promise<string> {
+  return async () => {
+    try {
+      const data = await withRetry(spec.fetch);
+      return data ? spec.format(data) : spec.emptyMessage;
+    } catch (err) {
+      console.warn(`[agent-voice-brief] ${spec.toolName} failed:`, err);
+      return spec.failMessage;
+    }
+  };
 }
 
 const TOOL_HANDLERS: Record<string, () => Promise<string>> = {
-  get_seo_metrics: runSeoMetrics,
-  get_pipeline_stats: runPipelineStats,
-  get_email_metrics: runEmailMetrics,
-  get_stripe_revenue: runStripeRevenue,
+  get_seo_metrics: makeToolHandler({
+    toolName: "get_seo_metrics",
+    fetch: fetchSeoMetrics,
+    format: (s) =>
+      `GSC: ${s.clicks.toLocaleString()} clicks, ${s.impressions.toLocaleString()} impressions, avg CTR ${s.ctr.toFixed(1)}%.`,
+    emptyMessage: "GSC returned no data this period.",
+    failMessage: "GSC lookup failed after retries.",
+  }),
+  get_pipeline_stats: makeToolHandler({
+    toolName: "get_pipeline_stats",
+    fetch: fetchPipelineMetrics,
+    format: (p) =>
+      `HubSpot pipeline: ${p.totalDeals} open deals worth €${p.totalValueEuros.toFixed(0)}.`,
+    emptyMessage: "HubSpot not configured.",
+    failMessage: "HubSpot pipeline lookup failed after retries.",
+  }),
+  get_email_metrics: makeToolHandler({
+    toolName: "get_email_metrics",
+    fetch: fetchEmailMetrics,
+    format: (e) =>
+      `Newsletter: ${e.totalContacts.toLocaleString()} subscribers.`,
+    emptyMessage: "HubSpot not configured.",
+    failMessage: "Newsletter lookup failed after retries.",
+  }),
+  get_stripe_revenue: makeToolHandler({
+    toolName: "get_stripe_revenue",
+    fetch: fetchStripeMetrics,
+    format: (s) =>
+      `Stripe: ${s.orders} paid orders, €${s.revenueEuros.toFixed(0)} revenue.`,
+    emptyMessage: "Stripe returned no data.",
+    failMessage: "Stripe lookup failed after retries.",
+  }),
 };
 
 function classifyOutcome(name: string, detail: string): ToolOutcome {
