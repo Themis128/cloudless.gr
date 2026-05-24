@@ -11,14 +11,12 @@ export interface DriftSnapshot {
   expected: string;
   /** cloudless.gr/api/health.version, or null if unreachable. */
   cloud: string | null;
-  /** Pi cluster /api/health.version, or null if unreachable. */
-  pi: string | null;
   /** When SSM was last updated; null if unknown. */
   ssmModifiedAt: Date | null;
 }
 
 export interface SurfaceStatus {
-  name: "cloud" | "pi";
+  name: "cloud";
   actual: string | null;
   matches: boolean;
   reason: string;
@@ -32,9 +30,9 @@ export interface DriftReport {
 }
 
 /**
- * Newly published SSM SHA needs this long for both surfaces to converge
- * (Lambda cold start + Pi K3s rolling update). Drift inside this window
- * is normal mid-rollout and should not page.
+ * Newly published SSM SHA needs this long for the cloud surface to converge
+ * (Lambda cold start). Drift inside this window is normal mid-rollout and
+ * should not page.
  */
 export const GRACE_WINDOW_MS = 10 * 60 * 1000;
 
@@ -53,7 +51,7 @@ export function shaEquivalent(a: string | null, b: string | null): boolean {
 }
 
 function classifySurface(
-  name: "cloud" | "pi",
+  name: "cloud",
   expected: string,
   actual: string | null,
 ): SurfaceStatus {
@@ -82,7 +80,6 @@ export function evaluateDrift(
 
   const surfaces: SurfaceStatus[] = [
     classifySurface("cloud", snapshot.expected, snapshot.cloud),
-    classifySurface("pi", snapshot.expected, snapshot.pi),
   ];
 
   const anyMismatch = surfaces.some((s) => !s.matches);

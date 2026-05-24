@@ -1,14 +1,14 @@
 /**
  * SHA drift detector — compares the source-of-truth deploy SHA in SSM
- * against the SHA each surface (cloud cloudless.gr, Pi cloudless.online)
- * actually reports via /api/health → version field.
+ * against the SHA the cloud surface (cloudless.gr) actually reports via
+ * /api/health → version field.
  *
  * Run:
  *   pnpm tsx scripts/detect-sha-drift.mts
  *   pnpm tsx scripts/detect-sha-drift.mts --json   # machine-readable
  *
  * Exit:
- *   0 — all surfaces agree (or grace window applies)
+ *   0 — cloud surface agrees (or grace window applies)
  *   1 — drift detected outside the grace window
  *   2 — could not read SSM (no AWS creds, network, etc.)
  *
@@ -35,11 +35,10 @@ import { request as httpsRequest } from "node:https";
 interface DriftSnapshot {
   expected: string;
   cloud: string | null;
-  pi: string | null;
   ssmModifiedAt: Date | null;
 }
 interface SurfaceStatus {
-  name: "cloud" | "pi";
+  name: "cloud";
   actual: string | null;
   matches: boolean;
   reason: string;
@@ -60,7 +59,7 @@ function shaEquivalent(a: string | null, b: string | null): boolean {
 }
 
 function classifySurface(
-  name: "cloud" | "pi",
+  name: "cloud",
   expected: string,
   actual: string | null,
 ): SurfaceStatus {
@@ -84,7 +83,6 @@ function evaluateDrift(
   const withinGrace = ageMs !== null && ageMs < GRACE_WINDOW_MS;
   const surfaces: SurfaceStatus[] = [
     classifySurface("cloud", snapshot.expected, snapshot.cloud),
-    classifySurface("pi", snapshot.expected, snapshot.pi),
   ];
   const anyMismatch = surfaces.some((s) => !s.matches);
   const drifted = anyMismatch && !withinGrace;
@@ -97,19 +95,12 @@ function evaluateDrift(
 
 const HEALTH_URLS = {
   cloud: "https://cloudless.gr/api/health",
-  pi: "https://cloudless.online/api/health",
 } as const;
 const SSM_PARAM = "/cloudless/production/current-image-sha";
 const REGION = process.env.AWS_REGION ?? "us-east-1";
 
 function fetchJson(url: string): Promise<Record<string, unknown> | null> {
   return new Promise((resolve) => {
-    // Happy Eyeballs (RFC 8305): if the host is dual-stack but the runner
-    // can't connect over IPv6 (GitHub Actions runners are IPv4-only by
-    // default), fall through to IPv4 after 250 ms instead of hanging the
-    // full 10 s timeout. cloudless.online's APIGW alias publishes both
-    // A and AAAA — without this, every CI run trips the IPv6 path and
-    // reports the Pi as unreachable.
     const req = httpsRequest(
       url,
       {
@@ -154,17 +145,15 @@ async function readSsm(): Promise<{ value: string; modifiedAt: Date } | null> {
 }
 
 async function snapshot(): Promise<DriftSnapshot | null> {
-  const [ssm, cloudJson, piJson] = await Promise.all([
+  const [ssm, cloudJson] = await Promise.all([
     readSsm(),
     fetchJson(HEALTH_URLS.cloud),
-    fetchJson(HEALTH_URLS.pi),
   ]);
   if (!ssm) return null;
   return {
     expected: ssm.value,
     ssmModifiedAt: ssm.modifiedAt,
     cloud: typeof cloudJson?.version === "string" ? cloudJson.version : null,
-    pi: typeof piJson?.version === "string" ? piJson.version : null,
   };
 }
 

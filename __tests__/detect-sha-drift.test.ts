@@ -49,46 +49,37 @@ describe("evaluateDrift", () => {
     return {
       expected: FULL_A,
       cloud: FULL_A,
-      pi: FULL_A,
       ssmModifiedAt: OLD,
       ...over,
     };
   }
 
-  it("reports no drift when both surfaces match", () => {
+  it("reports no drift when cloud matches", () => {
     const r = evaluateDrift(snap({}), NOW);
     expect(r.drifted).toBe(false);
     expect(r.surfaces.every((s) => s.matches)).toBe(true);
   });
 
-  it("matches across SHA length variants (12-char Pi, full cloud)", () => {
-    const r = evaluateDrift(snap({ cloud: FULL_A, pi: SHORT_A }), NOW);
+  it("matches across SHA length variants (12-char vs full)", () => {
+    const r = evaluateDrift(snap({ cloud: SHORT_A }), NOW);
     expect(r.drifted).toBe(false);
   });
 
   it("flags drift when cloud reports a different SHA", () => {
-    const r = evaluateDrift(snap({ cloud: FULL_B, pi: FULL_A }), NOW);
+    const r = evaluateDrift(snap({ cloud: FULL_B }), NOW);
     expect(r.drifted).toBe(true);
     expect(r.surfaces.find((s) => s.name === "cloud")?.matches).toBe(false);
-    expect(r.surfaces.find((s) => s.name === "pi")?.matches).toBe(true);
-  });
-
-  it("flags drift when Pi reports a different SHA", () => {
-    const r = evaluateDrift(snap({ cloud: FULL_A, pi: FULL_B }), NOW);
-    expect(r.drifted).toBe(true);
-    expect(r.surfaces.find((s) => s.name === "pi")?.matches).toBe(false);
   });
 
   it("recognises the 'APP_VERSION not wired' fallback", () => {
-    const r = evaluateDrift(snap({ cloud: "0.1.0", pi: "0.1.0" }), NOW);
+    const r = evaluateDrift(snap({ cloud: "0.1.0" }), NOW);
     expect(r.drifted).toBe(true);
     expect(r.surfaces.every((s) => s.reason.includes("APP_VERSION not wired"))).toBe(true);
   });
 
   it("does NOT flag drift inside the grace window (10 min after SSM publish)", () => {
-    // Both surfaces still showing the OLD SHA right after a new publish — expected.
     const r = evaluateDrift(
-      snap({ ssmModifiedAt: RECENT, cloud: FULL_B, pi: FULL_B }),
+      snap({ ssmModifiedAt: RECENT, cloud: FULL_B }),
       NOW,
     );
     expect(r.withinGrace).toBe(true);
@@ -97,15 +88,15 @@ describe("evaluateDrift", () => {
 
   it("flags drift outside the grace window even with the same situation", () => {
     const r = evaluateDrift(
-      snap({ ssmModifiedAt: OLD, cloud: FULL_B, pi: FULL_B }),
+      snap({ ssmModifiedAt: OLD, cloud: FULL_B }),
       NOW,
     );
     expect(r.withinGrace).toBe(false);
     expect(r.drifted).toBe(true);
   });
 
-  it("flags 'endpoint unreachable' when a surface returns null", () => {
-    const r = evaluateDrift(snap({ cloud: null, pi: FULL_A }), NOW);
+  it("flags 'endpoint unreachable' when cloud returns null", () => {
+    const r = evaluateDrift(snap({ cloud: null }), NOW);
     expect(r.drifted).toBe(true);
     expect(r.surfaces.find((s) => s.name === "cloud")?.reason).toContain("unreachable");
   });
