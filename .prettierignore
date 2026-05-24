@@ -1,0 +1,3 @@
+# proxy.ts uses intentional multi-line array formatting for readability;
+# exclude from prettier to avoid SonarCloud re-analyzing pre-existing CSP hotspots.
+src/proxy.ts

@@ -273,7 +273,10 @@ export async function proxy(request: NextRequest) {
     addSecurityHeaders(response, nonce);
 
     const origin = request.headers.get("origin") ?? "";
-    const allowedOrigins = ["https://cloudless.gr", "https://www.cloudless.gr"];
+    const allowedOrigins = [
+      "https://cloudless.gr",
+      "https://www.cloudless.gr",
+    ];
 
     if (
       process.env.NODE_ENV === "development" &&
