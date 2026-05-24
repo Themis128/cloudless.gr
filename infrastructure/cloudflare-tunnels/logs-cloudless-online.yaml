@@ -1,0 +1,54 @@
+# Cloudflare Tunnel config: logs.cloudless.online → alert-api on omv-main
+#
+# This tunnel exposes the Alert API WebSocket endpoint off-LAN so that
+# the Next.js admin panel (cloudless.gr) can stream ESP32 logs via:
+#   ws://logs.cloudless.online/ws/esp32-logs
+#
+# Once tunnel is live, set SSM param:
+#   aws ssm put-parameter \
+#     --name "/cloudless/NEXT_PUBLIC_ALERT_WS_URL" \
+#     --value "wss://logs.cloudless.online" \
+#     --type "SecureString" --overwrite
+#
+# Then rebuild the Next.js Docker image (NEXT_PUBLIC_* baked at build time).
+#
+# Setup steps:
+#   1. Install cloudflared on omv-main:
+#        curl -L https://pkg.cloudflare.com/cloudflare-main.gpg | sudo apt-key add -
+#        echo 'deb https://pkg.cloudflare.com/cloudflared bookworm main' | \
+#          sudo tee /etc/apt/sources.list.d/cloudflared.list
+#        sudo apt-get update && sudo apt-get install -y cloudflared
+#
+#   2. Authenticate:
+#        cloudflared tunnel login
+#
+#   3. Create tunnel:
+#        cloudflared tunnel create logs-cloudless-online
+#        # → outputs tunnel UUID (save it — needed in the config below)
+#
+#   4. Create DNS record:
+#        cloudflared tunnel route dns logs-cloudless-online logs.cloudless.online
+#
+#   5. Copy this config to omv-main and start:
+#        sudo mkdir -p /etc/cloudflared
+#        sudo cp logs-cloudless-online.yaml /etc/cloudflared/config.yml
+#        sudo cloudflared service install
+#        sudo systemctl start cloudflared
+#
+# Replace TUNNEL_UUID below with the actual UUID from step 3.
+---
+tunnel: TUNNEL_UUID
+credentials-file: /root/.cloudflared/TUNNEL_UUID.json
+
+ingress:
+  # Alert API — HTTP REST + WebSocket
+  - hostname: logs.cloudless.online
+    service: http://localhost:30800
+    originRequest:
+      noTLSVerify: false
+      connectTimeout: 10s
+      # WebSocket support — required for /ws/esp32-logs endpoint
+      proxyType: ""
+
+  # Catch-all: return 404 for anything else
+  - service: http_status:404
