@@ -1,6 +1,6 @@
 # =============================================================================
 # Cloudless Cluster Watchdog — ESPHome firmware
-# Board : ESP32-S3-DevKitC-1 v1.1  (VID_303A / PID_4001, COM5)
+# Board : ESP32-S3-DevKitC-1 v1.1  (VID_303A / PID_4001, COM3)
 #         RGB LED → GPIO38  (v1.0 uses GPIO48 — do NOT swap)
 # Nodes : omv    192.168.1.128  — probed via HTTP :9100 (node_exporter)
 #         omv-ha 192.168.1.130  — probed via HTTP :9100 (node_exporter)

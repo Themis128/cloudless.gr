@@ -1,7 +1,7 @@
 # ESP32 Cluster Watchdog
 
 **Board:** ESP32-S3-DevKitC-1 **v1.1** (RGB LED → GPIO38)  
-**Port:** COM5  
+**Port:** COM3  
 **Static IP after flash:** `192.168.1.201`
 
 ## What it does
@@ -69,13 +69,13 @@ The ESP32-S3 **must be in bootloader mode** for the first flash:
 
 1. Hold the **BOOT** button on the board
 2. While holding BOOT, press and release **RESET**
-3. Release BOOT — the board is now in DFU mode (COM5 may disappear and reappear)
+3. Release BOOT — the board is now in DFU mode (COM3 may disappear and reappear)
 4. Run:
 
 ```powershell
 $env:PATH = "C:\Users\baltz\.local\bin;$env:PATH"
 cd "D:\Nuxt Projects\Cloudless\cloudless.gr\infrastructure\esp32-watchdog\esphome"
-esphome run cloudless-watchdog.yaml --device COM5
+esphome run cloudless-watchdog.yaml --device COM3
 ```
 
 ESPHome will compile (~2 min first time), flash, and open the log console.  
