@@ -1,0 +1,109 @@
+name: harden runner systemd units (manual)
+
+# Applies systemd hardening to the Pi self-hosted runner services:
+#   - Removes any k3s.service dependency (After=/Requires=)
+#   - Adds Restart=on-failure, RestartSec=10s, StartLimitIntervalSec=0
+#   - Sets After=network-online.target
+#   - Configures fallback DNS for resilience
+#
+# Run this once after registering new runners, or any time runners drop
+# due to k3s crashes. Each matrix leg runs on a different runner instance
+# so all three are hardened in parallel.
+#
+# If runners are already offline, run the fix-runner-systemd.sh script
+# directly via SSH on each Pi node instead.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  harden:
+    name: Harden ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [omv, omv-2, omv-3]
+    runs-on: [self-hosted, "${{ matrix.runner }}", pi]
+    timeout-minutes: 5
+
+    steps:
+      - name: Detect runner service name
+        id: svc
+        run: |
+          # Runner registers itself with its own name — derive service from hostname
+          RUNNER="${{ matrix.runner }}"
+          REPO="Themis128-cloudless.gr"
+          SVC="actions.runner.${REPO}.${RUNNER}.service"
+          echo "name=${SVC}" >> "$GITHUB_OUTPUT"
+          echo "Runner service: ${SVC}"
+
+      - name: Check for k3s dependencies in current unit
+        run: |
+          SVC="${{ steps.svc.outputs.name }}"
+          echo "=== Current unit file ==="
+          systemctl cat "${SVC}" 2>/dev/null || echo "(unit file not found via systemctl cat)"
+          echo ""
+          echo "=== Checking for k3s references ==="
+          if systemctl cat "${SVC}" 2>/dev/null | grep -i "k3s"; then
+            echo "⚠️  k3s dependency found — will be removed by override"
+          else
+            echo "✓ No k3s dependency found in unit"
+          fi
+          echo ""
+          echo "=== Existing override.conf ==="
+          cat "/etc/systemd/system/${SVC}.d/override.conf" 2>/dev/null || echo "(no override yet)"
+
+      - name: Write systemd drop-in override
+        run: |
+          SVC="${{ steps.svc.outputs.name }}"
+          OVERRIDE_DIR="/etc/systemd/system/${SVC}.d"
+          sudo mkdir -p "${OVERRIDE_DIR}"
+          sudo tee "${OVERRIDE_DIR}/override.conf" > /dev/null << 'EOF'
+          [Unit]
+          # Decouple from k3s — runner must survive k3s crashes
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Restart=on-failure
+          RestartSec=10s
+          StartLimitIntervalSec=0
+          Environment="RUNNER_RETRY_RENEW_SECONDS=300"
+          Environment="DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER=1"
+          EOF
+          echo "✓ Written ${OVERRIDE_DIR}/override.conf"
+          cat "${OVERRIDE_DIR}/override.conf"
+
+      - name: Configure fallback DNS
+        run: |
+          sudo mkdir -p /etc/systemd/resolved.conf.d
+          sudo tee /etc/systemd/resolved.conf.d/retry.conf > /dev/null << 'EOF'
+          [Resolve]
+          DNS=8.8.8.8 8.8.4.4 1.1.1.1
+          FallbackDNS=9.9.9.9
+          EOF
+          sudo systemctl restart systemd-resolved || true
+          echo "✓ DNS fallback configured"
+
+      - name: Reload systemd and restart runner
+        run: |
+          SVC="${{ steps.svc.outputs.name }}"
+          sudo systemctl daemon-reload
+          sudo systemctl restart "${SVC}"
+          sleep 5
+          sudo systemctl is-active "${SVC}"
+          echo "✓ Runner service is active"
+
+      - name: Verify no k3s dependency in effective unit
+        run: |
+          SVC="${{ steps.svc.outputs.name }}"
+          echo "=== Effective unit after hardening ==="
+          systemctl show "${SVC}" --property=After --property=Requires --property=Wants
+          if systemctl show "${SVC}" --property=After | grep -i "k3s"; then
+            echo "::warning::k3s still appears in After= — check override"
+          else
+            echo "✓ No k3s dependency in effective unit"
+          fi
