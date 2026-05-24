@@ -9,6 +9,9 @@ import { randomUUID } from "node:crypto";
 
 const SSM_KEY = "/cloudless/WORKSPACES_JSON";
 const REGION = process.env.AWS_REGION ?? "eu-central-1";
+const CACHE_TTL_MS = 30_000;
+
+let cachedWorkspaces: { data: Workspace[]; expiresAt: number } | null = null;
 
 export interface Workspace {
   id: string;
@@ -20,12 +23,17 @@ export interface Workspace {
 }
 
 async function readWorkspaces(): Promise<Workspace[]> {
+  if (cachedWorkspaces && Date.now() < cachedWorkspaces.expiresAt) {
+    return cachedWorkspaces.data;
+  }
   try {
     const client = new SSMClient({ region: REGION });
     const res = await client.send(new GetParameterCommand({ Name: SSM_KEY }));
-    return JSON.parse(res.Parameter?.Value ?? "[]");
+    const data = JSON.parse(res.Parameter?.Value ?? "[]") as Workspace[];
+    cachedWorkspaces = { data, expiresAt: Date.now() + CACHE_TTL_MS };
+    return data;
   } catch {
-    return [];
+    return cachedWorkspaces?.data ?? [];
   }
 }
 
@@ -39,6 +47,7 @@ async function writeWorkspaces(workspaces: Workspace[]): Promise<void> {
       Overwrite: true,
     }),
   );
+  cachedWorkspaces = { data: workspaces, expiresAt: Date.now() + CACHE_TTL_MS };
 }
 
 function toSlug(name: string): string {

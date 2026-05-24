@@ -49,19 +49,28 @@ function athensOffsetMs(date: Date): number {
   return localMs - date.getTime();
 }
 
+const GCAL_TIMEOUT_MS = 10_000;
+
 async function calendarFetch(
   path: string,
   options: RequestInit = {},
 ): Promise<Response> {
   const token = await getAccessToken();
-  return fetch(`${CALENDAR_API}${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), GCAL_TIMEOUT_MS);
+  try {
+    return await fetch(`${CALENDAR_API}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 interface TimeSlot {

@@ -42,17 +42,26 @@ const getAccessToken = createGoogleAuth(
 /*  Low-level fetch                                                    */
 /* ------------------------------------------------------------------ */
 
+const GSC_TIMEOUT_MS = 10_000;
+
 async function gscQuery(siteUrl: string, body: object): Promise<Response> {
   const token = await getAccessToken();
   const encoded = encodeURIComponent(siteUrl);
-  return fetch(`${GSC_API}/${encoded}/searchAnalytics/query`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), GSC_TIMEOUT_MS);
+  try {
+    return await fetch(`${GSC_API}/${encoded}/searchAnalytics/query`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -319,6 +328,8 @@ export interface CtrOpportunity {
   /** CTR in % */
   ctr: number;
   position: number;
+  /** Estimated additional clicks if CTR reached 5% */
+  potentialClicks: number;
 }
 
 /**
@@ -351,13 +362,22 @@ export async function getCtrOpportunities(
           ((b.impressions as number) ?? 0) - ((a.impressions as number) ?? 0),
       )
       .slice(0, limit)
-      .map((r: Record<string, unknown>) => ({
-        keyword: (r.keys as string[])?.[0] ?? "",
-        clicks: Math.round((r.clicks as number) ?? 0),
-        impressions: Math.round((r.impressions as number) ?? 0),
-        ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
-        position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
-      }));
+      .map((r: Record<string, unknown>) => {
+        const impressions = Math.round((r.impressions as number) ?? 0);
+        const clicks = Math.round((r.clicks as number) ?? 0);
+        const potentialClicks = Math.max(
+          0,
+          Math.round(impressions * 0.05) - clicks,
+        );
+        return {
+          keyword: (r.keys as string[])?.[0] ?? "",
+          clicks,
+          impressions,
+          ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
+          position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+          potentialClicks,
+        };
+      });
 
     return opportunities;
   } catch (err) {
