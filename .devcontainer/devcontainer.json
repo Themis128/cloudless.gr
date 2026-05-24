@@ -18,37 +18,43 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        // TypeScript / Next.js
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
         "bradlc.vscode-tailwindcss",
         "ms-vscode.vscode-typescript-next",
         "christian-kohler.path-intellisense",
         "usernamehw.errorlens",
+        "yoavbls.pretty-ts-errors",
         "wix.vscode-import-cost",
+        "steoates.autoimport",
         "lokalise.i18n-ally",
-        // Testing
         "vitest.explorer",
         "ms-playwright.playwright",
-        // AWS / SST
         "amazonwebservices.aws-toolkit-vscode",
+        "amazonwebservices.amazon-q-vscode",
         "sst.ion",
-        // API testing
         "humao.rest-client",
-        // Code quality
+        "hubspot.hubl",
+        "maglabs.hubspot-hubl-snippets",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
         "sonarsource.sonarlint-vscode",
         "streetsidesoftware.code-spell-checker",
-        // Git / GitHub
+        "stylelint.vscode-stylelint",
+        "redhat.vscode-yaml",
+        "editorconfig.editorconfig",
         "eamodio.gitlens",
+        "mhutchie.git-graph",
         "github.copilot",
         "github.vscode-pull-request-github",
         "github.vscode-github-actions",
-        // Docker / Kubernetes
         "ms-azuretools.vscode-docker",
         "ms-kubernetes-tools.vscode-kubernetes-tools",
-        // Cloudflare Workers
-        "cloudflare.cloudflare-workers-bindings",
-        // Productivity
+        "esphome.esphome-vscode",
+        "platformio.platformio-ide",
+        "cloudflare.cloudflare-workers-bindings-extension",
+        "figma.figma-vscode-extension",
+        "frenco.vscode-notion",
         "gruntfuggly.todo-tree",
         "alefragnani.bookmarks"
       ],
@@ -56,9 +62,11 @@
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
-          "source.fixAll.eslint": "explicit"
+          "source.fixAll.eslint": "explicit",
+          "source.fixAll.stylelint": "explicit"
         },
         "typescript.tsdk": "node_modules/typescript/lib",
+        "prettyTypeErrors.enable": true,
         "i18n-ally.localesPaths": ["src/locales"],
         "i18n-ally.keystyle": "nested",
         "i18n-ally.sourceLanguage": "en",
@@ -66,7 +74,10 @@
         "tailwindCSS.experimental.classRegex": [
           ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^'\"`]*)(?:'|\"|`)"],
           ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^'\"`]*)(?:'|\"|`)"]
-        ]
+        ],
+        "yaml.customTags": ["!secret scalar"],
+        "python.defaultInterpreterPath": "python3",
+        "python.analysis.typeCheckingMode": "basic"
       }
     }
   },
