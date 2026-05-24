@@ -172,7 +172,7 @@ function buildCSP(nonce: string): string {
     // fonts.gstatic.com — Google Fonts binary CDN. next/font/google falls back
     // to it for the woff2 files when the build cannot inline them.
     "font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net",
-    "connect-src 'self' https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://cognito-idp.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
+    "connect-src 'self' ws://192.168.1.128:30800 wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://cognito-idp.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
     "frame-src https://js.stripe.com https://hooks.stripe.com https://www.facebook.com",
     "worker-src 'self' blob:",
     "media-src 'self'",
