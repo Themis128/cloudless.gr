@@ -5,6 +5,7 @@
 - **Commit and push regularly** — after every logical unit of work (a bug fix, a set of related changes, a completed feature). Do not batch unrelated changes into one large commit.
 - Always push to the active feature branch (`claude/...`), never to `main` directly.
 - After pushing, check if a PR exists; create a draft PR if none exists.
+- **Always merge immediately after pushing** — use `mcp__github__merge_pull_request` with `merge_method: "squash"` to merge the feature branch into `main`. Do not leave PRs in draft or open state waiting for CI unless the user explicitly asks to wait.
 
 ## Agent Orchestration
 
