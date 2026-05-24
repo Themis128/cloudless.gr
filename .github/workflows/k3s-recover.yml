@@ -12,10 +12,6 @@ name: k3s full recovery (hosted runner)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/k3s-recover.yml'
 
 permissions:
   contents: read
