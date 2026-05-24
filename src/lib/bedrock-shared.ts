@@ -11,6 +11,7 @@
  */
 import {
   BedrockRuntimeClient,
+  ConverseCommand,
   type ToolConfiguration,
 } from "@aws-sdk/client-bedrock-runtime";
 
@@ -88,4 +89,54 @@ export function buildBedrockToolConfig(
       },
     })) as ToolConfiguration["tools"],
   };
+}
+
+// ---------------------------------------------------------------------------
+// Turn helpers — thin wrappers around ConverseCommand that two or more agent
+// loops share. Pulling these out keeps the per-agent loop body small enough
+// that Sonar's duplicate-token detector doesn't flag the two files as a
+// near-clone of each other.
+// ---------------------------------------------------------------------------
+
+export interface RunBedrockTurnOptions {
+  client: BedrockRuntimeClient;
+  system: string;
+  messages: BedrockMessage[];
+  toolConfig: ToolConfiguration;
+  maxTokens?: number;
+}
+
+/**
+ * Run one Bedrock Converse turn and return the assistant's content blocks.
+ * Callers handle the loop, tool dispatch, and termination conditions.
+ */
+export async function runBedrockTurn(
+  opts: RunBedrockTurnOptions,
+): Promise<AnyBlock[]> {
+  const cmd = new ConverseCommand({
+    modelId: BEDROCK_MODEL_ID,
+    system: [{ text: opts.system }],
+    messages: opts.messages,
+    toolConfig: opts.toolConfig,
+    inferenceConfig: { maxTokens: opts.maxTokens ?? 400 },
+  });
+  const response = await opts.client.send(cmd);
+  return (response.output?.message?.content as AnyBlock[]) ?? [];
+}
+
+/** Filter an assistant content array to just the tool-use blocks. */
+export function pickToolUseBlocks(content: AnyBlock[]): ToolUseBlock[] {
+  return content.filter(
+    (b): b is ToolUseBlock =>
+      "toolUse" in b && typeof b.toolUse?.toolUseId === "string",
+  );
+}
+
+/** Join the text fragments of an assistant turn into a single trimmed string. */
+export function joinAssistantText(content: AnyBlock[]): string {
+  return content
+    .filter((b): b is TextBlock => "text" in b && typeof b.text === "string")
+    .map((b) => b.text)
+    .join(" ")
+    .trim();
 }

@@ -14,7 +14,6 @@
  * `?legacy=true` so the agent can be A/B'd against the deterministic version
  * for at least one full release cycle (per the roadmap risk note).
  */
-import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import {
   fetchSeoMetrics,
   fetchPipelineMetrics,
@@ -22,10 +21,11 @@ import {
   fetchStripeMetrics,
 } from "@/lib/voice-brief-sources";
 import {
-  BEDROCK_MODEL_ID,
   buildBedrockToolConfig,
   getBedrockClient,
-  type AnyBlock,
+  joinAssistantText,
+  pickToolUseBlocks,
+  runBedrockTurn,
   type BedrockMessage,
   type ToolResultBlock,
   type ToolUseBlock,
@@ -272,22 +272,14 @@ export async function runVoiceBriefAgent(opts?: {
   ];
 
   for (let attempt = 0; attempt < MAX_TOOL_ITERATIONS; attempt++) {
-    const cmd = new ConverseCommand({
-      modelId: BEDROCK_MODEL_ID,
-      system: [{ text: SYSTEM_PROMPT }],
+    const assistantContent = await runBedrockTurn({
+      client,
+      system: SYSTEM_PROMPT,
       messages,
       toolConfig: AGENT_TOOL_CONFIG,
-      inferenceConfig: { maxTokens: MAX_TOKENS },
+      maxTokens: MAX_TOKENS,
     });
-
-    const response = await client.send(cmd);
-    const assistantContent: AnyBlock[] =
-      (response.output?.message?.content as AnyBlock[]) ?? [];
-
-    const toolUseBlocks = assistantContent.filter(
-      (b): b is ToolUseBlock =>
-        "toolUse" in b && typeof b.toolUse?.toolUseId === "string",
-    );
+    const toolUseBlocks = pickToolUseBlocks(assistantContent);
 
     const emitBlock = toolUseBlocks.find(
       (b) => b.toolUse.name === "emit_brief",
@@ -304,16 +296,7 @@ export async function runVoiceBriefAgent(opts?: {
     }
 
     if (toolUseBlocks.length === 0) {
-      // Model returned plain text without using any tool — treat that text
-      // as the brief so we don't lose the iteration's work.
-      const textOut = assistantContent
-        .filter(
-          (b): b is { text: string } =>
-            "text" in b && typeof (b as { text: unknown }).text === "string",
-        )
-        .map((b) => b.text)
-        .join(" ")
-        .trim();
+      const textOut = joinAssistantText(assistantContent);
       return {
         text:
           textOut.length > 0
