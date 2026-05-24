@@ -4,6 +4,13 @@ import type { Workspace } from "@/app/api/admin/workspaces/route";
 const WORKSPACES_URL = "http://localhost/api/admin/workspaces";
 const ACME_WORKSPACE = "Acme Workspace";
 
+// The workspaces route holds a module-level cache (cachedWorkspaces).
+// Reset the module registry before every test so each test starts with
+// cachedWorkspaces = null — preventing stale data leaking between tests.
+beforeEach(() => {
+  vi.resetModules();
+});
+
 // ---------------------------------------------------------------------------
 // Hoist mocks
 // ---------------------------------------------------------------------------
