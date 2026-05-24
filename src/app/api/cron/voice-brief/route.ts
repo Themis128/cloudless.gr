@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SSMClient, PutParameterCommand } from "@aws-sdk/client-ssm";
 import { getConfig } from "@/lib/ssm-config";
 import { getSeoSnapshot } from "@/lib/gsc";
-import { isHubSpotConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/hubspot";
+import {
+  isHubSpotConfigured,
+  getPipelineStats,
+  listNewsletterSubscribers,
+} from "@/lib/hubspot";
 import { getStripe } from "@/lib/stripe";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 import { mapIntegrationError } from "@/lib/api-errors";
+import { runVoiceBriefAgent } from "@/lib/agent-voice-brief";
+import { SlackClient } from "@/lib/slack-notify";
+
+const SSM_PARAM_NAME = "/cloudless/VOICE_BRIEF_LATEST";
 
 function now() {
   return new Date();
@@ -17,6 +26,10 @@ function getWeekNumber(d: Date): number {
   return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
+function weekLabel(d: Date): string {
+  return `${d.getFullYear()}-W${String(getWeekNumber(d)).padStart(2, "0")}`;
+}
+
 async function safeCall<T>(fn: () => Promise<T>): Promise<T | null> {
   try {
     return await fn();
@@ -25,11 +38,17 @@ async function safeCall<T>(fn: () => Promise<T>): Promise<T | null> {
   }
 }
 
-async function buildBriefText(
+// ---------------------------------------------------------------------------
+// Legacy pipeline — kept available via ?legacy=true for at least one release
+// cycle so the agent path can be A/B'd. Lifted verbatim from the pre-agent
+// implementation.
+// ---------------------------------------------------------------------------
+
+async function buildLegacyBriefText(
   cfg: Record<string, string | undefined>,
 ): Promise<string> {
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("en-IE", {
+  const today = new Date();
+  const dateStr = today.toLocaleDateString("en-IE", {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -90,78 +109,163 @@ async function buildBriefText(
   return lines.join(" ");
 }
 
+async function narrateLegacyBrief(
+  rawText: string,
+  apiKey: string | undefined,
+): Promise<string> {
+  if (!apiKey) return rawText;
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 400,
+        messages: [
+          {
+            role: "user",
+            content: `You are a professional narrator for a weekly business brief. Rewrite the following raw metrics as a polished, conversational 3–5 sentence spoken brief suitable for text-to-speech. Keep it factual, positive, and concise. Do not add information not present in the input.\n\n${rawText}`,
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) return rawText;
+    const data = await res.json();
+    return data.content?.[0]?.text ?? rawText;
+  } catch {
+    return rawText;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Persistence + notification — shared by both legacy and agent paths.
+// ---------------------------------------------------------------------------
+
+async function persistBrief(
+  text: string,
+  cfg: Record<string, string | undefined>,
+): Promise<void> {
+  const region = cfg.AWS_REGION ?? "eu-central-1";
+  const client = new SSMClient({ region });
+  const brief = {
+    text,
+    generatedAt: new Date().toISOString(),
+    week: weekLabel(now()),
+  };
+  await client.send(
+    new PutParameterCommand({
+      Name: SSM_PARAM_NAME,
+      Value: JSON.stringify(brief),
+      Type: "String",
+      Overwrite: true,
+    }),
+  );
+}
+
+interface SlackSourceSummary {
+  name: string;
+  status: "ok" | "failed" | "skipped";
+  detail?: string;
+}
+
+const STATUS_EMOJI: Record<SlackSourceSummary["status"], string> = {
+  ok: "✅",
+  failed: "❌",
+  skipped: "⏭️",
+};
+
+async function notifySlack(
+  mode: "agent" | "legacy",
+  text: string,
+  sources: SlackSourceSummary[],
+): Promise<void> {
+  const client = new SlackClient();
+  const sourceLines =
+    sources.length > 0
+      ? sources
+          .map(
+            (s) =>
+              `${STATUS_EMOJI[s.status]} \`${s.name}\` — ${s.detail ?? s.status}`,
+          )
+          .join("\n")
+      : "_no per-source breakdown (legacy path)_";
+
+  await client.post({
+    text: `Weekly voice brief generated (${mode})`,
+    blocks: [
+      {
+        type: "header",
+        text: { type: "plain_text", text: `🎙️ Weekly Brief — ${mode}` },
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: text.slice(0, 2500) },
+      },
+      { type: "divider" },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `*Sources*\n${sourceLines}` },
+      },
+    ],
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Handler
+// ---------------------------------------------------------------------------
+
 export async function GET(request: NextRequest) {
   if (!(await isCronAuthorized(request))) {
     return cronUnauthorized();
   }
 
+  const useLegacy = new URL(request.url).searchParams.get("legacy") === "true";
+
   const cfg = (await getConfig()) as unknown as Record<
     string,
     string | undefined
   >;
-  const apiKey = cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
 
-  const rawText = await buildBriefText(cfg);
+  let text: string;
+  let sources: SlackSourceSummary[] = [];
 
-  let enhancedText = rawText;
-  if (apiKey) {
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 400,
-          messages: [
-            {
-              role: "user",
-              content: `You are a professional narrator for a weekly business brief. Rewrite the following raw metrics as a polished, conversational 3–5 sentence spoken brief suitable for text-to-speech. Keep it factual, positive, and concise. Do not add information not present in the input.\n\n${rawText}`,
-            },
-          ],
-        }),
-        signal: AbortSignal.timeout(30_000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        enhancedText = data.content?.[0]?.text ?? rawText;
-      }
-    } catch (err) {
-      const _r = mapIntegrationError(err);
-      if (_r) return _r;
-      // fall back to raw text
-    }
-  }
-
-  // Store brief in SSM for the admin page to retrieve
   try {
-    const SSM = await import("@aws-sdk/client-ssm");
-    const region = cfg.AWS_REGION ?? "eu-central-1";
-    const client = new SSM.SSMClient({ region });
-    const brief = {
-      text: enhancedText,
-      generatedAt: new Date().toISOString(),
-      week: `${now().getFullYear()}-W${String(getWeekNumber(now())).padStart(2, "0")}`,
-    };
-    await client.send(
-      new SSM.PutParameterCommand({
-        Name: "/cloudless/VOICE_BRIEF_LATEST",
-        Value: JSON.stringify(brief),
-        Type: "String",
-        Overwrite: true,
-      }),
-    );
+    if (useLegacy) {
+      const apiKey = cfg.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+      const raw = await buildLegacyBriefText(cfg);
+      text = await narrateLegacyBrief(raw, apiKey);
+    } else {
+      const agentResult = await runVoiceBriefAgent({
+        dateLabel: new Date().toLocaleDateString("en-IE", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }),
+      });
+      text = agentResult.text;
+      sources = agentResult.sources;
+    }
   } catch (err) {
-    const _r = mapIntegrationError(err);
-    if (_r) return _r;
-    // SSM unavailable — still return the brief
+    const mapped = mapIntegrationError(err);
+    if (mapped) return mapped;
+    throw err;
   }
+
+  await safeCall(() => persistBrief(text, cfg));
+  await safeCall(() =>
+    notifySlack(useLegacy ? "legacy" : "agent", text, sources),
+  );
 
   return NextResponse.json({
-    text: enhancedText,
+    text,
+    mode: useLegacy ? "legacy" : "agent",
+    sources,
     generatedAt: new Date().toISOString(),
   });
 }
