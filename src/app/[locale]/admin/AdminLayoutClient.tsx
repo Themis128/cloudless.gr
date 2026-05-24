@@ -179,9 +179,9 @@ function NavList({
 
 export default function AdminLayoutClient({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  readonly children: React.ReactNode;
+}) {
   const { user, isAdmin, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();

@@ -78,9 +78,9 @@ function StatCard({
   value,
   accent,
 }: {
-  label: string;
-  value: string | number;
-  accent?: string;
+  readonly label: string;
+  readonly value: string | number;
+  readonly accent?: string;
 }) {
   return (
     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
@@ -102,7 +102,7 @@ function LoadingState() {
   );
 }
 
-function ErrorState({ msg }: { msg: string }) {
+function ErrorState({ msg }: { readonly msg: string }) {
   return (
     <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
       <p className="font-mono text-sm text-red-400">{msg}</p>

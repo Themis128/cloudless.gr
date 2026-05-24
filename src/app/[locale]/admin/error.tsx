@@ -6,10 +6,10 @@ import Link from "next/link";
 export default function AdminError({
   error,
   reset,
-}: {
+}: Readonly<{
   error: Error & { digest?: string };
   reset: () => void;
-}) {
+}>) {
   useEffect(() => {
     console.error("[Admin] Unhandled error:", error);
   }, [error]);

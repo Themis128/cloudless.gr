@@ -22,7 +22,7 @@ export default function AdminLoading() {
               <div className="space-y-1">
                 {Array.from({ length: 10 }).map((_, i) => (
                   <div
-                    key={i}
+                    key={`sidebar-skeleton-${i}`}
                     className="bg-void-light/30 h-10 animate-pulse rounded-lg"
                   />
                 ))}
@@ -36,7 +36,7 @@ export default function AdminLoading() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
-                  key={i}
+                  key={`card-skeleton-${i}`}
                   className="bg-void-light/30 h-28 animate-pulse rounded-xl border border-slate-800"
                 />
               ))}

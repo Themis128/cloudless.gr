@@ -93,27 +93,31 @@ export default function AdminBlogPage() {
 
       {!loading && !error && (
         <div className="mb-4 flex items-center gap-2">
-          {(["all", "published", "draft"] as Filter[]).map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setFilter(f)}
-              className={`rounded-lg border px-3 py-1.5 font-mono text-xs transition-all ${
-                filter === f
-                  ? "border-neon-cyan/30 bg-neon-cyan/10 text-neon-cyan"
-                  : "border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
-              }`}
-            >
-              {FILTER_LABELS[f]}
-              <span className="ml-1.5 font-mono text-[10px] opacity-60">
-                {f === "all"
-                  ? posts.length
-                  : f === "published"
-                    ? publishedCount
-                    : draftCount}
-              </span>
-            </button>
-          ))}
+          {(["all", "published", "draft"] as Filter[]).map((f) => {
+            const count =
+              f === "all"
+                ? posts.length
+                : f === "published"
+                  ? publishedCount
+                  : draftCount;
+            return (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                className={`rounded-lg border px-3 py-1.5 font-mono text-xs transition-all ${
+                  filter === f
+                    ? "border-neon-cyan/30 bg-neon-cyan/10 text-neon-cyan"
+                    : "border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
+                }`}
+              >
+                {FILTER_LABELS[f]}
+                <span className="ml-1.5 font-mono text-[10px] opacity-60">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -231,7 +235,7 @@ export default function AdminBlogPage() {
             </table>
           </div>
           <div className="border-t border-slate-800 px-5 py-2.5 text-right font-mono text-[10px] text-slate-600">
-            {filtered.length} post{filtered.length !== 1 ? "s" : ""}
+            {filtered.length} post{filtered.length === 1 ? "" : "s"}
           </div>
         </div>
       )}

@@ -8,21 +8,22 @@ interface XCampaign {
   id: string;
   name: string;
   status: string;
-  objective: string;
-  daily_budget_amount_local_micro: number;
-  created_at: string;
-}
-
-interface Stats {
   impressions: number;
   clicks: number;
-  spend_micro: number;
-  engagements: number;
+  cost: number;
+  ctr: number;
+}
+
+interface Insights {
+  impressions: number;
+  clicks: number;
+  costInLocalCurrency: string;
+  leads: number;
 }
 
 export default function XPage() {
   const [campaigns, setCampaigns] = useState<XCampaign[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
   const [notConfigured, setNotConfigured] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +32,7 @@ export default function XPage() {
     setLoading(true);
     setError(null);
     try {
-      const [camRes, statsRes] = await Promise.all([
+      const [camRes, insRes] = await Promise.all([
         fetchWithAuth("/api/admin/campaigns/x"),
         fetchWithAuth("/api/admin/campaigns/x/insights"),
       ]);
@@ -41,7 +42,7 @@ export default function XPage() {
       }
       if (!camRes.ok) throw new Error("Failed to load campaigns");
       setCampaigns((await camRes.json()).campaigns ?? []);
-      if (statsRes.ok) setStats((await statsRes.json()).stats ?? null);
+      if (insRes.ok) setInsights((await insRes.json()).insights ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -60,10 +61,8 @@ export default function XPage() {
         <BackLink />
         <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-6">
           <p className="font-mono text-sm text-yellow-400">
-            X (Twitter) is not configured. Add{" "}
-            <code className="text-yellow-300">X_API_KEY</code>,{" "}
-            <code className="text-yellow-300">X_ACCESS_TOKEN</code>, and{" "}
-            <code className="text-yellow-300">X_AD_ACCOUNT_ID</code> to AWS SSM.
+            X is not configured. Add <code className="text-yellow-300">X_API_KEY</code> to
+            AWS SSM.
           </p>
         </div>
       </div>
@@ -74,30 +73,27 @@ export default function XPage() {
     <div>
       <BackLink />
       <div className="mb-8">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-500/20 bg-slate-500/10 px-3 py-1.5">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-slate-300" />
-          <span className="font-mono text-xs text-slate-300">X (TWITTER)</span>
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1.5">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-sky-400" />
+          <span className="font-mono text-xs text-sky-400">X (TWITTER)</span>
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">
           X Campaigns
         </h1>
       </div>
 
-      {stats && (
+      {insights && (
         <div className="mb-8 grid grid-cols-4 gap-4">
           <MetricCard
             label="Impressions"
-            value={stats.impressions.toLocaleString()}
+            value={insights.impressions.toLocaleString()}
           />
-          <MetricCard label="Clicks" value={stats.clicks.toLocaleString()} />
+          <MetricCard label="Clicks" value={insights.clicks.toLocaleString()} />
           <MetricCard
             label="Spend"
-            value={`$${(stats.spend_micro / 1_000_000).toFixed(2)}`}
+            value={`$${Number.parseFloat(insights.costInLocalCurrency).toFixed(2)}`}
           />
-          <MetricCard
-            label="Engagements"
-            value={stats.engagements.toLocaleString()}
-          />
+          <MetricCard label="Leads" value={insights.leads.toLocaleString()} />
         </div>
       )}
 
@@ -114,11 +110,14 @@ export default function XPage() {
                 <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
                   Status
                 </th>
-                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
-                  Objective
+                <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+                  Impressions
                 </th>
                 <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
-                  Daily Budget
+                  Clicks
+                </th>
+                <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+                  Cost
                 </th>
               </tr>
             </thead>
@@ -126,10 +125,10 @@ export default function XPage() {
               {campaigns.length === 0 && (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="py-8 text-center font-mono text-sm text-slate-600"
                   >
-                    No campaigns found.
+                    No X campaigns found.
                   </td>
                 </tr>
               )}
@@ -148,13 +147,14 @@ export default function XPage() {
                       {c.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-400">
-                    {c.objective}
+                  <td className="px-4 py-3 text-right font-mono text-xs text-slate-400">
+                    {(c.impressions ?? 0).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
-                    {c.daily_budget_amount_local_micro
-                      ? `$${(c.daily_budget_amount_local_micro / 1_000_000).toFixed(2)}`
-                      : "—"}
+                  <td className="px-4 py-3 text-right font-mono text-xs text-slate-400">
+                    {(c.clicks ?? 0).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-xs text-slate-400">
+                    ${Number.parseFloat(String(c.cost ?? 0)).toFixed(2)}
                   </td>
                 </tr>
               ))}
@@ -179,7 +179,7 @@ function BackLink() {
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({ label, value }: { readonly label: string; readonly value: string }) {
   return (
     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-3">
       <p className="font-mono text-[10px] text-slate-500">{label}</p>
@@ -190,14 +190,14 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 
 function Spinner() {
   return (
-    <div className="flex items-center gap-3 text-slate-400">
-      <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-transparent" />
+    <div className="flex items-center gap-3 py-4 text-slate-400">
+      <div className="h-4 w-4 animate-spin rounded-full border-2 border-neon-cyan border-t-transparent" />
       <span className="font-mono text-sm">Loading...</span>
     </div>
   );
 }
 
-function ErrorMsg({ msg }: { msg: string }) {
+function ErrorMsg({ msg }: { readonly msg: string }) {
   return (
     <div className="rounded-lg border border-red-900/30 bg-red-950/10 px-4 py-3 font-mono text-sm text-red-400">
       {msg}

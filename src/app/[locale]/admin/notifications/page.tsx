@@ -1,165 +1,83 @@
 "use client";
 
-import { useState } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { useEffect, useState } from "react";
 
-export default function AdminNotificationsPage() {
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(
-    null,
-  );
-  const [history, setHistory] = useState<
-    { time: string; message: string; ok: boolean }[]
-  >([]);
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  read: boolean;
+  createdAt: string;
+}
 
-  async function sendTest(e: React.FormEvent) {
-    e.preventDefault();
-    if (!message.trim()) return;
+export default function NotificationsPage() {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    setSending(true);
-    setResult(null);
+  useEffect(() => {
+    fetchWithAuth("/api/admin/notifications")
+      .then((r) => r.json())
+      .then((d) => setNotifications(d.notifications ?? []))
+      .finally(() => setLoading(false));
+  }, []);
 
-    try {
-      const res = await fetchWithAuth("/api/admin/notifications/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: message.trim() }),
-      });
-
-      const data = await res.json();
-      const ok = res.ok;
-      setResult({
-        ok,
-        text: ok
-          ? "Notification sent to Slack!"
-          : (data.error ?? "Failed to send"),
-      });
-      setHistory((prev) => [
-        {
-          time: new Date().toLocaleTimeString("en-IE"),
-          message: message.trim(),
-          ok,
-        },
-        ...prev,
-      ]);
-      if (ok) setMessage("");
-    } catch {
-      setResult({ ok: false, text: "Network error" });
-    } finally {
-      setSending(false);
-    }
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="border-neon-magenta h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+      </div>
+    );
   }
-
-  const presets = [
-    {
-      label: "Deploy complete",
-      text: "✅ Deployment to production completed successfully.",
-    },
-    {
-      label: "Maintenance start",
-      text: "🔧 Scheduled maintenance starting now. ETA: 30 minutes.",
-    },
-    {
-      label: "Issue resolved",
-      text: "✅ The reported issue has been resolved. All systems operational.",
-    },
-    {
-      label: "New feature",
-      text: "🚀 New feature deployed: check the admin dashboard for details.",
-    },
-  ];
 
   return (
     <div>
       <div className="mb-8">
-        <div className="bg-neon-magenta/10 border-neon-magenta/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
+        <div className="border-neon-magenta/20 bg-neon-magenta/10 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-magenta font-mono text-xs">
             NOTIFICATIONS
           </span>
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">
-          Slack Notifications
+          Notifications
         </h1>
-        <p className="font-body mt-1 text-slate-400">
-          Send test messages and announcements to your team Slack channel.
-        </p>
       </div>
 
-      {/* Quick presets */}
-      <div className="mb-4 flex flex-wrap gap-2">
-        {presets.map((p) => (
-          <button
-            key={p.label}
-            onClick={() => setMessage(p.text)}
-            className="min-h-[36px] rounded-lg border border-slate-800 px-3 py-1.5 font-mono text-xs text-slate-400 transition-all hover:border-slate-700 hover:text-white"
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Send form */}
-      <form onSubmit={sendTest} className="mb-8">
-        <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
-          <label className="mb-2 block font-mono text-xs text-slate-500">
-            Message
-          </label>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            rows={3}
-            placeholder="Type a Slack message..."
-            className="bg-void focus:border-neon-magenta/50 mb-4 w-full resize-none rounded-lg border border-slate-800 px-4 py-3 font-mono text-sm text-white transition-colors placeholder:text-slate-600 focus:outline-none"
-          />
-
-          <div className="flex items-center gap-4">
-            <button
-              type="submit"
-              disabled={sending || !message.trim()}
-              className="bg-neon-magenta/10 border-neon-magenta/50 text-neon-magenta hover:bg-neon-magenta/20 disabled:border-slate-700 disabled:text-slate-600 min-h-11 rounded-lg border px-6 py-2.5 font-mono text-sm font-semibold transition-all disabled:cursor-not-allowed hover:shadow-[0_0_25px_rgba(255,0,255,0.2)]"
-            >
-              {sending ? "Sending…" : "Send to Slack"}
-            </button>
-
-            {result && (
-              <span
-                className={`font-mono text-xs ${result.ok ? "text-neon-green" : "text-red-400"}`}
-              >
-                {result.ok ? "✓" : "✗"} {result.text}
-              </span>
-            )}
-          </div>
+      {notifications.length === 0 ? (
+        <div className="rounded-xl border border-slate-800 p-12 text-center">
+          <p className="font-mono text-sm text-slate-500">
+            No notifications yet.
+          </p>
         </div>
-      </form>
-
-      {/* Send history */}
-      {history.length > 0 && (
-        <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
-          <h3 className="font-heading mb-3 text-sm font-semibold text-white">
-            Session History
-          </h3>
-          <div className="space-y-2">
-            {history.map((h, i) => (
-              <div
-                key={i}
-                className="bg-void flex items-start gap-3 rounded-lg border border-slate-800/50 px-4 py-3"
-              >
-                <span
-                  className={`mt-1 h-2 w-2 shrink-0 rounded-full ${h.ok ? "bg-neon-green" : "bg-red-400"}`}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-mono text-xs text-slate-300">
-                    {h.message}
-                  </p>
+      ) : (
+        <div className="space-y-3">
+          {notifications.map((n) => (
+            <div
+              key={n.id}
+              className={`rounded-xl border p-4 ${
+                n.read
+                  ? "border-slate-800 bg-slate-900/20"
+                  : "border-neon-magenta/20 bg-neon-magenta/5"
+              }`}
+            >
+              <div className="mb-1 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {!n.read && (
+                    <span className="bg-neon-magenta h-2 w-2 rounded-full" />
+                  )}
+                  <span className="font-mono text-sm font-semibold text-white">
+                    {n.title}
+                  </span>
                 </div>
-                <span className="shrink-0 font-mono text-[10px] text-slate-600">
-                  {h.time}
+                <span className="font-mono text-[10px] text-slate-500">
+                  {new Date(n.createdAt).toLocaleDateString()}
                 </span>
               </div>
-            ))}
-          </div>
+              <p className="font-mono text-xs text-slate-400">{n.message}</p>
+            </div>
+          ))}
         </div>
       )}
     </div>
