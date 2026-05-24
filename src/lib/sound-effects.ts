@@ -37,7 +37,7 @@ function playTone({
     if (!ctx) return;
 
     if (ctx.state === "suspended") {
-      void ctx.resume();
+      ctx.resume().catch(() => {});
     }
 
     const oscillator = ctx.createOscillator();
