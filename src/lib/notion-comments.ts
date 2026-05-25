@@ -61,11 +61,8 @@ export async function listComments(blockId: string): Promise<NotionComment[]> {
     return results.map(mapComment);
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
-    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
-    console.error(
-      "[Notion Comments] Failed to list comments:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Comments] Failed to list comments:", msg); // codeql[js/log-injection]
     return [];
   }
 }
@@ -91,10 +88,8 @@ export async function addComment(pageId: string, text: string): Promise<NotionCo
     return mapComment(result);
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
-    console.error(
-      "[Notion Comments] Failed to add comment:",
-      (err as Error)?.message ?? "unknown error"
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Comments] Failed to add comment:", msg); // codeql[js/log-injection]
     return null;
   }
 }
@@ -120,10 +115,8 @@ export async function replyToDiscussion(
     return mapComment(result);
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
-    console.error(
-      "[Notion Comments] Failed to reply to discussion:",
-      (err as Error)?.message ?? "unknown error"
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Comments] Failed to reply to discussion:", msg); // codeql[js/log-injection]
     return null;
   }
 }

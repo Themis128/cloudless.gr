@@ -44,13 +44,11 @@ export async function addToSuppressionList(email: string): Promise<boolean> {
         Reason: "COMPLAINT",
       })
     );
-    // codeql[js/log-injection] -- domain sanitized (newlines stripped) in logSafeDomain
-    console.warn(`[SES] Added to suppression list: *@${logSafeDomain(email)}`);
+    console.warn(`[SES] Added to suppression list: *@${logSafeDomain(email)}`); // codeql[js/log-injection]
     return true;
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
-    // codeql[js/log-injection] codeql[js/tainted-format-string] -- domain and msg sanitized (newlines stripped) above
-    console.error(`[SES] Failed to suppress *@${logSafeDomain(email)}:`, msg);
+    console.error(`[SES] Failed to suppress *@${logSafeDomain(email)}:`, msg); // codeql[js/log-injection] codeql[js/tainted-format-string]
     return false;
   }
 }
@@ -65,16 +63,14 @@ export async function removeFromSuppressionList(email: string): Promise<boolean>
   try {
     const client = await getSESv2();
     await client.send(new DeleteSuppressedDestinationCommand({ EmailAddress: email }));
-    // codeql[js/log-injection] -- domain sanitized (newlines stripped) in logSafeDomain
-    console.warn(`[SES] Removed from suppression list: *@${logSafeDomain(email)}`);
+    console.warn(`[SES] Removed from suppression list: *@${logSafeDomain(email)}`); // codeql[js/log-injection]
     return true;
   } catch (err) {
     // SES throws NotFoundException when the address was never suppressed;
     // for a brand-new subscriber that is the normal case, treat as success.
     if ((err as { name?: string })?.name === "NotFoundException") return true;
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
-    // codeql[js/log-injection] codeql[js/tainted-format-string] -- domain and msg sanitized (newlines stripped) above
-    console.error(`[SES] Failed to remove *@${logSafeDomain(email)} from suppression:`, msg);
+    console.error(`[SES] Failed to remove *@${logSafeDomain(email)} from suppression:`, msg); // codeql[js/log-injection] codeql[js/tainted-format-string]
     return false;
   }
 }
