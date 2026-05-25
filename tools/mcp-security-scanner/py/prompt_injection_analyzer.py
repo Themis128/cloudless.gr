@@ -9,7 +9,7 @@ import json
 import re
 import sys
 
-PROMPT_INJECTION_PATTERNS = [
+_RAW_PATTERNS = [
     {
         'id': 'mcp-008-prompt-injection-directive',
         'message': 'Prompt contains explicit injection directive.',
@@ -28,6 +28,13 @@ PROMPT_INJECTION_PATTERNS = [
         ),
     },
 ]
+
+# Pre-compile patterns at module load time for performance
+PROMPT_INJECTION_PATTERNS = [
+    {**entry, 'regex': re.compile(entry['pattern'], re.IGNORECASE | re.MULTILINE)}
+    for entry in _RAW_PATTERNS
+]
+
 
 
 def analyze_text(text):
@@ -60,10 +67,11 @@ def main():
 
     if args.json:
         print(json.dumps(findings))
-        return
+    else:
+        for finding in findings:
+            print(f"{finding['id']}:{finding['line']} - {finding['message']}")
 
-    for finding in findings:
-        print(f"{finding['id']}:{finding['line']} - {finding['message']}")
+    sys.exit(1 if findings else 0)
 
 
 if __name__ == '__main__':
