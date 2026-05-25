@@ -1,14 +1,19 @@
 /**
  * SHA drift detector — compares the source-of-truth deploy SHA in SSM
- * against the SHA the cloud surface (cloudless.gr) actually reports via
- * /api/health → version field.
+ * against the SHA each surface (cloud cloudless.gr, Pi cloudless.online)
+ * actually reports via /api/health → version field.
+ *
+ * Each surface has its own SSM param so the two deploy pipelines can't
+ * overwrite each other:
+ *   deploy.yml     → /cloudless/production/cloud-sha  (full GITHUB_SHA)
+ *   deploy-pi.yml  → /cloudless/production/pi-sha     (12-char short SHA)
  *
  * Run:
  *   pnpm tsx scripts/detect-sha-drift.mts
  *   pnpm tsx scripts/detect-sha-drift.mts --json   # machine-readable
  *
  * Exit:
- *   0 — cloud surface agrees (or grace window applies)
+ *   0 — all surfaces agree (or grace window applies)
  *   1 — drift detected outside the grace window
  *   2 — could not read SSM (no AWS creds, network, etc.)
  *
@@ -33,12 +38,15 @@ import { request as httpsRequest } from "node:https";
 // ───────────────────────────────────────────────────────────────────────
 
 interface DriftSnapshot {
-  expected: string;
+  cloudExpected: string;
+  piExpected: string;
   cloud: string | null;
-  ssmModifiedAt: Date | null;
+  pi: string | null;
+  cloudSsmModifiedAt: Date | null;
+  piSsmModifiedAt: Date | null;
 }
 interface SurfaceStatus {
-  name: "cloud";
+  name: "cloud" | "pi";
   actual: string | null;
   matches: boolean;
   reason: string;
@@ -58,20 +66,39 @@ function shaEquivalent(a: string | null, b: string | null): boolean {
   return lo.startsWith(hi) || hi.startsWith(lo);
 }
 
-function classifySurface(name: "cloud", expected: string, actual: string | null): SurfaceStatus {
+function classifySurface(
+  name: "cloud" | "pi",
+  expected: string,
+  actual: string | null,
+): SurfaceStatus {
   const matches = shaEquivalent(expected, actual);
   let reason = "matches expected";
   if (actual === null) reason = "endpoint unreachable or no version field";
   else if (actual === "0.1.0" || actual === "dev") {
-    reason = "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
+    reason =
+      "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
   } else if (!matches) reason = "SHA differs from SSM source of truth";
   return { name, actual, matches, reason };
 }
 
-function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): DriftReport {
-  const ageMs = snapshot.ssmModifiedAt ? now - snapshot.ssmModifiedAt.getTime() : null;
+function evaluateDrift(
+  snapshot: DriftSnapshot,
+  now: number = Date.now(),
+): DriftReport {
+  // Use the most recent SSM write across both surfaces for the grace window.
+  const dates = [snapshot.cloudSsmModifiedAt, snapshot.piSsmModifiedAt].filter(
+    (d): d is Date => d !== null,
+  );
+  const latestModified =
+    dates.length > 0
+      ? new Date(Math.max(...dates.map((d) => d.getTime())))
+      : null;
+  const ageMs = latestModified ? now - latestModified.getTime() : null;
   const withinGrace = ageMs !== null && ageMs < GRACE_WINDOW_MS;
-  const surfaces: SurfaceStatus[] = [classifySurface("cloud", snapshot.expected, snapshot.cloud)];
+  const surfaces: SurfaceStatus[] = [
+    classifySurface("cloud", snapshot.cloudExpected, snapshot.cloud),
+    classifySurface("pi", snapshot.piExpected, snapshot.pi),
+  ];
   const anyMismatch = surfaces.some((s) => !s.matches);
   const drifted = anyMismatch && !withinGrace;
   return { drifted, ageMs, withinGrace, surfaces };
@@ -83,12 +110,20 @@ function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): Drift
 
 const HEALTH_URLS = {
   cloud: "https://cloudless.gr/api/health",
+  pi: "https://cloudless.online/api/health",
 } as const;
-const SSM_PARAM = "/cloudless/production/current-image-sha";
+const SSM_CLOUD = "/cloudless/production/cloud-sha";
+const SSM_PI = "/cloudless/production/pi-sha";
 const REGION = process.env.AWS_REGION ?? "us-east-1";
 
 function fetchJson(url: string): Promise<Record<string, unknown> | null> {
   return new Promise((resolve) => {
+    // Happy Eyeballs (RFC 8305): if the host is dual-stack but the runner
+    // can't connect over IPv6 (GitHub Actions runners are IPv4-only by
+    // default), fall through to IPv4 after 250 ms instead of hanging the
+    // full 10 s timeout. cloudless.online's APIGW alias publishes both
+    // A and AAAA — without this, every CI run trips the IPv6 path and
+    // reports the Pi as unreachable.
     const req = httpsRequest(
       url,
       {
@@ -98,17 +133,16 @@ function fetchJson(url: string): Promise<Record<string, unknown> | null> {
         autoSelectFamilyAttemptTimeout: 250,
       },
       (res) => {
-        const chunks: Buffer[] = [];
-        res.on("data", (c: Buffer) => chunks.push(c));
-        res.on("end", () => {
-          try {
-            resolve(JSON.parse(Buffer.concat(chunks).toString("utf-8")));
-          } catch {
-            resolve(null);
-          }
-        });
-      }
-    );
+      const chunks: Buffer[] = [];
+      res.on("data", (c: Buffer) => chunks.push(c));
+      res.on("end", () => {
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString("utf-8")));
+        } catch {
+          resolve(null);
+        }
+      });
+    });
     req.on("error", () => resolve(null));
     req.on("timeout", () => {
       req.destroy();
@@ -118,11 +152,13 @@ function fetchJson(url: string): Promise<Record<string, unknown> | null> {
   });
 }
 
-async function readSsm(): Promise<{ value: string; modifiedAt: Date } | null> {
+async function readSsmParam(
+  ssm: import("@aws-sdk/client-ssm").SSMClient,
+  name: string,
+): Promise<{ value: string; modifiedAt: Date } | null> {
+  const { GetParameterCommand } = await import("@aws-sdk/client-ssm");
   try {
-    const { SSMClient, GetParameterCommand } = await import("@aws-sdk/client-ssm");
-    const ssm = new SSMClient({ region: REGION });
-    const out = await ssm.send(new GetParameterCommand({ Name: SSM_PARAM }));
+    const out = await ssm.send(new GetParameterCommand({ Name: name }));
     if (!out.Parameter?.Value) return null;
     return {
       value: out.Parameter.Value,
@@ -134,35 +170,19 @@ async function readSsm(): Promise<{ value: string; modifiedAt: Date } | null> {
 }
 
 async function snapshot(): Promise<DriftSnapshot | null> {
-  const [ssm, cloudJson] = await Promise.all([readSsm(), fetchJson(HEALTH_URLS.cloud)]);
-  if (!ssm) return null;
+  const { SSMClient } = await import("@aws-sdk/client-ssm");
+  const ssmClient = new SSMClient({ region: REGION });
+  const [cloudSsm, piSsm, cloudJson, piJson] = await Promise.all([
+    readSsmParam(ssmClient, SSM_CLOUD),
+    readSsmParam(ssmClient, SSM_PI),
+    fetchJson(HEALTH_URLS.cloud),
+    fetchJson(HEALTH_URLS.pi),
+  ]);
+  if (!cloudSsm || !piSsm) return null;
   return {
-    expected: ssm.value,
-    ssmModifiedAt: ssm.modifiedAt,
+    cloudExpected: cloudSsm.value,
+    piExpected: piSsm.value,
+    cloudSsmModifiedAt: cloudSsm.modifiedAt,
+    piSsmModifiedAt: piSsm.modifiedAt,
     cloud: typeof cloudJson?.version === "string" ? cloudJson.version : null,
-  };
-}
-
-const wantJson = process.argv.includes("--json");
-const snap = await snapshot();
-if (!snap) {
-  console.error("Could not read SSM source of truth — check AWS creds.");
-  process.exit(2);
-}
-const report = evaluateDrift(snap);
-
-if (wantJson) {
-  console.log(JSON.stringify({ snapshot: snap, report }, null, 2));
-} else {
-  console.log(`\nSHA drift report — expected: ${snap.expected.slice(0, 12)}…`);
-  console.log(`  age: ${report.ageMs !== null ? `${Math.round(report.ageMs / 60_000)}m` : "?"}`);
-  console.log(`  within grace: ${report.withinGrace ? "yes" : "no"}`);
-  for (const s of report.surfaces) {
-    const mark = s.matches ? "✓" : "✗";
-    const actual = s.actual ? s.actual.slice(0, 12) + "…" : "(null)";
-    console.log(`  ${mark} ${s.name.padEnd(5)} actual=${actual.padEnd(15)} ${s.reason}`);
-  }
-  console.log(`  drifted: ${report.drifted ? "YES" : "no"}\n`);
-}
-
-process.exit(report.drifted ? 1 : 0);
+    pi: typeof piJson?.version === "string" ? piJson.version :

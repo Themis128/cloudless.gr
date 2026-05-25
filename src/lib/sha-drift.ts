@@ -4,19 +4,30 @@
  * I/O lives in scripts/detect-sha-drift.mts (which imports from this
  * module). Keeping the comparison pure makes it directly unit-testable
  * without mocking SSM clients or HTTPS requests.
+ *
+ * Each surface (cloud / Pi) has its own SSM source-of-truth param so
+ * that the two independent deploy pipelines don't overwrite each other:
+ *   deploy.yml       → /cloudless/production/cloud-sha  (full GITHUB_SHA)
+ *   deploy-pi.yml    → /cloudless/production/pi-sha     (12-char short SHA)
  */
 
 export interface DriftSnapshot {
-  /** SSM-published SHA — source of truth, written by deploy.yml. */
-  expected: string;
+  /** deploy.yml SHA — source of truth for cloudless.gr. */
+  cloudExpected: string;
+  /** deploy-pi.yml SHA — source of truth for cloudless.online. */
+  piExpected: string;
   /** cloudless.gr/api/health.version, or null if unreachable. */
   cloud: string | null;
-  /** When SSM was last updated; null if unknown. */
-  ssmModifiedAt: Date | null;
+  /** cloudless.online/api/health.version, or null if unreachable. */
+  pi: string | null;
+  /** When the cloud SSM param was last updated; null if unknown. */
+  cloudSsmModifiedAt: Date | null;
+  /** When the Pi SSM param was last updated; null if unknown. */
+  piSsmModifiedAt: Date | null;
 }
 
 export interface SurfaceStatus {
-  name: "cloud";
+  name: "cloud" | "pi";
   actual: string | null;
   matches: boolean;
   reason: string;
@@ -30,9 +41,9 @@ export interface DriftReport {
 }
 
 /**
- * Newly published SSM SHA needs this long for the cloud surface to converge
- * (Lambda cold start). Drift inside this window is normal mid-rollout and
- * should not page.
+ * Newly published SSM SHA needs this long for both surfaces to converge
+ * (Lambda cold start + Pi K3s rolling update). Drift inside this window
+ * is normal mid-rollout and should not page.
  */
 export const GRACE_WINDOW_MS = 10 * 60 * 1000;
 
@@ -50,7 +61,11 @@ export function shaEquivalent(a: string | null, b: string | null): boolean {
   return lo.startsWith(hi) || hi.startsWith(lo);
 }
 
-function classifySurface(name: "cloud", expected: string, actual: string | null): SurfaceStatus {
+function classifySurface(
+  name: "cloud" | "pi",
+  expected: string,
+  actual: string | null
+): SurfaceStatus {
   const matches = shaEquivalent(expected, actual);
   let reason = "matches expected";
   if (actual === null) reason = "endpoint unreachable or no version field";
@@ -63,12 +78,25 @@ function classifySurface(name: "cloud", expected: string, actual: string | null)
 /**
  * Build a DriftReport from a snapshot. Pure; takes `now` so tests can pin
  * the clock and exercise the grace-window edges deterministically.
+ *
+ * Grace window is computed from the most recently updated SSM param so
+ * that a fresh deploy to either surface suppresses false-positive drift
+ * alerts during rollout convergence.
  */
 export function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): DriftReport {
-  const ageMs = snapshot.ssmModifiedAt ? now - snapshot.ssmModifiedAt.getTime() : null;
+  // Use the most recent SSM write across both surfaces for the grace window.
+  const dates = [snapshot.cloudSsmModifiedAt, snapshot.piSsmModifiedAt].filter(
+    (d): d is Date => d !== null
+  );
+  const latestModified =
+    dates.length > 0 ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
+  const ageMs = latestModified ? now - latestModified.getTime() : null;
   const withinGrace = ageMs !== null && ageMs < GRACE_WINDOW_MS;
 
-  const surfaces: SurfaceStatus[] = [classifySurface("cloud", snapshot.expected, snapshot.cloud)];
+  const surfaces: SurfaceStatus[] = [
+    classifySurface("cloud", snapshot.cloudExpected, snapshot.cloud),
+    classifySurface("pi", snapshot.piExpected, snapshot.pi),
+  ];
 
   const anyMismatch = surfaces.some((s) => !s.matches);
   // During grace window we count mismatches as expected and don't fail.
