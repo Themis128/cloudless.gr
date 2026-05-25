@@ -120,4 +120,7 @@ describe("evaluateDrift", () => {
       snap({ cloudSsmModifiedAt: OLD, piSsmModifiedAt: OLD, cloud: FULL_B, pi: FULL_B }),
       NOW,
     );
-    expe
+    expect(r.withinGrace).toBe(false);
+    expect(r.drifted).toBe(true);
+  });
+});
