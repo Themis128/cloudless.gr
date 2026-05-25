@@ -70,11 +70,8 @@ test.describe("k3s standby path", () => {
   test.skip("standby host response is stamped by Cloudflare Tunnel (not direct Pi)", async ({
     request,
   }) => {
-    // Skipped: cloudless.online (the Cloudflare Tunnel standby surface) was
-    // decommissioned. The current standby path is APIGW → Lambda → Tailscale
-    // Funnel → Pi, which goes through AWS CloudFront, not Cloudflare — so
-    // CF-RAY is never present. Re-enable if a Cloudflare-tunnelled hostname
-    // is reintroduced.
+    // Skipped: Cloudflare Tunnel standby surface was decommissioned.
+    // Current path is direct Pi Traefik (pi-origin.cloudless.gr), no CF-RAY header.
     const r = await request.get(`https://${STANDBY_HOST}/api/health`);
     const cfRay = r.headers()["cf-ray"];
     expect(cfRay, "expected CF-RAY header proving traffic went through Cloudflare Tunnel").toBeTruthy();
