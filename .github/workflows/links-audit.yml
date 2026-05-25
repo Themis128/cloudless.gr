@@ -45,7 +45,7 @@ jobs:
             --exclude "^https://abc123\."
             --exclude "^http://localhost"
             --exclude "^https://cloudless\.online"
-            --exclude "^https://\.\.\."
+            --exclude "\.\.\."
             --exclude "^https?://[^@]+@.*\.ingest\.sentry\.io"
             --exclude "^https?://.*\.api-us1\.com"
             --exclude "^https?://www\.linkedin\.com"
