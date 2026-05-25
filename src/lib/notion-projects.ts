@@ -143,10 +143,8 @@ export async function listProjects(
     );
     return pages.map(mapProject);
   } catch (err) {
-    console.error(
-      "[Notion Projects] Failed to list projects:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Projects] Failed to list projects:", msg); // codeql[js/log-injection]
     return [];
   }
 }
@@ -157,10 +155,8 @@ export async function getProject(pageId: string): Promise<Project | null> {
     const page = await notionFetch(`/pages/${pageId}`);
     return mapProject(page);
   } catch (err) {
-    console.error(
-      "[Notion Projects] Failed to get project:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Projects] Failed to get project:", msg); // codeql[js/log-injection]
     return null;
   }
 }
@@ -205,10 +201,8 @@ export async function createProject(data: {
     });
     return page.id;
   } catch (err) {
-    console.error(
-      "[Notion Projects] Failed to create project:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Projects] Failed to create project:", msg); // codeql[js/log-injection]
     return null;
   }
 }
@@ -227,11 +221,8 @@ export async function updateProjectStatus(
     });
     return true;
   } catch (err) {
-    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
-    console.error(
-      "[Notion Projects] Failed to update project status:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Projects] Failed to update project status:", msg); // codeql[js/log-injection]
     return false;
   }
 }
@@ -252,11 +243,8 @@ export async function updateProjectProgress(
     });
     return true;
   } catch (err) {
-    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
-    console.error(
-      "[Notion Projects] Failed to update project progress:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Projects] Failed to update project progress:", msg); // codeql[js/log-injection]
     return false;
   }
 }
@@ -313,10 +301,8 @@ export async function listTasks(filters?: {
     );
     return pages.map(mapTask);
   } catch (err) {
-    console.error(
-      "[Notion Tasks] Failed to list tasks:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Tasks] Failed to list tasks:", msg); // codeql[js/log-injection]
     return [];
   }
 }
@@ -368,10 +354,8 @@ export async function createTask(data: {
     });
     return page.id;
   } catch (err) {
-    console.error(
-      "[Notion Tasks] Failed to create task:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Tasks] Failed to create task:", msg); // codeql[js/log-injection]
     return null;
   }
 }
@@ -390,11 +374,8 @@ export async function updateTaskStatus(
     });
     return true;
   } catch (err) {
-    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
-    console.error(
-      "[Notion Tasks] Failed to update task status:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Tasks] Failed to update task status:", msg); // codeql[js/log-injection]
     return false;
   }
 }
@@ -456,10 +437,8 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
     );
     return pages.map(mapTask);
   } catch (err) {
-    console.error(
-      "[Notion Tasks] Failed to get sprint tasks:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Tasks] Failed to get sprint tasks:", msg); // codeql[js/log-injection]
     return [];
   }
 }
@@ -510,10 +489,8 @@ export async function rolloverSprintTasks(
       });
       moved++;
     } catch (err) {
-      console.error(
-        `[Notion Tasks] Failed to move task:`,
-        ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-      );
+      const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+      console.error("[Notion Tasks] Failed to move task:", msg); // codeql[js/log-injection]
     }
   }
 
@@ -564,10 +541,8 @@ export async function getOverdueTasks(): Promise<Task[]> {
     );
     return pages.map(mapTask);
   } catch (err) {
-    console.error(
-      "[Notion Tasks] Failed to get overdue tasks:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Tasks] Failed to get overdue tasks:", msg); // codeql[js/log-injection]
     return [];
   }
 }

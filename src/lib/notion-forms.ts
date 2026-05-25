@@ -98,11 +98,8 @@ export async function saveSubmission(
 
     return page.id;
   } catch (err) {
-    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
-    console.error(
-      "[Notion] Failed to save submission:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion] Failed to save submission:", msg); // codeql[js/log-injection]
     return null;
   }
 }
@@ -149,10 +146,8 @@ export async function listSubmissions(limit = 50): Promise<SubmissionRecord[]> {
     });
     /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
-    console.error(
-      "[Notion] Failed to list submissions:",
-      (err as Error)?.message ?? "unknown error",
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion] Failed to list submissions:", msg); // codeql[js/log-injection]
     return [];
   }
 }
@@ -177,11 +172,8 @@ export async function updateSubmissionStatus(
     });
     return true;
   } catch (err) {
-    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
-    console.error(
-      "[Notion] Failed to update submission status:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion] Failed to update submission status:", msg); // codeql[js/log-injection]
     return false;
   }
 }
