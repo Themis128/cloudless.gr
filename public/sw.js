@@ -208,7 +208,12 @@ self.addEventListener("push", (event) => {
 
 // Message handler — handles SKIP_WAITING from Next.js and prevents
 // "message channel closed before response was received" errors.
+// Only messages from the same origin are acted on; all others are ignored.
 self.addEventListener("message", (event) => {
+  // Verify origin: only trust messages from the same origin as this SW.
+  // self.location is the SW script URL; compare origins.
+  if (event.origin && event.origin !== self.location.origin) return;
+
   if (event.data?.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
@@ -219,14 +224,4 @@ self.addEventListener("message", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = event.notification.data?.url || "/";
-  event.waitUntil(
-    self.clients.matchAll({ type: "window" }).then((clients) => {
-      for (const client of clients) {
-        if (client.url === url && "focus" in client) {
-          return client.focus();
-        }
-      }
-      return self.clients.openWindow(url);
-    }),
-  );
-});
+  event.wait
