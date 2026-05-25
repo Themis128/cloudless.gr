@@ -69,30 +69,24 @@ function shaEquivalent(a: string | null, b: string | null): boolean {
 function classifySurface(
   name: "cloud" | "pi",
   expected: string,
-  actual: string | null,
+  actual: string | null
 ): SurfaceStatus {
   const matches = shaEquivalent(expected, actual);
   let reason = "matches expected";
   if (actual === null) reason = "endpoint unreachable or no version field";
   else if (actual === "0.1.0" || actual === "dev") {
-    reason =
-      "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
+    reason = "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
   } else if (!matches) reason = "SHA differs from SSM source of truth";
   return { name, actual, matches, reason };
 }
 
-function evaluateDrift(
-  snapshot: DriftSnapshot,
-  now: number = Date.now(),
-): DriftReport {
+function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): DriftReport {
   // Use the most recent SSM write across both surfaces for the grace window.
   const dates = [snapshot.cloudSsmModifiedAt, snapshot.piSsmModifiedAt].filter(
-    (d): d is Date => d !== null,
+    (d): d is Date => d !== null
   );
   const latestModified =
-    dates.length > 0
-      ? new Date(Math.max(...dates.map((d) => d.getTime())))
-      : null;
+    dates.length > 0 ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
   const ageMs = latestModified ? now - latestModified.getTime() : null;
   const withinGrace = ageMs !== null && ageMs < GRACE_WINDOW_MS;
   const surfaces: SurfaceStatus[] = [
