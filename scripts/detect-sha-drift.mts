@@ -179,4 +179,38 @@ async function snapshot(): Promise<DriftSnapshot | null> {
     cloudSsmModifiedAt: cloudSsm.modifiedAt,
     piSsmModifiedAt: piSsm.modifiedAt,
     cloud: typeof cloudJson?.version === "string" ? cloudJson.version : null,
-    pi: typeof piJson?.version === "string" ? piJson.version :
+    piJson.version : null,
+  };
+}
+
+async function main(): Promise<void> {
+  const jsonMode = process.argv.includes("--json");
+
+  const data = await snapshot();
+  if (!data) {
+    const out = { error: "Could not read SSM parameters — check AWS credentials." };
+    if (jsonMode) console.log(JSON.stringify(out, null, 2));
+    else console.error("[sha-drift] " + out.error);
+    process.exit(2);
+  }
+
+  const report = evaluateDrift(data);
+
+  if (jsonMode) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    const icon = report.drifted ? "❌" : report.withinGrace ? "⏳" : "✅";
+    console.log(`${icon} SHA drift report`);
+    for (const s of report.surfaces) {
+      const mark = s.matches ? "✓" : "✗";
+      console.log(`  ${mark} ${s.name}: ${s.actual ?? "(null)"} — ${s.reason}`);
+    }
+    if (report.ageMs !== null) {
+      console.log(`  SSM age: ${Math.round(report.ageMs / 1000)}s`);
+    }
+  }
+
+  process.exit(report.drifted ? 1 : 0);
+}
+
+void main();
