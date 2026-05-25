@@ -35,7 +35,7 @@ jobs:
       id-token: write # for OIDC → AWS (to fetch ANTHROPIC_API_KEY from SSM)
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
