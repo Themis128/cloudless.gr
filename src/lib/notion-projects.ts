@@ -203,11 +203,8 @@ export async function updateProjectStatus(pageId: string, status: ProjectStatus)
     });
     return true;
   } catch (err) {
-    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
-    console.error(
-      "[Notion Projects] Failed to update project status:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Projects] Failed to update project status:", msg); // codeql[js/log-injection]
     return false;
   }
 }
@@ -225,11 +222,8 @@ export async function updateProjectProgress(pageId: string, progress: number): P
     });
     return true;
   } catch (err) {
-    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
-    console.error(
-      "[Notion Projects] Failed to update project progress:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Projects] Failed to update project progress:", msg); // codeql[js/log-injection]
     return false;
   }
 }
@@ -283,10 +277,8 @@ export async function listTasks(filters?: {
     });
     return pages.map(mapTask);
   } catch (err) {
-    console.error(
-      "[Notion Tasks] Failed to list tasks:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Tasks] Failed to list tasks:", msg); // codeql[js/log-injection]
     return [];
   }
 }
@@ -330,10 +322,8 @@ export async function createTask(data: {
     });
     return page.id;
   } catch (err) {
-    console.error(
-      "[Notion Tasks] Failed to create task:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Tasks] Failed to create task:", msg); // codeql[js/log-injection]
     return null;
   }
 }
@@ -349,11 +339,8 @@ export async function updateTaskStatus(pageId: string, status: TaskStatus): Prom
     });
     return true;
   } catch (err) {
-    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
-    console.error(
-      "[Notion Tasks] Failed to update task status:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Tasks] Failed to update task status:", msg); // codeql[js/log-injection]
     return false;
   }
 }
@@ -412,10 +399,8 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
     });
     return pages.map(mapTask);
   } catch (err) {
-    console.error(
-      "[Notion Tasks] Failed to get sprint tasks:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Tasks] Failed to get sprint tasks:", msg); // codeql[js/log-injection]
     return [];
   }
 }
@@ -463,10 +448,8 @@ export async function rolloverSprintTasks(fromSprint: string, toSprint: string):
       });
       moved++;
     } catch (err) {
-      console.error(
-        `[Notion Tasks] Failed to move task:`,
-        ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
-      );
+      const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+      console.error("[Notion Tasks] Failed to move task:", msg); // codeql[js/log-injection]
     }
   }
 
@@ -511,10 +494,8 @@ export async function getOverdueTasks(): Promise<Task[]> {
     });
     return pages.map(mapTask);
   } catch (err) {
-    console.error(
-      "[Notion Tasks] Failed to get overdue tasks:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
-    );
+    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
+    console.error("[Notion Tasks] Failed to get overdue tasks:", msg); // codeql[js/log-injection]
     return [];
   }
 }

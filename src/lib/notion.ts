@@ -47,8 +47,7 @@ export async function notionFetch<T = unknown>(path: string, init?: RequestInit)
   };
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    // codeql[js/server-side-request-forgery] -- url is NOTION_API (constant) + path; path is validated above (no :// or //)
-    const res = await fetch(url, reqInit);
+    const res = await fetch(url, reqInit); // codeql[js/server-side-request-forgery] -- NOTION_API is a constant; path validated above (no :// or //)
 
     if (res.status === 429 && attempt < MAX_RETRIES) {
       const retryAfterRaw = Number.parseInt(res.headers.get("Retry-After") ?? "1", 10);
