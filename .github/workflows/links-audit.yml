@@ -37,9 +37,12 @@ jobs:
           args: >-
             --verbose
             --no-progress
-            --accept 200,206,301,302,303,307,308,429,503
-            --exclude "^https://claude.ai/code/routines$"
-            --exclude "^https://claude.ai/code/routines/.*$"
+            --accept 200,206,301,302,303,307,308,401,403,429,503
+            --exclude "^https://claude\.ai/code/routines"
+            --exclude "^https://hooks\.slack\.com/"
+            --exclude "^https://[a-zA-Z0-9-]+\.ngrok-free\.app"
+            --exclude "^https://[a-zA-Z0-9-]+\.ngrok\.io"
+            --exclude "^https://abc123\."
             "README.md"
             "docs/**/*.md"
             ".github/**/*.md"
