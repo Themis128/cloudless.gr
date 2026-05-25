@@ -307,8 +307,10 @@ describe("view_submission: deploy-confirm-modal", () => {
     await POST(makeRequest(payload));
     await new Promise((r) => setTimeout(r, 50));
 
+    // codeql[js/incomplete-url-scheme-check] -- test assertion on mock fetch call args, not URL sanitization
     const githubCall = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).startsWith("https://api.github.com"),
+      (c[0] as string).includes("api.github.com/repos/") &&
+      (c[0] as string).includes("/actions/workflows/"),
     );
     expect(githubCall).toBeDefined();
     expect(githubCall![0]).toContain("dispatches");
@@ -326,8 +328,9 @@ describe("view_submission: deploy-confirm-modal", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     // Should not call GitHub at all
+    // codeql[js/incomplete-url-scheme-check] -- test assertion on mock fetch call args, not URL sanitization
     const githubCall = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).startsWith("https://api.github.com"),
+      (c[0] as string).includes("api.github.com/"),
     );
     expect(githubCall).toBeUndefined();
 
@@ -373,14 +376,4 @@ describe("view_submission: deploy-confirm-modal", () => {
     });
     verifyOk(payload);
 
-    await POST(makeRequest(payload));
-    await new Promise((r) => setTimeout(r, 50));
-
-    const deployPost = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).includes("chat.postMessage"),
-    );
-    expect(deployPost![1].body as string).toContain("U777");
-
-    delete process.env.GITHUB_TOKEN;
-  });
-});
+    await POST(makeRequest(
