@@ -1,0 +1,14 @@
+{
+  "exclude": [
+    "node_modules",
+    ".next",
+    ".sst"
+  ],
+  "ignore": [
+    "infrastructure/pi-alert-api",
+    "scripts/pi-routines",
+    "scripts/fix-pi-ssm-permission.py",
+    "scripts/grant-ci-iam-permissions.py"
+  ],
+  "pythonVersion": "3.11"
+}
