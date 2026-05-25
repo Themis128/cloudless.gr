@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 """
 Grant ssm:GetParametersByPath to the cloudless-pi-standby IAM user.
@@ -41,7 +42,7 @@ import sys
 import boto3
 from botocore.exceptions import ClientError
 
-ACCOUNT_ID = "278585680617"
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "278585680617")
 IAM_USER = "cloudless-pi-standby"
 POLICY_NAME = "PiStandbySSMRead"
 SSM_PATH = "/cloudless/production"

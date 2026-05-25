@@ -69,7 +69,7 @@ def _get_cert_expiry(hostname: str, port: int = 443, timeout: float = 10.0) -> d
 async def _check_domain(hostname: str) -> None:
     """Check one domain and log the result. Fires alerts via logger for now;
     wire into receive_alert() in main.py if in-process calls are preferred."""
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     expiry = await loop.run_in_executor(None, _get_cert_expiry, hostname)
 
     if expiry is None:
