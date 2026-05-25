@@ -19,6 +19,7 @@ export default function TrainingBanner({ locale }: Readonly<TrainingBannerProps>
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!sessionStorage.getItem(DISMISS_KEY)) setMounted(true);
   }, []);
 

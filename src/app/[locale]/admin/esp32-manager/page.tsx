@@ -174,6 +174,33 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
   );
 }
 
+// ── DeviceSelect ───────────────────────────────────────────────────────────────
+
+interface DeviceSelectProps {
+  devices: Device[];
+  selectedId: string;
+  setSelectedId: (id: string) => void;
+}
+
+function DeviceSelect({ devices, selectedId, setSelectedId }: DeviceSelectProps) {
+  return devices.length > 1 ? (
+    <div className="mb-4">
+      <label className="mb-1 block font-mono text-xs text-slate-500">Device</label>
+      <select
+        value={selectedId}
+        onChange={(e) => setSelectedId(e.target.value)}
+        className="focus:border-neon-magenta w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white focus:outline-none"
+      >
+        {devices.map((d) => (
+          <option key={d.device_id} value={d.device_id}>
+            {d.device_id} {d.stale ? "(stale)" : "(online)"}
+          </option>
+        ))}
+      </select>
+    </div>
+  ) : null;
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 type Tab = "devices" | "led" | "config" | "ota";
@@ -242,6 +269,7 @@ export default function Esp32ManagerPage() {
   }, [call]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDevices().catch(() => {});
     const t = setInterval(() => {
       loadDevices().catch(() => {});
@@ -262,6 +290,7 @@ export default function Esp32ManagerPage() {
   }, [call, selectedId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tab === "config") loadConfig().catch(() => {});
   }, [tab, loadConfig]);
 
@@ -302,26 +331,6 @@ export default function Esp32ManagerPage() {
       : "✗ Failed to send OTA command";
     setOtaFeedback(msg);
   }, [call, selectedId, otaUrl, otaVersion]);
-
-  // ── Device selector (shared across tabs) ─────────────────────────────────────
-
-  const DeviceSelect = () =>
-    devices.length > 1 ? (
-      <div className="mb-4">
-        <label className="mb-1 block font-mono text-xs text-slate-500">Device</label>
-        <select
-          value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
-          className="focus:border-neon-magenta w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white focus:outline-none"
-        >
-          {devices.map((d) => (
-            <option key={d.device_id} value={d.device_id}>
-              {d.device_id} {d.stale ? "(stale)" : "(online)"}
-            </option>
-          ))}
-        </select>
-      </div>
-    ) : null;
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -432,7 +441,7 @@ export default function Esp32ManagerPage() {
       {/* ── LED Control tab ──────────────────────────────────────────────────── */}
       {tab === "led" && (
         <div className="space-y-5">
-          <DeviceSelect />
+          <DeviceSelect devices={devices} selectedId={selectedId} setSelectedId={setSelectedId} />
 
           {/* Severity buttons */}
           <Card>
@@ -533,7 +542,7 @@ export default function Esp32ManagerPage() {
       {/* ── Config tab ───────────────────────────────────────────────────────── */}
       {tab === "config" && (
         <div className="space-y-5">
-          <DeviceSelect />
+          <DeviceSelect devices={devices} selectedId={selectedId} setSelectedId={setSelectedId} />
 
           {configLoading && !config ? (
             <Card>
@@ -628,7 +637,7 @@ export default function Esp32ManagerPage() {
       {/* ── OTA tab ──────────────────────────────────────────────────────────── */}
       {tab === "ota" && (
         <div className="space-y-5">
-          <DeviceSelect />
+          <DeviceSelect devices={devices} selectedId={selectedId} setSelectedId={setSelectedId} />
 
           <Card>
             <p className="mb-4 font-mono text-xs text-slate-500">

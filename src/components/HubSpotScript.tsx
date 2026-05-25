@@ -17,6 +17,7 @@ export function HubSpotScript({ nonce }: Readonly<{ nonce?: string }>) {
 
   useEffect(() => {
     if (HS_PORTAL_ID.length > 0 && PRODUCTION_HOSTS.has(globalThis.location.hostname)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShouldLoad(true);
     }
   }, []);
