@@ -47,6 +47,8 @@ jobs:
             --exclude "^https://cloudless\.online"
             --exclude "^https://\.\.\."
             --exclude "^https?://[^@]+@.*\.ingest\.sentry\.io"
+            --exclude "^https?://.*\.api-us1\.com"
+            --exclude "^https?://www\.linkedin\.com"
             "README.md"
             "docs/**/*.md"
             ".github/**/*.md"
