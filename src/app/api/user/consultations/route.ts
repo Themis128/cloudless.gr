@@ -20,13 +20,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No email in token" }, { status: 400 });
   }
 
-  if (
-    !isConfigured(
-      "GOOGLE_SERVICE_ACCOUNT_EMAIL",
-      "GOOGLE_PRIVATE_KEY",
-      "GOOGLE_CALENDAR_ID",
-    )
-  ) {
+  if (!isConfigured("GOOGLE_SERVICE_ACCOUNT_EMAIL", "GOOGLE_PRIVATE_KEY", "GOOGLE_CALENDAR_ID")) {
     // Calendar not configured — return empty list, not an error
     return NextResponse.json({ consultations: [], configured: false });
   }
@@ -38,9 +32,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ consultations, configured: true });
   } catch (err) {
     console.error("Failed to fetch consultations:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch consultations" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch consultations" }, { status: 500 });
   }
 }

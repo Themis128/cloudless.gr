@@ -25,10 +25,7 @@ export async function GET(request: NextRequest) {
     const _r = mapIntegrationError(err);
     if (_r) return _r;
     console.error("[API] Comments error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch comments" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch comments" }, { status: 500 });
   }
 }
 
@@ -40,25 +37,19 @@ export async function POST(request: NextRequest) {
     const { page_id, text } = await request.json();
 
     if (!page_id || !text) {
-      return NextResponse.json(
-        { error: "page_id and text are required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "page_id and text are required" }, { status: 400 });
     }
 
     if (typeof text !== "string" || text.length > 5000) {
       return NextResponse.json(
         { error: "text must be a string no longer than 5000 characters" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     const comment = await addComment(page_id, text);
     if (!comment) {
-      return NextResponse.json(
-        { error: "Failed to add comment" },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "Failed to add comment" }, { status: 500 });
     }
 
     return NextResponse.json({ comment }, { status: 201 });
@@ -66,9 +57,6 @@ export async function POST(request: NextRequest) {
     const _r = mapIntegrationError(err);
     if (_r) return _r;
     console.error("[API] Add comment error:", err);
-    return NextResponse.json(
-      { error: "Failed to add comment" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to add comment" }, { status: 500 });
   }
 }

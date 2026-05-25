@@ -53,7 +53,7 @@ export interface RateLimitExceeded {
 export function rateLimit(
   key: string,
   limit: number,
-  windowMs = 60_000,
+  windowMs = 60_000
 ): RateLimitResult | RateLimitExceeded {
   maybePrune(windowMs);
   const now = Date.now();
@@ -73,7 +73,7 @@ export function rateLimit(
             "X-RateLimit-Limit": String(limit),
             "X-RateLimit-Remaining": "0",
           },
-        },
+        }
       ),
     };
   }

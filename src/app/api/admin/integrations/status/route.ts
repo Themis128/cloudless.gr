@@ -3,11 +3,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import { getConfig } from "@/lib/ssm-config";
 import { verifyActiveCampaignToken } from "@/lib/activecampaign";
 
-export type IntegrationStatus =
-  | "configured"
-  | "not_configured"
-  | "degraded"
-  | "error";
+export type IntegrationStatus = "configured" | "not_configured" | "degraded" | "error";
 
 export type IntegrationReport = {
   id: string;
@@ -23,17 +19,13 @@ type Cfg = Awaited<ReturnType<typeof getConfig>>;
 
 async function pingHubSpot(token: string): Promise<PingResult> {
   try {
-    const res = await fetch(
-      "https://api.hubapi.com/crm/v3/objects/contacts?limit=1",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(5000),
-      },
-    );
+    const res = await fetch("https://api.hubapi.com/crm/v3/objects/contacts?limit=1", {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    });
     if (res.status === 401 || res.status === 403)
       return { status: "degraded", message: `Token rejected (${res.status}).` };
-    if (!res.ok)
-      return { status: "error", message: `API returned ${res.status}` };
+    if (!res.ok) return { status: "error", message: `API returned ${res.status}` };
     return { status: "configured" };
   } catch {
     return { status: "error", message: "Connection failed." };
@@ -51,8 +43,7 @@ async function pingSlack(token: string): Promise<PingResult> {
       signal: AbortSignal.timeout(5000),
     });
     const data = await res.json();
-    if (!data.ok)
-      return { status: "degraded", message: data.error ?? "auth.test failed." };
+    if (!data.ok) return { status: "degraded", message: data.error ?? "auth.test failed." };
     return { status: "configured", message: `Workspace: ${data.team}` };
   } catch {
     return { status: "error", message: "Connection failed." };
@@ -68,10 +59,8 @@ async function pingNotion(token: string): Promise<PingResult> {
       },
       signal: AbortSignal.timeout(5000),
     });
-    if (res.status === 401)
-      return { status: "degraded", message: "Token rejected (401)." };
-    if (!res.ok)
-      return { status: "error", message: `API returned ${res.status}` };
+    if (res.status === 401) return { status: "degraded", message: "Token rejected (401)." };
+    if (!res.ok) return { status: "error", message: `API returned ${res.status}` };
     return { status: "configured" };
   } catch {
     return { status: "error", message: "Connection failed." };
@@ -86,8 +75,7 @@ async function pingStripe(secretKey: string): Promise<PingResult> {
     });
     if (res.status === 401 || res.status === 403)
       return { status: "degraded", message: "Secret key rejected." };
-    if (!res.ok)
-      return { status: "error", message: `API returned ${res.status}` };
+    if (!res.ok) return { status: "error", message: `API returned ${res.status}` };
     return { status: "configured" };
   } catch {
     return { status: "error", message: "Connection failed." };
@@ -103,9 +91,7 @@ function sentryStatus(cfg: Cfg): IntegrationStatus {
 }
 
 function sentryReport(cfg: Cfg): IntegrationReport {
-  const dsnOnly = Boolean(
-    process.env.NEXT_PUBLIC_SENTRY_DSN && !cfg.SENTRY_AUTH_TOKEN,
-  );
+  const dsnOnly = Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN && !cfg.SENTRY_AUTH_TOKEN);
   return {
     id: "sentry",
     name: "Sentry",
@@ -118,10 +104,7 @@ function sentryReport(cfg: Cfg): IntegrationReport {
   };
 }
 
-function tiktokStatus(
-  appReady: boolean,
-  fullyConfigured: boolean,
-): IntegrationStatus {
+function tiktokStatus(appReady: boolean, fullyConfigured: boolean): IntegrationStatus {
   if (fullyConfigured) return "configured";
   if (appReady) return "degraded";
   return "not_configured";
@@ -129,9 +112,7 @@ function tiktokStatus(
 
 function tiktokReport(cfg: Cfg): IntegrationReport {
   const appReady = Boolean(cfg.TIKTOK_APP_ID && cfg.TIKTOK_APP_SECRET);
-  const fullyConfigured = Boolean(
-    appReady && cfg.TIKTOK_ACCESS_TOKEN && cfg.TIKTOK_ADVERTISER_ID,
-  );
+  const fullyConfigured = Boolean(appReady && cfg.TIKTOK_ACCESS_TOKEN && cfg.TIKTOK_ADVERTISER_ID);
   const tiktokSetupUrl = appReady
     ? `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/oauth/tiktok`
     : "https://ads.tiktok.com/marketing_api/apps";
@@ -148,10 +129,7 @@ function tiktokReport(cfg: Cfg): IntegrationReport {
   };
 }
 
-function xAdsStatus(
-  tokensReady: boolean,
-  fullyConfigured: boolean,
-): IntegrationStatus {
+function xAdsStatus(tokensReady: boolean, fullyConfigured: boolean): IntegrationStatus {
   if (fullyConfigured) return "configured";
   if (tokensReady) return "degraded";
   return "not_configured";
@@ -159,10 +137,7 @@ function xAdsStatus(
 
 function xAdsReport(cfg: Cfg): IntegrationReport {
   const tokensReady = Boolean(
-    cfg.X_API_KEY &&
-      cfg.X_ACCESS_TOKEN &&
-      cfg.X_API_SECRET &&
-      cfg.X_ACCESS_SECRET,
+    cfg.X_API_KEY && cfg.X_ACCESS_TOKEN && cfg.X_API_SECRET && cfg.X_ACCESS_SECRET
   );
   const fullyConfigured = Boolean(tokensReady && cfg.X_AD_ACCOUNT_ID);
   return {
@@ -202,9 +177,7 @@ function buildCoreReports(cfg: Cfg): IntegrationReport[] {
       name: "Google (Calendar + Search Console)",
       category: "productivity",
       status: configuredIf(
-        cfg.GOOGLE_CLIENT_EMAIL &&
-          cfg.GOOGLE_PRIVATE_KEY &&
-          cfg.GOOGLE_CALENDAR_ID,
+        cfg.GOOGLE_CLIENT_EMAIL && cfg.GOOGLE_PRIVATE_KEY && cfg.GOOGLE_CALENDAR_ID
       ),
       setupUrl: "https://console.cloud.google.com/iam-admin/serviceaccounts",
     },
@@ -224,16 +197,12 @@ function buildCoreReports(cfg: Cfg): IntegrationReport[] {
 
 function buildSocialAdsReports(cfg: Cfg): IntegrationReport[] {
   const metaConfigured = Boolean(
-    cfg.META_AD_ACCOUNT_ID && cfg.META_ACCESS_TOKEN && cfg.META_PIXEL_ID,
+    cfg.META_AD_ACCOUNT_ID && cfg.META_ACCESS_TOKEN && cfg.META_PIXEL_ID
   );
   const linkedInConfigured = Boolean(
-    cfg.LINKEDIN_ACCESS_TOKEN &&
-      cfg.LINKEDIN_AD_ACCOUNT_ID &&
-      cfg.LINKEDIN_ORGANIZATION_URN,
+    cfg.LINKEDIN_ACCESS_TOKEN && cfg.LINKEDIN_AD_ACCOUNT_ID && cfg.LINKEDIN_ORGANIZATION_URN
   );
-  const googleAdsConfigured = Boolean(
-    cfg.GOOGLE_ADS_DEVELOPER_TOKEN && cfg.GOOGLE_ADS_CUSTOMER_ID,
-  );
+  const googleAdsConfigured = Boolean(cfg.GOOGLE_ADS_DEVELOPER_TOKEN && cfg.GOOGLE_ADS_CUSTOMER_ID);
   const metaMessage = metaConfigured
     ? "Instagram Business Account ID blocked — Meta ad policy violation on account 1558125105019725. Appeal required."
     : undefined;
@@ -275,22 +244,13 @@ function buildStaticReports(cfg: Cfg): IntegrationReport[] {
 }
 
 async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
-  const [stripeResult, hubspotResult, slackResult, notionResult, acResult] =
-    await Promise.all([
-      cfg.STRIPE_SECRET_KEY
-        ? pingStripe(cfg.STRIPE_SECRET_KEY)
-        : Promise.resolve(NOT_CONFIGURED),
-      cfg.HUBSPOT_API_KEY
-        ? pingHubSpot(cfg.HUBSPOT_API_KEY)
-        : Promise.resolve(NOT_CONFIGURED),
-      cfg.SLACK_BOT_TOKEN
-        ? pingSlack(cfg.SLACK_BOT_TOKEN)
-        : Promise.resolve(NOT_CONFIGURED),
-      cfg.NOTION_API_KEY
-        ? pingNotion(cfg.NOTION_API_KEY)
-        : Promise.resolve(NOT_CONFIGURED),
-      verifyActiveCampaignToken(),
-    ]);
+  const [stripeResult, hubspotResult, slackResult, notionResult, acResult] = await Promise.all([
+    cfg.STRIPE_SECRET_KEY ? pingStripe(cfg.STRIPE_SECRET_KEY) : Promise.resolve(NOT_CONFIGURED),
+    cfg.HUBSPOT_API_KEY ? pingHubSpot(cfg.HUBSPOT_API_KEY) : Promise.resolve(NOT_CONFIGURED),
+    cfg.SLACK_BOT_TOKEN ? pingSlack(cfg.SLACK_BOT_TOKEN) : Promise.resolve(NOT_CONFIGURED),
+    cfg.NOTION_API_KEY ? pingNotion(cfg.NOTION_API_KEY) : Promise.resolve(NOT_CONFIGURED),
+    verifyActiveCampaignToken(),
+  ]);
 
   const acStatusMap: Record<string, IntegrationStatus> = {
     valid: "configured",

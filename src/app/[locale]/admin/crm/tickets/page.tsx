@@ -4,8 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 const REFRESH_INTERVAL = 10_000;
-const TH_CLASS =
-  "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
+const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
 
 interface Ticket {
   id: string;
@@ -85,9 +84,7 @@ export default function AdminTicketsPage() {
     return (t.properties.subject ?? "").toLowerCase().includes(q);
   });
 
-  const open = tickets.filter(
-    (t) => t.properties.hs_pipeline_stage !== "4",
-  ).length;
+  const open = tickets.filter((t) => t.properties.hs_pipeline_stage !== "4").length;
 
   let mainContent: React.ReactElement;
   if (loading) {
@@ -122,8 +119,7 @@ export default function AdminTicketsPage() {
             </thead>
             <tbody>
               {filtered.map((t) => {
-                const priority =
-                  t.properties.hs_ticket_priority?.toUpperCase() ?? "";
+                const priority = t.properties.hs_ticket_priority?.toUpperCase() ?? "";
                 const stage = t.properties.hs_pipeline_stage ?? "";
                 return (
                   <tr
@@ -131,14 +127,12 @@ export default function AdminTicketsPage() {
                     className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
                   >
                     <td className="max-w-xs px-6 py-4 text-white">
-                      <span className="line-clamp-2">
-                        {t.properties.subject || "—"}
-                      </span>
+                      <span className="line-clamp-2">{t.properties.subject || "—"}</span>
                     </td>
                     <td className="px-6 py-4">
                       {priority ? (
                         <span
-                          className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${priorityClasses[priority] ?? "text-slate-400 bg-slate-800/50"}`}
+                          className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${priorityClasses[priority] ?? "bg-slate-800/50 text-slate-400"}`}
                         >
                           {priority}
                         </span>
@@ -148,16 +142,14 @@ export default function AdminTicketsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${stage === "4" ? "text-neon-green bg-neon-green/10" : "text-yellow-400 bg-yellow-400/10"}`}
+                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${stage === "4" ? "text-neon-green bg-neon-green/10" : "bg-yellow-400/10 text-yellow-400"}`}
                       >
                         {stageLabels[stage] ?? (stage || "—")}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-slate-500">
                       {t.properties.createdate
-                        ? new Date(t.properties.createdate).toLocaleDateString(
-                            "en-IE",
-                          )
+                        ? new Date(t.properties.createdate).toLocaleDateString("en-IE")
                         : "—"}
                     </td>
                   </tr>
@@ -165,10 +157,7 @@ export default function AdminTicketsPage() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="px-6 py-12 text-center font-mono text-slate-600"
-                  >
+                  <td colSpan={4} className="px-6 py-12 text-center font-mono text-slate-600">
                     {search ? "No tickets match your search" : "No tickets yet"}
                   </td>
                 </tr>
@@ -188,9 +177,7 @@ export default function AdminTicketsPage() {
             <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
             <span className="text-neon-magenta font-mono text-xs">CRM</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            Support Tickets
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">Support Tickets</h1>
           <p className="font-body mt-1 text-slate-400">
             Customer support tickets synced from HubSpot.
           </p>

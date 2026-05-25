@@ -8,12 +8,7 @@ const REFRESH_INTERVAL = 30_000;
 
 type PlatformId = "tiktok" | "linkedin" | "x" | "google" | "meta";
 type IntegrationId = "tiktok" | "linkedin" | "x" | "google_ads" | "meta";
-type ConnectionStatus =
-  | "configured"
-  | "not_configured"
-  | "degraded"
-  | "error"
-  | "unknown";
+type ConnectionStatus = "configured" | "not_configured" | "degraded" | "error" | "unknown";
 
 interface PlatformDef {
   id: PlatformId;
@@ -173,9 +168,7 @@ async function fetchStatusMap(): Promise<
         message?: string;
       }>;
     };
-    const map: Partial<
-      Record<IntegrationId, { status: ConnectionStatus; message?: string }>
-    > = {};
+    const map: Partial<Record<IntegrationId, { status: ConnectionStatus; message?: string }>> = {};
     for (const i of data.integrations ?? []) {
       map[i.id as IntegrationId] = { status: i.status, message: i.message };
     }
@@ -188,15 +181,13 @@ async function fetchStatusMap(): Promise<
 async function fetchPlatformStats(
   platform: PlatformDef,
   start: string,
-  end: string,
+  end: string
 ): Promise<PlatformStats> {
   const stats = emptyStats();
 
   const [campaignsRes, insightsRes] = await Promise.allSettled([
     fetchWithAuth(`/api/admin/campaigns/${platform.id}`),
-    fetchWithAuth(
-      `/api/admin/campaigns/${platform.id}/insights?start=${start}&end=${end}`,
-    ),
+    fetchWithAuth(`/api/admin/campaigns/${platform.id}/insights?start=${start}&end=${end}`),
   ]);
 
   if (campaignsRes.status === "fulfilled" && campaignsRes.value.ok) {
@@ -220,11 +211,7 @@ async function fetchPlatformStats(
   return stats;
 }
 
-function applyInsights(
-  id: PlatformId,
-  data: unknown,
-  stats: PlatformStats,
-): void {
+function applyInsights(id: PlatformId, data: unknown, stats: PlatformStats): void {
   if (!data || typeof data !== "object") return;
   const root = data as Record<string, unknown>;
 
@@ -328,13 +315,10 @@ function useCampaignsHub() {
           s.status = conn.status;
           s.statusMessage = conn.message;
           return [p.id, s] as const;
-        }),
+        })
       );
 
-      const stats = Object.fromEntries(entries) as Record<
-        PlatformId,
-        PlatformStats
-      >;
+      const stats = Object.fromEntries(entries) as Record<PlatformId, PlatformStats>;
       setHub({ stats, fetchedAt: new Date().toISOString() });
       setError(null);
     } catch (err) {
@@ -377,13 +361,9 @@ export default function CampaignsDashboard() {
         <div>
           <div className="border-neon-magenta/20 bg-neon-magenta/10 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-magenta font-mono text-xs">
-              CAMPAIGNS
-            </span>
+            <span className="text-neon-magenta font-mono text-xs">CAMPAIGNS</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            Campaign Manager
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">Campaign Manager</h1>
           <p className="font-body mt-1 text-slate-400">
             Manage paid campaigns across all advertising platforms.
           </p>
@@ -415,14 +395,9 @@ export default function CampaignsDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {platforms.map((p) => {
           const stats = hub.stats[p.id];
-          const card = (
-            <PlatformCard platform={p} stats={stats} loading={loading} />
-          );
+          const card = <PlatformCard platform={p} stats={stats} loading={loading} />;
           return p.disabled ? (
-            <div
-              key={p.href}
-              className={`rounded-xl border p-5 transition-all ${p.color}`}
-            >
+            <div key={p.href} className={`rounded-xl border p-5 transition-all ${p.color}`}>
               {card}
             </div>
           ) : (
@@ -438,9 +413,7 @@ export default function CampaignsDashboard() {
       </div>
 
       <div className="mt-8 rounded-xl border border-slate-800 bg-slate-900/20 p-5">
-        <h2 className="font-heading mb-2 font-semibold text-white">
-          Quick Links
-        </h2>
+        <h2 className="font-heading mb-2 font-semibold text-white">Quick Links</h2>
         <div className="flex flex-wrap gap-3">
           <Link
             href="/admin/calendar"
@@ -491,13 +464,7 @@ function computeTotals(stats: Record<PlatformId, PlatformStats>): Totals {
   return { connected, totalPlatforms, activeCampaigns, impressions, clicks };
 }
 
-function TotalsStrip({
-  totals,
-  loading,
-}: {
-  readonly totals: Totals;
-  readonly loading: boolean;
-}) {
+function TotalsStrip({ totals, loading }: { readonly totals: Totals; readonly loading: boolean }) {
   return (
     <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
       <Tile
@@ -510,16 +477,8 @@ function TotalsStrip({
         value={formatNumber(totals.activeCampaigns)}
         loading={loading}
       />
-      <Tile
-        label="Impressions (MTD)"
-        value={formatNumber(totals.impressions)}
-        loading={loading}
-      />
-      <Tile
-        label="Clicks (MTD)"
-        value={formatNumber(totals.clicks)}
-        loading={loading}
-      />
+      <Tile label="Impressions (MTD)" value={formatNumber(totals.impressions)} loading={loading} />
+      <Tile label="Clicks (MTD)" value={formatNumber(totals.clicks)} loading={loading} />
     </div>
   );
 }
@@ -535,15 +494,11 @@ function Tile({
 }) {
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/20 p-4">
-      <p className="font-mono text-[10px] uppercase tracking-widest text-slate-600">
-        {label}
-      </p>
+      <p className="font-mono text-[10px] tracking-widest text-slate-600 uppercase">{label}</p>
       {loading ? (
         <div className="mt-2 h-6 w-16 animate-pulse rounded bg-slate-800/60" />
       ) : (
-        <p className="font-heading mt-1 text-xl font-bold text-white">
-          {value}
-        </p>
+        <p className="font-heading mt-1 text-xl font-bold text-white">{value}</p>
       )}
     </div>
   );
@@ -558,19 +513,14 @@ function PlatformCard({
   readonly stats: PlatformStats;
   readonly loading: boolean;
 }) {
-  const showKpis =
-    !platform.disabled && stats.status === "configured" && !loading;
+  const showKpis = !platform.disabled && stats.status === "configured" && !loading;
   return (
     <>
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className={`font-mono text-lg font-bold ${platform.badge}`}>
-            {platform.icon}
-          </span>
+          <span className={`font-mono text-lg font-bold ${platform.badge}`}>{platform.icon}</span>
           <div>
-            <p className={`font-mono text-sm font-semibold ${platform.badge}`}>
-              {platform.name}
-            </p>
+            <p className={`font-mono text-sm font-semibold ${platform.badge}`}>{platform.name}</p>
             {platform.disabled && (
               <span className="rounded-full border border-yellow-900/30 bg-yellow-950/20 px-2 py-0.5 font-mono text-[9px] text-yellow-600">
                 PENDING
@@ -580,15 +530,10 @@ function PlatformCard({
         </div>
         <div
           className="flex items-center gap-1.5"
-          title={
-            stats.statusMessage ??
-            STATUS_LABEL[stats.status]
-          }
+          title={stats.statusMessage ?? STATUS_LABEL[stats.status]}
         >
-          <span
-            className={`h-2 w-2 rounded-full ${STATUS_DOT_CLASS[stats.status]}`}
-          />
-          <span className="font-mono text-[9px] uppercase tracking-wider text-slate-500">
+          <span className={`h-2 w-2 rounded-full ${STATUS_DOT_CLASS[stats.status]}`} />
+          <span className="font-mono text-[9px] tracking-wider text-slate-500 uppercase">
             {STATUS_LABEL[stats.status]}
           </span>
         </div>
@@ -600,28 +545,17 @@ function PlatformCard({
         <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-800/60 pt-3">
           <Kpi
             label="Active"
-            value={
-              stats.activeCampaigns === null ? "—" : formatNumber(stats.activeCampaigns)
-            }
+            value={stats.activeCampaigns === null ? "—" : formatNumber(stats.activeCampaigns)}
           />
           <Kpi
             label="Spend MTD"
-            value={
-              stats.spend
-                ? formatMoney(stats.spend.amount, stats.spend.currency)
-                : "—"
-            }
+            value={stats.spend ? formatMoney(stats.spend.amount, stats.spend.currency) : "—"}
           />
           <Kpi
             label="Impressions"
-            value={
-              stats.impressions === null ? "—" : formatNumber(stats.impressions)
-            }
+            value={stats.impressions === null ? "—" : formatNumber(stats.impressions)}
           />
-          <Kpi
-            label="Clicks"
-            value={stats.clicks === null ? "—" : formatNumber(stats.clicks)}
-          />
+          <Kpi label="Clicks" value={stats.clicks === null ? "—" : formatNumber(stats.clicks)} />
         </div>
       ) : null}
       {loading && !platform.disabled && (
@@ -641,9 +575,7 @@ function PlatformCard({
 function Kpi({ label, value }: { readonly label: string; readonly value: string }) {
   return (
     <div>
-      <p className="font-mono text-[9px] uppercase tracking-wider text-slate-600">
-        {label}
-      </p>
+      <p className="font-mono text-[9px] tracking-wider text-slate-600 uppercase">{label}</p>
       <p className="font-mono text-sm font-semibold text-white">{value}</p>
     </div>
   );

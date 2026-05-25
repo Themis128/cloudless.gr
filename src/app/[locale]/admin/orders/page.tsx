@@ -70,9 +70,7 @@ export default function AdminOrdersPage() {
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-magenta font-mono text-xs">ORDERS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">
-          Order Management
-        </h1>
+        <h1 className="font-heading text-2xl font-bold text-white">Order Management</h1>
         <p className="font-body mt-1 text-slate-400">
           Live data from Stripe — checkout sessions and subscriptions.
         </p>
@@ -93,13 +91,9 @@ export default function AdminOrdersPage() {
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
-          <p className="font-mono text-xs text-slate-500">
-            Active Subscriptions
-          </p>
+          <p className="font-mono text-xs text-slate-500">Active Subscriptions</p>
           <p className="font-heading text-neon-cyan mt-1 text-2xl font-bold">
-            {loading
-              ? "…"
-              : subscriptions.filter((s) => s.status === "active").length}
+            {loading ? "…" : subscriptions.filter((s) => s.status === "active").length}
           </p>
         </div>
       </div>
@@ -168,9 +162,7 @@ export default function AdminOrdersPage() {
                     <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
                       {order.id.slice(0, 20)}…
                     </td>
-                    <td className="px-6 py-4 font-mono text-white">
-                      {order.email}
-                    </td>
+                    <td className="px-6 py-4 font-mono text-white">{order.email}</td>
                     <td className="max-w-[200px] truncate px-6 py-4 text-slate-300">
                       {order.items.map((i) => i.description).join(", ") || "—"}
                     </td>
@@ -179,7 +171,7 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${statusClasses[order.status] ?? "text-slate-400 bg-slate-800/50"}`}
+                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${statusClasses[order.status] ?? "bg-slate-800/50 text-slate-400"}`}
                       >
                         {order.status}
                       </span>
@@ -191,10 +183,7 @@ export default function AdminOrdersPage() {
                 ))}
                 {orders.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-12 text-center font-mono text-slate-600"
-                    >
+                    <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">
                       No orders yet
                     </td>
                   </tr>
@@ -241,25 +230,20 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${statusClasses[sub.status] ?? "text-slate-400 bg-slate-800/50"}`}
+                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${statusClasses[sub.status] ?? "bg-slate-800/50 text-slate-400"}`}
                       >
                         {sub.status}
                         {sub.cancelAtPeriodEnd ? " (canceling)" : ""}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-slate-500">
-                      {new Date(sub.currentPeriodEnd).toLocaleDateString(
-                        "en-IE",
-                      )}
+                      {new Date(sub.currentPeriodEnd).toLocaleDateString("en-IE")}
                     </td>
                   </tr>
                 ))}
                 {subscriptions.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="px-6 py-12 text-center font-mono text-slate-600"
-                    >
+                    <td colSpan={5} className="px-6 py-12 text-center font-mono text-slate-600">
                       No subscriptions yet
                     </td>
                   </tr>

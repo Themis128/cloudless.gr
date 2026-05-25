@@ -64,7 +64,7 @@ export async function listComments(blockId: string): Promise<NotionComment[]> {
     // codeql[js/log-injection] -- error message sanitized (newlines stripped)
     console.error(
       "[Notion Comments] Failed to list comments:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
     );
     return [];
   }
@@ -76,10 +76,7 @@ export async function listComments(blockId: string): Promise<NotionComment[]> {
  * Note: The Notion API only supports adding comments to pages (not blocks)
  * when using an internal integration.
  */
-export async function addComment(
-  pageId: string,
-  text: string,
-): Promise<NotionComment | null> {
+export async function addComment(pageId: string, text: string): Promise<NotionComment | null> {
   await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
@@ -96,7 +93,7 @@ export async function addComment(
   } catch (err) {
     console.error(
       "[Notion Comments] Failed to add comment:",
-      (err as Error)?.message ?? "unknown error",
+      (err as Error)?.message ?? "unknown error"
     );
     return null;
   }
@@ -107,7 +104,7 @@ export async function addComment(
  */
 export async function replyToDiscussion(
   discussionId: string,
-  text: string,
+  text: string
 ): Promise<NotionComment | null> {
   await requireIntegrationAsync("NOTION_API_KEY");
 
@@ -125,7 +122,7 @@ export async function replyToDiscussion(
   } catch (err) {
     console.error(
       "[Notion Comments] Failed to reply to discussion:",
-      (err as Error)?.message ?? "unknown error",
+      (err as Error)?.message ?? "unknown error"
     );
     return null;
   }

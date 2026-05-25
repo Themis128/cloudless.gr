@@ -32,10 +32,7 @@ export default function Navbar() {
   // Close user menu on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        userMenuRef.current &&
-        !userMenuRef.current.contains(e.target as Node)
-      ) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
       }
     }
@@ -57,7 +54,7 @@ export default function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-shadow duration-200${scrolled ? " [box-shadow:var(--shadow-md)]" : ""}`}
+      className={`sticky top-0 z-50 transition-shadow duration-200${scrolled ? "[box-shadow:var(--shadow-md)]" : ""}`}
     >
       {/* QD-inspired top accent bar */}
       <div className="bg-neon-cyan h-px shadow-[0_0_10px_rgba(0,255,245,0.5)]" />
@@ -100,15 +97,10 @@ export default function Navbar() {
                       className="hover:border-neon-cyan/30 flex min-h-11 items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-slate-300 transition-all hover:text-white"
                     >
                       <span className="bg-neon-cyan/20 border-neon-cyan/30 text-neon-cyan flex h-6 w-6 items-center justify-center rounded-full border text-xs">
-                        {(user.name ||
-                          user.email ||
-                          user.username ||
-                          "U")[0].toUpperCase()}
+                        {(user.name || user.email || user.username || "U")[0].toUpperCase()}
                       </span>
                       <span className="hidden max-w-30 truncate xl:inline">
-                        {user.name ||
-                          user.email?.split("@")[0] ||
-                          user.username}
+                        {user.name || user.email?.split("@")[0] || user.username}
                       </span>
                       <svg
                         width="12"
@@ -140,11 +132,7 @@ export default function Navbar() {
                             onClick={() => setUserMenuOpen(false)}
                             className="hover:text-neon-magenta hover:bg-neon-magenta/5 block px-4 py-2.5 font-mono text-sm text-slate-300 transition-all"
                           >
-                            {translate(
-                              locale,
-                              "navbar.adminPanel",
-                              "Admin Panel",
-                            )}
+                            {translate(locale, "navbar.adminPanel", "Admin Panel")}
                           </Link>
                         )}
                         <div className="my-1 border-t border-slate-800" />
@@ -167,11 +155,7 @@ export default function Navbar() {
                       href="/contact"
                       className="bg-accent hover:bg-accent/90 rounded-lg px-5 py-2.5 font-mono text-sm font-semibold whitespace-nowrap text-white transition-all duration-300"
                     >
-                      {translate(
-                        locale,
-                        "navbar.freeAudit",
-                        "Get a Free Audit",
-                      )}
+                      {translate(locale, "navbar.freeAudit", "Get a Free Audit")}
                     </Link>
                     <Link
                       href="/auth/login"
@@ -194,23 +178,11 @@ export default function Navbar() {
             aria-expanded={mobileOpen}
           >
             {mobileOpen ? (
-              <svg
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
+              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M6 6l12 12M6 18L18 6" />
               </svg>
             ) : (
-              <svg
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
+              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             )}
@@ -220,9 +192,7 @@ export default function Navbar() {
         {/* Mobile Menu */}
         <div
           className={`bg-void/95 border-neon-cyan/10 overflow-x-hidden overflow-y-auto border-t px-6 backdrop-blur-xl transition-all duration-300 ease-in-out lg:hidden ${
-            mobileOpen
-              ? "max-h-[calc(100svh-4rem)] py-4 opacity-100"
-              : "max-h-0 py-0 opacity-0"
+            mobileOpen ? "max-h-[calc(100svh-4rem)] py-4 opacity-100" : "max-h-0 py-0 opacity-0"
           }`}
         >
           <div className="space-y-1">
@@ -230,7 +200,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="hover:text-neon-cyan active:text-neon-cyan active:scale-95 flex min-h-11 items-center py-3 font-mono text-sm font-medium text-slate-400 transition-all"
+                className="hover:text-neon-cyan active:text-neon-cyan flex min-h-11 items-center py-3 font-mono text-sm font-medium text-slate-400 transition-all active:scale-95"
                 onClick={() => setMobileOpen(false)}
               >
                 <span className="text-neon-cyan/40 mr-2">&gt;</span>
@@ -238,21 +208,15 @@ export default function Navbar() {
               </Link>
             ))}
             <div className="mt-2 flex items-center justify-between border-t border-slate-800 pt-2 pb-1">
-              <span className="font-mono text-xs text-slate-500">
-                {cartLabel}
-              </span>
+              <span className="font-mono text-xs text-slate-500">{cartLabel}</span>
               <CartButton />
             </div>
             <div className="mt-2 border-t border-slate-800 pt-1 pb-1">
-              <span className="mb-2 block font-mono text-xs text-slate-500">
-                {themeLabel}
-              </span>
+              <span className="mb-2 block font-mono text-xs text-slate-500">{themeLabel}</span>
               <ThemeSwitcherInline />
             </div>
             <div className="mt-2 border-t border-slate-800 pt-1 pb-1">
-              <span className="mb-2 block font-mono text-xs text-slate-500">
-                {languageLabel}
-              </span>
+              <span className="mb-2 block font-mono text-xs text-slate-500">{languageLabel}</span>
               <div className="flex flex-wrap gap-2">
                 {locales.map((l) => (
                   <button
@@ -297,14 +261,8 @@ export default function Navbar() {
                           className="active:text-neon-magenta flex min-h-11 items-center py-3 font-mono text-sm font-medium text-slate-400 transition-colors"
                           onClick={() => setMobileOpen(false)}
                         >
-                          <span className="text-neon-magenta/40 mr-2">
-                            &gt;
-                          </span>
-                          {translate(
-                            locale,
-                            "navbar.adminPanel",
-                            "Admin Panel",
-                          )}
+                          <span className="text-neon-magenta/40 mr-2">&gt;</span>
+                          {translate(locale, "navbar.adminPanel", "Admin Panel")}
                         </Link>
                       )}
                       <button
@@ -327,11 +285,7 @@ export default function Navbar() {
                       className="bg-accent hover:bg-accent/90 mt-2 block min-h-11 rounded-lg px-5 py-3 text-center font-mono text-sm font-semibold text-white transition-all"
                       onClick={() => setMobileOpen(false)}
                     >
-                      {translate(
-                        locale,
-                        "navbar.freeAudit",
-                        "Get a Free Audit",
-                      )}
+                      {translate(locale, "navbar.freeAudit", "Get a Free Audit")}
                     </Link>
                     <Link
                       href="/auth/login"
@@ -342,7 +296,7 @@ export default function Navbar() {
                     </Link>
                     <Link
                       href="/auth/signup"
-                      className="mt-2 block min-h-11 rounded-lg border border-slate-700 px-5 py-3 text-center font-mono text-sm font-semibold text-slate-300 transition-all hover:border-neon-cyan/30 hover:text-neon-cyan"
+                      className="hover:border-neon-cyan/30 hover:text-neon-cyan mt-2 block min-h-11 rounded-lg border border-slate-700 px-5 py-3 text-center font-mono text-sm font-semibold text-slate-300 transition-all"
                       onClick={() => setMobileOpen(false)}
                     >
                       {translate(locale, "navbar.signUp", "Sign Up")}

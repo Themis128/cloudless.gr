@@ -37,10 +37,9 @@ const MATRIX_TIMING_CLASS_NAMES = [
 // Precompute random animation data outside render to satisfy react-hooks/purity
 const MATRIX_RAIN_DATA = Array.from({ length: 20 }, (_, index) => ({
   columnClassName: MATRIX_COLUMN_CLASS_NAMES[index],
-  timingClassName:
-    MATRIX_TIMING_CLASS_NAMES[index % MATRIX_TIMING_CLASS_NAMES.length],
+  timingClassName: MATRIX_TIMING_CLASS_NAMES[index % MATRIX_TIMING_CLASS_NAMES.length],
   chars: Array.from({ length: 30 }, () =>
-    String.fromCharCode(0x30a0 + Math.floor(Math.random() * 96)),
+    String.fromCharCode(0x30a0 + Math.floor(Math.random() * 96))
   ).join("\n"),
 }));
 
@@ -76,7 +75,7 @@ export default function KonamiEasterEgg() {
         setIndex(0);
       }
     },
-    [index],
+    [index]
   );
 
   useEffect(() => {

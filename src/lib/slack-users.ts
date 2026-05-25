@@ -48,7 +48,7 @@ const BASE = "https://slack.com/api";
 async function slackGet(
   method: string,
   params: Record<string, string>,
-  token: string,
+  token: string
 ): Promise<UserApiResponse> {
   const qs = new URLSearchParams(params).toString();
   const res = await fetch(`${BASE}/${method}?${qs}`, {
@@ -62,7 +62,7 @@ async function slackGet(
 async function slackFormPost(
   method: string,
   body: Record<string, string>,
-  token: string,
+  token: string
 ): Promise<UserApiResponse> {
   const res = await fetch(`${BASE}/${method}`, {
     method: "POST",
@@ -87,10 +87,7 @@ async function slackFormPost(
  *
  * Docs: https://api.slack.com/methods/users.lookupByEmail
  */
-export async function lookupUserByEmail(
-  email: string,
-  token: string,
-): Promise<SlackUser | null> {
+export async function lookupUserByEmail(email: string, token: string): Promise<SlackUser | null> {
   const res = await slackFormPost("users.lookupByEmail", { email }, token);
   if (!res.ok) {
     if (res.error === "users_not_found") return null;
@@ -105,13 +102,9 @@ export async function lookupUserByEmail(
  *
  * Docs: https://api.slack.com/methods/users.info
  */
-export async function getUserInfo(
-  userId: string,
-  token: string,
-): Promise<SlackUser> {
+export async function getUserInfo(userId: string, token: string): Promise<SlackUser> {
   const res = await slackGet("users.info", { user: userId }, token);
-  if (!res.ok || !res.user)
-    throw new Error(`[SlackUsers] users.info: ${res.error}`);
+  if (!res.ok || !res.user) throw new Error(`[SlackUsers] users.info: ${res.error}`);
   return res.user;
 }
 
@@ -129,7 +122,7 @@ export async function listUsers(token: string): Promise<SlackUser[]> {
     const res = await slackGet(
       "users.list",
       { limit: "200", ...(cursor ? { cursor } : {}) },
-      token,
+      token
     );
     if (!res.ok) throw new Error(`[SlackUsers] users.list: ${res.error}`);
     all.push(...(res.members ?? []).filter((u) => !u.deleted));
@@ -143,10 +136,7 @@ export async function listUsers(token: string): Promise<SlackUser[]> {
  * Convenience: resolve an email to a Slack user ID.
  * Returns null if the user is not found or the email scope is missing.
  */
-export async function resolveEmailToUserId(
-  email: string,
-  token: string,
-): Promise<string | null> {
+export async function resolveEmailToUserId(email: string, token: string): Promise<string | null> {
   const user = await lookupUserByEmail(email, token);
   return user?.id ?? null;
 }

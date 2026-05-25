@@ -161,22 +161,16 @@ function mapPage(page: any): CloudlessService {
  * Falls back to staticServices when Notion is not configured.
  */
 export async function getServices(): Promise<CloudlessService[]> {
-  const configured = await isConfiguredAsync(
-    "NOTION_API_KEY",
-    "NOTION_SERVICES_DB_ID",
-  );
+  const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_SERVICES_DB_ID");
   if (!configured) return staticServices;
 
   return cached("services:all", async () => {
     const { NOTION_SERVICES_DB_ID } = await getIntegrationsAsync();
     try {
-      const pages = await notionFetchAll(
-        `/databases/${NOTION_SERVICES_DB_ID}/query`,
-        {
-          filter: { property: "Published", checkbox: { equals: true } },
-          sorts: [{ property: "Order", direction: "ascending" }],
-        },
-      );
+      const pages = await notionFetchAll(`/databases/${NOTION_SERVICES_DB_ID}/query`, {
+        filter: { property: "Published", checkbox: { equals: true } },
+        sorts: [{ property: "Order", direction: "ascending" }],
+      });
       const results = pages.map(mapPage);
       return results.length > 0 ? results : staticServices;
     } catch (err) {
@@ -189,9 +183,7 @@ export async function getServices(): Promise<CloudlessService[]> {
 /**
  * Fetch a single service by slug.
  */
-export async function getServiceBySlug(
-  slug: string,
-): Promise<CloudlessService | null> {
+export async function getServiceBySlug(slug: string): Promise<CloudlessService | null> {
   const services = await getServices();
   return services.find((s) => s.slug === slug) ?? null;
 }
@@ -200,7 +192,7 @@ export async function getServiceBySlug(
  * Fetch services filtered by category.
  */
 export async function getServicesByCategory(
-  category: ServiceCategory,
+  category: ServiceCategory
 ): Promise<CloudlessService[]> {
   const services = await getServices();
   return services.filter((s) => s.category === category);

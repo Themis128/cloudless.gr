@@ -7,16 +7,9 @@ import {
 } from "@/lib/pending-clients";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
-import {
-  SSMClient,
-  GetParameterCommand,
-  PutParameterCommand,
-} from "@aws-sdk/client-ssm";
+import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
 import { randomUUID } from "node:crypto";
-import type {
-  ClientPortal,
-  PortalStep,
-} from "@/app/api/admin/client-portals/route";
+import type { ClientPortal, PortalStep } from "@/app/api/admin/client-portals/route";
 
 const PORTALS_SSM_KEY = "/cloudless/CLIENT_PORTALS_JSON";
 const REGION = process.env.AWS_REGION ?? "eu-central-1";
@@ -42,9 +35,7 @@ function makeDefaultSteps(): PortalStep[] {
 async function readPortals(): Promise<ClientPortal[]> {
   try {
     const client = new SSMClient({ region: REGION });
-    const res = await client.send(
-      new GetParameterCommand({ Name: PORTALS_SSM_KEY }),
-    );
+    const res = await client.send(new GetParameterCommand({ Name: PORTALS_SSM_KEY }));
     return JSON.parse(res.Parameter?.Value ?? "[]");
   } catch {
     return [];
@@ -59,7 +50,7 @@ async function writePortals(portals: ClientPortal[]): Promise<void> {
       Value: JSON.stringify(portals),
       Type: "String",
       Overwrite: true,
-    }),
+    })
   );
 }
 
@@ -73,9 +64,7 @@ export async function GET(request: NextRequest) {
   const sorted = [...clients].sort((a, b) => {
     if (a.status === "waiting" && b.status !== "waiting") return -1;
     if (a.status !== "waiting" && b.status === "waiting") return 1;
-    return (
-      new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-    );
+    return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
   });
   return NextResponse.json({ clients: sorted });
 }
@@ -100,19 +89,14 @@ export async function POST(request: NextRequest) {
   }
 
   const clients = await readPendingClients();
-  const pending = clients.find(
-    (c) => c.email.toLowerCase() === body.email!.toLowerCase(),
-  );
+  const pending = clients.find((c) => c.email.toLowerCase() === body.email!.toLowerCase());
   if (!pending) {
-    return NextResponse.json(
-      { error: "Pending client not found" },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: "Pending client not found" }, { status: 404 });
   }
   if (pending.status === "approved" && pending.portalToken) {
     return NextResponse.json(
       { error: "Already approved", portalToken: pending.portalToken },
-      { status: 409 },
+      { status: 409 }
     );
   }
 
@@ -163,9 +147,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   const clients = await readPendingClients();
-  const updated = clients.filter(
-    (c) => c.email.toLowerCase() !== email.toLowerCase(),
-  );
+  const updated = clients.filter((c) => c.email.toLowerCase() !== email.toLowerCase());
   await writePendingClients(updated);
   return NextResponse.json({ ok: true });
 }

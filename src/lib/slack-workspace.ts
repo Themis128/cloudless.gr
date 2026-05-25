@@ -91,7 +91,7 @@ const BASE = "https://slack.com/api";
 async function slackGet(
   method: string,
   params: Record<string, string>,
-  token: string,
+  token: string
 ): Promise<Response> {
   const qs = new URLSearchParams(params).toString();
   return fetch(`${BASE}/${method}${qs ? `?${qs}` : ""}`, {
@@ -111,8 +111,7 @@ async function slackGet(
  */
 export async function getBotInfo(token?: string): Promise<BotInfo> {
   const resolvedToken = token ?? (await getSlackConfigAsync()).SLACK_BOT_TOKEN;
-  if (!resolvedToken)
-    throw new Error("[SlackWorkspace] SLACK_BOT_TOKEN is not configured");
+  if (!resolvedToken) throw new Error("[SlackWorkspace] SLACK_BOT_TOKEN is not configured");
 
   const res = await fetch(`${BASE}/auth.test`, {
     method: "POST",
@@ -141,17 +140,14 @@ export async function getBotInfo(token?: string): Promise<BotInfo> {
  */
 export async function getWorkspaceInfo(token?: string): Promise<WorkspaceInfo> {
   const resolvedToken = token ?? (await getSlackConfigAsync()).SLACK_BOT_TOKEN;
-  if (!resolvedToken)
-    throw new Error("[SlackWorkspace] SLACK_BOT_TOKEN is not configured");
+  if (!resolvedToken) throw new Error("[SlackWorkspace] SLACK_BOT_TOKEN is not configured");
 
   const res = await slackGet("team.info", {}, resolvedToken);
   const data = (await res.json()) as TeamInfoResponse;
-  if (!data.ok || !data.team)
-    throw new Error(`[SlackWorkspace] team.info: ${data.error}`);
+  if (!data.ok || !data.team) throw new Error(`[SlackWorkspace] team.info: ${data.error}`);
 
   const icon = data.team.icon;
-  const iconUrl =
-    icon.image_230 ?? icon.image_132 ?? icon.image_102 ?? icon.image_88 ?? null;
+  const iconUrl = icon.image_230 ?? icon.image_132 ?? icon.image_102 ?? icon.image_88 ?? null;
 
   return {
     id: data.team.id,

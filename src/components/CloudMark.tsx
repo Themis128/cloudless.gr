@@ -29,9 +29,7 @@ export default function CloudMark({
 }: CloudMarkProps) {
   const ariaLabel = rest["aria-label"];
   const role = ariaLabel ? "img" : "presentation";
-  const labelProps = ariaLabel
-    ? { "aria-label": ariaLabel, role }
-    : { "aria-hidden": true };
+  const labelProps = ariaLabel ? { "aria-label": ariaLabel, role } : { "aria-hidden": true };
 
   return (
     <svg

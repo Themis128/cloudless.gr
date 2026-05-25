@@ -43,23 +43,16 @@ export default function AdminSettingsPage() {
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-magenta font-mono text-xs">SETTINGS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">
-          Site Settings
-        </h1>
-        <p className="font-body mt-1 text-slate-400">
-          Configure your Cloudless platform settings.
-        </p>
+        <h1 className="font-heading text-2xl font-bold text-white">Site Settings</h1>
+        <p className="font-body mt-1 text-slate-400">Configure your Cloudless platform settings.</p>
       </div>
 
       <div className="space-y-6">
         {/* Cache Management */}
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
-          <h2 className="font-heading mb-1 font-semibold text-white">
-            Cache Management
-          </h2>
+          <h2 className="font-heading mb-1 font-semibold text-white">Cache Management</h2>
           <p className="mb-4 text-xs text-slate-500">
-            The Notion in-memory cache speeds up page loads. Clear it after
-            manual Notion changes.
+            The Notion in-memory cache speeds up page loads. Clear it after manual Notion changes.
           </p>
 
           {cacheMsg && (
@@ -95,22 +88,14 @@ export default function AdminSettingsPage() {
 
         {/* Danger Zone */}
         <div className="rounded-xl border border-red-900/30 bg-red-950/10 p-6">
-          <h2 className="font-heading mb-2 font-semibold text-red-400">
-            Danger Zone
-          </h2>
-          <p className="mb-4 text-xs text-slate-500">
-            Irreversible actions. Proceed with caution.
-          </p>
+          <h2 className="font-heading mb-2 font-semibold text-red-400">Danger Zone</h2>
+          <p className="mb-4 text-xs text-slate-500">Irreversible actions. Proceed with caution.</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className="min-h-[44px] rounded-lg border border-red-900/50 px-4 py-2.5 font-mono text-xs text-red-400 transition-all hover:bg-red-950/30"
               onClick={() => {
-                if (
-                  window.confirm(
-                    "Delete all Notion cache? Active requests will re-fetch.",
-                  )
-                ) {
+                if (window.confirm("Delete all Notion cache? Active requests will re-fetch.")) {
                   handleClearCache();
                 }
               }}

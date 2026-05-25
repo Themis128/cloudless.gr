@@ -2,10 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
-import type {
-  ClientPortal,
-  PortalStep,
-} from "@/app/api/admin/client-portals/route";
+import type { ClientPortal, PortalStep } from "@/app/api/admin/client-portals/route";
 import type { PendingClient } from "@/lib/pending-clients";
 
 const STEP_STATUS_OPTIONS: {
@@ -30,15 +27,12 @@ function StepManager({
   const [commentAuthor, setCommentAuthor] = useState("Cloudless Team");
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(
-    portal.steps.find((s) => s.status === "in-progress")?.id ?? null,
+    portal.steps.find((s) => s.status === "in-progress")?.id ?? null
   );
   const [newStepName, setNewStepName] = useState("");
   const [addingStep, setAddingStep] = useState(false);
 
-  async function updateStepStatus(
-    stepId: string,
-    status: PortalStep["status"],
-  ) {
+  async function updateStepStatus(stepId: string, status: PortalStep["status"]) {
     await fetchWithAuth("/api/admin/client-portals", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -76,8 +70,7 @@ function StepManager({
   }
 
   async function deleteComment(stepId: string, commentId: string) {
-    if (!confirm("Delete this comment? The client will no longer see it."))
-      return;
+    if (!confirm("Delete this comment? The client will no longer see it.")) return;
     await fetchWithAuth("/api/admin/client-portals", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -131,7 +124,7 @@ function StepManager({
       <div className="flex items-center gap-2">
         <label
           htmlFor="portal-comment-author"
-          className="font-mono text-xs text-slate-500 shrink-0"
+          className="shrink-0 font-mono text-xs text-slate-500"
         >
           Comment as:
         </label>
@@ -140,22 +133,17 @@ function StepManager({
           type="text"
           value={commentAuthor}
           onChange={(e) => setCommentAuthor(e.target.value)}
-          className="rounded-lg border border-slate-700 bg-void px-2 py-1 font-mono text-xs text-white placeholder-slate-600 focus:border-neon-blue/50 focus:outline-none"
+          className="bg-void focus:border-neon-blue/50 rounded-lg border border-slate-700 px-2 py-1 font-mono text-xs text-white placeholder-slate-600 focus:outline-none"
           placeholder="Cloudless Team"
         />
       </div>
 
       {portal.steps.map((step, idx) => {
         const isOpen = expanded === step.id;
-        const statusCfg = STEP_STATUS_OPTIONS.find(
-          (o) => o.value === step.status,
-        );
+        const statusCfg = STEP_STATUS_OPTIONS.find((o) => o.value === step.status);
 
         return (
-          <div
-            key={step.id}
-            className="rounded-xl border border-slate-800 bg-void-light/20"
-          >
+          <div key={step.id} className="bg-void-light/20 rounded-xl border border-slate-800">
             {/* Step header */}
             <div
               role="button"
@@ -170,25 +158,20 @@ function StepManager({
                 }
               }}
             >
-              <span className="font-mono text-xs text-slate-600 w-5 shrink-0">
+              <span className="w-5 shrink-0 font-mono text-xs text-slate-600">
                 {String(idx + 1).padStart(2, "0")}
               </span>
-              <span className="flex-1 font-mono text-sm text-white truncate">
-                {step.name}
-              </span>
+              <span className="flex-1 truncate font-mono text-sm text-white">{step.name}</span>
 
               {/* Status selector */}
               <select
                 value={step.status}
                 onChange={(e) => {
                   e.stopPropagation();
-                  updateStepStatus(
-                    step.id,
-                    e.target.value as PortalStep["status"],
-                  );
+                  updateStepStatus(step.id, e.target.value as PortalStep["status"]);
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className={`rounded-lg border border-slate-700 bg-void px-2 py-1 font-mono text-xs focus:outline-none ${statusCfg?.color ?? "text-slate-400"}`}
+                className={`bg-void rounded-lg border border-slate-700 px-2 py-1 font-mono text-xs focus:outline-none ${statusCfg?.color ?? "text-slate-400"}`}
               >
                 {STEP_STATUS_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value} className="text-white">
@@ -220,11 +203,7 @@ function StepManager({
                   stroke="currentColor"
                   strokeWidth={2}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
 
@@ -235,25 +214,21 @@ function StepManager({
                 stroke="currentColor"
                 strokeWidth={2}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 5l7 7-7 7"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </div>
 
             {/* Comments + compose */}
             {isOpen && (
-              <div className="border-t border-slate-800 px-4 py-4 space-y-4">
+              <div className="space-y-4 border-t border-slate-800 px-4 py-4">
                 {step.comments.length > 0 ? (
                   <div className="space-y-3">
                     {step.comments.map((c) => (
                       <div key={c.id} className="group flex gap-3">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-void font-mono text-[10px] uppercase text-slate-400">
+                        <div className="bg-void flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-700 font-mono text-[10px] text-slate-400 uppercase">
                           {c.author.slice(0, 2)}
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-baseline gap-2">
                             <span className="font-mono text-xs font-semibold text-slate-300">
                               {c.author}
@@ -267,14 +242,14 @@ function StepManager({
                               })}
                             </span>
                           </div>
-                          <p className="mt-0.5 text-sm text-slate-400 whitespace-pre-wrap">
+                          <p className="mt-0.5 text-sm whitespace-pre-wrap text-slate-400">
                             {c.text}
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => deleteComment(step.id, c.id)}
-                          className="shrink-0 rounded p-1 text-slate-700 opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+                          className="shrink-0 rounded p-1 text-slate-700 opacity-0 transition group-hover:opacity-100 hover:text-red-400"
                           title="Delete comment"
                         >
                           <svg
@@ -295,9 +270,7 @@ function StepManager({
                     ))}
                   </div>
                 ) : (
-                  <p className="font-mono text-xs text-slate-600">
-                    No comments yet for this step.
-                  </p>
+                  <p className="font-mono text-xs text-slate-600">No comments yet for this step.</p>
                 )}
 
                 {/* Add comment */}
@@ -318,15 +291,13 @@ function StepManager({
                       }
                     }}
                     placeholder="Add an update for the client… (Ctrl+Enter to send)"
-                    className="flex-1 resize-none rounded-lg border border-slate-700 bg-void px-3 py-2 font-mono text-xs text-white placeholder-slate-600 focus:border-neon-blue/50 focus:outline-none"
+                    className="bg-void focus:border-neon-blue/50 flex-1 resize-none rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white placeholder-slate-600 focus:outline-none"
                   />
                   <button
                     type="button"
-                    disabled={
-                      submitting === step.id || !commentDraft[step.id]?.trim()
-                    }
+                    disabled={submitting === step.id || !commentDraft[step.id]?.trim()}
                     onClick={() => submitComment(step.id)}
-                    className="self-end rounded-lg border border-neon-blue/30 px-3 py-2 font-mono text-xs text-neon-blue transition hover:border-neon-blue/60 disabled:opacity-40"
+                    className="border-neon-blue/30 text-neon-blue hover:border-neon-blue/60 self-end rounded-lg border px-3 py-2 font-mono text-xs transition disabled:opacity-40"
                   >
                     {submitting === step.id ? "..." : "Send"}
                   </button>
@@ -347,7 +318,7 @@ function StepManager({
             if (e.key === "Enter") addStep();
           }}
           placeholder="Add custom step…"
-          className="flex-1 rounded-lg border border-slate-700 bg-void px-3 py-2 font-mono text-xs text-white placeholder-slate-600 focus:border-neon-blue/50 focus:outline-none"
+          className="bg-void focus:border-neon-blue/50 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white placeholder-slate-600 focus:outline-none"
         />
         <button
           type="button"
@@ -374,15 +345,9 @@ function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
       const res = await fetchWithAuth("/api/admin/pending-clients");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setClients(
-        (data.clients ?? []).filter(
-          (c: PendingClient) => c.status === "waiting",
-        ),
-      );
+      setClients((data.clients ?? []).filter((c: PendingClient) => c.status === "waiting"));
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Failed to load pending clients",
-      );
+      setError(e instanceof Error ? e.message : "Failed to load pending clients");
     } finally {
       setLoading(false);
     }
@@ -412,8 +377,7 @@ function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
   }
 
   async function decline(client: PendingClient) {
-    if (!confirm(`Decline ${client.email}? They'll need to sign up again.`))
-      return;
+    if (!confirm(`Decline ${client.email}? They'll need to sign up again.`)) return;
     try {
       await fetchWithAuth("/api/admin/pending-clients", {
         method: "DELETE",
@@ -449,8 +413,7 @@ function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
         </span>
         <div>
           <h2 className="font-heading text-base font-semibold text-yellow-200">
-            {clients.length} client{clients.length === 1 ? "" : "s"} waiting for
-            portal access
+            {clients.length} client{clients.length === 1 ? "" : "s"} waiting for portal access
           </h2>
           <p className="font-mono text-xs text-yellow-700">
             Review their order and click Approve to create their portal.
@@ -475,11 +438,7 @@ function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
                 <span className="font-heading text-sm font-semibold text-white">
                   {c.name || c.email}
                 </span>
-                {c.name && (
-                  <span className="font-mono text-xs text-slate-500">
-                    {c.email}
-                  </span>
-                )}
+                {c.name && <span className="font-mono text-xs text-slate-500">{c.email}</span>}
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-yellow-900/40 bg-yellow-950/20 px-2 py-0.5 font-mono text-[10px] text-yellow-400">
@@ -513,11 +472,9 @@ function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
                 type="button"
                 disabled={approving === c.email}
                 onClick={() => approve(c)}
-                className="rounded-lg border border-neon-green/40 bg-neon-green/10 px-4 py-1.5 font-mono text-xs font-semibold text-neon-green transition hover:bg-neon-green/20 disabled:opacity-50"
+                className="border-neon-green/40 bg-neon-green/10 text-neon-green hover:bg-neon-green/20 rounded-lg border px-4 py-1.5 font-mono text-xs font-semibold transition disabled:opacity-50"
               >
-                {approving === c.email
-                  ? "Creating portal…"
-                  : "Approve & Create Portal"}
+                {approving === c.email ? "Creating portal…" : "Approve & Create Portal"}
               </button>
             </div>
           </div>
@@ -586,12 +543,7 @@ export default function ClientPortalsPage() {
   }
 
   async function revoke(token: string) {
-    if (
-      !confirm(
-        "Revoke this portal link? The client will lose access immediately.",
-      )
-    )
-      return;
+    if (!confirm("Revoke this portal link? The client will lose access immediately.")) return;
     try {
       await fetchWithAuth("/api/admin/client-portals", {
         method: "DELETE",
@@ -621,16 +573,12 @@ export default function ClientPortalsPage() {
       <div className="mb-8">
         <div className="border-neon-blue/20 bg-neon-blue/10 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
           <span className="bg-neon-blue h-2 w-2 animate-pulse rounded-full" />
-          <span className="text-neon-blue font-mono text-xs">
-            CLIENT ACCESS
-          </span>
+          <span className="text-neon-blue font-mono text-xs">CLIENT ACCESS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">
-          Client Portals
-        </h1>
+        <h1 className="font-heading text-2xl font-bold text-white">Client Portals</h1>
         <p className="font-body mt-1 text-slate-400">
-          Generate secure portal links. Clients see their project timeline,
-          step-by-step updates, invoices, and subscription — no account needed.
+          Generate secure portal links. Clients see their project timeline, step-by-step updates,
+          invoices, and subscription — no account needed.
         </p>
       </div>
 
@@ -638,34 +586,27 @@ export default function ClientPortalsPage() {
       <PendingClients onApproved={load} />
 
       {/* Create form */}
-      <div className="mb-8 rounded-xl border border-slate-800 bg-void-light/30 p-6">
-        <h2 className="font-heading mb-4 text-sm font-semibold text-white">
-          Generate New Portal
-        </h2>
+      <div className="bg-void-light/30 mb-8 rounded-xl border border-slate-800 p-6">
+        <h2 className="font-heading mb-4 text-sm font-semibold text-white">Generate New Portal</h2>
         <form onSubmit={create} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label
-                htmlFor="cp-label"
-                className="font-mono mb-1 block text-xs text-slate-500"
-              >
+              <label htmlFor="cp-label" className="mb-1 block font-mono text-xs text-slate-500">
                 Label
               </label>
               <input
                 id="cp-label"
                 type="text"
                 value={form.label}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, label: e.target.value }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
                 placeholder="e.g. Acme Corp — Cloud Migration"
-                className="w-full rounded-lg border border-slate-700 bg-void px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-blue/50 focus:outline-none"
+                className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
               />
             </div>
             <div>
               <label
                 htmlFor="cp-client-email"
-                className="font-mono mb-1 block text-xs text-slate-500"
+                className="mb-1 block font-mono text-xs text-slate-500"
               >
                 Client Email
               </label>
@@ -673,17 +614,15 @@ export default function ClientPortalsPage() {
                 id="cp-client-email"
                 type="email"
                 value={form.clientEmail}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, clientEmail: e.target.value }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, clientEmail: e.target.value }))}
                 placeholder="client@example.com"
-                className="w-full rounded-lg border border-slate-700 bg-void px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-blue/50 focus:outline-none"
+                className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
               />
             </div>
             <div>
               <label
                 htmlFor="cp-client-name"
-                className="font-mono mb-1 block text-xs text-slate-500"
+                className="mb-1 block font-mono text-xs text-slate-500"
               >
                 Client Name (optional)
               </label>
@@ -691,25 +630,21 @@ export default function ClientPortalsPage() {
                 id="cp-client-name"
                 type="text"
                 value={form.clientName}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, clientName: e.target.value }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, clientName: e.target.value }))}
                 placeholder="Jane Doe"
-                className="w-full rounded-lg border border-slate-700 bg-void px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-blue/50 focus:outline-none"
+                className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
               />
             </div>
           </div>
           <p className="font-mono text-[10px] text-slate-600">
-            Portal is created with 6 default steps matching the Cloudless
-            workflow. You can customise steps after creation.
+            Portal is created with 6 default steps matching the Cloudless workflow. You can
+            customise steps after creation.
           </p>
-          {formError && (
-            <p className="font-mono text-xs text-red-400">{formError}</p>
-          )}
+          {formError && <p className="font-mono text-xs text-red-400">{formError}</p>}
           <button
             type="submit"
             disabled={creating}
-            className="rounded-lg border border-neon-blue/30 px-5 py-2 font-mono text-xs text-neon-blue transition hover:border-neon-blue/60 disabled:opacity-50"
+            className="border-neon-blue/30 text-neon-blue hover:border-neon-blue/60 rounded-lg border px-5 py-2 font-mono text-xs transition disabled:opacity-50"
           >
             {creating ? "Generating…" : "Generate Portal Link"}
           </button>
@@ -727,19 +662,17 @@ export default function ClientPortalsPage() {
           {["cp-skel-1", "cp-skel-2", "cp-skel-3"].map((k) => (
             <div
               key={k}
-              className="h-20 animate-pulse rounded-xl border border-slate-800 bg-void-light/30"
+              className="bg-void-light/30 h-20 animate-pulse rounded-xl border border-slate-800"
             />
           ))}
         </div>
       )}
 
       {!loading && portals.length === 0 && (
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 px-6 py-12 text-center">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 px-6 py-12 text-center">
           <div className="mb-3 text-4xl">🔗</div>
-          <p className="font-heading text-sm text-slate-400">
-            No portals created yet.
-          </p>
-          <p className="font-mono mt-1 text-xs text-slate-600">
+          <p className="font-heading text-sm text-slate-400">No portals created yet.</p>
+          <p className="mt-1 font-mono text-xs text-slate-600">
             Generate a portal above to share with a client.
           </p>
         </div>
@@ -749,14 +682,12 @@ export default function ClientPortalsPage() {
         <div className="space-y-3">
           {portals.map((portal) => {
             const isOpen = expanded === portal.token;
-            const completedSteps = portal.steps.filter(
-              (s) => s.status === "completed",
-            ).length;
+            const completedSteps = portal.steps.filter((s) => s.status === "completed").length;
 
             return (
               <div
                 key={portal.token}
-                className={`rounded-xl border bg-void-light/30 transition-colors ${
+                className={`bg-void-light/30 rounded-xl border transition-colors ${
                   isOpen ? "border-neon-blue/30" : "border-slate-800"
                 }`}
               >
@@ -776,9 +707,7 @@ export default function ClientPortalsPage() {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <div className="font-heading font-semibold text-white">
-                        {portal.label}
-                      </div>
+                      <div className="font-heading font-semibold text-white">{portal.label}</div>
                       {portal.steps.length > 0 && (
                         <span className="font-mono text-[10px] text-slate-500">
                           {completedSteps}/{portal.steps.length} steps
@@ -786,9 +715,7 @@ export default function ClientPortalsPage() {
                       )}
                     </div>
                     <div className="mt-0.5 flex flex-wrap gap-3">
-                      <span className="font-mono text-xs text-slate-400">
-                        {portal.clientEmail}
-                      </span>
+                      <span className="font-mono text-xs text-slate-400">{portal.clientEmail}</span>
                       {portal.clientName && (
                         <span className="font-mono text-xs text-slate-500">
                           {portal.clientName}
@@ -803,7 +730,7 @@ export default function ClientPortalsPage() {
                     {portal.steps.length > 0 && (
                       <div className="mt-2 h-1 w-40 overflow-hidden rounded-full bg-slate-800">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-neon-cyan to-neon-green transition-all"
+                          className="from-neon-cyan to-neon-green h-full rounded-full bg-gradient-to-r transition-all"
                           style={{
                             width: `${Math.round((completedSteps / portal.steps.length) * 100)}%`,
                           }}
@@ -840,11 +767,7 @@ export default function ClientPortalsPage() {
                       stroke="currentColor"
                       strokeWidth={2}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M9 5l7 7-7 7"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
                 </div>
@@ -865,7 +788,7 @@ export default function ClientPortalsPage() {
       )}
 
       {/* In-app help — how the portal flow works */}
-      <details className="mt-12 group rounded-xl border border-slate-800 bg-void-light/20 open:border-neon-cyan/30">
+      <details className="group bg-void-light/20 open:border-neon-cyan/30 mt-12 rounded-xl border border-slate-800">
         <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 text-sm font-semibold text-white [&::-webkit-details-marker]:hidden">
           <span className="bg-neon-cyan/15 border-neon-cyan/30 flex h-7 w-7 items-center justify-center rounded-full border text-base">
             ?
@@ -878,123 +801,89 @@ export default function ClientPortalsPage() {
             stroke="currentColor"
             strokeWidth={2}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 5l7 7-7 7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </summary>
-        <div className="border-t border-slate-800 px-5 py-5 space-y-4 text-sm leading-relaxed text-slate-300">
+        <div className="space-y-4 border-t border-slate-800 px-5 py-5 text-sm leading-relaxed text-slate-300">
           <div>
-            <p className="font-mono text-xs tracking-widest text-neon-cyan uppercase mb-2">
+            <p className="text-neon-cyan mb-2 font-mono text-xs tracking-widest uppercase">
               The flow, end-to-end
             </p>
             <ol className="ml-5 list-decimal space-y-2 text-slate-400">
               <li>
                 Client clicks a service or bundle CTA on{" "}
-                <code className="rounded bg-void px-1 text-neon-cyan">
-                  /services
-                </code>{" "}
-                — they get sent to{" "}
-                <code className="rounded bg-void px-1 text-neon-cyan">
-                  /auth/signup?plan=...
-                </code>
+                <code className="bg-void text-neon-cyan rounded px-1">/services</code> — they get
+                sent to{" "}
+                <code className="bg-void text-neon-cyan rounded px-1">/auth/signup?plan=...</code>
               </li>
               <li>
                 Cognito sign-up + email verification → client lands in{" "}
-                <code className="rounded bg-void px-1 text-neon-cyan">
-                  /portal/waiting
-                </code>
+                <code className="bg-void text-neon-cyan rounded px-1">/portal/waiting</code>
               </li>
               <li>
-                Waiting room creates a pending entry. <strong>You</strong> get a
-                Slack ping +{" "}
-                <code className="rounded bg-void px-1 text-neon-cyan">
-                  tbaltzakis@cloudless.gr
-                </code>{" "}
+                Waiting room creates a pending entry. <strong>You</strong> get a Slack ping +{" "}
+                <code className="bg-void text-neon-cyan rounded px-1">tbaltzakis@cloudless.gr</code>{" "}
                 email with the client&rsquo;s name, email, and plan.
               </li>
               <li>
                 You see them in the &ldquo;
                 <span className="text-yellow-400">⏳ N clients waiting</span>
                 &rdquo; section above. One click on{" "}
-                <span className="text-neon-green">
-                  Approve & Create Portal
-                </span>{" "}
-                creates the portal with 6 default steps and emails the client a
-                link to{" "}
-                <code className="rounded bg-void px-1 text-neon-cyan">
-                  /portal/[token]
-                </code>{" "}
-                from{" "}
-                <code className="rounded bg-void px-1 text-neon-cyan">
-                  noreply@cloudless.gr
-                </code>
-                .
+                <span className="text-neon-green">Approve & Create Portal</span> creates the portal
+                with 6 default steps and emails the client a link to{" "}
+                <code className="bg-void text-neon-cyan rounded px-1">/portal/[token]</code> from{" "}
+                <code className="bg-void text-neon-cyan rounded px-1">noreply@cloudless.gr</code>.
               </li>
               <li>
-                Manage the project from the expanded portal card below — set
-                step statuses (pending → in-progress → completed), post comments
-                that appear in the client&rsquo;s timeline, add custom steps if
-                needed.
+                Manage the project from the expanded portal card below — set step statuses (pending
+                → in-progress → completed), post comments that appear in the client&rsquo;s
+                timeline, add custom steps if needed.
               </li>
             </ol>
           </div>
 
           <div>
-            <p className="font-mono text-xs tracking-widest text-neon-cyan uppercase mb-2">
+            <p className="text-neon-cyan mb-2 font-mono text-xs tracking-widest uppercase">
               Default project steps
             </p>
             <p className="text-slate-400">
-              Free Audit → Proposal & Scope → Setup & Kickoff → Implementation →
-              Review & Feedback → Delivery & Handoff. You can rename, reorder
-              (delete + re-add), or add custom steps per portal.
+              Free Audit → Proposal & Scope → Setup & Kickoff → Implementation → Review & Feedback →
+              Delivery & Handoff. You can rename, reorder (delete + re-add), or add custom steps per
+              portal.
             </p>
           </div>
 
           <div>
-            <p className="font-mono text-xs tracking-widest text-neon-cyan uppercase mb-2">
+            <p className="text-neon-cyan mb-2 font-mono text-xs tracking-widest uppercase">
               What the client sees
             </p>
             <ul className="ml-5 list-disc space-y-1 text-slate-400">
+              <li>Visual project timeline (horizontal on desktop, vertical on mobile)</li>
+              <li>Per-step status indicator and your comment thread per step</li>
+              <li>Linked Stripe subscriptions and paid invoices (if their email is in Stripe)</li>
               <li>
-                Visual project timeline (horizontal on desktop, vertical on
-                mobile)
-              </li>
-              <li>
-                Per-step status indicator and your comment thread per step
-              </li>
-              <li>
-                Linked Stripe subscriptions and paid invoices (if their email is
-                in Stripe)
-              </li>
-              <li>
-                Live updates — they don&rsquo;t need to refresh; their portal
-                polls for changes
+                Live updates — they don&rsquo;t need to refresh; their portal polls for changes
               </li>
             </ul>
           </div>
 
           <div>
-            <p className="font-mono text-xs tracking-widest text-neon-cyan uppercase mb-2">
+            <p className="text-neon-cyan mb-2 font-mono text-xs tracking-widest uppercase">
               Storage and security
             </p>
             <p className="text-slate-400">
               Pending clients live in SSM at{" "}
-              <code className="rounded bg-void px-1 text-neon-cyan">
+              <code className="bg-void text-neon-cyan rounded px-1">
                 /cloudless/PENDING_CLIENTS_JSON
               </code>
               ; portals at{" "}
-              <code className="rounded bg-void px-1 text-neon-cyan">
+              <code className="bg-void text-neon-cyan rounded px-1">
                 /cloudless/CLIENT_PORTALS_JSON
               </code>
               . The portal token is a UUID v4 (
-              <code className="rounded bg-void px-1 text-neon-cyan">
-                crypto.randomUUID
-              </code>
-              ) — anyone with the link can view that client&rsquo;s portal, so
-              share it via email only. Use Revoke to invalidate immediately.
+              <code className="bg-void text-neon-cyan rounded px-1">crypto.randomUUID</code>) —
+              anyone with the link can view that client&rsquo;s portal, so share it via email only.
+              Use Revoke to invalidate immediately.
             </p>
           </div>
         </div>

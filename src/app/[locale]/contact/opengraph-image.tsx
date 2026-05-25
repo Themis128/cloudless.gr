@@ -39,8 +39,7 @@ export default function ContactOGImage() {
           right: "-60px",
           width: "520px",
           height: "520px",
-          background:
-            "radial-gradient(circle, rgba(0,212,255,0.10) 0%, transparent 65%)",
+          background: "radial-gradient(circle, rgba(0,212,255,0.10) 0%, transparent 65%)",
           borderRadius: "50%",
         }}
       />
@@ -146,6 +145,6 @@ export default function ContactOGImage() {
         </span>
       </div>
     </div>,
-    { ...size },
+    { ...size }
   );
 }

@@ -23,10 +23,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (!isConfigured("STRIPE_SECRET_KEY")) {
-    return NextResponse.json(
-      { error: "Stripe not configured" },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
   }
 
   try {
@@ -44,7 +41,7 @@ export async function GET(req: NextRequest) {
       });
 
       const userSessions = sessions.data.filter(
-        (s) => s.customer_email?.toLowerCase() === email.toLowerCase(),
+        (s) => s.customer_email?.toLowerCase() === email.toLowerCase()
       );
 
       return NextResponse.json({
@@ -73,15 +70,13 @@ export async function GET(req: NextRequest) {
         id: sub.id,
         status: sub.status,
         currentPeriodEnd: new Date(
-          ((sub as unknown as Record<string, number>).current_period_end ?? 0) *
-            1000,
+          ((sub as unknown as Record<string, number>).current_period_end ?? 0) * 1000
         ).toISOString(),
         items: sub.items.data.map((item) => ({
           name: item.price?.product
             ? typeof item.price.product === "string"
               ? item.price.product
-              : ((item.price.product as { name?: string }).name ??
-                "Subscription")
+              : ((item.price.product as { name?: string }).name ?? "Subscription")
             : "Subscription",
           amount: (item.price?.unit_amount ?? 0) / 100,
           currency: (item.price?.currency ?? "eur").toUpperCase(),
@@ -92,10 +87,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("Failed to fetch user purchases:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch purchases" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch purchases" }, { status: 500 });
   }
 }
 

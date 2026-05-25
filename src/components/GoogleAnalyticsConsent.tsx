@@ -21,8 +21,7 @@ export default function GoogleAnalyticsConsent() {
   const { preferences } = useCookieConsent();
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.gtag !== "function")
-      return;
+    if (typeof window === "undefined" || typeof window.gtag !== "function") return;
     window.gtag("consent", "update", {
       analytics_storage: preferences.analytics ? "granted" : "denied",
       ad_storage: preferences.marketing ? "granted" : "denied",

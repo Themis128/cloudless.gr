@@ -24,7 +24,7 @@ declare global {
       command: "init" | "track" | "trackCustom" | "consent",
       eventName?: string,
       params?: Record<string, unknown>,
-      options?: { eventID?: string },
+      options?: { eventID?: string }
     ) => void;
   }
 }
@@ -51,16 +51,11 @@ export function isPixelReady(): boolean {
 export function trackPixelEvent(
   eventName: string,
   params: Record<string, unknown> = {},
-  eventId?: string,
+  eventId?: string
 ): void {
   if (!isPixelReady()) return;
   try {
-    window.fbq?.(
-      "track",
-      eventName,
-      params,
-      eventId ? { eventID: eventId } : undefined,
-    );
+    window.fbq?.("track", eventName, params, eventId ? { eventID: eventId } : undefined);
   } catch (err) {
     // Pixel failures must never break the user flow.
     if (process.env.NODE_ENV !== "production") {
@@ -80,10 +75,7 @@ export function trackPixelEvent(
  * it is NOT deterministic. For deterministic dedup keys (e.g. order-based),
  * pass your own ID directly.
  */
-export function generateEventId(
-  prefix: string,
-  ...parts: (string | number)[]
-): string {
+export function generateEventId(prefix: string, ...parts: (string | number)[]): string {
   const buf = globalThis.crypto.getRandomValues(new Uint32Array(1));
   const rand = (buf[0] ?? 0).toString(36);
   return [prefix, Date.now(), rand, ...parts].filter(Boolean).join("-");

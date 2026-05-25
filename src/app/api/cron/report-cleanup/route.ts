@@ -14,14 +14,10 @@ export async function GET(request: NextRequest) {
   const now = Date.now();
 
   const stale = reports.filter(
-    (r) =>
-      r.status === "generating" &&
-      now - new Date(r.createdAt).getTime() > STALE_THRESHOLD_MS,
+    (r) => r.status === "generating" && now - new Date(r.createdAt).getTime() > STALE_THRESHOLD_MS
   );
 
-  const results = await Promise.all(
-    stale.map((r) => updateReport(r.id, { status: "error" })),
-  );
+  const results = await Promise.all(stale.map((r) => updateReport(r.id, { status: "error" })));
   const cleaned = results.filter(Boolean).length;
 
   if (cleaned > 0) {

@@ -50,11 +50,7 @@ function extractValue(prop: NotionProp): unknown {
   return fn ? fn(prop) : `(${prop.type})`;
 }
 
-async function probeDatabase(
-  name: string,
-  envKey: string,
-  limit = 5,
-): Promise<DbStatus> {
+async function probeDatabase(name: string, envKey: string, limit = 5): Promise<DbStatus> {
   const cfg = await getIntegrationsAsync();
   const dbId = cfg[envKey as keyof typeof cfg] as string | undefined;
 
@@ -104,10 +100,7 @@ async function probeDatabase(
 }
 
 function unauthenticated(error: string) {
-  return NextResponse.json(
-    { authenticated: false, error, databases: [] },
-    { status: 200 },
-  );
+  return NextResponse.json({ authenticated: false, error, databases: [] }, { status: 200 });
 }
 
 async function resolveBotName(): Promise<
@@ -126,8 +119,7 @@ async function resolveBotName(): Promise<
     const mapped = mapIntegrationError(err);
     return {
       ok: false,
-      response:
-        mapped ?? unauthenticated("NOTION_API_KEY is invalid or expired"),
+      response: mapped ?? unauthenticated("NOTION_API_KEY is invalid or expired"),
     };
   }
 }
@@ -146,17 +138,13 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
-    return unauthenticated(
-      "NOTION_API_KEY not configured. Add it to .env.local",
-    );
+    return unauthenticated("NOTION_API_KEY not configured. Add it to .env.local");
   }
 
   const bot = await resolveBotName();
   if (!bot.ok) return bot.response;
 
-  const databases = await Promise.all(
-    PROBE_TARGETS.map(([name, key]) => probeDatabase(name, key)),
-  );
+  const databases = await Promise.all(PROBE_TARGETS.map(([name, key]) => probeDatabase(name, key)));
 
   return NextResponse.json({
     authenticated: true,

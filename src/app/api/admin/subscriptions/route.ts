@@ -29,9 +29,7 @@ export async function GET(request: NextRequest) {
 
     const subs = await stripe.subscriptions.list({
       status:
-        status === "all"
-          ? undefined
-          : (status as "active" | "past_due" | "canceled" | "trialing"),
+        status === "all" ? undefined : (status as "active" | "past_due" | "canceled" | "trialing"),
       limit,
       expand: ["data.customer", "data.items.data.price.product"],
     });
@@ -48,10 +46,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: sub.id,
-        customerId:
-          typeof sub.customer === "string"
-            ? sub.customer
-            : (customer?.id ?? ""),
+        customerId: typeof sub.customer === "string" ? sub.customer : (customer?.id ?? ""),
         customerEmail: customer?.email ?? null,
         customerName: customer?.name ?? null,
         status: sub.status,
@@ -59,8 +54,7 @@ export async function GET(request: NextRequest) {
         amount: price?.unit_amount ?? 0,
         currency: (price?.currency ?? "eur").toUpperCase(),
         interval: price?.recurring?.interval ?? "month",
-        currentPeriodEnd:
-          (sub as unknown as Record<string, number>).current_period_end ?? 0,
+        currentPeriodEnd: (sub as unknown as Record<string, number>).current_period_end ?? 0,
         cancelAtPeriodEnd: sub.cancel_at_period_end,
         created: sub.created as number,
       };
@@ -76,7 +70,7 @@ export async function GET(request: NextRequest) {
       {
         error: e instanceof Error ? e.message : "Failed to fetch subscriptions",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -97,9 +91,7 @@ export async function POST(request: NextRequest) {
 
     if (action === "portal" && customerId) {
       const baseUrl =
-        process.env.NEXTAUTH_URL ??
-        process.env.NEXT_PUBLIC_APP_URL ??
-        "https://cloudless.gr";
+        process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://cloudless.gr";
       const session = await stripe.billingPortal.sessions.create({
         customer: customerId,
         return_url: `${baseUrl}/admin/subscriptions`,
@@ -121,7 +113,7 @@ export async function POST(request: NextRequest) {
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Action failed" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

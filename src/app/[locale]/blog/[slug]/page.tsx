@@ -3,11 +3,7 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
-import {
-  posts as staticPosts,
-  getPostBySlug as getStaticPost,
-  formatDate,
-} from "@/lib/blog";
+import { posts as staticPosts, getPostBySlug as getStaticPost, formatDate } from "@/lib/blog";
 import {
   getPostBySlug as getNotionPost,
   getPostWithToc,
@@ -42,7 +38,7 @@ function renderInline(text: string): React.ReactNode[] {
       parts.push(
         <strong key={key++} className="font-semibold text-white">
           {match[2]}
-        </strong>,
+        </strong>
       );
     } else if (match[3]) {
       parts.push(
@@ -51,7 +47,7 @@ function renderInline(text: string): React.ReactNode[] {
           className="text-neon-cyan bg-neon-cyan/5 border-neon-cyan/10 rounded border px-1.5 py-0.5 font-mono text-xs"
         >
           {match[3]}
-        </code>,
+        </code>
       );
     } else if (match[4] && match[5]) {
       parts.push(
@@ -63,7 +59,7 @@ function renderInline(text: string): React.ReactNode[] {
           rel={match[5].startsWith("http") ? "noopener noreferrer" : undefined}
         >
           {match[4]}
-        </a>,
+        </a>
       );
     }
     last = match.index + match[0].length;
@@ -77,9 +73,7 @@ function renderInline(text: string): React.ReactNode[] {
 /** Render a block of text — handles bullet lists and plain paragraphs */
 function renderBlock(block: string, keyPrefix: number) {
   const lines = block.split("\n");
-  const isList = lines.every(
-    (l) => l.trim().startsWith("- ") || l.trim() === "",
-  );
+  const isList = lines.every((l) => l.trim().startsWith("- ") || l.trim() === "");
 
   if (isList) {
     const items = lines.filter((l) => l.trim().startsWith("- "));
@@ -120,7 +114,7 @@ export async function generateStaticParams() {
   const allSlugs = new Set([...notionSlugs, ...staticPosts.map((p) => p.slug)]);
 
   return Array.from(allSlugs).flatMap((slug) =>
-    ["en", "el", "fr"].map((locale) => ({ locale, slug })),
+    ["en", "el", "fr"].map((locale) => ({ locale, slug }))
   );
 }
 
@@ -215,40 +209,30 @@ export default async function BlogPostPage({ params }: Props) {
                 href="/blog"
                 className="hover:text-neon-cyan mb-6 inline-flex items-center gap-2 font-mono text-sm text-slate-500 transition-colors"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M11 7H3M7 3L3 7l4 4" />
                 </svg>
                 Back to Blog
               </Link>
-              {notionPost.coverImage &&
-                notionPost.coverImage.startsWith("http") && (
-                  <div className="mb-6 overflow-hidden rounded-xl">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={notionPost.coverImage}
-                      alt={notionPost.title}
-                      className="h-56 w-full object-cover md:h-72"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display =
-                          "none";
-                      }}
-                    />
-                  </div>
-                )}
+              {notionPost.coverImage && notionPost.coverImage.startsWith("http") && (
+                <div className="mb-6 overflow-hidden rounded-xl">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={notionPost.coverImage}
+                    alt={notionPost.title}
+                    className="h-56 w-full object-cover md:h-72"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
               <div className="mb-4 flex items-center gap-3">
                 <span className="bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 rounded-full border px-3 py-1 font-mono text-[10px] font-medium">
                   {notionPost.category || "Blog"}
                 </span>
                 {notionPost.readTime && (
-                  <span className="font-mono text-xs text-slate-600">
-                    {notionPost.readTime}
-                  </span>
+                  <span className="font-mono text-xs text-slate-600">{notionPost.readTime}</span>
                 )}
               </div>
               <h1 className="font-heading animate-fade-in-up text-3xl leading-tight font-bold md:text-4xl lg:text-5xl">
@@ -259,9 +243,7 @@ export default async function BlogPostPage({ params }: Props) {
                   {formatDate(notionPost.date)}
                 </time>
                 {notionPost.author && (
-                  <span className="font-mono text-sm text-slate-500">
-                    by {notionPost.author}
-                  </span>
+                  <span className="font-mono text-sm text-slate-500">by {notionPost.author}</span>
                 )}
               </div>
               {notionPost.tags.length > 0 && (
@@ -270,7 +252,7 @@ export default async function BlogPostPage({ params }: Props) {
                     <Link
                       key={tag}
                       href={`/blog?tag=${encodeURIComponent(tag)}`}
-                      className="rounded border border-slate-700 bg-slate-800/50 px-2.5 py-0.5 font-mono text-[10px] text-slate-500 transition-colors hover:border-neon-cyan/30 hover:text-neon-cyan"
+                      className="hover:border-neon-cyan/30 hover:text-neon-cyan rounded border border-slate-700 bg-slate-800/50 px-2.5 py-0.5 font-mono text-[10px] text-slate-500 transition-colors"
                     >
                       {tag}
                     </Link>
@@ -306,10 +288,10 @@ export default async function BlogPostPage({ params }: Props) {
                           <li key={entry.blockId}>
                             <a
                               href={`#${entry.blockId}`}
-                              className={`block border-l-2 border-transparent py-1 text-sm transition-colors hover:border-neon-cyan/50 hover:text-slate-200 ${
+                              className={`hover:border-neon-cyan/50 block border-l-2 border-transparent py-1 text-sm transition-colors hover:text-slate-200 ${
                                 entry.level === 2
                                   ? "pl-4 text-slate-400"
-                                  : "pl-7 text-slate-500 text-xs"
+                                  : "pl-7 text-xs text-slate-500"
                               }`}
                             >
                               {entry.text}
@@ -325,9 +307,7 @@ export default async function BlogPostPage({ params }: Props) {
               {/* Related Posts */}
               {related.length > 0 && (
                 <div className="mx-auto mt-16 max-w-3xl">
-                  <h2 className="font-heading mb-6 text-xl font-bold text-white">
-                    Related Posts
-                  </h2>
+                  <h2 className="font-heading mb-6 text-xl font-bold text-white">Related Posts</h2>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     {related.map((rp) => (
                       <Link
@@ -343,12 +323,10 @@ export default async function BlogPostPage({ params }: Props) {
                         >
                           {rp.category}
                         </span>
-                        <h3 className="font-heading group-hover:text-neon-cyan text-sm font-semibold text-white transition-colors line-clamp-2">
+                        <h3 className="font-heading group-hover:text-neon-cyan line-clamp-2 text-sm font-semibold text-white transition-colors">
                           {rp.title}
                         </h3>
-                        <p className="mt-1.5 text-xs text-slate-500 line-clamp-2">
-                          {rp.excerpt}
-                        </p>
+                        <p className="mt-1.5 line-clamp-2 text-xs text-slate-500">{rp.excerpt}</p>
                       </Link>
                     ))}
                   </div>
@@ -362,8 +340,7 @@ export default async function BlogPostPage({ params }: Props) {
                     Need help implementing this?
                   </h3>
                   <p className="mt-2 text-sm text-slate-400">
-                    Book a free 30-minute audit and we&apos;ll show you exactly
-                    where to start.
+                    Book a free 30-minute audit and we&apos;ll show you exactly where to start.
                   </p>
                   <Link
                     href="/contact"
@@ -415,13 +392,7 @@ export default async function BlogPostPage({ params }: Props) {
             href="/blog"
             className="hover:text-neon-cyan mb-6 inline-flex items-center gap-2 font-mono text-sm text-slate-500 transition-colors"
           >
-            <svg
-              width="14"
-              height="14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M11 7H3M7 3L3 7l4 4" />
             </svg>
             Back to Blog
@@ -430,9 +401,7 @@ export default async function BlogPostPage({ params }: Props) {
             <span className="bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 rounded-full border px-3 py-1 font-mono text-[10px] font-medium">
               {post.category}
             </span>
-            <span className="font-mono text-xs text-slate-600">
-              {post.readTime}
-            </span>
+            <span className="font-mono text-xs text-slate-600">{post.readTime}</span>
           </div>
           <h1 className="font-heading animate-fade-in-up text-3xl leading-tight font-bold md:text-4xl lg:text-5xl">
             {post.title}
@@ -476,8 +445,7 @@ export default async function BlogPostPage({ params }: Props) {
               Need help implementing this?
             </h3>
             <p className="mt-2 text-sm text-slate-400">
-              Book a free 30-minute audit and we&apos;ll show you exactly where
-              to start.
+              Book a free 30-minute audit and we&apos;ll show you exactly where to start.
             </p>
             <Link
               href="/contact"

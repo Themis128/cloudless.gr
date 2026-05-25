@@ -52,8 +52,7 @@ export const DEFAULT_FLAGS: ABFlag[] = [
 export async function getABFlags(): Promise<ABFlag[]> {
   try {
     const cfg = await getConfig();
-    const raw = (cfg as unknown as Record<string, string | undefined>)
-      .AB_FLAGS_JSON;
+    const raw = (cfg as unknown as Record<string, string | undefined>).AB_FLAGS_JSON;
     if (raw) {
       const parsed = JSON.parse(raw) as ABFlag[];
       if (Array.isArray(parsed)) return parsed;

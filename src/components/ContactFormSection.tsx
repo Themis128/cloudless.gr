@@ -21,9 +21,7 @@ const serviceOptions = [
 export default function ContactFormSection() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
-    "idle",
-  );
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,8 +33,7 @@ export default function ContactFormSection() {
       email: (form.elements.namedItem("email") as HTMLInputElement).value,
       company: (form.elements.namedItem("company") as HTMLInputElement).value,
       service: (form.elements.namedItem("service") as HTMLSelectElement).value,
-      message: (form.elements.namedItem("message") as HTMLTextAreaElement)
-        .value,
+      message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
     };
 
     try {
@@ -51,11 +48,7 @@ export default function ContactFormSection() {
         } | null;
         // Browser-side Lead event with the same eventId the server sent to CAPI.
         // No-ops if the pixel is not loaded.
-        trackPixelEvent(
-          "Lead",
-          { content_name: payload.service || "contact_form" },
-          data?.eventId,
-        );
+        trackPixelEvent("Lead", { content_name: payload.service || "contact_form" }, data?.eventId);
         setStatus("sent");
         form.reset();
       } else {
@@ -75,16 +68,14 @@ export default function ContactFormSection() {
             {status === "sent" ? (
               <ScrollReveal>
                 <div className="neon-border bg-void-light rounded-lg p-10 text-center">
-                  <div className="text-neon-cyan mb-4 font-mono text-4xl">
-                    ✓
-                  </div>
+                  <div className="text-neon-cyan mb-4 font-mono text-4xl">✓</div>
                   <h2 className="font-heading text-2xl font-bold text-white">
                     {t("contact.success", "Message sent successfully!")}
                   </h2>
                   <p className="mt-2 text-slate-400">
                     {t(
                       "contact.subtitle",
-                      "Ready to go cloudless? Tell us about your project and we'll get back to you within 24 hours.",
+                      "Ready to go cloudless? Tell us about your project and we'll get back to you within 24 hours."
                     )}
                   </p>
                   <button
@@ -202,12 +193,9 @@ export default function ContactFormSection() {
                   >
                     {t(
                       "contact.privacyConsent",
-                      "I agree that my data will be processed to respond to my enquiry, as described in the",
+                      "I agree that my data will be processed to respond to my enquiry, as described in the"
                     )}{" "}
-                    <Link
-                      href="/privacy"
-                      className="text-neon-cyan underline underline-offset-2"
-                    >
+                    <Link href="/privacy" className="text-neon-cyan underline underline-offset-2">
                       {t("legal.privacyTitle", "Privacy Policy")}
                     </Link>
                     . *
@@ -215,16 +203,9 @@ export default function ContactFormSection() {
                 </div>
 
                 {status === "error" && (
-                  <p
-                    role="alert"
-                    className="text-neon-magenta font-mono text-sm"
-                  >
-                    Something went wrong. Please try again or email us directly
-                    at{" "}
-                    <a
-                      href="mailto:tbaltzakis@cloudless.gr"
-                      className="text-neon-cyan underline"
-                    >
+                  <p role="alert" className="text-neon-magenta font-mono text-sm">
+                    Something went wrong. Please try again or email us directly at{" "}
+                    <a href="mailto:tbaltzakis@cloudless.gr" className="text-neon-cyan underline">
                       tbaltzakis@cloudless.gr
                     </a>
                   </p>
@@ -247,9 +228,7 @@ export default function ContactFormSection() {
           <div className="space-y-8 lg:col-span-2">
             <ScrollReveal>
               <div className="neon-border bg-void-light/50 rounded-lg p-8">
-                <h3 className="font-heading text-lg font-bold text-white">
-                  What happens next?
-                </h3>
+                <h3 className="font-heading text-lg font-bold text-white">What happens next?</h3>
                 <ol className="mt-4 space-y-4 text-sm text-slate-400">
                   {[
                     "We review your message and get back within 24 hours.",
@@ -269,9 +248,7 @@ export default function ContactFormSection() {
 
             <ScrollReveal delay={100}>
               <div className="neon-border bg-void-light/50 rounded-lg p-8">
-                <h3 className="font-heading text-lg font-bold text-white">
-                  Direct Contact
-                </h3>
+                <h3 className="font-heading text-lg font-bold text-white">Direct Contact</h3>
                 <div className="mt-4 space-y-3 font-mono text-sm">
                   <p>
                     <span className="text-xs text-slate-500">EMAIL:</span>{" "}
@@ -288,9 +265,7 @@ export default function ContactFormSection() {
                   </p>
                   <p>
                     <span className="text-xs text-slate-500">RESPONSE:</span>{" "}
-                    <span className="text-xs text-slate-400">
-                      Within 24 hours
-                    </span>
+                    <span className="text-xs text-slate-400">Within 24 hours</span>
                   </p>
                 </div>
 

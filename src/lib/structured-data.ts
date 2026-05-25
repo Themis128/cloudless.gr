@@ -42,10 +42,7 @@ export function getOrganizationSchema(): OrganizationSchema {
       "@type": "PostalAddress",
       addressCountry: "GR",
     },
-    sameAs: [
-      "https://www.linkedin.com/company/cloudless-gr",
-      "https://github.com/cloudless-gr",
-    ],
+    sameAs: ["https://www.linkedin.com/company/cloudless-gr", "https://github.com/cloudless-gr"],
   };
 }
 

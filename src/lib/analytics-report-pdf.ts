@@ -1,10 +1,4 @@
-import {
-  PDFDocument,
-  StandardFonts,
-  rgb,
-  type PDFFont,
-  type PDFPage,
-} from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import type { AnalyticsOrchestrationResult } from "@/lib/analytics-agent-orchestrator";
 
 const PAGE_WIDTH = 595.28;
@@ -27,7 +21,7 @@ function splitOversizedWord(
   font: PDFFont,
   size: number,
   maxWidth: number,
-  lines: string[],
+  lines: string[]
 ): string {
   let segment = "";
   for (const character of word) {
@@ -42,12 +36,7 @@ function splitOversizedWord(
   return segment;
 }
 
-function wrapText(
-  text: string,
-  font: PDFFont,
-  size: number,
-  maxWidth: number,
-): string[] {
+function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
   const words = text.replace(/\s+/g, " ").trim().split(" ");
   if (words.length === 1 && words[0] === "") return [""];
 
@@ -81,11 +70,7 @@ function newPage(pdf: PDFDocument): DrawState {
   };
 }
 
-function ensureSpace(
-  pdf: PDFDocument,
-  state: DrawState,
-  neededHeight: number,
-): DrawState {
+function ensureSpace(pdf: PDFDocument, state: DrawState, neededHeight: number): DrawState {
   if (state.y - neededHeight >= PAGE_MARGIN) return state;
   return newPage(pdf);
 }
@@ -206,7 +191,7 @@ export async function renderAnalyticsReportPdf(params: {
       size: SUBTITLE_SIZE,
       font: regularFont,
       color: rgb(0.35, 0.39, 0.45),
-    },
+    }
   );
   state = { ...state, y: state.y - 24 };
 
@@ -275,8 +260,7 @@ export async function renderAnalyticsReportPdf(params: {
     state,
     font: regularFont,
     items: result.report.nextMoves.map(
-      (move) =>
-        `${move.move} (${move.confidence}, ${move.timeframeDays}d): ${move.expectedOutcome}`,
+      (move) => `${move.move} (${move.confidence}, ${move.timeframeDays}d): ${move.expectedOutcome}`
     ),
   });
   state = { ...state, y: state.y - 8 };
@@ -293,7 +277,7 @@ export async function renderAnalyticsReportPdf(params: {
     font: regularFont,
     items: result.report.scenarioOutcomes.map(
       (scenario) =>
-        `${scenario.scenario}: revenue ${scenario.expectedRevenueDeltaPct}%, conversion ${scenario.expectedConversionDeltaPct}%`,
+        `${scenario.scenario}: revenue ${scenario.expectedRevenueDeltaPct}%, conversion ${scenario.expectedConversionDeltaPct}%`
     ),
   });
   state = { ...state, y: state.y - 8 };
@@ -309,8 +293,7 @@ export async function renderAnalyticsReportPdf(params: {
     state,
     font: regularFont,
     items: result.connectorPayloads.map(
-      (payload) =>
-        `${payload.connector}: ${payload.chartRecommendations[0] ?? "Dashboard ready"}`,
+      (payload) => `${payload.connector}: ${payload.chartRecommendations[0] ?? "Dashboard ready"}`
     ),
   });
 

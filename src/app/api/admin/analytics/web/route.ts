@@ -9,10 +9,7 @@ export async function GET(request: NextRequest) {
 
   const config = await getConfig();
   if (!config.GOOGLE_CLIENT_EMAIL || !config.GOOGLE_PRIVATE_KEY) {
-    return NextResponse.json(
-      { error: "Google Search Console not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Google Search Console not configured." }, { status: 503 });
   }
 
   try {
@@ -24,9 +21,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     console.error("[Web Analytics] Error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch analytics." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch analytics." }, { status: 500 });
   }
 }

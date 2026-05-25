@@ -144,8 +144,7 @@ export default function IntegrationsPage() {
           setCheckedAt(data.checkedAt);
         }
       } catch (err) {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : "Failed to load");
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -166,13 +165,9 @@ export default function IntegrationsPage() {
         <div>
           <div className="bg-neon-magenta/10 border-neon-magenta/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-magenta font-mono text-xs">
-              INTEGRATIONS
-            </span>
+            <span className="text-neon-magenta font-mono text-xs">INTEGRATIONS</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            Integrations
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">Integrations</h1>
           <p className="font-body mt-1 text-slate-400">
             Live status of all external services connected to Cloudless.
           </p>
@@ -202,9 +197,7 @@ export default function IntegrationsPage() {
               key={label}
               className="bg-void-light/50 rounded-xl border border-slate-800 px-4 py-3"
             >
-              <div className={`font-mono text-xl font-bold ${cls}`}>
-                {count}
-              </div>
+              <div className={`font-mono text-xl font-bold ${cls}`}>{count}</div>
               <div className="font-mono text-xs text-slate-500">{label}</div>
             </div>
           ))}
@@ -232,7 +225,7 @@ export default function IntegrationsPage() {
       <div className="space-y-6">
         {categories.map((category) => (
           <div key={category}>
-            <h2 className="font-heading mb-3 text-sm font-semibold uppercase tracking-widest text-slate-500">
+            <h2 className="font-heading mb-3 text-sm font-semibold tracking-widest text-slate-500 uppercase">
               {category}
             </h2>
             <div className="divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800">
@@ -245,20 +238,14 @@ export default function IntegrationsPage() {
                     <span
                       className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT[row.status]}`}
                     />
-                    <span className="font-heading truncate font-medium text-white">
-                      {row.name}
-                    </span>
+                    <span className="font-heading truncate font-medium text-white">{row.name}</span>
                   </div>
 
                   <div className="flex items-center gap-3 pl-5 sm:pl-0">
                     {row.message && (
-                      <span className="font-mono text-xs text-slate-500">
-                        {row.message}
-                      </span>
+                      <span className="font-mono text-xs text-slate-500">{row.message}</span>
                     )}
-                    <span
-                      className={`shrink-0 font-mono text-xs ${STATUS_TEXT[row.status]}`}
-                    >
+                    <span className={`shrink-0 font-mono text-xs ${STATUS_TEXT[row.status]}`}>
                       {STATUS_LABEL[row.status]}
                     </span>
                     {row.status !== "configured" && (
@@ -266,7 +253,7 @@ export default function IntegrationsPage() {
                         href={row.setupUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="shrink-0 rounded-lg border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300 transition-all hover:border-neon-magenta/50 hover:text-white"
+                        className="hover:border-neon-magenta/50 shrink-0 rounded-lg border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300 transition-all hover:text-white"
                       >
                         Connect
                       </a>

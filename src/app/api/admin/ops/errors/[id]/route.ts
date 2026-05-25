@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  isSentryConfigured,
-  updateIssueStatus,
-  type IssueStatus,
-} from "@/lib/sentry";
+import { isSentryConfigured, updateIssueStatus, type IssueStatus } from "@/lib/sentry";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -19,10 +15,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   if (!auth.ok) return auth.response;
 
   if (!(await isSentryConfigured())) {
-    return NextResponse.json(
-      { error: "Sentry not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Sentry not configured." }, { status: 503 });
   }
 
   const { id } = await params;
@@ -41,7 +34,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       {
         error: `Invalid status "${status}". Must be one of: ${validStatuses.join(", ")}.`,
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -50,7 +43,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   if (!ok) {
     return NextResponse.json(
       { error: "Failed to update issue status in Sentry." },
-      { status: 502 },
+      { status: 502 }
     );
   }
 

@@ -57,9 +57,7 @@ export default function NotionSubmissionsPage() {
       };
       setSubmissions(data.submissions ?? []);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load submissions",
-      );
+      setError(err instanceof Error ? err.message : "Failed to load submissions");
     } finally {
       setLoading(false);
     }
@@ -79,9 +77,7 @@ export default function NotionSubmissionsPage() {
         body: JSON.stringify({ pageId, status }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setSubmissions((prev) =>
-        prev.map((s) => (s.id === pageId ? { ...s, status } : s)),
-      );
+      setSubmissions((prev) => prev.map((s) => (s.id === pageId ? { ...s, status } : s)));
     } catch (err) {
       console.error("Failed to update status:", err);
     } finally {
@@ -96,13 +92,9 @@ export default function NotionSubmissionsPage() {
         <div>
           <div className="bg-neon-magenta/10 border-neon-magenta/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-magenta font-mono text-xs">
-              NOTION_SUBMISSIONS
-            </span>
+            <span className="text-neon-magenta font-mono text-xs">NOTION_SUBMISSIONS</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            Contact Submissions
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">Contact Submissions</h1>
           <p className="font-body mt-1 text-slate-400">
             Form submissions stored in your Notion database.
           </p>
@@ -125,9 +117,9 @@ export default function NotionSubmissionsPage() {
 
       {/* Empty */}
       {!loading && !error && submissions.length === 0 && (
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
           <p className="font-mono text-slate-500">No submissions yet.</p>
-          <p className="mt-2 font-body text-sm text-slate-600">
+          <p className="font-body mt-2 text-sm text-slate-600">
             Submissions will appear here once the contact form is used.
           </p>
         </div>
@@ -139,7 +131,7 @@ export default function NotionSubmissionsPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5"
+              className="bg-void-light/50 animate-pulse rounded-xl border border-slate-800 p-5"
             >
               <div className="mb-3 flex items-center justify-between">
                 <div className="h-4 w-36 rounded bg-slate-700/60" />
@@ -157,18 +149,14 @@ export default function NotionSubmissionsPage() {
           {submissions.map((sub) => (
             <div
               key={sub.id}
-              className="rounded-xl border border-slate-800 bg-void-light/50 p-5 transition-all"
+              className="bg-void-light/50 rounded-xl border border-slate-800 p-5 transition-all"
             >
               {/* Row header */}
               <div className="flex flex-wrap items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-heading font-semibold text-white">
-                      {sub.name}
-                    </span>
-                    <span className="font-mono text-xs text-slate-500">
-                      {sub.email}
-                    </span>
+                    <span className="font-heading font-semibold text-white">{sub.name}</span>
+                    <span className="font-mono text-xs text-slate-500">{sub.email}</span>
                     {sub.company && (
                       <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-slate-400">
                         {sub.company}
@@ -192,10 +180,8 @@ export default function NotionSubmissionsPage() {
                   <select
                     value={sub.status}
                     disabled={updating === sub.id}
-                    onChange={(e) =>
-                      updateStatus(sub.id, e.target.value as StatusValue)
-                    }
-                    className="rounded border border-slate-700 bg-void px-2 py-1 font-mono text-xs text-slate-300 focus:border-neon-magenta/50 focus:outline-none disabled:opacity-50"
+                    onChange={(e) => updateStatus(sub.id, e.target.value as StatusValue)}
+                    className="bg-void focus:border-neon-magenta/50 rounded border border-slate-700 px-2 py-1 font-mono text-xs text-slate-300 focus:outline-none disabled:opacity-50"
                   >
                     <option value="New">New</option>
                     <option value="In Review">In Review</option>
@@ -203,10 +189,8 @@ export default function NotionSubmissionsPage() {
                   </select>
 
                   <button
-                    onClick={() =>
-                      setExpanded(expanded === sub.id ? null : sub.id)
-                    }
-                    className="text-slate-500 hover:text-slate-300 font-mono text-xs transition-colors"
+                    onClick={() => setExpanded(expanded === sub.id ? null : sub.id)}
+                    className="font-mono text-xs text-slate-500 transition-colors hover:text-slate-300"
                   >
                     {expanded === sub.id ? "▲ hide" : "▼ show"}
                   </button>
@@ -215,8 +199,8 @@ export default function NotionSubmissionsPage() {
 
               {/* Expanded message */}
               {expanded === sub.id && (
-                <div className="mt-4 rounded-lg border border-slate-700/50 bg-void/60 p-4">
-                  <p className="font-body whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
+                <div className="bg-void/60 mt-4 rounded-lg border border-slate-700/50 p-4">
+                  <p className="font-body text-sm leading-relaxed whitespace-pre-wrap text-slate-300">
                     {sub.message}
                   </p>
                   {sub.url && (

@@ -19,12 +19,7 @@ interface Project {
   url: string;
 }
 
-type ProjectStatus =
-  | "Planning"
-  | "In Progress"
-  | "On Hold"
-  | "Completed"
-  | "Cancelled";
+type ProjectStatus = "Planning" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
 type ProjectPriority = "Critical" | "High" | "Medium" | "Low";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -63,8 +58,7 @@ function formatDate(iso: string) {
 }
 
 function isOverdue(dueDate: string, status: string): boolean {
-  if (!dueDate || status === "Completed" || status === "Cancelled")
-    return false;
+  if (!dueDate || status === "Completed" || status === "Cancelled") return false;
   return new Date(dueDate) < new Date();
 }
 
@@ -91,7 +85,7 @@ function ProgressInput({
     <div className="flex items-center gap-2">
       <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-800">
         <div
-          className="h-full rounded-full bg-neon-cyan transition-all"
+          className="bg-neon-cyan h-full rounded-full transition-all"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -103,7 +97,7 @@ function ProgressInput({
         disabled={disabled}
         onChange={(e) => onProgressChange(projectId, clampProgress(e.target.value))}
         onBlur={(e) => onBlur(projectId, clampProgress(e.target.value))}
-        className="w-12 rounded border border-slate-700 bg-void px-1 py-0.5 text-center font-mono text-xs text-slate-300 focus:border-neon-cyan/50 focus:outline-none disabled:opacity-50"
+        className="bg-void focus:border-neon-cyan/50 w-12 rounded border border-slate-700 px-1 py-0.5 text-center font-mono text-xs text-slate-300 focus:outline-none disabled:opacity-50"
       />
       <span className="font-mono text-[10px] text-slate-600">%</span>
     </div>
@@ -159,9 +153,7 @@ export default function ProjectsPage() {
         body: JSON.stringify({ pageId, status }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setProjects((prev) =>
-        prev.map((p) => (p.id === pageId ? { ...p, status } : p)),
-      );
+      setProjects((prev) => prev.map((p) => (p.id === pageId ? { ...p, status } : p)));
     } catch (err) {
       console.error("Failed to update status:", err);
     } finally {
@@ -178,9 +170,7 @@ export default function ProjectsPage() {
         body: JSON.stringify({ pageId, progress }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setProjects((prev) =>
-        prev.map((p) => (p.id === pageId ? { ...p, progress } : p)),
-      );
+      setProjects((prev) => prev.map((p) => (p.id === pageId ? { ...p, progress } : p)));
     } catch (err) {
       console.error("Failed to update progress:", err);
     } finally {
@@ -223,8 +213,7 @@ export default function ProjectsPage() {
     "Completed",
     "Cancelled",
   ];
-  const countByStatus = (s: string) =>
-    projects.filter((p) => p.status === s).length;
+  const countByStatus = (s: string) => projects.filter((p) => p.status === s).length;
 
   return (
     <div>
@@ -233,13 +222,9 @@ export default function ProjectsPage() {
         <div>
           <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-cyan font-mono text-xs">
-              NOTION_PROJECTS
-            </span>
+            <span className="text-neon-cyan font-mono text-xs">NOTION_PROJECTS</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            Projects
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">Projects</h1>
           <p className="font-body mt-1 text-slate-400">
             Manage projects from your Notion workspace.
           </p>
@@ -291,23 +276,19 @@ export default function ProjectsPage() {
       {/* Create form */}
       {showCreate && (
         <div className="bg-void-light/50 mb-6 rounded-xl border border-slate-800 p-6">
-          <h3 className="font-heading mb-4 font-semibold text-white">
-            Create Project
-          </h3>
+          <h3 className="font-heading mb-4 font-semibold text-white">Create Project</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <input
               type="text"
               placeholder="Project name *"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="bg-void rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-cyan/50 focus:outline-none"
+              className="bg-void focus:border-neon-cyan/50 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
             />
             <select
               value={newPriority}
-              onChange={(e) =>
-                setNewPriority(e.target.value as ProjectPriority)
-              }
-              className="bg-void rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-neon-cyan/50 focus:outline-none"
+              onChange={(e) => setNewPriority(e.target.value as ProjectPriority)}
+              className="bg-void focus:border-neon-cyan/50 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:outline-none"
             >
               <option value="Critical">Critical</option>
               <option value="High">High</option>
@@ -317,7 +298,7 @@ export default function ProjectsPage() {
             <select
               value={newType}
               onChange={(e) => setNewType(e.target.value)}
-              className="bg-void rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-neon-cyan/50 focus:outline-none"
+              className="bg-void focus:border-neon-cyan/50 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:outline-none"
             >
               <option value="Client">Client</option>
               <option value="Internal">Internal</option>
@@ -328,14 +309,14 @@ export default function ProjectsPage() {
               placeholder="Owner"
               value={newOwner}
               onChange={(e) => setNewOwner(e.target.value)}
-              className="bg-void rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-cyan/50 focus:outline-none"
+              className="bg-void focus:border-neon-cyan/50 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
             />
             <textarea
               placeholder="Description"
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
               rows={2}
-              className="bg-void col-span-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-cyan/50 focus:outline-none"
+              className="bg-void focus:border-neon-cyan/50 col-span-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
             />
           </div>
           <div className="mt-4 flex gap-2">
@@ -369,7 +350,7 @@ export default function ProjectsPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5"
+              className="bg-void-light/50 animate-pulse rounded-xl border border-slate-800 p-5"
             >
               <div className="mb-3 h-4 w-48 rounded bg-slate-700/60" />
               <div className="h-3 w-32 rounded bg-slate-800/80" />
@@ -380,7 +361,7 @@ export default function ProjectsPage() {
 
       {/* Empty */}
       {!loading && !error && projects.length === 0 && (
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
           <p className="font-mono text-slate-500">No projects found.</p>
           <p className="font-body mt-2 text-sm text-slate-600">
             Create your first project above or add one in Notion.
@@ -397,9 +378,7 @@ export default function ProjectsPage() {
               <div
                 key={project.id}
                 className={`rounded-xl border p-5 transition-all hover:border-slate-700 ${
-                  overdue
-                    ? "border-red-500/20 bg-red-500/5"
-                    : "border-slate-800 bg-void-light/50"
+                  overdue ? "border-red-500/20 bg-red-500/5" : "bg-void-light/50 border-slate-800"
                 }`}
               >
                 <div className="flex flex-wrap items-start gap-3">
@@ -410,9 +389,7 @@ export default function ProjectsPage() {
                       >
                         {PRIORITY_ICONS[project.priority] ?? "◆"}
                       </span>
-                      <h3 className="font-heading font-semibold text-white">
-                        {project.name}
-                      </h3>
+                      <h3 className="font-heading font-semibold text-white">{project.name}</h3>
                       {overdue && (
                         <span className="rounded bg-red-500/20 px-1.5 py-0.5 font-mono text-[9px] text-red-400">
                           OVERDUE
@@ -423,16 +400,14 @@ export default function ProjectsPage() {
                       </span>
                     </div>
                     {project.description && (
-                      <p className="font-body mt-1 text-sm text-slate-500 line-clamp-1">
+                      <p className="font-body mt-1 line-clamp-1 text-sm text-slate-500">
                         {project.description}
                       </p>
                     )}
                     <div className="mt-2 flex flex-wrap gap-3 font-mono text-xs text-slate-600">
                       {project.owner && <span>Owner: {project.owner}</span>}
                       <span>Start: {formatDate(project.startDate)}</span>
-                      {project.dueDate && (
-                        <span>Due: {formatDate(project.dueDate)}</span>
-                      )}
+                      {project.dueDate && <span>Due: {formatDate(project.dueDate)}</span>}
                       {project.budget !== null && (
                         <span>Budget: €{project.budget.toLocaleString()}</span>
                       )}
@@ -450,13 +425,8 @@ export default function ProjectsPage() {
                       <select
                         value={project.status}
                         disabled={updating === project.id}
-                        onChange={(e) =>
-                          updateStatus(
-                            project.id,
-                            e.target.value as ProjectStatus,
-                          )
-                        }
-                        className="rounded border border-slate-700 bg-void px-2 py-1 font-mono text-xs text-slate-300 focus:border-neon-cyan/50 focus:outline-none disabled:opacity-50"
+                        onChange={(e) => updateStatus(project.id, e.target.value as ProjectStatus)}
+                        className="bg-void focus:border-neon-cyan/50 rounded border border-slate-700 px-2 py-1 font-mono text-xs text-slate-300 focus:outline-none disabled:opacity-50"
                       >
                         {statuses.map((s) => (
                           <option key={s} value={s}>
@@ -473,7 +443,7 @@ export default function ProjectsPage() {
                       disabled={updating === project.id}
                       onProgressChange={(id, val) =>
                         setProjects((prev) =>
-                          prev.map((p) => (p.id === id ? { ...p, progress: val } : p)),
+                          prev.map((p) => (p.id === id ? { ...p, progress: val } : p))
                         )
                       }
                       onBlur={updateProgress}

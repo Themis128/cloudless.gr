@@ -35,10 +35,7 @@ import {
   extractText,
   notionImageProxyUrl,
 } from "@/lib/notion";
-import {
-  getIntegrationsAsync,
-  requireIntegrationAsync,
-} from "@/lib/integrations";
+import { getIntegrationsAsync, requireIntegrationAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
 // ---------------------------------------------------------------------------
@@ -157,9 +154,7 @@ function mapPage(page: any): CaseStudy {
     coverImage:
       p.CoverImage?.url ??
       page.cover?.external?.url ??
-      (page.cover?.type === "file"
-        ? notionImageProxyUrl(page.id, "cover")
-        : undefined),
+      (page.cover?.type === "file" ? notionImageProxyUrl(page.id, "cover") : undefined),
     tags: (p.Tags?.multi_select ?? []).map((t: any) => t.name),
     featured: p.Featured?.checkbox ?? false,
     date: p.Date?.date?.start ?? page.created_time ?? "",
@@ -180,13 +175,10 @@ export async function getCaseStudies(): Promise<CaseStudy[]> {
   return cached("case-studies:all", async () => {
     const { NOTION_CASE_STUDIES_DB_ID } = await getIntegrationsAsync();
     try {
-      const pages = await notionFetchAll(
-        `/databases/${NOTION_CASE_STUDIES_DB_ID}/query`,
-        {
-          filter: { property: "Published", checkbox: { equals: true } },
-          sorts: [{ property: "Date", direction: "descending" }],
-        },
-      );
+      const pages = await notionFetchAll(`/databases/${NOTION_CASE_STUDIES_DB_ID}/query`, {
+        filter: { property: "Published", checkbox: { equals: true } },
+        sorts: [{ property: "Date", direction: "descending" }],
+      });
       return pages.map(mapPage);
     } catch (err) {
       console.error("[Notion Case Studies] Failed to fetch:", err);
@@ -206,24 +198,19 @@ export async function getFeaturedCaseStudies(): Promise<CaseStudy[]> {
 /**
  * Fetch a single case study by slug, with full rendered HTML content.
  */
-export async function getCaseStudyBySlug(
-  slug: string,
-): Promise<CaseStudyWithContent | null> {
+export async function getCaseStudyBySlug(slug: string): Promise<CaseStudyWithContent | null> {
   await requireIntegrationAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID");
 
   const { NOTION_CASE_STUDIES_DB_ID } = await getIntegrationsAsync();
   try {
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_CASE_STUDIES_DB_ID}/query`,
-      {
-        filter: {
-          and: [
-            { property: "Slug", rich_text: { equals: slug } },
-            { property: "Published", checkbox: { equals: true } },
-          ],
-        },
+    const pages = await notionFetchAll(`/databases/${NOTION_CASE_STUDIES_DB_ID}/query`, {
+      filter: {
+        and: [
+          { property: "Slug", rich_text: { equals: slug } },
+          { property: "Published", checkbox: { equals: true } },
+        ],
       },
-    );
+    });
     const page = pages[0];
     if (!page) return null;
     const cs = mapPage(page);
