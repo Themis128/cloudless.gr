@@ -99,8 +99,7 @@ export function getIntegrations(): IntegrationConfig {
     NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID,
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
     GOOGLE_SERVICE_ACCOUNT_EMAIL:
-      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-      process.env.GOOGLE_CLIENT_EMAIL,
+      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL,
     GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
@@ -178,136 +177,75 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
     const ssm = await getConfig();
 
     cachedAsync = {
-      SLACK_WEBHOOK_URL:
-        envCfg.SLACK_WEBHOOK_URL || ssm.SLACK_WEBHOOK_URL || undefined,
-      SLACK_BOT_TOKEN:
-        envCfg.SLACK_BOT_TOKEN || ssm.SLACK_BOT_TOKEN || undefined,
-      SLACK_SIGNING_SECRET:
-        envCfg.SLACK_SIGNING_SECRET || ssm.SLACK_SIGNING_SECRET || undefined,
-      HUBSPOT_API_KEY:
-        envCfg.HUBSPOT_API_KEY || ssm.HUBSPOT_API_KEY || undefined,
-      HUBSPOT_CLIENT_SECRET:
-        envCfg.HUBSPOT_CLIENT_SECRET || ssm.HUBSPOT_CLIENT_SECRET || undefined,
+      SLACK_WEBHOOK_URL: envCfg.SLACK_WEBHOOK_URL || ssm.SLACK_WEBHOOK_URL || undefined,
+      SLACK_BOT_TOKEN: envCfg.SLACK_BOT_TOKEN || ssm.SLACK_BOT_TOKEN || undefined,
+      SLACK_SIGNING_SECRET: envCfg.SLACK_SIGNING_SECRET || ssm.SLACK_SIGNING_SECRET || undefined,
+      HUBSPOT_API_KEY: envCfg.HUBSPOT_API_KEY || ssm.HUBSPOT_API_KEY || undefined,
+      HUBSPOT_CLIENT_SECRET: envCfg.HUBSPOT_CLIENT_SECRET || ssm.HUBSPOT_CLIENT_SECRET || undefined,
       NOTION_API_KEY: envCfg.NOTION_API_KEY || ssm.NOTION_API_KEY || undefined,
-      NOTION_BLOG_DB_ID:
-        envCfg.NOTION_BLOG_DB_ID || ssm.NOTION_BLOG_DB_ID || undefined,
+      NOTION_BLOG_DB_ID: envCfg.NOTION_BLOG_DB_ID || ssm.NOTION_BLOG_DB_ID || undefined,
       NOTION_SUBMISSIONS_DB_ID:
-        envCfg.NOTION_SUBMISSIONS_DB_ID ||
-        ssm.NOTION_SUBMISSIONS_DB_ID ||
-        undefined,
-      NOTION_DOCS_DB_ID:
-        envCfg.NOTION_DOCS_DB_ID || ssm.NOTION_DOCS_DB_ID || undefined,
-      NOTION_PROJECTS_DB_ID:
-        envCfg.NOTION_PROJECTS_DB_ID || ssm.NOTION_PROJECTS_DB_ID || undefined,
-      NOTION_TASKS_DB_ID:
-        envCfg.NOTION_TASKS_DB_ID || ssm.NOTION_TASKS_DB_ID || undefined,
+        envCfg.NOTION_SUBMISSIONS_DB_ID || ssm.NOTION_SUBMISSIONS_DB_ID || undefined,
+      NOTION_DOCS_DB_ID: envCfg.NOTION_DOCS_DB_ID || ssm.NOTION_DOCS_DB_ID || undefined,
+      NOTION_PROJECTS_DB_ID: envCfg.NOTION_PROJECTS_DB_ID || ssm.NOTION_PROJECTS_DB_ID || undefined,
+      NOTION_TASKS_DB_ID: envCfg.NOTION_TASKS_DB_ID || ssm.NOTION_TASKS_DB_ID || undefined,
       NOTION_ANALYTICS_DB_ID:
-        envCfg.NOTION_ANALYTICS_DB_ID ||
-        ssm.NOTION_ANALYTICS_DB_ID ||
-        undefined,
-      NOTION_CALENDAR_DB_ID:
-        envCfg.NOTION_CALENDAR_DB_ID || ssm.NOTION_CALENDAR_DB_ID || undefined,
-      NOTION_REPORTS_DB_ID:
-        envCfg.NOTION_REPORTS_DB_ID || ssm.NOTION_REPORTS_DB_ID || undefined,
+        envCfg.NOTION_ANALYTICS_DB_ID || ssm.NOTION_ANALYTICS_DB_ID || undefined,
+      NOTION_CALENDAR_DB_ID: envCfg.NOTION_CALENDAR_DB_ID || ssm.NOTION_CALENDAR_DB_ID || undefined,
+      NOTION_REPORTS_DB_ID: envCfg.NOTION_REPORTS_DB_ID || ssm.NOTION_REPORTS_DB_ID || undefined,
       NOTION_GSC_REPORTS_DB_ID:
-        envCfg.NOTION_GSC_REPORTS_DB_ID ||
-        ssm.NOTION_GSC_REPORTS_DB_ID ||
-        undefined,
+        envCfg.NOTION_GSC_REPORTS_DB_ID || ssm.NOTION_GSC_REPORTS_DB_ID || undefined,
       NOTION_TESTIMONIALS_DB_ID:
-        envCfg.NOTION_TESTIMONIALS_DB_ID ||
-        ssm.NOTION_TESTIMONIALS_DB_ID ||
-        undefined,
+        envCfg.NOTION_TESTIMONIALS_DB_ID || ssm.NOTION_TESTIMONIALS_DB_ID || undefined,
       NOTION_CASE_STUDIES_DB_ID:
-        envCfg.NOTION_CASE_STUDIES_DB_ID ||
-        ssm.NOTION_CASE_STUDIES_DB_ID ||
-        undefined,
-      NOTION_SERVICES_DB_ID:
-        envCfg.NOTION_SERVICES_DB_ID || ssm.NOTION_SERVICES_DB_ID || undefined,
-      NOTION_FAQS_DB_ID:
-        envCfg.NOTION_FAQS_DB_ID || ssm.NOTION_FAQS_DB_ID || undefined,
-      GOOGLE_CLIENT_EMAIL:
-        envCfg.GOOGLE_CLIENT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
+        envCfg.NOTION_CASE_STUDIES_DB_ID || ssm.NOTION_CASE_STUDIES_DB_ID || undefined,
+      NOTION_SERVICES_DB_ID: envCfg.NOTION_SERVICES_DB_ID || ssm.NOTION_SERVICES_DB_ID || undefined,
+      NOTION_FAQS_DB_ID: envCfg.NOTION_FAQS_DB_ID || ssm.NOTION_FAQS_DB_ID || undefined,
+      GOOGLE_CLIENT_EMAIL: envCfg.GOOGLE_CLIENT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
       GOOGLE_SERVICE_ACCOUNT_EMAIL:
-        envCfg.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-        ssm.GOOGLE_CLIENT_EMAIL ||
-        undefined,
-      GOOGLE_PRIVATE_KEY:
-        envCfg.GOOGLE_PRIVATE_KEY || ssm.GOOGLE_PRIVATE_KEY || undefined,
-      GOOGLE_CALENDAR_ID:
-        envCfg.GOOGLE_CALENDAR_ID || ssm.GOOGLE_CALENDAR_ID || undefined,
-      STRIPE_SECRET_KEY:
-        envCfg.STRIPE_SECRET_KEY || ssm.STRIPE_SECRET_KEY || undefined,
-      SENTRY_AUTH_TOKEN:
-        envCfg.SENTRY_AUTH_TOKEN || ssm.SENTRY_AUTH_TOKEN || undefined,
+        envCfg.GOOGLE_SERVICE_ACCOUNT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
+      GOOGLE_PRIVATE_KEY: envCfg.GOOGLE_PRIVATE_KEY || ssm.GOOGLE_PRIVATE_KEY || undefined,
+      GOOGLE_CALENDAR_ID: envCfg.GOOGLE_CALENDAR_ID || ssm.GOOGLE_CALENDAR_ID || undefined,
+      STRIPE_SECRET_KEY: envCfg.STRIPE_SECRET_KEY || ssm.STRIPE_SECRET_KEY || undefined,
+      SENTRY_AUTH_TOKEN: envCfg.SENTRY_AUTH_TOKEN || ssm.SENTRY_AUTH_TOKEN || undefined,
       SENTRY_ORG: envCfg.SENTRY_ORG || ssm.SENTRY_ORG || DEFAULT_SENTRY_ORG,
-      SENTRY_PROJECT:
-        envCfg.SENTRY_PROJECT || ssm.SENTRY_PROJECT || DEFAULT_SENTRY_PROJECT,
-      NOTION_WEBHOOK_SECRET:
-        envCfg.NOTION_WEBHOOK_SECRET || ssm.NOTION_WEBHOOK_SECRET || undefined,
+      SENTRY_PROJECT: envCfg.SENTRY_PROJECT || ssm.SENTRY_PROJECT || DEFAULT_SENTRY_PROJECT,
+      NOTION_WEBHOOK_SECRET: envCfg.NOTION_WEBHOOK_SECRET || ssm.NOTION_WEBHOOK_SECRET || undefined,
       ACTIVECAMPAIGN_API_URL:
-        envCfg.ACTIVECAMPAIGN_API_URL ||
-        ssm.ACTIVECAMPAIGN_API_URL ||
-        undefined,
+        envCfg.ACTIVECAMPAIGN_API_URL || ssm.ACTIVECAMPAIGN_API_URL || undefined,
       ACTIVECAMPAIGN_API_TOKEN:
-        envCfg.ACTIVECAMPAIGN_API_TOKEN ||
-        ssm.ACTIVECAMPAIGN_API_TOKEN ||
-        undefined,
+        envCfg.ACTIVECAMPAIGN_API_TOKEN || ssm.ACTIVECAMPAIGN_API_TOKEN || undefined,
       GOOGLE_ADS_DEVELOPER_TOKEN:
-        envCfg.GOOGLE_ADS_DEVELOPER_TOKEN ||
-        ssm.GOOGLE_ADS_DEVELOPER_TOKEN ||
-        undefined,
+        envCfg.GOOGLE_ADS_DEVELOPER_TOKEN || ssm.GOOGLE_ADS_DEVELOPER_TOKEN || undefined,
       GOOGLE_ADS_CUSTOMER_ID:
-        envCfg.GOOGLE_ADS_CUSTOMER_ID ||
-        ssm.GOOGLE_ADS_CUSTOMER_ID ||
-        undefined,
-      LINKEDIN_CLIENT_ID:
-        envCfg.LINKEDIN_CLIENT_ID || ssm.LINKEDIN_CLIENT_ID || undefined,
+        envCfg.GOOGLE_ADS_CUSTOMER_ID || ssm.GOOGLE_ADS_CUSTOMER_ID || undefined,
+      LINKEDIN_CLIENT_ID: envCfg.LINKEDIN_CLIENT_ID || ssm.LINKEDIN_CLIENT_ID || undefined,
       LINKEDIN_CLIENT_SECRET:
-        envCfg.LINKEDIN_CLIENT_SECRET ||
-        ssm.LINKEDIN_CLIENT_SECRET ||
-        undefined,
-      LINKEDIN_ACCESS_TOKEN:
-        envCfg.LINKEDIN_ACCESS_TOKEN || ssm.LINKEDIN_ACCESS_TOKEN || undefined,
+        envCfg.LINKEDIN_CLIENT_SECRET || ssm.LINKEDIN_CLIENT_SECRET || undefined,
+      LINKEDIN_ACCESS_TOKEN: envCfg.LINKEDIN_ACCESS_TOKEN || ssm.LINKEDIN_ACCESS_TOKEN || undefined,
       LINKEDIN_AD_ACCOUNT_ID:
-        envCfg.LINKEDIN_AD_ACCOUNT_ID ||
-        ssm.LINKEDIN_AD_ACCOUNT_ID ||
-        undefined,
+        envCfg.LINKEDIN_AD_ACCOUNT_ID || ssm.LINKEDIN_AD_ACCOUNT_ID || undefined,
       LINKEDIN_ORGANIZATION_URN:
-        envCfg.LINKEDIN_ORGANIZATION_URN ||
-        ssm.LINKEDIN_ORGANIZATION_URN ||
-        undefined,
+        envCfg.LINKEDIN_ORGANIZATION_URN || ssm.LINKEDIN_ORGANIZATION_URN || undefined,
       TIKTOK_APP_ID: envCfg.TIKTOK_APP_ID || ssm.TIKTOK_APP_ID || undefined,
-      TIKTOK_APP_SECRET:
-        envCfg.TIKTOK_APP_SECRET || ssm.TIKTOK_APP_SECRET || undefined,
-      TIKTOK_ACCESS_TOKEN:
-        envCfg.TIKTOK_ACCESS_TOKEN || ssm.TIKTOK_ACCESS_TOKEN || undefined,
-      TIKTOK_ADVERTISER_ID:
-        envCfg.TIKTOK_ADVERTISER_ID || ssm.TIKTOK_ADVERTISER_ID || undefined,
+      TIKTOK_APP_SECRET: envCfg.TIKTOK_APP_SECRET || ssm.TIKTOK_APP_SECRET || undefined,
+      TIKTOK_ACCESS_TOKEN: envCfg.TIKTOK_ACCESS_TOKEN || ssm.TIKTOK_ACCESS_TOKEN || undefined,
+      TIKTOK_ADVERTISER_ID: envCfg.TIKTOK_ADVERTISER_ID || ssm.TIKTOK_ADVERTISER_ID || undefined,
       X_API_KEY: envCfg.X_API_KEY || ssm.X_API_KEY || undefined,
       X_API_SECRET: envCfg.X_API_SECRET || ssm.X_API_SECRET || undefined,
       X_ACCESS_TOKEN: envCfg.X_ACCESS_TOKEN || ssm.X_ACCESS_TOKEN || undefined,
-      X_ACCESS_SECRET:
-        envCfg.X_ACCESS_SECRET || ssm.X_ACCESS_SECRET || undefined,
-      X_AD_ACCOUNT_ID:
-        envCfg.X_AD_ACCOUNT_ID || ssm.X_AD_ACCOUNT_ID || undefined,
-      META_AD_ACCOUNT_ID:
-        envCfg.META_AD_ACCOUNT_ID || ssm.META_AD_ACCOUNT_ID || undefined,
+      X_ACCESS_SECRET: envCfg.X_ACCESS_SECRET || ssm.X_ACCESS_SECRET || undefined,
+      X_AD_ACCOUNT_ID: envCfg.X_AD_ACCOUNT_ID || ssm.X_AD_ACCOUNT_ID || undefined,
+      META_AD_ACCOUNT_ID: envCfg.META_AD_ACCOUNT_ID || ssm.META_AD_ACCOUNT_ID || undefined,
       META_PIXEL_ID: envCfg.META_PIXEL_ID || ssm.META_PIXEL_ID || undefined,
       META_CAPI_ACCESS_TOKEN:
-        envCfg.META_CAPI_ACCESS_TOKEN ||
-        ssm.META_CAPI_ACCESS_TOKEN ||
-        undefined,
-      META_ACCESS_TOKEN:
-        envCfg.META_ACCESS_TOKEN || ssm.META_ACCESS_TOKEN || undefined,
+        envCfg.META_CAPI_ACCESS_TOKEN || ssm.META_CAPI_ACCESS_TOKEN || undefined,
+      META_ACCESS_TOKEN: envCfg.META_ACCESS_TOKEN || ssm.META_ACCESS_TOKEN || undefined,
       META_PAGE_ID: envCfg.META_PAGE_ID || ssm.META_PAGE_ID || undefined,
-      ANTHROPIC_API_KEY:
-        envCfg.ANTHROPIC_API_KEY || ssm.ANTHROPIC_API_KEY || undefined,
+      ANTHROPIC_API_KEY: envCfg.ANTHROPIC_API_KEY || ssm.ANTHROPIC_API_KEY || undefined,
     };
   } catch (err) {
-    console.warn(
-      "[Integrations] SSM fallback failed, using env-only config:",
-      err,
-    );
+    console.warn("[Integrations] SSM fallback failed, using env-only config:", err);
     cachedAsync = envCfg;
   }
 
@@ -324,7 +262,7 @@ export class IntegrationNotConfiguredError extends Error {
   constructor(keys: (keyof IntegrationConfig)[]) {
     super(
       `Integration not configured: missing ${keys.join(", ")}. ` +
-        "Set the env var(s) or add them to AWS SSM under /cloudless/production/.",
+        "Set the env var(s) or add them to AWS SSM under /cloudless/production/."
     );
     this.name = "IntegrationNotConfiguredError";
     this.keys = keys;
@@ -358,9 +296,7 @@ export async function requireIntegrationAsync(
  * Async version of isConfigured() — uses SSM fallback.
  * Use in API routes instead of the sync isConfigured().
  */
-export async function isConfiguredAsync(
-  ...keys: (keyof IntegrationConfig)[]
-): Promise<boolean> {
+export async function isConfiguredAsync(...keys: (keyof IntegrationConfig)[]): Promise<boolean> {
   // Fast-path: if any env var is explicitly cleared to "" return false immediately.
   // This ensures tests that clear env vars bypass the async cache regardless of
   // any module-isolation effects from vi.mock.
@@ -404,7 +340,7 @@ export function getSlackConfig(): SlackConfig {
   if (!token && !webhookUrl) {
     console.warn(
       "[Slack] Neither SLACK_BOT_TOKEN nor SLACK_WEBHOOK_URL is set — " +
-        "Slack notifications will be skipped.",
+        "Slack notifications will be skipped."
     );
   }
 
@@ -435,15 +371,10 @@ export async function getSlackConfigAsync(): Promise<SlackConfig> {
     try {
       const { getConfig } = await import("@/lib/ssm-config");
       const ssmCfg = await getConfig();
-      signingSecret =
-        (ssmCfg as unknown as Record<string, string>).SLACK_SIGNING_SECRET ??
-        "";
-      if (!token)
-        token =
-          (ssmCfg as unknown as Record<string, string>).SLACK_BOT_TOKEN ?? "";
+      signingSecret = (ssmCfg as unknown as Record<string, string>).SLACK_SIGNING_SECRET ?? "";
+      if (!token) token = (ssmCfg as unknown as Record<string, string>).SLACK_BOT_TOKEN ?? "";
       if (!webhookUrl)
-        webhookUrl =
-          (ssmCfg as unknown as Record<string, string>).SLACK_WEBHOOK_URL ?? "";
+        webhookUrl = (ssmCfg as unknown as Record<string, string>).SLACK_WEBHOOK_URL ?? "";
     } catch (err) {
       console.warn("[Slack] SSM fallback failed:", err);
     }
@@ -452,7 +383,7 @@ export async function getSlackConfigAsync(): Promise<SlackConfig> {
   if (!token && !webhookUrl) {
     console.warn(
       "[Slack] Neither SLACK_BOT_TOKEN nor SLACK_WEBHOOK_URL is set — " +
-        "Slack notifications will be skipped.",
+        "Slack notifications will be skipped."
     );
   }
 

@@ -116,15 +116,10 @@ function mapPage(page: any): Faq {
  * Falls back to staticFaqs when Notion is not configured.
  */
 export async function getFaqs(locale?: string): Promise<Faq[]> {
-  const configured = await isConfiguredAsync(
-    "NOTION_API_KEY",
-    "NOTION_FAQS_DB_ID",
-  );
+  const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_FAQS_DB_ID");
   if (!configured) {
     return locale
-      ? staticFaqs.filter(
-          (f) => f.locales.length === 0 || f.locales.includes(locale),
-        )
+      ? staticFaqs.filter((f) => f.locales.length === 0 || f.locales.includes(locale))
       : staticFaqs;
   }
 
@@ -132,18 +127,13 @@ export async function getFaqs(locale?: string): Promise<Faq[]> {
   return cached(cacheKey, async () => {
     const { NOTION_FAQS_DB_ID } = await getIntegrationsAsync();
     try {
-      const pages = await notionFetchAll(
-        `/databases/${NOTION_FAQS_DB_ID}/query`,
-        {
-          filter: { property: "Published", checkbox: { equals: true } },
-          sorts: [{ property: "Order", direction: "ascending" }],
-        },
-      );
+      const pages = await notionFetchAll(`/databases/${NOTION_FAQS_DB_ID}/query`, {
+        filter: { property: "Published", checkbox: { equals: true } },
+        sorts: [{ property: "Order", direction: "ascending" }],
+      });
       const all = pages.map(mapPage);
       const filtered = locale
-        ? all.filter(
-            (f) => f.locales.length === 0 || f.locales.includes(locale),
-          )
+        ? all.filter((f) => f.locales.length === 0 || f.locales.includes(locale))
         : all;
       return filtered.length > 0 ? filtered : staticFaqs;
     } catch (err) {
@@ -156,10 +146,7 @@ export async function getFaqs(locale?: string): Promise<Faq[]> {
 /**
  * Fetch FAQs filtered by category.
  */
-export async function getFaqsByCategory(
-  category: FaqCategory,
-  locale?: string,
-): Promise<Faq[]> {
+export async function getFaqsByCategory(category: FaqCategory, locale?: string): Promise<Faq[]> {
   const faqs = await getFaqs(locale);
   return faqs.filter((f) => f.category === category);
 }

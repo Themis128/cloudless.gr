@@ -13,10 +13,7 @@ async function getTikTokConfig(): Promise<{
   return { token, advertiserId };
 }
 
-async function ttFetch(
-  path: string,
-  options: RequestInit = {},
-): Promise<Response> {
+async function ttFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const { token } = await getTikTokConfig();
   return fetch(`${TIKTOK_API}${path}`, {
     ...options,
@@ -51,9 +48,7 @@ export interface TikTokCampaign {
 export async function listTikTokCampaigns(): Promise<TikTokCampaign[]> {
   try {
     const { advertiserId } = await getTikTokConfig();
-    const res = await ttFetch(
-      `/campaign/get/?advertiser_id=${advertiserId}&page_size=20`,
-    );
+    const res = await ttFetch(`/campaign/get/?advertiser_id=${advertiserId}&page_size=20`);
     if (!res.ok) return [];
     const data = await res.json();
     return data.data?.list ?? [];
@@ -73,7 +68,7 @@ export interface TikTokInsights {
 
 export async function getTikTokInsights(
   dateStart: string,
-  dateEnd: string,
+  dateEnd: string
 ): Promise<TikTokInsights> {
   const empty: TikTokInsights = {
     spend: "0",
@@ -101,11 +96,9 @@ export async function getTikTokInsights(
     });
     if (!res.ok) return empty;
     const data = await res.json();
-    const rows: Record<string, Record<string, string>>[] =
-      data.data?.list ?? [];
+    const rows: Record<string, Record<string, string>>[] = data.data?.list ?? [];
     if (rows.length === 0) return empty;
-    const metrics: Record<string, string> =
-      (rows[0].metrics as Record<string, string>) ?? {};
+    const metrics: Record<string, string> = (rows[0].metrics as Record<string, string>) ?? {};
     return {
       spend: metrics.spend ?? "0",
       impressions: metrics.impressions ?? "0",

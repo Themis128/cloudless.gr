@@ -20,16 +20,13 @@ export async function POST(request: NextRequest) {
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Invalid input" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   const apiKey = await getAnthropicApiKey();
   if (!apiKey) {
-    return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 });
   }
 
   const CHAR_LIMITS: Record<string, { headline: number; body: number }> = {
@@ -74,7 +71,7 @@ Respond with raw JSON only (no markdown fences):
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "AI generation failed." },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

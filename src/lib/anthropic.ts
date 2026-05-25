@@ -21,11 +21,7 @@ const VERIFY_TIMEOUT_MS = 8_000;
 const DEFAULT_MAX_TOKENS = 1_000;
 const DEFAULT_CHAT_MODEL = "claude-3-5-haiku-latest";
 
-export type AnthropicTokenStatus =
-  | "valid"
-  | "rejected"
-  | "not_configured"
-  | "error";
+export type AnthropicTokenStatus = "valid" | "rejected" | "not_configured" | "error";
 
 const ERROR_STATUS: AnthropicTokenStatus = "error";
 
@@ -89,8 +85,7 @@ export async function verifyAnthropicKey(): Promise<{
         message: `API key rejected (${res.status}) — check key validity or billing.`,
       };
     }
-    if (!res.ok)
-      return { status: ERROR_STATUS, message: `API returned ${res.status}` };
+    if (!res.ok) return { status: ERROR_STATUS, message: `API returned ${res.status}` };
     return { status: "valid" };
   } catch {
     return { status: ERROR_STATUS, message: "Connection failed." };
@@ -118,13 +113,9 @@ export interface CallClaudeOptions {
 export async function callClaude(
   prompt: string,
   apiKey: string,
-  options: CallClaudeOptions = {},
+  options: CallClaudeOptions = {}
 ): Promise<string> {
-  const {
-    model = "claude-sonnet-4-6",
-    maxTokens = DEFAULT_MAX_TOKENS,
-    system,
-  } = options;
+  const { model = "claude-sonnet-4-6", maxTokens = DEFAULT_MAX_TOKENS, system } = options;
 
   const body: Record<string, unknown> = {
     model,

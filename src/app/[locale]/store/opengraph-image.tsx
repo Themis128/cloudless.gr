@@ -39,8 +39,7 @@ export default function StoreOGImage() {
           right: "-60px",
           width: "560px",
           height: "560px",
-          background:
-            "radial-gradient(circle, rgba(180,0,255,0.10) 0%, transparent 65%)",
+          background: "radial-gradient(circle, rgba(180,0,255,0.10) 0%, transparent 65%)",
           borderRadius: "50%",
         }}
       />
@@ -146,6 +145,6 @@ export default function StoreOGImage() {
         </span>
       </div>
     </div>,
-    { ...size },
+    { ...size }
   );
 }

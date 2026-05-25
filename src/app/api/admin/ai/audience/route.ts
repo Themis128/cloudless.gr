@@ -12,24 +12,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     description = body.description;
-    platforms = Array.isArray(body.platforms)
-      ? body.platforms
-      : ["Meta", "LinkedIn", "Google"];
+    platforms = Array.isArray(body.platforms) ? body.platforms : ["Meta", "LinkedIn", "Google"];
     objective = body.objective ?? "LEAD_GENERATION";
     if (!description) throw new Error("description is required");
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Invalid input" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   const apiKey = await getAnthropicApiKey();
   if (!apiKey) {
-    return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 });
   }
 
   const prompt = `You are a digital marketing targeting expert for Cloudless.gr, a Greek digital agency specialising in AI-powered marketing.
@@ -100,7 +95,7 @@ Only include the platforms that were requested. Tailor recommendations for the G
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "AI generation failed." },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

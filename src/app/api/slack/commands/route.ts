@@ -166,9 +166,7 @@ async function handleOrders(payload: SlashCommandPayload): Promise<Response> {
           },
           {
             type: "context",
-            elements: [
-              { type: "mrkdwn", text: `Requested by <@${payload.user_id}>` },
-            ],
+            elements: [{ type: "mrkdwn", text: `Requested by <@${payload.user_id}>` }],
           },
         ],
       });
@@ -275,24 +273,13 @@ async function handleChannels(payload: SlashCommandPayload): Promise<Response> {
       });
     }
 
-    const [channels, bot] = await Promise.all([
-      listChannels(token),
-      getBotInfo(token),
-    ]);
+    const [channels, bot] = await Promise.all([listChannels(token), getBotInfo(token)]);
 
-    const MANAGED = [
-      "bookings",
-      "orders",
-      "errors",
-      "deployments",
-      "contacts",
-      "subscribers",
-    ];
+    const MANAGED = ["bookings", "orders", "errors", "deployments", "contacts", "subscribers"];
 
     const rows = MANAGED.map((name) => {
       const ch = channels.find((c) => c.name === name);
-      if (!ch)
-        return `❌ \`#${name}\` — *missing* (run \`/slack-channels-setup\`)`;
+      if (!ch) return `❌ \`#${name}\` — *missing* (run \`/slack-channels-setup\`)`;
       const member = ch.is_member ? "✅ member" : "⚠️ not a member";
       return `• <#${ch.id}> — ${member}`;
     });
@@ -412,16 +399,12 @@ async function handleTicket(payload: SlashCommandPayload): Promise<Response> {
       },
     }),
     signal: AbortSignal.timeout(5_000),
-  }).catch((err) =>
-    console.error("[Slack Commands] views.open (ticket) error:", err),
-  );
+  }).catch((err) => console.error("[Slack Commands] views.open (ticket) error:", err));
 
   return new Response(null, { status: 200 });
 }
 
-async function handleAnalytics(
-  payload: SlashCommandPayload,
-): Promise<Response> {
+async function handleAnalytics(payload: SlashCommandPayload): Promise<Response> {
   try {
     const { orders, hasMore } = await listRecentCheckoutSessions(10);
 
@@ -447,9 +430,7 @@ async function handleAnalytics(
           },
           {
             type: "context",
-            elements: [
-              { type: "mrkdwn", text: `Requested by <@${payload.user_id}>` },
-            ],
+            elements: [{ type: "mrkdwn", text: `Requested by <@${payload.user_id}>` }],
           },
         ],
       });
@@ -564,9 +545,7 @@ async function handleDeploy(payload: SlashCommandPayload): Promise<Response> {
       },
     }),
     signal: AbortSignal.timeout(5_000),
-  }).catch((err) =>
-    console.error("[Slack Commands] views.open (deploy) error:", err),
-  );
+  }).catch((err) => console.error("[Slack Commands] views.open (deploy) error:", err));
 
   return new Response(null, { status: 200 });
 }

@@ -58,32 +58,20 @@ function shaEquivalent(a: string | null, b: string | null): boolean {
   return lo.startsWith(hi) || hi.startsWith(lo);
 }
 
-function classifySurface(
-  name: "cloud",
-  expected: string,
-  actual: string | null,
-): SurfaceStatus {
+function classifySurface(name: "cloud", expected: string, actual: string | null): SurfaceStatus {
   const matches = shaEquivalent(expected, actual);
   let reason = "matches expected";
   if (actual === null) reason = "endpoint unreachable or no version field";
   else if (actual === "0.1.0" || actual === "dev") {
-    reason =
-      "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
+    reason = "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
   } else if (!matches) reason = "SHA differs from SSM source of truth";
   return { name, actual, matches, reason };
 }
 
-function evaluateDrift(
-  snapshot: DriftSnapshot,
-  now: number = Date.now(),
-): DriftReport {
-  const ageMs = snapshot.ssmModifiedAt
-    ? now - snapshot.ssmModifiedAt.getTime()
-    : null;
+function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): DriftReport {
+  const ageMs = snapshot.ssmModifiedAt ? now - snapshot.ssmModifiedAt.getTime() : null;
   const withinGrace = ageMs !== null && ageMs < GRACE_WINDOW_MS;
-  const surfaces: SurfaceStatus[] = [
-    classifySurface("cloud", snapshot.expected, snapshot.cloud),
-  ];
+  const surfaces: SurfaceStatus[] = [classifySurface("cloud", snapshot.expected, snapshot.cloud)];
   const anyMismatch = surfaces.some((s) => !s.matches);
   const drifted = anyMismatch && !withinGrace;
   return { drifted, ageMs, withinGrace, surfaces };
@@ -110,16 +98,17 @@ function fetchJson(url: string): Promise<Record<string, unknown> | null> {
         autoSelectFamilyAttemptTimeout: 250,
       },
       (res) => {
-      const chunks: Buffer[] = [];
-      res.on("data", (c: Buffer) => chunks.push(c));
-      res.on("end", () => {
-        try {
-          resolve(JSON.parse(Buffer.concat(chunks).toString("utf-8")));
-        } catch {
-          resolve(null);
-        }
-      });
-    });
+        const chunks: Buffer[] = [];
+        res.on("data", (c: Buffer) => chunks.push(c));
+        res.on("end", () => {
+          try {
+            resolve(JSON.parse(Buffer.concat(chunks).toString("utf-8")));
+          } catch {
+            resolve(null);
+          }
+        });
+      }
+    );
     req.on("error", () => resolve(null));
     req.on("timeout", () => {
       req.destroy();
@@ -145,10 +134,7 @@ async function readSsm(): Promise<{ value: string; modifiedAt: Date } | null> {
 }
 
 async function snapshot(): Promise<DriftSnapshot | null> {
-  const [ssm, cloudJson] = await Promise.all([
-    readSsm(),
-    fetchJson(HEALTH_URLS.cloud),
-  ]);
+  const [ssm, cloudJson] = await Promise.all([readSsm(), fetchJson(HEALTH_URLS.cloud)]);
   if (!ssm) return null;
   return {
     expected: ssm.value,
@@ -169,9 +155,7 @@ if (wantJson) {
   console.log(JSON.stringify({ snapshot: snap, report }, null, 2));
 } else {
   console.log(`\nSHA drift report — expected: ${snap.expected.slice(0, 12)}…`);
-  console.log(
-    `  age: ${report.ageMs !== null ? `${Math.round(report.ageMs / 60_000)}m` : "?"}`,
-  );
+  console.log(`  age: ${report.ageMs !== null ? `${Math.round(report.ageMs / 60_000)}m` : "?"}`);
   console.log(`  within grace: ${report.withinGrace ? "yes" : "no"}`);
   for (const s of report.surfaces) {
     const mark = s.matches ? "✓" : "✗";

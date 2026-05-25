@@ -85,11 +85,7 @@ function StatCard({
   return (
     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
       <p className="font-mono text-[10px] text-slate-500">{label}</p>
-      <p
-        className={`font-heading mt-1 text-xl font-bold ${accent ?? "text-white"}`}
-      >
-        {value}
-      </p>
+      <p className={`font-heading mt-1 text-xl font-bold ${accent ?? "text-white"}`}>{value}</p>
     </div>
   );
 }
@@ -214,22 +210,21 @@ function OverviewTab({
 
       {web && (
         <div>
-          <p className="mb-3 font-mono text-xs text-slate-500">
-            Organic search summary
-          </p>
+          <p className="mb-3 font-mono text-xs text-slate-500">Organic search summary</p>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <StatCard label="Clicks (organic)" value={web.clicks?.toLocaleString() ?? "—"} />
             <StatCard label="Impressions" value={web.impressions?.toLocaleString() ?? "—"} />
             <StatCard label="CTR" value={web ? pct(web.ctr) : "—"} />
-            <StatCard label="Position" value={web?.position != null ? web.position.toFixed(1) : "—"} />
+            <StatCard
+              label="Position"
+              value={web?.position != null ? web.position.toFixed(1) : "—"}
+            />
           </div>
         </div>
       )}
 
       <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
-        <p className="mb-3 font-mono text-xs text-slate-500">
-          Explore deeper
-        </p>
+        <p className="mb-3 font-mono text-xs text-slate-500">Explore deeper</p>
         <div className="flex flex-wrap gap-2">
           {(["keywords", "pages", "history", "ctr"] as Tab[]).map((t) => (
             <button
@@ -273,7 +268,7 @@ async function handleTabFetch<T>(
   setLoading: (v: boolean) => void,
   setError: (v: string | null) => void,
   markFetched: () => void,
-  extractFn: (json: Record<string, unknown>) => T,
+  extractFn: (json: Record<string, unknown>) => T
 ) {
   setLoading(true);
   setError(null);
@@ -349,10 +344,8 @@ export default function AdminAnalyticsPage() {
   });
   const [fetchedTabs, setFetchedTabs] = useState<Set<Tab>>(new Set());
 
-  const setLoading = (t: Tab, v: boolean) =>
-    setLoadingTab((p) => ({ ...p, [t]: v }));
-  const setError = (t: Tab, v: string | null) =>
-    setErrors((p) => ({ ...p, [t]: v }));
+  const setLoading = (t: Tab, v: boolean) => setLoadingTab((p) => ({ ...p, [t]: v }));
+  const setError = (t: Tab, v: string | null) => setErrors((p) => ({ ...p, [t]: v }));
   const markFetched = (t: Tab) => setFetchedTabs((p) => new Set(p).add(t));
 
   const fetchOverview = useCallback(async () => {
@@ -372,49 +365,61 @@ export default function AdminAnalyticsPage() {
     }
   }, []);
 
-  const fetchKeywords = useCallback(() =>
-    handleTabFetch(
-      "keywords",
-      "/api/admin/analytics/keywords?limit=50",
-      setKeywords as (d: unknown) => void,
-      (v) => setLoading("keywords", v),
-      (v) => setError("keywords", v),
-      () => markFetched("keywords"),
-      (j) => (j.keywords ?? []) as Keyword[],
-    ), []);
+  const fetchKeywords = useCallback(
+    () =>
+      handleTabFetch(
+        "keywords",
+        "/api/admin/analytics/keywords?limit=50",
+        setKeywords as (d: unknown) => void,
+        (v) => setLoading("keywords", v),
+        (v) => setError("keywords", v),
+        () => markFetched("keywords"),
+        (j) => (j.keywords ?? []) as Keyword[]
+      ),
+    []
+  );
 
-  const fetchPages = useCallback(() =>
-    handleTabFetch(
-      "pages",
-      "/api/admin/analytics/pages?limit=25",
-      setPages as (d: unknown) => void,
-      (v) => setLoading("pages", v),
-      (v) => setError("pages", v),
-      () => markFetched("pages"),
-      (j) => (j.pages ?? []) as Page[],
-    ), []);
+  const fetchPages = useCallback(
+    () =>
+      handleTabFetch(
+        "pages",
+        "/api/admin/analytics/pages?limit=25",
+        setPages as (d: unknown) => void,
+        (v) => setLoading("pages", v),
+        (v) => setError("pages", v),
+        () => markFetched("pages"),
+        (j) => (j.pages ?? []) as Page[]
+      ),
+    []
+  );
 
-  const fetchHistory = useCallback(() =>
-    handleTabFetch(
-      "history",
-      "/api/admin/analytics/history?weeks=16",
-      setHistory as (d: unknown) => void,
-      (v) => setLoading("history", v),
-      (v) => setError("history", v),
-      () => markFetched("history"),
-      (j) => (j.history ?? []) as HistoryPoint[],
-    ), []);
+  const fetchHistory = useCallback(
+    () =>
+      handleTabFetch(
+        "history",
+        "/api/admin/analytics/history?weeks=16",
+        setHistory as (d: unknown) => void,
+        (v) => setLoading("history", v),
+        (v) => setError("history", v),
+        () => markFetched("history"),
+        (j) => (j.history ?? []) as HistoryPoint[]
+      ),
+    []
+  );
 
-  const fetchCtr = useCallback(() =>
-    handleTabFetch(
-      "ctr",
-      "/api/admin/analytics/ctr-opportunities?limit=40",
-      setOpportunities as (d: unknown) => void,
-      (v) => setLoading("ctr", v),
-      (v) => setError("ctr", v),
-      () => markFetched("ctr"),
-      (j) => (j.opportunities ?? []) as CtrOpportunity[],
-    ), []);
+  const fetchCtr = useCallback(
+    () =>
+      handleTabFetch(
+        "ctr",
+        "/api/admin/analytics/ctr-opportunities?limit=40",
+        setOpportunities as (d: unknown) => void,
+        (v) => setLoading("ctr", v),
+        (v) => setError("ctr", v),
+        () => markFetched("ctr"),
+        (j) => (j.opportunities ?? []) as CtrOpportunity[]
+      ),
+    []
+  );
 
   // Lazy-load: only fetch when tab is first opened
   useEffect(() => {
@@ -428,15 +433,7 @@ export default function AdminAnalyticsPage() {
       };
       fetchers[tab]();
     }
-  }, [
-    tab,
-    fetchedTabs,
-    fetchOverview,
-    fetchKeywords,
-    fetchPages,
-    fetchHistory,
-    fetchCtr,
-  ]);
+  }, [tab, fetchedTabs, fetchOverview, fetchKeywords, fetchPages, fetchHistory, fetchCtr]);
 
   const currentLoading = loadingTab[tab];
   const currentError = errors[tab];
@@ -465,12 +462,9 @@ export default function AdminAnalyticsPage() {
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-magenta font-mono text-xs">ANALYTICS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">
-          SEO & Analytics
-        </h1>
+        <h1 className="font-heading text-2xl font-bold text-white">SEO & Analytics</h1>
         <p className="font-body mt-1 text-slate-400">
-          Performance data from Google Search Console — clicks, impressions,
-          rankings.
+          Performance data from Google Search Console — clicks, impressions, rankings.
         </p>
       </div>
 
@@ -509,36 +503,61 @@ function KeywordsTab({ keywords }: { readonly keywords: Keyword[] }) {
         <h3 className="font-mono text-xs font-medium text-slate-400">
           Top {keywords.length} Keywords by Clicks
         </h3>
-        <span className="font-mono text-[10px] text-slate-600">
-          Google Search Console
-        </span>
+        <span className="font-mono text-[10px] text-slate-600">Google Search Console</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-800">
-              <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">#</th>
-              <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Keyword</th>
-              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Clicks</th>
-              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Impr.</th>
-              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">CTR</th>
-              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Pos.</th>
+              <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                #
+              </th>
+              <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                Keyword
+              </th>
+              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                Clicks
+              </th>
+              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                Impr.
+              </th>
+              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                CTR
+              </th>
+              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                Pos.
+              </th>
             </tr>
           </thead>
           <tbody>
             {keywords.map((kw, i) => (
-              <tr key={`kw-${i}`} className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors">
+              <tr
+                key={`kw-${i}`}
+                className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+              >
                 <td className="px-6 py-3 font-mono text-xs text-slate-600">{i + 1}</td>
                 <td className="px-6 py-3 text-white">{kw.keyword}</td>
-                <td className="px-6 py-3 text-right font-mono text-sm text-white">{(kw.clicks ?? 0).toLocaleString()}</td>
-                <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">{(kw.impressions ?? 0).toLocaleString()}</td>
-                <td className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(kw.ctr)}`}>{pct(kw.ctr)}</td>
-                <td className={`px-6 py-3 text-right font-mono text-sm font-semibold ${positionColor(kw.position)}`}>#{kw.position != null ? kw.position.toFixed(1) : "—"}</td>
+                <td className="px-6 py-3 text-right font-mono text-sm text-white">
+                  {(kw.clicks ?? 0).toLocaleString()}
+                </td>
+                <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
+                  {(kw.impressions ?? 0).toLocaleString()}
+                </td>
+                <td className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(kw.ctr)}`}>
+                  {pct(kw.ctr)}
+                </td>
+                <td
+                  className={`px-6 py-3 text-right font-mono text-sm font-semibold ${positionColor(kw.position)}`}
+                >
+                  #{kw.position != null ? kw.position.toFixed(1) : "—"}
+                </td>
               </tr>
             ))}
             {keywords.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">No keyword data available</td>
+                <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">
+                  No keyword data available
+                </td>
               </tr>
             )}
           </tbody>
@@ -562,39 +581,74 @@ function PagesTab({ pages }: { readonly pages: Page[] }) {
   return (
     <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
       <div className="flex items-center justify-between border-b border-slate-800 px-6 py-3">
-        <h3 className="font-mono text-xs font-medium text-slate-400">Top {pages.length} Pages by Clicks</h3>
+        <h3 className="font-mono text-xs font-medium text-slate-400">
+          Top {pages.length} Pages by Clicks
+        </h3>
         <span className="font-mono text-[10px] text-slate-600">Google Search Console</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-800">
-              <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">#</th>
-              <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Page</th>
-              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Clicks</th>
-              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Impr.</th>
-              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">CTR</th>
-              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Pos.</th>
+              <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                #
+              </th>
+              <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                Page
+              </th>
+              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                Clicks
+              </th>
+              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                Impr.
+              </th>
+              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                CTR
+              </th>
+              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                Pos.
+              </th>
             </tr>
           </thead>
           <tbody>
             {pages.map((pg, i) => (
-              <tr key={`page-${i}`} className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors">
+              <tr
+                key={`page-${i}`}
+                className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+              >
                 <td className="px-6 py-3 font-mono text-xs text-slate-600">{i + 1}</td>
                 <td className="px-6 py-3">
-                  <a href={pg.page} target="_blank" rel="noopener noreferrer" className="text-neon-cyan truncate font-mono text-xs hover:underline" title={pg.page}>
+                  <a
+                    href={pg.page}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-neon-cyan truncate font-mono text-xs hover:underline"
+                    title={pg.page}
+                  >
                     {formatPageUrl(pg.page)}
                   </a>
                 </td>
-                <td className="px-6 py-3 text-right font-mono text-sm text-white">{(pg.clicks ?? 0).toLocaleString()}</td>
-                <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">{(pg.impressions ?? 0).toLocaleString()}</td>
-                <td className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(pg.ctr)}`}>{pct(pg.ctr)}</td>
-                <td className={`px-6 py-3 text-right font-mono text-sm font-semibold ${positionColor(pg.position)}`}>#{pg.position != null ? pg.position.toFixed(1) : "—"}</td>
+                <td className="px-6 py-3 text-right font-mono text-sm text-white">
+                  {(pg.clicks ?? 0).toLocaleString()}
+                </td>
+                <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
+                  {(pg.impressions ?? 0).toLocaleString()}
+                </td>
+                <td className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(pg.ctr)}`}>
+                  {pct(pg.ctr)}
+                </td>
+                <td
+                  className={`px-6 py-3 text-right font-mono text-sm font-semibold ${positionColor(pg.position)}`}
+                >
+                  #{pg.position != null ? pg.position.toFixed(1) : "—"}
+                </td>
               </tr>
             ))}
             {pages.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">No page data available</td>
+                <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">
+                  No page data available
+                </td>
               </tr>
             )}
           </tbody>
@@ -620,14 +674,14 @@ function HistoryTab({ history }: { readonly history: HistoryPoint[] }) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
           <p className="mb-1 font-mono text-xs text-slate-500">Clicks (16 weeks)</p>
-          <p className="font-heading mb-3 text-2xl font-bold text-neon-magenta">
+          <p className="font-heading text-neon-magenta mb-3 text-2xl font-bold">
             {history.reduce((s, h) => s + (h.clicks ?? 0), 0).toLocaleString()}
           </p>
           <Sparkline data={history} field="clicks" />
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
           <p className="mb-1 font-mono text-xs text-slate-500">Impressions (16 weeks)</p>
-          <p className="font-heading mb-3 text-2xl font-bold text-neon-cyan">
+          <p className="font-heading text-neon-cyan mb-3 text-2xl font-bold">
             {history.reduce((s, h) => s + (h.impressions ?? 0), 0).toLocaleString()}
           </p>
           <Sparkline data={history} field="impressions" />
@@ -642,23 +696,49 @@ function HistoryTab({ history }: { readonly history: HistoryPoint[] }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800">
-                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Week of</th>
-                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Clicks</th>
-                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Impressions</th>
-                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">CTR</th>
-                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Avg Pos.</th>
+                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                  Week of
+                </th>
+                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                  Clicks
+                </th>
+                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                  Impressions
+                </th>
+                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                  CTR
+                </th>
+                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                  Avg Pos.
+                </th>
               </tr>
             </thead>
             <tbody>
               {[...history].reverse().map((h, i) => (
-                <tr key={`hist-${i}`} className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors">
+                <tr
+                  key={`hist-${i}`}
+                  className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                >
                   <td className="px-6 py-3 font-mono text-xs text-slate-300">
-                    {new Date(h.date).toLocaleDateString("en-IE", { month: "short", day: "numeric" })}
+                    {new Date(h.date).toLocaleDateString("en-IE", {
+                      month: "short",
+                      day: "numeric",
+                    })}
                   </td>
-                  <td className="px-6 py-3 text-right font-mono text-sm text-white">{(h.clicks ?? 0).toLocaleString()}</td>
-                  <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">{(h.impressions ?? 0).toLocaleString()}</td>
-                  <td className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(h.ctr)}`}>{pct(h.ctr)}</td>
-                  <td className={`px-6 py-3 text-right font-mono text-xs ${positionColor(h.position)}`}>{h.position != null ? h.position.toFixed(1) : "—"}</td>
+                  <td className="px-6 py-3 text-right font-mono text-sm text-white">
+                    {(h.clicks ?? 0).toLocaleString()}
+                  </td>
+                  <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
+                    {(h.impressions ?? 0).toLocaleString()}
+                  </td>
+                  <td className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(h.ctr)}`}>
+                    {pct(h.ctr)}
+                  </td>
+                  <td
+                    className={`px-6 py-3 text-right font-mono text-xs ${positionColor(h.position)}`}
+                  >
+                    {h.position != null ? h.position.toFixed(1) : "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -674,43 +754,75 @@ function HistoryTab({ history }: { readonly history: HistoryPoint[] }) {
 function CtrTab({ opportunities }: { readonly opportunities: CtrOpportunity[] }) {
   return (
     <div className="space-y-4">
-      <div className="bg-yellow-950/20 rounded-xl border border-yellow-900/30 p-4">
+      <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/20 p-4">
         <p className="font-mono text-xs text-yellow-400">
-          ⚡ These keywords rank position 4–20 with high impressions but low CTR (&lt;5%). Improving your title/meta description for these queries could significantly boost organic traffic.
+          ⚡ These keywords rank position 4–20 with high impressions but low CTR (&lt;5%). Improving
+          your title/meta description for these queries could significantly boost organic traffic.
         </p>
       </div>
 
       <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
         <div className="flex items-center justify-between border-b border-slate-800 px-6 py-3">
-          <h3 className="font-mono text-xs font-medium text-slate-400">{opportunities.length} CTR Opportunities</h3>
+          <h3 className="font-mono text-xs font-medium text-slate-400">
+            {opportunities.length} CTR Opportunities
+          </h3>
           <span className="font-mono text-[10px] text-slate-600">Sorted by potential</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800">
-                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">Keyword</th>
-                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Pos.</th>
-                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Impr.</th>
-                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Current CTR</th>
-                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Clicks</th>
-                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">Potential ↑</th>
+                <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
+                  Keyword
+                </th>
+                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                  Pos.
+                </th>
+                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                  Impr.
+                </th>
+                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                  Current CTR
+                </th>
+                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                  Clicks
+                </th>
+                <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
+                  Potential ↑
+                </th>
               </tr>
             </thead>
             <tbody>
               {opportunities.map((opp, i) => (
-                <tr key={`ctr-${i}`} className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors">
+                <tr
+                  key={`ctr-${i}`}
+                  className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                >
                   <td className="px-6 py-3 text-white">{opp.keyword}</td>
-                  <td className={`px-6 py-3 text-right font-mono text-xs ${positionColor(opp.position)}`}>#{opp.position != null ? opp.position.toFixed(1) : "—"}</td>
-                  <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">{(opp.impressions ?? 0).toLocaleString()}</td>
-                  <td className="px-6 py-3 text-right font-mono text-xs text-red-400">{pct(opp.ctr)}</td>
-                  <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">{(opp.clicks ?? 0).toLocaleString()}</td>
-                  <td className="px-6 py-3 text-right font-mono text-xs text-neon-green font-semibold">+{(opp.potentialClicks ?? 0).toLocaleString()} clicks</td>
+                  <td
+                    className={`px-6 py-3 text-right font-mono text-xs ${positionColor(opp.position)}`}
+                  >
+                    #{opp.position != null ? opp.position.toFixed(1) : "—"}
+                  </td>
+                  <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
+                    {(opp.impressions ?? 0).toLocaleString()}
+                  </td>
+                  <td className="px-6 py-3 text-right font-mono text-xs text-red-400">
+                    {pct(opp.ctr)}
+                  </td>
+                  <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
+                    {(opp.clicks ?? 0).toLocaleString()}
+                  </td>
+                  <td className="text-neon-green px-6 py-3 text-right font-mono text-xs font-semibold">
+                    +{(opp.potentialClicks ?? 0).toLocaleString()} clicks
+                  </td>
                 </tr>
               ))}
               {opportunities.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">No CTR opportunities found — your CTRs look healthy!</td>
+                  <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">
+                    No CTR opportunities found — your CTRs look healthy!
+                  </td>
                 </tr>
               )}
             </tbody>

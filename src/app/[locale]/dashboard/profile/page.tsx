@@ -54,20 +54,16 @@ export default function ProfilePage() {
 
       {/* Avatar / Identity */}
       <div className="bg-void-light/50 mb-6 flex items-center gap-5 rounded-xl border border-slate-800 p-6">
-        <div className="bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 font-heading text-2xl font-bold">
+        <div className="bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan font-heading flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 text-2xl font-bold">
           {(user?.name || user?.email || "U")[0].toUpperCase()}
         </div>
         <div className="min-w-0">
-          <p className="truncate font-heading text-lg font-semibold text-white">
+          <p className="font-heading truncate text-lg font-semibold text-white">
             {user?.name || user?.email?.split("@")[0] || "User"}
           </p>
-          <p className="text-neon-cyan truncate font-mono text-sm">
-            {user?.email}
-          </p>
+          <p className="text-neon-cyan truncate font-mono text-sm">{user?.email}</p>
           {user?.company && (
-            <p className="mt-0.5 truncate text-xs text-slate-500">
-              {user.company}
-            </p>
+            <p className="mt-0.5 truncate text-xs text-slate-500">{user.company}</p>
           )}
         </div>
       </div>
@@ -133,10 +129,7 @@ export default function ProfilePage() {
                 onChange={(e) => setCompany(e.target.value)}
                 autoComplete="organization"
                 className="bg-void-light focus:border-neon-cyan/50 w-full rounded-lg border border-slate-800 px-4 py-3 font-mono text-sm text-white transition-colors focus:outline-none"
-                placeholder={t(
-                  "dashboard.companyPlaceholder",
-                  "Your company or organization",
-                )}
+                placeholder={t("dashboard.companyPlaceholder", "Your company or organization")}
               />
             </div>
             <div>
@@ -166,9 +159,7 @@ export default function ProfilePage() {
             disabled={saving}
             className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-11 rounded-lg border px-6 py-2.5 font-mono text-sm font-semibold transition-all hover:shadow-[0_0_25px_rgba(0,255,245,0.2)] disabled:opacity-50"
           >
-            {saving
-              ? t("common.saving", "Saving…")
-              : t("common.saveChanges", "Save Changes")}
+            {saving ? t("common.saving", "Saving…") : t("common.saveChanges", "Save Changes")}
           </button>
           {saved && (
             <span className="text-neon-green animate-fade-in-up font-mono text-xs">

@@ -9,11 +9,7 @@ function signState(nonce: string, secret: string): string {
   return createHmac("sha256", secret).update(nonce).digest("hex").slice(0, 16);
 }
 
-export function buildTikTokAuthUrl(
-  appId: string,
-  redirectUri: string,
-  state: string,
-): string {
+export function buildTikTokAuthUrl(appId: string, redirectUri: string, state: string): string {
   const params = new URLSearchParams({
     app_id: appId,
     redirect_uri: redirectUri,
@@ -30,10 +26,9 @@ export async function GET(request: NextRequest) {
   if (!cfg.TIKTOK_APP_ID || !cfg.TIKTOK_APP_SECRET) {
     return NextResponse.json(
       {
-        error:
-          "TIKTOK_APP_ID and TIKTOK_APP_SECRET must be set before starting OAuth.",
+        error: "TIKTOK_APP_ID and TIKTOK_APP_SECRET must be set before starting OAuth.",
       },
-      { status: 503 },
+      { status: 503 }
     );
   }
 

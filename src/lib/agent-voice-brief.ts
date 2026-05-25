@@ -85,14 +85,12 @@ const AGENT_TOOLS = [
   },
   {
     name: "get_pipeline_stats",
-    description:
-      "Fetch HubSpot open-deal pipeline totals (deal count + total value in euros).",
+    description: "Fetch HubSpot open-deal pipeline totals (deal count + total value in euros).",
     input_schema: { type: "object", properties: {}, required: [] },
   },
   {
     name: "get_email_metrics",
-    description:
-      "Fetch the size of the newsletter subscriber list (HubSpot marketing contacts).",
+    description: "Fetch the size of the newsletter subscriber list (HubSpot marketing contacts).",
     input_schema: { type: "object", properties: {}, required: [] },
   },
   {
@@ -131,10 +129,7 @@ async function sleep(ms: number): Promise<void> {
   });
 }
 
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  retries = TOOL_MAX_RETRIES,
-): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, retries = TOOL_MAX_RETRIES): Promise<T> {
   let lastErr: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -195,16 +190,14 @@ const TOOL_HANDLERS: Record<string, () => Promise<string>> = {
   get_email_metrics: makeToolHandler({
     toolName: "get_email_metrics",
     fetch: fetchEmailMetrics,
-    format: (e) =>
-      `Newsletter: ${e.totalContacts.toLocaleString()} subscribers.`,
+    format: (e) => `Newsletter: ${e.totalContacts.toLocaleString()} subscribers.`,
     emptyMessage: "HubSpot not configured.",
     failMessage: "Newsletter lookup failed after retries.",
   }),
   get_stripe_revenue: makeToolHandler({
     toolName: "get_stripe_revenue",
     fetch: fetchStripeMetrics,
-    format: (s) =>
-      `Stripe: ${s.orders} paid orders, €${s.revenueEuros.toFixed(0)} revenue.`,
+    format: (s) => `Stripe: ${s.orders} paid orders, €${s.revenueEuros.toFixed(0)} revenue.`,
     emptyMessage: "Stripe returned no data.",
     failMessage: "Stripe lookup failed after retries.",
   }),
@@ -223,12 +216,10 @@ function classifyOutcome(name: string, detail: string): ToolOutcome {
 
 async function runPendingTool(
   block: ToolUseBlock,
-  outcomes: ToolOutcome[],
+  outcomes: ToolOutcome[]
 ): Promise<ToolResultBlock> {
   const handler = TOOL_HANDLERS[block.toolUse.name];
-  const result = handler
-    ? await handler()
-    : `Unknown tool: ${block.toolUse.name}`;
+  const result = handler ? await handler() : `Unknown tool: ${block.toolUse.name}`;
   outcomes.push(classifyOutcome(block.toolUse.name, result));
   return {
     toolResult: {
@@ -253,9 +244,7 @@ function asString(value: unknown): string {
  * Throws on Bedrock infrastructure errors so the route handler can surface
  * a 5xx instead of writing a half-broken brief to SSM.
  */
-export async function runVoiceBriefAgent(opts?: {
-  dateLabel?: string;
-}): Promise<VoiceBriefResult> {
+export async function runVoiceBriefAgent(opts?: { dateLabel?: string }): Promise<VoiceBriefResult> {
   const client = getBedrockClient();
   const dateLabel = opts?.dateLabel ?? new Date().toISOString().slice(0, 10);
   const outcomes: ToolOutcome[] = [];
@@ -281,9 +270,7 @@ export async function runVoiceBriefAgent(opts?: {
     });
     const toolUseBlocks = pickToolUseBlocks(assistantContent);
 
-    const emitBlock = toolUseBlocks.find(
-      (b) => b.toolUse.name === "emit_brief",
-    );
+    const emitBlock = toolUseBlocks.find((b) => b.toolUse.name === "emit_brief");
     if (emitBlock) {
       const narrative = asString(emitBlock.toolUse.input?.narrative).trim();
       return {
@@ -298,18 +285,13 @@ export async function runVoiceBriefAgent(opts?: {
     if (toolUseBlocks.length === 0) {
       const textOut = joinAssistantText(assistantContent);
       return {
-        text:
-          textOut.length > 0
-            ? textOut
-            : "Agent produced no narrative this week.",
+        text: textOut.length > 0 ? textOut : "Agent produced no narrative this week.",
         sources: outcomes,
       };
     }
 
     messages.push({ role: "assistant", content: assistantContent });
-    const toolResults = await Promise.all(
-      toolUseBlocks.map((b) => runPendingTool(b, outcomes)),
-    );
+    const toolResults = await Promise.all(toolUseBlocks.map((b) => runPendingTool(b, outcomes)));
     messages.push({ role: "user", content: toolResults });
   }
 

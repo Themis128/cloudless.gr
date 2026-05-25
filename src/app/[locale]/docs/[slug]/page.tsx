@@ -24,9 +24,7 @@ export async function generateStaticParams() {
   if (!isConfigured("NOTION_API_KEY", "NOTION_DOCS_DB_ID")) return [];
 
   const docs = await getDocs();
-  return docs.flatMap((doc) =>
-    ["en", "el", "fr"].map((locale) => ({ locale, slug: doc.slug })),
-  );
+  return docs.flatMap((doc) => ["en", "el", "fr"].map((locale) => ({ locale, slug: doc.slug })));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -99,7 +97,7 @@ export default async function DocPage({ params }: Props) {
                         <li key={d.id}>
                           <Link
                             href={`/docs/${d.slug}`}
-                            className={`block rounded px-2 py-1.5 font-body text-sm transition-colors ${
+                            className={`font-body block rounded px-2 py-1.5 text-sm transition-colors ${
                               d.slug === slug
                                 ? "text-neon-cyan bg-neon-cyan/5"
                                 : "text-slate-400 hover:text-slate-200"
@@ -119,10 +117,7 @@ export default async function DocPage({ params }: Props) {
             <main className="min-w-0 flex-1">
               {/* Breadcrumb */}
               <div className="mb-6 flex items-center gap-2 font-mono text-xs text-slate-500">
-                <Link
-                  href="/docs"
-                  className="hover:text-slate-300 transition-colors"
-                >
+                <Link href="/docs" className="transition-colors hover:text-slate-300">
                   Docs
                 </Link>
                 <span>/</span>
@@ -140,9 +135,7 @@ export default async function DocPage({ params }: Props) {
                   {doc.title}
                 </h1>
                 {doc.description && (
-                  <p className="font-body mt-3 text-lg text-slate-400">
-                    {doc.description}
-                  </p>
+                  <p className="font-body mt-3 text-lg text-slate-400">{doc.description}</p>
                 )}
               </div>
 
@@ -152,22 +145,11 @@ export default async function DocPage({ params }: Props) {
                 <div className="min-w-0 flex-1">
                   {content?.html ? (
                     <div
-                      className="prose prose-invert prose-sm md:prose-base max-w-none
-                        prose-headings:font-heading prose-headings:text-white
-                        prose-p:text-slate-300 prose-p:leading-relaxed
-                        prose-a:text-neon-cyan prose-a:no-underline hover:prose-a:underline
-                        prose-code:text-neon-cyan prose-code:bg-neon-cyan/5 prose-code:border prose-code:border-neon-cyan/10 prose-code:rounded prose-code:px-1.5 prose-code:py-0.5 prose-code:font-mono prose-code:text-xs
-                        prose-pre:bg-void-light/60 prose-pre:border prose-pre:border-slate-700
-                        prose-blockquote:border-neon-cyan/40 prose-blockquote:text-slate-400
-                        prose-hr:border-slate-800
-                        prose-strong:text-white
-                        prose-li:text-slate-300"
+                      className="prose prose-invert prose-sm md:prose-base prose-headings:font-heading prose-headings:text-white prose-p:text-slate-300 prose-p:leading-relaxed prose-a:text-neon-cyan prose-a:no-underline hover:prose-a:underline prose-code:text-neon-cyan prose-code:bg-neon-cyan/5 prose-code:border prose-code:border-neon-cyan/10 prose-code:rounded prose-code:px-1.5 prose-code:py-0.5 prose-code:font-mono prose-code:text-xs prose-pre:bg-void-light/60 prose-pre:border prose-pre:border-slate-700 prose-blockquote:border-neon-cyan/40 prose-blockquote:text-slate-400 prose-hr:border-slate-800 prose-strong:text-white prose-li:text-slate-300 max-w-none"
                       dangerouslySetInnerHTML={{ __html: content.html }}
                     />
                   ) : (
-                    <p className="font-mono text-slate-500">
-                      No content available.
-                    </p>
+                    <p className="font-mono text-slate-500">No content available.</p>
                   )}
                 </div>
 
@@ -183,7 +165,7 @@ export default async function DocPage({ params }: Props) {
                           <li key={entry.blockId}>
                             <a
                               href={`#${entry.blockId}`}
-                              className={`block border-l-2 border-transparent py-1 text-sm transition-colors hover:border-neon-cyan/50 hover:text-slate-200 ${
+                              className={`hover:border-neon-cyan/50 block border-l-2 border-transparent py-1 text-sm transition-colors hover:text-slate-200 ${
                                 entry.level === 2
                                   ? "pl-4 text-slate-400"
                                   : "pl-7 text-xs text-slate-500"

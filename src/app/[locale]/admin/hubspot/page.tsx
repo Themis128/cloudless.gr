@@ -4,10 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 const REFRESH_INTERVAL = 10_000;
-const SECTION_LABEL_CLASS =
-  "mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600";
-const TH_CLASS =
-  "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
+const SECTION_LABEL_CLASS = "mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-600";
+const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
 const COLOR_WHITE = "text-white";
 const RECENT_CONTACTS_LIMIT = 5;
 
@@ -66,17 +64,14 @@ interface Stats {
 function computeContactStats(contacts: Contact[]): Stats["contacts"] {
   return {
     total: contacts.length,
-    newLeads: contacts.filter((c) => c.properties.hs_lead_status === "NEW")
-      .length,
-    qualified: contacts.filter(
-      (c) => c.properties.hs_lead_status === "OPEN_DEAL",
-    ).length,
+    newLeads: contacts.filter((c) => c.properties.hs_lead_status === "NEW").length,
+    qualified: contacts.filter((c) => c.properties.hs_lead_status === "OPEN_DEAL").length,
     recent: contacts
       .slice()
       .sort(
         (a, b) =>
           new Date(b.properties.createdate ?? 0).getTime() -
-          new Date(a.properties.createdate ?? 0).getTime(),
+          new Date(a.properties.createdate ?? 0).getTime()
       )
       .slice(0, RECENT_CONTACTS_LIMIT),
   };
@@ -87,7 +82,7 @@ function computeDealStats(deals: Deal[]): Stats["deals"] {
     total: deals.length,
     pipelineValue: deals.reduce(
       (sum, d) => sum + (Number.parseFloat(d.properties.amount ?? "0") || 0),
-      0,
+      0
     ),
     won: deals.filter((d) => d.properties.dealstage === "closedwon").length,
   };
@@ -192,11 +187,7 @@ function RecentLeadsTable({
     );
   }
   if (contacts.length === 0) {
-    return (
-      <p className="px-6 py-12 text-center font-mono text-slate-600">
-        No contacts yet
-      </p>
-    );
+    return <p className="px-6 py-12 text-center font-mono text-slate-600">No contacts yet</p>;
   }
   return (
     <div className="overflow-x-auto">
@@ -216,23 +207,19 @@ function RecentLeadsTable({
               className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
             >
               <td className="px-6 py-4 text-white">
-                {[c.properties.firstname, c.properties.lastname]
-                  .filter(Boolean)
-                  .join(" ") || "—"}
+                {[c.properties.firstname, c.properties.lastname].filter(Boolean).join(" ") || "—"}
               </td>
               <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
                 {c.properties.email ?? "—"}
               </td>
               <td className="px-6 py-4">
-                <span className="rounded-full bg-neon-cyan/10 px-2 py-0.5 font-mono text-[10px] text-neon-cyan">
+                <span className="bg-neon-cyan/10 text-neon-cyan rounded-full px-2 py-0.5 font-mono text-[10px]">
                   {c.properties.hs_lead_status ?? "—"}
                 </span>
               </td>
               <td className="px-6 py-4 font-mono text-slate-500">
                 {c.properties.createdate
-                  ? new Date(c.properties.createdate).toLocaleDateString(
-                      "en-IE",
-                    )
+                  ? new Date(c.properties.createdate).toLocaleDateString("en-IE")
                   : "—"}
               </td>
             </tr>
@@ -255,9 +242,7 @@ export default function HubSpotOverviewPage() {
             <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
             <span className="text-neon-magenta font-mono text-xs">HUBSPOT</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            HubSpot Overview
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">HubSpot Overview</h1>
           <p className="font-body mt-1 text-slate-400">
             Live snapshot of your CRM — contacts, deals, and support tickets.
           </p>
@@ -321,11 +306,7 @@ export default function HubSpotOverviewPage() {
               value={loading ? "…" : fmt(stats.deals.pipelineValue)}
               color="text-neon-green"
             />
-            <StatCard
-              label="Won"
-              value={loading ? "…" : stats.deals.won}
-              color="text-neon-cyan"
-            />
+            <StatCard label="Won" value={loading ? "…" : stats.deals.won} color="text-neon-cyan" />
           </div>
 
           <p className={SECTION_LABEL_CLASS}>Support Tickets</p>
@@ -344,10 +325,7 @@ export default function HubSpotOverviewPage() {
 
           <p className={SECTION_LABEL_CLASS}>Recent Leads</p>
           <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
-            <RecentLeadsTable
-              loading={loading}
-              contacts={stats.contacts.recent}
-            />
+            <RecentLeadsTable loading={loading} contacts={stats.contacts.recent} />
           </div>
         </>
       )}

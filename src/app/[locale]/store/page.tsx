@@ -82,15 +82,15 @@ export default function StorePage() {
           <p className="animate-shimmer-text mb-3 font-mono text-xs font-medium tracking-[0.3em]">
             [ STORE ]
           </p>
-          <h1 className="animate-fade-in-up delay-100 font-heading text-3xl leading-tight font-bold md:text-5xl">
+          <h1 className="animate-fade-in-up font-heading text-3xl leading-tight font-bold delay-100 md:text-5xl">
             Tools, templates &amp;{" "}
             <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
               expert services.
             </span>
           </h1>
-          <p className="animate-fade-in-up delay-200 mt-4 max-w-xl text-lg text-slate-400">
-            Everything you need to build, scale, and market your cloud-powered
-            business. From self-serve digital products to done-for-you services.
+          <p className="animate-fade-in-up mt-4 max-w-xl text-lg text-slate-400 delay-200">
+            Everything you need to build, scale, and market your cloud-powered business. From
+            self-serve digital products to done-for-you services.
           </p>
         </div>
       </section>
@@ -116,23 +116,15 @@ export default function StorePage() {
             {testimonials.map((t, ti) => (
               <ScrollReveal key={t.name} delay={ti * 100}>
                 <div className="bg-void-light/50 hover:border-neon-cyan/30 rounded-xl border border-slate-800 p-6 transition-colors">
-                  <div className="text-neon-cyan/40 mb-3 font-serif text-3xl">
-                    &ldquo;
-                  </div>
-                  <p className="text-sm leading-relaxed text-slate-300">
-                    {t.quote}
-                  </p>
+                  <div className="text-neon-cyan/40 mb-3 font-serif text-3xl">&ldquo;</div>
+                  <p className="text-sm leading-relaxed text-slate-300">{t.quote}</p>
                   <div className="mt-6 flex items-center gap-3">
                     <div className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan flex h-8 w-8 items-center justify-center rounded-full border font-mono text-xs font-bold">
                       {t.name.charAt(0)}
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-white">
-                        {t.name}
-                      </p>
-                      <p className="font-mono text-[10px] text-slate-400">
-                        {t.role}
-                      </p>
+                      <p className="text-xs font-semibold text-white">{t.name}</p>
+                      <p className="font-mono text-[10px] text-slate-400">{t.role}</p>
                     </div>
                   </div>
                 </div>
@@ -157,9 +149,7 @@ export default function StorePage() {
               <ScrollReveal key={faq.question} delay={fi * 60}>
                 <details className="group bg-void open:border-neon-cyan/30 rounded-xl border border-slate-800 transition-colors">
                   <summary className="flex cursor-pointer items-center justify-between px-6 py-5 select-none">
-                    <span className="pr-4 text-sm font-semibold text-white">
-                      {faq.question}
-                    </span>
+                    <span className="pr-4 text-sm font-semibold text-white">{faq.question}</span>
                     <span className="text-neon-cyan/40 shrink-0 text-lg transition-transform group-open:rotate-45">
                       +
                     </span>

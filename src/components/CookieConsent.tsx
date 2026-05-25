@@ -2,10 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "@/i18n/navigation";
-import {
-  useCookieConsent,
-  type CookiePreferences,
-} from "@/context/CookieConsentContext";
+import { useCookieConsent, type CookiePreferences } from "@/context/CookieConsentContext";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
@@ -73,7 +70,7 @@ export default function CookieConsent() {
 
       if (e.key === "Tab" && modalRef.current) {
         const focusable = modalRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         );
         if (focusable.length === 0) return;
 
@@ -96,7 +93,7 @@ export default function CookieConsent() {
     requestAnimationFrame(() => {
       if (modalRef.current) {
         const first = modalRef.current.querySelector<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         );
         first?.focus();
       }
@@ -115,18 +112,15 @@ export default function CookieConsent() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="cookie-settings-title"
-        className="border-slate-800 bg-void-light mx-4 w-full max-w-lg rounded-xl border p-6 shadow-2xl"
+        className="bg-void-light mx-4 w-full max-w-lg rounded-xl border border-slate-800 p-6 shadow-2xl"
       >
-        <h3
-          id="cookie-settings-title"
-          className="mb-4 font-heading text-lg font-bold text-white"
-        >
+        <h3 id="cookie-settings-title" className="font-heading mb-4 text-lg font-bold text-white">
           {t("cookies.settingsTitle", "Cookie Preferences")}
         </h3>
         <p className="mb-6 text-sm text-slate-400">
           {t(
             "cookies.settingsDesc",
-            "Choose which cookies you'd like to allow. Necessary cookies are required for the site to function and cannot be disabled.",
+            "Choose which cookies you'd like to allow. Necessary cookies are required for the site to function and cannot be disabled."
           )}
         </p>
 
@@ -134,13 +128,11 @@ export default function CookieConsent() {
         <div className="mb-4 rounded-lg border border-slate-700 p-4">
           <div className={FLEX_BETWEEN}>
             <div>
-              <p className={CATEGORY_TITLE_CLASS}>
-                {t("cookies.necessary", "Necessary")}
-              </p>
+              <p className={CATEGORY_TITLE_CLASS}>{t("cookies.necessary", "Necessary")}</p>
               <p className={HELP_TEXT_CLASS}>
                 {t(
                   "cookies.necessaryDesc",
-                  "Essential for the website to function. Includes session cookies, security tokens, and consent preferences.",
+                  "Essential for the website to function. Includes session cookies, security tokens, and consent preferences."
                 )}
               </p>
             </div>
@@ -154,13 +146,11 @@ export default function CookieConsent() {
         <div className="mb-4 rounded-lg border border-slate-700 p-4">
           <div className={FLEX_BETWEEN}>
             <div className="mr-4">
-              <p className={CATEGORY_TITLE_CLASS}>
-                {t("cookies.analytics", "Analytics")}
-              </p>
+              <p className={CATEGORY_TITLE_CLASS}>{t("cookies.analytics", "Analytics")}</p>
               <p className={HELP_TEXT_CLASS}>
                 {t(
                   "cookies.analyticsDesc",
-                  "Help us understand how visitors use our site so we can improve the experience. Data is anonymised.",
+                  "Help us understand how visitors use our site so we can improve the experience. Data is anonymised."
                 )}
               </p>
             </div>
@@ -169,9 +159,7 @@ export default function CookieConsent() {
               role="switch"
               aria-checked={localPrefs.analytics}
               aria-label={t("cookies.analytics", "Analytics") + " cookies"}
-              onClick={() =>
-                setLocalPrefs((p) => ({ ...p, analytics: !p.analytics }))
-              }
+              onClick={() => setLocalPrefs((p) => ({ ...p, analytics: !p.analytics }))}
               className={`relative h-8 w-12 shrink-0 rounded-full transition-colors ${
                 localPrefs.analytics ? "bg-neon-cyan/60" : "bg-slate-700"
               }`}
@@ -189,13 +177,11 @@ export default function CookieConsent() {
         <div className="mb-6 rounded-lg border border-slate-700 p-4">
           <div className={FLEX_BETWEEN}>
             <div className="mr-4">
-              <p className={CATEGORY_TITLE_CLASS}>
-                {t("cookies.marketing", "Marketing")}
-              </p>
+              <p className={CATEGORY_TITLE_CLASS}>{t("cookies.marketing", "Marketing")}</p>
               <p className={HELP_TEXT_CLASS}>
                 {t(
                   "cookies.marketingDesc",
-                  "Used to deliver relevant ads and track campaign effectiveness across platforms.",
+                  "Used to deliver relevant ads and track campaign effectiveness across platforms."
                 )}
               </p>
             </div>
@@ -204,9 +190,7 @@ export default function CookieConsent() {
               role="switch"
               aria-checked={localPrefs.marketing}
               aria-label={t("cookies.marketing", "Marketing") + " cookies"}
-              onClick={() =>
-                setLocalPrefs((p) => ({ ...p, marketing: !p.marketing }))
-              }
+              onClick={() => setLocalPrefs((p) => ({ ...p, marketing: !p.marketing }))}
               className={`relative h-8 w-12 shrink-0 rounded-full transition-colors ${
                 localPrefs.marketing ? "bg-neon-cyan/60" : "bg-slate-700"
               }`}
@@ -262,16 +246,16 @@ export default function CookieConsent() {
           role="region"
           aria-label={t("cookies.bannerTitle", "We value your privacy")}
         >
-          <div className="border-slate-800 bg-void-light/95 mx-auto max-w-4xl rounded-xl border p-6 shadow-2xl backdrop-blur-xl">
+          <div className="bg-void-light/95 mx-auto max-w-4xl rounded-xl border border-slate-800 p-6 shadow-2xl backdrop-blur-xl">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
               <div className="flex-1">
-                <h3 className="mb-2 font-heading text-sm font-bold text-white">
+                <h3 className="font-heading mb-2 text-sm font-bold text-white">
                   {t("cookies.bannerTitle", "We value your privacy")}
                 </h3>
                 <p className="text-xs leading-relaxed text-slate-400">
                   {t(
                     "cookies.bannerDesc",
-                    "We use cookies to improve your experience, analyse traffic, and personalise content. You can accept all cookies, reject optional ones, or customise your preferences.",
+                    "We use cookies to improve your experience, analyse traffic, and personalise content. You can accept all cookies, reject optional ones, or customise your preferences."
                   )}{" "}
                   <Link href="/cookies" className="text-neon-cyan underline">
                     {t("cookies.learnMore", "Learn more about cookies")}

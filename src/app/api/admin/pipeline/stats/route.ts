@@ -8,10 +8,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isHubSpotConfigured())) {
-    return NextResponse.json(
-      { error: "HubSpot not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "HubSpot not configured." }, { status: 503 });
   }
 
   try {
@@ -20,9 +17,6 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     const _r = mapIntegrationError(err);
     if (_r) return _r;
-    return NextResponse.json(
-      { error: "Failed to fetch pipeline stats." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch pipeline stats." }, { status: 500 });
   }
 }

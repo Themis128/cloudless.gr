@@ -118,12 +118,7 @@ function rssiBar(rssi: number | null): { width: string; color: string } {
   if (rssi == null) return { width: "0%", color: "bg-slate-600" };
   // RSSI typically -30 (excellent) to -90 (poor)
   const pct = Math.max(0, Math.min(100, ((rssi + 90) / 60) * 100));
-  const color =
-    rssi >= -60
-      ? "bg-neon-green"
-      : rssi >= -75
-        ? "bg-yellow-400"
-        : "bg-red-400";
+  const color = rssi >= -60 ? "bg-neon-green" : rssi >= -75 ? "bg-yellow-400" : "bg-red-400";
   return { width: `${pct.toFixed(0)}%`, color };
 }
 
@@ -136,8 +131,8 @@ export default function AdminEsp32Page() {
   const [error, setError] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
   const [wsLogs, setWsLogs] = useState<LogEntry[]>([]);
-  const [wsStatus, setWsStatus] = useState<"connecting" | "open" | "closed">(
-    () => (getAlertApiWsUrl() ? "connecting" : "closed"),
+  const [wsStatus, setWsStatus] = useState<"connecting" | "open" | "closed">(() =>
+    getAlertApiWsUrl() ? "connecting" : "closed"
   );
   const [logFilter, setLogFilter] = useState<string>("ALL");
   const wsRef = useRef<WebSocket | null>(null);
@@ -170,9 +165,7 @@ export default function AdminEsp32Page() {
         const allAlerts: Alert[] = await alertsRes.json();
         // Filter to only ESP32 alerts
         const esp32Alerts = Array.isArray(allAlerts)
-          ? allAlerts.filter(
-              (a) => a.host === "esp32" || a.code.startsWith("ESP32_"),
-            )
+          ? allAlerts.filter((a) => a.host === "esp32" || a.code.startsWith("ESP32_"))
           : [];
         setAlerts(esp32Alerts);
       }
@@ -222,9 +215,7 @@ export default function AdminEsp32Page() {
             };
             setWsLogs((prev) => {
               const next = [...prev, entry];
-              return next.length > MAX_WS_LINES
-                ? next.slice(-MAX_WS_LINES)
-                : next;
+              return next.length > MAX_WS_LINES ? next.slice(-MAX_WS_LINES) : next;
             });
           } catch {
             // non-JSON frame
@@ -259,8 +250,7 @@ export default function AdminEsp32Page() {
   const activeAlerts = alerts.filter((a) => a.status !== "RESOLVED");
   const resolvedAlerts = alerts.filter((a) => a.status === "RESOLVED");
 
-  const filteredLogs =
-    logFilter === "ALL" ? wsLogs : wsLogs.filter((l) => l.level === logFilter);
+  const filteredLogs = logFilter === "ALL" ? wsLogs : wsLogs.filter((l) => l.level === logFilter);
 
   const rssi = rssiBar(esp32?.rssi ?? null);
 
@@ -276,9 +266,7 @@ export default function AdminEsp32Page() {
         </div>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-heading text-2xl font-bold text-white">
-              ESP32 Dashboard
-            </h1>
+            <h1 className="font-heading text-2xl font-bold text-white">ESP32 Dashboard</h1>
             <p className="font-body mt-1 text-slate-400">
               Hardware status · Out-of-band log stream · Alert history
             </p>
@@ -314,20 +302,18 @@ export default function AdminEsp32Page() {
       ) : esp32 ? (
         <>
           {/* ── Hardware Status ────────────────────────────────────────────── */}
-          <h2 className="font-heading mb-3 text-sm font-semibold uppercase tracking-widest text-slate-500">
+          <h2 className="font-heading mb-3 text-sm font-semibold tracking-widest text-slate-500 uppercase">
             Hardware
           </h2>
-          <div className="mb-6 bg-void-light/50 rounded-xl border border-slate-800 p-6">
+          <div className="bg-void-light/50 mb-6 rounded-xl border border-slate-800 p-6">
             {/* Online indicator */}
             <div className="mb-5 flex items-center gap-3">
               <span
-                className={`h-3 w-3 rounded-full ${esp32.stale ? "bg-yellow-400 animate-pulse" : "bg-neon-green animate-pulse"}`}
+                className={`h-3 w-3 rounded-full ${esp32.stale ? "animate-pulse bg-yellow-400" : "bg-neon-green animate-pulse"}`}
               />
-              <span className="font-mono text-sm font-bold text-white">
-                ESP32 Alert Manager
-              </span>
+              <span className="font-mono text-sm font-bold text-white">ESP32 Alert Manager</span>
               <span
-                className={`ml-auto rounded px-2 py-0.5 font-mono text-xs font-semibold ${esp32.stale ? "text-yellow-400 bg-yellow-950/30" : "text-neon-green bg-neon-green/10"}`}
+                className={`ml-auto rounded px-2 py-0.5 font-mono text-xs font-semibold ${esp32.stale ? "bg-yellow-950/30 text-yellow-400" : "text-neon-green bg-neon-green/10"}`}
               >
                 {esp32.stale ? "STALE" : "LIVE"}
               </span>
@@ -336,24 +322,16 @@ export default function AdminEsp32Page() {
             {/* Metric grid */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               <div>
-                <p className="font-mono text-[10px] text-slate-500">
-                  IP Address
-                </p>
-                <p className="font-mono text-sm text-white">
-                  {esp32.ip ?? "—"}
-                </p>
+                <p className="font-mono text-[10px] text-slate-500">IP Address</p>
+                <p className="font-mono text-sm text-white">{esp32.ip ?? "—"}</p>
               </div>
               <div>
                 <p className="font-mono text-[10px] text-slate-500">Firmware</p>
-                <p className="font-mono text-sm text-white">
-                  {esp32.firmware_ver ?? "—"}
-                </p>
+                <p className="font-mono text-sm text-white">{esp32.firmware_ver ?? "—"}</p>
               </div>
               <div>
                 <p className="font-mono text-[10px] text-slate-500">Uptime</p>
-                <p className="font-mono text-sm text-white">
-                  {fmtUptime(esp32.uptime_s)}
-                </p>
+                <p className="font-mono text-sm text-white">{fmtUptime(esp32.uptime_s)}</p>
               </div>
               <div>
                 <p className="font-mono text-[10px] text-slate-500">Free RAM</p>
@@ -368,29 +346,17 @@ export default function AdminEsp32Page() {
                 </p>
               </div>
               <div>
-                <p className="font-mono text-[10px] text-slate-500">
-                  Last Heartbeat
-                </p>
-                <p className="font-mono text-xs text-white">
-                  {fmtTs(esp32.last_heartbeat)}
-                </p>
+                <p className="font-mono text-[10px] text-slate-500">Last Heartbeat</p>
+                <p className="font-mono text-xs text-white">{fmtTs(esp32.last_heartbeat)}</p>
               </div>
               <div>
-                <p className="font-mono text-[10px] text-slate-500">
-                  Online Since
-                </p>
-                <p className="font-mono text-xs text-white">
-                  {fmtTs(esp32.started_at)}
-                </p>
+                <p className="font-mono text-[10px] text-slate-500">Online Since</p>
+                <p className="font-mono text-xs text-white">{fmtTs(esp32.started_at)}</p>
               </div>
               {esp32.device_id && (
                 <div className="col-span-2">
-                  <p className="font-mono text-[10px] text-slate-500">
-                    Device ID
-                  </p>
-                  <p className="font-mono text-xs text-slate-300">
-                    {esp32.device_id}
-                  </p>
+                  <p className="font-mono text-[10px] text-slate-500">Device ID</p>
+                  <p className="font-mono text-xs text-slate-300">{esp32.device_id}</p>
                 </div>
               )}
             </div>
@@ -398,9 +364,7 @@ export default function AdminEsp32Page() {
             {/* RSSI bar */}
             <div className="mt-5">
               <div className="mb-1.5 flex items-center justify-between">
-                <p className="font-mono text-[10px] text-slate-500">
-                  WiFi Signal (RSSI)
-                </p>
+                <p className="font-mono text-[10px] text-slate-500">WiFi Signal (RSSI)</p>
                 <p className="font-mono text-xs text-slate-400">
                   {esp32.rssi != null ? `${esp32.rssi} dBm` : "—"}
                 </p>
@@ -419,38 +383,27 @@ export default function AdminEsp32Page() {
           </div>
 
           {/* ── ESP32 Alerts ───────────────────────────────────────────────── */}
-          <h2 className="font-heading mb-3 text-sm font-semibold uppercase tracking-widest text-slate-500">
+          <h2 className="font-heading mb-3 text-sm font-semibold tracking-widest text-slate-500 uppercase">
             Active Alerts ({activeAlerts.length})
           </h2>
           <div className="mb-6 space-y-3">
             {activeAlerts.length === 0 ? (
               <div className="bg-void-light/50 rounded-xl border border-slate-800 p-8 text-center">
                 <p className="text-neon-green text-3xl">✓</p>
-                <p className="font-heading mt-3 font-semibold text-white">
-                  All Clear
-                </p>
-                <p className="mt-1 font-mono text-xs text-slate-500">
-                  No active ESP32 alerts.
-                </p>
+                <p className="font-heading mt-3 font-semibold text-white">All Clear</p>
+                <p className="mt-1 font-mono text-xs text-slate-500">No active ESP32 alerts.</p>
               </div>
             ) : (
               activeAlerts.map((alert) => {
                 const cls = SEV_COLOR[alert.severity] ?? SEV_COLOR.info;
                 const dot = SEV_DOT[alert.severity] ?? "bg-slate-500";
                 return (
-                  <div
-                    key={alert.id}
-                    className={`rounded-xl border p-5 ${cls}`}
-                  >
+                  <div key={alert.id} className={`rounded-xl border p-5 ${cls}`}>
                     <div className="flex flex-wrap items-start gap-3">
-                      <span
-                        className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${dot}`}
-                      />
+                      <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-sm font-bold">
-                            {alert.code}
-                          </span>
+                          <span className="font-mono text-sm font-bold">{alert.code}</span>
                           <span className="rounded border border-current/30 px-1.5 py-0.5 font-mono text-[10px] opacity-70">
                             {alert.status}
                           </span>
@@ -458,12 +411,9 @@ export default function AdminEsp32Page() {
                             ×{alert.count}
                           </span>
                         </div>
-                        <p className="mt-0.5 font-mono text-xs opacity-80">
-                          {alert.message}
-                        </p>
+                        <p className="mt-0.5 font-mono text-xs opacity-80">{alert.message}</p>
                         <p className="mt-1 font-mono text-[10px] opacity-50">
-                          First: {fmtTs(alert.first_seen)} · Last:{" "}
-                          {fmtTs(alert.last_seen)}
+                          First: {fmtTs(alert.first_seen)} · Last: {fmtTs(alert.last_seen)}
                         </p>
                       </div>
                     </div>
@@ -475,7 +425,7 @@ export default function AdminEsp32Page() {
 
           {resolvedAlerts.length > 0 && (
             <>
-              <h2 className="font-heading mb-3 text-sm font-semibold uppercase tracking-widest text-slate-500">
+              <h2 className="font-heading mb-3 text-sm font-semibold tracking-widest text-slate-500 uppercase">
                 Resolved ({resolvedAlerts.length})
               </h2>
               <div className="mb-6 space-y-2">
@@ -484,10 +434,8 @@ export default function AdminEsp32Page() {
                     key={alert.id}
                     className="bg-void-light/30 flex flex-wrap items-center gap-3 rounded-xl border border-slate-800/60 px-4 py-3 opacity-60"
                   >
-                    <span className="h-2 w-2 rounded-full bg-neon-green" />
-                    <span className="font-mono text-xs font-bold text-slate-300">
-                      {alert.code}
-                    </span>
+                    <span className="bg-neon-green h-2 w-2 rounded-full" />
+                    <span className="font-mono text-xs font-bold text-slate-300">{alert.code}</span>
                     <span className="ml-auto font-mono text-[10px] text-slate-600">
                       {fmtTs(alert.last_seen)}
                     </span>
@@ -500,7 +448,7 @@ export default function AdminEsp32Page() {
       ) : null}
 
       {/* ── Live Log Stream ───────────────────────────────────────────────── */}
-      <h2 className="font-heading mb-3 text-sm font-semibold uppercase tracking-widest text-slate-500">
+      <h2 className="font-heading mb-3 text-sm font-semibold tracking-widest text-slate-500 uppercase">
         Live Log Stream
       </h2>
 
@@ -512,19 +460,19 @@ export default function AdminEsp32Page() {
             onClick={() => setLogFilter(lvl)}
             className={`rounded px-2.5 py-1 font-mono text-[10px] transition-colors ${
               logFilter === lvl
-                ? "bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40"
+                ? "bg-neon-cyan/20 text-neon-cyan border-neon-cyan/40 border"
                 : "border border-slate-800 text-slate-500 hover:text-slate-300"
             }`}
           >
             {lvl}
           </button>
         ))}
-        <span className="ml-auto font-mono text-[10px] text-slate-600 self-center">
+        <span className="ml-auto self-center font-mono text-[10px] text-slate-600">
           {filteredLogs.length} lines
         </span>
       </div>
 
-      <div className="bg-void-light/50 rounded-xl border border-slate-800 overflow-hidden">
+      <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
         {/* WS status bar */}
         <div className="flex items-center gap-2 border-b border-slate-800 px-4 py-2">
           <span
@@ -532,7 +480,7 @@ export default function AdminEsp32Page() {
               wsStatus === "open"
                 ? "bg-neon-green animate-pulse"
                 : wsStatus === "connecting"
-                  ? "bg-yellow-400 animate-pulse"
+                  ? "animate-pulse bg-yellow-400"
                   : "bg-red-400"
             }`}
           />
@@ -559,24 +507,17 @@ export default function AdminEsp32Page() {
             </p>
           ) : (
             filteredLogs.map((entry, i) => (
-              <div
-                key={i}
-                className={`flex gap-3 ${entry.historic ? "opacity-50" : ""}`}
-              >
+              <div key={i} className={`flex gap-3 ${entry.historic ? "opacity-50" : ""}`}>
                 <span className="shrink-0 text-slate-600 select-none">
                   {new Date(entry.ts).toLocaleTimeString("en-IE", {
                     timeZone: "Europe/Athens",
                     hour12: false,
                   })}
                 </span>
-                <span
-                  className={`shrink-0 w-12 ${LOG_COLOR[entry.level] ?? "text-slate-400"}`}
-                >
+                <span className={`w-12 shrink-0 ${LOG_COLOR[entry.level] ?? "text-slate-400"}`}>
                   {entry.level}
                 </span>
-                <span className="text-slate-300 break-all">
-                  {entry.message}
-                </span>
+                <span className="break-all text-slate-300">{entry.message}</span>
               </div>
             ))
           )}
@@ -586,8 +527,8 @@ export default function AdminEsp32Page() {
 
       <p className="mt-4 font-mono text-[10px] text-slate-600">
         Polls every {POLL_INTERVAL / 1000}s
-        {getAlertApiWsUrl() ? " · WebSocket reconnects automatically" : ""}·
-        Last fetched: {esp32 ? fmtTs(esp32.last_heartbeat) : "—"}
+        {getAlertApiWsUrl() ? " · WebSocket reconnects automatically" : ""}· Last fetched:{" "}
+        {esp32 ? fmtTs(esp32.last_heartbeat) : "—"}
       </p>
     </div>
   );

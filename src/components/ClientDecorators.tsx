@@ -3,10 +3,7 @@
 import dynamic from "next/dynamic";
 import ThemePreferenceSync from "@/components/ThemePreferenceSync";
 
-const LenisInitializer = dynamic(
-  () => import("@/components/LenisInitializer"),
-  { ssr: false },
-);
+const LenisInitializer = dynamic(() => import("@/components/LenisInitializer"), { ssr: false });
 const CommandPalette = dynamic(() => import("@/components/CommandPalette"), {
   ssr: false,
 });

@@ -21,13 +21,8 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (
-    !(await isConfiguredAsync("NOTION_API_KEY", "NOTION_SUBMISSIONS_DB_ID"))
-  ) {
-    return NextResponse.json(
-      { error: "Notion submissions not configured" },
-      { status: 503 },
-    );
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_SUBMISSIONS_DB_ID"))) {
+    return NextResponse.json({ error: "Notion submissions not configured" }, { status: 503 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -40,10 +35,7 @@ export async function GET(request: NextRequest) {
     const _r = mapIntegrationError(err);
     if (_r) return _r;
     console.error("[Admin] Failed to list submissions:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch submissions" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch submissions" }, { status: 500 });
   }
 }
 
@@ -52,10 +44,7 @@ export async function PATCH(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
-    return NextResponse.json(
-      { error: "Notion not configured" },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Notion not configured" }, { status: 503 });
   }
 
   let body: { pageId?: string; status?: string };
@@ -70,39 +59,27 @@ export async function PATCH(request: NextRequest) {
   const { pageId, status } = body;
 
   if (!pageId || !status) {
-    return NextResponse.json(
-      { error: "pageId and status are required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "pageId and status are required" }, { status: 400 });
   }
 
   const validStatuses = ["New", "In Review", "Done"] as const;
   if (!validStatuses.includes(status as (typeof validStatuses)[number])) {
     return NextResponse.json(
       { error: `status must be one of: ${validStatuses.join(", ")}` },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   try {
-    const ok = await updateSubmissionStatus(
-      pageId,
-      status as "New" | "In Review" | "Done",
-    );
+    const ok = await updateSubmissionStatus(pageId, status as "New" | "In Review" | "Done");
     if (!ok) {
-      return NextResponse.json(
-        { error: "Failed to update status" },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "Failed to update status" }, { status: 500 });
     }
     return NextResponse.json({ success: true });
   } catch (err) {
     const _r = mapIntegrationError(err);
     if (_r) return _r;
     console.error("[Admin] Failed to update submission status:", err);
-    return NextResponse.json(
-      { error: "Failed to update submission status" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to update submission status" }, { status: 500 });
   }
 }

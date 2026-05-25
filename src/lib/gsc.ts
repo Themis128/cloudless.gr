@@ -34,9 +34,7 @@ function dateRange() {
 /*  Auth                                                               */
 /* ------------------------------------------------------------------ */
 
-const getAccessToken = createGoogleAuth(
-  "https://www.googleapis.com/auth/webmasters.readonly",
-);
+const getAccessToken = createGoogleAuth("https://www.googleapis.com/auth/webmasters.readonly");
 
 /* ------------------------------------------------------------------ */
 /*  Low-level fetch                                                    */
@@ -111,9 +109,7 @@ export interface WebAnalyticsData {
 /**
  * Overall SEO performance snapshot (28-day rolling window).
  */
-export async function getSeoSnapshot(
-  siteUrl = DEFAULT_SITE,
-): Promise<SeoSnapshot | null> {
+export async function getSeoSnapshot(siteUrl = DEFAULT_SITE): Promise<SeoSnapshot | null> {
   try {
     const range = dateRange();
 
@@ -156,10 +152,7 @@ export async function getSeoSnapshot(
 /**
  * Top organic keywords sorted by clicks (28-day rolling window).
  */
-export async function getTopKeywords(
-  siteUrl = DEFAULT_SITE,
-  limit = 20,
-): Promise<KeywordData[]> {
+export async function getTopKeywords(siteUrl = DEFAULT_SITE, limit = 20): Promise<KeywordData[]> {
   try {
     const res = await gscQuery(siteUrl, {
       ...dateRange(),
@@ -206,7 +199,7 @@ export interface PageData {
  */
 export async function getPerformanceHistory(
   siteUrl = DEFAULT_SITE,
-  weeks = 12,
+  weeks = 12
 ): Promise<PerformancePoint[]> {
   try {
     const end = new Date();
@@ -239,10 +232,7 @@ export async function getPerformanceHistory(
 /**
  * Top pages by organic clicks.
  */
-export async function getTopPages(
-  siteUrl = DEFAULT_SITE,
-  limit = 25,
-): Promise<PageData[]> {
+export async function getTopPages(siteUrl = DEFAULT_SITE, limit = 25): Promise<PageData[]> {
   try {
     const res = await gscQuery(siteUrl, {
       ...dateRange(),
@@ -270,9 +260,7 @@ export async function getTopPages(
 /**
  * Top pages by organic clicks — used as a web analytics proxy.
  */
-export async function getWebAnalytics(
-  siteUrl = DEFAULT_SITE,
-): Promise<WebAnalyticsData | null> {
+export async function getWebAnalytics(siteUrl = DEFAULT_SITE): Promise<WebAnalyticsData | null> {
   try {
     const range = dateRange();
 
@@ -295,14 +283,12 @@ export async function getWebAnalytics(
     });
 
     const pagesData = pagesRes.ok ? await pagesRes.json() : {};
-    const topPages = (pagesData.rows ?? []).map(
-      (r: Record<string, unknown>) => ({
-        page: (r.keys as string[])?.[0] ?? "",
-        clicks: Math.round((r.clicks as number) ?? 0),
-        impressions: Math.round((r.impressions as number) ?? 0),
-        position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
-      }),
-    );
+    const topPages = (pagesData.rows ?? []).map((r: Record<string, unknown>) => ({
+      page: (r.keys as string[])?.[0] ?? "",
+      clicks: Math.round((r.clicks as number) ?? 0),
+      impressions: Math.round((r.impressions as number) ?? 0),
+      position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+    }));
 
     return {
       clicks: Math.round(total.clicks ?? 0),
@@ -338,7 +324,7 @@ export interface CtrOpportunity {
  */
 export async function getCtrOpportunities(
   siteUrl = DEFAULT_SITE,
-  limit = 50,
+  limit = 50
 ): Promise<CtrOpportunity[]> {
   try {
     const res = await gscQuery(siteUrl, {
@@ -359,16 +345,13 @@ export async function getCtrOpportunities(
       })
       .sort(
         (a: Record<string, unknown>, b: Record<string, unknown>) =>
-          ((b.impressions as number) ?? 0) - ((a.impressions as number) ?? 0),
+          ((b.impressions as number) ?? 0) - ((a.impressions as number) ?? 0)
       )
       .slice(0, limit)
       .map((r: Record<string, unknown>) => {
         const impressions = Math.round((r.impressions as number) ?? 0);
         const clicks = Math.round((r.clicks as number) ?? 0);
-        const potentialClicks = Math.max(
-          0,
-          Math.round(impressions * 0.05) - clicks,
-        );
+        const potentialClicks = Math.max(0, Math.round(impressions * 0.05) - clicks);
         return {
           keyword: (r.keys as string[])?.[0] ?? "",
           clicks,
@@ -402,9 +385,7 @@ export interface DeviceData {
 /**
  * Search performance breakdown by device type (DESKTOP, MOBILE, TABLET).
  */
-export async function getDeviceBreakdown(
-  siteUrl = DEFAULT_SITE,
-): Promise<DeviceData[]> {
+export async function getDeviceBreakdown(siteUrl = DEFAULT_SITE): Promise<DeviceData[]> {
   try {
     const res = await gscQuery(siteUrl, {
       ...dateRange(),
@@ -448,7 +429,7 @@ export interface ProductPageData {
 export async function getProductPageMetrics(
   siteUrl = DEFAULT_SITE,
   urlPattern = "/store/",
-  limit = 50,
+  limit = 50
 ): Promise<ProductPageData[]> {
   try {
     const res = await gscQuery(siteUrl, {
@@ -505,7 +486,7 @@ export interface QueryPageMapping {
  */
 export async function getQueryPageMapping(
   siteUrl = DEFAULT_SITE,
-  limit = 100,
+  limit = 100
 ): Promise<QueryPageMapping[]> {
   try {
     const res = await gscQuery(siteUrl, {
@@ -562,7 +543,7 @@ export interface SearchIntentBreakdown {
  *  - navigational:   everything else (looking for a specific site/page)
  */
 export async function getSearchIntentBreakdown(
-  siteUrl = DEFAULT_SITE,
+  siteUrl = DEFAULT_SITE
 ): Promise<SearchIntentBreakdown> {
   const empty: SearchIntentBreakdown = {
     brand: [],
@@ -618,8 +599,7 @@ export async function getSearchIntentBreakdown(
     }
 
     // Sort each bucket by impressions descending
-    const sortByImpressions = (a: IntentKeyword, b: IntentKeyword) =>
-      b.impressions - a.impressions;
+    const sortByImpressions = (a: IntentKeyword, b: IntentKeyword) => b.impressions - a.impressions;
 
     result.brand.sort(sortByImpressions);
     result.product.sort(sortByImpressions);
@@ -651,7 +631,7 @@ export interface CountryTraffic {
  */
 export async function getTrafficByCountry(
   siteUrl = DEFAULT_SITE,
-  limit = 30,
+  limit = 30
 ): Promise<CountryTraffic[]> {
   try {
     const res = await gscQuery(siteUrl, {

@@ -7,11 +7,7 @@
  * entry and links the portal token back here.
  */
 
-import {
-  SSMClient,
-  GetParameterCommand,
-  PutParameterCommand,
-} from "@aws-sdk/client-ssm";
+import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
 
 const SSM_KEY = "/cloudless/PENDING_CLIENTS_JSON";
 const REGION = process.env.AWS_REGION || "eu-central-1";
@@ -49,25 +45,21 @@ export const PLAN_LABELS: Record<string, string> = {
 
 export async function readPendingClients(): Promise<PendingClient[]> {
   try {
-    const res = await ssmClient.send(
-      new GetParameterCommand({ Name: SSM_KEY }),
-    );
+    const res = await ssmClient.send(new GetParameterCommand({ Name: SSM_KEY }));
     return JSON.parse(res.Parameter?.Value ?? "[]");
   } catch {
     return [];
   }
 }
 
-export async function writePendingClients(
-  clients: PendingClient[],
-): Promise<void> {
+export async function writePendingClients(clients: PendingClient[]): Promise<void> {
   await ssmClient.send(
     new PutParameterCommand({
       Name: SSM_KEY,
       Value: JSON.stringify(clients),
       Type: "String",
       Overwrite: true,
-    }),
+    })
   );
 }
 
@@ -76,12 +68,10 @@ export async function writePendingClients(
  * plan and resets to "waiting" status (only if they aren't already approved).
  */
 export async function upsertPendingClient(
-  input: Pick<PendingClient, "email" | "plan"> & Partial<PendingClient>,
+  input: Pick<PendingClient, "email" | "plan"> & Partial<PendingClient>
 ): Promise<PendingClient> {
   const clients = await readPendingClients();
-  const idx = clients.findIndex(
-    (c) => c.email.toLowerCase() === input.email.toLowerCase(),
-  );
+  const idx = clients.findIndex((c) => c.email.toLowerCase() === input.email.toLowerCase());
 
   if (idx === -1) {
     const created: PendingClient = {
@@ -117,23 +107,17 @@ export async function upsertPendingClient(
   return updated;
 }
 
-export async function findPendingByEmail(
-  email: string,
-): Promise<PendingClient | null> {
+export async function findPendingByEmail(email: string): Promise<PendingClient | null> {
   const clients = await readPendingClients();
-  return (
-    clients.find((c) => c.email.toLowerCase() === email.toLowerCase()) ?? null
-  );
+  return clients.find((c) => c.email.toLowerCase() === email.toLowerCase()) ?? null;
 }
 
 export async function approvePendingClient(
   email: string,
-  portalToken: string,
+  portalToken: string
 ): Promise<PendingClient | null> {
   const clients = await readPendingClients();
-  const idx = clients.findIndex(
-    (c) => c.email.toLowerCase() === email.toLowerCase(),
-  );
+  const idx = clients.findIndex((c) => c.email.toLowerCase() === email.toLowerCase());
   if (idx === -1) return null;
   clients[idx] = {
     ...clients[idx],

@@ -57,8 +57,7 @@ export const CHAT_TOOLS = [
       properties: {
         days_ahead: {
           type: "integer",
-          description:
-            "How many days ahead to search. Defaults to 7. Capped at 14.",
+          description: "How many days ahead to search. Defaults to 7. Capped at 14.",
           minimum: MIN_DAYS_AHEAD,
           maximum: MAX_DAYS_AHEAD,
         },
@@ -79,8 +78,7 @@ export const CHAT_TOOLS = [
         },
         email: {
           type: "string",
-          description:
-            "Email address for the calendar invite and Google Meet link.",
+          description: "Email address for the calendar invite and Google Meet link.",
         },
         start: {
           type: "string",
@@ -94,8 +92,7 @@ export const CHAT_TOOLS = [
         },
         notes: {
           type: "string",
-          description:
-            "Optional notes or context the visitor shared about their needs.",
+          description: "Optional notes or context the visitor shared about their needs.",
         },
       },
       required: ["name", "email", "start", "end"],
@@ -126,8 +123,7 @@ interface BookSlotInput {
 }
 
 async function runLookupProduct(input: LookupProductInput): Promise<string> {
-  const query =
-    typeof input.query === "string" ? input.query.trim().toLowerCase() : "";
+  const query = typeof input.query === "string" ? input.query.trim().toLowerCase() : "";
   if (!query) return "No query provided.";
 
   const products = await getProducts();
@@ -137,7 +133,7 @@ async function runLookupProduct(input: LookupProductInput): Promise<string> {
         p.name.toLowerCase().includes(query) ||
         p.description.toLowerCase().includes(query) ||
         p.category.toLowerCase().includes(query) ||
-        (p.features ?? []).some((f) => f.toLowerCase().includes(query)),
+        (p.features ?? []).some((f) => f.toLowerCase().includes(query))
     )
     .slice(0, MAX_PRODUCT_RESULTS);
 
@@ -153,9 +149,7 @@ async function runLookupProduct(input: LookupProductInput): Promise<string> {
   return `Found ${matches.length} match(es):\n${lines.join("\n")}`;
 }
 
-async function runCheckCalendarAvailability(
-  input: CheckCalendarInput,
-): Promise<string> {
+async function runCheckCalendarAvailability(input: CheckCalendarInput): Promise<string> {
   if (!(await isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"))) {
     return "Calendar booking is not yet wired up. Suggest the visitor use the Contact page to request a time.";
   }
@@ -175,10 +169,7 @@ async function runCheckCalendarAvailability(
 
   const lines = slots
     .slice(0, MAX_SLOT_RESULTS)
-    .map(
-      (s) =>
-        `- ${formatAthensSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`,
-    );
+    .map((s) => `- ${formatAthensSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`);
   return `Available slots (next ${days} day(s)):\n${lines.join("\n")}\nAsk the visitor which slot they prefer, then collect their name and email to call book_slot. They can also book directly at https://cloudless.gr/book.`;
 }
 
@@ -188,14 +179,11 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
   }
 
   const name = typeof input.name === "string" ? input.name.trim() : "";
-  const email =
-    typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+  const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
   const start = typeof input.start === "string" ? input.start.trim() : "";
   const end = typeof input.end === "string" ? input.end.trim() : "";
   const notes =
-    typeof input.notes === "string" && input.notes.trim()
-      ? input.notes.trim()
-      : undefined;
+    typeof input.notes === "string" && input.notes.trim() ? input.notes.trim() : undefined;
 
   if (!name) return "Missing visitor name. Ask them for their full name first.";
   if (!email || !email.includes("@"))
@@ -217,18 +205,14 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
     start,
     notes,
     meetLink: result.htmlLink,
-  }).catch((err) =>
-    console.warn("[chat-tools] slackBookingNotify failed:", err),
-  );
+  }).catch((err) => console.warn("[chat-tools] slackBookingNotify failed:", err));
   void sendBookingConfirmation({
     name,
     email,
     slotLabel,
     meetLink: result.htmlLink,
     notes,
-  }).catch((err) =>
-    console.warn("[chat-tools] sendBookingConfirmation failed:", err),
-  );
+  }).catch((err) => console.warn("[chat-tools] sendBookingConfirmation failed:", err));
 
   return [
     `Booking confirmed!`,
@@ -245,17 +229,16 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
  * because a thrown tool result would crash the chat loop.
  */
 export async function runTool(name: string, input: unknown): Promise<string> {
-  const safeInput = (
-    typeof input === "object" && input !== null ? input : {}
-  ) as LookupProductInput | CheckCalendarInput | BookSlotInput;
+  const safeInput = (typeof input === "object" && input !== null ? input : {}) as
+    | LookupProductInput
+    | CheckCalendarInput
+    | BookSlotInput;
   try {
     if (name === "lookup_product") {
       return await runLookupProduct(safeInput as LookupProductInput);
     }
     if (name === "check_calendar_availability") {
-      return await runCheckCalendarAvailability(
-        safeInput as CheckCalendarInput,
-      );
+      return await runCheckCalendarAvailability(safeInput as CheckCalendarInput);
     }
     if (name === "book_slot") {
       return await runBookSlot(safeInput as BookSlotInput);

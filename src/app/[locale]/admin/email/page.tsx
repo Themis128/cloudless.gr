@@ -55,9 +55,7 @@ export default function EmailPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(
-        `/api/admin/email/contacts?tab=${t}&limit=100`,
-      );
+      const res = await fetchWithAuth(`/api/admin/email/contacts?tab=${t}&limit=100`);
       if (res.status === 503) {
         setNotConfigured(true);
         return;
@@ -82,8 +80,8 @@ export default function EmailPage() {
         <PageHeader />
         <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-6">
           <p className="font-mono text-sm text-yellow-400">
-            HubSpot is not configured. Add{" "}
-            <code className="text-yellow-300">HUBSPOT_API_KEY</code> to AWS SSM.
+            HubSpot is not configured. Add <code className="text-yellow-300">HUBSPOT_API_KEY</code>{" "}
+            to AWS SSM.
           </p>
         </div>
       </div>
@@ -101,13 +99,9 @@ export default function EmailPage() {
         <div className="mb-8 inline-flex items-center gap-6 rounded-xl border border-slate-800 bg-slate-900/50 px-6 py-4">
           <div>
             <p className="font-mono text-xs text-slate-500">
-              {tab === "subscribers"
-                ? "Newsletter Subscribers"
-                : "CRM Contacts"}
+              {tab === "subscribers" ? "Newsletter Subscribers" : "CRM Contacts"}
             </p>
-            <p className="font-mono text-2xl font-bold text-white">
-              {data.total.toLocaleString()}
-            </p>
+            <p className="font-mono text-2xl font-bold text-white">{data.total.toLocaleString()}</p>
           </div>
           <div className="h-8 w-px bg-slate-800" />
           <p className="font-mono text-xs text-slate-600">
@@ -133,9 +127,7 @@ export default function EmailPage() {
             type="button"
             onClick={() => setTab(id)}
             className={`flex-1 rounded-md px-3 py-2 font-mono text-xs transition-all ${
-              tab === id
-                ? "bg-neon-cyan/10 text-neon-cyan"
-                : "text-slate-500 hover:text-slate-300"
+              tab === id ? "bg-neon-cyan/10 text-neon-cyan" : "text-slate-500 hover:text-slate-300"
             }`}
           >
             {label}
@@ -161,20 +153,12 @@ export default function EmailPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/50">
-                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
-                  Email
-                </th>
-                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
-                  Name
-                </th>
+                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Email</th>
+                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Name</th>
                 {tab === "contacts" && (
-                  <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
-                    Stage
-                  </th>
+                  <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Stage</th>
                 )}
-                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
-                  Added
-                </th>
+                <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Added</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
@@ -190,43 +174,29 @@ export default function EmailPage() {
               )}
               {contacts.map((c) => {
                 const p = c.properties;
-                const name = [p.firstname, p.lastname]
-                  .filter(Boolean)
-                  .join(" ");
+                const name = [p.firstname, p.lastname].filter(Boolean).join(" ");
                 const stage = p.lifecyclestage ?? "";
                 return (
-                  <tr
-                    key={c.id}
-                    className="transition-colors hover:bg-slate-800/30"
-                  >
-                    <td className="px-4 py-3 font-mono text-sm text-white">
-                      {p.email ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-sm text-slate-300">
-                      {name || "—"}
-                    </td>
+                  <tr key={c.id} className="transition-colors hover:bg-slate-800/30">
+                    <td className="px-4 py-3 font-mono text-sm text-white">{p.email ?? "—"}</td>
+                    <td className="px-4 py-3 font-mono text-sm text-slate-300">{name || "—"}</td>
                     {tab === "contacts" && (
                       <td className="px-4 py-3">
                         {stage ? (
                           <span
                             className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
-                              LIFECYCLE_BADGE[stage] ??
-                              "border-slate-700 text-slate-500"
+                              LIFECYCLE_BADGE[stage] ?? "border-slate-700 text-slate-500"
                             }`}
                           >
                             {LIFECYCLE_LABEL[stage] ?? stage}
                           </span>
                         ) : (
-                          <span className="font-mono text-xs text-slate-600">
-                            —
-                          </span>
+                          <span className="font-mono text-xs text-slate-600">—</span>
                         )}
                       </td>
                     )}
                     <td className="px-4 py-3 font-mono text-xs text-slate-500">
-                      {p.createdate
-                        ? new Date(p.createdate).toLocaleDateString("en-IE")
-                        : "—"}
+                      {p.createdate ? new Date(p.createdate).toLocaleDateString("en-IE") : "—"}
                     </td>
                   </tr>
                 );
@@ -244,9 +214,7 @@ function PageHeader() {
     <div className="mb-8">
       <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
         <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-        <span className="text-neon-cyan font-mono text-xs">
-          EMAIL MARKETING
-        </span>
+        <span className="text-neon-cyan font-mono text-xs">EMAIL MARKETING</span>
       </div>
       <h1 className="font-heading text-2xl font-bold text-white">Email</h1>
       <p className="font-body mt-1 text-slate-400">

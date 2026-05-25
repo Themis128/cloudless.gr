@@ -19,15 +19,12 @@ export async function GET(request: NextRequest) {
 
   const config = await getConfig();
   if (!config.GOOGLE_CLIENT_EMAIL || !config.GOOGLE_PRIVATE_KEY) {
-    return NextResponse.json(
-      { error: "Google Search Console not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Google Search Console not configured." }, { status: 503 });
   }
 
   const limit = Math.max(
     1,
-    Math.min(Number(request.nextUrl.searchParams.get("limit")) || 100, 500),
+    Math.min(Number(request.nextUrl.searchParams.get("limit")) || 100, 500)
   );
 
   try {
@@ -39,9 +36,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     console.error("[GSC query-pages] Error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch query-page mappings." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch query-page mappings." }, { status: 500 });
   }
 }

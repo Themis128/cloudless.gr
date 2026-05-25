@@ -111,7 +111,7 @@ async function fetchSsmParams(): Promise<Map<string, string>> {
         Path: SSM_PREFIX,
         WithDecryption: true,
         NextToken: nextToken,
-      }),
+      })
     );
     for (const p of res.Parameters ?? []) {
       const key = p.Name?.replace(`${SSM_PREFIX}/`, "") ?? "";
@@ -143,7 +143,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
 
   if (!sesFrom.includes("@") || !sesTo.includes("@")) {
     console.warn(
-      `[SSM] SES email addresses look invalid — FROM: ${sesFrom}, TO: ${sesTo}. Using defaults.`,
+      `[SSM] SES email addresses look invalid — FROM: ${sesFrom}, TO: ${sesTo}. Using defaults.`
     );
   }
 
@@ -232,10 +232,7 @@ function buildConfigFromEnv(): AppConfig {
     SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL || "",
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || "",
-    HUBSPOT_API_KEY:
-      process.env.HUBSPOT_API_KEY ||
-      process.env.HUBSPOT_PRIVATE_APP_TOKEN ||
-      "",
+    HUBSPOT_API_KEY: process.env.HUBSPOT_API_KEY || process.env.HUBSPOT_PRIVATE_APP_TOKEN || "",
     HUBSPOT_CLIENT_SECRET: process.env.HUBSPOT_CLIENT_SECRET || "",
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
@@ -253,10 +250,7 @@ function buildConfigFromEnv(): AppConfig {
     NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID || "",
     NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID || "",
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL || "",
-    GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replace(
-      /\\n/g,
-      "\n",
-    ),
+    GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || "",
     GSC_SITE_URL: process.env.GSC_SITE_URL || "sc-domain:cloudless.gr",
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN || "",
@@ -330,7 +324,7 @@ export async function getConfig(): Promise<AppConfig> {
       const errName = (err as { name?: string })?.name ?? "Error";
       console.warn(
         `[SSM] ${errName} in dev — falling back to .env.local. ` +
-          "Set AWS_PROFILE or use IAM env keys to talk to real SSM.",
+          "Set AWS_PROFILE or use IAM env keys to talk to real SSM."
       );
       cached = buildConfigFromEnv();
       cachedAt = Date.now();

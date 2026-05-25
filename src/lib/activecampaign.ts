@@ -8,10 +8,7 @@ async function getACConfig(): Promise<{ url: string; token: string }> {
   return { url: url.replace(/\/$/, ""), token };
 }
 
-async function acFetch(
-  path: string,
-  options: RequestInit = {},
-): Promise<Response> {
+async function acFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const { url, token } = await getACConfig();
   return fetch(`${url}/api/3${path}`, {
     ...options,
@@ -63,8 +60,7 @@ export async function verifyActiveCampaignToken(): Promise<{
         message: `Token rejected (${res.status}) — account may be expired or token rotated.`,
       };
     }
-    if (!res.ok)
-      return { status: "error", message: `API returned ${res.status}` };
+    if (!res.ok) return { status: "error", message: `API returned ${res.status}` };
     return { status: "valid" };
   } catch {
     return { status: "error", message: "Connection failed." };
@@ -119,9 +115,7 @@ export interface CreateCampaignInput {
   sdate?: string;
 }
 
-export async function createCampaign(
-  input: CreateCampaignInput,
-): Promise<ACCampaign | null> {
+export async function createCampaign(input: CreateCampaignInput): Promise<ACCampaign | null> {
   try {
     const res = await acFetch("/campaigns", {
       method: "POST",

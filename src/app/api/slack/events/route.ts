@@ -185,8 +185,7 @@ async function handleAppMention(event: SlackEvent): Promise<void> {
 
   let text: string;
   if (userText.includes("status")) {
-    text =
-      ":white_check_mark: cloudless.gr is *online*. All systems operational.";
+    text = ":white_check_mark: cloudless.gr is *online*. All systems operational.";
   } else if (userText.includes("help")) {
     text = HELP_TEXT;
   } else {
@@ -393,7 +392,7 @@ async function handleMemberJoinedChannel(event: SlackEvent): Promise<void> {
       {
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(5_000),
-      },
+      }
     );
     const infoData = (await infoRes.json()) as {
       ok: boolean;

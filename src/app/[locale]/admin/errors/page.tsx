@@ -50,7 +50,7 @@ const ACTION_LABELS: Record<string, string> = {
 
 async function performErrorAction(
   id: string,
-  status: "resolved" | "ignored" | "unresolved",
+  status: "resolved" | "ignored" | "unresolved"
 ): Promise<string> {
   const res = await fetchWithAuth(`/api/admin/ops/errors/${id}`, {
     method: "PUT",
@@ -97,10 +97,7 @@ export default function AdminErrorsPage() {
     fetchErrors();
   }, [fetchErrors]);
 
-  const handleAction = async (
-    id: string,
-    status: "resolved" | "ignored" | "unresolved",
-  ) => {
+  const handleAction = async (id: string, status: "resolved" | "ignored" | "unresolved") => {
     setActionLoading(`${status}-${id}`);
     setActionMsg(null);
     try {
@@ -142,9 +139,7 @@ export default function AdminErrorsPage() {
         </div>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-heading text-2xl font-bold text-white">
-              Error Monitoring
-            </h1>
+            <h1 className="font-heading text-2xl font-bold text-white">Error Monitoring</h1>
             <p className="font-body mt-1 text-slate-400">
               Unresolved Sentry issues — resolve or ignore directly from here.
             </p>
@@ -184,11 +179,7 @@ export default function AdminErrorsPage() {
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
           <p className="font-mono text-xs text-slate-500">Total Events</p>
           <p className="font-heading mt-1 text-2xl font-bold text-slate-300">
-            {loading
-              ? "…"
-              : issues
-                  .reduce((s, i) => s + Number(i.count || 0), 0)
-                  .toLocaleString()}
+            {loading ? "…" : issues.reduce((s, i) => s + Number(i.count || 0), 0).toLocaleString()}
           </p>
         </div>
       </div>
@@ -196,21 +187,19 @@ export default function AdminErrorsPage() {
       {/* Filter tabs */}
       {!loading && !error && issues.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
-          {(["all", "fatal", "error", "warning", "info"] as FilterLevel[]).map(
-            (lvl) => (
-              <button
-                key={lvl}
-                onClick={() => setFilter(lvl)}
-                className={`min-h-[34px] rounded-lg border px-3 py-1 font-mono text-xs transition-all ${
-                  filter === lvl
-                    ? "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20"
-                    : "border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
-                }`}
-              >
-                {lvl} ({counts[lvl]})
-              </button>
-            ),
-          )}
+          {(["all", "fatal", "error", "warning", "info"] as FilterLevel[]).map((lvl) => (
+            <button
+              key={lvl}
+              onClick={() => setFilter(lvl)}
+              className={`min-h-[34px] rounded-lg border px-3 py-1 font-mono text-xs transition-all ${
+                filter === lvl
+                  ? "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20"
+                  : "border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
+              }`}
+            >
+              {lvl} ({counts[lvl]})
+            </button>
+          ))}
         </div>
       )}
 
@@ -239,18 +228,12 @@ export default function AdminErrorsPage() {
       ) : issues.length === 0 ? (
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-12 text-center">
           <p className="text-neon-green text-4xl">✓</p>
-          <p className="font-heading mt-4 text-lg font-semibold text-white">
-            All Clear
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            No unresolved issues in Sentry.
-          </p>
+          <p className="font-heading mt-4 text-lg font-semibold text-white">All Clear</p>
+          <p className="mt-1 text-sm text-slate-500">No unresolved issues in Sentry.</p>
         </div>
       ) : visible.length === 0 ? (
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-8 text-center">
-          <p className="font-mono text-sm text-slate-500">
-            No issues at this level.
-          </p>
+          <p className="font-mono text-sm text-slate-500">No issues at this level.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -258,8 +241,7 @@ export default function AdminErrorsPage() {
             const isActing = actionLoading !== null;
             const dotClass = levelDot[issue.level] ?? "bg-slate-600";
             const labelClass =
-              levelClasses[issue.level] ??
-              "text-slate-400 bg-slate-800/50 border-slate-700";
+              levelClasses[issue.level] ?? "text-slate-400 bg-slate-800/50 border-slate-700";
 
             return (
               <div
@@ -268,7 +250,7 @@ export default function AdminErrorsPage() {
               >
                 <div className="flex flex-wrap items-start gap-3">
                   {/* Level dot + badge */}
-                  <div className="mt-1 shrink-0 flex items-center gap-2">
+                  <div className="mt-1 flex shrink-0 items-center gap-2">
                     <span className={`h-2 w-2 rounded-full ${dotClass}`} />
                     <span
                       className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${labelClass}`}
@@ -286,11 +268,9 @@ export default function AdminErrorsPage() {
                       {issue.culprit || "unknown location"}
                     </p>
                     <p className="mt-1 font-mono text-[10px] text-slate-600">
-                      First:{" "}
-                      {new Date(issue.firstSeen).toLocaleDateString("en-IE")}
+                      First: {new Date(issue.firstSeen).toLocaleDateString("en-IE")}
                       {" · "}
-                      Last:{" "}
-                      {new Date(issue.lastSeen).toLocaleDateString("en-IE")}
+                      Last: {new Date(issue.lastSeen).toLocaleDateString("en-IE")}
                     </p>
                   </div>
 
@@ -299,25 +279,19 @@ export default function AdminErrorsPage() {
                     <p className="font-mono text-sm font-bold text-white">
                       {Number(issue.count).toLocaleString()}
                     </p>
-                    <p className="font-mono text-[10px] text-slate-600">
-                      events
-                    </p>
+                    <p className="font-mono text-[10px] text-slate-600">events</p>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-800/60 pt-3">
-                  <span className="font-mono text-[10px] text-slate-600 mr-1">
-                    Actions:
-                  </span>
+                  <span className="mr-1 font-mono text-[10px] text-slate-600">Actions:</span>
                   <button
                     onClick={() => handleAction(issue.id, "resolved")}
                     disabled={isActing}
-                    className="min-h-[30px] rounded-lg border border-neon-green/20 px-3 py-1 font-mono text-[11px] text-neon-green transition-colors hover:bg-neon-green/10 disabled:opacity-40"
+                    className="border-neon-green/20 text-neon-green hover:bg-neon-green/10 min-h-[30px] rounded-lg border px-3 py-1 font-mono text-[11px] transition-colors disabled:opacity-40"
                   >
-                    {actionLoading === `resolved-${issue.id}`
-                      ? "…"
-                      : "✓ Resolve"}
+                    {actionLoading === `resolved-${issue.id}` ? "…" : "✓ Resolve"}
                   </button>
                   <button
                     onClick={() => handleAction(issue.id, "ignored")}
@@ -330,7 +304,7 @@ export default function AdminErrorsPage() {
                     href={`https://sentry.io/organizations/${process.env.NEXT_PUBLIC_SENTRY_ORG ?? ""}/issues/${issue.id}/`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="min-h-[30px] inline-flex items-center rounded-lg border border-slate-800 px-3 py-1 font-mono text-[11px] text-slate-500 transition-colors hover:border-slate-700 hover:text-white"
+                    className="inline-flex min-h-[30px] items-center rounded-lg border border-slate-800 px-3 py-1 font-mono text-[11px] text-slate-500 transition-colors hover:border-slate-700 hover:text-white"
                   >
                     ↗ Sentry
                   </a>
@@ -343,8 +317,8 @@ export default function AdminErrorsPage() {
 
       {!loading && issues.length > 0 && (
         <p className="mt-4 font-mono text-[10px] text-slate-600">
-          Showing {visible.length} of {issues.length} unresolved issues ·
-          Resolving removes from this list immediately
+          Showing {visible.length} of {issues.length} unresolved issues · Resolving removes from
+          this list immediately
         </p>
       )}
     </div>

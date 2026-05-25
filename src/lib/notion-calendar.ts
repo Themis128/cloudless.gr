@@ -17,10 +17,7 @@
  */
 
 import { notionFetch } from "@/lib/notion";
-import {
-  IntegrationNotConfiguredError,
-  requireIntegrationAsync,
-} from "@/lib/integrations";
+import { IntegrationNotConfiguredError, requireIntegrationAsync } from "@/lib/integrations";
 import type { CalendarItem } from "@/lib/content-calendar";
 
 // ---------------------------------------------------------------------------
@@ -29,19 +26,10 @@ import type { CalendarItem } from "@/lib/content-calendar";
 
 async function getDb(): Promise<{ apiKey: string; dbId: string }> {
   // Empty string means explicitly disabled -- don't let SSM override a cleared env var.
-  if (
-    process.env.NOTION_API_KEY === "" ||
-    process.env.NOTION_CALENDAR_DB_ID === ""
-  ) {
-    throw new IntegrationNotConfiguredError([
-      "NOTION_API_KEY",
-      "NOTION_CALENDAR_DB_ID",
-    ]);
+  if (process.env.NOTION_API_KEY === "" || process.env.NOTION_CALENDAR_DB_ID === "") {
+    throw new IntegrationNotConfiguredError(["NOTION_API_KEY", "NOTION_CALENDAR_DB_ID"]);
   }
-  const cfg = await requireIntegrationAsync(
-    "NOTION_API_KEY",
-    "NOTION_CALENDAR_DB_ID",
-  );
+  const cfg = await requireIntegrationAsync("NOTION_API_KEY", "NOTION_CALENDAR_DB_ID");
   return { apiKey: cfg.NOTION_API_KEY!, dbId: cfg.NOTION_CALENDAR_DB_ID! };
 }
 
@@ -51,8 +39,7 @@ function rt(text: string) {
 
 function pageToItem(page: Record<string, unknown>): CalendarItem | null {
   try {
-    const p =
-      (page as { properties: Record<string, unknown> }).properties ?? {};
+    const p = (page as { properties: Record<string, unknown> }).properties ?? {};
 
     function sel(key: string): string {
       const prop = p[key] as { select?: { name?: string } } | undefined;
@@ -60,23 +47,17 @@ function pageToItem(page: Record<string, unknown>): CalendarItem | null {
     }
 
     function richText(key: string): string {
-      const prop = p[key] as
-        | { rich_text?: { plain_text?: string }[] }
-        | undefined;
+      const prop = p[key] as { rich_text?: { plain_text?: string }[] } | undefined;
       return prop?.rich_text?.map((r) => r.plain_text ?? "").join("") ?? "";
     }
 
     function title(): string {
-      const prop = p["Name"] as
-        | { title?: { plain_text?: string }[] }
-        | undefined;
+      const prop = p["Name"] as { title?: { plain_text?: string }[] } | undefined;
       return prop?.title?.map((r) => r.plain_text ?? "").join("") ?? "";
     }
 
     function dateField(key: string): { start?: string; end?: string } {
-      const prop = p[key] as
-        | { date?: { start?: string; end?: string | null } }
-        | undefined;
+      const prop = p[key] as { date?: { start?: string; end?: string | null } } | undefined;
       return { start: prop?.date?.start, end: prop?.date?.end ?? undefined };
     }
 
@@ -110,7 +91,7 @@ function pageToItem(page: Record<string, unknown>): CalendarItem | null {
 
 export async function notionGetCalendarItems(
   from?: string,
-  to?: string,
+  to?: string
 ): Promise<CalendarItem[] | null> {
   const db = await getDb();
 
@@ -132,13 +113,10 @@ export async function notionGetCalendarItems(
   }
 
   try {
-    const res = await notionFetch<{ results: unknown[] }>(
-      `/databases/${db.dbId}/query`,
-      {
-        method: "POST",
-        body: JSON.stringify(body),
-      },
-    );
+    const res = await notionFetch<{ results: unknown[] }>(`/databases/${db.dbId}/query`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
 
     return res.results
       .map((p) => pageToItem(p as Record<string, unknown>))
@@ -148,9 +126,7 @@ export async function notionGetCalendarItems(
   }
 }
 
-export async function notionCreateCalendarItem(
-  item: CalendarItem,
-): Promise<string | null> {
+export async function notionCreateCalendarItem(item: CalendarItem): Promise<string | null> {
   const db = await getDb();
 
   const properties: Record<string, unknown> = {
@@ -184,23 +160,18 @@ export async function notionCreateCalendarItem(
   }
 }
 
-export async function notionUpdateCalendarItem(
-  item: CalendarItem,
-): Promise<boolean> {
+export async function notionUpdateCalendarItem(item: CalendarItem): Promise<boolean> {
   const db = await getDb();
 
   // Find the Notion page by CalID
   try {
-    const search = await notionFetch<{ results: { id: string }[] }>(
-      `/databases/${db.dbId}/query`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          filter: { property: "CalID", rich_text: { equals: item.id } },
-          page_size: 1,
-        }),
-      },
-    );
+    const search = await notionFetch<{ results: { id: string }[] }>(`/databases/${db.dbId}/query`, {
+      method: "POST",
+      body: JSON.stringify({
+        filter: { property: "CalID", rich_text: { equals: item.id } },
+        page_size: 1,
+      }),
+    });
 
     const pageId = search.results[0]?.id;
     if (!pageId) return false;
@@ -229,16 +200,13 @@ export async function notionDeleteCalendarItem(id: string): Promise<boolean> {
   const db = await getDb();
 
   try {
-    const search = await notionFetch<{ results: { id: string }[] }>(
-      `/databases/${db.dbId}/query`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          filter: { property: "CalID", rich_text: { equals: id } },
-          page_size: 1,
-        }),
-      },
-    );
+    const search = await notionFetch<{ results: { id: string }[] }>(`/databases/${db.dbId}/query`, {
+      method: "POST",
+      body: JSON.stringify({
+        filter: { property: "CalID", rich_text: { equals: id } },
+        page_size: 1,
+      }),
+    });
 
     const pageId = search.results[0]?.id;
     if (!pageId) return false;

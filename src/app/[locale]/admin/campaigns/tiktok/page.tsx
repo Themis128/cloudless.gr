@@ -84,33 +84,19 @@ export default function TikTokPage() {
           <span className="h-2 w-2 animate-pulse rounded-full bg-pink-400" />
           <span className="font-mono text-xs text-pink-400">TIKTOK</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">
-          TikTok Campaigns
-        </h1>
+        <h1 className="font-heading text-2xl font-bold text-white">TikTok Campaigns</h1>
       </div>
 
       {insights && (
         <div className="mb-8 grid grid-cols-3 gap-4 sm:grid-cols-6">
-          <MetricCard
-            label="Spend"
-            value={`$${Number.parseFloat(insights.spend).toFixed(2)}`}
-          />
+          <MetricCard label="Spend" value={`$${Number.parseFloat(insights.spend).toFixed(2)}`} />
           <MetricCard
             label="Impressions"
             value={Number.parseInt(insights.impressions).toLocaleString()}
           />
-          <MetricCard
-            label="Clicks"
-            value={Number.parseInt(insights.clicks).toLocaleString()}
-          />
-          <MetricCard
-            label="CTR"
-            value={`${Number.parseFloat(insights.ctr).toFixed(2)}%`}
-          />
-          <MetricCard
-            label="CPC"
-            value={`$${Number.parseFloat(insights.cpc).toFixed(2)}`}
-          />
+          <MetricCard label="Clicks" value={Number.parseInt(insights.clicks).toLocaleString()} />
+          <MetricCard label="CTR" value={`${Number.parseFloat(insights.ctr).toFixed(2)}%`} />
+          <MetricCard label="CPC" value={`$${Number.parseFloat(insights.cpc).toFixed(2)}`} />
           <MetricCard
             label="Conversions"
             value={Number.parseInt(insights.conversions).toLocaleString()}
@@ -120,19 +106,12 @@ export default function TikTokPage() {
 
       <CampaignTable loading={loading} error={error}>
         {campaigns.map((c) => (
-          <tr
-            key={c.campaign_id}
-            className="hover:bg-slate-800/30 transition-colors"
-          >
-            <td className="px-4 py-3 font-mono text-sm text-white">
-              {c.campaign_name}
-            </td>
+          <tr key={c.campaign_id} className="transition-colors hover:bg-slate-800/30">
+            <td className="px-4 py-3 font-mono text-sm text-white">{c.campaign_name}</td>
             <td className="px-4 py-3">
               <StatusBadge status={c.status} />
             </td>
-            <td className="px-4 py-3 font-mono text-xs text-slate-400">
-              {c.objective_type}
-            </td>
+            <td className="px-4 py-3 font-mono text-xs text-slate-400">{c.objective_type}</td>
             <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
               {c.budget ? `$${Number.parseFloat(c.budget).toLocaleString()}` : "—"}
             </td>
@@ -159,18 +138,10 @@ function CampaignTable({
       <table className="w-full">
         <thead>
           <tr className="border-b border-slate-800 bg-slate-900/50">
-            <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
-              Campaign
-            </th>
-            <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
-              Status
-            </th>
-            <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
-              Objective
-            </th>
-            <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
-              Budget
-            </th>
+            <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Campaign</th>
+            <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Status</th>
+            <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Objective</th>
+            <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">Budget</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">{children}</tbody>
@@ -184,9 +155,7 @@ function StatusBadge({ status }: { readonly status: string }) {
   return (
     <span
       className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
-        isActive
-          ? "border-neon-green/30 text-neon-green"
-          : "border-slate-700 text-slate-500"
+        isActive ? "border-neon-green/30 text-neon-green" : "border-slate-700 text-slate-500"
       }`}
     >
       {isActive ? "Active" : "Paused"}

@@ -27,7 +27,7 @@ if (userPoolId && userPoolClientId) {
         },
       },
     },
-    { ssr: true },
+    { ssr: true }
   );
 }
 

@@ -19,10 +19,7 @@
  */
 
 import { notionFetchAll, extractText } from "@/lib/notion";
-import {
-  getIntegrationsAsync,
-  requireIntegrationAsync,
-} from "@/lib/integrations";
+import { getIntegrationsAsync, requireIntegrationAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
 // ---------------------------------------------------------------------------
@@ -97,8 +94,7 @@ function mapPage(page: any): Testimonial {
     quote: extractText(p.Quote?.rich_text) || "",
     avatar: p.Avatar?.url ?? undefined,
     service: p.Service?.select?.name ?? undefined,
-    rating:
-      typeof rating === "number" ? Math.min(5, Math.max(1, rating)) : undefined,
+    rating: typeof rating === "number" ? Math.min(5, Math.max(1, rating)) : undefined,
     featured: p.Featured?.checkbox ?? false,
   };
 }
@@ -117,13 +113,10 @@ export async function getTestimonials(): Promise<Testimonial[]> {
   return cached("testimonials:all", async () => {
     const { NOTION_TESTIMONIALS_DB_ID } = await getIntegrationsAsync();
     try {
-      const pages = await notionFetchAll(
-        `/databases/${NOTION_TESTIMONIALS_DB_ID}/query`,
-        {
-          filter: { property: "Published", checkbox: { equals: true } },
-          sorts: [{ property: "Order", direction: "ascending" }],
-        },
-      );
+      const pages = await notionFetchAll(`/databases/${NOTION_TESTIMONIALS_DB_ID}/query`, {
+        filter: { property: "Published", checkbox: { equals: true } },
+        sorts: [{ property: "Order", direction: "ascending" }],
+      });
       return pages.map(mapPage);
     } catch (err) {
       console.error("[Notion Testimonials] Failed to fetch:", err);

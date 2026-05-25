@@ -72,6 +72,6 @@ export function useStoredPref(): ThemePref | null {
   return useSyncExternalStore<ThemePref | null>(
     subscribeStored,
     readStoredPref,
-    getServerStoredPref,
+    getServerStoredPref
   );
 }

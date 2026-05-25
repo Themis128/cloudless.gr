@@ -35,10 +35,7 @@ const ATHENS_TIME_ONLY_FORMAT: Intl.DateTimeFormatOptions = {
  */
 export function formatAthensSlot(start: string, end: string): string {
   const startStr = new Date(start).toLocaleString("en-IE", ATHENS_DATE_FORMAT);
-  const endStr = new Date(end).toLocaleTimeString(
-    "en-IE",
-    ATHENS_TIME_ONLY_FORMAT,
-  );
+  const endStr = new Date(end).toLocaleTimeString("en-IE", ATHENS_TIME_ONLY_FORMAT);
   return `${startStr}–${endStr} Athens`;
 }
 
@@ -47,7 +44,6 @@ export function formatAthensSlot(start: string, end: string): string {
  * (between MIN_DAYS_AHEAD and MAX_DAYS_AHEAD).
  */
 export function clampDaysAhead(raw: unknown): number {
-  const n =
-    typeof raw === "number" && Number.isFinite(raw) ? raw : DEFAULT_DAYS_AHEAD;
+  const n = typeof raw === "number" && Number.isFinite(raw) ? raw : DEFAULT_DAYS_AHEAD;
   return Math.max(MIN_DAYS_AHEAD, Math.min(MAX_DAYS_AHEAD, Math.trunc(n)));
 }
