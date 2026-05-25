@@ -179,7 +179,7 @@ async function snapshot(): Promise<DriftSnapshot | null> {
     cloudSsmModifiedAt: cloudSsm.modifiedAt,
     piSsmModifiedAt: piSsm.modifiedAt,
     cloud: typeof cloudJson?.version === "string" ? cloudJson.version : null,
-    piJson.version : null,
+    pi: typeof piJson?.version === "string" ? piJson.version : null,
   };
 }
 
