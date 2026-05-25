@@ -85,9 +85,7 @@ export async function POST(request: Request): Promise<Response> {
       return handleViewSubmission(payload);
 
     default:
-      console.warn(
-        `[Slack Interactions] Unhandled interaction type: ${payload.type}`,
-      );
+      console.warn(`[Slack Interactions] Unhandled interaction type: ${payload.type}`);
       return new Response(null, { status: 200 });
   }
 }
@@ -96,9 +94,7 @@ export async function POST(request: Request): Promise<Response> {
 // Interaction handlers
 // ---------------------------------------------------------------------------
 
-async function handleBlockActions(
-  payload: SlackInteractionPayload,
-): Promise<Response> {
+async function handleBlockActions(payload: SlackInteractionPayload): Promise<Response> {
   const actions = payload.actions ?? [];
 
   for (const action of actions) {
@@ -113,16 +109,14 @@ async function handleBlockActions(
         // Post updated order data to the response_url
         if (payload.response_url) {
           refreshOrdersAsync(payload.response_url).catch((err) =>
-            console.error("[Slack Interactions] refresh_orders failed:", err),
+            console.error("[Slack Interactions] refresh_orders failed:", err)
           );
         }
         break;
       }
 
       default:
-        console.warn(
-          `[Slack Interactions] Unhandled action_id: ${action.action_id}`,
-        );
+        console.warn(`[Slack Interactions] Unhandled action_id: ${action.action_id}`);
     }
   }
 
@@ -136,20 +130,18 @@ function handleViewSubmission(payload: SlackInteractionPayload): Response {
   switch (callbackId) {
     case "create-ticket-modal":
       postTicketAsync(payload).catch((err) =>
-        console.error("[Slack Interactions] create-ticket-modal error:", err),
+        console.error("[Slack Interactions] create-ticket-modal error:", err)
       );
       break;
 
     case "deploy-confirm-modal":
       postDeployAsync(payload).catch((err) =>
-        console.error("[Slack Interactions] deploy-confirm-modal error:", err),
+        console.error("[Slack Interactions] deploy-confirm-modal error:", err)
       );
       break;
 
     default:
-      console.warn(
-        `[Slack Interactions] Unknown view callback_id: ${callbackId}`,
-      );
+      console.warn(`[Slack Interactions] Unknown view callback_id: ${callbackId}`);
   }
 
   return new Response(null, { status: 200 });
@@ -160,10 +152,7 @@ function handleViewSubmission(payload: SlackInteractionPayload): Response {
 // ---------------------------------------------------------------------------
 
 function slackEscape(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
 function priorityEmoji(priority: string): string {
@@ -177,25 +166,17 @@ function priorityEmoji(priority: string): string {
   }
 }
 
-async function postTicketAsync(
-  payload: SlackInteractionPayload,
-): Promise<void> {
+async function postTicketAsync(payload: SlackInteractionPayload): Promise<void> {
   const { SLACK_BOT_TOKEN: token } = await getSlackConfigAsync();
   if (!token) return;
 
   const values = payload.view?.state.values ?? {};
-  const email = slackEscape(
-    values.ticket_email?.ticket_email_input?.value ?? "",
-  );
+  const email = slackEscape(values.ticket_email?.ticket_email_input?.value ?? "");
   const issueType =
-    values.ticket_issue_type?.ticket_issue_type_select?.selected_option
-      ?.value ?? "unknown";
+    values.ticket_issue_type?.ticket_issue_type_select?.selected_option?.value ?? "unknown";
   const priority =
-    values.ticket_priority?.ticket_priority_select?.selected_option?.value ??
-    "medium";
-  const description = slackEscape(
-    values.ticket_description?.ticket_description_input?.value ?? "",
-  );
+    values.ticket_priority?.ticket_priority_select?.selected_option?.value ?? "medium";
+  const description = slackEscape(values.ticket_description?.ticket_description_input?.value ?? "");
   const emoji = priorityEmoji(priority);
   const userId = payload.user.id;
 
@@ -244,9 +225,7 @@ async function postTicketAsync(
   });
 }
 
-async function postDeployAsync(
-  payload: SlackInteractionPayload,
-): Promise<void> {
+async function postDeployAsync(payload: SlackInteractionPayload): Promise<void> {
   const { SLACK_BOT_TOKEN: token } = await getSlackConfigAsync();
   if (!token) return;
 
@@ -337,7 +316,7 @@ async function postDeployAsync(
       },
       body: JSON.stringify({ ref: "main" }),
       signal: AbortSignal.timeout(10_000),
-    },
+    }
   );
 
   if (!dispatchRes.ok) {
@@ -360,8 +339,7 @@ async function refreshOrdersAsync(responseUrl: string): Promise<void> {
   try {
     const { orders } = await listRecentCheckoutSessions(5);
     const lines = orders.map((o) => {
-      const status =
-        o.paymentStatus === "paid" ? ":white_check_mark:" : ":hourglass:";
+      const status = o.paymentStatus === "paid" ? ":white_check_mark:" : ":hourglass:";
       const amount = formatPrice(o.amount, o.currency);
       return `${status} *${amount}* — ${o.email ?? "N/A"}`;
     });

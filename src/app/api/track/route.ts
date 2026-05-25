@@ -3,12 +3,7 @@ import { trackEvent } from "@/lib/notion-analytics";
 import type { AnalyticsEventType } from "@/lib/notion-analytics";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
-const ALLOWED_TYPES: AnalyticsEventType[] = [
-  "page_view",
-  "blog_view",
-  "doc_view",
-  "form_submit",
-];
+const ALLOWED_TYPES: AnalyticsEventType[] = ["page_view", "blog_view", "doc_view", "form_submit"];
 
 /**
  * POST /api/track
@@ -38,14 +33,12 @@ export async function POST(request: NextRequest) {
   if (!ALLOWED_TYPES.includes(type)) {
     return NextResponse.json(
       { error: `Unsupported event type. Allowed: ${ALLOWED_TYPES.join(", ")}` },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
-  const page =
-    typeof body.page === "string" ? body.page.slice(0, 500) : undefined;
-  const source =
-    typeof body.source === "string" ? body.source.slice(0, 200) : undefined;
+  const page = typeof body.page === "string" ? body.page.slice(0, 500) : undefined;
+  const source = typeof body.source === "string" ? body.source.slice(0, 200) : undefined;
   const referer = request.headers.get("referer") ?? undefined;
 
   // Build a human-readable event name

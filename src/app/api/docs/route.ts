@@ -19,9 +19,6 @@ export async function GET() {
     return NextResponse.json({ docs, grouped });
   } catch (err) {
     console.error("[Docs API] Failed to fetch docs:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch docs" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch docs" }, { status: 500 });
   }
 }

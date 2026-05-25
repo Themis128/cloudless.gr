@@ -47,9 +47,7 @@ interface RawMessage {
   content: string;
 }
 
-function parseMessages(
-  body: unknown,
-): { role: "user" | "assistant"; content: string }[] {
+function parseMessages(body: unknown): { role: "user" | "assistant"; content: string }[] {
   if (
     typeof body !== "object" ||
     body === null ||
@@ -66,7 +64,7 @@ function parseMessages(
         m !== null &&
         "role" in m &&
         "content" in m &&
-        typeof (m as RawMessage).content === "string",
+        typeof (m as RawMessage).content === "string"
     )
     .slice(-MAX_TURNS)
     .map((m): { role: "user" | "assistant"; content: string } => ({
@@ -97,9 +95,7 @@ function sseStreamFromText(text: string): ReadableStream<Uint8Array> {
   return new ReadableStream({
     start(controller) {
       for (const piece of chunkText(safe)) {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ text: piece })}\n\n`),
-        );
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: piece })}\n\n`));
       }
       controller.enqueue(encoder.encode("data: [DONE]\n\n"));
       controller.close();
@@ -131,7 +127,7 @@ export async function POST(request: NextRequest) {
     if (name === "AccessDeniedException" || name === "UnauthorizedException") {
       return Response.json(
         { error: "Chat not available right now. Please use the Contact page." },
-        { status: 503 },
+        { status: 503 }
       );
     }
     return Response.json({ error: "AI service unavailable." }, { status: 502 });

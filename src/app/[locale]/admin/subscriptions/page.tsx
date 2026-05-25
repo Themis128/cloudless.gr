@@ -44,9 +44,7 @@ export default function SubscriptionsPage() {
     setError(null);
     setActionMessage(null);
     try {
-      const res = await fetchWithAuth(
-        `/api/admin/subscriptions?status=${status}&limit=50`,
-      );
+      const res = await fetchWithAuth(`/api/admin/subscriptions?status=${status}&limit=50`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setSubscriptions(data.subscriptions ?? []);
@@ -94,9 +92,7 @@ export default function SubscriptionsPage() {
       });
       const data = await res.json();
       if (data.ok) {
-        setActionMessage(
-          "Subscription scheduled for cancellation at period end.",
-        );
+        setActionMessage("Subscription scheduled for cancellation at period end.");
         load(statusFilter);
       } else {
         setActionMessage(data.error ?? "Cancellation failed");
@@ -121,13 +117,9 @@ export default function SubscriptionsPage() {
         <div>
           <div className="border-neon-blue/20 bg-neon-blue/10 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-blue h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-blue font-mono text-xs">
-              STRIPE BILLING
-            </span>
+            <span className="text-neon-blue font-mono text-xs">STRIPE BILLING</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            Subscriptions
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">Subscriptions</h1>
           <p className="font-body mt-1 text-slate-400">
             Manage recurring billing, access customer portals, and monitor MRR.
           </p>
@@ -144,25 +136,25 @@ export default function SubscriptionsPage() {
 
       {/* Summary cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 p-4">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 p-4">
           <div className="font-mono text-xs text-slate-500">Active</div>
           <div className="font-heading mt-1 text-2xl font-bold text-white">
             {subscriptions.filter((s) => s.status === "active").length}
           </div>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 p-4">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 p-4">
           <div className="font-mono text-xs text-slate-500">Trialing</div>
-          <div className="font-heading mt-1 text-2xl font-bold text-neon-blue">
+          <div className="font-heading text-neon-blue mt-1 text-2xl font-bold">
             {subscriptions.filter((s) => s.status === "trialing").length}
           </div>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 p-4">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 p-4">
           <div className="font-mono text-xs text-slate-500">Past Due</div>
           <div className="font-heading mt-1 text-2xl font-bold text-yellow-400">
             {subscriptions.filter((s) => s.status === "past_due").length}
           </div>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 p-4">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 p-4">
           <div className="font-mono text-xs text-slate-500">Est. MRR</div>
           <div className="font-heading mt-1 text-2xl font-bold text-green-400">
             {(totalMRR / 100).toLocaleString("en-IE", {
@@ -176,15 +168,7 @@ export default function SubscriptionsPage() {
 
       {/* Status filter */}
       <div className="mb-4 flex flex-wrap gap-2">
-        {(
-          [
-            "active",
-            "trialing",
-            "past_due",
-            "canceled",
-            "all",
-          ] as StatusFilter[]
-        ).map((s) => (
+        {(["active", "trialing", "past_due", "canceled", "all"] as StatusFilter[]).map((s) => (
           <button
             key={s}
             type="button"
@@ -217,19 +201,17 @@ export default function SubscriptionsPage() {
           {["sub-1", "sub-2", "sub-3", "sub-4"].map((k) => (
             <div
               key={k}
-              className="h-20 animate-pulse rounded-xl border border-slate-800 bg-void-light/30"
+              className="bg-void-light/30 h-20 animate-pulse rounded-xl border border-slate-800"
             />
           ))}
         </div>
       )}
 
       {!loading && subscriptions.length === 0 && (
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 px-6 py-12 text-center">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 px-6 py-12 text-center">
           <div className="mb-3 text-4xl">💳</div>
-          <p className="font-heading text-sm text-slate-400">
-            No subscriptions found.
-          </p>
-          <p className="font-mono mt-1 text-xs text-slate-600">
+          <p className="font-heading text-sm text-slate-400">No subscriptions found.</p>
+          <p className="mt-1 font-mono text-xs text-slate-600">
             {statusFilter === "all"
               ? "Your Stripe account has no subscriptions yet."
               : `No ${statusFilter.replace("_", " ")} subscriptions.`}
@@ -240,14 +222,12 @@ export default function SubscriptionsPage() {
       {!loading && subscriptions.length > 0 && (
         <div className="space-y-3">
           {subscriptions.map((sub) => {
-            const statusClass =
-              STATUS_COLORS[sub.status] ?? "text-slate-400 border-slate-700";
-            const busy =
-              actionLoading === sub.id || actionLoading === sub.customerId;
+            const statusClass = STATUS_COLORS[sub.status] ?? "text-slate-400 border-slate-700";
+            const busy = actionLoading === sub.id || actionLoading === sub.customerId;
             return (
               <div
                 key={sub.id}
-                className="rounded-xl border border-slate-800 bg-void-light/30 p-4 transition hover:border-slate-700"
+                className="bg-void-light/30 rounded-xl border border-slate-800 p-4 transition hover:border-slate-700"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -256,9 +236,7 @@ export default function SubscriptionsPage() {
                         {sub.customerEmail ?? sub.customerId}
                       </span>
                       {sub.customerName && (
-                        <span className="font-mono text-xs text-slate-500">
-                          {sub.customerName}
-                        </span>
+                        <span className="font-mono text-xs text-slate-500">{sub.customerName}</span>
                       )}
                       <span
                         className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${statusClass}`}
@@ -292,7 +270,7 @@ export default function SubscriptionsPage() {
                       type="button"
                       onClick={() => openPortal(sub.customerId)}
                       disabled={busy}
-                      className="rounded-lg border border-neon-blue/30 px-3 py-1.5 font-mono text-xs text-neon-blue transition hover:border-neon-blue/60 disabled:opacity-50"
+                      className="border-neon-blue/30 text-neon-blue hover:border-neon-blue/60 rounded-lg border px-3 py-1.5 font-mono text-xs transition disabled:opacity-50"
                     >
                       {actionLoading === sub.customerId ? "Opening…" : "Portal"}
                     </button>

@@ -2,12 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { headers } from "next/headers";
-import {
-  translate,
-  type Locale,
-  isSupportedLocale,
-  defaultLocale,
-} from "@/lib/i18n";
+import { translate, type Locale, isSupportedLocale, defaultLocale } from "@/lib/i18n";
 
 const FALLBACK = {
   title: "Page not found",
@@ -52,9 +47,7 @@ export default async function NotFound() {
         <p className="text-neon-magenta glow-magenta animate-neon-pulse font-mono text-7xl font-bold">
           404
         </p>
-        <h1 className="font-heading mt-4 text-3xl font-bold text-white">
-          {m.title}
-        </h1>
+        <h1 className="font-heading mt-4 text-3xl font-bold text-white">{m.title}</h1>
         <p className="mt-3 font-mono text-sm text-slate-400">{m.body}</p>
         <Link
           href={homeHref}

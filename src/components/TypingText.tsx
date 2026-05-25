@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 interface TypingTextProps {
   texts: string[];
@@ -30,7 +24,7 @@ function useReducedMotion(): boolean {
 
   const getSnapshot = useCallback(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    [],
+    []
   );
 
   // During SSR, assume no preference
@@ -47,10 +41,7 @@ export default function TypingText({
   pauseDuration = 2000,
   className = "",
 }: TypingTextProps) {
-  const firstText = useMemo(
-    () => initialText ?? texts[0] ?? "",
-    [initialText, texts],
-  );
+  const firstText = useMemo(() => initialText ?? texts[0] ?? "", [initialText, texts]);
   const [displayed, setDisplayed] = useState(firstText);
   const [textIndex, setTextIndex] = useState(0);
   // Start charIndex at the end of the initial text so the pause fires first

@@ -26,7 +26,7 @@ const DEFAULT_CONNECTORS: AnalyticsConnector[] = ["quicksight", "powerbi"];
 
 export async function prepareOrchestration(
   request: NextRequest,
-  failureMessage: string,
+  failureMessage: string
 ): Promise<PrepareResult> {
   const auth = await requireAdmin(request);
   if (!auth.ok) return { ok: false, response: auth.response };
@@ -37,14 +37,15 @@ export async function prepareOrchestration(
   let reportTitle = "Stripe Analytics Report";
 
   try {
-    ({ windowDays, connectors, goals, reportTitle } =
-      parseAnalyticsOrchestrationRequestBody(await request.json()));
+    ({ windowDays, connectors, goals, reportTitle } = parseAnalyticsOrchestrationRequestBody(
+      await request.json()
+    ));
   } catch (error) {
     return {
       ok: false,
       response: NextResponse.json(
         { error: error instanceof Error ? error.message : "Invalid input" },
-        { status: 400 },
+        { status: 400 }
       ),
     };
   }
@@ -53,10 +54,7 @@ export async function prepareOrchestration(
   if (!apiKey) {
     return {
       ok: false,
-      response: NextResponse.json(
-        { error: "ANTHROPIC_API_KEY not configured." },
-        { status: 503 },
-      ),
+      response: NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 }),
     };
   }
 
@@ -76,7 +74,7 @@ export async function prepareOrchestration(
         {
           error: error instanceof Error ? error.message : failureMessage,
         },
-        { status: 500 },
+        { status: 500 }
       ),
     };
   }

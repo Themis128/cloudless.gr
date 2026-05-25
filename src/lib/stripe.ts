@@ -35,7 +35,7 @@ export interface RecentOrder {
  * Used by the /cloudless-orders slash command and admin dashboard.
  */
 export async function listRecentCheckoutSessions(
-  limit: number = 10,
+  limit: number = 10
 ): Promise<{ orders: RecentOrder[]; hasMore: boolean }> {
   const stripe = await getStripe();
 

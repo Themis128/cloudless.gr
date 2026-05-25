@@ -40,7 +40,7 @@ const BEDROCK_TOOL_CONFIG = buildBedrockToolConfig(CHAT_TOOLS);
  */
 export async function runBedrockChatLoop(
   systemPrompt: string,
-  initialMessages: { role: "user" | "assistant"; content: string }[],
+  initialMessages: { role: "user" | "assistant"; content: string }[]
 ): Promise<string> {
   const client = getBedrockClient();
 
@@ -61,8 +61,7 @@ export async function runBedrockChatLoop(
 
     const response = await client.send(cmd);
     const stopReason = response.stopReason;
-    const assistantContent: AnyBlock[] =
-      (response.output?.message?.content as AnyBlock[]) ?? [];
+    const assistantContent: AnyBlock[] = (response.output?.message?.content as AnyBlock[]) ?? [];
 
     if (stopReason !== "tool_use") {
       // Extract and concatenate all text blocks.
@@ -78,13 +77,10 @@ export async function runBedrockChatLoop(
     // Extract tool-use blocks and execute them in parallel.
     const toolUseBlocks = assistantContent.filter(
       (b): b is ToolUseBlock =>
-        "toolUse" in b &&
-        typeof (b as ToolUseBlock).toolUse?.toolUseId === "string",
+        "toolUse" in b && typeof (b as ToolUseBlock).toolUse?.toolUseId === "string"
     );
 
-    toolUseBlocks.forEach((b) =>
-      console.warn("[chat] tool_use", b.toolUse.name),
-    );
+    toolUseBlocks.forEach((b) => console.warn("[chat] tool_use", b.toolUse.name));
 
     const toolResults: ToolResultBlock[] = await Promise.all(
       toolUseBlocks.map(async (b) => {
@@ -95,7 +91,7 @@ export async function runBedrockChatLoop(
             content: [{ text: result }] as [{ text: string }],
           },
         };
-      }),
+      })
     );
 
     messages.push({ role: "user", content: toolResults });

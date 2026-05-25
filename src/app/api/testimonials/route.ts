@@ -10,29 +10,22 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const featured = searchParams.get("featured") === "true";
 
-  const configured = await isConfiguredAsync(
-    "NOTION_API_KEY",
-    "NOTION_TESTIMONIALS_DB_ID",
-  );
+  const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_TESTIMONIALS_DB_ID");
 
   if (!configured) {
-    const data = featured
-      ? staticTestimonials.filter((t) => t.featured)
-      : staticTestimonials;
+    const data = featured ? staticTestimonials.filter((t) => t.featured) : staticTestimonials;
     return NextResponse.json(
       {
         testimonials: data,
         source: "static",
         fallbackReason: "not-configured",
       },
-      { headers: { "x-cms-source": "static" } },
+      { headers: { "x-cms-source": "static" } }
     );
   }
 
   try {
-    const testimonials = featured
-      ? await getFeaturedTestimonials()
-      : await getTestimonials();
+    const testimonials = featured ? await getFeaturedTestimonials() : await getTestimonials();
     return NextResponse.json(
       { testimonials, source: "notion" },
       {
@@ -40,16 +33,14 @@ export async function GET(request: Request) {
           "Cache-Control": "public, s-maxage=120, stale-while-revalidate=60",
           "x-cms-source": "notion",
         },
-      },
+      }
     );
   } catch (err) {
     console.error("[API /testimonials] Fetch error:", err);
-    const data = featured
-      ? staticTestimonials.filter((t) => t.featured)
-      : staticTestimonials;
+    const data = featured ? staticTestimonials.filter((t) => t.featured) : staticTestimonials;
     return NextResponse.json(
       { testimonials: data, source: "static", fallbackReason: "notion-error" },
-      { headers: { "x-cms-source": "static" } },
+      { headers: { "x-cms-source": "static" } }
     );
   }
 }

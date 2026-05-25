@@ -12,11 +12,7 @@ const sidebarLinks = [
   { href: "/dashboard/settings", label: "Settings", icon: "⚙" },
 ];
 
-export default function DashboardLayoutClient({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayoutClient({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -42,7 +38,7 @@ export default function DashboardLayoutClient({
           <aside className="shrink-0 lg:w-64">
             <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
               <div className="mb-4 border-b border-slate-800 pb-4">
-                <div className="bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan mb-2 flex h-10 w-10 items-center justify-center rounded-full border font-heading text-lg font-bold">
+                <div className="bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan font-heading mb-2 flex h-10 w-10 items-center justify-center rounded-full border text-lg font-bold">
                   {(user.name || user.email || "U")[0].toUpperCase()}
                 </div>
                 <p className="truncate font-mono text-sm font-medium text-white">

@@ -32,10 +32,7 @@ import {
   notionImageProxyUrl,
   type TocEntry,
 } from "@/lib/notion";
-import {
-  getIntegrationsAsync,
-  requireIntegrationAsync,
-} from "@/lib/integrations";
+import { getIntegrationsAsync, requireIntegrationAsync } from "@/lib/integrations";
 import { cached } from "@/lib/notion-cache";
 
 const BLOG_PUBLISHED_FILTER = {
@@ -103,18 +100,13 @@ function mapPage(page: any): NotionPost {
     coverImage:
       p["Cover Image"]?.url ??
       page.cover?.external?.url ??
-      (page.cover?.type === "file"
-        ? notionImageProxyUrl(page.id, "cover")
-        : undefined),
+      (page.cover?.type === "file" ? notionImageProxyUrl(page.id, "cover") : undefined),
     readTime:
-      extractText(p["Read Time"]?.rich_text) ||
-      extractText(p.ReadTime?.rich_text) ||
-      "5 min read",
+      extractText(p["Read Time"]?.rich_text) || extractText(p.ReadTime?.rich_text) || "5 min read",
     seoTitle: extractText(p["SEO Title"]?.rich_text) || undefined,
     seoDescription: extractText(p["SEO Description"]?.rich_text) || undefined,
     status: (p.Status?.select?.name ?? "") as NotionPost["status"],
-    generatedBy: (p.GeneratedBy?.select?.name ??
-      "") as NotionPost["generatedBy"],
+    generatedBy: (p.GeneratedBy?.select?.name ?? "") as NotionPost["generatedBy"],
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -133,13 +125,10 @@ export async function getPosts(): Promise<NotionPost[]> {
   return cached("blog:posts", async () => {
     const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
     try {
-      const pages = await notionFetchAll(
-        `/databases/${NOTION_BLOG_DB_ID}/query`,
-        {
-          filter: BLOG_PUBLISHED_FILTER,
-          sorts: BLOG_DATE_SORT,
-        },
-      );
+      const pages = await notionFetchAll(`/databases/${NOTION_BLOG_DB_ID}/query`, {
+        filter: BLOG_PUBLISHED_FILTER,
+        sorts: BLOG_DATE_SORT,
+      });
       return pages.map(mapPage);
     } catch (err) {
       console.error("[Notion Blog] Failed to fetch posts:", err);
@@ -156,10 +145,9 @@ export async function getAllPosts(): Promise<NotionPost[]> {
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_BLOG_DB_ID}/query`,
-      { sorts: BLOG_DATE_SORT },
-    );
+    const pages = await notionFetchAll(`/databases/${NOTION_BLOG_DB_ID}/query`, {
+      sorts: BLOG_DATE_SORT,
+    });
     return pages.map(mapPage);
   } catch (err) {
     console.error("[Notion Blog] Failed to fetch all posts:", err);
@@ -180,9 +168,7 @@ export async function getFeaturedPosts(): Promise<NotionPost[]> {
  * Fetch posts filtered by category.
  * Reuses the cached getPosts() result to avoid a redundant Notion query.
  */
-export async function getPostsByCategory(
-  category: string,
-): Promise<NotionPost[]> {
+export async function getPostsByCategory(category: string): Promise<NotionPost[]> {
   const posts = await getPosts();
   return posts.filter((p) => p.category === category);
 }
@@ -199,24 +185,16 @@ export async function getPostsByTag(tag: string): Promise<NotionPost[]> {
 /**
  * Fetch a single post by slug, including full rendered HTML content.
  */
-export async function getPostBySlug(
-  slug: string,
-): Promise<NotionPostWithContent | null> {
+export async function getPostBySlug(slug: string): Promise<NotionPostWithContent | null> {
   await requireBlogIntegration();
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_BLOG_DB_ID}/query`,
-      {
-        filter: {
-          and: [
-            { property: "Slug", rich_text: { equals: slug } },
-            BLOG_PUBLISHED_FILTER,
-          ],
-        },
+    const pages = await notionFetchAll(`/databases/${NOTION_BLOG_DB_ID}/query`, {
+      filter: {
+        and: [{ property: "Slug", rich_text: { equals: slug } }, BLOG_PUBLISHED_FILTER],
       },
-    );
+    });
 
     const page = pages[0];
     if (!page) return null;
@@ -274,7 +252,7 @@ export async function searchPosts(query: string): Promise<NotionPost[]> {
     (p) =>
       p.title.toLowerCase().includes(q) ||
       p.excerpt.toLowerCase().includes(q) ||
-      p.tags.some((t) => t.toLowerCase().includes(q)),
+      p.tags.some((t) => t.toLowerCase().includes(q))
   );
 }
 
@@ -282,10 +260,7 @@ export async function searchPosts(query: string): Promise<NotionPost[]> {
  * Get related posts based on shared tags and category.
  * Returns up to `limit` posts, excluding the current post.
  */
-export async function getRelatedPosts(
-  post: NotionPost,
-  limit = 3,
-): Promise<NotionPost[]> {
+export async function getRelatedPosts(post: NotionPost, limit = 3): Promise<NotionPost[]> {
   const allPosts = await getPosts();
   const others = allPosts.filter((p) => p.id !== post.id);
 
@@ -311,23 +286,17 @@ export async function getRelatedPosts(
  * Uses extractToc from the shared client.
  */
 export async function getPostWithToc(
-  slug: string,
+  slug: string
 ): Promise<(NotionPostWithContent & { toc: TocEntry[] }) | null> {
   await requireBlogIntegration();
 
   const { NOTION_BLOG_DB_ID } = await getIntegrationsAsync();
   try {
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_BLOG_DB_ID}/query`,
-      {
-        filter: {
-          and: [
-            { property: "Slug", rich_text: { equals: slug } },
-            BLOG_PUBLISHED_FILTER,
-          ],
-        },
+    const pages = await notionFetchAll(`/databases/${NOTION_BLOG_DB_ID}/query`, {
+      filter: {
+        and: [{ property: "Slug", rich_text: { equals: slug } }, BLOG_PUBLISHED_FILTER],
       },
-    );
+    });
 
     const page = pages[0];
     if (!page) return null;
@@ -377,7 +346,7 @@ export async function getTagCounts(): Promise<Record<string, number>> {
  */
 export async function getPaginatedPosts(
   page: number,
-  perPage = 10,
+  perPage = 10
 ): Promise<{ posts: NotionPost[]; total: number; totalPages: number }> {
   const allPosts = await getPosts();
   const start = (page - 1) * perPage;

@@ -50,17 +50,12 @@ export function shaEquivalent(a: string | null, b: string | null): boolean {
   return lo.startsWith(hi) || hi.startsWith(lo);
 }
 
-function classifySurface(
-  name: "cloud",
-  expected: string,
-  actual: string | null,
-): SurfaceStatus {
+function classifySurface(name: "cloud", expected: string, actual: string | null): SurfaceStatus {
   const matches = shaEquivalent(expected, actual);
   let reason = "matches expected";
   if (actual === null) reason = "endpoint unreachable or no version field";
   else if (actual === "0.1.0" || actual === "dev") {
-    reason =
-      "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
+    reason = "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
   } else if (!matches) reason = "SHA differs from SSM source of truth";
   return { name, actual, matches, reason };
 }
@@ -69,18 +64,11 @@ function classifySurface(
  * Build a DriftReport from a snapshot. Pure; takes `now` so tests can pin
  * the clock and exercise the grace-window edges deterministically.
  */
-export function evaluateDrift(
-  snapshot: DriftSnapshot,
-  now: number = Date.now(),
-): DriftReport {
-  const ageMs = snapshot.ssmModifiedAt
-    ? now - snapshot.ssmModifiedAt.getTime()
-    : null;
+export function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): DriftReport {
+  const ageMs = snapshot.ssmModifiedAt ? now - snapshot.ssmModifiedAt.getTime() : null;
   const withinGrace = ageMs !== null && ageMs < GRACE_WINDOW_MS;
 
-  const surfaces: SurfaceStatus[] = [
-    classifySurface("cloud", snapshot.expected, snapshot.cloud),
-  ];
+  const surfaces: SurfaceStatus[] = [classifySurface("cloud", snapshot.expected, snapshot.cloud)];
 
   const anyMismatch = surfaces.some((s) => !s.matches);
   // During grace window we count mismatches as expected and don't fail.

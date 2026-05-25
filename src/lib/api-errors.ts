@@ -17,7 +17,7 @@ export function mapIntegrationError(err: unknown): NextResponse | null {
         reason: "integration_not_configured",
         missing: err.keys,
       },
-      { status: 503 },
+      { status: 503 }
     );
   }
   return null;

@@ -45,20 +45,14 @@ interface ConfirmBody {
 
 function isProposeBody(b: unknown): b is ProposeBody {
   return (
-    typeof b === "object" &&
-    b !== null &&
-    typeof (b as { intent?: unknown }).intent === "string"
+    typeof b === "object" && b !== null && typeof (b as { intent?: unknown }).intent === "string"
   );
 }
 
 function isConfirmBody(b: unknown): b is ConfirmBody {
   if (typeof b !== "object" || b === null) return false;
   const o = b as { confirm?: unknown; start?: unknown; end?: unknown };
-  return (
-    o.confirm === true &&
-    typeof o.start === "string" &&
-    typeof o.end === "string"
-  );
+  return o.confirm === true && typeof o.start === "string" && typeof o.end === "string";
 }
 
 function jsonError(status: number, error: string) {
@@ -78,15 +72,8 @@ function resolveUserName(claim: string | undefined, email: string): string {
   return "Cloudless User";
 }
 
-async function handlePropose(
-  body: ProposeBody,
-  ip: string,
-): Promise<NextResponse> {
-  const rl = rateLimit(
-    `agent-book-propose:${ip}`,
-    PROPOSE_LIMIT_PER_WINDOW,
-    PROPOSE_WINDOW_MS,
-  );
+async function handlePropose(body: ProposeBody, ip: string): Promise<NextResponse> {
+  const rl = rateLimit(`agent-book-propose:${ip}`, PROPOSE_LIMIT_PER_WINDOW, PROPOSE_WINDOW_MS);
   if (!rl.ok) return rl.response as NextResponse;
 
   const intent = body.intent.trim().slice(0, MAX_INTENT_LENGTH);
@@ -109,13 +96,9 @@ async function handleConfirm(
   body: ConfirmBody,
   userEmail: string,
   userName: string,
-  ip: string,
+  ip: string
 ): Promise<NextResponse> {
-  const rl = rateLimit(
-    `agent-book-confirm:${ip}`,
-    CONFIRM_LIMIT_PER_WINDOW,
-    CONFIRM_WINDOW_MS,
-  );
+  const rl = rateLimit(`agent-book-confirm:${ip}`, CONFIRM_LIMIT_PER_WINDOW, CONFIRM_WINDOW_MS);
   if (!rl.ok) return rl.response as NextResponse;
 
   const startD = new Date(body.start);
@@ -133,20 +116,14 @@ async function handleConfirm(
   // Re-check availability — the propose step is advisory; another booking
   // could have taken the slot in between. getAvailableSlots only returns
   // currently-free slots, so a hit there is the source of truth.
-  const daysAhead = Math.max(
-    1,
-    Math.ceil((startD.getTime() - Date.now()) / 86_400_000) + 1,
-  );
+  const daysAhead = Math.max(1, Math.ceil((startD.getTime() - Date.now()) / 86_400_000) + 1);
   const free = await getAvailableSlots(Math.min(daysAhead, MAX_DAYS_AHEAD));
   const stillFree = free.some((s) => {
     const sStart = new Date(s.start).getTime();
     return Math.abs(sStart - startD.getTime()) <= SLOT_OVERLAP_TOLERANCE_MS;
   });
   if (!stillFree) {
-    return jsonError(
-      409,
-      "That slot is no longer available. Please propose a new time.",
-    );
+    return jsonError(409, "That slot is no longer available. Please propose a new time.");
   }
 
   const notes = normalizeNotes(body.notes);
@@ -169,18 +146,14 @@ async function handleConfirm(
       start: body.start,
       notes,
       meetLink: result.htmlLink,
-    }).catch((err) =>
-      console.warn("[agent-book] slackBookingNotify failed:", err),
-    );
+    }).catch((err) => console.warn("[agent-book] slackBookingNotify failed:", err));
     sendBookingConfirmation({
       name: userName,
       email: userEmail,
       slotLabel,
       meetLink: result.htmlLink,
       notes,
-    }).catch((err) =>
-      console.warn("[agent-book] sendBookingConfirmation failed:", err),
-    );
+    }).catch((err) => console.warn("[agent-book] sendBookingConfirmation failed:", err));
 
     return NextResponse.json({
       status: "confirmed",
@@ -202,10 +175,7 @@ export async function POST(request: NextRequest) {
 
   const userEmail = auth.user.email?.toLowerCase();
   if (!userEmail) {
-    return jsonError(
-      400,
-      "Authenticated token is missing an email claim — cannot book.",
-    );
+    return jsonError(400, "Authenticated token is missing an email claim — cannot book.");
   }
   const userName = resolveUserName(auth.user["cognito:username"], userEmail);
 
@@ -231,6 +201,6 @@ export async function POST(request: NextRequest) {
 
   return jsonError(
     400,
-    "Body must be either { intent } to propose or { confirm: true, start, end } to confirm.",
+    "Body must be either { intent } to propose or { confirm: true, start, end } to confirm."
   );
 }

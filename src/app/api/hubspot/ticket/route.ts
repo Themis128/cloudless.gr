@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  isHubSpotConfigured,
-  createTicket,
-  searchContacts,
-} from "@/lib/hubspot";
+import { isHubSpotConfigured, createTicket, searchContacts } from "@/lib/hubspot";
 import { isValidEmail } from "@/lib/validation";
 import { mapIntegrationError } from "@/lib/api-errors";
 
@@ -15,10 +11,8 @@ function parseTicketBody(body: Record<string, unknown>): {
   email: string | undefined;
   normalizedPriority: string;
 } | null {
-  const subject =
-    typeof body.subject === "string" ? body.subject.trim().slice(0, 200) : "";
-  const content =
-    typeof body.content === "string" ? body.content.trim().slice(0, 2000) : "";
+  const subject = typeof body.subject === "string" ? body.subject.trim().slice(0, 200) : "";
+  const content = typeof body.content === "string" ? body.content.trim().slice(0, 2000) : "";
   if (!subject || !content) return null;
   const email = typeof body.email === "string" ? body.email : undefined;
   const rawPriority = typeof body.priority === "string" ? body.priority : "";
@@ -29,7 +23,7 @@ function parseTicketBody(body: Record<string, unknown>): {
 }
 
 async function resolveContactId(
-  email: string,
+  email: string
 ): Promise<{ contactId: string | undefined; integrationError: NextResponse | null }> {
   try {
     const result = await searchContacts("email", email);
@@ -51,7 +45,7 @@ export async function POST(request: NextRequest) {
   if (!(await isHubSpotConfigured())) {
     return NextResponse.json(
       { error: "HubSpot ticket creation is not configured." },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
@@ -62,17 +56,14 @@ export async function POST(request: NextRequest) {
     if (!parsed) {
       return NextResponse.json(
         { error: "Missing required fields: subject, content" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     const { subject, content, email, normalizedPriority } = parsed;
 
     if (email && !isValidEmail(email)) {
-      return NextResponse.json(
-        { error: "Invalid email address." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
     }
 
     // Find contact by email if provided
@@ -85,13 +76,13 @@ export async function POST(request: NextRequest) {
 
     const ticket = await createTicket(
       { subject, content, hs_ticket_priority: normalizedPriority },
-      contactId,
+      contactId
     );
 
     if (!ticket) {
       return NextResponse.json(
         { error: "HubSpot ticket creation is not configured." },
-        { status: 503 },
+        { status: 503 }
       );
     }
 
@@ -104,9 +95,6 @@ export async function POST(request: NextRequest) {
     const _r = mapIntegrationError(error);
     if (_r) return _r;
     console.error("[HubSpot] Ticket error:", error);
-    return NextResponse.json(
-      { error: "Failed to create ticket." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to create ticket." }, { status: 500 });
   }
 }

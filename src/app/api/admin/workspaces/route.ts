@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  SSMClient,
-  GetParameterCommand,
-  PutParameterCommand,
-} from "@aws-sdk/client-ssm";
+import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
 import { randomUUID } from "node:crypto";
 
 const SSM_KEY = "/cloudless/WORKSPACES_JSON";
@@ -45,7 +41,7 @@ async function writeWorkspaces(workspaces: Workspace[]): Promise<void> {
       Value: JSON.stringify(workspaces),
       Type: "String",
       Overwrite: true,
-    }),
+    })
   );
   cachedWorkspaces = { data: workspaces, expiresAt: Date.now() + CACHE_TTL_MS };
 }
@@ -86,7 +82,7 @@ export async function POST(request: NextRequest) {
   if (workspaces.some((w) => w.slug === slug)) {
     return NextResponse.json(
       { error: "A workspace with this name already exists" },
-      { status: 409 },
+      { status: 409 }
     );
   }
 
@@ -95,9 +91,7 @@ export async function POST(request: NextRequest) {
     name: String(body.name).trim().slice(0, 100),
     slug,
     description: String(body.description ?? "").slice(0, 300),
-    adminEmails: Array.isArray(body.adminEmails)
-      ? body.adminEmails.map(String).slice(0, 20)
-      : [],
+    adminEmails: Array.isArray(body.adminEmails) ? body.adminEmails.map(String).slice(0, 20) : [],
     createdAt: new Date().toISOString(),
   };
 
@@ -118,13 +112,11 @@ export async function PATCH(request: NextRequest) {
     adminEmails?: string[];
   };
 
-  if (!body.id)
-    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  if (!body.id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
   const workspaces = await readWorkspaces();
   const idx = workspaces.findIndex((w) => w.id === body.id);
-  if (idx === -1)
-    return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+  if (idx === -1) return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
 
   if (body.name) {
     workspaces[idx].name = String(body.name).trim().slice(0, 100);
@@ -146,8 +138,7 @@ export async function DELETE(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const { id } = (await request.json()) as { id?: string };
-  if (!id)
-    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
   const workspaces = await readWorkspaces();
   const updated = workspaces.filter((w) => w.id !== id);

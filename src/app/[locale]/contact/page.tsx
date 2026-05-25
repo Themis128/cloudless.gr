@@ -32,13 +32,13 @@ export default async function ContactPage() {
           <p className="animate-shimmer-text mb-3 font-mono text-xs font-medium tracking-[0.3em]">
             [ CONTACT ]
           </p>
-          <h1 className="animate-fade-in-up delay-100 font-heading text-3xl leading-tight font-bold md:text-5xl">
+          <h1 className="animate-fade-in-up font-heading text-3xl leading-tight font-bold delay-100 md:text-5xl">
             {t("contact.title", "Get in Touch")}
           </h1>
-          <p className="animate-fade-in-up delay-200 mt-4 max-w-xl text-lg text-slate-400">
+          <p className="animate-fade-in-up mt-4 max-w-xl text-lg text-slate-400 delay-200">
             {t(
               "contact.subtitle",
-              "Ready to go cloudless? Tell us about your project and we'll get back to you within 24 hours.",
+              "Ready to go cloudless? Tell us about your project and we'll get back to you within 24 hours."
             )}
           </p>
         </div>

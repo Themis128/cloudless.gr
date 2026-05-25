@@ -18,16 +18,10 @@ export async function GET(request: NextRequest) {
 
   const config = await getConfig();
   if (!config.GOOGLE_CLIENT_EMAIL || !config.GOOGLE_PRIVATE_KEY) {
-    return NextResponse.json(
-      { error: "Google Search Console not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Google Search Console not configured." }, { status: 503 });
   }
 
-  const limit = Math.max(
-    1,
-    Math.min(Number(request.nextUrl.searchParams.get("limit")) || 30, 50),
-  );
+  const limit = Math.max(1, Math.min(Number(request.nextUrl.searchParams.get("limit")) || 30, 50));
 
   try {
     const countries = await getTrafficByCountry(undefined, limit);
@@ -38,9 +32,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     console.error("[GSC countries] Error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch country data." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch country data." }, { status: 500 });
   }
 }

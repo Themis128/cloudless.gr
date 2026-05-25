@@ -8,10 +8,7 @@ export const ALLOWED_ANALYTICS_CONNECTORS: AnalyticsConnector[] = [
   "metabase",
 ];
 
-export const DEFAULT_ANALYTICS_CONNECTORS: AnalyticsConnector[] = [
-  "quicksight",
-  "powerbi",
-];
+export const DEFAULT_ANALYTICS_CONNECTORS: AnalyticsConnector[] = ["quicksight", "powerbi"];
 
 export interface AnalyticsOrchestrationInput {
   windowDays: number;
@@ -36,11 +33,8 @@ function normalizeConnectors(value: unknown): AnalyticsConnector[] {
   return Array.from(deduped);
 }
 
-export function parseAnalyticsOrchestrationRequestBody(
-  body: unknown,
-): AnalyticsOrchestrationInput {
-  const payload =
-    body && typeof body === "object" && !Array.isArray(body) ? body : {};
+export function parseAnalyticsOrchestrationRequestBody(body: unknown): AnalyticsOrchestrationInput {
+  const payload = body && typeof body === "object" && !Array.isArray(body) ? body : {};
   const record = payload as Record<string, unknown>;
 
   let windowDays = 30;

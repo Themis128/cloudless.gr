@@ -10,11 +10,7 @@
  * the legacy path Promise.all's them and formats inline.
  */
 import { getSeoSnapshot } from "@/lib/gsc";
-import {
-  isHubSpotConfigured,
-  getPipelineStats,
-  listNewsletterSubscribers,
-} from "@/lib/hubspot";
+import { isHubSpotConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/hubspot";
 import { getStripe } from "@/lib/stripe";
 
 export interface SeoMetrics {
@@ -67,7 +63,6 @@ export async function fetchStripeMetrics(): Promise<StripeMetrics | null> {
   const stripe = await getStripe();
   const sessions = await stripe.checkout.sessions.list({ limit: 50 });
   const paid = sessions.data.filter((s) => s.payment_status === "paid");
-  const revenueEuros =
-    paid.reduce((acc, s) => acc + (s.amount_total ?? 0), 0) / 100;
+  const revenueEuros = paid.reduce((acc, s) => acc + (s.amount_total ?? 0), 0) / 100;
   return { orders: paid.length, revenueEuros };
 }

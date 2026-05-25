@@ -64,10 +64,7 @@ async function notionEnabled(): Promise<boolean> {
   return !!(cfg.NOTION_API_KEY && cfg.NOTION_CALENDAR_DB_ID);
 }
 
-export async function getCalendarItems(
-  from?: string,
-  to?: string,
-): Promise<CalendarItem[]> {
+export async function getCalendarItems(from?: string, to?: string): Promise<CalendarItem[]> {
   if (await notionEnabled()) {
     return (await notionGetCalendarItems(from, to)) ?? [];
   }
@@ -79,9 +76,7 @@ export async function getCalendarItems(
   });
 }
 
-export async function createCalendarItem(
-  input: Omit<CalendarItem, "id">,
-): Promise<CalendarItem> {
+export async function createCalendarItem(input: Omit<CalendarItem, "id">): Promise<CalendarItem> {
   const item: CalendarItem = {
     ...input,
     id: `cal_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -96,7 +91,7 @@ export async function createCalendarItem(
 
 export async function updateCalendarItem(
   id: string,
-  updates: Partial<Omit<CalendarItem, "id">>,
+  updates: Partial<Omit<CalendarItem, "id">>
 ): Promise<CalendarItem | null> {
   if (await notionEnabled()) {
     const all = (await notionGetCalendarItems()) ?? [];

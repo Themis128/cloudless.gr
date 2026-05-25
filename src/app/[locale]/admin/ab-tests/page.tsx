@@ -75,9 +75,7 @@ export default function ABTestsPage() {
   }
 
   function setTrafficSplit(id: string, value: number) {
-    setFlags((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, trafficSplit: value } : f)),
-    );
+    setFlags((prev) => prev.map((f) => (f.id === id ? { ...f, trafficSplit: value } : f)));
   }
 
   async function resetAll() {
@@ -107,13 +105,9 @@ export default function ABTestsPage() {
         <div>
           <div className="bg-neon-yellow/10 border-neon-yellow/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-yellow h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-yellow font-mono text-xs">
-              A/B TESTS
-            </span>
+            <span className="text-neon-yellow font-mono text-xs">A/B TESTS</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            A/B Test Manager
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">A/B Test Manager</h1>
           <p className="font-body mt-1 text-slate-400">
             Toggle feature flags and traffic splits for live experiments.
           </p>
@@ -141,19 +135,15 @@ export default function ABTestsPage() {
       {/* Summary */}
       <div className="mb-6 grid grid-cols-3 gap-3">
         <div className="bg-void-light/50 rounded-xl border border-slate-800 px-4 py-3">
-          <div className="font-mono text-xl font-bold text-white">
-            {flags.length}
-          </div>
+          <div className="font-mono text-xl font-bold text-white">{flags.length}</div>
           <div className="font-mono text-xs text-slate-500">Total flags</div>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 px-4 py-3">
-          <div className="text-neon-green font-mono text-xl font-bold">
-            {activeCount}
-          </div>
+          <div className="text-neon-green font-mono text-xl font-bold">{activeCount}</div>
           <div className="font-mono text-xs text-slate-500">Active tests</div>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 px-4 py-3">
-          <div className="text-slate-400 font-mono text-xl font-bold">
+          <div className="font-mono text-xl font-bold text-slate-400">
             {flags.length - activeCount}
           </div>
           <div className="font-mono text-xs text-slate-500">Inactive</div>
@@ -185,41 +175,28 @@ export default function ABTestsPage() {
 
       <div className="space-y-3">
         {flags.map((flag) => (
-          <div
-            key={flag.id}
-            className="bg-void-light/50 rounded-xl border border-slate-800 p-5"
-          >
+          <div key={flag.id} className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3">
-                  <span className="font-heading font-semibold text-white">
-                    {flag.name}
-                  </span>
+                  <span className="font-heading font-semibold text-white">{flag.name}</span>
                   <span
                     className={`font-mono text-xs ${flag.enabled ? "text-neon-green" : "text-slate-600"}`}
                   >
                     {flag.enabled ? "LIVE" : "OFF"}
                   </span>
                 </div>
-                <p className="font-body mt-1 text-sm text-slate-400">
-                  {flag.description}
-                </p>
+                <p className="font-body mt-1 text-sm text-slate-400">{flag.description}</p>
                 <div className="mt-3 flex flex-wrap gap-3">
                   <div className="rounded-lg border border-slate-700 px-3 py-1.5">
-                    <div className="font-mono text-xs text-slate-500">
-                      Variant A
-                    </div>
-                    <div className="font-mono text-xs text-white">
-                      {flag.variants.a}
-                    </div>
+                    <div className="font-mono text-xs text-slate-500">Variant A</div>
+                    <div className="font-mono text-xs text-white">{flag.variants.a}</div>
                   </div>
-                  <div className="rounded-lg border border-neon-yellow/20 bg-neon-yellow/5 px-3 py-1.5">
-                    <div className="font-mono text-xs text-neon-yellow">
+                  <div className="border-neon-yellow/20 bg-neon-yellow/5 rounded-lg border px-3 py-1.5">
+                    <div className="text-neon-yellow font-mono text-xs">
                       Variant B ({flag.trafficSplit}% traffic)
                     </div>
-                    <div className="font-mono text-xs text-white">
-                      {flag.variants.b}
-                    </div>
+                    <div className="font-mono text-xs text-white">{flag.variants.b}</div>
                   </div>
                 </div>
               </div>
@@ -229,16 +206,14 @@ export default function ABTestsPage() {
                   onChange={(v) => updateFlag(flag.id, { enabled: v })}
                 />
                 {saving === flag.id && (
-                  <span className="font-mono text-xs text-slate-500">
-                    Saving…
-                  </span>
+                  <span className="font-mono text-xs text-slate-500">Saving…</span>
                 )}
               </div>
             </div>
 
             {/* Traffic split slider */}
             <div className="mt-4 flex items-center gap-3">
-              <span className="font-mono text-xs text-slate-500 w-16">
+              <span className="w-16 font-mono text-xs text-slate-500">
                 Split: {flag.trafficSplit}%
               </span>
               <input
@@ -247,17 +222,15 @@ export default function ABTestsPage() {
                 max={100}
                 step={5}
                 value={flag.trafficSplit}
-                onChange={(e) =>
-                  setTrafficSplit(flag.id, Number(e.target.value))
-                }
+                onChange={(e) => setTrafficSplit(flag.id, Number(e.target.value))}
                 onMouseUp={(e) =>
                   updateFlag(flag.id, {
                     trafficSplit: Number((e.target as HTMLInputElement).value),
                   })
                 }
-                className="flex-1 accent-neon-yellow h-1.5 cursor-pointer rounded-full"
+                className="accent-neon-yellow h-1.5 flex-1 cursor-pointer rounded-full"
               />
-              <span className="font-mono text-xs text-slate-500 w-16 text-right">
+              <span className="w-16 text-right font-mono text-xs text-slate-500">
                 B: {flag.trafficSplit}%
               </span>
             </div>

@@ -35,10 +35,7 @@ export async function notionHeaders(): Promise<Record<string, string>> {
 // Fetch wrapper
 // ---------------------------------------------------------------------------
 
-export async function notionFetch<T = unknown>(
-  path: string,
-  init?: RequestInit,
-): Promise<T> {
+export async function notionFetch<T = unknown>(path: string, init?: RequestInit): Promise<T> {
   const MAX_RETRIES = 3;
   const headers = await notionHeaders();
   if (path.includes("://") || path.startsWith("//"))
@@ -108,8 +105,7 @@ function richTextToHtml(richText: RichTextItem[]): string {
       if (t.annotations?.code) text = `<code>${text}</code>`;
       if (t.annotations?.strikethrough) text = `<s>${text}</s>`;
       if (t.annotations?.underline) text = `<u>${text}</u>`;
-      if (t.href)
-        text = `<a href="${t.href}" target="_blank" rel="noopener">${text}</a>`;
+      if (t.href) text = `<a href="${t.href}" target="_blank" rel="noopener">${text}</a>`;
 
       return text;
     })
@@ -181,12 +177,14 @@ function appendListItem(
   text: string,
   listBuffer: string[],
   listTypeRef: { current: ListTag },
-  lines: string[],
+  lines: string[]
 ): void {
   const wantedTag = type === "bulleted_list_item" ? "ul" : "ol";
   if (listTypeRef.current !== wantedTag) {
     if (listBuffer.length > 0) {
-      lines.push(`<${listTypeRef.current ?? "ul"}>${listBuffer.splice(0).join("")}</${listTypeRef.current ?? "ul"}>`);
+      lines.push(
+        `<${listTypeRef.current ?? "ul"}>${listBuffer.splice(0).join("")}</${listTypeRef.current ?? "ul"}>`
+      );
     }
     listTypeRef.current = wantedTag;
   }
@@ -196,7 +194,7 @@ function appendListItem(
 function flushListBuffer(
   listBuffer: string[],
   listTypeRef: { current: ListTag },
-  lines: string[],
+  lines: string[]
 ): void {
   if (listBuffer.length === 0) return;
   const tag = listTypeRef.current ?? "ul";
@@ -239,7 +237,7 @@ export function blocksToHtml(blocks: any[]): string {
  */
 export async function notionFetchAll<T = unknown>(
   path: string,
-  body?: Record<string, unknown>,
+  body?: Record<string, unknown>
 ): Promise<T[]> {
   const results: T[] = [];
   let cursor: string | undefined;
@@ -301,18 +299,14 @@ export interface NotionBlock {
  * Fetch all blocks under a parent, recursively expanding any block that
  * has `has_children: true` (e.g. toggle, callout, column_list).
  */
-export async function fetchBlocksDeep(
-  parentId: string,
-): Promise<NotionBlock[]> {
-  const blocks = await notionListAll<NotionBlock>(
-    `/blocks/${parentId}/children`,
-  );
+export async function fetchBlocksDeep(parentId: string): Promise<NotionBlock[]> {
+  const blocks = await notionListAll<NotionBlock>(`/blocks/${parentId}/children`);
   await Promise.all(
     blocks.map(async (block) => {
       if (block.has_children) {
         block.children = await fetchBlocksDeep(block.id);
       }
-    }),
+    })
   );
   return blocks;
 }
@@ -325,10 +319,7 @@ export async function fetchBlocksDeep(
  * Returns the local image-proxy URL for a Notion-hosted file.
  * The proxy route re-fetches the fresh signed URL on each request.
  */
-export function notionImageProxyUrl(
-  id: string,
-  type: "block" | "cover" = "block",
-): string {
+export function notionImageProxyUrl(id: string, type: "block" | "cover" = "block"): string {
   return `/api/notion-image?id=${encodeURIComponent(id)}&type=${type}`;
 }
 
@@ -342,7 +333,7 @@ export function notionImageProxyUrl(
  */
 export async function updatePage(
   pageId: string,
-  properties: Record<string, unknown>,
+  properties: Record<string, unknown>
 ): Promise<boolean> {
   try {
     await notionFetch(`/pages/${pageId}`, {
@@ -353,7 +344,7 @@ export async function updatePage(
   } catch (err) {
     console.error(
       `[Notion] Failed to update page ${pageId}:`,
-      (err as Error)?.message ?? "unknown error",
+      (err as Error)?.message ?? "unknown error"
     );
     return false;
   }
@@ -372,7 +363,7 @@ export async function archivePage(pageId: string): Promise<boolean> {
   } catch (err) {
     console.error(
       `[Notion] Failed to archive page ${pageId}:`,
-      (err as Error)?.message ?? "unknown error",
+      (err as Error)?.message ?? "unknown error"
     );
     return false;
   }
@@ -391,7 +382,7 @@ export async function restorePage(pageId: string): Promise<boolean> {
   } catch (err) {
     console.error(
       `[Notion] Failed to restore page ${pageId}:`,
-      (err as Error)?.message ?? "unknown error",
+      (err as Error)?.message ?? "unknown error"
     );
     return false;
   }
@@ -407,10 +398,7 @@ export async function restorePage(pageId: string): Promise<boolean> {
  * Append child blocks to a page or block.
  * Max 100 blocks per call (Notion API limit).
  */
-export async function appendBlocks(
-  parentId: string,
-  children: any[],
-): Promise<boolean> {
+export async function appendBlocks(parentId: string, children: any[]): Promise<boolean> {
   try {
     await notionFetch(`/blocks/${parentId}/children`, {
       method: "PATCH",
@@ -420,7 +408,7 @@ export async function appendBlocks(
   } catch (err) {
     console.error(
       `[Notion] Failed to append blocks to ${parentId}:`,
-      (err as Error)?.message ?? "unknown error",
+      (err as Error)?.message ?? "unknown error"
     );
     return false;
   }
@@ -436,7 +424,7 @@ export async function deleteBlock(blockId: string): Promise<boolean> {
   } catch (err) {
     console.error(
       `[Notion] Failed to delete block ${blockId}:`,
-      (err as Error)?.message ?? "unknown error",
+      (err as Error)?.message ?? "unknown error"
     );
     return false;
   }

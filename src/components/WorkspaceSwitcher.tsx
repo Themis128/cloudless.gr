@@ -11,8 +11,7 @@ export default function WorkspaceSwitcher() {
   useEffect(() => {
     if (!open) return;
     function close(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
@@ -25,16 +24,14 @@ export default function WorkspaceSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-800 bg-void/60 px-3 py-2 text-left transition hover:border-slate-700"
+        className="bg-void/60 flex w-full items-center justify-between gap-2 rounded-lg border border-slate-800 px-3 py-2 text-left transition hover:border-slate-700"
       >
         <div className="min-w-0">
-          <p className="font-mono truncate text-xs text-white">
+          <p className="truncate font-mono text-xs text-white">
             {current?.name ?? "Select workspace"}
           </p>
           {current?.slug && (
-            <p className="font-mono truncate text-[10px] text-slate-600">
-              {current.slug}
-            </p>
+            <p className="truncate font-mono text-[10px] text-slate-600">{current.slug}</p>
           )}
         </div>
         <svg
@@ -43,17 +40,12 @@ export default function WorkspaceSwitcher() {
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 overflow-hidden rounded-lg border border-slate-800 bg-[#0a0a0f] shadow-xl">
+        <div className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-lg border border-slate-800 bg-[#0a0a0f] shadow-xl">
           {workspaces.map((ws) => (
             <button
               key={ws.id}
@@ -65,13 +57,13 @@ export default function WorkspaceSwitcher() {
               className={`flex w-full items-center gap-2 px-3 py-2.5 text-left transition ${
                 ws.id === current?.id
                   ? "bg-neon-magenta/10 text-neon-magenta"
-                  : "text-slate-300 hover:bg-void-lighter/40 hover:text-white"
+                  : "hover:bg-void-lighter/40 text-slate-300 hover:text-white"
               }`}
             >
               <span
                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${ws.id === current?.id ? "bg-neon-magenta" : "bg-slate-600"}`}
               />
-              <span className="font-mono truncate text-xs">{ws.name}</span>
+              <span className="truncate font-mono text-xs">{ws.name}</span>
             </button>
           ))}
         </div>

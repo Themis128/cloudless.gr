@@ -132,7 +132,7 @@ function NavList({
     <nav className="space-y-4">
       {adminGroups.map((group) => (
         <div key={group.label}>
-          <p className="px-3 pb-1.5 font-mono text-[10px] uppercase tracking-widest text-slate-600">
+          <p className="px-3 pb-1.5 font-mono text-[10px] tracking-widest text-slate-600 uppercase">
             {group.label}
           </p>
           <div className="space-y-0.5">
@@ -144,27 +144,13 @@ function NavList({
                   : "text-slate-400 hover:bg-void-lighter/50 hover:text-white"
               }`;
               return external ? (
-                <a
-                  key={href}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cls}
-                >
+                <a key={href} href={href} target="_blank" rel="noopener noreferrer" className={cls}>
                   <Icon size={15} className="shrink-0" />
                   {label}
-                  <ExternalLink
-                    size={11}
-                    className="ml-auto shrink-0 opacity-40"
-                  />
+                  <ExternalLink size={11} className="ml-auto shrink-0 opacity-40" />
                 </a>
               ) : (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={onLinkClick}
-                  className={cls}
-                >
+                <Link key={href} href={href} onClick={onLinkClick} className={cls}>
                   <Icon size={15} className="shrink-0" />
                   {label}
                 </Link>
@@ -177,11 +163,7 @@ function NavList({
   );
 }
 
-export default function AdminLayoutClient({
-  children,
-}: {
-  readonly children: React.ReactNode;
-}) {
+export default function AdminLayoutClient({ children }: { readonly children: React.ReactNode }) {
   const { user, isAdmin, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -212,9 +194,7 @@ export default function AdminLayoutClient({
 
   const isActive = (href: string) => {
     if (href === "/admin")
-      return (
-        pathname === "/admin" || Boolean(pathname?.match(/^\/[a-z]{2}\/admin$/))
-      );
+      return pathname === "/admin" || Boolean(pathname?.match(/^\/[a-z]{2}\/admin$/));
     const path = (pathname ?? "").replace(/^\/[a-z]{2}(?=\/)/, "");
     return path === href;
   };
@@ -227,9 +207,7 @@ export default function AdminLayoutClient({
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-2 sm:px-6 lg:px-8">
             <div className="flex items-center gap-2">
               <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
-              <span className="text-neon-magenta font-mono text-xs">
-                ADMIN PANEL
-              </span>
+              <span className="text-neon-magenta font-mono text-xs">ADMIN PANEL</span>
             </div>
             {/* Mobile hamburger */}
             <button
@@ -239,13 +217,7 @@ export default function AdminLayoutClient({
               onClick={() => setDrawerOpen(true)}
               className="text-neon-magenta p-1 lg:hidden"
             >
-              <svg
-                width="20"
-                height="20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 5h14M3 10h14M3 15h14" />
               </svg>
             </button>
@@ -279,13 +251,7 @@ export default function AdminLayoutClient({
               onClick={() => setDrawerOpen(false)}
               className="p-1 text-slate-400 hover:text-white"
             >
-              <svg
-                width="18"
-                height="18"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
+              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M4 4l10 10M14 4L4 14" />
               </svg>
             </button>
@@ -293,18 +259,13 @@ export default function AdminLayoutClient({
 
           {/* Workspace switcher at top */}
           <div className="border-b border-slate-800 px-4 py-3">
-            <p className="mb-1 font-mono text-xs text-slate-500">
-              {user.email || user.username}
-            </p>
+            <p className="mb-1 font-mono text-xs text-slate-500">{user.email || user.username}</p>
             <WorkspaceSwitcher />
           </div>
 
           {/* Scrollable nav */}
           <div className="flex-1 overflow-y-auto px-3 py-4">
-            <NavList
-              isActive={isActive}
-              onLinkClick={() => setDrawerOpen(false)}
-            />
+            <NavList isActive={isActive} onLinkClick={() => setDrawerOpen(false)} />
           </div>
         </div>
 

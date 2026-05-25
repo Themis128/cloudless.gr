@@ -30,10 +30,7 @@ export async function GET(request: NextRequest) {
   const path = RESOURCE_MAP[resource];
 
   if (!path) {
-    return NextResponse.json(
-      { error: `Unknown resource: ${resource}` },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: `Unknown resource: ${resource}` }, { status: 400 });
   }
 
   // Forward optional query params (e.g. ?status=active for /api/alerts)
@@ -52,7 +49,7 @@ export async function GET(request: NextRequest) {
     if (!res.ok) {
       return NextResponse.json(
         { error: `Alert API error: HTTP ${res.status}` },
-        { status: res.status },
+        { status: res.status }
       );
     }
 
@@ -62,7 +59,7 @@ export async function GET(request: NextRequest) {
     const msg = err instanceof Error ? err.message : "Unreachable";
     return NextResponse.json(
       { error: `Alert API unreachable: ${msg}`, offline: true },
-      { status: 503 },
+      { status: 503 }
     );
   }
 }

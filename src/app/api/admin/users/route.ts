@@ -13,21 +13,14 @@ import {
 const REGION = process.env.AWS_REGION ?? "us-east-1";
 
 function getPoolId() {
-  return (
-    process.env.COGNITO_USER_POOL_ID ??
-    process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ??
-    ""
-  );
+  return process.env.COGNITO_USER_POOL_ID ?? process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
 }
 
 function getClient() {
   return new CognitoIdentityProviderClient({ region: REGION });
 }
 
-function getAttr(
-  attrs: { Name?: string; Value?: string }[] | undefined,
-  name: string,
-): string {
+function getAttr(attrs: { Name?: string; Value?: string }[] | undefined, name: string): string {
   return attrs?.find((a) => a.Name === name)?.Value ?? "";
 }
 
@@ -38,10 +31,7 @@ export async function GET(request: NextRequest) {
   try {
     const poolId = getPoolId();
     if (!poolId) {
-      return NextResponse.json(
-        { error: "Cognito User Pool not configured" },
-        { status: 503 },
-      );
+      return NextResponse.json({ error: "Cognito User Pool not configured" }, { status: 503 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -58,7 +48,7 @@ export async function GET(request: NextRequest) {
         UserPoolId: poolId,
         Limit: limit,
         ...(filter ? { Filter: `email ^= "${filter}"` } : {}),
-      }),
+      })
     );
 
     const users = await Promise.all(
@@ -69,10 +59,9 @@ export async function GET(request: NextRequest) {
             new AdminListGroupsForUserCommand({
               UserPoolId: poolId,
               Username: u.Username!,
-            }),
+            })
           );
-          isAdmin =
-            groupsRes.Groups?.some((g) => g.GroupName === "admin") ?? false;
+          isAdmin = groupsRes.Groups?.some((g) => g.GroupName === "admin") ?? false;
         } catch {
           // If group lookup fails, default to non-admin
         }
@@ -90,16 +79,13 @@ export async function GET(request: NextRequest) {
           created: u.UserCreateDate?.toISOString(),
           lastModified: u.UserLastModifiedDate?.toISOString(),
         };
-      }),
+      })
     );
 
     return NextResponse.json({ users, count: users.length });
   } catch (err) {
     console.error("Failed to list users:", err);
-    return NextResponse.json(
-      { error: "Failed to list users" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to list users" }, { status: 500 });
   }
 }
 
@@ -110,19 +96,13 @@ export async function POST(request: NextRequest) {
   try {
     const poolId = getPoolId();
     if (!poolId) {
-      return NextResponse.json(
-        { error: "Cognito User Pool not configured" },
-        { status: 503 },
-      );
+      return NextResponse.json({ error: "Cognito User Pool not configured" }, { status: 503 });
     }
 
     const { action, username } = await request.json();
 
     if (!action || !username) {
-      return NextResponse.json(
-        { error: "action and username required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "action and username required" }, { status: 400 });
     }
 
     const client = getClient();
@@ -132,7 +112,7 @@ export async function POST(request: NextRequest) {
         new AdminDisableUserCommand({
           UserPoolId: poolId,
           Username: username,
-        }),
+        })
       );
       return NextResponse.json({ success: true, message: "User disabled" });
     }
@@ -142,7 +122,7 @@ export async function POST(request: NextRequest) {
         new AdminEnableUserCommand({
           UserPoolId: poolId,
           Username: username,
-        }),
+        })
       );
       return NextResponse.json({ success: true, message: "User enabled" });
     }
@@ -153,7 +133,7 @@ export async function POST(request: NextRequest) {
           UserPoolId: poolId,
           Username: username,
           GroupName: "admin",
-        }),
+        })
       );
       return NextResponse.json({
         success: true,
@@ -167,7 +147,7 @@ export async function POST(request: NextRequest) {
           UserPoolId: poolId,
           Username: username,
           GroupName: "admin",
-        }),
+        })
       );
       return NextResponse.json({
         success: true,
@@ -178,9 +158,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (err) {
     console.error("Failed to modify user:", err);
-    return NextResponse.json(
-      { error: "Failed to modify user" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to modify user" }, { status: 500 });
   }
 }

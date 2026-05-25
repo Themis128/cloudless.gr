@@ -3,10 +3,7 @@ import { renderAnalyticsReportPdf } from "@/lib/analytics-report-pdf";
 import { prepareOrchestration } from "../_shared";
 
 export async function POST(request: NextRequest) {
-  const prepared = await prepareOrchestration(
-    request,
-    "Analytics PDF export failed.",
-  );
+  const prepared = await prepareOrchestration(request, "Analytics PDF export failed.");
   if (!prepared.ok) return prepared.response;
 
   const { snapshot, orchestration, reportTitle } = prepared.data;

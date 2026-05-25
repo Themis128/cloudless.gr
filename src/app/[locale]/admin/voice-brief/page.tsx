@@ -82,13 +82,9 @@ export default function VoiceBriefPage() {
         <div>
           <div className="border-neon-blue/20 bg-neon-blue/10 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-blue h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-blue font-mono text-xs">
-              AI VOICE BRIEF
-            </span>
+            <span className="text-neon-blue font-mono text-xs">AI VOICE BRIEF</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            Weekly Voice Brief
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">Weekly Voice Brief</h1>
           <p className="font-body mt-1 text-slate-400">
             AI-generated spoken summary of your KPIs — powered by Claude.
           </p>
@@ -98,7 +94,7 @@ export default function VoiceBriefPage() {
             type="button"
             onClick={generate}
             disabled={generating}
-            className="rounded-lg border border-neon-blue/30 px-4 py-2 font-mono text-xs text-neon-blue transition hover:border-neon-blue/60 disabled:opacity-50"
+            className="border-neon-blue/30 text-neon-blue hover:border-neon-blue/60 rounded-lg border px-4 py-2 font-mono text-xs transition disabled:opacity-50"
           >
             {generating ? "Generating…" : "Generate Now"}
           </button>
@@ -124,12 +120,10 @@ export default function VoiceBriefPage() {
       )}
 
       {!loading && !brief && (
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 px-6 py-12 text-center">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 px-6 py-12 text-center">
           <div className="mb-3 text-4xl">🎙️</div>
-          <p className="font-heading text-sm text-slate-400">
-            No brief generated yet.
-          </p>
-          <p className="font-mono mt-1 text-xs text-slate-600">
+          <p className="font-heading text-sm text-slate-400">No brief generated yet.</p>
+          <p className="mt-1 font-mono text-xs text-slate-600">
             Click Generate Now to create your first AI voice brief.
           </p>
         </div>
@@ -159,7 +153,7 @@ export default function VoiceBriefPage() {
                 className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border transition ${
                   playing
                     ? "border-neon-blue/50 bg-neon-blue/10 text-neon-blue"
-                    : "border-slate-700 bg-slate-800 text-white hover:border-neon-blue/40"
+                    : "hover:border-neon-blue/40 border-slate-700 bg-slate-800 text-white"
                 }`}
               >
                 {playing ? "⏹" : "▶"}
@@ -168,26 +162,22 @@ export default function VoiceBriefPage() {
                 <div className="font-heading text-sm font-semibold text-white">
                   {playing ? "Playing…" : "Play Brief"}
                 </div>
-                <div className="font-mono text-xs text-slate-500">
-                  Browser speech synthesis
-                </div>
+                <div className="font-mono text-xs text-slate-500">Browser speech synthesis</div>
               </div>
             </div>
 
             {/* Transcript */}
-            <div className="rounded-lg border border-slate-700 bg-void/50 p-4">
-              <div className="font-mono mb-2 text-xs uppercase tracking-widest text-slate-500">
+            <div className="bg-void/50 rounded-lg border border-slate-700 p-4">
+              <div className="mb-2 font-mono text-xs tracking-widest text-slate-500 uppercase">
                 Transcript
               </div>
-              <p className="font-body leading-relaxed text-slate-300">
-                {brief.text}
-              </p>
+              <p className="font-body leading-relaxed text-slate-300">{brief.text}</p>
             </div>
           </div>
 
           <p className="font-mono text-xs text-slate-600">
-            Briefs are auto-generated weekly via the /api/cron/voice-brief
-            endpoint. Schedule it in vercel.json.
+            Briefs are auto-generated weekly via the /api/cron/voice-brief endpoint. Schedule it in
+            vercel.json.
           </p>
         </div>
       )}

@@ -28,10 +28,7 @@ async function getHubSpotToken(): Promise<string> {
   throw new Error("HubSpot not configured (no token in env or SSM)");
 }
 
-async function hubspotFetch(
-  path: string,
-  options: RequestInit = {},
-): Promise<Response> {
+async function hubspotFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = await getHubSpotToken();
 
   return fetch(`${HUBSPOT_API}${path}`, {
@@ -74,9 +71,7 @@ async function hubspotListAll<T = unknown>(path: string): Promise<T[]> {
  * Uses the email as the unique identifier.
  * Silently returns null if no HubSpot token is available.
  */
-export async function upsertContact(
-  contact: HubSpotContact,
-): Promise<string | null> {
+export async function upsertContact(contact: HubSpotContact): Promise<string | null> {
   try {
     const createRes = await hubspotFetch("/crm/v3/objects/contacts", {
       method: "POST",
@@ -109,9 +104,7 @@ export async function upsertContact(
         body: JSON.stringify({
           filterGroups: [
             {
-              filters: [
-                { propertyName: "email", operator: "EQ", value: contact.email },
-              ],
+              filters: [{ propertyName: "email", operator: "EQ", value: contact.email }],
             },
           ],
         }),
@@ -208,7 +201,7 @@ export async function listNewsletterSubscribers(): Promise<string[]> {
  */
 export async function setNewsletterStatus(
   email: string,
-  status: "newsletter_signup" | "newsletter_unsubscribed",
+  status: "newsletter_signup" | "newsletter_unsubscribed"
 ): Promise<boolean> {
   try {
     const searchRes = await hubspotFetch("/crm/v3/objects/contacts/search", {
@@ -224,18 +217,14 @@ export async function setNewsletterStatus(
       }),
     });
     const existingId = searchRes.ok
-      ? ((await searchRes.json()) as { results?: { id?: string }[] })
-          .results?.[0]?.id
+      ? ((await searchRes.json()) as { results?: { id?: string }[] }).results?.[0]?.id
       : undefined;
 
     if (existingId) {
-      const patchRes = await hubspotFetch(
-        `/crm/v3/objects/contacts/${existingId}`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({ properties: { lead_source: status } }),
-        },
-      );
+      const patchRes = await hubspotFetch(`/crm/v3/objects/contacts/${existingId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ properties: { lead_source: status } }),
+      });
       return patchRes.ok;
     }
 
@@ -267,7 +256,7 @@ export async function listContacts(limit = 10): Promise<unknown[]> {
     : 10;
   try {
     const res = await hubspotFetch(
-      `/crm/v3/objects/contacts?limit=${safeLimit}&properties=email,firstname,lastname,company,createdate,hs_lead_status`,
+      `/crm/v3/objects/contacts?limit=${safeLimit}&properties=email,firstname,lastname,company,createdate,hs_lead_status`
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -288,7 +277,7 @@ export async function listTickets(limit = 20): Promise<unknown[]> {
     : 20;
   try {
     const res = await hubspotFetch(
-      `/crm/v3/objects/tickets?limit=${safeLimit}&properties=subject,content,hs_pipeline,hs_pipeline_stage,hs_ticket_priority,createdate`,
+      `/crm/v3/objects/tickets?limit=${safeLimit}&properties=subject,content,hs_pipeline,hs_pipeline_stage,hs_ticket_priority,createdate`
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -314,7 +303,7 @@ interface TicketData {
  */
 export async function createTicket(
   data: TicketData,
-  contactId?: string,
+  contactId?: string
 ): Promise<{ id: string } | null> {
   const properties: Record<string, string> = {
     subject: data.subject,
@@ -385,7 +374,7 @@ export async function listCompanies(limit = 20): Promise<unknown[]> {
     : 20;
   try {
     const res = await hubspotFetch(
-      `/crm/v3/objects/companies?limit=${safeLimit}&properties=name,domain,city,country,createdate`,
+      `/crm/v3/objects/companies?limit=${safeLimit}&properties=name,domain,city,country,createdate`
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -407,7 +396,7 @@ export async function listDeals(limit = 20): Promise<unknown[]> {
     : 20;
   try {
     const res = await hubspotFetch(
-      `/crm/v3/objects/deals?limit=${safeLimit}&properties=dealname,amount,dealstage,closedate,createdate`,
+      `/crm/v3/objects/deals?limit=${safeLimit}&properties=dealname,amount,dealstage,closedate,createdate`
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -438,7 +427,7 @@ export async function listOwners(): Promise<unknown[]> {
  */
 export async function searchContacts(
   propertyName: string,
-  value: string,
+  value: string
 ): Promise<{
   total: number;
   results: Array<{ id: string; properties: Record<string, string> }>;
@@ -476,10 +465,7 @@ export async function isHubSpotConfigured(): Promise<boolean> {
 
 /* ─── Deal automation ────────────────────────────────────────────────────── */
 
-export type DealSource =
-  | "stripe_checkout"
-  | "calendar_booking"
-  | "contact_form";
+export type DealSource = "stripe_checkout" | "calendar_booking" | "contact_form";
 
 interface DealData {
   /** Human-readable deal name, e.g. "Purchase – session_xyz" */
@@ -508,14 +494,11 @@ interface DealData {
  * Fire-and-forget safe — never throws.
  */
 export async function createDeal(data: DealData): Promise<string | null> {
-  const closedate =
-    data.closedate ?? new Date().toISOString().split("T")[0] + "T00:00:00.000Z";
+  const closedate = data.closedate ?? new Date().toISOString().split("T")[0] + "T00:00:00.000Z";
 
   const properties: Record<string, string> = {
     dealname: data.dealname,
-    dealstage:
-      data.dealstage ??
-      (data.amount !== undefined ? "closedwon" : "appointmentscheduled"),
+    dealstage: data.dealstage ?? (data.amount !== undefined ? "closedwon" : "appointmentscheduled"),
     pipeline: data.pipeline ?? "default",
     closedate,
     ...(data.amount !== undefined && { amount: String(data.amount) }),
@@ -550,7 +533,7 @@ export async function createDeal(data: DealData): Promise<string | null> {
  */
 export async function updateDeal(
   id: string,
-  data: Partial<Record<string, string>>,
+  data: Partial<Record<string, string>>
 ): Promise<{ id: string } | null> {
   try {
     const res = await hubspotFetch(`/crm/v3/objects/deals/${id}`, {
@@ -567,10 +550,7 @@ export async function updateDeal(
 /**
  * Move a deal to a new pipeline stage.
  */
-export async function moveDealStage(
-  id: string,
-  stageId: string,
-): Promise<{ id: string } | null> {
+export async function moveDealStage(id: string, stageId: string): Promise<{ id: string } | null> {
   return updateDeal(id, { dealstage: stageId });
 }
 
@@ -583,7 +563,7 @@ export async function getDealsByStage(): Promise<Record<string, unknown[]>> {
     const allDeals = await hubspotListAll<{
       properties: { dealstage: string };
     }>(
-      `/crm/v3/objects/deals?properties=dealname,amount,dealstage,pipeline,closedate,createdate,hs_deal_stage_probability`,
+      `/crm/v3/objects/deals?properties=dealname,amount,dealstage,pipeline,closedate,createdate,hs_deal_stage_probability`
     );
     const grouped: Record<string, unknown[]> = {};
     for (const deal of allDeals) {
@@ -600,10 +580,7 @@ export async function getDealsByStage(): Promise<Record<string, unknown[]>> {
 /**
  * Create a note on a deal.
  */
-export async function createNote(
-  dealId: string,
-  body: string,
-): Promise<{ id: string } | null> {
+export async function createNote(dealId: string, body: string): Promise<{ id: string } | null> {
   try {
     const res = await hubspotFetch("/crm/v3/objects/notes", {
       method: "POST",
@@ -637,7 +614,7 @@ export async function createNote(
  */
 export async function createContactNote(
   contactId: string,
-  body: string,
+  body: string
 ): Promise<{ id: string } | null> {
   try {
     const res = await hubspotFetch("/crm/v3/objects/notes", {
@@ -672,14 +649,10 @@ export async function createContactNote(
  */
 export async function listNotes(dealId: string): Promise<unknown[]> {
   try {
-    const res = await hubspotFetch(
-      `/crm/v3/objects/deals/${dealId}/associations/notes`,
-    );
+    const res = await hubspotFetch(`/crm/v3/objects/deals/${dealId}/associations/notes`);
     if (!res.ok) return [];
     const assocData = await res.json();
-    const noteIds: string[] = (assocData.results ?? []).map(
-      (r: { id: string }) => r.id,
-    );
+    const noteIds: string[] = (assocData.results ?? []).map((r: { id: string }) => r.id);
     if (noteIds.length === 0) return [];
 
     // Batch read all notes in a single request instead of N individual fetches
@@ -687,9 +660,7 @@ export async function listNotes(dealId: string): Promise<unknown[]> {
       method: "POST",
       body: JSON.stringify({
         properties: ["hs_note_body", "hs_timestamp"],
-        inputs: noteIds
-          .slice(0, HUBSPOT_BATCH_NOTE_LIMIT)
-          .map((id) => ({ id })),
+        inputs: noteIds.slice(0, HUBSPOT_BATCH_NOTE_LIMIT).map((id) => ({ id })),
       }),
     });
     if (!batchRes.ok) return [];
@@ -733,20 +704,12 @@ export async function getPipelineStats(): Promise<{
  * Associate an existing deal with an existing contact.
  * Safe to call fire-and-forget — never throws.
  */
-export async function associateDealWithContact(
-  dealId: string,
-  contactId: string,
-): Promise<void> {
+export async function associateDealWithContact(dealId: string, contactId: string): Promise<void> {
   try {
-    await hubspotFetch(
-      `/crm/v4/objects/deals/${dealId}/associations/contacts/${contactId}`,
-      {
-        method: "PUT",
-        body: JSON.stringify([
-          { associationCategory: HUBSPOT_DEFINED, associationTypeId: 3 },
-        ]),
-      },
-    );
+    await hubspotFetch(`/crm/v4/objects/deals/${dealId}/associations/contacts/${contactId}`, {
+      method: "PUT",
+      body: JSON.stringify([{ associationCategory: HUBSPOT_DEFINED, associationTypeId: 3 }]),
+    });
   } catch (err) {
     console.error("[HubSpot] associateDealWithContact error:", err);
   }

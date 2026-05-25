@@ -25,12 +25,10 @@ export const metadata: Metadata = {
 const categoryColors: Record<string, string> = {
   Cloud: "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20",
   Serverless: "bg-neon-green/10 text-neon-green border border-neon-green/20",
-  Analytics:
-    "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
+  Analytics: "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
   "AI Marketing": "bg-neon-blue/10 text-neon-blue border border-neon-blue/20",
   DevOps: "bg-neon-green/10 text-neon-green border border-neon-green/20",
-  Security:
-    "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
+  Security: "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
   Architecture: "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20",
 };
 
@@ -38,26 +36,15 @@ const PER_PAGE = 10;
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
-export default async function BlogPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
+export default async function BlogPage({ searchParams }: { searchParams: SearchParams }) {
   const locale = await getServerLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
   const resolvedParams = await searchParams;
-  const currentPage = Math.max(
-    1,
-    parseInt(String(resolvedParams.page ?? "1"), 10) || 1,
-  );
+  const currentPage = Math.max(1, parseInt(String(resolvedParams.page ?? "1"), 10) || 1);
   const activeCategory =
-    typeof resolvedParams.category === "string"
-      ? resolvedParams.category
-      : null;
-  const activeTag =
-    typeof resolvedParams.tag === "string" ? resolvedParams.tag : null;
-  const searchQuery =
-    typeof resolvedParams.q === "string" ? resolvedParams.q : "";
+    typeof resolvedParams.category === "string" ? resolvedParams.category : null;
+  const activeTag = typeof resolvedParams.tag === "string" ? resolvedParams.tag : null;
+  const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
 
   // Fetch from Notion when configured, otherwise fall back to static posts
   const useNotion = isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
@@ -103,7 +90,7 @@ export default async function BlogPage({
       (p) =>
         p.title.toLowerCase().includes(q) ||
         p.excerpt.toLowerCase().includes(q) ||
-        p.tags.some((t) => t.toLowerCase().includes(q)),
+        p.tags.some((t) => t.toLowerCase().includes(q))
     );
   }
 
@@ -118,10 +105,7 @@ export default async function BlogPage({
   // Pagination
   const total = filteredPosts.length;
   const totalPages = Math.ceil(total / PER_PAGE);
-  const posts = filteredPosts.slice(
-    (currentPage - 1) * PER_PAGE,
-    currentPage * PER_PAGE,
-  );
+  const posts = filteredPosts.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
   const categories = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]);
   const tags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
@@ -178,26 +162,22 @@ export default async function BlogPage({
           <p className="animate-fade-in-up mt-6 max-w-xl text-lg text-slate-400 delay-200">
             {t(
               "blog.subtitle",
-              "Cloud architecture, serverless, analytics, and AI marketing — written for founders and technical teams who want to move fast.",
+              "Cloud architecture, serverless, analytics, and AI marketing — written for founders and technical teams who want to move fast."
             )}
           </p>
 
           {/* Search bar */}
-          <form
-            action=""
-            method="get"
-            className="animate-scale-in mt-8 max-w-md delay-300"
-          >
+          <form action="" method="get" className="animate-scale-in mt-8 max-w-md delay-300">
             <div className="relative">
               <input
                 type="text"
                 name="q"
                 defaultValue={searchQuery}
                 placeholder={t("blog.searchPlaceholder", "Search posts…")}
-                className="w-full rounded-lg border border-slate-700 bg-void-light/50 px-4 py-2.5 pl-10 font-mono text-sm text-white placeholder-slate-600 backdrop-blur-sm transition-colors focus:border-neon-cyan/50 focus:outline-none"
+                className="bg-void-light/50 focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-2.5 pl-10 font-mono text-sm text-white placeholder-slate-600 backdrop-blur-sm transition-colors focus:outline-none"
               />
               <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"
+                className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-600"
                 width="16"
                 height="16"
                 fill="none"
@@ -227,7 +207,7 @@ export default async function BlogPage({
                   {searchQuery && (
                     <Link
                       href={filterUrl({ q: null })}
-                      className="inline-flex items-center gap-1 rounded-full border border-neon-cyan/20 bg-neon-cyan/10 px-2.5 py-1 font-mono text-xs text-neon-cyan transition-colors hover:bg-neon-cyan/20"
+                      className="border-neon-cyan/20 bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-xs transition-colors"
                     >
                       &quot;{searchQuery}&quot; ✕
                     </Link>
@@ -235,7 +215,7 @@ export default async function BlogPage({
                   {activeCategory && (
                     <Link
                       href={filterUrl({ category: null })}
-                      className="inline-flex items-center gap-1 rounded-full border border-neon-cyan/20 bg-neon-cyan/10 px-2.5 py-1 font-mono text-xs text-neon-cyan transition-colors hover:bg-neon-cyan/20"
+                      className="border-neon-cyan/20 bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-xs transition-colors"
                     >
                       {activeCategory} ✕
                     </Link>
@@ -243,7 +223,7 @@ export default async function BlogPage({
                   {activeTag && (
                     <Link
                       href={filterUrl({ tag: null })}
-                      className="inline-flex items-center gap-1 rounded-full border border-neon-magenta/20 bg-neon-magenta/10 px-2.5 py-1 font-mono text-xs text-neon-magenta transition-colors hover:bg-neon-magenta/20"
+                      className="border-neon-magenta/20 bg-neon-magenta/10 text-neon-magenta hover:bg-neon-magenta/20 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-xs transition-colors"
                     >
                       #{activeTag} ✕
                     </Link>
@@ -260,15 +240,12 @@ export default async function BlogPage({
               {/* Results count */}
               {filteredPosts.length !== allPosts.length && (
                 <p className="mb-4 font-mono text-xs text-slate-500">
-                  {total}{" "}
-                  {total !== 1
-                    ? t("blog.results", "results")
-                    : t("blog.result", "result")}
+                  {total} {total !== 1 ? t("blog.results", "results") : t("blog.result", "result")}
                 </p>
               )}
 
               {posts.length === 0 ? (
-                <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
+                <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
                   <p className="font-mono text-slate-500">
                     {t("blog.noPostsFound", "No posts found.")}
                   </p>
@@ -306,9 +283,7 @@ export default async function BlogPage({
                           >
                             {post.category}
                           </span>
-                          <span className="font-mono text-xs text-slate-600">
-                            {post.readTime}
-                          </span>
+                          <span className="font-mono text-xs text-slate-600">{post.readTime}</span>
                         </div>
                         <h2 className="font-heading group-hover:text-neon-cyan text-xl font-bold text-white transition-colors">
                           {post.title}
@@ -364,30 +339,28 @@ export default async function BlogPage({
                   {currentPage > 1 && (
                     <Link
                       href={pageUrl(currentPage - 1)}
-                      className="rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-slate-400 transition-colors hover:border-neon-cyan/30 hover:text-neon-cyan"
+                      className="hover:border-neon-cyan/30 hover:text-neon-cyan rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-slate-400 transition-colors"
                     >
                       {t("blog.prevPage", "← Prev")}
                     </Link>
                   )}
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => (
-                      <Link
-                        key={page}
-                        href={pageUrl(page)}
-                        className={`rounded-lg border px-3 py-2 font-mono text-xs transition-colors ${
-                          page === currentPage
-                            ? "border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan"
-                            : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
-                        }`}
-                      >
-                        {page}
-                      </Link>
-                    ),
-                  )}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Link
+                      key={page}
+                      href={pageUrl(page)}
+                      className={`rounded-lg border px-3 py-2 font-mono text-xs transition-colors ${
+                        page === currentPage
+                          ? "border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan"
+                          : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+                      }`}
+                    >
+                      {page}
+                    </Link>
+                  ))}
                   {currentPage < totalPages && (
                     <Link
                       href={pageUrl(currentPage + 1)}
-                      className="rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-slate-400 transition-colors hover:border-neon-cyan/30 hover:text-neon-cyan"
+                      className="hover:border-neon-cyan/30 hover:text-neon-cyan rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-slate-400 transition-colors"
                     >
                       {t("blog.nextPage", "Next →")}
                     </Link>
@@ -413,16 +386,14 @@ export default async function BlogPage({
                               href={filterUrl({
                                 category: activeCategory === cat ? null : cat,
                               })}
-                              className={`flex items-center justify-between rounded px-2 py-1.5 font-body text-sm transition-colors ${
+                              className={`font-body flex items-center justify-between rounded px-2 py-1.5 text-sm transition-colors ${
                                 activeCategory === cat
                                   ? "text-neon-cyan bg-neon-cyan/5"
                                   : "text-slate-400 hover:text-slate-200"
                               }`}
                             >
                               <span>{cat}</span>
-                              <span className="font-mono text-[10px] text-slate-600">
-                                {count}
-                              </span>
+                              <span className="font-mono text-[10px] text-slate-600">{count}</span>
                             </Link>
                           </li>
                         ))}

@@ -71,8 +71,7 @@ export class SlackClient {
   private defaultChannel: string;
 
   constructor(opts?: { channel?: string }) {
-    this.defaultChannel =
-      opts?.channel ?? process.env.SLACK_DEFAULT_CHANNEL ?? "#general";
+    this.defaultChannel = opts?.channel ?? process.env.SLACK_DEFAULT_CHANNEL ?? "#general";
   }
 
   /** Send a Block Kit message with retry/backoff. Returns true on success. */
@@ -128,7 +127,7 @@ export class SlackClient {
   private async postOnce(
     payload: PostMessagePayload,
     token: string | undefined,
-    webhookUrl: string | undefined,
+    webhookUrl: string | undefined
   ): Promise<true | number | null> {
     if (token) {
       const apiResult = await this.postViaApi(token, {
@@ -142,7 +141,11 @@ export class SlackClient {
       if (webhookUrl) return (await this.postViaWebhook(webhookUrl, payload)) ? true : null;
       return null;
     }
-    if (webhookUrl) return (await this.postViaWebhook(webhookUrl, payload)) ? true : null;
+    if (webhookUrl) {
+      const ok = await this.postViaWebhook(webhookUrl, payload);
+      if (ok) return true;
+      throw new Error("Slack webhook request failed");
+    }
     return null;
   }
 
@@ -154,7 +157,7 @@ export class SlackClient {
    */
   private async postViaApi(
     token: string,
-    payload: PostMessagePayload,
+    payload: PostMessagePayload
   ): Promise<true | number | null> {
     const body = {
       ...payload,
@@ -187,10 +190,7 @@ export class SlackClient {
     return true;
   }
 
-  private async postViaWebhook(
-    webhookUrl: string,
-    payload: PostMessagePayload,
-  ): Promise<boolean> {
+  private async postViaWebhook(webhookUrl: string, payload: PostMessagePayload): Promise<boolean> {
     const res = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -319,11 +319,7 @@ export async function slackErrorNotify(opts: {
       sectionBlock(`*${opts.title}*\n${opts.message}`),
       ...(opts.route ? [sectionBlock(`*Route:* \`${opts.route}\``)] : []),
       ...(errText
-        ? [
-            sectionBlock(
-              `*Details:*\n\`\`\`${errText.slice(0, MAX_ERROR_TEXT_LENGTH)}\`\`\``,
-            ),
-          ]
+        ? [sectionBlock(`*Details:*\n\`\`\`${errText.slice(0, MAX_ERROR_TEXT_LENGTH)}\`\`\``)]
         : []),
       contextBlock(slackTimestamp(), "cloudless.gr"),
       divider,
@@ -371,7 +367,7 @@ export async function slackDeployNotify(opts: {
             : null,
         ]
           .filter((s): s is string => Boolean(s))
-          .join("\n"),
+          .join("\n")
       ),
       contextBlock(slackTimestamp(), "cloudless.gr deploy pipeline"),
       divider,
@@ -424,7 +420,7 @@ export async function slackContactNotify(data: {
           `*Email:* ${safeEmail}`,
           `*Company:* ${safeCompany}`,
           `*Service:* ${safeService}`,
-        ].join("\n"),
+        ].join("\n")
       ),
       divider,
       sectionBlock(`*Message:*\n${safeMessage}`),
@@ -450,7 +446,7 @@ export async function slackBookingNotify(data: {
       timeZone: "Europe/Athens",
       dateStyle: "full",
       timeStyle: "short",
-    }),
+    })
   );
   await bookingsClient.post({
     text: `📅 New consultation booked: ${safeName} (${safeEmail})`,
@@ -461,17 +457,11 @@ export async function slackBookingNotify(data: {
           `*Name:* ${safeName}`,
           `*Email:* ${safeEmail}`,
           `*Time:* ${dateStr} (Athens)`,
-          ...(data.meetLink
-            ? [`*Meet:* <${data.meetLink}|Join Google Meet>`]
-            : []),
-        ].join("\n"),
+          ...(data.meetLink ? [`*Meet:* <${data.meetLink}|Join Google Meet>`] : []),
+        ].join("\n")
       ),
       ...(data.notes
-        ? [
-            sectionBlock(
-              `*Notes:*\n${slackEscape(data.notes).slice(0, MAX_NOTES_TEXT_LENGTH)}`,
-            ),
-          ]
+        ? [sectionBlock(`*Notes:*\n${slackEscape(data.notes).slice(0, MAX_NOTES_TEXT_LENGTH)}`)]
         : []),
       contextBlock(slackTimestamp(), "cloudless.gr calendar booking"),
     ],
@@ -496,7 +486,7 @@ export async function slackOrderNotify(data: {
           `*Customer:* ${safeEmail}`,
           `*Amount:* ${data.amount}`,
           `*Session:* \`${data.sessionId.slice(0, ORDER_SESSION_DISPLAY_LENGTH)}...\``,
-        ].join("\n"),
+        ].join("\n")
       ),
       contextBlock(slackTimestamp(), "cloudless.gr stripe checkout"),
     ],
@@ -518,8 +508,5 @@ function sleep(ms: number): Promise<void> {
  * Prevents link injection (<url|text>) and @mention injection (<@here>).
  */
 function slackEscape(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }

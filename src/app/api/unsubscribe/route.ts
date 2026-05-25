@@ -20,10 +20,7 @@ export async function POST(request: Request) {
     const { email } = await request.json();
 
     if (!isValidEmail(email)) {
-      return Response.json(
-        { error: "Invalid email address." },
-        { status: 400 },
-      );
+      return Response.json({ error: "Invalid email address." }, { status: 400 });
     }
 
     // Suppress future SES sends, and flip the HubSpot contact out of the
@@ -40,10 +37,10 @@ export async function POST(request: Request) {
       <p><strong>Email:</strong> ${escapeHtml(email)}</p>
       <p><strong>SES suppressed:</strong> ${suppressed ? "Yes" : "Failed (manual removal needed)"}</p>
       <p><strong>HubSpot updated:</strong> ${hubspotUpdated ? "Yes" : "Failed (manual removal needed)"}</p>
-      <p><strong>Date:</strong> ${new Date().toISOString()}</p>`,
+      <p><strong>Date:</strong> ${new Date().toISOString()}</p>`
     ).catch(() => {});
     sendUnsubscribeConfirmation(email).catch((err) =>
-      console.warn("[unsubscribe] Confirmation email failed:", err),
+      console.warn("[unsubscribe] Confirmation email failed:", err)
     );
 
     return Response.json({
@@ -54,7 +51,7 @@ export async function POST(request: Request) {
     console.error("Unsubscribe error:", error);
     return Response.json(
       { error: "Failed to process unsubscribe request. Please try again." },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -64,23 +61,20 @@ export async function GET(request: Request) {
   const ip = getClientIp(request);
   const rl = rateLimit(`unsubscribe:${ip}`, 5, 60_000);
   if (!rl.ok) {
-    return new Response(
-      unsubscribePage("Too many requests. Please try again later.", false),
-      { status: 429, headers: { "Content-Type": "text/html; charset=utf-8" } },
-    );
+    return new Response(unsubscribePage("Too many requests. Please try again later.", false), {
+      status: 429,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
   }
 
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("email");
 
   if (!email || !isValidEmail(email)) {
-    return new Response(
-      unsubscribePage("Invalid or missing email address.", false),
-      {
-        status: 400,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      },
-    );
+    return new Response(unsubscribePage("Invalid or missing email address.", false), {
+      status: 400,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
   }
 
   try {
@@ -96,23 +90,20 @@ export async function GET(request: Request) {
       <p><strong>Email:</strong> ${escapeHtml(email)}</p>
       <p><strong>SES suppressed:</strong> ${suppressed ? "Yes" : "Failed"}</p>
       <p><strong>HubSpot updated:</strong> ${hubspotUpdated ? "Yes" : "Failed"}</p>
-      <p><strong>Date:</strong> ${new Date().toISOString()}</p>`,
+      <p><strong>Date:</strong> ${new Date().toISOString()}</p>`
     ).catch(() => {});
     sendUnsubscribeConfirmation(email).catch((err) =>
-      console.warn("[unsubscribe-link] Confirmation email failed:", err),
+      console.warn("[unsubscribe-link] Confirmation email failed:", err)
     );
 
     return new Response(unsubscribePage(email, true), {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   } catch {
-    return new Response(
-      unsubscribePage("Something went wrong. Please try again.", false),
-      {
-        status: 500,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      },
-    );
+    return new Response(unsubscribePage("Something went wrong. Please try again.", false), {
+      status: 500,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
   }
 }
 

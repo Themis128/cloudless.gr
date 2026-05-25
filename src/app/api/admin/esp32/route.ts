@@ -10,7 +10,10 @@ async function proxyRequest(path: string, init?: RequestInit): Promise<NextRespo
       signal: AbortSignal.timeout(8000),
     });
     if (res.status === 404) {
-      return NextResponse.json({ error: "ESP32 management unavailable", offline: true }, { status: 503 });
+      return NextResponse.json(
+        { error: "ESP32 management unavailable", offline: true },
+        { status: 503 }
+      );
     }
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
@@ -57,7 +60,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ error: "Pi unreachable", offline: true }, { status: 503 });
       }
     }
-    case "config":  return proxyRequest(`/api/esp32/${deviceId}/config`);
+    case "config":
+      return proxyRequest(`/api/esp32/${deviceId}/config`);
     default:
       return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }

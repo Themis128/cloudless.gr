@@ -19,12 +19,8 @@ function Section({
 }) {
   return (
     <section id={id} className="scroll-mt-24">
-      <h2 className="text-neon-cyan/80 mb-4 font-heading text-xl font-bold text-white">
-        {title}
-      </h2>
-      <div className="space-y-3 text-sm leading-relaxed text-slate-300">
-        {children}
-      </div>
+      <h2 className="text-neon-cyan/80 font-heading mb-4 text-xl font-bold text-white">{title}</h2>
+      <div className="space-y-3 text-sm leading-relaxed text-slate-300">{children}</div>
     </section>
   );
 }
@@ -81,7 +77,7 @@ export default function CookiePolicyPage() {
             <p className="text-neon-cyan/70 mb-4 font-mono text-xs tracking-widest">
               {t("legal.legalDocument", "LEGAL DOCUMENT")}
             </p>
-            <h1 className="mb-4 font-heading text-3xl font-bold text-white lg:text-4xl">
+            <h1 className="font-heading mb-4 text-3xl font-bold text-white lg:text-4xl">
               {t("legal.cookiePolicyTitle", "Cookie Policy")}
             </h1>
             <p className="mb-2 font-mono text-xs text-slate-500">
@@ -90,7 +86,7 @@ export default function CookiePolicyPage() {
             <p className="mb-12 text-sm leading-relaxed text-slate-400">
               {t(
                 "legal.cookiePolicyIntro",
-                "This Cookie Policy explains what cookies are, how Cloudless uses them on cloudless.gr, and how you can manage your preferences. It complements our Privacy Policy and complies with the EU ePrivacy Directive (2002/58/EC) and GDPR.",
+                "This Cookie Policy explains what cookies are, how Cloudless uses them on cloudless.gr, and how you can manage your preferences. It complements our Privacy Policy and complies with the EU ePrivacy Directive (2002/58/EC) and GDPR."
               )}
             </p>
           </ScrollReveal>
@@ -104,7 +100,7 @@ export default function CookiePolicyPage() {
                 <p>
                   {t(
                     "legal.whatAreCookies",
-                    'Cookies are small text files stored on your device when you visit a website. They help the site remember your preferences, understand how you use it, and improve your experience. Cookies may be "session" (deleted when you close your browser) or "persistent" (stored for a set period).',
+                    'Cookies are small text files stored on your device when you visit a website. They help the site remember your preferences, understand how you use it, and improve your experience. Cookies may be "session" (deleted when you close your browser) or "persistent" (stored for a set period).'
                   )}
                 </p>
               </Section>
@@ -121,7 +117,7 @@ export default function CookiePolicyPage() {
                 <p>
                   {t(
                     "legal.necessaryCookiesDesc",
-                    "Required for the website to function. They enable core features like page navigation, secure areas, and consent management. These cannot be disabled.",
+                    "Required for the website to function. They enable core features like page navigation, secure areas, and consent management. These cannot be disabled."
                   )}
                 </p>
                 <p className="font-semibold text-white">
@@ -130,7 +126,7 @@ export default function CookiePolicyPage() {
                 <p>
                   {t(
                     "legal.analyticsCookiesDesc",
-                    "Help us understand how visitors interact with our site by collecting anonymised data about page visits, traffic sources, and user behaviour. Only set with your explicit consent.",
+                    "Help us understand how visitors interact with our site by collecting anonymised data about page visits, traffic sources, and user behaviour. Only set with your explicit consent."
                   )}
                 </p>
                 <p className="font-semibold text-white">
@@ -139,7 +135,7 @@ export default function CookiePolicyPage() {
                 <p>
                   {t(
                     "legal.marketingCookiesDesc",
-                    "Used to track visitors across websites and display relevant advertisements. These cookies help measure the effectiveness of advertising campaigns. Only set with your explicit consent.",
+                    "Used to track visitors across websites and display relevant advertisements. These cookies help measure the effectiveness of advertising campaigns. Only set with your explicit consent."
                   )}
                 </p>
               </Section>
@@ -193,7 +189,7 @@ export default function CookiePolicyPage() {
                 <p className="mt-3 text-xs text-slate-500">
                   {t(
                     "legal.cookieTableNote",
-                    "This table will be updated as we add analytics or marketing integrations. Currently, no third-party analytics or marketing cookies are set.",
+                    "This table will be updated as we add analytics or marketing integrations. Currently, no third-party analytics or marketing cookies are set."
                   )}
                 </p>
               </Section>
@@ -202,15 +198,12 @@ export default function CookiePolicyPage() {
             <ScrollReveal>
               <Section
                 id="manage-cookies"
-                title={t(
-                  "legal.manageCookiesTitle",
-                  "4. Managing Your Preferences",
-                )}
+                title={t("legal.manageCookiesTitle", "4. Managing Your Preferences")}
               >
                 <p>
                   {t(
                     "legal.manageCookies",
-                    'You can change your cookie preferences at any time by clicking the button below, or via the "Cookie Settings" link in our website footer.',
+                    'You can change your cookie preferences at any time by clicking the button below, or via the "Cookie Settings" link in our website footer.'
                   )}
                 </p>
                 <button
@@ -223,32 +216,23 @@ export default function CookiePolicyPage() {
                 <p className="mt-4">
                   {t(
                     "legal.browserSettings",
-                    "You can also control cookies through your browser settings. Most browsers allow you to block or delete cookies. Note that blocking all cookies may affect site functionality.",
+                    "You can also control cookies through your browser settings. Most browsers allow you to block or delete cookies. Note that blocking all cookies may affect site functionality."
                   )}
                 </p>
               </Section>
             </ScrollReveal>
 
             <ScrollReveal>
-              <Section
-                id="more-info"
-                title={t("legal.moreInfoTitle", "5. More Information")}
-              >
+              <Section id="more-info" title={t("legal.moreInfoTitle", "5. More Information")}>
                 <p>
-                  {t(
-                    "legal.moreInfo",
-                    "For more details about how we handle your data, see our",
-                  )}{" "}
-                  <Link
-                    href="/privacy"
-                    className="text-neon-cyan hover:underline"
-                  >
+                  {t("legal.moreInfo", "For more details about how we handle your data, see our")}{" "}
+                  <Link href="/privacy" className="text-neon-cyan hover:underline">
                     {t("legal.privacyTitle", "Privacy Policy")}
                   </Link>
                   {". "}
                   {t(
                     "legal.moreInfoContact",
-                    "If you have questions about our use of cookies, contact us at tbaltzakis@cloudless.gr.",
+                    "If you have questions about our use of cookies, contact us at tbaltzakis@cloudless.gr."
                   )}
                 </p>
               </Section>

@@ -3,18 +3,12 @@ import { requireAdmin } from "@/lib/api-auth";
 import { isHubSpotConfigured, createNote, listNotes } from "@/lib/hubspot";
 import { mapIntegrationError } from "@/lib/api-errors";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   if (!(await isHubSpotConfigured())) {
-    return NextResponse.json(
-      { error: "HubSpot not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "HubSpot not configured." }, { status: 503 });
   }
 
   const { id } = await params;
@@ -22,18 +16,12 @@ export async function GET(
   return NextResponse.json({ notes });
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   if (!(await isHubSpotConfigured())) {
-    return NextResponse.json(
-      { error: "HubSpot not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "HubSpot not configured." }, { status: 503 });
   }
 
   const { id } = await params;
@@ -50,10 +38,7 @@ export async function POST(
 
   const note = await createNote(id, body);
   if (!note) {
-    return NextResponse.json(
-      { error: "Failed to create note." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to create note." }, { status: 500 });
   }
   return NextResponse.json({ note });
 }
