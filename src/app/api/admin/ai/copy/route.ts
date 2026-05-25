@@ -12,10 +12,10 @@ export async function POST(request: NextRequest) {
   let language: string;
   try {
     const body = await request.json();
-    service = body.service;
-    platform = body.platform ?? "Meta";
-    objective = body.objective ?? "awareness";
-    language = body.language ?? "English";
+    service = String(body.service ?? "").slice(0, 2000);
+    platform = String(body.platform ?? "Meta").slice(0, 50);
+    objective = String(body.objective ?? "awareness").slice(0, 200);
+    language = String(body.language ?? "English").slice(0, 50);
     if (!service) throw new Error("service is required");
   } catch (e) {
     return NextResponse.json(
@@ -72,8 +72,9 @@ Respond with raw JSON only (no markdown fences):
     }
     return NextResponse.json({ variants });
   } catch (e) {
+    console.error("[ai/copy] Claude call failed:", e);
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "AI generation failed." },
+      { error: "AI generation failed." },
       { status: 500 },
     );
   }

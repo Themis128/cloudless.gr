@@ -62,21 +62,26 @@ function successHtml(accessToken: string, advertiserIds: string[]): string {
     .map((id) => `<code>TIKTOK_ADVERTISER_ID=${escapeHtml(id)}</code>`)
     .join("<br>");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 <title>TikTok OAuth — Success</title>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 640px; margin: 4rem auto; padding: 0 1rem; }
   h1 { color: #1a1a1a; } code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
   .box { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
   .success { color: #16a34a; } .warn { color: #92400e; background: #fef3c7; padding: .75rem 1rem; border-radius: 6px; }
+  button { cursor: pointer; background: #1a1a1a; color: #fff; border: none; border-radius: 4px; padding: 4px 10px; font-size: .85rem; margin-left: 8px; }
 </style></head><body>
 <h1 class="success">TikTok OAuth complete</h1>
 <p>Add these values to <strong>AWS SSM</strong> under <code>/cloudless/production/</code> or to your <code>.env.local</code>:</p>
 <div class="box">
-  <code>TIKTOK_ACCESS_TOKEN=${escapeHtml(accessToken)}</code><br><br>
+  <code id="tok">TIKTOK_ACCESS_TOKEN=${escapeHtml(accessToken)}</code>
+  <button onclick="navigator.clipboard.writeText(document.getElementById('tok').textContent).then(()=>{this.textContent='Copied!'})">Copy</button><br><br>
   ${adsBlock || "<em>No advertiser accounts returned. Ensure your app has access to at least one TikTok Ads account.</em>"}
 </div>
 <p class="warn">Store the access token securely. Do not commit it to version control. After saving, restart the server (or wait for the SSM cache to expire).</p>
 <p><a href="/admin">Return to admin dashboard</a></p>
+<script>history.replaceState(null,'',location.pathname);</script>
 </body></html>`;
 }
 
@@ -172,6 +177,10 @@ export async function GET(request: NextRequest) {
   const { access_token, advertiser_ids } = tokenData.data;
   return new NextResponse(successHtml(access_token, advertiser_ids ?? []), {
     status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Referrer-Policy": "no-referrer",
+    },
   });
 }

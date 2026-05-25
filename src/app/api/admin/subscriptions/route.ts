@@ -72,10 +72,9 @@ export async function GET(request: NextRequest) {
       total: subscriptions.length,
     });
   } catch (e) {
+    console.error("[Stripe] Error fetching subscriptions:", e);
     return NextResponse.json(
-      {
-        error: e instanceof Error ? e.message : "Failed to fetch subscriptions",
-      },
+      { error: "Failed to fetch subscriptions" },
       { status: 500 },
     );
   }
@@ -119,8 +118,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (e) {
+    console.error("[Stripe] Error performing subscription action:", e);
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Action failed" },
+      { error: "Action failed" },
       { status: 500 },
     );
   }

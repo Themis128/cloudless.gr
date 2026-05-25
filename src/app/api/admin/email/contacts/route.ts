@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
           sorts: [{ propertyName: "createdate", direction: "DESCENDING" }],
           limit,
         }),
+        signal: AbortSignal.timeout(10_000),
       });
       if (!res.ok) throw new Error(`HubSpot error: ${res.status}`);
       const data = await res.json();
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest) {
       `${HUBSPOT_API}/crm/v3/objects/contacts?limit=${limit}&properties=email,firstname,lastname,createdate,lifecyclestage,hs_lead_status,lead_source&archived=false`,
       {
         headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(10_000),
       },
     );
     if (!res.ok) throw new Error(`HubSpot error: ${res.status}`);
@@ -71,8 +73,9 @@ export async function GET(request: NextRequest) {
       fetchedAt: new Date().toISOString(),
     });
   } catch (err) {
+    console.error("[HubSpot] Error fetching email contacts:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to fetch contacts" },
+      { error: "Failed to fetch contacts" },
       { status: 500 },
     );
   }

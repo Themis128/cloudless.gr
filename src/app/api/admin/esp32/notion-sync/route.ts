@@ -45,8 +45,8 @@ export async function GET(request: NextRequest) {
     const devices = await readEsp32DevicesFromNotion();
     return NextResponse.json({ configured: true, devices });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Notion read failed";
-    return NextResponse.json({ error: msg }, { status: 502 });
+    console.error("[esp32/notion-sync] Notion read failed:", err);
+    return NextResponse.json({ error: "Notion read failed" }, { status: 502 });
   }
 }
 
@@ -94,8 +94,8 @@ export async function POST(request: NextRequest) {
     }
     status = (await res.json()) as Esp32Status;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Alert API unreachable";
-    return NextResponse.json({ error: msg, offline: true }, { status: 503 });
+    console.error("[esp32/notion-sync] Alert API unreachable:", err);
+    return NextResponse.json({ error: "Alert API unreachable", offline: true }, { status: 503 });
   }
 
   // 2) Push into Notion
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       last_heartbeat: status.last_heartbeat,
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Notion write failed";
-    return NextResponse.json({ error: msg }, { status: 502 });
+    console.error("[esp32/notion-sync] Notion write failed:", err);
+    return NextResponse.json({ error: "Notion write failed" }, { status: 502 });
   }
 }

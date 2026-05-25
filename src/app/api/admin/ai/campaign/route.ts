@@ -11,9 +11,9 @@ export async function POST(request: NextRequest) {
   let targetAudience: string;
   try {
     const body = await request.json();
-    brief = body.brief;
-    budget = body.budget ?? "unspecified";
-    targetAudience = body.targetAudience ?? "unspecified";
+    brief = String(body.brief ?? "").slice(0, 2000);
+    budget = String(body.budget ?? "unspecified").slice(0, 200);
+    targetAudience = String(body.targetAudience ?? "unspecified").slice(0, 500);
     if (!brief) throw new Error("brief is required");
   } catch (e) {
     return NextResponse.json(
@@ -68,8 +68,9 @@ Respond with a JSON object (no markdown fences, just the raw JSON) with this str
     }
     return NextResponse.json({ strategy });
   } catch (e) {
+    console.error("[ai/campaign] Claude call failed:", e);
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "AI generation failed." },
+      { error: "AI generation failed." },
       { status: 500 },
     );
   }
