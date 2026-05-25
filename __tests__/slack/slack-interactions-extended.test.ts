@@ -308,7 +308,7 @@ describe("view_submission: deploy-confirm-modal", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     const githubCall = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).startsWith("https://api.github.com"),
+      new URL(c[0] as string).hostname === "api.github.com",
     );
     expect(githubCall).toBeDefined();
     expect(githubCall![0]).toContain("dispatches");
@@ -327,7 +327,7 @@ describe("view_submission: deploy-confirm-modal", () => {
 
     // Should not call GitHub at all
     const githubCall = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).startsWith("https://api.github.com"),
+      new URL(c[0] as string).hostname === "api.github.com",
     );
     expect(githubCall).toBeUndefined();
 
