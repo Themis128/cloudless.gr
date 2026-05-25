@@ -229,6 +229,6 @@ describe("POST /api/admin/ai/analytics-orchestration", () => {
     const body = await response.json();
 
     expect(response.status).toBe(500);
-    expect(body.error).toContain("orchestration boom");
+    expect(body.error).toBe("Analytics orchestration failed.");
   });
 });
