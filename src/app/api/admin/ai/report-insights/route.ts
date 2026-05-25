@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     metrics = body.metrics;
-    period = body.period ?? "last 30 days";
-    if (!metrics) throw new Error("metrics is required");
+    period = String(body.period ?? "last 30 days").slice(0, 100);
+    if (!metrics || typeof metrics !== "object") throw new Error("metrics is required");
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Invalid input" },
@@ -39,8 +39,9 @@ Write 3-5 sentences of plain English insights. Mention specific numbers, compare
     const insights = await callClaude(prompt, apiKey, { maxTokens: 500 }); // NOSONAR
     return NextResponse.json({ insights });
   } catch (e) {
+    console.error("[ai/report-insights] Claude call failed:", e);
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "AI generation failed." },
+      { error: "AI generation failed." },
       { status: 500 },
     );
   }

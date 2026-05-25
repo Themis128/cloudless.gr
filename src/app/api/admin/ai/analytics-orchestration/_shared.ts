@@ -70,12 +70,11 @@ export async function prepareOrchestration(
     });
     return { ok: true, data: { snapshot, orchestration, reportTitle } };
   } catch (error) {
+    console.error("[analytics-orchestration]", failureMessage, error);
     return {
       ok: false,
       response: NextResponse.json(
-        {
-          error: error instanceof Error ? error.message : failureMessage,
-        },
+        { error: failureMessage },
         { status: 500 },
       ),
     };

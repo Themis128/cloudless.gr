@@ -59,9 +59,9 @@ export async function GET(request: NextRequest) {
     const data = await res.json();
     return NextResponse.json(data);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unreachable";
+    console.error("[ops/monitor] Alert API unreachable:", err);
     return NextResponse.json(
-      { error: `Alert API unreachable: ${msg}`, offline: true },
+      { error: "Alert API unreachable", offline: true },
       { status: 503 },
     );
   }
