@@ -8,7 +8,12 @@ def ssm(key):
          '--with-decryption', '--query', 'Parameter.Value', '--output', 'text',
          '--region', 'us-east-1'],
         capture_output=True, text=True)
-    return r.stdout.strip()
+    if r.returncode != 0:
+        raise RuntimeError(f"SSM lookup failed for {key!r}: {r.stderr.strip()}")
+    value = r.stdout.strip()
+    if not value:
+        raise RuntimeError(f"SSM returned empty value for {key!r}")
+    return value
 
 def gh(path, token, data=None):
     method = 'POST' if data else 'GET'
@@ -25,12 +30,15 @@ def slack_post(token, channel, text):
     req = urllib.request.Request(
         'https://slack.com/api/chat.postMessage', data=body,
         headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'})
-    urllib.request.urlopen(req)
+    with urllib.request.urlopen(req) as r:
+        resp = json.loads(r.read())
+    if not resp.get('ok'):
+        raise RuntimeError(f"Slack API error: {resp.get('error', 'unknown')}")
 
 gh_token = ssm('GITHUB_TOKEN')
 slack_token = ssm('SLACK_BOT_TOKEN')
 channel = ssm('SLACK_DEFAULT_CHANNEL')
-today = datetime.datetime.utcnow()
+today = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 cutoff = today - datetime.timedelta(days=21)
 repo = 'Themis128/cloudless.gr'
 protected = {'main', 'master', 'develop', 'staging'}
@@ -45,6 +53,8 @@ req = urllib.request.Request(
     headers={'Authorization': f'bearer {gh_token}', 'Content-Type': 'application/json'})
 with urllib.request.urlopen(req) as r:
     gql_data = json.loads(r.read())
+if 'errors' in gql_data:
+    raise RuntimeError(f"GitHub GraphQL error: {gql_data['errors']}")
 branches = gql_data['data']['repository']['refs']['nodes']
 
 # Open PR branches (exclude from stale list)

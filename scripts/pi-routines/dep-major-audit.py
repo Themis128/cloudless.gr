@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Monthly major dependency version audit for cloudless.gr — posts to Slack."""
-import subprocess, json, datetime, urllib.request, urllib.parse
+import subprocess, json, datetime, urllib.request, urllib.parse, re
 
 def ssm(key):
     r = subprocess.run(
@@ -8,14 +8,22 @@ def ssm(key):
          '--with-decryption', '--query', 'Parameter.Value', '--output', 'text',
          '--region', 'us-east-1'],
         capture_output=True, text=True)
-    return r.stdout.strip()
+    if r.returncode != 0:
+        raise RuntimeError(f"SSM lookup failed for {key!r}: {r.stderr.strip()}")
+    value = r.stdout.strip()
+    if not value:
+        raise RuntimeError(f"SSM returned empty value for {key!r}")
+    return value
 
 def slack_post(token, channel, text):
     body = json.dumps({'channel': channel, 'text': text}).encode()
     req = urllib.request.Request(
         'https://slack.com/api/chat.postMessage', data=body,
         headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'})
-    urllib.request.urlopen(req)
+    with urllib.request.urlopen(req) as r:
+        resp = json.loads(r.read())
+    if not resp.get('ok'):
+        raise RuntimeError(f"Slack API error: {resp.get('error', 'unknown')}")
 
 token = ssm('SLACK_BOT_TOKEN')
 channel = ssm('SLACK_DEFAULT_CHANNEL')
@@ -41,7 +49,7 @@ upgrades = 0
 for name in KEY_PKGS:
     if name not in all_deps:
         continue
-    installed = all_deps[name].lstrip('^~>=')
+    installed = re.sub(r'^[\^~>=<]+', '', all_deps[name])
     try:
         enc = urllib.parse.quote(name, safe='@%')
         with urllib.request.urlopen(

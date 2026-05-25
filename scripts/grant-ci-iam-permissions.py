@@ -52,7 +52,7 @@ from typing import List
 import boto3
 from botocore.exceptions import ClientError
 
-ACCOUNT_ID = "278585680617"
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "278585680617")
 PI_IMAGE_REPO = "cloudless-pi-app"
 PI_IMAGE_REGION = "us-east-1"
 SST_ROLE_PREFIX = "cloudl-production-"
@@ -84,10 +84,23 @@ DEPLOY_POLICY = {
                 "iam:DeleteRole",
                 "iam:UpdateRole",
                 "iam:UpdateAssumeRolePolicy",
-                # Pass roles to Lambda/etc.
-                "iam:PassRole",
             ],
-            "Resource": f"arn:aws:iam::*:role/{SST_ROLE_PREFIX}*",
+            "Resource": f"arn:aws:iam::{ACCOUNT_ID}:role/{SST_ROLE_PREFIX}*",
+        },
+        {
+            "Sid": "AllowSSTPassRole",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": f"arn:aws:iam::{ACCOUNT_ID}:role/{SST_ROLE_PREFIX}*",
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": [
+                        "lambda.amazonaws.com",
+                        "cloudformation.amazonaws.com",
+                        "apigateway.amazonaws.com",
+                    ]
+                }
+            },
         },
         {
             "Sid": "AllowPolicySimulation",
