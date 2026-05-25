@@ -376,4 +376,14 @@ describe("view_submission: deploy-confirm-modal", () => {
     });
     verifyOk(payload);
 
-    await POST(makeRequest(
+    await POST(makeRequest(payload));
+    await new Promise((r) => setTimeout(r, 50));
+
+    const deployPost = mockFetch.mock.calls.find((c) =>
+      (c[0] as string).includes("chat.postMessage"),
+    );
+    expect(deployPost![1].body as string).toContain("U777");
+
+    delete process.env.GITHUB_TOKEN;
+  });
+});
