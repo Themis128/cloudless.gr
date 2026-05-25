@@ -118,6 +118,27 @@ function richTextToHtml(richText: RichTextItem[]): string {
 type ListTag = "ul" | "ol" | null;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+function renderMediaBlock(block: any, type: string, data: any): string | null {
+  switch (type) {
+    case "image": {
+      const url = data.type === "external" ? data.external?.url : notionImageProxyUrl(block.id);
+      if (!url) return null;
+      const caption = extractText(data.caption);
+      const figcaption = caption ? `<figcaption>${caption}</figcaption>` : "";
+      return `<figure><img src="${url}" alt="${caption}" loading="lazy" />${figcaption}</figure>`;
+    }
+    case "video": {
+      const url = data.type === "external" ? data.external?.url : data.file?.url;
+      return url ? `<video controls src="${url}"></video>` : null;
+    }
+    case "embed":
+    case "bookmark":
+      return `<a href="${data.url}" target="_blank" rel="noopener">${data.url}</a>`;
+    default:
+      return null;
+  }
+}
+
 function renderBlockToHtml(block: any, type: string, data: any, text: string): string | null {
   switch (type) {
     case "paragraph":
@@ -145,20 +166,6 @@ function renderBlockToHtml(block: any, type: string, data: any, text: string): s
       const suffix = body ? "\n" + body : "";
       return `<div class="callout">${data.icon?.emoji ?? ""} ${text}${suffix}</div>`;
     }
-    case "image": {
-      const url = data.type === "external" ? data.external?.url : notionImageProxyUrl(block.id);
-      if (!url) return null;
-      const caption = extractText(data.caption);
-      const figcaption = caption ? `<figcaption>${caption}</figcaption>` : "";
-      return `<figure><img src="${url}" alt="${caption}" loading="lazy" />${figcaption}</figure>`;
-    }
-    case "video": {
-      const url = data.type === "external" ? data.external?.url : data.file?.url;
-      return url ? `<video controls src="${url}"></video>` : null;
-    }
-    case "embed":
-    case "bookmark":
-      return `<a href="${data.url}" target="_blank" rel="noopener">${data.url}</a>`;
     case "to_do":
       return `<label class="todo"><input type="checkbox" disabled ${data.checked ? "checked" : ""} /> ${text}</label>`;
     case "toggle": {
@@ -167,7 +174,7 @@ function renderBlockToHtml(block: any, type: string, data: any, text: string): s
       return `<details><summary>${text}</summary>${suffix}</details>`;
     }
     default:
-      return text ? `<p>${text}</p>` : null;
+      return renderMediaBlock(block, type, data) ?? (text ? `<p>${text}</p>` : null);
   }
 }
 
@@ -201,27 +208,31 @@ function flushListBuffer(
   listTypeRef.current = null;
 }
 
+function processBlock(
+  block: any,
+  listBuffer: string[],
+  listTypeRef: { current: ListTag },
+  lines: string[]
+): void {
+  const type: string = block.type;
+  const data = block[type] ?? {};
+  const text = richTextToHtml(data.rich_text ?? []);
+  if (type === "bulleted_list_item" || type === "numbered_list_item") {
+    appendListItem(type, text, listBuffer, listTypeRef, lines);
+    return;
+  }
+  flushListBuffer(listBuffer, listTypeRef, lines);
+  const html = renderBlockToHtml(block, type, data, text);
+  if (html !== null) lines.push(html);
+}
+
 export function blocksToHtml(blocks: any[]): string {
   const lines: string[] = [];
   const listBuffer: string[] = [];
   const listTypeRef: { current: ListTag } = { current: null };
-
   for (const block of blocks) {
-    const type: string = block.type;
-    const data = block[type] ?? {};
-    const rt: RichTextItem[] = data.rich_text ?? [];
-    const text = richTextToHtml(rt);
-
-    if (type === "bulleted_list_item" || type === "numbered_list_item") {
-      appendListItem(type, text, listBuffer, listTypeRef, lines);
-      continue;
-    }
-
-    flushListBuffer(listBuffer, listTypeRef, lines);
-    const html = renderBlockToHtml(block, type, data, text);
-    if (html !== null) lines.push(html);
+    processBlock(block, listBuffer, listTypeRef, lines);
   }
-
   flushListBuffer(listBuffer, listTypeRef, lines);
   return lines.join("\n");
 }
