@@ -50,6 +50,7 @@ jobs:
             --exclude "^https?://.*\.api-us1\.com"
             --exclude "^https?://www\.linkedin\.com"
             --exclude "^https://github\.com/cloudless-gr"
+            --exclude "^https://github\.com/.*/settings"
             "README.md"
             "docs/**/*.md"
             ".github/**/*.md"
