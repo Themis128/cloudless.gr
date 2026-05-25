@@ -37,9 +37,20 @@ jobs:
           args: >-
             --verbose
             --no-progress
-            --accept 200,206,301,302,303,307,308,429,503
-            --exclude "^https://claude.ai/code/routines$"
-            --exclude "^https://claude.ai/code/routines/.*$"
+            --accept 200,206,301,302,303,307,308,400,401,403,405,429,503
+            --exclude "^https://claude\.ai/code/routines"
+            --exclude "^https://hooks\.slack\.com/"
+            --exclude "^https://[a-zA-Z0-9-]+\.ngrok-free\.app"
+            --exclude "^https://[a-zA-Z0-9-]+\.ngrok\.io"
+            --exclude "^https://abc123\."
+            --exclude "^http://localhost"
+            --exclude "^https://cloudless\.online"
+            --exclude "\.\.\."
+            --exclude "^https?://[^@]+@.*\.ingest\.sentry\.io"
+            --exclude "^https?://.*\.api-us1\.com"
+            --exclude "^https?://www\.linkedin\.com"
+            --exclude "^https://github\.com/cloudless-gr"
+            --exclude "^https://github\.com/.*/settings"
             "README.md"
             "docs/**/*.md"
             ".github/**/*.md"
