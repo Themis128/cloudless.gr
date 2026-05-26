@@ -41,7 +41,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!process.env.ALERT_API_URL && isPrivateLanUrl(ALERT_API)) {
+  if (isPrivateLanUrl(ALERT_API)) {
     return NextResponse.json(
       { error: "ESP32 API not reachable from this deployment", offline: true },
       { status: 503 }
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!process.env.ALERT_API_URL && isPrivateLanUrl(ALERT_API)) {
+  if (isPrivateLanUrl(ALERT_API)) {
     return NextResponse.json(
       { error: "ESP32 API not reachable from this deployment", offline: true },
       { status: 503 }
@@ -127,7 +127,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!process.env.ALERT_API_URL && isPrivateLanUrl(ALERT_API)) {
+  if (isPrivateLanUrl(ALERT_API)) {
     return NextResponse.json(
       { error: "ESP32 API not reachable from this deployment", offline: true },
       { status: 503 }

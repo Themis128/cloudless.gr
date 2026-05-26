@@ -43,8 +43,8 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  // On Lambda/cloud the Pi LAN is unreachable — return offline immediately.
-  if (!process.env.ALERT_API_URL && isPrivateLanUrl(ALERT_API_URL)) {
+  // On any deployment where the Pi is behind a private LAN IP it's unreachable.
+  if (isPrivateLanUrl(ALERT_API_URL)) {
     return NextResponse.json(
       { error: "Alert API not reachable from this deployment", offline: true },
       { status: 503 }
