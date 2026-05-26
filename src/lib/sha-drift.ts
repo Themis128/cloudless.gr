@@ -14,11 +14,11 @@
 export interface DriftSnapshot {
   /** deploy.yml SHA — source of truth for cloudless.gr. */
   cloudExpected: string;
-  /** deploy-pi.yml SHA — source of truth for cloudless.online. */
+  /** deploy-pi.yml SHA — source of truth for the Pi surface. */
   piExpected: string;
   /** cloudless.gr/api/health.version, or null if unreachable. */
   cloud: string | null;
-  /** cloudless.online/api/health.version, or null if unreachable. */
+  /** pi-origin.cloudless.gr/api/health.version, or null if unreachable. */
   pi: string | null;
   /** When the cloud SSM param was last updated; null if unknown. */
   cloudSsmModifiedAt: Date | null;

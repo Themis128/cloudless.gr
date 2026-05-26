@@ -1,11 +1,11 @@
 /**
- * Verify the live cloudless.gr (and cloudless.online standby) posture
+ * Verify the live cloudless.gr (and pi-origin.cloudless.gr Pi surface) posture
  * against the targets documented in docs/security.md and the
  * encryption/compression contract.
  *
  * Run:
  *   pnpm tsx scripts/verify-prod-posture.mts
- *   pnpm tsx scripts/verify-prod-posture.mts cloudless.online   # check standby
+ *   pnpm tsx scripts/verify-prod-posture.mts pi-origin.cloudless.gr   # check Pi
  *
  * Exits 0 if every check passes, 1 if any fail. Designed to be wired
  * into a periodic Claude Code routine or a manual-dispatch CI job.

@@ -1,14 +1,17 @@
 /**
  * Admin - Monitor API proxy
  *
- * Proxies requests to the Pi Alert API (http://192.168.1.128:30800).
- * Exposes three sub-resources via a `resource` query param:
- *   ?resource=status   → GET /api/status   (combined Pi + ESP32 + alert summary)
- *   ?resource=alerts   → GET /api/alerts   (all alerts, optional ?status=active)
- *   ?resource=esp32    → GET /api/esp32/status
+ * Proxies requests to the Pi Alert API. The target URL is set via
+ * ALERT_API_URL env var; when unset it defaults to the LAN address.
  *
- * Only accessible to admins. Falls back gracefully when the Pi is unreachable
- * (e.g. when running on AWS Lambda / cloudless.gr).
+ * On Lambda/cloud deployments the Pi LAN is unreachable — the route
+ * returns {offline:true} immediately without attempting a connection,
+ * rather than hanging for 5s or producing an unhandled 500.
+ *
+ * Sub-resources (via ?resource=):
+ *   status   → GET /api/status
+ *   alerts   → GET /api/alerts
+ *   esp32    → GET /api/esp32/status
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
@@ -21,9 +24,32 @@ const RESOURCE_MAP: Record<string, string> = {
   esp32: "/api/esp32/status",
 };
 
+function isPrivateLanUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return (
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("172.") ||
+      hostname === "localhost" ||
+      hostname === "127.0.0.1"
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
+
+  // On any deployment where the Pi is behind a private LAN IP it's unreachable.
+  if (isPrivateLanUrl(ALERT_API_URL)) {
+    return NextResponse.json(
+      { error: "Alert API not reachable from this deployment", offline: true },
+      { status: 503 }
+    );
+  }
 
   const { searchParams } = new URL(request.url);
   const resource = searchParams.get("resource") ?? "status";
@@ -33,7 +59,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: `Unknown resource: ${resource}` }, { status: 400 });
   }
 
-  // Forward optional query params (e.g. ?status=active for /api/alerts)
   const extra = new URLSearchParams();
   searchParams.forEach((v, k) => {
     if (k !== "resource") extra.set(k, v);
@@ -53,7 +78,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await res.json();
+    const data: unknown = await res.json();
     return NextResponse.json(data);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unreachable";

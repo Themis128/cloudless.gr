@@ -1,6 +1,6 @@
 /**
  * SHA drift detector — compares the source-of-truth deploy SHA in SSM
- * against the SHA each surface (cloud cloudless.gr, Pi cloudless.online)
+ * against the SHA each surface (cloud cloudless.gr, Pi pi-origin.cloudless.gr)
  * actually reports via /api/health → version field.
  *
  * Each surface has its own SSM param so the two deploy pipelines can't
@@ -104,7 +104,7 @@ function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): Drift
 
 const HEALTH_URLS = {
   cloud: "https://cloudless.gr/api/health",
-  pi: "https://cloudless.online/api/health",
+  pi: "https://pi-origin.cloudless.gr/api/health",
 } as const;
 const SSM_CLOUD = "/cloudless/production/cloud-sha";
 const SSM_PI = "/cloudless/production/pi-sha";
@@ -112,12 +112,8 @@ const REGION = process.env.AWS_REGION ?? "us-east-1";
 
 function fetchJson(url: string): Promise<Record<string, unknown> | null> {
   return new Promise((resolve) => {
-    // Happy Eyeballs (RFC 8305): if the host is dual-stack but the runner
-    // can't connect over IPv6 (GitHub Actions runners are IPv4-only by
-    // default), fall through to IPv4 after 250 ms instead of hanging the
-    // full 10 s timeout. cloudless.online's APIGW alias publishes both
-    // A and AAAA — without this, every CI run trips the IPv6 path and
-    // reports the Pi as unreachable.
+    // Happy Eyeballs (RFC 8305): fall through to IPv4 after 250 ms instead
+    // of hanging the full 10 s timeout when IPv6 is unreachable from CI.
     const req = httpsRequest(
       url,
       {
@@ -179,7 +175,7 @@ async function snapshot(): Promise<DriftSnapshot | null> {
     cloudSsmModifiedAt: cloudSsm.modifiedAt,
     piSsmModifiedAt: piSsm.modifiedAt,
     cloud: typeof cloudJson?.version === "string" ? cloudJson.version : null,
-    piJson.version : null,
+    pi: typeof piJson?.version === "string" ? piJson.version : null,
   };
 }
 

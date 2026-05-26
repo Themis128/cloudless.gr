@@ -102,7 +102,7 @@ orchestrator completion. It compares three values:
    by the deploy workflow on every successful production deploy).
 2. **Cloud actual** — `cloudless.gr/api/health.version`. Wired to the
    deploy SHA via SST Lambda env (`APP_VERSION=$GITHUB_SHA`).
-3. **Pi actual** — `cloudless.online/api/health.version`. Wired to the
+3. **Pi actual** — `pi-origin.cloudless.gr/api/health.version`. Wired to the
    build SHA via Docker `ARG APP_VERSION=${target_sha || github.sha}`
    passed from the Pi-image workflow.
 

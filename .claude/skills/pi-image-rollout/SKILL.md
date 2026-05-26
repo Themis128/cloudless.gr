@@ -1,10 +1,10 @@
 ---
 name: pi-image-rollout
-description: Update the cloudless.online Pi k3s deployment to the latest ECR image. Use when the user asks to update the Pi, restart the app on cloudless.online, deploy a new version to the Pi, or after a Pi image build completes. Triggers on "update Pi", "rollout", "restart Pi app", "cloudless.online outdated", "Pi deploy", "new image".
+description: Update the Pi k3s deployment to the latest ECR image. Use when the user asks to update the Pi, restart the app on the Pi, deploy a new version to the Pi, or after a Pi image build completes. Triggers on "update Pi", "rollout", "restart Pi app", "Pi deploy", "new image".
 allowed-tools: mcp__cloudless-infra__k3s_get_pods, mcp__cloudless-infra__cluster_run_command, mcp__cloudless-infra__aws_get_ssm_parameters, mcp__cloudless-infra__k3s_get_pod_logs
 ---
 
-# Pi Image Rollout — cloudless.online
+# Pi Image Rollout — pi-origin.cloudless.gr
 
 ## Overview
 
@@ -59,7 +59,7 @@ Watch for a new pod in `Running` state. Old pod terminates once new pod passes r
 ### 5. Verify new version
 ```
 cluster_run_command(node: "omv-main",
-  command: "curl -s https://cloudless.online/api/health | python3 -m json.tool")
+  command: "curl -s https://pi-origin.cloudless.gr/api/health | python3 -m json.tool")
 ```
 `version` should now match `current-image-sha`.
 
@@ -107,7 +107,7 @@ Look for startup messages confirming the Next.js server started on port 3000.
 The new pod uses `cloudless-pi-standby` IAM credentials from `pi-standby-aws-creds` secret
 (key `AKIAUBXIAELU7NG7LBAQ`). Note: `omv-main-cli` is the Pi **node's** own IAM user for CLI
 operations — the k3s pod credentials belong to `cloudless-pi-standby`.
-For Bedrock chat (`/api/chat`) to work on cloudless.online, `cloudless-pi-standby` must have
+For Bedrock chat (`/api/chat`) to work on the Pi surface, `cloudless-pi-standby` must have
 `bedrock:InvokeModel` + `bedrock:Converse`. Run this with admin credentials if not yet applied:
 
 ```bash

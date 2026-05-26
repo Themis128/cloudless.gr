@@ -19,7 +19,7 @@ the k3s standby E2E, avoiding the timing race where E2E fires against a mid-roll
    - If `conclusion` is `failure`, print a warning but continue (E2E will confirm the state).
    - If no run exists for HEAD SHA, note it (SHA may have been superseded) and continue.
 
-3. **Check k3s rollout convergence** — poll `https://cloudless.online/en` until the Pi is self-consistent:
+3. **Check k3s rollout convergence** — poll `https://pi-origin.cloudless.gr/en` until the Pi is self-consistent:
    ```powershell
    # Fetch homepage HTML, extract first /_next/static/chunks/*.js reference,
    # verify it returns HTTP 200. Retry every 10s for up to 2 minutes.
