@@ -66,14 +66,6 @@ Respond with a JSON object (no markdown fences, just the raw JSON) with this str
     return NextResponse.json({ strategy });
   } catch (e) {
     console.error("[ai/campaign] Claude call failed:", e);
-    return NextResponse.json(
-<<<<<<< HEAD
-      { error: "AI generation failed." },
-      { status: 500 },
-=======
-      { error: e instanceof Error ? e.message : "AI generation failed." },
-      { status: 500 }
->>>>>>> 1e82f95379841052acd6b392003da65486497629
-    );
+    return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }

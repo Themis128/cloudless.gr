@@ -67,17 +67,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (e) {
     console.error("[Stripe] Error fetching subscriptions:", e);
-    return NextResponse.json(
-<<<<<<< HEAD
-      { error: "Failed to fetch subscriptions" },
-      { status: 500 },
-=======
-      {
-        error: e instanceof Error ? e.message : "Failed to fetch subscriptions",
-      },
-      { status: 500 }
->>>>>>> 1e82f95379841052acd6b392003da65486497629
-    );
+    return NextResponse.json({ error: "Failed to fetch subscriptions" }, { status: 500 });
   }
 }
 
@@ -118,14 +108,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (e) {
     console.error("[Stripe] Error performing subscription action:", e);
-    return NextResponse.json(
-<<<<<<< HEAD
-      { error: "Action failed" },
-      { status: 500 },
-=======
-      { error: e instanceof Error ? e.message : "Action failed" },
-      { status: 500 }
->>>>>>> 1e82f95379841052acd6b392003da65486497629
-    );
+    return NextResponse.json({ error: "Action failed" }, { status: 500 });
   }
 }
