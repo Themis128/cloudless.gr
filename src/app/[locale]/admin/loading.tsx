@@ -4,9 +4,7 @@ export default function AdminLoading() {
       <div className="border-neon-magenta/20 bg-neon-magenta/5 border-b">
         <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2 sm:px-6 lg:px-8">
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
-          <span className="text-neon-magenta font-mono text-xs">
-            ADMIN PANEL
-          </span>
+          <span className="text-neon-magenta font-mono text-xs">ADMIN PANEL</span>
         </div>
       </div>
 

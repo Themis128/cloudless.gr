@@ -36,17 +36,11 @@ export async function POST(request: Request) {
     const { name, email, company, service, message } = parsed;
 
     if (!name || !email || !message) {
-      return Response.json(
-        { error: "Name, email, and message are required." },
-        { status: 400 },
-      );
+      return Response.json({ error: "Name, email, and message are required." }, { status: 400 });
     }
 
     if (!isValidEmail(email)) {
-      return Response.json(
-        { error: "Invalid email address." },
-        { status: 400 },
-      );
+      return Response.json({ error: "Invalid email address." }, { status: 400 });
     }
 
     const config = await getConfig();
@@ -89,13 +83,11 @@ export async function POST(request: Request) {
       "AI & Digital Marketing": "digital-marketing",
       "Full-Stack Growth Engine (Bundle)": "full-bundle",
     };
-    const serviceSlug = service
-      ? (SERVICE_SLUG[service] ?? undefined)
-      : undefined;
+    const serviceSlug = service ? (SERVICE_SLUG[service] ?? undefined) : undefined;
 
     // Auto-reply to the visitor — fire-and-forget, never blocks response
     sendContactAcknowledgment({ name, email, service }).catch((err) =>
-      console.warn("[contact] Auto-reply failed:", err),
+      console.warn("[contact] Auto-reply failed:", err)
     );
 
     const nameParts = String(name).trim().split(" ");
@@ -142,10 +134,7 @@ export async function POST(request: Request) {
         const labels = ["slack", "hubspot", "notion"];
         results.forEach((r, i) => {
           if (r.status === "rejected") {
-            console.error(
-              "[Contact] Background task " + labels[i] + " failed:",
-              r.reason,
-            );
+            console.error("[Contact] Background task " + labels[i] + " failed:", r.reason);
           }
         });
       })
@@ -191,7 +180,7 @@ export async function POST(request: Request) {
           withScope((scope) => {
             scope.setTag("route", "contact");
             captureException(error);
-          }),
+          })
         )
         .catch(() => {});
     }

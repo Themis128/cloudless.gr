@@ -39,8 +39,7 @@ export default function DocListingOGImage() {
           right: "-80px",
           width: "600px",
           height: "600px",
-          background:
-            "radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 65%)",
+          background: "radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 65%)",
           borderRadius: "50%",
         }}
       />
@@ -146,6 +145,6 @@ export default function DocListingOGImage() {
         </span>
       </div>
     </div>,
-    { ...size },
+    { ...size }
   );
 }

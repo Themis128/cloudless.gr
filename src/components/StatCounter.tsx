@@ -52,7 +52,7 @@ export default function StatCounter({
           observer.unobserve(el);
         }
       },
-      { threshold: 0.2 },
+      { threshold: 0.2 }
     );
 
     observer.observe(el);

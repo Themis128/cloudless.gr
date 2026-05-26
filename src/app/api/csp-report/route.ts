@@ -61,7 +61,7 @@ function logViolation(
   blocked: string | undefined,
   source: string | undefined,
   doc: string | undefined,
-  disposition: string | undefined,
+  disposition: string | undefined
 ): void {
   // Single-line structured log so Sentry/CloudWatch can group cleanly.
   // Fields are sanitized to prevent log injection from browser-supplied values.
@@ -69,7 +69,7 @@ function logViolation(
   // codeql[js/tainted-format-string] -- fields sanitized; template literal used for structured output only
   console.warn(
     `[csp-violation] dir=${sanitizeLogField(directive)} blocked=${sanitizeLogField(blocked)} ` +
-      `source=${sanitizeLogField(source)} doc=${sanitizeLogField(doc)} disp=${sanitizeLogField(disposition)}`,
+      `source=${sanitizeLogField(source)} doc=${sanitizeLogField(doc)} disp=${sanitizeLogField(disposition)}`
   );
 }
 
@@ -87,19 +87,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     for (const entry of payload as CspReportModernEntry[]) {
       if (entry?.type !== "csp-violation") continue;
       const b = entry.body ?? {};
-      logViolation(
-        b.effectiveDirective,
-        b.blockedURL,
-        b.sourceFile,
-        b.documentURL,
-        b.disposition,
-      );
+      logViolation(b.effectiveDirective, b.blockedURL, b.sourceFile, b.documentURL, b.disposition);
     }
-  } else if (
-    payload &&
-    typeof payload === "object" &&
-    "csp-report" in payload
-  ) {
+  } else if (payload && typeof payload === "object" && "csp-report" in payload) {
     // Legacy report-uri payload
     const r = (payload as CspReportLegacy)["csp-report"] ?? {};
     logViolation(
@@ -107,7 +97,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       r["blocked-uri"],
       r["source-file"],
       r["document-uri"],
-      r.disposition,
+      r.disposition
     );
   }
 

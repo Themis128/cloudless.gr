@@ -46,8 +46,8 @@ same image, so all controls below apply identically to both).
   ones. The server-side `requireAdmin()` on every API route is the
   authoritative enforcement; the UI redirect is defence-in-depth only.
 - **Infrastructure shortcuts** — The admin panel sidebar and dashboard
-  include external links to `grafana.cloudless.online` (Grafana) and
-  `manage.cloudless.online` (Cluster Manager). These links open in a new
+  include external links to `grafana.cloudless.gr` (Grafana) and
+  `manage.cloudless.gr` (Cluster Manager). These links open in a new
   tab and carry no credentials or tokens from cloudless.gr. Each tool
   enforces its own independent authentication: Grafana uses its built-in
   login; Cluster Manager is behind oauth2-proxy → Keycloak SSO.
@@ -132,7 +132,7 @@ verifiable any time via `pnpm tsx scripts/verify-prod-posture.mts`.
 ```bash
 # Single command — checks 8 properties against prod
 pnpm tsx scripts/verify-prod-posture.mts            # cloudless.gr
-pnpm tsx scripts/verify-prod-posture.mts cloudless.online   # standby
+pnpm tsx scripts/verify-prod-posture.mts pi-origin.cloudless.gr   # Pi surface
 
 # Or manually:
 echo | openssl s_client -connect cloudless.gr:443 -servername cloudless.gr 2>/dev/null \

@@ -36,20 +36,14 @@ export default function NotificationsPage() {
       <div className="mb-8">
         <div className="border-neon-magenta/20 bg-neon-magenta/10 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
-          <span className="text-neon-magenta font-mono text-xs">
-            NOTIFICATIONS
-          </span>
+          <span className="text-neon-magenta font-mono text-xs">NOTIFICATIONS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">
-          Notifications
-        </h1>
+        <h1 className="font-heading text-2xl font-bold text-white">Notifications</h1>
       </div>
 
       {notifications.length === 0 ? (
         <div className="rounded-xl border border-slate-800 p-12 text-center">
-          <p className="font-mono text-sm text-slate-500">
-            No notifications yet.
-          </p>
+          <p className="font-mono text-sm text-slate-500">No notifications yet.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -64,12 +58,8 @@ export default function NotificationsPage() {
             >
               <div className="mb-1 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  {!n.read && (
-                    <span className="bg-neon-magenta h-2 w-2 rounded-full" />
-                  )}
-                  <span className="font-mono text-sm font-semibold text-white">
-                    {n.title}
-                  </span>
+                  {!n.read && <span className="bg-neon-magenta h-2 w-2 rounded-full" />}
+                  <span className="font-mono text-sm font-semibold text-white">{n.title}</span>
                 </div>
                 <span className="font-mono text-[10px] text-slate-500">
                   {new Date(n.createdAt).toLocaleDateString()}

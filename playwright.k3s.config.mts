@@ -7,10 +7,9 @@ const isCi = !!process.env.CI;
 /**
  * Playwright E2E configuration — targets the Pi k3s standby ("HA app").
  *
- * Hits https://cloudless.online (the standby's vanity hostname, always
- * resolved to APIGW SECONDARY → Lambda cloudless-pi-proxy → Tailscale
- * Funnel → Pi Traefik :18443 → k3s cloudless-app pod). This exercises
- * the entire failover-path serving stack on every run.
+ * Hits https://pi-origin.cloudless.gr (the Pi k3s ingress hostname, direct
+ * path through Traefik → k3s cloudless-app pod). This exercises the Pi
+ * serving stack on every run.
  *
  * Run with:
  *   pnpm test:k3s                 # local
@@ -35,11 +34,10 @@ export default defineConfig({
   expect: { timeout: 15_000 },
 
   use: {
-    baseURL: process.env.K3S_BASE_URL ?? "https://cloudless.online",
+    baseURL: process.env.K3S_BASE_URL ?? "https://pi-origin.cloudless.gr",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    // The standby path crosses the public internet + APIGW + Funnel; allow
-    // a generous nav budget so transient hop latency doesn't flake tests.
+    // Pi path can have latency; allow a generous nav budget.
     navigationTimeout: 30_000,
     actionTimeout: 15_000,
     extraHTTPHeaders: {

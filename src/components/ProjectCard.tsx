@@ -80,7 +80,7 @@ export default function ProjectCard({
     >
       {/* Header row */}
       <div className="mb-4 flex items-start justify-between gap-3">
-        <h3 className="font-heading group-hover:text-neon-cyan text-base font-bold leading-snug text-white transition-colors">
+        <h3 className="font-heading group-hover:text-neon-cyan text-base leading-snug font-bold text-white transition-colors">
           {project.name}
         </h3>
         <span
@@ -94,9 +94,7 @@ export default function ProjectCard({
       <div className="mb-4">
         <div className="mb-1 flex items-center justify-between">
           <span className="font-mono text-[10px] text-slate-500">Progress</span>
-          <span className="font-mono text-[10px] text-slate-400">
-            {project.progress}%
-          </span>
+          <span className="font-mono text-[10px] text-slate-400">{project.progress}%</span>
         </div>
         <div className="h-1 w-full overflow-hidden rounded-full bg-slate-800">
           <div
@@ -137,17 +135,13 @@ export default function ProjectCard({
           >
             {project.type}
           </span>
-          <span
-            className={`font-mono text-[10px] font-semibold ${priorityColor}`}
-          >
+          <span className={`font-mono text-[10px] font-semibold ${priorityColor}`}>
             {priorityIcon} {project.priority}
           </span>
         </div>
         {(startFmt || dueFmt) && (
           <span className="font-mono text-[10px] text-slate-600">
-            {startFmt && dueFmt
-              ? `${startFmt} → ${dueFmt}`
-              : (startFmt ?? dueFmt)}
+            {startFmt && dueFmt ? `${startFmt} → ${dueFmt}` : (startFmt ?? dueFmt)}
           </span>
         )}
       </div>

@@ -5,11 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
-import {
-  type ThemePref,
-  useStoredPref,
-  writeStoredPref,
-} from "@/lib/theme-pref";
+import { type ThemePref, useStoredPref, writeStoredPref } from "@/lib/theme-pref";
 
 const ADMIN_PATH_RE = /^\/(?:en|el|fr|de)?\/?admin(?:\/|$)/;
 
@@ -109,10 +105,7 @@ export default function ThemeSwitcher() {
   useEffect(() => {
     if (!isOpen) return;
     function onMouse(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      )
+      if (containerRef.current && !containerRef.current.contains(e.target as Node))
         setIsOpen(false);
     }
     function onKey(e: KeyboardEvent) {
@@ -159,12 +152,7 @@ export default function ThemeSwitcher() {
           viewBox="0 0 24 24"
           aria-hidden="true"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
@@ -187,9 +175,7 @@ export default function ThemeSwitcher() {
                 onClick={() => handleSelect(opt.value)}
                 aria-label={`${label}: ${optLabel}`}
                 className={`hover:bg-neon-cyan/10 active:bg-neon-cyan/20 flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
-                  selected
-                    ? "bg-neon-cyan/10 text-neon-cyan font-medium"
-                    : "text-slate-300"
+                  selected ? "bg-neon-cyan/10 text-neon-cyan font-medium" : "text-slate-300"
                 }`}
               >
                 <ThemeIcon kind={opt.iconKey} />

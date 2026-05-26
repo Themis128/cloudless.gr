@@ -22,8 +22,7 @@ export function createGoogleAuth(scope: string): () => Promise<string> {
     const config = await getConfig();
     const email = config.GOOGLE_CLIENT_EMAIL;
     const key = config.GOOGLE_PRIVATE_KEY;
-    if (!email || !key)
-      throw new Error("Google service account not configured");
+    if (!email || !key) throw new Error("Google service account not configured");
 
     const { SignJWT, importPKCS8 } = await import("jose");
     const now = Math.floor(Date.now() / 1000);
@@ -52,8 +51,7 @@ export function createGoogleAuth(scope: string): () => Promise<string> {
 
     cached = {
       token: data.access_token,
-      expires:
-        Date.now() + (data.expires_in - TOKEN_REFRESH_BUFFER_SECS) * 1_000,
+      expires: Date.now() + (data.expires_in - TOKEN_REFRESH_BUFFER_SECS) * 1_000,
     };
 
     return cached.token;

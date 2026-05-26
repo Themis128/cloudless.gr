@@ -2,11 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
-import type {
-  CalendarItem,
-  CalendarItemType,
-  CalendarPlatform,
-} from "@/lib/content-calendar";
+import type { CalendarItem, CalendarItemType, CalendarPlatform } from "@/lib/content-calendar";
 import { CALENDAR_ITEM_COLORS, PLATFORM_LABELS } from "@/lib/content-calendar";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -47,9 +43,7 @@ export default function CalendarPage() {
     const firstDay = `${year}-${String(month + 1).padStart(2, "0")}-01`;
     const lastDay = `${year}-${String(month + 1).padStart(2, "0")}-${new Date(year, month + 1, 0).getDate()}`;
     try {
-      const res = await fetchWithAuth(
-        `/api/admin/calendar?from=${firstDay}&to=${lastDay}`,
-      );
+      const res = await fetchWithAuth(`/api/admin/calendar?from=${firstDay}&to=${lastDay}`);
       if (!res.ok) return;
       const data = await res.json();
       setItems(data.items ?? []);
@@ -131,13 +125,9 @@ export default function CalendarPage() {
       <div className="mb-8">
         <div className="border-neon-cyan/20 bg-neon-cyan/10 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
           <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-          <span className="text-neon-cyan font-mono text-xs">
-            CONTENT CALENDAR
-          </span>
+          <span className="text-neon-cyan font-mono text-xs">CONTENT CALENDAR</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">
-          Content Calendar
-        </h1>
+        <h1 className="font-heading text-2xl font-bold text-white">Content Calendar</h1>
         <p className="font-body mt-1 text-slate-400">
           Schedule and manage content across all channels.
         </p>
@@ -148,7 +138,7 @@ export default function CalendarPage() {
           <button
             type="button"
             onClick={prevMonth}
-            className="font-mono text-slate-400 hover:text-white transition-colors px-2"
+            className="px-2 font-mono text-slate-400 transition-colors hover:text-white"
           >
             ‹
           </button>
@@ -158,7 +148,7 @@ export default function CalendarPage() {
           <button
             type="button"
             onClick={nextMonth}
-            className="font-mono text-slate-400 hover:text-white transition-colors px-2"
+            className="px-2 font-mono text-slate-400 transition-colors hover:text-white"
           >
             ›
           </button>
@@ -179,14 +169,12 @@ export default function CalendarPage() {
               : null;
             const dayItems = dateStr ? (itemsByDate[dateStr] ?? []) : [];
             const isToday =
-              day === today.getDate() &&
-              month === today.getMonth() &&
-              year === today.getFullYear();
+              day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
 
             return (
               <div
                 key={idx}
-                className={`bg-void min-h-[80px] p-1.5 ${day ? "cursor-pointer hover:bg-slate-800/30 transition-colors" : ""}`}
+                className={`bg-void min-h-[80px] p-1.5 ${day ? "cursor-pointer transition-colors hover:bg-slate-800/30" : ""}`}
                 onClick={() => {
                   if (!day || !dateStr) return;
                   setSelectedDate(dateStr);
@@ -258,23 +246,17 @@ export default function CalendarPage() {
             </div>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="mb-1 block font-mono text-xs text-slate-400">
-                  Title
-                </label>
+                <label className="mb-1 block font-mono text-xs text-slate-400">Title</label>
                 <input
                   required
                   value={form.title}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, title: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                   className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-white focus:border-slate-500 focus:outline-none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block font-mono text-xs text-slate-400">
-                    Type
-                  </label>
+                  <label className="mb-1 block font-mono text-xs text-slate-400">Type</label>
                   <select
                     value={form.type}
                     onChange={(e) =>
@@ -293,9 +275,7 @@ export default function CalendarPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block font-mono text-xs text-slate-400">
-                    Platform
-                  </label>
+                  <label className="mb-1 block font-mono text-xs text-slate-400">Platform</label>
                   <select
                     value={form.platform}
                     onChange={(e) =>
@@ -306,25 +286,19 @@ export default function CalendarPage() {
                     }
                     className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs text-white focus:outline-none"
                   >
-                    {(Object.keys(PLATFORM_LABELS) as CalendarPlatform[]).map(
-                      (p) => (
-                        <option key={p} value={p}>
-                          {PLATFORM_LABELS[p]}
-                        </option>
-                      ),
-                    )}
+                    {(Object.keys(PLATFORM_LABELS) as CalendarPlatform[]).map((p) => (
+                      <option key={p} value={p}>
+                        {PLATFORM_LABELS[p]}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="mb-1 block font-mono text-xs text-slate-400">
-                  Notes
-                </label>
+                <label className="mb-1 block font-mono text-xs text-slate-400">Notes</label>
                 <textarea
                   value={form.notes}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, notes: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                   rows={2}
                   className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs text-white focus:border-slate-500 focus:outline-none"
                 />

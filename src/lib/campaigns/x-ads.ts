@@ -11,8 +11,7 @@ async function getXConfig(): Promise<{
   adAccountId: string;
 }> {
   const cfg = await getConfig();
-  if (!cfg.X_API_KEY || !cfg.X_ACCESS_TOKEN)
-    throw new Error("X not configured");
+  if (!cfg.X_API_KEY || !cfg.X_ACCESS_TOKEN) throw new Error("X not configured");
   return {
     apiKey: cfg.X_API_KEY,
     apiSecret: cfg.X_API_SECRET,
@@ -28,7 +27,7 @@ function buildOAuthHeader(
   apiKey: string,
   apiSecret: string,
   accessToken: string,
-  accessSecret: string,
+  accessSecret: string
 ): string {
   const nonce = randomBytes(16).toString("hex");
   const ts = Math.floor(Date.now() / 1000).toString();
@@ -58,10 +57,7 @@ function buildOAuthHeader(
   return header;
 }
 
-async function xFetch(
-  path: string,
-  options: RequestInit = {},
-): Promise<Response> {
+async function xFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const cfg = await getXConfig();
   const url = `${X_ADS_API}${path}`;
   const method = (options.method ?? "GET").toUpperCase();
@@ -71,7 +67,7 @@ async function xFetch(
     cfg.apiKey,
     cfg.apiSecret,
     cfg.accessToken,
-    cfg.accessSecret,
+    cfg.accessSecret
   );
   return fetch(url, {
     ...options,
@@ -106,9 +102,7 @@ export async function listXCampaigns(): Promise<XCampaign[]> {
   try {
     const { adAccountId } = await getXConfig();
     if (!adAccountId) return [];
-    const res = await xFetch(
-      `/accounts/${adAccountId}/campaigns?count=20&sort_by=created_at-desc`,
-    );
+    const res = await xFetch(`/accounts/${adAccountId}/campaigns?count=20&sort_by=created_at-desc`);
     if (!res.ok) return [];
     const data = await res.json();
     return data.data ?? [];
@@ -124,10 +118,7 @@ export interface XStats {
   engagements: number;
 }
 
-export async function getXStats(
-  dateStart: string,
-  dateEnd: string,
-): Promise<XStats> {
+export async function getXStats(dateStart: string, dateEnd: string): Promise<XStats> {
   const empty: XStats = {
     impressions: 0,
     clicks: 0,
@@ -138,7 +129,7 @@ export async function getXStats(
     const { adAccountId } = await getXConfig();
     if (!adAccountId) return empty;
     const res = await xFetch(
-      `/stats/accounts/${adAccountId}?granularity=DAY&metric_groups=ENGAGEMENT,BILLING&start_time=${dateStart}T00:00:00Z&end_time=${dateEnd}T23:59:59Z`,
+      `/stats/accounts/${adAccountId}?granularity=DAY&metric_groups=ENGAGEMENT,BILLING&start_time=${dateStart}T00:00:00Z&end_time=${dateEnd}T23:59:59Z`
     );
     if (!res.ok) return empty;
     const data = await res.json();

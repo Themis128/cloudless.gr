@@ -77,14 +77,11 @@ export default function PipelinePage() {
   async function moveDeal(dealId: string, stageId: string) {
     setMovingDeal(dealId);
     try {
-      const res = await fetchWithAuth(
-        `/api/admin/pipeline/deals/${dealId}/move`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stageId }),
-        },
-      );
+      const res = await fetchWithAuth(`/api/admin/pipeline/deals/${dealId}/move`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stageId }),
+      });
       if (!res.ok) throw new Error("Move failed");
       await load();
     } catch {
@@ -94,13 +91,9 @@ export default function PipelinePage() {
     }
   }
 
-  const allStages =
-    pipelines[0]?.stages?.sort((a, b) => a.displayOrder - b.displayOrder) ?? [];
+  const allStages = pipelines[0]?.stages?.sort((a, b) => a.displayOrder - b.displayOrder) ?? [];
 
-  const stageIds =
-    allStages.length > 0
-      ? allStages.map((s) => s.id)
-      : Object.keys(dealsByStage);
+  const stageIds = allStages.length > 0 ? allStages.map((s) => s.id) : Object.keys(dealsByStage);
 
   return (
     <div>
@@ -109,21 +102,15 @@ export default function PipelinePage() {
           <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-cyan font-mono text-xs">PIPELINE</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">
-          Lead Pipeline
-        </h1>
-        <p className="font-body mt-1 text-slate-400">
-          HubSpot deal pipeline kanban board.
-        </p>
+        <h1 className="font-heading text-2xl font-bold text-white">Lead Pipeline</h1>
+        <p className="font-body mt-1 text-slate-400">HubSpot deal pipeline kanban board.</p>
       </div>
 
       {stats && (
         <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
           <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
             <p className="font-mono text-xs text-slate-500">Total Deals</p>
-            <p className="mt-1 font-mono text-2xl font-bold text-white">
-              {stats.totalDeals}
-            </p>
+            <p className="mt-1 font-mono text-2xl font-bold text-white">{stats.totalDeals}</p>
           </div>
           <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
             <p className="font-mono text-xs text-slate-500">Pipeline Value</p>
@@ -157,18 +144,12 @@ export default function PipelinePage() {
 
       {!loading && !error && (
         <div className="overflow-x-auto pb-4">
-          <div
-            className="flex gap-4"
-            style={{ minWidth: `${stageIds.length * 280}px` }}
-          >
+          <div className="flex gap-4" style={{ minWidth: `${stageIds.length * 280}px` }}>
             {stageIds.map((stageId) => {
-              const stageLabel =
-                allStages.find((s) => s.id === stageId)?.label ?? stageId;
+              const stageLabel = allStages.find((s) => s.id === stageId)?.label ?? stageId;
               const deals = (dealsByStage[stageId] ?? []) as Deal[];
-              const colStyle =
-                STAGE_COLORS[stageId] ?? "border-slate-700/30 bg-slate-800/10";
-              const labelStyle =
-                STAGE_LABEL_COLORS[stageId] ?? "text-slate-300";
+              const colStyle = STAGE_COLORS[stageId] ?? "border-slate-700/30 bg-slate-800/10";
+              const labelStyle = STAGE_LABEL_COLORS[stageId] ?? "text-slate-300";
 
               return (
                 <div
@@ -176,9 +157,7 @@ export default function PipelinePage() {
                   className={`flex w-64 shrink-0 flex-col rounded-xl border p-3 ${colStyle}`}
                 >
                   <div className="mb-3 flex items-center justify-between">
-                    <span
-                      className={`font-mono text-xs font-semibold ${labelStyle}`}
-                    >
+                    <span className={`font-mono text-xs font-semibold ${labelStyle}`}>
                       {stageLabel}
                     </span>
                     <span className="rounded-full bg-slate-800 px-2 py-0.5 font-mono text-[10px] text-slate-400">

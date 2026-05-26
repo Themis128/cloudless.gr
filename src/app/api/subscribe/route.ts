@@ -16,10 +16,7 @@ export async function POST(request: Request) {
     const { email } = await request.json();
 
     if (!isValidEmail(email)) {
-      return Response.json(
-        { error: "Invalid email address." },
-        { status: 400 },
-      );
+      return Response.json({ error: "Invalid email address." }, { status: 400 });
     }
 
     // Clear any stale SES suppression first, so a previously-unsubscribed
@@ -41,7 +38,7 @@ export async function POST(request: Request) {
         <p style="color: #666; font-size: 12px;">
           Subscriber recorded as a HubSpot contact (lead_source: newsletter_signup).
           This notification was sent from the cloudless.gr subscribe form.
-        </p>`,
+        </p>`
       ),
       sendSubscriberWelcome(email),
     ]);
@@ -53,9 +50,6 @@ export async function POST(request: Request) {
     return Response.json({ success: true });
   } catch (error) {
     console.error("Subscribe error:", error);
-    return Response.json(
-      { error: "Failed to subscribe. Please try again." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Failed to subscribe. Please try again." }, { status: 500 });
   }
 }

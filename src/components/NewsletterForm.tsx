@@ -31,35 +31,18 @@ export default function NewsletterForm() {
 
       if (res.ok) {
         setStatus(STATUS_SUCCESS);
-        setMessage(
-          translate(
-            locale,
-            "newsletter.success",
-            "You're in! Check your email.",
-          ),
-        );
+        setMessage(translate(locale, "newsletter.success", "You're in! Check your email."));
         setEmail("");
       } else {
         const data = await res.json().catch(() => ({}));
         setStatus(STATUS_ERROR);
         setMessage(
-          data.error ||
-            translate(
-              locale,
-              "newsletter.error",
-              "Something went wrong. Try again.",
-            ),
+          data.error || translate(locale, "newsletter.error", "Something went wrong. Try again.")
         );
       }
     } catch {
       setStatus(STATUS_ERROR);
-      setMessage(
-        translate(
-          locale,
-          "newsletter.error",
-          "Something went wrong. Try again.",
-        ),
-      );
+      setMessage(translate(locale, "newsletter.error", "Something went wrong. Try again."));
     }
   }
 
@@ -75,23 +58,15 @@ export default function NewsletterForm() {
         {translate(
           locale,
           "newsletter.subtitle",
-          "Cloud tips, cost-saving strategies, and growth hacks. No spam.",
+          "Cloud tips, cost-saving strategies, and growth hacks. No spam."
         )}
       </p>
-      <form
-        onSubmit={handleSubmit}
-        className="flex gap-2"
-        suppressHydrationWarning
-      >
+      <form onSubmit={handleSubmit} className="flex gap-2" suppressHydrationWarning>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder={translate(
-            locale,
-            "newsletter.placeholder",
-            "your@email.com",
-          )}
+          placeholder={translate(locale, "newsletter.placeholder", "your@email.com")}
           required
           className="bg-void focus:border-neon-cyan/50 min-w-0 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white transition-colors placeholder:text-slate-600 focus:outline-none"
         />
@@ -109,12 +84,9 @@ export default function NewsletterForm() {
         {translate(
           locale,
           "newsletter.consent",
-          "By subscribing, you agree to receive our newsletter and accept our",
+          "By subscribing, you agree to receive our newsletter and accept our"
         )}{" "}
-        <Link
-          href="/privacy"
-          className="text-neon-cyan/60 underline hover:text-neon-cyan"
-        >
+        <Link href="/privacy" className="text-neon-cyan/60 hover:text-neon-cyan underline">
           {translate(locale, "legal.privacyTitle", "Privacy Policy")}
         </Link>
         {". "}
@@ -123,9 +95,7 @@ export default function NewsletterForm() {
       {status === STATUS_SUCCESS && (
         <p className="text-neon-green mt-2 font-mono text-xs">{message}</p>
       )}
-      {status === STATUS_ERROR && (
-        <p className="mt-2 font-mono text-xs text-red-400">{message}</p>
-      )}
+      {status === STATUS_ERROR && <p className="mt-2 font-mono text-xs text-red-400">{message}</p>}
     </div>
   );
 }

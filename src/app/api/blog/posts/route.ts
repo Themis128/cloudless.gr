@@ -9,7 +9,7 @@ export async function GET() {
     const blogPosts = blogModule.posts;
     return NextResponse.json(
       { posts: blogPosts, source: "static", fallbackReason: "not-configured" },
-      { headers: { "x-blog-source": "static" } },
+      { headers: { "x-blog-source": "static" } }
     );
   }
 
@@ -22,7 +22,7 @@ export async function GET() {
           "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30",
           "x-blog-source": "notion",
         },
-      },
+      }
     );
   } catch (err) {
     console.error("[Blog] Fetch error:", err);
@@ -30,7 +30,7 @@ export async function GET() {
     const blogPosts = blogModule.posts;
     return NextResponse.json(
       { posts: blogPosts, source: "static", fallbackReason: "notion-error" },
-      { headers: { "x-blog-source": "static" } },
+      { headers: { "x-blog-source": "static" } }
     );
   }
 }

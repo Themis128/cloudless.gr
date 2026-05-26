@@ -56,7 +56,7 @@ export class IntegrationError extends Error {
     public readonly integration: string,
     public readonly status: number,
     public readonly body: string,
-    message?: string,
+    message?: string
   ) {
     super(message ?? `${integration} HTTP ${status}: ${body.slice(0, 200)}`);
     this.name = "IntegrationError";
@@ -92,7 +92,7 @@ async function breadcrumb(
   url: string,
   status: number,
   latencyMs: number,
-  retries: number,
+  retries: number
 ): Promise<void> {
   try {
     const Sentry = await import("@sentry/nextjs").catch(() => null);
@@ -120,7 +120,7 @@ async function handleFinalResponse<T>(
   integration: string,
   latencyMs: number,
   retries: number,
-  passthroughErrors: boolean,
+  passthroughErrors: boolean
 ): Promise<IntegrationFetchResult<T>> {
   if (!res.ok) {
     if (passthroughErrors) {
@@ -157,14 +157,9 @@ export async function integrationFetch<T = unknown>(
   integration: string,
   url: string,
   init?: RequestInit,
-  opts?: IntegrationFetchOptions,
+  opts?: IntegrationFetchOptions
 ): Promise<T> {
-  const result = await integrationFetchWithMeta<T>(
-    integration,
-    url,
-    init,
-    opts,
-  );
+  const result = await integrationFetchWithMeta<T>(integration, url, init, opts);
   return result.data;
 }
 
@@ -177,7 +172,7 @@ export async function integrationFetchWithMeta<T = unknown>(
   integration: string,
   url: string,
   init?: RequestInit,
-  opts?: IntegrationFetchOptions,
+  opts?: IntegrationFetchOptions
 ): Promise<IntegrationFetchResult<T>> {
   const timeoutMs = opts?.timeoutMs ?? 10_000;
   const maxRetries = opts?.maxRetries ?? 3;
@@ -215,10 +210,7 @@ export async function integrationFetchWithMeta<T = unknown>(
 
     // 429 / 5xx: retry with exponential backoff (429 honors Retry-After)
     if ((res.status === 429 || res.status >= 500) && attempt < maxRetries) {
-      const ra =
-        res.status === 429
-          ? parseRetryAfter(res.headers.get("Retry-After"))
-          : null;
+      const ra = res.status === 429 ? parseRetryAfter(res.headers.get("Retry-After")) : null;
       retries++;
       await sleep(ra ?? backoffMs * 2 ** attempt);
       continue;
@@ -226,32 +218,21 @@ export async function integrationFetchWithMeta<T = unknown>(
 
     const latencyMs = Date.now() - started;
     await breadcrumb(integration, url, res.status, latencyMs, retries);
-    return handleFinalResponse<T>(
-      res,
-      integration,
-      latencyMs,
-      retries,
-      passthroughErrors,
-    );
+    return handleFinalResponse<T>(res, integration, latencyMs, retries, passthroughErrors);
   }
 
   // Exhausted retries on 429/5xx — fall through to throw
   const latencyMs = Date.now() - started;
   await breadcrumb(integration, url, 0, latencyMs, retries);
   if (lastError) throw lastError;
-  throw new Error(
-    `${integration}: max retries (${maxRetries}) exceeded on ${url}`,
-  );
+  throw new Error(`${integration}: max retries (${maxRetries}) exceeded on ${url}`);
 }
 
 /**
  * Convenience: returns true if an error is an IntegrationError with a
  * specific status code. Type-narrows.
  */
-export function isIntegrationError(
-  err: unknown,
-  status?: number,
-): err is IntegrationError {
+export function isIntegrationError(err: unknown, status?: number): err is IntegrationError {
   if (!(err instanceof IntegrationError)) return false;
   if (status === undefined) return true;
   return err.status === status;

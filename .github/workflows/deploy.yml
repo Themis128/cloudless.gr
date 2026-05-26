@@ -49,7 +49,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -113,19 +113,19 @@ jobs:
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
           NODE_OPTIONS: --max-old-space-size=3072
 
-      - name: Publish current SHA to SSM (for Pi-side image pin)
+      - name: Publish cloud SHA to SSM (source of truth for sha-drift-detector)
         if: success()
         continue-on-error: true
         run: |
           set -euo pipefail
           aws ssm put-parameter \
-            --name '/cloudless/production/current-image-sha' \
+            --name '/cloudless/production/cloud-sha' \
             --type String \
             --value "${GITHUB_SHA}" \
             --overwrite \
-            --description 'Latest production deploy SHA — Pi K3s reads this to pin its image tag.' \
+            --description 'Latest cloud (CloudFront/Lambda) deploy SHA — written by deploy.yml.' \
             --region us-east-1 > /dev/null
-          echo "→ Published SHA ${GITHUB_SHA::12} to SSM /cloudless/production/current-image-sha"
+          echo "→ Published cloud SHA ${GITHUB_SHA::12} to SSM /cloudless/production/cloud-sha"
 
       - name: Notify Slack — deploy succeeded
         if: success() && env.SLACK_WEBHOOK_URL != ''
@@ -153,4 +153,4 @@ jobs:
                 {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\"}},
                 {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
               ]
-            }"
+            

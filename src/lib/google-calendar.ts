@@ -16,9 +16,7 @@ const CALENDAR_TIMEZONE = "Europe/Athens";
 const DEFAULT_CALENDAR_ID = "primary";
 const DATE_PART_2_DIGIT = "2-digit";
 
-const getAccessToken = createGoogleAuth(
-  "https://www.googleapis.com/auth/calendar",
-);
+const getAccessToken = createGoogleAuth("https://www.googleapis.com/auth/calendar");
 
 /**
  * Returns the UTC offset for Europe/Athens at the given instant, in ms.
@@ -35,26 +33,14 @@ function athensOffsetMs(date: Date): number {
     second: DATE_PART_2_DIGIT,
     hour12: false,
   });
-  const p = Object.fromEntries(
-    fmt.formatToParts(date).map(({ type, value }) => [type, value]),
-  );
-  const localMs = Date.UTC(
-    +p.year,
-    +p.month - 1,
-    +p.day,
-    +p.hour % 24,
-    +p.minute,
-    +p.second,
-  );
+  const p = Object.fromEntries(fmt.formatToParts(date).map(({ type, value }) => [type, value]));
+  const localMs = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
   return localMs - date.getTime();
 }
 
 const GCAL_TIMEOUT_MS = 10_000;
 
-async function calendarFetch(
-  path: string,
-  options: RequestInit = {},
-): Promise<Response> {
+async function calendarFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = await getAccessToken();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), GCAL_TIMEOUT_MS);
@@ -78,11 +64,7 @@ interface TimeSlot {
   end: string;
 }
 
-function slotOverlapsBusy(
-  slotStart: Date,
-  slotEnd: Date,
-  busySlots: TimeSlot[],
-): boolean {
+function slotOverlapsBusy(slotStart: Date, slotEnd: Date, busySlots: TimeSlot[]): boolean {
   return busySlots.some((busy) => {
     const bs = new Date(busy.start);
     const be = new Date(busy.end);
@@ -90,20 +72,14 @@ function slotOverlapsBusy(
   });
 }
 
-function slotsForDay(
-  day: Date,
-  now: Date,
-  busySlots: TimeSlot[],
-): TimeSlot[] {
+function slotsForDay(day: Date, now: Date, busySlots: TimeSlot[]): TimeSlot[] {
   const daySlots: TimeSlot[] = [];
   for (let hour = BUSINESS_OPEN_HOUR; hour < BUSINESS_CLOSE_HOUR; hour++) {
     for (const minute of [0, SLOT_DURATION_MINUTES]) {
       const slotStart = new Date(day);
       slotStart.setUTCHours(0, 0, 0, 0);
       const offset = athensOffsetMs(slotStart);
-      slotStart.setTime(
-        slotStart.getTime() + hour * MS_PER_HOUR + minute * MS_PER_MINUTE - offset,
-      );
+      slotStart.setTime(slotStart.getTime() + hour * MS_PER_HOUR + minute * MS_PER_MINUTE - offset);
       const slotEnd = new Date(slotStart.getTime() + SLOT_DURATION_MINUTES * MS_PER_MINUTE);
       if (slotStart < now) continue;
       if (!slotOverlapsBusy(slotStart, slotEnd, busySlots)) {
@@ -114,11 +90,7 @@ function slotsForDay(
   return daySlots;
 }
 
-function buildAvailableSlots(
-  now: Date,
-  daysAhead: number,
-  busySlots: TimeSlot[],
-): TimeSlot[] {
+function buildAvailableSlots(now: Date, daysAhead: number, busySlots: TimeSlot[]): TimeSlot[] {
   const slots: TimeSlot[] = [];
   for (let d = 0; d < daysAhead; d++) {
     const day = new Date(now.getTime() + d * MS_PER_DAY);
@@ -136,10 +108,7 @@ function buildAvailableSlots(
 export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
   // Fast-path: check env vars before SSM so tests that stub them to "" don't
   // get real credentials from SSM. Mirrors the pattern in isConfiguredAsync.
-  if (
-    process.env.GOOGLE_CLIENT_EMAIL === "" ||
-    process.env.GOOGLE_PRIVATE_KEY === ""
-  ) {
+  if (process.env.GOOGLE_CLIENT_EMAIL === "" || process.env.GOOGLE_PRIVATE_KEY === "") {
     throw new Error("Google service account not configured");
   }
 
@@ -160,8 +129,7 @@ export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
 
   if (!freeBusyRes.ok) return [];
   const freeBusyData = await freeBusyRes.json();
-  const busySlots: TimeSlot[] =
-    freeBusyData.calendars?.[calendarId]?.busy ?? [];
+  const busySlots: TimeSlot[] = freeBusyData.calendars?.[calendarId]?.busy ?? [];
 
   // Generate 30-min slots during business hours (09:00-17:00 Europe/Athens).
   // Athens is UTC+2 (EET) in winter and UTC+3 (EEST) in summer; the offset
@@ -209,7 +177,7 @@ export async function bookConsultation(data: {
             },
           },
         }),
-      },
+      }
     );
 
     if (!res.ok) {
@@ -238,19 +206,13 @@ interface Consultation {
  * Find consultation events for a specific attendee email.
  * Searches from 90 days ago to 30 days ahead.
  */
-export async function getConsultationsByEmail(
-  email: string,
-): Promise<Consultation[]> {
+export async function getConsultationsByEmail(email: string): Promise<Consultation[]> {
   const { GOOGLE_CALENDAR_ID } = await getConfig();
   const calendarId = GOOGLE_CALENDAR_ID ?? DEFAULT_CALENDAR_ID;
 
   const now = new Date();
-  const timeMin = new Date(
-    now.getTime() - LOOKBACK_DAYS * MS_PER_DAY,
-  ).toISOString();
-  const timeMax = new Date(
-    now.getTime() + LOOKAHEAD_DAYS * MS_PER_DAY,
-  ).toISOString();
+  const timeMin = new Date(now.getTime() - LOOKBACK_DAYS * MS_PER_DAY).toISOString();
+  const timeMax = new Date(now.getTime() + LOOKAHEAD_DAYS * MS_PER_DAY).toISOString();
 
   try {
     const params = new URLSearchParams({
@@ -263,7 +225,7 @@ export async function getConsultationsByEmail(
     });
 
     const res = await calendarFetch(
-      `/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+      `/calendars/${encodeURIComponent(calendarId)}/events?${params}`
     );
 
     if (!res.ok) return [];
@@ -274,7 +236,7 @@ export async function getConsultationsByEmail(
       .filter(
         (evt: Record<string, unknown>) =>
           typeof evt.summary === "string" &&
-          (evt.summary as string).toLowerCase().includes("consultation"),
+          (evt.summary as string).toLowerCase().includes("consultation")
       )
       .map((evt: Record<string, unknown>) => {
         const start = (evt.start as { dateTime?: string })?.dateTime ?? "";
@@ -283,9 +245,8 @@ export async function getConsultationsByEmail(
           title: evt.summary as string,
           start,
           end: (evt.end as { dateTime?: string })?.dateTime ?? "",
-          meetLink: (
-            evt.conferenceData as { entryPoints?: Array<{ uri?: string }> }
-          )?.entryPoints?.[0]?.uri,
+          meetLink: (evt.conferenceData as { entryPoints?: Array<{ uri?: string }> })
+            ?.entryPoints?.[0]?.uri,
           status: new Date(start) > now ? "upcoming" : "past",
         } satisfies Consultation;
       });

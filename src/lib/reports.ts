@@ -42,9 +42,7 @@ export async function listReports(): Promise<Report[]> {
   if (await notionEnabled()) {
     return (await notionListReports()) ?? [];
   }
-  return store.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  return store.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 export async function getReport(id: string): Promise<Report | null> {
@@ -54,9 +52,7 @@ export async function getReport(id: string): Promise<Report | null> {
   return store.find((r) => r.id === id) ?? null;
 }
 
-export async function createReport(
-  input: GenerateReportInput,
-): Promise<Report> {
+export async function createReport(input: GenerateReportInput): Promise<Report> {
   const report: Report = {
     id: `report_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     clientName: input.clientName,
@@ -73,10 +69,7 @@ export async function createReport(
   return report;
 }
 
-export async function updateReport(
-  id: string,
-  updates: Partial<Report>,
-): Promise<Report | null> {
+export async function updateReport(id: string, updates: Partial<Report>): Promise<Report | null> {
   if (await notionEnabled()) {
     const ok = await notionUpdateReport(id, updates);
     if (!ok) return null;

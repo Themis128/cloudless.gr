@@ -101,14 +101,12 @@ export default function AdminUsersPage() {
     (u) =>
       u.email.toLowerCase().includes(search.toLowerCase()) ||
       u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.company.toLowerCase().includes(search.toLowerCase()),
+      u.company.toLowerCase().includes(search.toLowerCase())
   );
 
   const adminCount = users.filter((u) => u.role === "admin").length;
   const activeCount = users.filter((u) => u.status === "active").length;
-  const unconfirmedCount = users.filter(
-    (u) => u.userStatus !== "CONFIRMED",
-  ).length;
+  const unconfirmedCount = users.filter((u) => u.userStatus !== "CONFIRMED").length;
 
   return (
     <div>
@@ -117,9 +115,7 @@ export default function AdminUsersPage() {
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-magenta font-mono text-xs">USERS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">
-          User Management
-        </h1>
+        <h1 className="font-heading text-2xl font-bold text-white">User Management</h1>
         <p className="font-body mt-1 text-slate-400">
           Cognito user pool — manage accounts, roles, and access.
         </p>
@@ -186,8 +182,8 @@ export default function AdminUsersPage() {
         <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
           <p className="font-mono text-sm text-red-400">{error}</p>
           <p className="mt-2 text-xs text-slate-500">
-            Make sure COGNITO_USER_POOL_ID is configured and the Lambda/server
-            has cognito-idp permissions.
+            Make sure COGNITO_USER_POOL_ID is configured and the Lambda/server has cognito-idp
+            permissions.
           </p>
         </div>
       ) : (
@@ -229,9 +225,7 @@ export default function AdminUsersPage() {
                           {(user.name || user.email || "U")[0].toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate font-mono text-sm text-white">
-                            {user.email}
-                          </p>
+                          <p className="truncate font-mono text-sm text-white">{user.email}</p>
                           {user.name && (
                             <p className="truncate text-xs text-slate-500">
                               {user.name}
@@ -263,7 +257,7 @@ export default function AdminUsersPage() {
                     {/* Cognito status */}
                     <td className="px-6 py-4">
                       <span
-                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${userStatusClasses[user.userStatus] ?? "text-slate-400 bg-slate-800/50"}`}
+                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${userStatusClasses[user.userStatus] ?? "bg-slate-800/50 text-slate-400"}`}
                       >
                         {user.userStatus}
                       </span>
@@ -271,9 +265,7 @@ export default function AdminUsersPage() {
 
                     {/* Joined */}
                     <td className="px-6 py-4 font-mono text-slate-500">
-                      {user.created
-                        ? new Date(user.created).toLocaleDateString("en-IE")
-                        : "—"}
+                      {user.created ? new Date(user.created).toLocaleDateString("en-IE") : "—"}
                     </td>
 
                     {/* Actions */}
@@ -281,53 +273,37 @@ export default function AdminUsersPage() {
                       <div className="flex gap-1.5">
                         {user.status === "active" ? (
                           <button
-                            onClick={() =>
-                              handleAction("disable", user.username)
-                            }
+                            onClick={() => handleAction("disable", user.username)}
                             disabled={actionLoading !== null}
                             className="min-h-[32px] rounded-lg border border-red-900/30 px-2 py-1 font-mono text-[10px] text-red-400 transition-colors hover:bg-red-400/10 disabled:opacity-50"
                           >
-                            {actionLoading === `disable-${user.username}`
-                              ? "…"
-                              : "Disable"}
+                            {actionLoading === `disable-${user.username}` ? "…" : "Disable"}
                           </button>
                         ) : (
                           <button
-                            onClick={() =>
-                              handleAction("enable", user.username)
-                            }
+                            onClick={() => handleAction("enable", user.username)}
                             disabled={actionLoading !== null}
-                            className="min-h-[32px] rounded-lg border border-neon-green/20 px-2 py-1 font-mono text-[10px] text-neon-green transition-colors hover:bg-neon-green/10 disabled:opacity-50"
+                            className="border-neon-green/20 text-neon-green hover:bg-neon-green/10 min-h-[32px] rounded-lg border px-2 py-1 font-mono text-[10px] transition-colors disabled:opacity-50"
                           >
-                            {actionLoading === `enable-${user.username}`
-                              ? "…"
-                              : "Enable"}
+                            {actionLoading === `enable-${user.username}` ? "…" : "Enable"}
                           </button>
                         )}
 
                         {user.role === "user" ? (
                           <button
-                            onClick={() =>
-                              handleAction("promote", user.username)
-                            }
+                            onClick={() => handleAction("promote", user.username)}
                             disabled={actionLoading !== null}
                             className="border-neon-magenta/20 text-neon-magenta hover:bg-neon-magenta/10 min-h-[32px] rounded-lg border px-2 py-1 font-mono text-[10px] transition-colors disabled:opacity-50"
                           >
-                            {actionLoading === `promote-${user.username}`
-                              ? "…"
-                              : "→ Admin"}
+                            {actionLoading === `promote-${user.username}` ? "…" : "→ Admin"}
                           </button>
                         ) : (
                           <button
-                            onClick={() =>
-                              handleAction("demote", user.username)
-                            }
+                            onClick={() => handleAction("demote", user.username)}
                             disabled={actionLoading !== null}
                             className="min-h-[32px] rounded-lg border border-slate-700 px-2 py-1 font-mono text-[10px] text-slate-400 transition-colors hover:bg-slate-800 disabled:opacity-50"
                           >
-                            {actionLoading === `demote-${user.username}`
-                              ? "…"
-                              : "→ User"}
+                            {actionLoading === `demote-${user.username}` ? "…" : "→ User"}
                           </button>
                         )}
                       </div>
@@ -336,10 +312,7 @@ export default function AdminUsersPage() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-12 text-center font-mono text-slate-600"
-                    >
+                    <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">
                       {search ? "No users match your search" : "No users found"}
                     </td>
                   </tr>

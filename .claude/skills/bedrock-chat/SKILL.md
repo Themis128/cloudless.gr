@@ -101,7 +101,7 @@ permissions: [
 ],
 ```
 
-### cloudless-pi-standby (SECONDARY — cloudless.online via Pi k3s)
+### cloudless-pi-standby (SECONDARY — pi-origin.cloudless.gr via Pi k3s)
 **Must be added manually** — the GH Actions OIDC role cannot call `iam:PutUserPolicy` on IAM users.
 Note: the k3s pod credential is `cloudless-pi-standby` (key `AKIAUBXIAELU7NG7LBAQ` in the
 `pi-standby-aws-creds` secret). `omv-main-cli` is the Pi **node's** own IAM user — different user.
@@ -172,7 +172,7 @@ Check CloudWatch logs for `[chat]` prefix:
 [chat] bedrock loop failed: ...   ← Bedrock error (check IAM if AccessDeniedException)
 ```
 
-### Pi (cloudless.online)
+### Pi (pi-origin.cloudless.gr)
 ```
 cluster_run_command(node: "omv-main",
   command: "kubectl logs -n cloudless deployment/cloudless --tail=50 | grep '\\[chat\\]'")

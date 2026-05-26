@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import type { Workspace } from "@/app/api/admin/workspaces/route";
 
@@ -29,9 +22,7 @@ const WorkspaceContext = createContext<WorkspaceContextValue>({
   setWorkspaces: () => {},
 });
 
-export function WorkspaceProvider({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export function WorkspaceProvider({ children }: Readonly<{ children: React.ReactNode }>) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -60,9 +51,7 @@ export function WorkspaceProvider({
   useEffect(() => {
     if (currentId || workspaces.length === 0) return;
     const stored = localStorage.getItem(LS_KEY);
-    const valid = workspaces.some((w) => w.id === stored)
-      ? stored
-      : (workspaces[0]?.id ?? null);
+    const valid = workspaces.some((w) => w.id === stored) ? stored : (workspaces[0]?.id ?? null);
     if (valid) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentId(valid);
@@ -75,19 +64,14 @@ export function WorkspaceProvider({
     localStorage.setItem(LS_KEY, id);
   }, []);
 
-  const current =
-    workspaces.find((w) => w.id === currentId) ?? workspaces[0] ?? null;
+  const current = workspaces.find((w) => w.id === currentId) ?? workspaces[0] ?? null;
 
   const value = useMemo(
     () => ({ workspaces, current, loaded, switchTo, setWorkspaces }),
-    [workspaces, current, loaded, switchTo, setWorkspaces],
+    [workspaces, current, loaded, switchTo, setWorkspaces]
   );
 
-  return (
-    <WorkspaceContext.Provider value={value}>
-      {children}
-    </WorkspaceContext.Provider>
-  );
+  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
 
 export function useWorkspace() {

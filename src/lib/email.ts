@@ -57,14 +57,13 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
             ...(extraHeaders.length ? { Headers: extraHeaders } : {}),
           },
         },
-      }),
+      })
     );
   } catch (err: unknown) {
     // AWS SDK v3 XML parser throws a deserialization error on SES success responses
     // that contain &#xD; entities. If HTTP status is 200 the email was delivered —
     // swallow the parse error and continue.
-    const meta = (err as { $metadata?: { httpStatusCode?: number } })
-      ?.$metadata;
+    const meta = (err as { $metadata?: { httpStatusCode?: number } })?.$metadata;
     if (meta?.httpStatusCode !== 200) throw err;
   }
 }
@@ -73,7 +72,7 @@ export async function sendOrderConfirmation(
   customerEmail: string,
   sessionId: string,
   amountTotal: number,
-  currency: string,
+  currency: string
 ): Promise<void> {
   const formatted = new Intl.NumberFormat(DEFAULT_LOCALE, {
     style: "currency",
@@ -126,7 +125,7 @@ export async function sendOrderConfirmation(
 
 export async function sendPaymentFailureNotice(
   customerEmail: string,
-  invoiceId: string,
+  invoiceId: string
 ): Promise<void> {
   await sendEmail({
     to: customerEmail,
@@ -161,9 +160,7 @@ export async function sendPaymentFailureNotice(
   });
 }
 
-export async function sendSubscriberWelcome(
-  subscriberEmail: string,
-): Promise<void> {
+export async function sendSubscriberWelcome(subscriberEmail: string): Promise<void> {
   const unsubscribeUrl = `https://cloudless.gr/api/unsubscribe?email=${encodeURIComponent(subscriberEmail)}`;
   const safeUnsub = escapeHtml(unsubscribeUrl);
   await sendEmail({
@@ -346,9 +343,7 @@ export async function sendContactAcknowledgment(data: {
 /**
  * Confirmation email sent when a subscriber successfully unsubscribes.
  */
-export async function sendUnsubscribeConfirmation(
-  email: string,
-): Promise<void> {
+export async function sendUnsubscribeConfirmation(email: string): Promise<void> {
   await sendEmail({
     to: email,
     subject: "You've been unsubscribed — Cloudless",

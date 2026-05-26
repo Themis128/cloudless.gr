@@ -73,10 +73,7 @@ export async function listComments(blockId: string): Promise<NotionComment[]> {
  * Note: The Notion API only supports adding comments to pages (not blocks)
  * when using an internal integration.
  */
-export async function addComment(
-  pageId: string,
-  text: string,
-): Promise<NotionComment | null> {
+export async function addComment(pageId: string, text: string): Promise<NotionComment | null> {
   await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
@@ -102,7 +99,7 @@ export async function addComment(
  */
 export async function replyToDiscussion(
   discussionId: string,
-  text: string,
+  text: string
 ): Promise<NotionComment | null> {
   await requireIntegrationAsync("NOTION_API_KEY");
 

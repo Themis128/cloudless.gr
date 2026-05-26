@@ -53,7 +53,7 @@ function loadManifest(): Record<string, unknown> {
 async function slackPost(
   method: string,
   body: Record<string, unknown>,
-  token: string,
+  token: string
 ): Promise<ManifestApiResponse> {
   const res = await fetch(`${BASE}/${method}`, {
     method: "POST",
@@ -63,8 +63,7 @@ async function slackPost(
     },
     body: JSON.stringify(body), // codeql[js/file-data-network-request] -- manifest JSON is sent intentionally to Slack API; loaded from a versioned local config file, not user input
   });
-  if (!res.ok)
-    throw new Error(`[SlackManifest] HTTP ${res.status} on ${method}`);
+  if (!res.ok) throw new Error(`[SlackManifest] HTTP ${res.status} on ${method}`);
   return res.json() as Promise<ManifestApiResponse>;
 }
 
@@ -80,13 +79,13 @@ async function slackPost(
  * Docs: https://api.slack.com/methods/apps.manifest.validate
  */
 export async function validateManifest(
-  token: string,
+  token: string
 ): Promise<{ valid: boolean; errors: string[] }> {
   const manifest = loadManifest();
   const res = await slackPost(
     "apps.manifest.validate",
     { manifest: JSON.stringify(manifest) },
-    token,
+    token
   );
 
   if (res.ok) return { valid: true, errors: [] };
@@ -110,17 +109,16 @@ export async function validateManifest(
  */
 export async function applyManifest(
   appId: string,
-  token: string,
+  token: string
 ): Promise<{ ok: boolean; appId: string }> {
   const manifest = loadManifest();
   const res = await slackPost(
     "apps.manifest.update",
     { app_id: appId, manifest: JSON.stringify(manifest) },
-    token,
+    token
   );
 
-  if (!res.ok)
-    throw new Error(`[SlackManifest] apps.manifest.update: ${res.error}`);
+  if (!res.ok) throw new Error(`[SlackManifest] apps.manifest.update: ${res.error}`);
 
   return { ok: true, appId: res.app_id ?? appId };
 }

@@ -9,7 +9,7 @@ import { isConfigured } from "@/lib/integrations";
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   if (!isConfigured("NOTION_API_KEY", "NOTION_DOCS_DB_ID")) {
     return NextResponse.json({ error: "Docs not configured" }, { status: 503 });
@@ -25,10 +25,7 @@ export async function GET(
 
     const content = await getDocContent(doc.id);
     if (!content) {
-      return NextResponse.json(
-        { error: "Failed to load doc content" },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "Failed to load doc content" }, { status: 500 });
     }
 
     return NextResponse.json(content);

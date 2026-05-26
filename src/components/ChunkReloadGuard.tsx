@@ -43,7 +43,7 @@ export default function ChunkReloadGuard() {
     // Once the page has been stable for 10s, allow a future recovery reload.
     const clearTimer = globalThis.setTimeout(
       () => sessionStorage.removeItem(CHUNK_RELOAD_FLAG),
-      10_000,
+      10_000
     );
 
     return () => {

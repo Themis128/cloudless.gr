@@ -53,7 +53,7 @@ gh run list --limit 8 --json status,conclusion,name,headSha \
 ### 2. Pi / k3s SHA
 ```bash
 # Health endpoint reports running SHA
-curl -s https://cloudless.online/api/health | python3 -m json.tool
+curl -s https://pi-origin.cloudless.gr/api/health | python3 -m json.tool
 # Expected: {"status":"ok","version":"<sha>"}
 ```
 Or via cluster:
@@ -62,7 +62,7 @@ cluster_run_command(node: "omv-main", command: "curl -s http://localhost:3000/ap
 ```
 
 ### 3. Are they in sync?
-Compare `version` from `/api/health` on cloudless.online with `current-image-sha` in SSM.
+Compare `version` from `/api/health` on `pi-origin.cloudless.gr` with `current-image-sha` in SSM.
 Both should match the latest successful deploy SHA.
 
 ## Common Failures
@@ -135,6 +135,6 @@ aws iam put-user-policy \
 ```
 1. gh run list --limit 5  → look for "Deploy to Production" success
 2. aws_get_ssm_parameters(current-image-sha)  → note the SHA
-3. curl https://cloudless.online/api/health  → compare version
+3. curl https://pi-origin.cloudless.gr/api/health  → compare version
 4. If version != SHA → trigger rollout restart (see pi-image-rollout skill)
 ```

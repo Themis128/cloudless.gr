@@ -41,30 +41,22 @@ export default function SubmissionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "New" | "In Review" | "Done">(
-    "all",
-  );
+  const [filter, setFilter] = useState<"all" | "New" | "In Review" | "Done">("all");
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(
-        "/api/admin/notion/submissions?limit=100",
-      );
+      const res = await fetchWithAuth("/api/admin/notion/submissions?limit=100");
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(
-          (data as { error?: string }).error ?? `HTTP ${res.status}`,
-        );
+        throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
       }
       const data = (await res.json()) as { submissions: Submission[] };
       setSubmissions(data.submissions ?? []);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load submissions",
-      );
+      setError(err instanceof Error ? err.message : "Failed to load submissions");
     } finally {
       setLoading(false);
     }
@@ -75,10 +67,7 @@ export default function SubmissionsPage() {
     load();
   }, [load]);
 
-  const updateStatus = async (
-    pageId: string,
-    status: "New" | "In Review" | "Done",
-  ) => {
+  const updateStatus = async (pageId: string, status: "New" | "In Review" | "Done") => {
     setUpdating(pageId);
     try {
       const res = await fetchWithAuth("/api/admin/notion/submissions", {
@@ -87,9 +76,7 @@ export default function SubmissionsPage() {
         body: JSON.stringify({ pageId, status }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setSubmissions((prev) =>
-        prev.map((s) => (s.id === pageId ? { ...s, status } : s)),
-      );
+      setSubmissions((prev) => prev.map((s) => (s.id === pageId ? { ...s, status } : s)));
     } catch (err) {
       console.error("Failed to update submission:", err);
     } finally {
@@ -97,10 +84,7 @@ export default function SubmissionsPage() {
     }
   };
 
-  const filtered =
-    filter === "all"
-      ? submissions
-      : submissions.filter((s) => s.status === filter);
+  const filtered = filter === "all" ? submissions : submissions.filter((s) => s.status === filter);
 
   const counts = {
     New: submissions.filter((s) => s.status === "New").length,
@@ -115,13 +99,9 @@ export default function SubmissionsPage() {
         <div>
           <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-cyan font-mono text-xs">
-              NOTION_SUBMISSIONS
-            </span>
+            <span className="text-neon-cyan font-mono text-xs">NOTION_SUBMISSIONS</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            Contact Submissions
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">Contact Submissions</h1>
           <p className="font-body mt-1 text-slate-400">
             Incoming leads and contact form entries from cloudless.gr.
           </p>
@@ -144,7 +124,7 @@ export default function SubmissionsPage() {
             className={`rounded-xl border p-4 text-left transition-all ${
               filter === s
                 ? STATUS_STYLES[s]
-                : "border-slate-800 bg-void-light/30 text-slate-400 hover:border-slate-700"
+                : "bg-void-light/30 border-slate-800 text-slate-400 hover:border-slate-700"
             }`}
           >
             <div className="font-mono text-2xl font-bold">{counts[s]}</div>
@@ -186,7 +166,7 @@ export default function SubmissionsPage() {
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="animate-pulse rounded-xl border border-slate-800 bg-void-light/30 p-4"
+              className="bg-void-light/30 animate-pulse rounded-xl border border-slate-800 p-4"
             >
               <div className="flex items-center gap-4">
                 <div className="h-4 w-32 rounded bg-slate-700/60" />
@@ -200,11 +180,9 @@ export default function SubmissionsPage() {
 
       {/* Empty state */}
       {!loading && filtered.length === 0 && !error && (
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
           <p className="font-mono text-slate-500">
-            {filter === "all"
-              ? "No submissions yet."
-              : `No submissions with status "${filter}".`}
+            {filter === "all" ? "No submissions yet." : `No submissions with status "${filter}".`}
           </p>
         </div>
       )}
@@ -215,30 +193,26 @@ export default function SubmissionsPage() {
           {filtered.map((sub) => (
             <div
               key={sub.id}
-              className="rounded-xl border border-slate-800 bg-void-light/30 overflow-hidden"
+              className="bg-void-light/30 overflow-hidden rounded-xl border border-slate-800"
             >
               {/* Row */}
               <button
                 onClick={() => setExpanded(expanded === sub.id ? null : sub.id)}
-                className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-white/[0.02] transition-colors"
+                className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-white/[0.02]"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-3">
-                    <span className="font-medium text-white truncate">
-                      {sub.name}
-                    </span>
+                    <span className="truncate font-medium text-white">{sub.name}</span>
                     {sub.company && (
-                      <span className="font-mono text-xs text-slate-500 truncate">
+                      <span className="truncate font-mono text-xs text-slate-500">
                         {sub.company}
                       </span>
                     )}
                   </div>
                   <div className="mt-0.5 flex items-center gap-3">
-                    <span className="font-mono text-xs text-slate-500">
-                      {sub.email}
-                    </span>
+                    <span className="font-mono text-xs text-slate-500">{sub.email}</span>
                     {sub.service && (
-                      <span className="rounded bg-neon-cyan/5 px-1.5 py-0.5 font-mono text-[10px] text-neon-cyan/60">
+                      <span className="bg-neon-cyan/5 text-neon-cyan/60 rounded px-1.5 py-0.5 font-mono text-[10px]">
                         {sub.service}
                       </span>
                     )}
@@ -250,13 +224,13 @@ export default function SubmissionsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex shrink-0 items-center gap-3">
                   <span
                     className={`rounded-full border px-2.5 py-1 font-mono text-[10px] ${STATUS_STYLES[sub.status] ?? ""}`}
                   >
                     {sub.status}
                   </span>
-                  <span className="text-slate-600 font-mono text-xs">
+                  <span className="font-mono text-xs text-slate-600">
                     {expanded === sub.id ? "▲" : "▼"}
                   </span>
                 </div>
@@ -267,18 +241,14 @@ export default function SubmissionsPage() {
                 <div className="border-t border-slate-800 px-5 py-4">
                   {sub.message && (
                     <div className="mb-4">
-                      <p className="font-mono text-xs text-slate-500 mb-1">
-                        Message
-                      </p>
-                      <p className="font-body text-sm text-slate-300 whitespace-pre-wrap">
+                      <p className="mb-1 font-mono text-xs text-slate-500">Message</p>
+                      <p className="font-body text-sm whitespace-pre-wrap text-slate-300">
                         {sub.message}
                       </p>
                     </div>
                   )}
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-xs text-slate-500">
-                      Update status:
-                    </span>
+                    <span className="font-mono text-xs text-slate-500">Update status:</span>
                     {VALID_STATUSES.map((s) => (
                       <button
                         key={s}
@@ -295,7 +265,7 @@ export default function SubmissionsPage() {
                     ))}
                     <a
                       href={`mailto:${sub.email}`}
-                      className="ml-auto text-neon-cyan/70 hover:text-neon-cyan font-mono text-xs transition-colors"
+                      className="text-neon-cyan/70 hover:text-neon-cyan ml-auto font-mono text-xs transition-colors"
                     >
                       Reply →
                     </a>

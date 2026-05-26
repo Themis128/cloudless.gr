@@ -15,11 +15,10 @@ export async function handler() {
     new GetParameterCommand({
       Name: `${ssmPrefix}/CRON_SECRET`,
       WithDecryption: true,
-    }),
+    })
   );
   const secret = Parameter?.Value;
-  if (!secret)
-    throw new Error(`CRON_SECRET not found at ${ssmPrefix}/CRON_SECRET`);
+  if (!secret) throw new Error(`CRON_SECRET not found at ${ssmPrefix}/CRON_SECRET`);
 
   const res = await fetch(`${siteUrl}${route}`, {
     headers: { Authorization: `Bearer ${secret}` },
@@ -28,9 +27,7 @@ export async function handler() {
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(
-      `Cron ${route} responded ${res.status}: ${body.slice(0, 200)}`,
-    );
+    throw new Error(`Cron ${route} responded ${res.status}: ${body.slice(0, 200)}`);
   }
 
   const payload = await res.json().catch(() => null);

@@ -14,8 +14,7 @@ function getAudioContext(): AudioContext | null {
 
   const AudioCtx =
     window.AudioContext ||
-    (window as typeof window & { webkitAudioContext?: typeof AudioContext })
-      .webkitAudioContext;
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
 
   if (!AudioCtx) return null;
 
@@ -26,12 +25,7 @@ function getAudioContext(): AudioContext | null {
   return audioContext;
 }
 
-function playTone({
-  frequency,
-  durationMs,
-  volume = 0.04,
-  type = "sine",
-}: ToneOptions) {
+function playTone({ frequency, durationMs, volume = 0.04, type = "sine" }: ToneOptions) {
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
@@ -50,10 +44,7 @@ function playTone({
     const duration = durationMs / 1000;
 
     gainNode.gain.setValueAtTime(0.0001, now);
-    gainNode.gain.exponentialRampToValueAtTime(
-      Math.max(volume, 0.0001),
-      now + 0.01,
-    );
+    gainNode.gain.exponentialRampToValueAtTime(Math.max(volume, 0.0001), now + 0.01);
     gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
     oscillator.connect(gainNode);
@@ -72,9 +63,5 @@ export function playUiClickSound() {
 
 export function playUiSuccessSound() {
   playTone({ frequency: 660, durationMs: 70, volume: 0.04, type: "sine" });
-  setTimeout(
-    () =>
-      playTone({ frequency: 990, durationMs: 90, volume: 0.04, type: "sine" }),
-    70,
-  );
+  setTimeout(() => playTone({ frequency: 990, durationMs: 90, volume: 0.04, type: "sine" }), 70);
 }

@@ -40,12 +40,12 @@
     "test:k3s:smoke": "playwright test --config=playwright.k3s.config.mts e2e/k3s/smoke.spec.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.1047.0",
-    "@aws-sdk/client-cognito-identity-provider": "^3.1047.0",
-    "@aws-sdk/client-dynamodb": "^3.1047.0",
-    "@aws-sdk/client-ses": "^3.1047.0",
-    "@aws-sdk/client-sesv2": "^3.1047.0",
-    "@aws-sdk/client-ssm": "^3.1047.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1053.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.1053.0",
+    "@aws-sdk/client-dynamodb": "^3.1053.0",
+    "@aws-sdk/client-ses": "^3.1053.0",
+    "@aws-sdk/client-sesv2": "^3.1053.0",
+    "@aws-sdk/client-ssm": "^3.1053.0",
     "@sentry/nextjs": "^10.53.1",
     "aws-amplify": "^6.17.0",
     "cmdk": "^1.1.1",
@@ -68,8 +68,8 @@
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
-    "@types/node": "^25.8.0",
-    "@types/react": "^19.2.14",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "eslint": "^9.0.0",
@@ -78,13 +78,13 @@
     "jsdom": "^29.1.1",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.8.0",
-    "sst": "^4.14.1",
+    "sst": "^4.14.3",
     "tailwindcss": "^4.3.0",
-    "tsx": "^4.19.3",
+    "tsx": "^4.22.3",
     "typescript": "^6.0.3",
-    "vite": "^8.0.13",
+    "vite": "^8.0.14",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.7"
   },
   "pnpm": {
     "overrides": {

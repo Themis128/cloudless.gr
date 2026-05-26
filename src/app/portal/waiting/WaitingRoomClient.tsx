@@ -39,7 +39,7 @@ function SystemIndicator({ activeStep }: Readonly<{ activeStep: 1 | 2 | 3 }>) {
 
   return (
     <div className="relative mx-auto max-w-xl">
-      <div className="absolute top-5 left-[calc(16.67%+1.5rem)] right-[calc(16.67%+1.5rem)] hidden h-px bg-gradient-to-r from-neon-cyan/40 via-neon-magenta/40 to-neon-green/40 sm:block" />
+      <div className="from-neon-cyan/40 via-neon-magenta/40 to-neon-green/40 absolute top-5 right-[calc(16.67%+1.5rem)] left-[calc(16.67%+1.5rem)] hidden h-px bg-gradient-to-r sm:block" />
       <div className="relative flex flex-col gap-6 sm:flex-row sm:justify-between">
         {steps.map((s, i) => {
           const stepIndex = i + 1;
@@ -58,7 +58,7 @@ function SystemIndicator({ activeStep }: Readonly<{ activeStep: 1 | 2 | 3 }>) {
               className="relative z-10 flex flex-1 flex-col items-center text-center"
             >
               <div
-                className={`mb-3 flex h-10 w-10 items-center justify-center rounded-full border-2 bg-void font-mono text-sm font-bold ring-2 transition-all duration-500 ${colorRing} ${colorText}`}
+                className={`bg-void mb-3 flex h-10 w-10 items-center justify-center rounded-full border-2 font-mono text-sm font-bold ring-2 transition-all duration-500 ${colorRing} ${colorText}`}
               >
                 {isComplete ? (
                   <svg
@@ -68,24 +68,16 @@ function SystemIndicator({ activeStep }: Readonly<{ activeStep: 1 | 2 | 3 }>) {
                     stroke="currentColor"
                     strokeWidth={3}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 ) : (
                   s.num
                 )}
               </div>
-              <span className={`font-mono text-xs font-semibold ${colorText}`}>
-                {s.label}
-              </span>
+              <span className={`font-mono text-xs font-semibold ${colorText}`}>{s.label}</span>
               {isActive && (
                 <span className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-slate-500">
-                  <span
-                    className={`h-1 w-1 animate-pulse rounded-full bg-${s.color}`}
-                  />
+                  <span className={`h-1 w-1 animate-pulse rounded-full bg-${s.color}`} />
                   In progress
                 </span>
               )}
@@ -111,9 +103,7 @@ function WaitingRoomContent() {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      const next = encodeURIComponent(
-        "/portal/waiting" + (planParam ? `?plan=${planParam}` : ""),
-      );
+      const next = encodeURIComponent("/portal/waiting" + (planParam ? `?plan=${planParam}` : ""));
       router.push(`/auth/login?next=${next}`);
     }
   }, [user, isLoading, router, planParam]);
@@ -129,10 +119,7 @@ function WaitingRoomContent() {
 
         if (planParam && PLAN_LABELS[planParam] && !enrollAttempted.current) {
           enrollAttempted.current = true;
-          if (
-            me.status === "none" ||
-            (me.status === "waiting" && me.plan !== planParam)
-          ) {
+          if (me.status === "none" || (me.status === "waiting" && me.plan !== planParam)) {
             setEnrolling(true);
             const enrollRes = await fetchWithAuth("/api/portal/enroll", {
               method: "POST",
@@ -141,9 +128,7 @@ function WaitingRoomContent() {
             });
             if (!enrollRes.ok) {
               const data = await enrollRes.json().catch(() => ({}));
-              throw new Error(
-                data.error ?? `Enrollment failed (HTTP ${enrollRes.status})`,
-              );
+              throw new Error(data.error ?? `Enrollment failed (HTTP ${enrollRes.status})`);
             }
             const refreshed = await fetchWithAuth("/api/portal/me");
             setStatus(await refreshed.json());
@@ -226,9 +211,7 @@ function WaitingRoomContent() {
           <div className="flex flex-col items-center justify-center py-24">
             <div className="border-neon-cyan mb-6 h-10 w-10 animate-spin rounded-full border-2 border-t-transparent" />
             <p className="font-mono text-sm text-slate-400">
-              {enrolling
-                ? "Submitting your order..."
-                : "Loading your status..."}
+              {enrolling ? "Submitting your order..." : "Loading your status..."}
             </p>
           </div>
         )}
@@ -238,15 +221,12 @@ function WaitingRoomContent() {
             <div className="bg-neon-cyan/10 border-neon-cyan/20 mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border text-3xl">
               ✨
             </div>
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-neon-cyan mb-2">
+            <p className="text-neon-cyan mb-2 font-mono text-xs tracking-[0.3em] uppercase">
               [ ALL SET ]
             </p>
-            <h1 className="font-heading text-3xl font-bold text-white">
-              You&rsquo;re signed in
-            </h1>
+            <h1 className="font-heading text-3xl font-bold text-white">You&rsquo;re signed in</h1>
             <p className="mt-3 text-slate-400">
-              Pick a service or bundle to get started — your portal will be set
-              up right after.
+              Pick a service or bundle to get started — your portal will be set up right after.
             </p>
             <Link
               href="/services"
@@ -260,11 +240,7 @@ function WaitingRoomContent() {
                 stroke="currentColor"
                 strokeWidth={2}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M1 7h12M8 2l5 5-5 5"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M1 7h12M8 2l5 5-5 5" />
               </svg>
             </Link>
           </div>
@@ -280,16 +256,16 @@ function WaitingRoomContent() {
                 </span>
                 ORDER RECEIVED
               </div>
-              <h1 className="animate-fade-in-up delay-100 font-heading text-3xl leading-tight font-bold text-white md:text-4xl">
+              <h1 className="animate-fade-in-up font-heading text-3xl leading-tight font-bold text-white delay-100 md:text-4xl">
                 Welcome, {status.name || (user.email || "").split("@")[0]}.
               </h1>
-              <p className="animate-fade-in-up delay-200 mx-auto mt-4 max-w-lg text-slate-400">
-                Your project manager has been notified. We&rsquo;ll prepare your
-                personalized portal and email you the moment it&rsquo;s ready.
+              <p className="animate-fade-in-up mx-auto mt-4 max-w-lg text-slate-400 delay-200">
+                Your project manager has been notified. We&rsquo;ll prepare your personalized portal
+                and email you the moment it&rsquo;s ready.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-void-light/30 p-8 backdrop-blur-sm">
+            <div className="bg-void-light/30 rounded-2xl border border-slate-800 p-8 backdrop-blur-sm">
               <p className="mb-7 text-center font-mono text-[10px] tracking-[0.3em] text-slate-500">
                 [ HOW IT WORKS ]
               </p>
@@ -337,24 +313,20 @@ function WaitingRoomContent() {
               ].map((item) => (
                 <div
                   key={item.title}
-                  className="rounded-xl border border-slate-800 bg-void-light/20 p-5 backdrop-blur-sm transition-all hover:border-slate-700"
+                  className="bg-void-light/20 rounded-xl border border-slate-800 p-5 backdrop-blur-sm transition-all hover:border-slate-700"
                 >
                   <div
                     className={`bg-${item.color}/10 border-${item.color}/20 mb-3 flex h-9 w-9 items-center justify-center rounded-lg border text-base`}
                   >
                     {item.icon}
                   </div>
-                  <h3 className="font-heading text-sm font-semibold text-white">
-                    {item.title}
-                  </h3>
-                  <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
-                    {item.desc}
-                  </p>
+                  <h3 className="font-heading text-sm font-semibold text-white">{item.title}</h3>
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{item.desc}</p>
                 </div>
               ))}
             </div>
 
-            <div className="rounded-xl border border-slate-800/50 bg-void-light/10 px-5 py-4 text-center backdrop-blur-sm">
+            <div className="bg-void-light/10 rounded-xl border border-slate-800/50 px-5 py-4 text-center backdrop-blur-sm">
               <p className="flex items-center justify-center gap-2 font-mono text-xs text-slate-500">
                 <span className="bg-neon-green h-1.5 w-1.5 animate-pulse rounded-full" />
                 Watching for portal — this page refreshes automatically
@@ -367,24 +339,20 @@ function WaitingRoomContent() {
           <div className="space-y-10 text-center">
             <div>
               <div className="relative mx-auto mb-6 flex h-24 w-24 items-center justify-center">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-neon-green/30 opacity-75" />
+                <span className="bg-neon-green/30 absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
                 <span className="bg-neon-green/15 border-neon-green/50 relative inline-flex h-24 w-24 items-center justify-center rounded-full border-2">
                   <svg
-                    className="h-10 w-10 text-neon-green"
+                    className="text-neon-green h-10 w-10"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                     strokeWidth={3}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </span>
               </div>
-              <p className="font-mono text-xs uppercase tracking-[0.3em] text-neon-green mb-3">
+              <p className="text-neon-green mb-3 font-mono text-xs tracking-[0.3em] uppercase">
                 [ PORTAL READY ]
               </p>
               <h1 className="font-heading text-3xl font-bold text-white md:text-4xl">
@@ -397,7 +365,7 @@ function WaitingRoomContent() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-void-light/30 p-8 backdrop-blur-sm">
+            <div className="bg-void-light/30 rounded-2xl border border-slate-800 p-8 backdrop-blur-sm">
               <SystemIndicator activeStep={3} />
             </div>
 
@@ -414,11 +382,7 @@ function WaitingRoomContent() {
                   stroke="currentColor"
                   strokeWidth={2}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M1 7h12M8 2l5 5-5 5"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M1 7h12M8 2l5 5-5 5" />
                 </svg>
               </a>
             )}

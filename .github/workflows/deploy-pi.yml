@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.3.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
@@ -115,12 +115,14 @@ jobs:
             APP_VERSION=${{ github.sha }}
             NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
 
-      - name: Update SSM image tracking
+      - name: Update SSM Pi image tracking
         run: |
           aws ssm put-parameter \
-            --name "/cloudless/production/current-image-sha" \
+            --name "/cloudless/production/pi-sha" \
             --value "${{ steps.check_ecr.outputs.short_sha }}" \
-            --type String --overwrite
+            --type String \
+            --description 'Latest Pi (k3s) deploy SHA — written by deploy-pi.yml.' \
+            --overwrite
 
   rollout:
     name: Rollout restart on k3s
@@ -167,5 +169,4 @@ jobs:
           kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
             ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.short_sha }} \
             -n ${{ env.K3S_NAMESPACE }}
-          kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} \
-            -n ${{ env.K3S_NAMESPACE }} --timeout=420s
+          kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} --timeout=180s

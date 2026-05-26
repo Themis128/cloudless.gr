@@ -90,8 +90,7 @@ const AGENT_TOOLS = [
         },
         reasoning: {
           type: "string",
-          description:
-            "Brief explanation of why this slot was chosen, or why no slot fits.",
+          description: "Brief explanation of why this slot was chosen, or why no slot fits.",
         },
       },
       required: ["start", "end", "reasoning"],
@@ -116,8 +115,7 @@ async function runCheckAvailability(raw: unknown): Promise<string> {
       return `No open slots in the next ${days} day(s).`;
     }
     const lines = slots.map(
-      (s) =>
-        `- ${formatAthensSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`,
+      (s) => `- ${formatAthensSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`
     );
     return `Open slots (next ${days} day(s)):\n${lines.join("\n")}`;
   } catch (err) {
@@ -196,13 +194,9 @@ export async function isAgentBookConfigured(): Promise<boolean> {
  * Returns the proposed slot (or no_match) — never books on its own.
  * May throw on Bedrock API errors; caller maps to HTTP status.
  */
-export async function proposeBookingSlot(
-  intent: string,
-): Promise<ProposeResult> {
+export async function proposeBookingSlot(intent: string): Promise<ProposeResult> {
   const client = getBedrockClient();
-  const messages: BedrockMessage[] = [
-    { role: "user", content: [{ text: intent }] },
-  ];
+  const messages: BedrockMessage[] = [{ role: "user", content: [{ text: intent }] }];
 
   for (let attempt = 0; attempt < MAX_TOOL_ITERATIONS; attempt++) {
     const cmd = new ConverseCommand({
@@ -214,33 +208,26 @@ export async function proposeBookingSlot(
     });
 
     const response = await client.send(cmd);
-    const assistantContent: AnyBlock[] =
-      (response.output?.message?.content as AnyBlock[]) ?? [];
+    const assistantContent: AnyBlock[] = (response.output?.message?.content as AnyBlock[]) ?? [];
 
     const toolUseBlocks = assistantContent.filter(
-      (b): b is ToolUseBlock =>
-        "toolUse" in b && typeof b.toolUse?.toolUseId === "string",
+      (b): b is ToolUseBlock => "toolUse" in b && typeof b.toolUse?.toolUseId === "string"
     );
 
     // Terminal tool — propose_slot. Bind the result and return.
-    const proposeBlock = toolUseBlocks.find(
-      (b) => b.toolUse.name === "propose_slot",
-    );
+    const proposeBlock = toolUseBlocks.find((b) => b.toolUse.name === "propose_slot");
     if (proposeBlock) return resolveProposeBlock(proposeBlock);
 
     if (toolUseBlocks.length === 0) {
       // Model returned plain text without proposing — treat as no_match.
       const textOut = assistantContent
-        .filter(
-          (b): b is TextBlock => "text" in b && typeof b.text === "string",
-        )
+        .filter((b): b is TextBlock => "text" in b && typeof b.text === "string")
         .map((b) => b.text)
         .join(" ")
         .trim();
       return {
         status: STATUS_NO_MATCH,
-        reasoning:
-          textOut.length > 0 ? textOut : "Model did not propose a slot.",
+        reasoning: textOut.length > 0 ? textOut : "Model did not propose a slot.",
       };
     }
 

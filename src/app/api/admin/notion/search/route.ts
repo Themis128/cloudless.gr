@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { mapIntegrationError } from "@/lib/api-errors";
-import {
-  searchPages,
-  searchDatabases,
-  listUsers,
-  getDatabaseSchema,
-} from "@/lib/notion-search";
+import { searchPages, searchDatabases, listUsers, getDatabaseSchema } from "@/lib/notion-search";
 
 /**
  * GET /api/admin/notion/search?q=...&type=page|database&limit=20
@@ -19,12 +14,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q") ?? "";
-  const type = searchParams.get("type") as
-    | "page"
-    | "database"
-    | "users"
-    | "schema"
-    | null;
+  const type = searchParams.get("type") as "page" | "database" | "users" | "schema" | null;
   const limit = Math.min(Number(searchParams.get("limit") ?? 20), 100);
 
   try {
@@ -36,10 +26,7 @@ export async function GET(request: NextRequest) {
     if (type === "schema") {
       const dbId = searchParams.get("database_id");
       if (!dbId) {
-        return NextResponse.json(
-          { error: "database_id is required" },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: "database_id is required" }, { status: 400 });
       }
       const schema = await getDatabaseSchema(dbId);
       return NextResponse.json({ schema });

@@ -24,13 +24,8 @@ const BASE_URL = "https://cloudless.gr";
 
 export async function generateStaticParams() {
   try {
-    const configured = await isConfiguredAsync(
-      "NOTION_API_KEY",
-      "NOTION_CASE_STUDIES_DB_ID",
-    );
-    const slugs = configured
-      ? await getAllCaseStudySlugs()
-      : staticCaseStudies.map((c) => c.slug);
+    const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID");
+    const slugs = configured ? await getAllCaseStudySlugs() : staticCaseStudies.map((c) => c.slug);
     return slugs.map((slug) => ({ slug }));
   } catch {
     return staticCaseStudies.map((c) => ({ slug: c.slug }));
@@ -78,14 +73,9 @@ export async function generateMetadata({
 // Data loading
 // ---------------------------------------------------------------------------
 
-async function loadCaseStudy(
-  slug: string,
-): Promise<CaseStudyWithContent | null> {
+async function loadCaseStudy(slug: string): Promise<CaseStudyWithContent | null> {
   try {
-    const configured = await isConfiguredAsync(
-      "NOTION_API_KEY",
-      "NOTION_CASE_STUDIES_DB_ID",
-    );
+    const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID");
     if (configured) return await getCaseStudyBySlug(slug);
     const cs = staticCaseStudies.find((c) => c.slug === slug);
     return cs ? { ...cs, html: "" } : null;
@@ -99,11 +89,7 @@ async function loadCaseStudy(
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function CaseStudyPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function CaseStudyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const cs = await loadCaseStudy(slug);
   if (!cs) notFound();
@@ -118,7 +104,7 @@ export default async function CaseStudyPage({
         ])}
       />
       {/* Hero */}
-      <section className="px-4 pb-12 pt-24">
+      <section className="px-4 pt-24 pb-12">
         <div className="mx-auto max-w-4xl">
           <ScrollReveal>
             <Link
@@ -173,9 +159,7 @@ export default async function CaseStudyPage({
                   key={m.label}
                   className="rounded-2xl border border-[#00fff5]/20 bg-[#00fff5]/5 p-6 text-center"
                 >
-                  <div className="mb-1 text-3xl font-bold text-[#00fff5]">
-                    {m.value}
-                  </div>
+                  <div className="mb-1 text-3xl font-bold text-[#00fff5]">{m.value}</div>
                   <div className="text-sm text-gray-400">{m.label}</div>
                 </div>
               ))}
@@ -199,9 +183,7 @@ export default async function CaseStudyPage({
             {cs.challenge && (
               <ScrollReveal>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
-                  <h2 className="mb-4 text-2xl font-bold text-[#00fff5]">
-                    The Challenge
-                  </h2>
+                  <h2 className="mb-4 text-2xl font-bold text-[#00fff5]">The Challenge</h2>
                   <p className="text-gray-300">{cs.challenge}</p>
                 </div>
               </ScrollReveal>
@@ -210,9 +192,7 @@ export default async function CaseStudyPage({
             {cs.solution && (
               <ScrollReveal>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
-                  <h2 className="mb-4 text-2xl font-bold text-[#00fff5]">
-                    Our Approach
-                  </h2>
+                  <h2 className="mb-4 text-2xl font-bold text-[#00fff5]">Our Approach</h2>
                   <p className="text-gray-300">{cs.solution}</p>
                 </div>
               </ScrollReveal>
@@ -221,9 +201,7 @@ export default async function CaseStudyPage({
             {cs.results && (
               <ScrollReveal>
                 <div className="rounded-2xl border border-[#00fff5]/20 bg-[#00fff5]/5 p-8">
-                  <h2 className="mb-4 text-2xl font-bold text-[#00fff5]">
-                    Results
-                  </h2>
+                  <h2 className="mb-4 text-2xl font-bold text-[#00fff5]">Results</h2>
                   <p className="text-gray-300">{cs.results}</p>
                 </div>
               </ScrollReveal>
@@ -236,8 +214,7 @@ export default async function CaseStudyPage({
           <div className="mt-16 rounded-2xl border border-[#00fff5]/20 bg-[#00fff5]/5 p-8 text-center">
             <h2 className="mb-3 text-2xl font-bold">Want similar results?</h2>
             <p className="mb-6 text-gray-400">
-              Book a free 30-minute call and let&apos;s talk about your cloud
-              setup.
+              Book a free 30-minute call and let&apos;s talk about your cloud setup.
             </p>
             <Link
               href="/contact"

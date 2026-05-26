@@ -13,8 +13,7 @@ let hasRegisteredServiceWorker = false;
 
 export default function ServiceWorkerRegistration() {
   const [locale] = useCurrentLocale();
-  const [installPrompt, setInstallPrompt] =
-    useState<BeforeInstallPromptEvent | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
@@ -79,7 +78,7 @@ export default function ServiceWorkerRegistration() {
               {translate(
                 locale,
                 "pwa.installDesc",
-                "Add to your home screen for offline access and a faster experience.",
+                "Add to your home screen for offline access and a faster experience."
               )}
             </p>
             <div className="mt-3 flex gap-3">

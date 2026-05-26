@@ -20,16 +20,10 @@ export async function GET(request: NextRequest) {
 
   const config = await getConfig();
   if (!config.GOOGLE_CLIENT_EMAIL || !config.GOOGLE_PRIVATE_KEY) {
-    return NextResponse.json(
-      { error: "Google Search Console not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Google Search Console not configured." }, { status: 503 });
   }
 
-  const limit = Math.max(
-    1,
-    Math.min(Number(request.nextUrl.searchParams.get("limit")) || 50, 200),
-  );
+  const limit = Math.max(1, Math.min(Number(request.nextUrl.searchParams.get("limit")) || 50, 200));
 
   try {
     const opportunities = await getCtrOpportunities(undefined, limit);
@@ -40,9 +34,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     console.error("[GSC CTR opportunities] Error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch CTR opportunities." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch CTR opportunities." }, { status: 500 });
   }
 }

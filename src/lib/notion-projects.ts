@@ -10,21 +10,13 @@
  */
 
 import { notionFetch, notionFetchAll, extractText } from "@/lib/notion";
-import {
-  getIntegrationsAsync,
-  requireIntegrationAsync,
-} from "@/lib/integrations";
+import { getIntegrationsAsync, requireIntegrationAsync } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type ProjectStatus =
-  | "Planning"
-  | "In Progress"
-  | "On Hold"
-  | "Completed"
-  | "Cancelled";
+export type ProjectStatus = "Planning" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
 export type ProjectPriority = "Critical" | "High" | "Medium" | "Low";
 export type ProjectType = "Client" | "Internal" | "Maintenance";
 
@@ -44,13 +36,7 @@ export interface Project {
   url: string;
 }
 
-export type TaskStatus =
-  | "Backlog"
-  | "To Do"
-  | "In Progress"
-  | "In Review"
-  | "Done"
-  | "Blocked";
+export type TaskStatus = "Backlog" | "To Do" | "In Progress" | "In Review" | "Done" | "Blocked";
 export type TaskPriority = "Urgent" | "High" | "Medium" | "Low";
 export type TaskEstimate = "XS" | "S" | "M" | "L" | "XL";
 export type TaskType = "Feature" | "Bug" | "Chore" | "Spike" | "Design";
@@ -123,9 +109,7 @@ function mapTask(page: any): Task {
 // Projects API
 // ---------------------------------------------------------------------------
 
-export async function listProjects(
-  statusFilter?: ProjectStatus,
-): Promise<Project[]> {
+export async function listProjects(statusFilter?: ProjectStatus): Promise<Project[]> {
   await requireIntegrationAsync("NOTION_API_KEY", "NOTION_PROJECTS_DB_ID");
 
   const { NOTION_PROJECTS_DB_ID } = await getIntegrationsAsync();
@@ -134,17 +118,21 @@ export async function listProjects(
       ? { property: "Status", select: { equals: statusFilter } }
       : undefined;
 
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_PROJECTS_DB_ID}/query`,
-      {
-        ...(filter ? { filter } : {}),
-        sorts: [{ property: "Priority", direction: "ascending" }],
-      },
-    );
+    const pages = await notionFetchAll(`/databases/${NOTION_PROJECTS_DB_ID}/query`, {
+      ...(filter ? { filter } : {}),
+      sorts: [{ property: "Priority", direction: "ascending" }],
+    });
     return pages.map(mapProject);
   } catch (err) {
+<<<<<<< HEAD
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Projects] Failed to list projects:", msg); // codeql[js/log-injection]
+=======
+    console.error(
+      "[Notion Projects] Failed to list projects:",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
+    );
+>>>>>>> 1e82f95379841052acd6b392003da65486497629
     return [];
   }
 }
@@ -155,8 +143,15 @@ export async function getProject(pageId: string): Promise<Project | null> {
     const page = await notionFetch(`/pages/${pageId}`);
     return mapProject(page);
   } catch (err) {
+<<<<<<< HEAD
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Projects] Failed to get project:", msg); // codeql[js/log-injection]
+=======
+    console.error(
+      "[Notion Projects] Failed to get project:",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
+    );
+>>>>>>> 1e82f95379841052acd6b392003da65486497629
     return null;
   }
 }
@@ -187,9 +182,7 @@ export async function createProject(data: {
           ...(data.description
             ? {
                 Description: {
-                  rich_text: [
-                    { text: { content: data.description.slice(0, 2000) } },
-                  ],
+                  rich_text: [{ text: { content: data.description.slice(0, 2000) } }],
                 },
               }
             : {}),
@@ -201,16 +194,20 @@ export async function createProject(data: {
     });
     return page.id;
   } catch (err) {
+<<<<<<< HEAD
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Projects] Failed to create project:", msg); // codeql[js/log-injection]
+=======
+    console.error(
+      "[Notion Projects] Failed to create project:",
+      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
+    );
+>>>>>>> 1e82f95379841052acd6b392003da65486497629
     return null;
   }
 }
 
-export async function updateProjectStatus(
-  pageId: string,
-  status: ProjectStatus,
-): Promise<boolean> {
+export async function updateProjectStatus(pageId: string, status: ProjectStatus): Promise<boolean> {
   await requireIntegrationAsync("NOTION_API_KEY");
   try {
     await notionFetch(`/pages/${pageId}`, {
@@ -227,10 +224,7 @@ export async function updateProjectStatus(
   }
 }
 
-export async function updateProjectProgress(
-  pageId: string,
-  progress: number,
-): Promise<boolean> {
+export async function updateProjectProgress(pageId: string, progress: number): Promise<boolean> {
   await requireIntegrationAsync("NOTION_API_KEY");
   try {
     await notionFetch(`/pages/${pageId}`, {
@@ -289,16 +283,13 @@ export async function listTasks(filters?: {
           ? conditions[0]
           : undefined;
 
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_TASKS_DB_ID}/query`,
-      {
-        ...(filter ? { filter } : {}),
-        sorts: [
-          { property: "Status", direction: "ascending" },
-          { property: "Priority", direction: "ascending" },
-        ],
-      },
-    );
+    const pages = await notionFetchAll(`/databases/${NOTION_TASKS_DB_ID}/query`, {
+      ...(filter ? { filter } : {}),
+      sorts: [
+        { property: "Status", direction: "ascending" },
+        { property: "Priority", direction: "ascending" },
+      ],
+    });
     return pages.map(mapTask);
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
@@ -330,25 +321,17 @@ export async function createTask(data: {
           Task: { title: [{ text: { content: data.task } }] },
           Status: { select: { name: data.status ?? "To Do" } },
           Priority: { select: { name: data.priority ?? "Medium" } },
-          ...(data.project
-            ? { Project: { relation: [{ id: data.project }] } }
-            : {}),
-          ...(data.assignee
-            ? { Assignee: { people: [{ id: data.assignee }] } }
-            : {}),
+          ...(data.project ? { Project: { relation: [{ id: data.project }] } } : {}),
+          ...(data.assignee ? { Assignee: { people: [{ id: data.assignee }] } } : {}),
           ...(data.type ? { Type: { select: { name: data.type } } } : {}),
           ...(data.description
             ? {
                 Description: {
-                  rich_text: [
-                    { text: { content: data.description.slice(0, 2000) } },
-                  ],
+                  rich_text: [{ text: { content: data.description.slice(0, 2000) } }],
                 },
               }
             : {}),
-          ...(data.dueDate
-            ? { "Due Date": { date: { start: data.dueDate } } }
-            : {}),
+          ...(data.dueDate ? { "Due Date": { date: { start: data.dueDate } } } : {}),
         },
       }),
     });
@@ -360,10 +343,7 @@ export async function createTask(data: {
   }
 }
 
-export async function updateTaskStatus(
-  pageId: string,
-  status: TaskStatus,
-): Promise<boolean> {
+export async function updateTaskStatus(pageId: string, status: TaskStatus): Promise<boolean> {
   await requireIntegrationAsync("NOTION_API_KEY");
   try {
     await notionFetch(`/pages/${pageId}`, {
@@ -422,19 +402,16 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
 
   const { NOTION_TASKS_DB_ID } = await getIntegrationsAsync();
   try {
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_TASKS_DB_ID}/query`,
-      {
-        filter: {
-          property: "Sprint",
-          rich_text: { equals: sprintName },
-        },
-        sorts: [
-          { property: "Status", direction: "ascending" },
-          { property: "Priority", direction: "ascending" },
-        ],
+    const pages = await notionFetchAll(`/databases/${NOTION_TASKS_DB_ID}/query`, {
+      filter: {
+        property: "Sprint",
+        rich_text: { equals: sprintName },
       },
-    );
+      sorts: [
+        { property: "Status", direction: "ascending" },
+        { property: "Priority", direction: "ascending" },
+      ],
+    });
     return pages.map(mapTask);
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
@@ -447,7 +424,7 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
  * Get sprint progress — how many tasks are done vs total.
  */
 export async function getSprintProgress(
-  sprintName: string,
+  sprintName: string
 ): Promise<{ total: number; done: number; percent: number }> {
   const tasks = await getSprintTasks(sprintName);
   const done = tasks.filter((t) => t.status === "Done").length;
@@ -467,10 +444,7 @@ export async function getSprintProgress(
  * Move all incomplete tasks from one sprint to another.
  * Useful for sprint rollovers.
  */
-export async function rolloverSprintTasks(
-  fromSprint: string,
-  toSprint: string,
-): Promise<number> {
+export async function rolloverSprintTasks(fromSprint: string, toSprint: string): Promise<number> {
   await requireIntegrationAsync("NOTION_API_KEY");
 
   const tasks = await getSprintTasks(fromSprint);
@@ -500,10 +474,7 @@ export async function rolloverSprintTasks(
 /**
  * Bulk update status for multiple tasks.
  */
-export async function bulkUpdateTaskStatus(
-  taskIds: string[],
-  status: TaskStatus,
-): Promise<number> {
+export async function bulkUpdateTaskStatus(taskIds: string[], status: TaskStatus): Promise<number> {
   await requireIntegrationAsync("NOTION_API_KEY");
 
   let updated = 0;
@@ -524,21 +495,18 @@ export async function getOverdueTasks(): Promise<Task[]> {
   const today = new Date().toISOString().split("T")[0];
 
   try {
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_TASKS_DB_ID}/query`,
-      {
-        filter: {
-          and: [
-            { property: "Due Date", date: { before: today } },
-            {
-              property: "Status",
-              select: { does_not_equal: "Done" },
-            },
-          ],
-        },
-        sorts: [{ property: "Due Date", direction: "ascending" }],
+    const pages = await notionFetchAll(`/databases/${NOTION_TASKS_DB_ID}/query`, {
+      filter: {
+        and: [
+          { property: "Due Date", date: { before: today } },
+          {
+            property: "Status",
+            select: { does_not_equal: "Done" },
+          },
+        ],
       },
-    );
+      sorts: [{ property: "Due Date", direction: "ascending" }],
+    });
     return pages.map(mapTask);
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
@@ -573,9 +541,7 @@ export async function getProjectDashboard(projectName: string): Promise<{
   }
 
   const today = new Date().toISOString().split("T")[0];
-  const overdueTasks = tasks.filter(
-    (t) => t.dueDate && t.dueDate < today && t.status !== "Done",
-  );
+  const overdueTasks = tasks.filter((t) => t.dueDate && t.dueDate < today && t.status !== "Done");
 
   return {
     project,

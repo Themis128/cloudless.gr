@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  SSMClient,
-  GetParameterCommand,
-  PutParameterCommand,
-} from "@aws-sdk/client-ssm";
+import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
 import { randomUUID } from "node:crypto";
 
 const SSM_KEY = "/cloudless/CLIENT_PORTALS_JSON";
@@ -70,7 +66,7 @@ async function writePortals(portals: ClientPortal[]): Promise<void> {
       Value: JSON.stringify(portals),
       Type: "String",
       Overwrite: true,
-    }),
+    })
   );
 }
 
@@ -93,10 +89,7 @@ export async function POST(request: NextRequest) {
     stepNames?: string[];
   };
   if (!body.clientEmail || !body.label) {
-    return NextResponse.json(
-      { error: "clientEmail and label are required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "clientEmail and label are required" }, { status: 400 });
   }
 
   const portals = await readPortals();
@@ -153,7 +146,7 @@ function stepNotFound() {
 
 function applyUpdateStep(
   portal: ClientPortal,
-  body: Extract<PatchAction, { action: "update-step" }>,
+  body: Extract<PatchAction, { action: "update-step" }>
 ): NextResponse | null {
   const step = portal.steps.find((s) => s.id === body.stepId);
   if (!step) return stepNotFound();
@@ -168,15 +161,12 @@ function applyUpdateStep(
 
 function applyAddComment(
   portal: ClientPortal,
-  body: Extract<PatchAction, { action: "add-comment" }>,
+  body: Extract<PatchAction, { action: "add-comment" }>
 ): NextResponse | null {
   const step = portal.steps.find((s) => s.id === body.stepId);
   if (!step) return stepNotFound();
   if (!body.text?.trim()) {
-    return NextResponse.json(
-      { error: "Comment text required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Comment text required" }, { status: 400 });
   }
   step.comments.push({
     id: randomUUID(),
@@ -189,7 +179,7 @@ function applyAddComment(
 
 function applyDeleteComment(
   portal: ClientPortal,
-  body: Extract<PatchAction, { action: "delete-comment" }>,
+  body: Extract<PatchAction, { action: "delete-comment" }>
 ): NextResponse | null {
   const step = portal.steps.find((s) => s.id === body.stepId);
   if (!step) return stepNotFound();
@@ -199,7 +189,7 @@ function applyDeleteComment(
 
 function applyAddStep(
   portal: ClientPortal,
-  body: Extract<PatchAction, { action: "add-step" }>,
+  body: Extract<PatchAction, { action: "add-step" }>
 ): NextResponse | null {
   if (!body.name?.trim()) {
     return NextResponse.json({ error: "Step name required" }, { status: 400 });
@@ -215,7 +205,7 @@ function applyAddStep(
 
 function applyRenameStep(
   portal: ClientPortal,
-  body: Extract<PatchAction, { action: "rename-step" }>,
+  body: Extract<PatchAction, { action: "rename-step" }>
 ): NextResponse | null {
   const step = portal.steps.find((s) => s.id === body.stepId);
   if (!step) return stepNotFound();
@@ -223,10 +213,7 @@ function applyRenameStep(
   return null;
 }
 
-function dispatchPatch(
-  portal: ClientPortal,
-  body: PatchAction,
-): NextResponse | null {
+function dispatchPatch(portal: ClientPortal, body: PatchAction): NextResponse | null {
   switch (body.action) {
     case "update-step":
       return applyUpdateStep(portal, body);
@@ -252,10 +239,7 @@ export async function PATCH(request: NextRequest) {
 
   const body = (await request.json()) as PatchAction;
   if (!body.token || !body.action) {
-    return NextResponse.json(
-      { error: "token and action are required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "token and action are required" }, { status: 400 });
   }
 
   const portals = await readPortals();
@@ -278,8 +262,7 @@ export async function DELETE(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const { token } = (await request.json()) as { token?: string };
-  if (!token)
-    return NextResponse.json({ error: "token is required" }, { status: 400 });
+  if (!token) return NextResponse.json({ error: "token is required" }, { status: 400 });
 
   const portals = await readPortals();
   const updated = portals.filter((p) => p.token !== token);

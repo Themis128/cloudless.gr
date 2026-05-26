@@ -18,15 +18,11 @@ export default function AdminError({
     <div className="flex flex-1 items-center justify-center px-6 py-24">
       <div className="max-w-md text-center">
         <p className="text-neon-magenta font-mono text-5xl font-bold">ERROR</p>
-        <h1 className="font-heading mt-4 text-2xl font-bold text-white">
-          Admin panel error
-        </h1>
+        <h1 className="font-heading mt-4 text-2xl font-bold text-white">Admin panel error</h1>
         <p className="mt-3 font-mono text-sm text-slate-400">
           Something went wrong in the admin panel.
           {error.digest && (
-            <span className="mt-1 block text-slate-600">
-              digest: {error.digest}
-            </span>
+            <span className="mt-1 block text-slate-600">digest: {error.digest}</span>
           )}
         </p>
         <div className="mt-8 flex justify-center gap-3">

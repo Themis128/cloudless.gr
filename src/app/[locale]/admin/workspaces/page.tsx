@@ -66,9 +66,7 @@ export default function WorkspacesPage() {
       setForm({ name: "", description: "", adminEmails: "" });
       load();
     } catch (e) {
-      setFormError(
-        e instanceof Error ? e.message : "Failed to create workspace",
-      );
+      setFormError(e instanceof Error ? e.message : "Failed to create workspace");
     } finally {
       setCreating(false);
     }
@@ -136,44 +134,35 @@ export default function WorkspacesPage() {
           <span className="bg-neon-blue h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-blue font-mono text-xs">MULTI-TENANT</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">
-          Workspaces
-        </h1>
+        <h1 className="font-heading text-2xl font-bold text-white">Workspaces</h1>
         <p className="font-body mt-1 text-slate-400">
-          Manage isolated workspaces for different clients or brands. Switch
-          between them using the sidebar selector.
+          Manage isolated workspaces for different clients or brands. Switch between them using the
+          sidebar selector.
         </p>
       </div>
 
       {/* Create form */}
-      <div className="mb-8 rounded-xl border border-slate-800 bg-void-light/30 p-6">
-        <h2 className="font-heading mb-4 text-sm font-semibold text-white">
-          Create Workspace
-        </h2>
+      <div className="bg-void-light/30 mb-8 rounded-xl border border-slate-800 p-6">
+        <h2 className="font-heading mb-4 text-sm font-semibold text-white">Create Workspace</h2>
         <form onSubmit={create} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label
-                htmlFor="ws-name"
-                className="font-mono mb-1 block text-xs text-slate-500"
-              >
+              <label htmlFor="ws-name" className="mb-1 block font-mono text-xs text-slate-500">
                 Name
               </label>
               <input
                 id="ws-name"
                 type="text"
                 value={form.name}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="Acme Corp"
-                className="w-full rounded-lg border border-slate-700 bg-void px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-blue/50 focus:outline-none"
+                className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
               />
             </div>
             <div>
               <label
                 htmlFor="ws-admin-emails"
-                className="font-mono mb-1 block text-xs text-slate-500"
+                className="mb-1 block font-mono text-xs text-slate-500"
               >
                 Admin Emails (comma-separated)
               </label>
@@ -181,39 +170,30 @@ export default function WorkspacesPage() {
                 id="ws-admin-emails"
                 type="text"
                 value={form.adminEmails}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, adminEmails: e.target.value }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, adminEmails: e.target.value }))}
                 placeholder="admin@acme.com, manager@acme.com"
-                className="w-full rounded-lg border border-slate-700 bg-void px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-blue/50 focus:outline-none"
+                className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
               />
             </div>
           </div>
           <div>
-            <label
-              htmlFor="ws-description"
-              className="font-mono mb-1 block text-xs text-slate-500"
-            >
+            <label htmlFor="ws-description" className="mb-1 block font-mono text-xs text-slate-500">
               Description (optional)
             </label>
             <input
               id="ws-description"
               type="text"
               value={form.description}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, description: e.target.value }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="Main production workspace for Acme Corp"
-              className="w-full rounded-lg border border-slate-700 bg-void px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-blue/50 focus:outline-none"
+              className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
             />
           </div>
-          {formError && (
-            <p className="font-mono text-xs text-red-400">{formError}</p>
-          )}
+          {formError && <p className="font-mono text-xs text-red-400">{formError}</p>}
           <button
             type="submit"
             disabled={creating}
-            className="rounded-lg border border-neon-blue/30 px-5 py-2 font-mono text-xs text-neon-blue transition hover:border-neon-blue/60 disabled:opacity-50"
+            className="border-neon-blue/30 text-neon-blue hover:border-neon-blue/60 rounded-lg border px-5 py-2 font-mono text-xs transition disabled:opacity-50"
           >
             {creating ? "Creating…" : "Create Workspace"}
           </button>
@@ -231,19 +211,17 @@ export default function WorkspacesPage() {
           {["skel-1", "skel-2", "skel-3"].map((k) => (
             <div
               key={k}
-              className="h-24 animate-pulse rounded-xl border border-slate-800 bg-void-light/30"
+              className="bg-void-light/30 h-24 animate-pulse rounded-xl border border-slate-800"
             />
           ))}
         </div>
       )}
 
       {!loading && workspaces.length === 0 && (
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 px-6 py-12 text-center">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 px-6 py-12 text-center">
           <div className="mb-3 text-4xl">🏢</div>
-          <p className="font-heading text-sm text-slate-400">
-            No workspaces yet.
-          </p>
-          <p className="font-mono mt-1 text-xs text-slate-600">
+          <p className="font-heading text-sm text-slate-400">No workspaces yet.</p>
+          <p className="mt-1 font-mono text-xs text-slate-600">
             Create your first workspace above.
           </p>
         </div>
@@ -257,7 +235,7 @@ export default function WorkspacesPage() {
               className={`rounded-xl border p-4 transition ${
                 ws.id === current?.id
                   ? "border-neon-magenta/30 bg-neon-magenta/5"
-                  : "border-slate-800 bg-void-light/30 hover:border-slate-700"
+                  : "bg-void-light/30 border-slate-800 hover:border-slate-700"
               }`}
             >
               {editingId === ws.id ? (
@@ -266,10 +244,8 @@ export default function WorkspacesPage() {
                     <input
                       type="text"
                       value={editForm.name}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, name: e.target.value }))
-                      }
-                      className="rounded-lg border border-slate-700 bg-void px-3 py-2 font-mono text-sm text-white focus:border-neon-blue/50 focus:outline-none"
+                      onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                      className="bg-void focus:border-neon-blue/50 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:outline-none"
                     />
                     <input
                       type="text"
@@ -281,7 +257,7 @@ export default function WorkspacesPage() {
                         }))
                       }
                       placeholder="admin@acme.com"
-                      className="rounded-lg border border-slate-700 bg-void px-3 py-2 font-mono text-sm text-white focus:border-neon-blue/50 focus:outline-none"
+                      className="bg-void focus:border-neon-blue/50 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:outline-none"
                     />
                   </div>
                   <input
@@ -293,13 +269,13 @@ export default function WorkspacesPage() {
                         description: e.target.value,
                       }))
                     }
-                    className="w-full rounded-lg border border-slate-700 bg-void px-3 py-2 font-mono text-sm text-white focus:border-neon-blue/50 focus:outline-none"
+                    className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:outline-none"
                   />
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => save(ws.id)}
-                      className="rounded-lg border border-neon-blue/30 px-4 py-1.5 font-mono text-xs text-neon-blue hover:border-neon-blue/60"
+                      className="border-neon-blue/30 text-neon-blue hover:border-neon-blue/60 rounded-lg border px-4 py-1.5 font-mono text-xs"
                     >
                       Save
                     </button>
@@ -316,31 +292,26 @@ export default function WorkspacesPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-heading font-semibold text-white">
-                        {ws.name}
-                      </span>
+                      <span className="font-heading font-semibold text-white">{ws.name}</span>
                       {ws.id === current?.id && (
-                        <span className="rounded-full border border-neon-magenta/30 bg-neon-magenta/10 px-2 py-0.5 font-mono text-[10px] text-neon-magenta">
+                        <span className="border-neon-magenta/30 bg-neon-magenta/10 text-neon-magenta rounded-full border px-2 py-0.5 font-mono text-[10px]">
                           active
                         </span>
                       )}
                     </div>
-                    <div className="font-mono mt-0.5 text-xs text-slate-500">
+                    <div className="mt-0.5 font-mono text-xs text-slate-500">
                       slug: <span className="text-slate-400">{ws.slug}</span>
                     </div>
                     {ws.description && (
-                      <p className="font-body mt-1 text-xs text-slate-500">
-                        {ws.description}
-                      </p>
+                      <p className="font-body mt-1 text-xs text-slate-500">{ws.description}</p>
                     )}
                     {ws.adminEmails.length > 0 && (
-                      <p className="font-mono mt-1 text-xs text-slate-600">
+                      <p className="mt-1 font-mono text-xs text-slate-600">
                         admins: {ws.adminEmails.join(", ")}
                       </p>
                     )}
-                    <p className="font-mono mt-1 text-xs text-slate-700">
-                      created{" "}
-                      {new Date(ws.createdAt).toLocaleDateString("en-IE")}
+                    <p className="mt-1 font-mono text-xs text-slate-700">
+                      created {new Date(ws.createdAt).toLocaleDateString("en-IE")}
                     </p>
                   </div>
                   <div className="flex gap-2">

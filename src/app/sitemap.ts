@@ -3,10 +3,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { posts } from "@/lib/blog";
 import { defaultProducts } from "@/lib/store-products";
-import {
-  getCaseStudies,
-  staticCaseStudies,
-} from "@/lib/notion-case-studies";
+import { getCaseStudies, staticCaseStudies } from "@/lib/notion-case-studies";
 import { isConfiguredAsync } from "@/lib/integrations";
 
 // Render sitemap.xml on each request rather than baking it at build time so
@@ -93,22 +90,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Products don't carry an individual last-modified date; share the
   // catalogue date so it only resets when the catalogue is actually updated
   const catalogueDate = new Date(LAST_MODIFIED["/store/products"]);
-  const productPages: MetadataRoute.Sitemap = defaultProducts.map(
-    (product) => ({
-      url: `${baseUrl}/store/${product.id}`,
-      lastModified: catalogueDate,
-      changeFrequency: "monthly" as const,
-      priority: 0.5,
-    }),
-  );
+  const productPages: MetadataRoute.Sitemap = defaultProducts.map((product) => ({
+    url: `${baseUrl}/store/${product.id}`,
+    lastModified: catalogueDate,
+    changeFrequency: "monthly" as const,
+    priority: 0.5,
+  }));
 
   // Case studies (Notion-backed with static fallback)
   let caseStudyList = staticCaseStudies;
   try {
-    const configured = await isConfiguredAsync(
-      "NOTION_API_KEY",
-      "NOTION_CASE_STUDIES_DB_ID",
-    );
+    const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID");
     if (configured) caseStudyList = await getCaseStudies();
   } catch {
     // fall back to static list

@@ -14,7 +14,7 @@ async function putSSMParam(value: string): Promise<void> {
       Value: value,
       Type: "String",
       Overwrite: true,
-    }),
+    })
   );
 }
 
@@ -37,7 +37,7 @@ export async function PATCH(request: NextRequest) {
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Invalid input" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
