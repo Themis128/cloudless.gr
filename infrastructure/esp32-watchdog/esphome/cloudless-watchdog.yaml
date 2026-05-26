@@ -33,6 +33,7 @@ substitutions:
   omv_probe:       "http://192.168.1.128:9100/metrics"   # node_exporter — always HTTP 200
   omv_ha_probe:    "http://192.168.1.130:9100/metrics"
   aws_health:      "https://cloudless.gr/api/health"   # direct 200 — avoids 307 redirect at root
+  alert_api_url:   "http://192.168.1.128:30800"   # Alert API NodePort on omv-main
   relay_gpio:      "none"
 
 esphome:
@@ -443,6 +444,30 @@ interval:
       # probe state even if a prior update was interrupted or lost.
       - script.execute: update_led
 
+
+  # ── Alert API heartbeat — keep device status fresh ──────────────────────────
+  # POST hardware telemetry every 60 s so the Alert API dashboard shows the
+  # ESP32 as online with current RSSI, uptime, and free RAM.
+  - id: alert_api_heartbeat
+    interval: 60s
+    startup_delay: 45s     # let Wi-Fi + first probe cycle complete
+    then:
+      - http_request.post:
+          url: "${alert_api_url}/api/esp32/heartbeat"
+          request_headers:
+            Content-Type: application/json
+          json:
+            ip: "192.168.1.201"
+            rssi: !lambda "return (int)id(wifi_signal_sensor).state;"
+            firmware_ver: "esphome-2026.5"
+            uptime_s: !lambda "return (int)id(uptime_sensor).state;"
+            free_ram_bytes: !lambda "return (int)ESP.getFreeHeap();"
+          on_error:
+            then:
+              - logger.log:
+                  level: WARN
+                  format: "Alert API heartbeat failed"
+
 # ---------------------------------------------------------------------------
 # LED update script — priority order (worst first):
 #  1. All three down  → magenta
@@ -571,11 +596,13 @@ script:
 # ---------------------------------------------------------------------------
 sensor:
   - platform:   wifi_signal
+    id:         wifi_signal_sensor
     name:       "Wi-Fi Signal"
     update_interval: 60s
     entity_category: diagnostic
 
   - platform:   uptime
+    id:         uptime_sensor
     name:       "Uptime"
     update_interval: 60s
     entity_category: diagnostic
