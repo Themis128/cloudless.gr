@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const HS_PORTAL_ID = process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ?? "";
 
@@ -10,16 +10,11 @@ const HS_PORTAL_ID = process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ?? "";
 const PRODUCTION_HOSTS = new Set(["cloudless.gr", "www.cloudless.gr"]);
 
 export function HubSpotScript({ nonce }: Readonly<{ nonce?: string }>) {
-  // Mount-deferred to avoid React #418: useSyncExternalStore with
-  // getServerSnapshot=false caused null→<Script> mismatch during hydration
-  // because getSnapshot ran synchronously on the production hostname.
-  const [shouldLoad, setShouldLoad] = useState(false);
-
-  useEffect(() => {
-    if (HS_PORTAL_ID.length > 0 && PRODUCTION_HOSTS.has(globalThis.location.hostname)) {
-      setShouldLoad(true);
-    }
-  }, []);
+  // Lazy initializer runs once on mount (client-only), avoiding React #418:
+  // null→<Script> hydration mismatch when getServerSnapshot=false ran during SSR.
+  const [shouldLoad] = useState(
+    () => HS_PORTAL_ID.length > 0 && PRODUCTION_HOSTS.has(globalThis.location?.hostname ?? ""),
+  );
 
   if (!shouldLoad) return null;
   return (

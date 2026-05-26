@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const DISMISS_KEY = "cloudless-training-banner-dismissed";
 
@@ -14,15 +14,10 @@ interface TrainingBannerProps {
 export default function TrainingBanner({
   locale,
 }: Readonly<TrainingBannerProps>) {
-  // Mount-deferred: SSR renders nothing, client reveals banner after hydration.
-  // useSyncExternalStore with getServerSnapshot=false caused React #418 because
-  // the client snapshot ran synchronously during hydration, mismatch-ing null→element.
-  const [mounted, setMounted] = useState(false);
+  // Lazy initializer runs once on mount (client-only) — avoids React #418 that
+  // useSyncExternalStore caused when its client snapshot ran during hydration.
+  const [mounted] = useState(() => !sessionStorage.getItem(DISMISS_KEY));
   const [dismissed, setDismissed] = useState(false);
-
-  useEffect(() => {
-    if (!sessionStorage.getItem(DISMISS_KEY)) setMounted(true);
-  }, []);
 
   if (!mounted || dismissed) return null;
 
