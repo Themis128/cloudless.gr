@@ -69,7 +69,17 @@ interface LogEntry {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const ALERT_API_WS = "ws://192.168.1.128:30800/ws/esp32-logs";
+/** Returns the WebSocket URL for the alert-api, or empty string when unavailable.
+ *  Only connects on LAN/localhost — blocks ws:// mixed content on HTTPS deployments.
+ */
+function getAlertApiWsUrl(): string {
+  if (typeof window === "undefined") return "";
+  const h = window.location.hostname;
+  if (h.startsWith("192.168.") || h === "localhost") {
+    return "ws://192.168.1.128:30800/ws/esp32-logs";
+  }
+  return "";
+}
 const POLL_INTERVAL = 30_000;
 const MAX_LOG_LINES = 150;
 
@@ -143,7 +153,9 @@ export default function AdminMonitorPage() {
   const [error, setError] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [wsStatus, setWsStatus] = useState<"connecting" | "open" | "closed">("connecting");
+  const [wsStatus, setWsStatus] = useState<"connecting" | "open" | "closed">(() =>
+    getAlertApiWsUrl() ? "connecting" : "closed"
+  );
   const wsRef = useRef<WebSocket | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -173,6 +185,11 @@ export default function AdminMonitorPage() {
       if (alertsRes.ok) {
         const alertData = await alertsRes.json();
         setAlerts(Array.isArray(alertData) ? alertData : []);
+      } else {
+        console.warn(
+          "[monitor] alerts fetch returned %d — Pi Alert API may be degraded",
+          alertsRes.status
+        );
       }
 
       setError(null);
@@ -193,16 +210,28 @@ export default function AdminMonitorPage() {
   // ── WebSocket log stream ───────────────────────────────────────────────────
 
   useEffect(() => {
+    const wsUrl = getAlertApiWsUrl();
+    if (!wsUrl) return;
+
     let ws: WebSocket;
     let retryTimer: ReturnType<typeof setTimeout>;
+    let retryCount = 0;
+    const MAX_RETRIES = 10;
 
     function connect() {
+      if (retryCount >= MAX_RETRIES) {
+        setWsStatus("closed");
+        return;
+      }
       try {
         setWsStatus("connecting");
-        ws = new WebSocket(ALERT_API_WS);
+        ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
-        ws.onopen = () => setWsStatus("open");
+        ws.onopen = () => {
+          setWsStatus("open");
+          retryCount = 0;
+        };
 
         ws.onmessage = (evt) => {
           try {
@@ -218,7 +247,7 @@ export default function AdminMonitorPage() {
               return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next;
             });
           } catch {
-            // non-JSON frame, ignore
+            // non-JSON frame
           }
         };
 
@@ -226,11 +255,15 @@ export default function AdminMonitorPage() {
 
         ws.onclose = () => {
           setWsStatus("closed");
-          retryTimer = setTimeout(connect, 5000);
+          retryCount++;
+          const delay = Math.min(1000 * 2 ** retryCount, 30_000);
+          retryTimer = setTimeout(connect, delay);
         };
       } catch {
         setWsStatus("closed");
-        retryTimer = setTimeout(connect, 5000);
+        retryCount++;
+        const delay = Math.min(1000 * 2 ** retryCount, 30_000);
+        retryTimer = setTimeout(connect, delay);
       }
     }
 
@@ -484,17 +517,23 @@ export default function AdminMonitorPage() {
           />
           <span className="font-mono text-[10px] text-slate-500">
             {wsStatus === "open"
-              ? `ws://192.168.1.128:30800/ws/esp32-logs — connected (${logs.length} lines)`
+              ? `ws/esp32-logs — connected (${logs.length} lines)`
               : wsStatus === "connecting"
                 ? "Connecting to log stream…"
-                : "Log stream disconnected — retrying in 5s"}
+                : getAlertApiWsUrl()
+                  ? "Log stream disconnected — retrying…"
+                  : "WebSocket unavailable on this deployment"}
           </span>
         </div>
 
         {/* Log lines */}
         <div className="h-80 overflow-y-auto p-4 font-mono text-[11px] leading-relaxed">
           {logs.length === 0 ? (
-            <p className="text-slate-600">Waiting for log entries…</p>
+            <p className="text-slate-600">
+              {getAlertApiWsUrl()
+                ? "Waiting for log entries…"
+                : "WebSocket stream not available on this deployment."}
+            </p>
           ) : (
             logs.map((entry, i) => (
               <div key={i} className="flex gap-3">
@@ -518,8 +557,9 @@ export default function AdminMonitorPage() {
       </div>
 
       <p className="mt-4 font-mono text-[10px] text-slate-600">
-        Auto-refreshes every {POLL_INTERVAL / 1000}s · WebSocket reconnects automatically · Last
-        fetched: {status ? fmtTs(status.timestamp) : "—"}
+        Auto-refreshes every {POLL_INTERVAL / 1000}s
+        {getAlertApiWsUrl() ? " · WebSocket reconnects automatically" : ""} · Last fetched:{" "}
+        {status ? fmtTs(status.timestamp) : "—"}
       </p>
     </div>
   );

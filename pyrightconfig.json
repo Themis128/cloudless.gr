@@ -2,7 +2,8 @@
   "exclude": [
     "node_modules",
     ".next",
-    ".sst"
+    ".sst",
+    "infrastructure/esp32-watchdog/esphome/.esphome"
   ],
   "ignore": [
     "infrastructure/pi-alert-api",

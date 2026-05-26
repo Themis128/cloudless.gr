@@ -188,19 +188,28 @@ export default function AdminEsp32Page() {
   // ── WebSocket log stream ───────────────────────────────────────────────────
 
   useEffect(() => {
+    const wsUrl = getAlertApiWsUrl();
+    if (!wsUrl) return;
+
     let ws: WebSocket;
     let retryTimer: ReturnType<typeof setTimeout>;
-
-    const wsUrl = getAlertApiWsUrl();
+    let retryCount = 0;
+    const MAX_RETRIES = 10;
 
     function connect() {
-      if (!wsUrl) return;
+      if (retryCount >= MAX_RETRIES) {
+        setWsStatus("closed");
+        return;
+      }
       try {
         setWsStatus("connecting");
         ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
-        ws.onopen = () => setWsStatus("open");
+        ws.onopen = () => {
+          setWsStatus("open");
+          retryCount = 0;
+        };
 
         ws.onmessage = (evt) => {
           try {
@@ -225,11 +234,15 @@ export default function AdminEsp32Page() {
         ws.onerror = () => setWsStatus("closed");
         ws.onclose = () => {
           setWsStatus("closed");
-          retryTimer = setTimeout(connect, 5000);
+          retryCount++;
+          const delay = Math.min(1000 * 2 ** retryCount, 30_000);
+          retryTimer = setTimeout(connect, delay);
         };
       } catch {
         setWsStatus("closed");
-        retryTimer = setTimeout(connect, 5000);
+        retryCount++;
+        const delay = Math.min(1000 * 2 ** retryCount, 30_000);
+        retryTimer = setTimeout(connect, delay);
       }
     }
 

@@ -254,7 +254,9 @@ export default function Esp32ManagerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, value }),
       });
-      const msg = res?.ok ? `✓ ${action} sent` : "✗ Command failed";
+      // `call` returns parsed JSON or null (offline). Treat non-null as success
+      // since the Pi command endpoint returns {} or {ok:true} on success.
+      const msg = res !== null && !res?.offline ? `✓ ${action} sent` : "✗ Command failed";
       setLedFeedback(msg);
       setTimeout(() => setLedFeedback(""), 3500);
     },
@@ -313,7 +315,18 @@ export default function Esp32ManagerPage() {
   // ── OTA tab ──────────────────────────────────────────────────────────────────
 
   const triggerOta = useCallback(async () => {
-    if (!otaUrl.trim()) return;
+    const url = otaUrl.trim();
+    if (!url) return;
+    // ESP32 HTTPUpdate requires an HTTP (not HTTPS) URL reachable from the Pi LAN.
+    // The .bin extension is required — the partition bootloader verifies the magic bytes.
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      setOtaFeedback("✗ URL must start with http:// or https://");
+      return;
+    }
+    if (!url.toLowerCase().endsWith(".bin")) {
+      setOtaFeedback("✗ URL must point to a .bin firmware file");
+      return;
+    }
     setOtaLoading(true);
     setOtaFeedback("");
     const res = await call("/api/admin/esp32?action=ota", {

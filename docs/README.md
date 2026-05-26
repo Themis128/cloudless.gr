@@ -47,7 +47,7 @@
 | Marketing | `/admin/campaigns/**`, `/admin/email`, `/admin/calendar` | Campaigns, email, content calendar |
 | Notion | `/admin/notion/**` | Submissions, projects, tasks, analytics |
 | System | `/admin/orders`, `/admin/errors`, `/admin/integrations`, `/admin/settings` | Ops and config |
-| Infrastructure | external links | Grafana (`grafana.cloudless.online`) + Cluster Manager (`manage.cloudless.online`) — open in new tab, each tool has its own auth |
+| Infrastructure | external links | Grafana (`grafana.cloudless.gr`) + Cluster Manager (`manage.cloudless.gr`) — open in new tab, each tool has its own auth |
 
 ### Social links
 

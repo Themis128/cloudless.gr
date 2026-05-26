@@ -108,7 +108,7 @@ time on ARM:
   the wrong heuristic — sourcemap upload alone is multi-hundred-MB
   through Sentry's API and CDK synth is CPU-heavy on cold cache. When
   billing is broken this workflow goes red and `cloudless.gr` (Lambda)
-  cannot be updated until billing is fixed. `cloudless.online` (Pi/k3s)
+  cannot be updated until billing is fixed. The Pi/k3s surface (`pi-origin.cloudless.gr`)
   stays deployable via `deploy-pi.yml` and is the documented failover
   surface, so user-visible features still ship through the secondary.
 - `lighthouse.yml` — needs system Chrome; ARM has no official Chromium binary in the runner image.
@@ -160,7 +160,7 @@ a deploy job it can't run.
 
 ## Caveat: Pi runners share resources with production
 
-Pi 4/5 hosts also run the `cloudless` k3s pod that serves `cloudless.online`.
+Pi 4/5 hosts also run the `cloudless` k3s pod that serves `pi-origin.cloudless.gr`.
 Heavy CI concurrency on the `build` runner will degrade prod latency. If you
 flip to `pi` mode for more than a short outage window, consider:
 
