@@ -174,21 +174,6 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
   );
 }
 
-<<<<<<< HEAD
-// ── Device selector ────────────────────────────────────────────────────────────
-
-function DeviceSelect({
-  devices,
-  selectedId,
-  onSelect,
-}: {
-  devices: Device[];
-  selectedId: string;
-  onSelect: (id: string) => void;
-}) {
-  if (devices.length <= 1) return null;
-  return (
-=======
 // ── DeviceSelect ───────────────────────────────────────────────────────────────
 
 interface DeviceSelectProps {
@@ -199,18 +184,12 @@ interface DeviceSelectProps {
 
 function DeviceSelect({ devices, selectedId, setSelectedId }: DeviceSelectProps) {
   return devices.length > 1 ? (
->>>>>>> 1e82f95379841052acd6b392003da65486497629
     <div className="mb-4">
       <label className="mb-1 block font-mono text-xs text-slate-500">Device</label>
       <select
         value={selectedId}
-<<<<<<< HEAD
-        onChange={(e) => onSelect(e.target.value)}
-        className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white focus:border-neon-magenta focus:outline-none"
-=======
         onChange={(e) => setSelectedId(e.target.value)}
         className="focus:border-neon-magenta w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white focus:outline-none"
->>>>>>> 1e82f95379841052acd6b392003da65486497629
       >
         {devices.map((d) => (
           <option key={d.device_id} value={d.device_id}>
@@ -219,11 +198,7 @@ function DeviceSelect({ devices, selectedId, setSelectedId }: DeviceSelectProps)
         ))}
       </select>
     </div>
-<<<<<<< HEAD
-  );
-=======
   ) : null;
->>>>>>> 1e82f95379841052acd6b392003da65486497629
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────

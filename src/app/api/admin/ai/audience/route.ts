@@ -11,17 +11,11 @@ export async function POST(request: NextRequest) {
   let objective: string;
   try {
     const body = await request.json();
-<<<<<<< HEAD
     description = String(body.description ?? "").slice(0, 2000);
     platforms = Array.isArray(body.platforms)
       ? body.platforms
       : ["Meta", "LinkedIn", "Google"];
     objective = String(body.objective ?? "LEAD_GENERATION").slice(0, 200);
-=======
-    description = body.description;
-    platforms = Array.isArray(body.platforms) ? body.platforms : ["Meta", "LinkedIn", "Google"];
-    objective = body.objective ?? "LEAD_GENERATION";
->>>>>>> 1e82f95379841052acd6b392003da65486497629
     if (!description) throw new Error("description is required");
   } catch (e) {
     return NextResponse.json(
@@ -103,13 +97,8 @@ Only include the platforms that were requested. Tailor recommendations for the G
   } catch (e) {
     console.error("[ai/audience] Claude call failed:", e);
     return NextResponse.json(
-<<<<<<< HEAD
       { error: "AI generation failed." },
       { status: 500 },
-=======
-      { error: e instanceof Error ? e.message : "AI generation failed." },
-      { status: 500 }
->>>>>>> 1e82f95379841052acd6b392003da65486497629
     );
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const DISMISS_KEY = "cloudless-training-banner-dismissed";
 
@@ -11,16 +11,6 @@ interface TrainingBannerProps {
   locale?: string;
 }
 
-<<<<<<< HEAD
-export default function TrainingBanner({
-  locale,
-}: Readonly<TrainingBannerProps>) {
-  // Lazy initializer runs once on mount (client-only) — avoids React #418 that
-  // useSyncExternalStore caused when its client snapshot ran during hydration.
-  const [mounted] = useState(() => !sessionStorage.getItem(DISMISS_KEY));
-  const [dismissed, setDismissed] = useState(false);
-
-=======
 export default function TrainingBanner({ locale }: Readonly<TrainingBannerProps>) {
   // Mount-deferred: SSR renders nothing, client reveals banner after hydration.
   // useSyncExternalStore with getServerSnapshot=false caused React #418 because
@@ -33,7 +23,6 @@ export default function TrainingBanner({ locale }: Readonly<TrainingBannerProps>
     if (!sessionStorage.getItem(DISMISS_KEY)) setMounted(true);
   }, []);
 
->>>>>>> 1e82f95379841052acd6b392003da65486497629
   if (!mounted || dismissed) return null;
 
   const isEl = locale === "el";

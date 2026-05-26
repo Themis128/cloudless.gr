@@ -38,13 +38,8 @@ Write 3-5 sentences of plain English insights. Mention specific numbers, compare
   } catch (e) {
     console.error("[ai/report-insights] Claude call failed:", e);
     return NextResponse.json(
-<<<<<<< HEAD
       { error: "AI generation failed." },
       { status: 500 },
-=======
-      { error: e instanceof Error ? e.message : "AI generation failed." },
-      { status: 500 }
->>>>>>> 1e82f95379841052acd6b392003da65486497629
     );
   }
 }
