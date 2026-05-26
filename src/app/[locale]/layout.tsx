@@ -16,7 +16,7 @@ import CookieConsent from "@/components/CookieConsent";
 import GoogleAnalyticsConsent from "@/components/GoogleAnalyticsConsent";
 
 const CartSlideOver = dynamic(() => import("@/components/store/CartSlideOver"));
-const ChatWidget = dynamic(() => import("@/components/ChatWidget"), { ssr: false });
+const ChatWidget = dynamic(() => import("@/components/ChatWidget"));
 import ClientDecorators from "@/components/ClientDecorators";
 
 type Props = {
