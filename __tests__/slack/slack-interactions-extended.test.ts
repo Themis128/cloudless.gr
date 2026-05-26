@@ -309,12 +309,7 @@ describe("view_submission: deploy-confirm-modal", () => {
 
     // codeql[js/incomplete-url-scheme-check] -- test assertion on mock fetch call args, not URL sanitization
     const githubCall = mockFetch.mock.calls.find((c) =>
-<<<<<<< HEAD
       new URL(c[0] as string).hostname === "api.github.com",
-=======
-      (c[0] as string).includes("api.github.com/repos/") &&
-      (c[0] as string).includes("/actions/workflows/"),
->>>>>>> 1e82f95379841052acd6b392003da65486497629
     );
     expect(githubCall).toBeDefined();
     expect(githubCall![0]).toContain("dispatches");
@@ -334,11 +329,7 @@ describe("view_submission: deploy-confirm-modal", () => {
     // Should not call GitHub at all
     // codeql[js/incomplete-url-scheme-check] -- test assertion on mock fetch call args, not URL sanitization
     const githubCall = mockFetch.mock.calls.find((c) =>
-<<<<<<< HEAD
       new URL(c[0] as string).hostname === "api.github.com",
-=======
-      (c[0] as string).includes("api.github.com/"),
->>>>>>> 1e82f95379841052acd6b392003da65486497629
     );
     expect(githubCall).toBeUndefined();
 

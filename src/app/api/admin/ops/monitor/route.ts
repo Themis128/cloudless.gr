@@ -82,14 +82,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   } catch (err) {
     console.error("[ops/monitor] Alert API unreachable:", err);
-    return NextResponse.json(
-<<<<<<< HEAD
-      { error: "Alert API unreachable", offline: true },
-      { status: 503 },
-=======
-      { error: `Alert API unreachable: ${msg}`, offline: true },
-      { status: 503 }
->>>>>>> 1e82f95379841052acd6b392003da65486497629
-    );
+    return NextResponse.json({ error: "Alert API unreachable", offline: true }, { status: 503 });
   }
 }

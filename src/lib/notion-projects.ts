@@ -124,15 +124,8 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
     });
     return pages.map(mapProject);
   } catch (err) {
-<<<<<<< HEAD
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Projects] Failed to list projects:", msg); // codeql[js/log-injection]
-=======
-    console.error(
-      "[Notion Projects] Failed to list projects:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
-    );
->>>>>>> 1e82f95379841052acd6b392003da65486497629
     return [];
   }
 }
@@ -143,15 +136,8 @@ export async function getProject(pageId: string): Promise<Project | null> {
     const page = await notionFetch(`/pages/${pageId}`);
     return mapProject(page);
   } catch (err) {
-<<<<<<< HEAD
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Projects] Failed to get project:", msg); // codeql[js/log-injection]
-=======
-    console.error(
-      "[Notion Projects] Failed to get project:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
-    );
->>>>>>> 1e82f95379841052acd6b392003da65486497629
     return null;
   }
 }
@@ -194,15 +180,8 @@ export async function createProject(data: {
     });
     return page.id;
   } catch (err) {
-<<<<<<< HEAD
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Projects] Failed to create project:", msg); // codeql[js/log-injection]
-=======
-    console.error(
-      "[Notion Projects] Failed to create project:",
-      ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ")
-    );
->>>>>>> 1e82f95379841052acd6b392003da65486497629
     return null;
   }
 }
