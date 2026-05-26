@@ -21,9 +21,9 @@ const SUGGESTIONS = [
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<Message[]>(() => [
     {
-      id: newId(),
+      id: "initial-assistant-msg",
       role: "assistant",
       content:
         "Hi! I'm the Cloudless assistant. Ask me anything about our cloud, serverless, or AI marketing services.",

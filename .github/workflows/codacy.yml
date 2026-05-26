@@ -16,7 +16,7 @@ on:
       - ".github/workflows/codacy.yml"
   workflow_dispatch:
   schedule:
-    - cron: "29 15 * * 4"
+    - cron: "29 15 * * 4" # Every Thursday at 15:29 UTC
 
 permissions:
   contents: read
@@ -27,14 +27,17 @@ concurrency:
 
 jobs:
   codacy-security-scan:
+    name: Codacy Security Scan
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 15
     permissions:
       contents: read
       security-events: write
       actions: read
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Run Codacy Analysis CLI
         uses: codacy/codacy-analysis-cli-action@d840f886c4bd4edc059706d09c6a1586111c540b
