@@ -16,10 +16,8 @@ import SocialLinks from "@/components/SocialLinks";
 export const revalidate = 3600;
 
 function stepColorClass(color: string): string {
-  if (color === "cyan")
-    return "bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan";
-  if (color === "magenta")
-    return "bg-neon-magenta/10 border-neon-magenta/20 text-neon-magenta";
+  if (color === "cyan") return "bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan";
+  if (color === "magenta") return "bg-neon-magenta/10 border-neon-magenta/20 text-neon-magenta";
   return "bg-neon-green/10 border-neon-green/20 text-neon-green";
 }
 
@@ -78,18 +76,15 @@ export default async function Home({
   const services = [
     {
       icon: "01",
-      title: t(
-        "servicesSection.service1Title",
-        "Cloud Architecture & Migration",
-      ),
+      title: t("servicesSection.service1Title", "Cloud Architecture & Migration"),
       description: t(
         "servicesSection.service1Desc",
-        "Design and migrate your infrastructure to AWS, GCP, or Azure with zero downtime. Scalable, secure, cost-optimized.",
+        "Design and migrate your infrastructure to AWS, GCP, or Azure with zero downtime. Scalable, secure, cost-optimized."
       ),
       tag: t("servicesSection.service1Tag", "CLOUD"),
       perfectFor: t(
         "servicesSection.service1For",
-        "For teams paying €500+/mo for infrastructure they can't explain.",
+        "For teams paying €500+/mo for infrastructure they can't explain."
       ),
     },
     {
@@ -97,12 +92,12 @@ export default async function Home({
       title: t("servicesSection.service2Title", "Serverless Development"),
       description: t(
         "servicesSection.service2Desc",
-        "Build event-driven applications that scale automatically and cost nothing when idle. Lambda, API Gateway, DynamoDB.",
+        "Build event-driven applications that scale automatically and cost nothing when idle. Lambda, API Gateway, DynamoDB."
       ),
       tag: t("servicesSection.service2Tag", "SERVERLESS"),
       perfectFor: t(
         "servicesSection.service2For",
-        "For founders tired of paying for servers that sit idle 90% of the time.",
+        "For founders tired of paying for servers that sit idle 90% of the time."
       ),
     },
     {
@@ -110,12 +105,12 @@ export default async function Home({
       title: t("servicesSection.service3Title", "Data Analytics & Dashboards"),
       description: t(
         "servicesSection.service3Desc",
-        "Turn raw data into actionable insights with custom dashboards, pipelines, and real-time reporting.",
+        "Turn raw data into actionable insights with custom dashboards, pipelines, and real-time reporting."
       ),
       tag: t("servicesSection.service3Tag", "ANALYTICS"),
       perfectFor: t(
         "servicesSection.service3For",
-        "For teams making decisions on gut feeling instead of data.",
+        "For teams making decisions on gut feeling instead of data."
       ),
     },
     {
@@ -123,12 +118,12 @@ export default async function Home({
       title: t("servicesSection.service4Title", "AI & Digital Marketing"),
       description: t(
         "servicesSection.service4Desc",
-        "AI-powered campaigns, SEO, content strategy, and performance marketing that drives measurable growth.",
+        "AI-powered campaigns, SEO, content strategy, and performance marketing that drives measurable growth."
       ),
       tag: t("servicesSection.service4Tag", "AI"),
       perfectFor: t(
         "servicesSection.service4For",
-        "For startups spending on ads with no idea what's actually working.",
+        "For startups spending on ads with no idea what's actually working."
       ),
     },
   ];
@@ -145,42 +140,42 @@ export default async function Home({
       question: t("faq.q1", "How much will this actually cost me?"),
       answer: t(
         "faq.a1",
-        "Individual services range from €800 to €2,400 depending on scope. The full bundle is €3,600/month. For context: hiring a single cloud engineer in-house costs €5K–€8K/month. A CTO + marketer + data analyst? €20K+/month. We replace all three for a fraction of the cost — and you can cancel anytime.",
+        "Individual services range from €800 to €2,400 depending on scope. The full bundle is €3,600/month. For context: hiring a single cloud engineer in-house costs €5K–€8K/month. A CTO + marketer + data analyst? €20K+/month. We replace all three for a fraction of the cost — and you can cancel anytime."
       ),
     },
     {
       question: t("faq.q2", "Who is this for? Am I the right fit?"),
       answer: t(
         "faq.a2",
-        "We work best with startups and SMBs that are past the MVP stage — typically 2–20 person teams doing €50K–€500K in revenue. You have a product that works but your infrastructure is duct tape, your marketing is guesswork, and you don't have a CTO to fix it. If that sounds familiar, the free audit will tell you exactly what to do next.",
+        "We work best with startups and SMBs that are past the MVP stage — typically 2–20 person teams doing €50K–€500K in revenue. You have a product that works but your infrastructure is duct tape, your marketing is guesswork, and you don't have a CTO to fix it. If that sounds familiar, the free audit will tell you exactly what to do next."
       ),
     },
     {
       question: t("faq.q3", "What if I want to leave?"),
       answer: t(
         "faq.a3",
-        "Leave whenever you want. Month-to-month, no lock-in, no exit fees. Your code, infrastructure, and data are always yours — fully documented and handoff-ready. We're not in the business of holding your code hostage.",
+        "Leave whenever you want. Month-to-month, no lock-in, no exit fees. Your code, infrastructure, and data are always yours — fully documented and handoff-ready. We're not in the business of holding your code hostage."
       ),
     },
     {
       question: t("faq.q4", "How quickly can I see results?"),
       answer: t(
         "faq.a4",
-        "Measurable progress within 14 days of kickoff. Cloud migrations show cost savings immediately. Marketing campaigns deliver initial data within two weeks. We guarantee it — or we keep working until you see it.",
+        "Measurable progress within 14 days of kickoff. Cloud migrations show cost savings immediately. Marketing campaigns deliver initial data within two weeks. We guarantee it — or we keep working until you see it."
       ),
     },
     {
       question: t("faq.q5", "What does the free audit include?"),
       answer: t(
         "faq.a5",
-        "A 30-minute call where we review your current infrastructure, marketing setup, or both. You'll get a concrete action plan with specific recommendations — no pitch, no pressure. Most founders say it's the most useful 30 minutes they've spent on their tech stack.",
+        "A 30-minute call where we review your current infrastructure, marketing setup, or both. You'll get a concrete action plan with specific recommendations — no pitch, no pressure. Most founders say it's the most useful 30 minutes they've spent on their tech stack."
       ),
     },
     {
       question: t("faq.q6", "Can I trust a new agency with my infrastructure?"),
       answer: t(
         "faq.a6",
-        "Fair question. We're backed by AWS certifications (check our Credly badges), open-source contributions on GitHub, and 8+ years of hands-on cloud architecture. The free audit is zero-risk — you'll see our thinking and decide if it's worth going further. We'd rather lose a deal than overpromise.",
+        "Fair question. We're backed by AWS certifications (check our Credly badges), open-source contributions on GitHub, and 8+ years of hands-on cloud architecture. The free audit is zero-risk — you'll see our thinking and decide if it's worth going further. We'd rather lose a deal than overpromise."
       ),
     },
   ];
@@ -191,7 +186,7 @@ export default async function Home({
       title: t("guarantees.resultsTitle", "Results in 14 Days"),
       desc: t(
         "guarantees.resultsDesc",
-        "Measurable progress within two weeks of kickoff — or we keep working until you see it.",
+        "Measurable progress within two weeks of kickoff — or we keep working until you see it."
       ),
     },
     {
@@ -199,7 +194,7 @@ export default async function Home({
       title: t("guarantees.noLockInTitle", "No Lock-in Contracts"),
       desc: t(
         "guarantees.noLockInDesc",
-        "Month-to-month. Cancel anytime. We earn your business every month.",
+        "Month-to-month. Cancel anytime. We earn your business every month."
       ),
     },
     {
@@ -207,7 +202,7 @@ export default async function Home({
       title: t("guarantees.yourCodeTitle", "Your Code Is Yours"),
       desc: t(
         "guarantees.yourCodeDesc",
-        "Full documentation, handoff-ready. We build it and you own it — always.",
+        "Full documentation, handoff-ready. We build it and you own it — always."
       ),
     },
   ];
@@ -221,11 +216,7 @@ export default async function Home({
 
   return (
     <>
-      <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-        ])}
-      />
+      <JsonLd data={getBreadcrumbSchema([{ name: "Home", url: "https://cloudless.gr" }])} />
       <JsonLd data={getFAQSchema(faqs)} />
 
       {/* Hero */}
@@ -266,7 +257,7 @@ export default async function Home({
               <p className="animate-fade-in-up mt-8 max-w-xl text-lg leading-relaxed text-slate-300 delay-200 md:text-xl">
                 {t(
                   "hero.subtitle",
-                  "Enterprise cloud? You can't afford it. DIY infrastructure? You shouldn't. We're the third way — serverless, data-driven growth, and scaling that actually fits a 2–20 person team.",
+                  "Enterprise cloud? You can't afford it. DIY infrastructure? You shouldn't. We're the third way — serverless, data-driven growth, and scaling that actually fits a 2–20 person team."
                 )}{" "}
                 <span className="text-neon-cyan font-medium">
                   {t("hero.subtitleHighlight", "Finally.")}
@@ -288,16 +279,9 @@ export default async function Home({
               </div>
               {/* CTA microcopy */}
               <div className="animate-fade-in-up mt-4 flex flex-col gap-6 font-mono text-xs text-slate-500 delay-300 sm:flex-row">
-                <span>
-                  {t(
-                    "hero.microCopy1",
-                    "No commitment. Actionable insights in 30 min.",
-                  )}
-                </span>
+                <span>{t("hero.microCopy1", "No commitment. Actionable insights in 30 min.")}</span>
                 <span className="hidden sm:inline">•</span>
-                <span>
-                  {t("hero.microCopy2", "Transparent pricing. No lock-in.")}
-                </span>
+                <span>{t("hero.microCopy2", "Transparent pricing. No lock-in.")}</span>
               </div>
             </div>
 
@@ -336,12 +320,8 @@ export default async function Home({
                     {g.icon}
                   </span>
                   <div>
-                    <p className="font-mono text-sm font-semibold text-white">
-                      {g.title}
-                    </p>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                      {g.desc}
-                    </p>
+                    <p className="font-mono text-sm font-semibold text-white">{g.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-400">{g.desc}</p>
                   </div>
                 </div>
               </ScrollReveal>
@@ -372,7 +352,7 @@ export default async function Home({
             {/* Connector line — desktop only */}
             <div
               aria-hidden="true"
-              className="absolute top-8 left-[calc(16.67%+1.5rem)] right-[calc(16.67%+1.5rem)] hidden h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent md:block"
+              className="absolute top-8 right-[calc(16.67%+1.5rem)] left-[calc(16.67%+1.5rem)] hidden h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent md:block"
             />
             {(
               [
@@ -382,7 +362,7 @@ export default async function Home({
                   title: t("process.step1Title", "Free Audit"),
                   desc: t(
                     "process.step1Desc",
-                    "30-minute call. We review your infrastructure and marketing, identify quick wins, and give you a concrete action plan — no commitment required.",
+                    "30-minute call. We review your infrastructure and marketing, identify quick wins, and give you a concrete action plan — no commitment required."
                   ),
                 },
                 {
@@ -391,7 +371,7 @@ export default async function Home({
                   title: t("process.step2Title", "Choose your scope"),
                   desc: t(
                     "process.step2Desc",
-                    "Pick one service or bundle all four for 30% savings. We align on deliverables, timeline, and what 'done' looks like before any work starts.",
+                    "Pick one service or bundle all four for 30% savings. We align on deliverables, timeline, and what 'done' looks like before any work starts."
                   ),
                 },
                 {
@@ -400,7 +380,7 @@ export default async function Home({
                   title: t("process.step3Title", "Results in 14 days"),
                   desc: t(
                     "process.step3Desc",
-                    "We kick off immediately. Measurable progress within two weeks — cost savings, live infrastructure, first campaign data. We keep working until you see it.",
+                    "We kick off immediately. Measurable progress within two weeks — cost savings, live infrastructure, first campaign data. We keep working until you see it."
                   ),
                 },
               ] as const
@@ -412,12 +392,8 @@ export default async function Home({
                   >
                     {item.step}
                   </div>
-                  <h3 className="font-heading mb-2 font-semibold text-white">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-slate-400">
-                    {item.desc}
-                  </p>
+                  <h3 className="font-heading mb-2 font-semibold text-white">{item.title}</h3>
+                  <p className="text-sm leading-relaxed text-slate-400">{item.desc}</p>
                 </div>
               </ScrollReveal>
             ))}
@@ -433,23 +409,18 @@ export default async function Home({
               {/* Avatar — swap src for /images/founder.jpg once photo is added */}
               <div className="from-neon-cyan/30 to-neon-magenta/30 shrink-0 rounded-full bg-gradient-to-br p-0.5">
                 <div className="bg-void-light flex h-16 w-16 items-center justify-center rounded-full">
-                  <span className="font-heading text-neon-cyan text-xl font-bold">
-                    TB
-                  </span>
+                  <span className="font-heading text-neon-cyan text-xl font-bold">TB</span>
                 </div>
               </div>
               {/* Copy */}
               <div className="flex-1 text-center md:text-left">
                 <p className="text-sm leading-relaxed text-slate-300">
                   <span className="font-semibold text-white">
-                    {t(
-                      "credibility.builtBy",
-                      "Built by Themistoklis Baltzakis",
-                    )}
+                    {t("credibility.builtBy", "Built by Themistoklis Baltzakis")}
                   </span>{" "}
                   {t(
                     "credibility.bio",
-                    "— AWS Certified Cloud Architect, 8+ years building serverless infrastructure and growth systems. I started cloudless.gr because startups deserve enterprise-grade cloud without the enterprise price or the enterprise BS.",
+                    "— AWS Certified Cloud Architect, 8+ years building serverless infrastructure and growth systems. I started cloudless.gr because startups deserve enterprise-grade cloud without the enterprise price or the enterprise BS."
                   )}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-3 md:justify-start">
@@ -470,10 +441,7 @@ export default async function Home({
                     ↗ {t("credibility.badgeOss", "Open-Source Contributor")}
                   </a>
                   <span className="bg-neon-magenta/10 border-neon-magenta/20 text-neon-magenta inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px]">
-                    {t(
-                      "credibility.badgeCapacity",
-                      "Now accepting 5 clients for Q2 2026",
-                    )}
+                    {t("credibility.badgeCapacity", "Now accepting 5 clients for Q2 2026")}
                   </span>
                 </div>
               </div>
@@ -501,7 +469,7 @@ export default async function Home({
               <p className="mt-4 text-lg text-slate-400">
                 {t(
                   "servicesSection.subtitle",
-                  "From infrastructure to marketing, we cover the full stack of modern business growth.",
+                  "From infrastructure to marketing, we cover the full stack of modern business growth."
                 )}
               </p>
             </div>
@@ -563,7 +531,7 @@ export default async function Home({
               <p className="mb-4 font-mono text-sm font-semibold text-white">
                 {t(
                   "leadCapture.playbookTitle",
-                  "Get our free Cloud Migration Playbook — the exact framework we use with clients.",
+                  "Get our free Cloud Migration Playbook — the exact framework we use with clients."
                 )}
               </p>
               <Link
@@ -571,13 +539,7 @@ export default async function Home({
                 className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta hover:bg-neon-magenta/20 inline-flex items-center gap-2 rounded-lg border px-6 py-2.5 font-mono text-sm font-semibold transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,0,255,0.1)]"
               >
                 {t("leadCapture.playbookCta", "Download the Playbook")}
-                <svg
-                  width="14"
-                  height="14"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M7 1v10M3 8l4 4 4-4" />
                 </svg>
               </Link>
@@ -596,9 +558,7 @@ export default async function Home({
               </p>
               <h2 className="font-heading text-3xl font-bold text-white md:text-4xl">
                 {t("faq.title", "Common")}{" "}
-                <span className="text-neon-cyan">
-                  {t("faq.titleHighlight", "questions")}
-                </span>
+                <span className="text-neon-cyan">{t("faq.titleHighlight", "questions")}</span>
               </h2>
             </div>
           </ScrollReveal>
@@ -644,9 +604,7 @@ export default async function Home({
               </p>
               <h2 className="font-heading text-3xl font-bold text-white md:text-4xl">
                 {t("founder.title", "Meet the")}{" "}
-                <span className="text-neon-cyan">
-                  {t("founder.titleHighlight", "founder")}
-                </span>
+                <span className="text-neon-cyan">{t("founder.titleHighlight", "founder")}</span>
               </h2>
             </div>
           </ScrollReveal>
@@ -656,9 +614,7 @@ export default async function Home({
               <div className="flex flex-col items-center gap-8 md:flex-row md:items-start">
                 {/* Avatar */}
                 <div className="bg-neon-cyan/10 border-neon-cyan/20 flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border">
-                  <span className="font-heading text-neon-cyan text-3xl font-bold">
-                    TB
-                  </span>
+                  <span className="font-heading text-neon-cyan text-3xl font-bold">TB</span>
                 </div>
 
                 {/* Bio */}
@@ -672,15 +628,12 @@ export default async function Home({
                   <p className="mt-4 text-sm leading-relaxed text-slate-400">
                     {t(
                       "founder.bio",
-                      "Certified cloud architect with hands-on experience in AWS, serverless architectures, data analytics, and AI-powered marketing. I help startups and SMBs build infrastructure that scales without the enterprise overhead.",
+                      "Certified cloud architect with hands-on experience in AWS, serverless architectures, data analytics, and AI-powered marketing. I help startups and SMBs build infrastructure that scales without the enterprise overhead."
                     )}
                   </p>
 
                   {/* Social links */}
-                  <SocialLinks
-                    size="md"
-                    className="mt-6 justify-center md:justify-start"
-                  />
+                  <SocialLinks size="md" className="mt-6 justify-center md:justify-start" />
                 </div>
               </div>
             </div>
@@ -704,13 +657,13 @@ export default async function Home({
             <p className="mx-auto mb-4 max-w-xl text-xl text-slate-400">
               {t(
                 "cta.subtitle",
-                "Book a free 30-minute audit. We'll review your current setup and show you exactly where you're overpaying, underperforming, or both.",
+                "Book a free 30-minute audit. We'll review your current setup and show you exactly where you're overpaying, underperforming, or both."
               )}
             </p>
             <p className="mx-auto mb-8 max-w-lg text-sm text-slate-500">
               {t(
                 "cta.subtext",
-                "No pitch. No commitment. Just actionable insights you can use even if you never talk to us again.",
+                "No pitch. No commitment. Just actionable insights you can use even if you never talk to us again."
               )}
             </p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">

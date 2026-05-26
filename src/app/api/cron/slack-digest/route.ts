@@ -75,10 +75,7 @@ async function postOrderDigest(): Promise<void> {
     return o.paymentStatus === "paid" && created >= yesterdayStart;
   });
 
-  const totalAmount = yesterdaysOrders.reduce(
-    (sum, o) => sum + (o.amount ?? 0),
-    0,
-  );
+  const totalAmount = yesterdaysOrders.reduce((sum, o) => sum + (o.amount ?? 0), 0);
 
   // Use the currency of the first order, or EUR as default
   const currency = yesterdaysOrders[0]?.currency ?? "eur";
@@ -126,7 +123,7 @@ async function postOrderDigest(): Promise<void> {
 
   if (yesterdaysOrders.length > 5) {
     orderLines.push(
-      `_…and ${yesterdaysOrders.length - 5} more order${yesterdaysOrders.length - 5 === 1 ? "" : "s"}_`,
+      `_…and ${yesterdaysOrders.length - 5} more order${yesterdaysOrders.length - 5 === 1 ? "" : "s"}_`
     );
   }
 
@@ -226,10 +223,7 @@ async function postErrorDigest(): Promise<void> {
   }
 
   // Fetch live error counts and top issues concurrently.
-  const [counts, topErrors] = await Promise.all([
-    getErrorCounts(),
-    getTopErrors(3),
-  ]);
+  const [counts, topErrors] = await Promise.all([getErrorCounts(), getTopErrors(3)]);
 
   // Sentry unreachable / token invalid — still post so the channel gets a
   // daily message and operators know something is wrong.
@@ -273,10 +267,8 @@ async function postErrorDigest(): Promise<void> {
   // Build summary line.
   const parts: string[] = [];
   if (counts.fatal > 0) parts.push(`${counts.fatal} fatal`);
-  if (counts.error > 0)
-    parts.push(`${counts.error} error${counts.error === 1 ? "" : "s"}`);
-  if (counts.warning > 0)
-    parts.push(`${counts.warning} warning${counts.warning === 1 ? "" : "s"}`);
+  if (counts.error > 0) parts.push(`${counts.error} error${counts.error === 1 ? "" : "s"}`);
+  if (counts.warning > 0) parts.push(`${counts.warning} warning${counts.warning === 1 ? "" : "s"}`);
   const summaryLine = parts.join(", ");
 
   // Build top-issues list (up to 3).
@@ -367,8 +359,5 @@ async function postErrorDigest(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 function slackEscape(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }

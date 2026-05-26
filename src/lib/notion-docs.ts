@@ -66,13 +66,9 @@ function mapPage(page: any): DocRecord {
   const p = page.properties ?? {};
   return {
     id: page.id,
-    slug:
-      (p.Slug?.rich_text ?? []).map((t: any) => t.plain_text).join("") ||
-      page.id,
+    slug: (p.Slug?.rich_text ?? []).map((t: any) => t.plain_text).join("") || page.id,
     title: (p.Title?.title ?? []).map((t: any) => t.plain_text).join(""),
-    description: (p.Description?.rich_text ?? [])
-      .map((t: any) => t.plain_text)
-      .join(""),
+    description: (p.Description?.rich_text ?? []).map((t: any) => t.plain_text).join(""),
     category: p.Category?.select?.name ?? "General",
     order: p.Order?.number ?? 0,
     published: p.Published?.checkbox ?? false,
@@ -91,16 +87,13 @@ function mapPage(page: any): DocRecord {
 export async function getAllDocs(): Promise<DocRecord[]> {
   const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
     "NOTION_API_KEY",
-    "NOTION_DOCS_DB_ID",
+    "NOTION_DOCS_DB_ID"
   );
 
   try {
-    const results = await notionFetchAll<unknown>(
-      `/databases/${NOTION_DOCS_DB_ID}/query`,
-      {
-        sorts: DOCS_SORT,
-      },
-    );
+    const results = await notionFetchAll<unknown>(`/databases/${NOTION_DOCS_DB_ID}/query`, {
+      sorts: DOCS_SORT,
+    });
     /* eslint-disable @typescript-eslint/no-explicit-any */
     return (results as any[]).map(mapPage);
     /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -117,18 +110,15 @@ export async function getAllDocs(): Promise<DocRecord[]> {
 export async function getDocs(): Promise<DocRecord[]> {
   const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
     "NOTION_API_KEY",
-    "NOTION_DOCS_DB_ID",
+    "NOTION_DOCS_DB_ID"
   );
 
   return cached("docs:all", async () => {
     try {
-      const results = await notionFetchAll<unknown>(
-        `/databases/${NOTION_DOCS_DB_ID}/query`,
-        {
-          filter: DOCS_PUBLISHED_FILTER,
-          sorts: DOCS_SORT,
-        },
-      );
+      const results = await notionFetchAll<unknown>(`/databases/${NOTION_DOCS_DB_ID}/query`, {
+        filter: DOCS_PUBLISHED_FILTER,
+        sorts: DOCS_SORT,
+      });
 
       /* eslint-disable @typescript-eslint/no-explicit-any */
       return (results as any[]).map(mapPage);
@@ -147,7 +137,7 @@ export async function getDocs(): Promise<DocRecord[]> {
 export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
   const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
     "NOTION_API_KEY",
-    "NOTION_DOCS_DB_ID",
+    "NOTION_DOCS_DB_ID"
   );
 
   try {
@@ -157,14 +147,11 @@ export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
         method: "POST",
         body: JSON.stringify({
           filter: {
-            and: [
-              { property: "Slug", rich_text: { equals: slug } },
-              DOCS_PUBLISHED_FILTER,
-            ],
+            and: [{ property: "Slug", rich_text: { equals: slug } }, DOCS_PUBLISHED_FILTER],
           },
           page_size: 1,
         }),
-      },
+      }
     );
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -183,9 +170,7 @@ export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
  * Fetch a doc's full content as rendered HTML.
  * Returns null if not found or Notion is not configured.
  */
-export async function getDocContent(
-  pageId: string,
-): Promise<DocContent | null> {
+export async function getDocContent(pageId: string): Promise<DocContent | null> {
   await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
@@ -210,9 +195,7 @@ export async function getDocContent(
 /**
  * Group docs by category for sidebar navigation.
  */
-export function groupDocsByCategory(
-  docs: DocRecord[],
-): Record<string, DocRecord[]> {
+export function groupDocsByCategory(docs: DocRecord[]): Record<string, DocRecord[]> {
   return docs.reduce<Record<string, DocRecord[]>>((acc, doc) => {
     const cat = doc.category;
     if (!acc[cat]) acc[cat] = [];
@@ -246,10 +229,8 @@ function mapWikiPage(page: any): WikiDocRecord {
       p["Verification Status"]?.status?.name ??
       p["Verification Status"]?.select?.name ??
       "Unverified",
-    owner:
-      (p.Owner?.people ?? []).map((u: any) => u.name ?? "").join(", ") || "",
-    lastVerified:
-      p["Last verified"]?.date?.start ?? p["Last Verified"]?.date?.start ?? "",
+    owner: (p.Owner?.people ?? []).map((u: any) => u.name ?? "").join(", ") || "",
+    lastVerified: p["Last verified"]?.date?.start ?? p["Last Verified"]?.date?.start ?? "",
     lastEdited: page.last_edited_time ?? "",
   };
 }
@@ -262,17 +243,14 @@ function mapWikiPage(page: any): WikiDocRecord {
 export async function getWikiDocs(): Promise<WikiDocRecord[]> {
   const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
     "NOTION_API_KEY",
-    "NOTION_DOCS_DB_ID",
+    "NOTION_DOCS_DB_ID"
   );
 
   try {
-    const results = await notionFetchAll<unknown>(
-      `/databases/${NOTION_DOCS_DB_ID}/query`,
-      {
-        filter: DOCS_PUBLISHED_FILTER,
-        sorts: DOCS_SORT,
-      },
-    );
+    const results = await notionFetchAll<unknown>(`/databases/${NOTION_DOCS_DB_ID}/query`, {
+      filter: DOCS_PUBLISHED_FILTER,
+      sorts: DOCS_SORT,
+    });
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     return (results as any[]).map(mapWikiPage);
@@ -289,22 +267,16 @@ export async function getWikiDocs(): Promise<WikiDocRecord[]> {
 export async function getDocsNeedingVerification(): Promise<WikiDocRecord[]> {
   const docs = await getWikiDocs();
   return docs.filter(
-    (d) =>
-      d.verificationStatus === "Needs re-verification" ||
-      d.verificationStatus === "Unverified",
+    (d) => d.verificationStatus === "Needs re-verification" || d.verificationStatus === "Unverified"
   );
 }
 
 /**
  * Get docs owned by a specific person.
  */
-export async function getDocsByOwner(
-  ownerName: string,
-): Promise<WikiDocRecord[]> {
+export async function getDocsByOwner(ownerName: string): Promise<WikiDocRecord[]> {
   const docs = await getWikiDocs();
-  return docs.filter((d) =>
-    d.owner.toLowerCase().includes(ownerName.toLowerCase()),
-  );
+  return docs.filter((d) => d.owner.toLowerCase().includes(ownerName.toLowerCase()));
 }
 
 /**
@@ -315,9 +287,7 @@ export async function searchDocs(query: string): Promise<DocRecord[]> {
   const docs = await getDocs();
   const q = query.toLowerCase();
   return docs.filter(
-    (d) =>
-      d.title.toLowerCase().includes(q) ||
-      d.description.toLowerCase().includes(q),
+    (d) => d.title.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)
   );
 }
 
@@ -325,7 +295,7 @@ export async function searchDocs(query: string): Promise<DocRecord[]> {
  * Get doc content with table of contents.
  */
 export async function getDocContentWithToc(
-  pageId: string,
+  pageId: string
 ): Promise<(DocContent & { toc: TocEntry[] }) | null> {
   await requireIntegrationAsync("NOTION_API_KEY");
 

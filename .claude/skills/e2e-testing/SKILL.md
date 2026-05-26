@@ -1,6 +1,6 @@
 ---
 name: e2e-testing
-description: End-to-end Playwright testing suite for cloudless.gr. Use this skill whenever the user asks about running tests, adding tests, fixing test failures, understanding test coverage, configuring Playwright, running production smoke tests against cloudless.gr or cloudless.online, or anything about the e2e/ directory. Triggers on "run tests", "playwright", "test failing", "smoke test", "add coverage", "e2e", "production tests", "test suite".
+description: End-to-end Playwright testing suite for cloudless.gr. Use this skill whenever the user asks about running tests, adding tests, fixing test failures, understanding test coverage, configuring Playwright, running production smoke tests against cloudless.gr or pi-origin.cloudless.gr, or anything about the e2e/ directory. Triggers on "run tests", "playwright", "test failing", "smoke test", "add coverage", "e2e", "production tests", "test suite".
 ---
 
 # E2E Testing — cloudless.gr
@@ -11,7 +11,7 @@ Playwright test suite covering the full cloudless.gr surface: public pages, API 
 
 **Two configs:**
 - `playwright.config.mts` — local dev (spins up `pnpm dev` on port 4000)
-- `playwright.production.config.mts` — production smoke tests against live cloudless.gr + cloudless.online
+- `playwright.production.config.mts` — production smoke tests against live cloudless.gr + pi-origin.cloudless.gr
 
 ---
 
@@ -27,7 +27,7 @@ npx playwright test e2e/customer-behavior.spec.ts
 # Local dev — interactive UI
 npx playwright test --ui
 
-# Production — all 4 projects (cloudless.gr + cloudless.online, desktop + mobile)
+# Production — all 4 projects (cloudless.gr + pi-origin.cloudless.gr, desktop + mobile)
 npx playwright test --config=playwright.production.config.mts
 
 # Production — single project
@@ -58,8 +58,8 @@ npx playwright show-report
 ### `playwright.production.config.mts` (production smoke)
 | Setting | Value |
 |---------|-------|
-| Projects | `cloudless-gr-desktop`, `cloudless-gr-mobile`, `cloudless-online-desktop`, `cloudless-online-mobile` |
-| `baseURL` | `https://cloudless.gr` or `https://cloudless.online` |
+| Projects | `cloudless-gr-desktop`, `cloudless-gr-mobile`, `pi-origin-desktop`, `pi-origin-mobile` |
+| `baseURL` | `https://cloudless.gr` or `https://pi-origin.cloudless.gr` |
 | `retries` | 2 |
 | `workers` | 4 |
 | `timeout` | 60 000 ms |
@@ -102,7 +102,7 @@ npx playwright show-report
 | `theme-switcher.spec.ts` | Dark/light theme toggle persistence | — |
 | `webhook-signatures.spec.ts` | Stripe + HubSpot webhook HMAC verification | — |
 
-### `k3s/` subdirectory (standby cluster — cloudless.online)
+### `k3s/` subdirectory (Pi k3s cluster — pi-origin.cloudless.gr)
 | File | What it covers |
 |------|---------------|
 | `smoke.spec.ts` | `/api/health`, security headers, app signature |

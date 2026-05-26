@@ -27,7 +27,7 @@ type HubSpotEvent = {
 async function verifySignatureV3(
   request: NextRequest,
   body: string,
-  clientSecret: string,
+  clientSecret: string
 ): Promise<boolean> {
   const signature = request.headers.get("x-hubspot-signature-v3");
   const timestamp = request.headers.get("x-hubspot-signature-timestamp");
@@ -35,9 +35,7 @@ async function verifySignatureV3(
   const age = Date.now() - Number(timestamp);
   if (Number.isNaN(age) || age > MAX_TIMESTAMP_AGE_MS || age < 0) return false;
   const input = `${request.method}${request.url}${body}${timestamp}`;
-  const expected = createHmac("sha256", clientSecret)
-    .update(input)
-    .digest("base64");
+  const expected = createHmac("sha256", clientSecret).update(input).digest("base64");
   try {
     return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
   } catch {
@@ -46,24 +44,17 @@ async function verifySignatureV3(
 }
 
 /** Allowlist of HubSpot CRM object types that may be fetched. */
-const ALLOWED_OBJECT_TYPES = new Set([
-  "contacts",
-  "deals",
-  "tickets",
-  "companies",
-]);
+const ALLOWED_OBJECT_TYPES = new Set(["contacts", "deals", "tickets", "companies"]);
 
 async function fetchObject(
   token: string,
   objectType: string,
   objectId: number,
-  properties: string[],
+  properties: string[]
 ): Promise<Record<string, string> | null> {
   // Validate objectType against allowlist to prevent request forgery
   if (!ALLOWED_OBJECT_TYPES.has(objectType)) {
-    console.warn(
-      `[HubSpot Webhook] Blocked unsupported objectType: ${objectType}`,
-    );
+    console.warn(`[HubSpot Webhook] Blocked unsupported objectType: ${objectType}`);
     return null;
   }
   try {
@@ -72,7 +63,7 @@ async function fetchObject(
       {
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(5_000),
-      },
+      }
     );
     if (!res.ok) return null;
     const data = await res.json();
@@ -106,8 +97,7 @@ async function onContactCreated(token: string, id: number): Promise<void> {
     "hs_lead_status",
   ]);
 
-  const name =
-    [p?.firstname, p?.lastname].filter(Boolean).join(" ") || "Unknown";
+  const name = [p?.firstname, p?.lastname].filter(Boolean).join(" ") || "Unknown";
   const email = p?.email ?? "—";
   const company = p?.company || "—";
   const service = p?.service_interest || "—";
@@ -157,9 +147,7 @@ async function onDealCreated(token: string, id: number): Promise<void> {
   ]);
 
   const name = p?.dealname ?? "Untitled Deal";
-  const amount = p?.amount
-    ? `€${Number.parseFloat(p.amount).toLocaleString("en-IE")}`
-    : "—";
+  const amount = p?.amount ? `€${Number.parseFloat(p.amount).toLocaleString("en-IE")}` : "—";
   const stage = p?.dealstage ?? "—";
 
   await slack.post({
@@ -173,11 +161,7 @@ async function onDealCreated(token: string, id: number): Promise<void> {
         type: SECTION,
         text: {
           type: "mrkdwn",
-          text: [
-            `*Deal:* ${name}`,
-            `*Amount:* ${amount}`,
-            `*Stage:* \`${stage}\``,
-          ].join("\n"),
+          text: [`*Deal:* ${name}`, `*Amount:* ${amount}`, `*Stage:* \`${stage}\``].join("\n"),
         },
         accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/deal/${id}`),
       },
@@ -201,9 +185,7 @@ async function onDealClosedWon(token: string, id: number): Promise<void> {
   const p = await fetchObject(token, "deals", id, ["dealname", "amount"]);
 
   const name = p?.dealname ?? "Untitled Deal";
-  const amount = p?.amount
-    ? `€${Number.parseFloat(p.amount).toLocaleString("en-IE")}`
-    : "";
+  const amount = p?.amount ? `€${Number.parseFloat(p.amount).toLocaleString("en-IE")}` : "";
   const closedWonText = amount
     ? `Deal closed won: ${name} — ${amount}`
     : `Deal closed won: ${name}`;
@@ -242,10 +224,7 @@ async function onDealClosedWon(token: string, id: number): Promise<void> {
 }
 
 async function onTicketCreated(token: string, id: number): Promise<void> {
-  const p = await fetchObject(token, "tickets", id, [
-    "subject",
-    "hs_ticket_priority",
-  ]);
+  const p = await fetchObject(token, "tickets", id, ["subject", "hs_ticket_priority"]);
 
   const subject = p?.subject ?? "No subject";
   const priority = (p?.hs_ticket_priority ?? "MEDIUM").toUpperCase();
@@ -269,10 +248,7 @@ async function onTicketCreated(token: string, id: number): Promise<void> {
         type: SECTION,
         text: {
           type: "mrkdwn",
-          text: [
-            `*Subject:* ${subject}`,
-            `*Priority:* ${priorityEmoji} ${priority}`,
-          ].join("\n"),
+          text: [`*Subject:* ${subject}`, `*Priority:* ${priorityEmoji} ${priority}`].join("\n"),
         },
         accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/ticket/${id}`),
       },
@@ -293,12 +269,7 @@ async function onTicketCreated(token: string, id: number): Promise<void> {
 }
 
 async function onCompanyCreated(token: string, id: number): Promise<void> {
-  const p = await fetchObject(token, "companies", id, [
-    "name",
-    "domain",
-    "city",
-    "country",
-  ]);
+  const p = await fetchObject(token, "companies", id, ["name", "domain", "city", "country"]);
 
   const name = p?.name ?? "Unknown Company";
   const domain = p?.domain || "—";
@@ -315,11 +286,7 @@ async function onCompanyCreated(token: string, id: number): Promise<void> {
         type: SECTION,
         text: {
           type: "mrkdwn",
-          text: [
-            `*Company:* ${name}`,
-            `*Domain:* ${domain}`,
-            `*Location:* ${location}`,
-          ].join("\n"),
+          text: [`*Company:* ${name}`, `*Domain:* ${domain}`, `*Location:* ${location}`].join("\n"),
         },
         accessory: viewButton(OPEN_IN_HUBSPOT, `${PORTAL_BASE}/company/${id}`),
       },
@@ -372,13 +339,8 @@ export async function POST(request: NextRequest) {
   // Fail closed: without the secret we cannot verify the signature, so we must
   // reject rather than silently process unauthenticated webhook events.
   if (!clientSecret) {
-    console.error(
-      "[HubSpot Webhook] HUBSPOT_CLIENT_SECRET not configured — rejecting",
-    );
-    return NextResponse.json(
-      { error: "Webhook not configured" },
-      { status: 500 },
-    );
+    console.error("[HubSpot Webhook] HUBSPOT_CLIENT_SECRET not configured — rejecting");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
   }
 
   const valid = await verifySignatureV3(request, rawBody, clientSecret);

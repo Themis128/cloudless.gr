@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Invalid input" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 

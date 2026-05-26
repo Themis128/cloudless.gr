@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 
 // aws-amplify is imported lazily inside each async function so the ~2 MB
 // module is excluded from the initial JS bundle, reducing TBT on public pages.
@@ -52,17 +45,9 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   confirmSignUp: (email: string, code: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  confirmForgotPassword: (
-    email: string,
-    code: string,
-    newPassword: string,
-  ) => Promise<void>;
+  confirmForgotPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   completeNewPassword: (newPassword: string) => Promise<void>;
-  updateProfile: (attrs: {
-    name?: string;
-    company?: string;
-    phone?: string;
-  }) => Promise<void>;
+  updateProfile: (attrs: { name?: string; company?: string; phone?: string }) => Promise<void>;
   updatePreferences: (prefs: Partial<UserPreferences>) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -109,10 +94,7 @@ function friendlyAuthError(err: unknown): string {
   if (name === "ExpiredCodeException") {
     return "Verification code has expired. Please request a new one.";
   }
-  if (
-    name === "LimitExceededException" ||
-    name === "TooManyRequestsException"
-  ) {
+  if (name === "LimitExceededException" || name === "TooManyRequestsException") {
     return "Too many attempts. Please wait a moment and try again.";
   }
   if (name === "InvalidPasswordException" || message.includes("password")) {
@@ -135,7 +117,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
       atob(base64)
         .split("")
         .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(""),
+        .join("")
     );
     return JSON.parse(jsonPayload);
   } catch {
@@ -178,13 +160,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { username, email, name, company, phone, preferences };
     },
-    [],
+    []
   );
 
   const checkAuth = useCallback(async () => {
     try {
-      const { getCurrentUser, fetchAuthSession } =
-        await import("aws-amplify/auth");
+      const { getCurrentUser, fetchAuthSession } = await import("aws-amplify/auth");
       const currentUser = await getCurrentUser();
       const email = currentUser.signInDetails?.loginId;
       const profile = await loadUserProfile(currentUser.username, email);
@@ -196,8 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const session = await fetchAuthSession();
         const idToken = session.tokens?.idToken?.toString();
         if (idToken) {
-          groups =
-            (decodeJwtPayload(idToken)["cognito:groups"] as string[]) ?? [];
+          groups = (decodeJwtPayload(idToken)["cognito:groups"] as string[]) ?? [];
         }
       } catch {
         // Session fetch failed (network blip). Keep existing admin state if
@@ -225,9 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           console.error("Amplify configuration failed:", err);
           setConfigError(
-            err instanceof Error
-              ? err.message
-              : "Authentication configuration failed",
+            err instanceof Error ? err.message : "Authentication configuration failed"
           );
           setIsLoading(false);
         }
@@ -235,9 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (!ok) {
         if (!cancelled) {
-          setConfigError(
-            "Authentication is not configured for this environment.",
-          );
+          setConfigError("Authentication is not configured for this environment.");
           setIsLoading(false);
         }
         return;
@@ -251,19 +227,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [checkAuth]);
 
-  const handleSignIn = async (
-    email: string,
-    password: string,
-  ): Promise<SignInResult> => {
-    const { signIn: amplifySignIn, signOut: amplifySignOut } =
-      await import("aws-amplify/auth");
+  const handleSignIn = async (email: string, password: string): Promise<SignInResult> => {
+    const { signIn: amplifySignIn, signOut: amplifySignOut } = await import("aws-amplify/auth");
     try {
       const result = await amplifySignIn({ username: email, password });
 
-      if (
-        result.nextStep?.signInStep ===
-        "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED"
-      ) {
+      if (result.nextStep?.signInStep === "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED") {
         return { needsNewPassword: true };
       }
 
@@ -276,10 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return {};
     } catch (err: unknown) {
-      if (
-        err instanceof Error &&
-        err.name === "UserAlreadyAuthenticatedException"
-      ) {
+      if (err instanceof Error && err.name === "UserAlreadyAuthenticatedException") {
         await amplifySignOut();
         const result = await amplifySignIn({ username: email, password });
         if (result.isSignedIn) {
@@ -291,11 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const handleSignUp = async (
-    email: string,
-    password: string,
-    name?: string,
-  ) => {
+  const handleSignUp = async (email: string, password: string, name?: string) => {
     const { signUp: amplifySignUp } = await import("aws-amplify/auth");
     try {
       const userAttributes: Record<string, string> = { email };
@@ -318,8 +280,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleConfirmSignUp = async (email: string, code: string) => {
-    const { confirmSignUp: amplifyConfirmSignUp } =
-      await import("aws-amplify/auth");
+    const { confirmSignUp: amplifyConfirmSignUp } = await import("aws-amplify/auth");
     try {
       await amplifyConfirmSignUp({ username: email, confirmationCode: code });
     } catch (err) {
@@ -328,8 +289,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleForgotPassword = async (email: string) => {
-    const { resetPassword: amplifyResetPassword } =
-      await import("aws-amplify/auth");
+    const { resetPassword: amplifyResetPassword } = await import("aws-amplify/auth");
     try {
       await amplifyResetPassword({ username: email });
     } catch (err) {
@@ -337,13 +297,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const handleConfirmForgotPassword = async (
-    email: string,
-    code: string,
-    newPassword: string,
-  ) => {
-    const { confirmResetPassword: amplifyConfirmResetPassword } =
-      await import("aws-amplify/auth");
+  const handleConfirmForgotPassword = async (email: string, code: string, newPassword: string) => {
+    const { confirmResetPassword: amplifyConfirmResetPassword } = await import("aws-amplify/auth");
     try {
       await amplifyConfirmResetPassword({
         username: email,
@@ -356,8 +311,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleCompleteNewPassword = async (newPassword: string) => {
-    const { confirmSignIn: amplifyConfirmSignIn } =
-      await import("aws-amplify/auth");
+    const { confirmSignIn: amplifyConfirmSignIn } = await import("aws-amplify/auth");
     try {
       const result = await amplifyConfirmSignIn({
         challengeResponse: newPassword,
@@ -379,8 +333,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const updates: Record<string, string> = {};
       if (attrs.name !== undefined) updates.name = attrs.name;
       if (attrs.phone !== undefined) updates.phone_number = attrs.phone;
-      if (attrs.company !== undefined)
-        updates["custom:company"] = attrs.company;
+      if (attrs.company !== undefined) updates["custom:company"] = attrs.company;
 
       if (Object.keys(updates).length > 0) {
         const { updateUserAttributes } = await import("aws-amplify/auth");
@@ -395,7 +348,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               company: attrs.company ?? prev.company,
               phone: attrs.phone ?? prev.phone,
             }
-          : prev,
+          : prev
       );
     } catch (err) {
       throw new Error(friendlyAuthError(err));

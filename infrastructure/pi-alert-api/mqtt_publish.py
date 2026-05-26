@@ -61,21 +61,25 @@ def _worst_severity(active_alerts: list[dict]) -> str:
 
 
 def _publish_sync(msgs: list[dict]) -> None:
-    """Blocking paho publish — runs in the executor thread."""
-    try:
-        publish.multiple(
-            msgs,
-            hostname=MQTT_BROKER_HOST,
-            port=MQTT_BROKER_PORT,
-            client_id="alert-api-publisher",
-        )
-    except Exception as exc:
-        logger.warning("MQTT publish failed: %s", exc)
+    """Blocking paho publish — runs in the executor thread.
+
+    Raises on failure so the async caller can surface the error rather than
+    silently succeeding while the MQTT message was never delivered.
+    """
+    publish.multiple(
+        msgs,
+        hostname=MQTT_BROKER_HOST,
+        port=MQTT_BROKER_PORT,
+        client_id="alert-api-publisher",
+    )
 
 
 async def _publish_async(msgs: list[dict]) -> None:
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(_executor, _publish_sync, msgs)
+    loop = asyncio.get_running_loop()
+    try:
+        await loop.run_in_executor(_executor, _publish_sync, msgs)
+    except Exception as exc:
+        logger.warning("MQTT publish failed (non-fatal): %s", exc)
 
 
 async def publish_alert_event(alert: dict, active_alerts: list[dict]) -> None:

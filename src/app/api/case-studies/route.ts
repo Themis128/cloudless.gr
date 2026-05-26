@@ -10,25 +10,18 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const featured = searchParams.get("featured") === "true";
 
-  const configured = await isConfiguredAsync(
-    "NOTION_API_KEY",
-    "NOTION_CASE_STUDIES_DB_ID",
-  );
+  const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID");
 
   if (!configured) {
-    const data = featured
-      ? staticCaseStudies.filter((c) => c.featured)
-      : staticCaseStudies;
+    const data = featured ? staticCaseStudies.filter((c) => c.featured) : staticCaseStudies;
     return NextResponse.json(
       { caseStudies: data, source: "static", fallbackReason: "not-configured" },
-      { headers: { "x-cms-source": "static" } },
+      { headers: { "x-cms-source": "static" } }
     );
   }
 
   try {
-    const caseStudies = featured
-      ? await getFeaturedCaseStudies()
-      : await getCaseStudies();
+    const caseStudies = featured ? await getFeaturedCaseStudies() : await getCaseStudies();
     return NextResponse.json(
       { caseStudies, source: "notion" },
       {
@@ -36,16 +29,14 @@ export async function GET(request: Request) {
           "Cache-Control": "public, s-maxage=120, stale-while-revalidate=60",
           "x-cms-source": "notion",
         },
-      },
+      }
     );
   } catch (err) {
     console.error("[API /case-studies] Fetch error:", err);
-    const data = featured
-      ? staticCaseStudies.filter((c) => c.featured)
-      : staticCaseStudies;
+    const data = featured ? staticCaseStudies.filter((c) => c.featured) : staticCaseStudies;
     return NextResponse.json(
       { caseStudies: data, source: "static", fallbackReason: "notion-error" },
-      { headers: { "x-cms-source": "static" } },
+      { headers: { "x-cms-source": "static" } }
     );
   }
 }

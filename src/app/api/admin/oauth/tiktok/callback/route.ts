@@ -3,8 +3,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import { createHmac, timingSafeEqual } from "crypto";
 import { getConfig } from "@/lib/ssm-config";
 
-const TOKEN_URL =
-  "https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/";
+const TOKEN_URL = "https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/";
 
 function escapeHtml(s: string): string {
   return s
@@ -20,10 +19,7 @@ function verifyState(state: string, secret: string): boolean {
   if (dot === -1) return false;
   const nonce = state.slice(0, dot);
   const sig = state.slice(dot + 1);
-  const expected = createHmac("sha256", secret)
-    .update(nonce)
-    .digest("hex")
-    .slice(0, 16);
+  const expected = createHmac("sha256", secret).update(nonce).digest("hex").slice(0, 16);
   const sigBuf = Buffer.from(sig, "utf-8");
   const expectedBuf = Buffer.from(expected, "utf-8");
   if (sigBuf.length !== expectedBuf.length) return false;
@@ -46,7 +42,7 @@ interface TikTokTokenResponse {
 async function exchangeCode(
   appId: string,
   secret: string,
-  authCode: string,
+  authCode: string
 ): Promise<TikTokTokenResponse> {
   const res = await fetch(TOKEN_URL, {
     method: "POST",
@@ -113,64 +109,52 @@ export async function GET(request: NextRequest) {
   }
 
   if (!authCode) {
-    return new NextResponse(
-      errorHtml("Missing auth_code in callback parameters."),
-      {
-        status: 400,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      },
-    );
+    return new NextResponse(errorHtml("Missing auth_code in callback parameters."), {
+      status: 400,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
   }
 
   const cfg = await getConfig();
 
   if (!cfg.TIKTOK_APP_ID || !cfg.TIKTOK_APP_SECRET) {
-    return new NextResponse(
-      errorHtml("TIKTOK_APP_ID or TIKTOK_APP_SECRET not configured."),
-      {
-        status: 503,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      },
-    );
+    return new NextResponse(errorHtml("TIKTOK_APP_ID or TIKTOK_APP_SECRET not configured."), {
+      status: 503,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
   }
 
   // Verify the CSRF state with the TikTok app secret only. Using CRON_SECRET
   // here would let any holder of the cron token forge a valid OAuth state.
   if (!verifyState(state, cfg.TIKTOK_APP_SECRET)) {
     return new NextResponse(
-      errorHtml(
-        "Invalid state parameter — possible CSRF. Restart the OAuth flow.",
-      ),
+      errorHtml("Invalid state parameter — possible CSRF. Restart the OAuth flow."),
       {
         status: 400,
         headers: { "Content-Type": "text/html; charset=utf-8" },
-      },
+      }
     );
   }
 
   let tokenData: TikTokTokenResponse;
   try {
-    tokenData = await exchangeCode(
-      cfg.TIKTOK_APP_ID,
-      cfg.TIKTOK_APP_SECRET,
-      authCode,
-    );
+    tokenData = await exchangeCode(cfg.TIKTOK_APP_ID, cfg.TIKTOK_APP_SECRET, authCode);
   } catch {
     return new NextResponse(
       errorHtml("Token exchange request failed. Check network connectivity."),
       {
         status: 502,
         headers: { "Content-Type": "text/html; charset=utf-8" },
-      },
+      }
     );
   }
 
   if (tokenData.code !== 0 || !tokenData.data?.access_token) {
     return new NextResponse(
       errorHtml(
-        `TikTok token exchange failed: ${tokenData.message ?? "unknown error"} (code ${tokenData.code})`,
+        `TikTok token exchange failed: ${tokenData.message ?? "unknown error"} (code ${tokenData.code})`
       ),
-      { status: 502, headers: { "Content-Type": "text/html; charset=utf-8" } },
+      { status: 502, headers: { "Content-Type": "text/html; charset=utf-8" } }
     );
   }
 

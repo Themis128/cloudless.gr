@@ -56,10 +56,7 @@ type SendEventOptions = {
 };
 
 function sha256(value: string): string {
-  return crypto
-    .createHash("sha256")
-    .update(value.trim().toLowerCase())
-    .digest("hex");
+  return crypto.createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
 }
 
 function hashMaybe(value: string | undefined): string | undefined {
@@ -109,9 +106,7 @@ function captureCapiError(err: unknown, context: Record<string, string>): void {
  * when unconfigured.
  */
 export function isCapiConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_META_PIXEL_ID && process.env.META_CAPI_ACCESS_TOKEN,
-  );
+  return Boolean(process.env.NEXT_PUBLIC_META_PIXEL_ID && process.env.META_CAPI_ACCESS_TOKEN);
 }
 
 function buildUserData(opts: SendEventOptions): Record<string, unknown> {
@@ -143,7 +138,7 @@ function buildUserData(opts: SendEventOptions): Record<string, unknown> {
  */
 export async function sendCapiEvent(
   eventName: string,
-  opts: SendEventOptions,
+  opts: SendEventOptions
 ): Promise<CapiResult> {
   const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
   const token = process.env.META_CAPI_ACCESS_TOKEN;
@@ -189,9 +184,7 @@ export async function sendCapiEvent(
 
     if (!res.ok) {
       const rawBody = await res.text().catch(() => "");
-      const safeBody = rawBody
-        .replaceAll(token, "[redacted-token]")
-        .slice(0, 500);
+      const safeBody = rawBody.replaceAll(token, "[redacted-token]").slice(0, 500);
       captureCapiError(new Error(`CAPI ${eventName} failed: ${res.status}`), {
         event_name: eventName,
         status: String(res.status),
@@ -203,8 +196,7 @@ export async function sendCapiEvent(
     return { ok: true, eventsReceived: json.events_received ?? 1 };
   } catch (err) {
     const isAbort =
-      err instanceof Error &&
-      (err.name === "AbortError" || err.message.includes("aborted"));
+      err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"));
     captureCapiError(err, {
       event_name: eventName,
       reason: isAbort ? "timeout" : "network_error",
@@ -228,9 +220,7 @@ export async function sendCapiEvent(
  * request, consultation booking). Call AFTER the form has been accepted
  * (e.g. after SES send in /api/contact).
  */
-export function sendLeadEvent(
-  opts: SendEventOptions & { source?: string },
-): Promise<CapiResult> {
+export function sendLeadEvent(opts: SendEventOptions & { source?: string }): Promise<CapiResult> {
   const { source, ...rest } = opts;
   return sendCapiEvent("Lead", {
     ...rest,
@@ -258,7 +248,7 @@ export function sendPurchaseEvent(
     value: number;
     currency: string;
     contents?: Array<{ id: string; quantity: number; item_price?: number }>;
-  },
+  }
 ): Promise<CapiResult> {
   const { value, currency, contents, ...rest } = opts;
   return sendCapiEvent("Purchase", {

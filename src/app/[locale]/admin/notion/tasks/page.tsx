@@ -19,28 +19,12 @@ interface Task {
   url: string;
 }
 
-type TaskStatus =
-  | "Backlog"
-  | "To Do"
-  | "In Progress"
-  | "In Review"
-  | "Done"
-  | "Blocked";
+type TaskStatus = "Backlog" | "To Do" | "In Progress" | "In Review" | "Done" | "Blocked";
 type TaskPriority = "Urgent" | "High" | "Medium" | "Low";
 
-const COLUMNS: TaskStatus[] = [
-  "Backlog",
-  "To Do",
-  "In Progress",
-  "In Review",
-  "Done",
-  "Blocked",
-];
+const COLUMNS: TaskStatus[] = ["Backlog", "To Do", "In Progress", "In Review", "Done", "Blocked"];
 
-const COLUMN_STYLES: Record<
-  string,
-  { border: string; header: string; dot: string }
-> = {
+const COLUMN_STYLES: Record<string, { border: string; header: string; dot: string }> = {
   Backlog: {
     border: "border-slate-700",
     header: "text-slate-400",
@@ -111,9 +95,7 @@ export default function TasksKanbanPage() {
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [viewMode, setViewMode] = useState<"kanban" | "list" | "sprint">(
-    "kanban",
-  );
+  const [viewMode, setViewMode] = useState<"kanban" | "list" | "sprint">("kanban");
   const [selectedSprint, setSelectedSprint] = useState<string>("all");
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<TaskStatus>("To Do");
@@ -156,9 +138,7 @@ export default function TasksKanbanPage() {
         body: JSON.stringify({ pageId, status }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setTasks((prev) =>
-        prev.map((t) => (t.id === pageId ? { ...t, status } : t)),
-      );
+      setTasks((prev) => prev.map((t) => (t.id === pageId ? { ...t, status } : t)));
     } catch (err) {
       console.error("Failed to update task:", err);
     } finally {
@@ -175,13 +155,11 @@ export default function TasksKanbanPage() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pageId: id, status: bulkStatus }),
-        }),
+        })
       );
       await Promise.all(promises);
       setTasks((prev) =>
-        prev.map((t) =>
-          bulkSelected.has(t.id) ? { ...t, status: bulkStatus } : t,
-        ),
+        prev.map((t) => (bulkSelected.has(t.id) ? { ...t, status: bulkStatus } : t))
       );
       setBulkSelected(new Set());
     } catch (err) {
@@ -222,9 +200,7 @@ export default function TasksKanbanPage() {
   };
 
   // Get unique sprints
-  const sprints = [
-    ...new Set(tasks.map((t) => t.sprint).filter(Boolean)),
-  ] as string[];
+  const sprints = [...new Set(tasks.map((t) => t.sprint).filter(Boolean))] as string[];
 
   // Filter tasks
   const filteredTasks =
@@ -234,17 +210,13 @@ export default function TasksKanbanPage() {
         ? tasks.filter((t) => isOverdue(t.dueDate, t.status))
         : tasks.filter((t) => t.sprint === selectedSprint);
 
-  const tasksByStatus = (status: string) =>
-    filteredTasks.filter((t) => t.status === status);
-  const overdueCount = tasks.filter((t) =>
-    isOverdue(t.dueDate, t.status),
-  ).length;
+  const tasksByStatus = (status: string) => filteredTasks.filter((t) => t.status === status);
+  const overdueCount = tasks.filter((t) => isOverdue(t.dueDate, t.status)).length;
 
   // Sprint progress
   const sprintTotal = filteredTasks.length;
   const sprintDone = filteredTasks.filter((t) => t.status === "Done").length;
-  const sprintPercent =
-    sprintTotal > 0 ? Math.round((sprintDone / sprintTotal) * 100) : 0;
+  const sprintPercent = sprintTotal > 0 ? Math.round((sprintDone / sprintTotal) * 100) : 0;
 
   const toggleBulk = (id: string) => {
     setBulkSelected((prev) => {
@@ -261,9 +233,7 @@ export default function TasksKanbanPage() {
     return (
       <div
         className={`group rounded-lg border p-3 transition-all hover:border-slate-600 ${
-          overdue
-            ? "border-red-500/30 bg-red-500/5"
-            : "border-slate-700/50 bg-void/60"
+          overdue ? "border-red-500/30 bg-red-500/5" : "bg-void/60 border-slate-700/50"
         }`}
       >
         <div className="flex items-start justify-between gap-2">
@@ -274,7 +244,7 @@ export default function TasksKanbanPage() {
                   type="checkbox"
                   checked={bulkSelected.has(task.id)}
                   onChange={() => toggleBulk(task.id)}
-                  className="mr-1 accent-neon-cyan"
+                  className="accent-neon-cyan mr-1"
                 />
               )}
               {task.type && (
@@ -282,9 +252,7 @@ export default function TasksKanbanPage() {
                   {TYPE_ICONS[task.type] ?? "•"}
                 </span>
               )}
-              <h4 className="truncate text-sm font-medium text-white">
-                {task.task}
-              </h4>
+              <h4 className="truncate text-sm font-medium text-white">{task.task}</h4>
               {overdue && (
                 <span className="ml-1 rounded bg-red-500/20 px-1 py-0.5 font-mono text-[8px] text-red-400">
                   OVERDUE
@@ -292,7 +260,7 @@ export default function TasksKanbanPage() {
               )}
             </div>
             {task.description && (
-              <p className="font-body mt-1 text-xs text-slate-500 line-clamp-2">
+              <p className="font-body mt-1 line-clamp-2 text-xs text-slate-500">
                 {task.description}
               </p>
             )}
@@ -302,7 +270,7 @@ export default function TasksKanbanPage() {
               href={task.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 text-slate-600 opacity-0 transition-all hover:text-slate-400 group-hover:opacity-100"
+              className="shrink-0 text-slate-600 opacity-0 transition-all group-hover:opacity-100 hover:text-slate-400"
             >
               <svg
                 width="12"
@@ -330,14 +298,12 @@ export default function TasksKanbanPage() {
             </span>
           )}
           {task.sprint && (
-            <span className="rounded bg-neon-blue/5 px-1.5 py-0.5 font-mono text-[9px] text-neon-blue/60">
+            <span className="bg-neon-blue/5 text-neon-blue/60 rounded px-1.5 py-0.5 font-mono text-[9px]">
               {task.sprint}
             </span>
           )}
           {task.dueDate && (
-            <span
-              className={`font-mono text-[9px] ${overdue ? "text-red-400" : "text-slate-600"}`}
-            >
+            <span className={`font-mono text-[9px] ${overdue ? "text-red-400" : "text-slate-600"}`}>
               {formatDate(task.dueDate)}
             </span>
           )}
@@ -346,12 +312,12 @@ export default function TasksKanbanPage() {
         <div className="mt-2 flex items-center justify-between">
           <div className="flex flex-wrap gap-1">
             {task.project && (
-              <span className="rounded bg-neon-cyan/5 px-1.5 py-0.5 font-mono text-[9px] text-neon-cyan/60">
+              <span className="bg-neon-cyan/5 text-neon-cyan/60 rounded px-1.5 py-0.5 font-mono text-[9px]">
                 {task.project}
               </span>
             )}
             {task.assignee && (
-              <span className="rounded bg-neon-magenta/5 px-1.5 py-0.5 font-mono text-[9px] text-neon-magenta/60">
+              <span className="bg-neon-magenta/5 text-neon-magenta/60 rounded px-1.5 py-0.5 font-mono text-[9px]">
                 {task.assignee}
               </span>
             )}
@@ -359,10 +325,8 @@ export default function TasksKanbanPage() {
           <select
             value={task.status}
             disabled={updating === task.id || updating === "bulk"}
-            onChange={(e) =>
-              updateStatus(task.id, e.target.value as TaskStatus)
-            }
-            className="rounded border border-slate-700 bg-void px-1 py-0.5 font-mono text-[9px] text-slate-400 focus:border-neon-cyan/50 focus:outline-none disabled:opacity-50"
+            onChange={(e) => updateStatus(task.id, e.target.value as TaskStatus)}
+            className="bg-void focus:border-neon-cyan/50 rounded border border-slate-700 px-1 py-0.5 font-mono text-[9px] text-slate-400 focus:outline-none disabled:opacity-50"
           >
             {COLUMNS.map((s) => (
               <option key={s} value={s}>
@@ -395,13 +359,9 @@ export default function TasksKanbanPage() {
         <div>
           <div className="bg-neon-magenta/10 border-neon-magenta/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-magenta font-mono text-xs">
-              NOTION_TASKS
-            </span>
+            <span className="text-neon-magenta font-mono text-xs">NOTION_TASKS</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            Task Board
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">Task Board</h1>
           <p className="font-body mt-1 text-slate-400">
             Kanban view of your Notion tasks database.
           </p>
@@ -501,7 +461,7 @@ export default function TasksKanbanPage() {
             <div className="ml-auto flex items-center gap-2">
               <div className="h-1.5 w-32 overflow-hidden rounded-full bg-slate-800">
                 <div
-                  className="h-full rounded-full bg-neon-green transition-all"
+                  className="bg-neon-green h-full rounded-full transition-all"
                   style={{ width: `${sprintPercent}%` }}
                 />
               </div>
@@ -515,14 +475,12 @@ export default function TasksKanbanPage() {
 
       {/* Bulk actions */}
       {viewMode === "list" && bulkSelected.size > 0 && (
-        <div className="mb-4 flex items-center gap-3 rounded-lg border border-neon-cyan/20 bg-neon-cyan/5 p-3">
-          <span className="font-mono text-xs text-neon-cyan">
-            {bulkSelected.size} selected
-          </span>
+        <div className="border-neon-cyan/20 bg-neon-cyan/5 mb-4 flex items-center gap-3 rounded-lg border p-3">
+          <span className="text-neon-cyan font-mono text-xs">{bulkSelected.size} selected</span>
           <select
             value={bulkStatus}
             onChange={(e) => setBulkStatus(e.target.value as TaskStatus)}
-            className="rounded border border-slate-700 bg-void px-2 py-1 font-mono text-xs text-slate-300 focus:outline-none"
+            className="bg-void rounded border border-slate-700 px-2 py-1 font-mono text-xs text-slate-300 focus:outline-none"
           >
             {COLUMNS.map((s) => (
               <option key={s} value={s}>
@@ -533,7 +491,7 @@ export default function TasksKanbanPage() {
           <button
             onClick={bulkUpdateStatus}
             disabled={updating === "bulk"}
-            className="rounded border border-neon-cyan/30 bg-neon-cyan/10 px-3 py-1 font-mono text-xs text-neon-cyan transition-colors hover:bg-neon-cyan/20 disabled:opacity-50"
+            className="border-neon-cyan/30 bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 rounded border px-3 py-1 font-mono text-xs transition-colors disabled:opacity-50"
           >
             {updating === "bulk" ? "Updating…" : "Update All"}
           </button>
@@ -549,21 +507,19 @@ export default function TasksKanbanPage() {
       {/* Create form */}
       {showCreate && (
         <div className="bg-void-light/50 mb-6 rounded-xl border border-slate-800 p-6">
-          <h3 className="font-heading mb-4 font-semibold text-white">
-            Create Task
-          </h3>
+          <h3 className="font-heading mb-4 font-semibold text-white">Create Task</h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <input
               type="text"
               placeholder="Task title *"
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
-              className="bg-void sm:col-span-2 lg:col-span-3 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-magenta/50 focus:outline-none"
+              className="bg-void focus:border-neon-magenta/50 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none sm:col-span-2 lg:col-span-3"
             />
             <select
               value={newPriority}
               onChange={(e) => setNewPriority(e.target.value as TaskPriority)}
-              className="bg-void rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-neon-magenta/50 focus:outline-none"
+              className="bg-void focus:border-neon-magenta/50 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:outline-none"
             >
               <option value="Urgent">Urgent</option>
               <option value="High">High</option>
@@ -573,7 +529,7 @@ export default function TasksKanbanPage() {
             <select
               value={newType}
               onChange={(e) => setNewType(e.target.value)}
-              className="bg-void rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-neon-magenta/50 focus:outline-none"
+              className="bg-void focus:border-neon-magenta/50 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:outline-none"
             >
               <option value="">Type (optional)</option>
               <option value="Feature">Feature</option>
@@ -587,20 +543,20 @@ export default function TasksKanbanPage() {
               placeholder="Project"
               value={newProject}
               onChange={(e) => setNewProject(e.target.value)}
-              className="bg-void rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-magenta/50 focus:outline-none"
+              className="bg-void focus:border-neon-magenta/50 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
             />
             <input
               type="text"
               placeholder="Assignee"
               value={newAssignee}
               onChange={(e) => setNewAssignee(e.target.value)}
-              className="bg-void rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-magenta/50 focus:outline-none"
+              className="bg-void focus:border-neon-magenta/50 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
             />
             <input
               type="date"
               value={newDueDate}
               onChange={(e) => setNewDueDate(e.target.value)}
-              className="bg-void rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-neon-magenta/50 focus:outline-none"
+              className="bg-void focus:border-neon-magenta/50 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:outline-none"
             />
           </div>
           <div className="mt-4 flex gap-2">
@@ -634,7 +590,7 @@ export default function TasksKanbanPage() {
           {COLUMNS.map((col) => (
             <div
               key={col}
-              className="animate-pulse rounded-xl border border-slate-800 bg-void-light/30 p-4"
+              className="bg-void-light/30 animate-pulse rounded-xl border border-slate-800 p-4"
             >
               <div className="mb-3 h-4 w-20 rounded bg-slate-700/60" />
               <div className="space-y-2">
@@ -658,17 +614,10 @@ export default function TasksKanbanPage() {
             const style = COLUMN_STYLES[col];
             const colTasks = tasksByStatus(col);
             return (
-              <div
-                key={col}
-                className={`rounded-xl border bg-void-light/20 p-3 ${style.border}`}
-              >
+              <div key={col} className={`bg-void-light/20 rounded-xl border p-3 ${style.border}`}>
                 <div className="mb-3 flex items-center gap-2">
                   <span className={`h-2 w-2 rounded-full ${style.dot}`} />
-                  <span
-                    className={`font-mono text-xs font-semibold ${style.header}`}
-                  >
-                    {col}
-                  </span>
+                  <span className={`font-mono text-xs font-semibold ${style.header}`}>{col}</span>
                   <span className="ml-auto rounded-full bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-slate-500">
                     {colTasks.length}
                   </span>
@@ -678,9 +627,7 @@ export default function TasksKanbanPage() {
                     <TaskCard key={task.id} task={task} />
                   ))}
                   {colTasks.length === 0 && (
-                    <p className="py-4 text-center font-mono text-[10px] text-slate-700">
-                      Empty
-                    </p>
+                    <p className="py-4 text-center font-mono text-[10px] text-slate-700">Empty</p>
                   )}
                 </div>
               </div>
@@ -693,10 +640,8 @@ export default function TasksKanbanPage() {
       {!loading && viewMode === "sprint" && (
         <div className="space-y-6">
           {sprints.length === 0 ? (
-            <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
-              <p className="font-mono text-slate-500">
-                No sprints assigned to tasks yet.
-              </p>
+            <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
+              <p className="font-mono text-slate-500">No sprints assigned to tasks yet.</p>
               <p className="font-body mt-2 text-sm text-slate-600">
                 Add a Sprint property to your tasks in Notion.
               </p>
@@ -704,23 +649,17 @@ export default function TasksKanbanPage() {
           ) : (
             sprints.map((sprint) => {
               const sprintTasks = tasks.filter((t) => t.sprint === sprint);
-              const done = sprintTasks.filter(
-                (t) => t.status === "Done",
-              ).length;
+              const done = sprintTasks.filter((t) => t.status === "Done").length;
               const pct =
-                sprintTasks.length > 0
-                  ? Math.round((done / sprintTasks.length) * 100)
-                  : 0;
+                sprintTasks.length > 0 ? Math.round((done / sprintTasks.length) * 100) : 0;
               return (
                 <div
                   key={sprint}
-                  className="rounded-xl border border-slate-800 bg-void-light/30 p-5"
+                  className="bg-void-light/30 rounded-xl border border-slate-800 p-5"
                 >
                   <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-heading font-semibold text-white">
-                        {sprint}
-                      </h3>
+                      <h3 className="font-heading font-semibold text-white">{sprint}</h3>
                       <span className="font-mono text-xs text-slate-500">
                         {done}/{sprintTasks.length} done
                       </span>
@@ -732,9 +671,7 @@ export default function TasksKanbanPage() {
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="font-mono text-xs text-slate-500">
-                        {pct}%
-                      </span>
+                      <span className="font-mono text-xs text-slate-500">{pct}%</span>
                     </div>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -752,7 +689,7 @@ export default function TasksKanbanPage() {
             const unassigned = tasks.filter((t) => !t.sprint);
             if (unassigned.length === 0) return null;
             return (
-              <div className="rounded-xl border border-slate-700/50 bg-void-light/20 p-5">
+              <div className="bg-void-light/20 rounded-xl border border-slate-700/50 p-5">
                 <h3 className="font-heading mb-4 font-semibold text-slate-400">
                   No Sprint ({unassigned.length})
                 </h3>
@@ -771,7 +708,7 @@ export default function TasksKanbanPage() {
       {!loading && viewMode === "list" && (
         <div className="space-y-2">
           {filteredTasks.length === 0 && (
-            <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
+            <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
               <p className="font-mono text-slate-500">No tasks found.</p>
             </div>
           )}
@@ -781,7 +718,7 @@ export default function TasksKanbanPage() {
               className={`flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3 ${
                 isOverdue(task.dueDate, task.status)
                   ? "border-red-500/20 bg-red-500/5"
-                  : "border-slate-800 bg-void-light/50"
+                  : "bg-void-light/50 border-slate-800"
               }`}
             >
               <input
@@ -791,9 +728,7 @@ export default function TasksKanbanPage() {
                 className="accent-neon-cyan"
               />
               <span className="text-xs">{TYPE_ICONS[task.type] ?? "•"}</span>
-              <span className="min-w-0 flex-1 text-sm font-medium text-white">
-                {task.task}
-              </span>
+              <span className="min-w-0 flex-1 text-sm font-medium text-white">{task.task}</span>
               {isOverdue(task.dueDate, task.status) && (
                 <span className="rounded bg-red-500/20 px-1.5 py-0.5 font-mono text-[9px] text-red-400">
                   OVERDUE
@@ -805,27 +740,19 @@ export default function TasksKanbanPage() {
                 {task.priority}
               </span>
               {task.sprint && (
-                <span className="font-mono text-[10px] text-neon-blue/60">
-                  {task.sprint}
-                </span>
+                <span className="text-neon-blue/60 font-mono text-[10px]">{task.sprint}</span>
               )}
               {task.project && (
-                <span className="font-mono text-[10px] text-slate-500">
-                  {task.project}
-                </span>
+                <span className="font-mono text-[10px] text-slate-500">{task.project}</span>
               )}
               {task.assignee && (
-                <span className="font-mono text-[10px] text-neon-magenta/60">
-                  {task.assignee}
-                </span>
+                <span className="text-neon-magenta/60 font-mono text-[10px]">{task.assignee}</span>
               )}
               <select
                 value={task.status}
                 disabled={updating === task.id || updating === "bulk"}
-                onChange={(e) =>
-                  updateStatus(task.id, e.target.value as TaskStatus)
-                }
-                className="rounded border border-slate-700 bg-void px-2 py-1 font-mono text-[10px] text-slate-300 focus:border-neon-magenta/50 focus:outline-none disabled:opacity-50"
+                onChange={(e) => updateStatus(task.id, e.target.value as TaskStatus)}
+                className="bg-void focus:border-neon-magenta/50 rounded border border-slate-700 px-2 py-1 font-mono text-[10px] text-slate-300 focus:outline-none disabled:opacity-50"
               >
                 {COLUMNS.map((s) => (
                   <option key={s} value={s}>

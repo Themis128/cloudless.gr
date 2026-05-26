@@ -1,18 +1,10 @@
 import { NextRequest } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getConfig } from "@/lib/ssm-config";
-import {
-  sendOrderConfirmation,
-  sendPaymentFailureNotice,
-  notifyTeam,
-} from "@/lib/email";
+import { sendOrderConfirmation, sendPaymentFailureNotice, notifyTeam } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { slackOrderNotify } from "@/lib/slack-notify";
-import {
-  upsertContact,
-  createDeal,
-  associateDealWithContact,
-} from "@/lib/hubspot";
+import { upsertContact, createDeal, associateDealWithContact } from "@/lib/hubspot";
 import type Stripe from "stripe";
 import { mapIntegrationError } from "@/lib/api-errors";
 import {
@@ -28,8 +20,7 @@ async function syncHubSpotDeal(session: Stripe.Checkout.Session): Promise<void> 
     const contactId = await upsertContact({
       email: session.customer_email ?? "",
       firstname: session.customer_details?.name?.split(" ")[0] ?? "",
-      lastname:
-        session.customer_details?.name?.split(" ").slice(1).join(" ") ?? "",
+      lastname: session.customer_details?.name?.split(" ").slice(1).join(" ") ?? "",
       lead_source: "stripe_checkout",
     });
     const dealId = await createDeal({
@@ -50,21 +41,20 @@ async function syncHubSpotDeal(session: Stripe.Checkout.Session): Promise<void> 
 
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
-  eventId: string,
+  eventId: string
 ): Promise<void> {
   console.warn(
-    `[Stripe] Checkout completed: ${session.id}, event: ${eventId}, payment_status: ${session.payment_status}`,
+    `[Stripe] Checkout completed: ${session.id}, event: ${eventId}, payment_status: ${session.payment_status}`
   );
 
-  const paymentCollected =
-    session.payment_status === "paid" || session.mode === "subscription";
+  const paymentCollected = session.payment_status === "paid" || session.mode === "subscription";
 
   if (session.customer_email && paymentCollected) {
     await sendOrderConfirmation(
       session.customer_email,
       session.id,
       session.amount_total ?? 0,
-      session.currency ?? "eur",
+      session.currency ?? "eur"
     );
   }
 
@@ -73,7 +63,7 @@ async function handleCheckoutCompleted(
     `<h3>New order received</h3>
     <p><strong>Customer:</strong> ${escapeHtml(session.customer_email ?? "N/A")}</p>
     <p><strong>Amount:</strong> ${((session.amount_total ?? 0) / 100).toFixed(2)} ${escapeHtml((session.currency ?? "EUR").toUpperCase())}</p>
-    <p><strong>Session:</strong> ${escapeHtml(session.id)}</p>`,
+    <p><strong>Session:</strong> ${escapeHtml(session.id)}</p>`
   );
 
   slackOrderNotify({
@@ -96,10 +86,9 @@ function invoiceCustomerString(invoice: Stripe.Invoice): string {
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
   console.error(
-    `[Stripe] Invoice payment failed: ${invoice.id}, customer: ${invoiceCustomerString(invoice)}`,
+    `[Stripe] Invoice payment failed: ${invoice.id}, customer: ${invoiceCustomerString(invoice)}`
   );
-  const customerEmail =
-    typeof invoice.customer_email === "string" ? invoice.customer_email : null;
+  const customerEmail = typeof invoice.customer_email === "string" ? invoice.customer_email : null;
   if (customerEmail) {
     await sendPaymentFailureNotice(customerEmail, invoice.id ?? "unknown");
   }
@@ -108,19 +97,19 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void
     `<p style="color: #ff4444;"><strong>Payment failed</strong></p>
     <p><strong>Invoice:</strong> ${escapeHtml(invoice.id ?? "unknown")}</p>
     <p><strong>Customer:</strong> ${escapeHtml(customerEmail ?? invoiceCustomerString(invoice))}</p>
-    <p><strong>Amount:</strong> ${((invoice.amount_due ?? 0) / 100).toFixed(2)} ${escapeHtml((invoice.currency ?? "EUR").toUpperCase())}</p>`,
+    <p><strong>Amount:</strong> ${((invoice.amount_due ?? 0) / 100).toFixed(2)} ${escapeHtml((invoice.currency ?? "EUR").toUpperCase())}</p>`
   );
 }
 
 async function handleSubscriptionEvent(
   action: "created" | "updated" | "deleted",
-  sub: Stripe.Subscription,
+  sub: Stripe.Subscription
 ): Promise<void> {
   if (action === "deleted") {
     console.warn(`[Stripe] Subscription cancelled: ${sub.id}`);
     await notifyTeam(
       `[Subscription] Cancelled: ${sub.id}`,
-      `<p>Subscription cancelled.</p><p><strong>ID:</strong> ${escapeHtml(sub.id)}</p>`,
+      `<p>Subscription cancelled.</p><p><strong>ID:</strong> ${escapeHtml(sub.id)}</p>`
     );
     return;
   }
@@ -131,7 +120,7 @@ async function handleSubscriptionEvent(
     `[Subscription] ${label}: ${sub.id}`,
     `<p>Subscription ${verb}.</p>
     <p><strong>ID:</strong> ${escapeHtml(sub.id)}</p>
-    <p><strong>Status:</strong> ${escapeHtml(sub.status)}</p>`,
+    <p><strong>Status:</strong> ${escapeHtml(sub.status)}</p>`
   );
 }
 
@@ -150,7 +139,9 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       await handleSubscriptionEvent("deleted", event.data.object);
       break;
     case "invoice.payment_succeeded":
-      console.warn(`[Stripe] Invoice paid: ${event.data.object.id}, amount: ${event.data.object.amount_paid}`);
+      console.warn(
+        `[Stripe] Invoice paid: ${event.data.object.id}, amount: ${event.data.object.amount_paid}`
+      );
       break;
     case "invoice.payment_failed":
       await handleInvoicePaymentFailed(event.data.object);
@@ -165,10 +156,7 @@ export async function POST(request: NextRequest) {
   const signature = request.headers.get("stripe-signature");
 
   if (!signature) {
-    return Response.json(
-      { error: "Missing stripe-signature header" },
-      { status: 400 },
-    );
+    return Response.json({ error: "Missing stripe-signature header" }, { status: 400 });
   }
 
   const config = await getConfig();
@@ -202,10 +190,7 @@ export async function POST(request: NextRequest) {
     const integrationResponse = mapIntegrationError(err);
     if (integrationResponse) return integrationResponse;
     console.error("[Stripe] Failed to persist event for analytics:", err);
-    return Response.json(
-      { error: "Transaction persistence failed" },
-      { status: 500 },
-    );
+    return Response.json({ error: "Transaction persistence failed" }, { status: 500 });
   }
 
   try {
@@ -214,8 +199,7 @@ export async function POST(request: NextRequest) {
     const integrationResponse = mapIntegrationError(err);
     if (integrationResponse) return integrationResponse;
 
-    const message =
-      err instanceof Error ? err.message : "Unknown handler error";
+    const message = err instanceof Error ? err.message : "Unknown handler error";
     await markStripeEventFailed(event.id, message).catch((markErr) => {
       console.error("[Stripe] Failed to mark event as failed:", markErr);
     });
@@ -228,7 +212,7 @@ export async function POST(request: NextRequest) {
             scope.setTag("route", "stripe.webhook");
             scope.setTag("stripe.event", event.type);
             captureException(err);
-          }),
+          })
         )
         .catch(() => {});
     }
@@ -240,9 +224,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-    await import("@sentry/nextjs")
-      .then(({ flush }) => flush(2000))
-      .catch(() => {});
+    await import("@sentry/nextjs").then(({ flush }) => flush(2000)).catch(() => {});
   }
 
   return Response.json({ received: true });

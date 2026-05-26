@@ -19,8 +19,7 @@
 let lastNotifiedVersion: string | undefined;
 
 async function loadSsmParams(prefix: string): Promise<Map<string, string>> {
-  const { SSMClient, GetParametersByPathCommand } =
-    await import("@aws-sdk/client-ssm");
+  const { SSMClient, GetParametersByPathCommand } = await import("@aws-sdk/client-ssm");
   const ssm = new SSMClient({ region: process.env.AWS_REGION ?? "us-east-1" });
   const params = new Map<string, string>();
   let nextToken: string | undefined;
@@ -31,7 +30,7 @@ async function loadSsmParams(prefix: string): Promise<Map<string, string>> {
         Path: prefix,
         WithDecryption: true,
         NextToken: nextToken,
-      }),
+      })
     );
     for (const p of res.Parameters ?? []) {
       const key = p.Name?.replace(`${prefix}/`, "") ?? "";
@@ -44,16 +43,14 @@ async function loadSsmParams(prefix: string): Promise<Map<string, string>> {
 }
 
 async function fireDeployNotification(prefix: string, params: Map<string, string>): Promise<void> {
-  console.warn(
-    `[Instrumentation] Loaded ${params.size} SSM parameters from ${prefix}`,
-  );
+  console.warn(`[Instrumentation] Loaded ${params.size} SSM parameters from ${prefix}`);
   const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "unknown";
   const stage = process.env.SST_STAGE ?? process.env.NODE_ENV ?? "production";
   if (version === "unknown" || version === lastNotifiedVersion) return;
   lastNotifiedVersion = version;
   const { slackDeployNotify } = await import("@/lib/slack-notify");
-  slackDeployNotify({ version, stage, status: "succeeded", commitSha: version }).catch(
-    (err) => console.warn("[Instrumentation] slackDeployNotify failed:", err),
+  slackDeployNotify({ version, stage, status: "succeeded", commitSha: version }).catch((err) =>
+    console.warn("[Instrumentation] slackDeployNotify failed:", err)
   );
 }
 

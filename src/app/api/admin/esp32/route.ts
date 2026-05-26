@@ -3,6 +3,21 @@ import { NextRequest, NextResponse } from "next/server";
 
 const ALERT_API = process.env.ALERT_API_URL ?? "http://192.168.1.128:30800";
 
+function isPrivateLanUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return (
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("172.") ||
+      hostname === "localhost" ||
+      hostname === "127.0.0.1"
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function proxyRequest(path: string, init?: RequestInit): Promise<NextResponse> {
   try {
     const res = await fetch(`${ALERT_API}${path}`, {
@@ -10,9 +25,12 @@ async function proxyRequest(path: string, init?: RequestInit): Promise<NextRespo
       signal: AbortSignal.timeout(8000),
     });
     if (res.status === 404) {
-      return NextResponse.json({ error: "ESP32 management unavailable", offline: true }, { status: 503 });
+      return NextResponse.json(
+        { error: "ESP32 management unavailable", offline: true },
+        { status: 503 }
+      );
     }
-    const data = await res.json();
+    const data: unknown = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch {
     return NextResponse.json({ error: "Pi unreachable", offline: true }, { status: 503 });
@@ -22,6 +40,13 @@ async function proxyRequest(path: string, init?: RequestInit): Promise<NextRespo
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
+
+  if (isPrivateLanUrl(ALERT_API)) {
+    return NextResponse.json(
+      { error: "ESP32 API not reachable from this deployment", offline: true },
+      { status: 503 }
+    );
+  }
 
   const { searchParams } = request.nextUrl;
   const action = searchParams.get("action");
@@ -38,26 +63,34 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         if (!res.ok) {
           return NextResponse.json({ error: "No ESP32 devices found" }, { status: 404 });
         }
-        const raw = await res.json();
-        // Pi /api/esp32/status returns { id, ip, rssi, ... } but the
-        // frontend expects device_id.  Map the fields so the device
-        // table renders correctly.
+        const rawUntyped: unknown = await res.json();
+        // Pi /api/esp32/status returns { id, device_id, ip, rssi, ... }.
+        // Prefer the explicit device_id field; fall back to synthesising
+        // from id only when both are absent (older firmware).
+        const statusData = rawUntyped as Record<string, unknown>;
+        const deviceIdVal =
+          typeof statusData.device_id === "string" && statusData.device_id
+            ? statusData.device_id
+            : statusData.id != null
+              ? `esp32-${statusData.id}`
+              : "esp32-unknown";
         const device = {
-          device_id: raw.id != null ? `esp32-${raw.id}` : "esp32-leds",
-          ip: raw.ip,
-          rssi: raw.rssi,
-          firmware_ver: raw.firmware_ver,
-          uptime_s: raw.uptime_s,
-          free_ram_bytes: raw.free_ram_bytes,
-          last_heartbeat: raw.last_heartbeat,
-          stale: raw.stale ?? true,
+          device_id: deviceIdVal,
+          ip: statusData.ip ?? null,
+          rssi: statusData.rssi ?? null,
+          firmware_ver: statusData.firmware_ver ?? null,
+          uptime_s: statusData.uptime_s ?? null,
+          free_ram_bytes: statusData.free_ram_bytes ?? null,
+          last_heartbeat: statusData.last_heartbeat ?? null,
+          stale: typeof statusData.stale === "boolean" ? statusData.stale : true,
         };
         return NextResponse.json([device]);
       } catch {
         return NextResponse.json({ error: "Pi unreachable", offline: true }, { status: 503 });
       }
     }
-    case "config":  return proxyRequest(`/api/esp32/${deviceId}/config`);
+    case "config":
+      return proxyRequest(`/api/esp32/${deviceId}/config`);
     default:
       return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
@@ -66,6 +99,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
+
+  if (isPrivateLanUrl(ALERT_API)) {
+    return NextResponse.json(
+      { error: "ESP32 API not reachable from this deployment", offline: true },
+      { status: 503 }
+    );
+  }
 
   const { searchParams } = request.nextUrl;
   const action = searchParams.get("action");
@@ -86,6 +126,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 export async function PUT(request: NextRequest): Promise<NextResponse> {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
+
+  if (isPrivateLanUrl(ALERT_API)) {
+    return NextResponse.json(
+      { error: "ESP32 API not reachable from this deployment", offline: true },
+      { status: 503 }
+    );
+  }
 
   const { searchParams } = request.nextUrl;
   const deviceId = searchParams.get("device_id") ?? "esp32-leds";

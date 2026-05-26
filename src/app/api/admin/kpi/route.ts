@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getAnalyticsSummary } from "@/lib/notion-analytics";
 import { getSeoSnapshot } from "@/lib/gsc";
-import {
-  listProjects,
-  getTaskSummary,
-  getOverdueTasks,
-} from "@/lib/notion-projects";
+import { listProjects, getTaskSummary, getOverdueTasks } from "@/lib/notion-projects";
 import { isConfiguredAsync } from "@/lib/integrations";
 import { getConfig } from "@/lib/ssm-config";
 
@@ -22,29 +18,20 @@ export async function GET(request: NextRequest) {
   ]);
   const gscConf = !!(cfg.GOOGLE_CLIENT_EMAIL && cfg.GOOGLE_PRIVATE_KEY);
 
-  const [
-    analyticsResult,
-    gscResult,
-    projectsResult,
-    taskSummaryResult,
-    overdueResult,
-  ] = await Promise.allSettled([
-    analyticsConf ? getAnalyticsSummary(7) : Promise.resolve(null),
-    gscConf ? getSeoSnapshot() : Promise.resolve(null),
-    projectsConf ? listProjects() : Promise.resolve([]),
-    tasksConf ? getTaskSummary() : Promise.resolve({}),
-    tasksConf ? getOverdueTasks() : Promise.resolve([]),
-  ]);
+  const [analyticsResult, gscResult, projectsResult, taskSummaryResult, overdueResult] =
+    await Promise.allSettled([
+      analyticsConf ? getAnalyticsSummary(7) : Promise.resolve(null),
+      gscConf ? getSeoSnapshot() : Promise.resolve(null),
+      projectsConf ? listProjects() : Promise.resolve([]),
+      tasksConf ? getTaskSummary() : Promise.resolve({}),
+      tasksConf ? getOverdueTasks() : Promise.resolve([]),
+    ]);
 
-  const analytics =
-    analyticsResult.status === "fulfilled" ? analyticsResult.value : null;
+  const analytics = analyticsResult.status === "fulfilled" ? analyticsResult.value : null;
   const gsc = gscResult.status === "fulfilled" ? gscResult.value : null;
-  const projects =
-    projectsResult.status === "fulfilled" ? projectsResult.value : [];
-  const taskSummary =
-    taskSummaryResult.status === "fulfilled" ? taskSummaryResult.value : {};
-  const overdueTasks =
-    overdueResult.status === "fulfilled" ? overdueResult.value : [];
+  const projects = projectsResult.status === "fulfilled" ? projectsResult.value : [];
+  const taskSummary = taskSummaryResult.status === "fulfilled" ? taskSummaryResult.value : {};
+  const overdueTasks = overdueResult.status === "fulfilled" ? overdueResult.value : [];
 
   const projectsByStatus: Record<string, number> = {};
   for (const p of projects) {
@@ -57,9 +44,8 @@ export async function GET(request: NextRequest) {
     projects: {
       total: projects.length,
       byStatus: projectsByStatus,
-      activeCount: projects.filter(
-        (p) => p.status === "In Progress" || p.status === "Planning",
-      ).length,
+      activeCount: projects.filter((p) => p.status === "In Progress" || p.status === "Planning")
+        .length,
     },
     tasks: {
       summary: taskSummary,

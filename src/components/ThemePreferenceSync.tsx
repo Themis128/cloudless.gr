@@ -38,10 +38,7 @@ export default function ThemePreferenceSync() {
       return;
     }
 
-    if (
-      preferredTheme === "system" &&
-      typeof window.matchMedia === "function"
-    ) {
+    if (preferredTheme === "system" && typeof window.matchMedia === "function") {
       const media = window.matchMedia("(prefers-color-scheme: dark)");
       const applySystemTheme = () => {
         root.dataset.theme = media.matches ? "dark" : "light";

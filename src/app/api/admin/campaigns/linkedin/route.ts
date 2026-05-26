@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  isLinkedInConfigured,
-  listLinkedInCampaigns,
-} from "@/lib/campaigns/linkedin";
+import { isLinkedInConfigured, listLinkedInCampaigns } from "@/lib/campaigns/linkedin";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   if (!(await isLinkedInConfigured())) {
-    return NextResponse.json(
-      { error: "LinkedIn not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "LinkedIn not configured." }, { status: 503 });
   }
 
   try {
@@ -24,9 +18,6 @@ export async function GET(request: NextRequest) {
       fetchedAt: new Date().toISOString(),
     });
   } catch {
-    return NextResponse.json(
-      { error: "Failed to fetch LinkedIn campaigns." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch LinkedIn campaigns." }, { status: 500 });
   }
 }

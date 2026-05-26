@@ -48,12 +48,8 @@ function KpiCard({
   return (
     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
       <div className={`font-mono text-2xl font-bold ${color}`}>{value}</div>
-      <div className="font-heading mt-1 text-sm font-medium text-white">
-        {label}
-      </div>
-      {sub && (
-        <div className="font-mono mt-0.5 text-xs text-slate-500">{sub}</div>
-      )}
+      <div className="font-heading mt-1 text-sm font-medium text-white">{label}</div>
+      {sub && <div className="mt-0.5 font-mono text-xs text-slate-500">{sub}</div>}
     </div>
   );
 }
@@ -65,7 +61,7 @@ function SectionHeader({
 }: Readonly<{ title: string; icon: string; href: string }>) {
   return (
     <div className="mb-4 flex items-center justify-between">
-      <h2 className="font-heading text-sm font-semibold uppercase tracking-widest text-slate-500">
+      <h2 className="font-heading text-sm font-semibold tracking-widest text-slate-500 uppercase">
         {icon} {title}
       </h2>
       <Link
@@ -84,7 +80,7 @@ function Skeleton() {
       {[1, 2, 3, 4].map((i) => (
         <div
           key={i}
-          className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5"
+          className="bg-void-light/50 animate-pulse rounded-xl border border-slate-800 p-5"
         >
           <div className="mb-2 h-7 w-20 rounded bg-slate-700/60" />
           <div className="h-4 w-28 rounded bg-slate-800/80" />
@@ -118,8 +114,7 @@ export default function KpiDashboard() {
     load();
   }, [load]);
 
-  const fmt = (n: number | undefined | null) =>
-    n == null ? "—" : n.toLocaleString();
+  const fmt = (n: number | undefined | null) => (n == null ? "—" : n.toLocaleString());
 
   return (
     <div>
@@ -128,13 +123,9 @@ export default function KpiDashboard() {
         <div>
           <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-cyan font-mono text-xs">
-              KPI_DASHBOARD
-            </span>
+            <span className="text-neon-cyan font-mono text-xs">KPI_DASHBOARD</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            KPI Dashboard
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">KPI Dashboard</h1>
           <p className="font-body mt-1 text-slate-400">
             Consolidated view — GSC · Notion analytics · Projects · Tasks
           </p>
@@ -204,11 +195,7 @@ export default function KpiDashboard() {
 
           {/* Notion site analytics */}
           <section>
-            <SectionHeader
-              title="Site Events (7 days)"
-              icon="📈"
-              href="/admin/notion/analytics"
-            />
+            <SectionHeader title="Site Events (7 days)" icon="📈" href="/admin/notion/analytics" />
             {data.analytics ? (
               <>
                 <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -235,19 +222,16 @@ export default function KpiDashboard() {
                 </div>
                 {data.analytics.topPages.length > 0 && (
                   <div className="bg-void-light/30 rounded-xl border border-slate-800 p-4">
-                    <p className="font-mono mb-3 text-[10px] uppercase tracking-widest text-slate-500">
+                    <p className="mb-3 font-mono text-[10px] tracking-widest text-slate-500 uppercase">
                       Top Pages
                     </p>
                     <div className="space-y-1.5">
                       {data.analytics.topPages.slice(0, 5).map((p) => (
-                        <div
-                          key={p.page}
-                          className="flex items-center justify-between gap-4"
-                        >
-                          <span className="font-mono truncate text-xs text-slate-400">
+                        <div key={p.page} className="flex items-center justify-between gap-4">
+                          <span className="truncate font-mono text-xs text-slate-400">
                             {p.page || "/"}
                           </span>
-                          <span className="text-neon-cyan font-mono shrink-0 text-xs">
+                          <span className="text-neon-cyan shrink-0 font-mono text-xs">
                             {fmt(p.count)}
                           </span>
                         </div>
@@ -257,19 +241,13 @@ export default function KpiDashboard() {
                 )}
               </>
             ) : (
-              <p className="font-mono text-sm text-slate-600">
-                Notion Analytics not configured.
-              </p>
+              <p className="font-mono text-sm text-slate-600">Notion Analytics not configured.</p>
             )}
           </section>
 
           {/* Projects */}
           <section>
-            <SectionHeader
-              title="Projects"
-              icon="📋"
-              href="/admin/notion/projects"
-            />
+            <SectionHeader title="Projects" icon="📋" href="/admin/notion/projects" />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <KpiCard
                 label="Total Projects"
@@ -312,19 +290,13 @@ export default function KpiDashboard() {
               <KpiCard
                 label="Overdue"
                 value={fmt(data.tasks.overdueCount)}
-                color={
-                  (data.tasks.overdueCount ?? 0) > 0
-                    ? "text-red-400"
-                    : "text-neon-green"
-                }
+                color={(data.tasks.overdueCount ?? 0) > 0 ? "text-red-400" : "text-neon-green"}
               />
               <KpiCard
                 label="Blocked"
                 value={fmt(data.tasks.summary["Blocked"])}
                 color={
-                  (data.tasks.summary["Blocked"] ?? 0) > 0
-                    ? "text-neon-magenta"
-                    : "text-slate-500"
+                  (data.tasks.summary["Blocked"] ?? 0) > 0 ? "text-neon-magenta" : "text-slate-500"
                 }
               />
             </div>

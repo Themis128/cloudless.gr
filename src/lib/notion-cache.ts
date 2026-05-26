@@ -31,7 +31,7 @@ const DEFAULT_TTL_MS = 60 * 1000; // 60 seconds
 export async function cached<T>(
   key: string,
   fetcher: () => Promise<T>,
-  ttlMs = DEFAULT_TTL_MS,
+  ttlMs = DEFAULT_TTL_MS
 ): Promise<T> {
   const now = Date.now();
   const entry = cache.get(key) as CacheEntry<T> | undefined;

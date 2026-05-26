@@ -11,6 +11,7 @@ interface TrainingBannerProps {
   locale?: string;
 }
 
+<<<<<<< HEAD
 export default function TrainingBanner({
   locale,
 }: Readonly<TrainingBannerProps>) {
@@ -19,6 +20,20 @@ export default function TrainingBanner({
   const [mounted] = useState(() => !sessionStorage.getItem(DISMISS_KEY));
   const [dismissed, setDismissed] = useState(false);
 
+=======
+export default function TrainingBanner({ locale }: Readonly<TrainingBannerProps>) {
+  // Mount-deferred: SSR renders nothing, client reveals banner after hydration.
+  // useSyncExternalStore with getServerSnapshot=false caused React #418 because
+  // the client snapshot ran synchronously during hydration, mismatch-ing null→element.
+  const [mounted, setMounted] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!sessionStorage.getItem(DISMISS_KEY)) setMounted(true);
+  }, []);
+
+>>>>>>> 1e82f95379841052acd6b392003da65486497629
   if (!mounted || dismissed) return null;
 
   const isEl = locale === "el";
@@ -31,9 +46,7 @@ export default function TrainingBanner({
   return (
     <div
       role="note"
-      aria-label={
-        isEl ? "Σημείωση εκπαιδευτικού έργου" : "Training project notice"
-      }
+      aria-label={isEl ? "Σημείωση εκπαιδευτικού έργου" : "Training project notice"}
       className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5"
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
@@ -41,33 +54,26 @@ export default function TrainingBanner({
           <span className="mr-1.5 font-bold">⚠</span>
           {isEl ? (
             <>
-              <span className="font-semibold">
-                Εκπαιδευτικό &amp; Portfolio Project
-              </span>
+              <span className="font-semibold">Εκπαιδευτικό &amp; Portfolio Project</span>
               {" — "}
-              Αυτή η ιστοσελίδα δημιουργήθηκε αποκλειστικά για εκπαιδευτικούς
-              και portfolio σκοπούς. Δεν αποτελεί εμπορική υπηρεσία, δεν παρέχει
-              πραγματικές υπηρεσίες και δεν δέχεται πελάτες.
+              Αυτή η ιστοσελίδα δημιουργήθηκε αποκλειστικά για εκπαιδευτικούς και portfolio σκοπούς.
+              Δεν αποτελεί εμπορική υπηρεσία, δεν παρέχει πραγματικές υπηρεσίες και δεν δέχεται
+              πελάτες.
               <span className="mx-2 opacity-30">·</span>
               <span className="italic opacity-50">υπό κατασκευή</span>
             </>
           ) : (
             <>
-              <span className="font-semibold">
-                Training &amp; Portfolio Project
-              </span>
+              <span className="font-semibold">Training &amp; Portfolio Project</span>
               {" — "}
-              This website is built for educational and portfolio purposes only.
-              It is not a commercial service, does not provide real services,
-              and does not accept clients.
+              This website is built for educational and portfolio purposes only. It is not a
+              commercial service, does not provide real services, and does not accept clients.
               <span className="mx-2 opacity-30">·</span>
               <span className="italic opacity-50">under construction</span>
             </>
           )}
           <span className="mx-2 opacity-20">|</span>
-          <span className="italic opacity-40">
-            &ldquo;{isEl ? QUOTE_EL : QUOTE_EN}&rdquo;
-          </span>
+          <span className="italic opacity-40">&ldquo;{isEl ? QUOTE_EL : QUOTE_EN}&rdquo;</span>
         </p>
         <button
           type="button"

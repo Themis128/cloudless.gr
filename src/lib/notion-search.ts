@@ -62,8 +62,7 @@ function mapSearchResult(item: any): SearchResult {
   if (isPage) {
     const props = item.properties ?? {};
     // Try common title property names
-    const titleProp =
-      props.Title?.title ?? props.Name?.title ?? props.title?.title;
+    const titleProp = props.Title?.title ?? props.Name?.title ?? props.title?.title;
     title = titleProp ? titleProp.map((t: any) => t.plain_text).join("") : "";
   } else {
     // Database title
@@ -77,11 +76,7 @@ function mapSearchResult(item: any): SearchResult {
     url: item.url ?? "",
     lastEditedTime: item.last_edited_time ?? "",
     parentType: item.parent?.type ?? "",
-    parentId:
-      item.parent?.page_id ??
-      item.parent?.database_id ??
-      item.parent?.workspace_id ??
-      "",
+    parentId: item.parent?.page_id ?? item.parent?.database_id ?? item.parent?.workspace_id ?? "",
     icon: item.icon?.emoji ?? item.icon?.external?.url ?? undefined,
   };
 }
@@ -142,7 +137,7 @@ export async function searchPages(
     limit?: number;
     sortDirection?: "ascending" | "descending";
     startCursor?: string;
-  },
+  }
 ): Promise<{ results: SearchResult[]; hasMore: boolean; nextCursor?: string }> {
   await requireIntegrationAsync("NOTION_API_KEY");
 
@@ -189,10 +184,7 @@ export async function searchPages(
 /**
  * Search only databases.
  */
-export async function searchDatabases(
-  query: string,
-  limit = 20,
-): Promise<SearchResult[]> {
+export async function searchDatabases(query: string, limit = 20): Promise<SearchResult[]> {
   const { results } = await searchPages(query, { filter: "database", limit });
   return results;
 }
@@ -265,9 +257,7 @@ export async function getUser(userId: string): Promise<NotionUser | null> {
  * Retrieve the full schema of a database — property names, types, and options.
  * Useful for building dynamic forms or admin UIs.
  */
-export async function getDatabaseSchema(
-  databaseId: string,
-): Promise<DatabaseSchema | null> {
+export async function getDatabaseSchema(databaseId: string): Promise<DatabaseSchema | null> {
   await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
@@ -275,9 +265,9 @@ export async function getDatabaseSchema(
     const db = await notionFetch<any>(`/databases/${databaseId}`);
 
     const title = (db.title ?? []).map((t: any) => t.plain_text).join("");
-    const properties: DatabaseProperty[] = Object.entries(
-      db.properties ?? {},
-    ).map(([name, prop]) => mapProperty(name, prop));
+    const properties: DatabaseProperty[] = Object.entries(db.properties ?? {}).map(([name, prop]) =>
+      mapProperty(name, prop)
+    );
 
     return {
       id: db.id,
@@ -299,7 +289,7 @@ export async function getDatabaseSchema(
  */
 export async function getPropertyOptions(
   databaseId: string,
-  propertyName: string,
+  propertyName: string
 ): Promise<{ name: string; color?: string }[]> {
   const schema = await getDatabaseSchema(databaseId);
   if (!schema) return [];

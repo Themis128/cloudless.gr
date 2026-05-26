@@ -32,9 +32,7 @@ export default function GlobalError({
           >
             500
           </p>
-          <h1 style={{ marginTop: "1rem", fontSize: "1.5rem" }}>
-            Something went wrong
-          </h1>
+          <h1 style={{ marginTop: "1rem", fontSize: "1.5rem" }}>Something went wrong</h1>
           <button
             type="button"
             onClick={reset}

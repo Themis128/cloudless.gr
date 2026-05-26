@@ -1,12 +1,7 @@
 import { callClaude } from "@/lib/anthropic";
 import type { StripeAnalyticsSnapshot } from "@/lib/stripe-analytics-read";
 
-export type AnalyticsConnector =
-  | "quicksight"
-  | "powerbi"
-  | "tableau"
-  | "lookerstudio"
-  | "metabase";
+export type AnalyticsConnector = "quicksight" | "powerbi" | "tableau" | "lookerstudio" | "metabase";
 
 export interface RecommendedMove {
   move: string;
@@ -124,7 +119,7 @@ function buildSystemPrompt(): string {
 
 function buildDataQualityNotes(
   snapshot: StripeAnalyticsSnapshot,
-  hasData: boolean,
+  hasData: boolean
 ): { sparseWindow: boolean; notes: string[] } {
   const notes: string[] = [];
   if (!hasData) {
@@ -132,24 +127,23 @@ function buildDataQualityNotes(
   }
 
   const sparseWindow =
-    snapshot.totals.events > 0 &&
-    snapshot.totals.events < Math.max(5, snapshot.windowDays / 2);
+    snapshot.totals.events > 0 && snapshot.totals.events < Math.max(5, snapshot.windowDays / 2);
   if (sparseWindow) {
     notes.push(
-      "Sample size is sparse for the selected window, so directionally useful trends may be noisier than usual.",
+      "Sample size is sparse for the selected window, so directionally useful trends may be noisier than usual."
     );
   }
 
   const currencies = Object.keys(snapshot.byCurrency);
   if (currencies.length > 1) {
     notes.push(
-      "Revenue spans multiple currencies, so totals should be treated as ledger totals rather than FX-normalized business revenue.",
+      "Revenue spans multiple currencies, so totals should be treated as ledger totals rather than FX-normalized business revenue."
     );
   }
 
   if (snapshot.totals.processed === 0 && snapshot.totals.events > 0) {
     notes.push(
-      "No processed events were recorded, which likely indicates either a live issue or a partial ingest window.",
+      "No processed events were recorded, which likely indicates either a live issue or a partial ingest window."
     );
   }
 
@@ -167,48 +161,36 @@ function sumTrend(points: StripeAnalyticsSnapshot["dailyTrend"]): {
       events: accumulator.events + point.events,
       failed: accumulator.failed + point.failed,
     }),
-    { revenueMinor: 0, events: 0, failed: 0 },
+    { revenueMinor: 0, events: 0, failed: 0 }
   );
 }
 
 export function preprocessStripeAnalyticsSnapshot(
-  snapshot: StripeAnalyticsSnapshot,
+  snapshot: StripeAnalyticsSnapshot
 ): PreprocessedAnalyticsSummary {
   const hasData = snapshot.totals.events > 0;
   const sortedTrend = [...snapshot.dailyTrend].sort((left, right) =>
-    left.day.localeCompare(right.day),
+    left.day.localeCompare(right.day)
   );
   const comparisonWindowDays = Math.min(7, sortedTrend.length);
-  const recentWindow =
-    comparisonWindowDays > 0 ? sortedTrend.slice(-comparisonWindowDays) : [];
+  const recentWindow = comparisonWindowDays > 0 ? sortedTrend.slice(-comparisonWindowDays) : [];
   const priorWindow =
     comparisonWindowDays > 0
       ? sortedTrend.slice(-comparisonWindowDays * 2, -comparisonWindowDays)
       : [];
   const recentTotals = sumTrend(recentWindow);
   const priorTotals = sumTrend(priorWindow);
-  const recentFailureRatePct = percentage(
-    recentTotals.failed,
-    recentTotals.events,
-  );
+  const recentFailureRatePct = percentage(recentTotals.failed, recentTotals.events);
   const priorFailureRatePct =
-    priorWindow.length > 0
-      ? percentage(priorTotals.failed, priorTotals.events)
-      : null;
+    priorWindow.length > 0 ? percentage(priorTotals.failed, priorTotals.events) : null;
   const topRevenueCategories = Object.entries(snapshot.byCategory)
     .map(([category, metrics]) => ({
       category,
       events: metrics.events,
       revenueMinor: metrics.revenueMinor,
-      revenueSharePct: percentage(
-        metrics.revenueMinor,
-        snapshot.totals.revenueMinor,
-      ),
+      revenueSharePct: percentage(metrics.revenueMinor, snapshot.totals.revenueMinor),
     }))
-    .sort(
-      (left, right) =>
-        right.revenueMinor - left.revenueMinor || right.events - left.events,
-    )
+    .sort((left, right) => right.revenueMinor - left.revenueMinor || right.events - left.events)
     .slice(0, 5);
   const topFailureDays = sortedTrend
     .filter((point) => point.failed > 0)
@@ -218,18 +200,11 @@ export function preprocessStripeAnalyticsSnapshot(
       events: point.events,
       failureRatePct: percentage(point.failed, point.events),
     }))
-    .sort(
-      (left, right) =>
-        right.failed - left.failed ||
-        right.failureRatePct - left.failureRatePct,
-    )
+    .sort((left, right) => right.failed - left.failed || right.failureRatePct - left.failureRatePct)
     .slice(0, 5);
   const strongestRevenueDays = sortedTrend
     .filter((point) => point.revenueMinor > 0)
-    .sort(
-      (left, right) =>
-        right.revenueMinor - left.revenueMinor || right.events - left.events,
-    )
+    .sort((left, right) => right.revenueMinor - left.revenueMinor || right.events - left.events)
     .slice(0, 5)
     .map((point) => ({
       day: point.day,
@@ -242,14 +217,9 @@ export function preprocessStripeAnalyticsSnapshot(
     windowDays: snapshot.windowDays,
     hasData,
     failureRatePct: percentage(snapshot.totals.failed, snapshot.totals.events),
-    processedRatePct: percentage(
-      snapshot.totals.processed,
-      snapshot.totals.events,
-    ),
+    processedRatePct: percentage(snapshot.totals.processed, snapshot.totals.events),
     averageRevenuePerEventMinor:
-      snapshot.totals.events > 0
-        ? round(snapshot.totals.revenueMinor / snapshot.totals.events)
-        : 0,
+      snapshot.totals.events > 0 ? round(snapshot.totals.revenueMinor / snapshot.totals.events) : 0,
     averageDailyRevenueMinor:
       snapshot.dailyTrend.length > 0
         ? round(snapshot.totals.revenueMinor / snapshot.dailyTrend.length)
@@ -268,21 +238,18 @@ export function preprocessStripeAnalyticsSnapshot(
     momentum: {
       comparisonWindowDays,
       recentRevenueMinor: recentTotals.revenueMinor,
-      priorRevenueMinor:
-        priorWindow.length > 0 ? priorTotals.revenueMinor : null,
+      priorRevenueMinor: priorWindow.length > 0 ? priorTotals.revenueMinor : null,
       revenueDeltaPct:
         priorWindow.length > 0 && priorTotals.revenueMinor > 0
           ? percentage(
               recentTotals.revenueMinor - priorTotals.revenueMinor,
-              priorTotals.revenueMinor,
+              priorTotals.revenueMinor
             )
           : null,
       recentFailureRatePct,
       priorFailureRatePct,
       failureRateDeltaPct:
-        priorFailureRatePct !== null
-          ? round(recentFailureRatePct - priorFailureRatePct)
-          : null,
+        priorFailureRatePct !== null ? round(recentFailureRatePct - priorFailureRatePct) : null,
     },
     dataQuality,
   };
@@ -291,7 +258,7 @@ export function preprocessStripeAnalyticsSnapshot(
 function buildUserPrompt(
   snapshot: StripeAnalyticsSnapshot,
   preprocessed: PreprocessedAnalyticsSummary,
-  goals: string[],
+  goals: string[]
 ): string {
   const promptPayload = {
     goals:
@@ -341,10 +308,9 @@ ${JSON.stringify(promptPayload, null, 2)}`;
 
 function defaultReport(
   snapshot: StripeAnalyticsSnapshot,
-  preprocessed: PreprocessedAnalyticsSummary,
+  preprocessed: PreprocessedAnalyticsSummary
 ): AnalyticsNarrativeReport {
-  const topCategory =
-    preprocessed.topRevenueCategories[0]?.category ?? "checkout";
+  const topCategory = preprocessed.topRevenueCategories[0]?.category ?? "checkout";
   const revenueDelta = preprocessed.momentum.revenueDeltaPct;
   const deltaSummary =
     revenueDelta === null
@@ -407,9 +373,7 @@ function parseClaudeJson(text: string): AnalyticsNarrativeReport | null {
   try {
     const parsed = JSON.parse(cleaned) as Record<string, unknown>;
     const executiveSummary =
-      typeof parsed.executiveSummary === "string"
-        ? parsed.executiveSummary.trim()
-        : "";
+      typeof parsed.executiveSummary === "string" ? parsed.executiveSummary.trim() : "";
     const keyInsights = Array.isArray(parsed.keyInsights)
       ? parsed.keyInsights.map((value) => String(value).trim()).filter(Boolean)
       : [];
@@ -421,14 +385,8 @@ function parseClaudeJson(text: string): AnalyticsNarrativeReport | null {
           .map((value) => {
             if (!value || typeof value !== "object") return null;
             const candidate = value as Record<string, unknown>;
-            const confidence = String(
-              candidate.confidence ?? "medium",
-            ).toLowerCase();
-            if (
-              confidence !== "low" &&
-              confidence !== "medium" &&
-              confidence !== "high"
-            ) {
+            const confidence = String(candidate.confidence ?? "medium").toLowerCase();
+            if (confidence !== "low" && confidence !== "medium" && confidence !== "high") {
               return null;
             }
 
@@ -444,7 +402,7 @@ function parseClaudeJson(text: string): AnalyticsNarrativeReport | null {
             } satisfies RecommendedMove;
           })
           .filter((value): value is RecommendedMove =>
-            Boolean(value?.move && value?.rationale && value?.expectedOutcome),
+            Boolean(value?.move && value?.rationale && value?.expectedOutcome)
           )
       : [];
     const scenarioOutcomes = Array.isArray(parsed.scenarioOutcomes)
@@ -454,27 +412,16 @@ function parseClaudeJson(text: string): AnalyticsNarrativeReport | null {
             const candidate = value as Record<string, unknown>;
             return {
               scenario: String(candidate.scenario ?? "").trim(),
-              expectedRevenueDeltaPct: round(
-                Number(candidate.expectedRevenueDeltaPct ?? 0),
-              ),
-              expectedConversionDeltaPct: round(
-                Number(candidate.expectedConversionDeltaPct ?? 0),
-              ),
+              expectedRevenueDeltaPct: round(Number(candidate.expectedRevenueDeltaPct ?? 0)),
+              expectedConversionDeltaPct: round(Number(candidate.expectedConversionDeltaPct ?? 0)),
             };
           })
-          .filter(
-            (
-              value,
-            ): value is AnalyticsNarrativeReport["scenarioOutcomes"][number] =>
-              Boolean(value?.scenario),
+          .filter((value): value is AnalyticsNarrativeReport["scenarioOutcomes"][number] =>
+            Boolean(value?.scenario)
           )
       : [];
 
-    if (
-      !executiveSummary ||
-      keyInsights.length === 0 ||
-      nextMoves.length === 0
-    ) {
+    if (!executiveSummary || keyInsights.length === 0 || nextMoves.length === 0) {
       return null;
     }
 
@@ -493,36 +440,35 @@ function parseClaudeJson(text: string): AnalyticsNarrativeReport | null {
 function buildConnectorPayload(
   connector: AnalyticsConnector,
   snapshot: StripeAnalyticsSnapshot,
-  preprocessed: PreprocessedAnalyticsSummary,
+  preprocessed: PreprocessedAnalyticsSummary
 ): ConnectorPayload {
-  const chartRecommendationsByConnector: Record<AnalyticsConnector, string[]> =
-    {
-      quicksight: [
-        "Line chart: daily revenue and failed events trend",
-        "Stacked bar: category revenue contribution",
-        "KPI tiles: processed %, failed %, total revenue",
-      ],
-      powerbi: [
-        "Combo chart: daily events vs revenue",
-        "Treemap: category share by revenue",
-        "Funnel: processed vs failed event flow",
-      ],
-      tableau: [
-        "Dual-axis time series for revenue and failures",
-        "Heatmap of day-of-week vs category volume",
-        "Pareto chart of category impact",
-      ],
-      lookerstudio: [
-        "Scorecards for totals and fail rate",
-        "Time series for revenue trajectory",
-        "Pie chart for category split",
-      ],
-      metabase: [
-        "Dashboard cards for weekly KPIs",
-        "Area chart for volume and revenue",
-        "Bar chart for processing status breakdown",
-      ],
-    };
+  const chartRecommendationsByConnector: Record<AnalyticsConnector, string[]> = {
+    quicksight: [
+      "Line chart: daily revenue and failed events trend",
+      "Stacked bar: category revenue contribution",
+      "KPI tiles: processed %, failed %, total revenue",
+    ],
+    powerbi: [
+      "Combo chart: daily events vs revenue",
+      "Treemap: category share by revenue",
+      "Funnel: processed vs failed event flow",
+    ],
+    tableau: [
+      "Dual-axis time series for revenue and failures",
+      "Heatmap of day-of-week vs category volume",
+      "Pareto chart of category impact",
+    ],
+    lookerstudio: [
+      "Scorecards for totals and fail rate",
+      "Time series for revenue trajectory",
+      "Pie chart for category split",
+    ],
+    metabase: [
+      "Dashboard cards for weekly KPIs",
+      "Area chart for volume and revenue",
+      "Bar chart for processing status breakdown",
+    ],
+  };
 
   const serviceHintsByConnector: Record<AnalyticsConnector, string[]> = {
     quicksight: [
@@ -561,9 +507,7 @@ function buildConnectorPayload(
       averageRevenuePerEventMinor: preprocessed.averageRevenuePerEventMinor,
       revenueDeltaPct: preprocessed.momentum.revenueDeltaPct,
       failureRateDeltaPct: preprocessed.momentum.failureRateDeltaPct,
-      topRevenueCategories: preprocessed.topRevenueCategories.map(
-        (entry) => entry.category,
-      ),
+      topRevenueCategories: preprocessed.topRevenueCategories.map((entry) => entry.category),
       dataQualityNotes: preprocessed.dataQuality.notes,
     },
     chartRecommendations: chartRecommendationsByConnector[connector],
@@ -593,26 +537,21 @@ export async function runAnalyticsAgentOrchestration(params: {
     },
   ];
 
-  const raw = await callClaude(
-    buildUserPrompt(snapshot, preprocessed, goals),
-    apiKey,
-    {
-      model: "claude-sonnet-4-6",
-      maxTokens: 1500,
-      system: buildSystemPrompt(),
-    },
-  );
+  const raw = await callClaude(buildUserPrompt(snapshot, preprocessed, goals), apiKey, {
+    model: "claude-sonnet-4-6",
+    maxTokens: 1500,
+    system: buildSystemPrompt(),
+  });
 
   const report = parseClaudeJson(raw) ?? defaultReport(snapshot, preprocessed);
   workflow.push({
     step: "generate_insights",
     status: "completed",
-    details:
-      "Generated executive narrative, next moves, and scenario outcomes.",
+    details: "Generated executive narrative, next moves, and scenario outcomes.",
   });
 
   const connectorPayloads = connectors.map((connector) =>
-    buildConnectorPayload(connector, snapshot, preprocessed),
+    buildConnectorPayload(connector, snapshot, preprocessed)
   );
   workflow.push({
     step: "prepare_connectors",

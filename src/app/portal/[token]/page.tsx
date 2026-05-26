@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { use } from "react";
-import type {
-  PortalStep,
-  PortalComment,
-} from "@/app/api/admin/client-portals/route";
+import type { PortalStep, PortalComment } from "@/app/api/admin/client-portals/route";
 
 interface PortalProject {
   id: string;
@@ -124,7 +121,7 @@ function StepIcon({ status }: Readonly<{ status: PortalStep["status"] }>) {
   if (status === "completed") {
     return (
       <svg
-        className="h-4 w-4 text-neon-green"
+        className="text-neon-green h-4 w-4"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -135,9 +132,7 @@ function StepIcon({ status }: Readonly<{ status: PortalStep["status"] }>) {
     );
   }
   if (status === "in-progress") {
-    return (
-      <span className="h-2.5 w-2.5 rounded-full bg-neon-cyan animate-pulse" />
-    );
+    return <span className="bg-neon-cyan h-2.5 w-2.5 animate-pulse rounded-full" />;
   }
   if (status === "blocked") {
     return (
@@ -162,19 +157,17 @@ function StepIcon({ status }: Readonly<{ status: PortalStep["status"] }>) {
 function CommentCard({ comment }: Readonly<{ comment: PortalComment }>) {
   return (
     <div className="flex gap-3">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-void-lighter border border-slate-700 font-mono text-[10px] text-slate-400 uppercase">
+      <div className="bg-void-lighter flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-700 font-mono text-[10px] text-slate-400 uppercase">
         {comment.author.slice(0, 2)}
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="font-mono text-xs font-semibold text-slate-300">
-            {comment.author}
-          </span>
+          <span className="font-mono text-xs font-semibold text-slate-300">{comment.author}</span>
           <span className="font-mono text-[10px] text-slate-600">
             {formatRelative(comment.createdAt)}
           </span>
         </div>
-        <p className="mt-1 text-sm leading-relaxed text-slate-400 whitespace-pre-wrap">
+        <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap text-slate-400">
           {comment.text}
         </p>
       </div>
@@ -184,20 +177,17 @@ function CommentCard({ comment }: Readonly<{ comment: PortalComment }>) {
 
 function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
   const [expanded, setExpanded] = useState<string | null>(() => {
-    const active = steps.find(
-      (s) => s.status === "in-progress" || s.status === "blocked",
-    );
+    const active = steps.find((s) => s.status === "in-progress" || s.status === "blocked");
     return active?.id ?? null;
   });
 
   const completedCount = steps.filter((s) => s.status === "completed").length;
-  const pct =
-    steps.length > 0 ? Math.round((completedCount / steps.length) * 100) : 0;
+  const pct = steps.length > 0 ? Math.round((completedCount / steps.length) * 100) : 0;
 
   return (
     <section>
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="font-mono text-xs uppercase tracking-widest text-slate-500">
+        <h2 className="font-mono text-xs tracking-widest text-slate-500 uppercase">
           Project Progress
         </h2>
         <span className="font-mono text-xs text-slate-400">
@@ -213,7 +203,7 @@ function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-neon-cyan to-neon-green transition-all duration-700"
+            className="from-neon-cyan to-neon-green h-full rounded-full bg-gradient-to-r transition-all duration-700"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -222,9 +212,9 @@ function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
       {/* Horizontal step bubbles — desktop */}
       <div className="relative mb-8 hidden sm:block">
         {/* Connector track */}
-        <div className="absolute top-5 left-0 right-0 h-px bg-slate-800" />
+        <div className="absolute top-5 right-0 left-0 h-px bg-slate-800" />
         <div
-          className="absolute top-5 left-0 h-px bg-gradient-to-r from-neon-cyan to-neon-green transition-all duration-700"
+          className="from-neon-cyan to-neon-green absolute top-5 left-0 h-px bg-gradient-to-r transition-all duration-700"
           style={{ width: `${pct}%` }}
         />
 
@@ -247,17 +237,15 @@ function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
                 >
                   <StepIcon status={step.status} />
                   {step.comments.length > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-neon-magenta font-mono text-[9px] text-white">
+                    <span className="bg-neon-magenta absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full font-mono text-[9px] text-white">
                       {step.comments.length}
                     </span>
                   )}
                 </div>
                 {/* Label */}
                 <span
-                  className={`font-mono text-[10px] leading-tight text-center transition-colors ${
-                    isActive
-                      ? cfg.text
-                      : "text-slate-500 group-hover:text-slate-300"
+                  className={`text-center font-mono text-[10px] leading-tight transition-colors ${
+                    isActive ? cfg.text : "text-slate-500 group-hover:text-slate-300"
                   }`}
                   style={{ maxWidth: "6rem" }}
                 >
@@ -283,9 +271,7 @@ function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
                 onClick={() => setExpanded(isActive ? null : step.id)}
                 aria-expanded={isActive}
                 className={`group w-full rounded-xl border text-left transition-all duration-200 ${
-                  isActive
-                    ? `${cfg.ring} ${cfg.bg}`
-                    : "border-slate-800 hover:border-slate-700"
+                  isActive ? `${cfg.ring} ${cfg.bg}` : "border-slate-800 hover:border-slate-700"
                 }`}
               >
                 <div className="flex items-center gap-4 px-4 py-3.5">
@@ -296,14 +282,12 @@ function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
                     <StepIcon status={step.status} />
                   </div>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`font-mono text-xs text-slate-600 shrink-0`}
-                      >
+                      <span className={`shrink-0 font-mono text-xs text-slate-600`}>
                         {String(idx + 1).padStart(2, "0")}
                       </span>
-                      <span className="font-heading text-sm font-semibold text-white truncate">
+                      <span className="font-heading truncate text-sm font-semibold text-white">
                         {step.name}
                       </span>
                     </div>
@@ -345,11 +329,7 @@ function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
                       stroke="currentColor"
                       strokeWidth={2}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M9 5l7 7-7 7"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
                 </div>
@@ -357,9 +337,9 @@ function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
 
               {/* Comments panel */}
               {isActive && (
-                <div className="mt-1 rounded-xl border border-slate-800 bg-void-light/20 px-4 py-4">
+                <div className="bg-void-light/20 mt-1 rounded-xl border border-slate-800 px-4 py-4">
                   {step.comments.length === 0 ? (
-                    <p className="font-mono text-xs text-slate-600 text-center py-4">
+                    <p className="py-4 text-center font-mono text-xs text-slate-600">
                       No updates yet for this step.
                     </p>
                   ) : (
@@ -379,11 +359,7 @@ function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
   );
 }
 
-export default function PortalPage({
-  params,
-}: {
-  params: Promise<{ token: string }>;
-}) {
+export default function PortalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -393,12 +369,8 @@ export default function PortalPage({
     async function load() {
       try {
         const res = await fetch(`/api/portal/${token}`);
-        if (res.status === 404)
-          throw new Error("This portal link is invalid or has been revoked.");
-        if (!res.ok)
-          throw new Error(
-            "Failed to load your portal. Please try again later.",
-          );
+        if (res.status === 404) throw new Error("This portal link is invalid or has been revoked.");
+        if (!res.ok) throw new Error("Failed to load your portal. Please try again later.");
         setData(await res.json());
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -418,20 +390,18 @@ export default function PortalPage({
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
             <span className="font-mono text-sm text-white">cloudless.gr</span>
           </div>
-          <span className="font-mono text-xs text-slate-500">
-            Client Portal
-          </span>
+          <span className="font-mono text-xs text-slate-500">Client Portal</span>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-10">
         {loading && (
           <div className="space-y-4">
-            <div className="h-10 w-64 animate-pulse rounded-lg bg-void-light/40" />
+            <div className="bg-void-light/40 h-10 w-64 animate-pulse rounded-lg" />
             {["s1", "s2", "s3", "s4"].map((k) => (
               <div
                 key={k}
-                className="h-16 animate-pulse rounded-xl border border-slate-800 bg-void-light/30"
+                className="bg-void-light/30 h-16 animate-pulse rounded-xl border border-slate-800"
               />
             ))}
           </div>
@@ -441,7 +411,7 @@ export default function PortalPage({
           <div className="rounded-xl border border-red-900/30 bg-red-950/10 px-6 py-12 text-center">
             <div className="mb-3 text-4xl">🔒</div>
             <p className="font-heading text-base text-red-400">{error}</p>
-            <p className="font-mono mt-2 text-xs text-slate-600">
+            <p className="mt-2 font-mono text-xs text-slate-600">
               Contact your project manager for a new link.
             </p>
           </div>
@@ -455,14 +425,12 @@ export default function PortalPage({
               <h1 className="font-heading mt-1 text-3xl font-bold text-white">
                 {data.client.name}
               </h1>
-              <p className="font-mono mt-1 text-sm text-slate-400">
-                {data.client.label}
-              </p>
+              <p className="mt-1 font-mono text-sm text-slate-400">{data.client.label}</p>
             </div>
 
             {/* Project Timeline — the main view */}
             {data.steps.length > 0 && (
-              <div className="rounded-2xl border border-slate-800 bg-void-light/20 p-6">
+              <div className="bg-void-light/20 rounded-2xl border border-slate-800 p-6">
                 <ProjectTimeline steps={data.steps} />
               </div>
             )}
@@ -470,23 +438,22 @@ export default function PortalPage({
             {/* Active subscriptions */}
             {data.subscriptions.length > 0 && (
               <section>
-                <h2 className="font-mono mb-3 text-xs uppercase tracking-widest text-slate-500">
+                <h2 className="mb-3 font-mono text-xs tracking-widest text-slate-500 uppercase">
                   Active Plan
                 </h2>
                 <div className="space-y-3">
                   {data.subscriptions.map((sub) => (
                     <div
                       key={sub.id}
-                      className="rounded-xl border border-slate-800 bg-void-light/30 p-4"
+                      className="bg-void-light/30 rounded-xl border border-slate-800 p-4"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <span className="font-heading font-semibold text-white">
                             {sub.planName}
                           </span>
-                          <span className="font-mono ml-3 text-sm text-slate-400">
-                            {formatAmount(sub.amount, sub.currency)}/
-                            {sub.interval}
+                          <span className="ml-3 font-mono text-sm text-slate-400">
+                            {formatAmount(sub.amount, sub.currency)}/{sub.interval}
                           </span>
                         </div>
                         <div className="flex items-center gap-3">
@@ -516,40 +483,38 @@ export default function PortalPage({
             {/* Notion projects (secondary, if Notion is connected) */}
             {data.projects.length > 0 && (
               <section>
-                <h2 className="font-mono mb-3 text-xs uppercase tracking-widest text-slate-500">
+                <h2 className="mb-3 font-mono text-xs tracking-widest text-slate-500 uppercase">
                   Linked Projects
                 </h2>
                 <div className="space-y-3">
                   {data.projects.map((project) => (
                     <div
                       key={project.id}
-                      className="rounded-xl border border-slate-800 bg-void-light/30 p-4"
+                      className="bg-void-light/30 rounded-xl border border-slate-800 p-4"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <span className="font-heading font-semibold text-white truncate block">
+                          <span className="font-heading block truncate font-semibold text-white">
                             {project.name}
                           </span>
                           {typeof project.progress === "number" && (
                             <div className="mt-3">
                               <div className="mb-1 flex justify-between">
-                                <span className="font-mono text-xs text-slate-500">
-                                  Progress
-                                </span>
+                                <span className="font-mono text-xs text-slate-500">Progress</span>
                                 <span className="font-mono text-xs text-white">
                                   {project.progress}%
                                 </span>
                               </div>
                               <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
                                 <div
-                                  className="h-full rounded-full bg-neon-blue transition-all"
+                                  className="bg-neon-blue h-full rounded-full transition-all"
                                   style={{ width: `${project.progress}%` }}
                                 />
                               </div>
                             </div>
                           )}
                         </div>
-                        <span className="font-mono shrink-0 rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-400">
+                        <span className="shrink-0 rounded-full border border-slate-700 px-2 py-0.5 font-mono text-[10px] text-slate-400">
                           {project.status}
                         </span>
                       </div>
@@ -562,14 +527,14 @@ export default function PortalPage({
             {/* Invoices */}
             {data.invoices.length > 0 && (
               <section>
-                <h2 className="font-mono mb-3 text-xs uppercase tracking-widest text-slate-500">
+                <h2 className="mb-3 font-mono text-xs tracking-widest text-slate-500 uppercase">
                   Invoices
                 </h2>
                 <div className="space-y-2">
                   {data.invoices.map((inv) => (
                     <div
                       key={inv.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-void-light/20 px-4 py-3"
+                      className="bg-void-light/20 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 px-4 py-3"
                     >
                       <div className="flex flex-wrap items-center gap-3">
                         <span className="font-mono text-sm text-white">
@@ -591,7 +556,7 @@ export default function PortalPage({
                             href={inv.pdfUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-mono text-xs text-neon-blue hover:underline"
+                            className="text-neon-blue font-mono text-xs hover:underline"
                           >
                             PDF
                           </a>

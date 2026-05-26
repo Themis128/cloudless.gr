@@ -30,7 +30,7 @@ function parsePayload(body: unknown): SendPayload | null {
 
 async function broadcast(
   recipients: string[],
-  payload: SendPayload,
+  payload: SendPayload
 ): Promise<{ sent: number; failed: number }> {
   let sent = 0;
   let failed = 0;
@@ -65,10 +65,7 @@ export async function POST(request: Request): Promise<Response> {
   const config = await getConfig();
   const secret = config.NEWSLETTER_SEND_SECRET;
   if (!secret) {
-    return Response.json(
-      { error: "Newsletter sending is not configured." },
-      { status: 503 },
-    );
+    return Response.json({ error: "Newsletter sending is not configured." }, { status: 503 });
   }
   if (request.headers.get("x-newsletter-secret") !== secret) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
@@ -83,10 +80,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const payload = parsePayload(rawBody);
   if (!payload) {
-    return Response.json(
-      { error: "subject, html and text are required." },
-      { status: 400 },
-    );
+    return Response.json({ error: "subject, html and text are required." }, { status: 400 });
   }
 
   const recipients = await listNewsletterSubscribers();

@@ -5,10 +5,7 @@
 
 import { fetchAuthSession } from "aws-amplify/auth";
 
-export async function fetchWithAuth(
-  url: string,
-  init?: RequestInit,
-): Promise<Response> {
+export async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
   try {
     const session = await fetchAuthSession();
     const idToken = session.tokens?.idToken?.toString();

@@ -26,16 +26,12 @@ export default function Footer() {
               <Logo variant="wordmark" size="sm" />
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
-              {translate(
-                locale,
-                "footer.tagline",
-                "Clear skies. Zero friction.",
-              )}
+              {translate(locale, "footer.tagline", "Clear skies. Zero friction.")}
               <br />
               {translate(
                 locale,
                 "footer.description",
-                "Cloud architecture, serverless, data analytics & AI marketing for startups and SMBs.",
+                "Cloud architecture, serverless, data analytics & AI marketing for startups and SMBs."
               )}
             </p>
           </div>
@@ -164,7 +160,7 @@ export default function Footer() {
             {translate(
               locale,
               "footer.trainingNotice",
-              "This website is a training and portfolio project built for educational purposes only. It is not a commercial service and does not accept clients.",
+              "This website is a training and portfolio project built for educational purposes only. It is not a commercial service and does not accept clients."
             )}
           </p>
         </div>
@@ -175,11 +171,7 @@ export default function Footer() {
             {translate(locale, "footer.rightsReserved", "All rights reserved.")}
           </p>
           <p className="text-slate-400">
-            {translate(
-              locale,
-              "footer.builtWith",
-              "Built with Next.js & deployed on AWS",
-            )}
+            {translate(locale, "footer.builtWith", "Built with Next.js & deployed on AWS")}
           </p>
         </div>
       </div>

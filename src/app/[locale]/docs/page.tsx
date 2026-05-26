@@ -32,14 +32,9 @@ const VERIFICATION_STYLES: Record<string, { badge: string; icon: string }> = {
   },
 };
 
-export default async function DocsPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
+export default async function DocsPage({ searchParams }: { searchParams: SearchParams }) {
   const resolvedParams = await searchParams;
-  const searchQuery =
-    typeof resolvedParams.q === "string" ? resolvedParams.q : "";
+  const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
   const filterVerification =
     typeof resolvedParams.status === "string" ? resolvedParams.status : null;
 
@@ -51,9 +46,7 @@ export default async function DocsPage({
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     docs = docs.filter(
-      (d) =>
-        d.title.toLowerCase().includes(q) ||
-        d.description.toLowerCase().includes(q),
+      (d) => d.title.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)
     );
   }
 
@@ -66,15 +59,11 @@ export default async function DocsPage({
   const categories = Object.keys(grouped);
 
   // Verification stats
-  const verifiedCount = allDocs.filter(
-    (d) => d.verificationStatus === "Verified",
-  ).length;
+  const verifiedCount = allDocs.filter((d) => d.verificationStatus === "Verified").length;
   const needsReviewCount = allDocs.filter(
-    (d) => d.verificationStatus === "Needs re-verification",
+    (d) => d.verificationStatus === "Needs re-verification"
   ).length;
-  const unverifiedCount = allDocs.filter(
-    (d) => d.verificationStatus === "Unverified",
-  ).length;
+  const unverifiedCount = allDocs.filter((d) => d.verificationStatus === "Unverified").length;
 
   function filterUrl(params: Record<string, string | null>) {
     const search = new URLSearchParams();
@@ -113,26 +102,21 @@ export default async function DocsPage({
             </span>
           </h1>
           <p className="animate-fade-in-up mt-4 max-w-xl text-lg text-slate-400 delay-200">
-            Everything you need to integrate, configure, and extend the
-            Cloudless platform.
+            Everything you need to integrate, configure, and extend the Cloudless platform.
           </p>
 
           {/* Search */}
-          <form
-            action=""
-            method="get"
-            className="animate-fade-in-up mt-6 max-w-md delay-300"
-          >
+          <form action="" method="get" className="animate-fade-in-up mt-6 max-w-md delay-300">
             <div className="relative">
               <input
                 type="text"
                 name="q"
                 defaultValue={searchQuery}
                 placeholder="Search docs…"
-                className="w-full rounded-lg border border-slate-700 bg-void-light/50 px-4 py-2.5 pl-10 font-mono text-sm text-white placeholder-slate-600 backdrop-blur-sm transition-colors focus:border-neon-cyan/50 focus:outline-none"
+                className="bg-void-light/50 focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-2.5 pl-10 font-mono text-sm text-white placeholder-slate-600 backdrop-blur-sm transition-colors focus:outline-none"
               />
               <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"
+                className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-600"
                 width="16"
                 height="16"
                 fill="none"
@@ -179,9 +163,7 @@ export default async function DocsPage({
               <Link
                 href={filterUrl({
                   status:
-                    filterVerification === "Needs re-verification"
-                      ? null
-                      : "Needs re-verification",
+                    filterVerification === "Needs re-verification" ? null : "Needs re-verification",
                 })}
                 className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors ${
                   filterVerification === "Needs re-verification"
@@ -193,8 +175,7 @@ export default async function DocsPage({
               </Link>
               <Link
                 href={filterUrl({
-                  status:
-                    filterVerification === "Unverified" ? null : "Unverified",
+                  status: filterVerification === "Unverified" ? null : "Unverified",
                 })}
                 className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors ${
                   filterVerification === "Unverified"
@@ -215,7 +196,7 @@ export default async function DocsPage({
               </span>
               <Link
                 href={filterUrl({ q: null })}
-                className="inline-flex items-center gap-1 rounded-full border border-neon-cyan/20 bg-neon-cyan/10 px-2.5 py-1 font-mono text-xs text-neon-cyan transition-colors hover:bg-neon-cyan/20"
+                className="border-neon-cyan/20 bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-xs transition-colors"
               >
                 &quot;{searchQuery}&quot; ✕
               </Link>
@@ -223,7 +204,7 @@ export default async function DocsPage({
           )}
 
           {docs.length === 0 ? (
-            <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
+            <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
               <p className="font-mono text-slate-500">
                 {searchQuery || filterVerification
                   ? "No docs match your filters."
@@ -242,9 +223,7 @@ export default async function DocsPage({
             <div className="space-y-12">
               {categories.map((category) => (
                 <div key={category}>
-                  <h2 className="font-heading mb-6 text-xl font-semibold text-white">
-                    {category}
-                  </h2>
+                  <h2 className="font-heading mb-6 text-xl font-semibold text-white">{category}</h2>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {(grouped[category] as WikiDocRecord[]).map((doc) => {
                       const vStyle =
@@ -272,7 +251,7 @@ export default async function DocsPage({
                               {doc.title}
                             </h3>
                             {doc.description && (
-                              <p className="font-body text-sm text-slate-400 line-clamp-2">
+                              <p className="font-body line-clamp-2 text-sm text-slate-400">
                                 {doc.description}
                               </p>
                             )}
@@ -286,9 +265,7 @@ export default async function DocsPage({
                               {doc.lastVerified && (
                                 <span className="font-mono text-[9px] text-slate-600">
                                   Verified:{" "}
-                                  {new Date(
-                                    doc.lastVerified,
-                                  ).toLocaleDateString("en-GB", {
+                                  {new Date(doc.lastVerified).toLocaleDateString("en-GB", {
                                     day: "2-digit",
                                     month: "short",
                                     year: "numeric",

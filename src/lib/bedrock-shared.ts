@@ -19,8 +19,7 @@ const DEFAULT_REGION = "us-east-1";
 const DEFAULT_MODEL_ID = "us.anthropic.claude-3-5-haiku-20241022-v1:0";
 
 export const BEDROCK_REGION = process.env.AWS_REGION ?? DEFAULT_REGION;
-export const BEDROCK_MODEL_ID =
-  process.env.BEDROCK_MODEL_ID ?? DEFAULT_MODEL_ID;
+export const BEDROCK_MODEL_ID = process.env.BEDROCK_MODEL_ID ?? DEFAULT_MODEL_ID;
 
 // ---------------------------------------------------------------------------
 // Content block types — narrow shape of what we actually read / write.
@@ -75,7 +74,7 @@ interface AnthropicShapedTool {
 }
 
 export function buildBedrockToolConfig(
-  tools: ReadonlyArray<AnthropicShapedTool>,
+  tools: ReadonlyArray<AnthropicShapedTool>
 ): ToolConfiguration {
   return {
     tools: tools.map((t) => ({
@@ -110,9 +109,7 @@ export interface RunBedrockTurnOptions {
  * Run one Bedrock Converse turn and return the assistant's content blocks.
  * Callers handle the loop, tool dispatch, and termination conditions.
  */
-export async function runBedrockTurn(
-  opts: RunBedrockTurnOptions,
-): Promise<AnyBlock[]> {
+export async function runBedrockTurn(opts: RunBedrockTurnOptions): Promise<AnyBlock[]> {
   const cmd = new ConverseCommand({
     modelId: BEDROCK_MODEL_ID,
     system: [{ text: opts.system }],
@@ -127,8 +124,7 @@ export async function runBedrockTurn(
 /** Filter an assistant content array to just the tool-use blocks. */
 export function pickToolUseBlocks(content: AnyBlock[]): ToolUseBlock[] {
   return content.filter(
-    (b): b is ToolUseBlock =>
-      "toolUse" in b && typeof b.toolUse?.toolUseId === "string",
+    (b): b is ToolUseBlock => "toolUse" in b && typeof b.toolUse?.toolUseId === "string"
   );
 }
 

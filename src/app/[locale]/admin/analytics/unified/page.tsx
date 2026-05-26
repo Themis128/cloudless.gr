@@ -53,12 +53,8 @@ function KpiCard({
   return (
     <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
       <div className={`font-mono text-2xl font-bold ${color}`}>{value}</div>
-      <div className="font-heading mt-1 text-sm font-medium text-white">
-        {label}
-      </div>
-      {sub && (
-        <div className="font-mono mt-0.5 text-xs text-slate-500">{sub}</div>
-      )}
+      <div className="font-heading mt-1 text-sm font-medium text-white">{label}</div>
+      {sub && <div className="mt-0.5 font-mono text-xs text-slate-500">{sub}</div>}
     </div>
   );
 }
@@ -74,13 +70,10 @@ function SectionHeader({
 }>) {
   return (
     <div className="mb-3 flex items-center justify-between">
-      <h2 className="font-heading text-sm font-semibold uppercase tracking-widest text-slate-500">
+      <h2 className="font-heading text-sm font-semibold tracking-widest text-slate-500 uppercase">
         {icon} {title}
       </h2>
-      <Link
-        href={href}
-        className="font-mono text-xs text-slate-500 transition hover:text-white"
-      >
+      <Link href={href} className="font-mono text-xs text-slate-500 transition hover:text-white">
         View full →
       </Link>
     </div>
@@ -112,8 +105,7 @@ export default function UnifiedAnalyticsPage() {
         const json: UnifiedData = await res.json();
         if (!cancelled) setData(json);
       } catch (e) {
-        if (!cancelled)
-          setError(e instanceof Error ? e.message : "Failed to load");
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -131,13 +123,9 @@ export default function UnifiedAnalyticsPage() {
         <div>
           <div className="bg-neon-green/10 border-neon-green/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-green h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-green font-mono text-xs">
-              UNIFIED ANALYTICS
-            </span>
+            <span className="text-neon-green font-mono text-xs">UNIFIED ANALYTICS</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-white">
-            Unified Dashboard
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-white">Unified Dashboard</h1>
           <p className="font-body mt-1 text-slate-400">
             All KPIs in one view — SEO, revenue, pipeline, and email.
           </p>
@@ -205,11 +193,7 @@ export default function UnifiedAnalyticsPage() {
 
           {/* SEO */}
           <div>
-            <SectionHeader
-              title="Search Performance"
-              icon="🔍"
-              href="/admin/analytics"
-            />
+            <SectionHeader title="Search Performance" icon="🔍" href="/admin/analytics" />
             {data.seo ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <KpiCard
@@ -241,11 +225,7 @@ export default function UnifiedAnalyticsPage() {
 
           {/* Pipeline */}
           <div>
-            <SectionHeader
-              title="Sales Pipeline"
-              icon="🔀"
-              href="/admin/pipeline"
-            />
+            <SectionHeader title="Sales Pipeline" icon="🔀" href="/admin/pipeline" />
             {data.pipeline ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <KpiCard
@@ -259,25 +239,16 @@ export default function UnifiedAnalyticsPage() {
                   color="text-neon-magenta"
                 />
                 <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
-                  <div className="font-heading mb-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                  <div className="font-heading mb-2 text-xs font-semibold tracking-widest text-slate-500 uppercase">
                     By Stage
                   </div>
                   <div className="space-y-1">
-                    {Object.entries(data.pipeline.byStage).map(
-                      ([stage, { count }]) => (
-                        <div
-                          key={stage}
-                          className="flex justify-between font-mono text-xs"
-                        >
-                          <span className="truncate text-slate-400">
-                            {stage}
-                          </span>
-                          <span className="text-neon-magenta ml-2 shrink-0">
-                            {count}
-                          </span>
-                        </div>
-                      ),
-                    )}
+                    {Object.entries(data.pipeline.byStage).map(([stage, { count }]) => (
+                      <div key={stage} className="flex justify-between font-mono text-xs">
+                        <span className="truncate text-slate-400">{stage}</span>
+                        <span className="text-neon-magenta ml-2 shrink-0">{count}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -288,11 +259,7 @@ export default function UnifiedAnalyticsPage() {
 
           {/* Email */}
           <div>
-            <SectionHeader
-              title="Email Marketing"
-              icon="📧"
-              href="/admin/email"
-            />
+            <SectionHeader title="Email Marketing" icon="📧" href="/admin/email" />
             {data.email ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <KpiCard

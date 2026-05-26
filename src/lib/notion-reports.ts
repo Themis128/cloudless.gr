@@ -16,10 +16,7 @@
  */
 
 import { notionFetch } from "@/lib/notion";
-import {
-  IntegrationNotConfiguredError,
-  requireIntegrationAsync,
-} from "@/lib/integrations";
+import { IntegrationNotConfiguredError, requireIntegrationAsync } from "@/lib/integrations";
 import type { Report } from "@/lib/reports";
 
 // ---------------------------------------------------------------------------
@@ -28,19 +25,10 @@ import type { Report } from "@/lib/reports";
 
 async function getDb(): Promise<{ apiKey: string; dbId: string }> {
   // Empty string means explicitly disabled -- don't let SSM override a cleared env var.
-  if (
-    process.env.NOTION_API_KEY === "" ||
-    process.env.NOTION_REPORTS_DB_ID === ""
-  ) {
-    throw new IntegrationNotConfiguredError([
-      "NOTION_API_KEY",
-      "NOTION_REPORTS_DB_ID",
-    ]);
+  if (process.env.NOTION_API_KEY === "" || process.env.NOTION_REPORTS_DB_ID === "") {
+    throw new IntegrationNotConfiguredError(["NOTION_API_KEY", "NOTION_REPORTS_DB_ID"]);
   }
-  const cfg = await requireIntegrationAsync(
-    "NOTION_API_KEY",
-    "NOTION_REPORTS_DB_ID",
-  );
+  const cfg = await requireIntegrationAsync("NOTION_API_KEY", "NOTION_REPORTS_DB_ID");
   return { apiKey: cfg.NOTION_API_KEY!, dbId: cfg.NOTION_REPORTS_DB_ID! };
 }
 
@@ -50,8 +38,7 @@ function rt(text: string) {
 
 function pageToReport(page: Record<string, unknown>): Report | null {
   try {
-    const p =
-      (page as { properties: Record<string, unknown> }).properties ?? {};
+    const p = (page as { properties: Record<string, unknown> }).properties ?? {};
 
     function sel(key: string): string {
       const prop = p[key] as { select?: { name?: string } } | undefined;
@@ -59,16 +46,12 @@ function pageToReport(page: Record<string, unknown>): Report | null {
     }
 
     function richText(key: string): string {
-      const prop = p[key] as
-        | { rich_text?: { plain_text?: string }[] }
-        | undefined;
+      const prop = p[key] as { rich_text?: { plain_text?: string }[] } | undefined;
       return prop?.rich_text?.map((r) => r.plain_text ?? "").join("") ?? "";
     }
 
     function title(): string {
-      const prop = p["Name"] as
-        | { title?: { plain_text?: string }[] }
-        | undefined;
+      const prop = p["Name"] as { title?: { plain_text?: string }[] } | undefined;
       return prop?.title?.map((r) => r.plain_text ?? "").join("") ?? "";
     }
 
@@ -108,15 +91,12 @@ export async function notionListReports(): Promise<Report[] | null> {
   const db = await getDb();
 
   try {
-    const res = await notionFetch<{ results: unknown[] }>(
-      `/databases/${db.dbId}/query`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          sorts: [{ property: "CreatedAt", direction: "descending" }],
-        }),
-      },
-    );
+    const res = await notionFetch<{ results: unknown[] }>(`/databases/${db.dbId}/query`, {
+      method: "POST",
+      body: JSON.stringify({
+        sorts: [{ property: "CreatedAt", direction: "descending" }],
+      }),
+    });
 
     return res.results
       .map((p) => pageToReport(p as Record<string, unknown>))
@@ -130,16 +110,13 @@ export async function notionGetReport(id: string): Promise<Report | null> {
   const db = await getDb();
 
   try {
-    const res = await notionFetch<{ results: unknown[] }>(
-      `/databases/${db.dbId}/query`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          filter: { property: "ReportID", rich_text: { equals: id } },
-          page_size: 1,
-        }),
-      },
-    );
+    const res = await notionFetch<{ results: unknown[] }>(`/databases/${db.dbId}/query`, {
+      method: "POST",
+      body: JSON.stringify({
+        filter: { property: "ReportID", rich_text: { equals: id } },
+        page_size: 1,
+      }),
+    });
 
     const page = res.results[0];
     if (!page) return null;
@@ -149,9 +126,7 @@ export async function notionGetReport(id: string): Promise<Report | null> {
   }
 }
 
-export async function notionCreateReport(
-  report: Report,
-): Promise<string | null> {
+export async function notionCreateReport(report: Report): Promise<string | null> {
   const db = await getDb();
 
   try {
@@ -176,30 +151,23 @@ export async function notionCreateReport(
   }
 }
 
-export async function notionUpdateReport(
-  id: string,
-  updates: Partial<Report>,
-): Promise<boolean> {
+export async function notionUpdateReport(id: string, updates: Partial<Report>): Promise<boolean> {
   const db = await getDb();
 
   try {
-    const search = await notionFetch<{ results: { id: string }[] }>(
-      `/databases/${db.dbId}/query`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          filter: { property: "ReportID", rich_text: { equals: id } },
-          page_size: 1,
-        }),
-      },
-    );
+    const search = await notionFetch<{ results: { id: string }[] }>(`/databases/${db.dbId}/query`, {
+      method: "POST",
+      body: JSON.stringify({
+        filter: { property: "ReportID", rich_text: { equals: id } },
+        page_size: 1,
+      }),
+    });
 
     const pageId = search.results[0]?.id;
     if (!pageId) return false;
 
     const properties: Record<string, unknown> = {};
-    if (updates.status)
-      properties.Status = { select: { name: updates.status } };
+    if (updates.status) properties.Status = { select: { name: updates.status } };
     if (updates.sections !== undefined) {
       properties.Sections = { rich_text: rt(JSON.stringify(updates.sections)) };
     }
@@ -219,16 +187,13 @@ export async function notionDeleteReport(id: string): Promise<boolean> {
   const db = await getDb();
 
   try {
-    const search = await notionFetch<{ results: { id: string }[] }>(
-      `/databases/${db.dbId}/query`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          filter: { property: "ReportID", rich_text: { equals: id } },
-          page_size: 1,
-        }),
-      },
-    );
+    const search = await notionFetch<{ results: { id: string }[] }>(`/databases/${db.dbId}/query`, {
+      method: "POST",
+      body: JSON.stringify({
+        filter: { property: "ReportID", rich_text: { equals: id } },
+        page_size: 1,
+      }),
+    });
 
     const pageId = search.results[0]?.id;
     if (!pageId) return false;

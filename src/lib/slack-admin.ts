@@ -83,7 +83,7 @@ const BASE = "https://slack.com/api";
 async function slackPost(
   method: string,
   body: Record<string, unknown>,
-  token: string,
+  token: string
 ): Promise<SlackApiResponse> {
   const res = await fetch(`${BASE}/${method}`, {
     method: "POST",
@@ -100,7 +100,7 @@ async function slackPost(
 async function slackGet(
   method: string,
   params: Record<string, string>,
-  token: string,
+  token: string
 ): Promise<SlackApiResponse> {
   const qs = new URLSearchParams(params).toString();
   const res = await fetch(`${BASE}/${method}?${qs}`, {
@@ -131,10 +131,9 @@ export async function listChannels(token: string): Promise<SlackChannel[]> {
         exclude_archived: "true",
         ...(cursor ? { cursor } : {}),
       },
-      token,
+      token
     );
-    if (!res.ok)
-      throw new Error(`[SlackAdmin] conversations.list: ${res.error}`);
+    if (!res.ok) throw new Error(`[SlackAdmin] conversations.list: ${res.error}`);
     all.push(...(res.channels ?? []));
     cursor = res.response_metadata?.next_cursor ?? "";
   } while (cursor);
@@ -147,15 +146,9 @@ export async function listChannels(token: string): Promise<SlackChannel[]> {
  * member when it creates the channel.
  * Docs: https://docs.slack.dev/reference/methods/conversations.create
  */
-export async function createChannel(
-  name: string,
-  token: string,
-): Promise<SlackChannel> {
+export async function createChannel(name: string, token: string): Promise<SlackChannel> {
   const res = await slackPost("conversations.create", { name }, token);
-  if (!res.ok)
-    throw new Error(
-      `[SlackAdmin] conversations.create "${name}": ${res.error}`,
-    );
+  if (!res.ok) throw new Error(`[SlackAdmin] conversations.create "${name}": ${res.error}`);
   return res.channel!;
 }
 
@@ -166,15 +159,10 @@ export async function createChannel(
 export async function setChannelTopic(
   channelId: string,
   topic: string,
-  token: string,
+  token: string
 ): Promise<void> {
-  const res = await slackPost(
-    "conversations.setTopic",
-    { channel: channelId, topic },
-    token,
-  );
-  if (!res.ok)
-    throw new Error(`[SlackAdmin] conversations.setTopic: ${res.error}`);
+  const res = await slackPost("conversations.setTopic", { channel: channelId, topic }, token);
+  if (!res.ok) throw new Error(`[SlackAdmin] conversations.setTopic: ${res.error}`);
 }
 
 /**
@@ -182,15 +170,8 @@ export async function setChannelTopic(
  * isn't a member yet).
  * Docs: https://docs.slack.dev/reference/methods/conversations.join
  */
-export async function joinChannel(
-  channelId: string,
-  token: string,
-): Promise<void> {
-  const res = await slackPost(
-    "conversations.join",
-    { channel: channelId },
-    token,
-  );
+export async function joinChannel(channelId: string, token: string): Promise<void> {
+  const res = await slackPost("conversations.join", { channel: channelId }, token);
   if (!res.ok && res.error !== "already_in_channel") {
     throw new Error(`[SlackAdmin] conversations.join: ${res.error}`);
   }
@@ -200,17 +181,9 @@ export async function joinChannel(
  * Fetch metadata for a single channel by ID.
  * Docs: https://api.slack.com/methods/conversations.info
  */
-export async function getChannelInfo(
-  channelId: string,
-  token: string,
-): Promise<SlackChannel> {
-  const res = await slackGet(
-    "conversations.info",
-    { channel: channelId },
-    token,
-  );
-  if (!res.ok || !res.channel)
-    throw new Error(`[SlackAdmin] conversations.info: ${res.error}`);
+export async function getChannelInfo(channelId: string, token: string): Promise<SlackChannel> {
+  const res = await slackGet("conversations.info", { channel: channelId }, token);
+  if (!res.ok || !res.channel) throw new Error(`[SlackAdmin] conversations.info: ${res.error}`);
   return res.channel;
 }
 
@@ -221,15 +194,10 @@ export async function getChannelInfo(
 export async function setChannelPurpose(
   channelId: string,
   purpose: string,
-  token: string,
+  token: string
 ): Promise<void> {
-  const res = await slackPost(
-    "conversations.setPurpose",
-    { channel: channelId, purpose },
-    token,
-  );
-  if (!res.ok)
-    throw new Error(`[SlackAdmin] conversations.setPurpose: ${res.error}`);
+  const res = await slackPost("conversations.setPurpose", { channel: channelId, purpose }, token);
+  if (!res.ok) throw new Error(`[SlackAdmin] conversations.setPurpose: ${res.error}`);
 }
 
 /**
@@ -239,15 +207,10 @@ export async function setChannelPurpose(
 export async function renameChannel(
   channelId: string,
   name: string,
-  token: string,
+  token: string
 ): Promise<SlackChannel> {
-  const res = await slackPost(
-    "conversations.rename",
-    { channel: channelId, name },
-    token,
-  );
-  if (!res.ok || !res.channel)
-    throw new Error(`[SlackAdmin] conversations.rename: ${res.error}`);
+  const res = await slackPost("conversations.rename", { channel: channelId, name }, token);
+  if (!res.ok || !res.channel) throw new Error(`[SlackAdmin] conversations.rename: ${res.error}`);
   return res.channel;
 }
 
@@ -255,15 +218,8 @@ export async function renameChannel(
  * Archive a channel (bot must be a member or have channels:manage scope).
  * Docs: https://api.slack.com/methods/conversations.archive
  */
-export async function archiveChannel(
-  channelId: string,
-  token: string,
-): Promise<void> {
-  const res = await slackPost(
-    "conversations.archive",
-    { channel: channelId },
-    token,
-  );
+export async function archiveChannel(channelId: string, token: string): Promise<void> {
+  const res = await slackPost("conversations.archive", { channel: channelId }, token);
   if (!res.ok && res.error !== "already_archived")
     throw new Error(`[SlackAdmin] conversations.archive: ${res.error}`);
 }
@@ -275,7 +231,7 @@ export async function archiveChannel(
 export async function inviteToChannel(
   channelId: string,
   userIds: string[],
-  token: string,
+  token: string
 ): Promise<void> {
   const res = await slackPost(
     "conversations.invite",
@@ -283,10 +239,9 @@ export async function inviteToChannel(
       channel: channelId,
       users: userIds.join(","),
     },
-    token,
+    token
   );
-  if (!res.ok)
-    throw new Error(`[SlackAdmin] conversations.invite: ${res.error}`);
+  if (!res.ok) throw new Error(`[SlackAdmin] conversations.invite: ${res.error}`);
 }
 
 /**
@@ -297,7 +252,7 @@ export async function ensureChannel(
   name: string,
   topic: string,
   token: string,
-  existing: SlackChannel[],
+  existing: SlackChannel[]
 ): Promise<ChannelResult> {
   const found = existing.find((c) => c.name === name);
 
@@ -319,9 +274,7 @@ export async function ensureChannel(
  * Ensure all channels in SLACK_CHANNELS exist and the bot is a member.
  * Safe to call repeatedly — idempotent.
  */
-export async function ensureAllChannels(): Promise<
-  Record<SlackChannelKey, ChannelResult>
-> {
+export async function ensureAllChannels(): Promise<Record<SlackChannelKey, ChannelResult>> {
   const cfg = await getSlackConfigAsync();
   const token = cfg.SLACK_BOT_TOKEN;
   if (!token) throw new Error("[SlackAdmin] SLACK_BOT_TOKEN is not configured");

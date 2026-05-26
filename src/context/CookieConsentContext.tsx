@@ -65,7 +65,7 @@ function writeConsentCookie(prefs: CookiePreferences): void {
       analytics: prefs.analytics,
       marketing: prefs.marketing,
       timestamp: new Date().toISOString(),
-    }),
+    })
   );
   document.cookie = `${COOKIE_NAME}=${value}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax; Secure`;
 }
@@ -90,10 +90,7 @@ type ConsentAction =
   | { type: "SET_PREFERENCES"; payload: CookiePreferences }
   | { type: "MOUNT" };
 
-function consentReducer(
-  state: ConsentState,
-  action: ConsentAction,
-): ConsentState {
+function consentReducer(state: ConsentState, action: ConsentAction): ConsentState {
   switch (action.type) {
     case "HYDRATE":
       return {
@@ -130,16 +127,12 @@ export interface CookieConsentState {
   closeSettings: () => void;
 }
 
-export const CookieConsentContext = createContext<CookieConsentState | null>(
-  null,
-);
+export const CookieConsentContext = createContext<CookieConsentState | null>(null);
 
 export function useCookieConsent(): CookieConsentState {
   const ctx = useContext(CookieConsentContext);
   if (!ctx) {
-    throw new Error(
-      "useCookieConsent must be used within CookieConsentProvider",
-    );
+    throw new Error("useCookieConsent must be used within CookieConsentProvider");
   }
   return ctx;
 }
@@ -189,7 +182,7 @@ export function CookieConsentProvider({ children }: { children: ReactNode }) {
     (prefs: Partial<CookiePreferences>) => {
       persist({ ...state.preferences, ...prefs, necessary: true });
     },
-    [persist, state.preferences],
+    [persist, state.preferences]
   );
 
   const openSettings = useCallback(() => {

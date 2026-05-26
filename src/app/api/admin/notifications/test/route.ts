@@ -15,10 +15,9 @@ export async function POST(request: NextRequest) {
   if (!cfg.SLACK_BOT_TOKEN && !cfg.SLACK_WEBHOOK_URL) {
     return NextResponse.json(
       {
-        error:
-          "Slack not configured — set SLACK_BOT_TOKEN or SLACK_WEBHOOK_URL.",
+        error: "Slack not configured — set SLACK_BOT_TOKEN or SLACK_WEBHOOK_URL.",
       },
-      { status: 503 },
+      { status: 503 }
     );
   }
 

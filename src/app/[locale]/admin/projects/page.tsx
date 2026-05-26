@@ -2,12 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
-import type {
-  Project,
-  Task,
-  ProjectStatus,
-  TaskStatus,
-} from "@/lib/notion-projects";
+import type { Project, Task, ProjectStatus, TaskStatus } from "@/lib/notion-projects";
 
 type Tab = "projects" | "tasks";
 
@@ -45,9 +40,9 @@ function ProgressBar({ value }: { value: number }) {
   const pct = Math.max(0, Math.min(100, value));
   return (
     <div className="flex items-center gap-2">
-      <div className="h-1.5 w-20 rounded-full bg-slate-800 overflow-hidden">
+      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-800">
         <div
-          className="h-full rounded-full bg-neon-cyan transition-all"
+          className="bg-neon-cyan h-full rounded-full transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -76,9 +71,7 @@ export default function AdminProjectsPage() {
       const data = await res.json();
       setProjects(data.projects ?? []);
     } catch (err) {
-      setErrorProjects(
-        err instanceof Error ? err.message : "Failed to load projects",
-      );
+      setErrorProjects(err instanceof Error ? err.message : "Failed to load projects");
     } finally {
       setLoadingProjects(false);
     }
@@ -94,9 +87,7 @@ export default function AdminProjectsPage() {
       setTasks(data.tasks ?? []);
       setFetchedTasks(true);
     } catch (err) {
-      setErrorTasks(
-        err instanceof Error ? err.message : "Failed to load tasks",
-      );
+      setErrorTasks(err instanceof Error ? err.message : "Failed to load tasks");
     } finally {
       setLoadingTasks(false);
     }
@@ -122,9 +113,7 @@ export default function AdminProjectsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId: id, status }),
       });
-      setProjects((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status } : p)),
-      );
+      setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
     } finally {
       setUpdatingId(null);
     }
@@ -151,9 +140,7 @@ export default function AdminProjectsPage() {
           <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
           <span className="text-neon-cyan font-mono text-xs">PROJECTS</span>
         </div>
-        <h1 className="font-heading text-2xl font-bold text-white">
-          Projects & Tasks
-        </h1>
+        <h1 className="font-heading text-2xl font-bold text-white">Projects & Tasks</h1>
         <p className="font-body mt-1 text-slate-400">
           Manage projects and tasks from your Notion workspace.
         </p>
@@ -165,7 +152,7 @@ export default function AdminProjectsPage() {
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`rounded-lg border px-4 py-1.5 font-mono text-xs transition-all capitalize ${
+            className={`rounded-lg border px-4 py-1.5 font-mono text-xs capitalize transition-all ${
               tab === t
                 ? "border-neon-cyan/30 bg-neon-cyan/10 text-neon-cyan"
                 : "border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
@@ -186,7 +173,7 @@ export default function AdminProjectsPage() {
             if (tab === "projects") loadProjects();
             else loadTasks();
           }}
-          className="ml-auto rounded-lg border border-slate-700 px-3 py-1.5 font-mono text-xs text-slate-400 hover:text-white transition-colors"
+          className="ml-auto rounded-lg border border-slate-700 px-3 py-1.5 font-mono text-xs text-slate-400 transition-colors hover:text-white"
         >
           ↺ Refresh
         </button>
@@ -204,7 +191,7 @@ export default function AdminProjectsPage() {
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-5"
+                  className="bg-void-light/50 animate-pulse rounded-xl border border-slate-800 p-5"
                 >
                   <div className="mb-2 h-4 w-1/2 rounded bg-slate-700/60" />
                   <div className="h-3 w-1/4 rounded bg-slate-800/80" />
@@ -213,14 +200,12 @@ export default function AdminProjectsPage() {
             </div>
           )}
           {!loadingProjects && projects.length === 0 && !errorProjects && (
-            <div className="rounded-xl border border-slate-800 bg-void-light/30 py-12 text-center">
-              <p className="font-mono text-sm text-slate-500">
-                No projects in Notion yet.
-              </p>
+            <div className="bg-void-light/30 rounded-xl border border-slate-800 py-12 text-center">
+              <p className="font-mono text-sm text-slate-500">No projects in Notion yet.</p>
             </div>
           )}
           {!loadingProjects && projects.length > 0 && (
-            <div className="overflow-hidden rounded-xl border border-slate-800 bg-void-light/50">
+            <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -240,9 +225,7 @@ export default function AdminProjectsPage() {
                       <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
                         Owner
                       </th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
-                        Due
-                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Due</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -252,13 +235,9 @@ export default function AdminProjectsPage() {
                         className="hover:bg-void-lighter/20 border-b border-slate-800/50 transition-colors"
                       >
                         <td className="px-5 py-3">
-                          <div className="font-medium text-white">
-                            {p.name || "(Untitled)"}
-                          </div>
+                          <div className="font-medium text-white">{p.name || "(Untitled)"}</div>
                           {p.type && (
-                            <div className="font-mono text-[10px] text-slate-600">
-                              {p.type}
-                            </div>
+                            <div className="font-mono text-[10px] text-slate-600">{p.type}</div>
                           )}
                         </td>
                         <td className="px-5 py-3">
@@ -266,12 +245,9 @@ export default function AdminProjectsPage() {
                             value={p.status}
                             disabled={updatingId === p.id}
                             onChange={(e) =>
-                              updateProjectStatus(
-                                p.id,
-                                e.target.value as ProjectStatus,
-                              )
+                              updateProjectStatus(p.id, e.target.value as ProjectStatus)
                             }
-                            className={`rounded border bg-void px-2 py-1 font-mono text-[10px] focus:outline-none disabled:opacity-50 ${PROJECT_STATUS_COLORS[p.status] ?? "border-slate-700 text-slate-400"}`}
+                            className={`bg-void rounded border px-2 py-1 font-mono text-[10px] focus:outline-none disabled:opacity-50 ${PROJECT_STATUS_COLORS[p.status] ?? "border-slate-700 text-slate-400"}`}
                           >
                             {(
                               [
@@ -291,9 +267,7 @@ export default function AdminProjectsPage() {
                         <td className="px-5 py-3">
                           <ProgressBar value={p.progress} />
                         </td>
-                        <td className="px-5 py-3 font-mono text-xs text-slate-400">
-                          {p.priority}
-                        </td>
+                        <td className="px-5 py-3 font-mono text-xs text-slate-400">{p.priority}</td>
                         <td className="px-5 py-3 font-mono text-xs text-slate-400">
                           {p.owner || "—"}
                         </td>
@@ -325,7 +299,7 @@ export default function AdminProjectsPage() {
               {[1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="animate-pulse rounded-xl border border-slate-800 bg-void-light/50 p-4"
+                  className="bg-void-light/50 animate-pulse rounded-xl border border-slate-800 p-4"
                 >
                   <div className="mb-1.5 h-3.5 w-1/2 rounded bg-slate-700/60" />
                   <div className="h-3 w-1/4 rounded bg-slate-800/80" />
@@ -333,25 +307,18 @@ export default function AdminProjectsPage() {
               ))}
             </div>
           )}
-          {!loadingTasks &&
-            fetchedTasks &&
-            tasks.length === 0 &&
-            !errorTasks && (
-              <div className="rounded-xl border border-slate-800 bg-void-light/30 py-12 text-center">
-                <p className="font-mono text-sm text-slate-500">
-                  No tasks in Notion yet.
-                </p>
-              </div>
-            )}
+          {!loadingTasks && fetchedTasks && tasks.length === 0 && !errorTasks && (
+            <div className="bg-void-light/30 rounded-xl border border-slate-800 py-12 text-center">
+              <p className="font-mono text-sm text-slate-500">No tasks in Notion yet.</p>
+            </div>
+          )}
           {!loadingTasks && tasks.length > 0 && (
-            <div className="overflow-hidden rounded-xl border border-slate-800 bg-void-light/50">
+            <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-800">
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
-                        Task
-                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Task</th>
                       <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
                         Status
                       </th>
@@ -361,12 +328,8 @@ export default function AdminProjectsPage() {
                       <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
                         Assignee
                       </th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
-                        Type
-                      </th>
-                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">
-                        Due
-                      </th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Type</th>
+                      <th className="px-5 py-3 text-left font-mono text-xs text-slate-500">Due</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -376,9 +339,7 @@ export default function AdminProjectsPage() {
                         className="hover:bg-void-lighter/20 border-b border-slate-800/50 transition-colors"
                       >
                         <td className="px-5 py-3">
-                          <div className="font-medium text-white">
-                            {t.task || "(Untitled)"}
-                          </div>
+                          <div className="font-medium text-white">{t.task || "(Untitled)"}</div>
                           {t.estimate && (
                             <span className="mt-0.5 inline-block rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[9px] text-slate-500">
                               {t.estimate}
@@ -389,13 +350,8 @@ export default function AdminProjectsPage() {
                           <select
                             value={t.status}
                             disabled={updatingId === t.id}
-                            onChange={(e) =>
-                              updateTaskStatus(
-                                t.id,
-                                e.target.value as TaskStatus,
-                              )
-                            }
-                            className={`rounded border bg-void px-2 py-1 font-mono text-[10px] focus:outline-none disabled:opacity-50 ${TASK_STATUS_COLORS[t.status] ?? "border-slate-700 text-slate-400"}`}
+                            onChange={(e) => updateTaskStatus(t.id, e.target.value as TaskStatus)}
+                            className={`bg-void rounded border px-2 py-1 font-mono text-[10px] focus:outline-none disabled:opacity-50 ${TASK_STATUS_COLORS[t.status] ?? "border-slate-700 text-slate-400"}`}
                           >
                             {(
                               [
@@ -413,9 +369,7 @@ export default function AdminProjectsPage() {
                             ))}
                           </select>
                         </td>
-                        <td className="px-5 py-3 font-mono text-xs text-slate-400">
-                          {t.priority}
-                        </td>
+                        <td className="px-5 py-3 font-mono text-xs text-slate-400">{t.priority}</td>
                         <td className="px-5 py-3 font-mono text-xs text-slate-400">
                           {t.assignee || "—"}
                         </td>

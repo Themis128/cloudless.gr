@@ -26,28 +26,15 @@ const SIZES = {
   lg: { mark: 32, text: "text-2xl" },
 };
 
-export default function Logo({
-  variant = "wordmark",
-  size = "md",
-  className = "",
-}: LogoProps) {
+export default function Logo({ variant = "wordmark", size = "md", className = "" }: LogoProps) {
   const s = SIZES[size];
 
   if (variant === "mark") {
-    return (
-      <CloudMark
-        size={s.mark}
-        className={className}
-        aria-label="cloudless.gr"
-      />
-    );
+    return <CloudMark size={s.mark} className={className} aria-label="cloudless.gr" />;
   }
 
   return (
-    <span
-      className={`inline-flex items-center gap-2 ${className}`}
-      aria-label="cloudless.gr"
-    >
+    <span className={`inline-flex items-center gap-2 ${className}`} aria-label="cloudless.gr">
       {variant === "wordmark" && <CloudMark size={s.mark} aria-hidden />}
       <span className={`font-heading ${s.text} font-bold tracking-tight`}>
         cloudless<span className="text-neon-cyan">.gr</span>

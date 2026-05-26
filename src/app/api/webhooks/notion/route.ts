@@ -41,13 +41,7 @@ interface WebhookPayload {
     | "project.updated"
     | "task.updated"
     | "analytics.event";
-  database:
-    | "blog"
-    | "docs"
-    | "submissions"
-    | "projects"
-    | "tasks"
-    | "analytics";
+  database: "blog" | "docs" | "submissions" | "projects" | "tasks" | "analytics";
   page_id: string;
   slug?: string;
   data?: Record<string, unknown>;
@@ -71,9 +65,7 @@ async function verifySecret(request: NextRequest): Promise<boolean> {
 async function handlePageUpdated(payload: WebhookPayload) {
   const { database, slug } = payload;
 
-  invalidateCache(
-    database === "blog" ? "blog" : database === "docs" ? "docs" : undefined,
-  );
+  invalidateCache(database === "blog" ? "blog" : database === "docs" ? "docs" : undefined);
 
   if (database === "blog") {
     revalidatePath("/blog");
@@ -95,9 +87,7 @@ async function handlePageUpdated(payload: WebhookPayload) {
 async function handlePageCreated(payload: WebhookPayload) {
   const { database, slug, data } = payload;
 
-  invalidateCache(
-    database === "blog" ? "blog" : database === "docs" ? "docs" : undefined,
-  );
+  invalidateCache(database === "blog" ? "blog" : database === "docs" ? "docs" : undefined);
 
   if (database === "blog") {
     revalidatePath("/blog");
@@ -241,10 +231,7 @@ async function handleSubmissionStatus(payload: WebhookPayload) {
 
 export async function POST(request: NextRequest) {
   if (!(await verifySecret(request))) {
-    return NextResponse.json(
-      { error: "Invalid or missing x-webhook-secret" },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "Invalid or missing x-webhook-secret" }, { status: 401 });
   }
 
   let body: WebhookPayload;
@@ -259,7 +246,7 @@ export async function POST(request: NextRequest) {
   if (!body.type || !body.database || !body.page_id) {
     return NextResponse.json(
       { error: "type, database, and page_id are required" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -286,10 +273,7 @@ export async function POST(request: NextRequest) {
         result = await handleAnalyticsEvent(body);
         break;
       default:
-        return NextResponse.json(
-          { error: `Unknown event type: ${body.type}` },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: `Unknown event type: ${body.type}` }, { status: 400 });
     }
 
     return NextResponse.json({ ok: true, type: body.type, ...result });
@@ -304,13 +288,10 @@ export async function POST(request: NextRequest) {
             scope.setTag("route", "notion.webhook");
             scope.setTag("notion.event", body.type);
             captureException(err);
-          }),
+          })
         )
         .catch(() => {});
     }
-    return NextResponse.json(
-      { error: "Internal error processing webhook" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal error processing webhook" }, { status: 500 });
   }
 }

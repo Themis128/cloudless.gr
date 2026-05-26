@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { updateCalendarItem, deleteCalendarItem } from "@/lib/content-calendar";
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
@@ -20,7 +17,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;

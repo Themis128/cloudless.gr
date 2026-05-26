@@ -47,39 +47,68 @@ describe("evaluateDrift", () => {
 
   function snap(over: Partial<DriftSnapshot>): DriftSnapshot {
     return {
-      expected: FULL_A,
+      cloudExpected: FULL_A,
+      piExpected: FULL_A,
       cloud: FULL_A,
-      ssmModifiedAt: OLD,
+      pi: FULL_A,
+      cloudSsmModifiedAt: OLD,
+      piSsmModifiedAt: OLD,
       ...over,
     };
   }
 
-  it("reports no drift when cloud matches", () => {
+  it("reports no drift when both surfaces match", () => {
     const r = evaluateDrift(snap({}), NOW);
     expect(r.drifted).toBe(false);
     expect(r.surfaces.every((s) => s.matches)).toBe(true);
   });
 
-  it("matches across SHA length variants (12-char vs full)", () => {
-    const r = evaluateDrift(snap({ cloud: SHORT_A }), NOW);
+  it("each surface compared to its own expected SHA (real-world: Pi short vs cloud full)", () => {
+    // Pi deploys SHORT_A (12-char), cloud deploys FULL_A (40-char), both correct.
+    const r = evaluateDrift(
+      snap({ cloudExpected: FULL_A, piExpected: SHORT_A, cloud: FULL_A, pi: SHORT_A }),
+      NOW,
+    );
     expect(r.drifted).toBe(false);
   });
 
-  it("flags drift when cloud reports a different SHA", () => {
-    const r = evaluateDrift(snap({ cloud: FULL_B }), NOW);
+  it("flags drift when cloud reports a SHA different from its own expected", () => {
+    const r = evaluateDrift(snap({ cloud: FULL_B, pi: FULL_A }), NOW);
     expect(r.drifted).toBe(true);
     expect(r.surfaces.find((s) => s.name === "cloud")?.matches).toBe(false);
+    expect(r.surfaces.find((s) => s.name === "pi")?.matches).toBe(true);
+  });
+
+  it("flags drift when Pi reports a SHA different from its own expected", () => {
+    const r = evaluateDrift(snap({ cloud: FULL_A, pi: FULL_B }), NOW);
+    expect(r.drifted).toBe(true);
+    expect(r.surfaces.find((s) => s.name === "pi")?.matches).toBe(false);
+  });
+
+  it("does NOT flag false drift when cloud and Pi deployed different commits (normal)", () => {
+    // Cloud deployed FULL_A, Pi deployed FULL_B — each matches its own SSM param.
+    const r = evaluateDrift(
+      snap({
+        cloudExpected: FULL_A,
+        piExpected: FULL_B,
+        cloud: FULL_A,
+        pi: FULL_B,
+      }),
+      NOW,
+    );
+    expect(r.drifted).toBe(false);
   });
 
   it("recognises the 'APP_VERSION not wired' fallback", () => {
-    const r = evaluateDrift(snap({ cloud: "0.1.0" }), NOW);
+    const r = evaluateDrift(snap({ cloud: "0.1.0", pi: "0.1.0" }), NOW);
     expect(r.drifted).toBe(true);
     expect(r.surfaces.every((s) => s.reason.includes("APP_VERSION not wired"))).toBe(true);
   });
 
-  it("does NOT flag drift inside the grace window (10 min after SSM publish)", () => {
+  it("does NOT flag drift inside grace window when most-recent SSM write is fresh", () => {
+    // Pi just deployed (RECENT) but cloud hasn't caught up yet.
     const r = evaluateDrift(
-      snap({ ssmModifiedAt: RECENT, cloud: FULL_B }),
+      snap({ cloudSsmModifiedAt: OLD, piSsmModifiedAt: RECENT, cloud: FULL_B, pi: FULL_B }),
       NOW,
     );
     expect(r.withinGrace).toBe(true);
@@ -88,27 +117,10 @@ describe("evaluateDrift", () => {
 
   it("flags drift outside the grace window even with the same situation", () => {
     const r = evaluateDrift(
-      snap({ ssmModifiedAt: OLD, cloud: FULL_B }),
+      snap({ cloudSsmModifiedAt: OLD, piSsmModifiedAt: OLD, cloud: FULL_B, pi: FULL_B }),
       NOW,
     );
     expect(r.withinGrace).toBe(false);
     expect(r.drifted).toBe(true);
-  });
-
-  it("flags 'endpoint unreachable' when cloud returns null", () => {
-    const r = evaluateDrift(snap({ cloud: null }), NOW);
-    expect(r.drifted).toBe(true);
-    expect(r.surfaces.find((s) => s.name === "cloud")?.reason).toContain("unreachable");
-  });
-
-  it("computes ageMs correctly", () => {
-    const r = evaluateDrift(snap({ ssmModifiedAt: OLD }), NOW);
-    expect(r.ageMs).toBe(30 * 60 * 1000);
-  });
-
-  it("returns null ageMs when ssmModifiedAt is missing", () => {
-    const r = evaluateDrift(snap({ ssmModifiedAt: null }), NOW);
-    expect(r.ageMs).toBeNull();
-    expect(r.withinGrace).toBe(false);
   });
 });

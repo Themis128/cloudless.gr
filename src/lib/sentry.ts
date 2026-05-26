@@ -57,11 +57,7 @@ export type IssueStatus = "resolved" | "ignored" | "unresolved"; // NOSONAR — 
 const STATUS_RESOLVED: IssueStatus = "resolved"; // NOSONAR — constant extracted from type annotation
 const STATUS_IGNORED: IssueStatus = "ignored"; // NOSONAR — constant extracted from type annotation
 
-export type SentryTokenStatus =
-  | "valid"
-  | "rejected"
-  | "not_configured"
-  | "error";
+export type SentryTokenStatus = "valid" | "rejected" | "not_configured" | "error";
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -86,7 +82,7 @@ function recordRejection(status: number) {
   // Throttle the auth-error log to once per TTL window.
   if (Date.now() - lastAuthLogAt > REJECTION_CACHE_TTL_MS) {
     console.error(
-      `[Sentry] Auth error ${status} — check SENTRY_AUTH_TOKEN scopes (project:read required). Suppressing further logs for ${Math.round(REJECTION_CACHE_TTL_MS / 1000)}s.`,
+      `[Sentry] Auth error ${status} — check SENTRY_AUTH_TOKEN scopes (project:read required). Suppressing further logs for ${Math.round(REJECTION_CACHE_TTL_MS / 1000)}s.`
     );
     lastAuthLogAt = Date.now();
   }
@@ -116,10 +112,7 @@ async function getSentryConfig(): Promise<{
   };
 }
 
-async function sentryFetch<T>(
-  path: string,
-  options?: RequestInit,
-): Promise<T | null> {
+async function sentryFetch<T>(path: string, options?: RequestInit): Promise<T | null> {
   const cfg = await getSentryConfig();
   if (!cfg) return null;
 
@@ -184,13 +177,10 @@ export async function verifySentryToken(): Promise<{
   }
 
   try {
-    const res = await fetch(
-      `${SENTRY_API}/projects/${cfg.org}/${cfg.project}/`,
-      {
-        headers: { Authorization: `Bearer ${cfg.token}` },
-        signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
-      },
-    );
+    const res = await fetch(`${SENTRY_API}/projects/${cfg.org}/${cfg.project}/`, {
+      headers: { Authorization: `Bearer ${cfg.token}` },
+      signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
+    });
     if (res.status === 401 || res.status === 403) {
       recordRejection(res.status);
       return {
@@ -198,8 +188,7 @@ export async function verifySentryToken(): Promise<{
         message: `Token rejected (${res.status}) — check SENTRY_AUTH_TOKEN scopes (project:read required).`,
       };
     }
-    if (!res.ok)
-      return { status: "error", message: `API returned ${res.status}` };
+    if (!res.ok) return { status: "error", message: `API returned ${res.status}` };
     return { status: "valid" };
   } catch {
     return { status: "error", message: "Connection failed." };
@@ -224,7 +213,7 @@ export async function getUnresolvedIssues(
     sort?: SortField;
     query?: string;
     level?: IssueLevel;
-  } = {},
+  } = {}
 ): Promise<SentryIssueList | null> {
   const cfg = await getSentryConfig();
   if (!cfg) return null;
@@ -236,7 +225,7 @@ export async function getUnresolvedIssues(
 
   const params = new URLSearchParams({ query, sort, limit: String(limit) });
   const issues = await sentryFetch<SentryIssue[]>(
-    `/projects/${cfg.org}/${cfg.project}/issues/?${params}`,
+    `/projects/${cfg.org}/${cfg.project}/issues/?${params}`
   );
 
   if (!issues) return null;
@@ -303,10 +292,7 @@ export async function getErrorCounts(): Promise<{
  * Update issue status (resolve, ignore, or reopen).
  * Returns true on success, false on failure.
  */
-export async function updateIssueStatus(
-  issueId: string,
-  status: IssueStatus,
-): Promise<boolean> {
+export async function updateIssueStatus(issueId: string, status: IssueStatus): Promise<boolean> {
   const result = await sentryFetch<{ status: string }>(`/issues/${issueId}/`, {
     method: "PUT",
     body: JSON.stringify({ status }),
@@ -332,10 +318,7 @@ export async function ignoreIssue(issueId: string): Promise<boolean> {
  * Resolve an issue and mark it as fixed in a specific release.
  * Useful when deploying a fix — links the resolution to the release version.
  */
-export async function resolveInRelease(
-  issueId: string,
-  version: string,
-): Promise<boolean> {
+export async function resolveInRelease(issueId: string, version: string): Promise<boolean> {
   const result = await sentryFetch<{ status: string }>(`/issues/${issueId}/`, {
     method: "PUT",
     body: JSON.stringify({

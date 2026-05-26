@@ -33,12 +33,48 @@ const SEV: Record<
   Severity,
   { bg: string; ring: string; text: string; label: string; dot: string }
 > = {
-  ok:       { bg: "bg-emerald-500/10", ring: "ring-emerald-500/40", text: "text-emerald-400", label: "OK",       dot: "bg-emerald-500" },
-  info:     { bg: "bg-blue-500/10",    ring: "ring-blue-500/40",    text: "text-blue-400",    label: "Info",     dot: "bg-blue-400"    },
-  warning:  { bg: "bg-amber-500/10",   ring: "ring-amber-500/40",   text: "text-amber-400",   label: "Warning",  dot: "bg-amber-400"   },
-  error:    { bg: "bg-orange-500/10",  ring: "ring-orange-500/40",  text: "text-orange-400",  label: "Error",    dot: "bg-orange-400"  },
-  high:     { bg: "bg-red-500/10",     ring: "ring-red-500/40",     text: "text-red-400",     label: "High",     dot: "bg-red-400"     },
-  critical: { bg: "bg-red-700/20",     ring: "ring-red-500/60",     text: "text-red-300",     label: "Critical", dot: "bg-red-500"     },
+  ok: {
+    bg: "bg-emerald-500/10",
+    ring: "ring-emerald-500/40",
+    text: "text-emerald-400",
+    label: "OK",
+    dot: "bg-emerald-500",
+  },
+  info: {
+    bg: "bg-blue-500/10",
+    ring: "ring-blue-500/40",
+    text: "text-blue-400",
+    label: "Info",
+    dot: "bg-blue-400",
+  },
+  warning: {
+    bg: "bg-amber-500/10",
+    ring: "ring-amber-500/40",
+    text: "text-amber-400",
+    label: "Warning",
+    dot: "bg-amber-400",
+  },
+  error: {
+    bg: "bg-orange-500/10",
+    ring: "ring-orange-500/40",
+    text: "text-orange-400",
+    label: "Error",
+    dot: "bg-orange-400",
+  },
+  high: {
+    bg: "bg-red-500/10",
+    ring: "ring-red-500/40",
+    text: "text-red-400",
+    label: "High",
+    dot: "bg-red-400",
+  },
+  critical: {
+    bg: "bg-red-700/20",
+    ring: "ring-red-500/60",
+    text: "text-red-300",
+    label: "Critical",
+    dot: "bg-red-500",
+  },
 };
 
 function fmtUptime(s?: number): string {
@@ -70,8 +106,7 @@ function fmtTs(iso?: string): string {
 function RssiBar({ rssi }: { rssi?: number }) {
   if (!rssi) return <span className="font-mono text-xs text-slate-500">—</span>;
   const pct = Math.max(0, Math.min(100, ((rssi + 100) / 70) * 100));
-  const color =
-    pct > 60 ? "bg-emerald-500" : pct > 30 ? "bg-amber-500" : "bg-red-500";
+  const color = pct > 60 ? "bg-emerald-500" : pct > 30 ? "bg-amber-500" : "bg-red-500";
   return (
     <div className="flex items-center gap-2">
       <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-700">
@@ -86,9 +121,7 @@ function StatusChip({ stale }: { stale: boolean }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-xs ${
-        stale
-          ? "bg-amber-500/10 text-amber-400"
-          : "bg-emerald-500/10 text-emerald-400"
+        stale ? "bg-amber-500/10 text-amber-400" : "bg-emerald-500/10 text-emerald-400"
       }`}
     >
       <span
@@ -105,11 +138,7 @@ function Feedback({ msg }: { msg: string }) {
   if (!msg) return null;
   const ok = msg.startsWith("✓");
   return (
-    <p
-      className={`mt-2 font-mono text-xs ${ok ? "text-emerald-400" : "text-red-400"}`}
-    >
-      {msg}
-    </p>
+    <p className={`mt-2 font-mono text-xs ${ok ? "text-emerald-400" : "text-red-400"}`}>{msg}</p>
   );
 }
 
@@ -128,7 +157,7 @@ function TabBtn({
       onClick={onClick}
       className={`rounded-lg px-4 py-2 font-mono text-sm transition-all ${
         active
-          ? "bg-neon-magenta/15 text-neon-magenta ring-1 ring-neon-magenta/30"
+          ? "bg-neon-magenta/15 text-neon-magenta ring-neon-magenta/30 ring-1"
           : "text-slate-400 hover:bg-slate-800 hover:text-white"
       }`}
     >
@@ -145,6 +174,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
   );
 }
 
+<<<<<<< HEAD
 // ── Device selector ────────────────────────────────────────────────────────────
 
 function DeviceSelect({
@@ -158,12 +188,29 @@ function DeviceSelect({
 }) {
   if (devices.length <= 1) return null;
   return (
+=======
+// ── DeviceSelect ───────────────────────────────────────────────────────────────
+
+interface DeviceSelectProps {
+  devices: Device[];
+  selectedId: string;
+  setSelectedId: (id: string) => void;
+}
+
+function DeviceSelect({ devices, selectedId, setSelectedId }: DeviceSelectProps) {
+  return devices.length > 1 ? (
+>>>>>>> 1e82f95379841052acd6b392003da65486497629
     <div className="mb-4">
       <label className="mb-1 block font-mono text-xs text-slate-500">Device</label>
       <select
         value={selectedId}
+<<<<<<< HEAD
         onChange={(e) => onSelect(e.target.value)}
         className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white focus:border-neon-magenta focus:outline-none"
+=======
+        onChange={(e) => setSelectedId(e.target.value)}
+        className="focus:border-neon-magenta w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white focus:outline-none"
+>>>>>>> 1e82f95379841052acd6b392003da65486497629
       >
         {devices.map((d) => (
           <option key={d.device_id} value={d.device_id}>
@@ -172,7 +219,11 @@ function DeviceSelect({
         ))}
       </select>
     </div>
+<<<<<<< HEAD
   );
+=======
+  ) : null;
+>>>>>>> 1e82f95379841052acd6b392003da65486497629
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -204,38 +255,37 @@ export default function Esp32ManagerPage() {
 
   // ── API helpers ──────────────────────────────────────────────────────────────
 
-  const call = useCallback(
-    async (path: string, opts?: RequestInit) => {
-      try {
-        const res = await fetchWithAuth(path, opts);
-        const json = await res.json();
-        if (json?.offline) { setOffline(true); return null; }
-        setOffline(false);
-        return json;
-      } catch {
+  const call = useCallback(async (path: string, opts?: RequestInit) => {
+    try {
+      const res = await fetchWithAuth(path, opts);
+      const json = await res.json();
+      if (json?.offline) {
         setOffline(true);
         return null;
       }
-    },
-    [],
-  );
+      setOffline(false);
+      return json;
+    } catch {
+      setOffline(true);
+      return null;
+    }
+  }, []);
 
   const sendCmd = useCallback(
     async (action: string, value?: unknown) => {
       setLedFeedback("");
-      const res = await call(
-        `/api/admin/esp32?action=command&device_id=${selectedId}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action, value }),
-        },
-      );
-      const msg = res?.ok ? `✓ ${action} sent` : "✗ Command failed";
+      const res = await call(`/api/admin/esp32?action=command&device_id=${selectedId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, value }),
+      });
+      // `call` returns parsed JSON or null (offline). Treat non-null as success
+      // since the Pi command endpoint returns {} or {ok:true} on success.
+      const msg = res !== null && !res?.offline ? `✓ ${action} sent` : "✗ Command failed";
       setLedFeedback(msg);
       setTimeout(() => setLedFeedback(""), 3500);
     },
-    [call, selectedId],
+    [call, selectedId]
   );
 
   // ── Devices tab ──────────────────────────────────────────────────────────────
@@ -248,7 +298,9 @@ export default function Esp32ManagerPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDevices().catch(() => {});
-    const t = setInterval(() => { loadDevices().catch(() => {}); }, POLL_MS);
+    const t = setInterval(() => {
+      loadDevices().catch(() => {});
+    }, POLL_MS);
     return () => clearInterval(t);
   }, [loadDevices]);
 
@@ -257,7 +309,10 @@ export default function Esp32ManagerPage() {
   const loadConfig = useCallback(async () => {
     setConfigLoading(true);
     const data = await call(`/api/admin/esp32?action=config&device_id=${selectedId}`);
-    if (data && !data.offline) { setConfig(data); setConfigDirty(false); }
+    if (data && !data.offline) {
+      setConfig(data);
+      setConfigDirty(false);
+    }
     setConfigLoading(false);
   }, [call, selectedId]);
 
@@ -270,14 +325,11 @@ export default function Esp32ManagerPage() {
     if (!config) return;
     setConfigLoading(true);
     setConfigFeedback("");
-    const res = await call(
-      `/api/admin/esp32?action=config&device_id=${selectedId}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
-      },
-    );
+    const res = await call(`/api/admin/esp32?action=config&device_id=${selectedId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
+    });
     setConfigLoading(false);
     const msg = res?.ok ? "✓ Config saved & published to device" : "✗ Save failed";
     setConfigFeedback(msg);
@@ -288,7 +340,18 @@ export default function Esp32ManagerPage() {
   // ── OTA tab ──────────────────────────────────────────────────────────────────
 
   const triggerOta = useCallback(async () => {
-    if (!otaUrl.trim()) return;
+    const url = otaUrl.trim();
+    if (!url) return;
+    // ESP32 HTTPUpdate requires an HTTP (not HTTPS) URL reachable from the Pi LAN.
+    // The .bin extension is required — the partition bootloader verifies the magic bytes.
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      setOtaFeedback("✗ URL must start with http:// or https://");
+      return;
+    }
+    if (!url.toLowerCase().endsWith(".bin")) {
+      setOtaFeedback("✗ URL must point to a .bin firmware file");
+      return;
+    }
     setOtaLoading(true);
     setOtaFeedback("");
     const res = await call("/api/admin/esp32?action=ota", {
@@ -328,10 +391,18 @@ export default function Esp32ManagerPage() {
 
       {/* Tab bar */}
       <div className="flex flex-wrap gap-2">
-        <TabBtn active={tab === "devices"} onClick={() => setTab("devices")}>Devices</TabBtn>
-        <TabBtn active={tab === "led"}     onClick={() => setTab("led")}>LED Control</TabBtn>
-        <TabBtn active={tab === "config"}  onClick={() => setTab("config")}>Config</TabBtn>
-        <TabBtn active={tab === "ota"}     onClick={() => setTab("ota")}>OTA Update</TabBtn>
+        <TabBtn active={tab === "devices"} onClick={() => setTab("devices")}>
+          Devices
+        </TabBtn>
+        <TabBtn active={tab === "led"} onClick={() => setTab("led")}>
+          LED Control
+        </TabBtn>
+        <TabBtn active={tab === "config"} onClick={() => setTab("config")}>
+          Config
+        </TabBtn>
+        <TabBtn active={tab === "ota"} onClick={() => setTab("ota")}>
+          OTA Update
+        </TabBtn>
       </div>
 
       {/* ── Devices tab ─────────────────────────────────────────────────────── */}
@@ -373,7 +444,9 @@ export default function Esp32ManagerPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <dt className="font-mono text-xs text-slate-500">Signal</dt>
-                      <dd><RssiBar rssi={d.rssi} /></dd>
+                      <dd>
+                        <RssiBar rssi={d.rssi} />
+                      </dd>
                     </div>
                     <div className="flex items-center justify-between">
                       <dt className="font-mono text-xs text-slate-500">Uptime</dt>
@@ -381,7 +454,9 @@ export default function Esp32ManagerPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <dt className="font-mono text-xs text-slate-500">Free RAM</dt>
-                      <dd className="font-mono text-xs text-slate-300">{fmtRam(d.free_ram_bytes)}</dd>
+                      <dd className="font-mono text-xs text-slate-300">
+                        {fmtRam(d.free_ram_bytes)}
+                      </dd>
                     </div>
                     <div className="flex items-center justify-between">
                       <dt className="font-mono text-xs text-slate-500">Firmware</dt>
@@ -389,7 +464,9 @@ export default function Esp32ManagerPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <dt className="font-mono text-xs text-slate-500">Last seen</dt>
-                      <dd className="font-mono text-xs text-slate-300">{fmtTs(d.last_heartbeat)}</dd>
+                      <dd className="font-mono text-xs text-slate-300">
+                        {fmtTs(d.last_heartbeat)}
+                      </dd>
                     </div>
                   </dl>
                 </Card>
@@ -402,7 +479,7 @@ export default function Esp32ManagerPage() {
       {/* ── LED Control tab ──────────────────────────────────────────────────── */}
       {tab === "led" && (
         <div className="space-y-5">
-          <DeviceSelect />
+          <DeviceSelect devices={devices} selectedId={selectedId} setSelectedId={setSelectedId} />
 
           {/* Severity buttons */}
           <Card>
@@ -431,7 +508,10 @@ export default function Esp32ManagerPage() {
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => { sendCmd("led_mute", !isMuted); setIsMuted((m) => !m); }}
+                onClick={() => {
+                  sendCmd("led_mute", !isMuted);
+                  setIsMuted((m) => !m);
+                }}
                 className={`rounded-lg px-4 py-2 font-mono text-sm ring-1 transition-all hover:scale-105 active:scale-95 ${
                   isMuted
                     ? "bg-blue-500/10 text-blue-400 ring-blue-500/30"
@@ -471,10 +551,11 @@ export default function Esp32ManagerPage() {
               onChange={(e) => setBrightness(Number(e.target.value))}
               onMouseUp={() => sendCmd("set_brightness", brightness)}
               onTouchEnd={() => sendCmd("set_brightness", brightness)}
-              className="w-full accent-neon-magenta"
+              className="accent-neon-magenta w-full"
             />
             <div className="mt-1 flex justify-between font-mono text-xs text-slate-600">
-              <span>0</span><span>255</span>
+              <span>0</span>
+              <span>255</span>
             </div>
           </Card>
 
@@ -499,7 +580,7 @@ export default function Esp32ManagerPage() {
       {/* ── Config tab ───────────────────────────────────────────────────────── */}
       {tab === "config" && (
         <div className="space-y-5">
-          <DeviceSelect />
+          <DeviceSelect devices={devices} selectedId={selectedId} setSelectedId={setSelectedId} />
 
           {configLoading && !config ? (
             <Card>
@@ -508,7 +589,8 @@ export default function Esp32ManagerPage() {
           ) : config ? (
             <Card>
               <p className="mb-4 font-mono text-xs text-slate-500">
-                Config is published as a retained MQTT message — device applies it on next boot/reconnect.
+                Config is published as a retained MQTT message — device applies it on next
+                boot/reconnect.
               </p>
               <div className="space-y-5">
                 {/* Brightness */}
@@ -523,10 +605,10 @@ export default function Esp32ManagerPage() {
                     max={255}
                     value={config.brightness}
                     onChange={(e) => {
-                      setConfig((c) => c ? { ...c, brightness: Number(e.target.value) } : c);
+                      setConfig((c) => (c ? { ...c, brightness: Number(e.target.value) } : c));
                       setConfigDirty(true);
                     }}
-                    className="w-full accent-neon-magenta"
+                    className="accent-neon-magenta w-full"
                   />
                 </div>
 
@@ -541,25 +623,25 @@ export default function Esp32ManagerPage() {
                     max={3600}
                     value={config.heartbeat_interval_s}
                     onChange={(e) => {
-                      setConfig((c) => c ? { ...c, heartbeat_interval_s: Number(e.target.value) } : c);
+                      setConfig((c) =>
+                        c ? { ...c, heartbeat_interval_s: Number(e.target.value) } : c
+                      );
                       setConfigDirty(true);
                     }}
-                    className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white focus:border-neon-magenta focus:outline-none"
+                    className="focus:border-neon-magenta w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white focus:outline-none"
                   />
                 </div>
 
                 {/* MQTT QoS */}
                 <div>
-                  <label className="mb-1 block font-mono text-xs text-slate-400">
-                    MQTT QoS
-                  </label>
+                  <label className="mb-1 block font-mono text-xs text-slate-400">MQTT QoS</label>
                   <select
                     value={config.mqtt_qos}
                     onChange={(e) => {
-                      setConfig((c) => c ? { ...c, mqtt_qos: Number(e.target.value) } : c);
+                      setConfig((c) => (c ? { ...c, mqtt_qos: Number(e.target.value) } : c));
                       setConfigDirty(true);
                     }}
-                    className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white focus:border-neon-magenta focus:outline-none"
+                    className="focus:border-neon-magenta w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white focus:outline-none"
                   >
                     <option value={0}>0 — At most once</option>
                     <option value={1}>1 — At least once</option>
@@ -570,7 +652,7 @@ export default function Esp32ManagerPage() {
                   type="button"
                   onClick={saveConfig}
                   disabled={!configDirty || configLoading}
-                  className="w-full rounded-lg bg-neon-magenta/15 py-2.5 font-mono text-sm text-neon-magenta ring-1 ring-neon-magenta/30 transition-all hover:bg-neon-magenta/25 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="bg-neon-magenta/15 text-neon-magenta ring-neon-magenta/30 hover:bg-neon-magenta/25 w-full rounded-lg py-2.5 font-mono text-sm ring-1 transition-all disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {configLoading ? "Saving…" : "Save & publish to device"}
                 </button>
@@ -593,7 +675,7 @@ export default function Esp32ManagerPage() {
       {/* ── OTA tab ──────────────────────────────────────────────────────────── */}
       {tab === "ota" && (
         <div className="space-y-5">
-          <DeviceSelect />
+          <DeviceSelect devices={devices} selectedId={selectedId} setSelectedId={setSelectedId} />
 
           <Card>
             <p className="mb-4 font-mono text-xs text-slate-500">
@@ -611,7 +693,7 @@ export default function Esp32ManagerPage() {
                   placeholder="https://example.com/firmware/esp32.bin"
                   value={otaUrl}
                   onChange={(e) => setOtaUrl(e.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-magenta focus:outline-none"
+                  className="focus:border-neon-magenta w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
                 />
               </div>
 
@@ -624,14 +706,14 @@ export default function Esp32ManagerPage() {
                   placeholder="e.g. 4.1"
                   value={otaVersion}
                   onChange={(e) => setOtaVersion(e.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:border-neon-magenta focus:outline-none"
+                  className="focus:border-neon-magenta w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
                 />
               </div>
 
               <div className="rounded-lg bg-amber-500/10 p-3 ring-1 ring-amber-500/20">
                 <p className="font-mono text-xs text-amber-400">
-                  ⚠ The device will go offline during flash (~30 s). LEDs will glow cyan.
-                  Ensure the firmware URL is reachable from the Pi LAN (192.168.1.x).
+                  ⚠ The device will go offline during flash (~30 s). LEDs will glow cyan. Ensure the
+                  firmware URL is reachable from the Pi LAN (192.168.1.x).
                 </p>
               </div>
 
@@ -639,7 +721,7 @@ export default function Esp32ManagerPage() {
                 type="button"
                 onClick={triggerOta}
                 disabled={!otaUrl.trim() || otaLoading}
-                className="w-full rounded-lg bg-neon-magenta/15 py-2.5 font-mono text-sm text-neon-magenta ring-1 ring-neon-magenta/30 transition-all hover:bg-neon-magenta/25 disabled:cursor-not-allowed disabled:opacity-40"
+                className="bg-neon-magenta/15 text-neon-magenta ring-neon-magenta/30 hover:bg-neon-magenta/25 w-full rounded-lg py-2.5 font-mono text-sm ring-1 transition-all disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {otaLoading ? "Sending OTA command…" : "⬆ Trigger OTA update"}
               </button>
@@ -651,9 +733,13 @@ export default function Esp32ManagerPage() {
           <Card className="border-slate-800/50">
             <p className="mb-2 font-mono text-xs text-slate-500">Tips</p>
             <ul className="space-y-1 font-mono text-xs text-slate-500">
-              <li>• Upload your <code>.bin</code> to S3 or GitHub Releases and paste the URL above.</li>
+              <li>
+                • Upload your <code>.bin</code> to S3 or GitHub Releases and paste the URL above.
+              </li>
               <li>• Compile in Arduino IDE: Sketch → Export Compiled Binary.</li>
-              <li>• Current firmware: <strong className="text-slate-300">v4.0</strong></li>
+              <li>
+                • Current firmware: <strong className="text-slate-300">v4.0</strong>
+              </li>
             </ul>
           </Card>
         </div>

@@ -16,7 +16,7 @@ interface DashboardStats {
 
 async function fetchDashboardStats(
   setStats: (s: DashboardStats) => void,
-  setLoading: (v: boolean) => void,
+  setLoading: (v: boolean) => void
 ): Promise<void> {
   const [purchasesRes, consultationsRes] = await Promise.allSettled([
     fetchWithAuth("/api/user/purchases"),
@@ -34,20 +34,15 @@ async function fetchDashboardStats(
     const subs = data.subscriptions ?? [];
     totalOrders = purchases.length;
     totalSpent = purchases
-      .filter(
-        (p: { status: string }) =>
-          p.status === "paid" || p.status === "complete",
-      )
+      .filter((p: { status: string }) => p.status === "paid" || p.status === "complete")
       .reduce((sum: number, p: { amount: number }) => sum + p.amount, 0);
-    activeSubscriptions = subs.filter(
-      (s: { status: string }) => s.status === "active",
-    ).length;
+    activeSubscriptions = subs.filter((s: { status: string }) => s.status === "active").length;
   }
 
   if (consultationsRes.status === "fulfilled" && consultationsRes.value.ok) {
     const data = await consultationsRes.value.json();
     upcomingConsultations = (data.consultations ?? []).filter(
-      (c: { status: string }) => c.status === "upcoming",
+      (c: { status: string }) => c.status === "upcoming"
     ).length;
   }
 
@@ -85,10 +80,7 @@ export default function DashboardPage() {
   const dashboardCards = [
     {
       title: t("dashboard.profile", "Profile"),
-      description: t(
-        "dashboard.profileCardDesc",
-        "Update your name, company, and contact info",
-      ),
+      description: t("dashboard.profileCardDesc", "Update your name, company, and contact info"),
       icon: "◉",
       href: "/dashboard/profile",
       accent: "cyan" as const,
@@ -117,10 +109,7 @@ export default function DashboardPage() {
     },
     {
       title: t("dashboard.settings", "Settings"),
-      description: t(
-        "dashboard.settingsCardDesc",
-        "Theme, language, and notification preferences",
-      ),
+      description: t("dashboard.settingsCardDesc", "Theme, language, and notification preferences"),
       icon: "⚙",
       href: "/dashboard/settings",
       accent: "magenta" as const,
@@ -209,12 +198,8 @@ export default function DashboardPage() {
                   {card.icon}
                 </div>
               </div>
-              <h3 className="font-heading mb-1 font-semibold text-white">
-                {card.title}
-              </h3>
-              <p className="font-body text-sm text-slate-500">
-                {card.description}
-              </p>
+              <h3 className="font-heading mb-1 font-semibold text-white">{card.title}</h3>
+              <p className="font-body text-sm text-slate-500">{card.description}</p>
             </Link>
           );
         })}

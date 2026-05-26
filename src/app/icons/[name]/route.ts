@@ -34,10 +34,7 @@ async function readFirstExisting(filePaths: string[]) {
   return null;
 }
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ name: string }> },
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
   const filename = ICON_MAP[name];
 

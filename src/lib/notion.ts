@@ -35,10 +35,7 @@ export async function notionHeaders(): Promise<Record<string, string>> {
 // Fetch wrapper
 // ---------------------------------------------------------------------------
 
-export async function notionFetch<T = unknown>(
-  path: string,
-  init?: RequestInit,
-): Promise<T> {
+export async function notionFetch<T = unknown>(path: string, init?: RequestInit): Promise<T> {
   const MAX_RETRIES = 3;
   const headers = await notionHeaders();
   if (path.includes("://") || path.startsWith("//"))
@@ -50,8 +47,7 @@ export async function notionFetch<T = unknown>(
   };
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    // codeql[js/server-side-request-forgery] -- url is NOTION_API (constant) + path; path is validated above (no :// or //)
-    const res = await fetch(url, reqInit);
+    const res = await fetch(url, reqInit); // codeql[js/server-side-request-forgery] -- NOTION_API is a constant; path validated above (no :// or //)
 
     if (res.status === 429 && attempt < MAX_RETRIES) {
       const retryAfterRaw = Number.parseInt(res.headers.get("Retry-After") ?? "1", 10);
@@ -108,8 +104,7 @@ function richTextToHtml(richText: RichTextItem[]): string {
       if (t.annotations?.code) text = `<code>${text}</code>`;
       if (t.annotations?.strikethrough) text = `<s>${text}</s>`;
       if (t.annotations?.underline) text = `<u>${text}</u>`;
-      if (t.href)
-        text = `<a href="${t.href}" target="_blank" rel="noopener">${text}</a>`;
+      if (t.href) text = `<a href="${t.href}" target="_blank" rel="noopener">${text}</a>`;
 
       return text;
     })
@@ -123,6 +118,27 @@ function richTextToHtml(richText: RichTextItem[]): string {
 type ListTag = "ul" | "ol" | null;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+function renderMediaBlock(block: any, type: string, data: any): string | null {
+  switch (type) {
+    case "image": {
+      const url = data.type === "external" ? data.external?.url : notionImageProxyUrl(block.id);
+      if (!url) return null;
+      const caption = extractText(data.caption);
+      const figcaption = caption ? `<figcaption>${caption}</figcaption>` : "";
+      return `<figure><img src="${url}" alt="${caption}" loading="lazy" />${figcaption}</figure>`;
+    }
+    case "video": {
+      const url = data.type === "external" ? data.external?.url : data.file?.url;
+      return url ? `<video controls src="${url}"></video>` : null;
+    }
+    case "embed":
+    case "bookmark":
+      return `<a href="${data.url}" target="_blank" rel="noopener">${data.url}</a>`;
+    default:
+      return null;
+  }
+}
+
 function renderBlockToHtml(block: any, type: string, data: any, text: string): string | null {
   switch (type) {
     case "paragraph":
@@ -150,20 +166,6 @@ function renderBlockToHtml(block: any, type: string, data: any, text: string): s
       const suffix = body ? "\n" + body : "";
       return `<div class="callout">${data.icon?.emoji ?? ""} ${text}${suffix}</div>`;
     }
-    case "image": {
-      const url = data.type === "external" ? data.external?.url : notionImageProxyUrl(block.id);
-      if (!url) return null;
-      const caption = extractText(data.caption);
-      const figcaption = caption ? `<figcaption>${caption}</figcaption>` : "";
-      return `<figure><img src="${url}" alt="${caption}" loading="lazy" />${figcaption}</figure>`;
-    }
-    case "video": {
-      const url = data.type === "external" ? data.external?.url : data.file?.url;
-      return url ? `<video controls src="${url}"></video>` : null;
-    }
-    case "embed":
-    case "bookmark":
-      return `<a href="${data.url}" target="_blank" rel="noopener">${data.url}</a>`;
     case "to_do":
       return `<label class="todo"><input type="checkbox" disabled ${data.checked ? "checked" : ""} /> ${text}</label>`;
     case "toggle": {
@@ -172,7 +174,7 @@ function renderBlockToHtml(block: any, type: string, data: any, text: string): s
       return `<details><summary>${text}</summary>${suffix}</details>`;
     }
     default:
-      return text ? `<p>${text}</p>` : null;
+      return renderMediaBlock(block, type, data) ?? (text ? `<p>${text}</p>` : null);
   }
 }
 
@@ -181,12 +183,14 @@ function appendListItem(
   text: string,
   listBuffer: string[],
   listTypeRef: { current: ListTag },
-  lines: string[],
+  lines: string[]
 ): void {
   const wantedTag = type === "bulleted_list_item" ? "ul" : "ol";
   if (listTypeRef.current !== wantedTag) {
     if (listBuffer.length > 0) {
-      lines.push(`<${listTypeRef.current ?? "ul"}>${listBuffer.splice(0).join("")}</${listTypeRef.current ?? "ul"}>`);
+      lines.push(
+        `<${listTypeRef.current ?? "ul"}>${listBuffer.splice(0).join("")}</${listTypeRef.current ?? "ul"}>`
+      );
     }
     listTypeRef.current = wantedTag;
   }
@@ -196,7 +200,7 @@ function appendListItem(
 function flushListBuffer(
   listBuffer: string[],
   listTypeRef: { current: ListTag },
-  lines: string[],
+  lines: string[]
 ): void {
   if (listBuffer.length === 0) return;
   const tag = listTypeRef.current ?? "ul";
@@ -204,27 +208,31 @@ function flushListBuffer(
   listTypeRef.current = null;
 }
 
+function processBlock(
+  block: any,
+  listBuffer: string[],
+  listTypeRef: { current: ListTag },
+  lines: string[]
+): void {
+  const type: string = block.type;
+  const data = block[type] ?? {};
+  const text = richTextToHtml(data.rich_text ?? []);
+  if (type === "bulleted_list_item" || type === "numbered_list_item") {
+    appendListItem(type, text, listBuffer, listTypeRef, lines);
+    return;
+  }
+  flushListBuffer(listBuffer, listTypeRef, lines);
+  const html = renderBlockToHtml(block, type, data, text);
+  if (html !== null) lines.push(html);
+}
+
 export function blocksToHtml(blocks: any[]): string {
   const lines: string[] = [];
   const listBuffer: string[] = [];
   const listTypeRef: { current: ListTag } = { current: null };
-
   for (const block of blocks) {
-    const type: string = block.type;
-    const data = block[type] ?? {};
-    const rt: RichTextItem[] = data.rich_text ?? [];
-    const text = richTextToHtml(rt);
-
-    if (type === "bulleted_list_item" || type === "numbered_list_item") {
-      appendListItem(type, text, listBuffer, listTypeRef, lines);
-      continue;
-    }
-
-    flushListBuffer(listBuffer, listTypeRef, lines);
-    const html = renderBlockToHtml(block, type, data, text);
-    if (html !== null) lines.push(html);
+    processBlock(block, listBuffer, listTypeRef, lines);
   }
-
   flushListBuffer(listBuffer, listTypeRef, lines);
   return lines.join("\n");
 }
@@ -239,7 +247,7 @@ export function blocksToHtml(blocks: any[]): string {
  */
 export async function notionFetchAll<T = unknown>(
   path: string,
-  body?: Record<string, unknown>,
+  body?: Record<string, unknown>
 ): Promise<T[]> {
   const results: T[] = [];
   let cursor: string | undefined;
@@ -301,18 +309,14 @@ export interface NotionBlock {
  * Fetch all blocks under a parent, recursively expanding any block that
  * has `has_children: true` (e.g. toggle, callout, column_list).
  */
-export async function fetchBlocksDeep(
-  parentId: string,
-): Promise<NotionBlock[]> {
-  const blocks = await notionListAll<NotionBlock>(
-    `/blocks/${parentId}/children`,
-  );
+export async function fetchBlocksDeep(parentId: string): Promise<NotionBlock[]> {
+  const blocks = await notionListAll<NotionBlock>(`/blocks/${parentId}/children`);
   await Promise.all(
     blocks.map(async (block) => {
       if (block.has_children) {
         block.children = await fetchBlocksDeep(block.id);
       }
-    }),
+    })
   );
   return blocks;
 }
@@ -325,10 +329,7 @@ export async function fetchBlocksDeep(
  * Returns the local image-proxy URL for a Notion-hosted file.
  * The proxy route re-fetches the fresh signed URL on each request.
  */
-export function notionImageProxyUrl(
-  id: string,
-  type: "block" | "cover" = "block",
-): string {
+export function notionImageProxyUrl(id: string, type: "block" | "cover" = "block"): string {
   return `/api/notion-image?id=${encodeURIComponent(id)}&type=${type}`;
 }
 
@@ -342,7 +343,7 @@ export function notionImageProxyUrl(
  */
 export async function updatePage(
   pageId: string,
-  properties: Record<string, unknown>,
+  properties: Record<string, unknown>
 ): Promise<boolean> {
   try {
     await notionFetch(`/pages/${pageId}`, {
@@ -353,7 +354,7 @@ export async function updatePage(
   } catch (err) {
     console.error(
       `[Notion] Failed to update page ${pageId}:`,
-      (err as Error)?.message ?? "unknown error",
+      (err as Error)?.message ?? "unknown error"
     );
     return false;
   }
@@ -372,7 +373,7 @@ export async function archivePage(pageId: string): Promise<boolean> {
   } catch (err) {
     console.error(
       `[Notion] Failed to archive page ${pageId}:`,
-      (err as Error)?.message ?? "unknown error",
+      (err as Error)?.message ?? "unknown error"
     );
     return false;
   }
@@ -391,7 +392,7 @@ export async function restorePage(pageId: string): Promise<boolean> {
   } catch (err) {
     console.error(
       `[Notion] Failed to restore page ${pageId}:`,
-      (err as Error)?.message ?? "unknown error",
+      (err as Error)?.message ?? "unknown error"
     );
     return false;
   }
@@ -407,10 +408,7 @@ export async function restorePage(pageId: string): Promise<boolean> {
  * Append child blocks to a page or block.
  * Max 100 blocks per call (Notion API limit).
  */
-export async function appendBlocks(
-  parentId: string,
-  children: any[],
-): Promise<boolean> {
+export async function appendBlocks(parentId: string, children: any[]): Promise<boolean> {
   try {
     await notionFetch(`/blocks/${parentId}/children`, {
       method: "PATCH",
@@ -420,7 +418,7 @@ export async function appendBlocks(
   } catch (err) {
     console.error(
       `[Notion] Failed to append blocks to ${parentId}:`,
-      (err as Error)?.message ?? "unknown error",
+      (err as Error)?.message ?? "unknown error"
     );
     return false;
   }
@@ -436,7 +434,7 @@ export async function deleteBlock(blockId: string): Promise<boolean> {
   } catch (err) {
     console.error(
       `[Notion] Failed to delete block ${blockId}:`,
-      (err as Error)?.message ?? "unknown error",
+      (err as Error)?.message ?? "unknown error"
     );
     return false;
   }

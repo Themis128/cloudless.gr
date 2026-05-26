@@ -18,9 +18,7 @@ export default function DashboardError({
     <section className="bg-void flex flex-1 items-center justify-center px-6 py-24">
       <div className="max-w-md text-center">
         <p className="text-neon-magenta font-mono text-5xl font-bold">ERROR</p>
-        <h1 className="font-heading mt-4 text-2xl font-bold text-white">
-          Dashboard error
-        </h1>
+        <h1 className="font-heading mt-4 text-2xl font-bold text-white">Dashboard error</h1>
         <p className="mt-3 font-mono text-sm text-slate-400">
           Something went wrong loading your dashboard.
         </p>

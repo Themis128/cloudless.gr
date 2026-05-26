@@ -32,14 +32,9 @@ export default function GoogleCampaignsPage() {
 
   const totalImpressions = campaigns.reduce((s, c) => s + (c.impressions ?? 0), 0);
   const totalClicks = campaigns.reduce((s, c) => s + (c.clicks ?? 0), 0);
-  const totalCost = campaigns.reduce(
-    (s, c) => s + Number.parseFloat(String(c.cost ?? 0)),
-    0,
-  );
+  const totalCost = campaigns.reduce((s, c) => s + Number.parseFloat(String(c.cost ?? 0)), 0);
   const avgCtr =
-    totalImpressions > 0
-      ? ((totalClicks / totalImpressions) * 100).toFixed(2)
-      : "0.00";
+    totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : "0.00";
 
   return (
     <div className="space-y-6">
@@ -52,9 +47,7 @@ export default function GoogleCampaignsPage() {
 
       <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
         <div className="border-b border-slate-800 px-6 py-3">
-          <h3 className="font-mono text-xs font-medium text-slate-400">
-            Google Ads Campaigns
-          </h3>
+          <h3 className="font-mono text-xs font-medium text-slate-400">Google Ads Campaigns</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -100,10 +93,7 @@ export default function GoogleCampaignsPage() {
               ))}
               {campaigns.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-12 text-center font-mono text-slate-600"
-                  >
+                  <td colSpan={5} className="px-6 py-12 text-center font-mono text-slate-600">
                     No Google Ads campaigns found.
                   </td>
                 </tr>
@@ -133,9 +123,7 @@ function StatusBadge({ status }: { readonly status: string }) {
         ? "text-yellow-400 border-yellow-400/30"
         : "text-slate-500 border-slate-600";
   return (
-    <span
-      className={`rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase ${color}`}
-    >
+    <span className={`rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase ${color}`}>
       {status}
     </span>
   );

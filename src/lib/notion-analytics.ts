@@ -8,10 +8,7 @@
  */
 
 import { notionFetch, notionFetchAll, extractText } from "@/lib/notion";
-import {
-  getIntegrationsAsync,
-  requireIntegrationAsync,
-} from "@/lib/integrations";
+import { getIntegrationsAsync, requireIntegrationAsync } from "@/lib/integrations";
 
 async function requireAnalyticsIntegration(): Promise<void> {
   await requireIntegrationAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID");
@@ -93,12 +90,8 @@ async function writeEventToNotion(data: EventData): Promise<string | null> {
         properties: {
           Event: { title: [{ text: { content: data.event.slice(0, 200) } }] },
           Type: { select: { name: data.type } },
-          ...(data.page
-            ? { Page: { rich_text: [{ text: { content: data.page } }] } }
-            : {}),
-          ...(data.source
-            ? { Source: { rich_text: [{ text: { content: data.source } }] } }
-            : {}),
+          ...(data.page ? { Page: { rich_text: [{ text: { content: data.page } }] } } : {}),
+          ...(data.source ? { Source: { rich_text: [{ text: { content: data.source } }] } } : {}),
           Count: { number: data.count ?? 1 },
           Date: { date: { start: new Date().toISOString() } },
           ...(data.country
@@ -163,7 +156,7 @@ export async function trackEvent(
     country?: string;
     metadata?: Record<string, unknown>;
   },
-  _opts?: { immediate?: boolean },
+  _opts?: { immediate?: boolean }
 ): Promise<string | null> {
   return writeEventToNotion(data);
 }
@@ -173,7 +166,7 @@ export async function trackEvent(
  */
 export async function trackFormSubmission(
   formName: string,
-  source?: string,
+  source?: string
 ): Promise<string | null> {
   return trackEvent(
     {
@@ -182,17 +175,14 @@ export async function trackFormSubmission(
       page: `/contact`,
       source,
     },
-    { immediate: true },
+    { immediate: true }
   );
 }
 
 /**
  * Convenience: track a blog post view.
  */
-export async function trackBlogView(
-  slug: string,
-  source?: string,
-): Promise<string | null> {
+export async function trackBlogView(slug: string, source?: string): Promise<string | null> {
   return trackEvent(
     {
       event: `Blog: ${slug}`,
@@ -200,7 +190,7 @@ export async function trackBlogView(
       page: `/blog/${slug}`,
       source,
     },
-    { immediate: true },
+    { immediate: true }
   );
 }
 
@@ -213,24 +203,19 @@ export async function trackBlogView(
  */
 export async function getRecentEvents(
   type?: AnalyticsEventType,
-  limit = 50,
+  limit = 50
 ): Promise<AnalyticsEvent[]> {
   await requireAnalyticsIntegration();
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
-    const filter = type
-      ? { property: "Type", select: { equals: type } }
-      : undefined;
+    const filter = type ? { property: "Type", select: { equals: type } } : undefined;
 
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_ANALYTICS_DB_ID}/query`,
-      {
-        ...(filter ? { filter } : {}),
-        sorts: [{ property: "Date", direction: "descending" }],
-        page_size: Math.min(limit, 100),
-      },
-    );
+    const pages = await notionFetchAll(`/databases/${NOTION_ANALYTICS_DB_ID}/query`, {
+      ...(filter ? { filter } : {}),
+      sorts: [{ property: "Date", direction: "descending" }],
+      page_size: Math.min(limit, 100),
+    });
     return pages.slice(0, limit).map(mapEvent);
   } catch (err) {
     console.error("[Notion Analytics] Failed to fetch events:", err);
@@ -243,24 +228,21 @@ export async function getRecentEvents(
  */
 export async function getEventsByDateRange(
   startDate: string,
-  endDate: string,
+  endDate: string
 ): Promise<AnalyticsEvent[]> {
   await requireAnalyticsIntegration();
 
   const { NOTION_ANALYTICS_DB_ID } = await getIntegrationsAsync();
   try {
-    const pages = await notionFetchAll(
-      `/databases/${NOTION_ANALYTICS_DB_ID}/query`,
-      {
-        filter: {
-          and: [
-            { property: "Date", date: { on_or_after: startDate } },
-            { property: "Date", date: { on_or_before: endDate } },
-          ],
-        },
-        sorts: [{ property: "Date", direction: "descending" }],
+    const pages = await notionFetchAll(`/databases/${NOTION_ANALYTICS_DB_ID}/query`, {
+      filter: {
+        and: [
+          { property: "Date", date: { on_or_after: startDate } },
+          { property: "Date", date: { on_or_before: endDate } },
+        ],
       },
-    );
+      sorts: [{ property: "Date", direction: "descending" }],
+    });
     return pages.map(mapEvent);
   } catch (err) {
     console.error("[Notion Analytics] Failed to fetch events by date:", err);
@@ -276,7 +258,7 @@ export async function getAnalyticsSummary(days = 7): Promise<AnalyticsSummary> {
   startDate.setDate(startDate.getDate() - days);
   const events = await getEventsByDateRange(
     startDate.toISOString().split("T")[0],
-    new Date().toISOString().split("T")[0],
+    new Date().toISOString().split("T")[0]
   );
 
   // Aggregate by type
@@ -327,7 +309,7 @@ export async function getAnalyticsSummary(days = 7): Promise<AnalyticsSummary> {
  * error, and weekly_rollup rows permanently.
  */
 export async function archiveOldEvents(
-  daysToKeep = 30,
+  daysToKeep = 30
 ): Promise<{ archived: number; errors: number }> {
   await requireAnalyticsIntegration();
 
@@ -344,17 +326,14 @@ export async function archiveOldEvents(
 
   for (const eventType of archivableTypes) {
     try {
-      const pages = await notionFetchAll(
-        `/databases/${NOTION_ANALYTICS_DB_ID}/query`,
-        {
-          filter: {
-            and: [
-              { property: "Type", select: { equals: eventType } },
-              { property: "Date", date: { before: cutoffStr } },
-            ],
-          },
+      const pages = await notionFetchAll(`/databases/${NOTION_ANALYTICS_DB_ID}/query`, {
+        filter: {
+          and: [
+            { property: "Type", select: { equals: eventType } },
+            { property: "Date", date: { before: cutoffStr } },
+          ],
         },
-      );
+      });
 
       for (const page of pages) {
         try {
@@ -368,17 +347,12 @@ export async function archiveOldEvents(
         }
       }
     } catch (err) {
-      console.error(
-        `[Notion Analytics] Failed to archive ${eventType} events:`,
-        err,
-      );
+      console.error(`[Notion Analytics] Failed to archive ${eventType} events:`, err);
       errors++;
     }
   }
 
-  console.warn(
-    `[Notion Analytics] Archived ${archived} old events (${errors} errors)`,
-  );
+  console.warn(`[Notion Analytics] Archived ${archived} old events (${errors} errors)`);
   return { archived, errors };
 }
 
@@ -401,6 +375,6 @@ export async function createWeeklyRollup(): Promise<string | null> {
       count: summary.totalEvents,
       metadata,
     },
-    { immediate: true },
+    { immediate: true }
   );
 }

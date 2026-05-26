@@ -69,7 +69,17 @@ interface LogEntry {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const ALERT_API_WS = "ws://192.168.1.128:30800/ws/esp32-logs";
+/** Returns the WebSocket URL for the alert-api, or empty string when unavailable.
+ *  Only connects on LAN/localhost — blocks ws:// mixed content on HTTPS deployments.
+ */
+function getAlertApiWsUrl(): string {
+  if (typeof window === "undefined") return "";
+  const h = window.location.hostname;
+  if (h.startsWith("192.168.") || h === "localhost") {
+    return "ws://192.168.1.128:30800/ws/esp32-logs";
+  }
+  return "";
+}
 const POLL_INTERVAL = 30_000;
 const MAX_LOG_LINES = 150;
 
@@ -143,8 +153,8 @@ export default function AdminMonitorPage() {
   const [error, setError] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [wsStatus, setWsStatus] = useState<"connecting" | "open" | "closed">(
-    "connecting",
+  const [wsStatus, setWsStatus] = useState<"connecting" | "open" | "closed">(() =>
+    getAlertApiWsUrl() ? "connecting" : "closed"
   );
   const wsRef = useRef<WebSocket | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -175,6 +185,11 @@ export default function AdminMonitorPage() {
       if (alertsRes.ok) {
         const alertData = await alertsRes.json();
         setAlerts(Array.isArray(alertData) ? alertData : []);
+      } else {
+        console.warn(
+          "[monitor] alerts fetch returned %d — Pi Alert API may be degraded",
+          alertsRes.status
+        );
       }
 
       setError(null);
@@ -195,16 +210,28 @@ export default function AdminMonitorPage() {
   // ── WebSocket log stream ───────────────────────────────────────────────────
 
   useEffect(() => {
+    const wsUrl = getAlertApiWsUrl();
+    if (!wsUrl) return;
+
     let ws: WebSocket;
     let retryTimer: ReturnType<typeof setTimeout>;
+    let retryCount = 0;
+    const MAX_RETRIES = 10;
 
     function connect() {
+      if (retryCount >= MAX_RETRIES) {
+        setWsStatus("closed");
+        return;
+      }
       try {
         setWsStatus("connecting");
-        ws = new WebSocket(ALERT_API_WS);
+        ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
-        ws.onopen = () => setWsStatus("open");
+        ws.onopen = () => {
+          setWsStatus("open");
+          retryCount = 0;
+        };
 
         ws.onmessage = (evt) => {
           try {
@@ -217,12 +244,10 @@ export default function AdminMonitorPage() {
             };
             setLogs((prev) => {
               const next = [...prev, entry];
-              return next.length > MAX_LOG_LINES
-                ? next.slice(-MAX_LOG_LINES)
-                : next;
+              return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next;
             });
           } catch {
-            // non-JSON frame, ignore
+            // non-JSON frame
           }
         };
 
@@ -230,11 +255,15 @@ export default function AdminMonitorPage() {
 
         ws.onclose = () => {
           setWsStatus("closed");
-          retryTimer = setTimeout(connect, 5000);
+          retryCount++;
+          const delay = Math.min(1000 * 2 ** retryCount, 30_000);
+          retryTimer = setTimeout(connect, delay);
         };
       } catch {
         setWsStatus("closed");
-        retryTimer = setTimeout(connect, 5000);
+        retryCount++;
+        const delay = Math.min(1000 * 2 ** retryCount, 30_000);
+        retryTimer = setTimeout(connect, delay);
       }
     }
 
@@ -265,9 +294,7 @@ export default function AdminMonitorPage() {
         </div>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-heading text-2xl font-bold text-white">
-              Infrastructure Monitor
-            </h1>
+            <h1 className="font-heading text-2xl font-bold text-white">Infrastructure Monitor</h1>
             <p className="font-body mt-1 text-slate-400">
               Pi cluster · ESP32 sensor · Alert API v2.0 · Live log stream
             </p>
@@ -286,8 +313,8 @@ export default function AdminMonitorPage() {
       {offline && (
         <div className="mb-6 rounded-xl border border-yellow-900/40 bg-yellow-950/20 px-5 py-4">
           <p className="font-mono text-sm text-yellow-400">
-            ⚠ Alert API unreachable — Pi may be offline or this deployment does
-            not have local network access.
+            ⚠ Alert API unreachable — Pi may be offline or this deployment does not have local
+            network access.
           </p>
           <p className="mt-1 font-mono text-xs text-slate-500">
             Dashboard data available only from the K3s Pi cluster.
@@ -324,12 +351,9 @@ export default function AdminMonitorPage() {
               </p>
             </div>
             <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
-              <p className="font-mono text-xs text-slate-500">
-                Critical / High
-              </p>
+              <p className="font-mono text-xs text-slate-500">Critical / High</p>
               <p className="font-heading mt-1 text-2xl font-bold text-red-400">
-                {(status.alerts.by_severity.critical ?? 0) +
-                  (status.alerts.by_severity.high ?? 0)}
+                {(status.alerts.by_severity.critical ?? 0) + (status.alerts.by_severity.high ?? 0)}
               </p>
             </div>
             <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
@@ -343,31 +367,22 @@ export default function AdminMonitorPage() {
           </div>
 
           {/* ── Pi Nodes ──────────────────────────────────────────────────── */}
-          <h2 className="font-heading mb-3 text-sm font-semibold uppercase tracking-widest text-slate-500">
+          <h2 className="font-heading mb-3 text-sm font-semibold tracking-widest text-slate-500 uppercase">
             Pi Nodes
           </h2>
           <div className="mb-6 grid gap-4 sm:grid-cols-2">
             {Object.entries(status.pis).map(([name, pi]) => (
-              <div
-                key={name}
-                className="bg-void-light/50 rounded-xl border border-slate-800 p-5"
-              >
+              <div key={name} className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
                 <div className="flex items-center gap-3">
-                  <span
-                    className={`h-3 w-3 rounded-full ${piStatusDot(pi.status)}`}
-                  />
-                  <span className="font-mono text-sm font-bold text-white">
-                    {name}
-                  </span>
+                  <span className={`h-3 w-3 rounded-full ${piStatusDot(pi.status)}`} />
+                  <span className="font-mono text-sm font-bold text-white">{name}</span>
                   <span
                     className={`ml-auto font-mono text-xs font-semibold ${STATUS_COLOR[pi.status] ?? "text-slate-400"}`}
                   >
                     {pi.status.toUpperCase()}
                   </span>
                 </div>
-                <p className="mt-1.5 font-mono text-xs text-slate-500">
-                  {pi.ip}
-                </p>
+                <p className="mt-1.5 font-mono text-xs text-slate-500">{pi.ip}</p>
                 {pi.alerts.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {pi.alerts.map((code) => (
@@ -385,17 +400,15 @@ export default function AdminMonitorPage() {
           </div>
 
           {/* ── ESP32 ─────────────────────────────────────────────────────── */}
-          <h2 className="font-heading mb-3 text-sm font-semibold uppercase tracking-widest text-slate-500">
+          <h2 className="font-heading mb-3 text-sm font-semibold tracking-widest text-slate-500 uppercase">
             ESP32 Sensor
           </h2>
-          <div className="mb-6 bg-void-light/50 rounded-xl border border-slate-800 p-5">
-            <div className="flex items-center gap-3 mb-4">
+          <div className="bg-void-light/50 mb-6 rounded-xl border border-slate-800 p-5">
+            <div className="mb-4 flex items-center gap-3">
               <span
-                className={`h-3 w-3 rounded-full ${status.esp32.stale ? "bg-yellow-400 animate-pulse" : "bg-neon-green animate-pulse"}`}
+                className={`h-3 w-3 rounded-full ${status.esp32.stale ? "animate-pulse bg-yellow-400" : "bg-neon-green animate-pulse"}`}
               />
-              <span className="font-mono text-sm font-bold text-white">
-                ESP32 Alert Manager
-              </span>
+              <span className="font-mono text-sm font-bold text-white">ESP32 Alert Manager</span>
               <span
                 className={`ml-auto font-mono text-xs font-semibold ${status.esp32.stale ? "text-yellow-400" : "text-neon-green"}`}
               >
@@ -408,10 +421,7 @@ export default function AdminMonitorPage() {
                 { label: "Firmware", value: status.esp32.firmware_ver ?? "—" },
                 {
                   label: "RSSI",
-                  value:
-                    status.esp32.rssi != null
-                      ? `${status.esp32.rssi} dBm`
-                      : "—",
+                  value: status.esp32.rssi != null ? `${status.esp32.rssi} dBm` : "—",
                 },
                 { label: "Uptime", value: fmtUptime(status.esp32.uptime_s) },
                 {
@@ -421,9 +431,7 @@ export default function AdminMonitorPage() {
                 { label: "Last HB", value: fmtTs(status.esp32.last_heartbeat) },
               ].map(({ label, value }) => (
                 <div key={label}>
-                  <p className="font-mono text-[10px] text-slate-500">
-                    {label}
-                  </p>
+                  <p className="font-mono text-[10px] text-slate-500">{label}</p>
                   <p className="font-mono text-xs text-white">{value}</p>
                 </div>
               ))}
@@ -431,38 +439,27 @@ export default function AdminMonitorPage() {
           </div>
 
           {/* ── Active Alerts ─────────────────────────────────────────────── */}
-          <h2 className="font-heading mb-3 text-sm font-semibold uppercase tracking-widest text-slate-500">
+          <h2 className="font-heading mb-3 text-sm font-semibold tracking-widest text-slate-500 uppercase">
             Active Alerts ({activeAlerts.length})
           </h2>
           <div className="mb-6 space-y-3">
             {activeAlerts.length === 0 ? (
               <div className="bg-void-light/50 rounded-xl border border-slate-800 p-8 text-center">
                 <p className="text-neon-green text-3xl">✓</p>
-                <p className="font-heading mt-3 font-semibold text-white">
-                  All Clear
-                </p>
-                <p className="mt-1 font-mono text-xs text-slate-500">
-                  No active alerts.
-                </p>
+                <p className="font-heading mt-3 font-semibold text-white">All Clear</p>
+                <p className="mt-1 font-mono text-xs text-slate-500">No active alerts.</p>
               </div>
             ) : (
               activeAlerts.map((alert) => {
                 const cls = SEV_COLOR[alert.severity] ?? SEV_COLOR.info;
                 const dot = SEV_DOT[alert.severity] ?? "bg-slate-500";
                 return (
-                  <div
-                    key={alert.id}
-                    className={`rounded-xl border p-5 ${cls}`}
-                  >
+                  <div key={alert.id} className={`rounded-xl border p-5 ${cls}`}>
                     <div className="flex flex-wrap items-start gap-3">
-                      <span
-                        className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${dot}`}
-                      />
+                      <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-sm font-bold">
-                            {alert.code}
-                          </span>
+                          <span className="font-mono text-sm font-bold">{alert.code}</span>
                           <span className="rounded border border-current/30 px-1.5 py-0.5 font-mono text-[10px] opacity-70">
                             {alert.status}
                           </span>
@@ -470,12 +467,9 @@ export default function AdminMonitorPage() {
                             {alert.severity}
                           </span>
                         </div>
-                        <p className="mt-0.5 font-mono text-xs opacity-80">
-                          {alert.message}
-                        </p>
+                        <p className="mt-0.5 font-mono text-xs opacity-80">{alert.message}</p>
                         <p className="mt-1 font-mono text-[10px] opacity-50">
-                          {alert.host} · {alert.service} · ×{alert.count} ·{" "}
-                          {fmtTs(alert.last_seen)}
+                          {alert.host} · {alert.service} · ×{alert.count} · {fmtTs(alert.last_seen)}
                         </p>
                       </div>
                     </div>
@@ -488,7 +482,7 @@ export default function AdminMonitorPage() {
           {/* ── Recently Resolved ─────────────────────────────────────────── */}
           {resolvedAlerts.length > 0 && (
             <>
-              <h2 className="font-heading mb-3 text-sm font-semibold uppercase tracking-widest text-slate-500">
+              <h2 className="font-heading mb-3 text-sm font-semibold tracking-widest text-slate-500 uppercase">
                 Recently Resolved ({resolvedAlerts.length})
               </h2>
               <div className="mb-6 space-y-2">
@@ -497,13 +491,9 @@ export default function AdminMonitorPage() {
                     key={alert.id}
                     className="bg-void-light/30 flex flex-wrap items-center gap-3 rounded-xl border border-slate-800/60 px-4 py-3 opacity-60"
                   >
-                    <span className="h-2 w-2 rounded-full bg-neon-green" />
-                    <span className="font-mono text-xs font-bold text-slate-300">
-                      {alert.code}
-                    </span>
-                    <span className="font-mono text-[10px] text-slate-500">
-                      {alert.host}
-                    </span>
+                    <span className="bg-neon-green h-2 w-2 rounded-full" />
+                    <span className="font-mono text-xs font-bold text-slate-300">{alert.code}</span>
+                    <span className="font-mono text-[10px] text-slate-500">{alert.host}</span>
                     <span className="ml-auto font-mono text-[10px] text-slate-600">
                       {fmtTs(alert.last_seen)}
                     </span>
@@ -516,28 +506,34 @@ export default function AdminMonitorPage() {
       ) : null}
 
       {/* ── Live Log Stream ───────────────────────────────────────────────── */}
-      <h2 className="font-heading mb-3 text-sm font-semibold uppercase tracking-widest text-slate-500">
+      <h2 className="font-heading mb-3 text-sm font-semibold tracking-widest text-slate-500 uppercase">
         Live Log Stream
       </h2>
-      <div className="bg-void-light/50 rounded-xl border border-slate-800 overflow-hidden">
+      <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
         {/* WS status bar */}
         <div className="flex items-center gap-2 border-b border-slate-800 px-4 py-2">
           <span
-            className={`h-2 w-2 rounded-full ${wsStatus === "open" ? "bg-neon-green animate-pulse" : wsStatus === "connecting" ? "bg-yellow-400 animate-pulse" : "bg-red-400"}`}
+            className={`h-2 w-2 rounded-full ${wsStatus === "open" ? "bg-neon-green animate-pulse" : wsStatus === "connecting" ? "animate-pulse bg-yellow-400" : "bg-red-400"}`}
           />
           <span className="font-mono text-[10px] text-slate-500">
             {wsStatus === "open"
-              ? `ws://192.168.1.128:30800/ws/esp32-logs — connected (${logs.length} lines)`
+              ? `ws/esp32-logs — connected (${logs.length} lines)`
               : wsStatus === "connecting"
                 ? "Connecting to log stream…"
-                : "Log stream disconnected — retrying in 5s"}
+                : getAlertApiWsUrl()
+                  ? "Log stream disconnected — retrying…"
+                  : "WebSocket unavailable on this deployment"}
           </span>
         </div>
 
         {/* Log lines */}
         <div className="h-80 overflow-y-auto p-4 font-mono text-[11px] leading-relaxed">
           {logs.length === 0 ? (
-            <p className="text-slate-600">Waiting for log entries…</p>
+            <p className="text-slate-600">
+              {getAlertApiWsUrl()
+                ? "Waiting for log entries…"
+                : "WebSocket stream not available on this deployment."}
+            </p>
           ) : (
             logs.map((entry, i) => (
               <div key={i} className="flex gap-3">
@@ -548,13 +544,11 @@ export default function AdminMonitorPage() {
                   })}
                 </span>
                 <span
-                  className={`shrink-0 w-12 ${LOG_LEVEL_COLOR[entry.level] ?? "text-slate-400"}`}
+                  className={`w-12 shrink-0 ${LOG_LEVEL_COLOR[entry.level] ?? "text-slate-400"}`}
                 >
                   {entry.level}
                 </span>
-                <span className="text-slate-300 break-all">
-                  {entry.message}
-                </span>
+                <span className="break-all text-slate-300">{entry.message}</span>
               </div>
             ))
           )}
@@ -563,8 +557,9 @@ export default function AdminMonitorPage() {
       </div>
 
       <p className="mt-4 font-mono text-[10px] text-slate-600">
-        Auto-refreshes every {POLL_INTERVAL / 1000}s · WebSocket reconnects
-        automatically · Last fetched: {status ? fmtTs(status.timestamp) : "—"}
+        Auto-refreshes every {POLL_INTERVAL / 1000}s
+        {getAlertApiWsUrl() ? " · WebSocket reconnects automatically" : ""} · Last fetched:{" "}
+        {status ? fmtTs(status.timestamp) : "—"}
       </p>
     </div>
   );

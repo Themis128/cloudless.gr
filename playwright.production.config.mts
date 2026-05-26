@@ -5,12 +5,12 @@ const rootDir = import.meta.dirname ?? path.resolve();
 
 /**
  * Production smoke-test config — runs customer-behavior suite against both
- * cloudless.gr and cloudless.online (Cloudflare tunnel).
+ * cloudless.gr (Lambda/cloud) and pi-origin.cloudless.gr (Pi k3s).
  *
  * Usage:
  *   npx playwright test --config=playwright.production.config.mts
  *   npx playwright test --config=playwright.production.config.mts --project=cloudless-gr
- *   npx playwright test --config=playwright.production.config.mts --project=cloudless-online
+ *   npx playwright test --config=playwright.production.config.mts --project=pi-origin
  *
  * Tests tagged @mutating are skipped (they POST real data to production).
  */
@@ -51,17 +51,17 @@ export default defineConfig({
       },
     },
     {
-      name: "cloudless-online-desktop",
+      name: "pi-origin-desktop",
       use: {
         ...devices["Desktop Chrome"],
-        baseURL: "https://cloudless.online",
+        baseURL: "https://pi-origin.cloudless.gr",
       },
     },
     {
-      name: "cloudless-online-mobile",
+      name: "pi-origin-mobile",
       use: {
         ...devices["Pixel 7"],
-        baseURL: "https://cloudless.online",
+        baseURL: "https://pi-origin.cloudless.gr",
       },
     },
   ],

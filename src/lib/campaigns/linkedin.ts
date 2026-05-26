@@ -15,10 +15,7 @@ async function getLinkedInConfig(): Promise<{
   return { token, adAccountId, orgUrn };
 }
 
-async function liiFetch(
-  path: string,
-  options: RequestInit = {},
-): Promise<Response> {
+async function liiFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const { token } = await getLinkedInConfig();
   return fetch(`${LINKEDIN_API}${path}`, {
     ...options,
@@ -56,7 +53,7 @@ export async function listLinkedInCampaigns(): Promise<LinkedInCampaign[]> {
     const { adAccountId } = await getLinkedInConfig();
     if (!adAccountId) return [];
     const res = await liiFetch(
-      `/adAccounts/${adAccountId}/adCampaigns?q=search&search.status.values[0]=ACTIVE&count=20`,
+      `/adAccounts/${adAccountId}/adCampaigns?q=search&search.status.values[0]=ACTIVE&count=20`
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -81,7 +78,7 @@ export async function listLinkedInCampaigns(): Promise<LinkedInCampaign[]> {
         totalBudget: el.totalBudget ?? null,
         createdAt: el.changeAuditStamps?.created?.time ?? 0,
         lastModifiedAt: el.changeAuditStamps?.lastModified?.time ?? 0,
-      }),
+      })
     );
   } catch {
     return [];
@@ -97,7 +94,7 @@ export interface LinkedInInsights {
 
 export async function getLinkedInInsights(
   dateStart: string,
-  dateEnd: string,
+  dateEnd: string
 ): Promise<LinkedInInsights> {
   const empty: LinkedInInsights = {
     impressions: 0,
@@ -109,7 +106,7 @@ export async function getLinkedInInsights(
     const { adAccountId } = await getLinkedInConfig();
     if (!adAccountId) return empty;
     const res = await liiFetch(
-      `/adAnalytics?q=analytics&pivot=ACCOUNT&dateRange.start.day=${dateStart.split("-")[2]}&dateRange.start.month=${dateStart.split("-")[1]}&dateRange.start.year=${dateStart.split("-")[0]}&dateRange.end.day=${dateEnd.split("-")[2]}&dateRange.end.month=${dateEnd.split("-")[1]}&dateRange.end.year=${dateEnd.split("-")[0]}&accounts[0]=urn:li:sponsoredAccount:${adAccountId}&fields=impressions,clicks,costInLocalCurrency,leads`,
+      `/adAnalytics?q=analytics&pivot=ACCOUNT&dateRange.start.day=${dateStart.split("-")[2]}&dateRange.start.month=${dateStart.split("-")[1]}&dateRange.start.year=${dateStart.split("-")[0]}&dateRange.end.day=${dateEnd.split("-")[2]}&dateRange.end.month=${dateEnd.split("-")[1]}&dateRange.end.year=${dateEnd.split("-")[0]}&accounts[0]=urn:li:sponsoredAccount:${adAccountId}&fields=impressions,clicks,costInLocalCurrency,leads`
     );
     if (!res.ok) return empty;
     const data = await res.json();

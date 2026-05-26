@@ -21,9 +21,9 @@ const SUGGESTIONS = [
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<Message[]>(() => [
     {
-      id: newId(),
+      id: "initial-assistant-msg",
       role: "assistant",
       content:
         "Hi! I'm the Cloudless assistant. Ask me anything about our cloud, serverless, or AI marketing services.",
@@ -48,10 +48,7 @@ export default function ChatWidget() {
     setMessages((prev) => {
       const last = prev.at(-1);
       if (!last) return prev;
-      return [
-        ...prev.slice(0, -1),
-        { id: last.id, role: "assistant", content },
-      ];
+      return [...prev.slice(0, -1), { id: last.id, role: "assistant", content }];
     });
   }
 
@@ -66,9 +63,7 @@ export default function ChatWidget() {
     });
   }
 
-  async function consumeStream(
-    reader: ReadableStreamDefaultReader<Uint8Array>,
-  ) {
+  async function consumeStream(reader: ReadableStreamDefaultReader<Uint8Array>) {
     const decoder = new TextDecoder();
     let buffer = "";
     while (true) {
@@ -107,10 +102,7 @@ export default function ChatWidget() {
     setMessages(next);
     setInput("");
     setStreaming(true);
-    setMessages((prev) => [
-      ...prev,
-      { id: newId(), role: "assistant", content: "" },
-    ]);
+    setMessages((prev) => [...prev, { id: newId(), role: "assistant", content: "" }]);
 
     try {
       const res = await fetch("/api/chat", {
@@ -120,9 +112,7 @@ export default function ChatWidget() {
       });
 
       if (!res.ok || !res.body) {
-        replaceLastAssistant(
-          "Sorry, I'm unavailable right now. Please use the Contact page.",
-        );
+        replaceLastAssistant("Sorry, I'm unavailable right now. Please use the Contact page.");
         return;
       }
 
@@ -148,24 +138,22 @@ export default function ChatWidget() {
         type="button"
         aria-label={open ? "Close chat" : "Open chat assistant"}
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full border border-neon-green/30 bg-void shadow-lg shadow-neon-green/10 transition-all hover:border-neon-green/60 hover:shadow-neon-green/20"
+        className="border-neon-green/30 bg-void shadow-neon-green/10 hover:border-neon-green/60 hover:shadow-neon-green/20 fixed right-6 bottom-6 z-50 flex h-14 w-14 items-center justify-center rounded-full border shadow-lg transition-all"
       >
         <span className="text-xl">{open ? "✕" : "💬"}</span>
       </button>
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 flex w-80 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-void shadow-2xl sm:w-96">
+        <div className="bg-void fixed right-6 bottom-24 z-50 flex w-80 flex-col overflow-hidden rounded-2xl border border-slate-800 shadow-2xl sm:w-96">
           {/* Header */}
-          <div className="flex items-center gap-3 border-b border-slate-800 bg-void-light px-4 py-3">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-neon-green" />
+          <div className="bg-void-light flex items-center gap-3 border-b border-slate-800 px-4 py-3">
+            <span className="bg-neon-green h-2.5 w-2.5 animate-pulse rounded-full" />
             <div>
               <div className="font-heading text-sm font-semibold text-white">
                 Cloudless Assistant
               </div>
-              <div className="font-mono text-xs text-slate-500">
-                Powered by Claude
-              </div>
+              <div className="font-mono text-xs text-slate-500">Powered by Claude</div>
             </div>
           </div>
 
@@ -177,9 +165,9 @@ export default function ChatWidget() {
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-xl px-3 py-2 font-body text-sm leading-relaxed ${
+                  className={`font-body max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed ${
                     m.role === "user"
-                      ? "bg-neon-green/10 border border-neon-green/20 text-white"
+                      ? "bg-neon-green/10 border-neon-green/20 border text-white"
                       : "bg-void-light border border-slate-800 text-slate-300"
                   }`}
                 >
@@ -214,7 +202,7 @@ export default function ChatWidget() {
                   key={s}
                   type="button"
                   onClick={() => send(s)}
-                  className="rounded-full border border-slate-700 px-3 py-1 font-mono text-xs text-slate-400 transition hover:border-neon-green/40 hover:text-white"
+                  className="hover:border-neon-green/40 rounded-full border border-slate-700 px-3 py-1 font-mono text-xs text-slate-400 transition hover:text-white"
                 >
                   {s}
                 </button>
@@ -223,7 +211,7 @@ export default function ChatWidget() {
           )}
 
           {/* Input */}
-          <div className="flex items-center gap-2 border-t border-slate-800 bg-void-light px-3 py-3">
+          <div className="bg-void-light flex items-center gap-2 border-t border-slate-800 px-3 py-3">
             <input
               ref={inputRef}
               type="text"
@@ -239,7 +227,7 @@ export default function ChatWidget() {
               type="button"
               onClick={() => send(input)}
               disabled={!input.trim() || streaming}
-              className="shrink-0 rounded-lg border border-neon-green/30 px-3 py-1.5 font-mono text-xs text-neon-green transition hover:border-neon-green/60 disabled:opacity-30"
+              className="border-neon-green/30 text-neon-green hover:border-neon-green/60 shrink-0 rounded-lg border px-3 py-1.5 font-mono text-xs transition disabled:opacity-30"
             >
               Send
             </button>

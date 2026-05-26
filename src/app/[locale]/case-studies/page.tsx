@@ -5,11 +5,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
-import {
-  getCaseStudies,
-  staticCaseStudies,
-  type CaseStudy,
-} from "@/lib/notion-case-studies";
+import { getCaseStudies, staticCaseStudies, type CaseStudy } from "@/lib/notion-case-studies";
 import { isConfiguredAsync } from "@/lib/integrations";
 
 const BASE_URL = "https://cloudless.gr";
@@ -39,10 +35,7 @@ export const metadata: Metadata = {
 
 async function loadCaseStudies(): Promise<CaseStudy[]> {
   try {
-    const configured = await isConfiguredAsync(
-      "NOTION_API_KEY",
-      "NOTION_CASE_STUDIES_DB_ID",
-    );
+    const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID");
     return configured ? await getCaseStudies() : staticCaseStudies;
   } catch {
     return staticCaseStudies;
@@ -79,10 +72,7 @@ function CaseStudyCard({ cs }: { cs: CaseStudy }) {
 
         <div className="mb-2 flex flex-wrap gap-2">
           {cs.services.map((s) => (
-            <span
-              key={s}
-              className="rounded-full bg-[#00fff5]/10 px-3 py-1 text-xs text-[#00fff5]"
-            >
+            <span key={s} className="rounded-full bg-[#00fff5]/10 px-3 py-1 text-xs text-[#00fff5]">
               {s}
             </span>
           ))}
@@ -91,9 +81,7 @@ function CaseStudyCard({ cs }: { cs: CaseStudy }) {
           </span>
         </div>
 
-        <h2 className="mb-2 text-xl font-bold text-white group-hover:text-[#00fff5]">
-          {cs.title}
-        </h2>
+        <h2 className="mb-2 text-xl font-bold text-white group-hover:text-[#00fff5]">{cs.title}</h2>
         <p className="mb-4 flex-1 text-sm text-gray-400">{cs.summary}</p>
 
         {cs.metrics.length > 0 && (
@@ -114,16 +102,15 @@ export default async function CaseStudiesPage() {
   return (
     <main className="min-h-screen bg-[#0a0a0f] text-white">
       {/* Hero */}
-      <section className="px-4 pb-16 pt-24 text-center">
+      <section className="px-4 pt-24 pb-16 text-center">
         <ScrollReveal>
           <span className="mb-4 inline-block rounded-full border border-[#00fff5]/30 bg-[#00fff5]/10 px-4 py-1 text-sm text-[#00fff5]">
             Results that speak for themselves
           </span>
           <h1 className="mb-4 text-4xl font-bold md:text-5xl">Case Studies</h1>
           <p className="mx-auto max-w-2xl text-lg text-gray-400">
-            Real engagements, real numbers. Here&apos;s how Cloudless helped
-            businesses reduce cloud spend, modernise infrastructure, and ship
-            faster.
+            Real engagements, real numbers. Here&apos;s how Cloudless helped businesses reduce cloud
+            spend, modernise infrastructure, and ship faster.
           </p>
         </ScrollReveal>
       </section>
@@ -134,10 +121,7 @@ export default async function CaseStudiesPage() {
           <ScrollReveal>
             <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
               <p className="text-gray-400">Case studies coming soon.</p>
-              <Link
-                href="/contact"
-                className="mt-4 inline-block text-[#00fff5] hover:underline"
-              >
+              <Link href="/contact" className="mt-4 inline-block text-[#00fff5] hover:underline">
                 Book a free consultation →
               </Link>
             </div>

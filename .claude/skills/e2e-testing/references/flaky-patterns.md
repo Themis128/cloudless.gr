@@ -16,12 +16,12 @@ intentionally uses in-process limits for Lambda cold-start simplicity.
 
 ---
 
-## 2. Notion CMS `/docs` networkidle timeout on mobile (cloudless.online)
+## 2. Notion CMS `/docs` networkidle timeout on mobile (pi-origin.cloudless.gr)
 
 **Test**: `notion-cms.spec.ts` — "renders the docs header and search input"
 
 **Root cause**: `waitForLoadState("networkidle")` waits for all network activity to stop.
-On cloudless.online (Cloudflare tunnel → Pi), mobile throttle profile + active Notion polling
+On pi-origin.cloudless.gr (Pi k3s), mobile throttle profile + active Notion polling
 can keep network active beyond the 60s test timeout.
 
 **Mitigation**: `retries: 2`. If the Notion client has already cached data, the second attempt
@@ -80,7 +80,7 @@ The `@mutating` tag is the correct long-term solution — don't remove it.
 
 | Problem class | Solution |
 |--------------|---------|
-| Network latency on cloudless.online | `timeout: 60_000` in production config |
+| Network latency on pi-origin.cloudless.gr | `timeout: 60_000` in production config |
 | Parallel test workers sharing rate-limit bucket | Accept `[400, 429]` in validation tests |
 | Lambda cold starts / multi-instance rate limiting | `retries: 2` in production config |
 | Mobile-only failures on desktop-only elements | `test.skip(!!isMobile, ...)` |
