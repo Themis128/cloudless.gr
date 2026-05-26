@@ -22,14 +22,17 @@ _RAW_PATTERNS = [
     {
         'id': 'mcp-009-prompt-injection-injection-pattern',
         'message': 'Prompt contains suspicious instruction or injection-like pattern.',
+        # Note: the \b(human|assistant|system)\s*: pattern triggers on legitimate
+        # chat-transcript formatting. Scope it to avoid prefixing colons in normal prose
+        # by requiring it at line-start or after a blank/quote character.
         'pattern': (
-            r'\b(human|assistant|system)\s*:\s*|instruction[s]?\s*:'
+            r'(?:^|\s)(human|assistant|system)\s*:\s|instruction[s]?\s*:'
             r'|do not answer|bypass .* filters|ignore .* safe'
         ),
     },
 ]
 
-# Pre-compile patterns at module load time for performance
+# Compile patterns once at module load time (not inside the per-line loop).
 PROMPT_INJECTION_PATTERNS = [
     {**entry, 'regex': re.compile(entry['pattern'], re.IGNORECASE | re.MULTILINE)}
     for entry in _RAW_PATTERNS
@@ -42,7 +45,7 @@ def analyze_text(text):
     findings = []
     lines = text.splitlines()
     for entry in PROMPT_INJECTION_PATTERNS:
-        regex = re.compile(entry['pattern'], re.IGNORECASE)
+        regex = entry['regex']
         for index, line in enumerate(lines):
             if regex.search(line):
                 findings.append({
@@ -71,6 +74,7 @@ def main():
         for finding in findings:
             print(f"{finding['id']}:{finding['line']} - {finding['message']}")
 
+    # Exit 1 when findings are present so CI integration can gate on this check.
     sys.exit(1 if findings else 0)
 
 

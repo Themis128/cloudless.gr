@@ -142,12 +142,18 @@ def put_inline(iam, role_arn: str, policy_name: str, policy_doc: dict, dry: bool
     if dry:
         print("  [dry-run] skipped put_role_policy")
         return
-    iam.put_role_policy(
-        RoleName=role,
-        PolicyName=policy_name,
-        PolicyDocument=json.dumps(policy_doc),
-    )
-    print("  ✓ put_role_policy ok")
+    try:
+        iam.put_role_policy(
+            RoleName=role,
+            PolicyName=policy_name,
+            PolicyDocument=json.dumps(policy_doc),
+        )
+        print("  ✓ put_role_policy ok")
+    except ClientError as exc:
+        code = exc.response["Error"]["Code"]
+        msg = exc.response["Error"]["Message"]
+        print(f"  ✗ put_role_policy failed ({code}): {msg}", file=sys.stderr)
+        raise
 
 
 def verify(iam, role_arn: str, actions: List[str], resources: List[str]) -> bool:
