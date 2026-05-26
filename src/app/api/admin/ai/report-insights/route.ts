@@ -37,9 +37,6 @@ Write 3-5 sentences of plain English insights. Mention specific numbers, compare
     return NextResponse.json({ insights });
   } catch (e) {
     console.error("[ai/report-insights] Claude call failed:", e);
-    return NextResponse.json(
-      { error: "AI generation failed." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }

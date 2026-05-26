@@ -64,9 +64,7 @@ export async function addToSuppressionList(email: string): Promise<boolean> {
 export async function removeFromSuppressionList(email: string): Promise<boolean> {
   try {
     const client = await getSESv2();
-    await client.send(
-      new DeleteSuppressedDestinationCommand({ EmailAddress: email }),
-    );
+    await client.send(new DeleteSuppressedDestinationCommand({ EmailAddress: email }));
     const safeDomain = logSafeDomain(email);
     console.warn(`[SES] Removed from suppression list: *@${safeDomain}`); // codeql[js/log-injection]
     return true;

@@ -71,10 +71,7 @@ export async function prepareOrchestration(
     console.error("[analytics-orchestration]", failureMessage, error);
     return {
       ok: false,
-      response: NextResponse.json(
-        { error: failureMessage },
-        { status: 500 },
-      ),
+      response: NextResponse.json({ error: failureMessage }, { status: 500 }),
     };
   }
 }

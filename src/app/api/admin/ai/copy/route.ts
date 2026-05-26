@@ -70,9 +70,6 @@ Respond with raw JSON only (no markdown fences):
     return NextResponse.json({ variants });
   } catch (e) {
     console.error("[ai/copy] Claude call failed:", e);
-    return NextResponse.json(
-      { error: "AI generation failed." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }

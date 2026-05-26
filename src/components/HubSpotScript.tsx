@@ -13,7 +13,7 @@ export function HubSpotScript({ nonce }: Readonly<{ nonce?: string }>) {
   // Lazy initializer runs once on mount (client-only), avoiding React #418:
   // null→<Script> hydration mismatch when getServerSnapshot=false ran during SSR.
   const [shouldLoad] = useState(
-    () => HS_PORTAL_ID.length > 0 && PRODUCTION_HOSTS.has(globalThis.location?.hostname ?? ""),
+    () => HS_PORTAL_ID.length > 0 && PRODUCTION_HOSTS.has(globalThis.location?.hostname ?? "")
   );
 
   if (!shouldLoad) return null;
