@@ -188,7 +188,7 @@ export default function AdminMonitorPage() {
       } else {
         console.warn(
           "[monitor] alerts fetch returned %d — Pi Alert API may be degraded",
-          alertsRes.status,
+          alertsRes.status
         );
       }
 
@@ -530,7 +530,9 @@ export default function AdminMonitorPage() {
         <div className="h-80 overflow-y-auto p-4 font-mono text-[11px] leading-relaxed">
           {logs.length === 0 ? (
             <p className="text-slate-600">
-              {getAlertApiWsUrl() ? "Waiting for log entries…" : "WebSocket stream not available on this deployment."}
+              {getAlertApiWsUrl()
+                ? "Waiting for log entries…"
+                : "WebSocket stream not available on this deployment."}
             </p>
           ) : (
             logs.map((entry, i) => (
