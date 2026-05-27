@@ -104,6 +104,11 @@ jobs:
           tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.check_ecr.outputs.short_sha }}
           cache-from: type=local,src=/opt/docker-cache
           cache-to: type=local,dest=/opt/docker-cache,mode=max
+          # Disable provenance/SBOM attestation manifests — they require a
+          # separate Buildx session push that times out on the Pi runner when
+          # ECR is slow (no active session / context deadline exceeded).
+          provenance: false
+          sbom: false
           build-args: |
             NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
             NEXT_PUBLIC_STAGE=production
