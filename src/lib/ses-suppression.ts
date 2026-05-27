@@ -45,12 +45,12 @@ export async function addToSuppressionList(email: string): Promise<boolean> {
       })
     );
     const safeDomain = logSafeDomain(email);
-    console.warn(`[SES] Added to suppression list: *@${safeDomain}`); // codeql[js/log-injection]
+    console.warn("[SES] Added to suppression list: *@%s", safeDomain);
     return true;
   } catch (err) {
     const safeDomain = logSafeDomain(email);
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
-    console.error(`[SES] Failed to suppress *@${safeDomain}:`, msg); // codeql[js/log-injection] codeql[js/tainted-format-string]
+    console.error("[SES] Failed to suppress *@%s: %s", safeDomain, msg);
     return false;
   }
 }
@@ -66,7 +66,7 @@ export async function removeFromSuppressionList(email: string): Promise<boolean>
     const client = await getSESv2();
     await client.send(new DeleteSuppressedDestinationCommand({ EmailAddress: email }));
     const safeDomain = logSafeDomain(email);
-    console.warn(`[SES] Removed from suppression list: *@${safeDomain}`); // codeql[js/log-injection]
+    console.warn("[SES] Removed from suppression list: *@%s", safeDomain);
     return true;
   } catch (err) {
     // SES throws NotFoundException when the address was never suppressed;
@@ -74,7 +74,7 @@ export async function removeFromSuppressionList(email: string): Promise<boolean>
     if ((err as { name?: string })?.name === "NotFoundException") return true;
     const safeDomain = logSafeDomain(email);
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
-    console.error(`[SES] Failed to remove *@${safeDomain} from suppression:`, msg); // codeql[js/log-injection] codeql[js/tainted-format-string]
+    console.error("[SES] Failed to remove *@%s from suppression: %s", safeDomain, msg);
     return false;
   }
 }
