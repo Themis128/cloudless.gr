@@ -37,7 +37,7 @@ jobs:
 
       - name: inspect existing pi build runs for deploy SHA
         id: check
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -68,7 +68,7 @@ jobs:
       - name: dispatch pi image build for deploy SHA
         id: dispatch
         if: steps.check.outputs.exists != 'true' && steps.check.outputs.active != 'true'
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -120,7 +120,7 @@ jobs:
 
       - name: wait for pi build completion
         if: steps.check.outputs.exists != 'true'
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -198,7 +198,7 @@ jobs:
         # build-pi-image.yml only pushes to ECR; the actual kubectl rollout runs
         # in deploy-pi.yml. Wait for that too so the k3s E2E (which fires on our
         # success) always hits the fully-rolled-out image, not mid-rollout pods.
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
