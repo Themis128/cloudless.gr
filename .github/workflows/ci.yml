@@ -29,10 +29,13 @@ on:
       - "eslint.config.*"
       - ".prettierrc*"
       - "prettier.config.*"
-      # Cluster manifests + repo-root ignore rules also gate the required
-      # "Build" check — without these, k8s-only or .gitignore-only PRs
-      # are BLOCKED forever because the required check never fires.
+      # Cluster manifests, docs, agent skills, and repo-root ignore rules
+      # also gate the required "Build" check — without these, PRs that
+      # touch only those paths are BLOCKED forever because the required
+      # check never fires.
       - "k8s/**"
+      - "docs/**"
+      - ".claude/**"
       - ".gitignore"
 
 concurrency:

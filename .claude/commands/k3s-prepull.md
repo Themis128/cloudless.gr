@@ -14,7 +14,7 @@ of waiting 4+ minutes for the in-rollout ECR pull.
 
 1. **Resolve the target image URI** — if no image is given, read the latest deployed SHA from SSM:
    ```powershell
-   aws ssm get-parameter --name "/cloudless/production/current-image-sha" --query "Parameter.Value" --output text
+   aws ssm get-parameter --name "/cloudless/production/pi-sha" --query "Parameter.Value" --output text
    ```
    Construct the full image: `278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:<sha>`
 
