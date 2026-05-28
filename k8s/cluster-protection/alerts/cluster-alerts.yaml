@@ -1,0 +1,168 @@
+# Cluster-wide event scanner that pushes Critical events to Slack #errors.
+#
+# Why: the 2026-05-29 cluster overload incident was only caught when the user
+# noticed pi-origin slowness. With this CronJob, the same incident would have
+# fired into #errors within ~5 min: "keycloak/keycloak-* CrashLoopBackOff x97"
+# and "analytics/duckdb-api-* CrashLoopBackOff x108".
+#
+# Scope: read-only over Events + Pods cluster-wide. Posts to a SLACK_WEBHOOK_URL
+# stored in the `cluster-alerts-secret` Secret in the `monitoring` namespace.
+#
+# Prereq (one-time): create the secret with the Slack incoming-webhook URL
+# already used by the Next.js app (mirror it from SSM
+# /cloudless/production/slack-webhook-url):
+#
+#   kubectl -n monitoring create secret generic cluster-alerts-secret \
+#     --from-literal=SLACK_WEBHOOK_URL='https://hooks.slack.com/services/…'
+#
+# Apply:
+#   kubectl apply -f k8s/cluster-protection/alerts/cluster-alerts.yaml
+#
+# Verify:
+#   kubectl -n monitoring logs -l app=cluster-alerts --tail=50
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-alerts
+  namespace: monitoring
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-alerts-reader
+rules:
+  - apiGroups: [""]
+    resources: ["events", "pods"]
+    verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-alerts-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-alerts-reader
+subjects:
+  - kind: ServiceAccount
+    name: cluster-alerts
+    namespace: monitoring
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cluster-alerts
+  namespace: monitoring
+  labels:
+    app: cluster-alerts
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app: cluster-alerts
+        spec:
+          serviceAccountName: cluster-alerts
+          restartPolicy: Never
+          containers:
+            - name: scanner
+              image: bitnami/kubectl:1.31
+              resources:
+                requests:
+                  memory: 32Mi
+                  cpu: 25m
+                limits:
+                  memory: 128Mi
+                  cpu: 200m
+              env:
+                - name: SLACK_WEBHOOK_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: cluster-alerts-secret
+                      key: SLACK_WEBHOOK_URL
+                # Look back this many minutes for events; matches the schedule
+                # plus 1 min buffer to catch events at the boundary.
+                - name: WINDOW_MIN
+                  value: "6"
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -eo pipefail
+                  STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+                  if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+                    echo "[${STAMP}] SLACK_WEBHOOK_URL not set — exiting noop"
+                    exit 0
+                  fi
+
+                  # ── 1. Crash-loop pods cluster-wide ─────────────────────────
+                  CRASH_LOOP="$(kubectl get pods -A \
+                    -o jsonpath='{range .items[?(@.status.containerStatuses[*].state.waiting.reason=="CrashLoopBackOff")]}{.metadata.namespace}/{.metadata.name} ({.status.containerStatuses[0].restartCount}x){"\n"}{end}' \
+                    2>/dev/null || true)"
+
+                  # ── 2. OOMKilled pods in last window ────────────────────────
+                  OOM="$(kubectl get pods -A \
+                    -o jsonpath='{range .items[?(@.status.containerStatuses[*].lastState.terminated.reason=="OOMKilled")]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}' \
+                    2>/dev/null || true)"
+
+                  # ── 3. Quota / admission failures from recent events ────────
+                  EVENTS="$(kubectl get events -A \
+                    --field-selector type=Warning \
+                    --sort-by=.lastTimestamp \
+                    -o json 2>/dev/null \
+                    | python3 -c '
+                  import json, sys, datetime as dt
+                  win = int(__import__("os").environ.get("WINDOW_MIN","6"))
+                  cutoff = dt.datetime.now(dt.UTC) - dt.timedelta(minutes=win)
+                  data = json.load(sys.stdin)
+                  out = []
+                  for e in data.get("items", []):
+                      ts = e.get("lastTimestamp") or e.get("eventTime") or ""
+                      if not ts: continue
+                      try:
+                          when = dt.datetime.fromisoformat(ts.replace("Z","+00:00"))
+                      except Exception:
+                          continue
+                      if when < cutoff: continue
+                      reason = e.get("reason","")
+                      if reason not in ("FailedCreate","FailedScheduling","Evicted","FailedMount","BackOff"):
+                          continue
+                      msg = (e.get("message") or "").splitlines()[0][:200]
+                      obj = e.get("involvedObject",{})
+                      out.append(f"{e.get(\"metadata\",{}).get(\"namespace\",\"-\")}/{obj.get(\"name\",\"?\")} {reason}: {msg}")
+                  print("\n".join(out[-15:]))
+                  ' || true)"
+
+                  if [ -z "${CRASH_LOOP}${OOM}${EVENTS}" ]; then
+                    echo "[${STAMP}] all clear"
+                    exit 0
+                  fi
+
+                  # ── Compose Slack payload ───────────────────────────────────
+                  BODY=":rotating_light: *omv k3s alerts* (window: ${WINDOW_MIN}m)\n"
+                  [ -n "${CRASH_LOOP}" ] && BODY="${BODY}\n*CrashLoopBackOff:*\n\`\`\`${CRASH_LOOP}\`\`\`"
+                  [ -n "${OOM}" ]        && BODY="${BODY}\n*OOMKilled (last terminate):*\n\`\`\`${OOM}\`\`\`"
+                  [ -n "${EVENTS}" ]     && BODY="${BODY}\n*Recent warnings:*\n\`\`\`${EVENTS}\`\`\`"
+
+                  PAYLOAD="$(python3 -c 'import json,os; print(json.dumps({"text": os.environ["B"]}))' B="${BODY}")"
+
+                  echo "[${STAMP}] posting alert to Slack"
+                  echo "${BODY}" | head -50
+                  curl -sS -X POST -H 'Content-Type: application/json' \
+                    --data "${PAYLOAD}" \
+                    --max-time 8 \
+                    "${SLACK_WEBHOOK_URL}" \
+                    || { echo "[${STAMP}] Slack POST failed"; exit 1; }
+                  echo "[${STAMP}] alert posted"
