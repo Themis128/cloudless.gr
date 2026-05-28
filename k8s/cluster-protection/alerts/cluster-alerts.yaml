@@ -144,7 +144,9 @@ spec:
                           continue
                       msg = (e.get("message") or "").splitlines()[0][:200]
                       obj = e.get("involvedObject",{})
-                      out.append(f"{e.get(\"metadata\",{}).get(\"namespace\",\"-\")}/{obj.get(\"name\",\"?\")} {reason}: {msg}")
+                      ns = e.get("metadata", {}).get("namespace", "-")
+                      nm = obj.get("name", "?")
+                      out.append(f"{ns}/{nm} {reason}: {msg}")
                   print("\n".join(out[-15:]))
                   ' || true)"
 
