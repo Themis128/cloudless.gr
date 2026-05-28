@@ -8,19 +8,19 @@ allowed-tools: mcp__cloudless-infra__gh_runner_list, mcp__cloudless-infra__gh_ru
 
 ## Overview
 
-The `cloudless.gr` repo has three registered runners. As of 2026-05-29 the two
-on `omv-main` are disabled to relieve SD-card contention; only `omv-2-build`
-(on a separate host) is active.
+The `cloudless.gr` repo has three registered runners. As of 2026-05-29:
 
 | Runner | Host | Labels | Status |
 |---|---|---|---|
 | `omv` | omv-main (192.168.1.128) | `self-hosted, Linux, ARM64, omv, pi` | disabled |
-| `omv-build` | omv-main (192.168.1.128) | `self-hosted, Linux, ARM64, omv, build` | disabled |
-| `omv-2-build` | (separate host) | `self-hosted, Linux, ARM64, omv, build` | online |
+| `omv-build` | omv-main (192.168.1.128) | `self-hosted, Linux, ARM64, omv, pi, build` | **active** (workdir on USB SSD) |
+| `omv-2-build` | (separate host) | `self-hosted, Linux, ARM64, omv, build` | online (lacks docker) |
 
-Active Pi-image build workflows now use `runs-on: [self-hosted, omv, build]`
-so jobs route to `omv-2-build`. Anything still using `[self-hosted, omv, pi]`
-will hang forever; remove or re-label such workflows.
+The `pi` label was moved off `omv` and onto `omv-build` so the unique
+combination `[self-hosted, omv, pi, build]` pins to `omv-build` only.
+`omv-2-build` lacks docker so PRs route to omv-build via the `pi` qualifier.
+
+Active Pi-image build workflows use `runs-on: [self-hosted, omv, pi, build]`.
 
 **Service pattern:** `actions.runner.Themis128-{repo}.{runner}.service`
 **Example:** `actions.runner.Themis128-cloudless.gr.omv.service`
