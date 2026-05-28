@@ -210,7 +210,9 @@ export default function Navbar() {
                 style={{ color: "var(--ink-body)" }}
                 onClick={() => setMobileOpen(false)}
               >
-                <span style={{ color: "var(--accent)", opacity: 0.5 }} className="mr-2">&gt;</span>
+                <span style={{ color: "var(--accent)", opacity: 0.5 }} className="mr-2">
+                  &gt;
+                </span>
                 {translate(locale, link.key, link.fallback)}
               </Link>
             ))}

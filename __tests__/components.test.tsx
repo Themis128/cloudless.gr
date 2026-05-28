@@ -223,7 +223,7 @@ describe("Navbar", () => {
     fireEvent.click(view.getByLabelText("Toggle menu"));
 
     // Mobile menu should be visible (opacity-100)
-    const mobileMenu = container.querySelector(".lg\\:hidden.bg-void\\/95");
+    const mobileMenu = container.querySelector(".lg\\:hidden.overflow-x-hidden");
     expect(mobileMenu?.className).toContain("opacity-100");
 
     // Cart row visible in mobile menu
@@ -243,7 +243,7 @@ describe("Navbar", () => {
     if (mobileLink) fireEvent.click(mobileLink);
 
     // Menu should be collapsed (opacity-0)
-    const mobileMenu = container.querySelector(".lg\\:hidden.bg-void\\/95");
+    const mobileMenu = container.querySelector(".lg\\:hidden.overflow-x-hidden");
     expect(mobileMenu?.className).toContain("opacity-0");  });
 
   it("renders Sign In CTA in both desktop and mobile when unauthenticated", () => {
@@ -261,7 +261,7 @@ describe("Navbar", () => {
     fireEvent.click(within(container).getByLabelText("Toggle menu"));
 
     // Mobile nav links should have min-h-[44px] or min-h-11 class (both equal 44px)
-    const mobileMenu = container.querySelector(".lg\\:hidden.bg-void\\/95");
+    const mobileMenu = container.querySelector(".lg\\:hidden.overflow-x-hidden");
     const links = mobileMenu?.querySelectorAll("a");
     const linksWithMinHeight = Array.from(links ?? []).filter(
       (a) => a.className.includes("min-h-[44px]") || a.className.includes("min-h-11"),
