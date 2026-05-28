@@ -51,15 +51,15 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: pnpm/action-setup@a7487c7e89a4d402482785f524245f3df3eb3532 # v4.1.0
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
       - name: pin pnpm store to persistent local path
         run: |
           mkdir -p "$HOME/.pnpm-store"
           pnpm config set store-dir "$HOME/.pnpm-store"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
         with:
           node-version: 22
           cache: pnpm
@@ -72,15 +72,15 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: pnpm/action-setup@a7487c7e89a4d402482785f524245f3df3eb3532 # v4.1.0
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
       - name: pin pnpm store to persistent local path
         run: |
           mkdir -p "$HOME/.pnpm-store"
           pnpm config set store-dir "$HOME/.pnpm-store"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
         with:
           node-version: 22
           cache: pnpm
@@ -102,15 +102,15 @@ jobs:
       SENTRY_PROJECT: cloudless-gr
       NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: pnpm/action-setup@a7487c7e89a4d402482785f524245f3df3eb3532 # v4.1.0
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
       - name: pin pnpm store to persistent local path
         run: |
           mkdir -p "$HOME/.pnpm-store"
           pnpm config set store-dir "$HOME/.pnpm-store"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
         with:
           node-version: 22
           cache: pnpm
@@ -122,15 +122,15 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: pnpm/action-setup@a7487c7e89a4d402482785f524245f3df3eb3532 # v4.1.0
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
       - name: pin pnpm store to persistent local path
         run: |
           mkdir -p "$HOME/.pnpm-store"
           pnpm config set store-dir "$HOME/.pnpm-store"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
         with:
           node-version: 22
           cache: pnpm
