@@ -1,4 +1,4 @@
-# /ci-flaky [workflow] — Detect and diagnose flaky CI workflows
+# /ci-flaky `<workflow>` — Detect and diagnose flaky CI workflows
 
 Analyses the last 30 runs of a workflow to determine if failures are intermittent (flaky) or a genuine regression. Posts a verdict: STABLE / FLAKY / CONSISTENTLY_FAILING.
 

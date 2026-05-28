@@ -208,11 +208,23 @@ self.addEventListener("push", (event) => {
 
 // Message handler — handles SKIP_WAITING from Next.js and prevents
 // "message channel closed before response was received" errors.
-// Only accept messages from window clients controlled by this SW (same origin).
+//
+// Service worker `MessageEvent` does not expose `event.origin` the way
+// `window.addEventListener('message')` does, so we authenticate the sender
+// by walking back to its `Client.url` and comparing origins. A missing or
+// cross-origin source is rejected before any `event.data` is read.
 self.addEventListener("message", (event) => {
-  if (!event.source || !("url" in event.source)) return;
-  if (new URL(event.source.url).origin !== self.location.origin) return;
-  if (event.data?.type === "SKIP_WAITING") {
+  const source = event.source;
+  if (!source || typeof source !== "object" || !("url" in source)) return;
+  let sourceOrigin;
+  try {
+    sourceOrigin = new URL(source.url).origin;
+  } catch {
+    return;
+  }
+  if (sourceOrigin !== self.location.origin) return;
+  // Only after the origin check do we touch event.data.
+  if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
   // All other messages are intentionally ignored; no async return needed.
