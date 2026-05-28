@@ -161,7 +161,10 @@ spec:
                   [ -n "${OOM}" ]        && BODY="${BODY}\n*OOMKilled (last terminate):*\n\`\`\`${OOM}\`\`\`"
                   [ -n "${EVENTS}" ]     && BODY="${BODY}\n*Recent warnings:*\n\`\`\`${EVENTS}\`\`\`"
 
-                  PAYLOAD="$(python3 -c 'import json,os; print(json.dumps({"text": os.environ["B"]}))' B="${BODY}")"
+                  # JSON-encode BODY via stdin so we don't depend on env-var
+                  # propagation through `cmd VAR=val` (which sets a python argv,
+                  # not an env entry, in many shells/images).
+                  PAYLOAD="$(printf '%s' "${BODY}" | python3 -c 'import json,sys; print(json.dumps({"text": sys.stdin.read()}))')"
 
                   echo "[${STAMP}] posting alert to Slack"
                   echo "${BODY}" | head -50
