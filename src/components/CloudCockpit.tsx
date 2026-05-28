@@ -39,7 +39,10 @@ function LiveDot({ color = T.ok }: { color?: string }) {
 function TimeSeries() {
   const series = useMemo(
     () => ({
-      p95: [14, 12, 13, 18, 15, 11, 12, 14, 22, 16, 13, 12, 10, 11, 13, 17, 14, 12, 11, 13, 19, 12, 11, 12],
+      p95: [
+        14, 12, 13, 18, 15, 11, 12, 14, 22, 16, 13, 12, 10, 11, 13, 17, 14, 12, 11, 13, 19, 12, 11,
+        12,
+      ],
       p50: [6, 5, 5, 7, 6, 5, 5, 6, 8, 7, 5, 5, 4, 5, 5, 7, 6, 5, 4, 5, 7, 5, 5, 5],
     }),
     []
@@ -57,8 +60,7 @@ function TimeSeries() {
   const yFor = (v: number) => H - padB - ((v - min) / (max - min)) * (H - padT - padB);
   const toPath = (arr: number[]) =>
     arr.map((v, i) => `${i === 0 ? "M" : "L"}${xFor(i)},${yFor(v)}`).join(" ");
-  const areaPath =
-    toPath(series.p95) + ` L${xFor(n - 1)},${H - padB} L${xFor(0)},${H - padB} Z`;
+  const areaPath = toPath(series.p95) + ` L${xFor(n - 1)},${H - padB} L${xFor(0)},${H - padB} Z`;
 
   const [cursor, setCursor] = useState(n - 1);
   useEffect(() => {
@@ -101,8 +103,26 @@ function TimeSeries() {
             textTransform: "none",
           }}
         >
-          <i style={{ width: 8, height: 8, borderRadius: 2, background: T.accent, display: "inline-block" }} /> p95
-          <i style={{ width: 8, height: 8, borderRadius: 2, background: T.secondary, display: "inline-block" }} /> p50
+          <i
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 2,
+              background: T.accent,
+              display: "inline-block",
+            }}
+          />{" "}
+          p95
+          <i
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 2,
+              background: T.secondary,
+              display: "inline-block",
+            }}
+          />{" "}
+          p50
         </span>
       </div>
       <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
@@ -144,7 +164,13 @@ function TimeSeries() {
         <text x={W - padR - 4} y={yFor(20) - 4} fontSize="9" textAnchor="end" fill={T.warn}>
           SLO 20ms
         </text>
-        <path d={toPath(series.p50)} fill="none" stroke={T.secondary} strokeWidth="1.3" strokeOpacity="0.85" />
+        <path
+          d={toPath(series.p50)}
+          fill="none"
+          stroke={T.secondary}
+          strokeWidth="1.3"
+          strokeOpacity="0.85"
+        />
         <path d={areaPath} fill="url(#cc-area)" />
         <path
           d={toPath(series.p95)}
@@ -154,7 +180,15 @@ function TimeSeries() {
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        <line x1={cx} x2={cx} y1={padT} y2={H - padB} stroke={T.gridAxis} strokeWidth="1" strokeDasharray="2 3" />
+        <line
+          x1={cx}
+          x2={cx}
+          y1={padT}
+          y2={H - padB}
+          stroke={T.gridAxis}
+          strokeWidth="1"
+          strokeDasharray="2 3"
+        />
         <circle cx={cx} cy={yFor(series.p95[cursor])} r="3" fill={T.accent} />
         <circle cx={cx} cy={yFor(series.p95[cursor])} r="6" fill={T.accent} opacity="0.20" />
         <g
@@ -229,11 +263,18 @@ export default function CloudCockpit() {
       >
         <div style={{ display: "flex", flexDirection: "column" }}>
           <span
-            style={{ fontSize: 10, letterSpacing: "0.2em", color: T.textMuted, textTransform: "uppercase" }}
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.2em",
+              color: T.textMuted,
+              textTransform: "uppercase",
+            }}
           >
             Dashboard
           </span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>Production · api.cloudless.gr</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>
+            Production · api.cloudless.gr
+          </span>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
           <span style={chip}>Last 24h ▾</span>
@@ -267,21 +308,49 @@ export default function CloudCockpit() {
             value: "12",
             unit: "ms",
             color: T.accent,
-            sub: <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, color: T.ok }}>▼ −18% · 24h</span>,
+            sub: (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: 10,
+                  color: T.ok,
+                }}
+              >
+                ▼ −18% · 24h
+              </span>
+            ),
           },
           {
             label: "Uptime · 30d",
             value: "99.987",
             unit: "%",
             color: T.ok,
-            sub: <span style={{ fontSize: 10, color: T.textDim, fontVariantNumeric: "tabular-nums" }}>SLO 99.9% · target met</span>,
+            sub: (
+              <span style={{ fontSize: 10, color: T.textDim, fontVariantNumeric: "tabular-nums" }}>
+                SLO 99.9% · target met
+              </span>
+            ),
           },
           {
             label: "Error Rate",
             value: "0.04",
             unit: "%",
             color: T.ok,
-            sub: <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, color: T.ok }}>▼ −40% · week</span>,
+            sub: (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: 10,
+                  color: T.ok,
+                }}
+              >
+                ▼ −40% · week
+              </span>
+            ),
           },
         ].map(({ label, value, unit, color, sub }) => (
           <div
@@ -317,7 +386,9 @@ export default function CloudCockpit() {
               }}
             >
               {value}
-              <span style={{ fontSize: unit === "ms" ? 11 : 14, color: T.textDim, fontWeight: 400 }}>
+              <span
+                style={{ fontSize: unit === "ms" ? 11 : 14, color: T.textDim, fontWeight: 400 }}
+              >
                 {unit}
               </span>
             </span>

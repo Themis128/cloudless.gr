@@ -21,7 +21,8 @@ interface CloudMarkProps {
   "aria-label"?: string;
 }
 
-const CLOUD_PATH = "M6 22 A6 6 0 0 1 6 10 A4 4 0 0 1 10.5 7 A7 7 0 0 1 23 5.2 A6 6 0 0 1 28.5 14 A5 5 0 0 1 26 22 Z";
+const CLOUD_PATH =
+  "M6 22 A6 6 0 0 1 6 10 A4 4 0 0 1 10.5 7 A7 7 0 0 1 23 5.2 A6 6 0 0 1 28.5 14 A5 5 0 0 1 26 22 Z";
 
 export default function CloudMark({
   size = 28,

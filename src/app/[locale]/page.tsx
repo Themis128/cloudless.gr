@@ -199,10 +199,7 @@ export default async function Home({
       <JsonLd data={getFAQSchema(faqs)} />
 
       {/* ── Hero ── */}
-      <section
-        className="relative overflow-hidden"
-        style={{ background: "var(--gradient-hero)" }}
-      >
+      <section className="relative overflow-hidden" style={{ background: "var(--gradient-hero)" }}>
         <div className="relative z-10 mx-auto max-w-6xl px-6 py-20 md:py-28 lg:py-32">
           <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
             {/* Left — copy */}
@@ -219,7 +216,10 @@ export default async function Home({
                 <span className="relative flex h-2 w-2">
                   <span
                     className="absolute inline-flex h-full w-full rounded-full opacity-75"
-                    style={{ background: "var(--success)", animation: "ping 2.4s cubic-bezier(0,0,0.2,1) infinite" }}
+                    style={{
+                      background: "var(--success)",
+                      animation: "ping 2.4s cubic-bezier(0,0,0.2,1) infinite",
+                    }}
                   />
                   <span
                     className="relative inline-flex h-2 w-2 rounded-full"
@@ -283,13 +283,15 @@ export default async function Home({
                 style={{ color: "var(--ink-muted)" }}
               >
                 <span>{t("hero.microCopy1", "No commitment. Actionable insights in 30 min.")}</span>
-                <span className="hidden sm:inline" style={{ color: "var(--border-strong)" }}>•</span>
+                <span className="hidden sm:inline" style={{ color: "var(--border-strong)" }}>
+                  •
+                </span>
                 <span>{t("hero.microCopy2", "Transparent pricing. No lock-in.")}</span>
               </div>
             </div>
 
             {/* Right — Grafana dashboard */}
-            <div className="animate-fade-in-up hidden lg:block delay-200">
+            <div className="animate-fade-in-up hidden delay-200 lg:block">
               <CloudCockpit />
             </div>
           </div>
@@ -333,10 +335,16 @@ export default async function Home({
                     {g.icon}
                   </span>
                   <div>
-                    <p className="font-mono text-sm font-semibold" style={{ color: "var(--ink-primary)" }}>
+                    <p
+                      className="font-mono text-sm font-semibold"
+                      style={{ color: "var(--ink-primary)" }}
+                    >
                       {g.title}
                     </p>
-                    <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+                    <p
+                      className="mt-1 text-xs leading-relaxed"
+                      style={{ color: "var(--ink-muted)" }}
+                    >
                       {g.desc}
                     </p>
                   </div>
@@ -528,10 +536,7 @@ export default async function Home({
       </section>
 
       {/* ── Services Overview ── */}
-      <section
-        className="py-20 lg:py-24"
-        style={{ background: "var(--surface-subtle)" }}
-      >
+      <section className="py-20 lg:py-24" style={{ background: "var(--surface-subtle)" }}>
         <div className="mx-auto max-w-6xl px-6">
           <ScrollReveal>
             <div className="mx-auto mb-12 max-w-2xl text-center">
@@ -593,7 +598,10 @@ export default async function Home({
                   <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--ink-body)" }}>
                     {service.description}
                   </p>
-                  <p className="mt-3 font-mono text-xs italic" style={{ color: "var(--ink-muted)" }}>
+                  <p
+                    className="mt-3 font-mono text-xs italic"
+                    style={{ color: "var(--ink-muted)" }}
+                  >
                     {service.perfectFor}
                   </p>
                 </div>
@@ -634,7 +642,10 @@ export default async function Home({
               <p className="mb-3 text-sm" style={{ color: "var(--ink-muted)" }}>
                 {t("leadCapture.notReady", "Not ready for a call? No problem.")}
               </p>
-              <p className="mb-4 font-mono text-sm font-semibold" style={{ color: "var(--ink-primary)" }}>
+              <p
+                className="mb-4 font-mono text-sm font-semibold"
+                style={{ color: "var(--ink-primary)" }}
+              >
                 {t(
                   "leadCapture.playbookTitle",
                   "Get our free Cloud Migration Playbook — the exact framework we use with clients."
@@ -678,7 +689,9 @@ export default async function Home({
                 style={{ color: "var(--ink-primary)" }}
               >
                 {t("faq.title", "Common")}{" "}
-                <span style={{ color: "var(--accent)" }}>{t("faq.titleHighlight", "questions")}</span>
+                <span style={{ color: "var(--accent)" }}>
+                  {t("faq.titleHighlight", "questions")}
+                </span>
               </h2>
             </div>
           </ScrollReveal>
@@ -728,10 +741,7 @@ export default async function Home({
       </section>
 
       {/* ── Founder ── */}
-      <section
-        className="py-20 lg:py-24"
-        style={{ background: "var(--surface-subtle)" }}
-      >
+      <section className="py-20 lg:py-24" style={{ background: "var(--surface-subtle)" }}>
         <div className="mx-auto max-w-4xl px-6">
           <ScrollReveal>
             <div className="mb-12 text-center">
@@ -746,7 +756,9 @@ export default async function Home({
                 style={{ color: "var(--ink-primary)" }}
               >
                 {t("founder.title", "Meet the")}{" "}
-                <span style={{ color: "var(--accent)" }}>{t("founder.titleHighlight", "founder")}</span>
+                <span style={{ color: "var(--accent)" }}>
+                  {t("founder.titleHighlight", "founder")}
+                </span>
               </h2>
             </div>
           </ScrollReveal>
@@ -776,7 +788,10 @@ export default async function Home({
                   </span>
                 </div>
                 <div className="flex-1 text-center md:text-left">
-                  <h3 className="font-heading text-xl font-bold" style={{ color: "var(--ink-primary)" }}>
+                  <h3
+                    className="font-heading text-xl font-bold"
+                    style={{ color: "var(--ink-primary)" }}
+                  >
                     {t("founder.name", "Themistoklis Baltzakis")}
                   </h3>
                   <p className="mt-1 font-mono text-sm" style={{ color: "var(--accent)" }}>
@@ -808,9 +823,7 @@ export default async function Home({
               style={{ color: "var(--ink-primary)" }}
             >
               {t("cta.title", "Ready to go")}{" "}
-              <span style={{ color: "var(--accent)" }}>
-                {t("cta.titleHighlight", "cloudless")}
-              </span>
+              <span style={{ color: "var(--accent)" }}>{t("cta.titleHighlight", "cloudless")}</span>
               ?
             </h2>
             <p className="mx-auto mb-4 max-w-xl text-xl" style={{ color: "var(--ink-body)" }}>
