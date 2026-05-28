@@ -68,13 +68,13 @@ test.describe("Navbar style", () => {
     );
     expect(position).toBe("sticky");
 
-    // First child div is the 1-px accent bar (h-px Tailwind utility)
+    // First child div is the 2-px accent bar (h-0.5 Tailwind utility)
     const accentBar = header.locator("div").first();
     await expect(accentBar).toBeVisible();
     const height = await accentBar.evaluate(
       (el) => getComputedStyle(el).height,
     );
-    expect(parseFloat(height)).toBeCloseTo(1, 0);
+    expect(parseFloat(height)).toBeCloseTo(2, 0);
   });
 
   test("logo link is visible and points to homepage", async ({ page }) => {
