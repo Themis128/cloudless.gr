@@ -29,6 +29,11 @@ on:
       - "eslint.config.*"
       - ".prettierrc*"
       - "prettier.config.*"
+      # Cluster manifests + repo-root ignore rules also gate the required
+      # "Build" check — without these, k8s-only or .gitignore-only PRs
+      # are BLOCKED forever because the required check never fires.
+      - "k8s/**"
+      - ".gitignore"
 
 concurrency:
   group: ci-${{ github.head_ref }}

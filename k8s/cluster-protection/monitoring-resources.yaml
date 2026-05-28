@@ -1,0 +1,142 @@
+# Monitoring stack resource limits + retention tuning.
+#
+# The monitoring namespace is helm-deployed (kube-prometheus-stack +
+# loki + grafana). Source-of-truth Helm values live outside this repo,
+# so this file applies the protections as direct kubectl patches against
+# the live custom resources / workloads. They survive helm upgrades only
+# if the upstream values also set them — track follow-up below.
+#
+# Apply with the companion script:
+#   bash k8s/cluster-protection/apply-monitoring-resources.sh
+#
+# Why:
+# - Prometheus retention was 7d / 4 GB. On an 8 GiB box that's enough TSDB
+#   churn (compaction every 2h) to keep the data SSD busy and starve etcd.
+#   3d / 2 GB is plenty for incident lookback when we also have Grafana
+#   Cloud / AMP as the long-term store.
+# - None of the workloads had explicit limits. Without them, a Loki ingester
+#   that hits its working set takes the whole node down (see
+#   docs/cluster-overload-runbook.md).
+#
+# Numbers below are sized to fit inside the `monitoring-quota`
+# ResourceQuota in limit-ranges.yaml: total ≈ 1.4 GiB requests,
+# ≈ 1.9 GiB limits.
+
+---
+# Prometheus — biggest single consumer (TSDB ingest + compaction).
+# Patches the Prometheus CR managed by the prometheus-operator.
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: monitoring-prometheus
+  namespace: monitoring
+spec:
+  retention: 3d
+  retentionSize: 2GB
+  resources:
+    requests:
+      memory: 400Mi
+      cpu: 100m
+    limits:
+      memory: 700Mi
+      cpu: 1
+
+---
+# Alertmanager — small, alerting only.
+apiVersion: monitoring.coreos.com/v1
+kind: Alertmanager
+metadata:
+  name: monitoring-alertmanager
+  namespace: monitoring
+spec:
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 25m
+    limits:
+      memory: 128Mi
+      cpu: 200m
+
+---
+# Loki — single binary, all-in-one target. Bounded ingest.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: loki
+  namespace: monitoring
+spec:
+  template:
+    spec:
+      containers:
+        - name: loki
+          resources:
+            requests:
+              memory: 200Mi
+              cpu: 50m
+            limits:
+              memory: 400Mi
+              cpu: 500m
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-prom-grafana
+  namespace: monitoring
+spec:
+  template:
+    spec:
+      containers:
+        - name: grafana
+          resources:
+            requests:
+              memory: 100Mi
+              cpu: 50m
+            limits:
+              memory: 256Mi
+              cpu: 500m
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring-operator
+  namespace: monitoring
+spec:
+  template:
+    spec:
+      containers:
+        - name: operator
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 25m
+            limits:
+              memory: 200Mi
+              cpu: 500m
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-prom-kube-state-metrics
+  namespace: monitoring
+spec:
+  template:
+    spec:
+      containers:
+        - name: kube-state-metrics
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 25m
+            limits:
+              memory: 128Mi
+              cpu: 200m
+
+# Follow-up (separate PR):
+# - Mirror these limits and retention values into the upstream
+#   kube-prometheus-stack / loki Helm values so future `helm upgrade` runs
+#   don't revert them.
+# - Consider moving Loki off this node entirely — promtail ships logs, and
+#   the ingester can live on a sibling Pi without coupling to the data SSD.
