@@ -1,0 +1,84 @@
+# Namespace-level guardrails for the omv k3s node.
+#
+# Why: an 8 GiB single-node cluster cannot survive a single namespace
+# blowing past its working set. Without a LimitRange, any pod that ships
+# without `resources.limits` gets unbounded memory and can swap-storm the
+# host (see docs/cluster-overload-runbook.md).
+#
+# Apply with:
+#   kubectl apply -f k8s/cluster-protection/limit-ranges.yaml
+#
+# These are additive — applying twice is safe. Existing pods are unaffected
+# (LimitRange only injects defaults at admission time); restart the
+# Deployment/StatefulSet to pick up the defaults retroactively.
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: monitoring
+spec:
+  limits:
+    - type: Container
+      default:
+        memory: 256Mi
+        cpu: 500m
+      defaultRequest:
+        memory: 64Mi
+        cpu: 50m
+      max:
+        memory: 1Gi
+        cpu: 2
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: monitoring-quota
+  namespace: monitoring
+spec:
+  hard:
+    # Total of all pods' requests in this namespace. Sized for
+    # Prometheus + Loki + Grafana + Alertmanager + node-exporter +
+    # operator + kube-state-metrics with the limits in
+    # monitoring-resources.yaml.
+    requests.memory: "1.5Gi"
+    limits.memory: "2Gi"
+    requests.cpu: "1"
+    limits.cpu: "4"
+    # Cap pod count so a runaway ReplicaSet can't proliferate.
+    pods: "20"
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: cloudless
+spec:
+  limits:
+    - type: Container
+      default:
+        memory: 512Mi
+        cpu: 1
+      defaultRequest:
+        memory: 128Mi
+        cpu: 100m
+      max:
+        memory: 1Gi
+        cpu: 2
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: cloudless-quota
+  namespace: cloudless
+spec:
+  hard:
+    requests.memory: "1.5Gi"
+    limits.memory: "2.5Gi"
+    requests.cpu: "1"
+    limits.cpu: "4"
+    pods: "20"
