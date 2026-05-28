@@ -13,14 +13,22 @@ export default function Footer() {
   const { openSettings } = useCookieConsent();
 
   return (
-    <footer className="bg-void-lighter border-neon-cyan/20 border-t text-slate-400">
+    <footer
+      className="border-t"
+      style={{
+        background: "var(--surface-subtle)",
+        borderColor: "var(--border-subtle)",
+        color: "var(--ink-body)",
+      }}
+    >
       <div className="mx-auto max-w-6xl px-6 py-12">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div>
             <Link
               href="/"
-              className="text-white transition-opacity hover:opacity-90"
+              className="transition-opacity hover:opacity-90"
+              style={{ color: "var(--ink-primary)" }}
               aria-label="cloudless.gr — home"
             >
               <Logo variant="wordmark" size="sm" />
