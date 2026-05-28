@@ -1,10 +1,13 @@
 #!/bin/bash
+# shellcheck disable=SC2034
+# One-shot helper used once to draft the PR #149 comment. Kept for archival
+# reference; PR_NUMBER and REPO are documentation, not runtime values.
 
-# Post comment to PR #149
 PR_NUMBER=149
 REPO="Themis128/cloudless.gr"
 
-COMMENT_BODY='## ✅ Security Vulnerability Confirmed & Remediated
+cat <<'COMMENT_BODY'
+## ✅ Security Vulnerability Confirmed & Remediated
 
 @tg12 — Thank you for this excellent security analysis. Your vulnerability report is **100% valid** and has been addressed.
 
@@ -25,30 +28,16 @@ COMMENT_BODY='## ✅ Security Vulnerability Confirmed & Remediated
 Branch: **`security/fix-dependabot-bypass`** → [View Commit](https://github.com/Themis128/cloudless.gr/commit/4488537847f03c950970839c89317085414b6438)
 
 ✅ **1. Excluded `next` from auto-merge**
-```yaml
-# .github/workflows/dependabot-automerge.yml
-if: |
-  (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
-   steps.meta.outputs.update-type == 'version-update:semver-minor') &&
-  !contains(steps.meta.outputs.dependency-names, '"'"'next'"'"')
-```
-Framework updates now require **human review**.
+
+Framework updates now require **human review** via a `!contains(...)` guard on the dependency name.
 
 ✅ **2. Removed risky `node_modules` path from AGENTS.md**
-```markdown
-# BEFORE
-"Read the relevant guide in `node_modules/next/dist/docs/` before writing any code"
 
-# AFTER
-"Refer to the official Next.js documentation at https://nextjs.org/docs"
-```
+AGENTS.md now points to the official Next.js docs URL instead of reading from `node_modules/next/dist/docs/`.
 
 ✅ **3. Made MCP security scan blocking**
-```yaml
-# .github/workflows/mcp-security-scan.yml
-continue-on-error: false
-```
-Security findings now **prevent merges**.
+
+`continue-on-error` set to `false` in `mcp-security-scan.yml` — security findings now **prevent merges**.
 
 ✅ **4. Enabling branch protection** (via settings)
 - Require ≥1 approving review before merge
@@ -75,6 +64,5 @@ Thank you for the thorough security research and for helping us harden the repos
 
 **References:**
 - 🔗 [OWASP LLM Top 10 — LLM01: Prompt Injection](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
-- 🔗 [Dependabot Security Best Practices](https://docs.github.com/en/code-security/dependabot/working-with-dependabot)'
-
-echo "$COMMENT_BODY"
+- 🔗 [Dependabot Security Best Practices](https://docs.github.com/en/code-security/dependabot/working-with-dependabot)
+COMMENT_BODY

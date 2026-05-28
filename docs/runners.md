@@ -76,7 +76,7 @@ These read `vars.RUNNER_GENERIC` and fail over automatically:
 - `seo-hygiene.yml`
 - `mcp-security-scan.yml` (pure JS/TS scanner, ARM-safe; informational-only via `continue-on-error: true`)
 - `codeql.yml` (CodeQL CLI v4 supports linux-arm64 for JS/TS analysis)
-- `preview.yml` (SST/CDK — prior Pi attempt in run [`26321031309`] hung past timeout under cold-deploy; retrying with 40-min timeout)
+- `preview.yml` (SST/CDK — prior Pi attempt in run `26321031309` hung past timeout under cold-deploy; retrying with 40-min timeout)
 - `dependabot-automerge.yml`
 - `dependency-review.yml`
 - `ecr-lifecycle.yml`
