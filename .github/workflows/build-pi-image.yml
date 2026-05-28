@@ -60,6 +60,19 @@ jobs:
         with:
           ref: ${{ github.event.inputs.target_sha || github.sha }}
 
+      - name: resolve effective SHA
+        # The HA orchestrator dispatches this workflow with `target_sha` set to
+        # a previous commit. Without this step we'd push the BUILT-FROM-OLD-SHA
+        # image under the NEW-SHA tag (using GITHUB_SHA), making the image and
+        # its label diverge. See Issue #293.
+        id: sha
+        run: |
+          EFFECTIVE_SHA="$(git rev-parse HEAD)"
+          echo "full=${EFFECTIVE_SHA}" >> "$GITHUB_OUTPUT"
+          echo "short=${EFFECTIVE_SHA:0:12}" >> "$GITHUB_OUTPUT"
+          echo "short8=${EFFECTIVE_SHA:0:8}" >> "$GITHUB_OUTPUT"
+          echo "Effective SHA (post-checkout HEAD): ${EFFECTIVE_SHA}"
+
       - name: configure AWS credentials (OIDC)
         if: github.event_name != 'pull_request'
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
@@ -81,7 +94,7 @@ jobs:
         id: existing
         if: github.event_name != 'pull_request'
         run: |
-          SHA="${GITHUB_SHA::12}"
+          SHA="${{ steps.sha.outputs.short }}"
           set +e
           aws ecr describe-images \
             --repository-name "${ECR_REPO}" \
@@ -155,7 +168,7 @@ jobs:
         env:
           LATEST_WRITABLE: ${{ steps.untag.outputs.latest_writable }}
         run: |
-          SHA="${GITHUB_SHA::12}"
+          SHA="${{ steps.sha.outputs.short }}"
           if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
             echo "push=false" >> "$GITHUB_OUTPUT"
             echo "tags=cloudless-pi-app:pr-${SHA}" >> "$GITHUB_OUTPUT"
@@ -184,7 +197,7 @@ jobs:
           provenance: false
           sbom: false
           build-args: |
-            APP_VERSION=${{ github.event.inputs.target_sha || github.sha }}
+            APP_VERSION=${{ steps.sha.outputs.full }}
             NEXT_PUBLIC_SITE_URL=https://cloudless.gr
             NEXT_PUBLIC_STAGE=production
             NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
@@ -202,7 +215,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
-          SHA="${GITHUB_SHA::12}"
+          SHA="${{ steps.sha.outputs.short }}"
           DIGEST=$(aws ecr describe-images \
             --repository-name "${ECR_REPO}" \
             --image-ids imageTag="${SHA}" \
@@ -244,7 +257,7 @@ jobs:
             exit 0
           fi
           BODY=$(jq -nc \
-            --arg sha "$GITHUB_SHA" \
+            --arg sha "${{ steps.sha.outputs.full }}" \
             --argjson ts "$(date +%s)" \
             '{job:"image-sync", ts:$ts, sha:$sha}')
           HASH=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')
@@ -253,7 +266,7 @@ jobs:
             exit 0
           fi
           SIG="sha256=${HASH}"
-          echo "POST /_sync/image (sha=${GITHUB_SHA::8})"
+          echo "POST /_sync/image (sha=${{ steps.sha.outputs.short8 }})"
           # 30s timeout covers DERP-relay round-trips; 2 retries handle transient
           # Tailscale Funnel hiccups. Total worst-case: ~75s, still non-blocking
           # because continue-on-error: true — Pi falls back to its 60s poll.
