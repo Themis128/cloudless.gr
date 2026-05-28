@@ -5,15 +5,24 @@
 # fired into #errors within ~5 min: "keycloak/keycloak-* CrashLoopBackOff x97"
 # and "analytics/duckdb-api-* CrashLoopBackOff x108".
 #
-# Scope: read-only over Events + Pods cluster-wide. Posts to a SLACK_WEBHOOK_URL
-# stored in the `cluster-alerts-secret` Secret in the `monitoring` namespace.
+# Scope: read-only over Events + Pods cluster-wide. Posts to #errors via the
+# Slack chat.postMessage API using the `cloudless_bot` bot token stored in the
+# `cluster-alerts-secret` Secret in the `monitoring` namespace.
 #
-# Prereq (one-time): create the secret with the Slack incoming-webhook URL
-# already used by the Next.js app (mirror it from SSM
-# /cloudless/production/slack-webhook-url):
+# Why bot token vs incoming webhook: the legacy SLACK_WEBHOOK_URL in SSM is
+# dead (Slack returns `no_service`). The bot token is the live path the Next.js
+# app uses for per-channel routing; it survives webhook rotation.
 #
+# Prereq (one-time): mirror the bot token from SSM into a cluster secret:
+#
+#   BOT=$(aws ssm get-parameter --region us-east-1 \
+#     --name /cloudless/production/SLACK_BOT_TOKEN \
+#     --with-decryption --query Parameter.Value --output text)
 #   kubectl -n monitoring create secret generic cluster-alerts-secret \
-#     --from-literal=SLACK_WEBHOOK_URL='https://hooks.slack.com/services/…'
+#     --from-literal=SLACK_BOT_TOKEN="$BOT"
+#
+# Also: invite @cloudless_bot to #errors once: `/invite @cloudless_bot` in
+# that channel — otherwise chat.postMessage returns not_in_channel.
 #
 # Apply:
 #   kubectl apply -f k8s/cluster-protection/alerts/cluster-alerts.yaml
@@ -89,11 +98,14 @@ spec:
                   memory: 128Mi
                   cpu: 200m
               env:
-                - name: SLACK_WEBHOOK_URL
+                - name: SLACK_BOT_TOKEN
                   valueFrom:
                     secretKeyRef:
                       name: cluster-alerts-secret
-                      key: SLACK_WEBHOOK_URL
+                      key: SLACK_BOT_TOKEN
+                # The channel to post into. Default #errors.
+                - name: SLACK_CHANNEL
+                  value: "#errors"
                 # Look back this many minutes for events; matches the schedule
                 # plus 1 min buffer to catch events at the boundary.
                 - name: WINDOW_MIN
@@ -105,10 +117,11 @@ spec:
                   set -eo pipefail
                   STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
-                  if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
-                    echo "[${STAMP}] SLACK_WEBHOOK_URL not set — exiting noop"
+                  if [ -z "${SLACK_BOT_TOKEN:-}" ]; then
+                    echo "[${STAMP}] SLACK_BOT_TOKEN not set — exiting noop"
                     exit 0
                   fi
+                  : "${SLACK_CHANNEL:=#errors}"
 
                   # ── 1. Crash-loop pods cluster-wide ─────────────────────────
                   CRASH_LOOP="$(kubectl get pods -A \
@@ -164,13 +177,22 @@ spec:
                   # JSON-encode BODY via stdin so we don't depend on env-var
                   # propagation through `cmd VAR=val` (which sets a python argv,
                   # not an env entry, in many shells/images).
-                  PAYLOAD="$(printf '%s' "${BODY}" | python3 -c 'import json,sys; print(json.dumps({"text": sys.stdin.read()}))')"
+                  PAYLOAD="$(printf '%s' "${BODY}" | python3 -c '
+                  import json,os,sys
+                  print(json.dumps({"channel": os.environ.get("SLACK_CHANNEL","#errors"), "text": sys.stdin.read()}))
+                  ')"
 
-                  echo "[${STAMP}] posting alert to Slack"
+                  echo "[${STAMP}] posting alert to Slack channel ${SLACK_CHANNEL}"
                   echo "${BODY}" | head -50
-                  curl -sS -X POST -H 'Content-Type: application/json' \
+                  RESP="$(curl -sS -X POST https://slack.com/api/chat.postMessage \
+                    -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+                    -H 'Content-Type: application/json; charset=utf-8' \
                     --data "${PAYLOAD}" \
-                    --max-time 8 \
-                    "${SLACK_WEBHOOK_URL}" \
-                    || { echo "[${STAMP}] Slack POST failed"; exit 1; }
-                  echo "[${STAMP}] alert posted"
+                    --max-time 8 || echo '{"ok":false,"error":"curl_failed"}')"
+                  OK="$(printf '%s' "${RESP}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ok"))')"
+                  if [ "${OK}" = "True" ]; then
+                    echo "[${STAMP}] alert posted"
+                  else
+                    echo "[${STAMP}] Slack post failed: ${RESP}"
+                    exit 1
+                  fi
