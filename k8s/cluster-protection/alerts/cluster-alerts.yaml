@@ -77,7 +77,10 @@ spec:
           restartPolicy: Never
           containers:
             - name: scanner
-              image: bitnami/kubectl:1.31
+              # alpine/k8s bundles kubectl + curl + jq + python3 in one image.
+              # Matches the cluster's k3s minor version (v1.35.x). bitnami/kubectl
+              # was withdrawn from Docker Hub mid-2026.
+              image: alpine/k8s:1.35.5
               resources:
                 requests:
                   memory: 32Mi
