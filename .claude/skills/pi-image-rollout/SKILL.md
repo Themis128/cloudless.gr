@@ -31,17 +31,18 @@ Roll out **after** a new Pi image has been built and pushed to ECR:
 
 ### 1. Confirm new image is ready
 ```
-aws_get_ssm_parameters(parameter_name: "current-image-sha")
+aws_get_ssm_parameters(parameter_name: "pi-sha")
 aws_get_ssm_parameters(parameter_name: "ECR_LATEST_DIGEST")
 ```
-Both should reflect the intended SHA.
+Both should reflect the intended SHA. (`pi-sha` is the 12-char short SHA of
+the last deploy-pi.yml run; the legacy `current-image-sha` is orphaned.)
 
 ### 2. Check current pod version
 ```
 cluster_run_command(node: "omv-main",
   command: "curl -s http://localhost:3000/api/health")
 ```
-`version` field = running SHA. Compare with `current-image-sha`.
+`version` field = running SHA. Compare with `pi-sha`.
 
 ### 3. Trigger rollout restart
 ```
@@ -61,7 +62,7 @@ Watch for a new pod in `Running` state. Old pod terminates once new pod passes r
 cluster_run_command(node: "omv-main",
   command: "curl -s https://pi-origin.cloudless.gr/api/health | python3 -m json.tool")
 ```
-`version` should now match `current-image-sha`.
+`version` should now match `pi-sha`.
 
 ## Pod States During Rollout
 

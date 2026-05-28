@@ -14,7 +14,7 @@ git push main
   └─▶ Deploy to Production (GH Actions)
         ├─▶ Type Check + Unit Tests + Lint
         ├─▶ pnpm sst deploy --stage production   → Lambda + CloudFront (PRIMARY)
-        ├─▶ Publish current SHA to SSM            → /cloudless/production/current-image-sha
+        ├─▶ Publish current SHA to SSM            → /cloudless/production/cloud-sha
         └─▶ [on success] HA sync orchestrator
               ├─▶ inspect existing pi build runs for deploy SHA
               ├─▶ dispatch build-pi-image.yml (if no existing build)
@@ -24,20 +24,30 @@ build-pi-image.yml
   └─▶ Docker build arm64 → ECR cloudless-pi-app:latest
       └─▶ [on success] update SSM ECR_LATEST_DIGEST
 
+deploy-pi.yml
+  └─▶ kubectl set image deployment/cloudless to new tag
+      └─▶ [on success] update SSM pi-sha (12-char short SHA)
+
 k3s auto-healer (CronJob, every ~5 min)
   └─▶ detects new ECR digest → kubectl rollout restart deployment/cloudless -n cloudless
 ```
 
 ## Key SSM Parameters
 
-| Parameter | Purpose |
-|-----------|---------|
-| `current-image-sha` | SHA of the last successful Lambda deploy |
-| `ECR_LATEST_DIGEST` | Digest of the latest Pi Docker image in ECR |
+| Parameter | Purpose | Written by |
+|-----------|---------|-----------|
+| `cloud-sha` | Full SHA of the last successful Lambda deploy | `deploy.yml` |
+| `pi-sha` | 12-char short SHA of the last successful Pi rollout | `deploy-pi.yml` |
+| `ECR_LATEST_DIGEST` | Digest of the latest Pi Docker image in ECR | `build-pi-image.yml` |
+
+> ⚠️ The legacy `current-image-sha` parameter is **orphaned** — last written
+> 2026-05-25 by code that no longer exists. Don't use it. Use `cloud-sha` for
+> Lambda and `pi-sha` for Pi.
 
 Check both with:
 ```
-mcp__cloudless-infra__aws_get_ssm_parameters (parameter_name: "current-image-sha")
+mcp__cloudless-infra__aws_get_ssm_parameters (parameter_name: "cloud-sha")
+mcp__cloudless-infra__aws_get_ssm_parameters (parameter_name: "pi-sha")
 mcp__cloudless-infra__aws_get_ssm_parameters (parameter_name: "ECR_LATEST_DIGEST")
 ```
 
@@ -62,8 +72,10 @@ cluster_run_command(node: "omv-main", command: "curl -s http://localhost:3000/ap
 ```
 
 ### 3. Are they in sync?
-Compare `version` from `/api/health` on `pi-origin.cloudless.gr` with `current-image-sha` in SSM.
-Both should match the latest successful deploy SHA.
+Compare `version` from `/api/health` on `pi-origin.cloudless.gr` with `pi-sha` in SSM
+(or with `cloud-sha` for the Lambda side). The Lambda and Pi can be on different
+SHAs intentionally when a commit only touches paths excluded by `deploy-pi.yml`'s
+path filter (k8s/, docs/, .github/) — that's working as designed.
 
 ## Common Failures
 
@@ -134,7 +146,7 @@ aws iam put-user-policy \
 
 ```
 1. gh run list --limit 5  → look for "Deploy to Production" success
-2. aws_get_ssm_parameters(current-image-sha)  → note the SHA
+2. aws_get_ssm_parameters(cloud-sha)  → note the SHA
 3. curl https://pi-origin.cloudless.gr/api/health  → compare version
 4. If version != SHA → trigger rollout restart (see pi-image-rollout skill)
 ```

@@ -37,12 +37,12 @@ This doc is the contract for what's kept in sync, how, and what to monitor.
 
 ## What's enforced today
 
-### 1. Image SHA pin via SSM `/cloudless/production/current-image-sha`
+### 1. Image SHA pin via SSM `/cloudless/production/cloud-sha`
 
 After every successful production deploy, [.github/workflows/deploy.yml](../.github/workflows/deploy.yml) writes the just-deployed commit SHA to:
 
 ```
-arn:aws:ssm:us-east-1:278585680617:parameter/cloudless/production/current-image-sha
+arn:aws:ssm:us-east-1:278585680617:parameter/cloudless/production/cloud-sha
 ```
 
 The Pi K3s side reads this and pins its `image:` tag accordingly. The publish
@@ -54,7 +54,7 @@ runs every N minutes:
 
 ```bash
 SHA=$(aws ssm get-parameter \
-  --name /cloudless/production/current-image-sha \
+  --name /cloudless/production/cloud-sha \
   --query 'Parameter.Value' --output text)
 kubectl set image deployment/cloudless cloudless=278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:${SHA} \
   --record
@@ -98,7 +98,7 @@ morning Athens time. Output is `ALL_HEALTHY` or a per-workflow failure report.
 runs every 6h (00:45, 06:45, 12:45, 18:45 UTC) and after every HA sync
 orchestrator completion. It compares three values:
 
-1. **Expected** — `/cloudless/production/current-image-sha` in SSM (written
+1. **Expected** — `/cloudless/production/cloud-sha` in SSM (written
    by the deploy workflow on every successful production deploy).
 2. **Cloud actual** — `cloudless.gr/api/health.version`. Wired to the
    deploy SHA via SST Lambda env (`APP_VERSION=$GITHUB_SHA`).
@@ -175,7 +175,7 @@ doc for context. Listed in priority order:
 - **SNS failover alerts topic**: `arn:aws:sns:us-east-1:278585680617:cloudless-failover-alerts` (edge-event only, fires on PRIMARY↔SECONDARY transitions)
 - **ECR repo**: `278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app` (tag-immutable)
 - **IAM users in the Pi orbit**: `cloudless-pi-standby`, `cloudless-pi-proxy`, `cloudless-failover-monitor`, `cloudless-ddns-updater`
-- **SSM SHA pointer**: `/cloudless/production/current-image-sha`
+- **SSM SHA pointer**: `/cloudless/production/cloud-sha`
 
 ## Cryptography parity
 
