@@ -133,6 +133,54 @@ h6 {
 }
 
 /* ──────────────────────────────────────────────────────────────────
+   V2 UTILITY CLASSES
+   ────────────────────────────────────────────────────────────────── */
+
+/* v2 card with hover-lift effect */
+.v2-hover-card {
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.v2-hover-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* v2 primary button */
+.btn-v2-primary {
+  background: var(--accent);
+  color: var(--accent-on);
+  transition: background 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-v2-primary:hover {
+  background: var(--accent-hover);
+}
+
+/* v2 ghost button */
+.btn-v2-ghost {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--ink-primary);
+  transition:
+    border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    background 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-v2-ghost:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  color: var(--accent);
+}
+
+/* ──────────────────────────────────────────────────────────────────
    LEGACY V1 UTILITIES — retired in Phase 5
    These class names are still referenced in component markup (services,
    homepage, navbar, contact form, store, terminal blocks). To avoid a

@@ -56,14 +56,18 @@ export default function Navbar() {
     <header
       className={`sticky top-0 z-50 transition-shadow duration-200${scrolled ? "[box-shadow:var(--shadow-md)]" : ""}`}
     >
-      {/* QD-inspired top accent bar */}
-      <div className="bg-neon-cyan h-px shadow-[0_0_10px_rgba(0,255,245,0.5)]" />
-      <div className="bg-void/90 border-neon-cyan/10 border-b backdrop-blur-xl">
+      {/* Top accent stripe */}
+      <div className="bg-neon-cyan h-0.5" />
+      <div
+        className="border-b backdrop-blur-xl"
+        style={{ background: "var(--surface-glass)", borderColor: "var(--border-subtle)" }}
+      >
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           {/* Logo */}
           <Link
             href="/"
-            className="group flex shrink-0 items-center text-white transition-opacity hover:opacity-90"
+            className="group flex shrink-0 items-center transition-opacity hover:opacity-90"
+            style={{ color: "var(--ink-primary)" }}
             aria-label={translate(locale, "common.home", "Home")}
           >
             <Logo variant="wordmark" size="md" />
@@ -75,7 +79,8 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="hover:text-neon-cyan font-mono text-sm font-medium text-slate-400 transition-colors duration-200"
+                className="hover:text-neon-cyan font-mono text-sm font-medium transition-colors duration-200"
+                style={{ color: "var(--ink-body)" }}
               >
                 {translate(locale, link.key, link.fallback)}
               </Link>
@@ -191,19 +196,21 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         <div
-          className={`bg-void/95 border-neon-cyan/10 overflow-x-hidden overflow-y-auto border-t px-6 backdrop-blur-xl transition-all duration-300 ease-in-out lg:hidden ${
+          className={`overflow-x-hidden overflow-y-auto border-t px-6 backdrop-blur-xl transition-all duration-300 ease-in-out lg:hidden ${
             mobileOpen ? "max-h-[calc(100svh-4rem)] py-4 opacity-100" : "max-h-0 py-0 opacity-0"
           }`}
+          style={{ background: "var(--surface-glass)", borderColor: "var(--border-subtle)" }}
         >
           <div className="space-y-1">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="hover:text-neon-cyan active:text-neon-cyan flex min-h-11 items-center py-3 font-mono text-sm font-medium text-slate-400 transition-all active:scale-95"
+                className="hover:text-neon-cyan active:text-neon-cyan flex min-h-11 items-center py-3 font-mono text-sm font-medium transition-all active:scale-95"
+                style={{ color: "var(--ink-body)" }}
                 onClick={() => setMobileOpen(false)}
               >
-                <span className="text-neon-cyan/40 mr-2">&gt;</span>
+                <span style={{ color: "var(--accent)", opacity: 0.5 }} className="mr-2">&gt;</span>
                 {translate(locale, link.key, link.fallback)}
               </Link>
             ))}
