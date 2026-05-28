@@ -314,7 +314,7 @@
 
 [data-theme="light"] .bg-slate-800\/50,
 [data-theme="light"] .bg-slate-900\/50 {
-  background-color: color-mix(in srgb, var(--surface-subtle) 50%, transparent);
+  background-color: color-mix(in sRGB, var(--surface-subtle) 50%, transparent);
 }
 
 /* Borders */
@@ -333,7 +333,7 @@
 
 /* Mobile tap highlight — accent-soft instead of high-saturation cyan. */
 [data-theme="light"] {
-  -webkit-tap-highlight-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  -webkit-tap-highlight-color: color-mix(in sRGB, var(--accent) 18%, transparent);
 }
 
 /* Selection — calmer accent on light. */
@@ -555,6 +555,6 @@
   [data-theme="light"] button,
   [data-theme="light"] [role="button"],
   [data-theme="light"] summary {
-    -webkit-tap-highlight-color: color-mix(in srgb, var(--accent) 18%, transparent);
+    -webkit-tap-highlight-color: color-mix(in sRGB, var(--accent) 18%, transparent);
   }
 }

@@ -117,6 +117,18 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/monitor", label: "Monitor", Icon: Activity },
       { href: "/admin/esp32", label: "ESP32", Icon: Server },
       { href: "/admin/esp32-manager", label: "ESP32 Mgr", Icon: Cpu },
+      {
+        href: "https://grafana.cloudless.gr",
+        label: "Grafana",
+        Icon: BarChart2,
+        external: true,
+      },
+      {
+        href: "https://manage.cloudless.gr",
+        label: "Cluster Manager",
+        Icon: LayoutGrid,
+        external: true,
+      },
     ],
   },
 ];

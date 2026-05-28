@@ -24,9 +24,22 @@ async function getSESv2(): Promise<SESv2Client> {
   return sesv2Client;
 }
 
-/** Domain portion of an email, newline-stripped, for safe logging. */
+/**
+ * Domain portion of an email, reduced to an allowlisted [a-z0-9.-] slug for
+ * safe logging. Anything outside the allowlist (including CR/LF used in log
+ * forging) is dropped so the value cannot inject log entries or control
+ * sequences.
+ */
 function logSafeDomain(email: string): string {
-  return (email.includes("@") ? email.split("@")[1] : "(no-domain)").replace(/[\r\n]/g, "_");
+  const raw = email.includes("@") ? email.split("@")[1] : "";
+  const slug = raw.toLowerCase().replace(/[^a-z0-9.-]/g, "");
+  return slug.slice(0, 253) || "(no-domain)";
+}
+
+/** Reduce an arbitrary error message to a printable-ASCII single line. */
+function logSafeMessage(err: unknown): string {
+  const raw = (err as Error)?.message ?? "unknown error";
+  return raw.replace(/[^\x20-\x7E]/g, " ").slice(0, 200);
 }
 
 /**
@@ -45,12 +58,12 @@ export async function addToSuppressionList(email: string): Promise<boolean> {
       })
     );
     const safeDomain = logSafeDomain(email);
-    console.warn(`[SES] Added to suppression list: *@${safeDomain}`); // codeql[js/log-injection]
+    console.warn(`[SES] Added to suppression list: *@${safeDomain}`);
     return true;
   } catch (err) {
     const safeDomain = logSafeDomain(email);
-    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
-    console.error(`[SES] Failed to suppress *@${safeDomain}:`, msg); // codeql[js/log-injection] codeql[js/tainted-format-string]
+    const msg = logSafeMessage(err);
+    console.error(`[SES] Failed to suppress *@${safeDomain}: ${msg}`);
     return false;
   }
 }
@@ -66,15 +79,15 @@ export async function removeFromSuppressionList(email: string): Promise<boolean>
     const client = await getSESv2();
     await client.send(new DeleteSuppressedDestinationCommand({ EmailAddress: email }));
     const safeDomain = logSafeDomain(email);
-    console.warn(`[SES] Removed from suppression list: *@${safeDomain}`); // codeql[js/log-injection]
+    console.warn(`[SES] Removed from suppression list: *@${safeDomain}`);
     return true;
   } catch (err) {
     // SES throws NotFoundException when the address was never suppressed;
     // for a brand-new subscriber that is the normal case, treat as success.
     if ((err as { name?: string })?.name === "NotFoundException") return true;
     const safeDomain = logSafeDomain(email);
-    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
-    console.error(`[SES] Failed to remove *@${safeDomain} from suppression:`, msg); // codeql[js/log-injection] codeql[js/tainted-format-string]
+    const msg = logSafeMessage(err);
+    console.error(`[SES] Failed to remove *@${safeDomain} from suppression: ${msg}`);
     return false;
   }
 }

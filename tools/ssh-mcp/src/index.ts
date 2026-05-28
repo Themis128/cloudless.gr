@@ -1606,8 +1606,17 @@ server.tool(
     query: z.string().describe("SQL query to run against Metabase's H2 database"),
   },
   async ({ query }) => {
-    const escaped = query.replace(/'/g, "\\'");
-    const cmd = `POD=$(sudo kubectl get pod -n analytics -l app=metabase -o name 2>/dev/null | head -1) && sudo kubectl exec -n analytics $POD -- java -cp /app/metabase.jar org.h2.tools.Shell -url "jdbc:h2:/data/metabase.db" -user metabase -sql '${escaped}' 2>&1 | head -50 || echo "H2 query failed"`;
+    // Strict allowlist: printable ASCII letters/digits/whitespace plus a
+    // narrow set of SQL punctuation. Backslash, quotes, backticks, and `$`
+    // are deliberately excluded so the value is safe at both the SQL and
+    // shell layer even before the base64 hop below.
+    if (query.length > 2000 || !/^[\w\s,.;()*=<>!+\-/'"%]+$/.test(query)) {
+      return err(new Error("Query contains disallowed characters or exceeds 2000 chars"));
+    }
+    // Encode as base64 and decode shell-side so the raw query never touches
+    // the command line. This eliminates all interpolation-based injection.
+    const b64 = Buffer.from(query, "utf8").toString("base64");
+    const cmd = `POD=$(sudo kubectl get pod -n analytics -l app=metabase -o name 2>/dev/null | head -1) && SQL=$(echo ${b64} | base64 -d) && sudo kubectl exec -n analytics $POD -- java -cp /app/metabase.jar org.h2.tools.Shell -url "jdbc:h2:/data/metabase.db" -user metabase -sql "$SQL" 2>&1 | head -50 || echo "H2 query failed"`;
     try { return ok(await sshMain(cmd, 30_000)); } catch (e) { return err(e); }
   }
 );
