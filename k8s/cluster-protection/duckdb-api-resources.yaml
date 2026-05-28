@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: duckdb-api
+  namespace: analytics
+spec:
+  template:
+    spec:
+      containers:
+        - name: duckdb-api
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 200m
+            limits:
+              memory: 1500Mi
+              cpu: 1
