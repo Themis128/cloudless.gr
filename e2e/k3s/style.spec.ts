@@ -77,12 +77,11 @@ test.describe("k3s Navbar style", () => {
     const className = await header.getAttribute("class") ?? "";
     expect(className, "header should have Tailwind sticky class").toContain("sticky");
 
-    // First child div inside <header> is the 1-px neon-cyan accent bar (h-px)
+    // First child div inside <header> is the 2-px neon-cyan accent bar (h-0.5)
     const accentBar = header.locator("div").first();
     await expect(accentBar).toBeVisible();
-    // Use class check for height too — subpixel rendering may report <1px on HiDPI
     const accentClass = await accentBar.getAttribute("class") ?? "";
-    expect(accentClass, "accent bar should have h-px class").toContain("h-px");
+    expect(accentClass, "accent bar should have h-0.5 class").toContain("h-0.5");
   });
 
   test("logo link is visible", async ({ page }) => {
