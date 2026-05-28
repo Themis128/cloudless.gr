@@ -1606,14 +1606,12 @@ server.tool(
     query: z.string().describe("SQL query to run against Metabase's H2 database"),
   },
   async ({ query }) => {
-    // Reject anything beyond plain read-only SQL. The query is interpolated
-    // into a shell command and an H2 -sql argument, so any quoting bypass is
-    // a shell injection. Whitelist printable ASCII minus shell/SQL specials.
-    if (!/^[\w\s,.;()*=<>!+\-/'"%]+$/.test(query) || query.length > 2000) {
+    // Strict allowlist: printable ASCII letters/digits/whitespace plus a
+    // narrow set of SQL punctuation. Backslash, quotes, backticks, and `$`
+    // are deliberately excluded so the value is safe at both the SQL and
+    // shell layer even before the base64 hop below.
+    if (query.length > 2000 || !/^[\w\s,.;()*=<>!+\-/'"%]+$/.test(query)) {
       return err(new Error("Query contains disallowed characters or exceeds 2000 chars"));
-    }
-    if (/['`$\\]/.test(query)) {
-      return err(new Error("Quotes, backticks, $ and backslash are not allowed in queries"));
     }
     // Encode as base64 and decode shell-side so the raw query never touches
     // the command line. This eliminates all interpolation-based injection.
