@@ -1,4 +1,4 @@
-# /ci-pr-checks [PR number] — Check CI status for a pull request
+# /ci-pr-checks `<PR number>` — Check CI status for a pull request
 
 Shows all check runs for a specific PR: which are failing, pending, or passing. Use before merging or when a PR is blocked.
 
@@ -26,7 +26,7 @@ Shows all check runs for a specific PR: which are failing, pending, or passing. 
 4. **Print the verdict**:
    - All passing → "✅ PR #N is clear to merge"
    - Pending → "⏳ N checks still running — check back in a few minutes"
-   - Failing → "❌ N checks failing — [list with root cause summary]"
+   - Failing → "❌ N checks failing — `<list with root cause summary>`"
 
 ## Notes
 

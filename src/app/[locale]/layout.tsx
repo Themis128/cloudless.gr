@@ -16,7 +16,7 @@ import CookieConsent from "@/components/CookieConsent";
 import GoogleAnalyticsConsent from "@/components/GoogleAnalyticsConsent";
 
 const CartSlideOver = dynamic(() => import("@/components/store/CartSlideOver"));
-const ChatWidget = dynamic(() => import("@/components/ChatWidget"));
+import ClientChatWidget from "@/components/ClientChatWidget";
 import ClientDecorators from "@/components/ClientDecorators";
 
 type Props = {
@@ -83,7 +83,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             <ServiceWorkerRegistration />
             <ClientDecorators />
             <CookieConsent />
-            <ChatWidget />
+            <ClientChatWidget />
           </CookieConsentProvider>
         </CartProvider>
       </AuthProvider>
