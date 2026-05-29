@@ -31,9 +31,24 @@ for arg in "$@"; do
 done
 
 # ── 1. Copy Python modules ────────────────────────────────────────────────────
+# main.py and slack_notify.py are now also tracked in the repo as of v3.3 —
+# they used to live only on the Pi, which made the verbose-alert-message
+# patch invisible to git. Always overwrite from the repo (with a .bak.<ts>
+# safety copy on the Pi before replacing).
 if [[ "$ROUTES_ONLY" != "true" ]]; then
-  echo "==> Copying mqtt_publish.py and tls_check.py to Pi..."
-  scp infrastructure/pi-alert-api/mqtt_publish.py \
+  echo "==> Backing up + copying main.py, slack_notify.py, mqtt_publish.py, tls_check.py to Pi..."
+  ssh "${PI}" bash -s <<'REMOTE'
+set -euo pipefail
+ts=$(date +%s)
+for f in main.py slack_notify.py; do
+  if [[ -f "${HOME}/alert-api/${f}" ]]; then
+    cp "${HOME}/alert-api/${f}" "${HOME}/alert-api/${f}.bak.${ts}"
+  fi
+done
+REMOTE
+  scp infrastructure/pi-alert-api/main.py \
+      infrastructure/pi-alert-api/slack_notify.py \
+      infrastructure/pi-alert-api/mqtt_publish.py \
       infrastructure/pi-alert-api/tls_check.py \
       "${PI}:${ALERT_API_DIR}/"
 fi
@@ -43,42 +58,6 @@ if [[ "$MQTT_ONLY" != "true" ]]; then
   scp infrastructure/pi-alert-api/esp32_command_routes.py \
       "${PI}:${ALERT_API_DIR}/esp32_command_routes.py"
 fi
-
-# ── 2. Patch main.py (idempotent) ─────────────────────────────────────────────
-echo "==> Patching main.py..."
-ssh "${PI}" bash -s <<'REMOTE'
-set -euo pipefail
-MAIN="${HOME}/alert-api/main.py"
-
-NEEDS_MQTT=true
-NEEDS_ROUTES=true
-
-grep -q "mqtt_publish" "${MAIN}" && NEEDS_MQTT=false && echo "  mqtt_publish already wired — skipping."
-grep -q "esp32_cmd_router" "${MAIN}" && NEEDS_ROUTES=false && echo "  esp32_command_routes already wired — skipping."
-
-if [[ "$NEEDS_MQTT" == "true" || "$NEEDS_ROUTES" == "true" ]]; then
-  cp "${MAIN}" "${MAIN}.bak.$(date +%s)"
-fi
-
-if [[ "$NEEDS_MQTT" == "true" ]]; then
-  cat >> "${MAIN}" <<'PATCH'
-
-# ── MQTT publisher (added by deploy.sh) ──────────────────────────────────────
-from mqtt_publish import publish_alert_status, publish_alert_event  # noqa: E402
-PATCH
-  echo "  mqtt_publish wired into main.py."
-fi
-
-if [[ "$NEEDS_ROUTES" == "true" ]]; then
-  cat >> "${MAIN}" <<'PATCH'
-
-# ── ESP32 command + config + OTA routes (added by deploy.sh) ─────────────────
-from esp32_command_routes import router as esp32_cmd_router  # noqa: E402
-app.include_router(esp32_cmd_router)
-PATCH
-  echo "  esp32_command_routes wired into main.py."
-fi
-REMOTE
 
 # ── 3. Check paho-mqtt is in requirements.txt ─────────────────────────────────
 echo "==> Checking paho-mqtt in requirements.txt..."
@@ -98,9 +77,9 @@ echo "==> Rebuilding alert-api image on Pi..."
 ssh "${PI}" bash -s <<'REMOTE'
 set -euo pipefail
 cd ~/alert-api
-docker build -t alert-api:v3.2 -t alert-api:v3 .
-docker save alert-api:v3.2 | sudo k3s ctr images import -
-kubectl -n alert-manager set image deployment/alert-api alert-api=docker.io/library/alert-api:v3.2
+docker build -t alert-api:v3.3 -t alert-api:v3 .
+docker save alert-api:v3.3 | sudo k3s ctr images import -
+kubectl -n alert-manager set image deployment/alert-api alert-api=docker.io/library/alert-api:v3.3
 kubectl -n alert-manager rollout status deployment/alert-api --timeout=120s
 REMOTE
 
