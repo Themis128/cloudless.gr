@@ -8,9 +8,20 @@ allowed-tools: mcp__cloudless-infra__gh_runner_list, mcp__cloudless-infra__gh_ru
 
 ## Overview
 
-The `cloudless.gr` repo uses three Pi 5 self-hosted runners (`omv`, `omv-2`, `omv-3`) registered under the `omv-main` node (192.168.1.128). Jobs requiring native arm64 Docker builds use `runs-on: [self-hosted, omv, pi]`.
+The `cloudless.gr` repo has three registered runners. As of 2026-05-29:
 
-**Runner labels (all three):** `self-hosted, Linux, ARM64, omv, pi`
+| Runner | Host | Labels | Status |
+|---|---|---|---|
+| `omv` | omv-main (192.168.1.128) | `self-hosted, Linux, ARM64, omv, pi` | disabled |
+| `omv-build` | omv-main (192.168.1.128) | `self-hosted, Linux, ARM64, omv, pi, build` | **active** (workdir on USB SSD) |
+| `omv-2-build` | (separate host) | `self-hosted, Linux, ARM64, omv, build` | online (lacks docker) |
+
+The `pi` label was moved off `omv` and onto `omv-build` so the unique
+combination `[self-hosted, omv, pi, build]` pins to `omv-build` only.
+`omv-2-build` lacks docker so PRs route to omv-build via the `pi` qualifier.
+
+Active Pi-image build workflows use `runs-on: [self-hosted, omv, pi, build]`.
+
 **Service pattern:** `actions.runner.Themis128-{repo}.{runner}.service`
 **Example:** `actions.runner.Themis128-cloudless.gr.omv.service`
 

@@ -35,8 +35,10 @@ env:
 jobs:
   build-and-push:
     name: Build arm64 image and push to ECR
-    # Self-hosted Pi runner (arm64 native) — no QEMU, no paid GH runner minutes.
-    runs-on: [self-hosted, omv, pi]
+    # Self-hosted arm64 runner. Label set `[omv, pi, build]` is unique to
+    # `omv-build` on omv-main (which has docker + USB-SSD-backed _work).
+    # The `omv` runner stays disabled to relieve SD-card contention.
+    runs-on: [self-hosted, omv, pi, build]
     outputs:
       short_sha: ${{ steps.check_ecr.outputs.short_sha }}
       image_exists: ${{ steps.check_ecr.outputs.exists }}
