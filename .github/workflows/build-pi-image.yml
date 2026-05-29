@@ -169,19 +169,6 @@ jobs:
         if: steps.existing.outputs.exists != 'true' || github.event_name == 'pull_request'
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
-      # Re-login to ECR immediately before the build step so buildkit picks
-      # up a fresh token. Without this, a stale buildkit credential helper
-      # state (left over from a previous run on the same self-hosted Pi
-      # runner) can hand the build a 401 partway through the layer push —
-      # which manifested on 2026-05-29 as:
-      #   "failed to push ...: 401 Unauthorized"
-      # 15 seconds into the export. The earlier login (line ~90) is still
-      # needed for the `aws ecr describe-images` short-circuit step, so we
-      # don't remove it — we just add a fresh login right before the build.
-      - name: refresh ECR login (for buildx)
-        if: github.event_name != 'pull_request' && (steps.existing.outputs.exists != 'true')
-        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
-
       - name: compute tags
         id: tags
         if: steps.existing.outputs.exists != 'true' || github.event_name == 'pull_request'
@@ -200,14 +187,39 @@ jobs:
             echo "tags=${ECR_REGISTRY}/${ECR_REPO}:${SHA}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: build (and push if main)
+      # Build with load:true (not push:true). Loads the built image into
+      # the local dockerd image store. Push happens in the next step via a
+      # plain `docker push`.
+      #
+      # Why this split:
+      #   docker/build-push-action with push:true delegates the push to
+      #   buildkit, which has a known 401 bug against AWS ECR — after the
+      #   layer upload succeeds it does a HEAD on the manifest blob path
+      #   and ECR rate-limits that as 401 Unauthorized (the auth token's
+      #   path-scope vs the HEAD path mismatch). This caused the
+      #   2026-05-29 build-pi-image failures.
+      #
+      #   `docker push`, by contrast, uses dockerd's own registry client
+      #   which (a) re-reads ~/.docker/config.json on every push, (b) does
+      #   not perform the buildkit-specific HEAD/manifest dance.
+      #   amazon-ecr-login (step ~92) populated the docker auth helper
+      #   with a fresh ECR token in this same job, so dockerd has valid
+      #   credentials for the push.
+      #
+      # Earlier attempts that did NOT work:
+      #   PR #308 — added a second amazon-ecr-login AFTER setup-buildx.
+      #             Insufficient: buildkit still hits 401 on the manifest
+      #             finalization HEAD because that's a buildkit-side issue,
+      #             not a token-staleness one.
+      - name: build (load to dockerd)
         if: steps.existing.outputs.exists != 'true' || github.event_name == 'pull_request'
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/arm64
-          push: ${{ steps.tags.outputs.push == 'true' }}
+          load: true
+          push: false
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=local,src=/opt/docker-cache
           cache-to: type=local,dest=/opt/docker-cache,mode=max
@@ -226,6 +238,18 @@ jobs:
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
             NEXT_PUBLIC_META_PIXEL_ID=${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
             NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
+
+      # Push each tag with dockerd's own registry client (not buildkit).
+      # See the long comment on the `build (load to dockerd)` step above.
+      - name: push to ECR
+        if: github.event_name != 'pull_request' && (steps.existing.outputs.exists != 'true')
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra TAGS <<< "${{ steps.tags.outputs.tags }}"
+          for tag in "${TAGS[@]}"; do
+            echo "==> docker push ${tag}"
+            docker push "${tag}"
+          done
 
       # Record the pushed image digest in SSM so the Pi's image-sync CronJob
       # can compare without needing ecr:DescribeImages (omv-main-cli is
