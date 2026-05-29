@@ -172,7 +172,7 @@ function richTextToHtml(rt: NotionRichText[] | undefined): string {
     })
     .join("");
 }
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -184,7 +184,7 @@ function escapeAttr(s: string): string {
   return escapeHtml(s);
 }
 
-function blocksToHtml(blocks: NotionBlock[]): {
+export function blocksToHtml(blocks: NotionBlock[]): {
   html: string;
   text: string;
 } {
@@ -272,7 +272,7 @@ interface ServiceOffer {
   url: string;
 }
 
-function categoryOffer(category: string, siteUrl: string): ServiceOffer {
+export function categoryOffer(category: string, siteUrl: string): ServiceOffer {
   const contactUrl = `${siteUrl}/en/contact`;
   const offers: Record<string, ServiceOffer> = {
     Cloud: {
@@ -303,7 +303,7 @@ function categoryOffer(category: string, siteUrl: string): ServiceOffer {
   return offers[category] ?? offers["Cloud"];
 }
 
-function renderNewsletter(post: ApprovedPost, body: string): string {
+export function renderNewsletter(post: ApprovedPost, body: string): string {
   const siteUrl = process.env.SITE_URL || SITE_URL_DEFAULT;
   const postUrl = `${siteUrl}/en/blog/${post.slug}`;
   const safeTitle = escapeHtml(post.title);
@@ -356,7 +356,7 @@ function renderNewsletter(post: ApprovedPost, body: string): string {
 </html>`;
 }
 
-function renderPlaintext(post: ApprovedPost, body: string): string {
+export function renderPlaintext(post: ApprovedPost, body: string): string {
   const siteUrl = process.env.SITE_URL || SITE_URL_DEFAULT;
   const postUrl = `${siteUrl}/en/blog/${post.slug}`;
   const offer = categoryOffer(post.category, siteUrl);
@@ -531,10 +531,13 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error("[publish-and-send-newsletter] FATAL:", err);
-  process.exit(1);
-});
+// Only auto-run when invoked directly (skip during vitest imports).
+if (process.argv[1]?.includes("publish-and-send-newsletter")) {
+  main().catch((err) => {
+    console.error("[publish-and-send-newsletter] FATAL:", err);
+    process.exit(1);
+  });
+}
 
 // ── Inline Notion shape declarations ──────────────────────────────────────────
 
