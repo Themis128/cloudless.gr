@@ -56,7 +56,13 @@ spec:
     requests.memory: "1.5Gi"
     limits.memory: "4Gi"
     requests.cpu: "1"
-    limits.cpu: "4"
+    # limits.cpu was 4; bumped to 6 on 2026-05-29 after the k3s restart
+    # for the etcd-s3 IAM rotation. Bringing Prometheus + Alertmanager
+    # back from their `Completed` state pushed `used.limits.cpu` to
+    # 4900m which exceeded the 4 cap and caused admission rejection of
+    # the Prometheus pod recreation. 6 cap leaves headroom for one
+    # rolling-update surge replica of the heaviest workload.
+    limits.cpu: "6"
     # Cap pod count so a runaway ReplicaSet can't proliferate.
     pods: "20"
 
