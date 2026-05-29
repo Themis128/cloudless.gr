@@ -169,6 +169,19 @@ jobs:
         if: steps.existing.outputs.exists != 'true' || github.event_name == 'pull_request'
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
+      # Re-login to ECR immediately before the build step so buildkit picks
+      # up a fresh token. Without this, a stale buildkit credential helper
+      # state (left over from a previous run on the same self-hosted Pi
+      # runner) can hand the build a 401 partway through the layer push —
+      # which manifested on 2026-05-29 as:
+      #   "failed to push ...: 401 Unauthorized"
+      # 15 seconds into the export. The earlier login (line ~90) is still
+      # needed for the `aws ecr describe-images` short-circuit step, so we
+      # don't remove it — we just add a fresh login right before the build.
+      - name: refresh ECR login (for buildx)
+        if: github.event_name != 'pull_request' && (steps.existing.outputs.exists != 'true')
+        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
+
       - name: compute tags
         id: tags
         if: steps.existing.outputs.exists != 'true' || github.event_name == 'pull_request'
