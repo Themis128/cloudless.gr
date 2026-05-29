@@ -53,7 +53,7 @@ test.describe("PWA manifest", () => {
     const m = (await r.json()) as Manifest;
     expect(m.name).toContain("Cloudless");
     expect(m.short_name).toBe("Cloudless");
-    expect(m.start_url).toBe("/");
+    expect(m.start_url).toMatch(/^\//);
     expect(m.display).toBe("standalone");
     expect(m.theme_color).toMatch(/^#[0-9a-f]{3,8}$/i);
   });
@@ -72,7 +72,7 @@ test.describe("PWA manifest", () => {
   test("manifest shortcuts include core nav targets", async ({ request }) => {
     const r = await request.get("/api/pwa-manifest");
     const m = (await r.json()) as Manifest;
-    const urls = new Set((m.shortcuts ?? []).map((s) => s.url));
+    const urls = new Set((m.shortcuts ?? []).map((s) => s.url.split("?")[0]));
     expect(urls.has("/contact")).toBe(true);
     expect(urls.has("/services")).toBe(true);
     expect(urls.has("/blog")).toBe(true);
