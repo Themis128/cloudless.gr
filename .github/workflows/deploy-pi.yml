@@ -84,15 +84,6 @@ jobs:
         if: steps.check_ecr.outputs.exists != 'true'
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
-      # Re-login to ECR immediately before the build step so buildkit picks
-      # up a fresh token. Mirrors the same fix in build-pi-image.yml —
-      # without this, a stale buildkit credential helper state on the
-      # self-hosted Pi runner can hand the build a 401 Unauthorized 15s
-      # into the layer push.
-      - name: refresh ECR login (for buildx)
-        if: steps.check_ecr.outputs.exists != 'true'
-        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
-
       - name: ensure local cache dirs exist
         if: steps.check_ecr.outputs.exists != 'true'
         run: |
@@ -103,13 +94,18 @@ jobs:
         if: steps.check_ecr.outputs.exists != 'true'
         run: docker pull node:22-alpine
 
-      - name: Build and push Docker image
+      # Build with load:true (not push:true) — see the long comment in
+      # build-pi-image.yml for the rationale. Push happens via plain
+      # `docker push` in the next step, bypassing the buildkit/ECR
+      # manifest-HEAD bug that caused the 2026-05-29 401 failures.
+      - name: Build and load to dockerd
         if: steps.check_ecr.outputs.exists != 'true'
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
           platforms: linux/arm64
-          push: true
+          load: true
+          push: false
           # SHA tag only — ECR has immutable tags, :latest is never pushed.
           # Rollout uses kubectl set image with this SHA for pinned, reproducible deploys.
           tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.check_ecr.outputs.short_sha }}
@@ -130,6 +126,17 @@ jobs:
             NEXT_PUBLIC_META_PIXEL_ID=${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
             APP_VERSION=${{ github.sha }}
             NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
+
+      # Push via dockerd's own registry client (not buildkit). dockerd
+      # re-reads ~/.docker/config.json for every push and does not
+      # perform buildkit's manifest-HEAD dance against ECR.
+      - name: Push to ECR
+        if: steps.check_ecr.outputs.exists != 'true'
+        run: |
+          set -euo pipefail
+          TAG="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.check_ecr.outputs.short_sha }}"
+          echo "==> docker push ${TAG}"
+          docker push "${TAG}"
 
       - name: Update SSM Pi image tracking
         run: |
