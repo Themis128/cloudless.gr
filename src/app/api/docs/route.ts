@@ -21,7 +21,10 @@ export async function GET() {
   try {
     const docs = await getDocs();
     const grouped = groupDocsByCategory(docs);
-    return NextResponse.json({ docs, grouped, source: "notion" }, { headers: { "x-cms-source": "notion" } });
+    return NextResponse.json(
+      { docs, grouped, source: "notion" },
+      { headers: { "x-cms-source": "notion" } }
+    );
   } catch (err) {
     console.error("[Docs API] Failed to fetch docs:", err);
     return NextResponse.json(
