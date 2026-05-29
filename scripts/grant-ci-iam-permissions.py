@@ -112,14 +112,17 @@ DEPLOY_POLICY = {
 }
 
 PI_IMAGE_POLICY_NAME = "CICDEcrUntagLatest"
-PI_IMAGE_POLICY = {
+PI_IMAGE_RESOURCE_ARN = (
+    f"arn:aws:ecr:{PI_IMAGE_REGION}:{ACCOUNT_ID}:repository/{PI_IMAGE_REPO}"
+)
+PI_IMAGE_POLICY: dict[str, object] = {
     "Version": "2012-10-17",
     "Statement": [
         {
             "Sid": "AllowEcrUntagForLatest",
             "Effect": "Allow",
             "Action": "ecr:BatchDeleteImage",
-            "Resource": f"arn:aws:ecr:{PI_IMAGE_REGION}:{ACCOUNT_ID}:repository/{PI_IMAGE_REPO}",
+            "Resource": PI_IMAGE_RESOURCE_ARN,
         }
     ],
 }
@@ -255,7 +258,7 @@ def main() -> int:
             iam,
             args.pi_image_role,
             ["ecr:BatchDeleteImage"],
-            [PI_IMAGE_POLICY["Statement"][0]["Resource"]],
+            [PI_IMAGE_RESOURCE_ARN],
         )
 
     print()

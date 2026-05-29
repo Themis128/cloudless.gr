@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Weekly API integration health check for cloudless.gr — posts to Slack."""
-import subprocess, json, datetime, urllib.request, urllib.error
+import subprocess
+import json
+import datetime
+import urllib.request
+import urllib.error
 
 def ssm(key):
     r = subprocess.run(
