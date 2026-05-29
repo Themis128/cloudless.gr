@@ -11,8 +11,6 @@ import { Amplify } from "aws-amplify";
  * NEXT_PUBLIC_* vars are inlined by Next.js at build/dev-server start,
  * so process.env.NEXT_PUBLIC_* always resolves on the client without needing
  * globalThis.process?.env.
- *
- * Returns true when both required vars are present, false otherwise.
  */
 const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
 const userPoolClientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "";
@@ -39,21 +37,31 @@ export function configureAmplify(): boolean {
 }
 
 /**
- * Awaitable handle that any consumer of `aws-amplify/auth` MUST await before
- * the first auth call. Guarantees Amplify.configure() has run regardless of
- * which lazy-import path landed first.
+ * Single entry point for loading `aws-amplify/auth` in a way that guarantees
+ * `Amplify.configure()` has executed first.
  *
- * Why this exists: AuthContext lazy-imports both `@/lib/amplify-config` (which
- * runs Amplify.configure as a module side-effect) and `aws-amplify/auth` (which
- * needs configure to have already run). Without a barrier, a sibling component
- * calling an auth helper during first paint can hit Amplify before configure
- * lands, producing:
- *   "Amplify has not been configured. Please call Amplify.configure() ..."
+ * Why this exists:
+ *   AuthContext lazy-imports `aws-amplify/auth` to keep the ~2 MB module out
+ *   of the initial public-page bundle (preserved here — this function still
+ *   uses dynamic `import()`). But the auth helpers are useless until
+ *   `Amplify.configure()` has run. Without an explicit barrier a caller
+ *   could grab `signIn` etc. before the config side-effect lands and hit:
+ *     "Amplify has not been configured. Please call Amplify.configure() …"
  *
- * Importing this module is the synchronization barrier: the side-effect block
- * above runs at module-load, then awaiting `ensureAmplifyConfigured()` from
- * anywhere is a no-op promise — but it forces the import to resolve first.
+ * How the guarantee works:
+ *   `await import("./amplify-config")` resolves only after THIS module's
+ *   top-level body has executed (the `Amplify.configure()` call above).
+ *   We chain the auth import off that resolution, so by the time the auth
+ *   module's exports are handed back, configure has provably run.
+ *
+ *   Bundle-size impact: zero — both imports are dynamic, so `aws-amplify`
+ *   stays out of the public-page bundle. Webpack also dedupes module
+ *   instances, so subsequent calls are cache hits (no extra wall-clock).
  */
-export function ensureAmplifyConfigured(): Promise<boolean> {
-  return Promise.resolve(isConfigured);
+export async function getAuthModule(): Promise<typeof import("aws-amplify/auth")> {
+  // Re-import self so the module-load side-effect (Amplify.configure) is
+  // observably complete before the auth import is awaited. Cheap on repeat
+  // calls — Webpack returns the cached module record.
+  await import("./amplify-config");
+  return import("aws-amplify/auth");
 }
