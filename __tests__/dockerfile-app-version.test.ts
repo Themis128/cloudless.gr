@@ -57,13 +57,17 @@ describe("build-pi-image workflow APP_VERSION wiring", () => {
 
   it("passes APP_VERSION as a build-arg to docker buildx", () => {
     // The workflow uses docker/build-push-action with build-args: |\n ...
-    // Look for APP_VERSION= followed by either github.sha or a target_sha
-    // expression — both forms should land the SHA into the image.
+    // Accepts any of three forms that all resolve to the SHA being built:
+    //   1. APP_VERSION=${{ github.event.inputs.target_sha || github.sha }}
+    //   2. APP_VERSION=${{ github.sha }}
+    //   3. APP_VERSION=${{ steps.sha.outputs.full }}   ← PR #294 fix for
+    //      Issue #293; ensures the embedded version matches the ACTUAL
+    //      checked-out HEAD instead of the workflow's GITHUB_SHA.
     expect(
       yml,
       "build-pi-image workflow MUST pass APP_VERSION as a build-arg",
     ).toMatch(
-      /APP_VERSION=\$\{\{\s*github\.event\.inputs\.target_sha\s*\|\|\s*github\.sha\s*\}\}|APP_VERSION=\$\{\{\s*github\.sha\s*\}\}/,
+      /APP_VERSION=\$\{\{\s*github\.event\.inputs\.target_sha\s*\|\|\s*github\.sha\s*\}\}|APP_VERSION=\$\{\{\s*github\.sha\s*\}\}|APP_VERSION=\$\{\{\s*steps\.sha\.outputs\.full\s*\}\}/,
     );
   });
 });
