@@ -141,7 +141,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let preferences = { ...DEFAULT_PREFERENCES };
 
       try {
-        const { fetchUserAttributes } = await (await import("@/lib/amplify-config")).getAuthModule();
+        const { fetchUserAttributes } = await (
+          await import("@/lib/amplify-config")
+        ).getAuthModule();
         const attrs = await fetchUserAttributes();
         name = attrs.name || attrs.given_name || undefined;
         phone = attrs.phone_number || undefined;
@@ -167,7 +169,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      const { getCurrentUser, fetchAuthSession } = await (await import("@/lib/amplify-config")).getAuthModule();
+      const { getCurrentUser, fetchAuthSession } = await (
+        await import("@/lib/amplify-config")
+      ).getAuthModule();
       const currentUser = await getCurrentUser();
       const email = currentUser.signInDetails?.loginId;
       const profile = await loadUserProfile(currentUser.username, email);
@@ -230,7 +234,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [checkAuth]);
 
   const handleSignIn = async (email: string, password: string): Promise<SignInResult> => {
-    const { signIn: amplifySignIn, signOut: amplifySignOut } = await (await import("@/lib/amplify-config")).getAuthModule();
+    const { signIn: amplifySignIn, signOut: amplifySignOut } = await (
+      await import("@/lib/amplify-config")
+    ).getAuthModule();
     try {
       const result = await amplifySignIn({ username: email, password });
 
@@ -275,14 +281,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleSignOut = async () => {
-    const { signOut: amplifySignOut } = await (await import("@/lib/amplify-config")).getAuthModule();
+    const { signOut: amplifySignOut } = await (
+      await import("@/lib/amplify-config")
+    ).getAuthModule();
     await amplifySignOut();
     setUser(null);
     setIsAdmin(false);
   };
 
   const handleConfirmSignUp = async (email: string, code: string) => {
-    const { confirmSignUp: amplifyConfirmSignUp } = await (await import("@/lib/amplify-config")).getAuthModule();
+    const { confirmSignUp: amplifyConfirmSignUp } = await (
+      await import("@/lib/amplify-config")
+    ).getAuthModule();
     try {
       await amplifyConfirmSignUp({ username: email, confirmationCode: code });
     } catch (err) {
@@ -291,7 +301,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleForgotPassword = async (email: string) => {
-    const { resetPassword: amplifyResetPassword } = await (await import("@/lib/amplify-config")).getAuthModule();
+    const { resetPassword: amplifyResetPassword } = await (
+      await import("@/lib/amplify-config")
+    ).getAuthModule();
     try {
       await amplifyResetPassword({ username: email });
     } catch (err) {
@@ -300,7 +312,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleConfirmForgotPassword = async (email: string, code: string, newPassword: string) => {
-    const { confirmResetPassword: amplifyConfirmResetPassword } = await (await import("@/lib/amplify-config")).getAuthModule();
+    const { confirmResetPassword: amplifyConfirmResetPassword } = await (
+      await import("@/lib/amplify-config")
+    ).getAuthModule();
     try {
       await amplifyConfirmResetPassword({
         username: email,
@@ -313,7 +327,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleCompleteNewPassword = async (newPassword: string) => {
-    const { confirmSignIn: amplifyConfirmSignIn } = await (await import("@/lib/amplify-config")).getAuthModule();
+    const { confirmSignIn: amplifyConfirmSignIn } = await (
+      await import("@/lib/amplify-config")
+    ).getAuthModule();
     try {
       const result = await amplifyConfirmSignIn({
         challengeResponse: newPassword,
@@ -338,7 +354,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (attrs.company !== undefined) updates["custom:company"] = attrs.company;
 
       if (Object.keys(updates).length > 0) {
-        const { updateUserAttributes } = await (await import("@/lib/amplify-config")).getAuthModule();
+        const { updateUserAttributes } = await (
+          await import("@/lib/amplify-config")
+        ).getAuthModule();
         await updateUserAttributes({ userAttributes: updates });
       }
 
