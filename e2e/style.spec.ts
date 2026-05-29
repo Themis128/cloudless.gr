@@ -79,7 +79,10 @@ test.describe("Navbar style", () => {
 
   test("logo link is visible and points to homepage", async ({ page }) => {
     await page.goto("/en", { waitUntil: "domcontentloaded" });
-    const logoLink = page.getByRole("link", { name: /cloudless/i }).first();
+    // The logo link lives inside <nav> and has href="/" (localized to /en).
+    // Use a CSS selector to avoid matching footer social links that also
+    // contain "cloudless" in their accessible name.
+    const logoLink = page.locator('nav a[href="/"], nav a[href="/en"]').first();
     await expect(logoLink).toBeVisible();
     const href = await logoLink.getAttribute("href");
     expect(href).toMatch(/^(\/|\/en)?$/);

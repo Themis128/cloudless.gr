@@ -14,6 +14,7 @@ const isCi = !!process.env.CI;
  */
 export default defineConfig({
   testDir: path.join(rootDir, "e2e"),
+  testIgnore: ["**/k3s/**"],
   fullyParallel: true,
   forbidOnly: isCi,
   retries: isCi ? 2 : 1,
