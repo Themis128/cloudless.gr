@@ -132,9 +132,13 @@ prometheus:
 # HTTP requests — ntfy alerts + health probes
 # ---------------------------------------------------------------------------
 http_request:
-  timeout: 5s     # 5 s — sufficient for LAN probes + HTTPS (verify_ssl:false = lightweight TLS)
-                  # MUST be < CONFIG_ESP_TASK_WDT_TIMEOUT_S (10 s) to avoid watchdog resets
-                  # when a probe target silently drops packets (no RST, no ICMP reject)
+  # 8 s — accommodates cold Cloudflare TLS handshake to https://cloudless.gr
+  # which can take 1–2 s on the ESP32's 240 MHz CPU. Previous 5 s was producing
+  # false-positive "AWS UNREACHABLE" alerts (probe times out → on_error fires
+  # even though the endpoint actually returns HTTP 200 in ~1.2 s when warm).
+  # MUST stay < CONFIG_ESP_TASK_WDT_TIMEOUT_S (10 s) to avoid watchdog resets
+  # when a probe target silently drops packets (no RST, no ICMP reject).
+  timeout: 8s
   verify_ssl: false
 
 # ---------------------------------------------------------------------------

@@ -1,8 +1,12 @@
 # ESP32 Cluster Watchdog
 
-**Board:** ESP32-S3-DevKitC-1 **v1.1** (RGB LED → GPIO38)  
-**Port:** COM3  
+**Board:** ESP32-S3-DevKitC-1 **v1.0** (RGB LED → GPIO48)  
+**Port:** COM3 (VID_303A / PID_4001)
 **Static IP after flash:** `192.168.1.201`
+
+> Pin reference: v1.0 boards have the onboard RGB LED on **GPIO48**. v1.1 boards
+> moved it to GPIO38. Do **not** swap the YAML pin without confirming the
+> physical board revision (silkscreen).
 
 ## What it does
 
