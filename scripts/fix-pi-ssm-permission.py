@@ -1,4 +1,3 @@
-import os
 #!/usr/bin/env python3
 """
 Grant ssm:GetParametersByPath to the cloudless-pi-standby IAM user.
@@ -147,9 +146,9 @@ def main() -> int:
     if all_ok:
         print("\nAll SSM permissions granted and verified.")
         print(
-            f"\nNext step: restart the cloudless deployment in k3s so the Pi app\n"
-            f"picks up fresh SSM credentials on the next cold start.\n"
-            f"  kubectl rollout restart deployment/cloudless -n cloudless"
+            "\nNext step: restart the cloudless deployment in k3s so the Pi app\n"
+            "picks up fresh SSM credentials on the next cold start.\n"
+            "  kubectl rollout restart deployment/cloudless -n cloudless"
         )
         return 0
 

@@ -53,11 +53,18 @@ CRIT_DAYS = 3
 def _get_cert_expiry(hostname: str, port: int = 443, timeout: float = 10.0) -> datetime | None:
     """Return the TLS certificate expiry datetime for hostname, or None on error."""
     ctx = ssl.create_default_context()
+    # Explicit floor satisfies SonarLint S4423 (which doesn't trust the
+    # secure-by-default behavior of Python 3.10+) and documents the policy.
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     try:
         with socket.create_connection((hostname, port), timeout=timeout) as sock:
             with ctx.wrap_socket(sock, server_hostname=hostname) as ssock:
                 cert = ssock.getpeercert()
-                not_after = cert.get("notAfter", "")
+                if not cert:
+                    return None
+                not_after = cert.get("notAfter")
+                if not isinstance(not_after, str):
+                    return None
                 return datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(
                     tzinfo=timezone.utc
                 )

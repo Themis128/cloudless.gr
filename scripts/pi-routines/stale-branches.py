@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Bi-weekly stale branch audit for cloudless.gr — opens GitHub issue + posts to Slack."""
-import subprocess, json, datetime, urllib.request
+import subprocess
+import json
+import datetime
+import urllib.request
 
 def ssm(key):
     r = subprocess.run(

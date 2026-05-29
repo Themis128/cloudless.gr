@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Monthly SSL cert + site reachability check for cloudless.gr — posts to Slack."""
-import subprocess, json, datetime, urllib.request, ssl, socket
+import subprocess
+import json
+import datetime
+import urllib.request
+import ssl
+import socket
 
 def ssm(key):
     r = subprocess.run(
@@ -27,6 +32,7 @@ def slack_post(token, channel, text):
 
 def ssl_expiry(host):
     ctx = ssl.create_default_context()
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2  # explicit floor, satisfies S4423
     with ctx.wrap_socket(socket.create_connection((host, 443), timeout=10),
                          server_hostname=host) as s:
         cert = s.getpeercert()
@@ -44,21 +50,25 @@ for host in ['cloudless.gr', 'www.cloudless.gr']:
     try:
         exp, days = ssl_expiry(host)
         if days < 14:
-            em = ':red_circle:'; ok = False
+            em = ':red_circle:'
+            ok = False
         elif days < 30:
-            em = ':yellow_circle:'; ok = False
+            em = ':yellow_circle:'
+            ok = False
         else:
             em = ':green_circle:'
         lines.append(f'{em} `{host}` — expires {exp.date()} ({days}d remaining)')
     except Exception as e:
-        lines.append(f':red_circle: `{host}` — FAIL: {e}'); ok = False
+        lines.append(f':red_circle: `{host}` — FAIL: {e}')
+        ok = False
 
 # Site reachability
 try:
     with urllib.request.urlopen('https://cloudless.gr/api/health', timeout=8) as r:
         lines.append(f':green_circle: `cloudless.gr/api/health` — HTTP {r.status}')
 except Exception as e:
-    lines.append(f':red_circle: `cloudless.gr/api/health` — {e}'); ok = False
+    lines.append(f':red_circle: `cloudless.gr/api/health` — {e}')
+    ok = False
 
 lines.append('\n:white_check_mark: All checks passed' if ok
              else '\n:warning: *Action required* — check SSL/DNS')
