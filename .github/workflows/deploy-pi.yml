@@ -80,18 +80,18 @@ jobs:
         with:
           platforms: arm64
 
+      # PR #308 put the login AFTER setup-buildx, which doesn't work:
+      # docker/setup-buildx-action launches a buildkit CONTAINER, and
+      # buildkit snapshots ~/.docker/config.json at container-create time.
+      # A login after that is invisible to buildkit. Put the refresh
+      # BEFORE setup-buildx so the new container starts with fresh creds.
+      - name: refresh ECR login (before buildx boots)
+        if: steps.check_ecr.outputs.exists != 'true'
+        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
+
       - name: Set up Docker Buildx
         if: steps.check_ecr.outputs.exists != 'true'
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
-
-      # Re-login to ECR immediately before the build step so buildkit picks
-      # up a fresh token. Mirrors the same fix in build-pi-image.yml —
-      # without this, a stale buildkit credential helper state on the
-      # self-hosted Pi runner can hand the build a 401 Unauthorized 15s
-      # into the layer push.
-      - name: refresh ECR login (for buildx)
-        if: steps.check_ecr.outputs.exists != 'true'
-        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
 
       - name: ensure local cache dirs exist
         if: steps.check_ecr.outputs.exists != 'true'
