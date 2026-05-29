@@ -1,0 +1,19 @@
+# Bandit security-scan config for repo Python files (YAML format).
+#
+# Skipped test IDs are reviewed-and-accepted patterns in these scripts:
+#   B310  urllib.request.urlopen — every URL is a hardcoded https:// constant
+#         or a value fetched from AWS SSM (trusted).
+#   B404  importing `subprocess` — required to call `aws`, `git`, `kubectl`.
+#   B603  subprocess without shell=True — argv is static, no injection risk.
+#   B607  partial executable path — `aws` / `git` resolved via PATH on purpose.
+#   B110  try/except/pass — best-effort cleanup; real failures handled elsewhere.
+skips:
+  - B310
+  - B404
+  - B603
+  - B607
+  - B110
+exclude_dirs:
+  - ./.venv
+  - ./node_modules
+  - ./.next

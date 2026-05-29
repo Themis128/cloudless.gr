@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Monthly major dependency version audit for cloudless.gr — posts to Slack."""
-import subprocess, json, datetime, urllib.request, urllib.parse, re
+import subprocess
+import json
+import datetime
+import urllib.request
+import urllib.parse
+import re
 
 def ssm(key):
     r = subprocess.run(

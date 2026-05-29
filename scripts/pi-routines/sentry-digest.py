@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Weekly Sentry error digest for cloudless.gr — posts to Slack."""
-import subprocess, json, datetime, urllib.request
+import subprocess
+import json
+import datetime
+import urllib.request
 
 def ssm(key):
     r = subprocess.run(
