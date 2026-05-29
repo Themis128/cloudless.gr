@@ -50,10 +50,17 @@ concurrency:
 jobs:
   build-and-push:
     name: build arm64 + push to ECR
-    # Self-hosted Pi runner (arm64 native) — no QEMU, no paid GH runner minutes.
-    # Cross-compile via QEMU on x86 runners was unviable (pnpm install alone
-    # exceeded 60min); GH-hosted ARM runner costs money and hit billing limits.
-    runs-on: [self-hosted, omv, pi]
+    # Self-hosted arm64 runner. The label set `[omv, pi, build]` is unique
+    # to the `omv-build` runner on omv-main — `omv-2-build` advertises
+    # `[omv, build]` but lacks `pi`, and `omv` is disabled. This pins Pi
+    # image builds to the runner that has docker installed and now uses
+    # the USB SSD for its `_work` dir (no SD-card thrash). The original
+    # `omv` runner (also on omv-main) stays disabled.
+    #
+    # Why not ubuntu-latest + QEMU: pnpm install alone exceeds 60min under
+    # QEMU emulation. GH-hosted native arm64 runners require the paid
+    # larger-runners plan.
+    runs-on: [self-hosted, omv, pi, build]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
