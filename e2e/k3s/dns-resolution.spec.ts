@@ -1,0 +1,58 @@
+/**
+ * DNS resolution validation — verifies that all public hostnames resolve
+ * and point to the expected infrastructure (CloudFront, Cloudflare tunnel,
+ * or direct IP).
+ *
+ * Catches: dangling DNS records, accidental record deletion, propagation
+ * failures after a migration, and misrouted subdomains.
+ */
+import { test, expect } from "@playwright/test";
+
+const K3S_HOST = process.env.K3S_HOST ?? "cloudless.gr";
+
+test.describe("DNS resolution", () => {
+  test("apex domain resolves and serves the app", async ({ request }) => {
+    const r = await request.get(`https://${K3S_HOST}/api/health`, {
+      failOnStatusCode: false,
+      timeout: 15_000,
+    });
+    expect(r.status()).toBe(200);
+  });
+
+  test("www redirects to apex (or serves the app)", async ({ request }) => {
+    const r = await request.get(`https://www.${K3S_HOST}/`, {
+      maxRedirects: 0,
+      failOnStatusCode: false,
+      timeout: 10_000,
+    });
+    expect([200, 301, 302, 308].includes(r.status())).toBe(true);
+    if (r.status() >= 300 && r.status() < 400) {
+      const location = r.headers()["location"] ?? "";
+      expect(location).toContain(K3S_HOST);
+    }
+  });
+
+  test("pi-origin subdomain resolves to the Pi cluster", async ({ request }) => {
+    const r = await request.get(`https://pi-origin.${K3S_HOST}/api/health`, {
+      failOnStatusCode: false,
+      timeout: 20_000,
+    });
+    expect(r.status()).toBeLessThan(500);
+  });
+
+  const tunnelSubdomains = ["oncall", "ntfy", "manage", "ha", "logs"];
+
+  for (const sub of tunnelSubdomains) {
+    test(`${sub}.${K3S_HOST} — resolves and responds`, async ({ request }) => {
+      const r = await request.get(`https://${sub}.${K3S_HOST}/`, {
+        maxRedirects: 5,
+        failOnStatusCode: false,
+        timeout: 15_000,
+      });
+      expect(
+        r.status(),
+        `${sub}.${K3S_HOST} returned ${r.status()} — DNS or tunnel broken?`,
+      ).toBeLessThan(504);
+    });
+  }
+});

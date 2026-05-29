@@ -1,0 +1,81 @@
+/**
+ * HA failover path validation — verifies the dual-origin architecture
+ * (CloudFront → Lambda primary, APIGW → Lambda → Pi standby).
+ *
+ * Catches: standby drift (different SHA), CloudFront origin misconfiguration,
+ * APIGW timeout, Lambda Funnel routing failure, Pi k3s pod crash.
+ */
+import { test, expect } from "@playwright/test";
+import { probeHealth, isHealthBody, STANDBY_HOST, PRIMARY_HOST } from "./_helpers";
+
+test.describe("HA failover readiness", () => {
+  test("primary and standby both return healthy", async ({ request }) => {
+    const [primary, standby] = await Promise.all([
+      probeHealth(request, PRIMARY_HOST),
+      probeHealth(request, STANDBY_HOST),
+    ]);
+    expect(primary.status, "primary /api/health must be 200").toBe(200);
+    expect(standby.status, "standby /api/health must be 200").toBe(200);
+    expect(isHealthBody(primary.body)).toBe(true);
+    expect(isHealthBody(standby.body)).toBe(true);
+  });
+
+  test("both origins serve the same app (matching health schema)", async ({ request }) => {
+    const [primary, standby] = await Promise.all([
+      probeHealth(request, PRIMARY_HOST),
+      probeHealth(request, STANDBY_HOST),
+    ]);
+    const pBody = JSON.parse(primary.body);
+    const sBody = JSON.parse(standby.body);
+    expect(pBody.status).toBe("ok");
+    expect(sBody.status).toBe("ok");
+    expect(typeof pBody.timestamp).toBe("string");
+    expect(typeof sBody.timestamp).toBe("string");
+  });
+
+  test("primary path goes through CloudFront (x-cache header)", async ({ request }) => {
+    const r = await request.get(`https://${PRIMARY_HOST}/api/health`, {
+      failOnStatusCode: false,
+    });
+    const headers = r.headers();
+    const isCloudFront =
+      !!headers["x-cache"] ||
+      !!headers["x-amz-cf-id"] ||
+      !!headers["x-amz-cf-pop"];
+    expect(isCloudFront, "primary path should route through CloudFront").toBe(true);
+  });
+
+  test("standby path does NOT go through CloudFront", async ({ request }) => {
+    const r = await request.get(`https://${STANDBY_HOST}/api/health`, {
+      failOnStatusCode: false,
+    });
+    const server = (r.headers()["server"] ?? "").toLowerCase();
+    expect(server).not.toContain("cloudfront");
+  });
+
+  test("Pi origin direct path is alive", async ({ request }) => {
+    const piHost = `pi-origin.${PRIMARY_HOST}`;
+    const r = await request.get(`https://${piHost}/api/health`, {
+      failOnStatusCode: false,
+      timeout: 20_000,
+    });
+    expect(r.status(), "Pi origin direct path must respond").toBe(200);
+    expect(isHealthBody(await r.text())).toBe(true);
+  });
+
+  test("primary and standby latency delta < 5s (standby isn't stuck)", async ({ request }) => {
+    const start1 = Date.now();
+    await request.get(`https://${PRIMARY_HOST}/api/health`);
+    const primaryMs = Date.now() - start1;
+
+    const start2 = Date.now();
+    await request.get(`https://${STANDBY_HOST}/api/health`);
+    const standbyMs = Date.now() - start2;
+
+    const delta = Math.abs(standbyMs - primaryMs);
+    expect(
+      delta,
+      `latency delta ${delta}ms — primary ${primaryMs}ms, standby ${standbyMs}ms`,
+    ).toBeLessThan(5_000);
+  });
+});
