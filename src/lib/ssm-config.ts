@@ -23,6 +23,10 @@ interface AppConfig {
   STRIPE_WEBHOOK_SECRET: string;
   COGNITO_USER_POOL_ID: string;
   COGNITO_CLIENT_ID: string;
+  // Keycloak / next-auth
+  AUTH_SECRET: string;
+  KEYCLOAK_ADMIN_USER: string;
+  KEYCLOAK_ADMIN_PASSWORD: string;
   // Optional integrations
   SLACK_WEBHOOK_URL: string;
   SLACK_BOT_TOKEN: string;
@@ -157,6 +161,9 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     STRIPE_WEBHOOK_SECRET: params.get("STRIPE_WEBHOOK_SECRET") ?? "",
     COGNITO_USER_POOL_ID: params.get("COGNITO_USER_POOL_ID") ?? "",
     COGNITO_CLIENT_ID: params.get("COGNITO_CLIENT_ID") ?? "",
+    AUTH_SECRET: params.get("AUTH_SECRET") ?? "",
+    KEYCLOAK_ADMIN_USER: params.get("KEYCLOAK_ADMIN_USER") ?? "",
+    KEYCLOAK_ADMIN_PASSWORD: params.get("KEYCLOAK_ADMIN_PASSWORD") ?? "",
     SLACK_WEBHOOK_URL: params.get("SLACK_WEBHOOK_URL") ?? "",
     SLACK_BOT_TOKEN: params.get("SLACK_BOT_TOKEN") ?? "",
     SLACK_SIGNING_SECRET: params.get("SLACK_SIGNING_SECRET") ?? "",
@@ -229,6 +236,9 @@ function buildConfigFromEnv(): AppConfig {
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
     COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID || "",
     COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID || "",
+    AUTH_SECRET: process.env.AUTH_SECRET || "",
+    KEYCLOAK_ADMIN_USER: process.env.KEYCLOAK_ADMIN_USER || "",
+    KEYCLOAK_ADMIN_PASSWORD: process.env.KEYCLOAK_ADMIN_PASSWORD || "",
     SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL || "",
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || "",
