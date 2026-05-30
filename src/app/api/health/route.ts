@@ -6,6 +6,6 @@ const APP_VERSION = globalThis.process?.env.APP_VERSION ?? "0.1.0";
 export async function GET() {
   return globalThis.Response.json(
     { status: "ok", timestamp: new Date().toISOString(), version: APP_VERSION },
-    { headers: { "cache-control": "no-store, no-cache, must-revalidate" } },
+    { headers: { "cache-control": "no-store, no-cache, must-revalidate" } }
   );
 }
