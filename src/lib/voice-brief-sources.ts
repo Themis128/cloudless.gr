@@ -1,13 +1,10 @@
 /**
  * Shared data-source primitives for the voice-brief cron route.
  *
- * Both the new Bedrock agent (`src/lib/agent-voice-brief.ts`) and the legacy
- * linear pipeline (kept in the route under `?legacy=true`) call these
- * functions so the actual data-shaping logic lives in exactly one place.
- *
- * Each function returns a small typed object or null. The agent wraps each
- * call with `withRetry` and formats the result into a tool-response string;
- * the legacy path Promise.all's them and formats inline.
+ * Called by the Bedrock agent (`src/lib/agent-voice-brief.ts`) which wraps
+ * each one with `withRetry` and formats the result into a tool-response
+ * string. Kept as a separate module so the data-shaping logic stays out of
+ * the agent loop and can be unit-tested independently.
  */
 import { getSeoSnapshot } from "@/lib/gsc";
 import { isHubSpotConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/hubspot";

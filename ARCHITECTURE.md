@@ -590,7 +590,7 @@ All modules live in `src/lib/`. They are **server-side only** unless noted.
 
 | File | Purpose |
 |---|---|
-| `slack-notify.ts` | `SlackClient` with retry/backoff. `slackContactNotify()` · `slackSubscriberNotify()` · `slackOrderNotify()` · `slackErrorNotify()` · `slackDeployNotify()` · `slackNotify()`. |
+| `slack-notify.ts` | `SlackClient` with retry/backoff. `slackContactNotify()` · `slackSubscriberNotify()` · `slackOrderNotify()` · `slackErrorNotify()` · `slackDeployNotify()`. |
 | `slack-verify.ts` | HMAC-SHA256 request verification for inbound Slack. |
 | `slack-rate-limit.ts` | Per-IP rate limiting for Slack inbound endpoints. |
 
