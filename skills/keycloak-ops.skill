@@ -1,0 +1,235 @@
+---
+name: keycloak-ops
+description: Manage Keycloak operations for cloudless.gr — list/create/disable users, manage groups, update client redirect URIs, check SMTP, get/rotate admin tokens.
+triggers:
+  - keycloak
+  - OIDC
+  - auth.cloudless.gr
+  - admin user management
+  - redirect_uri errors
+  - client configuration
+  - keycloak-ops
+  - "Invalid parameter: redirect_uri"
+  - JWKS
+  - master realm
+---
+
+# Keycloak Ops — cloudless.gr
+
+Operational playbook for the Keycloak instance at **https://auth.cloudless.gr**. Use the
+companion script at `tools/keycloak-cli/keycloak.sh` for everyday commands; use the curl
+snippets below when you need raw API access or are debugging the script itself.
+
+## Connection info
+
+| Field             | Value                                                                   |
+| ----------------- | ----------------------------------------------------------------------- |
+| Base URL          | `https://auth.cloudless.gr`                                             |
+| Realm             | `master`                                                                |
+| Admin user (SSM)  | `/cloudless/production/KEYCLOAK_ADMIN_USER`                             |
+| Admin pass (SSM)  | `/cloudless/production/KEYCLOAK_ADMIN_PASSWORD` (SecureString)          |
+| App client        | `cloudless-app` (public, PKCE)                                          |
+| Manager client    | `cloudless-manager` (confidential, service account)                     |
+| Token endpoint    | `/realms/master/protocol/openid-connect/token`                          |
+| JWKS endpoint     | `/realms/master/protocol/openid-connect/certs`                          |
+| OIDC discovery    | `/realms/master/.well-known/openid-configuration`                       |
+| Admin API base    | `/admin/realms/master`                                                  |
+
+> **Never** put admin credentials in the file system, env files, or commit history.
+> Always fetch them at call time from SSM:
+>
+> ```bash
+> KC_USER=$(aws ssm get-parameter --name /cloudless/production/KEYCLOAK_ADMIN_USER \
+>   --query 'Parameter.Value' --output text)
+> KC_PASS=$(aws ssm get-parameter --name /cloudless/production/KEYCLOAK_ADMIN_PASSWORD \
+>   --with-decryption --query 'Parameter.Value' --output text)
+> ```
+
+## Common operations
+
+### Get an admin access token
+
+```bash
+TOKEN=$(curl -s -X POST \
+  "https://auth.cloudless.gr/realms/master/protocol/openid-connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=password" \
+  -d "client_id=admin-cli" \
+  -d "username=$KC_USER" \
+  -d "password=$KC_PASS" \
+  | jq -r .access_token)
+```
+
+Tokens last 60 seconds for `admin-cli` by default. The helper script caches one in
+`/tmp/.kc-token`.
+
+### List clients
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://auth.cloudless.gr/admin/realms/master/clients" \
+  | jq '.[] | {clientId, id, enabled, redirectUris}'
+```
+
+### List users (first 100)
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://auth.cloudless.gr/admin/realms/master/users?max=100" \
+  | jq '.[] | {id, username, email, enabled, emailVerified}'
+```
+
+### List groups
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://auth.cloudless.gr/admin/realms/master/groups" \
+  | jq '.[] | {id, name, path}'
+```
+
+### Add a user to a group
+
+You need the user UUID and the group UUID — names are not accepted.
+
+```bash
+curl -s -X PUT -H "Authorization: Bearer $TOKEN" \
+  "https://auth.cloudless.gr/admin/realms/master/users/$USER_ID/groups/$GROUP_ID"
+```
+
+A `204 No Content` response means success.
+
+### Disable a user
+
+```bash
+curl -s -X PUT -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  "https://auth.cloudless.gr/admin/realms/master/users/$USER_ID" \
+  -d '{"enabled": false}'
+```
+
+### Update a client's redirect URIs
+
+Fetch first, mutate the `redirectUris` array, then PUT the full representation back.
+
+```bash
+CLIENT_UUID=$(curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://auth.cloudless.gr/admin/realms/master/clients?clientId=cloudless-app" \
+  | jq -r '.[0].id')
+
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://auth.cloudless.gr/admin/realms/master/clients/$CLIENT_UUID" \
+  | jq '.redirectUris = ["https://cloudless.gr/api/auth/callback", "http://localhost:3000/api/auth/callback"]' \
+  > /tmp/client.json
+
+curl -s -X PUT -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  "https://auth.cloudless.gr/admin/realms/master/clients/$CLIENT_UUID" \
+  --data-binary @/tmp/client.json
+```
+
+### Test JWKS endpoint
+
+```bash
+curl -s "https://auth.cloudless.gr/realms/master/protocol/openid-connect/certs" \
+  | jq '.keys | length'
+```
+
+Expect `>= 1`. Two keys is normal during a signing-key rotation window.
+
+### Check OIDC discovery
+
+```bash
+curl -s "https://auth.cloudless.gr/realms/master/.well-known/openid-configuration" \
+  | jq '{issuer, authorization_endpoint, token_endpoint, jwks_uri}'
+```
+
+The `issuer` value must match what every relying party has hard-coded — drift here causes
+silent JWT verification failures.
+
+### Trigger an SMTP test email
+
+```bash
+curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+  "https://auth.cloudless.gr/admin/realms/master/testSMTPConnection" \
+  -H "Content-Type: application/json" \
+  -d "$(curl -s -H "Authorization: Bearer $TOKEN" \
+        "https://auth.cloudless.gr/admin/realms/master" \
+        | jq '.smtpServer')"
+```
+
+A `204` is success. Anything else: re-check the SES SMTP creds in SSM
+(`/cloudless/production/SES_SMTP_USER`, `/cloudless/production/SES_SMTP_PASSWORD`).
+
+## Troubleshooting playbook
+
+### `Invalid parameter: redirect_uri`
+
+1. Look at the actual `redirect_uri` in the failing browser request (DevTools → Network).
+2. Compare it byte-for-byte against the client's `redirectUris`:
+   ```bash
+   ./tools/keycloak-cli/keycloak.sh clients | jq '.[] | select(.clientId=="cloudless-app")'
+   ```
+3. Watch for trailing slashes, scheme mismatches (`http` vs `https`), and locale prefixes
+   (`/en/api/auth/callback`).
+4. If the deployed app uses dynamic locales, add a single wildcard entry **at the path
+   level only** (`https://cloudless.gr/*`), never as a bare `*` host.
+5. Update with `keycloak.sh client-update-redirect cloudless-app <new-uri>`.
+
+### `User not found`
+
+- Confirm you're hitting the right realm (`master`, not a forgotten dev realm).
+- Username lookups are case-sensitive in some setups; try `?email=...` if `?username=...`
+  returns `[]`.
+- If `users?username=foo` returns `[]` but the user logs in fine, the user is in a
+  federated source (e.g. LDAP) and has never been "imported" — call
+  `GET /admin/realms/master/users?username=foo&exact=true` to force a sync.
+
+### JWT verification fails in the Next.js app
+
+1. Hit `/realms/master/protocol/openid-connect/certs` — confirm `keys[].length >= 1`.
+2. Decode the failing JWT (jwt.io) and compare `iss` against the discovery doc's
+   `issuer`. Must match exactly, scheme included.
+3. Confirm `kid` in the JWT header matches a key in JWKS. If not, the key rotated and the
+   client cached the old set — restart the Next.js pod or wait for the JWKS cache TTL.
+4. Check that the pod's outbound DNS resolves `auth.cloudless.gr` to the public LB, not to
+   a stale internal ClusterIP.
+
+### Admin password rotation
+
+```bash
+NEW_PASS=$(openssl rand -base64 32)
+aws ssm put-parameter --name /cloudless/production/KEYCLOAK_ADMIN_PASSWORD \
+  --value "$NEW_PASS" --type SecureString --overwrite
+
+curl -s -X PUT -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  "https://auth.cloudless.gr/admin/realms/master/users/$ADMIN_USER_ID/reset-password" \
+  -d "{\"type\":\"password\",\"value\":\"$NEW_PASS\",\"temporary\":false}"
+```
+
+Rotate the SSM value **before** the API call so a failed API call leaves the system in a
+known-bad-credential state instead of a known-good-credential one (easier to diagnose).
+
+## Architecture reference
+
+- **Runtime:** Keycloak runs as a k3s Deployment in the `keycloak` namespace on the omv
+  cluster (`192.168.1.128`). 1 replica + readiness/liveness probes.
+- **Storage:** PostgreSQL StatefulSet in the same namespace, persistent volume on the omv
+  ZFS pool.
+- **TLS:** Traefik IngressRoute terminates at the edge; auth.cloudless.gr → service
+  `keycloak.keycloak.svc:8080`.
+- **SMTP:** Outbound through AWS SES (`email-smtp.us-east-1.amazonaws.com:587`,
+  STARTTLS). Credentials in `/cloudless/production/SES_SMTP_*`.
+- **JWKS endpoint:** `/realms/master/protocol/openid-connect/certs` — public, cached
+  by clients for 10 minutes by default.
+- **Token endpoint:** `/realms/master/protocol/openid-connect/token` — used by all OIDC
+  flows (auth code + PKCE for `cloudless-app`, client credentials for
+  `cloudless-manager`).
+- **OIDC discovery:** `/realms/master/.well-known/openid-configuration` — single source
+  of truth; never hard-code endpoint URLs in client code, derive them from discovery.
+
+## See also
+
+- Companion CLI: `tools/keycloak-cli/keycloak.sh`
+- Upstream API reference: <https://www.keycloak.org/docs-api/latest/rest-api/index.html>
+- Server admin guide: <https://www.keycloak.org/docs/latest/server_admin/index.html>

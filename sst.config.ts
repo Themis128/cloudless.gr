@@ -22,6 +22,10 @@ function buildSiteEnvironment(
     // next-auth requires AUTH_SECRET as an env var (reads synchronously at
     // module load, before SSM can be async-fetched).
     ...(authSecret ? { AUTH_SECRET: authSecret } : {}),
+    // Lambda runs behind CloudFront — next-auth needs to trust the
+    // X-Forwarded-Host header to construct correct callback URLs.
+    AUTH_TRUST_HOST: "true",
+    AUTH_URL: isProd ? "https://cloudless.gr" : `https://${stage}.cloudless.gr`,
     NODE_ENV: "production",
     SSM_PREFIX: isProd ? "/cloudless/production" : `/cloudless/${stage}`,
     // AWS_REGION is set automatically by Lambda — do not override it
@@ -42,11 +46,9 @@ function buildSiteEnvironment(
     KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
     KEYCLOAK_ADMIN_CLIENT_ID: "admin-cli",
     // KEYCLOAK_ADMIN_USER and KEYCLOAK_ADMIN_PASSWORD loaded from SSM at runtime
-    // AUTH_SECRET and KEYCLOAK_ADMIN_* are loaded from SSM at runtime by
-    // ssm-config.ts and exposed to process.env via the startup block below.
-    // Cognito vars kept during transition period — remove after pool deletion.
-    NEXT_PUBLIC_COGNITO_USER_POOL_ID: "us-east-1_JQWwFbO9a",
-    NEXT_PUBLIC_COGNITO_CLIENT_ID: "2qq6i24oc48391cmuv4kfl1rm2",
+    // AUTH_SECRET injected from SSM at deploy time (above).
+    // KEYCLOAK_ADMIN_* loaded from SSM at runtime by ssm-config.ts.
+    // Cognito user pools deleted 2026-05-30 — no fallback env vars needed.
     // Notion database IDs (non-secret, safe to inline)
     NOTION_BLOG_DB_ID: "0ac591657ee44063bbbc8004ea7ccd6c",
     NOTION_SUBMISSIONS_DB_ID: "9abe0a5614d64b759d44a45cee2d0bbc",
