@@ -126,18 +126,47 @@ and the agent loop never advances past turn 1.
 pwsh scripts/tabby/test-tabby.ps1
 ```
 
-Validates `/v1/health`, a Python FIM completion, and a one-token streaming
-chat reply. Exits non-zero if any check fails. Useful right after
-`start-tabby.ps1` to confirm the models actually loaded onto CUDA before
-opening the editor.
+Validates `/v1/health`, a Python FIM completion, a streaming chat reply,
+and that the chat model emits a Pochi-style `<read_file>` tool tag when
+prompted as an agent. Exits non-zero if any check fails. Useful right
+after `start-tabby.ps1`.
 
 Expected on this hardware:
 
 | Check | Latency |
 |---|---|
-| `/v1/health` | <100 ms |
+| `/v1/health` | <200 ms |
 | FIM completion (30-line prefix) | 3-5 s cold, <1 s warm |
 | Chat reply (single token) | 1-2 s warm |
+| Agentic tool-tag emission | 3-5 s warm |
+
+## Extensive test suite
+
+```powershell
+pwsh scripts/tabby/extensive-tests.ps1
+```
+
+30 checks across 10 groups (health, auth, FIM in 6 languages, FIM edge
+cases, chat correctness, throughput, agentic patterns, concurrency,
+sustained load, VRAM). Latest verified run on this hardware:
+
+| Group | Result | Latency (avg) |
+|---|---|---|
+| 1. Health + metadata | 5/5 PASS | 144 ms |
+| 2. Auth (good / bad / missing token) | 3/3 PASS | 22 ms |
+| 3. FIM across 6 languages | 6/6 PASS | 2.7 s |
+| 4. FIM edge cases (empty/long/unicode/with suffix) | 4/4 PASS | 3.4 s |
+| 5. Chat correctness (math, code, factual, JSON-only) | 4/4 PASS | 4.0 s |
+| 6. Chat throughput | 2/2 PASS | TTFT 1.2 s, 6.2 tok/s steady-state on 300 tokens |
+| 7. Agentic tool-call (`<read_file>`, `<list_files>`, multi-turn) | 3/3 PASS | 3.3 s |
+| 8. Concurrency (4 parallel chats) | 1/1 PASS | 3.2 s wallclock |
+| 9. Sustained FIM x10 | 1/1 PASS | avg 526 ms, p95 538 ms, max 611 ms |
+| 10. VRAM under load | 1/1 PASS | 664 MiB used / 7355 MiB free |
+| **Total** | **30/30 PASS** | |
+
+Throughput is the canary metric: anything below 5 tok/s on this stack
+signals CPU fallback, GPU contention from another consumer, or thermal
+throttling.
 
 ## Endpoints reference
 
