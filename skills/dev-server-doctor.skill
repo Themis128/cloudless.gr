@@ -1,0 +1,97 @@
+---
+name: dev-server-doctor
+description: Diagnose and recover the local Next.js dev server (pnpm dev / port 4000). Detects port conflicts, hung processes, 500s on /api/health, compilation errors, and Turbopack cache corruption. Restarts cleanly with the right env loaded.
+triggers: when the user mentions "dev server", "localhost:4000 not working", "ERR_CONNECTION_REFUSED", "500 on /api/health", "dev server slow", "pnpm dev hangs", "kill port 4000", "next dev broken"
+---
+
+# Dev Server Doctor
+
+## Quick diagnosis (in order)
+
+```bash
+# 1. Is something listening on 4000?
+ss -tlnp 2>/dev/null | grep ":4000" || echo "NOTHING ON 4000"
+
+# 2. Is it healthy?
+curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 5 http://localhost:4000/api/health
+
+# 3. Find the process
+ps aux | grep -E "next dev|node.*next" | grep -v grep | head -3
+```
+
+## Decision tree
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| HTTP 200 on /api/health | Server healthy | Nothing to do |
+| HTTP 500 on /api/health | Compilation error or env missing | Check terminal for stack trace, verify `.env.local` exists |
+| ERR_CONNECTION_REFUSED from Windows | WSL2 port forwarding broken | See `wsl-net-fix` skill |
+| ERR_CONNECTION_REFUSED from WSL too | No process on 4000 | `pnpm dev` |
+| EADDRINUSE on `pnpm dev` | Stale process holds port | Kill it (commands below) |
+| Server returns 500 on /en after working fine | Turbopack cache corrupted | Clear `.next/` and restart |
+| First request always 500, then works | Cold compile (Turbopack) | Normal — warm it with `curl http://localhost:4000/en` once |
+
+## Common recovery commands
+
+```bash
+# Kill anything on port 4000
+fuser -k 4000/tcp 2>/dev/null || true
+pkill -f "next dev" 2>/dev/null
+sleep 2
+
+# Clear Turbopack cache (only if 500s persist)
+rm -rf /home/tbaltzakis/code/cloudless.gr/.next /home/tbaltzakis/code/cloudless.gr/tmp
+
+# Verify .env.local exists with the auth vars
+test -f /home/tbaltzakis/code/cloudless.gr/.env.local && \
+  grep -E "^AUTH_SECRET|^AUTH_TRUST_HOST|^KEYCLOAK_ISSUER" /home/tbaltzakis/code/cloudless.gr/.env.local || \
+  echo "WARNING: .env.local missing or incomplete"
+
+# Restart in background (user can attach via the terminal)
+cd /home/tbaltzakis/code/cloudless.gr
+nohup pnpm dev > /tmp/dev-server.log 2>&1 &
+echo "Dev server started — logs at /tmp/dev-server.log"
+
+# Wait for ready
+for i in {1..15}; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 2 http://localhost:4000/api/health 2>/dev/null)
+  [ "$code" = "200" ] && echo "Ready after ${i}s" && break
+  sleep 1
+done
+```
+
+## Recovering `.env.local` from SSM
+
+If `.env.local` is missing, recreate it:
+
+```bash
+AUTH_SECRET=$(aws ssm get-parameter --name "/cloudless/production/AUTH_SECRET" \
+  --with-decryption --output text --query Parameter.Value --region us-east-1)
+
+cat > /home/tbaltzakis/code/cloudless.gr/.env.local <<EOF
+NEXT_PUBLIC_KEYCLOAK_ISSUER=https://auth.cloudless.gr/realms/master
+NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=cloudless-app
+KEYCLOAK_ISSUER=https://auth.cloudless.gr/realms/master
+KEYCLOAK_ADMIN_CLIENT_ID=admin-cli
+AUTH_SECRET=${AUTH_SECRET}
+AUTH_TRUST_HOST=true
+AUTH_URL=http://localhost:4000
+EOF
+```
+
+## Memory pressure
+
+Turbopack can use 1–2 GB during compilation. On a 10 GB WSL2 box, running tests + dev server + Tabby + other tools at once will OOM. Check:
+
+```bash
+free -h
+# If "available" < 1 GB, kill optional services:
+pkill -f llama-server 2>/dev/null   # Tabby
+pkill -f tabby 2>/dev/null
+```
+
+## When NOT to restart
+
+- HMR error in browser only: just refresh the page
+- One route 500s but others work: check the route file for a syntax error
+- "Slow filesystem" warning: harmless, ignore

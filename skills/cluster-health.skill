@@ -1,0 +1,101 @@
+---
+name: cluster-health
+description: Quick health snapshot of the k3s Pi cluster + critical AWS resources. Covers SSH/runner status, k3s pods/deployments, Grafana/Keycloak/Lambda reachability, cert expiry. Identifies whether an issue is k3s-side or cloud-side without needing to drill in.
+triggers: when the user mentions "is the cluster ok", "k3s health", "Pi runner offline", "cluster status", "deploy stuck", "is grafana up", "is keycloak up", "everything green?", "what's broken"
+---
+
+# Cluster Health Snapshot
+
+## One-shot check (run all in parallel)
+
+```bash
+echo "=== AWS Lambda (cloud) ==="
+curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 5 https://cloudless.gr/api/health
+
+echo "=== k3s ingress (Pi) ==="
+curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 5 -k -H "Host: cloudless.gr" https://192.168.1.128/api/health
+
+echo "=== Keycloak ==="
+curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 5 https://auth.cloudless.gr/api/health || echo "Use OIDC discovery:"
+curl -s -o /dev/null -w "OIDC discovery: %{http_code}\n" --max-time 5 https://auth.cloudless.gr/realms/master/.well-known/openid-configuration
+
+echo "=== Grafana ==="
+curl -s --max-time 5 https://grafana.cloudless.gr/api/health | python3 -m json.tool
+
+echo "=== Pi node SSH ==="
+nc -z -w3 192.168.1.128 22 2>&1 && echo "omv-main: OK" || echo "omv-main: REFUSED"
+nc -z -w3 192.168.1.130 22 2>&1 && echo "omv-ha:   OK" || echo "omv-ha:   REFUSED"
+
+echo "=== GH self-hosted runners ==="
+gh api repos/Themis128/cloudless.gr/actions/runners --jq '.runners[] | "\(.name): \(.status) (busy=\(.busy))"'
+```
+
+## Component-specific deep dives
+
+### k3s pods (need SSH or Portainer)
+
+```bash
+# Via SSH (if working):
+ssh omv@192.168.1.128 'kubectl get pods -A --field-selector status.phase!=Running'
+
+# Via Portainer (if SSH dead) — see `keycloak-ops` skill for the pattern
+# Portainer URL: http://192.168.1.128:9000
+# Auth: admin / [Portainer password — same as Cognito]
+```
+
+### omv runner is offline
+
+The `omv` GH Actions runner is a systemd service `actions.runner.Themis128-cloudless.gr.omv.service` on the Pi. If it's offline:
+
+1. Check SSH first — `nc -z -w3 192.168.1.128 22`
+2. If SSH is up, restart via systemctl: `ssh omv@192.168.1.128 'sudo systemctl restart actions.runner.*'`
+3. If SSH is down, use Portainer to launch a privileged container that chroots to /host and starts the runsvc.sh manually:
+
+```bash
+# Pattern: launch alpine container with /host mount, run nsenter into host PID
+# Full recipe in tools/keycloak-cli/keycloak.sh (search for "runner-fix")
+```
+
+### Grafana password
+
+Stored in SSM:
+```bash
+aws ssm get-parameter --name /cloudless/production/GRAFANA_ADMIN_PASSWORD \
+  --with-decryption --output text --query Parameter.Value
+```
+
+Username: `admin`. Login URL: `https://grafana.cloudless.gr/login`
+
+### Pi TLS cert expiry
+
+```bash
+echo | openssl s_client -servername cloudless.gr -connect cloudless.gr:443 2>/dev/null \
+  | openssl x509 -noout -dates
+```
+
+## Common state combinations
+
+| Lambda | k3s | Keycloak | Diagnosis |
+|---|---|---|---|
+| 200 | 200 | 200 | All healthy |
+| 500 | 500 | 200 | Likely Keycloak token verification failing → check Lambda env (AUTH_SECRET, KEYCLOAK_ISSUER) |
+| 200 | TIMEOUT | 200 | Pi failover triggered or DNS routing odd |
+| 200 | 200 | DOWN | Keycloak pod or postgres down — affects /admin login but public site OK |
+| 502 | n/a | n/a | CloudFront couldn't reach origin — check Lambda logs |
+
+## Workflow status (CI/deploys)
+
+```bash
+gh run list --repo Themis128/cloudless.gr --limit 15 --json workflowName,conclusion,status \
+  | python3 -c "
+import sys,json
+runs = json.load(sys.stdin)
+seen = {}
+for r in runs:
+    wf = r['workflowName']
+    if wf not in seen: seen[wf] = r
+for wf,r in sorted(seen.items()):
+    icon = '✓' if r['conclusion']=='success' else ('…' if r['status'] in ('in_progress','queued') else '✗')
+    print(f'{icon}  {wf}')
+"
+```

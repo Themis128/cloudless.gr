@@ -1,0 +1,103 @@
+---
+name: wsl-net-fix
+description: Diagnose and fix WSL2 networking — localhost forwarding, mirrored mode, port access from Windows browser to WSL services. Specifically tuned for Ubuntu-24.04 + WSL 2.6+.
+triggers: when the user mentions "localhost not working", "ERR_CONNECTION_REFUSED", "WSL2 port", "Windows can't reach WSL", "mirrored mode", "172.x.x.x", "wsl --shutdown", "WSL networking", "wslconfig"
+---
+
+# WSL2 Network Diagnostics & Fix
+
+## The two networking modes
+
+- **NAT (default)**: WSL is `172.x.x.x`. Windows reaches it via auto-forwarded localhost — works for most cases but breaks for cross-origin HMR, mDNS, Docker bridges.
+- **Mirrored**: WSL shares Windows' network stack — `localhost:4000` is the same on both sides. Requires WSL 2.0.0+ and Windows 11 22H2+.
+
+## Quick diagnosis
+
+```bash
+# What mode are we in?
+WSL_IP=$(ip -4 addr show eth0 | awk '/inet / {print $2}' | cut -d/ -f1)
+if [[ "$WSL_IP" =~ ^172\. ]]; then echo "Mode: NAT (IP=$WSL_IP)"; else echo "Mode: mirrored or other (IP=$WSL_IP)"; fi
+
+# Is there a config?
+test -f /mnt/c/Users/baltz/.wslconfig && cat /mnt/c/Users/baltz/.wslconfig
+
+# WSL version
+/mnt/c/Windows/System32/wsl.exe --version 2>&1 | tr -d '\0' | head -3
+```
+
+## Enabling mirrored mode (recommended for dev)
+
+```bash
+# Backup existing config
+cp /mnt/c/Users/baltz/.wslconfig /mnt/c/Users/baltz/.wslconfig.bak.$(date +%s) 2>/dev/null
+
+# Write new config
+cat > /mnt/c/Users/baltz/.wslconfig <<'EOF'
+[wsl2]
+memory=10GB
+processors=4
+swap=4GB
+networkingMode=mirrored
+dnsTunneling=true
+autoProxy=true
+firewall=true
+
+[experimental]
+autoMemoryReclaim=gradual
+sparseVhd=true
+hostAddressLoopback=true
+EOF
+
+echo "Config written. Now run in Windows PowerShell:"
+echo "    wsl --shutdown"
+echo "Then reopen this terminal."
+```
+
+## When mirrored mode breaks Docker
+
+Mirrored mode can break Docker Desktop's WSL integration. If `docker ps` hangs after switching:
+
+```bash
+# Add Docker bridge exception in [wsl2] section
+echo "vmSwitch=" >> /mnt/c/Users/baltz/.wslconfig
+# Then wsl --shutdown again
+```
+
+## Fallback: NAT mode + explicit port forwarding
+
+If mirrored mode causes issues, stay on NAT and forward specific ports from Windows:
+
+```powershell
+# Run in Windows PowerShell as Administrator:
+$wslIp = (wsl hostname -I).Trim().Split()[0]
+netsh interface portproxy add v4tov4 listenport=4000 listenaddress=0.0.0.0 connectport=4000 connectaddress=$wslIp
+# To remove later:
+netsh interface portproxy delete v4tov4 listenport=4000 listenaddress=0.0.0.0
+```
+
+## The always-works fallback
+
+Whatever the mode, **`http://<WSL_IP>:4000`** always works from Windows. Get the IP:
+
+```bash
+hostname -I | awk '{print $1}'
+# Or:
+ip -4 addr show eth0 | awk '/inet / {print $2}' | cut -d/ -f1
+```
+
+## Troubleshooting checklist
+
+| Symptom | Diagnosis | Action |
+|---|---|---|
+| Windows browser: ERR_CONNECTION_REFUSED, WSL `curl localhost:4000` works | WSL2 localhost forwarding broken | Use WSL IP directly, or enable mirrored mode |
+| Both Windows and WSL refused | No process listening | Start dev server |
+| Worked, then stopped after sleep/resume | Hyper-V switch reset | `wsl --shutdown`, reopen |
+| `wsl --shutdown` doesn't free RAM | autoMemoryReclaim disabled | Already enabled in our config; check that `wsl --shutdown` finished |
+| `wsl.exe --version` shows < 2.0.0 | WSL too old for mirrored mode | Update WSL: `wsl --update` in PowerShell |
+
+## Helper: run from anywhere in the repo
+
+```bash
+bash /home/tbaltzakis/code/cloudless.gr/scripts/wsl-dev-info.sh
+# Or: pnpm dev:info
+```

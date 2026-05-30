@@ -1,0 +1,102 @@
+---
+name: playwright-smart-run
+description: Run Playwright E2E tests against the dev/staging/production server without overloading. Handles cold-start retries, concurrency tuning, scoped test selection, k3s-vs-cloud config, and result triage. Avoids the "158 failed → dev server OOM" cascade.
+triggers: when the user says "run e2e tests", "run playwright", "test the dev server", "test the live site", "k3s e2e", "test k3s standby", "run smoke tests", "test homepage"
+---
+
+# Playwright Smart Run
+
+## Configs
+
+| Target | Config | Base URL | When to use |
+|---|---|---|---|
+| Local dev | `playwright.config.mts` (default) | `http://localhost:4000` | Iterating on a feature |
+| Pi k3s standby | `playwright.k3s.config.mts` | live cloudless.gr behind Pi path | Post-Pi-deploy validation |
+| Production | `playwright.production.config.mts` | live cloudless.gr | Smoke after Lambda deploy |
+
+## Concurrency rules of thumb
+
+| Target | Workers | Why |
+|---|---|---|
+| Dev (Turbopack) | **2** | Turbopack compilation is single-threaded per route; more workers = thrashing |
+| k3s live | 4 | Pi serving has fixed capacity |
+| Production live | 6 (default) | Lambda scales horizontally |
+
+## Smoke set (always run first)
+
+```bash
+cd /home/tbaltzakis/code/cloudless.gr
+pnpm exec playwright test \
+  e2e/api-routes.spec.ts \
+  e2e/api-auth.spec.ts \
+  e2e/homepage.spec.ts \
+  e2e/security-headers.spec.ts \
+  --project=chromium \
+  --workers=2 \
+  --reporter=line
+```
+
+Takes ~30s. If smoke fails, don't bother running the full suite — fix smoke first.
+
+## Full local suite (after smoke passes)
+
+```bash
+# Warm up the server first (cold compile)
+curl -s http://localhost:4000/en > /dev/null
+curl -s http://localhost:4000/api/health > /dev/null
+
+# Then run
+pnpm exec playwright test \
+  --project=chromium \
+  --workers=2 \
+  --reporter=line 2>&1 | tail -20
+```
+
+The `--workers=2` is critical for dev mode — running with default 6 workers overwhelms Turbopack and causes cascading 500s (the famous "158 failed" pattern). Workers=2 → ~5 minutes total. Workers=6 → server OOM, half the tests fail.
+
+## k3s live tests
+
+```bash
+# These hit https://cloudless.gr via Pi path — no local server needed
+pnpm test:k3s:smoke               # 10 tests, ~20s — sanity check
+pnpm test:k3s                     # full 136-test suite, ~2 min
+```
+
+Common k3s failures:
+- **React #418 hydration error** on `/en`: Lambda is serving but a route has a Date-in-render or similar SSR mismatch. Check `Footer.tsx` for `new Date()` without `suppressHydrationWarning`.
+- **/api/auth/session 500**: missing `AUTH_TRUST_HOST` — see `lambda-env-check` skill.
+- **logs.cloudless.gr ENOTFOUND from GH runner**: tunnel subdomain not resolvable from runner IP — test should skip, not fail. Already patched in `dns-resolution.spec.ts`.
+
+## Triage failures fast
+
+```bash
+# Show only failing test names from a run
+pnpm exec playwright test --project=chromium --reporter=line 2>&1 | grep -E "✗|failed"
+
+# Trace a specific failure
+pnpm exec playwright show-trace test-results/.../trace.zip
+
+# Just rerun the failed ones
+pnpm exec playwright test --last-failed --project=chromium
+```
+
+## What NOT to do
+
+- Don't run full suite at `--workers=6` against the dev server — 158-failure cascade
+- Don't run k3s tests in parallel with a deploy in progress
+- Don't include `e2e/customer-behavior.spec.ts` `@mutating` tests against production — they actually subscribe emails / send messages
+- Don't trust a single retry — if a test is flaky 2/3 runs, it's a real bug
+
+## When dev server returns 500 mid-test
+
+The dev server is dead. Restart per `dev-server-doctor` skill, then warm:
+
+```bash
+pkill -f "next dev"; sleep 2
+cd /home/tbaltzakis/code/cloudless.gr && pnpm dev &
+sleep 5
+for r in /en /en/services /en/contact /api/health; do
+  curl -s -o /dev/null "http://localhost:4000${r}"
+done
+# Now safe to re-run tests
+```
