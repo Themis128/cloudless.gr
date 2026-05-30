@@ -406,8 +406,6 @@ module-level cache, so subsequent calls within the same invocation are free.
 
 **Retry policy:** Up to 3 attempts with exponential backoff (500 ms, 1 000 ms, 2 000 ms). `ratelimited` errors from the Slack API are retried; all other Slack API errors stop immediately.
 
-**Legacy API:** `slackNotify(message)` is still available for backward compatibility but deprecated in favor of `SlackClient.post()`.
-
 **Cache:** Integration config and Slack config are cached in module-level variables. Call `resetSlackConfigCache()` in tests to clear.
 
 ### `slackEscape()` — mrkdwn injection guard

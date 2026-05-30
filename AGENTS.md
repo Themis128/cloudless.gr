@@ -382,7 +382,7 @@ All integrations are optional and degrade gracefully. Config is centralized in `
 | Sentry             | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`          | (inline in route)   |
 
 **Integration patterns:**
-- **Fire-and-forget:** Contact route uses `Promise.allSettled([slackNotify, hubspotUpsert]).catch(() => {})` so the main email flow isn't blocked
+- **Fire-and-forget:** Contact route uses `Promise.allSettled([slackContactNotify, hubspotUpsert]).catch(() => {})` so the main email flow isn't blocked
 - **Fallback:** Blog API returns static `lib/blog.ts` data when Notion isn't configured
 - **Cache:** Calendar availability is cached 5 minutes; Google OAuth tokens cached until expiry
 
