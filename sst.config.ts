@@ -16,8 +16,12 @@ function buildSiteEnvironment(
   stage: string,
   isProd: boolean,
   stripeTransactionsTableName: $util.Output<string>,
+  authSecret?: $util.Output<string>,
 ) {
   return {
+    // next-auth requires AUTH_SECRET as an env var (reads synchronously at
+    // module load, before SSM can be async-fetched).
+    ...(authSecret ? { AUTH_SECRET: authSecret } : {}),
     NODE_ENV: "production",
     SSM_PREFIX: isProd ? "/cloudless/production" : `/cloudless/${stage}`,
     // AWS_REGION is set automatically by Lambda — do not override it
@@ -31,6 +35,16 @@ function buildSiteEnvironment(
     // to compare cloud actual vs SSM expected.
     APP_VERSION: process.env.GITHUB_SHA ?? "local",
     STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
+    // Keycloak — replaces Cognito. NEXT_PUBLIC_* baked into client bundle.
+    NEXT_PUBLIC_KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
+    NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: "cloudless-app",
+    // Server-side only (admin REST API + JWT issuer for proxy.ts)
+    KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
+    KEYCLOAK_ADMIN_CLIENT_ID: "admin-cli",
+    // KEYCLOAK_ADMIN_USER and KEYCLOAK_ADMIN_PASSWORD loaded from SSM at runtime
+    // AUTH_SECRET and KEYCLOAK_ADMIN_* are loaded from SSM at runtime by
+    // ssm-config.ts and exposed to process.env via the startup block below.
+    // Cognito vars kept during transition period — remove after pool deletion.
     NEXT_PUBLIC_COGNITO_USER_POOL_ID: "us-east-1_JQWwFbO9a",
     NEXT_PUBLIC_COGNITO_CLIENT_ID: "2qq6i24oc48391cmuv4kfl1rm2",
     // Notion database IDs (non-secret, safe to inline)
@@ -80,8 +94,14 @@ export default {
   },
   async run() {
     // --- SSM secrets are loaded at runtime by src/lib/ssm-config.ts ---
-    // No need to pass STRIPE keys as env vars; the app reads them from SSM.
-    // Only pass non-secret configuration that varies per stage.
+    // Exception: AUTH_SECRET must be a Lambda env var because next-auth reads
+    // it synchronously at module load before ssm-config can async-fetch from SSM.
+    // We fetch it from SSM at deploy time and inject it directly.
+    const authSecretParam = aws.ssm.getParameterOutput({
+      name: "/cloudless/production/AUTH_SECRET",
+      withDecryption: true,
+    });
+    const authSecret = authSecretParam.value;
 
     const stage = $app.stage;
     const isProd = stage === STAGE_PRODUCTION;
@@ -132,6 +152,7 @@ export default {
         stage,
         isProd,
         stripeTransactionsTable.name,
+        authSecret,
       ),
       link: [stripeTransactionsTable],
       permissions: [
