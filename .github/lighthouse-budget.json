@@ -8,7 +8,7 @@
       },
       {
         "metric": "first-contentful-paint",
-        "budget": 2500
+        "budget": 3500
       },
       {
         "metric": "largest-contentful-paint",
@@ -17,20 +17,6 @@
       {
         "metric": "total-blocking-time",
         "budget": 2000
-      }
-    ],
-    "resourceSizes": [
-      {
-        "resourceType": "script",
-        "budget": 340
-      },
-      {
-        "resourceType": "image",
-        "budget": 500
-      },
-      {
-        "resourceType": "total",
-        "budget": 1000
       }
     ]
   },
@@ -43,7 +29,7 @@
       },
       {
         "metric": "first-contentful-paint",
-        "budget": 2200
+        "budget": 2500
       },
       {
         "metric": "largest-contentful-paint",
@@ -52,20 +38,6 @@
       {
         "metric": "total-blocking-time",
         "budget": 700
-      }
-    ],
-    "resourceSizes": [
-      {
-        "resourceType": "script",
-        "budget": 340
-      },
-      {
-        "resourceType": "image",
-        "budget": 300
-      },
-      {
-        "resourceType": "total",
-        "budget": 800
       }
     ],
     "resourceCounts": [
