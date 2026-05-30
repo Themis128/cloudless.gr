@@ -1,78 +1,73 @@
 "use client";
 
+import { Amplify } from "aws-amplify";
+
 /**
- * Single entry point for configuring AWS Amplify and loading
- * `aws-amplify/auth` in a way that guarantees `Amplify.configure()` runs
- * before any auth helper (signIn, getCurrentUser, fetchAuthSession, ...)
- * is invoked.
+ * Configure AWS Amplify with Cognito User Pool credentials.
  *
- * Why this file does NOT statically import `aws-amplify`:
- *   A static `import { Amplify } from "aws-amplify"` loads the ~2 MB SDK
- *   eagerly AND registers internal Hub listeners during module init.
- *   Those listeners can dispatch auth events before our synchronous
- *   `Amplify.configure(...)` call lands on the singleton, surfacing:
+ * IMPORTANT — Why this module does NOT read `process.env.NEXT_PUBLIC_*` directly:
+ *   Turbopack (Next 16) does not inline `process.env.NEXT_PUBLIC_*` references
+ *   inside client modules that are reached via a dynamic `import()` chain.
+ *   They are emitted as runtime reads against next.js' `process.js` polyfill,
+ *   whose `.env` is empty on the client — which left userPoolId / userPoolClientId
+ *   as empty strings, `Amplify.configure()` was skipped, and sign-in failed
+ *   with "Auth UserPool not configured."
  *
- *     "Amplify has not been configured. Please call Amplify.configure() ..."
+ * Fix: the caller (Server Component in `[locale]/layout.tsx`) reads the env
+ * at SSR — where process.env works natively — and passes the values to
+ * `AuthProvider`, which calls `configureAmplifyWith()` synchronously in its
+ * mount effect, before any auth helper runs.
  *
- *   on the console twice under React StrictMode's dev double-mount.
- *
- *   Loading the SDK lazily inside `ensureConfigured()` collapses load +
- *   configure into a single microtask — by the time the returned promise
- *   resolves, the singleton config is provably in place.
- *
- *   NEXT_PUBLIC_* vars are inlined by Next.js at build / dev-server start,
- *   so process.env.NEXT_PUBLIC_* always resolves on the client.
+ * The configure call here is synchronous (no await) so it lands on the
+ * Amplify singleton before `getAuthModule()` returns the auth helpers —
+ * matching aws-amplify v6's read-singleton-eagerly behavior.
  */
 
-const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
-const userPoolClientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "";
-const hasCognitoEnv = Boolean(userPoolId && userPoolClientId);
+export interface AmplifyAuthConfig {
+  userPoolId: string;
+  userPoolClientId: string;
+}
 
-let configurePromise: Promise<boolean> | null = null;
+let configured = false;
 
-function ensureConfigured(): Promise<boolean> {
-  if (configurePromise) return configurePromise;
+/**
+ * Apply the Cognito config to the Amplify singleton. Idempotent — safe to
+ * call multiple times (StrictMode dev double-mount, repeated renders).
+ * Returns true when Amplify is now configured with non-empty credentials.
+ */
+export function configureAmplifyWith(config: AmplifyAuthConfig): boolean {
+  if (configured) return true;
+  if (!config.userPoolId || !config.userPoolClientId) return false;
 
-  if (!hasCognitoEnv) {
-    configurePromise = Promise.resolve(false);
-    return configurePromise;
-  }
-
-  configurePromise = (async () => {
-    const { Amplify } = await import("aws-amplify");
-    Amplify.configure(
-      {
-        Auth: {
-          Cognito: {
-            userPoolId,
-            userPoolClientId,
-          },
+  Amplify.configure(
+    {
+      Auth: {
+        Cognito: {
+          userPoolId: config.userPoolId,
+          userPoolClientId: config.userPoolClientId,
         },
       },
-      { ssr: true }
-    );
-    return true;
-  })();
-
-  return configurePromise;
+    },
+    { ssr: true }
+  );
+  configured = true;
+  return true;
 }
 
-/** Resolves to true when Amplify is (now) configured with Cognito credentials. */
-export function configureAmplify(): Promise<boolean> {
-  return ensureConfigured();
+/** True when configureAmplifyWith() has successfully run at least once. */
+export function isAmplifyConfigured(): boolean {
+  return configured;
 }
 
 /**
- * Returns the `aws-amplify/auth` module, guaranteed to be loaded AFTER
- * `Amplify.configure()` has run. Repeat calls are cache hits (Webpack
- * dedupes the dynamic import).
+ * Returns the `aws-amplify/auth` module. Callers must ensure
+ * `configureAmplifyWith()` has already run (it happens in AuthProvider's
+ * mount effect) before invoking auth helpers like signIn / fetchAuthSession.
+ *
+ * Bundle-size note: this dynamic import keeps the ~2 MB aws-amplify auth
+ * runtime out of the initial public-page bundle. Webpack/Turbopack dedupe
+ * the module so repeat calls are cache hits.
  */
 export async function getAuthModule(): Promise<typeof import("aws-amplify/auth")> {
-  const ok = await ensureConfigured();
-  if (!ok) {
-    throw new Error(
-      "Amplify is not configured: NEXT_PUBLIC_COGNITO_USER_POOL_ID / NEXT_PUBLIC_COGNITO_CLIENT_ID are missing."
-    );
-  }
   return import("aws-amplify/auth");
 }

@@ -61,8 +61,15 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 30,
   },
   experimental: {
-    // Tree-shake heavy barrel packages — reduces client bundle for Amplify, GSAP, cmdk
-    optimizePackageImports: ["aws-amplify", "gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
+    // Tree-shake heavy barrel packages — reduces client bundle for GSAP, cmdk, etc.
+    // NOTE: aws-amplify is intentionally NOT in this list. Turbopack's
+    // optimizePackageImports rewrites `import { Amplify } from "aws-amplify"`
+    // and `import { signIn } from "aws-amplify/auth"` to different submodule
+    // paths whose Amplify singletons can end up *separate*, so the
+    // configure() that ran via the first path is invisible to the auth
+    // helpers loaded via the second — surfacing "Auth UserPool not configured"
+    // at signIn time even when configure provably ran.
+    optimizePackageImports: ["gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
   },
 };
 
