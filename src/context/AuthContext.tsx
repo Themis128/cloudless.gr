@@ -140,7 +140,7 @@ function buildProfileUpdates(attrs: {
 
 function mergeProfileAttrs(
   prev: AuthUser,
-  attrs: { name?: string; company?: string; phone?: string },
+  attrs: { name?: string; company?: string; phone?: string }
 ): Partial<AuthUser> {
   return {
     name: attrs.name ?? prev.name,
@@ -256,7 +256,11 @@ export function AuthProvider({ children, cognitoConfig }: AuthProviderProps) {
   }, [checkAuth, cognitoConfig]);
 
   const applySignInResult = async (
-    result: Awaited<ReturnType<Awaited<ReturnType<typeof import("@/lib/amplify-config")["getAuthModule"]>>["signIn"]>>,
+    result: Awaited<
+      ReturnType<
+        Awaited<ReturnType<(typeof import("@/lib/amplify-config"))["getAuthModule"]>>["signIn"]
+      >
+    >
   ): Promise<SignInResult> => {
     if (result.nextStep?.signInStep === "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED") {
       return { needsNewPassword: true };
