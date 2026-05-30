@@ -125,7 +125,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const deploySha = '${{ steps.meta.outputs.sha }}';
-            const dispatchedRunId = Number('${{ steps.dispatch.outputs.run_id }}') || 0;
+            let dispatchedRunId = Number('${{ steps.dispatch.outputs.run_id }}') || 0;
             const { owner, repo } = context.repo;
 
             // Pi builds frequently spend 20-30 min queued on the GitHub ARM
@@ -232,11 +232,12 @@ jobs:
                 await sleep(delayMs);
                 continue;
               }
-              // Completed but not succeeded — superseded or failed; warn, don't block.
-              core.warning(`deploy-pi.yml for ${deploySha} ended with: ${candidates[0].conclusion}. E2E will surface any regression.`);
+              // Completed but not succeeded — hard-fail so E2E cannot run against
+              // a stale or crashed image (Gap 10 fix).
+              core.setFailed(`deploy-pi.yml for ${deploySha} ended with: ${candidates[0].conclusion}. URL: ${candidates[0].html_url}`);
               return;
             }
-            core.warning(`Timed out waiting for deploy-pi.yml for SHA ${deploySha} — continuing anyway.`);
+            core.setFailed(`Timed out waiting for deploy-pi.yml for SHA ${deploySha}`);
 
       - name: summary
         run: |
