@@ -2,8 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockFetchAuthSession = vi.fn();
 
-vi.mock("aws-amplify/auth", () => ({
-  fetchAuthSession: () => mockFetchAuthSession(),
+// fetchWithAuth routes through getAuthModule() in amplify-config — mock that
+// module so the test never requires Cognito env vars to be set.
+vi.mock("@/lib/amplify-config", () => ({
+  getAuthModule: () =>
+    Promise.resolve({ fetchAuthSession: () => mockFetchAuthSession() }),
 }));
 
 describe("fetch-with-auth.ts", () => {
@@ -23,12 +26,12 @@ describe("fetch-with-auth.ts", () => {
       tokens: { idToken: { toString: () => "test-token-abc" } },
     });
     const mockResponse = new Response(JSON.stringify({ ok: true }), { status: 200 });
-    vi.mocked(global.fetch).mockResolvedValueOnce(mockResponse);
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(mockResponse);
 
     const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
     const res = await fetchWithAuth("/api/admin/data");
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       "/api/admin/data",
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: "Bearer test-token-abc" }),
@@ -41,7 +44,7 @@ describe("fetch-with-auth.ts", () => {
     mockFetchAuthSession.mockResolvedValueOnce({
       tokens: { idToken: { toString: () => "tok" } },
     });
-    vi.mocked(global.fetch).mockResolvedValueOnce(new Response("{}", { status: 200 }));
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("{}", { status: 200 }));
 
     const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
     await fetchWithAuth("/api/test", {
@@ -49,7 +52,7 @@ describe("fetch-with-auth.ts", () => {
       headers: { "Content-Type": "application/json" },
     });
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       "/api/test",
       expect.objectContaining({
         method: "POST",
