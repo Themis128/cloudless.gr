@@ -127,7 +127,17 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
   }
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+interface AuthProviderProps {
+  children: ReactNode;
+  /**
+   * Cognito config sourced from the Server Component layout (where
+   * process.env is readable). Empty strings here surface configError and
+   * keep auth helpers disabled.
+   */
+  cognitoConfig: { userPoolId: string; userPoolClientId: string };
+}
+
+export function AuthProvider({ children, cognitoConfig }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -205,8 +215,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const init = async () => {
       let ok: boolean;
       try {
-        const { configureAmplify } = await import("@/lib/amplify-config");
-        ok = await configureAmplify();
+        const { configureAmplifyWith } = await import("@/lib/amplify-config");
+        ok = configureAmplifyWith(cognitoConfig);
       } catch (err) {
         if (!cancelled) {
           console.error("Amplify configuration failed:", err);
@@ -231,7 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [checkAuth]);
+  }, [checkAuth, cognitoConfig]);
 
   const handleSignIn = async (email: string, password: string): Promise<SignInResult> => {
     const { signIn: amplifySignIn, signOut: amplifySignOut } = await (
