@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import TrainingBanner from "@/components/TrainingBanner";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
+import NextAuthProvider from "@/components/NextAuthProvider";
 import JsonLd from "@/components/JsonLd";
 import { getOrganizationSchema } from "@/lib/structured-data";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
@@ -66,36 +67,32 @@ export default async function LocaleLayout({ children, params }: Props) {
   // Load messages for NextIntlClientProvider
   const messages = await getMessages();
 
-  // Read Cognito env on the SERVER. Turbopack (Next 16) does not inline
-  // process.env.NEXT_PUBLIC_* into dynamically-imported client modules, so
-  // the values are sourced here at SSR time (where process.env works
-  // natively) and passed to AuthProvider as a prop.
-  const cognitoConfig = {
-    userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "",
-    userPoolClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "",
-  };
+  // cognitoConfig kept for backwards compatibility — unused with Keycloak.
+  const cognitoConfig = { userPoolId: "", userPoolClientId: "" };
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      <AuthProvider cognitoConfig={cognitoConfig}>
-        <CartProvider>
-          <CookieConsentProvider>
-            <GoogleAnalyticsConsent />
-            <JsonLd data={getOrganizationSchema()} />
-            <TrainingBanner locale={locale} />
-            <Navbar />
-            <main id="main-content" className="flex-1">
-              {children}
-            </main>
-            <Footer />
-            <CartSlideOver />
-            <ServiceWorkerRegistration />
-            <ClientDecorators />
-            <CookieConsent />
-            <ClientChatWidget />
-          </CookieConsentProvider>
-        </CartProvider>
-      </AuthProvider>
+      <NextAuthProvider>
+        <AuthProvider cognitoConfig={cognitoConfig}>
+          <CartProvider>
+            <CookieConsentProvider>
+              <GoogleAnalyticsConsent />
+              <JsonLd data={getOrganizationSchema()} />
+              <TrainingBanner locale={locale} />
+              <Navbar />
+              <main id="main-content" className="flex-1">
+                {children}
+              </main>
+              <Footer />
+              <CartSlideOver />
+              <ServiceWorkerRegistration />
+              <ClientDecorators />
+              <CookieConsent />
+              <ClientChatWidget />
+            </CookieConsentProvider>
+          </CartProvider>
+        </AuthProvider>
+      </NextAuthProvider>
     </NextIntlClientProvider>
   );
 }

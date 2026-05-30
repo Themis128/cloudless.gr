@@ -119,11 +119,11 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
 interface AuthProviderProps {
   children: ReactNode;
   /**
-   * Cognito config sourced from the Server Component layout (where
-   * process.env is readable). Empty strings here surface configError and
-   * keep auth helpers disabled.
+   * Kept for backwards-compatibility with the layout Server Component.
+   * With Keycloak these values are unused — next-auth reads KEYCLOAK_*
+   * env vars server-side.  Pass empty strings if migrating gradually.
    */
-  cognitoConfig: { userPoolId: string; userPoolClientId: string };
+  cognitoConfig?: { userPoolId: string; userPoolClientId: string };
 }
 
 function buildProfileUpdates(attrs: {
@@ -149,7 +149,10 @@ function mergeProfileAttrs(
   };
 }
 
-export function AuthProvider({ children, cognitoConfig }: AuthProviderProps) {
+export function AuthProvider({
+  children,
+  cognitoConfig = { userPoolId: "", userPoolClientId: "" },
+}: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

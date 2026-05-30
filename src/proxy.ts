@@ -4,15 +4,21 @@ import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
 
+// Keycloak JWKS — primary for both k3s (Pi) and Lambda deployments.
+// Falls back to Cognito for zero-downtime rollout during migration.
+const _kcIssuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
 const _upId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
 const _reg = _upId.split("_")[0] || "us-east-1";
-const JWKS = _upId
-  ? createRemoteJWKSet(
-      new URL(
-        `https://cognito-idp.${_reg}.amazonaws.com/${_upId}/.well-known/jwks.json`,
-      ),
-    )
-  : null;
+
+const JWKS = _kcIssuer
+  ? createRemoteJWKSet(new URL(`${_kcIssuer}/protocol/openid-connect/certs`))
+  : _upId
+    ? createRemoteJWKSet(
+        new URL(`https://cognito-idp.${_reg}.amazonaws.com/${_upId}/.well-known/jwks.json`),
+      )
+    : null;
+
+const JWT_ISSUER = _kcIssuer || (_upId ? `https://cognito-idp.${_reg}.amazonaws.com/${_upId}` : "");
 
 const LOCALES = routing.locales as readonly string[];
 const DEFAULT_LOCALE = routing.defaultLocale;
@@ -28,32 +34,68 @@ function stripLocale(pathname: string): string {
   return pathname.slice(segment.length + 1) || "/";
 }
 
-async function readCognitoToken(
+async function readAuthToken(
   req: NextRequest,
 ): Promise<{ valid: boolean; isAdmin: boolean }> {
-  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  if (!clientId || !JWKS) return { valid: false, isAdmin: false };
-  const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
-  const username = req.cookies.get(lastAuthKey)?.value;
-  if (!username) return { valid: false, isAdmin: false };
-  const tokenKey = `CognitoIdentityServiceProvider.${clientId}.${username}.idToken`;
-  const token = req.cookies.get(tokenKey)?.value;
-  if (!token) return { valid: false, isAdmin: false };
-  try {
-    const { payload } = await jwtVerify(token, JWKS, {
-      issuer: `https://cognito-idp.${_reg}.amazonaws.com/${_upId}`,
-      audience: clientId,
-    });
-    return {
-      valid: true,
-      isAdmin:
-        (payload["cognito:groups"] as string[] | undefined)?.includes(
-          "admin",
-        ) ?? false,
-    };
-  } catch {
-    return { valid: false, isAdmin: false };
+  if (!JWKS || !JWT_ISSUER) return { valid: false, isAdmin: false };
+
+  // next-auth stores the session as an encrypted JWT in __Secure-authjs.session-token
+  // (prod) or authjs.session-token (dev/HTTP). Extract and verify the id_token
+  // that next-auth embeds in the session JWT payload.
+  const sessionCookie =
+    req.cookies.get("__Secure-authjs.session-token")?.value ??
+    req.cookies.get("authjs.session-token")?.value;
+
+  if (sessionCookie) {
+    try {
+      // next-auth v5 session cookies are encrypted — decode with next-auth secret
+      // via the getToken helper (edge-compatible).
+      const { getToken } = await import("next-auth/jwt");
+      const token = await getToken({
+        req: req as Parameters<typeof getToken>[0]["req"],
+        secret: process.env.AUTH_SECRET ?? "",
+        secureCookie: process.env.NODE_ENV === "production",
+        cookieName:
+          process.env.NODE_ENV === "production"
+            ? "__Secure-authjs.session-token"
+            : "authjs.session-token",
+      });
+      if (token) {
+        const groups = (token.groups as string[]) ?? [];
+        return { valid: true, isAdmin: groups.includes("admin") };
+      }
+    } catch {
+      // fall through to legacy Cognito check
+    }
   }
+
+  // Legacy Cognito fallback — active while old sessions still exist during rollout
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+  if (clientId && !_kcIssuer) {
+    const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
+    const username = req.cookies.get(lastAuthKey)?.value;
+    if (username) {
+      const tokenKey = `CognitoIdentityServiceProvider.${clientId}.${username}.idToken`;
+      const token = req.cookies.get(tokenKey)?.value;
+      if (token) {
+        try {
+          const { payload } = await jwtVerify(token, JWKS, {
+            issuer: JWT_ISSUER,
+            audience: clientId,
+          });
+          return {
+            valid: true,
+            isAdmin:
+              (payload["cognito:groups"] as string[] | undefined)?.includes("admin") ?? false,
+          };
+        } catch {
+          // invalid token
+        }
+      }
+    }
+  }
+
+  return { valid: false, isAdmin: false };
 }
 
 // --- next-intl locale middleware ---
@@ -172,7 +214,7 @@ function buildCSP(nonce: string): string {
     // fonts.gstatic.com — Google Fonts binary CDN. next/font/google falls back
     // to it for the woff2 files when the build cannot inline them.
     "font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net",
-    "connect-src 'self' ws://192.168.1.128:30800 wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://cognito-idp.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
+    "connect-src 'self' ws://192.168.1.128:30800 wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://auth.cloudless.gr https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
     "frame-src https://js.stripe.com https://hooks.stripe.com https://www.facebook.com",
     "worker-src 'self' blob:",
     "media-src 'self'",
@@ -325,7 +367,7 @@ async function handlePageRoute(
   const isDashboardPath = bare === "/dashboard" || bare.startsWith("/dashboard/");
 
   if (isAdminPath || isDashboardPath) {
-    const { valid, isAdmin: hasAdminGroup } = await readCognitoToken(request);
+    const { valid, isAdmin: hasAdminGroup } = await readAuthToken(request);
     if (valid) {
       if (isAdminPath && !hasAdminGroup) {
         return NextResponse.redirect(new URL(`${prefix}/dashboard`, request.url));

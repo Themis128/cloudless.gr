@@ -1,73 +1,46 @@
 "use client";
 
-import { Amplify } from "aws-amplify";
-
 /**
- * Configure AWS Amplify with Cognito User Pool credentials.
+ * Auth configuration shim — Keycloak via next-auth replaces aws-amplify/Cognito.
  *
- * IMPORTANT — Why this module does NOT read `process.env.NEXT_PUBLIC_*` directly:
- *   Turbopack (Next 16) does not inline `process.env.NEXT_PUBLIC_*` references
- *   inside client modules that are reached via a dynamic `import()` chain.
- *   They are emitted as runtime reads against next.js' `process.js` polyfill,
- *   whose `.env` is empty on the client — which left userPoolId / userPoolClientId
- *   as empty strings, `Amplify.configure()` was skipped, and sign-in failed
- *   with "Auth UserPool not configured."
- *
- * Fix: the caller (Server Component in `[locale]/layout.tsx`) reads the env
- * at SSR — where process.env works natively — and passes the values to
- * `AuthProvider`, which calls `configureAmplifyWith()` synchronously in its
- * mount effect, before any auth helper runs.
- *
- * The configure call here is synchronous (no await) so it lands on the
- * Amplify singleton before `getAuthModule()` returns the auth helpers —
- * matching aws-amplify v6's read-singleton-eagerly behavior.
+ * Exports the same interface as the old amplify-config so AuthContext and
+ * other callers require zero changes.  The actual auth work is done by
+ * next-auth (src/lib/auth.ts) and the Keycloak OIDC provider.
  */
 
 export interface AmplifyAuthConfig {
+  /** Kept for interface compatibility — unused with Keycloak. */
   userPoolId: string;
+  /** Kept for interface compatibility — unused with Keycloak. */
   userPoolClientId: string;
 }
 
 let configured = false;
 
 /**
- * Apply the Cognito config to the Amplify singleton. Idempotent — safe to
- * call multiple times (StrictMode dev double-mount, repeated renders).
- * Returns true when Amplify is now configured with non-empty credentials.
+ * No-op with Keycloak — next-auth reads KEYCLOAK_* env vars at module load.
+ * Returns true as long as KEYCLOAK_ISSUER is set (both credentials are SSR-only).
  */
-export function configureAmplifyWith(config: AmplifyAuthConfig): boolean {
+export function configureAmplifyWith(_config: AmplifyAuthConfig): boolean {
   if (configured) return true;
-  if (!config.userPoolId || !config.userPoolClientId) return false;
-
-  Amplify.configure(
-    {
-      Auth: {
-        Cognito: {
-          userPoolId: config.userPoolId,
-          userPoolClientId: config.userPoolClientId,
-        },
-      },
-    },
-    { ssr: true }
-  );
-  configured = true;
-  return true;
+  const hasIssuer = typeof process !== "undefined" && !!process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+  configured = hasIssuer;
+  return configured;
 }
 
-/** True when configureAmplifyWith() has successfully run at least once. */
 export function isAmplifyConfigured(): boolean {
   return configured;
 }
 
 /**
- * Returns the `aws-amplify/auth` module. Callers must ensure
- * `configureAmplifyWith()` has already run (it happens in AuthProvider's
- * mount effect) before invoking auth helpers like signIn / fetchAuthSession.
- *
- * Bundle-size note: this dynamic import keeps the ~2 MB aws-amplify auth
- * runtime out of the initial public-page bundle. Webpack/Turbopack dedupe
- * the module so repeat calls are cache hits.
+ * Returns a Keycloak-backed auth module that matches the subset of
+ * aws-amplify/auth used by AuthContext:
+ *   signIn, signOut, signUp, confirmSignUp,
+ *   resetPassword, confirmResetPassword, confirmSignIn,
+ *   getCurrentUser, fetchAuthSession, fetchUserAttributes,
+ *   updateUserAttributes
  */
-export async function getAuthModule(): Promise<typeof import("aws-amplify/auth")> {
-  return import("aws-amplify/auth");
+export async function getAuthModule() {
+  const { keycloakAuthModule } = await import("@/lib/keycloak-auth");
+  return keycloakAuthModule;
 }
