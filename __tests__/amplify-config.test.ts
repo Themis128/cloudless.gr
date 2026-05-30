@@ -13,17 +13,18 @@ describe("amplify-config.ts", () => {
     delete process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   });
 
-  it("configureAmplify returns false when env vars are missing", async () => {
+  it("configureAmplify resolves false when env vars are missing", async () => {
     const { configureAmplify } = await import("@/lib/amplify-config");
-    expect(configureAmplify()).toBe(false);
+    await expect(configureAmplify()).resolves.toBe(false);
   });
 
-  it("configureAmplify returns true when both env vars are set", async () => {
+  it("configureAmplify resolves true when both env vars are set", async () => {
     process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "us-east-1_TestPool";
     process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID = "test-client-id";
 
     vi.resetModules();
     const { configureAmplify } = await import("@/lib/amplify-config");
-    expect(configureAmplify()).toBe(true);
+    await expect(configureAmplify()).resolves.toBe(true);
+    expect(mockAmplifyConfigureFn).toHaveBeenCalledTimes(1);
   });
 });
