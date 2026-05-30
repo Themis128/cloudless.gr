@@ -25,7 +25,7 @@ describe("fetch-with-auth.ts", () => {
     mockFetchAuthSession.mockResolvedValueOnce({
       tokens: { idToken: { toString: () => "test-token-abc" } },
     });
-    const mockResponse = new Response(JSON.stringify({ ok: true }), { status: 200 });
+    const mockResponse = new globalThis.Response(JSON.stringify({ ok: true }), { status: 200 });
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(mockResponse);
 
     const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
@@ -44,7 +44,7 @@ describe("fetch-with-auth.ts", () => {
     mockFetchAuthSession.mockResolvedValueOnce({
       tokens: { idToken: { toString: () => "tok" } },
     });
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("{}", { status: 200 }));
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(new globalThis.Response("{}", { status: 200 }));
 
     const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
     await fetchWithAuth("/api/test", {

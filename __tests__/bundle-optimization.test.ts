@@ -43,11 +43,13 @@ describe("bundle optimization", () => {
     // separate Bundle Budget Audit workflow instead.
     const globalEntry = budget.find((b) => b.path === "/*");
     expect(globalEntry).toBeDefined();
-    expect(globalEntry!.timings).toBeDefined();
-    expect(globalEntry!.timings!.length).toBeGreaterThan(0);
+    if (!globalEntry) throw new Error("globalEntry missing");
+    expect(globalEntry.timings).toBeDefined();
+    expect(globalEntry.timings?.length).toBeGreaterThan(0);
 
     const storeEntry = budget.find((b) => b.path === "/store");
     expect(storeEntry).toBeDefined();
-    expect(storeEntry!.timings).toBeDefined();
+    if (!storeEntry) throw new Error("storeEntry missing");
+    expect(storeEntry.timings).toBeDefined();
   });
 });
