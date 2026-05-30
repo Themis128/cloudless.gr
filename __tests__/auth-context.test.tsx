@@ -22,7 +22,7 @@ const mockFetchAuthSession = vi.fn();
 const mockFetchUserAttributes = vi.fn();
 
 vi.mock("@/lib/amplify-config", () => ({
-  configureAmplify: () => mockConfigureAmplify(),
+  configureAmplifyWith: () => mockConfigureAmplify(),
   getAuthModule: () => mockGetAuthModule(),
 }));
 
