@@ -28,7 +28,10 @@ test.describe("DNS resolution", () => {
     expect([200, 301, 302, 307, 308].includes(r.status())).toBe(true);
     if (r.status() >= 300 && r.status() < 400) {
       const location = r.headers()["location"] ?? "";
-      expect(location).toContain(K3S_HOST);
+      // CF may redirect to a relative path ("/en") or full URL — either is valid
+      const isFullUrl = location.includes(K3S_HOST);
+      const isRelative = location.startsWith("/");
+      expect(isFullUrl || isRelative, `unexpected location: ${location}`).toBe(true);
     }
   });
 

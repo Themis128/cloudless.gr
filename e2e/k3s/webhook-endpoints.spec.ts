@@ -7,15 +7,15 @@
  */
 import { test, expect } from "@playwright/test";
 
-const K3S_HOST = process.env.K3S_HOST ?? "cloudless.gr";
+const K3S_HOST = globalThis.process?.env["K3S_HOST"] ?? "cloudless.gr";
 
 const WEBHOOK_ENDPOINTS = [
   { name: "Slack events", path: "/api/slack/events", expectedStatus: [401, 403, 400] },
   { name: "Slack interactions", path: "/api/slack/interactions", expectedStatus: [401, 403, 400] },
   { name: "Slack commands", path: "/api/slack/commands", expectedStatus: [401, 403, 400] },
-  { name: "HubSpot webhook", path: "/api/hubspot/webhook", expectedStatus: [401, 403, 400, 405] },
-  { name: "Stripe webhook", path: "/api/stripe/webhook", expectedStatus: [400, 401, 403] },
-  { name: "Notion webhook", path: "/api/notion/webhook", expectedStatus: [400, 401, 403, 405] },
+  { name: "HubSpot webhook", path: "/api/webhooks/hubspot", expectedStatus: [401, 403, 400, 405] },
+  { name: "Stripe webhook", path: "/api/webhooks/stripe", expectedStatus: [400, 401, 403] },
+  { name: "Notion webhook", path: "/api/webhooks/notion", expectedStatus: [400, 401, 403, 405] },
 ];
 
 test.describe("Webhook endpoints — route existence and auth rejection", () => {
