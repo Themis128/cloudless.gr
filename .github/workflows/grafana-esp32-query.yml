@@ -14,65 +14,14 @@ jobs:
     runs-on: [self-hosted, omv, pi]
     timeout-minutes: 5
     steps:
-      - name: Query Grafana and ESP32 status
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - name: Get Grafana admin password
         run: |
           PASS=$(kubectl get secret kube-prom-grafana -n monitoring \
             -o jsonpath='{.data.admin-password}' | base64 -d)
           echo "::add-mask::${PASS}"
-          BASE="http://kube-prom-grafana.monitoring.svc.cluster.local:80"
-
-          echo "=== Dashboard panels ==="
-          curl -sf "${BASE}/api/dashboards/uid/${{ inputs.dashboard_uid }}" \
-            -u "admin:${PASS}" \
-          | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-meta = d.get('meta',{})
-dash = d.get('dashboard',{})
-print('Title:', dash.get('title'))
-print('UID:', dash.get('uid'))
-print('Updated:', meta.get('updated'))
-panels = dash.get('panels',[])
-print(f'Panels ({len(panels)}):')
-for p in panels:
-    print(f'  [{p.get(\"id\")}] {p.get(\"type\")} — {p.get(\"title\")}')
-"
-
-          echo ""
-          echo "=== Firing alerts ==="
-          curl -sf "${BASE}/api/alertmanager/grafana/api/v2/alerts" \
-            -u "admin:${PASS}" 2>/dev/null \
-          | python3 -c "
-import sys,json
-alerts=json.load(sys.stdin)
-if not alerts: print('No firing alerts')
-for a in alerts:
-    lbls=a.get('labels',{})
-    print(lbls.get('alertname','?'), '-', lbls.get('severity','?'), '-', a.get('status',{}).get('state','?'))
-" || echo "No alerts endpoint"
-
-          echo ""
-          echo "=== ESP32 Prometheus targets ==="
-          curl -sf "http://monitoring-prometheus.monitoring.svc.cluster.local:9090/api/v1/targets" \
-          | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-targets=d.get('data',{}).get('activeTargets',[])
-esp=[t for t in targets if any(k in str(t.get('labels',{})).lower() for k in ['esp','sensor','iot','arduino','watchdog'])]
-if not esp:
-    print('No ESP32/IoT targets found. All targets:')
-    for t in targets[:10]: print(' ', t.get('labels',{}).get('job'), t.get('health'))
-else:
-    for t in esp:
-        print(t.get('health'), t.get('labels',{}).get('job'), t.get('labels',{}).get('instance'), t.get('lastError',''))
-"
-
-          echo ""
-          echo "=== Recent ESP32 metric samples ==="
-          curl -sf "http://monitoring-prometheus.monitoring.svc.cluster.local:9090/api/v1/label/__name__/values" \
-          | python3 -c "
-import sys,json
-names=json.load(sys.stdin).get('data',[])
-esp=[n for n in names if any(k in n.lower() for k in ['esp','sensor','temperature','humidity','watchdog','heartbeat'])]
-print('ESP/sensor metrics:', esp[:20])
-" || echo "Cannot query metric names"
+          echo "GRAFANA_PASS=${PASS}" >> "$GITHUB_ENV"
+      - name: Query Grafana and ESP32 data
+        env:
+          DASHBOARD_UID: ${{ inputs.dashboard_uid }}
+        run: python3 scripts/grafana-esp32-query.py
