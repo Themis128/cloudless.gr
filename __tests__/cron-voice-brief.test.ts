@@ -139,16 +139,46 @@ describe("GET /api/cron/voice-brief", () => {
       expect(res.status).toBe(200);
       expect(body.text).toContain("three new deals");
       expect(body.sources).toHaveLength(2);
+      // The `mode` field was removed when the legacy path was deleted.
+      // Lock the contract: response keys are exactly text + sources + generatedAt.
+      expect(body).not.toHaveProperty("mode");
+      expect(Object.keys(body).sort()).toEqual(
+        ["generatedAt", "sources", "text"].sort(),
+      );
 
       expect(mockRunAgent).toHaveBeenCalledOnce();
       expect(mockSlackPost).toHaveBeenCalledOnce();
 
       const slackPayload = mockSlackPost.mock.calls[0][0];
       expect(slackPayload.text).toContain("Weekly voice brief");
+      // No more "(agent)" or "(legacy)" suffix on the Slack header.
+      expect(slackPayload.text).not.toMatch(/\(agent\)|\(legacy\)/);
       // The brief text and a per-source breakdown should both be in the blocks.
       const blockText = JSON.stringify(slackPayload.blocks);
       expect(blockText).toContain("three new deals");
       expect(blockText).toContain("get_pipeline_stats");
+      // The legacy fallback string is gone.
+      expect(blockText).not.toContain("no per-source breakdown");
+    });
+
+    it("?legacy=true URL param has no effect (legacy path was removed)", async () => {
+      mockRunAgent.mockResolvedValueOnce({
+        text: "Same agent output regardless of URL params.",
+        sources: [{ name: "get_pipeline_stats", status: "ok" }],
+      });
+
+      const { GET } = await import(VOICE_BRIEF_ROUTE);
+      const res = await GET(
+        authedRequest("http://localhost/api/cron/voice-brief?legacy=true"),
+      );
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(body.text).toBe("Same agent output regardless of URL params.");
+      // Confirm the route reached the agent and not a legacy branch.
+      expect(mockRunAgent).toHaveBeenCalledOnce();
+      // The legacy path used to call the Anthropic API directly via global fetch.
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it("still returns 200 if persistBrief throws (best-effort)", async () => {
