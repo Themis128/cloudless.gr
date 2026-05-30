@@ -71,41 +71,30 @@ const DEFAULT_AUTH_CONTEXT: AuthContextType = {
   refreshProfile: async () => {},
 };
 
-/**
- * Map raw Cognito/Amplify error messages to user-friendly strings.
- */
+const COGNITO_ERROR_MESSAGES: Record<string, string> = {
+  UserAlreadyAuthenticatedException: "You are already signed in. Redirecting\u2026",
+  NotAuthorizedException: "Incorrect email or password.",
+  UserNotFoundException: "No account found with that email.",
+  UsernameExistsException: "An account with that email already exists.",
+  CodeMismatchException: "Invalid verification code. Please try again.",
+  ExpiredCodeException: "Verification code has expired. Please request a new one.",
+  LimitExceededException: "Too many attempts. Please wait a moment and try again.",
+  TooManyRequestsException: "Too many attempts. Please wait a moment and try again.",
+  InvalidPasswordException:
+    "Password does not meet requirements (min. 8 characters, include uppercase, lowercase, and a number).",
+  UserNotConfirmedException:
+    "Your email has not been verified. Please check your inbox for a verification code.",
+};
+
+/** Map raw Cognito/Amplify error messages to user-friendly strings. */
 function friendlyAuthError(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err);
   const name = err instanceof Error ? err.name : "";
-
-  if (name === "UserAlreadyAuthenticatedException") {
-    return "You are already signed in. Redirecting\u2026";
-  }
-  if (name === "NotAuthorizedException") {
-    return "Incorrect email or password.";
-  }
-  if (name === "UserNotFoundException") {
-    return "No account found with that email.";
-  }
-  if (name === "UsernameExistsException") {
-    return "An account with that email already exists.";
-  }
-  if (name === "CodeMismatchException") {
-    return "Invalid verification code. Please try again.";
-  }
-  if (name === "ExpiredCodeException") {
-    return "Verification code has expired. Please request a new one.";
-  }
-  if (name === "LimitExceededException" || name === "TooManyRequestsException") {
-    return "Too many attempts. Please wait a moment and try again.";
-  }
-  if (name === "InvalidPasswordException" || message.includes("password")) {
+  const mapped = COGNITO_ERROR_MESSAGES[name];
+  if (mapped) return mapped;
+  if (message.includes("password")) {
     return "Password does not meet requirements (min. 8 characters, include uppercase, lowercase, and a number).";
   }
-  if (name === "UserNotConfirmedException") {
-    return "Your email has not been verified. Please check your inbox for a verification code.";
-  }
-
   return message.replace(/^[A-Za-z]+Exception:\s*/, "");
 }
 
@@ -135,6 +124,29 @@ interface AuthProviderProps {
    * keep auth helpers disabled.
    */
   cognitoConfig: { userPoolId: string; userPoolClientId: string };
+}
+
+function buildProfileUpdates(attrs: {
+  name?: string;
+  company?: string;
+  phone?: string;
+}): Record<string, string> {
+  const updates: Record<string, string> = {};
+  if (attrs.name !== undefined) updates.name = attrs.name;
+  if (attrs.phone !== undefined) updates.phone_number = attrs.phone;
+  if (attrs.company !== undefined) updates["custom:company"] = attrs.company;
+  return updates;
+}
+
+function mergeProfileAttrs(
+  prev: AuthUser,
+  attrs: { name?: string; company?: string; phone?: string }
+): Partial<AuthUser> {
+  return {
+    name: attrs.name ?? prev.name,
+    company: attrs.company ?? prev.company,
+    phone: attrs.phone ?? prev.phone,
+  };
 }
 
 export function AuthProvider({ children, cognitoConfig }: AuthProviderProps) {
@@ -243,33 +255,35 @@ export function AuthProvider({ children, cognitoConfig }: AuthProviderProps) {
     };
   }, [checkAuth, cognitoConfig]);
 
+  const applySignInResult = async (
+    result: Awaited<
+      ReturnType<
+        Awaited<ReturnType<(typeof import("@/lib/amplify-config"))["getAuthModule"]>>["signIn"]
+      >
+    >
+  ): Promise<SignInResult> => {
+    if (result.nextStep?.signInStep === "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED") {
+      return { needsNewPassword: true };
+    }
+    if (result.nextStep?.signInStep === "CONFIRM_SIGN_UP") {
+      return { needsConfirmation: true };
+    }
+    if (result.isSignedIn) {
+      await checkAuth();
+    }
+    return {};
+  };
+
   const handleSignIn = async (email: string, password: string): Promise<SignInResult> => {
     const { signIn: amplifySignIn, signOut: amplifySignOut } = await (
       await import("@/lib/amplify-config")
     ).getAuthModule();
     try {
-      const result = await amplifySignIn({ username: email, password });
-
-      if (result.nextStep?.signInStep === "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED") {
-        return { needsNewPassword: true };
-      }
-
-      if (result.nextStep?.signInStep === "CONFIRM_SIGN_UP") {
-        return { needsConfirmation: true };
-      }
-
-      if (result.isSignedIn) {
-        await checkAuth();
-      }
-      return {};
+      return await applySignInResult(await amplifySignIn({ username: email, password }));
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "UserAlreadyAuthenticatedException") {
         await amplifySignOut();
-        const result = await amplifySignIn({ username: email, password });
-        if (result.isSignedIn) {
-          await checkAuth();
-        }
-        return {};
+        return await applySignInResult(await amplifySignIn({ username: email, password }));
       }
       throw new Error(friendlyAuthError(err));
     }
@@ -358,28 +372,14 @@ export function AuthProvider({ children, cognitoConfig }: AuthProviderProps) {
     phone?: string;
   }) => {
     try {
-      const updates: Record<string, string> = {};
-      if (attrs.name !== undefined) updates.name = attrs.name;
-      if (attrs.phone !== undefined) updates.phone_number = attrs.phone;
-      if (attrs.company !== undefined) updates["custom:company"] = attrs.company;
-
+      const updates = buildProfileUpdates(attrs);
       if (Object.keys(updates).length > 0) {
         const { updateUserAttributes } = await (
           await import("@/lib/amplify-config")
         ).getAuthModule();
         await updateUserAttributes({ userAttributes: updates });
       }
-
-      setUser((prev) =>
-        prev
-          ? {
-              ...prev,
-              name: attrs.name ?? prev.name,
-              company: attrs.company ?? prev.company,
-              phone: attrs.phone ?? prev.phone,
-            }
-          : prev
-      );
+      setUser((prev) => (prev ? { ...prev, ...mergeProfileAttrs(prev, attrs) } : prev));
     } catch (err) {
       throw new Error(friendlyAuthError(err));
     }
