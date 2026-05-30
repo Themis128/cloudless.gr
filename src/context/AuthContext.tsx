@@ -206,7 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let ok: boolean;
       try {
         const { configureAmplify } = await import("@/lib/amplify-config");
-        ok = await configureAmplify();
+        ok = configureAmplify();
       } catch (err) {
         if (!cancelled) {
           console.error("Amplify configuration failed:", err);
