@@ -1,5 +1,8 @@
 name: ECR Lifecycle Policy & Cleanup
 on:
+  # Run weekly on Sunday at 03:00 UTC to prune ECR images automatically
+  schedule:
+    - cron: "0 3 * * 0"
   workflow_dispatch:
 permissions:
   id-token: write
