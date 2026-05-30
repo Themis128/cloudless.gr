@@ -46,7 +46,7 @@ interface HubSpotFilter {
   value: string;
 }
 
-async function countHubSpotContacts(filters: HubSpotFilter[]): Promise<number> {
+export async function countHubSpotContacts(filters: HubSpotFilter[]): Promise<number> {
   const token = requireEnv("HUBSPOT_API_KEY");
   const res = await fetch(HUBSPOT_SEARCH, {
     method: "POST",
@@ -69,7 +69,7 @@ async function countHubSpotContacts(filters: HubSpotFilter[]): Promise<number> {
   return data.total;
 }
 
-async function fetchSubscriberStats(week: string): Promise<{
+export async function fetchSubscriberStats(week: string): Promise<{
   total: number;
   newThisWeek: number;
   totalUnsubscribed: number;
@@ -285,7 +285,10 @@ async function main(): Promise<void> {
   console.log("[weekly-subscriber-report] done");
 }
 
-main().catch((err) => {
-  console.error("[weekly-subscriber-report] FAILED:", err);
-  process.exit(1);
-});
+// Only auto-run when invoked directly (skip during vitest imports).
+if (process.argv[1]?.includes("weekly-subscriber-report")) {
+  main().catch((err) => {
+    console.error("[weekly-subscriber-report] FAILED:", err);
+    process.exit(1);
+  });
+}
