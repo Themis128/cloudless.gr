@@ -1,0 +1,87 @@
+---
+name: lambda-env-check
+description: Audit the production Lambda's environment variables against expected/required values. Detect missing AUTH_SECRET, KEYCLOAK_*, stale Cognito refs, env drift after deploy. Identify common 500 causes from missing env.
+triggers: when the user mentions "Lambda env", "AUTH_SECRET", "next-auth 500", "auth error 500", "/api/auth/session 500", "There was a problem with the server configuration", "AUTH_TRUST_HOST", "env var missing in production"
+---
+
+# Lambda Environment Check
+
+## Production Lambda function
+
+The Next.js server runs in:
+```
+cloudless-production-CloudlessSiteServerUseast1Function-ddkafukh
+```
+
+(Find it via `aws resourcegroupstaggingapi get-resources --tag-filters Key=Project,Values=cloudless --resource-type-filters lambda:function | grep Server`.)
+
+## Quick env dump
+
+```bash
+LAMBDA_FN="cloudless-production-CloudlessSiteServerUseast1Function-ddkafukh"
+aws lambda get-function-configuration --function-name "$LAMBDA_FN" --region us-east-1 \
+  --query "Environment.Variables" 2>&1 | python3 -m json.tool
+```
+
+## Required env vars (post-Keycloak migration)
+
+| Variable | Purpose | Failure mode if missing |
+|---|---|---|
+| `AUTH_SECRET` | next-auth JWT encryption | 500 on `/api/auth/session`, "server configuration" error |
+| `AUTH_TRUST_HOST` | Lambda behind CloudFront — trust X-Forwarded-Host | 500 on `/api/auth/*` |
+| `AUTH_URL` | Canonical site URL for callback construction | Wrong callback URLs, redirect failures |
+| `NEXT_PUBLIC_KEYCLOAK_ISSUER` | OIDC discovery URL | Client can't init OIDC provider |
+| `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` | OIDC client ID | Same as above |
+| `KEYCLOAK_ISSUER` | Server-side JWT verification (proxy.ts) | Falls back to Cognito (now deleted) → all auth fails |
+| `SSM_PREFIX` | SSM path prefix for runtime secrets | App can't load Stripe/Notion/etc. |
+
+## Common 500 causes
+
+### "There was a problem with the server configuration"
+- `AUTH_SECRET` missing or not a Lambda env var
+- `AUTH_TRUST_HOST` missing (Lambda behind CloudFront needs it)
+- Both must be set at deploy time via `sst.config.ts` — they can't be lazy-loaded from SSM because next-auth reads them synchronously at module load
+
+### "Invalid token signature"
+- `KEYCLOAK_ISSUER` URL mismatches the issuer in the JWT
+- Verify: `curl https://auth.cloudless.gr/realms/master/.well-known/openid-configuration | python3 -c "import sys,json; print(json.load(sys.stdin)['issuer'])"` should exactly match `KEYCLOAK_ISSUER`
+
+### "Cognito JWKS unreachable" (legacy fallback)
+- proxy.ts still tries Cognito if `NEXT_PUBLIC_KEYCLOAK_ISSUER` is empty
+- Cognito pools were deleted 2026-05-30 — make sure Keycloak issuer is set
+
+## Verify a deploy actually picked up new env
+
+```bash
+# Check the deployed version matches the latest main commit
+curl -s https://cloudless.gr/api/health | python3 -m json.tool
+# Compare "version" with: git log -1 main --format=%H
+
+# Check the actual env on the Lambda
+aws lambda get-function-configuration --function-name "$LAMBDA_FN" --region us-east-1 \
+  --query "Environment.Variables.{AUTH_SECRET:AUTH_SECRET,AUTH_TRUST_HOST:AUTH_TRUST_HOST,KEYCLOAK_ISSUER:KEYCLOAK_ISSUER,APP_VERSION:APP_VERSION}" \
+  --output json
+```
+
+## End-to-end smoke test
+
+```bash
+echo "=== /api/health ===" && curl -s -o /dev/null -w "%{http_code}\n" https://cloudless.gr/api/health
+echo "=== /api/auth/session ===" && curl -s -o /dev/null -w "%{http_code}\n" https://cloudless.gr/api/auth/session
+echo "=== /api/auth/providers ===" && curl -s -o /dev/null -w "%{http_code}\n" https://cloudless.gr/api/auth/providers
+echo "=== Keycloak JWKS ===" && curl -s -o /dev/null -w "%{http_code}\n" https://auth.cloudless.gr/realms/master/protocol/openid-connect/certs
+# All four should return 200. /api/auth/session returns `null` when no user logged in.
+```
+
+## Force a redeploy (env-only changes)
+
+If you change `sst.config.ts` env vars but the Lambda function code hasn't changed, SST may skip the function update:
+
+```bash
+# Push a small code change OR force update via AWS CLI
+aws lambda update-function-configuration \
+  --function-name "$LAMBDA_FN" \
+  --region us-east-1 \
+  --environment "Variables={AUTH_TRUST_HOST=true,AUTH_SECRET=$(aws ssm get-parameter --name /cloudless/production/AUTH_SECRET --with-decryption --output text --query Parameter.Value),...}"
+# But the proper way is to bump APP_VERSION via a code commit and let SST redeploy.
+```
