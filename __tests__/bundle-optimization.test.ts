@@ -33,20 +33,21 @@ describe("bundle optimization", () => {
     expect(src).not.toMatch(/^import KonamiEasterEgg from/m);
   });
 
-  it("lighthouse budget covers heaviest route script size", () => {
+  it("lighthouse budget has timing entries for all routes", () => {
     const budget: BudgetEntry[] = JSON.parse(
       readFileSync(path.resolve(".github/lighthouse-budget.json"), "utf-8"),
     );
 
+    // resourceSizes are intentionally omitted — LHCI v12 resource-summary
+    // audit returns undefined (known bug). Bundle sizes are enforced by the
+    // separate Bundle Budget Audit workflow instead.
     const globalEntry = budget.find((b) => b.path === "/*");
     expect(globalEntry).toBeDefined();
+    expect(globalEntry!.timings).toBeDefined();
+    expect(globalEntry!.timings!.length).toBeGreaterThan(0);
 
-    const scriptBudget = globalEntry!.resourceSizes?.find(
-      (r) => r.resourceType === "script",
-    )?.budget;
-    // Budget reflects actual live script sizes (~307-332KB across routes).
-    // /store is heaviest at ~332KB; 340KB gives a small buffer while still
-    // blocking regressions. Tighten once code-splitting improves.
-    expect(scriptBudget).toBeGreaterThanOrEqual(340);
+    const storeEntry = budget.find((b) => b.path === "/store");
+    expect(storeEntry).toBeDefined();
+    expect(storeEntry!.timings).toBeDefined();
   });
 });
