@@ -62,9 +62,11 @@ Check 'completion (FIM)' {
   Write-Host "  first line: $(($res.choices[0].text -split "`n")[0])"
 }
 
+$chatModel = (Get-Content $cfgPath | Select-String -Pattern '^\s*model\s*=\s*"([^"]+)"' | ForEach-Object { $_.Matches[0].Groups[1].Value } | Select-Object -First 1)
+
 Check 'chat (streaming)' {
   $body = @{
-    model    = (Get-Content $cfgPath | Select-String -Pattern '^\s*model\s*=\s*"([^"]+)"' | ForEach-Object { $_.Matches[0].Groups[1].Value } | Select-Object -First 1)
+    model    = $chatModel
     messages = @(@{ role = 'user'; content = 'Reply with the single word: pong' })
     max_tokens = 8
     stream   = $true
@@ -76,6 +78,30 @@ Check 'chat (streaming)' {
   }) -join ''
   if ([string]::IsNullOrWhiteSpace($text)) { throw 'empty chat response' }
   Write-Host "  reply: $($text.Trim())"
+}
+
+Check 'agentic tool-call emission (Pochi readiness)' {
+  # Verifies the chat model emits Pochi-style tool-call XML when prompted.
+  # This is what `useToolCallMiddleware: true` in ~/.pochi/config.jsonc relies on.
+  $body = @{
+    model    = $chatModel
+    messages = @(
+      @{ role = 'system'; content = "You are a coding agent. Call tools via XML tags like <read_file path='X'/>. Use exactly one tool call to read README.md, then stop." },
+      @{ role = 'user';   content = 'Read the README.md file in this project.' }
+    )
+    temperature = 0.2
+    max_tokens  = 100
+    stream      = $true
+  } | ConvertTo-Json -Depth 6 -Compress
+  $r = Invoke-WebRequest "http://127.0.0.1:$Port/v1/chat/completions" -Method Post -Body $body `
+    -ContentType 'application/json' -Headers $H -UseBasicParsing -TimeoutSec 120
+  $text = ($r.Content -split "`n" | Where-Object { $_ -like 'data: {*' } | ForEach-Object {
+    ($_.Substring(6) | ConvertFrom-Json).choices[0].delta.content
+  }) -join ''
+  if ($text -notmatch '<read_file[^>]*path=') {
+    throw "model did not emit a <read_file path=...> tool tag. Got: $($text.Substring(0, [Math]::Min(120, $text.Length)))"
+  }
+  Write-Host "  tool tag: $($text.Trim())"
 }
 
 Write-Host ""
