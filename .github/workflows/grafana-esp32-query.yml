@@ -1,0 +1,27 @@
+name: Grafana ESP32 Query
+on:
+  workflow_dispatch:
+    inputs:
+      dashboard_uid:
+        description: Dashboard UID
+        default: esp32-watchdog
+        required: true
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  query:
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - name: Get Grafana admin password
+        run: |
+          PASS=$(kubectl get secret kube-prom-grafana -n monitoring \
+            -o jsonpath='{.data.admin-password}' | base64 -d)
+          echo "::add-mask::${PASS}"
+          echo "GRAFANA_PASS=${PASS}" >> "$GITHUB_ENV"
+      - name: Query Grafana and ESP32 data
+        env:
+          DASHBOARD_UID: ${{ inputs.dashboard_uid }}
+        run: python3 scripts/grafana-esp32-query.py

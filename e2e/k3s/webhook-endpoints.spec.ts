@@ -32,12 +32,15 @@ test.describe("Webhook endpoints — route existence and auth rejection", () => 
     });
   }
 
-  test("GET on webhook routes returns 405 Method Not Allowed (not 200)", async ({ request }) => {
+  test("GET on webhook routes does not return 2xx (except HubSpot which has a GET verification handler)", async ({ request }) => {
     for (const wh of WEBHOOK_ENDPOINTS) {
       const r = await request.get(`https://${K3S_HOST}${wh.path}`, {
         failOnStatusCode: false,
         timeout: 10_000,
       });
+      // HubSpot intentionally exports GET for webhook URL verification during setup.
+      // All other webhook routes should reject GET with 405.
+      if (wh.path.includes("hubspot")) continue;
       expect(
         [200].includes(r.status()),
         `${wh.name} accepts GET — webhook routes should be POST-only`,
