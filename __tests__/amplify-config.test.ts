@@ -9,21 +9,46 @@ vi.mock("aws-amplify", () => ({
 describe("amplify-config.ts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
-    delete process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  });
-
-  it("configureAmplify returns false when env vars are missing", async () => {
-    const { configureAmplify } = await import("@/lib/amplify-config");
-    expect(configureAmplify()).toBe(false);
-  });
-
-  it("configureAmplify returns true when both env vars are set", async () => {
-    process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "us-east-1_TestPool";
-    process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID = "test-client-id";
-
     vi.resetModules();
-    const { configureAmplify } = await import("@/lib/amplify-config");
-    expect(configureAmplify()).toBe(true);
+  });
+
+  it("configureAmplifyWith returns false when credentials are empty", async () => {
+    const { configureAmplifyWith, isAmplifyConfigured } = await import("@/lib/amplify-config");
+    expect(configureAmplifyWith({ userPoolId: "", userPoolClientId: "" })).toBe(false);
+    expect(isAmplifyConfigured()).toBe(false);
+    expect(mockAmplifyConfigureFn).not.toHaveBeenCalled();
+  });
+
+  it("configureAmplifyWith returns true and calls Amplify.configure once", async () => {
+    const { configureAmplifyWith, isAmplifyConfigured } = await import("@/lib/amplify-config");
+
+    expect(
+      configureAmplifyWith({
+        userPoolId: "us-east-1_TestPool",
+        userPoolClientId: "test-client-id",
+      })
+    ).toBe(true);
+    expect(isAmplifyConfigured()).toBe(true);
+    expect(mockAmplifyConfigureFn).toHaveBeenCalledTimes(1);
+    expect(mockAmplifyConfigureFn).toHaveBeenCalledWith(
+      {
+        Auth: {
+          Cognito: {
+            userPoolId: "us-east-1_TestPool",
+            userPoolClientId: "test-client-id",
+          },
+        },
+      },
+      { ssr: true }
+    );
+
+    // Idempotent — repeated calls do not re-invoke Amplify.configure.
+    expect(
+      configureAmplifyWith({
+        userPoolId: "us-east-1_TestPool",
+        userPoolClientId: "test-client-id",
+      })
+    ).toBe(true);
+    expect(mockAmplifyConfigureFn).toHaveBeenCalledTimes(1);
   });
 });

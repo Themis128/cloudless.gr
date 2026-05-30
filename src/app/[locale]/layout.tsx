@@ -66,9 +66,18 @@ export default async function LocaleLayout({ children, params }: Props) {
   // Load messages for NextIntlClientProvider
   const messages = await getMessages();
 
+  // Read Cognito env on the SERVER. Turbopack (Next 16) does not inline
+  // process.env.NEXT_PUBLIC_* into dynamically-imported client modules, so
+  // the values are sourced here at SSR time (where process.env works
+  // natively) and passed to AuthProvider as a prop.
+  const cognitoConfig = {
+    userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "",
+    userPoolClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "",
+  };
+
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      <AuthProvider>
+      <AuthProvider cognitoConfig={cognitoConfig}>
         <CartProvider>
           <CookieConsentProvider>
             <GoogleAnalyticsConsent />

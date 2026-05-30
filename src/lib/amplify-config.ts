@@ -5,63 +5,69 @@ import { Amplify } from "aws-amplify";
 /**
  * Configure AWS Amplify with Cognito User Pool credentials.
  *
- * Called at module load time (not inside useEffect) so the config is in place
- * before any auth function (signIn, getCurrentUser, ...) is invoked.
+ * IMPORTANT — Why this module does NOT read `process.env.NEXT_PUBLIC_*` directly:
+ *   Turbopack (Next 16) does not inline `process.env.NEXT_PUBLIC_*` references
+ *   inside client modules that are reached via a dynamic `import()` chain.
+ *   They are emitted as runtime reads against next.js' `process.js` polyfill,
+ *   whose `.env` is empty on the client — which left userPoolId / userPoolClientId
+ *   as empty strings, `Amplify.configure()` was skipped, and sign-in failed
+ *   with "Auth UserPool not configured."
  *
- * NEXT_PUBLIC_* vars are inlined by Next.js at build/dev-server start,
- * so process.env.NEXT_PUBLIC_* always resolves on the client without needing
- * globalThis.process?.env.
+ * Fix: the caller (Server Component in `[locale]/layout.tsx`) reads the env
+ * at SSR — where process.env works natively — and passes the values to
+ * `AuthProvider`, which calls `configureAmplifyWith()` synchronously in its
+ * mount effect, before any auth helper runs.
+ *
+ * The configure call here is synchronous (no await) so it lands on the
+ * Amplify singleton before `getAuthModule()` returns the auth helpers —
+ * matching aws-amplify v6's read-singleton-eagerly behavior.
  */
-const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
-const userPoolClientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "";
 
-const isConfigured = Boolean(userPoolId && userPoolClientId);
+export interface AmplifyAuthConfig {
+  userPoolId: string;
+  userPoolClientId: string;
+}
 
-if (isConfigured) {
+let configured = false;
+
+/**
+ * Apply the Cognito config to the Amplify singleton. Idempotent — safe to
+ * call multiple times (StrictMode dev double-mount, repeated renders).
+ * Returns true when Amplify is now configured with non-empty credentials.
+ */
+export function configureAmplifyWith(config: AmplifyAuthConfig): boolean {
+  if (configured) return true;
+  if (!config.userPoolId || !config.userPoolClientId) return false;
+
   Amplify.configure(
     {
       Auth: {
         Cognito: {
-          userPoolId,
-          userPoolClientId,
+          userPoolId: config.userPoolId,
+          userPoolClientId: config.userPoolClientId,
         },
       },
     },
     { ssr: true }
   );
+  configured = true;
+  return true;
 }
 
-/** Returns true when Amplify has been configured with valid Cognito credentials. */
-export function configureAmplify(): boolean {
-  return isConfigured;
+/** True when configureAmplifyWith() has successfully run at least once. */
+export function isAmplifyConfigured(): boolean {
+  return configured;
 }
 
 /**
- * Single entry point for loading `aws-amplify/auth` in a way that guarantees
- * `Amplify.configure()` has executed first.
+ * Returns the `aws-amplify/auth` module. Callers must ensure
+ * `configureAmplifyWith()` has already run (it happens in AuthProvider's
+ * mount effect) before invoking auth helpers like signIn / fetchAuthSession.
  *
- * Why this exists:
- *   AuthContext lazy-imports `aws-amplify/auth` to keep the ~2 MB module out
- *   of the initial public-page bundle (preserved here — this function still
- *   uses dynamic `import()`). But the auth helpers are useless until
- *   `Amplify.configure()` has run. Without an explicit barrier a caller
- *   could grab `signIn` etc. before the config side-effect lands and hit:
- *     "Amplify has not been configured. Please call Amplify.configure() …"
- *
- * How the guarantee works:
- *   `await import("./amplify-config")` resolves only after THIS module's
- *   top-level body has executed (the `Amplify.configure()` call above).
- *   We chain the auth import off that resolution, so by the time the auth
- *   module's exports are handed back, configure has provably run.
- *
- *   Bundle-size impact: zero — both imports are dynamic, so `aws-amplify`
- *   stays out of the public-page bundle. Webpack also dedupes module
- *   instances, so subsequent calls are cache hits (no extra wall-clock).
+ * Bundle-size note: this dynamic import keeps the ~2 MB aws-amplify auth
+ * runtime out of the initial public-page bundle. Webpack/Turbopack dedupe
+ * the module so repeat calls are cache hits.
  */
 export async function getAuthModule(): Promise<typeof import("aws-amplify/auth")> {
-  // Re-import self so the module-load side-effect (Amplify.configure) is
-  // observably complete before the auth import is awaited. Cheap on repeat
-  // calls — Webpack returns the cached module record.
-  await import("./amplify-config");
   return import("aws-amplify/auth");
 }
