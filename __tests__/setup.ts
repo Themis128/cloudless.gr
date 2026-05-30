@@ -77,9 +77,17 @@ process.env.GOOGLE_PRIVATE_KEY =
 process.env.GOOGLE_CALENDAR_ID = "calendar@cloudless.gr";
 process.env.GSC_SITE_URL = "sc-domain:cloudless.gr";
 
-// ── Cognito ───────────────────────────────────────────────────────────────────
+// ── Cognito (kept for legacy fallback path in proxy.ts) ──────────────────────
 process.env.COGNITO_USER_POOL_ID = "us-east-1_TestPool";
 process.env.COGNITO_CLIENT_ID = "test-client-id";
+
+// ── Keycloak / next-auth ──────────────────────────────────────────────────────
+process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID = "cloudless-app";
+process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
+process.env.KEYCLOAK_ADMIN_USER = "tbaltzakis";
+process.env.KEYCLOAK_ADMIN_PASSWORD = "test-admin-pass";
 
 // ── Cache resets ──────────────────────────────────────────────────────────────
 // Reset all in-memory caches before each test and restore env vars that tests
