@@ -92,6 +92,34 @@ VS Code Insiders picks up:
 - `tabbyml.pochi` — reads `~/.pochi/config.jsonc` and uses the same Tabby
   server for chat/agent flows via OpenAI-compatible API.
 
+After editing `~/.pochi/config.jsonc` you must reload the VS Code window
+(`Developer: Reload Window`) for Pochi to pick up the new provider.
+
+### Pochi agentic mode — what makes it work locally
+
+Pochi's agent loop relies on the model emitting tool invocations in a
+specific shape. The Pochi config flag that bridges local models to that
+shape is `useToolCallMiddleware: true`.
+
+| Backend | Native `tool_calls` in OpenAI response? | Need middleware? |
+|---|---|---|
+| Anthropic / OpenAI cloud | yes | no |
+| Tabby (llama-server wrapper) | **no** | **yes** |
+| Ollama with tool-trained models | partial | yes (safer) |
+
+The middleware tells Pochi to treat tool calls as plain text in the model
+response (wrapped in XML-ish tags like `<read_file path="X"/>`), parse
+them client-side, and execute them. Qwen2.5-Coder-7B-Instruct emits these
+cleanly on the first turn when the system prompt teaches the schema —
+verified locally:
+
+```
+POST /v1/chat/completions  ->  <read_file path='README.md'/>
+```
+
+Without that flag, Pochi sees the agent text as a normal assistant reply
+and the agent loop never advances past turn 1.
+
 ## Smoke test
 
 ```powershell
