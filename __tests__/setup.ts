@@ -85,6 +85,7 @@ process.env.COGNITO_CLIENT_ID = "test-client-id";
 process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
 process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID = "cloudless-app";
 process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+process.env.KEYCLOAK_CLIENT_ID = "cloudless-app";
 process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
 process.env.KEYCLOAK_ADMIN_USER = "tbaltzakis";
 process.env.KEYCLOAK_ADMIN_PASSWORD = "test-admin-pass";
