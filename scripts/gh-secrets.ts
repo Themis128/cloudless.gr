@@ -104,20 +104,20 @@ async function listSecrets(o: Options): Promise<SecretEntry[]> {
   return body.secrets;
 }
 
-/** True when the secret name still appears anywhere in the tracked tree. */
+/**
+ * True when any workflow under `.github` still consumes this secret as
+ * `secrets.NAME`. We scope to workflow consumption deliberately: a GitHub
+ * Actions secret is "in use" only if a workflow reads it. Placeholder mentions
+ * in `.env.example`, docs, or script comments do not count.
+ */
 function isReferenced(name: string): boolean {
   try {
-    // git grep exits 0 when matches found, 1 when none. Exclude self-documenting files.
-    const out = execFileSync(
-      "git",
-      ["grep", "-l", "--fixed-strings", name, "--", ".github", "src", "scripts", "infrastructure", "k8s"],
-      { encoding: "utf8" }
-    ).trim();
-    // Ignore matches that are only in this very tool / its docs.
-    const hits = out.split("\n").filter((f) => f && f !== "scripts/gh-secrets.ts");
-    return hits.length > 0;
+    // git grep exits 0 when a match is found, 1 when none. -q suppresses output.
+    execFileSync("git", ["grep", "-q", "--fixed-strings", `secrets.${name}`, "--", ".github"], {
+      stdio: "ignore",
+    });
+    return true;
   } catch (err) {
-    // exit code 1 = no matches → not referenced. Anything else, surface it.
     if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 1) {
       return false;
     }
