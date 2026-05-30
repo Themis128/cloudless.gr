@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "next dev -p 4000",
+    "dev:info": "bash scripts/wsl-dev-info.sh",
     "build": "next build",
     "start": "next start -p 4000",
     "lint": "eslint src",
