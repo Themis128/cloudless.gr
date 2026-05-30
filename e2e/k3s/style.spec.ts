@@ -162,11 +162,19 @@ test.describe("k3s Neon accent colours", () => {
 // ── Footer ─────────────────────────────────────────────────────────────────
 
 test.describe("k3s Footer style", () => {
+  // Scroll via evaluate — avoids "element not attached" when React re-hydrates
+  // the footer mid-navigation (hydration error causes a brief unmount/remount).
+  async function scrollToFooter(page: Page): Promise<void> {
+    await page.evaluate(() =>
+      document.querySelector("footer")?.scrollIntoView({ behavior: "instant" }),
+    );
+  }
+
   test("footer is rendered on the live app", async ({ page }) => {
     await gotoWithRetry(page, "/en");
+    await expect(page.locator("footer").first()).toBeAttached({ timeout: 20_000 });
+    await scrollToFooter(page);
     const footer = page.locator("footer").first();
-    await expect(footer).toBeAttached({ timeout: 20_000 });
-    await footer.scrollIntoViewIfNeeded();
     await expect(footer).toBeVisible({ timeout: 20_000 });
     const cls = await footer.getAttribute("class");
     expect(cls).toContain("border");
@@ -174,17 +182,17 @@ test.describe("k3s Footer style", () => {
 
   test("footer contains navigate / services / legal labels", async ({ page }) => {
     await gotoWithRetry(page, "/en");
-    const footer = page.locator("footer").first();
-    await footer.scrollIntoViewIfNeeded();
-    await expect(footer).toContainText(/navigate|services|legal/i);
+    await expect(page.locator("footer").first()).toBeAttached({ timeout: 20_000 });
+    await scrollToFooter(page);
+    await expect(page.locator("footer").first()).toContainText(/navigate|services|legal/i);
   });
 
   test("footer newsletter input is present", async ({ page }) => {
     await gotoWithRetry(page, "/en");
-    const footer = page.locator("footer").first();
-    await footer.scrollIntoViewIfNeeded();
-    const emailInput = footer
-      .locator('input[type="email"], input[name="email"]')
+    await expect(page.locator("footer").first()).toBeAttached({ timeout: 20_000 });
+    await scrollToFooter(page);
+    const emailInput = page
+      .locator('footer input[type="email"], footer input[name="email"]')
       .first();
     await expect(emailInput).toBeVisible({ timeout: 15_000 });
   });
