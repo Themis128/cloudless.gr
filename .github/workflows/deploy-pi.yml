@@ -127,6 +127,12 @@ jobs:
             APP_VERSION=${{ github.sha }}
             NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
 
+      # Re-login immediately before push — ECR tokens expire after ~12 min
+      # and the build step can take longer than that on a cold cache.
+      - name: Re-login to ECR before push
+        if: steps.check_ecr.outputs.exists != 'true'
+        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
+
       # Push via dockerd's own registry client (not buildkit). dockerd
       # re-reads ~/.docker/config.json for every push and does not
       # perform buildkit's manifest-HEAD dance against ECR.
