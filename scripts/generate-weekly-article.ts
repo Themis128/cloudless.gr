@@ -27,13 +27,13 @@ const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
 const MODEL = "claude-sonnet-4-6";
 
-const CATEGORIES = [
+export const CATEGORIES = [
   "Cloud",
   "Serverless",
   "Analytics",
   "AI Marketing",
 ] as const;
-type Category = (typeof CATEGORIES)[number];
+export type Category = (typeof CATEGORIES)[number];
 
 function requireEnv(name: string): string {
   const v = process.env[name];
@@ -44,7 +44,7 @@ function requireEnv(name: string): string {
   return v;
 }
 
-interface RecentPost {
+export interface RecentPost {
   title: string;
   category: Category;
   /** ISO date the publisher set, falls back to created_time */
@@ -108,7 +108,7 @@ async function fetchRecentPosts(): Promise<RecentPost[]> {
  * Pick the category that hasn't been used in the longest time.
  * If a category is missing from recent posts entirely, it wins outright.
  */
-function pickLruCategory(recent: RecentPost[]): Category {
+export function pickLruCategory(recent: RecentPost[]): Category {
   const lastSeen = new Map<Category, string>();
   for (const post of recent) {
     const prev = lastSeen.get(post.category);
@@ -247,7 +247,7 @@ async function generateArticle(
  * collapses to a paragraph — fine for AI-generated articles which we keep
  * to a constrained set.
  */
-function markdownToNotionBlocks(md: string): NotionBlock[] {
+export function markdownToNotionBlocks(md: string): NotionBlock[] {
   const blocks: NotionBlock[] = [];
   const lines = md.split(/\r?\n/);
   let paragraph: string[] = [];
@@ -416,15 +416,18 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch(async (err) => {
-  console.error("[generate-weekly-article] FAILED:", err);
-  await slackPing(
-    `:warning: Weekly article generator FAILED: \`${String(
-      (err as Error)?.message ?? err,
-    ).slice(0, 500)}\``,
-  );
-  process.exit(1);
-});
+// Only auto-run when invoked directly (skip during vitest imports).
+if (process.argv[1]?.includes("generate-weekly-article")) {
+  main().catch(async (err) => {
+    console.error("[generate-weekly-article] FAILED:", err);
+    await slackPing(
+      `:warning: Weekly article generator FAILED: \`${String(
+        (err as Error)?.message ?? err,
+      ).slice(0, 500)}\``,
+    );
+    process.exit(1);
+  });
+}
 
 // ── Notion shape declarations (kept inline so the script stays self-contained) ──
 

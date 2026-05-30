@@ -51,7 +51,7 @@ function requireEnv(name: string): string {
   return v;
 }
 
-function dateRange(): { startDate: string; endDate: string } {
+export function dateRange(): { startDate: string; endDate: string } {
   const end = new Date();
   const start = new Date();
   start.setDate(start.getDate() - 28);
@@ -97,7 +97,7 @@ interface GscRow {
   position: number;
 }
 
-async function gscQuery(
+export async function gscQuery(
   token: string,
   siteUrl: string,
   body: object,
@@ -139,7 +139,7 @@ async function notionCreatePage(
   }
 }
 
-function rt(text: string) {
+export function rt(text: string) {
   return { rich_text: [{ text: { content: text.slice(0, 2000) } }] };
 }
 
@@ -251,7 +251,10 @@ async function main(): Promise<void> {
   console.log(`[weekly-gsc-sync] Notion page created in db ${notionDbId}`);
 }
 
-main().catch((err) => {
-  console.error("[weekly-gsc-sync] FAILED:", err);
-  process.exit(1);
-});
+// Only auto-run when invoked directly (skip during vitest imports).
+if (process.argv[1]?.includes("weekly-gsc-sync")) {
+  main().catch((err) => {
+    console.error("[weekly-gsc-sync] FAILED:", err);
+    process.exit(1);
+  });
+}
