@@ -201,11 +201,20 @@ function generateNonce(): string {
  *   - Google Analytics / GTM
  */
 function buildCSP(nonce: string): string {
+  const isDev = process.env.NODE_ENV !== "production";
+  // In dev mode, Turbopack/HMR injects inline scripts without nonces and
+  // opens WebSockets on the dev origin — we need 'unsafe-inline' + ws:// to
+  // make the dev server work. Production uses the strict nonced policy.
+  const scriptSrc = isDev
+    ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`
+    : `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`;
+  const connectSrc = isDev
+    ? "connect-src 'self' ws: wss: http://localhost:* http://172.* https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://auth.cloudless.gr https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com"
+    : "connect-src 'self' ws://192.168.1.128:30800 wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://auth.cloudless.gr https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com";
+
   return [
     "default-src 'self'",
-    // 'strict-dynamic' makes the explicit host list below redundant for
-    // modern browsers but we keep it for CSP Level 2 fallback (Safari < 15.4).
-    `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`,
+    scriptSrc,
     // fonts.googleapis.com is allowlisted because next/font/google emits a
     // @font-face stylesheet whose src URLs hit Google's CDN even though the
     // font binaries themselves are self-hosted under /_next/static/media.
@@ -214,7 +223,7 @@ function buildCSP(nonce: string): string {
     // fonts.gstatic.com — Google Fonts binary CDN. next/font/google falls back
     // to it for the woff2 files when the build cannot inline them.
     "font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net",
-    "connect-src 'self' ws://192.168.1.128:30800 wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://auth.cloudless.gr https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
+    connectSrc,
     "frame-src https://js.stripe.com https://hooks.stripe.com https://www.facebook.com",
     "worker-src 'self' blob:",
     "media-src 'self'",
@@ -222,12 +231,9 @@ function buildCSP(nonce: string): string {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    // Browsers POST violation reports here. Same-origin so it works on
-    // Same-origin so it works without a CORS dance.
-    // Endpoint logs to stdout → Sentry/CloudWatch.
     "report-uri /api/csp-report",
     "report-to csp-endpoint",
-    "upgrade-insecure-requests",
+    ...(isDev ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");
 }
 
