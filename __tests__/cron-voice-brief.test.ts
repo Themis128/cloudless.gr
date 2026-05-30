@@ -3,8 +3,7 @@
  *
  * Covers:
  *   - cron auth gate
- *   - default (agent) path: agent invoked, brief persisted to SSM, Slack notified
- *   - legacy path (?legacy=true): linear pipeline + Anthropic narration kept
+ *   - agent path: agent invoked, brief persisted to SSM, Slack notified
  *   - failures in persist / Slack don't break the response (best-effort)
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -138,7 +137,6 @@ describe("GET /api/cron/voice-brief", () => {
       const body = await res.json();
 
       expect(res.status).toBe(200);
-      expect(body.mode).toBe("agent");
       expect(body.text).toContain("three new deals");
       expect(body.sources).toHaveLength(2);
 
@@ -146,7 +144,7 @@ describe("GET /api/cron/voice-brief", () => {
       expect(mockSlackPost).toHaveBeenCalledOnce();
 
       const slackPayload = mockSlackPost.mock.calls[0][0];
-      expect(slackPayload.text).toContain("agent");
+      expect(slackPayload.text).toContain("Weekly voice brief");
       // The brief text and a per-source breakdown should both be in the blocks.
       const blockText = JSON.stringify(slackPayload.blocks);
       expect(blockText).toContain("three new deals");
@@ -182,76 +180,4 @@ describe("GET /api/cron/voice-brief", () => {
     });
   });
 
-  describe("legacy mode (?legacy=true)", () => {
-    beforeEach(() => {
-      mockIsHubSpot.mockResolvedValue(true);
-      mockPipeline.mockResolvedValue({
-        totalDeals: 5,
-        totalValue: 50_000_00,
-        byStage: {},
-      });
-      mockSubscribers.mockResolvedValue(["a@x.com", "b@x.com"]);
-      mockGetSeo.mockResolvedValue({
-        clicks: 1234,
-        impressions: 56_789,
-        ctr: 2.1,
-      });
-      mockGetStripe.mockResolvedValue({
-        checkout: {
-          sessions: {
-            list: vi.fn().mockResolvedValue({
-              data: [{ payment_status: "paid", amount_total: 25_000 }],
-            }),
-          },
-        },
-      });
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            content: [{ text: "Polished narration of the week." }],
-          }),
-      });
-    });
-
-    it("calls the linear pipeline and Anthropic, does NOT call the agent", async () => {
-      const { GET } = await import(VOICE_BRIEF_ROUTE);
-      const res = await GET(
-        authedRequest("http://localhost/api/cron/voice-brief?legacy=true"),
-      );
-      const body = await res.json();
-
-      expect(res.status).toBe(200);
-      expect(body.mode).toBe("legacy");
-      expect(body.text).toBe("Polished narration of the week.");
-      expect(body.sources).toEqual([]);
-
-      expect(mockRunAgent).not.toHaveBeenCalled();
-      // Linear pipeline ran all four primitives.
-      expect(mockGetSeo).toHaveBeenCalled();
-      expect(mockPipeline).toHaveBeenCalled();
-      expect(mockSubscribers).toHaveBeenCalled();
-      expect(mockGetStripe).toHaveBeenCalled();
-      // Direct Anthropic API call (not Bedrock) — that's the legacy path.
-      expect(mockFetch).toHaveBeenCalledWith(
-        "https://api.anthropic.com/v1/messages",
-        expect.objectContaining({ method: "POST" }),
-      );
-    });
-
-    it("falls back to raw metrics text if the Anthropic narration fails", async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 502 });
-
-      const { GET } = await import(VOICE_BRIEF_ROUTE);
-      const res = await GET(
-        authedRequest("http://localhost/api/cron/voice-brief?legacy=true"),
-      );
-      const body = await res.json();
-
-      expect(res.status).toBe(200);
-      // Without polishing we get the raw "Weekly brief for Cloudless.gr — …" prefix.
-      expect(body.text).toContain("Weekly brief for Cloudless.gr");
-      expect(body.text).toContain("5 open deals");
-    });
-  });
 });

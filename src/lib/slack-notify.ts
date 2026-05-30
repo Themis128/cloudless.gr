@@ -247,9 +247,6 @@ const deploymentsClient = new SlackClient({ channel: "#deployments" });
 const contactsClient = new SlackClient({ channel: "#contacts" });
 const subscribersClient = new SlackClient({ channel: "#subscribers" });
 
-/** Fallback client for unrouted / legacy messages. */
-const client = new SlackClient();
-
 /**
  * Notify Slack when a new newsletter subscriber signs up.
  */
@@ -374,26 +371,6 @@ export async function slackDeployNotify(opts: {
     ],
     icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Legacy API — kept for backward compatibility with existing routes
-// ---------------------------------------------------------------------------
-
-interface SlackMessage {
-  text: string;
-  blocks?: Record<string, unknown>[];
-}
-
-/**
- * Send a raw message to Slack webhook.
- * @deprecated Use SlackClient.post() for new code.
- */
-export async function slackNotify(message: SlackMessage): Promise<boolean> {
-  return client.post({
-    text: message.text,
-    blocks: message.blocks as BlockKitBlock[],
   });
 }
 

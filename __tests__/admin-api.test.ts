@@ -296,7 +296,6 @@ vi.mock("@/lib/hubspot", () => ({
 
 // Slack notify
 vi.mock("@/lib/slack-notify", () => ({
-  slackNotify: vi.fn().mockResolvedValue(true),
   slackErrorNotify: vi.fn().mockResolvedValue(undefined),
   SlackClient: vi.fn().mockImplementation(() => ({
     post: vi.fn().mockResolvedValue(true),

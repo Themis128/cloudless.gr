@@ -9,10 +9,6 @@
  *   2. Retries each tool up to twice with exponential backoff before giving
  *      up on a source.
  *   3. Calls `emit_brief` exactly once with a polished TTS-friendly narrative.
- *
- * The route can still run the original linear pipeline by passing
- * `?legacy=true` so the agent can be A/B'd against the deterministic version
- * for at least one full release cycle (per the roadmap risk note).
  */
 import {
   fetchSeoMetrics,
