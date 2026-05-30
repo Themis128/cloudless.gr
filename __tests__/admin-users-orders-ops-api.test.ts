@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 // ---------------------------------------------------------------------------
@@ -102,7 +102,7 @@ describe("GET /api/admin/users", () => {
       if (String(url).includes("/token")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ access_token: "tok" }) });
       }
-      if (String(url).match(/\/users\?/)) {
+      if (/\/users\?/.exec(String(url))) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(kcUsers) });
       }
       if (String(url).includes("/groups")) {

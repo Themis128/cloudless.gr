@@ -1,54 +1,53 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+/**
+ * amplify-config shim tests — Keycloak era.
+ *
+ * The shim no longer calls Amplify.configure() — it checks NEXT_PUBLIC_KEYCLOAK_ISSUER
+ * and routes getAuthModule() to keycloak-auth.ts.
+ */
 
-const mockAmplifyConfigureFn = vi.fn();
-
-vi.mock("aws-amplify", () => ({
-  Amplify: { configure: mockAmplifyConfigureFn },
-}));
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 describe("amplify-config.ts", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     vi.resetModules();
+    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
   });
 
-  it("configureAmplifyWith returns false when credentials are empty", async () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("configureAmplifyWith returns false when NEXT_PUBLIC_KEYCLOAK_ISSUER is absent", async () => {
     const { configureAmplifyWith, isAmplifyConfigured } = await import("@/lib/amplify-config");
     expect(configureAmplifyWith({ userPoolId: "", userPoolClientId: "" })).toBe(false);
     expect(isAmplifyConfigured()).toBe(false);
-    expect(mockAmplifyConfigureFn).not.toHaveBeenCalled();
   });
 
-  it("configureAmplifyWith returns true and calls Amplify.configure once", async () => {
+  it("configureAmplifyWith returns true when NEXT_PUBLIC_KEYCLOAK_ISSUER is set", async () => {
+    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
     const { configureAmplifyWith, isAmplifyConfigured } = await import("@/lib/amplify-config");
-
-    expect(
-      configureAmplifyWith({
-        userPoolId: "us-east-1_TestPool",
-        userPoolClientId: "test-client-id",
-      })
-    ).toBe(true);
+    expect(configureAmplifyWith({ userPoolId: "", userPoolClientId: "" })).toBe(true);
     expect(isAmplifyConfigured()).toBe(true);
-    expect(mockAmplifyConfigureFn).toHaveBeenCalledTimes(1);
-    expect(mockAmplifyConfigureFn).toHaveBeenCalledWith(
-      {
-        Auth: {
-          Cognito: {
-            userPoolId: "us-east-1_TestPool",
-            userPoolClientId: "test-client-id",
-          },
-        },
-      },
-      { ssr: true }
-    );
+  });
 
-    // Idempotent — repeated calls do not re-invoke Amplify.configure.
-    expect(
-      configureAmplifyWith({
-        userPoolId: "us-east-1_TestPool",
-        userPoolClientId: "test-client-id",
-      })
-    ).toBe(true);
-    expect(mockAmplifyConfigureFn).toHaveBeenCalledTimes(1);
+  it("configureAmplifyWith is idempotent", async () => {
+    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+    const { configureAmplifyWith } = await import("@/lib/amplify-config");
+    expect(configureAmplifyWith({ userPoolId: "", userPoolClientId: "" })).toBe(true);
+    expect(configureAmplifyWith({ userPoolId: "x", userPoolClientId: "y" })).toBe(true);
+  });
+
+  it("getAuthModule returns keycloakAuthModule shape", async () => {
+    vi.mock("@/lib/keycloak-auth", () => ({
+      keycloakAuthModule: {
+        signIn: vi.fn(), signOut: vi.fn(), getCurrentUser: vi.fn(),
+        fetchAuthSession: vi.fn(), fetchUserAttributes: vi.fn(),
+        updateUserAttributes: vi.fn(), signUp: vi.fn(), confirmSignUp: vi.fn(),
+        resetPassword: vi.fn(), confirmResetPassword: vi.fn(), confirmSignIn: vi.fn(),
+      },
+    }));
+    const { getAuthModule } = await import("@/lib/amplify-config");
+    const auth = await getAuthModule();
+    expect(typeof auth.signIn).toBe("function");
+    expect(typeof auth.getCurrentUser).toBe("function");
+    expect(typeof auth.fetchAuthSession).toBe("function");
   });
 });
