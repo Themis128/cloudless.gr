@@ -127,20 +127,19 @@ jobs:
             APP_VERSION=${{ github.sha }}
             NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
 
-      # Re-login immediately before push — ECR tokens expire after ~12 min
-      # and the build step can take longer than that on a cold cache.
-      - name: Re-login to ECR before push
-        if: steps.check_ecr.outputs.exists != 'true'
-        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
-
-      # Push via dockerd's own registry client (not buildkit). dockerd
-      # re-reads ~/.docker/config.json for every push and does not
-      # perform buildkit's manifest-HEAD dance against ECR.
+      # Login + push in one step — avoids credential-store issues on self-hosted
+      # Pi runners where `amazon-ecr-login` writes to secretservice/pass but
+      # dockerd reads only ~/.docker/config.json.
+      # `aws ecr get-login-password | docker login --password-stdin` writes
+      # directly to config.json, bypassing any credential helper.
       - name: Push to ECR
         if: steps.check_ecr.outputs.exists != 'true'
         run: |
           set -euo pipefail
           TAG="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.check_ecr.outputs.short_sha }}"
+          echo "==> docker login via get-login-password"
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} \
+            | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
           echo "==> docker push ${TAG}"
           docker push "${TAG}"
 
