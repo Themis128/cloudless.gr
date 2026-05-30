@@ -174,7 +174,7 @@ export default function Footer() {
         </div>
 
         <div className="border-neon-cyan/10 mt-4 flex flex-col items-center justify-between gap-4 border-t pt-5 font-mono text-xs sm:flex-row">
-          <p className="text-slate-400">
+          <p className="text-slate-400" suppressHydrationWarning>
             &copy; {new Date().getFullYear()} Cloudless.{" "}
             {translate(locale, "footer.rightsReserved", "All rights reserved.")}
           </p>

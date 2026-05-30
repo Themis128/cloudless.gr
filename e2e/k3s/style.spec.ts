@@ -165,6 +165,7 @@ test.describe("k3s Footer style", () => {
   test("footer is rendered on the live app", async ({ page }) => {
     await gotoWithRetry(page, "/en");
     const footer = page.locator("footer").first();
+    await expect(footer).toBeAttached({ timeout: 20_000 });
     await footer.scrollIntoViewIfNeeded();
     await expect(footer).toBeVisible({ timeout: 20_000 });
     const cls = await footer.getAttribute("class");
