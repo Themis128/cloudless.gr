@@ -48,6 +48,70 @@ async function signToken(
     .sign(privateKey);
 }
 
+// ── URL/body builders — reused across multiple describe blocks ──────────────
+
+function buildAuthorizeUrl(opts: {
+  issuer: string;
+  clientId: string;
+  redirectUri: string;
+  state: string;
+  codeChallenge: string;
+  scope?: string;
+}): URL {
+  const url = new URL(`${opts.issuer}/protocol/openid-connect/auth`);
+  url.searchParams.set("client_id", opts.clientId);
+  url.searchParams.set("redirect_uri", opts.redirectUri);
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("state", opts.state);
+  url.searchParams.set("code_challenge", opts.codeChallenge);
+  url.searchParams.set("code_challenge_method", "S256");
+  url.searchParams.set("scope", opts.scope ?? "openid profile email");
+  return url;
+}
+
+function buildTokenBody(opts: {
+  code: string;
+  clientId: string;
+  redirectUri: string;
+  codeVerifier: string;
+}): URLSearchParams {
+  const body = new URLSearchParams();
+  body.set("grant_type", "authorization_code");
+  body.set("code", opts.code);
+  body.set("client_id", opts.clientId);
+  body.set("redirect_uri", opts.redirectUri);
+  body.set("code_verifier", opts.codeVerifier);
+  return body;
+}
+
+function buildRefreshBody(opts: {
+  refreshToken: string;
+  clientId: string;
+}): URLSearchParams {
+  const body = new URLSearchParams();
+  body.set("grant_type", "refresh_token");
+  body.set("refresh_token", opts.refreshToken);
+  body.set("client_id", opts.clientId);
+  return body;
+}
+
+function buildLogoutUrl(opts: {
+  issuer: string;
+  idToken: string;
+  postLogoutRedirectUri: string;
+}): URL {
+  const url = new URL(`${opts.issuer}/protocol/openid-connect/logout`);
+  url.searchParams.set("id_token_hint", opts.idToken);
+  url.searchParams.set("post_logout_redirect_uri", opts.postLogoutRedirectUri);
+  return url;
+}
+
+function adminBase(issuer: string): string {
+  const realm = issuer.split("/realms/")[1] ?? "master";
+  const base = issuer.replace(`/realms/${realm}`, "");
+  return `${base}/admin/realms/${realm}`;
+}
+
 // ── 1. JWT verification (jose, the same lib proxy.ts uses) ───────────────────
 
 describe("JWT verification — Keycloak-style claims via jose", () => {
@@ -57,7 +121,7 @@ describe("JWT verification — Keycloak-style claims via jose", () => {
   beforeEach(async () => {
     const kp = await makeKeyPair();
     privateKey = kp.privateKey;
-    jwks = createLocalJWKSet({ keys: [kp.jwk as Parameters<typeof createLocalJWKSet>[0]["keys"][0]] });
+    jwks = createLocalJWKSet({ keys: [kp.jwk] });
   });
 
   it("accepts a valid token signed by a known JWKS key", async () => {
@@ -165,8 +229,9 @@ describe("JWT verification — Keycloak-style claims via jose", () => {
       exp: Math.floor(Date.now() / 1000) + 3600,
     });
 
-    // Flip the last character of the signature
-    const tampered = valid.slice(0, -1) + (valid.slice(-1) === "A" ? "B" : "A");
+    // Replace the entire signature with a different valid-shaped base64url string
+    const [header, payload] = valid.split(".");
+    const tampered = `${header}.${payload}.${"A".repeat(342)}`; // RS256 sig is ~342 chars
 
     await expect(
       jwtVerify(tampered, jwks, { issuer: KC_ISSUER, audience: CLIENT_ID }),
@@ -199,8 +264,7 @@ describe("next-auth callbacks — src/lib/auth.ts contract", () => {
     if (account) {
       token.accessToken = account.access_token;
       token.idToken = account.id_token;
-      const p = profile as Record<string, unknown> | undefined;
-      token.groups = (p?.["groups"] as string[]) ?? [];
+      token.groups = (profile?.["groups"] as string[]) ?? [];
     }
     return token;
   }
@@ -377,25 +441,6 @@ describe("OIDC endpoint URLs — Keycloak realm contract", () => {
 // ── 5. Public client + PKCE flow expectations ────────────────────────────────
 
 describe("Public client + PKCE — authorization request shape", () => {
-  function buildAuthorizeUrl(opts: {
-    issuer: string;
-    clientId: string;
-    redirectUri: string;
-    state: string;
-    codeChallenge: string;
-    scope?: string;
-  }): URL {
-    const url = new URL(`${opts.issuer}/protocol/openid-connect/auth`);
-    url.searchParams.set("client_id", opts.clientId);
-    url.searchParams.set("redirect_uri", opts.redirectUri);
-    url.searchParams.set("response_type", "code");
-    url.searchParams.set("state", opts.state);
-    url.searchParams.set("code_challenge", opts.codeChallenge);
-    url.searchParams.set("code_challenge_method", "S256");
-    url.searchParams.set("scope", opts.scope ?? "openid profile email");
-    return url;
-  }
-
   it("includes response_type=code", () => {
     const url = buildAuthorizeUrl({
       issuer: KC_ISSUER,
@@ -457,21 +502,6 @@ describe("Public client + PKCE — authorization request shape", () => {
 // ── 6. Token exchange (code → access_token) request shape ────────────────────
 
 describe("Token endpoint exchange — code grant body", () => {
-  function buildTokenBody(opts: {
-    code: string;
-    clientId: string;
-    redirectUri: string;
-    codeVerifier: string;
-  }): URLSearchParams {
-    const body = new URLSearchParams();
-    body.set("grant_type", "authorization_code");
-    body.set("code", opts.code);
-    body.set("client_id", opts.clientId);
-    body.set("redirect_uri", opts.redirectUri);
-    body.set("code_verifier", opts.codeVerifier);
-    return body;
-  }
-
   it("uses grant_type=authorization_code", () => {
     const body = buildTokenBody({
       code: "abc",
@@ -503,17 +533,6 @@ describe("Token endpoint exchange — code grant body", () => {
 // ── 7. Refresh token rotation (Auth.js documented pattern) ──────────────────
 
 describe("Refresh token rotation contract", () => {
-  function buildRefreshBody(opts: {
-    refreshToken: string;
-    clientId: string;
-  }): URLSearchParams {
-    const body = new URLSearchParams();
-    body.set("grant_type", "refresh_token");
-    body.set("refresh_token", opts.refreshToken);
-    body.set("client_id", opts.clientId);
-    return body;
-  }
-
   it("uses grant_type=refresh_token", () => {
     const body = buildRefreshBody({ refreshToken: "rt", clientId: CLIENT_ID });
     expect(body.get("grant_type")).toBe("refresh_token");
@@ -566,17 +585,6 @@ describe("Refresh token rotation contract", () => {
 // ── 8. Federated logout (RP-Initiated Logout) ────────────────────────────────
 
 describe("Federated logout — end_session_endpoint URL shape", () => {
-  function buildLogoutUrl(opts: {
-    issuer: string;
-    idToken: string;
-    postLogoutRedirectUri: string;
-  }): URL {
-    const url = new URL(`${opts.issuer}/protocol/openid-connect/logout`);
-    url.searchParams.set("id_token_hint", opts.idToken);
-    url.searchParams.set("post_logout_redirect_uri", opts.postLogoutRedirectUri);
-    return url;
-  }
-
   it("includes id_token_hint (required for federated logout)", () => {
     const url = buildLogoutUrl({
       issuer: KC_ISSUER,
@@ -608,12 +616,6 @@ describe("Federated logout — end_session_endpoint URL shape", () => {
 // ── 9. Admin REST API integration (/api/admin/users) ─────────────────────────
 
 describe("Keycloak Admin REST API — token + path contract", () => {
-  function adminBase(issuer: string): string {
-    const realm = issuer.split("/realms/")[1] ?? "master";
-    const base = issuer.replace(`/realms/${realm}`, "");
-    return `${base}/admin/realms/${realm}`;
-  }
-
   it("admin URL is derived as {host}/admin/realms/{realm}", () => {
     expect(adminBase(KC_ISSUER)).toBe("https://auth.cloudless.gr/admin/realms/master");
   });
@@ -683,6 +685,38 @@ describe("Keycloak Admin REST API — token + path contract", () => {
 });
 
 // ── 10. Issuer URL hygiene (regression guard) ────────────────────────────────
+
+describe("Server-side env var presence (regression: empty client_id)", () => {
+  // Regression for the live bug 2026-05-30 where the authorize URL went out
+  // with client_id="" because next-auth's Keycloak provider reads
+  // process.env.KEYCLOAK_CLIENT_ID (server-side), not NEXT_PUBLIC_KEYCLOAK_CLIENT_ID.
+  // Result: Keycloak returned HTTP 400. Test ensures both env vars are set.
+
+  it("KEYCLOAK_CLIENT_ID (server-side) is set and non-empty", () => {
+    expect(process.env.KEYCLOAK_CLIENT_ID).toBeTruthy();
+    expect(process.env.KEYCLOAK_CLIENT_ID).not.toBe("");
+  });
+
+  it("KEYCLOAK_ISSUER (server-side) is set and non-empty", () => {
+    expect(process.env.KEYCLOAK_ISSUER).toBeTruthy();
+    expect(process.env.KEYCLOAK_ISSUER).not.toBe("");
+  });
+
+  it("NEXT_PUBLIC_KEYCLOAK_CLIENT_ID (client-side) is set", () => {
+    expect(process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID).toBeTruthy();
+  });
+
+  it("NEXT_PUBLIC_KEYCLOAK_CLIENT_ID and KEYCLOAK_CLIENT_ID must equal", () => {
+    // Drift between server and client client_id would mean the OIDC handshake
+    // succeeds on one side but the client-side JWT verification fails.
+    expect(process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID).toBe(process.env.KEYCLOAK_CLIENT_ID);
+  });
+
+  it("AUTH_SECRET is set (next-auth crashes silently without it)", () => {
+    expect(process.env.AUTH_SECRET).toBeTruthy();
+    expect((process.env.AUTH_SECRET ?? "").length).toBeGreaterThanOrEqual(32);
+  });
+});
 
 describe("Issuer URL configuration — env var sanity", () => {
   beforeEach(() => {

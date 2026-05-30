@@ -42,8 +42,9 @@ function buildSiteEnvironment(
     // Keycloak — replaces Cognito. NEXT_PUBLIC_* baked into client bundle.
     NEXT_PUBLIC_KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
     NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: "cloudless-app",
-    // Server-side only (admin REST API + JWT issuer for proxy.ts)
+    // Server-side only (admin REST API + JWT issuer for proxy.ts + next-auth provider)
     KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
+    KEYCLOAK_CLIENT_ID: "cloudless-app",
     KEYCLOAK_ADMIN_CLIENT_ID: "admin-cli",
     // KEYCLOAK_ADMIN_USER and KEYCLOAK_ADMIN_PASSWORD loaded from SSM at runtime
     // AUTH_SECRET injected from SSM at deploy time (above).
