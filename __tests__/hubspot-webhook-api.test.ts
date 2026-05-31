@@ -20,7 +20,7 @@ describe("POST /api/webhooks/hubspot", () => {
     vi.clearAllMocks();
   });
 
-  it("fails closed with 500 when HUBSPOT_CLIENT_SECRET is not configured", async () => {
+  it("fails closed with 401 when HUBSPOT_CLIENT_SECRET is not configured", async () => {
     getIntegrationsAsyncMock.mockResolvedValue({
       HUBSPOT_CLIENT_SECRET: "",
       HUBSPOT_API_KEY: "",
@@ -29,7 +29,7 @@ describe("POST /api/webhooks/hubspot", () => {
     const { POST } = await import("@/app/api/webhooks/hubspot/route");
     const res = await POST(makeRequest(JSON.stringify([])));
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(401);
     const data = await res.json();
     expect(data.error).toBe("Webhook not configured");
   });
