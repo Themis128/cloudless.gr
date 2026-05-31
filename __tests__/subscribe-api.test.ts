@@ -102,8 +102,10 @@ describe("POST /api/subscribe", () => {
     notifyTeamMock.mockRejectedValueOnce(new Error("ses-down"));
     const { POST } = await import("@/app/api/subscribe/route");
     const response = await POST(makeRequest({ email: "hello@cloudless.gr" }));
+    const data = await response.json();
 
     expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
     expect(notifyTeamMock).toHaveBeenCalledTimes(1);
   });
 });
