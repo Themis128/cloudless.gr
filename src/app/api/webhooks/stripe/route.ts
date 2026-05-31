@@ -163,8 +163,8 @@ export async function POST(request: NextRequest) {
   const webhookSecret = config.STRIPE_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
-    console.error("STRIPE_WEBHOOK_SECRET not configured in SSM");
-    return Response.json({ error: "Webhook not configured" }, { status: 500 });
+    console.warn("STRIPE_WEBHOOK_SECRET not configured — webhook disabled");
+    return Response.json({ error: "Webhook not configured" }, { status: 503 });
   }
 
   let event: Stripe.Event;

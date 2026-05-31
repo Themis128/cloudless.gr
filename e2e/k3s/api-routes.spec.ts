@@ -2,7 +2,7 @@
  * API-surface coverage — verifies common public Next.js API routes work
  * through the standby pipeline (no auth required for these).
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 import { getWithRetry } from "./_helpers";
 
 const BASE = `https://${process.env.K3S_HOST ?? "cloudless.gr"}`;

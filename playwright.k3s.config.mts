@@ -29,7 +29,21 @@ export default defineConfig({
   forbidOnly: isCi,
   retries: isCi ? 2 : 1,
   workers: isCi ? 4 : undefined,
-  reporter: isCi ? "github" : [["html", { open: "never" }], ["list"]],
+  reporter: process.env.COVERAGE === "1"
+    ? [
+        ["list"],
+        ["monocart-reporter", {
+          name: "cloudless.gr k3s coverage",
+          outputFile: "./coverage/k3s/index.html",
+          coverage: {
+            entryFilter: { "**/src/**": true, "**/_next/static/chunks/main-app*": false, "**/_next/static/chunks/webpack*": false, "**/_next/static/chunks/framework*": false, "**/_next/static/chunks/polyfills*": false },
+            sourceFilter: { "**/src/**": true, "**/node_modules/**": false },
+            reports: ["v8", "html", "lcov", "console-summary"],
+            outputDir: "./coverage/k3s",
+          },
+        }],
+      ]
+    : isCi ? "github" : [["html", { open: "never" }], ["list"]],
   timeout: 60_000,
   expect: { timeout: 15_000 },
 

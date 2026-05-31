@@ -16,8 +16,17 @@ export async function POST(request: Request) {
   const rl = rateLimit(`unsubscribe:${ip}`, 5, 60_000);
   if (!rl.ok) return rl.response;
 
+  // Parse the body in its own guard: a malformed JSON payload is a client
+  // error (400), not a 500.
+  let parsed;
   try {
-    const { email } = await request.json();
+    parsed = await request.json();
+  } catch {
+    return Response.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  try {
+    const { email } = parsed;
 
     if (!isValidEmail(email)) {
       return Response.json({ error: "Invalid email address." }, { status: 400 });

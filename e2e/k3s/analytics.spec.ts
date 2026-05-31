@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 
 /**
  * Analytics stack smoke tests — Metabase.

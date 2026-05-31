@@ -2,7 +2,7 @@
  * i18n routing coverage — the app uses next-intl with `[locale]` segments.
  * All three locales must serve via the standby path identically to PRIMARY.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 
 const LOCALES = ["en", "el", "fr"] as const;
 

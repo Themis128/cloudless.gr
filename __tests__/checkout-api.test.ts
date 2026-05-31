@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -43,7 +44,7 @@ describe("POST /api/checkout", () => {
     expect(data.error).toBe("No items in cart");
   });
 
-  it("returns 500 for unknown product IDs", async () => {
+  it("returns 400 for unknown product IDs", async () => {
     const request = new NextRequest("http://localhost/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -53,7 +54,7 @@ describe("POST /api/checkout", () => {
     });
 
     const response = await POST(request);
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(400);
   });
 
   it("creates a session with valid product IDs using server-side prices", async () => {

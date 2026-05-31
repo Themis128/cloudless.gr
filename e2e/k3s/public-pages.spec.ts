@@ -4,7 +4,7 @@
  *
  * Routes are hit at /en (English) since locale-routing is covered separately.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 
 const PAGES: { path: string; expectText?: RegExp; optional?: boolean }[] = [
   { path: "/en", expectText: /cloudless/i },

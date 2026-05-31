@@ -18,8 +18,17 @@ function getIdempotencyKey(request: NextRequest): string | undefined {
 }
 
 export async function POST(request: NextRequest) {
+  // Parse the body in its own guard: a malformed JSON payload is a client
+  // error (400), not a 500.
+  let parsed: { items?: CheckoutItem[] };
   try {
-    const { items } = (await request.json()) as { items: CheckoutItem[] };
+    parsed = (await request.json()) as { items?: CheckoutItem[] };
+  } catch {
+    return Response.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  try {
+    const { items } = parsed;
 
     if (!items || items.length === 0) {
       return Response.json({ error: "No items in cart" }, { status: 400 });
@@ -136,11 +145,15 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ url: session.url });
   } catch (error) {
+    const msg = ((error as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     // codeql[js/log-injection] -- error message sanitized (newlines stripped)
-    console.error(
-      "Checkout error:",
-      ((error as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " "),
-    );
+    console.error("Checkout error:", msg);
+
+    // Client errors: malformed body or unknown product → 400
+    if (/unknown product|json/i.test(msg)) {
+      return Response.json({ error: msg }, { status: 400 });
+    }
+
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       await import("@sentry/nextjs")
         .then(({ captureException, withScope }) =>
