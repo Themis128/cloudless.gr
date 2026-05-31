@@ -5,7 +5,7 @@
  * Catches: runner daemon crash, runner de-registered, labels misconfigured.
  * Requires GH_TOKEN with repo scope.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 
 const REPO = "Themis128/cloudless.gr";
 const runInfra = !!process.env.INFRA_SMOKE;

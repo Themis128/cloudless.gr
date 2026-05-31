@@ -8,7 +8,7 @@
  * Catches: cloudflared daemon crash, tunnel credential expiry,
  * ingress rule misconfiguration, Traefik routing failure.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 
 const K3S_HOST = process.env.K3S_HOST ?? "cloudless.gr";
 const runInfra = !!process.env.INFRA_SMOKE;

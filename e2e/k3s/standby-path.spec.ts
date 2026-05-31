@@ -8,7 +8,7 @@
  * so any successful response on that hostname is by definition the
  * standby path.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 import { STANDBY_HOST } from "./_helpers";
 
 test.describe("k3s standby path", () => {

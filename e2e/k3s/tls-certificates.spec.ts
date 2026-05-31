@@ -5,7 +5,7 @@
  * Catches cert-manager renewal failures, ACM misconfigurations, and
  * Cloudflare tunnel edge-cert gaps before they page anyone at 3 AM.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 
 const K3S_HOST = globalThis.process?.env["K3S_HOST"] ?? "cloudless.gr";
 

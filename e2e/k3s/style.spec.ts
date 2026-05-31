@@ -8,7 +8,7 @@
  * Run:  pnpm test:k3s e2e/k3s/style.spec.ts
  */
 
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "../coverage";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 

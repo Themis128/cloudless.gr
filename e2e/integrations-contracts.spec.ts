@@ -37,8 +37,8 @@ async function postForm(
 }
 
 test.describe("Integrations contracts", () => {
-  test("Notion blog API returns posts with source marker", async ({ page }) => {
-    const response = await page.request.get("/api/blog/posts");
+  test("Notion blog API returns posts with source marker", async ({ request }) => {
+    const response = await request.get("/api/blog/posts");
     expect(response.status()).toBe(200);
 
     const body = await response.json();

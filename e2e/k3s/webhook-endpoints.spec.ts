@@ -5,7 +5,7 @@
  * Catches: webhook route accidentally deleted, middleware misconfiguration,
  * signature verification broken.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 
 const K3S_HOST = globalThis.process?.env["K3S_HOST"] ?? "cloudless.gr";
 

@@ -4,7 +4,7 @@
  * Catches: scrape target down, stale recording rules, alert rule
  * syntax error, Grafana datasource misconfigured, dashboard deleted.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 
 const K3S_HOST = process.env.K3S_HOST ?? "cloudless.gr";
 const runInfra = !!process.env.INFRA_SMOKE;

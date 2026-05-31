@@ -85,12 +85,12 @@ function mapPage(page: any): DocRecord {
  * List all docs (published and unpublished) for admin use. Not cached.
  */
 export async function getAllDocs(): Promise<DocRecord[]> {
-  const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
-    "NOTION_API_KEY",
-    "NOTION_DOCS_DB_ID"
-  );
-
   try {
+    const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
+      "NOTION_API_KEY",
+      "NOTION_DOCS_DB_ID"
+    );
+
     const results = await notionFetchAll<unknown>(`/databases/${NOTION_DOCS_DB_ID}/query`, {
       sorts: DOCS_SORT,
     });
@@ -108,13 +108,13 @@ export async function getAllDocs(): Promise<DocRecord[]> {
  * Returns empty array if Notion is not configured.
  */
 export async function getDocs(): Promise<DocRecord[]> {
-  const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
-    "NOTION_API_KEY",
-    "NOTION_DOCS_DB_ID"
-  );
+  try {
+    const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
+      "NOTION_API_KEY",
+      "NOTION_DOCS_DB_ID"
+    );
 
-  return cached("docs:all", async () => {
-    try {
+    return cached("docs:all", async () => {
       const results = await notionFetchAll<unknown>(`/databases/${NOTION_DOCS_DB_ID}/query`, {
         filter: DOCS_PUBLISHED_FILTER,
         sorts: DOCS_SORT,
@@ -123,11 +123,11 @@ export async function getDocs(): Promise<DocRecord[]> {
       /* eslint-disable @typescript-eslint/no-explicit-any */
       return (results as any[]).map(mapPage);
       /* eslint-enable @typescript-eslint/no-explicit-any */
-    } catch (err) {
-      console.error("[Notion] Failed to fetch docs:", err);
-      return [];
-    }
-  });
+    });
+  } catch (err) {
+    console.error("[Notion] Failed to fetch docs:", err);
+    return [];
+  }
 }
 
 /**
@@ -135,12 +135,12 @@ export async function getDocs(): Promise<DocRecord[]> {
  * Returns null if not found or Notion is not configured.
  */
 export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
-  const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
-    "NOTION_API_KEY",
-    "NOTION_DOCS_DB_ID"
-  );
-
   try {
+    const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
+      "NOTION_API_KEY",
+      "NOTION_DOCS_DB_ID"
+    );
+
     const data = await notionFetch<{ results: unknown[] }>(
       `/databases/${NOTION_DOCS_DB_ID}/query`,
       {
@@ -171,9 +171,9 @@ export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
  * Returns null if not found or Notion is not configured.
  */
 export async function getDocContent(pageId: string): Promise<DocContent | null> {
-  await requireIntegrationAsync("NOTION_API_KEY");
-
   try {
+    await requireIntegrationAsync("NOTION_API_KEY");
+
     // Fetch the page metadata
     const page = await notionFetch<unknown>(`/pages/${pageId}`);
 
@@ -241,12 +241,12 @@ function mapWikiPage(page: any): WikiDocRecord {
  * Falls back to regular docs if wiki properties don't exist.
  */
 export async function getWikiDocs(): Promise<WikiDocRecord[]> {
-  const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
-    "NOTION_API_KEY",
-    "NOTION_DOCS_DB_ID"
-  );
-
   try {
+    const { NOTION_DOCS_DB_ID } = await requireIntegrationAsync(
+      "NOTION_API_KEY",
+      "NOTION_DOCS_DB_ID"
+    );
+
     const results = await notionFetchAll<unknown>(`/databases/${NOTION_DOCS_DB_ID}/query`, {
       filter: DOCS_PUBLISHED_FILTER,
       sorts: DOCS_SORT,
@@ -297,9 +297,9 @@ export async function searchDocs(query: string): Promise<DocRecord[]> {
 export async function getDocContentWithToc(
   pageId: string
 ): Promise<(DocContent & { toc: TocEntry[] }) | null> {
-  await requireIntegrationAsync("NOTION_API_KEY");
-
   try {
+    await requireIntegrationAsync("NOTION_API_KEY");
+
     const page = await notionFetch<unknown>(`/pages/${pageId}`);
     const blocks = await fetchBlocksDeep(pageId);
 
