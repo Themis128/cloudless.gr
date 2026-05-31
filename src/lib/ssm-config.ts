@@ -140,7 +140,9 @@ function validateRequiredKeys(params: Map<string, string>): void {
     }
   }
   if (missing.length > 0) {
-    console.warn(`[SSM] Missing required parameters (some features may be disabled): ${missing.join(", ")}`);
+    console.warn(
+      `[SSM] Missing required parameters (some features may be disabled): ${missing.join(", ")}`
+    );
   }
 }
 
