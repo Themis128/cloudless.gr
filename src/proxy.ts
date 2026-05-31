@@ -1,24 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
-
-// Keycloak JWKS — primary for both k3s (Pi) and Lambda deployments.
-// Falls back to Cognito for zero-downtime rollout during migration.
-const _kcIssuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
-const _upId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
-const _reg = _upId.split("_")[0] || "us-east-1";
-
-const JWKS = _kcIssuer
-  ? createRemoteJWKSet(new URL(`${_kcIssuer}/protocol/openid-connect/certs`))
-  : _upId
-    ? createRemoteJWKSet(
-        new URL(`https://cognito-idp.${_reg}.amazonaws.com/${_upId}/.well-known/jwks.json`),
-      )
-    : null;
-
-const JWT_ISSUER = _kcIssuer || (_upId ? `https://cognito-idp.${_reg}.amazonaws.com/${_upId}` : "");
 
 const LOCALES = routing.locales as readonly string[];
 const DEFAULT_LOCALE = routing.defaultLocale;
@@ -37,65 +20,35 @@ function stripLocale(pathname: string): string {
 async function readAuthToken(
   req: NextRequest,
 ): Promise<{ valid: boolean; isAdmin: boolean }> {
-  if (!JWKS || !JWT_ISSUER) return { valid: false, isAdmin: false };
-
-  // next-auth stores the session as an encrypted JWT in __Secure-authjs.session-token
-  // (prod) or authjs.session-token (dev/HTTP). Extract and verify the id_token
-  // that next-auth embeds in the session JWT payload.
   const sessionCookie =
     req.cookies.get("__Secure-authjs.session-token")?.value ??
     req.cookies.get("authjs.session-token")?.value;
 
-  if (sessionCookie) {
-    try {
-      // next-auth v5 session cookies are encrypted — decode with next-auth secret
-      // via the getToken helper (edge-compatible).
-      const { getToken } = await import("next-auth/jwt");
-      const token = await getToken({
-        req: req as Parameters<typeof getToken>[0]["req"],
-        secret: process.env.AUTH_SECRET ?? "",
-        secureCookie: process.env.NODE_ENV === "production",
-        cookieName:
-          process.env.NODE_ENV === "production"
-            ? "__Secure-authjs.session-token"
-            : "authjs.session-token",
-      });
-      if (token) {
-        const groups = (token.groups as string[]) ?? [];
-        return { valid: true, isAdmin: groups.includes("admin") };
-      }
-    } catch {
-      // fall through to legacy Cognito check
-    }
-  }
+  if (!sessionCookie) return { valid: false, isAdmin: false };
 
-  // Legacy Cognito fallback — active while old sessions still exist during rollout
-  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  if (clientId && !_kcIssuer) {
-    const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
-    const username = req.cookies.get(lastAuthKey)?.value;
-    if (username) {
-      const tokenKey = `CognitoIdentityServiceProvider.${clientId}.${username}.idToken`;
-      const token = req.cookies.get(tokenKey)?.value;
-      if (token) {
-        try {
-          const { payload } = await jwtVerify(token, JWKS, {
-            issuer: JWT_ISSUER,
-            audience: clientId,
-          });
-          return {
-            valid: true,
-            isAdmin:
-              (payload["cognito:groups"] as string[] | undefined)?.includes("admin") ?? false,
-          };
-        } catch {
-          // invalid token
-        }
-      }
-    }
-  }
+  try {
+    const { getToken } = await import("next-auth/jwt");
+    const token = await getToken({
+      req: req as Parameters<typeof getToken>[0]["req"],
+      secret: process.env.AUTH_SECRET ?? "",
+      secureCookie: process.env.NODE_ENV === "production",
+      cookieName:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-authjs.session-token"
+          : "authjs.session-token",
+    });
+    if (!token) return { valid: false, isAdmin: false };
 
-  return { valid: false, isAdmin: false };
+    const groups = (token.groups as string[]) ?? [];
+    const roles = (token.roles as string[]) ?? [];
+    const admin =
+      groups.includes("admin") ||
+      roles.includes("admin") ||
+      roles.includes("realm:admin");
+    return { valid: true, isAdmin: admin };
+  } catch {
+    return { valid: false, isAdmin: false };
+  }
 }
 
 // --- next-intl locale middleware ---

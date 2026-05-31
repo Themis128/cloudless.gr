@@ -43,6 +43,19 @@ declare module "next-auth/jwt" {
   }
 }
 
+/** Decode a JWT without verification — used only to read Keycloak claims. */
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return {};
+    const padded = part.replace(/-/g, "+").replace(/_/g, "/");
+    const json = atob(padded.padEnd(padded.length + ((4 - (padded.length % 4)) % 4), "="));
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 const hasAuthSecret = !!process.env.AUTH_SECRET;
 const KC_ISSUER = process.env.KEYCLOAK_ISSUER ?? "";
 const KC_CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID ?? "";
@@ -99,10 +112,33 @@ const nextAuthResult = hasAuthSecret
               typeof account.expires_at === "number"
                 ? account.expires_at
                 : Math.floor(Date.now() / 1000) + Number(account.expires_in ?? 0);
+
+            // Decode the access token to read Keycloak-specific claims.
+            // Keycloak puts groups in the id_token/access_token payload under
+            // "groups" and realm roles under "realm_access.roles". The OIDC
+            // profile object may not include these unless the client has the
+            // corresponding Protocol Mapper configured, so decode directly.
+            const accessPayload = account.access_token
+              ? decodeJwtPayload(account.access_token as string)
+              : {};
+            const idPayload = account.id_token
+              ? decodeJwtPayload(account.id_token as string)
+              : {};
+
+            // Groups: prefer id_token, fall back to access_token, then profile
             const p = profile as Record<string, unknown> | undefined;
-            token.groups = (p?.["groups"] as string[]) ?? [];
-            const realmAccess = p?.["realm_access"] as { roles?: string[] } | undefined;
+            token.groups =
+              (idPayload["groups"] as string[] | undefined) ??
+              (accessPayload["groups"] as string[] | undefined) ??
+              (p?.["groups"] as string[] | undefined) ??
+              [];
+
+            // Roles: realm_access.roles from access_token (authoritative source)
+            const realmAccess = (accessPayload["realm_access"] ?? p?.["realm_access"]) as
+              | { roles?: string[] }
+              | undefined;
             token.roles = realmAccess?.roles ?? [];
+
             return token;
           }
 
@@ -121,9 +157,15 @@ const nextAuthResult = hasAuthSecret
           try {
             const refreshed = await refreshAccessToken(token.refreshToken);
             token.accessToken = refreshed.access_token;
-            token.refreshToken = refreshed.refresh_token; // Keycloak rotates by default
+            token.refreshToken = refreshed.refresh_token;
             if (refreshed.id_token) token.idToken = refreshed.id_token;
             token.expiresAt = now + refreshed.expires_in;
+            // Re-read groups/roles from the new access token
+            const payload = decodeJwtPayload(refreshed.access_token);
+            const ra = payload["realm_access"] as { roles?: string[] } | undefined;
+            token.groups =
+              (payload["groups"] as string[] | undefined) ?? token.groups ?? [];
+            token.roles = ra?.roles ?? token.roles ?? [];
             delete token.error;
             return token;
           } catch {
