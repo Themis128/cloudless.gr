@@ -1,8 +1,11 @@
 "use client";
 
 /**
- * Legacy shim — kept only so imports in any remaining callers don't break.
- * All authentication is now handled by next-auth + Keycloak.
+ * Legacy shim — kept so any remaining callers don't break.
+ * All authentication is handled by next-auth + Keycloak.
+ *
+ * configureAmplifyWith returns true only when NEXT_PUBLIC_KEYCLOAK_ISSUER
+ * is set, preserving the original contract so existing test coverage holds.
  */
 
 export interface AmplifyAuthConfig {
@@ -10,12 +13,18 @@ export interface AmplifyAuthConfig {
   userPoolClientId: string;
 }
 
+let configured = false;
+
 export function configureAmplifyWith(_config: AmplifyAuthConfig): boolean {
-  return true;
+  if (configured) return true;
+  const hasIssuer =
+    typeof process !== "undefined" && !!process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+  configured = hasIssuer;
+  return configured;
 }
 
 export function isAmplifyConfigured(): boolean {
-  return true;
+  return configured;
 }
 
 export async function getAuthModule() {
