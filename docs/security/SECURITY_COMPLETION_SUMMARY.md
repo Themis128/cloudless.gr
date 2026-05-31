@@ -272,10 +272,10 @@ ea90f87f security: migrate GitHub Actions to OIDC token exchange (keyless AWS au
 
 ## Documentation References
 
-- **Audit Report:** [SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md)
-- **OIDC Details:** [OIDC_MIGRATION_COMPLETED.md](OIDC_MIGRATION_COMPLETED.md)
-- **Maintenance:** [SECURITY_MONITORING.md](SECURITY_MONITORING.md)
-- **Roadmap:** [docs/SECURITY_ENHANCEMENTS_ROADMAP.md](docs/SECURITY_ENHANCEMENTS_ROADMAP.md)
+- **Audit Report:** `SECURITY_AUDIT_REPORT.md` _(not yet published)_
+- **OIDC Details:** `OIDC_MIGRATION_COMPLETED.md` _(not yet published)_
+- **Maintenance:** `SECURITY_MONITORING.md` _(not yet published)_
+- **Roadmap:** [SECURITY_ENHANCEMENTS_ROADMAP.md](../SECURITY_ENHANCEMENTS_ROADMAP.md)
 - **Action Log:** [SECURITY_ACTION_LOG.md](SECURITY_ACTION_LOG.md)
 
 ---
