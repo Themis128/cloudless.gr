@@ -24,9 +24,9 @@ next-auth token as a `groups` claim:
 - **Page routes** — `src/proxy.ts:42-48` reads the next-auth JWT and treats
   a user as admin if `groups` includes `"admin"` (it also accepts a
   `roles` containing `admin`/`realm:admin` as a fallback).
-- **API routes** — `src/lib/api-auth.ts:108-109` (`isAdmin`) checks the
-  decoded token's `cognito:groups` for `"admin"`; `requireAdmin`
-  (`:140-155`) returns **403** when that group is absent.
+- **API routes** — `src/lib/api-auth.ts` (`isAdmin`) checks the
+  decoded token's `groups` for `"admin"`; `requireAdmin`
+  returns **403** when that group is absent.
 
 > The `groups` claim only appears in the token if the Keycloak `cloudless`
 > client has the **Group Membership** protocol mapper. The provisioning
