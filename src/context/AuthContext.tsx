@@ -193,82 +193,86 @@ export function AuthProvider({
   );
 
   const checkAuth = useCallback(async () => {
-    // Try Cognito/Amplify first (legacy path).
-    let amplifyConfigured = false;
     try {
-      const { configureAmplifyWith } = await import("@/lib/amplify-config");
-      const ok = configureAmplifyWith(cognitoConfig);
-      if (!ok) {
-        setConfigError("Authentication is not configured for this environment.");
-        return;
-      }
-      amplifyConfigured = true;
-    } catch (err) {
-      setConfigError(err instanceof Error ? err.message : "Authentication configuration failed");
-      return;
-    }
-
-    if (amplifyConfigured) {
+      // Try Cognito/Amplify first (legacy path).
+      let amplifyConfigured = false;
       try {
-        const { getCurrentUser, fetchAuthSession } = await (
-          await import("@/lib/amplify-config")
-        ).getAuthModule();
-        const currentUser = await getCurrentUser();
-        const email = currentUser.signInDetails?.loginId;
-        const profile = await loadUserProfile(currentUser.username, email);
-        setUser(profile);
-        // Fetch the session separately so a transient token-refresh failure
-        // doesn't clear an already-authenticated user's admin status.
-        let groups: string[] = [];
-        try {
-          const session = await fetchAuthSession();
-          const idToken = session.tokens?.idToken?.toString();
-          if (idToken) {
-            groups = (decodeJwtPayload(idToken)["cognito:groups"] as string[]) ?? [];
-          }
-        } catch {
-          // Session fetch failed (network blip). Keep existing admin state if
-          // already set; otherwise default to non-admin.
-          groups = [];
-        }
-        setIsAdmin(groups.includes("admin"));
-        return;
-      } catch {
-        // No Cognito session — fall through to next-auth/Keycloak check.
-      }
-    }
-
-    // Keycloak/next-auth path: read the server-side session cookie via the
-    // next-auth session endpoint. This is active after the Cognito→Keycloak
-    // migration and coexists with Amplify during the rollout.
-    try {
-      const res = await globalThis.fetch("/api/auth/session");
-      if (res.ok) {
-        const data = (await res.json()) as {
-          user?: { name?: string; email?: string; id?: string; groups?: string[] };
-        };
-        if (data.user) {
-          const { email, name, id, groups: kcGroups = [] } = data.user;
-          setUser({
-            username: id ?? email ?? "",
-            email: email ?? undefined,
-            name: name ?? undefined,
-            preferences: { ...DEFAULT_PREFERENCES },
-          });
-          setIsAdmin(kcGroups.includes("admin"));
+        const { configureAmplifyWith } = await import("@/lib/amplify-config");
+        const ok = configureAmplifyWith(cognitoConfig);
+        if (!ok) {
+          setConfigError("Authentication is not configured for this environment.");
           return;
         }
+        amplifyConfigured = true;
+      } catch (err) {
+        setConfigError(err instanceof Error ? err.message : "Authentication configuration failed");
+        return;
       }
-    } catch {
-      // Network error — treat as unauthenticated.
-    }
 
-    setUser(null);
-    setIsAdmin(false);
+      if (amplifyConfigured) {
+        try {
+          const { getCurrentUser, fetchAuthSession } = await (
+            await import("@/lib/amplify-config")
+          ).getAuthModule();
+          const currentUser = await getCurrentUser();
+          const email = currentUser.signInDetails?.loginId;
+          const profile = await loadUserProfile(currentUser.username, email);
+          setUser(profile);
+          // Fetch the session separately so a transient token-refresh failure
+          // doesn't clear an already-authenticated user's admin status.
+          let groups: string[] = [];
+          try {
+            const session = await fetchAuthSession();
+            const idToken = session.tokens?.idToken?.toString();
+            if (idToken) {
+              groups = (decodeJwtPayload(idToken)["cognito:groups"] as string[]) ?? [];
+            }
+          } catch {
+            // Session fetch failed (network blip). Keep existing admin state if
+            // already set; otherwise default to non-admin.
+            groups = [];
+          }
+          setIsAdmin(groups.includes("admin"));
+          return;
+        } catch {
+          // No Cognito session — fall through to next-auth/Keycloak check.
+        }
+      }
+
+      // Keycloak/next-auth path: read the server-side session cookie via the
+      // next-auth session endpoint. This is active after the Cognito→Keycloak
+      // migration and coexists with Amplify during the rollout.
+      try {
+        const res = await globalThis.fetch("/api/auth/session");
+        if (res.ok) {
+          const data = (await res.json()) as {
+            user?: { name?: string; email?: string; id?: string; groups?: string[] };
+          };
+          if (data.user) {
+            const { email, name, id, groups: kcGroups = [] } = data.user;
+            setUser({
+              username: id ?? email ?? "",
+              email: email ?? undefined,
+              name: name ?? undefined,
+              preferences: { ...DEFAULT_PREFERENCES },
+            });
+            setIsAdmin(kcGroups.includes("admin"));
+            return;
+          }
+        }
+      } catch {
+        // Network error — treat as unauthenticated.
+      }
+
+      setUser(null);
+      setIsAdmin(false);
+    } finally {
+      setIsLoading(false);
+    }
   }, [loadUserProfile, cognitoConfig]);
 
   useEffect(() => {
-    checkAuth().finally(() => setIsLoading(false));
+    void checkAuth();
   }, [checkAuth]);
 
 
