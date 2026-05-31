@@ -82,6 +82,9 @@ export function useStoredPref(): ThemePref | null {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Intentional post-hydration flip to swap from the SSR-matching null
+    // snapshot to the real localStorage value. See React error #418 context above.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
