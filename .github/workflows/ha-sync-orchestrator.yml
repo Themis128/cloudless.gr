@@ -185,7 +185,38 @@ jobs:
                 continue;
               }
               if (candidates.length > 0) {
-                core.setFailed(`Pi build for SHA ${deploySha} ended with: ${candidates[0].conclusion}`);
+                const latest = candidates[0];
+                if (latest.conclusion === 'cancelled') {
+                  // Cancelled runs happen when a PR-triggered build is auto-cancelled
+                  // on branch deletion after merge. Re-dispatch and switch to run-ID
+                  // tracking so the next iterations use the faster id-based path.
+                  core.warning(
+                    `Pi build ${latest.id} for SHA ${deploySha} was cancelled. Re-dispatching…`
+                  );
+                  const deployBranch = '${{ steps.meta.outputs.branch }}';
+                  const redispatchedAt = new Date().toISOString();
+                  await github.rest.actions.createWorkflowDispatch({
+                    owner, repo,
+                    workflow_id: 'build-pi-image.yml',
+                    ref: deployBranch,
+                    inputs: { target_sha: deploySha },
+                  });
+                  await sleep(delayMs * 2);
+                  for (let j = 0; j < 5; j++) {
+                    const { data } = await github.rest.actions.listWorkflowRuns({
+                      owner, repo,
+                      workflow_id: 'build-pi-image.yml',
+                      event: 'workflow_dispatch', per_page: 10,
+                    });
+                    const newRun = data.workflow_runs.find(
+                      r => new Date(r.created_at) >= new Date(redispatchedAt)
+                    );
+                    if (newRun) { dispatchedRunId = newRun.id; break; }
+                    await sleep(delayMs);
+                  }
+                  continue;
+                }
+                core.setFailed(`Pi build for SHA ${deploySha} ended with: ${latest.conclusion}`);
                 return;
               }
               core.info(`Attempt ${attempt}: no run found yet for SHA ${deploySha}`);
