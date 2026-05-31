@@ -275,7 +275,6 @@ export function AuthProvider({
     void checkAuth();
   }, [checkAuth]);
 
-
   const applySignInResult = async (
     result: Awaited<
       ReturnType<
