@@ -60,9 +60,11 @@ for (const route of AUTH_PAGES) {
     await page.goto(route);
     await page.waitForLoadState("networkidle").catch(() => {});
     await expect(page.locator("body")).toBeVisible();
-    // login / signup show email; forgot-password might show email only
+    // login page shows Keycloak SSO button when NEXT_PUBLIC_KEYCLOAK_ISSUER is set;
+    // signup and forgot-password always show an email field.
     const hasEmail = await page.getByLabel(/email/i).first().isVisible({ timeout: 10_000 }).catch(() => false);
-    expect(hasEmail, `${route} has no email input`).toBeTruthy();
+    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 5_000 }).catch(() => false);
+    expect(hasEmail || hasKeycloak, `${route} has no email input or Keycloak SSO button`).toBeTruthy();
   });
 }
 

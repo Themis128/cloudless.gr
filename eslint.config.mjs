@@ -36,6 +36,28 @@ const eslintConfig = defineConfig([
     },
   },
 
+
+  // Scripts/tools/workers — CLI utilities legitimately use console, any, require
+  {
+    files: ["scripts/**/*.{ts,mts,mjs,js}", "tools/**/*.{ts,mts,mjs,js}", "workers/**/*.{ts,mts,mjs,js}", "*.config.{ts,mts,mjs,js}"],
+    rules: {
+      "no-console": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/triple-slash-reference": "off",
+      "import/no-anonymous-default-export": "off",
+    },
+  },
+
+  // Tests — looser rules
+  {
+    files: ["__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "no-console": "off",
+    },
+  },
+
   // Override ignores of eslint-config-next
   globalIgnores([
     ".next/**",
@@ -45,6 +67,16 @@ const eslintConfig = defineConfig([
     "e2e/**",
     "playwright.config.ts",
     "public/sw.js",
+    ".venv/**",
+    ".mypy_cache/**",
+    ".ruff_cache/**",
+    ".pochi/**",
+    "scripts/**/dist/**",
+    "tools/**/dist/**",
+    "coverage/**",
+    ".coverage-v8-server/**",
+    ".coverage-run/**",
+    "workers/**/dist/**"
   ]),
 ]);
 
