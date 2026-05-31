@@ -34,8 +34,7 @@ vi.mock("@/lib/agent-book", async (importOriginal) => {
   return {
     ...actual,
     proposeBookingSlot: (...args: unknown[]) => mockProposeBookingSlot(...args),
-    isAgentBookConfigured: (...args: unknown[]) =>
-      mockIsAgentBookConfigured(...args),
+    isAgentBookConfigured: (...args: unknown[]) => mockIsAgentBookConfigured(...args),
   };
 });
 
@@ -45,8 +44,7 @@ vi.mock("@/lib/google-calendar", () => ({
 }));
 
 vi.mock("@/lib/email", () => ({
-  sendBookingConfirmation: (...args: unknown[]) =>
-    mockSendBookingConfirmation(...args),
+  sendBookingConfirmation: (...args: unknown[]) => mockSendBookingConfirmation(...args),
 }));
 
 vi.mock("@/lib/slack-notify", () => ({
@@ -80,9 +78,7 @@ function makeUserToken(email = "user@example.com"): string {
     token_use: "id",
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
-  const header = Buffer.from(JSON.stringify({ alg: "RS256" })).toString(
-    "base64url",
-  );
+  const header = Buffer.from(JSON.stringify({ alg: "RS256" })).toString("base64url");
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `${header}.${body}.fake-sig`;
 }
@@ -113,6 +109,10 @@ function unauthPost(body?: unknown): NextRequest {
 describe("POST /api/agent/book", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Clear the auth issuer/pool so api-auth uses the dev decode-only fallback
+    // (these fixtures use fake-signed tokens, so JWKS verification would 401).
+    delete process.env.KEYCLOAK_ISSUER;
+    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     delete process.env.COGNITO_USER_POOL_ID;
     delete process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
     mockIsAgentBookConfigured.mockResolvedValue(true);
@@ -171,9 +171,7 @@ describe("POST /api/agent/book", () => {
     const data = await res.json();
     expect(data.status).toBe("proposed");
     expect(data.proposed.start).toBe(start);
-    expect(mockProposeBookingSlot).toHaveBeenCalledWith(
-      "tomorrow morning, 30 min",
-    );
+    expect(mockProposeBookingSlot).toHaveBeenCalledWith("tomorrow morning, 30 min");
   });
 
   it("propose: returns no_match when the agent finds nothing", async () => {
@@ -221,10 +219,7 @@ describe("POST /api/agent/book", () => {
 
     const { POST } = await import(BOOK_ROUTE);
     const res = await POST(
-      authPost(
-        { confirm: true, start, end, notes: "audit prep" },
-        "auth@cloudless.gr",
-      ),
+      authPost({ confirm: true, start, end, notes: "audit prep" }, "auth@cloudless.gr")
     );
     expect(res.status).toBe(200);
     expect(mockBookConsultation).toHaveBeenCalledWith(
@@ -233,7 +228,7 @@ describe("POST /api/agent/book", () => {
         start,
         end,
         notes: "audit prep",
-      }),
+      })
     );
     const data = await res.json();
     expect(data.status).toBe("confirmed");
