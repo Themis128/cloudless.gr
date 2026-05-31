@@ -77,6 +77,21 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
       expect(result).not.toBeNull();
       expect(result!.sub).toBe("user-2");
     });
+
+    it("fails closed in production even with no JWKS (never decodes unverified)", async () => {
+      const prev = process.env.NODE_ENV;
+      // @ts-expect-error — NODE_ENV is readonly in types but writable at runtime
+      process.env.NODE_ENV = "production";
+      try {
+        const { verifyToken } = await import("@/lib/api-auth");
+        // A perfectly well-formed, non-expired token must still be rejected:
+        // production never trusts an unverified decode.
+        expect(await verifyToken(makeValidJwt({ email: "x@x.com" }))).toBeNull();
+      } finally {
+        // @ts-expect-error — restore
+        process.env.NODE_ENV = prev;
+      }
+    });
   });
 
   describe("isAdmin()", () => {
