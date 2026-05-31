@@ -142,6 +142,52 @@ else
   log "  = group 'admin' already exists ($ADMIN_GROUP_ID)"
 fi
 
+# ─── ensure "groups" claim mapper on the client ──────────────
+# Without this, Keycloak won't include group membership in the ID token
+# profile, so next-auth's jwt callback never sees token.groups.
+KEYCLOAK_CLIENT_ID="${KEYCLOAK_CLIENT_ID:-cloudless}"
+log "Ensuring group membership mapper on client '$KEYCLOAK_CLIENT_ID'"
+
+if [ "$DRY_RUN" != "1" ]; then
+  # Find the internal client UUID for our client ID
+  CLIENT_UUID="$(kc GET "/clients?clientId=$KEYCLOAK_CLIENT_ID" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+print(data[0]['id'] if data else '')
+" 2>/dev/null)"
+
+  if [ -n "$CLIENT_UUID" ]; then
+    # Check if the groups mapper already exists
+    MAPPER_EXISTS="$(kc GET "/clients/$CLIENT_UUID/protocol-mappers/models" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+found = any(m.get('name') == 'groups' for m in data)
+print('yes' if found else '')
+" 2>/dev/null)"
+
+    if [ -z "$MAPPER_EXISTS" ]; then
+      kc POST "/clients/$CLIENT_UUID/protocol-mappers/models" -d '{
+        "name": "groups",
+        "protocol": "openid-connect",
+        "protocolMapper": "oidc-group-membership-mapper",
+        "config": {
+          "full.path": "false",
+          "id.token.claim": "true",
+          "access.token.claim": "true",
+          "userinfo.token.claim": "true",
+          "claim.name": "groups"
+        }
+      }' >/dev/null && log "  + created groups mapper on client $KEYCLOAK_CLIENT_ID" || warn "  ! could not create groups mapper (may need manual setup)"
+    else
+      log "  = groups mapper already exists on client $KEYCLOAK_CLIENT_ID"
+    fi
+  else
+    warn "  ! client '$KEYCLOAK_CLIENT_ID' not found — skipping mapper setup"
+    warn "    Run this manually in Keycloak: Clients → $KEYCLOAK_CLIENT_ID → Client scopes → Add mapper → Group Membership"
+    warn "    Set claim name: groups, enable 'Add to ID token' and 'Add to access token'"
+  fi
+fi
+
 # ─── provision a user ────────────────────────────────────────
 provision_user() {
   local username="$1" email="$2" password="$3" add_to_admin="$4"

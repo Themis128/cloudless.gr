@@ -193,7 +193,11 @@ export function AuthProvider({
   );
 
   const checkAuth = useCallback(async () => {
+    // Try Cognito/Amplify first (legacy path).
     try {
+      const { configureAmplifyWith } = await import("@/lib/amplify-config");
+      const ok = configureAmplifyWith(cognitoConfig);
+      if (!ok) throw new Error("Amplify not configured");
       const { getCurrentUser, fetchAuthSession } = await (
         await import("@/lib/amplify-config")
       ).getAuthModule();
@@ -216,47 +220,44 @@ export function AuthProvider({
         groups = [];
       }
       setIsAdmin(groups.includes("admin"));
+      return;
     } catch {
-      setUser(null);
-      setIsAdmin(false);
-    } finally {
-      setIsLoading(false);
+      // No Cognito session — fall through to next-auth/Keycloak check.
     }
-  }, [loadUserProfile]);
+
+    // Keycloak/next-auth path: read the server-side session cookie via the
+    // next-auth session endpoint. This is active after the Cognito→Keycloak
+    // migration and coexists with Amplify during the rollout.
+    try {
+      const res = await globalThis.fetch("/api/auth/session");
+      if (res.ok) {
+        const data = (await res.json()) as {
+          user?: { name?: string; email?: string; id?: string; groups?: string[] };
+        };
+        if (data.user) {
+          const { email, name, id, groups: kcGroups = [] } = data.user;
+          setUser({
+            username: id ?? email ?? "",
+            email: email ?? undefined,
+            name: name ?? undefined,
+            preferences: { ...DEFAULT_PREFERENCES },
+          });
+          setIsAdmin(kcGroups.includes("admin"));
+          return;
+        }
+      }
+    } catch {
+      // Network error — treat as unauthenticated.
+    }
+
+    setUser(null);
+    setIsAdmin(false);
+  }, [loadUserProfile, cognitoConfig]);
 
   useEffect(() => {
-    let cancelled = false;
+    checkAuth().finally(() => setIsLoading(false));
+  }, [checkAuth]);
 
-    const init = async () => {
-      let ok: boolean;
-      try {
-        const { configureAmplifyWith } = await import("@/lib/amplify-config");
-        ok = configureAmplifyWith(cognitoConfig);
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Amplify configuration failed:", err);
-          setConfigError(
-            err instanceof Error ? err.message : "Authentication configuration failed"
-          );
-          setIsLoading(false);
-        }
-        return;
-      }
-      if (!ok) {
-        if (!cancelled) {
-          setConfigError("Authentication is not configured for this environment.");
-          setIsLoading(false);
-        }
-        return;
-      }
-      checkAuth();
-    };
-
-    init();
-    return () => {
-      cancelled = true;
-    };
-  }, [checkAuth, cognitoConfig]);
 
   const applySignInResult = async (
     result: Awaited<
@@ -308,6 +309,13 @@ export function AuthProvider({
   };
 
   const handleSignOut = async () => {
+    if (process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER) {
+      const { signOut: nextAuthSignOut } = await import("next-auth/react");
+      setUser(null);
+      setIsAdmin(false);
+      await nextAuthSignOut({ callbackUrl: "/" });
+      return;
+    }
     const { signOut: amplifySignOut } = await (
       await import("@/lib/amplify-config")
     ).getAuthModule();
