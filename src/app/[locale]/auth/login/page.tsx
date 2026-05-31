@@ -99,7 +99,6 @@ function LoginContent() {
   return (
     <div className="bg-void flex min-h-screen items-center justify-center px-4 py-20">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="mb-8 text-center">
           <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
@@ -115,7 +114,6 @@ function LoginContent() {
           </p>
         </div>
 
-        {/* Card */}
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-8">
           {error && (
             <div className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta mb-6 rounded-lg border p-3 font-mono text-sm">

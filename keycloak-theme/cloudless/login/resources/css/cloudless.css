@@ -1,0 +1,286 @@
+/* =========================================================
+   Cloudless Design System — Keycloak Login Theme
+   Matches the app's auth/login page exactly:
+     bg-void dark background, neon-cyan accents, mono font
+   Tokens mirror src/app/theme-v2.css dark mode values.
+   ========================================================= */
+
+/* --- Google Fonts (matches Next.js font stack) --- */
+@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600&family=Instrument+Sans:wght@600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+/* --- Design tokens (dark mode only — KC login is always dark) --- */
+:root {
+  --surface-canvas:   #0b0f15;
+  --surface-subtle:   #121823;
+  --surface-raised:   #1a2230;
+  --border-subtle:    #27313f;
+  --border-strong:    #3d4a5c;
+  --ink-primary:      #e6edf3;
+  --ink-body:         #9aa7b8;
+  --ink-muted:        #697587;
+  --accent:           #22d3e6;
+  --accent-hover:     #5be4f0;
+  --accent-soft:      #0e3a40;
+  --accent-on:        #06222a;
+  --secondary:        #a78bfa;
+  --danger:           #e85f4d;
+  --border-radius:    0.5rem;
+  --font-heading:     'Instrument Sans', system-ui, sans-serif;
+  --font-body:        'Work Sans', system-ui, sans-serif;
+  --font-mono:        'Geist Mono', 'Courier New', monospace;
+}
+
+/* --- Reset / base --- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--surface-canvas);
+  color: var(--ink-primary);
+  font-family: var(--font-body);
+  font-size: 16px;
+  min-height: 100vh;
+}
+
+/* --- Hide default KC chrome we replace --- */
+.pf-v5-c-page__header,
+.pf-v5-c-page__sidebar,
+#kc-header,
+#kc-header-wrapper {
+  display: none !important;
+}
+
+/* --- Page layout: center card vertically --- */
+.pf-v5-c-page,
+#kc-container,
+body > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+/* --- Login card --- */
+#kc-form-wrapper,
+.login-pf-page .card-pf,
+.pf-v5-c-card {
+  background: var(--surface-subtle) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 0.75rem !important;
+  padding: 2rem !important;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45) !important;
+}
+
+/* --- Logo / branding header --- */
+#kc-form-wrapper::before,
+.login-pf-page .card-pf::before {
+  content: 'cloudless.gr';
+  display: block;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 0.25rem;
+}
+
+/* SECURE_AUTH badge */
+#kc-form-wrapper::after,
+.login-pf-page .card-pf::after {
+  content: '● SECURE_AUTH';
+  display: block;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  margin-bottom: 1.5rem;
+}
+
+/* --- Page title ("Sign In") --- */
+#kc-page-title,
+.pf-v5-c-title {
+  font-family: var(--font-heading) !important;
+  font-size: 1.75rem !important;
+  font-weight: 700 !important;
+  color: var(--ink-primary) !important;
+  text-align: center !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* --- Labels --- */
+label,
+.pf-v5-c-form__label-text {
+  font-family: var(--font-mono) !important;
+  font-size: 0.8125rem !important;
+  color: var(--ink-muted) !important;
+  margin-bottom: 0.375rem !important;
+  display: block;
+}
+
+/* --- Inputs --- */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+.pf-v5-c-form-control {
+  background: var(--surface-canvas) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--border-radius) !important;
+  color: var(--ink-primary) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.875rem !important;
+  padding: 0.75rem 1rem !important;
+  width: 100% !important;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+.pf-v5-c-form-control:focus {
+  border-color: rgb(34 211 230 / 0.5) !important;
+  box-shadow: 0 0 0 3px rgb(34 211 230 / 0.1) !important;
+}
+
+input::placeholder { color: var(--ink-muted); }
+
+/* --- Primary button (Sign In / Continue) --- */
+#kc-login,
+input[type="submit"],
+.pf-v5-c-button--primary,
+button[type="submit"] {
+  background: rgb(34 211 230 / 0.1) !important;
+  border: 1px solid rgb(34 211 230 / 0.5) !important;
+  border-radius: var(--border-radius) !important;
+  color: var(--accent) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  padding: 0.75rem 1rem !important;
+  width: 100% !important;
+  min-height: 44px;
+  cursor: pointer !important;
+  transition: background 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.03em;
+}
+
+#kc-login:hover,
+input[type="submit"]:hover,
+.pf-v5-c-button--primary:hover,
+button[type="submit"]:hover {
+  background: rgb(34 211 230 / 0.18) !important;
+  box-shadow: 0 0 15px rgb(34 211 230 / 0.2) !important;
+}
+
+/* --- Secondary/tertiary buttons --- */
+.pf-v5-c-button--secondary,
+.pf-v5-c-button--tertiary {
+  background: transparent !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--border-radius) !important;
+  color: var(--ink-body) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.8125rem !important;
+  padding: 0.625rem 1rem !important;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.pf-v5-c-button--secondary:hover { border-color: var(--accent) !important; color: var(--accent) !important; }
+
+/* --- Links --- */
+a, a:visited {
+  color: var(--accent) !important;
+  text-decoration: none !important;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  transition: color 0.15s;
+}
+a:hover { color: var(--accent-hover) !important; text-decoration: underline !important; }
+
+/* --- "Forgot password" link row --- */
+#kc-form-options {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+/* Remember me checkbox label */
+#rememberMe + label,
+.pf-v5-c-check__label {
+  font-family: var(--font-mono) !important;
+  font-size: 0.8125rem !important;
+  color: var(--ink-muted) !important;
+}
+
+/* --- Error / alert messages --- */
+.pf-v5-c-alert,
+#kc-error-message,
+.alert-error {
+  background: rgb(232 95 77 / 0.1) !important;
+  border: 1px solid rgb(232 95 77 / 0.3) !important;
+  border-radius: var(--border-radius) !important;
+  color: var(--danger) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.8125rem !important;
+  padding: 0.75rem 1rem !important;
+  margin-bottom: 1rem;
+}
+
+.pf-v5-c-alert--success,
+.alert-success {
+  background: rgb(31 165 110 / 0.1) !important;
+  border-color: rgb(31 165 110 / 0.3) !important;
+  color: #1fa56e !important;
+}
+
+/* --- "Create Account" / register link row --- */
+#kc-registration,
+#kc-registration-container {
+  text-align: center;
+  margin-top: 1.25rem;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+/* --- Social / IDP buttons --- */
+.pf-v5-c-button.kc-social-provider-item {
+  background: var(--surface-canvas) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--border-radius) !important;
+  color: var(--ink-body) !important;
+  font-family: var(--font-mono) !important;
+  margin-bottom: 0.5rem;
+}
+
+/* --- Divider "or" line --- */
+.kc-social-section .separator,
+hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 1.25rem 0;
+}
+
+/* --- Password toggle icon --- */
+.pf-v5-c-button--plain { color: var(--ink-muted) !important; }
+.pf-v5-c-button--plain:hover { color: var(--accent) !important; }
+
+/* --- Form group spacing --- */
+.pf-v5-c-form__group { margin-bottom: 1rem !important; }
+
+/* --- Remove PatternFly shadows / hard overrides --- */
+.pf-v5-c-card { --pf-v5-c-card--BoxShadow: none !important; }
+.pf-v5-c-form-control { --pf-v5-c-form-control--BackgroundColor: transparent !important; }
+
+/* --- Responsive --- */
+@media (max-width: 480px) {
+  #kc-form-wrapper,
+  .login-pf-page .card-pf,
+  .pf-v5-c-card { padding: 1.5rem !important; }
+}

@@ -16,8 +16,7 @@
  * existing signup/forgot-password pages keep working.
  */
 
-import { signIn as nextAuthSignIn, signOut as nextAuthSignOut } from "next-auth/react";
-import { getSession } from "next-auth/react";
+import { signIn as nextAuthSignIn, signOut as nextAuthSignOut, getSession } from "next-auth/react";
 
 // ── Types matching the aws-amplify/auth surface ───────────────────────────
 
@@ -72,10 +71,24 @@ async function signIn(_input: SignInInput): Promise<SignInOutput> {
 }
 
 async function signOut(): Promise<void> {
-  await nextAuthSignOut({
-    callbackUrl: "/",
-    redirect: true,
-  });
+  // Capture the id_token BEFORE next-auth clears the session, then
+  // perform RP-Initiated Logout against Keycloak's end_session_endpoint
+  // so the SSO cookie is invalidated server-side. Without this, the next
+  // signIn() silently re-authenticates without showing the login page.
+  const session = await getSession();
+  const idToken = session?.idToken;
+
+  await nextAuthSignOut({ callbackUrl: "/", redirect: false });
+
+  if (idToken && KC_BASE) {
+    const url = new URL(`${KC_BASE}/protocol/openid-connect/logout`);
+    url.searchParams.set("id_token_hint", idToken);
+    url.searchParams.set("post_logout_redirect_uri", `${globalThis.location?.origin ?? ""}/`);
+    globalThis.location.href = url.toString();
+    return;
+  }
+
+  globalThis.location.href = "/";
 }
 
 async function signUp(input: SignUpInput): Promise<void> {
@@ -151,32 +164,44 @@ async function fetchUserAttributes(): Promise<Record<string, string>> {
 }
 
 async function updateUserAttributes(input: UpdateUserAttributesInput): Promise<void> {
-  // Call the Keycloak Account REST API to update attributes.
+  // Call the Keycloak Account REST API to update profile.
+  // Endpoint: POST {issuer}/account — requires bearer access_token with
+  // 'account' client audience. Per Keycloak docs the payload is a
+  // UserRepresentation subset (firstName, lastName, email, attributes).
   const session = await getSession();
   if (!session?.accessToken) throw new Error("Not authenticated");
 
-  const body: Record<string, unknown> = {};
-  if (input.userAttributes.name) body.firstName = input.userAttributes.name;
-  if (input.userAttributes.given_name) body.firstName = input.userAttributes.given_name;
-  if (input.userAttributes.phone_number)
-    body.attributes = {
-      ...(body.attributes as object),
-      phone: [input.userAttributes.phone_number],
-    };
+  const attrs: Record<string, string[]> = {};
 
-  // Custom attributes go into Keycloak user attributes
-  const customAttrs: Record<string, string[]> = {};
+  // Split combined "name" into firstName + lastName when both parts present.
+  if (input.userAttributes.name) {
+    const [first, ...rest] = input.userAttributes.name.split(" ");
+    attrs.__firstName = [first];
+    if (rest.length) attrs.__lastName = [rest.join(" ")];
+  }
+  if (input.userAttributes.given_name) {
+    attrs.__firstName = [input.userAttributes.given_name];
+  }
+  if (input.userAttributes.family_name) {
+    attrs.__lastName = [input.userAttributes.family_name];
+  }
+  if (input.userAttributes.phone_number) {
+    attrs.phone = [input.userAttributes.phone_number];
+  }
   for (const [k, v] of Object.entries(input.userAttributes)) {
-    if (k.startsWith("custom:")) {
-      customAttrs[k.slice(7)] = [v];
-    }
+    if (k.startsWith("custom:")) attrs[k.slice(7)] = [v];
   }
-  if (Object.keys(customAttrs).length > 0) {
-    body.attributes = {
-      ...((body.attributes as object) ?? {}),
-      ...customAttrs,
-    };
+
+  const body: Record<string, unknown> = {};
+  if (attrs.__firstName) {
+    body.firstName = attrs.__firstName[0];
+    delete attrs.__firstName;
   }
+  if (attrs.__lastName) {
+    body.lastName = attrs.__lastName[0];
+    delete attrs.__lastName;
+  }
+  if (Object.keys(attrs).length > 0) body.attributes = attrs;
 
   const res = await globalThis.fetch(`${KC_BASE}/account`, {
     method: "POST",
