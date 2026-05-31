@@ -50,7 +50,10 @@ describe("keycloak-auth.ts — real module", () => {
   it("signOut delegates to next-auth signOut with callbackUrl=/", async () => {
     const { keycloakAuthModule } = await import("@/lib/keycloak-auth");
     await keycloakAuthModule.signOut();
-    expect(mockNextAuthSignOut).toHaveBeenCalledWith({ callbackUrl: "/", redirect: true });
+    // redirect:false is intentional — signOut performs RP-Initiated Logout by
+    // redirecting to Keycloak's end_session_endpoint itself, so next-auth must
+    // not redirect first (that would skip the SSO-cookie invalidation).
+    expect(mockNextAuthSignOut).toHaveBeenCalledWith({ callbackUrl: "/", redirect: false });
   });
 
   it("signUp redirects to Keycloak registrations URL with email pre-filled", async () => {
