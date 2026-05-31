@@ -1,0 +1,93 @@
+{
+  "title": "Pod Health",
+  "uid": "pod-health-2026",
+  "tags": ["cluster-health", "auto-generated-2026-05-31"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-3h", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Pods Pending (>5 min)",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{
+        "expr": "kube_pod_status_phase{phase=\"Pending\"} == 1",
+        "refId": "A",
+        "format": "table",
+        "instant": true
+      }],
+      "transformations": [
+        { "id": "organize", "options": {
+          "excludeByName": { "Time": true, "__name__": true, "Value": true, "endpoint": true, "instance": true, "job": true, "service": true, "uid": true }
+        }}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Pods CrashLooping",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{
+        "expr": "kube_pod_container_status_waiting_reason{reason=\"CrashLoopBackOff\"} == 1",
+        "refId": "A",
+        "format": "table",
+        "instant": true
+      }]
+    },
+    {
+      "id": 3,
+      "title": "Restart Rate (last 1h)",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "targets": [{
+        "expr": "topk(10, sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total[1h])))",
+        "refId": "A",
+        "legendFormat": "{{namespace}}/{{pod}}"
+      }]
+    },
+    {
+      "id": 4,
+      "title": "OOM Kills",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 18 },
+      "targets": [{
+        "expr": "sum(kube_pod_container_status_terminated_reason{reason=\"OOMKilled\"})",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "red", "value": 1 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Deployments NOT at desired replicas",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 18 },
+      "targets": [{
+        "expr": "sum(kube_deployment_status_replicas != kube_deployment_spec_replicas)",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 6,
+      "title": "Container Memory %  (top 10)",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 18 },
+      "targets": [{
+        "expr": "topk(10, container_memory_working_set_bytes{container!=\"\",container!=\"POD\"} / on (pod, container, namespace) kube_pod_container_resource_limits{resource=\"memory\"} * 100)",
+        "refId": "A",
+        "legendFormat": "{{namespace}}/{{pod}}/{{container}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100, "min": 0 } }
+    }
+  ]
+}

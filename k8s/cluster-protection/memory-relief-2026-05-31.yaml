@@ -1,0 +1,163 @@
+# Memory relief — 2026-05-31
+#
+# omv (Pi 5) is in iowait death-spiral: 95% iowait, 93% memory, kswapd active.
+# Root cause: 33 pods on omv vs 5 on omv-ha, several without limits.
+#
+# This file:
+#   1. Adds LimitRange defaults to namespaces that had none
+#      (keycloak, analytics, n8n, ntfy, home-assistant, oncall, alert-manager)
+#   2. Sets memory limits on the limit-less pods on omv
+#   3. Caps the heaviest single offenders (metabase, oncall stack, n8n)
+#
+# Apply order matters. Use the companion script:
+#   bash k8s/cluster-protection/apply-memory-relief.sh
+#
+# Expected memory reclaim on omv after restart of affected workloads:
+#   metabase     (cap 400Mi, was 927 Mi)  → -527 Mi
+#   prometheus   (already capped 700 Mi, slim scrape config drops it further)
+#   keycloak     (cap 384Mi, was 494 Mi)  → -110 Mi
+#   home-assistant scaled to 0           → -314 Mi
+#   oncall stack scaled to 0             → -900 Mi
+#   ------------------------------------------------
+#   Estimated total free                   ~1.85 GiB
+
+---
+# ── Namespace-level defaults (was missing for these namespaces) ──
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: keycloak
+spec:
+  limits:
+    - type: Container
+      default:        { memory: 512Mi, cpu: 1 }
+      defaultRequest: { memory: 128Mi, cpu: 100m }
+      max:            { memory: 768Mi, cpu: 2 }
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: analytics
+spec:
+  limits:
+    - type: Container
+      default:        { memory: 512Mi, cpu: 1 }
+      defaultRequest: { memory: 128Mi, cpu: 100m }
+      max:            { memory: 1Gi, cpu: 2 }
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: n8n
+spec:
+  limits:
+    - type: Container
+      default:        { memory: 256Mi, cpu: 500m }
+      defaultRequest: { memory: 64Mi, cpu: 50m }
+      max:            { memory: 384Mi, cpu: 1 }
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: ntfy
+spec:
+  limits:
+    - type: Container
+      default:        { memory: 96Mi, cpu: 200m }
+      defaultRequest: { memory: 32Mi, cpu: 25m }
+      max:            { memory: 128Mi, cpu: 500m }
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: alert-manager
+spec:
+  limits:
+    - type: Container
+      default:        { memory: 128Mi, cpu: 200m }
+      defaultRequest: { memory: 32Mi, cpu: 25m }
+      max:            { memory: 200Mi, cpu: 500m }
+
+---
+# ── Per-deployment hard caps for known memory hogs ──
+
+# Metabase — 927 Mi → 400 Mi cap. JVM heap can be tuned via JAVA_OPTS
+# but the kernel limit alone forces it to GC more aggressively.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metabase
+  namespace: analytics
+spec:
+  template:
+    spec:
+      containers:
+        - name: metabase
+          env:
+            - name: JAVA_OPTS
+              value: "-Xmx320m -Xms128m"
+            - name: MB_JETTY_MAXTHREADS
+              value: "20"
+          resources:
+            requests: { memory: 200Mi, cpu: 100m }
+            limits:   { memory: 400Mi, cpu: 1 }
+
+---
+# Keycloak — 494 Mi → 384 Mi cap. JVM heap set via JAVA_OPTS_KC_HEAP.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: keycloak
+spec:
+  template:
+    spec:
+      containers:
+        - name: keycloak
+          env:
+            - name: JAVA_OPTS_KC_HEAP
+              value: "-Xms128m -Xmx320m -XX:MaxRAMPercentage=80.0"
+          resources:
+            requests: { memory: 200Mi, cpu: 100m }
+            limits:   { memory: 384Mi, cpu: 1 }
+
+---
+# n8n — 117 Mi → 256 Mi cap (keep headroom for workflow spikes)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+  namespace: n8n
+spec:
+  template:
+    spec:
+      containers:
+        - name: n8n
+          resources:
+            requests: { memory: 80Mi, cpu: 50m }
+            limits:   { memory: 256Mi, cpu: 500m }
+
+---
+# ntfy — already small, just cap it
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ntfy
+  namespace: ntfy
+spec:
+  template:
+    spec:
+      containers:
+        - name: ntfy
+          resources:
+            requests: { memory: 24Mi, cpu: 10m }
+            limits:   { memory: 96Mi, cpu: 200m }

@@ -32,8 +32,20 @@ substitutions:
   ntfy_token:      !secret ntfy_token
   omv_probe:       "http://192.168.1.128:9100/metrics"   # node_exporter — always HTTP 200
   omv_ha_probe:    "http://192.168.1.130:9100/metrics"
-  aws_health:      "https://cloudless.gr/api/health"   # direct 200 — avoids 307 redirect at root
-  relay_gpio:      "none"
+  # k3s API health probe — node_exporter keeps responding even when k3s API
+  # is dead (the death-spiral scenario). This probe exercises etcd + apiserver
+  # so we can hardware-reset omv when k3s is wedged but the OS is still up.
+  omv_k3s_probe:   "https://192.168.1.128:6443/livez"
+  aws_health:      "https://cloudless.gr/api/health"
+  # Relay control — GPIO10 drives an active-LOW 5V relay that interrupts
+  # omv's 5V USB-C power line for hard-reset when k3s is wedged.
+  # Wiring: ESP32 GPIO10 → NPN base (10kΩ) → relay coil GND ; coil VCC → 5V
+  # The relay's NC contact is in series with the Pi power cable.
+  # Set "none" to disable hardware reset entirely (LED + ntfy only).
+  relay_gpio:      "GPIO10"
+  # Reset threshold: number of consecutive k3s probe failures before hardware
+  # reset fires. 30s interval × 6 = 3 minutes of k3s outage triggers reset.
+  k3s_reset_threshold: "6"
 
 esphome:
   name: ${node_name}
@@ -158,6 +170,23 @@ globals:
     type: bool
     restore_value: false
     initial_value: "true"
+  # k3s API health — separate signal from node_exporter. node_exporter keeps
+  # responding even when k3s API is wedged (the actual death-spiral scenario).
+  - id: omv_k3s_up
+    type: bool
+    restore_value: false
+    initial_value: "true"
+  # Lockout for hardware reset — prevents reset-loops. After a reset fires
+  # we hold this true for 5 minutes regardless of probe state, giving the
+  # Pi time to boot + k3s to start.
+  - id: reset_lockout_until
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+  - id: omv_k3s_fail_count
+    type: int
+    restore_value: false
+    initial_value: "0"
 
   # ── Failure counters (increment on each probe error; reset on reboot) ───────
   - id: omv_fail_count
@@ -209,6 +238,12 @@ binary_sensor:
     name:       "cloudless.gr (AWS) reachable"
     entity_category: diagnostic
     lambda: "return id(aws_up);"
+
+  - platform: template
+    id:         omv_k3s_reachable
+    name:       "omv k3s API reachable"
+    entity_category: diagnostic
+    lambda: "return id(omv_k3s_up);"
 
 # ---------------------------------------------------------------------------
 # On-board RGB LED  (GPIO48 = v1.0 — v1.1 uses GPIO38, do NOT swap)
@@ -395,6 +430,44 @@ interval:
                     id(heartbeat_pulse).execute();
                   }
 
+  # k3s API probe — fires every 30 s, staggered 22 s into each cycle so it
+  # doesn't overlap with the omv (0 s) / omv-ha (15 s) probes.
+  # 401 Unauthorized counts as healthy — we don't have client cert; we just
+  # want to know that apiserver+etcd are responsive. The TLS handshake alone
+  # proves the kube-apiserver process is alive.
+  - id: probe_omv_k3s
+    interval: 30s
+    startup_delay: 22s
+    then:
+      - http_request.get:
+          url: ${omv_k3s_probe}
+          on_response:
+            then:
+              - lambda: |-
+                  // 200 = healthy livez, 401 = TLS up + apiserver responds but no auth (fine for liveness)
+                  bool now = (response->status_code == 200 || response->status_code == 401);
+                  bool was = id(omv_k3s_up);
+                  if (!now) {
+                    id(omv_k3s_fail_count)++;
+                  } else {
+                    id(omv_k3s_fail_count) = 0;
+                  }
+                  if (was != now) {
+                    id(omv_k3s_up) = now;
+                  }
+                  // Hardware reset trigger
+                  if (id(omv_k3s_fail_count) >= ${k3s_reset_threshold}) {
+                    id(maybe_hard_reset).execute();
+                  }
+          on_error:
+            then:
+              - lambda: |-
+                  id(omv_k3s_fail_count)++;
+                  if (id(omv_k3s_up)) id(omv_k3s_up) = false;
+                  if (id(omv_k3s_fail_count) >= ${k3s_reset_threshold}) {
+                    id(maybe_hard_reset).execute();
+                  }
+
   # ntfy alerts — single combined interval every 60 s
   # Dedup: only re-alert per target if >10 minutes have passed since the last POST.
   # First alert fires immediately (last_alerted == 0); subsequent ones every 10 min.
@@ -504,6 +577,39 @@ script:
             Priority: "default"
             Tags: "white_check_mark,computer"
           body: "HTTP probe to omv-ha:9100 is responding again. Node is back online."
+
+  # ── Hardware reset — last-resort recovery when k3s is wedged ────────────────
+  # Fires when omv_k3s_fail_count >= 6 (≈3 min of k3s API unavailable).
+  # Cools down for 5 minutes to prevent reset loops.
+  - id: maybe_hard_reset
+    mode: single
+    then:
+      - lambda: |-
+          uint32_t now = millis();
+          if (now < id(reset_lockout_until)) {
+            ESP_LOGW("watchdog", "k3s reset suppressed — lockout active");
+            return;
+          }
+          // Set lockout 5 minutes from now
+          id(reset_lockout_until) = now + 300000;
+          // Reset the fail counter so we don't immediately re-trigger
+          id(omv_k3s_fail_count) = 0;
+      - if:
+          condition:
+            lambda: "return millis() >= id(reset_lockout_until) - 295000;"  # we just set it
+          then:
+            - http_request.post:
+                url:  ${ntfy_url}
+                request_headers:
+                  Content-Type: text/plain
+                  Authorization: "Bearer ${ntfy_token}"
+                  Title: "🔄 omv HARDWARE RESET (k3s wedged)"
+                  Priority: "max"
+                  Tags: "warning,electric_plug,arrows_counterclockwise"
+                body: "k3s API has been unreachable for 3 min while OS is responsive. Pulsing power relay for 5 s. 5 min lockout before next reset."
+            - switch.turn_off: pi_power_relay
+            - delay: 5s
+            - switch.turn_on: pi_power_relay
 
   - id: send_aws_recovery
     mode: single
@@ -627,12 +733,17 @@ text_sensor:
       name:     "MAC Address"
 
 # ---------------------------------------------------------------------------
-# Hardware relay  (uncomment when you wire a 5 V relay to the board)
+# Hardware relay — drives omv power line (active-LOW; NC contact in series
+# with Pi USB-C 5V). ALWAYS_ON keeps the contact closed so the Pi has power.
+# The maybe_hard_reset script (below) pulses it OFF for 5 s when k3s has
+# been unreachable for >= 3 minutes.
 # ---------------------------------------------------------------------------
-# switch:
-#   - platform: gpio
-#     id:       pi_power_relay
-#     name:     "omv Power Relay"
-#     pin:      GPIO10
-#     restore_mode: ALWAYS_ON
-#     icon:     mdi:power-plug
+switch:
+  - platform: gpio
+    id:       pi_power_relay
+    name:     "omv Power Relay"
+    pin:
+      number: GPIO10
+      inverted: true    # relay is active-LOW (LOW = closed/power-on)
+    restore_mode: ALWAYS_ON
+    icon:     mdi:power-plug
