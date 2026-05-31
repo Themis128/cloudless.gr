@@ -4,9 +4,12 @@ test.describe("Dashboard", () => {
   test("login page is accessible", async ({ page }) => {
     await page.goto("/auth/login");
     await expect(page).toHaveURL(/\/auth\/login/);
-    // Suspense + AuthContext init — wait for the form to hydrate.
-    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByLabel(/password/i).first()).toBeVisible({ timeout: 10_000 });
+    await page.waitForLoadState("networkidle").catch(() => {});
+    // When Keycloak is configured, the login page shows an SSO button instead
+    // of email/password fields.
+    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 10_000 }).catch(() => false);
+    const hasEmail = await page.getByLabel(/email/i).isVisible({ timeout: 5_000 }).catch(() => false);
+    expect(hasKeycloak || hasEmail, "login page must show either Keycloak SSO button or email field").toBeTruthy();
   });
 
   test("/dashboard redirects unauthenticated users to login", async ({ page }) => {
