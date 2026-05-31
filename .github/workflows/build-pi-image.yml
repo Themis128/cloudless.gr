@@ -232,8 +232,8 @@ jobs:
             APP_VERSION=${{ steps.sha.outputs.full }}
             NEXT_PUBLIC_SITE_URL=https://cloudless.gr
             NEXT_PUBLIC_STAGE=production
-            NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
-            NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
+            NEXT_PUBLIC_KEYCLOAK_ISSUER=https://auth.cloudless.gr/realms/master
+            NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=cloudless-app
             NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
             NEXT_PUBLIC_META_PIXEL_ID=${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
@@ -241,10 +241,17 @@ jobs:
 
       # Push each tag with dockerd's own registry client (not buildkit).
       # See the long comment on the `build (load to dockerd)` step above.
+      #
+      # Use get-login-password | docker login (not the amazon-ecr-login action)
+      # because the action writes to secretservice/pass on Pi runners while
+      # dockerd reads only ~/.docker/config.json. Same fix as deploy-pi.yml
+      # (commit 26f5fdd).
       - name: push to ECR
         if: github.event_name != 'pull_request' && (steps.existing.outputs.exists != 'true')
         run: |
           set -euo pipefail
+          aws ecr get-login-password --region "${AWS_REGION}" \
+            | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
           IFS=',' read -ra TAGS <<< "${{ steps.tags.outputs.tags }}"
           for tag in "${TAGS[@]}"; do
             echo "==> docker push ${tag}"
