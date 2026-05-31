@@ -72,14 +72,14 @@ describe("POST /api/webhooks/stripe", () => {
     expect(data.error).toContain("stripe-signature");
   });
 
-  it("returns 503 when webhook secret is not configured", async () => {
+  it("returns 401 when webhook secret is not configured", async () => {
     getConfigMock.mockResolvedValueOnce({ STRIPE_WEBHOOK_SECRET: "" });
 
     const { POST } = await import("@/app/api/webhooks/stripe/route");
     const response = await POST(makeRequest("{}", "sig_1"));
     const data = await response.json();
 
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(401);
     expect(data.error).toContain("Webhook not configured");
   });
 
@@ -124,7 +124,7 @@ describe("POST /api/webhooks/stripe", () => {
       "buyer@cloudless.gr",
       "cs_test_1",
       129900,
-      "eur",
+      "eur"
     );
   });
 
@@ -192,10 +192,7 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(500);
     expect(data.error).toContain("Webhook handler failed");
-    expect(markStripeEventFailedMock).toHaveBeenCalledWith(
-      "evt_handler_fail",
-      "mail down",
-    );
+    expect(markStripeEventFailedMock).toHaveBeenCalledWith("evt_handler_fail", "mail down");
   });
 
   it("handles invoice.payment_failed and sends customer/team notifications", async () => {
@@ -219,10 +216,7 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(data.received).toBe(true);
-    expect(sendPaymentFailureNoticeMock).toHaveBeenCalledWith(
-      "buyer@cloudless.gr",
-      "in_test_1",
-    );
+    expect(sendPaymentFailureNoticeMock).toHaveBeenCalledWith("buyer@cloudless.gr", "in_test_1");
     expect(notifyTeamMock).toHaveBeenCalledTimes(1);
   });
 });
