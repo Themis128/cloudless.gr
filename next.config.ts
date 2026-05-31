@@ -35,13 +35,7 @@ const nextConfig: NextConfig = {
   // Allow WSL2 LAN-side IP to access the dev server (cross-origin HMR).
   // Without this, accessing the dev server via http://172.x.x.x:4000 blocks
   // the webpack-hmr endpoint with "Blocked cross-origin request".
-  allowedDevOrigins: [
-    "localhost",
-    "127.0.0.1",
-    "172.29.17.211",
-    "10.255.255.254",
-    "*.local",
-  ],
+  allowedDevOrigins: ["localhost", "127.0.0.1", "172.29.17.211", "10.255.255.254", "*.local"],
   turbopack: {
     root: resolve(import.meta.dirname),
     resolveAlias: { "next-intl/config": "./src/i18n/request.ts" },
@@ -87,9 +81,7 @@ const nextConfig: NextConfig = {
 // Bypass Turbopack dev-mode bug where [locale] catches special metadata routes
 // in the App Router before next/manifest.ts can handle them.
 nextConfig.rewrites = async () => ({
-  beforeFiles: [
-    { source: "/manifest.webmanifest", destination: "/api/pwa-manifest" },
-  ],
+  beforeFiles: [{ source: "/manifest.webmanifest", destination: "/api/pwa-manifest" }],
   afterFiles: [],
   fallback: [],
 });
