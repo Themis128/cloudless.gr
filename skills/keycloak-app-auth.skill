@@ -1,0 +1,122 @@
+---
+name: keycloak-app-auth
+description: How the cloudless.gr Next.js APP integrates with Keycloak — OIDC/next-auth wiring, the api-auth.ts token-verification + admin-authorization contract, route gating in proxy.ts, refresh rotation, and RP-initiated logout. Use when adding/changing auth on routes, debugging 401/403 on admin APIs, "auth not working", token/claims issues, or wiring a new protected route. Distinct from keycloak-ops (which is admin-console/REST operations).
+triggers:
+  - api-auth
+  - requireAdmin
+  - requireAuth
+  - next-auth
+  - "401 on admin"
+  - "403 on admin"
+  - admin route auth
+  - groups claim
+  - realm_access.roles
+  - verifyToken
+  - protected route
+  - AuthContext
+  - session token
+  - keycloak-app-auth
+---
+
+# Keycloak — Application Auth (cloudless.gr)
+
+How the **app** authenticates and authorizes against Keycloak. For admin-console / REST
+operations (creating users, editing clients) see the **keycloak-ops** skill instead.
+
+## The model in one paragraph
+
+OIDC **Authorization Code + PKCE**, brokered by **next-auth v5** against Keycloak
+(`auth.cloudless.gr`, realm `master`, client `cloudless-app`). The browser never sees a
+password — it authenticates on Keycloak's hosted page. next-auth stores an **encrypted JWT
+cookie** (`authjs.session-token`) holding the Keycloak `access_token` / `id_token` /
+`refresh_token`. Page routes are gated in `src/proxy.ts`; API routes are gated in
+`src/lib/api-auth.ts`. **Admin = membership in the Keycloak `admin` group** (`groups`
+claim) or an `admin` realm role (`realm_access.roles`).
+
+## The files and their contract
+
+| File | Responsibility |
+| --- | --- |
+| `src/lib/auth.ts` | next-auth v5 config: Keycloak provider, `jwt()` callback (decode `groups` + `realm_access.roles`, refresh rotation), `session()` callback, RP-initiated logout in `events.signOut`. |
+| `src/app/api/auth/[...nextauth]/route.ts` | Exposes next-auth `GET`/`POST` handlers. |
+| `src/lib/keycloak-auth.ts` | Client-side shim (amplify-compatible surface) — `signIn`/`signOut`/`signUp` delegate to next-auth / Keycloak hosted pages. |
+| `src/proxy.ts` | **Page** gate: `readAuthToken()` via `getToken()` on the session cookie; `/admin/**` needs the `admin` group, `/dashboard/**` needs any session. |
+| `src/lib/api-auth.ts` | **API** gate: `requireAuth` / `requireAdmin`. Verifies the Keycloak access token's RS256 signature against the realm JWKS; `isAdmin()` reads `groups` / `realm_access.roles`. |
+| `src/context/AuthContext.tsx` | Reads `/api/auth/session`; calls admin APIs with `Authorization: Bearer <session.accessToken>`. |
+
+## api-auth.ts — the canonical contract (DO copy this shape)
+
+```ts
+// Verify Keycloak access tokens against the realm JWKS; authorize by group/role.
+const KC_ISSUER = (process.env.KEYCLOAK_ISSUER ?? process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "")
+  .replace(/\/+$/, "");
+
+// JWKS: local set from KEYCLOAK_JWKS_JSON (offline/dev) else remote realm certs.
+const getJWKS = KC_ISSUER
+  ? createRemoteJWKSet(new URL(`${KC_ISSUER}/protocol/openid-connect/certs`))
+  : null;
+
+export async function verifyToken(token: string) {
+  if (getJWKS) {
+    const { payload } = await jwtVerify(token, getJWKS, { issuer: KC_ISSUER });
+    return payload;           // NOTE: do NOT enforce audience — KC aud is often "account"
+  }
+  // dev/test fallback: decode + expiry only (no signature) when no issuer configured
+}
+
+export function isAdmin(d) {
+  const groups = d?.groups ?? d?.["cognito:groups"] ?? [];   // cognito:* kept for back-compat
+  if (groups.includes("admin")) return true;
+  const roles = d?.realm_access?.roles ?? [];
+  return roles.includes("admin") || roles.includes("realm:admin");
+}
+```
+
+### Rules / gotchas (these are the mistakes to avoid)
+
+1. **Verify the signature.** Always `jwtVerify` against the JWKS. The only no-signature
+   path is the explicit dev/test fallback that triggers **only** when `KEYCLOAK_ISSUER` is
+   unset. Never ship a guard that decodes without verifying when an issuer is present.
+2. **Read the right claim.** Admin is `groups` (Keycloak group-membership mapper) or
+   `realm_access.roles`. It is **not** `cognito:groups` (legacy; honored only for
+   back-compat during transition).
+3. **Do not enforce `audience`.** Keycloak access tokens commonly carry `aud: "account"`;
+   enforcing audience rejects valid tokens. Enforce `issuer` only.
+4. **`groups` requires a protocol mapper.** The `cloudless-app` client must have a
+   **Group Membership** mapper (claim `groups`, added to ID + access token, `full.path`
+   false). Without it the claim is absent and every admin check fails. Run
+   `pnpm keycloak:apply` (or the doctor below) to assert it.
+5. **Client sends the access token.** `AuthContext` calls admin APIs with
+   `Authorization: Bearer ${session.accessToken}`. The session exposes `accessToken` via
+   the next-auth `session()` callback — keep that wired.
+6. **Adding a protected API route:** `const auth = await requireAdmin(request); if (!auth.ok) return auth.response;`
+   (or `requireAuth` for non-admin). 401 = no/invalid token, 403 = valid token without admin.
+
+## Verify the implementation is correctly applied
+
+```bash
+# Static config (realm/client/group/mapper/redirect URIs):
+pnpm keycloak:doctor          # tools/keycloak-cli/keycloak.sh doctor — read-only checks
+pnpm keycloak:apply --dry-run # scripts/keycloak-apply.ts — shows drift
+pnpm keycloak:apply           # idempotently fix client/group/mapper config
+
+# Unit contract:
+pnpm exec vitest run __tests__/api-auth.test.ts
+
+# End-to-end login (requires e2e users — see test-accounts doc):
+E2E_BASE_URL=https://cloudless.gr pnpm e2e:prod
+```
+
+## Common failures → cause
+
+| Symptom | Likely cause |
+| --- | --- |
+| All admin APIs 403 for a real admin | `groups` mapper missing on `cloudless-app`, or user not in `admin` group |
+| Admin APIs 401 with a valid login | issuer mismatch (`KEYCLOAK_ISSUER` drift) or JWKS unreachable from the pod/Lambda |
+| Works locally, 401 in prod | `KEYCLOAK_ISSUER` not set in that runtime; verifyToken silently took the dev fallback and now a real JWKS rejects |
+| `redirect_uri` invalid at login | `cloudless-app` redirectUris missing `<origin>/api/auth/callback/keycloak` — see keycloak-ops |
+
+## See also
+- `keycloak-ops` skill — admin-console / REST operations
+- `docs/test-accounts.md` — access tiers + e2e accounts
+- Notion: "🔐 Auth: Keycloak Migration" (has the 5 architecture diagrams)

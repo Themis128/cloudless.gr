@@ -1,5 +1,3 @@
-
-
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { resetIntegrationCache } from "@/lib/integrations";
@@ -9,21 +7,17 @@ import { resetSsmCache } from "@/lib/ssm-config";
 // Hoist mock variables so vi.mock() factories can reference them safely.
 // ---------------------------------------------------------------------------
 
-const {
-  mockGetConfig,
-  mockIsConfiguredAsync,
-  mockResetIntegrationCache,
-  mockGetSlackConfigAsync,
-} = vi.hoisted(() => ({
-  mockGetConfig: vi.fn(),
-  mockIsConfiguredAsync: vi.fn().mockResolvedValue(true),
-  mockResetIntegrationCache: vi.fn(),
-  mockGetSlackConfigAsync: vi.fn().mockResolvedValue({
-    SLACK_BOT_TOKEN: "xoxb-test",
-    SLACK_WEBHOOK_URL: "",
-    SLACK_SIGNING_SECRET: "signing-secret-test",
-  }),
-}));
+const { mockGetConfig, mockIsConfiguredAsync, mockResetIntegrationCache, mockGetSlackConfigAsync } =
+  vi.hoisted(() => ({
+    mockGetConfig: vi.fn(),
+    mockIsConfiguredAsync: vi.fn().mockResolvedValue(true),
+    mockResetIntegrationCache: vi.fn(),
+    mockGetSlackConfigAsync: vi.fn().mockResolvedValue({
+      SLACK_BOT_TOKEN: "xoxb-test",
+      SLACK_WEBHOOK_URL: "",
+      SLACK_SIGNING_SECRET: "signing-secret-test",
+    }),
+  }));
 
 // ---------------------------------------------------------------------------
 // Mock ssm-config so tests never touch AWS SSM and getConfig() is controllable.
@@ -106,7 +100,6 @@ const GSC_MISSING_CONFIG = {
   GOOGLE_CLIENT_EMAIL: "",
   GOOGLE_PRIVATE_KEY: "",
 };
-
 
 // Set default getConfig() return value (overridden per-test where needed).
 mockGetConfig.mockResolvedValue(GSC_CONFIGURED_CONFIG);
@@ -248,15 +241,21 @@ vi.mock("@/lib/gsc", () => ({
     avgPosition: 14.2,
     organicKeywords: 87,
   }),
-  getTopKeywords: vi.fn().mockResolvedValue([
-    { keyword: "cloudless gr", clicks: 120, impressions: 3000, ctr: 4, position: 8.5 },
-  ]),
-  getTopPages: vi.fn().mockResolvedValue([
-    { page: "https://cloudless.gr/", clicks: 200, impressions: 5000, ctr: 4, position: 7 },
-  ]),
-  getPerformanceHistory: vi.fn().mockResolvedValue([
-    { date: "2025-01-01", clicks: 30, impressions: 600, ctr: 5, avgPosition: 11 },
-  ]),
+  getTopKeywords: vi
+    .fn()
+    .mockResolvedValue([
+      { keyword: "cloudless gr", clicks: 120, impressions: 3000, ctr: 4, position: 8.5 },
+    ]),
+  getTopPages: vi
+    .fn()
+    .mockResolvedValue([
+      { page: "https://cloudless.gr/", clicks: 200, impressions: 5000, ctr: 4, position: 7 },
+    ]),
+  getPerformanceHistory: vi
+    .fn()
+    .mockResolvedValue([
+      { date: "2025-01-01", clicks: 30, impressions: 600, ctr: 5, avgPosition: 11 },
+    ]),
   getWebAnalytics: vi.fn().mockResolvedValue({
     clicks: 500,
     impressions: 12000,
@@ -264,35 +263,56 @@ vi.mock("@/lib/gsc", () => ({
     avgPosition: 14.2,
     topPages: [{ page: "https://cloudless.gr/", clicks: 200, impressions: 5000, position: 7 }],
   }),
-  getCtrOpportunities: vi.fn().mockResolvedValue([
-    { keyword: "serverless nextjs", clicks: 10, impressions: 800, ctr: 1.25, position: 7.2 },
-  ]),
+  getCtrOpportunities: vi
+    .fn()
+    .mockResolvedValue([
+      { keyword: "serverless nextjs", clicks: 10, impressions: 800, ctr: 1.25, position: 7.2 },
+    ]),
   getDeviceBreakdown: vi.fn().mockResolvedValue([
     { device: "DESKTOP", clicks: 300, impressions: 6000, ctr: 5, avgPosition: 9 },
     { device: "MOBILE", clicks: 200, impressions: 5000, ctr: 4, avgPosition: 12 },
   ]),
-  getProductPageMetrics: vi.fn().mockResolvedValue([
-    { page: "https://cloudless.gr/store/pro-plan", clicks: 40, impressions: 900, ctr: 4.44, position: 8 },
-  ]),
-  getQueryPageMapping: vi.fn().mockResolvedValue([
-    { query: "cloudless hosting", page: "https://cloudless.gr/", clicks: 60, impressions: 1500, ctr: 4, position: 6 },
-  ]),
+  getProductPageMetrics: vi
+    .fn()
+    .mockResolvedValue([
+      {
+        page: "https://cloudless.gr/store/pro-plan",
+        clicks: 40,
+        impressions: 900,
+        ctr: 4.44,
+        position: 8,
+      },
+    ]),
+  getQueryPageMapping: vi
+    .fn()
+    .mockResolvedValue([
+      {
+        query: "cloudless hosting",
+        page: "https://cloudless.gr/",
+        clicks: 60,
+        impressions: 1500,
+        ctr: 4,
+        position: 6,
+      },
+    ]),
   getSearchIntentBreakdown: vi.fn().mockResolvedValue({
     brand: [{ keyword: "cloudless gr", clicks: 100, impressions: 2000, ctr: 5, position: 3 }],
     product: [],
     informational: [],
     navigational: [],
   }),
-  getTrafficByCountry: vi.fn().mockResolvedValue([
-    { country: "grc", clicks: 350, impressions: 7000, ctr: 5, avgPosition: 8 },
-  ]),
+  getTrafficByCountry: vi
+    .fn()
+    .mockResolvedValue([
+      { country: "grc", clicks: 350, impressions: 7000, ctr: 5, avgPosition: 8 },
+    ]),
 }));
 
 // HubSpot
 vi.mock("@/lib/hubspot", () => ({
-  listContacts: vi.fn().mockResolvedValue([
-    { id: "1", email: "lead@example.com", firstName: "Test" },
-  ]),
+  listContacts: vi
+    .fn()
+    .mockResolvedValue([{ id: "1", email: "lead@example.com", firstName: "Test" }]),
 }));
 
 // Slack notify
@@ -313,7 +333,6 @@ vi.mock("@/lib/sentry", () => ({
   }),
   verifySentryToken: vi.fn().mockResolvedValue({ status: "error" }),
 }));
-
 
 // ---------------------------------------------------------------------------
 // /api/admin/users
@@ -344,18 +363,24 @@ describe("GET /api/admin/users", () => {
     process.env.KEYCLOAK_ADMIN_PASSWORD = "pass";
 
     // Mock globalThis.fetch for Keycloak Admin REST API calls
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-      if (String(url).includes("/token")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ access_token: "tok" }) });
-      }
-      if (String(url).includes("/users?")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(kcUserList) });
-      }
-      if (String(url).includes("/groups")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (String(url).includes("/token")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ access_token: "tok" }),
+          });
+        }
+        if (String(url).includes("/users?")) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(kcUserList) });
+        }
+        if (String(url).includes("/groups")) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      })
+    );
   });
 
   afterEach(() => {
@@ -416,15 +441,24 @@ describe("POST /api/admin/users", () => {
     process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
     process.env.KEYCLOAK_ADMIN_USER = "admin";
     process.env.KEYCLOAK_ADMIN_PASSWORD = "pass";
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-      if (String(url).includes("/token")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ access_token: "tok" }) });
-      }
-      if (String(url).includes("/groups")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: "grp-1", name: "admin" }]) });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (String(url).includes("/token")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ access_token: "tok" }),
+          });
+        }
+        if (String(url).includes("/groups")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{ id: "grp-1", name: "admin" }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      })
+    );
   });
 
   afterEach(() => {
@@ -440,7 +474,7 @@ describe("POST /api/admin/users", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-      }),
+      })
     );
   }
 
@@ -451,7 +485,7 @@ describe("POST /api/admin/users", () => {
         method: "POST",
         body: JSON.stringify({ action: "disable", username: "x" }),
         headers: { "Content-Type": "application/json" },
-      }),
+      })
     );
     expect(res.status).toBe(401);
   });
@@ -510,9 +544,7 @@ describe("GET /api/admin/orders", () => {
           payment_status: "paid",
           mode: "payment",
           line_items: {
-            data: [
-              { description: "Pro Plan", quantity: 1, amount_total: 4900 },
-            ],
+            data: [{ description: "Pro Plan", quantity: 1, amount_total: 4900 }],
           },
           created: 1700000000,
         },
@@ -624,26 +656,20 @@ describe("GET /api/admin/crm/contacts", () => {
 
   it("returns 401 without token", async () => {
     const { GET } = await import("@/app/api/admin/crm/contacts/route");
-    const res = await GET(
-      unauthRequest("http://localhost/api/admin/crm/contacts"),
-    );
+    const res = await GET(unauthRequest("http://localhost/api/admin/crm/contacts"));
     expect(res.status).toBe(401);
   });
 
   it("returns 503 when HubSpot is not configured", async () => {
     mockIsConfiguredAsync.mockResolvedValueOnce(false);
     const { GET } = await import("@/app/api/admin/crm/contacts/route");
-    const res = await GET(
-      adminRequest("http://localhost/api/admin/crm/contacts"),
-    );
+    const res = await GET(adminRequest("http://localhost/api/admin/crm/contacts"));
     expect(res.status).toBe(503);
   });
 
   it("returns contact list for admin", async () => {
     const { GET } = await import("@/app/api/admin/crm/contacts/route");
-    const res = await GET(
-      adminRequest("http://localhost/api/admin/crm/contacts"),
-    );
+    const res = await GET(adminRequest("http://localhost/api/admin/crm/contacts"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.contacts)).toBe(true);
@@ -664,7 +690,7 @@ describe("POST /api/admin/notifications/test", () => {
     // Stub fetch so SlackClient.post() doesn't make real HTTP calls
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) }),
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) })
     );
     // Default: Slack is configured (overridden per-test where needed)
     mockGetSlackConfigAsync.mockResolvedValue({
@@ -932,7 +958,9 @@ describe("GET /api/admin/analytics/products", () => {
   it("respects ?pattern and ?limit query params", async () => {
     const { getProductPageMetrics } = await import("@/lib/gsc");
     const { GET } = await import("@/app/api/admin/analytics/products/route");
-    await GET(adminRequest("http://localhost/api/admin/analytics/products?pattern=/blog/&limit=10"));
+    await GET(
+      adminRequest("http://localhost/api/admin/analytics/products?pattern=/blog/&limit=10")
+    );
     expect(getProductPageMetrics).toHaveBeenCalledWith(undefined, "/blog/", 10);
   });
 });
