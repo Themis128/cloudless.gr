@@ -40,8 +40,12 @@ describe("proxy protected routes access", () => {
   it("allows authenticated non-admin user to access /en/dashboard and nested routes", async () => {
     mockGetToken.mockResolvedValue({ sub: "user-1", groups: ["viewer"], roles: [] });
 
-    const dashboardResponse = await proxy(makeRequest("/en/dashboard", "authjs.session-token=mock"));
-    const purchasesResponse = await proxy(makeRequest("/en/dashboard/purchases", "authjs.session-token=mock"));
+    const dashboardResponse = await proxy(
+      makeRequest("/en/dashboard", "authjs.session-token=mock")
+    );
+    const purchasesResponse = await proxy(
+      makeRequest("/en/dashboard/purchases", "authjs.session-token=mock")
+    );
 
     expect(dashboardResponse.status).toBe(200);
     expect(dashboardResponse.headers.get("location")).toBeNull();
@@ -53,7 +57,9 @@ describe("proxy protected routes access", () => {
     mockGetToken.mockResolvedValue({ sub: "user-1", groups: ["viewer"], roles: [] });
 
     const adminResponse = await proxy(makeRequest("/en/admin", "authjs.session-token=mock"));
-    const adminOrdersResponse = await proxy(makeRequest("/en/admin/orders", "authjs.session-token=mock"));
+    const adminOrdersResponse = await proxy(
+      makeRequest("/en/admin/orders", "authjs.session-token=mock")
+    );
 
     expect(adminResponse.status).toBe(307);
     expect(adminResponse.headers.get("location")).toContain("/en/dashboard");
@@ -65,7 +71,9 @@ describe("proxy protected routes access", () => {
     mockGetToken.mockResolvedValue({ sub: "admin-1", groups: ["admin"], roles: [] });
 
     const adminResponse = await proxy(makeRequest("/en/admin", "authjs.session-token=mock"));
-    const adminOrdersResponse = await proxy(makeRequest("/en/admin/orders", "authjs.session-token=mock"));
+    const adminOrdersResponse = await proxy(
+      makeRequest("/en/admin/orders", "authjs.session-token=mock")
+    );
 
     expect(adminResponse.status).toBe(200);
     expect(adminResponse.headers.get("location")).toBeNull();

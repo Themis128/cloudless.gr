@@ -17,8 +17,7 @@ let configured = false;
 
 export function configureAmplifyWith(_config: AmplifyAuthConfig): boolean {
   if (configured) return true;
-  const hasIssuer =
-    typeof process !== "undefined" && !!process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+  const hasIssuer = typeof process !== "undefined" && !!process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
   configured = hasIssuer;
   return configured;
 }
