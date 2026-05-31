@@ -101,7 +101,9 @@ const nextAuthResult = hasAuthSecret
                 : Math.floor(Date.now() / 1000) + Number(account.expires_in ?? 0);
             const p = profile as Record<string, unknown> | undefined;
             token.groups = (p?.["groups"] as string[]) ?? [];
-            const realmAccess = p?.["realm_access"] as { roles?: string[] } | undefined;
+            const realmAccess = p?.["realm_access"] as
+              | { roles?: string[] }
+              | undefined;
             token.roles = realmAccess?.roles ?? [];
             return token;
           }
@@ -150,7 +152,8 @@ const nextAuthResult = hasAuthSecret
          * showing the login page.
          */
         async signOut(message) {
-          const idToken = "token" in message ? message.token?.idToken : undefined;
+          const idToken =
+            "token" in message ? message.token?.idToken : undefined;
           if (!idToken || !KC_ISSUER) return;
           const url = new URL(`${KC_ISSUER}/protocol/openid-connect/logout`);
           url.searchParams.set("id_token_hint", idToken);
