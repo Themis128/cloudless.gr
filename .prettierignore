@@ -13,3 +13,6 @@ src/app/api/checkout/route.ts
 src/app/api/cron/voice-brief/route.ts
 src/app/api/portal/*/route.ts
 src/lib/api-auth.ts
+# Formatters keep stripping the SERVER_EXTERNAL_PACKAGES const that holds
+# next-auth in the externalized list. Exclude entirely to prevent that.
+next.config.ts
