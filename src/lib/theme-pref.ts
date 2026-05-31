@@ -14,7 +14,7 @@
  *     → themeForRoute(pathname)  (route default)
  */
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useEffect, useState } from "react";
 
 export type ThemePref = "system" | "light" | "dark";
 
@@ -67,11 +67,33 @@ const getServerStoredPref = (): ThemePref | null => null;
  * Subscribe to the localStorage override via React's external-store hook.
  * Re-renders the calling component on writes from any surface (navbar,
  * dashboard form, another tab).
+ *
+ * Returns `null` during SSR and on the first client render (hydration),
+ * then resolves to the stored preference after mount. This prevents React
+ * error #418 (text-node hydration mismatch) when a user has a saved
+ * preference in localStorage — the server always renders null and the client
+ * matches that on the first pass before switching to the real value post-mount.
  */
 export function useStoredPref(): ThemePref | null {
-  return useSyncExternalStore<ThemePref | null>(
+  // Hydration-safe: track whether we've mounted on the client. During SSR
+  // and the initial hydration pass both sides agree on `null`. After the
+  // first effect fires we flip `mounted` to true, which forces React to
+  // re-render with the real localStorage value — a safe post-hydration update.
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // Intentional post-hydration flip to swap from the SSR-matching null
+    // snapshot to the real localStorage value. See React error #418 context above.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
+  const stored = useSyncExternalStore<ThemePref | null>(
     subscribeStored,
     readStoredPref,
     getServerStoredPref
   );
+
+  // Before mount: always return null (matching server snapshot) to avoid #418.
+  return mounted ? stored : null;
 }
