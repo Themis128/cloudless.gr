@@ -69,10 +69,7 @@ const DEFAULT_AUTH_CONTEXT: AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>(DEFAULT_AUTH_CONTEXT);
 
-function isAdminFromSession(user: {
-  groups?: string[];
-  roles?: string[];
-}): boolean {
+function isAdminFromSession(user: { groups?: string[]; roles?: string[] }): boolean {
   return (
     (user.groups ?? []).includes("admin") ||
     (user.roles ?? []).includes("admin") ||

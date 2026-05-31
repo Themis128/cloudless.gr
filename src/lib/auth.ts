@@ -127,9 +127,7 @@ const nextAuthResult = hasAuthSecret
             const accessPayload = account.access_token
               ? decodeJwtPayload(account.access_token as string)
               : {};
-            const idPayload = account.id_token
-              ? decodeJwtPayload(account.id_token as string)
-              : {};
+            const idPayload = account.id_token ? decodeJwtPayload(account.id_token as string) : {};
 
             // Groups: prefer id_token, fall back to access_token, then profile
             const p = profile as Record<string, unknown> | undefined;
@@ -140,9 +138,8 @@ const nextAuthResult = hasAuthSecret
               [];
 
             // Roles: realm_access.roles from access_token (authoritative source)
-            const realmAccess = (
-              accessPayload[KC_CLAIM_REALM_ACCESS] ?? p?.[KC_CLAIM_REALM_ACCESS]
-            ) as { roles?: string[] } | undefined;
+            const realmAccess = (accessPayload[KC_CLAIM_REALM_ACCESS] ??
+              p?.[KC_CLAIM_REALM_ACCESS]) as { roles?: string[] } | undefined;
             token.roles = realmAccess?.roles ?? [];
 
             return token;
@@ -169,8 +166,7 @@ const nextAuthResult = hasAuthSecret
             // Re-read groups/roles from the new access token
             const payload = decodeJwtPayload(refreshed.access_token);
             const ra = payload[KC_CLAIM_REALM_ACCESS] as { roles?: string[] } | undefined;
-            token.groups =
-              (payload[KC_CLAIM_GROUPS] as string[] | undefined) ?? token.groups ?? [];
+            token.groups = (payload[KC_CLAIM_GROUPS] as string[] | undefined) ?? token.groups ?? [];
             token.roles = ra?.roles ?? token.roles ?? [];
             delete token.error;
             return token;
