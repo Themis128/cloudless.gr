@@ -84,10 +84,7 @@ async function signOut(): Promise<void> {
   if (idToken && KC_BASE) {
     const url = new URL(`${KC_BASE}/protocol/openid-connect/logout`);
     url.searchParams.set("id_token_hint", idToken);
-    url.searchParams.set(
-      "post_logout_redirect_uri",
-      `${globalThis.location?.origin ?? ""}/`,
-    );
+    url.searchParams.set("post_logout_redirect_uri", `${globalThis.location?.origin ?? ""}/`);
     globalThis.location.href = url.toString();
     return;
   }
