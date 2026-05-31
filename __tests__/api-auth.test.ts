@@ -94,7 +94,11 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
     it("returns false when user is not in the admin group", async () => {
       const { isAdmin } = await import("@/lib/api-auth");
       const decoded = {
-        sub: "u", aud: "a", iss: "i", iat: 0, exp: 9999999999,
+        sub: "u",
+        aud: "a",
+        iss: "i",
+        iat: 0,
+        exp: 9999999999,
         groups: ["users", "editors"],
       };
       expect(isAdmin(decoded)).toBe(false);
@@ -103,7 +107,11 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
     it("returns true when user is in the Keycloak admin group", async () => {
       const { isAdmin } = await import("@/lib/api-auth");
       const decoded = {
-        sub: "u", aud: "a", iss: "i", iat: 0, exp: 9999999999,
+        sub: "u",
+        aud: "a",
+        iss: "i",
+        iat: 0,
+        exp: 9999999999,
         groups: ["users", "admin"],
       };
       expect(isAdmin(decoded)).toBe(true);
@@ -112,7 +120,11 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
     it("returns true when user has the admin realm role", async () => {
       const { isAdmin } = await import("@/lib/api-auth");
       const decoded = {
-        sub: "u", aud: "a", iss: "i", iat: 0, exp: 9999999999,
+        sub: "u",
+        aud: "a",
+        iss: "i",
+        iat: 0,
+        exp: 9999999999,
         realm_access: { roles: ["offline_access", "admin"] },
       };
       expect(isAdmin(decoded)).toBe(true);
@@ -121,7 +133,11 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
     it("still honors the legacy cognito:groups claim (back-compat)", async () => {
       const { isAdmin } = await import("@/lib/api-auth");
       const decoded = {
-        sub: "u", aud: "a", iss: "i", iat: 0, exp: 9999999999,
+        sub: "u",
+        aud: "a",
+        iss: "i",
+        iat: 0,
+        exp: 9999999999,
         "cognito:groups": ["users", "admin"],
       };
       expect(isAdmin(decoded)).toBe(true);

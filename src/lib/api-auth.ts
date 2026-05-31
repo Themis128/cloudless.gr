@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createLocalJWKSet, createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import { createLocalJWKSet, createRemoteJWKSet, jwtVerify } from "jose";
 
 /**
  * Server-side authentication helpers for API routes.
@@ -45,11 +45,23 @@ function buildJwks() {
 // JWKS is cached in-process (local set is instant; remote set caches after first fetch).
 const getJWKS = buildJwks();
 
-export interface DecodedToken extends JWTPayload {
+/**
+ * The subset of Keycloak (and legacy Cognito) JWT claims this app reads.
+ * Deliberately a plain interface — not `extends JWTPayload` — so property
+ * access stays precisely typed (`email` is `string | undefined`, not the
+ * `unknown` that jose's index signature would impose).
+ */
+export interface DecodedToken {
   sub: string;
   email?: string;
   preferred_username?: string;
   name?: string;
+  /** Legacy Cognito username claim — honored for back-compat. */
+  "cognito:username"?: string;
+  exp?: number;
+  iat?: number;
+  iss?: string;
+  aud?: string | string[];
   /** Keycloak group-membership-mapper claim. */
   groups?: string[];
   /** Keycloak realm roles. */
@@ -86,7 +98,7 @@ export async function verifyToken(token: string): Promise<DecodedToken | null> {
       const { payload } = await jwtVerify(token, getJWKS, {
         ...(KC_ISSUER ? { issuer: KC_ISSUER } : {}),
       });
-      return payload as DecodedToken;
+      return payload as unknown as DecodedToken;
     } catch {
       return null;
     }

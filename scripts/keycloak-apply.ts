@@ -32,7 +32,7 @@
 
 const ISSUER = (process.env.KEYCLOAK_ISSUER ?? "https://auth.cloudless.gr/realms/master").replace(
   /\/+$/,
-  "",
+  ""
 );
 const REALM = ISSUER.split("/realms/")[1] ?? "master";
 const BASE = ISSUER.replace(`/realms/${REALM}`, "");
@@ -95,7 +95,10 @@ async function ensureAdminGroup(token: string): Promise<void> {
     return;
   }
   if (!DRY) {
-    const c = await kc(token, "/groups", { method: "POST", body: JSON.stringify({ name: "admin" }) });
+    const c = await kc(token, "/groups", {
+      method: "POST",
+      body: JSON.stringify({ name: "admin" }),
+    });
     if (!c.ok && c.status !== 409) throw new Error(`create admin group: ${c.status}`);
   }
   did("create admin group");
@@ -112,7 +115,8 @@ interface KcClient {
 async function getClient(token: string): Promise<KcClient> {
   const res = await kc(token, `/clients?clientId=${encodeURIComponent(APP_CLIENT_ID)}`);
   const arr = (await res.json()) as KcClient[];
-  if (!arr.length) throw new Error(`client '${APP_CLIENT_ID}' not found — create it in Keycloak first`);
+  if (!arr.length)
+    throw new Error(`client '${APP_CLIENT_ID}' not found — create it in Keycloak first`);
   return arr[0];
 }
 
@@ -156,7 +160,7 @@ async function ensureGroupsMapper(token: string, client: KcClient): Promise<void
   const res = await kc(token, `/clients/${client.id}/protocol-mappers/models`);
   const mappers = (await res.json()) as Array<{ name: string; protocolMapper: string }>;
   const exists = mappers.some(
-    (m) => m.name === "groups" || m.protocolMapper === "oidc-group-membership-mapper",
+    (m) => m.name === "groups" || m.protocolMapper === "oidc-group-membership-mapper"
   );
   if (exists) {
     ok("group-membership mapper present");
@@ -184,7 +188,9 @@ async function ensureGroupsMapper(token: string, client: KcClient): Promise<void
 }
 
 async function main() {
-  console.log(`Asserting Keycloak app config — realm "${REALM}", client "${APP_CLIENT_ID}"${DRY ? " (dry-run)" : ""}`);
+  console.log(
+    `Asserting Keycloak app config — realm "${REALM}", client "${APP_CLIENT_ID}"${DRY ? " (dry-run)" : ""}`
+  );
   const token = await getAdminToken();
   await ensureAdminGroup(token);
   const client = await getClient(token);
@@ -193,7 +199,11 @@ async function main() {
 
   console.log();
   if (DRY) {
-    console.log(changes === 0 ? "In sync — no changes needed." : `${changes} change(s) would be applied. Re-run without --dry-run.`);
+    console.log(
+      changes === 0
+        ? "In sync — no changes needed."
+        : `${changes} change(s) would be applied. Re-run without --dry-run.`
+    );
   } else {
     console.log(changes === 0 ? "In sync — nothing to do." : `Applied ${changes} change(s).`);
     console.log("Verify with: pnpm keycloak:doctor");
