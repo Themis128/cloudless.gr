@@ -36,21 +36,20 @@ export async function POST(request: Request) {
     // setNewsletterStatus swallows its own errors and returns false, so a
     // HubSpot outage never fails the subscriber; team-notify and Slack
     // provide a manual fallback path.
-    await Promise.all([
-      setNewsletterStatus(email, "newsletter_signup"),
-      notifyTeam(
-        `[Newsletter] New subscriber: ${email.slice(0, 80)}`,
-        `<h2>New newsletter subscriber</h2>
-        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-        <p><strong>Date:</strong> ${new Date().toISOString()}</p>
-        <hr />
-        <p style="color: #666; font-size: 12px;">
-          Subscriber recorded as a HubSpot contact (lead_source: newsletter_signup).
-          This notification was sent from the cloudless.gr subscribe form.
-        </p>`
-      ),
-      sendSubscriberWelcome(email),
-    ]);
+    await setNewsletterStatus(email, "newsletter_signup");
+
+    notifyTeam(
+      `[Newsletter] New subscriber: ${email.slice(0, 80)}`,
+      `<h2>New newsletter subscriber</h2>
+      <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+      <p><strong>Date:</strong> ${new Date().toISOString()}</p>
+      <hr />
+      <p style="color: #666; font-size: 12px;">
+        Subscriber recorded as a HubSpot contact (lead_source: newsletter_signup).
+        This notification was sent from the cloudless.gr subscribe form.
+      </p>`
+    ).catch(() => {});
+    sendSubscriberWelcome(email).catch(() => {});
 
     slackSubscriberNotify(email).catch((err) => {
       console.error("[subscribe] Slack notification failed:", err);

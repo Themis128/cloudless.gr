@@ -75,19 +75,14 @@ describe("POST /api/subscribe", () => {
     await POST(makeRequest({ email: "hello@cloudless.gr" }));
 
     expect(setNewsletterStatusMock).toHaveBeenCalledTimes(1);
-    expect(setNewsletterStatusMock).toHaveBeenCalledWith(
-      "hello@cloudless.gr",
-      "newsletter_signup",
-    );
+    expect(setNewsletterStatusMock).toHaveBeenCalledWith("hello@cloudless.gr", "newsletter_signup");
   });
 
   it("clears SES suppression so a re-subscriber can receive email", async () => {
     const { POST } = await import("@/app/api/subscribe/route");
     await POST(makeRequest({ email: "hello@cloudless.gr" }));
 
-    expect(removeFromSuppressionListMock).toHaveBeenCalledWith(
-      "hello@cloudless.gr",
-    );
+    expect(removeFromSuppressionListMock).toHaveBeenCalledWith("hello@cloudless.gr");
   });
 
   it("still returns success when the HubSpot update fails", async () => {
@@ -100,13 +95,17 @@ describe("POST /api/subscribe", () => {
     expect(notifyTeamMock).toHaveBeenCalledTimes(1);
   });
 
-  it("returns 500 when team notification fails", async () => {
+  it("still returns success when team notification fails (fire-and-forget)", async () => {
+    // notifyTeam() is fire-and-forget — an SES/HubSpot outage must NOT fail the
+    // subscriber. The HubSpot contact upsert (setNewsletterStatus) is the only
+    // awaited side effect; team-notify and Slack are best-effort.
     notifyTeamMock.mockRejectedValueOnce(new Error("ses-down"));
     const { POST } = await import("@/app/api/subscribe/route");
     const response = await POST(makeRequest({ email: "hello@cloudless.gr" }));
     const data = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(data.error).toContain("Failed to subscribe");
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(notifyTeamMock).toHaveBeenCalledTimes(1);
   });
 });

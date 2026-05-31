@@ -93,7 +93,10 @@ function unauthPost(): NextRequest {
 describe("POST /api/admin/cache", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Ensure no Cognito pool ID is set so api-auth uses the dev decode-only fallback
+    // Clear the auth issuer/pool so api-auth uses the dev decode-only fallback
+    // (these fixtures use fake-signed tokens, so JWKS verification would 401).
+    delete process.env.KEYCLOAK_ISSUER;
+    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     delete process.env.COGNITO_USER_POOL_ID;
     delete process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
   });

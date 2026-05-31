@@ -340,7 +340,7 @@ export async function POST(request: NextRequest) {
   // reject rather than silently process unauthenticated webhook events.
   if (!clientSecret) {
     console.error("[HubSpot Webhook] HUBSPOT_CLIENT_SECRET not configured — rejecting");
-    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 401 });
   }
 
   const valid = await verifySignatureV3(request, rawBody, clientSecret);
