@@ -4,19 +4,6 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
-// next-auth MUST be externalized: Turbopack cannot bundle it on Windows/pnpm
-// hoisted layout and throws "Module not found" on every /api/auth/* route.
-// Keep this list even if a formatter removes it from serverExternalPackages below.
-const SERVER_EXTERNAL_PACKAGES = [
-  "@aws-sdk/client-bedrock-runtime",
-  "@aws-sdk/client-cognito-identity-provider",
-  "@aws-sdk/client-dynamodb",
-  "@aws-sdk/client-ses",
-  "@aws-sdk/client-sesv2",
-  "@aws-sdk/client-ssm",
-  "next-auth",
-];
-
 const nextConfig: NextConfig = {
   // Compression of HTTP responses (gzip via the Next.js server). On Lambda
   // the compression is applied before CloudFront passes through; on the Pi
@@ -29,7 +16,21 @@ const nextConfig: NextConfig = {
   // For Docker builds (Pi HA standby): emit a self-contained .next/standalone
   // bundle. SST/Vercel deploys leave this unset.
   output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
-  serverExternalPackages: SERVER_EXTERNAL_PACKAGES,
+  // Turbopack (Next 16) fails to resolve `@smithy/core/*` subpath exports
+  // through pnpm's hoisted layout on Windows. Externalize the AWS SDK
+  // clients so Next uses Node's native resolver instead of bundling them.
+  // next-auth must NOT be in serverExternalPackages: it imports next/server
+  // without the .js extension which fails when loaded as an external ESM
+  // module. Use transpilePackages so Turbopack bundles it explicitly instead.
+  transpilePackages: ["next-auth"],
+  serverExternalPackages: [
+    "@aws-sdk/client-bedrock-runtime",
+    "@aws-sdk/client-cognito-identity-provider",
+    "@aws-sdk/client-dynamodb",
+    "@aws-sdk/client-ses",
+    "@aws-sdk/client-sesv2",
+    "@aws-sdk/client-ssm",
+  ],
   // In WSL dev, set NEXT_DIST_DIR to a native Linux path (e.g. ~/next-cloudless)
   // to avoid the slow NTFS→WSL filesystem benchmark warning.
   // Production and CI leave this unset so the default .next dir is used.
