@@ -5,7 +5,7 @@
  * (always routes APIGW → Lambda → Funnel → Pi). If any of these
  * fail, every other test in this suite will too — so they're the canary.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 import { isHealthBody, isLikelyAppResponse, probeHealth, STANDBY_HOST } from "./_helpers";
 
 test.describe("k3s smoke", () => {

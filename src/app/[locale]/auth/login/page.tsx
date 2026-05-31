@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import { signIn as nextAuthSignIn } from "next-auth/react";
 import { Link } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { translate, type Locale, isSupportedLocale } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
+
+const USE_KEYCLOAK = !!process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
 
 function normalizeRedirectPath(path: string): string {
   if (!path.startsWith("/")) return path;
@@ -50,6 +53,15 @@ function LoginContent() {
     setError("");
     setSubmitting(true);
     try {
+      if (USE_KEYCLOAK) {
+        const callbackUrl = nextParam?.startsWith("/")
+          ? normalizeRedirectPath(nextParam)
+          : isAdmin
+            ? "/admin"
+            : "/dashboard";
+        await nextAuthSignIn("keycloak", { callbackUrl });
+        return;
+      }
       const result = await signIn(email, password);
       if (result.needsNewPassword) {
         setNeedsNewPassword(true);
@@ -140,6 +152,18 @@ function LoginContent() {
                 {submitting
                   ? t("auth.settingPassword", "Setting Password...")
                   : t("auth.resetPassword", "Reset Password")}
+              </button>
+            </form>
+          ) : USE_KEYCLOAK ? (
+            <form onSubmit={handleLogin} className="space-y-5">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-[44px] w-full rounded-lg border py-3 font-mono font-semibold transition-all hover:shadow-[0_0_15px_rgba(0,255,245,0.2)] disabled:opacity-50"
+              >
+                {submitting
+                  ? t("auth.signingIn", "Signing In...")
+                  : t("auth.continueWithKeycloak", "Continue with Keycloak")}
               </button>
             </form>
           ) : (

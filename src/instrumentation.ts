@@ -83,3 +83,4 @@ export async function register() {
     // degrade gracefully when isConfigured() returns false.
   }
 }
+

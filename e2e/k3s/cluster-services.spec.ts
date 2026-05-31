@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 
 /**
  * Cluster service smoke tests — OnCall, ntfy, Cloudless Manager, Home Assistant.

@@ -133,10 +133,14 @@ function validateRequiredKeys(params: Map<string, string>): void {
     "COGNITO_USER_POOL_ID",
     "COGNITO_CLIENT_ID",
   ] as const;
+  const missing: string[] = [];
   for (const key of required) {
     if (!params.get(key)) {
-      throw new Error(`Missing required SSM parameter: ${SSM_PREFIX}/${key}`);
+      missing.push(`${SSM_PREFIX}/${key}`);
     }
+  }
+  if (missing.length > 0) {
+    console.warn(`[SSM] Missing required parameters (some features may be disabled): ${missing.join(", ")}`);
   }
 }
 

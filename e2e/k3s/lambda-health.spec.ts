@@ -5,7 +5,7 @@
  * Catches: Lambda timeout misconfiguration, memory exhaustion, cold start
  * regression, response size limit, missing env vars.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 import { PRIMARY_HOST } from "./_helpers";
 
 test.describe("Lambda health (primary path)", () => {

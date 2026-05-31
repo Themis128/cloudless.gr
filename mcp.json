@@ -2,7 +2,10 @@
   "mcpServers": {
     "cloudless-infra": {
       "command": "npx",
-      "args": ["tsx", "tools/ssh-mcp/src/index.ts"],
+      "args": [
+        "tsx",
+        "tools/ssh-mcp/src/index.ts"
+      ],
       "env": {
         "OMV_SSH_HOST_TAILSCALE": "100.113.41.119",
         "OMV_SSH_USER": "omv",
@@ -15,14 +18,6 @@
       "args": [
         "-y",
         "project-mcp"
-      ],
-      "autoStart": true
-    },
-    "mcp-tool-shop": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-tool-shop"
       ],
       "autoStart": true
     },
