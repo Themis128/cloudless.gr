@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
     "@aws-sdk/client-ses",
     "@aws-sdk/client-sesv2",
     "@aws-sdk/client-ssm",
+    "next-auth",
   ],
   // In WSL dev, set NEXT_DIST_DIR to a native Linux path (e.g. ~/next-cloudless)
   // to avoid the slow NTFS→WSL filesystem benchmark warning.
