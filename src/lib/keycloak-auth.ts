@@ -16,8 +16,7 @@
  * existing signup/forgot-password pages keep working.
  */
 
-import { signIn as nextAuthSignIn, signOut as nextAuthSignOut } from "next-auth/react";
-import { getSession } from "next-auth/react";
+import { signIn as nextAuthSignIn, signOut as nextAuthSignOut, getSession } from "next-auth/react";
 
 // ── Types matching the aws-amplify/auth surface ───────────────────────────
 

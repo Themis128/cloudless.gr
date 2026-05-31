@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { signIn as nextAuthSignIn, signOut as nextAuthSignOut, getSession } from "next-auth/react";
 
 interface UserPreferences {
   theme: "system" | "dark" | "light";
@@ -87,7 +88,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [configError, setConfigError] = useState<string | null>(null);
+  const configError = null;
 
   const checkAuth = useCallback(async () => {
     try {
@@ -110,8 +111,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (data?.error === "RefreshTokenError") {
         // Refresh token expired — clear session so login page shows
-        const { signOut } = await import("next-auth/react");
-        await signOut({ redirect: false });
+        await nextAuthSignOut({ redirect: false });
         setUser(null);
         setIsAdmin(false);
         return;
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    void checkAuth();
+    checkAuth().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
   }, [checkAuth]);
 
   // Sign-in delegates entirely to next-auth/Keycloak OIDC flow.
@@ -146,8 +146,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // hosted login page. They're kept in the signature for interface compat
   // with any callers that pass them (e.g. legacy login form).
   const handleSignIn = async (_email: string, _password: string): Promise<SignInResult> => {
-    const { signIn } = await import("next-auth/react");
-    await signIn("keycloak", { redirect: true });
+    await nextAuthSignIn("keycloak", { redirect: true });
     return {};
   };
 
@@ -169,8 +168,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const handleSignOut = async () => {
     setUser(null);
     setIsAdmin(false);
-    const { signOut } = await import("next-auth/react");
-    await signOut({ callbackUrl: "/" });
+    await nextAuthSignOut({ callbackUrl: "/" });
   };
 
   const handleConfirmSignUp = async (_email: string, _code: string) => {
@@ -204,7 +202,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     company?: string;
     phone?: string;
   }) => {
-    const { getSession } = await import("next-auth/react");
     const session = await getSession();
     if (!session?.accessToken) throw new Error("Not authenticated");
 
@@ -250,7 +247,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser((prev) => (prev ? { ...prev, preferences: merged } : prev));
     // Persist to Keycloak user attributes if possible
     try {
-      const { getSession } = await import("next-auth/react");
       const session = await getSession();
       if (!session?.accessToken) return;
       const issuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";

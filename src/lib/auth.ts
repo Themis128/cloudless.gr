@@ -18,11 +18,14 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import Keycloak from "next-auth/providers/keycloak";
 
+const REFRESH_TOKEN_ERROR = "RefreshTokenError" as const;
+type RefreshTokenError = typeof REFRESH_TOKEN_ERROR;
+
 declare module "next-auth" {
   interface Session {
     accessToken?: string;
     idToken?: string;
-    error?: "RefreshTokenError";
+    error?: RefreshTokenError;
     user: {
       id: string;
       groups?: string[];
@@ -39,7 +42,7 @@ declare module "next-auth/jwt" {
     expiresAt?: number;
     groups?: string[];
     roles?: string[];
-    error?: "RefreshTokenError";
+    error?: RefreshTokenError;
   }
 }
 
@@ -150,7 +153,7 @@ const nextAuthResult = hasAuthSecret
 
           // Access token expired (or near-expired) — rotate via refresh_token.
           if (!token.refreshToken) {
-            token.error = "RefreshTokenError";
+            token.error = REFRESH_TOKEN_ERROR;
             return token;
           }
 
@@ -169,7 +172,7 @@ const nextAuthResult = hasAuthSecret
             delete token.error;
             return token;
           } catch {
-            token.error = "RefreshTokenError";
+            token.error = REFRESH_TOKEN_ERROR;
             return token;
           }
         },
