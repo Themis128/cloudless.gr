@@ -114,7 +114,7 @@ export async function getDocs(): Promise<DocRecord[]> {
       "NOTION_DOCS_DB_ID"
     );
 
-    return cached("docs:all", async () => {
+    return await cached("docs:all", async () => {
       const results = await notionFetchAll<unknown>(`/databases/${NOTION_DOCS_DB_ID}/query`, {
         filter: DOCS_PUBLISHED_FILTER,
         sorts: DOCS_SORT,

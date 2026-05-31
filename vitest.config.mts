@@ -65,6 +65,8 @@ export default defineConfig({
     setupFiles: ["./__tests__/setup.ts"],
     coverage: {
       provider: "v8",
+      reportOnFailure: true,
+      enabled: true,
       reporter: ["text", "html", "lcov", "json-summary"],
       reportsDirectory: "./coverage/vitest",
       include: ["src/**/*.{ts,tsx}"],
@@ -79,7 +81,6 @@ export default defineConfig({
         "src/**/types.ts",
         "src/**/index.ts",
       ],
-      all: true,
       thresholds: {
         lines: 0,
         functions: 0,

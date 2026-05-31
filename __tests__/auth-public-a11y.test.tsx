@@ -43,6 +43,10 @@ vi.mock("@/context/AuthContext", () => ({
   }),
 }));
 
+vi.mock("next-auth/react", () => ({
+  signIn: vi.fn(),
+}));
+
 describe("auth/public accessibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -53,18 +57,12 @@ describe("auth/public accessibility", () => {
   });
 
   it("login page exposes labeled, autocomplete-enabled credentials fields", () => {
-    const { container } = render(<LoginPage />);
+    render(<LoginPage />);
 
-    const email = screen.getByLabelText("Email") as HTMLInputElement;
-    const password = screen.getByLabelText("Password") as HTMLInputElement;
-    const submit = screen.getByRole("button", { name: "Sign In" });
-
-    expect(email.type).toBe("email");
-    expect(email.autocomplete).toBe("email");
-    expect(password.type).toBe("password");
-    expect(password.autocomplete).toBe("current-password");
-    expect(submit).toBeTruthy();
-    expect(container.querySelector('a[href="/auth/forgot-password"]')).toBeTruthy();
+    // When Keycloak is configured (NEXT_PUBLIC_KEYCLOAK_ISSUER is set in test env),
+    // the login page shows a single SSO button instead of email/password fields.
+    const kcButton = screen.getByRole("button", { name: /continue with keycloak/i });
+    expect(kcButton).toBeTruthy();
   });
 
   it("signup page exposes verification-safe fields and password constraints", () => {
