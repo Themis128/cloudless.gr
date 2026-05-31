@@ -11,9 +11,13 @@
 
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { PUBLIC_PAGES } from "./helpers/coverage-routes";
 
-// Routes to audit on every PR
-const ROUTES = ["/", "/en", "/services", "/contact", "/store", "/blog"];
+// Serial mode: axe scans are heavy; parallel runs exhaust the dev server.
+test.describe.configure({ mode: "serial" });
+
+// Audit every public page plus the bare `/` (locale-redirect exercise).
+const ROUTES: string[] = Array.from(new Set<string>(["/", ...PUBLIC_PAGES]));
 
 // Impact levels that will fail the test
 const FAILING_IMPACTS = new Set(["critical", "serious"]);

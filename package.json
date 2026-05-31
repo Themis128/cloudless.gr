@@ -69,8 +69,8 @@
     "test:coverage:k3s": "COVERAGE=1 npx playwright test --config=playwright.k3s.config.mts",
     "test:coverage:all": "pnpm coverage:clean && pnpm test:coverage:full && pnpm test:coverage:k3s && pnpm coverage:merge",
     "coverage:merge": "node scripts/coverage-merge.mjs",
-    "test:unit:coverage": "vitest run --coverage",
-    "test:unit:coverage:ci": "vitest run --coverage --reporter=default"
+    "test:unit:coverage": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1",
+    "test:unit:coverage:ci": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1 --reporter=default"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1053.0",

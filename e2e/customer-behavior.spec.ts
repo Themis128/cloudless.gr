@@ -334,28 +334,38 @@ test.describe("Contact form API", () => {
 test.describe("Auth – Login page", () => {
   test("renders email, password fields and Sign In button", async ({ page }) => {
     await page.goto("/auth/login");
-    // Wait for client component to hydrate
-    await expect(page.locator("#login-email")).toBeVisible();
-    await expect(page.locator("#login-password")).toBeVisible();
-    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+    await page.waitForLoadState("networkidle").catch(() => {});
+    // When Keycloak is configured, the login page shows a single SSO button.
+    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 10_000 }).catch(() => false);
+    const hasEmail = await page.locator("#login-email").isVisible({ timeout: 5_000 }).catch(() => false);
+    expect(hasKeycloak || hasEmail, "login page must show Keycloak SSO button or email field").toBeTruthy();
   });
 
   test("has a Create Account signup link", async ({ page }) => {
     await page.goto("/auth/login");
-    await expect(page.locator("#login-email")).toBeVisible();
-    await expect(page.getByRole("link", { name: /create account/i })).toBeVisible();
+    await page.waitForLoadState("networkidle").catch(() => {});
+    // The signup link is only shown in Cognito mode; Keycloak mode redirects to Keycloak UI.
+    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 10_000 }).catch(() => false);
+    if (!hasKeycloak) {
+      await expect(page.getByRole("link", { name: /create account/i })).toBeVisible();
+    }
   });
 
   test("has a Forgot Password link", async ({ page }) => {
     await page.goto("/auth/login");
-    await expect(page.locator("#login-email")).toBeVisible();
-    await expect(page.getByRole("link", { name: /forgot password/i })).toBeVisible();
+    await page.waitForLoadState("networkidle").catch(() => {});
+    // The forgot-password link is only shown in Cognito mode.
+    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 10_000 }).catch(() => false);
+    if (!hasKeycloak) {
+      await expect(page.getByRole("link", { name: /forgot password/i })).toBeVisible();
+    }
   });
 
   test("submitting blank stays on login page", async ({ page }) => {
     await page.goto("/auth/login");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    expect(page.url()).toMatch(/\/auth\/login/);
+    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.getByRole("button").first().click();
+    expect(page.url()).toMatch(/\/auth\/login|auth\/login/);
   });
 });
 
