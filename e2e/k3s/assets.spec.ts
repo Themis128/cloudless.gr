@@ -3,7 +3,7 @@
  * chunks load cleanly through Lambda + Funnel. Image chunks are usually
  * the canary for Lambda response-size limits (6 MB hard cap for binary).
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 
 test.describe("k3s static assets", () => {
   test("homepage chunks all return 200", async ({ page }) => {

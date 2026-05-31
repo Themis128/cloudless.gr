@@ -5,7 +5,7 @@
  * Each hop has the potential to drop headers; this test pins the expected
  * surface so a regression on any layer fails CI.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 
 const URL = `https://${process.env.K3S_HOST ?? "cloudless.gr"}/api/health`;
 

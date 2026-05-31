@@ -6,7 +6,7 @@
  * Catches: dangling DNS records, accidental record deletion, propagation
  * failures after a migration, and misrouted subdomains.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 
 const K3S_HOST = globalThis.process?.env["K3S_HOST"] ?? "cloudless.gr";
 

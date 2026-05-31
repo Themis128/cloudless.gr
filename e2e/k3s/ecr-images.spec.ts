@@ -4,7 +4,7 @@
  *
  * Catches: ECR lifecycle too aggressive, failed push, image tag mismatch.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 import { PRIMARY_HOST, STANDBY_HOST, probeHealth, isHealthBody } from "./_helpers";
 
 test.describe("ECR / container image health", () => {

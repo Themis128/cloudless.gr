@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 // ---------------------------------------------------------------------------
@@ -89,21 +89,57 @@ function unauthReq(url: string): NextRequest {
 // GET /api/admin/users
 // ---------------------------------------------------------------------------
 describe("GET /api/admin/users", () => {
+  const kcUsers = [
+    { id: "uuid-1", username: "u1", email: "user@test.com",
+      firstName: "Test", lastName: "User", emailVerified: true,
+      enabled: true, createdTimestamp: Date.now() },
+    { id: "uuid-admin", username: "adm", email: "admin@cloudless.gr",
+      emailVerified: true, enabled: true, createdTimestamp: Date.now() },
+  ];
+
+  function mockFetch(adminGroups: string[] = []) {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      if (String(url).includes("/token")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ access_token: "tok" }) });
+      }
+      if (/\/users\?/.exec(String(url))) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(kcUsers) });
+      }
+      if (String(url).includes("/groups")) {
+        const isAdmin = String(url).includes("uuid-admin");
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(
+          isAdmin && adminGroups.length ? [{ id: "g1", name: adminGroups[0] }] : []
+        )});
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    }));
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.COGNITO_USER_POOL_ID = "us-east-1_TestPool";
+    vi.resetModules();
+    process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+    process.env.KEYCLOAK_ADMIN_USER = "admin";
+    process.env.KEYCLOAK_ADMIN_PASSWORD = "pass";
+    mockFetch();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.KEYCLOAK_ISSUER;
+    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
   });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/users/route");
     const res = await GET(unauthReq("http://localhost/api/admin/users"));
     expect(res.status).toBe(401);
-    expect(cognitoSendMock).not.toHaveBeenCalled();
   });
 
-  it("returns 503 when USER_POOL_ID not configured", async () => {
-    process.env.COGNITO_USER_POOL_ID = "";
-    process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "";
+  it("returns 503 when Keycloak is not configured", async () => {
+    process.env.KEYCLOAK_ISSUER = "";
+    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "";
     const { GET } = await import("@/app/api/admin/users/route");
     const res = await GET(adminReq("http://localhost/api/admin/users"));
     const data = await res.json();
@@ -111,56 +147,24 @@ describe("GET /api/admin/users", () => {
     expect(data.error).toMatch(/not configured/i);
   });
 
-  it("returns users list from Cognito", async () => {
-    cognitoSendMock
-      .mockResolvedValueOnce({
-        Users: [
-          {
-            Username: "user-1",
-            Enabled: true,
-            UserStatus: "CONFIRMED",
-            Attributes: [
-              { Name: "email", Value: "user@test.com" },
-              { Name: "name", Value: "Test User" },
-              { Name: "email_verified", Value: "true" },
-            ],
-            UserCreateDate: new Date("2024-01-01"),
-            UserLastModifiedDate: new Date("2024-06-01"),
-          },
-        ],
-      })
-      .mockResolvedValueOnce({ Groups: [] }); // group lookup for user-1
-
+  it("returns users list from Keycloak", async () => {
     const { GET } = await import("@/app/api/admin/users/route");
     const res = await GET(adminReq("http://localhost/api/admin/users"));
     const data = await res.json();
     expect(res.status).toBe(200);
-    expect(data.users).toHaveLength(1);
+    expect(data.users.length).toBeGreaterThan(0);
     expect(data.users[0].email).toBe("user@test.com");
     expect(data.users[0].role).toBe("user");
   });
 
   it("marks user as admin when in admin group", async () => {
-    cognitoSendMock
-      .mockResolvedValueOnce({
-        Users: [
-          {
-            Username: "admin-user",
-            Enabled: true,
-            UserStatus: "CONFIRMED",
-            Attributes: [{ Name: "email", Value: "admin@cloudless.gr" }],
-            UserCreateDate: new Date(),
-            UserLastModifiedDate: new Date(),
-          },
-        ],
-      })
-      .mockResolvedValueOnce({ Groups: [{ GroupName: "admin" }] });
-
+    mockFetch(["admin"]);
     const { GET } = await import("@/app/api/admin/users/route");
     const res = await GET(adminReq("http://localhost/api/admin/users"));
     const data = await res.json();
     expect(res.status).toBe(200);
-    expect(data.users[0].role).toBe("admin");
+    const adminUser = data.users.find((u: { email: string }) => u.email === "admin@cloudless.gr");
+    expect(adminUser?.role).toBe("admin");
   });
 });
 
@@ -170,7 +174,25 @@ describe("GET /api/admin/users", () => {
 describe("POST /api/admin/users", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.COGNITO_USER_POOL_ID = "us-east-1_TestPool";
+    process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+    process.env.KEYCLOAK_ADMIN_USER = "admin";
+    process.env.KEYCLOAK_ADMIN_PASSWORD = "pass";
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      if (String(url).includes("/token")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ access_token: "tok" }) });
+      }
+      if (String(url).includes("/groups")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: "grp-1", name: "admin" }]) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.KEYCLOAK_ISSUER;
+    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -188,11 +210,10 @@ describe("POST /api/admin/users", () => {
   });
 
   it("disables a user", async () => {
-    cognitoSendMock.mockResolvedValueOnce({});
     const { POST } = await import("@/app/api/admin/users/route");
     const res = await POST(adminReq("http://localhost/api/admin/users", {
       method: "POST",
-      body: { action: "disable", username: "test-user" },
+      body: { action: "disable", username: "uuid-test-user" },
     }));
     const data = await res.json();
     expect(res.status).toBe(200);
@@ -200,11 +221,10 @@ describe("POST /api/admin/users", () => {
   });
 
   it("promotes user to admin", async () => {
-    cognitoSendMock.mockResolvedValueOnce({});
     const { POST } = await import("@/app/api/admin/users/route");
     const res = await POST(adminReq("http://localhost/api/admin/users", {
       method: "POST",
-      body: { action: "promote", username: "test-user" },
+      body: { action: "promote", username: "uuid-test-user" },
     }));
     const data = await res.json();
     expect(res.status).toBe(200);
@@ -215,7 +235,7 @@ describe("POST /api/admin/users", () => {
     const { POST } = await import("@/app/api/admin/users/route");
     const res = await POST(adminReq("http://localhost/api/admin/users", {
       method: "POST",
-      body: { action: "nuke", username: "test-user" },
+      body: { action: "nuke", username: "uuid-test-user" },
     }));
     const data = await res.json();
     expect(res.status).toBe(400);

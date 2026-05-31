@@ -72,14 +72,14 @@ describe("POST /api/webhooks/stripe", () => {
     expect(data.error).toContain("stripe-signature");
   });
 
-  it("returns 500 when webhook secret is not configured", async () => {
+  it("returns 503 when webhook secret is not configured", async () => {
     getConfigMock.mockResolvedValueOnce({ STRIPE_WEBHOOK_SECRET: "" });
 
     const { POST } = await import("@/app/api/webhooks/stripe/route");
     const response = await POST(makeRequest("{}", "sig_1"));
     const data = await response.json();
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
     expect(data.error).toContain("Webhook not configured");
   });
 

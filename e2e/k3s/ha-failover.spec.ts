@@ -5,7 +5,7 @@
  * Catches: standby drift (different SHA), CloudFront origin misconfiguration,
  * APIGW timeout, Lambda Funnel routing failure, Pi k3s pod crash.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../coverage";
 import { probeHealth, isHealthBody, STANDBY_HOST, PRIMARY_HOST } from "./_helpers";
 
 test.describe("HA failover readiness", () => {

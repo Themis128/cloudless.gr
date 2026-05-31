@@ -743,7 +743,7 @@ These are the recommended next layers to build toward an AI-powered marketing pl
 ### Phase 1 — Foundation (Data Collection)
 - [ ] Activate Meta Pixel + CAPI (see `meta-account-runbook.md`) — blocked by Meta advertising restriction
 - [x] Wire `notion-analytics.ts` `trackEvent()` to all key user actions (blog views, doc views, form submits) — done 2026-04-21
-- [ ] Set up weekly GSC digest to Slack (script exists: `scripts/weekly-gsc-sync.ts`)
+- [x] Set up weekly GSC digest to Slack — `weekly-gsc-sync.yml` runs `scripts/weekly-gsc-sync.ts` on a Monday cron and posts a Block Kit success/failure digest to Slack (`SLACK_WEBHOOK_URL`); data lands in `NOTION_GSC_REPORTS_DB_ID`
 
 ### Phase 2 — Lead Intelligence
 - [x] HubSpot deal automation: contact form → contact upsert already live; deal creation via `createDeal()` added 2026-04-21
@@ -751,7 +751,7 @@ These are the recommended next layers to build toward an AI-powered marketing pl
 - [x] Stripe → HubSpot: create deal on checkout (via `checkout.session.completed` webhook) — done 2026-04-21
 
 ### Phase 3 — AI Content & Automation
-- [ ] AI blog post generation pipeline: brief in Notion → draft via LLM → publish to Notion blog DB
+- [x] AI blog post generation pipeline: `weekly-article-draft.yml` runs `scripts/generate-weekly-article.ts` (Anthropic → `NOTION_BLOG_DB_ID`) on a Monday cron, three hours ahead of the publisher window for human review
 - [ ] AI-powered SEO suggestions: GSC data → LLM analysis → content recommendations in admin
 - [ ] Automated email sequences (post-signup, post-purchase) via SES templates
 
