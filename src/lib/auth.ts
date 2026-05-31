@@ -46,6 +46,9 @@ declare module "next-auth/jwt" {
   }
 }
 
+const KC_CLAIM_GROUPS = "groups";
+const KC_CLAIM_REALM_ACCESS = "realm_access";
+
 /** Decode a JWT without verification — used only to read Keycloak claims. */
 function decodeJwtPayload(token: string): Record<string, unknown> {
   try {
@@ -131,15 +134,15 @@ const nextAuthResult = hasAuthSecret
             // Groups: prefer id_token, fall back to access_token, then profile
             const p = profile as Record<string, unknown> | undefined;
             token.groups =
-              (idPayload["groups"] as string[] | undefined) ??
-              (accessPayload["groups"] as string[] | undefined) ??
-              (p?.["groups"] as string[] | undefined) ??
+              (idPayload[KC_CLAIM_GROUPS] as string[] | undefined) ??
+              (accessPayload[KC_CLAIM_GROUPS] as string[] | undefined) ??
+              (p?.[KC_CLAIM_GROUPS] as string[] | undefined) ??
               [];
 
             // Roles: realm_access.roles from access_token (authoritative source)
-            const realmAccess = (accessPayload["realm_access"] ?? p?.["realm_access"]) as
-              | { roles?: string[] }
-              | undefined;
+            const realmAccess = (
+              accessPayload[KC_CLAIM_REALM_ACCESS] ?? p?.[KC_CLAIM_REALM_ACCESS]
+            ) as { roles?: string[] } | undefined;
             token.roles = realmAccess?.roles ?? [];
 
             return token;
@@ -165,9 +168,9 @@ const nextAuthResult = hasAuthSecret
             token.expiresAt = now + refreshed.expires_in;
             // Re-read groups/roles from the new access token
             const payload = decodeJwtPayload(refreshed.access_token);
-            const ra = payload["realm_access"] as { roles?: string[] } | undefined;
+            const ra = payload[KC_CLAIM_REALM_ACCESS] as { roles?: string[] } | undefined;
             token.groups =
-              (payload["groups"] as string[] | undefined) ?? token.groups ?? [];
+              (payload[KC_CLAIM_GROUPS] as string[] | undefined) ?? token.groups ?? [];
             token.roles = ra?.roles ?? token.roles ?? [];
             delete token.error;
             return token;
