@@ -10,6 +10,7 @@
 #   ./keycloak.sh user-add-to-group <user-id> <group-name>
 #   ./keycloak.sh client-update-redirect <client-id> <new-redirect-uri>
 #   ./keycloak.sh smtp-test
+#   ./keycloak.sh doctor               # validate app-auth config is correctly applied
 #
 # Credentials resolution order:
 #   1. $KC_USER / $KC_PASS in the environment.
@@ -237,8 +238,106 @@ cmd_smtp_test() {
   fi
 }
 
+# ---------------------------------------------------------------------------
+# doctor — read-only validation that the APP auth model is correctly applied.
+# Checks: OIDC discovery + issuer match, JWKS >=1 key, cloudless-app is a
+# public PKCE-S256 client, redirect URIs include the next-auth callback, the
+# admin group exists, and the group-membership ("groups") mapper is present.
+# Discovery + JWKS need no token; the client/group/mapper checks use one.
+# ---------------------------------------------------------------------------
+DOCTOR_APP_CLIENT="${DOCTOR_APP_CLIENT:-cloudless-app}"
+DOCTOR_CALLBACK="${DOCTOR_CALLBACK:-https://cloudless.gr/api/auth/callback/keycloak}"
+DOCTOR_FAILS=0
+
+doctor_pass() { printf '  \033[1;32mPASS\033[0m %s\n' "$*"; }
+doctor_fail() { printf '  \033[1;31mFAIL\033[0m %s\n' "$*"; DOCTOR_FAILS=$((DOCTOR_FAILS + 1)); }
+
+# Strip surrounding quotes/newlines from a jq string result (python fallback
+# already prints bare strings).
+unq() { tr -d '"' | tr -d '\n'; }
+
+cmd_doctor() {
+  DOCTOR_FAILS=0
+  local issuer_url="$KC_URL/realms/$KC_REALM"
+  echo "Keycloak app-auth doctor — $issuer_url"
+
+  # 1. OIDC discovery + issuer match
+  local disc issuer
+  disc=$(curl -fsS -m 10 "$issuer_url/.well-known/openid-configuration" 2>/dev/null || true)
+  issuer=$(printf '%s' "$disc" | filter_json '.issuer // empty' "data.get('issuer','')" 2>/dev/null | unq)
+  if [[ "$issuer" == "$issuer_url" ]]; then
+    doctor_pass "OIDC discovery reachable, issuer=$issuer"
+  else
+    doctor_fail "OIDC discovery issuer mismatch/unreachable (got '${issuer:-<none>}', want '$issuer_url')"
+  fi
+
+  # 2. JWKS keys >= 1
+  local nkeys
+  nkeys=$(curl -fsS -m 10 "$issuer_url/protocol/openid-connect/certs" 2>/dev/null \
+    | filter_json '.keys | length' "len(data.get('keys',[]))" 2>/dev/null | unq || echo 0)
+  if [[ "${nkeys:-0}" =~ ^[0-9]+$ ]] && (( nkeys >= 1 )); then
+    doctor_pass "JWKS has $nkeys key(s)"
+  else
+    doctor_fail "JWKS has no keys (got '${nkeys:-0}')"
+  fi
+
+  # 3-6 need an admin token + the client representation
+  local client
+  client=$(api GET "/clients?clientId=$DOCTOR_APP_CLIENT" 2>/dev/null \
+    | filter_json '.[0] // {}' "json.dumps(data[0] if data else {})" 2>/dev/null || echo "{}")
+  if [[ -z "$client" || "$client" == "{}" || "$client" == "null" ]]; then
+    doctor_fail "client '$DOCTOR_APP_CLIENT' not found"
+    echo; echo "doctor: $DOCTOR_FAILS check(s) failed"; return 1
+  fi
+
+  # 3. public client + PKCE S256
+  local is_public pkce
+  is_public=$(printf '%s' "$client" | filter_json '.publicClient' "str(data.get('publicClient',False)).lower()" | unq)
+  pkce=$(printf '%s' "$client" \
+    | filter_json '.attributes["pkce.code.challenge.method"] // empty' \
+      "data.get('attributes',{}).get('pkce.code.challenge.method','')" | unq)
+  if [[ "$is_public" == "true" ]]; then doctor_pass "$DOCTOR_APP_CLIENT is a public client"
+  else doctor_fail "$DOCTOR_APP_CLIENT is not public (publicClient=$is_public)"; fi
+  if [[ "$pkce" == "S256" ]]; then doctor_pass "PKCE challenge method = S256"
+  else doctor_fail "PKCE not S256 (got '${pkce:-<none>}')"; fi
+
+  # 4. redirect URI includes the next-auth callback
+  if printf '%s' "$client" | grep -qF "$DOCTOR_CALLBACK"; then
+    doctor_pass "redirectUris include $DOCTOR_CALLBACK"
+  else
+    doctor_fail "redirectUris missing $DOCTOR_CALLBACK"
+  fi
+
+  # 5. admin group exists
+  local admin_group
+  admin_group=$(resolve_group_id admin 2>/dev/null | unq)
+  if [[ -n "$admin_group" ]]; then doctor_pass "admin group exists ($admin_group)"
+  else doctor_fail "admin group not found"; fi
+
+  # 6. group-membership protocol mapper on the client
+  local uuid has_mapper
+  uuid=$(printf '%s' "$client" | filter_json '.id // empty' "data.get('id','')" | unq)
+  has_mapper=$(api GET "/clients/$uuid/protocol-mappers/models" 2>/dev/null \
+    | filter_json '[.[] | select(.name=="groups" or .protocolMapper=="oidc-group-membership-mapper")] | length' \
+      "len([m for m in data if m.get('name')=='groups' or m.get('protocolMapper')=='oidc-group-membership-mapper'])" \
+      2>/dev/null | unq || echo 0)
+  if [[ "${has_mapper:-0}" =~ ^[0-9]+$ ]] && (( has_mapper >= 1 )); then
+    doctor_pass "group-membership mapper present on $DOCTOR_APP_CLIENT"
+  else
+    doctor_fail "no group-membership mapper on $DOCTOR_APP_CLIENT (groups claim absent → admin checks fail)"
+  fi
+
+  echo
+  if (( DOCTOR_FAILS == 0 )); then
+    echo "doctor: all checks passed"
+  else
+    echo "doctor: $DOCTOR_FAILS check(s) failed — run 'pnpm keycloak:apply' to fix client/group/mapper drift"
+    return 1
+  fi
+}
+
 usage() {
-  sed -n '2,18p' "$0"
+  sed -n '2,19p' "$0"
   exit "${1:-1}"
 }
 
@@ -255,6 +354,7 @@ main() {
     user-add-to-group)           cmd_user_add_to_group "$@" ;;
     client-update-redirect)      cmd_client_update_redirect "$@" ;;
     smtp-test)                   cmd_smtp_test "$@" ;;
+    doctor)                      cmd_doctor "$@" ;;
     -h|--help|help)              usage 0 ;;
     *)                           die "unknown command: $cmd (try --help)" ;;
   esac
