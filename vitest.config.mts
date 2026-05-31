@@ -57,7 +57,7 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    pool: "threads",
+    pool: "forks",
     maxWorkers: 2,
     testTimeout: 15000,
     include: ["__tests__/**/*.test.{ts,tsx}"],
@@ -65,10 +65,9 @@ export default defineConfig({
     setupFiles: ["./__tests__/setup.ts"],
     coverage: {
       provider: "v8",
-      reportOnFailure: true,
-      enabled: true,
       reporter: ["text", "html", "lcov", "json-summary"],
       reportsDirectory: "./coverage/vitest",
+      clean: false,
       include: ["src/**/*.{ts,tsx}"],
       exclude: [
         "src/**/*.d.ts",
