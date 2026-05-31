@@ -89,8 +89,9 @@ export function getTokenFromHeader(request: NextRequest): string | null {
  * Keycloak access tokens carry a variable `aud` (often "account"), so checking
  * it would reject otherwise-valid tokens.
  *
- * Falls back to decode + expiry only when no issuer is configured (dev/test
- * environments without Keycloak).
+ * Falls back to decode + expiry only when no issuer is configured AND the
+ * runtime is not production (dev/test environments without Keycloak). The
+ * fallback is hard-gated so it can never execute in a deployed environment.
  */
 export async function verifyToken(token: string): Promise<DecodedToken | null> {
   if (getJWKS) {
@@ -104,7 +105,23 @@ export async function verifyToken(token: string): Promise<DecodedToken | null> {
     }
   }
 
-  // Dev/test fallback: decode + expiry only (no signature check).
+  // No JWKS configured. In production this is a misconfiguration, not a reason
+  // to trust an unverified token — fail closed.
+  if (process.env.NODE_ENV === "production") return null;
+
+  return decodeTokenUnverified(token);
+}
+
+/**
+ * Dev/test only: decode a JWT payload and check expiry WITHOUT verifying the
+ * signature. Reachable solely from verifyToken() when no Keycloak issuer/JWKS
+ * is configured and NODE_ENV !== "production" (local vitest/jsdom). Production
+ * always has KEYCLOAK_ISSUER set, so the signature-verifying path above runs
+ * instead and this is never executed in a deployed environment.
+ */
+function decodeTokenUnverified(token: string): DecodedToken | null {
+  // NOSONAR(S5659): intentional unverified decode, dev/test-only and unreachable
+  // in production (guarded by the NODE_ENV check in verifyToken).
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
