@@ -1,0 +1,92 @@
+# Prometheus — slim to cluster-health-only scraping.
+#
+# 2026-05-31: Prometheus was eating 623 Mi at the 700 Mi cap, scraping every
+# ServiceMonitor + PodMonitor in the cluster including app-specific metrics
+# that no one looks at. We're rebuilding the dashboards from scratch (see
+# k8s/grafana-dashboards/cluster-overview.json etc.) and only need cluster
+# health metrics.
+#
+# Strategy:
+#   1. Set serviceMonitorSelector + podMonitorSelector to only match resources
+#      labelled `cluster-protection.io/health=true` (cluster-health metrics only)
+#   2. Label the keepers manually below
+#   3. Everything else is silently ignored — no more app scraping
+#
+# What we keep (the minimum to know if a node/pod is healthy):
+#   - node-exporter      (CPU, memory, disk, network per node)
+#   - kube-state-metrics (pod status, deployment health, restart counts)
+#   - kubelet/cAdvisor   (container resource usage)
+#   - kube-apiserver     (control-plane health)
+#   - coredns            (cluster DNS health)
+#   - prometheus-self    (Prometheus's own metrics — needed for retention alerts)
+#
+# What we drop:
+#   - Application metrics (Loki self-metrics, Traefik, Grafana, n8n, Keycloak,
+#     duckdb-api, etc.)
+#   - Ad-hoc PodMonitors for cloudless-app, etc.
+#
+# Apply order:
+#   1. kubectl apply -f prometheus-slim.yaml   (this file)
+#   2. Wait for Prometheus pod to restart
+#   3. Verify drop in /api/v1/targets count
+
+---
+# Restrict what the Prometheus CR scrapes
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: monitoring-prometheus
+  namespace: monitoring
+spec:
+  # Only ServiceMonitors with this label are scraped
+  serviceMonitorSelector:
+    matchLabels:
+      cluster-protection.io/health: "true"
+  serviceMonitorNamespaceSelector: {}
+
+  # Only PodMonitors with this label are scraped
+  podMonitorSelector:
+    matchLabels:
+      cluster-protection.io/health: "true"
+  podMonitorNamespaceSelector: {}
+
+  # Drop probe/scrape configs entirely (we don't use them)
+  probeSelector:
+    matchLabels:
+      cluster-protection.io/health: "true"
+
+  # Retain settings (already set; restated for clarity)
+  retention: 3d
+  retentionSize: 2GB
+
+  # Scrape interval: 30 s (was 15 s default). Cluster health doesn't need
+  # finer resolution than this.
+  scrapeInterval: 30s
+  evaluationInterval: 30s
+
+  # Resource caps (already set in monitoring-resources.yaml; restated here
+  # so this file is self-contained on apply).
+  resources:
+    requests: { memory: 300Mi, cpu: 100m }
+    limits:   { memory: 500Mi, cpu: 1 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IMPORTANT: After applying this CR, you MUST label the ServiceMonitors and
+# PodMonitors you want to KEEP. Anything unlabelled will be dropped.
+#
+# The companion script `apply-memory-relief.sh` does this automatically. The
+# raw commands are documented below in case you need to re-label after a
+# helm upgrade:
+#
+# Cluster-health ServiceMonitors:
+#   kubectl label servicemonitor -n monitoring \
+#     prometheus-node-exporter \
+#     kube-prom-kube-state-metrics \
+#     monitoring-prometheus \
+#     kube-prom-kubelet \
+#     kube-prom-apiserver \
+#     kube-prom-coredns \
+#     cluster-protection.io/health=true --overwrite
+#
+# Then list what survives:
+#   kubectl get servicemonitor -A -l cluster-protection.io/health=true

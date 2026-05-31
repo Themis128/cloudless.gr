@@ -1,0 +1,84 @@
+{
+  "title": "Per-Node Detail",
+  "uid": "per-node-detail-2026",
+  "tags": ["cluster-health", "auto-generated-2026-05-31"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(node_uname_info, instance)",
+        "refresh": 2,
+        "includeAll": false,
+        "multi": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "CPU Mode Breakdown",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 },
+      "targets": [{
+        "expr": "sum by (mode) (rate(node_cpu_seconds_total{instance=\"$instance\",mode!=\"idle\"}[2m])) * 100 / count by (mode) (node_cpu_seconds_total{instance=\"$instance\",mode!=\"idle\"})",
+        "refId": "A",
+        "legendFormat": "{{mode}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } }
+    },
+    {
+      "id": 2,
+      "title": "Memory Breakdown",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 10 },
+      "targets": [
+        { "expr": "node_memory_MemTotal_bytes{instance=\"$instance\"} - node_memory_MemAvailable_bytes{instance=\"$instance\"}", "refId": "A", "legendFormat": "Used" },
+        { "expr": "node_memory_Buffers_bytes{instance=\"$instance\"} + node_memory_Cached_bytes{instance=\"$instance\"}", "refId": "B", "legendFormat": "Cached + Buffers" },
+        { "expr": "node_memory_MemAvailable_bytes{instance=\"$instance\"}", "refId": "C", "legendFormat": "Available" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "id": 3,
+      "title": "Swap Used",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 10 },
+      "targets": [{
+        "expr": "node_memory_SwapTotal_bytes{instance=\"$instance\"} - node_memory_SwapFree_bytes{instance=\"$instance\"}",
+        "refId": "A",
+        "legendFormat": "swap used"
+      }],
+      "description": "Swap usage > 0 = memory pressure. Sustained > 100 MB on SD card = iowait death-spiral.",
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "id": 4,
+      "title": "Disk I/O (read + write)",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 20 },
+      "targets": [
+        { "expr": "rate(node_disk_read_bytes_total{instance=\"$instance\"}[2m])", "refId": "A", "legendFormat": "read {{device}}" },
+        { "expr": "rate(node_disk_written_bytes_total{instance=\"$instance\"}[2m])", "refId": "B", "legendFormat": "write {{device}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps" } }
+    },
+    {
+      "id": 5,
+      "title": "Network Throughput",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        { "expr": "rate(node_network_receive_bytes_total{instance=\"$instance\",device!~\"lo|veth.*|cni.*\"}[2m])", "refId": "A", "legendFormat": "rx {{device}}" },
+        { "expr": "rate(node_network_transmit_bytes_total{instance=\"$instance\",device!~\"lo|veth.*|cni.*\"}[2m])", "refId": "B", "legendFormat": "tx {{device}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps" } }
+    }
+  ]
+}
