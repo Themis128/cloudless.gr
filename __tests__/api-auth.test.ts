@@ -21,8 +21,12 @@ function makeRequest(token?: string): NextRequest {
   return new NextRequest("http://localhost/api/test", { headers });
 }
 
-describe("api-auth.ts (fallback path — no Cognito pool)", () => {
+describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
   beforeEach(() => {
+    // Clear the issuer/pool so verifyToken takes the decode-only fallback path
+    // (no JWKS), which is what these fake-signature fixtures exercise.
+    delete process.env.KEYCLOAK_ISSUER;
+    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     delete process.env.COGNITO_USER_POOL_ID;
     delete process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
   });
@@ -81,22 +85,40 @@ describe("api-auth.ts (fallback path — no Cognito pool)", () => {
       expect(isAdmin(null)).toBe(false);
     });
 
-    it("returns false when cognito:groups is absent", async () => {
+    it("returns false when no group/role claim is present", async () => {
       const { isAdmin } = await import("@/lib/api-auth");
       const decoded = { sub: "u", aud: "a", iss: "i", iat: 0, exp: 9999999999 };
       expect(isAdmin(decoded)).toBe(false);
     });
 
-    it("returns false when user is not in admin group", async () => {
+    it("returns false when user is not in the admin group", async () => {
       const { isAdmin } = await import("@/lib/api-auth");
       const decoded = {
         sub: "u", aud: "a", iss: "i", iat: 0, exp: 9999999999,
-        "cognito:groups": ["users", "editors"],
+        groups: ["users", "editors"],
       };
       expect(isAdmin(decoded)).toBe(false);
     });
 
-    it("returns true when user is in admin group", async () => {
+    it("returns true when user is in the Keycloak admin group", async () => {
+      const { isAdmin } = await import("@/lib/api-auth");
+      const decoded = {
+        sub: "u", aud: "a", iss: "i", iat: 0, exp: 9999999999,
+        groups: ["users", "admin"],
+      };
+      expect(isAdmin(decoded)).toBe(true);
+    });
+
+    it("returns true when user has the admin realm role", async () => {
+      const { isAdmin } = await import("@/lib/api-auth");
+      const decoded = {
+        sub: "u", aud: "a", iss: "i", iat: 0, exp: 9999999999,
+        realm_access: { roles: ["offline_access", "admin"] },
+      };
+      expect(isAdmin(decoded)).toBe(true);
+    });
+
+    it("still honors the legacy cognito:groups claim (back-compat)", async () => {
       const { isAdmin } = await import("@/lib/api-auth");
       const decoded = {
         sub: "u", aud: "a", iss: "i", iat: 0, exp: 9999999999,
@@ -137,9 +159,9 @@ describe("api-auth.ts (fallback path — no Cognito pool)", () => {
       if (!result.ok) expect(result.response.status).toBe(403);
     });
 
-    it("returns ok:true for a valid admin token", async () => {
+    it("returns ok:true for a valid admin token (Keycloak groups claim)", async () => {
       const { requireAdmin } = await import("@/lib/api-auth");
-      const token = makeValidJwt({ "cognito:groups": ["admin"] });
+      const token = makeValidJwt({ groups: ["admin"] });
       const result = await requireAdmin(makeRequest(token));
       expect(result.ok).toBe(true);
     });
