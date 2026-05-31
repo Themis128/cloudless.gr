@@ -54,7 +54,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
   try {
     const part = token.split(".")[1];
     if (!part) return {};
-    const padded = part.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = part.replaceAll("-", "+").replaceAll("_", "/");
     const json = atob(padded.padEnd(padded.length + ((4 - (padded.length % 4)) % 4), "="));
     return JSON.parse(json) as Record<string, unknown>;
   } catch {

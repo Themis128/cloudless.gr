@@ -81,7 +81,7 @@ function isAdminFromSession(user: {
 }
 
 interface AuthProviderProps {
-  children: ReactNode;
+  readonly children: ReactNode;
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
