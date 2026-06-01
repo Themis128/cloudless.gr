@@ -1,20 +1,36 @@
-name: Keycloak create test user (verify provisioning + login)
+name: Keycloak create user (admin-provision + verify login)
 
-# Creates a test user in the master realm via kcadm.sh inside the keycloak pod
-# (admin password stays in-pod, never printed), verifies the account exists and
-# that its password authenticates, and posts a redacted result to issue #382.
+# Admin-provisions a Keycloak user via scripts/keycloak-create-user.sh (kcadm
+# inside the keycloak pod; admin password never leaves the pod) and verifies the
+# password authenticates. Self-service registration is disabled on the master
+# realm, so this is the supported "create a user" path.
 #
-# Self-service registration is disabled on the master realm, so users are
-# admin-provisioned — this is the supported "create a user" path.
+# Idempotent: the default email is reused across runs (password reset + re-verify)
+# so re-triggering does not pile up test users.
 #
-# Trigger: workflow_dispatch, or push to this file on main.
+# Trigger: workflow_dispatch (custom email/admin), or push to this file / the
+# script on main (uses the default verify email).
 
 on:
   workflow_dispatch:
+    inputs:
+      email:
+        description: "Email/username to provision"
+        required: true
+        default: "signup-verify@cloudless.gr"
+      admin:
+        description: "Add to the admin group (app admin)"
+        type: boolean
+        default: false
+      temporary:
+        description: "Password must be reset on first login"
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
       - ".github/workflows/keycloak-create-user.yml"
+      - "scripts/keycloak-create-user.sh"
 
 permissions:
   contents: read
@@ -25,7 +41,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      EMAIL: ${{ github.event.inputs.email || 'signup-verify@cloudless.gr' }}
+      ADMIN: ${{ github.event.inputs.admin == 'true' && '1' || '0' }}
+      TEMPORARY: ${{ github.event.inputs.temporary == 'true' && '1' || '0' }}
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
       - name: Connect to tailnet
         uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
@@ -37,48 +58,18 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Create + verify user via kcadm
+      - name: Provision + verify user
         run: |
           set -uo pipefail
-          TS=$(date -u +%Y%m%d%H%M%S)
-          NEWUSER="signup-test-${TS}@cloudless.gr"
-          NEWPASS="Sg9!$(head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')xY7"
-          POD=$(kubectl -n keycloak get pod -l app=keycloak -o jsonpath='{.items[0].metadata.name}')
-          echo "pod=$POD newuser=$NEWUSER"
+          bash scripts/keycloak-create-user.sh 2>&1 | tee raw.log
+          # Mask the generated password in the Actions log.
+          PW=$(grep -o 'password=[^ ]*' raw.log | head -1 | cut -d= -f2-)
+          [ -n "$PW" ] && echo "::add-mask::$PW"
+          # Strip CREDENTIAL lines before posting to the public issue.
+          grep -v '^CREDENTIAL' raw.log > post.log || true
 
-          OUT=$(kubectl -n keycloak exec -i "$POD" -- env NU="$NEWUSER" NP="$NEWPASS" bash -s <<'EOS'
-          set -u
-          KCADM=/opt/keycloak/bin/kcadm.sh
-          AU="${KEYCLOAK_ADMIN:-${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}}"
-          AP="${KEYCLOAK_ADMIN_PASSWORD:-${KC_BOOTSTRAP_ADMIN_PASSWORD:-}}"
-          if ! $KCADM config credentials --server http://localhost:8080 --realm master --user "$AU" --password "$AP" >/dev/null 2>&1; then
-            echo "ADMIN_AUTH_FAILED (no usable admin creds in pod env)"; exit 0
-          fi
-          ID=$($KCADM create users -r master -s username="$NU" -s email="$NU" -s enabled=true -s emailVerified=true -s firstName=Signup -s lastName=Test -i 2>/dev/null) || { echo "CREATE_FAILED"; exit 0; }
-          echo "USER_ID=$ID"
-          $KCADM set-password -r master --userid "$ID" --new-password "$NP" >/dev/null 2>&1 && echo "PASSWORD_SET=yes" || echo "PASSWORD_SET=no"
-          echo "ACCOUNT:"; $KCADM get "users/$ID" -r master --fields username,email,enabled,emailVerified 2>/dev/null
-          # Verify the new user's password authenticates (admin-cli allows direct grant in master).
-          if curl -sS -m 8 -d "grant_type=password&client_id=admin-cli&username=$NU&password=$NP" \
-               http://localhost:8080/realms/master/protocol/openid-connect/token | grep -q '"access_token"'; then
-            echo "LOGIN_VERIFIED=yes (password authenticates against Keycloak)"
-          else
-            echo "LOGIN_VERIFIED=no"
-          fi
-          EOS
-          )
-          echo "$OUT"
-
-          {
-            echo "# Keycloak create-user — $(date -u '+%F %T')Z"
-            echo
-            echo "Created (admin-provisioned; self-registration is disabled on master realm):"
-            echo
-            echo "- **Username/email:** \`${NEWUSER}\`"
-            echo "- Password: generated in-job, **not logged**"
-            echo
-            echo '```'
-            echo "$OUT" | grep -vi 'password'
-            echo '```'
-          } > user.md
-          gh issue comment 382 --repo "${{ github.repository }}" --body-file user.md
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          { echo "# Keycloak create-user — $(date -u '+%F %T')Z (email: \`${EMAIL}\`)"; echo; echo '```'; cat post.log 2>/dev/null || echo '(no log)'; echo '```'; } > comment.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file comment.md
