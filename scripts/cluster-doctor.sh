@@ -68,3 +68,5 @@ pod=$(kubectl -n "$NAMESPACE" get pods -l app="$DEPLOYMENT" -o name 2>/dev/null 
 [ -n "$pod" ] && k -n "$NAMESPACE" logs "$pod" --previous --tail=40 | fence || printf "_no pod found via label app=%s_\n" "$DEPLOYMENT"
 
 printf "\n_End of snapshot._\n"
+
+# re-run 20260601T133536Z
