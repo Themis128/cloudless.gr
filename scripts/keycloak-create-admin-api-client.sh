@@ -46,16 +46,18 @@ UUID=$($K get clients -r "$RL" -q clientId="$CID" --fields id --format csv --noq
 SAID=$($K get "clients/$UUID/service-account-user" -r "$RL" --fields id --format csv --noquotes | head -1)
 echo "client=$CID uuid=$UUID service-account=$SAID"
 [ -n "$SAID" ] || { echo "NO_SERVICE_ACCOUNT"; exit 1; }
-# Grant each read role individually so one failure doesn't abort the rest.
+# The admin client that holds view-users/query-users etc. is realm-specific:
+#   - non-master realm  -> "realm-management"
+#   - the master realm  -> "master-realm"  (realm-management does NOT exist here)
+if [ "$RL" = "master" ]; then MGMT="master-realm"; else MGMT="realm-management"; fi
+echo "management client: $MGMT"
+# Grant each read role individually; show the error if a grant fails.
 for role in view-users query-users query-groups view-groups; do
-  if $K add-roles -r "$RL" --uid "$SAID" --cclientid realm-management --rolename "$role" >/dev/null 2>&1; then
-    echo "  + $role"
-  else
-    echo "  = $role (already present or failed)"
-  fi
+  err=$($K add-roles -r "$RL" --uid "$SAID" --cclientid "$MGMT" --rolename "$role" 2>&1) \
+    && echo "  + $role" || echo "  ! $role: $(echo "$err" | head -1)"
 done
-echo -n "effective realm-management roles: "
-$K get-roles -r "$RL" --uid "$SAID" --cclientid realm-management --effective --fields name --format csv --noquotes 2>/dev/null | tr '\n' ' '
+echo -n "effective $MGMT roles: "
+$K get-roles -r "$RL" --uid "$SAID" --cclientid "$MGMT" --effective --fields name --format csv --noquotes 2>/dev/null | tr '\n' ' '
 echo
 EOS
 
