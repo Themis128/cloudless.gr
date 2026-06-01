@@ -98,20 +98,26 @@ kubectl -n "$PROM_NS" get pods -l app.kubernetes.io/name=prometheus -o jsonpath=
 printf "prometheus container memory limit: %s\n" "$(kubectl -n "$PROM_NS" get sts -l app.kubernetes.io/name=prometheus -o jsonpath='{.items[0].spec.template.spec.containers[?(@.name=="prometheus")].resources.limits.memory}' 2>&1)"
 
 section "Prometheus: failing rules (health != ok) + lastError"
-kubectl -n "$PROM_NS" run promq-$$ --image=curlimages/curl:8.11.1 --restart=Never --rm -i --quiet \
+# Curl the rules API from an in-cluster pod, parse with jq on the runner.
+kubectl -n "$PROM_NS" run "promq-$$" --image=curlimages/curl:8.11.1 --restart=Never --rm -i --quiet \
   --command -- curl -sS --max-time 12 "http://prometheus-operated.${PROM_NS}.svc:9090/api/v1/rules" 2>/dev/null \
-  | python3 -c '
-import json,sys
-try:
-    d=json.load(sys.stdin)
-except Exception as e:
-    print(f"could not parse rules API: {e}"); sys.exit(0)
-bad=[]
-for g in d.get("data",{}).get("groups",[]):
-    for r in g.get("rules",[]):
-        if r.get("health")!="ok" or r.get("lastError"):
-            bad.append(f"[{g.get(\"name\")}] {r.get(\"name\")}: health={r.get(\"health\")} error={r.get(\"lastError\")}")
-print("\n".join(bad) if bad else "all rules healthy (no eval failures right now)")
-' 2>&1 | fence
+  > /tmp/promrules.json || true
+if [ -s /tmp/promrules.json ]; then
+  jq -r '
+    [ .data.groups[]
+      | .name as $g
+      | .rules[]
+      | select((.health != "ok") or ((.lastError // "") != ""))
+      | "[\($g)] \(.name)  health=\(.health)  type=\(.type)\n    lastError: \(.lastError // "")"
+    ] as $bad
+    | if ($bad|length)==0 then "all rules healthy (no eval failures right now)"
+      else $bad[] end
+  ' /tmp/promrules.json 2>&1 | fence
+  printf "rule groups total: %s, rules total: %s\n" \
+    "$(jq '.data.groups|length' /tmp/promrules.json 2>/dev/null)" \
+    "$(jq '[.data.groups[].rules[]]|length' /tmp/promrules.json 2>/dev/null)"
+else
+  printf "_could not fetch /api/v1/rules (empty response)_\n"
+fi
 
 printf "\n_End of snapshot._\n"
