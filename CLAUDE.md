@@ -116,8 +116,20 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
     that's expected; no `LOGIN_VERIFIED`.) **Never commit a password to git.**
 - **Self-heal:** `pnpm keycloak:ensure` (`keycloak-ensure.yml`, **cron `*/15`**)
   reconciles auth to the last-working state — OOM-recovers Keycloak (768Mi /
-  `-Xmx512m`) and fixes realm flags + the `cloudless-app` groups mapper + admin
-  group/membership; posts to #382 only when it corrects drift or auth is broken.
+  `-Xmx512m`), fixes realm flags + the `cloudless-app` groups mapper + admin
+  group/membership, **and restores the Pi `cloudless` app's auth wiring** (the
+  `cloudless-app-auth` secret + `envFrom`) if it stops serving the keycloak
+  provider; posts to #382 only when it corrects drift or auth is broken.
+- **Pi/k3s app auth (HA standby):** the `cloudless` deployment needs runtime env
+  `AUTH_SECRET` + `KEYCLOAK_ISSUER`(**realm `master`**, not the stale SSM value
+  `cloudless`) + `KEYCLOAK_CLIENT_ID`/`KEYCLOAK_CLIENT_SECRET` + **`AUTH_TRUST_HOST=true`**
+  + `AUTH_URL=https://cloudless.gr` — else next-auth returns `{}` (no AUTH_SECRET)
+  or a "server configuration"/`UntrustedHost` error. Wire it with
+  `pnpm keycloak:wire-pi` style (`scripts/wire-pi-keycloak.sh` → `wire-pi-keycloak.yml`):
+  pulls values from SSM `/cloudless/production/*`, pins realm to `master`, stores
+  them in `cloudless-app-auth`, adds `envFrom` (keeping `pi-standby-aws-creds`),
+  restarts. `NEXT_PUBLIC_KEYCLOAK_ISSUER` is build-time → the Pi login *page*
+  button still needs the `--build-arg` in `deploy-pi.yml`.
 - **CloudWatch `SERVERLESS-APP_MAIN-Errors`** (custom metric
   `CloudlessApp/ServerlessErrors`) is a **CloudWatch Logs metric filter** on the
   Lambda log group — NOT Sentry (Sentry had 0). It counts next-auth
