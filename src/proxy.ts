@@ -322,6 +322,20 @@ async function handlePageRoute(
   const bare = stripLocale(pathname);
   const locale = getLocaleFromPath(pathname);
   const prefix = `/${locale}`;
+
+  // Post-login resolver: the Keycloak sign-in callbackUrl can't know isAdmin
+  // before the session exists, so it lands here. Decide in middleware (clean
+  // 307, no page render) — admins → /admin, everyone else → /dashboard.
+  if (bare === "/auth/post-login") {
+    const { valid, isAdmin: hasAdminGroup } = await readAuthToken(request);
+    if (!valid) {
+      return NextResponse.redirect(new URL(`${prefix}/auth/login`, request.url));
+    }
+    return NextResponse.redirect(
+      new URL(`${prefix}${hasAdminGroup ? "/admin" : "/dashboard"}`, request.url),
+    );
+  }
+
   const isAdminPath = bare === "/admin" || bare.startsWith("/admin/");
   const isDashboardPath = bare === "/dashboard" || bare.startsWith("/dashboard/");
 
