@@ -5,6 +5,7 @@ name: Restore Keycloak (one-shot recovery)
 # corrected limits from k8s/cluster-protection/memory-relief-2026-05-31.yaml and
 # restarts the keycloak Deployment.
 #
+# Re-run trigger: 2026-06-01 — apply corrected JAVA_OPTS_APPEND/limit fix.
 # Runs on a GitHub-hosted runner and reaches the omv k3s API over Tailscale +
 # KUBECONFIG_B64 — the same access path as deploy-pi.yml's rollout job. This is
 # deliberately NOT pinned to the self-hosted omv runners, so the recovery still
