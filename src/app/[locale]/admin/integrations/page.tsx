@@ -28,7 +28,6 @@ interface ApiResponse {
 // Static URL map — iterated directly so href is never derived from API response data
 const SETUP_URLS = {
   ses: "https://console.aws.amazon.com/ses",
-  cognito: "https://console.aws.amazon.com/cognito",
   stripe: "https://dashboard.stripe.com/apikeys",
   hubspot: "https://app.hubspot.com/private-apps",
   slack: "https://api.slack.com/apps",

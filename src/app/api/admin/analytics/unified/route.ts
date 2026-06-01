@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     config.STRIPE_SECRET_KEY
       ? safeCall(async () => {
           const stripeClient = await getStripe();
+          if (!stripeClient) return null;
           const [sessions, subscriptions] = await Promise.all([
             stripeClient.checkout.sessions.list({ limit: 100 }),
             stripeClient.subscriptions.list({ limit: 100, status: "active" }),

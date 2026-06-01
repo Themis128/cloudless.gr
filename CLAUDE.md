@@ -1,5 +1,9 @@
 # Claude Code — Project Memory
 
+## Testing Policy
+
+**Never fix test failures by adding mock code.** When a test fails, fix the actual production code so the test passes naturally. Do not add `vi.mocked(...)`, `mockReturnValue`, `mockResolvedValue`, or any other mock overrides to patch a failing test. If the test expectation is wrong (e.g. it expects old behavior that changed), update the expectation — but never shim production behavior with mocks.
+
 ## Git Workflow
 
 - **Commit and push regularly** — after every logical unit of work (a bug fix, a set of related changes, a completed feature). Do not batch unrelated changes into one large commit.
