@@ -166,13 +166,6 @@ function buildCoreReports(cfg: Cfg): IntegrationReport[] {
       status: configuredIf(cfg.SES_FROM_EMAIL && cfg.AWS_SES_REGION),
     },
     {
-      id: "cognito",
-      name: "AWS Cognito",
-      category: "auth",
-      status: configuredIf(cfg.COGNITO_USER_POOL_ID && cfg.COGNITO_CLIENT_ID),
-      setupUrl: "https://console.aws.amazon.com/cognito",
-    },
-    {
       id: "google",
       name: "Google (Calendar + Search Console)",
       category: "productivity",
