@@ -19,15 +19,30 @@ const mcr = new MCR({
   name: "cloudless.gr — merged coverage (client + server + k3s)",
   outputDir: OUT,
   reports: ["v8", "html", "lcov", "console-summary", "console-details"],
-  entryFilter: {
-    "**/src/**": true,
-    "**/.next/**": false,
-    "**/node_modules/**": false,
+  // The server V8 entries are bundle URLs, not literal `/src/` filesystem
+  // paths: the Next dev server records app code as
+  //   webpack-internal:///(rsc)/./src/app/layout.tsx
+  //   webpack-internal:///(ssr)/./src/lib/foo.ts
+  // and everything else as node_modules / node:internal / .next/dev runtime.
+  // A `**/src/**` allowlist on the *entry* URL therefore matched nothing and
+  // the whole report came back 0%. Keep entries whose URL references our
+  // source tree, drop vendor/runtime; sourceFilter then restricts the
+  // remapped originals to src/.
+  entryFilter: (entry) => {
+    const u = entry.url ?? "";
+    if (u.includes("/node_modules/")) return false;
+    if (u.startsWith("node:")) return false;
+    return /[/.]src\//.test(u) || u.includes("/./src/");
   },
-  sourceFilter: {
-    "**/src/**": true,
-    "**/node_modules/**": false,
-  },
+  // Normalise the webpack-internal scheme + (rsc)/(ssr) layer prefixes back to
+  // a repo-relative path so monocart can load the original source and filter.
+  sourcePath: (filePath) =>
+    filePath
+      .replace(/^webpack-internal:\/\/\/\((rsc|ssr|action-browser)\)\/\.\//, "")
+      .replace(/^webpack:\/\/_N_E\/\.\//, "")
+      .replace(/^.*?\/cloudless\.gr\//, ""),
+  sourceFilter: (sourcePath) =>
+    /(^|\/)src\//.test(sourcePath) && !sourcePath.includes("/node_modules/"),
   cleanCache: true,
 });
 
@@ -83,5 +98,25 @@ if (!added) {
   process.exit(0);
 }
 
-await mcr.generate();
+const results = await mcr.generate();
+const totalLines = results?.summary?.lines?.total ?? 0;
 console.log(`[merge] Merged ${added} V8 file(s) → ${OUT}/index.html`);
+
+// Guard against the silent-0% trap. The server-side V8 data captured via
+// NODE_V8_COVERAGE under `next dev --webpack` records app code against
+// in-memory bundle URLs (webpack-internal:///(rsc)/./src/...). Those entries
+// have no on-disk source or attached source map, so monocart cannot remap the
+// V8 byte-offsets back to the original TS and drops them — yielding a report
+// that LOOKS like "0% coverage" when it actually means "could not resolve".
+// Client coverage (Playwright page.coverage of /_next/static chunks) DOES carry
+// reachable source maps and is the path that produces real src/-mapped numbers.
+if (totalLines === 0) {
+  console.warn(
+    "\n[merge] ⚠  Resolved 0 source lines.\n" +
+      "  The merged report is NOT a real 0% — monocart could not map any entry\n" +
+      "  back to src/. The server-side webpack-internal V8 coverage is not\n" +
+      "  source-resolvable post-hoc; rely on the client (Playwright) coverage\n" +
+      "  and the Vitest unit report (pnpm test:unit:coverage) instead.\n" +
+      "  See the entryFilter/sourcePath notes at the top of this file.\n"
+  );
+}

@@ -13,19 +13,18 @@ export default {
     name: "cloudless.gr Coverage",
     outputDir: "./coverage/playwright",
     reports: ["v8", "html", "lcov", "console-summary"],
-    entryFilter: {
-      // Only count files from your source tree, ignore framework/vendor
-      "**/node_modules/**": false,
-      "**/.next/**": false,
-      "**/_next/static/chunks/main-app*": false,
-      "**/_next/static/chunks/webpack*": false,
-      "**/_next/static/chunks/framework*": false,
-      "**/_next/static/chunks/polyfills*": false,
-      "**/src/**": true,
+    // entryFilter runs against the loaded bundle URL (e.g.
+    // .../_next/static/chunks/app/[locale]/page-HASH.js), never a literal
+    // `/src/` path — so a `**/src/**` allowlist drops every entry before the
+    // source maps resolve. Exclude vendor/framework bundles, keep the rest,
+    // and let sourceFilter restrict to src/ after remapping to originals.
+    entryFilter: (entry: { url?: string }) => {
+      const u = entry.url ?? "";
+      if (u.includes("/node_modules/")) return false;
+      if (/\/_next\/static\/chunks\/(framework|main-app|main|webpack|polyfills|pages)/.test(u)) return false;
+      return true;
     },
-    sourceFilter: {
-      "**/node_modules/**": false,
-      "**/src/**": true,
-    },
+    sourceFilter: (sourcePath: string) =>
+      /(^|\/)src\//.test(sourcePath) && !sourcePath.includes("/node_modules/"),
   },
 };
