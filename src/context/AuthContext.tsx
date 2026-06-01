@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import { signIn as nextAuthSignIn, signOut as nextAuthSignOut, getSession } from "next-auth/react";
+import { signIn as nextAuthSignIn, signOut as nextAuthSignOut } from "next-auth/react";
 
 interface UserPreferences {
   theme: "system" | "dark" | "light";
@@ -199,30 +199,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     company?: string;
     phone?: string;
   }) => {
-    const session = await getSession();
-    if (!session?.accessToken) throw new Error("Not authenticated");
-
-    const issuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
-    const body: Record<string, unknown> = {};
-    if (attrs.name) {
-      const [first, ...rest] = attrs.name.split(" ");
-      body.firstName = first;
-      if (rest.length) body.lastName = rest.join(" ");
-    }
-    if (attrs.phone) body.attributes = { phone: [attrs.phone] };
-    if (attrs.company) {
-      body.attributes = { ...(body.attributes as object), company: [attrs.company] };
-    }
-
-    const res = await globalThis.fetch(`${issuer}/account`, {
+    // Go through our own same-origin API route. A direct browser fetch to
+    // Keycloak's Account API (auth.cloudless.gr) is cross-origin and is blocked
+    // by CORS → the opaque "Failed to fetch". The server route uses the user's
+    // access token to update Keycloak with no CORS constraint.
+    const res = await globalThis.fetch("/api/user/profile", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.accessToken as string}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(attrs),
     });
-    if (!res.ok) throw new Error(`Failed to update profile: ${res.status}`);
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(data?.error ?? `Failed to update profile: ${res.status}`);
+    }
 
     setUser((prev) =>
       prev
@@ -242,20 +231,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       ...prefs,
     };
     setUser((prev) => (prev ? { ...prev, preferences: merged } : prev));
-    // Persist to Keycloak user attributes if possible
+    // Persist via our same-origin route (browser → Keycloak is CORS-blocked).
     try {
-      const session = await getSession();
-      if (!session?.accessToken) return;
-      const issuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
-      await globalThis.fetch(`${issuer}/account`, {
+      await globalThis.fetch("/api/user/profile", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.accessToken as string}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          attributes: { preferences: [JSON.stringify(merged)] },
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: merged }),
       });
     } catch {
       // Non-fatal — preferences are kept in local state
