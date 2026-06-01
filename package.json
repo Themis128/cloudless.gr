@@ -117,7 +117,7 @@
     "monocart-reporter": "^2.11.2",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.8.0",
-    "sst": "^4.14.3",
+    "sst": "^4.15.2",
     "tailwindcss": "^4.3.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
