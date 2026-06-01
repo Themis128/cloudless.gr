@@ -4,9 +4,12 @@ name: Keycloak verify admin (token groups + SSM issuer)
 #   1. Prove the cloudless-app id token Keycloak WOULD issue for the admin
 #      carries groups:["admin"] (via evaluate-scopes example-token) → so the
 #      /admin gate + post-login resolver route them to /admin, not /dashboard.
-#   2. Fix the stale SSM /cloudless/production/KEYCLOAK_ISSUER (was `cloudless`,
-#      must be the realm `master` issuer URL) so wire-pi/self-heal never re-pin
-#      a broken value.
+#   2. Fix the stale SSM /cloudless/production/KEYCLOAK_ISSUER (was the
+#      `cloudless` realm, must be the realm `master` issuer URL) so a future
+#      naive consumer never reads a broken value. The param is a SecureString,
+#      and writing it needs write-capable creds — we use the OIDC deploy role
+#      (SST owns these /cloudless/* params), NOT the read-only in-cluster
+#      pi-standby creds.
 # Posts the result to issue #382.
 
 on:
@@ -20,6 +23,7 @@ on:
 permissions:
   contents: read
   issues: write
+  id-token: write # required for OIDC role assumption
 
 concurrency:
   group: keycloak-verify-admin
@@ -30,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      AWS_REGION: us-east-1
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
@@ -44,6 +49,12 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
+      - name: Configure AWS credentials (OIDC, write-capable)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Verify admin token carries groups:[admin]
         run: |
           set -uo pipefail
@@ -52,22 +63,21 @@ jobs:
       - name: Fix stale SSM KEYCLOAK_ISSUER (cloudless -> master)
         run: |
           set -uo pipefail
-          AK=$(kubectl -n cloudless get secret pi-standby-aws-creds -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)
-          SK=$(kubectl -n cloudless get secret pi-standby-aws-creds -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)
-          echo "::add-mask::$AK"; echo "::add-mask::$SK"
-          export AWS_ACCESS_KEY_ID="$AK" AWS_SECRET_ACCESS_KEY="$SK" AWS_REGION=us-east-1
           WANT="https://auth.cloudless.gr/realms/master"
           NAME="/cloudless/production/KEYCLOAK_ISSUER"
-          CUR=$(aws ssm get-parameter --name "$NAME" --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+          # SecureString → must decrypt to read the real value, and keep the
+          # SecureString type on overwrite (changing type is rejected).
+          CUR=$(aws ssm get-parameter --name "$NAME" --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+          TYPE=$(aws ssm get-parameter --name "$NAME" --query 'Parameter.Type' --output text 2>/dev/null || echo "SecureString")
           {
-            echo "## SSM $NAME"
+            echo "## SSM $NAME (type=$TYPE)"
             echo "before: ${CUR:-<unset>}"
             if [ "$CUR" = "$WANT" ]; then
               echo "result: ALREADY_CORRECT (no change)"
             else
-              aws ssm put-parameter --name "$NAME" --value "$WANT" --type String --overwrite >/dev/null 2>&1 \
+              aws ssm put-parameter --name "$NAME" --value "$WANT" --type "$TYPE" --overwrite >/dev/null 2>&1 \
                 && echo "after:  $WANT" && echo "result: UPDATED" \
-                || echo "result: PUT_FAILED"
+                || echo "result: PUT_FAILED (deploy role lacks ssm:PutParameter on $NAME?)"
             fi
           } | tee -a verify.log
 
