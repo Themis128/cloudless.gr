@@ -1,0 +1,62 @@
+name: Keycloak set admin email
+
+# Ensures the admin Keycloak user has its email set + verified (a blank email
+# blocks email-keyed features like the purchases lookup). Idempotent. Posts to #382.
+
+on:
+  workflow_dispatch:
+    inputs:
+      username:
+        description: "Keycloak username"
+        required: false
+        default: "tbaltzakis@cloudless.gr"
+      email:
+        description: "Email to set"
+        required: false
+        default: "tbaltzakis@cloudless.gr"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/keycloak-set-email.yml"
+      - "scripts/keycloak-set-admin-email.sh"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: keycloak-set-email
+  cancel-in-progress: false
+
+jobs:
+  set-email:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Set admin email
+        env:
+          USERNAME: ${{ github.event.inputs.username || 'tbaltzakis@cloudless.gr' }}
+          EMAIL: ${{ github.event.inputs.email || 'tbaltzakis@cloudless.gr' }}
+        run: |
+          set -uo pipefail
+          bash scripts/keycloak-set-admin-email.sh 2>&1 | tee email.log
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          { echo "# Keycloak set admin email — $(date -u '+%F %T')Z"; echo; echo '```'; cat email.log 2>/dev/null || echo '(no log)'; echo '```'; } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md

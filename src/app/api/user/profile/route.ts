@@ -56,16 +56,28 @@ export async function POST(req: Request) {
   const accountUrl = `${KC_ISSUER}/account`;
   const authHeader = { Authorization: `Bearer ${accessToken}` };
 
-  // Read the current account so we merge (not clobber) existing attributes.
-  let current: KcAccount = {};
+  // Read the current account FIRST so we merge (not clobber) existing fields.
+  // The Account API POST is a full update — omitting email/attributes can blank
+  // them — so if we can't read the current state we must NOT write.
+  let current: KcAccount;
   try {
     const res = await globalThis.fetch(accountUrl, {
       headers: { ...authHeader, Accept: "application/json" },
     });
-    if (res.ok) current = (await res.json()) as KcAccount;
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: "Could not read current profile", status: res.status },
+        { status: 502 }
+      );
+    }
+    current = (await res.json()) as KcAccount;
   } catch {
-    // fall through with empty current; the POST below is the source of truth
+    return NextResponse.json({ error: "Could not reach auth server" }, { status: 502 });
   }
+
+  // Never blank the email: it is read-only in the UI, so always preserve it
+  // (fall back to the session's email if the account representation omits it).
+  const preservedEmail = current.email ?? session.user.email ?? undefined;
 
   const attributes: KcAttributes = { ...(current.attributes ?? {}) };
   if (body.company !== undefined) attributes.company = [body.company];
@@ -78,7 +90,7 @@ export async function POST(req: Request) {
   const payload: KcAccount = {
     firstName: current.firstName,
     lastName: current.lastName,
-    email: current.email,
+    email: preservedEmail,
     attributes,
   };
   if (body.name) {
