@@ -1,0 +1,145 @@
+name: Keycloak configure email verification
+
+# Sets the realm SMTP server (AWS SES) and enables email verification for new
+# registrations. After this runs, every new user who registers at cloudless.gr
+# receives a verification email; they must click the link before signing in.
+#
+# How to get SES SMTP credentials:
+#   AWS Console → SES → SMTP Settings → Create SMTP credentials
+#   This creates a dedicated IAM user. The SMTP username = IAM access key ID.
+#   The SMTP password is the *derived* SES credential shown once at creation time
+#   (NOT the raw IAM secret key — AWS derives it internally).
+#
+#   Store them in SSM:
+#     /cloudless/production/SES_SMTP_USER     (not secret — can be plaintext)
+#     /cloudless/production/SES_SMTP_PASSWORD (SecureString)
+#
+#   Then trigger this workflow via workflow_dispatch (leave inputs blank to read
+#   from SSM, or paste the credentials directly in the inputs).
+
+on:
+  workflow_dispatch:
+    inputs:
+      smtp_user:
+        description: "SES SMTP username (leave blank to read from SSM)"
+        required: false
+        default: ""
+      smtp_password:
+        description: "SES SMTP password (leave blank to read from SSM)"
+        required: false
+        default: ""
+      from_email:
+        description: "From email address (leave blank to read SES_FROM_EMAIL from SSM)"
+        required: false
+        default: ""
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/keycloak-configure-email.yml"
+      - "scripts/keycloak-configure-email.sh"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: keycloak-configure-email
+  cancel-in-progress: false
+
+jobs:
+  configure-email:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Resolve SMTP credentials from inputs or SSM
+        id: creds
+        env:
+          INPUT_SMTP_USER: ${{ github.event.inputs.smtp_user }}
+          INPUT_SMTP_PASSWORD: ${{ github.event.inputs.smtp_password }}
+          INPUT_FROM_EMAIL: ${{ github.event.inputs.from_email }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          set -uo pipefail
+          # Use inline inputs if provided; otherwise fall back to SSM
+          SMTP_USER="${INPUT_SMTP_USER:-}"
+          SMTP_PASSWORD="${INPUT_SMTP_PASSWORD:-}"
+          FROM_EMAIL="${INPUT_FROM_EMAIL:-}"
+          if [ -z "$SMTP_USER" ]; then
+            SMTP_USER=$(aws ssm get-parameter \
+              --name /cloudless/production/SES_SMTP_USER \
+              --query 'Parameter.Value' --output text 2>/dev/null || true)
+          fi
+          if [ -z "$SMTP_PASSWORD" ]; then
+            SMTP_PASSWORD=$(aws ssm get-parameter \
+              --name /cloudless/production/SES_SMTP_PASSWORD \
+              --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || true)
+          fi
+          if [ -z "$FROM_EMAIL" ]; then
+            FROM_EMAIL=$(aws ssm get-parameter \
+              --name /cloudless/production/SES_FROM_EMAIL \
+              --query 'Parameter.Value' --output text 2>/dev/null || true)
+          fi
+          if [ -z "$SMTP_USER" ] || [ -z "$SMTP_PASSWORD" ]; then
+            echo "ERROR: SMTP credentials not found in inputs or SSM."
+            echo "Create SES SMTP credentials in AWS Console → SES → SMTP Settings"
+            echo "then store as SSM params /cloudless/production/SES_SMTP_{USER,PASSWORD}"
+            exit 1
+          fi
+          if [ -z "$FROM_EMAIL" ]; then
+            echo "ERROR: FROM_EMAIL not found — ensure /cloudless/production/SES_FROM_EMAIL exists in SSM"
+            exit 1
+          fi
+          # Mask secrets in log output
+          echo "::add-mask::$SMTP_PASSWORD"
+          # Export to next step via GITHUB_ENV
+          {
+            echo "SMTP_USER=$SMTP_USER"
+            echo "SMTP_PASSWORD=$SMTP_PASSWORD"
+            echo "FROM_EMAIL=$FROM_EMAIL"
+          } >> "$GITHUB_ENV"
+          echo "smtp_user=$SMTP_USER" >> "$GITHUB_OUTPUT"
+          echo "from_email=$FROM_EMAIL" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SMTP + enable email verification
+        env:
+          SMTP_USER: ${{ env.SMTP_USER }}
+          SMTP_PASSWORD: ${{ env.SMTP_PASSWORD }}
+          FROM_EMAIL: ${{ env.FROM_EMAIL }}
+        run: |
+          set -uo pipefail
+          bash scripts/keycloak-configure-email.sh 2>&1 | tee email-cfg.log
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          SMTP_USER="${{ steps.creds.outputs.smtp_user }}"
+          FROM_EMAIL="${{ steps.creds.outputs.from_email }}"
+          STATUS="${{ job.status }}"
+          {
+            echo "# Keycloak email verification config — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Status:** $STATUS"
+            echo "**SMTP user:** ${SMTP_USER:-<from input>}"
+            echo "**From email:** ${FROM_EMAIL:-<from input>}"
+            echo ""
+            echo '```'
+            cat email-cfg.log 2>/dev/null || echo '(no log)'
+            echo '```'
+          } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
