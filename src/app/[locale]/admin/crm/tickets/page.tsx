@@ -14,7 +14,6 @@ const FALLBACK_STAGES: PipelineStage[] = [
 ];
 
 const PRIORITY_OPTIONS = ["HIGH", "MEDIUM", "LOW"] as const;
-type Priority = (typeof PRIORITY_OPTIONS)[number];
 
 interface PipelineStage {
   id: string;
@@ -496,7 +495,7 @@ export default function AdminTicketsPage() {
     );
   }
 
-  const editTicket = modalTicket !== "new" && modalTicket !== undefined ? modalTicket : null;
+  const editTicket = modalTicket !== "new" ? modalTicket : null;
 
   return (
     <div>
