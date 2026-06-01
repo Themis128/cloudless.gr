@@ -1,0 +1,335 @@
+/**
+ * Tests for the REAL next-auth callbacks in src/lib/auth.ts
+ *
+ * The existing keycloak-implementation.test.ts re-implements the callbacks
+ * from scratch. This file imports the actual module and exercises:
+ *
+ *  - decodeJwtPayload (indirectly, via jwt callback)
+ *  - groups preference chain: id_token → access_token → profile
+ *  - roles from realm_access.roles
+ *  - token reuse when not expired
+ *  - refresh token rotation (success + failure)
+ *  - RefreshTokenError when no refresh_token is present
+ *  - session callback: accessToken, idToken, groups, roles, error propagation
+ *  - RP-initiated logout (signOut event hits the end_session_endpoint)
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+// ── Capture the config NextAuth() is called with ──────────────────────────────
+
+let capturedConfig: Record<string, unknown> = {};
+
+vi.mock("next-auth", () => ({
+  default: (config: Record<string, unknown>) => {
+    capturedConfig = config;
+    return {
+      handlers: { GET: vi.fn(), POST: vi.fn() },
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+      auth: vi.fn(),
+    };
+  },
+}));
+
+vi.mock("next-auth/providers/keycloak", () => ({
+  default: (opts: Record<string, unknown>) => ({ ...opts, name: "keycloak" }),
+}));
+
+// ── JWT helper: build a valid-looking (but unsigned) HS256 token ──────────────
+
+function buildToken(payload: Record<string, unknown>): string {
+  const header = btoa(JSON.stringify({ alg: "HS256" }))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
+  const body = btoa(JSON.stringify(payload))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
+  return `${header}.${body}.sig`;
+}
+
+// ── Types mirroring the callback signatures ───────────────────────────────────
+
+type JwtInput = {
+  token: Record<string, unknown>;
+  account?: Record<string, unknown> | null;
+  profile?: Record<string, unknown> | null;
+};
+
+type SessionInput = {
+  session: {
+    user: { id: string; name?: string; email?: string };
+    accessToken?: string;
+    idToken?: string;
+    error?: string;
+  };
+  token: Record<string, unknown>;
+};
+
+// ── tests ─────────────────────────────────────────────────────────────────────
+
+describe("src/lib/auth.ts — real callback behaviour", () => {
+  const origFetch = globalThis.fetch;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    capturedConfig = {};
+    process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
+    process.env.KEYCLOAK_ISSUER = "https://auth.test/realms/master";
+    process.env.KEYCLOAK_CLIENT_ID = "cloudless-app";
+    process.env.KEYCLOAK_CLIENT_SECRET = "client-secret";
+    await import("@/lib/auth");
+  });
+
+  afterEach(() => {
+    globalThis.fetch = origFetch;
+  });
+
+  // ── groups extraction ──────────────────────────────────────────────────────
+
+  it("extracts groups from the id_token payload (preferred source)", async () => {
+    const jwt = capturedConfig.callbacks as Record<
+      string,
+      (a: JwtInput) => Promise<Record<string, unknown>>
+    >;
+    const idToken = buildToken({ groups: ["admin"] });
+    const accessToken = buildToken({ groups: ["other"] });
+    const result = await jwt.jwt({
+      token: {},
+      account: {
+        access_token: accessToken,
+        id_token: idToken,
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        expires_in: 3600,
+      },
+    });
+    expect(result.groups).toEqual(["admin"]);
+  });
+
+  it("falls back to access_token groups when id_token has none", async () => {
+    const jwt = capturedConfig.callbacks as Record<
+      string,
+      (a: JwtInput) => Promise<Record<string, unknown>>
+    >;
+    const idToken = buildToken({ sub: "u1" });
+    const accessToken = buildToken({ groups: ["member"] });
+    const result = await jwt.jwt({
+      token: {},
+      account: {
+        access_token: accessToken,
+        id_token: idToken,
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        expires_in: 3600,
+      },
+    });
+    expect(result.groups).toEqual(["member"]);
+  });
+
+  it("falls back to profile groups when neither token has them", async () => {
+    const jwt = capturedConfig.callbacks as Record<
+      string,
+      (a: JwtInput) => Promise<Record<string, unknown>>
+    >;
+    const idToken = buildToken({ sub: "u1" });
+    const accessToken = buildToken({ sub: "u1" });
+    const result = await jwt.jwt({
+      token: {},
+      account: {
+        access_token: accessToken,
+        id_token: idToken,
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        expires_in: 3600,
+      },
+      profile: { groups: ["viewer"] },
+    });
+    expect(result.groups).toEqual(["viewer"]);
+  });
+
+  it("extracts realm roles from realm_access.roles in access_token", async () => {
+    const jwt = capturedConfig.callbacks as Record<
+      string,
+      (a: JwtInput) => Promise<Record<string, unknown>>
+    >;
+    const accessToken = buildToken({ realm_access: { roles: ["offline_access", "admin"] } });
+    const result = await jwt.jwt({
+      token: {},
+      account: {
+        access_token: accessToken,
+        id_token: buildToken({}),
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        expires_in: 3600,
+      },
+    });
+    expect(result.roles).toContain("admin");
+  });
+
+  it("handles a malformed JWT segment without throwing (returns empty claims)", async () => {
+    const jwt = capturedConfig.callbacks as Record<
+      string,
+      (a: JwtInput) => Promise<Record<string, unknown>>
+    >;
+    const result = await jwt.jwt({
+      token: {},
+      account: {
+        access_token: "not.a.validjwt!!!",
+        id_token: "also.not.valid",
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        expires_in: 3600,
+      },
+    });
+    // Should not throw; groups/roles fall back to []
+    expect(Array.isArray(result.groups)).toBe(true);
+    expect(Array.isArray(result.roles)).toBe(true);
+  });
+
+  // ── token lifetime ─────────────────────────────────────────────────────────
+
+  it("reuses the token unchanged when access_token has not expired", async () => {
+    const jwt = capturedConfig.callbacks as Record<
+      string,
+      (a: JwtInput) => Promise<Record<string, unknown>>
+    >;
+    const existing = {
+      accessToken: "atk",
+      refreshToken: "rtk",
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      groups: ["admin"],
+      roles: [],
+    };
+    const result = await jwt.jwt({ token: { ...existing } });
+    expect(result.accessToken).toBe("atk");
+    expect(result.groups).toEqual(["admin"]);
+  });
+
+  it("flags RefreshTokenError when there is no refresh_token", async () => {
+    const jwt = capturedConfig.callbacks as Record<
+      string,
+      (a: JwtInput) => Promise<Record<string, unknown>>
+    >;
+    const expired = {
+      accessToken: "old",
+      expiresAt: Math.floor(Date.now() / 1000) - 60,
+    };
+    const result = await jwt.jwt({ token: { ...expired } });
+    expect(result.error).toBe("RefreshTokenError");
+  });
+
+  it("rotates tokens using the refresh_token when access_token has expired", async () => {
+    const jwt = capturedConfig.callbacks as Record<
+      string,
+      (a: JwtInput) => Promise<Record<string, unknown>>
+    >;
+    const newAccessToken = buildToken({ groups: ["admin"], realm_access: { roles: [] } });
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        access_token: newAccessToken,
+        refresh_token: "rtk-new",
+        expires_in: 3600,
+      }),
+    });
+    const expired = {
+      accessToken: "old-atk",
+      refreshToken: "rtk-old",
+      expiresAt: Math.floor(Date.now() / 1000) - 60,
+      groups: ["member"],
+      roles: [],
+    };
+    const result = await jwt.jwt({ token: { ...expired } });
+    expect(result.accessToken).toBe(newAccessToken);
+    expect(result.refreshToken).toBe("rtk-new");
+    expect(result.error).toBeUndefined();
+  });
+
+  it("sets RefreshTokenError when the refresh call fails", async () => {
+    const jwt = capturedConfig.callbacks as Record<
+      string,
+      (a: JwtInput) => Promise<Record<string, unknown>>
+    >;
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({ ok: false, status: 401 });
+    const expired = {
+      accessToken: "old",
+      refreshToken: "rtk",
+      expiresAt: Math.floor(Date.now() / 1000) - 60,
+    };
+    const result = await jwt.jwt({ token: { ...expired } });
+    expect(result.error).toBe("RefreshTokenError");
+  });
+
+  // ── session callback ───────────────────────────────────────────────────────
+
+  it("session callback surfaces accessToken, idToken, groups, roles, and user.id", async () => {
+    const { session: sessionCb } = capturedConfig.callbacks as {
+      session: (a: SessionInput) => Promise<SessionInput["session"]>;
+    };
+    const out = await sessionCb({
+      session: { user: { id: "" } },
+      token: {
+        sub: "u-1",
+        accessToken: "atk",
+        idToken: "itk",
+        groups: ["admin"],
+        roles: ["offline_access"],
+      },
+    });
+    expect(out.user.id).toBe("u-1");
+    expect(out.accessToken).toBe("atk");
+    expect(out.idToken).toBe("itk");
+    expect((out as Record<string, unknown>).user).toMatchObject({
+      groups: ["admin"],
+      roles: ["offline_access"],
+    });
+  });
+
+  it("session callback propagates RefreshTokenError to the client", async () => {
+    const { session: sessionCb } = capturedConfig.callbacks as {
+      session: (a: SessionInput) => Promise<SessionInput["session"]>;
+    };
+    const out = await sessionCb({
+      session: { user: { id: "" } },
+      token: { sub: "u-1", error: "RefreshTokenError" },
+    });
+    expect((out as Record<string, unknown>).error).toBe("RefreshTokenError");
+  });
+
+  // ── RP-Initiated Logout (signOut event) ───────────────────────────────────
+
+  it("signOut event calls Keycloak end_session_endpoint with id_token_hint", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true });
+    globalThis.fetch = fetchMock;
+
+    const { signOut: signOutEvent } = capturedConfig.events as {
+      signOut: (msg: { token?: { idToken?: string } }) => Promise<void>;
+    };
+    await signOutEvent({ token: { idToken: "id-tok-123" } });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain("protocol/openid-connect/logout");
+    expect(url).toContain("id_token_hint=id-tok-123");
+  });
+
+  it("signOut event is a no-op when there is no id_token", async () => {
+    const fetchMock = vi.fn();
+    globalThis.fetch = fetchMock;
+
+    const { signOut: signOutEvent } = capturedConfig.events as {
+      signOut: (msg: { token?: { idToken?: string } }) => Promise<void>;
+    };
+    await signOutEvent({ token: {} });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("signOut event swallows fetch errors (best-effort SSO logout)", async () => {
+    globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error("network error"));
+
+    const { signOut: signOutEvent } = capturedConfig.events as {
+      signOut: (msg: { token?: { idToken?: string } }) => Promise<void>;
+    };
+    await expect(
+      signOutEvent({ token: { idToken: "tok" } })
+    ).resolves.toBeUndefined();
+  });
+});
