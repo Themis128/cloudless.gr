@@ -15,6 +15,11 @@ name: Keycloak configure admin (single admin + groups mapper)
 
 on:
   workflow_dispatch:
+    inputs:
+      password:
+        description: "Admin password to set for tbaltzakis@cloudless.gr (typed here, never stored in git; masked in logs)"
+        required: false
+        default: ""
   push:
     branches: [main]
     paths:
@@ -31,7 +36,9 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       ADMIN_EMAIL: tbaltzakis@cloudless.gr
-      ADMIN_PASSWORD: ${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
+      # Password source priority: the workflow_dispatch input (typed in the UI),
+      # else the ADMIN_BOOTSTRAP_PASSWORD repo secret. Never committed to git.
+      ADMIN_PASSWORD: ${{ github.event.inputs.password != '' && github.event.inputs.password || secrets.ADMIN_BOOTSTRAP_PASSWORD }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
