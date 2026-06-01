@@ -1,0 +1,78 @@
+name: Keycloak verify admin (token groups + SSM issuer)
+
+# Two things, no login required:
+#   1. Prove the cloudless-app id token Keycloak WOULD issue for the admin
+#      carries groups:["admin"] (via evaluate-scopes example-token) → so the
+#      /admin gate + post-login resolver route them to /admin, not /dashboard.
+#   2. Fix the stale SSM /cloudless/production/KEYCLOAK_ISSUER (was `cloudless`,
+#      must be the realm `master` issuer URL) so wire-pi/self-heal never re-pin
+#      a broken value.
+# Posts the result to issue #382.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/keycloak-verify-admin.yml"
+      - "scripts/keycloak-verify-admin.sh"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: keycloak-verify-admin
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Verify admin token carries groups:[admin]
+        run: |
+          set -uo pipefail
+          bash scripts/keycloak-verify-admin.sh 2>&1 | tee verify.log
+
+      - name: Fix stale SSM KEYCLOAK_ISSUER (cloudless -> master)
+        run: |
+          set -uo pipefail
+          AK=$(kubectl -n cloudless get secret pi-standby-aws-creds -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)
+          SK=$(kubectl -n cloudless get secret pi-standby-aws-creds -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)
+          echo "::add-mask::$AK"; echo "::add-mask::$SK"
+          export AWS_ACCESS_KEY_ID="$AK" AWS_SECRET_ACCESS_KEY="$SK" AWS_REGION=us-east-1
+          WANT="https://auth.cloudless.gr/realms/master"
+          NAME="/cloudless/production/KEYCLOAK_ISSUER"
+          CUR=$(aws ssm get-parameter --name "$NAME" --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+          {
+            echo "## SSM $NAME"
+            echo "before: ${CUR:-<unset>}"
+            if [ "$CUR" = "$WANT" ]; then
+              echo "result: ALREADY_CORRECT (no change)"
+            else
+              aws ssm put-parameter --name "$NAME" --value "$WANT" --type String --overwrite >/dev/null 2>&1 \
+                && echo "after:  $WANT" && echo "result: UPDATED" \
+                || echo "result: PUT_FAILED"
+            fi
+          } | tee -a verify.log
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          { echo "# Keycloak verify admin — $(date -u '+%F %T')Z"; echo; echo '```'; cat verify.log 2>/dev/null || echo '(no log)'; echo '```'; } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
