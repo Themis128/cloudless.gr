@@ -30,7 +30,7 @@ REALM="${REALM:-master}"
 CLIENT_ID="${CLIENT_ID:-cloudless-app}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-tbaltzakis@cloudless.gr}"
 MEM_LIMIT="${MEM_LIMIT:-768Mi}"
-HEAP="${HEAP:--Xms128m -Xmx512m -Djdk.reflect.useDirectMethodHandle=false}"
+HEAP="${HEAP:--Xms128m -Xmx512m -Djdk.reflect.useDirectMethodHandle=false -Dquarkus.http.limits.max-header-size=64K}"
 DISCOVERY="${DISCOVERY:-https://auth.cloudless.gr/realms/master/.well-known/openid-configuration}"
 
 command -v kubectl >/dev/null 2>&1 || { echo "error: kubectl not found / no cluster access"; exit 1; }

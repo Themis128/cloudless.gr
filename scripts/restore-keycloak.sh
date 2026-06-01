@@ -22,7 +22,7 @@ DEPLOYMENT="${DEPLOYMENT:-keycloak}"
 DISCOVERY="${DISCOVERY:-https://auth.cloudless.gr/realms/master/.well-known/openid-configuration}"
 MEM_LIMIT="${MEM_LIMIT:-768Mi}"
 MEM_REQUEST="${MEM_REQUEST:-384Mi}"
-HEAP="${HEAP:--Xms128m -Xmx512m -Djdk.reflect.useDirectMethodHandle=false}"
+HEAP="${HEAP:--Xms128m -Xmx512m -Djdk.reflect.useDirectMethodHandle=false -Dquarkus.http.limits.max-header-size=64K}"
 
 log() { printf '[restore-kc] %s\n' "$*"; }
 run() { log "\$ $*"; "$@"; log "(exit $?)"; }
