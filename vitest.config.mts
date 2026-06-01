@@ -20,6 +20,12 @@ export default defineConfig({
         __dirname,
         "__tests__/stubs/next-intl-middleware-stub.js",
       ),
+      // next-auth imports next/server as a bare ESM specifier. Vitest can't
+      // resolve the CJS file. This ESM stub re-exports the real classes.
+      "next/server": path.resolve(
+        __dirname,
+        "__tests__/stubs/next-server-stub.js",
+      ),
       // @aws-sdk/client-cognito-identity-provider is not installed; tests that
       // need it supply their own vi.mock() — the stub prevents Vite's import
       // analysis from failing when the route file is dynamically imported.
@@ -58,6 +64,13 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     pool: "forks",
+    server: {
+      deps: {
+        // next-auth imports next/server as bare ESM specifier. Inlining lets
+        // Vitest pre-transform the import through its alias map.
+        inline: ["next-auth", "@auth/core"],
+      },
+    },
     maxWorkers: 2,
     testTimeout: 15000,
     include: ["__tests__/**/*.test.{ts,tsx}"],

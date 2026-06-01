@@ -34,10 +34,9 @@ function makeAdminToken(): string {
   const payload = {
     sub: "admin-sub",
     email: "admin@cloudless.gr",
-    "cognito:groups": ["admin"],
-    token_use: "id",
+    "groups": ["admin"],
     aud: "test-client-id",
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TestPool",
+    iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
@@ -61,6 +60,9 @@ const BASE = "http://localhost/api/admin/notion/tasks";
 
 describe("GET /api/admin/notion/tasks", () => {
   beforeEach(() => {
+    // Use decode-only fallback for fake-sig tokens
+    delete process.env.KEYCLOAK_ISSUER;
+    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     vi.clearAllMocks();
     resetIntegrationCache();
     process.env.NOTION_API_KEY = "secret_test";
@@ -113,6 +115,9 @@ describe("GET /api/admin/notion/tasks", () => {
 
 describe("POST /api/admin/notion/tasks", () => {
   beforeEach(() => {
+    // Use decode-only fallback for fake-sig tokens
+    delete process.env.KEYCLOAK_ISSUER;
+    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     vi.clearAllMocks();
     resetIntegrationCache();
     process.env.NOTION_API_KEY = "secret_test";
@@ -172,6 +177,9 @@ describe("POST /api/admin/notion/tasks", () => {
 
 describe("PATCH /api/admin/notion/tasks", () => {
   beforeEach(() => {
+    // Use decode-only fallback for fake-sig tokens
+    delete process.env.KEYCLOAK_ISSUER;
+    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     vi.clearAllMocks();
     resetIntegrationCache();
     process.env.NOTION_API_KEY = "secret_test";

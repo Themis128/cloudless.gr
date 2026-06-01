@@ -74,8 +74,7 @@ function makeUserToken(email = "user@example.com"): string {
   const payload = {
     sub: "test-user",
     email,
-    "cognito:username": email.split("@")[0],
-    token_use: "id",
+    "preferred_username": email.split("@")[0],
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
   const header = Buffer.from(JSON.stringify({ alg: "RS256" })).toString("base64url");

@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockFetchAuthSession = vi.fn();
+const mockGetSession = vi.fn();
 
-// fetchWithAuth routes through getAuthModule() in amplify-config — mock that
-// module so the test never requires Cognito env vars to be set.
-vi.mock("@/lib/amplify-config", () => ({
-  getAuthModule: () =>
-    Promise.resolve({ fetchAuthSession: () => mockFetchAuthSession() }),
+vi.mock("next-auth/react", () => ({
+  getSession: () => mockGetSession(),
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+  SessionProvider: ({ children }: { children: unknown }) => children,
+  useSession: vi.fn().mockReturnValue({ data: null, status: "unauthenticated" }),
 }));
 
 describe("fetch-with-auth.ts", () => {
@@ -15,18 +16,28 @@ describe("fetch-with-auth.ts", () => {
     vi.stubGlobal("fetch", vi.fn());
   });
 
-  it("throws when no ID token is available", async () => {
-    mockFetchAuthSession.mockResolvedValueOnce({ tokens: {} });
+  it("calls fetch without Authorization when no session", async () => {
+    mockGetSession.mockResolvedValueOnce(null);
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      new globalThis.Response("{}", { status: 200 }),
+    );
+
     const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
-    await expect(fetchWithAuth("/api/test")).rejects.toThrow("No ID token available");
+    await fetchWithAuth("/api/test");
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "/api/test",
+      expect.objectContaining({
+        headers: expect.not.objectContaining({ Authorization: expect.anything() }),
+      }),
+    );
   });
 
-  it("calls fetch with Authorization header when token is available", async () => {
-    mockFetchAuthSession.mockResolvedValueOnce({
-      tokens: { idToken: { toString: () => "test-token-abc" } },
-    });
-    const mockResponse = new globalThis.Response(JSON.stringify({ ok: true }), { status: 200 });
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(mockResponse);
+  it("calls fetch with Authorization header when session has idToken", async () => {
+    mockGetSession.mockResolvedValueOnce({ idToken: "test-token-abc" });
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      new globalThis.Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
 
     const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
     const res = await fetchWithAuth("/api/admin/data");
@@ -41,10 +52,10 @@ describe("fetch-with-auth.ts", () => {
   });
 
   it("merges existing headers with the Authorization header", async () => {
-    mockFetchAuthSession.mockResolvedValueOnce({
-      tokens: { idToken: { toString: () => "tok" } },
-    });
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(new globalThis.Response("{}", { status: 200 }));
+    mockGetSession.mockResolvedValueOnce({ idToken: "tok" });
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      new globalThis.Response("{}", { status: 200 }),
+    );
 
     const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
     await fetchWithAuth("/api/test", {
@@ -64,9 +75,15 @@ describe("fetch-with-auth.ts", () => {
     );
   });
 
-  it("re-throws when fetchAuthSession itself throws", async () => {
-    mockFetchAuthSession.mockRejectedValueOnce(new Error("Amplify not configured"));
+  it("still calls fetch when getSession returns session without idToken", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { email: "a@b.com" } });
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      new globalThis.Response("{}", { status: 200 }),
+    );
+
     const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
-    await expect(fetchWithAuth("/api/test")).rejects.toThrow("Amplify not configured");
+    const res = await fetchWithAuth("/api/public");
+
+    expect(res.status).toBe(200);
   });
 });

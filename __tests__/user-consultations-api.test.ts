@@ -28,9 +28,8 @@ function makeUserToken(email = "user@example.com"): string {
   const payload = {
     sub: "user-sub",
     email,
-    token_use: "id",
     aud: "test-client-id",
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TestPool",
+    iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
@@ -53,6 +52,9 @@ const BASE = "http://localhost/api/user/consultations";
 
 describe("GET /api/user/consultations", () => {
   beforeEach(() => {
+    // Use decode-only fallback for fake-sig tokens
+    delete process.env.KEYCLOAK_ISSUER;
+    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     vi.clearAllMocks();
     resetIntegrationCache();
     process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = "svc@project.iam.gserviceaccount.com";

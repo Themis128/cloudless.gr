@@ -222,8 +222,7 @@ describe("POST /api/checkout", () => {
       iss: "https://cognito.example.com",
       iat: 0,
       exp: 9999999999,
-      token_use: "id",
-    });
+      });
 
     const request = new NextRequest("http://localhost/api/checkout", {
       method: "POST",

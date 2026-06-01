@@ -10,6 +10,7 @@
 import { beforeEach, afterEach, vi } from "vitest";
 import { resetIntegrationCache, resetIntegrationCacheAsync, resetSlackConfigCache } from "@/lib/integrations";
 import { resetSsmCache } from "@/lib/ssm-config";
+import { resetJwksCache } from "@/lib/api-auth";
 
 // ── Notion ────────────────────────────────────────────────────────────────────
 process.env.NOTION_API_KEY = "secret_test_key_12345";
@@ -107,10 +108,14 @@ beforeEach(() => {
   process.env.NOTION_REPORTS_DB_ID = "reports-db-123";
   process.env.SLACK_SIGNING_SECRET = "test-signing-secret-32chars-padded";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_123";
+  // Reset JWKS cache so api-auth.ts re-evaluates env vars per test.
+  // The env vars themselves stay set (tests that need the decode-only
+  // fallback clear them in their own beforeEach).
   resetIntegrationCache();
   resetIntegrationCacheAsync();
   resetSlackConfigCache();
   resetSsmCache();
+  resetJwksCache();
 });
 
 afterEach(() => {
