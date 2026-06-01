@@ -89,4 +89,29 @@ kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{range .metadata.m
 printf "live container[0] memory limit: %s\n" "$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' 2>&1)"
 printf "last-applied (kubectl apply) memory limit: %s\n" "$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.metadata.annotations.kubectl\.kubernetes\.io/last-applied-configuration}' 2>/dev/null | grep -oE '\"memory\":\"[0-9]+Mi\"' | tail -1)"
 
+# ── Prometheus health (PrometheusRuleFailures triage) ───────────────────────
+PROM_NS="${PROM_NS:-monitoring}"
+section "Prometheus: pods (restarts / OOM — is it starved like Keycloak was?)"
+k -n "$PROM_NS" get pods -l app.kubernetes.io/name=prometheus -o wide | fence
+printf "container states:\n"
+kubectl -n "$PROM_NS" get pods -l app.kubernetes.io/name=prometheus -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{range .status.containerStatuses[*]}{"  "}{.name}{": restarts="}{.restartCount}{" ready="}{.ready}{" lastTerminated="}{.lastState.terminated.reason}{"\n"}{end}{end}' 2>&1 | fence
+printf "prometheus container memory limit: %s\n" "$(kubectl -n "$PROM_NS" get sts -l app.kubernetes.io/name=prometheus -o jsonpath='{.items[0].spec.template.spec.containers[?(@.name=="prometheus")].resources.limits.memory}' 2>&1)"
+
+section "Prometheus: failing rules (health != ok) + lastError"
+kubectl -n "$PROM_NS" run promq-$$ --image=curlimages/curl:8.11.1 --restart=Never --rm -i --quiet \
+  --command -- curl -sS --max-time 12 "http://prometheus-operated.${PROM_NS}.svc:9090/api/v1/rules" 2>/dev/null \
+  | python3 -c '
+import json,sys
+try:
+    d=json.load(sys.stdin)
+except Exception as e:
+    print(f"could not parse rules API: {e}"); sys.exit(0)
+bad=[]
+for g in d.get("data",{}).get("groups",[]):
+    for r in g.get("rules",[]):
+        if r.get("health")!="ok" or r.get("lastError"):
+            bad.append(f"[{g.get(\"name\")}] {r.get(\"name\")}: health={r.get(\"health\")} error={r.get(\"lastError\")}")
+print("\n".join(bad) if bad else "all rules healthy (no eval failures right now)")
+' 2>&1 | fence
+
 printf "\n_End of snapshot._\n"
