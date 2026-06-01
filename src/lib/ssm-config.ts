@@ -21,8 +21,6 @@ interface AppConfig {
   STRIPE_SECRET_KEY: string;
   STRIPE_PUBLISHABLE_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
-  COGNITO_USER_POOL_ID: string;
-  COGNITO_CLIENT_ID: string;
   // Keycloak / next-auth
   AUTH_SECRET: string;
   KEYCLOAK_ADMIN_USER: string;
@@ -130,8 +128,6 @@ function validateRequiredKeys(params: Map<string, string>): void {
   const required = [
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
-    "COGNITO_USER_POOL_ID",
-    "COGNITO_CLIENT_ID",
   ] as const;
   const missing: string[] = [];
   for (const key of required) {
@@ -165,8 +161,6 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     STRIPE_SECRET_KEY: params.get("STRIPE_SECRET_KEY") ?? "",
     STRIPE_PUBLISHABLE_KEY: params.get("STRIPE_PUBLISHABLE_KEY") ?? "",
     STRIPE_WEBHOOK_SECRET: params.get("STRIPE_WEBHOOK_SECRET") ?? "",
-    COGNITO_USER_POOL_ID: params.get("COGNITO_USER_POOL_ID") ?? "",
-    COGNITO_CLIENT_ID: params.get("COGNITO_CLIENT_ID") ?? "",
     AUTH_SECRET: params.get("AUTH_SECRET") ?? "",
     KEYCLOAK_ADMIN_USER: params.get("KEYCLOAK_ADMIN_USER") ?? "",
     KEYCLOAK_ADMIN_PASSWORD: params.get("KEYCLOAK_ADMIN_PASSWORD") ?? "",
@@ -240,8 +234,6 @@ function buildConfigFromEnv(): AppConfig {
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
-    COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID || "",
-    COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID || "",
     AUTH_SECRET: process.env.AUTH_SECRET || "",
     KEYCLOAK_ADMIN_USER: process.env.KEYCLOAK_ADMIN_USER || "",
     KEYCLOAK_ADMIN_PASSWORD: process.env.KEYCLOAK_ADMIN_PASSWORD || "",
