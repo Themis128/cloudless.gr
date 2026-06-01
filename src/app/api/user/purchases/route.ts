@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isConfigured } from "@/lib/integrations";
+import { isConfiguredAsync } from "@/lib/integrations";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { requireAuth } from "@/lib/api-auth";
@@ -22,7 +22,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No email in token" }, { status: 400 });
   }
 
-  if (!isConfigured("STRIPE_SECRET_KEY")) {
+  // Use the SSM-aware async check: on Lambda/Pi the Stripe keys live in SSM
+  // (fetched at runtime), not process.env, so the sync isConfigured() would
+  // wrongly report "not configured" and the page shows "Payment system is
+  // being set up" even though Stripe works.
+  if (!(await isConfiguredAsync("STRIPE_SECRET_KEY"))) {
     return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
   }
 
