@@ -29,15 +29,27 @@ command -v aws >/dev/null 2>&1 || { echo "aws CLI not found"; exit 1; }
 
 get() { aws ssm get-parameter --name "$SSM_PREFIX/$1" --with-decryption --query 'Parameter.Value' --output text 2>/dev/null; }
 AUTH_SECRET=$(get AUTH_SECRET)
-KC_ISSUER=$(get KEYCLOAK_ISSUER)
+SSM_ISSUER=$(get KEYCLOAK_ISSUER)
 KC_CID=$(get KEYCLOAK_CLIENT_ID)
 KC_SECRET=$(get KEYCLOAK_CLIENT_SECRET)
 for v in "$AUTH_SECRET" "$KC_SECRET" "$KC_CID"; do [ -n "$v" ] && echo "::add-mask::$v"; done
 
-if [ -z "$AUTH_SECRET" ] || [ -z "$KC_ISSUER" ] || [ -z "$KC_CID" ]; then
-  echo "ERROR: missing SSM values (AUTH_SECRET/ISSUER/CLIENT_ID). Aborting, no changes."; exit 1
+# The live app realm is `master` (the Lambda hands off there; admin/mapper/users
+# are on master). SSM's KEYCLOAK_ISSUER is STALE (realm `cloudless`) — do NOT use
+# it. Pin the Pi to the same realm the Lambda uses so sessions/users line up.
+WANT_ISSUER="${KC_ISSUER_OVERRIDE:-https://auth.cloudless.gr/realms/master}"
+KC_ISSUER="$WANT_ISSUER"
+if [ -n "$SSM_ISSUER" ] && [ "$SSM_ISSUER" != "$WANT_ISSUER" ]; then
+  echo "WARN: SSM KEYCLOAK_ISSUER='$SSM_ISSUER' is stale; using '$WANT_ISSUER' (the live Lambda realm)."
+  # Best-effort: correct the SSM source of truth too (read-only creds will just fail harmlessly).
+  aws ssm put-parameter --name "$SSM_PREFIX/KEYCLOAK_ISSUER" --type String --value "$WANT_ISSUER" --overwrite >/dev/null 2>&1 \
+    && echo "SSM_FIXED: KEYCLOAK_ISSUER -> $WANT_ISSUER" || echo "SSM_NOT_FIXED: cannot write SSM (read-only creds) — recommend updating /cloudless/production/KEYCLOAK_ISSUER to $WANT_ISSUER manually."
 fi
-echo "fetched from SSM: AUTH_SECRET(len=${#AUTH_SECRET}) ISSUER=$KC_ISSUER CLIENT_ID(len=${#KC_CID}) CLIENT_SECRET(len=${#KC_SECRET})"
+
+if [ -z "$AUTH_SECRET" ] || [ -z "$KC_CID" ]; then
+  echo "ERROR: missing SSM values (AUTH_SECRET/CLIENT_ID). Aborting, no changes."; exit 1
+fi
+echo "using: AUTH_SECRET(len=${#AUTH_SECRET}) ISSUER=$KC_ISSUER CLIENT_ID(len=${#KC_CID}) CLIENT_SECRET(len=${#KC_SECRET})"
 
 echo "creating/updating secret $SECRET in ns/$NS"
 kubectl -n "$NS" create secret generic "$SECRET" \
