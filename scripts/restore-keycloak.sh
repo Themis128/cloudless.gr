@@ -2,50 +2,68 @@
 #
 # restore-keycloak.sh — bring auth.cloudless.gr back after an OOM / crash-loop.
 #
-# Applies the corrected memory-relief manifest (Keycloak 480Mi / -Xmx256m) and
-# restarts the keycloak Deployment, then waits for OIDC discovery to return 200.
+# Directly patches the keycloak Deployment to a container size that fits its
+# -Xmx512m heap (the original 2026-05-31 memory-relief cap of 384Mi could not
+# hold it → OOMKilled). Verbose and self-verifying: prints the limit before,
+# immediately after the patch, and again after a short wait (revert check), then
+# restarts and waits for OIDC discovery to return 200. Does NOT use `set -e`, so
+# it always runs to the end and reports — the workflow posts this log to the
+# tracking issue.
 #
-# Requires a working kubectl context pointed at the omv k3s cluster (the
-# restore-keycloak.yml workflow provides one via the KUBECONFIG_B64 secret;
-# a human with cluster access can run this directly).
+# Requires a kubectl context with write access to the keycloak namespace (the
+# restore-keycloak.yml workflow supplies one via Tailscale + KUBECONFIG_B64).
 #
-# Usage:
-#   bash scripts/restore-keycloak.sh
-#   NAMESPACE=keycloak DEPLOYMENT=keycloak bash scripts/restore-keycloak.sh
+# Usage: bash scripts/restore-keycloak.sh
 
-set -euo pipefail
+set -uo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NAMESPACE="${NAMESPACE:-keycloak}"
 DEPLOYMENT="${DEPLOYMENT:-keycloak}"
-MANIFEST="${MANIFEST:-$REPO_ROOT/k8s/cluster-protection/memory-relief-2026-05-31.yaml}"
 DISCOVERY="${DISCOVERY:-https://auth.cloudless.gr/realms/master/.well-known/openid-configuration}"
+MEM_LIMIT="${MEM_LIMIT:-768Mi}"
+MEM_REQUEST="${MEM_REQUEST:-384Mi}"
+HEAP="${HEAP:--Xms128m -Xmx512m -Djdk.reflect.useDirectMethodHandle=false}"
 
-log() { printf "\033[1;36m[restore-kc]\033[0m %s\n" "$*"; }
+log() { printf '[restore-kc] %s\n' "$*"; }
+run() { log "\$ $*"; "$@"; log "(exit $?)"; }
+limit() { kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" \
+  -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' 2>&1; }
 
-command -v kubectl >/dev/null 2>&1 || { echo "error: kubectl not found / no cluster access" >&2; exit 1; }
+command -v kubectl >/dev/null 2>&1 || { echo "error: kubectl not found / no cluster access"; exit 1; }
 
-log "Before:"
-kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o wide || true
-kubectl -n "$NAMESPACE" get pods -l app="$DEPLOYMENT" -o wide || true
+log "whoami: $(kubectl auth whoami 2>&1 | tr '\n' ' ')"
+log "memory limit BEFORE: $(limit)"
 
-log "Applying $MANIFEST"
-kubectl apply -f "$MANIFEST"
+# Raise the namespace LimitRange max first so the new pod limit is admissible.
+run kubectl -n "$NAMESPACE" patch limitrange default-container-limits --type=merge -p \
+  '{"spec":{"limits":[{"type":"Container","max":{"memory":"1Gi","cpu":"2"},"default":{"memory":"512Mi","cpu":"1"},"defaultRequest":{"memory":"128Mi","cpu":"100m"}}]}}' || true
 
-log "Restarting deploy/$DEPLOYMENT in ns/$NAMESPACE"
-kubectl -n "$NAMESPACE" rollout restart "deploy/$DEPLOYMENT"
-kubectl -n "$NAMESPACE" rollout status  "deploy/$DEPLOYMENT" --timeout=240s
+# Direct strategic-merge patch: size the container to fit the heap + set the
+# operative heap variable (JAVA_OPTS_APPEND) explicitly.
+PATCH=$(cat <<JSON
+{"spec":{"template":{"spec":{"containers":[{"name":"$DEPLOYMENT",
+  "resources":{"requests":{"memory":"$MEM_REQUEST","cpu":"100m"},"limits":{"memory":"$MEM_LIMIT","cpu":"1"}},
+  "env":[{"name":"JAVA_OPTS_APPEND","value":"$HEAP"}]}]}}}}
+JSON
+)
+run kubectl -n "$NAMESPACE" patch deploy "$DEPLOYMENT" --type=strategic -p "$PATCH"
 
-log "After:"
-kubectl -n "$NAMESPACE" get pods -l app="$DEPLOYMENT" -o wide || true
+log "memory limit IMMEDIATELY after patch: $(limit)"
+sleep 15
+log "memory limit after 15s (revert check): $(limit)"
+
+run kubectl -n "$NAMESPACE" rollout restart "deploy/$DEPLOYMENT"
+run kubectl -n "$NAMESPACE" rollout status  "deploy/$DEPLOYMENT" --timeout=210s
+
+log "memory limit AFTER rollout: $(limit)"
+kubectl -n "$NAMESPACE" get pods -l app="$DEPLOYMENT" -o wide 2>&1
 
 log "Waiting for OIDC discovery to return 200…"
-for i in $(seq 1 18); do
-  code=$(curl -sS -m 8 -o /dev/null -w '%{http_code}' "$DISCOVERY" 2>/dev/null || echo 000)
-  log "attempt $i: discovery HTTP $code"
-  if [ "$code" = "200" ]; then log "Keycloak is back up."; exit 0; fi
+final=000
+for i in $(seq 1 12); do
+  final=$(curl -sS -m 8 -o /dev/null -w '%{http_code}' "$DISCOVERY" 2>/dev/null || echo 000)
+  log "attempt $i: discovery HTTP $final"
+  [ "$final" = "200" ] && { log "Keycloak is back up."; break; }
   sleep 10
 done
-
-echo "error: Keycloak still not returning 200 after restart" >&2
-exit 1
+[ "$final" = "200" ] || log "Keycloak still not 200 — see pod state above."
