@@ -1,17 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { getConfig } from "@/lib/ssm-config";
 
 const KC_BASE = process.env.KEYCLOAK_ISSUER ?? process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
 const KC_REALM = KC_BASE ? (KC_BASE.split("/realms/")[1] ?? "master") : "master";
 const KC_ADMIN = KC_BASE ? KC_BASE.replace(`/realms/${KC_REALM}`, "") : "";
 const ADMIN_URL = `${KC_ADMIN}/admin/realms/${KC_REALM}`;
 
-/** Obtain a short-lived admin token using client-credentials (service account). */
+/**
+ * Obtain a short-lived Keycloak admin token. Prefers a confidential
+ * service-account client (client_credentials) whose creds live in SSM — on
+ * Lambda/Pi they are NOT in process.env, which is why the env-only path 500'd.
+ * Falls back to the resource-owner password grant only if no client secret is
+ * configured (e.g. local dev with env vars).
+ */
 async function getAdminToken(): Promise<string> {
-  const clientId = process.env.KEYCLOAK_ADMIN_CLIENT_ID ?? "admin-cli";
-  const clientSecret = process.env.KEYCLOAK_ADMIN_CLIENT_SECRET ?? "";
-  const adminUser = process.env.KEYCLOAK_ADMIN_USER ?? "";
-  const adminPass = process.env.KEYCLOAK_ADMIN_PASSWORD ?? "";
+  const cfg = await getConfig().catch(() => null);
+  const clientId =
+    cfg?.KEYCLOAK_ADMIN_CLIENT_ID || process.env.KEYCLOAK_ADMIN_CLIENT_ID || "admin-cli";
+  const clientSecret =
+    cfg?.KEYCLOAK_ADMIN_CLIENT_SECRET || process.env.KEYCLOAK_ADMIN_CLIENT_SECRET || "";
+  const adminUser = cfg?.KEYCLOAK_ADMIN_USER || process.env.KEYCLOAK_ADMIN_USER || "";
+  const adminPass = cfg?.KEYCLOAK_ADMIN_PASSWORD || process.env.KEYCLOAK_ADMIN_PASSWORD || "";
 
   // Prefer client-credentials, fall back to resource-owner password for admin-cli
   const body = clientSecret
