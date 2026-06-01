@@ -80,15 +80,15 @@ describe("auth/public accessibility", () => {
     expect(container.querySelector('a[href="/auth/login"]')).toBeTruthy();
   });
 
-  it("forgot password page uses one-time-code and new-password semantics", () => {
+  it("forgot password page has email field and reset link button", () => {
     render(<ForgotPasswordPage />);
 
     const email = screen.getByLabelText("Email") as HTMLInputElement;
-    const sendCode = screen.getByRole("button", { name: "Send Reset Code" });
+    const sendLink = screen.getByRole("button", { name: "Send Reset Link" });
 
     expect(email.type).toBe("email");
     expect(email.autocomplete).toBe("email");
-    expect(sendCode).toBeTruthy();
+    expect(sendLink).toBeTruthy();
   });
 
   it("newsletter form provides email field, explicit submit button, and privacy link", () => {
