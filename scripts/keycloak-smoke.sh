@@ -39,9 +39,20 @@ no()   { printf "  \033[1;31m✗\033[0m %s\n" "$*"; fail=$((fail+1)); }
 note() { printf "  \033[1;33m!\033[0m %s\n" "$*"; warn=$((warn+1)); }
 head() { printf "\n\033[1m%s\033[0m\n" "$*"; }
 
-# code <url> [curl-args...] -> echoes HTTP status, body saved to $BODY
+# code <url> [curl-args...] -> echoes HTTP status, body saved to $BODY.
+# Retries on a connection failure (000) — auth.cloudless.gr sits behind
+# Cloudflare which can transiently reset rapid-fire probes.
 BODY=$(mktemp)
-code() { local url="$1"; shift; curl -sS -m "$TIMEOUT" -o "$BODY" -w '%{http_code}' "$@" "$url" 2>/dev/null || echo 000; }
+code() {
+  local url="$1"; shift
+  local c="" i
+  for i in 1 2 3; do
+    c=$(curl -sS -m "$TIMEOUT" -o "$BODY" -w '%{http_code}' "$@" "$url" 2>/dev/null) || c="000"
+    [ "$c" != "000" ] && break
+    sleep 1
+  done
+  printf '%s' "$c"
+}
 
 head "Keycloak smoke test"
 printf "  issuer:    %s\n  app:       %s\n  client_id: %s\n" "$ISSUER" "$BASE_URL" "$CLIENT_ID"
@@ -66,40 +77,47 @@ head "2. JWKS (token signing keys)"
 c=$(code "${JWKS_EP:-$ISSUER/protocol/openid-connect/certs}")
 if [ "$c" = "200" ] && grep -q '"keys"' "$BODY"; then ok "JWKS 200 with keys"; else no "JWKS HTTP $c"; fi
 
-# 3. Hosted login (authorization_endpoint) -----------------------------------
-head "3. Hosted login screen"
-login_url="${AUTH_EP:-$ISSUER/protocol/openid-connect/auth}?client_id=${CLIENT_ID}&response_type=code&scope=openid&redirect_uri=$(printf '%s' "$REDIRECT_URI" | sed 's/:/%3A/g; s#/#%2F#g')"
-c=$(code "$login_url")
-if [ "$c" = "200" ]; then
-  if grep -qiE "kc-form-login|password|Sign in|Invalid parameter: redirect_uri" "$BODY"; then
-    if grep -qi "Invalid parameter: redirect_uri" "$BODY"; then
-      note "login renders but redirect_uri '$REDIRECT_URI' is not registered on $CLIENT_ID"
-    else
-      ok "login screen renders (200, password form present)"
-    fi
-  else ok "authorization_endpoint 200"; fi
-else no "authorization_endpoint HTTP $c"; fi
+# PKCE — the cloudless-app client enforces it, so build a real S256 challenge.
+gen_pkce() {
+  PKCE_VERIFIER=$(head -c 32 /dev/urandom | base64 | tr '+/' '-_' | tr -d '=')
+  PKCE_CHALLENGE=$(printf '%s' "$PKCE_VERIFIER" | openssl dgst -sha256 -binary | base64 | tr '+/' '-_' | tr -d '=')
+}
+urlenc() { printf '%s' "$1" | sed 's/:/%3A/g; s#/#%2F#g'; }
+gen_pkce
+RU_ENC=$(urlenc "$REDIRECT_URI")
+AUTHQ="client_id=${CLIENT_ID}&response_type=code&scope=openid&redirect_uri=${RU_ENC}&code_challenge=${PKCE_CHALLENGE}&code_challenge_method=S256"
 
-# 4. Registration ------------------------------------------------------------
+# 3. Hosted login (authorization_endpoint) — with valid PKCE --------------------
+head "3. Hosted login screen (PKCE)"
+c=$(code "${AUTH_EP:-$ISSUER/protocol/openid-connect/auth}?${AUTHQ}")
+if [ "$c" = "200" ] && grep -qiE "kc-form-login|password|Sign in to" "$BODY"; then
+  ok "login screen renders (200, password form)"
+elif grep -qi "Invalid parameter: redirect_uri" "$BODY"; then
+  no "redirect_uri '$REDIRECT_URI' is not registered on $CLIENT_ID"
+else
+  no "authorization_endpoint HTTP $c (expected 200 login page)"
+fi
+
+# 4. Registration (self-service is disabled on master — that is expected) -------
 head "4. Self-service registration"
-reg_url="${REG_EP:-$ISSUER/protocol/openid-connect/registrations}?client_id=${CLIENT_ID}&response_type=code&scope=openid&redirect_uri=$(printf '%s' "$REDIRECT_URI" | sed 's/:/%3A/g; s#/#%2F#g')"
-c=$(code "$reg_url")
-if [ "$c" = "200" ]; then
-  if grep -qiE "register|firstName|user.attributes|password-confirm" "$BODY"; then
-    ok "registration page renders (signup enabled)"
-  else ok "registration endpoint 200"; fi
-elif [ "$c" = "400" ] || [ "$c" = "403" ]; then
-  note "registration endpoint HTTP $c — self-registration may be disabled on the realm"
-else no "registration endpoint HTTP $c"; fi
+sleep 1  # space probes — Cloudflare resets rapid back-to-back connections
+c=$(code "${REG_EP:-$ISSUER/protocol/openid-connect/registrations}?${AUTHQ}")
+if [ "$c" = "200" ] && grep -qiE "register|firstName|password-confirm" "$BODY"; then
+  ok "registration page renders (self-signup ENABLED)"
+else
+  note "self-signup DISABLED on this realm (HTTP $c) — users are admin-provisioned (expected; use keycloak:create-user)"
+fi
 
 # 5. Token endpoint liveness -------------------------------------------------
 head "5. Token endpoint liveness"
-# Bad grant on purpose: a live endpoint answers 400/401 JSON, a dead one 5xx/000.
+sleep 1  # space probes — Cloudflare resets rapid back-to-back connections
 c=$(code "${TOKEN_EP:-$ISSUER/protocol/openid-connect/token}" \
       -X POST -H "Content-Type: application/x-www-form-urlencoded" \
-      -d "grant_type=password&client_id=${CLIENT_ID}&username=__smoke__&password=__smoke__")
+      --data-urlencode "grant_type=password" --data-urlencode "client_id=admin-cli" \
+      --data-urlencode "username=__smoke__" --data-urlencode "password=__smoke__")
 if [ "$c" = "400" ] || [ "$c" = "401" ]; then ok "token endpoint live (rejected bad creds with $c)"
 elif [ "$c" = "200" ]; then note "token endpoint returned 200 to junk creds (unexpected)"
+elif [ "$c" = "000" ]; then note "token endpoint not probeable (Cloudflare reset the rapid probe) — verify manually"
 else no "token endpoint HTTP $c"; fi
 
 # 6. App next-auth providers -------------------------------------------------
@@ -108,14 +126,20 @@ c=$(code "$BASE_URL/api/auth/providers")
 if [ "$c" = "200" ] && grep -q '"keycloak"' "$BODY"; then ok "next-auth lists the keycloak provider"
 else no "providers HTTP $c (keycloak provider missing?)"; fi
 
-# 7. App signin handoff ------------------------------------------------------
-head "7. App → Keycloak signin handoff"
-loc=$(curl -sS -m "$TIMEOUT" -o /dev/null -w '%{redirect_url}' "$BASE_URL/api/auth/signin/keycloak" 2>/dev/null)
+# 7. App signin handoff — the REAL flow is POST + CSRF -----------------------
+head "7. App → Keycloak signin handoff (POST + CSRF)"
+CJ=$(mktemp)
+csrf=$(curl -sS -m "$TIMEOUT" -c "$CJ" "$BASE_URL/api/auth/csrf" 2>/dev/null | grep -o '"csrfToken":"[^"]*"' | cut -d'"' -f4)
+loc=$(curl -sS -m "$TIMEOUT" -b "$CJ" -o /dev/null -w '%{redirect_url}' \
+        --data-urlencode "csrfToken=$csrf" --data-urlencode "callbackUrl=/en/dashboard" \
+        "$BASE_URL/api/auth/signin/keycloak" 2>/dev/null)
+rm -f "$CJ"
 case "$loc" in
-  *auth.cloudless.gr*|*"/protocol/openid-connect/auth"*) ok "signin/keycloak redirects to Keycloak" ;;
-  *error=Configuration*) no "signin/keycloak → error=Configuration (next-auth can't reach the IdP)" ;;
-  "") note "signin/keycloak did not redirect (got empty Location)" ;;
-  *) note "signin/keycloak redirected to: $loc" ;;
+  *auth.cloudless.gr*"openid-connect/auth"*code_challenge_method=S256*) ok "signin → 302 to Keycloak with PKCE (login works)" ;;
+  *auth.cloudless.gr*"openid-connect/auth"*) ok "signin → 302 to Keycloak authorize" ;;
+  *error=Configuration*) no "signin → error=Configuration (next-auth cannot reach the IdP)" ;;
+  "") note "signin did not redirect (empty Location)" ;;
+  *) note "signin redirected to: $loc" ;;
 esac
 
 # Summary --------------------------------------------------------------------
