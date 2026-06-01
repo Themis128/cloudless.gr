@@ -52,15 +52,6 @@ vi.mock("@/lib/slack-notify", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-import { beforeEach as beforeEachHook } from "vitest";
-import { resetJwksCache } from "@/lib/api-auth";
-
-beforeEachHook(() => {
-  delete process.env.KEYCLOAK_ISSUER;
-  delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
-  resetJwksCache();
-});
-
 // JWT helpers
 // ---------------------------------------------------------------------------
 function makeUserToken(opts?: { email?: string; admin?: boolean }): string {

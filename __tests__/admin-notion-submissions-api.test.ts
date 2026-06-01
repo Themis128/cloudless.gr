@@ -56,9 +56,6 @@ const BASE = "http://localhost/api/admin/notion/submissions";
 
 describe("GET /api/admin/notion/submissions", () => {
   beforeEach(() => {
-    // Use decode-only fallback for fake-sig tokens
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     vi.clearAllMocks();
     resetIntegrationCache();
     process.env.NOTION_API_KEY = "secret_test";
@@ -118,9 +115,6 @@ describe("GET /api/admin/notion/submissions", () => {
 
 describe("PATCH /api/admin/notion/submissions", () => {
   beforeEach(() => {
-    // Use decode-only fallback for fake-sig tokens
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     vi.clearAllMocks();
     resetIntegrationCache();
     process.env.NOTION_API_KEY = "secret_test";

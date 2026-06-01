@@ -82,9 +82,6 @@ function unauthReq(): NextRequest {
 
 describe("POST /api/admin/ai/analytics-orchestration", () => {
   beforeEach(() => {
-    // Use decode-only fallback for fake-sig tokens
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     vi.clearAllMocks();
     getConfigMock.mockResolvedValue({
       ANTHROPIC_API_KEY: "test-anthropic-key",

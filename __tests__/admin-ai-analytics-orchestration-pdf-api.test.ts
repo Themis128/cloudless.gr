@@ -71,9 +71,6 @@ function adminReq(body?: Record<string, unknown>): NextRequest {
 
 describe("POST /api/admin/ai/analytics-orchestration/pdf", () => {
   beforeEach(() => {
-    // Use decode-only fallback for fake-sig tokens
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     vi.clearAllMocks();
     getConfigMock.mockResolvedValue({
       ANTHROPIC_API_KEY: "test-anthropic-key",

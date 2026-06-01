@@ -75,9 +75,6 @@ function mockAnthropicResponse(text: string) {
 // ---------------------------------------------------------------------------
 describe("POST /api/admin/ai/campaign", () => {
   beforeEach(() => {
-    // Use decode-only fallback for fake-sig tokens
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     vi.clearAllMocks();
     getConfigMock.mockResolvedValue({ ANTHROPIC_API_KEY: "test-anthropic-key" });
   });
@@ -141,9 +138,6 @@ describe("POST /api/admin/ai/campaign", () => {
 // ---------------------------------------------------------------------------
 describe("POST /api/admin/ai/copy", () => {
   beforeEach(() => {
-    // Use decode-only fallback for fake-sig tokens
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     vi.clearAllMocks();
     getConfigMock.mockResolvedValue({ ANTHROPIC_API_KEY: "test-anthropic-key" });
   });
@@ -195,9 +189,6 @@ describe("POST /api/admin/ai/copy", () => {
 // ---------------------------------------------------------------------------
 describe("POST /api/admin/ai/audience", () => {
   beforeEach(() => {
-    // Use decode-only fallback for fake-sig tokens
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     vi.clearAllMocks();
     getConfigMock.mockResolvedValue({ ANTHROPIC_API_KEY: "test-anthropic-key" });
   });

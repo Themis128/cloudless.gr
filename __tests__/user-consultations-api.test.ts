@@ -52,9 +52,6 @@ const BASE = "http://localhost/api/user/consultations";
 
 describe("GET /api/user/consultations", () => {
   beforeEach(() => {
-    // Use decode-only fallback for fake-sig tokens
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
     vi.clearAllMocks();
     resetIntegrationCache();
     process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = "svc@project.iam.gserviceaccount.com";

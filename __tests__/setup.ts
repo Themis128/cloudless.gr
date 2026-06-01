@@ -108,9 +108,12 @@ beforeEach(() => {
   process.env.NOTION_REPORTS_DB_ID = "reports-db-123";
   process.env.SLACK_SIGNING_SECRET = "test-signing-secret-32chars-padded";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_123";
-  // Reset JWKS cache so api-auth.ts re-evaluates env vars per test.
-  // The env vars themselves stay set (tests that need the decode-only
-  // fallback clear them in their own beforeEach).
+  // Clear Keycloak ISSUER so api-auth.ts uses the decode-only fallback
+  // for fake-sig test tokens. Without this, CI (where KEYCLOAK_ISSUER is
+  // set as a GH secret) tries real JWKS verification and rejects them.
+  // Tests that need JWKS verification set the issuer explicitly.
+  delete process.env.KEYCLOAK_ISSUER;
+  delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
   resetIntegrationCache();
   resetIntegrationCacheAsync();
   resetSlackConfigCache();
