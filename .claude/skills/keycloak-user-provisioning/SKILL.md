@@ -17,10 +17,13 @@ users. **Users are admin-provisioned.** (Verify the realm flag with
 Two ways to act on this:
 1. **Provision a user yourself** (default, supported) — `keycloak:create-user`.
 2. **Enable public self-signup** (only if the user explicitly wants the signup
-   button to work) — set `registrationAllowed=true` on the realm:
-   `kcadm.sh update realms/master -s registrationAllowed=true` (and usually
-   `verifyEmail`, `registrationEmailAsUsername` to taste). This is a
-   product/security decision — confirm before flipping it.
+   button to work) — `pnpm keycloak:enable-signup`
+   (`scripts/keycloak-enable-signup.sh`) sets `registrationAllowed=true` plus
+   `resetPasswordAllowed`/`loginWithEmailAllowed` on the realm via kcadm in-pod.
+   `ENABLE=false` reverts it. From a cloud session use
+   `.github/workflows/keycloak-full-verify.yml` (enables signup + provisions +
+   verifies, posts to #382). This is a product/security decision (anyone can
+   then create an account) — confirm before flipping it.
 
 ## Provisioning a user
 

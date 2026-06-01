@@ -49,7 +49,7 @@ code() {
   for i in 1 2 3; do
     c=$(curl -sS -m "$TIMEOUT" -o "$BODY" -w '%{http_code}' "$@" "$url" 2>/dev/null) || c="000"
     [ "$c" != "000" ] && break
-    sleep 1
+    sleep 2
   done
   printf '%s' "$c"
 }
@@ -100,7 +100,7 @@ fi
 
 # 4. Registration (self-service is disabled on master — that is expected) -------
 head "4. Self-service registration"
-sleep 1  # space probes — Cloudflare resets rapid back-to-back connections
+sleep 2  # space probes — Cloudflare resets rapid back-to-back connections
 c=$(code "${REG_EP:-$ISSUER/protocol/openid-connect/registrations}?${AUTHQ}")
 if [ "$c" = "200" ] && grep -qiE "register|firstName|password-confirm" "$BODY"; then
   ok "registration page renders (self-signup ENABLED)"
@@ -110,7 +110,7 @@ fi
 
 # 5. Token endpoint liveness -------------------------------------------------
 head "5. Token endpoint liveness"
-sleep 1  # space probes — Cloudflare resets rapid back-to-back connections
+sleep 2  # space probes — Cloudflare resets rapid back-to-back connections
 c=$(code "${TOKEN_EP:-$ISSUER/protocol/openid-connect/token}" \
       -X POST -H "Content-Type: application/x-www-form-urlencoded" \
       --data-urlencode "grant_type=password" --data-urlencode "client_id=admin-cli" \
