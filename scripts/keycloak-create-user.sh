@@ -82,14 +82,15 @@ fi
 
 echo "ACCOUNT:"; $K get "users/$ID" -r "$RL" --fields username,email,enabled,emailVerified 2>/dev/null
 
-# Verify the password authenticates (admin-cli allows direct grant in master).
-CODE=$(curl -sS -m 8 -o /tmp/tok.json -w '%{http_code}' \
-  --data-urlencode "grant_type=password" --data-urlencode "client_id=admin-cli" \
-  --data-urlencode "username=$NU" --data-urlencode "password=$NP" \
-  "http://localhost:8080/realms/$RL/protocol/openid-connect/token" 2>/dev/null)
-if grep -q access_token /tmp/tok.json 2>/dev/null; then
+# Verify the password authenticates. The keycloak image has no curl, so use
+# kcadm itself: logging in as the new user via admin-cli direct grant (into a
+# throwaway config) proves the credentials work.
+if $K config credentials --config /tmp/userverify.json \
+     --server http://localhost:8080 --realm "$RL" \
+     --client admin-cli --user "$NU" --password "$NP" >/dev/null 2>&1; then
   echo "LOGIN_VERIFIED=yes (password authenticates against Keycloak)"
 else
-  echo "LOGIN_VERIFIED=no (http=$CODE $(grep -o '\"error[^,}]*' /tmp/tok.json 2>/dev/null | head -1))"
+  echo "LOGIN_VERIFIED=no (direct grant as user failed)"
 fi
+rm -f /tmp/userverify.json 2>/dev/null || true
 EOS
