@@ -31,7 +31,11 @@ export async function GET(request: NextRequest) {
       status:
         status === "all" ? undefined : (status as "active" | "past_due" | "canceled" | "trialing"),
       limit,
-      expand: ["data.customer", "data.items.data.price.product"],
+      // Stripe allows expanding at most 4 levels deep. "data.items.data.price"
+      // is already 4 (data→items→data→price); adding ".product" makes 5 and
+      // Stripe rejects the whole request → the list 500s. Stop at price and
+      // fall back to price.nickname for the plan name below.
+      expand: ["data.customer", "data.items.data.price"],
     });
 
     const subscriptions: AdminSubscription[] = subs.data.map((sub) => {
