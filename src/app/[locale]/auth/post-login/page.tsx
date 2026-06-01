@@ -20,9 +20,7 @@ export default async function PostLoginPage({
   const groups = session.user.groups ?? [];
   const roles = session.user.roles ?? [];
   const isAdmin =
-    groups.includes("admin") ||
-    roles.includes("admin") ||
-    roles.includes("realm:admin");
+    groups.includes("admin") || roles.includes("admin") || roles.includes("realm:admin");
 
   redirect(`/${locale}${isAdmin ? "/admin" : "/dashboard"}`);
 }
