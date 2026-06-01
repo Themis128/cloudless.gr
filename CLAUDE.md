@@ -62,7 +62,10 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
 - **Tools (all in repo):** `pnpm cluster:doctor` (read-only diagnostics →
   `cluster-doctor.yml`), `pnpm keycloak:smoke` (login/registration surface),
   `pnpm keycloak:restore` (direct-patch recovery → `restore-keycloak.yml`),
-  `pnpm prometheus:tune` (kill heavy apiserver SLO rules → `prometheus-tune.yml`).
+  `pnpm prometheus:tune` (kill heavy apiserver SLO rules → `prometheus-tune.yml`),
+  `pnpm keycloak:create-user` / `pnpm keycloak:enable-signup` (user provisioning →
+  `keycloak-create-user.yml` / `keycloak-full-verify.yml`; see the
+  **`keycloak-user-provisioning`** skill).
 - **2026-06-01 incident:** the 2026-05-31 memory-relief PR OOM-capped Keycloak
   (384Mi container vs its real `-Xmx512m` heap) → CrashLoop → `auth.cloudless.gr`
   503, login/registration down ~8h. Fix: size the container to the heap
@@ -80,6 +83,26 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
     (`context deadline exceeded`), not OOM. `pnpm prometheus:tune` removes those
     unused heavy SLO rule groups. Durable fix: kube-prometheus-stack Helm values
     `defaultRules.rules.kubeApiserver{Burnrate,Availability,Slos}: false`.
+
+### Keycloak users & the `ServerlessErrors` alarm
+
+- **Self-service registration** was OFF on the `master` realm (users are
+  admin-provisioned). 2026-06-01 it was turned **ON**
+  (`registrationAllowed=true` + `resetPasswordAllowed` + `loginWithEmailAllowed`)
+  so the website "Create Account" / forgot-password flows work. Toggle with
+  `pnpm keycloak:enable-signup` (`ENABLE=false` reverts).
+- **Provision users** with `pnpm keycloak:create-user` (`EMAIL=…`, `ADMIN=1` for
+  the admin group). It runs `kcadm` **inside the keycloak pod** so the admin
+  password never leaves the cluster. The keycloak image has **no `curl`**, so
+  verify a user's login with `kcadm config credentials` (direct grant as the
+  user via `admin-cli`), not curl. App admin = `admin` group membership.
+- **CloudWatch `SERVERLESS-APP_MAIN-Errors`** (custom metric
+  `CloudlessApp/ServerlessErrors`) is a **CloudWatch Logs metric filter** on the
+  Lambda log group — NOT Sentry (Sentry had 0). It counts next-auth
+  `[auth][error] Configuration` lines, which fire on a bare **GET** to
+  `/api/auth/signin/keycloak` (real login POSTs and is fine). The 2026-06-01
+  burst was the Keycloak outage (now fixed) + diagnostic GET probes. Threshold
+  is 1 error / 5 min (very noisy). The alarm/filter are not in this repo.
 
 ## Deployment to Pi
 
