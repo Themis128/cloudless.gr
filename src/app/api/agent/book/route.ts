@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
   if (!userEmail) {
     return jsonError(400, "Authenticated token is missing an email claim — cannot book.");
   }
-  const userName = resolveUserName(auth.user["cognito:username"], userEmail);
+  const userName = resolveUserName(auth.user.preferred_username, userEmail);
 
   if (!(await isAgentBookConfigured())) {
     return jsonError(503, "Booking is not configured.");

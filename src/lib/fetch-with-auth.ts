@@ -12,10 +12,7 @@
 
 import { getSession } from "next-auth/react";
 
-export async function fetchWithAuth(
-  url: string,
-  init?: RequestInit,
-): Promise<Response> {
+export async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
   const session = await getSession();
   const idToken = session?.idToken;
 
