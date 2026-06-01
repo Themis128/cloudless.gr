@@ -27,10 +27,10 @@ describe("stripe.ts", () => {
   beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   describe("getStripe", () => {
-    it("throws when STRIPE_SECRET_KEY is not set", async () => {
+    it("returns null when STRIPE_SECRET_KEY is not set", async () => {
       mockGetConfig.mockResolvedValue({});
       const { getStripe } = await import("@/lib/stripe");
-      await expect(getStripe()).rejects.toThrow(/STRIPE_SECRET_KEY is not set/);
+      await expect(getStripe()).resolves.toBeNull();
     });
 
     it("returns Stripe instance when key is present", async () => {
@@ -75,10 +75,10 @@ describe("stripe.ts", () => {
       expect(result.hasMore).toBe(false);
     });
 
-    it("throws when getStripe throws (not configured)", async () => {
+    it("returns empty result when not configured", async () => {
       mockGetConfig.mockResolvedValue({});
       const { listRecentCheckoutSessions } = await import("@/lib/stripe");
-      await expect(listRecentCheckoutSessions()).rejects.toThrow(/STRIPE_SECRET_KEY/);
+      await expect(listRecentCheckoutSessions()).resolves.toEqual({ orders: [], hasMore: false });
     });
   });
 

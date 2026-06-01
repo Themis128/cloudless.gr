@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
       : null;
 
     const stripe = await getStripe();
+    if (!stripe) return Response.json({ error: "Stripe not configured" }, { status: 503 });
     const idempotencyKey = getIdempotencyKey(request);
     const session = await stripe.checkout.sessions.create(
       {

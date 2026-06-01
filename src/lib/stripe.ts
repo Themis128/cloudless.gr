@@ -3,13 +3,11 @@ import { getConfig } from "./ssm-config";
 
 let stripeInstance: Stripe | null = null;
 
-export async function getStripe(): Promise<Stripe> {
+export async function getStripe(): Promise<Stripe | null> {
   if (stripeInstance) return stripeInstance;
 
   const config = await getConfig();
-  if (!config.STRIPE_SECRET_KEY) {
-    throw new Error("STRIPE_SECRET_KEY is not set in SSM Parameter Store");
-  }
+  if (!config.STRIPE_SECRET_KEY) return null;
 
   stripeInstance = new Stripe(config.STRIPE_SECRET_KEY);
   return stripeInstance;
@@ -38,6 +36,7 @@ export async function listRecentCheckoutSessions(
   limit: number = 10
 ): Promise<{ orders: RecentOrder[]; hasMore: boolean }> {
   const stripe = await getStripe();
+  if (!stripe) return { orders: [], hasMore: false };
 
   const sessions = await stripe.checkout.sessions.list({
     limit,
@@ -84,6 +83,7 @@ export interface StripeProduct {
 export async function listStripeProducts(): Promise<StripeProduct[] | null> {
   try {
     const stripe = await getStripe();
+    if (!stripe) return null;
 
     const products = await stripe.products.list({
       active: true,

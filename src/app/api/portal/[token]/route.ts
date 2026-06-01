@@ -54,6 +54,7 @@ export async function GET(
     if (!cfg.STRIPE_SECRET_KEY) return null;
     const { getStripe } = await import("@/lib/stripe");
     const stripe = await getStripe();
+    if (!stripe) return null;
 
     const customers = await stripe.customers.list({
       email: portal.clientEmail,

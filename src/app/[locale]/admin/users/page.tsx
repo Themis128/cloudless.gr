@@ -182,8 +182,8 @@ export default function AdminUsersPage() {
         <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
           <p className="font-mono text-sm text-red-400">{error}</p>
           <p className="mt-2 text-xs text-slate-500">
-            Make sure COGNITO_USER_POOL_ID is configured and the Lambda/server has cognito-idp
-            permissions.
+            Check that KEYCLOAK_ADMIN_USER and KEYCLOAK_ADMIN_PASSWORD are set in SSM and that
+            the Keycloak admin REST API is reachable.
           </p>
         </div>
       ) : (
@@ -324,10 +324,8 @@ export default function AdminUsersPage() {
       )}
 
       <p className="mt-4 font-mono text-xs text-slate-600">
-        Powered by AWS Cognito · User Pool{" "}
-        <span className="text-slate-500">
-          {process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "not configured"}
-        </span>
+        Powered by{" "}
+        <span className="text-slate-500">Keycloak · {process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "not configured"}</span>
       </p>
     </div>
   );
