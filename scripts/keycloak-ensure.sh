@@ -129,6 +129,27 @@ echo "$RECON"
 FIXES=$(printf '%s\n' "$RECON" | grep -c '^FIX ' || true)
 CHANGES=$((CHANGES + FIXES))
 
+# ── Phase 3: Pi `cloudless` app auth wiring (HA standby) ────────────────────
+# next-auth on the k3s app needs AUTH_SECRET/KEYCLOAK_*(realm master)/AUTH_TRUST_HOST
+# (cloudless-app-auth secret + envFrom). If the app stops serving the keycloak
+# provider (secret deleted, envFrom dropped on a manifest re-apply, etc.), restore
+# it by re-running the wire tool. Cheap HTTP check when healthy; only acts on break.
+PI_PROV=$(curl -sS -m 8 "https://pi-origin.cloudless.gr/api/auth/providers" 2>/dev/null || echo "")
+if printf '%s' "$PI_PROV" | grep -q '"keycloak"'; then
+  echo "PI_APP_AUTH=ok"
+else
+  note "Pi cloudless app not serving the keycloak provider — restoring auth wiring"
+  AK=$(kubectl -n cloudless get secret pi-standby-aws-creds -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' 2>/dev/null | base64 -d 2>/dev/null || true)
+  SK=$(kubectl -n cloudless get secret pi-standby-aws-creds -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' 2>/dev/null | base64 -d 2>/dev/null || true)
+  [ -n "$AK" ] && echo "::add-mask::$AK"; [ -n "$SK" ] && echo "::add-mask::$SK"
+  HERE="$(cd "$(dirname "$0")" && pwd)"
+  if [ -n "$AK" ] && [ -n "$SK" ] && command -v aws >/dev/null 2>&1 && [ -f "$HERE/wire-pi-keycloak.sh" ]; then
+    AWS_ACCESS_KEY_ID="$AK" AWS_SECRET_ACCESS_KEY="$SK" AWS_REGION=us-east-1 bash "$HERE/wire-pi-keycloak.sh" || echo "  (wire-pi-keycloak returned non-zero)"
+  else
+    echo "  (cannot auto-restore Pi app auth: need aws CLI + pi-standby-aws-creds + wire-pi-keycloak.sh)"
+  fi
+fi
+
 FINAL=$(code)
 echo "final discovery=$FINAL CHANGES=$CHANGES"
 if [ "$FINAL" = "200" ]; then
