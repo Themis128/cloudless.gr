@@ -43,6 +43,8 @@
     "newsletter:send": "tsx --tsconfig scripts/tsconfig.json scripts/publish-and-send-newsletter.ts",
     "newsletter:report": "tsx --tsconfig scripts/tsconfig.json scripts/weekly-subscriber-report.ts",
     "keycloak:doctor": "bash tools/keycloak-cli/keycloak.sh doctor",
+    "keycloak:smoke": "bash scripts/keycloak-smoke.sh",
+    "keycloak:restore": "bash scripts/restore-keycloak.sh",
     "keycloak:apply": "tsx --tsconfig scripts/tsconfig.json scripts/keycloak-apply.ts",
     "keycloak:apply:dry": "tsx --tsconfig scripts/tsconfig.json scripts/keycloak-apply.ts --dry-run",
     "mcp-security-scan": "cd tools/mcp-security-scanner && npm install && npm run scan -- --path \"../../src/**/*.{ts,tsx,js,jsx,py,md}\"",
