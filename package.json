@@ -50,6 +50,7 @@
     "keycloak:create-user": "bash scripts/keycloak-create-user.sh",
     "keycloak:enable-signup": "bash scripts/keycloak-enable-signup.sh",
     "keycloak:configure-admin": "bash scripts/keycloak-configure-admin.sh",
+    "keycloak:bootstrap-admin": "bash scripts/keycloak-bootstrap-admin.sh",
     "keycloak:ensure": "bash scripts/keycloak-ensure.sh",
     "keycloak:apply": "tsx --tsconfig scripts/tsconfig.json scripts/keycloak-apply.ts",
     "keycloak:apply:dry": "tsx --tsconfig scripts/tsconfig.json scripts/keycloak-apply.ts --dry-run",

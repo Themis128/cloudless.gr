@@ -52,6 +52,29 @@ idempotent email `signup-verify@cloudless.gr`. (The GitHub MCP here cannot
 `workflow_dispatch` — trigger via a push, or have the user click Run.) See the
 **cluster-incident-response** skill for the general workflow→#382 pattern.
 
+## Bootstrapping the sole admin when you cannot deliver a password
+
+You often can't get the admin's chosen password into CI: this session has no
+GitHub `Secrets: write` token, the `gh:secrets` script only lists/deletes, and
+the Actions "Run workflow" input doesn't render in the GitHub mobile app. Do NOT
+commit the password.
+
+Instead use **`pnpm keycloak:bootstrap-admin`** (`scripts/keycloak-bootstrap-admin.sh`
+→ `keycloak-bootstrap-admin.yml`): it generates a **one-time TEMPORARY password
+inside the cluster**, ensures the full admin chain (group + groups mapper on
+`cloudless-app` + membership), enforces single-admin (removes every other
+admin-group member — safe, since the sole admin now has a working temp login),
+and posts the temp login to issue #382. The human signs in once at `/auth/login`
+and Keycloak forces UPDATE_PASSWORD, so they set their own final password. The
+real password is never committed, never a secret, never typed into CI.
+
+> A temporary password fails a direct-grant check (`Account is not fully set
+> up`), so the bootstrap tool does NOT run `LOGIN_VERIFIED` — that is expected.
+
+The alternative paths (a `ADMIN_BOOTSTRAP_PASSWORD` repo secret, or the
+`workflow_dispatch` password input on a desktop browser) feed
+`keycloak:configure-admin`, which sets the password directly and verifies login.
+
 ## How "admin" is decided
 
 App admin = membership of the Keycloak **`admin` group** (surfaced as the
