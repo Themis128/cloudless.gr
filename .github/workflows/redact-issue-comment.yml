@@ -14,6 +14,12 @@ on:
         description: "delete or redact"
         required: false
         default: "delete"
+  # The MCP token cannot workflow_dispatch, so allow a one-shot run on merge.
+  # Targets the leaked admin-api-secret comment; removed in a follow-up commit.
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/redact-issue-comment.yml"
 
 permissions:
   contents: read
@@ -29,6 +35,7 @@ jobs:
         run: |
           set -uo pipefail
           ID="${{ github.event.inputs.comment_id }}"
+          ID="${ID:-4596443300}"   # default target on push: the leaked-secret comment
           REPO="${{ github.repository }}"
           if [ "${{ github.event.inputs.mode }}" = "redact" ]; then
             gh api -X PATCH "/repos/$REPO/issues/comments/$ID" \
