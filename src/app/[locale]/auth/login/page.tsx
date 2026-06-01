@@ -54,11 +54,13 @@ function LoginContent() {
     setSubmitting(true);
     try {
       if (USE_KEYCLOAK) {
+        // isAdmin is false here (not signed in yet), so we can't decide the
+        // landing page now. Send users through /auth/post-login, which reads the
+        // established session server-side and routes admins → /admin, else
+        // → /dashboard. A real ?next= deep-link still wins.
         const callbackUrl = nextParam?.startsWith("/")
           ? normalizeRedirectPath(nextParam)
-          : isAdmin
-            ? "/admin"
-            : "/dashboard";
+          : "/auth/post-login";
         await nextAuthSignIn("keycloak", { callbackUrl });
         return;
       }
