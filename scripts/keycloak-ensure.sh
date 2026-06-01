@@ -76,13 +76,33 @@ $K config credentials --server http://localhost:8080 --realm master --user "$AU"
 
 # realm flags
 rf() { csv "realms/$RL" --fields "$1" | head -1; }
-for kv in registrationAllowed=true resetPasswordAllowed=true loginWithEmailAllowed=true; do
+for kv in registrationAllowed=true resetPasswordAllowed=true loginWithEmailAllowed=true verifyEmail=true; do
   k=${kv%=*}; want=${kv#*=}
   cur=$(rf "$k")
   if [ "$cur" != "$want" ]; then
     $K update "realms/$RL" -s "$k=$want" >/dev/null 2>&1 && echo "FIX realm.$k: $cur -> $want"
   fi
 done
+
+# VERIFY_EMAIL required action — ensure enabled+default so new registrations get it
+VA=$($K get "realms/$RL/authentication/required-actions/VERIFY_EMAIL" -r "$RL" 2>/dev/null || true)
+if printf '%s' "$VA" | grep -q '"enabled"'; then
+  en=$(printf '%s' "$VA" | grep -o '"enabled"[^,}]*' | head -1 | grep -o 'true\|false')
+  da=$(printf '%s' "$VA" | grep -o '"defaultAction"[^,}]*' | head -1 | grep -o 'true\|false')
+  if [ "$en" != "true" ] || [ "$da" != "true" ]; then
+    $K update "realms/$RL/authentication/required-actions/VERIFY_EMAIL" \
+      -s enabled=true -s defaultAction=true >/dev/null 2>&1 \
+      && echo "FIX VERIFY_EMAIL required action: enabled=$en->true defaultAction=$da->true"
+  fi
+fi
+
+# SMTP health check — warn if missing but do not overwrite (password would be wiped)
+SMTP_HOST=$($K get "realms/$RL" -r "$RL" --fields smtpServer 2>/dev/null \
+  | grep -o '"host":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
+if [ -z "$SMTP_HOST" ]; then
+  echo "WARN: realm SMTP not configured — email verification emails cannot be sent."
+  echo "WARN: run .github/workflows/keycloak-configure-email.yml to set up SES SMTP."
+fi
 
 # admin group
 GID=$(csv groups -r "$RL" -q search=admin --fields id,name | grep -iE ',admin$' | head -1 | cut -d, -f1)
