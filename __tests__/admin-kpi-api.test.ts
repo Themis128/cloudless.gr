@@ -67,10 +67,9 @@ function makeToken(groups: string[]): string {
   const payload = {
     sub: "user-sub",
     email: "user@test.com",
-    "cognito:groups": groups,
-    token_use: "id",
+    "groups": groups,
     aud: "test-client",
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_test",
+    iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };

@@ -1,73 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createLocalJWKSet, createRemoteJWKSet, jwtVerify } from "jose";
+import { auth } from "@/lib/auth";
 
 /**
  * Server-side authentication helpers for API routes.
  *
- * Auth provider is **Keycloak** (OIDC), realm `master`, client `cloudless-app`.
- * The browser obtains tokens via next-auth's Authorization Code + PKCE flow
- * (see src/lib/auth.ts) and calls admin APIs with
- * `Authorization: Bearer <access_token>`. This module verifies that access
- * token's RS256 signature against the Keycloak JWKS and authorizes admins by
- * Keycloak **group** membership (`groups` claim) or realm role
- * (`realm_access.roles`).
+ * Two auth paths (tried in order):
+ *   1. next-auth session cookie (primary) -- browser same-origin requests
+ *      carry the `authjs.session-token` cookie automatically. We read it
+ *      via `auth()` from src/lib/auth.ts. No Bearer header needed.
+ *   2. Bearer token (fallback) -- external callers (cron, Slack, scripts)
+ *      send `Authorization: Bearer <token>`. Verified against the Keycloak
+ *      JWKS at `${KEYCLOAK_ISSUER}/protocol/openid-connect/certs`.
  *
- * Key resolution strategy:
- *   1. If KEYCLOAK_JWKS_JSON is set, use it as a local JWK set (no outbound
- *      HTTPS — handy for dev/offline or containers that can't reach Keycloak).
- *   2. Otherwise createRemoteJWKSet fetches + caches the realm JWKS at
- *      `${KEYCLOAK_ISSUER}/protocol/openid-connect/certs` (prod / Pi / Lambda).
- *
- * Back-compat: the legacy Cognito `cognito:groups` claim is still honored by
- * isAdmin() so any in-flight Cognito ID tokens (and the existing test fixtures)
- * keep working during the transition. New tokens use Keycloak claims.
+ * Admin check: Keycloak `admin` group (groups claim) OR `admin` / `realm:admin`
+ * realm role (realm_access.roles).
  */
 
-const KC_ISSUER = (
-  process.env.KEYCLOAK_ISSUER ??
-  process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ??
-  ""
-).replace(/\/+$/, "");
+function getKcIssuer(): string {
+  return (
+    process.env.KEYCLOAK_ISSUER ??
+    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ??
+    ""
+  ).replace(/\/+$/, "");
+}
 
-function buildJwks() {
-  if (!KC_ISSUER) return null;
+let jwksCache: ReturnType<typeof createRemoteJWKSet> | ReturnType<typeof createLocalJWKSet> | null | undefined;
+
+function getJWKS() {
+  if (jwksCache !== undefined) return jwksCache;
+  const issuer = getKcIssuer();
+  if (!issuer) { jwksCache = null; return null; }
   const raw = process.env.KEYCLOAK_JWKS_JSON;
   if (raw) {
     try {
-      return createLocalJWKSet(JSON.parse(raw) as Parameters<typeof createLocalJWKSet>[0]);
+      jwksCache = createLocalJWKSet(
+        JSON.parse(raw) as Parameters<typeof createLocalJWKSet>[0],
+      );
+      return jwksCache;
     } catch {
       // fall through to remote
     }
   }
-  return createRemoteJWKSet(new URL(`${KC_ISSUER}/protocol/openid-connect/certs`));
+  jwksCache = createRemoteJWKSet(
+    new URL(`${issuer}/protocol/openid-connect/certs`),
+  );
+  return jwksCache;
 }
 
-// JWKS is cached in-process (local set is instant; remote set caches after first fetch).
-const getJWKS = buildJwks();
+/** Reset the cached JWKS (for tests that change env vars). */
+export function resetJwksCache(): void {
+  jwksCache = undefined;
+}
 
-/**
- * The subset of Keycloak (and legacy Cognito) JWT claims this app reads.
- * Deliberately a plain interface — not `extends JWTPayload` — so property
- * access stays precisely typed (`email` is `string | undefined`, not the
- * `unknown` that jose's index signature would impose).
- */
 export interface DecodedToken {
   sub: string;
   email?: string;
   preferred_username?: string;
   name?: string;
-  /** Legacy Cognito username claim — honored for back-compat. */
-  "cognito:username"?: string;
   exp?: number;
   iat?: number;
   iss?: string;
   aud?: string | string[];
-  /** Keycloak group-membership-mapper claim. */
   groups?: string[];
-  /** Keycloak realm roles. */
   realm_access?: { roles?: string[] };
-  /** Legacy Cognito group claim — honored for back-compat. */
-  "cognito:groups"?: string[];
 }
 
 type AuthSuccess = { ok: true; user: DecodedToken };
@@ -84,20 +80,39 @@ export function getTokenFromHeader(request: NextRequest): string | null {
 }
 
 /**
+ * Try to authenticate via the next-auth session cookie.
+ * Returns DecodedToken on success, null if no session.
+ */
+async function readSessionCookie(): Promise<DecodedToken | null> {
+  try {
+    const session = await auth();
+    if (!session?.user) return null;
+    return {
+      sub: session.user.id ?? "",
+      email: session.user.email ?? undefined,
+      name: session.user.name ?? undefined,
+      groups: session.user.groups ?? [],
+      realm_access: { roles: session.user.roles ?? [] },
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Verify a Keycloak JWT with full RS256 signature verification against the
- * realm JWKS, enforcing the issuer. Audience is intentionally NOT enforced:
- * Keycloak access tokens carry a variable `aud` (often "account"), so checking
- * it would reject otherwise-valid tokens.
+ * realm JWKS, enforcing the issuer.
  *
  * Falls back to decode + expiry only when no issuer is configured AND the
- * runtime is not production (dev/test environments without Keycloak). The
- * fallback is hard-gated so it can never execute in a deployed environment.
+ * runtime is not production (dev/test environments without Keycloak).
  */
 export async function verifyToken(token: string): Promise<DecodedToken | null> {
-  if (getJWKS) {
+  const jwks = getJWKS();
+  const issuer = getKcIssuer();
+  if (jwks) {
     try {
-      const { payload } = await jwtVerify(token, getJWKS, {
-        ...(KC_ISSUER ? { issuer: KC_ISSUER } : {}),
+      const { payload } = await jwtVerify(token, jwks, {
+        ...(issuer ? { issuer } : {}),
       });
       return payload as unknown as DecodedToken;
     } catch {
@@ -105,27 +120,18 @@ export async function verifyToken(token: string): Promise<DecodedToken | null> {
     }
   }
 
-  // No JWKS configured. In production this is a misconfiguration, not a reason
-  // to trust an unverified token — fail closed.
   if (process.env.NODE_ENV === "production") return null;
 
   return decodeTokenUnverified(token);
 }
 
-/**
- * Dev/test only: decode a JWT payload and check expiry WITHOUT verifying the
- * signature. Reachable solely from verifyToken() when no Keycloak issuer/JWKS
- * is configured and NODE_ENV !== "production" (local vitest/jsdom). Production
- * always has KEYCLOAK_ISSUER set, so the signature-verifying path above runs
- * instead and this is never executed in a deployed environment.
- */
 function decodeTokenUnverified(token: string): DecodedToken | null {
-  // NOSONAR(S5659): intentional unverified decode, dev/test-only and unreachable
-  // in production (guarded by the NODE_ENV check in verifyToken).
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
-    const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8")) as DecodedToken;
+    const payload = JSON.parse(
+      Buffer.from(parts[1], "base64").toString("utf-8"),
+    ) as DecodedToken;
     if (payload.exp && Date.now() >= payload.exp * 1000) return null;
     return payload;
   } catch {
@@ -135,49 +141,71 @@ function decodeTokenUnverified(token: string): DecodedToken | null {
 
 /**
  * Check if a decoded token grants admin. Admin is granted by Keycloak `admin`
- * group membership, or an `admin` / `realm:admin` realm role. The legacy
- * Cognito `cognito:groups` claim is honored for back-compat.
+ * group membership, or an `admin` / `realm:admin` realm role.
  */
 export function isAdmin(decoded: DecodedToken | undefined | null): boolean {
   if (!decoded) return false;
-  const groups = decoded.groups ?? decoded["cognito:groups"] ?? [];
+  const groups = decoded.groups ?? [];
   if (groups.includes("admin")) return true;
   const roles = decoded.realm_access?.roles ?? [];
   return roles.includes("admin") || roles.includes("realm:admin");
 }
 
-/** Require authentication — returns the user or a 401 response. */
+/**
+ * Require authentication. Tries:
+ *   1. Bearer token in Authorization header (fetchWithAuth, external callers)
+ *   2. next-auth session cookie (browser same-origin without Bearer)
+ * Returns user or 401.
+ *
+ * Bearer is checked first because all admin page JS sends it via
+ * fetchWithAuth, and it carries the full Keycloak JWT with groups/roles.
+ * The session cookie fallback handles edge cases where the browser hits
+ * an API route directly (e.g. form action, link).
+ */
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   const token = getTokenFromHeader(request);
-  if (!token) {
+  if (token) {
+    const decoded = await verifyToken(token);
+    if (decoded) {
+      return { ok: true, user: decoded };
+    }
     return {
       ok: false,
-      response: NextResponse.json({ error: "Missing authorization token" }, { status: 401 }),
+      response: NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 },
+      ),
     };
   }
 
-  const decoded = await verifyToken(token);
-  if (!decoded) {
-    return {
-      ok: false,
-      response: NextResponse.json({ error: "Invalid or expired token" }, { status: 401 }),
-    };
+  const sessionUser = await readSessionCookie();
+  if (sessionUser) {
+    return { ok: true, user: sessionUser };
   }
 
-  return { ok: true, user: decoded };
+  return {
+    ok: false,
+    response: NextResponse.json(
+      { error: "Missing authorization token" },
+      { status: 401 },
+    ),
+  };
 }
 
-/** Require admin authentication — returns the user or a 401/403 response. */
+/** Require admin authentication -- returns user or 401/403. */
 export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
-  const auth = await requireAuth(request);
-  if (!auth.ok) return auth;
+  const authResult = await requireAuth(request);
+  if (!authResult.ok) return authResult;
 
-  if (!isAdmin(auth.user)) {
+  if (!isAdmin(authResult.user)) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Admin access required" }, { status: 403 }),
+      response: NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
+      ),
     };
   }
 
-  return { ok: true, user: auth.user };
+  return { ok: true, user: authResult.user };
 }

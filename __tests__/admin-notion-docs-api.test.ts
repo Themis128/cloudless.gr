@@ -42,11 +42,10 @@ function makeAdminToken(): string {
   const payload = {
     sub: "test-admin-sub",
     email: "admin@cloudless.gr",
-    "cognito:username": "admin-user",
-    "cognito:groups": ["admin"],
-    token_use: "id",
+    "preferred_username": "admin-user",
+    "groups": ["admin"],
     aud: "test-client-id",
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TestPool",
+    iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };

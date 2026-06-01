@@ -153,7 +153,7 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
         iss: "i",
         iat: 0,
         exp: 9999999999,
-        "cognito:groups": ["users", "admin"],
+        "groups": ["users", "admin"],
       };
       expect(isAdmin(decoded)).toBe(true);
     });

@@ -26,6 +26,8 @@ process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.test/realms/main";
 process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID = "cloudless-test";
 
 beforeEach(() => {
+  process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.test/realms/main";
+  process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID = "cloudless-test";
   mockNextAuthSignIn.mockClear();
   mockNextAuthSignOut.mockClear();
   mockGetSession.mockReset();
