@@ -1,0 +1,40 @@
+name: Redact issue comment
+
+# One-off admin utility: delete (or redact) a specific issue comment by id.
+# Used to remove a comment that accidentally captured a secret. Requires
+# issues:write — the GITHUB_TOKEN can delete comments in this repo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      comment_id:
+        description: "Numeric id of the issue comment to delete"
+        required: true
+      mode:
+        description: "delete or redact"
+        required: false
+        default: "delete"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  redact:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Delete / redact the comment
+        run: |
+          set -uo pipefail
+          ID="${{ github.event.inputs.comment_id }}"
+          REPO="${{ github.repository }}"
+          if [ "${{ github.event.inputs.mode }}" = "redact" ]; then
+            gh api -X PATCH "/repos/$REPO/issues/comments/$ID" \
+              -f body="_[redacted — contained a secret that has since been rotated]_" \
+              && echo "redacted comment $ID"
+          else
+            gh api -X DELETE "/repos/$REPO/issues/comments/$ID" \
+              && echo "deleted comment $ID"
+          fi
