@@ -50,6 +50,7 @@
     "keycloak:create-user": "bash scripts/keycloak-create-user.sh",
     "keycloak:enable-signup": "bash scripts/keycloak-enable-signup.sh",
     "keycloak:configure-admin": "bash scripts/keycloak-configure-admin.sh",
+    "keycloak:ensure": "bash scripts/keycloak-ensure.sh",
     "keycloak:apply": "tsx --tsconfig scripts/tsconfig.json scripts/keycloak-apply.ts",
     "keycloak:apply:dry": "tsx --tsconfig scripts/tsconfig.json scripts/keycloak-apply.ts --dry-run",
     "mcp-security-scan": "cd tools/mcp-security-scanner && npm install && npm run scan -- --path \"../../src/**/*.{ts,tsx,js,jsx,py,md}\"",
