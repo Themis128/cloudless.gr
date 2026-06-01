@@ -1,0 +1,60 @@
+name: Keycloak configure admin (single admin + groups mapper)
+
+# Makes the /admin panel reachable for exactly ONE admin
+# (tbaltzakis@cloudless.gr): ensures the admin group, the `groups` membership
+# mapper on the cloudless-app client (so next-auth gets the groups claim), the
+# user's membership, and removes any other admin-group members.
+#
+# The admin password is NEVER committed. It is read from the repo secret
+# ADMIN_BOOTSTRAP_PASSWORD (add it under Settings → Secrets and variables →
+# Actions). If the secret is absent, everything except the password is still
+# configured, and the admin can set a password via forgot-password at
+# /auth/login (resetPasswordAllowed is enabled).
+#
+# Trigger: workflow_dispatch, or push to this file / the script on main.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/keycloak-configure-admin.yml"
+      - "scripts/keycloak-configure-admin.sh"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  configure-admin:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ADMIN_EMAIL: tbaltzakis@cloudless.gr
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Configure admin
+        run: |
+          set -uo pipefail
+          [ -n "${ADMIN_PASSWORD:-}" ] && echo "::add-mask::$ADMIN_PASSWORD" || true
+          bash scripts/keycloak-configure-admin.sh > raw.log 2>&1 || echo "script exited $?" >> raw.log
+          grep -v '^CREDENTIAL' raw.log > post.log || true
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          { echo "# Keycloak configure-admin — $(date -u '+%F %T')Z"; echo; echo '```'; cat post.log 2>/dev/null || echo '(no log)'; echo '```'; } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
