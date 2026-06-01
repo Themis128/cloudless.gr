@@ -33,7 +33,10 @@ spec:
     - type: Container
       default:        { memory: 512Mi, cpu: 1 }
       defaultRequest: { memory: 128Mi, cpu: 100m }
-      max:            { memory: 768Mi, cpu: 2 }
+      # max raised 768Mi → 1Gi: Keycloak 26.2 runs a -Xmx512m heap, which needs
+      # a ~768Mi container ceiling (heap + JVM non-heap). 768Mi as the max left
+      # no room above the pod's own limit, so allow 1Gi headroom.
+      max:            { memory: 1Gi, cpu: 2 }
 
 ---
 apiVersion: v1
@@ -112,15 +115,22 @@ spec:
             limits:   { memory: 400Mi, cpu: 1 }
 
 ---
-# Keycloak — 494 Mi → 480 Mi cap. JVM heap set via JAVA_OPTS_KC_HEAP.
+# Keycloak — size the container to FIT the JVM heap, do not starve it.
 #
-# IMPORTANT: the container limit MUST leave room for JVM non-heap memory
-# (Quarkus metaspace ~130-150 Mi, thread stacks, code cache, direct buffers,
-# GC structures — together ~180-220 Mi). The previous values (-Xmx320m under a
-# 384 Mi limit) left only ~64 Mi for all of that, so Keycloak was OOMKilled on
-# startup → CrashLoopBackOff → auth.cloudless.gr returned 503. A 256 Mi heap
-# under a 480 Mi limit gives ~224 Mi of non-heap headroom, which fits.
-# (-Xmx makes -XX:MaxRAMPercentage dead config, so it is dropped.)
+# Verified in-cluster (cluster-doctor snapshot, issue #382): the live keycloak
+# Deployment runs its heap via JAVA_OPTS_APPEND="-Xms192m -Xmx512m …", NOT via
+# JAVA_OPTS_KC_HEAP. The original memory-relief capped the container at 384Mi
+# WITHOUT lowering that 512Mi heap, so the JVM could never fit → OOMKilled on
+# startup (exit 137), 79 restarts over ~8h, auth.cloudless.gr 503. An earlier
+# attempt to patch JAVA_OPTS_KC_HEAP was a no-op because that variable is not
+# what this deployment uses.
+#
+# Fix: set the operative variable (JAVA_OPTS_APPEND) explicitly and size the
+# container to hold a 512Mi heap plus ~200Mi of JVM non-heap (Quarkus metaspace,
+# thread stacks, code cache, GC, plus a startup-augmentation spike). The pod's
+# actual RSS is ~500Mi regardless of the ceiling, and the node has no memory
+# pressure, so raising the limit does not increase real usage — it only stops
+# the kernel OOMKill. (-Xms reduced 192m→128m so idle commits less.)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -132,11 +142,11 @@ spec:
       containers:
         - name: keycloak
           env:
-            - name: JAVA_OPTS_KC_HEAP
-              value: "-Xms64m -Xmx256m"
+            - name: JAVA_OPTS_APPEND
+              value: "-Xms128m -Xmx512m -Djdk.reflect.useDirectMethodHandle=false"
           resources:
-            requests: { memory: 256Mi, cpu: 100m }
-            limits:   { memory: 480Mi, cpu: 1 }
+            requests: { memory: 384Mi, cpu: 100m }
+            limits:   { memory: 768Mi, cpu: 1 }
 
 ---
 # n8n — 117 Mi → 256 Mi cap (keep headroom for workflow spikes)

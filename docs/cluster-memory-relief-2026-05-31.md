@@ -62,7 +62,7 @@ Plus ESP32 hardware reset:
 | Workload | Before | After | Δ |
 |---|---|---|---|
 | Metabase | 927 MiB | ≤ 400 MiB | -527 MiB |
-| Keycloak | 494 MiB | ≤ 480 MiB | -14 MiB |
+| Keycloak | 494 MiB | ≤ 768 MiB ceiling (~500 MiB actual) | 0 MiB |
 | Home Assistant | 314 MiB | 0 (scaled to 0) | -314 MiB |
 | Oncall (engine+celery+db+redis) | ~900 MiB | 0 (scaled to 0) | -900 MiB |
 | **Total** | | | **≈ -1.75 GiB** |
@@ -72,26 +72,36 @@ single digits, and bring k3s API back to fully responsive.
 
 ## Correction (2026-06-01): Keycloak OOM crash-loop
 
-The original cap of **384 MiB** (with a `-Xmx320m` heap) was too tight: a
-320 MiB JVM heap plus Quarkus non-heap memory (metaspace, thread stacks, code
-cache, GC structures ≈ 180-220 MiB) exceeds 384 MiB, so the kernel OOMKilled
-Keycloak on startup. It entered `CrashLoopBackOff` and `auth.cloudless.gr`
-served `503 "no available server"` (Cloudflare tunnel origin down) — taking
-login, registration, and password-reset offline while the rest of the cluster
-stayed healthy.
+The 384 MiB cap took Keycloak — and therefore login, registration, and
+password-reset — offline for ~8 hours (`auth.cloudless.gr` → `503 "no available
+server"`) while the rest of the cluster stayed healthy.
 
-Fix: heap lowered to `-Xmx256m` and the container limit raised to **480 MiB**,
-leaving ~224 MiB of non-heap headroom. Net reclaim vs. the original uncapped
-494 MiB is smaller (-14 MiB) but Keycloak stays up. Reliability of the IdP
-outweighs the few extra MiB. Apply with:
+Root cause, verified against the live cluster via `cluster-doctor` (issue #382):
+
+- The keycloak pod was `OOMKilled` (exit 137), 79 restarts over ~8 h.
+- Its heap is set by **`JAVA_OPTS_APPEND="-Xms192m -Xmx512m …"`**, **not**
+  `JAVA_OPTS_KC_HEAP`. The memory-relief change capped the container at 384 MiB
+  but never touched that 512 MiB heap, so the JVM could not fit → instant OOM.
+- A first remediation that patched `JAVA_OPTS_KC_HEAP` (→ `-Xmx256m`, limit
+  480 MiB) was a **no-op**: that variable is not what this deployment uses, and
+  480 MiB still cannot hold a 512 MiB heap.
+
+Real fix (this change): set the operative variable `JAVA_OPTS_APPEND` explicitly
+and size the container to hold the 512 MiB heap plus ~200 MiB of JVM non-heap:
+`requests 384 MiB`, `limits 768 MiB`, and raise the namespace `LimitRange` max
+768 MiB → 1 GiB. The pod's actual RSS is ~500 MiB regardless of the ceiling and
+the node has no memory pressure, so the higher limit does not increase real
+usage — it only stops the kernel OOMKill. Net: Keycloak's footprint is unchanged
+from before the incident; the lesson is **never cap a JVM container below its
+`-Xmx` + non-heap working set.**
+
+Apply with `pnpm keycloak:restore` (or, on omv-main with a live k3s API):
 
 ```bash
-# On omv-main (needs a responsive k3s API):
 kubectl apply -f k8s/cluster-protection/memory-relief-2026-05-31.yaml
 kubectl -n keycloak rollout restart deploy/keycloak
-kubectl -n keycloak rollout status  deploy/keycloak --timeout=180s
-# Verify: curl -sS -o /dev/null -w '%{http_code}\n' \
-#   https://auth.cloudless.gr/realms/master/.well-known/openid-configuration
+kubectl -n keycloak rollout status  deploy/keycloak --timeout=240s
+# Verify: pnpm keycloak:smoke   (or curl the OIDC discovery endpoint)
 ```
 
 ## How to apply
