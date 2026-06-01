@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+#
+# wire-pi-keycloak.sh — give the k3s `cloudless` app working Keycloak auth.
+#
+# The Pi standby's deployment has no AUTH_SECRET/KEYCLOAK_* env, so next-auth runs
+# in disabled fallback mode (providers={}, no login handoff). This reads those
+# values from SSM (/cloudless/production/* — the SAME source the Lambda uses, so
+# AUTH_SECRET matches and failover sessions stay valid), stores them in a k8s
+# Secret, wires it onto the deployment via envFrom (preserving pi-standby-aws-creds),
+# and restarts. Values are masked; never printed or committed.
+#
+# Requires: kubectl (cluster-admin) + aws CLI + AWS creds in env (the workflow
+# sources them from the pi-standby-aws-creds secret).
+#
+# NOTE: NEXT_PUBLIC_KEYCLOAK_ISSUER is build-time (baked into the client bundle),
+# so the login *page* button still needs a Pi image rebuild (deploy-pi build-arg).
+# This fixes the server-side auth API (providers, OIDC callback, session) — the
+# part that matters for HA failover.
+
+set -uo pipefail
+NS="${NS:-cloudless}"
+DEP="${DEP:-cloudless}"
+SECRET="${SECRET:-cloudless-app-auth}"
+SSM_PREFIX="${SSM_PREFIX:-/cloudless/production}"
+export AWS_REGION="${AWS_REGION:-us-east-1}"
+
+command -v kubectl >/dev/null 2>&1 || { echo "kubectl not found"; exit 1; }
+command -v aws >/dev/null 2>&1 || { echo "aws CLI not found"; exit 1; }
+
+get() { aws ssm get-parameter --name "$SSM_PREFIX/$1" --with-decryption --query 'Parameter.Value' --output text 2>/dev/null; }
+AUTH_SECRET=$(get AUTH_SECRET)
+KC_ISSUER=$(get KEYCLOAK_ISSUER)
+KC_CID=$(get KEYCLOAK_CLIENT_ID)
+KC_SECRET=$(get KEYCLOAK_CLIENT_SECRET)
+for v in "$AUTH_SECRET" "$KC_SECRET" "$KC_CID"; do [ -n "$v" ] && echo "::add-mask::$v"; done
+
+if [ -z "$AUTH_SECRET" ] || [ -z "$KC_ISSUER" ] || [ -z "$KC_CID" ]; then
+  echo "ERROR: missing SSM values (AUTH_SECRET/ISSUER/CLIENT_ID). Aborting, no changes."; exit 1
+fi
+echo "fetched from SSM: AUTH_SECRET(len=${#AUTH_SECRET}) ISSUER=$KC_ISSUER CLIENT_ID(len=${#KC_CID}) CLIENT_SECRET(len=${#KC_SECRET})"
+
+echo "creating/updating secret $SECRET in ns/$NS"
+kubectl -n "$NS" create secret generic "$SECRET" \
+  --from-literal=AUTH_SECRET="$AUTH_SECRET" \
+  --from-literal=KEYCLOAK_ISSUER="$KC_ISSUER" \
+  --from-literal=KEYCLOAK_CLIENT_ID="$KC_CID" \
+  --from-literal=KEYCLOAK_CLIENT_SECRET="$KC_SECRET" \
+  --dry-run=client -o yaml | kubectl apply -f - >/dev/null && echo "secret applied"
+
+# Strategic-merge patch: merge into the named container; include BOTH envFrom
+# entries (envFrom is a list and gets replaced) so we keep pi-standby-aws-creds.
+echo "wiring envFrom on deploy/$DEP (preserving pi-standby-aws-creds)"
+kubectl -n "$NS" patch deploy "$DEP" --type=strategic -p \
+  "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"$DEP\",\"envFrom\":[{\"secretRef\":{\"name\":\"pi-standby-aws-creds\"}},{\"secretRef\":{\"name\":\"$SECRET\"}}]}]}}}}" \
+  >/dev/null && echo "deployment patched"
+
+kubectl -n "$NS" rollout restart "deploy/$DEP" >/dev/null
+kubectl -n "$NS" rollout status "deploy/$DEP" --timeout=180s || echo "rollout status timed out (continuing)"
+
+echo "envFrom now:"
+kubectl -n "$NS" get deploy "$DEP" -o jsonpath='{range .spec.template.spec.containers[0].envFrom[*]}{.secretRef.name}{"\n"}{end}' 2>&1 | sed 's/^/  /'
+
+echo "verifying pi-origin auth (allow warm-up)…"
+for i in $(seq 1 12); do
+  P=$(curl -sS -m 8 "https://pi-origin.cloudless.gr/api/auth/providers" 2>/dev/null || echo "")
+  if printf '%s' "$P" | grep -q '"keycloak"'; then echo "PROVIDERS=ok (keycloak listed)"; break; fi
+  sleep 10
+done
+LOC=$(curl -sS -m 8 -c /tmp/pj -o /dev/null -w '' "https://pi-origin.cloudless.gr/api/auth/csrf" 2>/dev/null; \
+  CT=$(curl -sS -m 8 -b /tmp/pj "https://pi-origin.cloudless.gr/api/auth/csrf" | grep -o '"csrfToken":"[^"]*"' | cut -d'"' -f4); \
+  curl -sS -m 8 -b /tmp/pj -o /dev/null -w '%{redirect_url}' --data-urlencode "csrfToken=$CT" --data-urlencode "callbackUrl=/en/dashboard" "https://pi-origin.cloudless.gr/api/auth/signin/keycloak" 2>/dev/null)
+case "$LOC" in
+  *auth.cloudless.gr*openid-connect/auth*) echo "HANDOFF=ok (302 -> Keycloak PKCE)";;
+  *) echo "HANDOFF=check (got: ${LOC:-empty})";;
+esac
+echo "DONE wiring Pi Keycloak auth."
