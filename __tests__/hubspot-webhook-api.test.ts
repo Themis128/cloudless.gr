@@ -20,7 +20,7 @@ describe("POST /api/webhooks/hubspot", () => {
     vi.clearAllMocks();
   });
 
-  it("fails closed with 401 when HUBSPOT_CLIENT_SECRET is not configured", async () => {
+  it("returns 401 when HUBSPOT_CLIENT_SECRET is not configured", async () => {
     getIntegrationsAsyncMock.mockResolvedValue({
       HUBSPOT_CLIENT_SECRET: "",
       HUBSPOT_API_KEY: "",

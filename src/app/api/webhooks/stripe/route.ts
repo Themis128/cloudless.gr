@@ -41,12 +41,8 @@ async function syncHubSpotDeal(session: Stripe.Checkout.Session): Promise<void> 
 
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
-  eventId: string
+  _eventId: string
 ): Promise<void> {
-  console.warn(
-    `[Stripe] Checkout completed: ${session.id}, event: ${eventId}, payment_status: ${session.payment_status}`
-  );
-
   const paymentCollected = session.payment_status === "paid" || session.mode === "subscription";
 
   if (session.customer_email && paymentCollected) {
