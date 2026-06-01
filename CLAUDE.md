@@ -44,6 +44,43 @@ The `cloudless-infra` MCP server connects to `omv-main` via SSH. In **local** se
 
 Once set, `cluster_run_command`, `gh_runner_health`, `k3s_get_pods` and all other `mcp__cloudless-infra__*` tools become available in every cloud session. The Tailscale IP `100.113.41.119` is already baked into `mcp.json` so no host configuration is needed.
 
+## Cluster Incident Response (no kubectl/ssh/aws in the session)
+
+When `OMV_SSH_KEY_CONTENTS` is NOT set (the infra MCP is unavailable), you still
+have **no** `kubectl`/`ssh`/`aws`, and the tailnet API (`100.113.41.119:6443`) is
+blocked by the network policy. Drive the cluster through **GitHub Actions**
+instead — see the **`cluster-incident-response`** skill for the full playbook.
+
+- **Pattern:** a workflow with `on.push.paths: [its own file]` is fired by
+  editing+merging that file (the GitHub MCP here **cannot** `workflow_dispatch`).
+  Jobs run on `ubuntu-latest`, connect via `tailscale/github-action`
+  (`TS_AUTHKEY`), configure kubectl from the `KUBECONFIG_B64` secret (it is
+  **`system:admin`**), do the work, and `gh issue comment 382` the result.
+  Read it back with `mcp__github__issue_read(get_comments, issue_number=382)`.
+  Do NOT pin recovery to `[self-hosted, omv, pi]` — those runners go offline
+  during cluster incidents and the job queues forever.
+- **Tools (all in repo):** `pnpm cluster:doctor` (read-only diagnostics →
+  `cluster-doctor.yml`), `pnpm keycloak:smoke` (login/registration surface),
+  `pnpm keycloak:restore` (direct-patch recovery → `restore-keycloak.yml`),
+  `pnpm prometheus:tune` (kill heavy apiserver SLO rules → `prometheus-tune.yml`).
+- **2026-06-01 incident:** the 2026-05-31 memory-relief PR OOM-capped Keycloak
+  (384Mi container vs its real `-Xmx512m` heap) → CrashLoop → `auth.cloudless.gr`
+  503, login/registration down ~8h. Fix: size the container to the heap
+  (768Mi limit). Lessons baked into the skill:
+  - **Never cap a JVM container below `-Xmx` + ~200Mi non-heap.** A higher
+    *limit* doesn't raise real RSS (~500Mi) — it only stops the kernel OOMKill.
+  - Keycloak's operative heap var is **`JAVA_OPTS_APPEND`**, not
+    `JAVA_OPTS_KC_HEAP`. Verify via the doctor's deploy `env` dump.
+  - From CI, a direct `kubectl patch` of the single object beat
+    `kubectl apply -f <manifest>` (the apply silently never reached the deploy).
+  - Test login with the real **POST + CSRF** flow → `302` to Keycloak with
+    `code_challenge_method=S256`. `error=Configuration` on a bare **GET** to
+    `/api/auth/signin/keycloak` is a test artifact, not a bug.
+  - `PrometheusRuleFailures` here = `kube-apiserver-burnrate.rules` timing out
+    (`context deadline exceeded`), not OOM. `pnpm prometheus:tune` removes those
+    unused heavy SLO rule groups. Durable fix: kube-prometheus-stack Helm values
+    `defaultRules.rules.kubeApiserver{Burnrate,Availability,Slos}: false`.
+
 ## Deployment to Pi
 
 **Workflow:** `.github/workflows/deploy-pi.yml` — triggers on every push to `main`.
