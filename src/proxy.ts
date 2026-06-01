@@ -20,11 +20,19 @@ function stripLocale(pathname: string): string {
 async function readAuthToken(
   req: NextRequest,
 ): Promise<{ valid: boolean; isAdmin: boolean }> {
-  const sessionCookie =
-    req.cookies.get("__Secure-authjs.session-token")?.value ??
-    req.cookies.get("authjs.session-token")?.value;
+  // The session JWT stores the Keycloak access/id/refresh tokens, so it
+  // exceeds the 4096-byte cookie limit and next-auth CHUNKS it into
+  // `<name>.0`, `<name>.1`, … — the unchunked `<name>` cookie then does not
+  // exist. Detect either form (base cookie OR first chunk) before paying for
+  // the getToken dynamic import; getToken's SessionStore reassembles the
+  // chunks itself. Checking only the base name treated logged-in admins as
+  // anonymous and bounced them to /auth/login instead of /admin.
+  const baseNames = ["__Secure-authjs.session-token", "authjs.session-token"];
+  const hasSession = baseNames.some(
+    (n) => req.cookies.get(n) ?? req.cookies.get(`${n}.0`),
+  );
 
-  if (!sessionCookie) return { valid: false, isAdmin: false };
+  if (!hasSession) return { valid: false, isAdmin: false };
 
   try {
     const { getToken } = await import("next-auth/jwt");
