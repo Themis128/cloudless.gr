@@ -692,6 +692,11 @@ describe("Server-side env var presence (regression: empty client_id)", () => {
   // process.env.KEYCLOAK_CLIENT_ID (server-side), not NEXT_PUBLIC_KEYCLOAK_CLIENT_ID.
   // Result: Keycloak returned HTTP 400. Test ensures both env vars are set.
 
+  beforeEach(() => {
+    process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/cloudless";
+    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/cloudless";
+  });
+
   it("KEYCLOAK_CLIENT_ID (server-side) is set and non-empty", () => {
     expect(process.env.KEYCLOAK_CLIENT_ID).toBeTruthy();
     expect(process.env.KEYCLOAK_CLIENT_ID).not.toBe("");

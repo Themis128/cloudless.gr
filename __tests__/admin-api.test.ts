@@ -138,16 +138,16 @@ vi.mock("jose", async () => {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Build a mock admin JWT — groups encoded in payload, no real signature. */
+/** Build a mock admin JWT with Keycloak claims. No real signature — tests
+ *  clear KEYCLOAK_ISSUER so verifyToken takes the dev decode-only fallback. */
 function makeAdminToken(): string {
   const payload = {
     sub: "test-admin-sub",
     email: "admin@cloudless.gr",
-    "cognito:username": "admin-user",
-    "cognito:groups": ["admin"],
-    token_use: "id",
-    aud: "test-client-id",
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_test",
+    preferred_username: "admin-user",
+    groups: ["admin"],
+    realm_access: { roles: ["admin", "default-roles-cloudless"] },
+    iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
@@ -156,16 +156,15 @@ function makeAdminToken(): string {
   return `${header}.${body}.fake-sig`;
 }
 
-/** Build a mock non-admin JWT. */
+/** Build a mock non-admin JWT with Keycloak claims. */
 function makeUserToken(): string {
   const payload = {
     sub: "test-user-sub",
     email: "user@cloudless.gr",
-    "cognito:username": "regular-user",
-    "cognito:groups": [],
-    token_use: "id",
-    aud: "test-client-id",
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_test",
+    preferred_username: "regular-user",
+    groups: [],
+    realm_access: { roles: ["default-roles-cloudless"] },
+    iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };

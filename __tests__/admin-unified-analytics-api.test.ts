@@ -71,10 +71,9 @@ function makeAdminToken(): string {
   const payload = {
     sub: "admin-sub",
     email: "admin@test.com",
-    "cognito:groups": ["admin"],
-    token_use: "id",
+    "groups": ["admin"],
     aud: "test-client",
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_test",
+    iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
@@ -86,10 +85,9 @@ function makeAdminToken(): string {
 function makeUserToken(): string {
   const payload = {
     sub: "user-sub",
-    "cognito:groups": [],
-    token_use: "id",
+    "groups": [],
     aud: "test-client",
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_test",
+    iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };

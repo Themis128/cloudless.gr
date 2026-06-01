@@ -47,8 +47,7 @@ vi.mock("@aws-sdk/client-ssm", async () => {
 function makeAdminToken(): string {
   const payload = {
     sub: "admin-sub",
-    "cognito:groups": ["admin"],
-    token_use: "id",
+    "groups": ["admin"],
     aud: "client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
     iat: Math.floor(Date.now() / 1000) - 10,
@@ -62,8 +61,7 @@ function makeAdminToken(): string {
 function makeUserToken(): string {
   const payload = {
     sub: "user-sub",
-    "cognito:groups": [],
-    token_use: "id",
+    "groups": [],
     aud: "client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
     iat: Math.floor(Date.now() / 1000) - 10,

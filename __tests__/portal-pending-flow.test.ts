@@ -58,10 +58,9 @@ function makeUserToken(opts?: { email?: string; admin?: boolean }): string {
   const payload = {
     sub: "user-sub",
     email: opts?.email ?? "client@example.com",
-    "cognito:groups": opts?.admin ? ["admin"] : [],
-    token_use: "id",
+    groups: opts?.admin ? ["admin"] : [],
     aud: "client",
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
+    iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 10,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };

@@ -38,8 +38,7 @@ function makeAdminToken(): string {
   const payload = {
     sub: "test-admin",
     email: "admin@cloudless.gr",
-    "cognito:groups": ["admin"],
-    token_use: "id",
+    "groups": ["admin"],
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
   const header = Buffer.from(JSON.stringify({ alg: "RS256" })).toString("base64url");
@@ -52,8 +51,7 @@ function makeUserToken(): string {
   const payload = {
     sub: "test-user",
     email: "user@cloudless.gr",
-    "cognito:groups": [],
-    token_use: "id",
+    "groups": [],
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
   const header = Buffer.from(JSON.stringify({ alg: "RS256" })).toString("base64url");
