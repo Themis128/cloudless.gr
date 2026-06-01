@@ -4,6 +4,18 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+// Coverage mode — set by the E2E coverage harness (scripts/e2e-with-env.sh
+// runs `next dev --webpack` with COVERAGE=1 + NODE_V8_COVERAGE). We deliberately
+// DO NOT use SWC/Istanbul pre-instrumentation: Istanbul requires Babel, and
+// switching off SWC breaks Server Actions on the App Router
+// (vercel/next.js#53901). The documented best practice is V8 native coverage
+// (NODE_V8_COVERAGE for the server + Playwright CDP for the browser), which only
+// works if full, external source maps are emitted so the V8 byte-offsets can be
+// remapped back to the original TS by monocart. The default dev devtool
+// (eval-source-map) is not resolvable post-hoc, so we force `source-map` here.
+const COVERAGE =
+  process.env.COVERAGE === "1" || process.env.NEXT_PUBLIC_COVERAGE === "1";
+
 const nextConfig: NextConfig = {
   // Compression of HTTP responses (gzip via the Next.js server). On Lambda
   // the compression is applied before CloudFront passes through; on the Pi
@@ -13,6 +25,22 @@ const nextConfig: NextConfig = {
   compress: true,
   // Strip the X-Powered-By: Next.js header — small attack-surface reduction.
   poweredByHeader: false,
+  // Emit browser source maps so Playwright CDP coverage of /_next/static chunks
+  // can be remapped to src/. Only in coverage mode — production stays map-free
+  // (source maps are uploaded to Sentry separately during the SST deploy).
+  ...(COVERAGE ? { productionBrowserSourceMaps: true } : {}),
+  // Full external source maps for the `next dev --webpack` coverage server, so
+  // both server (NODE_V8_COVERAGE) and client (CDP) V8 coverage resolve to the
+  // original TS. Ignored under Turbopack (normal dev/build) — webpack() only
+  // runs in webpack mode — so this is a no-op outside coverage runs.
+  ...(COVERAGE
+    ? {
+        webpack: (config: { devtool?: string | false }) => {
+          config.devtool = "source-map";
+          return config;
+        },
+      }
+    : {}),
   // For Docker builds (Pi HA standby): emit a self-contained .next/standalone
   // bundle. SST/Vercel deploys leave this unset.
   output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
