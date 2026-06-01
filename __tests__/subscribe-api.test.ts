@@ -100,13 +100,11 @@ describe("POST /api/subscribe", () => {
     expect(notifyTeamMock).toHaveBeenCalledTimes(1);
   });
 
-  it("returns 500 when team notification fails", async () => {
+  it("returns 200 when team notification fails (fire-and-forget)", async () => {
     notifyTeamMock.mockRejectedValueOnce(new Error("ses-down"));
     const { POST } = await import("@/app/api/subscribe/route");
     const response = await POST(makeRequest({ email: "hello@cloudless.gr" }));
-    const data = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(data.error).toContain("Failed to subscribe");
+    expect(response.status).toBe(200);
   });
 });
