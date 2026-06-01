@@ -6,12 +6,14 @@
 # Why: /api/admin/users needs a Keycloak admin token. Using the master admin
 # password from the app is over-privileged; instead we use a confidential
 # client (cloudless-admin-api) whose service account holds ONLY view-users /
-# query-users / query-groups. Its secret is written to SSM so the app reads it
-# at runtime (KEYCLOAK_ADMIN_CLIENT_ID / KEYCLOAK_ADMIN_CLIENT_SECRET).
+# query-users / query-groups / view-groups. Its secret is written to SSM so the
+# app reads it at runtime (KEYCLOAK_ADMIN_CLIENT_ID / KEYCLOAK_ADMIN_CLIENT_SECRET).
 #
-# Runs kcadm inside the keycloak pod (admin password never leaves the cluster)
-# and writes SSM from the CI runner (OIDC creds). The client secret is captured
-# silently and masked — never printed to logs or posted anywhere.
+# SECURITY: the client secret is NEVER printed to stdout (this script is piped
+# through `tee` into a log that gets posted to an issue — printing it, even via
+# `::add-mask::`, leaks it). It is captured by command substitution and passed
+# straight to `aws ssm put-parameter`. The secret is regenerated on every run so
+# any previously-exposed value is invalidated.
 set -uo pipefail
 NS="${NS:-keycloak}"; DEP="${DEP:-keycloak}"; RL="${RL:-master}"
 CID="${CID:-cloudless-admin-api}"
@@ -39,35 +41,46 @@ if [ -z "$EXIST" ]; then
 else
   echo "client already exists ($EXIST)"
 fi
-# Grant ONLY the read roles needed to list/search users + groups.
-$K add-roles -r "$RL" --uusername "service-account-$CID" --cclientid realm-management \
-  --rolename view-users --rolename query-users --rolename query-groups --rolename view-groups >/dev/null 2>&1 \
-  && echo "roles granted" || echo "roles grant (already present or partial)"
+UUID=$($K get clients -r "$RL" -q clientId="$CID" --fields id --format csv --noquotes | head -1)
+# Resolve the service-account USER ID (more reliable than --uusername).
+SAID=$($K get "clients/$UUID/service-account-user" -r "$RL" --fields id --format csv --noquotes | head -1)
+echo "client=$CID uuid=$UUID service-account=$SAID"
+[ -n "$SAID" ] || { echo "NO_SERVICE_ACCOUNT"; exit 1; }
+# Grant each read role individually so one failure doesn't abort the rest.
+for role in view-users query-users query-groups view-groups; do
+  if $K add-roles -r "$RL" --uid "$SAID" --cclientid realm-management --rolename "$role" >/dev/null 2>&1; then
+    echo "  + $role"
+  else
+    echo "  = $role (already present or failed)"
+  fi
+done
 echo -n "effective realm-management roles: "
-$K get-roles -r "$RL" --uusername "service-account-$CID" --cclientid realm-management --effective --fields name --format csv --noquotes 2>/dev/null | tr '\n' ' '
+$K get-roles -r "$RL" --uid "$SAID" --cclientid realm-management --effective --fields name --format csv --noquotes 2>/dev/null | tr '\n' ' '
 echo
 EOS
 
-echo "== 2) capture client secret (silent) =="
+echo "== 2) (re)generate client secret + capture silently =="
+# Regenerate so any previously-exposed secret is dead, then read the new value.
+# Only the secret value reaches stdout of this exec; it is captured, never echoed.
 SECRET=$(kubectl -n "$NS" exec -i "$POD" -- env RL="$RL" CID="$CID" bash -s <<'EOS'
 K=/opt/keycloak/bin/kcadm.sh
 AU="${KEYCLOAK_ADMIN:-${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}}"
 AP="${KEYCLOAK_ADMIN_PASSWORD:-${KC_BOOTSTRAP_ADMIN_PASSWORD:-}}"
 $K config credentials --server http://localhost:8080 --realm master --user "$AU" --password "$AP" >/dev/null 2>&1
 UUID=$($K get clients -r "$RL" -q clientId="$CID" --fields id --format csv --noquotes | head -1)
+$K create "clients/$UUID/client-secret" -r "$RL" >/dev/null 2>&1
 $K get "clients/$UUID/client-secret" -r "$RL" | grep -o '"value"[^,}]*' | head -1 | cut -d'"' -f4
 EOS
 )
-echo "::add-mask::$SECRET"
 if [ -z "$SECRET" ]; then echo "RESULT=FAIL (no client secret)"; exit 1; fi
-echo "secret captured (len ${#SECRET}, masked)"
+echo "secret regenerated + captured (length ${#SECRET}); not printed"
 
 echo "== 3) write SSM (id + secret) =="
 aws ssm put-parameter --name "$SSM_PREFIX/KEYCLOAK_ADMIN_CLIENT_ID" --value "$CID" --type String --overwrite >/dev/null 2>&1 \
   && echo "  $SSM_PREFIX/KEYCLOAK_ADMIN_CLIENT_ID = $CID" || { echo "PUT id FAILED"; exit 1; }
 aws ssm put-parameter --name "$SSM_PREFIX/KEYCLOAK_ADMIN_CLIENT_SECRET" --value "$SECRET" --type SecureString --overwrite >/dev/null 2>&1 \
-  && echo "  $SSM_PREFIX/KEYCLOAK_ADMIN_CLIENT_SECRET = (SecureString, set)" || { echo "PUT secret FAILED"; exit 1; }
+  && echo "  $SSM_PREFIX/KEYCLOAK_ADMIN_CLIENT_SECRET = (SecureString, rotated + set)" || { echo "PUT secret FAILED"; exit 1; }
 
 # Note: the keycloak image has no curl, so the client_credentials grant is
 # verified live via /api/admin/users after the app picks up the SSM values.
-echo "RESULT=PASS (cloudless-admin-api ready + SSM written; app reads creds from SSM)"
+echo "RESULT=PASS (cloudless-admin-api ready + SSM written; secret never logged)"
