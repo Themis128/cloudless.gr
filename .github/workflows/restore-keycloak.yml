@@ -1,11 +1,10 @@
 name: Restore Keycloak (one-shot recovery)
 
 # Brings auth.cloudless.gr back after the 2026-05-31 memory-relief change left
-# Keycloak OOM-crash-looping (384Mi limit under a -Xmx320m heap). Applies the
-# corrected limits from k8s/cluster-protection/memory-relief-2026-05-31.yaml and
-# restarts the keycloak Deployment.
+# Keycloak OOM-crash-looping (384Mi container under a -Xmx512m heap). Directly
+# patches the keycloak Deployment to fit the heap and restarts it.
 #
-# Re-run trigger: 2026-06-01 — apply corrected JAVA_OPTS_APPEND/limit fix.
+# Re-run trigger: 2026-06-01b — direct patch + self-reporting to issue #382.
 # Runs on a GitHub-hosted runner and reaches the omv k3s API over Tailscale +
 # KUBECONFIG_B64 — the same access path as deploy-pi.yml's rollout job. This is
 # deliberately NOT pinned to the self-hosted omv runners, so the recovery still
@@ -22,10 +21,13 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   restore:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
@@ -40,5 +42,11 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Restore Keycloak (apply manifest, restart, verify)
-        run: bash scripts/restore-keycloak.sh
+      - name: Restore Keycloak (patch, restart, verify)
+        run: bash scripts/restore-keycloak.sh 2>&1 | tee restore.log
+
+      - name: Post restore log to tracking issue
+        if: always()
+        run: |
+          { echo '# Restore Keycloak run — '"$(date -u '+%Y-%m-%d %H:%M:%SZ')"; echo; echo '```'; cat restore.log 2>/dev/null || echo '(no log)'; echo '```'; } > restore-comment.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file restore-comment.md
