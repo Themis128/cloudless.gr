@@ -5,9 +5,12 @@ name: Restore Keycloak (one-shot recovery)
 # corrected limits from k8s/cluster-protection/memory-relief-2026-05-31.yaml and
 # restarts the keycloak Deployment.
 #
-# Runs on the omv self-hosted Pi runners, which are on the cluster LAN and reach
-# the k3s API directly — no Tailscale needed. Triggered automatically when this
-# file lands on main (path filter), and re-runnable manually via the Actions UI.
+# Runs on a GitHub-hosted runner and reaches the omv k3s API over Tailscale +
+# KUBECONFIG_B64 — the same access path as deploy-pi.yml's rollout job. This is
+# deliberately NOT pinned to the self-hosted omv runners, so the recovery still
+# works when those on-prem runners are offline (which is common right after a
+# cluster incident). Triggered automatically when this file lands on main (path
+# filter), and re-runnable manually via the Actions UI.
 
 on:
   workflow_dispatch:
@@ -21,9 +24,14 @@ permissions:
 
 jobs:
   restore:
-    runs-on: [self-hosted, omv, pi]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
 
       - name: Configure kubectl
         run: |
@@ -31,32 +39,5 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Show Keycloak state before
-        run: |
-          kubectl -n keycloak get deploy keycloak -o wide || true
-          kubectl -n keycloak get pods -l app=keycloak -o wide || true
-          kubectl -n keycloak describe deploy keycloak | grep -iE "limits|requests|Xmx|OOM|MinReady" || true
-
-      - name: Apply corrected memory-relief manifest
-        run: kubectl apply -f k8s/cluster-protection/memory-relief-2026-05-31.yaml
-
-      - name: Restart Keycloak and wait for rollout
-        run: |
-          kubectl -n keycloak rollout restart deploy/keycloak
-          kubectl -n keycloak rollout status deploy/keycloak --timeout=240s
-
-      - name: Show Keycloak state after
-        run: |
-          kubectl -n keycloak get pods -l app=keycloak -o wide || true
-
-      - name: Verify auth.cloudless.gr OIDC discovery is 200
-        run: |
-          for i in $(seq 1 18); do
-            code=$(curl -sS -m 8 -o /dev/null -w '%{http_code}' \
-              https://auth.cloudless.gr/realms/master/.well-known/openid-configuration || echo 000)
-            echo "attempt $i: discovery HTTP $code"
-            [ "$code" = "200" ] && { echo "Keycloak is back up."; exit 0; }
-            sleep 10
-          done
-          echo "::error::Keycloak still not returning 200 after restart"
-          exit 1
+      - name: Restore Keycloak (apply manifest, restart, verify)
+        run: bash scripts/restore-keycloak.sh
