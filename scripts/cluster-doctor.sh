@@ -78,4 +78,15 @@ printf "  can-i create deployments/rollout (restart) -n %s : %s\n" "$NAMESPACE" 
 section "Keycloak: rollout history (did a restart ever roll a new ReplicaSet?)"
 k -n "$NAMESPACE" rollout history "deploy/$DEPLOYMENT" | fence
 
+section "Keycloak deploy: ownership — who reconciles it (Helm/Argo/Flux)?"
+printf "managed-by label: %s\n" "$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>&1)"
+printf "ownerReferences:  %s\n" "$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.metadata.ownerReferences}' 2>&1)"
+printf "GitOps annotations:\n"
+kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.metadata.annotations}' 2>/dev/null \
+  | tr ',' '\n' | grep -iE "helm|argocd|fluxcd|kustomize\.toolkit|reconcile|managed-by" | fence
+printf "field managers (who last wrote each field):\n"
+kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{range .metadata.managedFields[*]}{.manager}{" ("}{.operation}{", "}{.apiVersion}{")\n"}{end}' 2>&1 | fence
+printf "live container[0] memory limit: %s\n" "$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' 2>&1)"
+printf "last-applied (kubectl apply) memory limit: %s\n" "$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.metadata.annotations.kubectl\.kubernetes\.io/last-applied-configuration}' 2>/dev/null | grep -oE '\"memory\":\"[0-9]+Mi\"' | tail -1)"
+
 printf "\n_End of snapshot._\n"
