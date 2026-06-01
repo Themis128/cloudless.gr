@@ -67,6 +67,15 @@ section "Keycloak: logs (previous container, last 40 lines — crash cause)"
 pod=$(kubectl -n "$NAMESPACE" get pods -l app="$DEPLOYMENT" -o name 2>/dev/null | head -1)
 [ -n "$pod" ] && k -n "$NAMESPACE" logs "$pod" --previous --tail=40 | fence || printf "_no pod found via label app=%s_\n" "$DEPLOYMENT"
 
-printf "\n_End of snapshot._\n"
+section "Identity & write permissions (can the CI kubeconfig recover Keycloak?)"
+printf "whoami: %s\n" "$(kubectl auth whoami 2>&1 | tr '\n' ' ')"
+for verb in get patch update; do
+  printf "  can-i %-6s deployments -n %s : %s\n" "$verb" "$NAMESPACE" "$(kubectl auth can-i "$verb" deployments -n "$NAMESPACE" 2>&1)"
+done
+printf "  can-i patch  limitranges -n %s : %s\n" "$NAMESPACE" "$(kubectl auth can-i patch limitranges -n "$NAMESPACE" 2>&1)"
+printf "  can-i create deployments/rollout (restart) -n %s : %s\n" "$NAMESPACE" "$(kubectl auth can-i patch deployments -n "$NAMESPACE" --subresource=scale 2>&1)"
 
-# re-run 20260601T133536Z
+section "Keycloak: rollout history (did a restart ever roll a new ReplicaSet?)"
+k -n "$NAMESPACE" rollout history "deploy/$DEPLOYMENT" | fence
+
+printf "\n_End of snapshot._\n"
