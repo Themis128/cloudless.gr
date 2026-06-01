@@ -5,7 +5,8 @@ import { SlackClient } from "@/lib/slack-notify";
 
 const MAX_TIMESTAMP_AGE_MS = 5 * 60 * 1000;
 const HUBSPOT_API = "https://api.hubapi.com";
-const PORTAL_BASE = "https://app-eu1.hubspot.com/contacts/147639927";
+const PORTAL_ID = process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ?? "147639927";
+const PORTAL_BASE = `https://app-eu1.hubspot.com/contacts/${PORTAL_ID}`;
 const PLAIN_TEXT = "plain_text";
 const SECTION = "section";
 const CONTEXT = "context";

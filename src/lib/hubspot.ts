@@ -289,7 +289,7 @@ export async function listTickets(limit = 20): Promise<unknown[]> {
 
 /* ─── Ticket support (requires 'tickets' scope) ─────────────────── */
 
-interface TicketData {
+export interface TicketData {
   subject: string;
   content: string;
   hs_pipeline?: string;
@@ -713,4 +713,149 @@ export async function associateDealWithContact(dealId: string, contactId: string
   } catch (err) {
     console.error("[HubSpot] associateDealWithContact error:", err);
   }
+}
+
+/** Update a contact's properties by ID. Returns updated contact or null on failure. */
+export async function updateContact(id: string, data: Partial<HubSpotContact>): Promise<{ id: string } | null> {
+  try {
+    const res = await hubspotFetch(`/crm/v3/objects/contacts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ properties: data }),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+/** Delete a contact by ID. Returns true on success. */
+export async function deleteContact(id: string): Promise<boolean> {
+  try {
+    const res = await hubspotFetch(`/crm/v3/objects/contacts/${id}`, { method: "DELETE" });
+    return res.ok || res.status === 204;
+  } catch { return false; }
+}
+
+/** Get a single contact by ID with extended properties. */
+export async function getContact(id: string): Promise<unknown | null> {
+  try {
+    const res = await hubspotFetch(
+      `/crm/v3/objects/contacts/${id}?properties=email,firstname,lastname,company,phone,hs_lead_status,lifecyclestage,lead_source,service_interest,createdate`
+    );
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+/** Create a new company. Returns company ID or null. */
+export async function createCompany(data: {
+  name: string;
+  domain?: string;
+  city?: string;
+  country?: string;
+  phone?: string;
+  industry?: string;
+}): Promise<string | null> {
+  try {
+    const res = await hubspotFetch("/crm/v3/objects/companies", {
+      method: "POST",
+      body: JSON.stringify({ properties: data }),
+    });
+    if (!res.ok) return null;
+    const company = await res.json();
+    return company.id as string;
+  } catch { return null; }
+}
+
+/** Update a company's properties. Returns updated company or null. */
+export async function updateCompany(id: string, data: Partial<Record<string, string>>): Promise<{ id: string } | null> {
+  try {
+    const res = await hubspotFetch(`/crm/v3/objects/companies/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ properties: data }),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+/** Delete a company by ID. Returns true on success. */
+export async function deleteCompany(id: string): Promise<boolean> {
+  try {
+    const res = await hubspotFetch(`/crm/v3/objects/companies/${id}`, { method: "DELETE" });
+    return res.ok || res.status === 204;
+  } catch { return false; }
+}
+
+/** Delete a deal by ID. Returns true on success. */
+export async function deleteDeal(id: string): Promise<boolean> {
+  try {
+    const res = await hubspotFetch(`/crm/v3/objects/deals/${id}`, { method: "DELETE" });
+    return res.ok || res.status === 204;
+  } catch { return false; }
+}
+
+/** Get a single deal by ID. */
+export async function getDeal(id: string): Promise<unknown | null> {
+  try {
+    const res = await hubspotFetch(
+      `/crm/v3/objects/deals/${id}?properties=dealname,amount,dealstage,pipeline,closedate,description,lead_source,service_interest,hubspot_owner_id`
+    );
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+/** Update a ticket's properties. Returns updated ticket or null. */
+export async function updateTicket(id: string, data: Partial<TicketData>): Promise<{ id: string } | null> {
+  try {
+    const res = await hubspotFetch(`/crm/v3/objects/tickets/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ properties: data }),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+/** Delete a ticket by ID. Returns true on success. */
+export async function deleteTicket(id: string): Promise<boolean> {
+  try {
+    const res = await hubspotFetch(`/crm/v3/objects/tickets/${id}`, { method: "DELETE" });
+    return res.ok || res.status === 204;
+  } catch { return false; }
+}
+
+/** Associate a deal with a company. */
+export async function associateDealWithCompany(dealId: string, companyId: string): Promise<void> {
+  try {
+    await hubspotFetch(`/crm/v4/objects/deals/${dealId}/associations/companies/${companyId}`, {
+      method: "PUT",
+      body: JSON.stringify([{ associationCategory: HUBSPOT_DEFINED, associationTypeId: 5 }]),
+    });
+  } catch (err) {
+    console.error("[HubSpot] associateDealWithCompany error:", err);
+  }
+}
+
+/** Assign a deal to an owner. */
+export async function assignDealOwner(dealId: string, ownerId: string): Promise<{ id: string } | null> {
+  return updateDeal(dealId, { hubspot_owner_id: ownerId });
+}
+
+/** Delete a note by ID. */
+export async function deleteNote(id: string): Promise<boolean> {
+  try {
+    const res = await hubspotFetch(`/crm/v3/objects/notes/${id}`, { method: "DELETE" });
+    return res.ok || res.status === 204;
+  } catch { return false; }
+}
+
+/** Validate that a stageId exists in the given pipeline before moving. */
+export async function validateStageId(pipelineId: string, stageId: string, objectType = "deals"): Promise<boolean> {
+  try {
+    const pipelines = await getPipelines(objectType) as Array<{ id: string; stages: Array<{ id: string }> }>;
+    const pipeline = pipelines.find(p => p.id === pipelineId) ?? pipelines[0];
+    if (!pipeline) return false;
+    return pipeline.stages?.some(s => s.id === stageId) ?? false;
+  } catch { return false; }
 }
