@@ -93,9 +93,31 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
   `pnpm keycloak:enable-signup` (`ENABLE=false` reverts).
 - **Provision users** with `pnpm keycloak:create-user` (`EMAIL=…`, `ADMIN=1` for
   the admin group). It runs `kcadm` **inside the keycloak pod** so the admin
-  password never leaves the cluster. The keycloak image has **no `curl`**, so
-  verify a user's login with `kcadm config credentials` (direct grant as the
-  user via `admin-cli`), not curl. App admin = `admin` group membership.
+  password never leaves the cluster. The keycloak image has **no `curl`** and **no
+  `awk`/`jq`**, so verify a login with `kcadm config credentials` (direct grant as
+  the user via `admin-cli`) and parse kcadm output with `--format csv --noquotes` +
+  grep/cut. App admin = **`admin` group membership**, surfaced via the `groups`
+  claim — which requires a **group-membership protocol mapper on the `cloudless-app`
+  client** with **`full.path=false`** (a `full.path=true` emits `"/admin"` and
+  silently breaks `isAdmin()`).
+- **Admin login chain** (must all hold): `admin` group → user membership →
+  `groups` mapper on `cloudless-app` (full.path=false, id+access claims) →
+  `auth.ts` jwt+session callbacks → `proxy.ts` (server) + `AdminLayoutClient`
+  (client, via `/api/auth/session`) + `api-auth.ts requireAdmin`. Configure it:
+  - `pnpm keycloak:configure-admin` — ensure group + verify/fix the mapper +
+    membership; sets the password from the `ADMIN_BOOTSTRAP_PASSWORD` repo secret
+    or a `workflow_dispatch` `password` input, and enforces single-admin once a
+    password exists.
+  - `pnpm keycloak:bootstrap-admin` — when you **can't** deliver a password to CI
+    (no `Secrets:write` token in-session; the mobile Actions UI hides inputs):
+    generates a one-time **temporary** password in-cluster, configures the sole
+    admin, and posts the temp login to #382; the human logs in once and Keycloak
+    forces `UPDATE_PASSWORD`. (A temporary password fails a direct-grant check —
+    that's expected; no `LOGIN_VERIFIED`.) **Never commit a password to git.**
+- **Self-heal:** `pnpm keycloak:ensure` (`keycloak-ensure.yml`, **cron `*/15`**)
+  reconciles auth to the last-working state — OOM-recovers Keycloak (768Mi /
+  `-Xmx512m`) and fixes realm flags + the `cloudless-app` groups mapper + admin
+  group/membership; posts to #382 only when it corrects drift or auth is broken.
 - **CloudWatch `SERVERLESS-APP_MAIN-Errors`** (custom metric
   `CloudlessApp/ServerlessErrors`) is a **CloudWatch Logs metric filter** on the
   Lambda log group — NOT Sentry (Sentry had 0). It counts next-auth
