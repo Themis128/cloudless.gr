@@ -1,0 +1,47 @@
+name: Wire Pi Keycloak auth (k3s standby)
+
+# Gives the k3s `cloudless` app working next-auth/Keycloak by sourcing
+# AUTH_SECRET/KEYCLOAK_* from SSM (same as the Lambda), storing them in a k8s
+# Secret, wiring envFrom on the deployment, and restarting. Posts result to #382.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/wire-pi-keycloak.yml"
+      - "scripts/wire-pi-keycloak.sh"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+      - name: Wire Keycloak auth onto the Pi deployment
+        run: |
+          set -uo pipefail
+          AK=$(kubectl -n cloudless get secret pi-standby-aws-creds -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)
+          SK=$(kubectl -n cloudless get secret pi-standby-aws-creds -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)
+          echo "::add-mask::$AK"; echo "::add-mask::$SK"
+          export AWS_ACCESS_KEY_ID="$AK" AWS_SECRET_ACCESS_KEY="$SK" AWS_REGION=us-east-1
+          bash scripts/wire-pi-keycloak.sh 2>&1 | tee wire.log
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          { echo "# Wire Pi Keycloak — $(date -u '+%F %T')Z"; echo; echo '```'; cat wire.log 2>/dev/null || echo '(no log)'; echo '```'; } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
