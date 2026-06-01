@@ -63,16 +63,36 @@ else
   echo "ADMIN_GROUP=present ($GID)"
 fi
 
-# 2) groups membership mapper on the next-auth client
+# 2) groups membership mapper on the next-auth client — ensure it is CORRECT.
+# isAdmin() checks groups.includes("admin"), so the mapper MUST emit "admin"
+# (full.path=false) under claim.name=groups, in both id & access tokens. A wrong
+# full.path=true would emit "/admin" and silently break admin detection.
+MAPPER_JSON='{"name":"groups","protocol":"openid-connect","protocolMapper":"oidc-group-membership-mapper","config":{"full.path":"false","id.token.claim":"true","access.token.claim":"true","userinfo.token.claim":"true","claim.name":"groups"}}'
 CUUID=$(csv clients -r "$RL" -q clientId="$CID" --fields id | head -1)
 if [ -z "$CUUID" ]; then
   echo "CLIENT=$CID NOT_FOUND (cannot add groups mapper!)"
-elif csv "clients/$CUUID/protocol-mappers/models" -r "$RL" --fields name | grep -qx "groups"; then
-  echo "GROUPS_MAPPER=present on $CID"
 else
-  printf '%s' '{"name":"groups","protocol":"openid-connect","protocolMapper":"oidc-group-membership-mapper","config":{"full.path":"false","id.token.claim":"true","access.token.claim":"true","userinfo.token.claim":"true","claim.name":"groups"}}' > /tmp/groups-mapper.json
-  $K create "clients/$CUUID/protocol-mappers/models" -r "$RL" -f /tmp/groups-mapper.json >/dev/null 2>&1 \
-    && echo "GROUPS_MAPPER=created on $CID" || echo "GROUPS_MAPPER=create_failed on $CID"
+  MID=$(csv "clients/$CUUID/protocol-mappers/models" -r "$RL" --fields id,name | grep ',groups$' | head -1 | cut -d, -f1)
+  if [ -n "$MID" ]; then
+    CFG=$($K get "clients/$CUUID/protocol-mappers/models/$MID" -r "$RL" 2>/dev/null)
+    FP=$(printf '%s' "$CFG" | grep -oE '"full.path"[ ]*:[ ]*"[a-z]+"' | grep -oE '(true|false)$')
+    CN=$(printf '%s' "$CFG" | grep -oE '"claim.name"[ ]*:[ ]*"[^"]+"' | sed -E 's/.*"([^"]+)"$/\1/')
+    IDC=$(printf '%s' "$CFG" | grep -oE '"id.token.claim"[ ]*:[ ]*"[a-z]+"' | grep -oE '(true|false)$')
+    ATC=$(printf '%s' "$CFG" | grep -oE '"access.token.claim"[ ]*:[ ]*"[a-z]+"' | grep -oE '(true|false)$')
+    echo "GROUPS_MAPPER=present on $CID (full.path=$FP claim.name=$CN id.token=$IDC access.token=$ATC)"
+    if [ "$FP" != "false" ] || [ "$CN" != "groups" ] || [ "$IDC" != "true" ] || [ "$ATC" != "true" ]; then
+      $K delete "clients/$CUUID/protocol-mappers/models/$MID" -r "$RL" >/dev/null 2>&1
+      printf '%s' "$MAPPER_JSON" > /tmp/groups-mapper.json
+      $K create "clients/$CUUID/protocol-mappers/models" -r "$RL" -f /tmp/groups-mapper.json >/dev/null 2>&1 \
+        && echo "GROUPS_MAPPER=reconfigured to correct config" || echo "GROUPS_MAPPER=reconfigure_failed"
+    else
+      echo "GROUPS_MAPPER=config_ok (emits 'admin' in id+access tokens)"
+    fi
+  else
+    printf '%s' "$MAPPER_JSON" > /tmp/groups-mapper.json
+    $K create "clients/$CUUID/protocol-mappers/models" -r "$RL" -f /tmp/groups-mapper.json >/dev/null 2>&1 \
+      && echo "GROUPS_MAPPER=created on $CID" || echo "GROUPS_MAPPER=create_failed on $CID"
+  fi
 fi
 
 # 3) the admin user
