@@ -1,5 +1,10 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
+
+// Mock @/lib/auth so readSessionCookie() is controllable in tests.
+// vi.mock is hoisted — the factory runs before any imports.
+const authMock = vi.fn();
+vi.mock("@/lib/auth", () => ({ auth: authMock }));
 
 function makeJwt(payload: Record<string, unknown>): string {
   const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
@@ -23,12 +28,14 @@ function makeRequest(token?: string): NextRequest {
 
 describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
   beforeEach(() => {
-    // Clear the issuer/pool so verifyToken takes the decode-only fallback path
-    // (no JWKS), which is what these fake-signature fixtures exercise.
+    // Reset the entire mock (clears queued Once values + call history) then set
+    // the default: no session. Tests that need a session configure mockOnce() explicitly.
+    authMock.mockReset();
+    authMock.mockResolvedValue(null);
+    // Clear the issuer so verifyToken takes the decode-only fallback path.
+    // (Global setup.ts already does this + resetJwksCache(); belt-and-suspenders.)
     delete process.env.KEYCLOAK_ISSUER;
     delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
-    delete process.env.COGNITO_USER_POOL_ID;
-    delete process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
   });
 
   describe("getTokenFromHeader()", () => {
@@ -145,7 +152,7 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
       expect(isAdmin(decoded)).toBe(true);
     });
 
-    it("still honors the legacy cognito:groups claim (back-compat)", async () => {
+    it("returns true when user has the realm:admin role", async () => {
       const { isAdmin } = await import("@/lib/api-auth");
       const decoded = {
         sub: "u",
@@ -153,28 +160,28 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
         iss: "i",
         iat: 0,
         exp: 9999999999,
-        "groups": ["users", "admin"],
+        realm_access: { roles: ["realm:admin"] },
       };
       expect(isAdmin(decoded)).toBe(true);
     });
   });
 
-  describe("requireAuth()", () => {
-    it("returns 401 when no token in header", async () => {
+  describe("requireAuth() — Bearer token path", () => {
+    it("returns 401 when no token in header and no session cookie", async () => {
       const { requireAuth } = await import("@/lib/api-auth");
       const result = await requireAuth(makeRequest());
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.response.status).toBe(401);
     });
 
-    it("returns 401 for expired token", async () => {
+    it("returns 401 for expired Bearer token", async () => {
       const { requireAuth } = await import("@/lib/api-auth");
       const result = await requireAuth(makeRequest(makeExpiredJwt()));
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.response.status).toBe(401);
     });
 
-    it("returns ok:true with user for valid token", async () => {
+    it("returns ok:true with user for valid Bearer token", async () => {
       const { requireAuth } = await import("@/lib/api-auth");
       const result = await requireAuth(makeRequest(makeValidJwt({ email: "x@x.com" })));
       expect(result.ok).toBe(true);
@@ -182,19 +189,103 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
     });
   });
 
+  describe("requireAuth() — session cookie path (no Bearer header)", () => {
+    it("returns ok:true when next-auth session provides a valid user", async () => {
+      // Reset modules so api-auth re-imports @/lib/auth with our mock applied.
+      vi.resetModules();
+      authMock.mockResolvedValueOnce({
+        user: { id: "session-user-1", email: "user@cloudless.gr", groups: [], roles: [] },
+      });
+      const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const result = await requireAuth(makeRequest()); // no Bearer header
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.user.sub).toBe("session-user-1");
+        expect(result.user.email).toBe("user@cloudless.gr");
+      }
+    });
+
+    it("returns 401 when auth() returns null (no active session)", async () => {
+      vi.resetModules();
+      authMock.mockResolvedValueOnce(null);
+      const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const result = await requireAuth(makeRequest());
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.response.status).toBe(401);
+    });
+
+    it("returns 401 when auth() throws (e.g. misconfigured next-auth)", async () => {
+      vi.resetModules();
+      authMock.mockRejectedValueOnce(new Error("auth config missing"));
+      const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const result = await requireAuth(makeRequest());
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.response.status).toBe(401);
+    });
+
+    it("Bearer token takes priority over session cookie when both are present", async () => {
+      vi.resetModules();
+      authMock.mockResolvedValueOnce({
+        user: { id: "session-user", email: "session@cloudless.gr", groups: [], roles: [] },
+      });
+      const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      // Send a valid Bearer token — it should win over the session mock
+      const result = await requireAuth(makeRequest(makeValidJwt({ email: "bearer@cloudless.gr" })));
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // The Bearer token's sub/email, NOT the session mock values
+        expect(result.user.sub).toBe("user-1");
+        expect(result.user.email).toBe("bearer@cloudless.gr");
+      }
+    });
+  });
+
   describe("requireAdmin()", () => {
-    it("returns 403 when user is not in admin group", async () => {
+    it("returns 403 when Bearer token user is not in admin group", async () => {
       const { requireAdmin } = await import("@/lib/api-auth");
       const result = await requireAdmin(makeRequest(makeValidJwt()));
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.response.status).toBe(403);
     });
 
-    it("returns ok:true for a valid admin token (Keycloak groups claim)", async () => {
+    it("returns ok:true for a valid admin Bearer token (Keycloak groups claim)", async () => {
       const { requireAdmin } = await import("@/lib/api-auth");
       const token = makeValidJwt({ groups: ["admin"] });
       const result = await requireAdmin(makeRequest(token));
       expect(result.ok).toBe(true);
+    });
+
+    it("returns ok:true when session cookie user is in the admin group", async () => {
+      vi.resetModules();
+      authMock.mockResolvedValueOnce({
+        user: {
+          id: "admin-1",
+          email: "admin@cloudless.gr",
+          groups: ["admin"],
+          roles: [],
+        },
+      });
+      const { requireAdmin, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const result = await requireAdmin(makeRequest()); // no Bearer header
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.user.sub).toBe("admin-1");
+    });
+
+    it("returns 403 when session cookie user is not in admin group", async () => {
+      vi.resetModules();
+      authMock.mockResolvedValueOnce({
+        user: { id: "plain-user", email: "user@cloudless.gr", groups: [], roles: [] },
+      });
+      const { requireAdmin, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const result = await requireAdmin(makeRequest());
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.response.status).toBe(403);
     });
   });
 });
