@@ -42,64 +42,63 @@ echo "pod=$POD realm=$REALM client=$CLIENT_ID admin=$ADMIN_EMAIL password_set=$(
 kubectl -n "$NAMESPACE" exec -i "$POD" -- env \
   NU="$ADMIN_EMAIL" NP="$ADMIN_PASSWORD" RL="$REALM" CID="$CLIENT_ID" bash -s <<'EOS'
 set -u
+# NOTE: the keycloak image has no awk/jq/python — parse kcadm CSV with grep/cut.
+# NOTE: $UID is a bash readonly var (=1000); use $USERID for the Keycloak user id.
 K=/opt/keycloak/bin/kcadm.sh
-U='[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}'
+csv() { $K get "$@" --format csv --noquotes 2>/dev/null; }
 AU="${KEYCLOAK_ADMIN:-${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}}"
 AP="${KEYCLOAK_ADMIN_PASSWORD:-${KC_BOOTSTRAP_ADMIN_PASSWORD:-}}"
 $K config credentials --server http://localhost:8080 --realm master --user "$AU" --password "$AP" >/dev/null 2>&1 \
   || { echo "ADMIN_AUTH=failed"; exit 0; }
 echo "ADMIN_AUTH=ok"
 
-# 1) admin group
-GID=$($K get groups -r "$RL" -q search=admin --fields id,name 2>/dev/null \
-  | awk -v RS='}' '/"name"[ ]*:[ ]*"admin"/' | grep -o "$U" | head -1)
+# 1) admin group  (CSV row is "id,name"; keep the one whose name is exactly admin)
+admin_gid() { csv groups -r "$RL" -q search=admin --fields id,name | grep -iE ',admin$' | head -1 | cut -d, -f1; }
+GID=$(admin_gid)
 if [ -z "$GID" ]; then
   $K create groups -r "$RL" -s name=admin >/dev/null 2>&1
-  GID=$($K get groups -r "$RL" -q search=admin --fields id,name 2>/dev/null \
-    | awk -v RS='}' '/"name"[ ]*:[ ]*"admin"/' | grep -o "$U" | head -1)
+  GID=$(admin_gid)
   echo "ADMIN_GROUP=created ($GID)"
 else
   echo "ADMIN_GROUP=present ($GID)"
 fi
 
 # 2) groups membership mapper on the next-auth client
-CUUID=$($K get clients -r "$RL" -q clientId="$CID" --fields id 2>/dev/null | grep -o "$U" | head -1)
+CUUID=$(csv clients -r "$RL" -q clientId="$CID" --fields id | head -1)
 if [ -z "$CUUID" ]; then
   echo "CLIENT=$CID NOT_FOUND (cannot add groups mapper!)"
+elif csv "clients/$CUUID/protocol-mappers/models" -r "$RL" --fields name | grep -qx "groups"; then
+  echo "GROUPS_MAPPER=present on $CID"
 else
-  if $K get "clients/$CUUID/protocol-mappers/models" -r "$RL" 2>/dev/null | grep -q '"name" : "groups"'; then
-    echo "GROUPS_MAPPER=present on $CID"
-  else
-    printf '%s' '{"name":"groups","protocol":"openid-connect","protocolMapper":"oidc-group-membership-mapper","config":{"full.path":"false","id.token.claim":"true","access.token.claim":"true","userinfo.token.claim":"true","claim.name":"groups"}}' > /tmp/groups-mapper.json
-    $K create "clients/$CUUID/protocol-mappers/models" -r "$RL" -f /tmp/groups-mapper.json >/dev/null 2>&1 \
-      && echo "GROUPS_MAPPER=created on $CID" || echo "GROUPS_MAPPER=create_failed on $CID"
-  fi
+  printf '%s' '{"name":"groups","protocol":"openid-connect","protocolMapper":"oidc-group-membership-mapper","config":{"full.path":"false","id.token.claim":"true","access.token.claim":"true","userinfo.token.claim":"true","claim.name":"groups"}}' > /tmp/groups-mapper.json
+  $K create "clients/$CUUID/protocol-mappers/models" -r "$RL" -f /tmp/groups-mapper.json >/dev/null 2>&1 \
+    && echo "GROUPS_MAPPER=created on $CID" || echo "GROUPS_MAPPER=create_failed on $CID"
 fi
 
 # 3) the admin user
-UID=$($K get users -r "$RL" -q username="$NU" --fields id 2>/dev/null | grep -o "$U" | head -1)
-if [ -z "$UID" ]; then
-  UID=$($K create users -r "$RL" -s username="$NU" -s email="$NU" -s enabled=true -s emailVerified=true -i 2>/dev/null) \
+USERID=$(csv users -r "$RL" -q username="$NU" --fields id | head -1)
+if [ -z "$USERID" ]; then
+  USERID=$($K create users -r "$RL" -s username="$NU" -s email="$NU" -s enabled=true -s emailVerified=true -i 2>/dev/null) \
     || { echo "USER=create_failed"; exit 0; }
-  echo "USER=created ($UID)"
+  echo "USER=created ($USERID)"
 else
-  echo "USER=present ($UID)"
+  echo "USER=present ($USERID)"
 fi
 if [ -n "$NP" ]; then
-  $K set-password -r "$RL" --userid "$UID" --new-password "$NP" >/dev/null 2>&1 \
+  $K set-password -r "$RL" --userid "$USERID" --new-password "$NP" >/dev/null 2>&1 \
     && echo "PW_SET=ok" || echo "PW_SET=failed"
 else
   echo "PW_SET=skipped (no ADMIN_PASSWORD; set via forgot-password or re-run with the secret)"
 fi
 
 # 4) membership + single-admin enforcement
-$K update "users/$UID/groups/$GID" -r "$RL" -s realm="$RL" -s userId="$UID" -s groupId="$GID" -n >/dev/null 2>&1 \
+$K update "users/$USERID/groups/$GID" -r "$RL" -s realm="$RL" -s userId="$USERID" -s groupId="$GID" -n >/dev/null 2>&1 \
   && echo "MEMBERSHIP=added" || echo "MEMBERSHIP=already/failed"
 # Only strip OTHER admins once the sole admin actually has a password set —
 # otherwise we'd leave a passwordless account as the only admin (lockout).
 if [ -n "$NP" ]; then
-  for m in $($K get "groups/$GID/members" -r "$RL" --fields id 2>/dev/null | grep -o "$U"); do
-    if [ "$m" != "$UID" ]; then
+  for m in $(csv "groups/$GID/members" -r "$RL" --fields id); do
+    if [ "$m" != "$USERID" ] && [ -n "$m" ]; then
       $K delete "users/$m/groups/$GID" -r "$RL" >/dev/null 2>&1 && echo "REMOVED_OTHER_ADMIN=$m"
     fi
   done
@@ -107,12 +106,14 @@ else
   echo "SINGLE_ADMIN=deferred (no password set yet — not removing existing admins to avoid lockout)"
 fi
 
-# 5) verify the admin's password authenticates (kcadm direct grant)
+# 5) verify the admin's password authenticates (kcadm direct grant as the user)
 if [ -n "$NP" ]; then
   $K config credentials --config /tmp/av.json --server http://localhost:8080 --realm "$RL" \
      --client admin-cli --user "$NU" --password "$NP" >/dev/null 2>&1 \
     && echo "LOGIN_VERIFIED=yes" || echo "LOGIN_VERIFIED=no"
   rm -f /tmp/av.json 2>/dev/null || true
 fi
-echo "DONE: only '$NU' is in the admin group; mapper on '$CID' ensures the groups claim."
+# Show current admin-group members for confirmation.
+echo "ADMIN_MEMBERS:"; csv "groups/$GID/members" -r "$RL" --fields username,email | sed 's/^/  /'
+echo "DONE: mapper on '$CID' emits the groups claim; '$NU' is in the admin group."
 EOS
