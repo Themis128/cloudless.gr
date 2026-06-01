@@ -25,6 +25,10 @@ interface AppConfig {
   AUTH_SECRET: string;
   KEYCLOAK_ADMIN_USER: string;
   KEYCLOAK_ADMIN_PASSWORD: string;
+  /** Confidential service-account client for admin user-management routes
+   * (least-privilege: view-users/query-users), preferred over the master admin. */
+  KEYCLOAK_ADMIN_CLIENT_ID: string;
+  KEYCLOAK_ADMIN_CLIENT_SECRET: string;
   // Optional integrations
   SLACK_WEBHOOK_URL: string;
   SLACK_BOT_TOKEN: string;
@@ -125,10 +129,7 @@ async function fetchSsmParams(): Promise<Map<string, string>> {
 }
 
 function validateRequiredKeys(params: Map<string, string>): void {
-  const required = [
-    "STRIPE_SECRET_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-  ] as const;
+  const required = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"] as const;
   const missing: string[] = [];
   for (const key of required) {
     if (!params.get(key)) {
@@ -164,6 +165,8 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     AUTH_SECRET: params.get("AUTH_SECRET") ?? "",
     KEYCLOAK_ADMIN_USER: params.get("KEYCLOAK_ADMIN_USER") ?? "",
     KEYCLOAK_ADMIN_PASSWORD: params.get("KEYCLOAK_ADMIN_PASSWORD") ?? "",
+    KEYCLOAK_ADMIN_CLIENT_ID: params.get("KEYCLOAK_ADMIN_CLIENT_ID") ?? "",
+    KEYCLOAK_ADMIN_CLIENT_SECRET: params.get("KEYCLOAK_ADMIN_CLIENT_SECRET") ?? "",
     SLACK_WEBHOOK_URL: params.get("SLACK_WEBHOOK_URL") ?? "",
     SLACK_BOT_TOKEN: params.get("SLACK_BOT_TOKEN") ?? "",
     SLACK_SIGNING_SECRET: params.get("SLACK_SIGNING_SECRET") ?? "",
@@ -237,6 +240,8 @@ function buildConfigFromEnv(): AppConfig {
     AUTH_SECRET: process.env.AUTH_SECRET || "",
     KEYCLOAK_ADMIN_USER: process.env.KEYCLOAK_ADMIN_USER || "",
     KEYCLOAK_ADMIN_PASSWORD: process.env.KEYCLOAK_ADMIN_PASSWORD || "",
+    KEYCLOAK_ADMIN_CLIENT_ID: process.env.KEYCLOAK_ADMIN_CLIENT_ID || "",
+    KEYCLOAK_ADMIN_CLIENT_SECRET: process.env.KEYCLOAK_ADMIN_CLIENT_SECRET || "",
     SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL || "",
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || "",
