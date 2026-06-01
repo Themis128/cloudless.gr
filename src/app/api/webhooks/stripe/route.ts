@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const stripe = await getStripe();
+    if (!stripe) return Response.json({ error: "Stripe not configured" }, { status: 503 });
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     const integrationResponse = mapIntegrationError(err);
