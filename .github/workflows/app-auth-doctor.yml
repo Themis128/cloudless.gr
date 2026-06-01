@@ -1,0 +1,41 @@
+name: App auth doctor (Pi cloudless deployment wiring)
+
+# Read-only: dumps how the k3s `cloudless` app is wired for auth (env names,
+# secrets, configmaps — never values) so we can wire Keycloak onto the standby.
+# Posts to issue #382.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/app-auth-doctor.yml"
+      - "scripts/app-auth-doctor.sh"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  doctor:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+      - name: Diagnose
+        run: bash scripts/app-auth-doctor.sh 2>&1 | tee aad.log
+      - name: Post to tracking issue
+        if: always()
+        run: |
+          { echo "# App auth doctor — $(date -u '+%F %T')Z"; echo; echo '```'; cat aad.log 2>/dev/null || echo '(no log)'; echo '```'; } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
