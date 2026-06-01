@@ -44,7 +44,7 @@ offline during cluster incidents and the job queues forever).
 | `.github/workflows/restore-keycloak.yml` | Runs `keycloak:restore` on a hosted runner, posts the log to #382. Trigger by editing the workflow file. |
 | `pnpm prometheus:tune` (`scripts/prometheus-tune.sh`) | Deletes the heavy kube-apiserver SLO/burnrate/availability PrometheusRules that time out and trip `PrometheusRuleFailures`; reports remaining failing rules. |
 | `.github/workflows/prometheus-tune.yml` | Runs `prometheus:tune` on a hosted runner, posts the log to #382. Trigger by editing the workflow file. |
-| `pnpm keycloak:ensure` (`scripts/keycloak-ensure.sh`) | **Self-heal**: idempotent reconciler that restores auth to its known-good state — OOM-recovers Keycloak (768Mi + `-Xmx512m`), and fixes realm flags + the cloudless-app `groups` mapper (`full.path=false`) + admin group/membership. Reports only what it `CORRECTED`. |
+| `pnpm keycloak:ensure` (`scripts/keycloak-ensure.sh`) | **Self-heal**: idempotent reconciler that restores auth to its known-good state — OOM-recovers Keycloak (768Mi + `-Xmx512m`), fixes realm flags + the cloudless-app `groups` mapper (`full.path=false`) + admin group/membership, **and restores the Pi `cloudless` app's auth wiring** (`cloudless-app-auth` secret + `envFrom`: AUTH_SECRET/KEYCLOAK_*(realm master)/AUTH_TRUST_HOST/AUTH_URL, via `wire-pi-keycloak.sh`) if it stops serving the keycloak provider. Reports only what it `CORRECTED`. |
 | `.github/workflows/keycloak-ensure.yml` | Runs `keycloak:ensure` on a **cron (`*/15`)** + dispatch + push; posts to #382 only when it corrects drift or auth is still broken (silent on healthy runs). This is the auto-recovery that brings auth back to the last working condition. |
 
 ## Triage workflow
