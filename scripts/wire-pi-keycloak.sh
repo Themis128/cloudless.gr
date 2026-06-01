@@ -51,13 +51,20 @@ if [ -z "$AUTH_SECRET" ] || [ -z "$KC_CID" ]; then
 fi
 echo "using: AUTH_SECRET(len=${#AUTH_SECRET}) ISSUER=$KC_ISSUER CLIENT_ID(len=${#KC_CID}) CLIENT_SECRET(len=${#KC_SECRET})"
 
+# AUTH_TRUST_HOST + AUTH_URL: Auth.js v5 reads these automatically. The Lambda
+# gets them from sst.config.ts; without AUTH_TRUST_HOST=true Auth.js throws
+# UntrustedHost ("server configuration" error). AUTH_URL is the canonical app URL
+# (matches the client's registered redirect_uri), not the pi-origin host.
+AUTH_URL_VAL="${AUTH_URL_VAL:-https://cloudless.gr}"
 echo "creating/updating secret $SECRET in ns/$NS"
 kubectl -n "$NS" create secret generic "$SECRET" \
   --from-literal=AUTH_SECRET="$AUTH_SECRET" \
+  --from-literal=AUTH_TRUST_HOST="true" \
+  --from-literal=AUTH_URL="$AUTH_URL_VAL" \
   --from-literal=KEYCLOAK_ISSUER="$KC_ISSUER" \
   --from-literal=KEYCLOAK_CLIENT_ID="$KC_CID" \
   --from-literal=KEYCLOAK_CLIENT_SECRET="$KC_SECRET" \
-  --dry-run=client -o yaml | kubectl apply -f - >/dev/null && echo "secret applied"
+  --dry-run=client -o yaml | kubectl apply -f - >/dev/null && echo "secret applied (incl. AUTH_TRUST_HOST + AUTH_URL=$AUTH_URL_VAL)"
 
 # Strategic-merge patch: merge into the named container; include BOTH envFrom
 # entries (envFrom is a list and gets replaced) so we keep pi-standby-aws-creds.
