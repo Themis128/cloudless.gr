@@ -62,13 +62,37 @@ Plus ESP32 hardware reset:
 | Workload | Before | After | Δ |
 |---|---|---|---|
 | Metabase | 927 MiB | ≤ 400 MiB | -527 MiB |
-| Keycloak | 494 MiB | ≤ 384 MiB | -110 MiB |
+| Keycloak | 494 MiB | ≤ 480 MiB | -14 MiB |
 | Home Assistant | 314 MiB | 0 (scaled to 0) | -314 MiB |
 | Oncall (engine+celery+db+redis) | ~900 MiB | 0 (scaled to 0) | -900 MiB |
-| **Total** | | | **≈ -1.85 GiB** |
+| **Total** | | | **≈ -1.75 GiB** |
 
 That should drop omv from ~93% → ~70% memory, kill kswapd, drop iowait to
 single digits, and bring k3s API back to fully responsive.
+
+## Correction (2026-06-01): Keycloak OOM crash-loop
+
+The original cap of **384 MiB** (with a `-Xmx320m` heap) was too tight: a
+320 MiB JVM heap plus Quarkus non-heap memory (metaspace, thread stacks, code
+cache, GC structures ≈ 180-220 MiB) exceeds 384 MiB, so the kernel OOMKilled
+Keycloak on startup. It entered `CrashLoopBackOff` and `auth.cloudless.gr`
+served `503 "no available server"` (Cloudflare tunnel origin down) — taking
+login, registration, and password-reset offline while the rest of the cluster
+stayed healthy.
+
+Fix: heap lowered to `-Xmx256m` and the container limit raised to **480 MiB**,
+leaving ~224 MiB of non-heap headroom. Net reclaim vs. the original uncapped
+494 MiB is smaller (-14 MiB) but Keycloak stays up. Reliability of the IdP
+outweighs the few extra MiB. Apply with:
+
+```bash
+# On omv-main (needs a responsive k3s API):
+kubectl apply -f k8s/cluster-protection/memory-relief-2026-05-31.yaml
+kubectl -n keycloak rollout restart deploy/keycloak
+kubectl -n keycloak rollout status  deploy/keycloak --timeout=180s
+# Verify: curl -sS -o /dev/null -w '%{http_code}\n' \
+#   https://auth.cloudless.gr/realms/master/.well-known/openid-configuration
+```
 
 ## How to apply
 

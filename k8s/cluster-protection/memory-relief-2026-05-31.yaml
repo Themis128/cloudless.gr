@@ -112,7 +112,15 @@ spec:
             limits:   { memory: 400Mi, cpu: 1 }
 
 ---
-# Keycloak — 494 Mi → 384 Mi cap. JVM heap set via JAVA_OPTS_KC_HEAP.
+# Keycloak — 494 Mi → 480 Mi cap. JVM heap set via JAVA_OPTS_KC_HEAP.
+#
+# IMPORTANT: the container limit MUST leave room for JVM non-heap memory
+# (Quarkus metaspace ~130-150 Mi, thread stacks, code cache, direct buffers,
+# GC structures — together ~180-220 Mi). The previous values (-Xmx320m under a
+# 384 Mi limit) left only ~64 Mi for all of that, so Keycloak was OOMKilled on
+# startup → CrashLoopBackOff → auth.cloudless.gr returned 503. A 256 Mi heap
+# under a 480 Mi limit gives ~224 Mi of non-heap headroom, which fits.
+# (-Xmx makes -XX:MaxRAMPercentage dead config, so it is dropped.)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -125,10 +133,10 @@ spec:
         - name: keycloak
           env:
             - name: JAVA_OPTS_KC_HEAP
-              value: "-Xms128m -Xmx320m -XX:MaxRAMPercentage=80.0"
+              value: "-Xms64m -Xmx256m"
           resources:
-            requests: { memory: 200Mi, cpu: 100m }
-            limits:   { memory: 384Mi, cpu: 1 }
+            requests: { memory: 256Mi, cpu: 100m }
+            limits:   { memory: 480Mi, cpu: 1 }
 
 ---
 # n8n — 117 Mi → 256 Mi cap (keep headroom for workflow spikes)
