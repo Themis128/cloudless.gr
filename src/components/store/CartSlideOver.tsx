@@ -4,11 +4,13 @@ import { useCart } from "@/context/CartContext";
 import { useState } from "react";
 import { formatPrice } from "@/lib/format-price";
 import ProductIcon from "@/components/store/ProductIcon";
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 export default function CartSlideOver() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice, totalItems } =
     useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const hasSubscription = items.some((item) => item.product.recurring);
   const hasOneTime = items.some((item) => !item.product.recurring);
@@ -16,8 +18,13 @@ export default function CartSlideOver() {
 
   const handleCheckout = async () => {
     setIsCheckingOut(true);
+    setCheckoutError(null);
     try {
-      const res = await fetch("/api/checkout", {
+      // fetchWithAuth attaches the Keycloak id_token when signed in, so the
+      // checkout route can pre-fill customer_email and tag the session with
+      // userId — linking the order to the account. Anonymous carts still work
+      // (no token → anonymous checkout).
+      const res = await fetchWithAuth("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -27,12 +34,15 @@ export default function CartSlideOver() {
           })),
         }),
       });
-      const data = await res.json();
-      if (data.url) {
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (res.ok && data.url) {
         window.location.href = data.url;
+        return;
       }
+      // Surface the failure instead of silently resetting the button.
+      setCheckoutError(data.error ?? "Checkout failed. Please try again.");
     } catch {
-      alert("Checkout failed. Please try again.");
+      setCheckoutError("Checkout failed. Please try again.");
     } finally {
       setIsCheckingOut(false);
     }
@@ -154,6 +164,14 @@ export default function CartSlideOver() {
                 <p className="text-neon-magenta bg-neon-magenta/10 border-neon-magenta/20 rounded-lg border px-3 py-2 font-mono text-xs">
                   Subscriptions and one-time items can&apos;t be purchased together. Please remove
                   one type before checking out.
+                </p>
+              )}
+              {checkoutError && (
+                <p
+                  role="alert"
+                  className="text-neon-magenta bg-neon-magenta/10 border-neon-magenta/20 rounded-lg border px-3 py-2 font-mono text-xs"
+                >
+                  {checkoutError}
                 </p>
               )}
               <button
