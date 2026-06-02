@@ -88,7 +88,9 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      activeDeadlineSeconds: 120
+      # Generous deadline: a cold image pull on the Pi can take >150s; once the
+      # image is cached (see nodeSelector below) a run finishes in a few seconds.
+      activeDeadlineSeconds: 300
       backoffLimit: 1
       template:
         metadata:
@@ -97,6 +99,10 @@ spec:
         spec:
           serviceAccountName: keycloak-autoheal
           restartPolicy: Never
+          # Pin to omv — the node Keycloak runs on, where the kubectl image is
+          # already cached, so the healer never stalls on a first-time pull.
+          nodeSelector:
+            kubernetes.io/hostname: omv
           # Tolerate the control-plane node taint if present — the healer must
           # be schedulable even when the cluster is under pressure.
           tolerations:
