@@ -237,5 +237,8 @@ if [ "$APPLY" = "1" ]; then
   log "   Verify: curl -sI https://${DOMAIN}/api/health  (200), then watch a"
   log "   forced-AWS-5xx flip to the Pi standby in the LB Analytics tab."
 else
-  log "== REPORT ONLY — nothing changed. Re-run with MODE=apply CONFIRM=1 to apply."
+  log "== REPORT ONLY — nothing changed."
+  log "   To apply the plan above (creates the LB + cuts apex/www DNS over):"
+  log "   GitHub -> Actions -> 'Cloudflare HA load balancer' -> Run workflow"
+  log "   -> set apply = true. Result + verification are posted back to #382."
 fi
