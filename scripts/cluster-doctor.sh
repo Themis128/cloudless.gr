@@ -120,6 +120,30 @@ else
   printf "_could not fetch /api/v1/rules (empty response)_\n"
 fi
 
+section "cloudless app: deployment (k3s standby E2E target)"
+k -n default get deploy cloudless -o wide | fence
+printf "Resource limits + env:\n"
+kubectl -n default get deploy cloudless \
+  -o jsonpath='{range .spec.template.spec.containers[*]}{.name}{"\n  limits="}{.resources.limits}{"\n  requests="}{.resources.requests}{"\n"}{end}' \
+  2>/dev/null | fence
+
+section "cloudless app: pods"
+k -n default get pods -l app=cloudless -o wide | fence
+printf "Container states:\n"
+kubectl -n default get pods -l app=cloudless -o jsonpath='{range .items[*]}{.metadata.name}{":\n"}{range .status.containerStatuses[*]}{"  restarts="}{.restartCount}{" ready="}{.ready}{" waiting="}{.state.waiting.reason}{" lastTerminated="}{.lastState.terminated.reason}{"(exit "}{.lastState.terminated.exitCode}{")\n"}{end}{end}' \
+  2>/dev/null | fence
+
+section "cloudless app: recent events"
+kubectl -n default get events --sort-by=.lastTimestamp --field-selector=involvedObject.kind=Pod 2>/dev/null \
+  | grep -i cloudless | tail -20 | fence
+
+section "cloudless app: logs (last 40 lines)"
+k -n default logs deploy/cloudless --tail=40 | fence
+
+section "cloudless app: logs (previous container, last 40 lines)"
+pod=$(kubectl -n default get pods -l app=cloudless -o name 2>/dev/null | head -1)
+[ -n "$pod" ] && k -n default logs "$pod" --previous --tail=40 | fence || printf "_no cloudless pod found_\n"
+
 printf "\n_End of snapshot._\n"
 
-# confirm-after-tune 20260601T141522Z
+# diagnose-cloudless-e2e-failure 20260602
