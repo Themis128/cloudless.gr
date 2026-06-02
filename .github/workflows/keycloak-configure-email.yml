@@ -16,6 +16,10 @@ name: Keycloak configure email verification
 #
 #   Then trigger this workflow via workflow_dispatch (leave inputs blank to read
 #   from SSM, or paste the credentials directly in the inputs).
+#
+#   It also re-runs on any push to main that touches this file or the script
+#   (push trigger below) — that path reads the credentials from SSM and is the
+#   idempotent way to (re)apply the SES SMTP config without the dispatch UI.
 
 on:
   workflow_dispatch:
