@@ -25,9 +25,13 @@ OVERRIDE_FILE="${OVERRIDE_DIR}/restart-always.conf"
 
 echo "=== k3s watchdog install $(date -u '+%F %T')Z ==="
 
-# Check k3s is installed
-if ! systemctl list-units --full --all 2>/dev/null | grep -q "k3s.service"; then
+# Check k3s is installed.
+# systemctl list-unit-files with sudo covers installed-but-inactive services;
+# plain list-units can miss k3s if it crashed and the runner lacks permissions.
+if ! sudo systemctl list-unit-files k3s.service 2>/dev/null | grep -q "k3s.service" && \
+   ! sudo systemctl list-units --full --all k3s.service 2>/dev/null | grep -q "k3s"; then
   echo "ERROR: k3s.service not found — is k3s installed on this host?"
+  echo "Tip: run 'which k3s' and 'sudo systemctl list-unit-files | grep k3s' to diagnose"
   exit 1
 fi
 
