@@ -6,8 +6,8 @@ These require access outside GitHub and cannot be automated from a cloud session
 
 | Item | Status | Action |
 |------|--------|--------|
-| `OMV_SSH_KEY` | **MISSING** | On Pi: `cat ~/.ssh/id_ed25519` → GitHub repo Settings → Secrets → `OMV_SSH_KEY`. Then `k3s-watchdog-deploy.yml` auto-triggers. See `.claude/skills/omv-ssh-key-setup/`. |
-| SES SMTP | **MISSING** | AWS Console → SES → SMTP Settings → Create SMTP credentials (one-time, save them). Then GitHub Actions → "Provision SES SMTP credentials" → Run workflow with `smtp_user` + `smtp_password` inputs. |
+| `OMV_SSH_KEY` | **AUTO-PROVISIONING** | `setup-omv-ssh-key.yml` runs on Pi runner, reads/generates key, sets secret, installs watchdog. Check #382 for result. If runner is offline, fall back: `cat ~/.ssh/id_ed25519` on Pi → GitHub repo Settings → Secrets → `OMV_SSH_KEY`. |
+| SES SMTP | **AUTO-PROVISIONING** | `provision-ses-smtp.yml` now attempts IAM auto-provision on path trigger. Check #382 for result. If IAM permission missing, fall back: AWS Console → SES → SMTP Settings → Create credentials → `workflow_dispatch` with `smtp_user` + `smtp_password`. |
 | ESP32 page content | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. ESP32 Devices + Telemetry databases (IDs confirmed correct, integration has access) are **empty** — no data was ever populated there to restore. |
 | Admin password | **ACTION REQUIRED** | Temp login posted to GitHub issue #382 (2026-06-02 17:18Z). Login at auth.cloudless.gr with `tbaltzakis@cloudless.gr` + temp password from #382. Keycloak forces password change on first login. |
 
