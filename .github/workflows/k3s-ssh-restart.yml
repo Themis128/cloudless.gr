@@ -38,17 +38,17 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-      - name: Check SSH key secret is set
+      - name: Check OMV_SSH_KEY secret is set
         run: |
-          if [ -z "${{ secrets.OMV_SSH_KEY }}${{ secrets.SSH_DEPLOY_KEY }}" ]; then
-            echo "::error::No Pi SSH key secret found (checked OMV_SSH_KEY and SSH_DEPLOY_KEY)."
-            echo "Add the Pi private key as a GitHub repo secret:"
+          if [ -z "${{ secrets.OMV_SSH_KEY }}" ]; then
+            echo "::error::OMV_SSH_KEY secret is not set."
+            echo "Add the Pi private key as a GitHub repo secret named OMV_SSH_KEY:"
             echo "  GitHub → Settings → Secrets → Actions → New repository secret"
-            echo "  Name: OMV_SSH_KEY  (or SSH_DEPLOY_KEY)"
-            echo "  Value: contents of ~/.ssh/id_ed25519 (same as OMV_SSH_KEY_CONTENTS session secret)"
+            echo "  Name: OMV_SSH_KEY"
+            echo "  Value: cat ~/.ssh/id_ed25519  (on the Pi, omv@100.113.41.119)"
             exit 1
           fi
-          [ -n "${{ secrets.OMV_SSH_KEY }}" ] && echo "OMV_SSH_KEY is set — proceeding" || echo "SSH_DEPLOY_KEY is set — proceeding"
+          echo "OMV_SSH_KEY is set — proceeding"
 
       - name: Connect to tailnet
         uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
@@ -73,9 +73,7 @@ jobs:
       - name: Install SSH key
         run: |
           mkdir -p ~/.ssh
-          KEY="${{ secrets.OMV_SSH_KEY }}"
-          [ -z "$KEY" ] && KEY="${{ secrets.SSH_DEPLOY_KEY }}"
-          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
