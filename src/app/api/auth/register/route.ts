@@ -2,27 +2,12 @@ import { NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
 import { isValidEmail } from "@/lib/validation";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { getAdminToken, parseRealm, sendVerifyEmail } from "@/lib/keycloak-admin";
 
 interface RegisterBody {
   email: string;
   password: string;
   fullName?: string;
-}
-
-async function getAdminToken(tokenUrl: string, clientId: string, clientSecret: string) {
-  const res = await globalThis.fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: clientId,
-      client_secret: clientSecret,
-    }).toString(),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) throw new Error(`Admin token request failed: ${res.status}`);
-  const data = (await res.json()) as { access_token: string };
-  return data.access_token;
 }
 
 export async function POST(req: Request) {
@@ -35,11 +20,11 @@ export async function POST(req: Request) {
   }
 
   // issuer = https://auth.cloudless.gr/realms/master
-  const realmMatch = issuer.match(/^(https?:\/\/[^/]+)\/realms\/([^/]+)$/);
-  if (!realmMatch) {
+  const parsed = parseRealm(issuer);
+  if (!parsed) {
     return NextResponse.json({ error: "Registration not available" }, { status: 503 });
   }
-  const [, kcBase, realm] = realmMatch;
+  const { kcBase, realm } = parsed;
 
   let body: RegisterBody;
   try {
@@ -105,25 +90,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Registration failed" }, { status: 400 });
     }
 
-    // Send verification email via the app client so the link returns to cloudless.gr
+    // Send verification email via the app client so the link returns to
+    // cloudless.gr. Best-effort: if SMTP is not yet configured the email
+    // silently fails; the VERIFY_EMAIL required action still blocks sign-in
+    // until the user verifies (recoverable via /api/auth/resend-verification).
     const userId = createRes.headers.get("Location")?.split("/").pop();
     if (userId) {
-      const appClientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID ?? "cloudless-app";
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
-      const params = new URLSearchParams({ client_id: appClientId });
-      if (siteUrl) params.set("redirect_uri", `${siteUrl}/api/auth/callback/keycloak`);
-      // Best-effort: if SMTP is not yet configured the email silently fails;
-      // the VERIFY_EMAIL required action still blocks sign-in until verified.
-      await globalThis
-        .fetch(
-          `${kcBase}/admin/realms/${realm}/users/${userId}/send-verify-email?${params.toString()}`,
-          {
-            method: "PUT",
-            headers: { Authorization: `Bearer ${adminToken}` },
-            signal: AbortSignal.timeout(8_000),
-          }
-        )
-        .catch(() => {});
+      await sendVerifyEmail(kcBase, realm, adminToken, userId).catch(() => {});
     }
 
     return NextResponse.json({ ok: true });
