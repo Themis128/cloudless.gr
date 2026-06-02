@@ -21,8 +21,8 @@
 set -uo pipefail
 
 NS="${ANALYTICS_NS:-analytics}"
-METABASE_MEM_LIMIT="${METABASE_MEM_LIMIT:-600Mi}"
-METABASE_JAVA_OPTS="${METABASE_JAVA_OPTS:--Xmx480m -Xms128m}"
+METABASE_MEM_LIMIT="${METABASE_MEM_LIMIT:-1Gi}"
+METABASE_JAVA_OPTS="${METABASE_JAVA_OPTS:--Xmx768m -Xms128m}"
 DUCKDB_MEM_LIMIT="${DUCKDB_MEM_LIMIT:-1500Mi}"
 
 note() { printf "[analytics-restore] %s\n" "$*"; }
@@ -57,8 +57,8 @@ MB_LIMIT=$(deploy_live_limit metabase)
 
 note "Metabase: restarts=${MB_RESTARTS} lastExit=${MB_EXIT:-none} liveLimit=${MB_LIMIT}"
 
-if [ "$MB_EXIT" = "OOMKilled" ] || [ "${MB_RESTARTS:-0}" -gt 3 ] || [ "$MB_LIMIT" = "400Mi" ]; then
-  note "Metabase needs recovery (OOMKilled or limit=400Mi) → patching to ${METABASE_MEM_LIMIT}"
+if [ "$MB_EXIT" = "OOMKilled" ] || [ "${MB_RESTARTS:-0}" -gt 3 ] || [ "$MB_LIMIT" = "400Mi" ] || [ "$MB_LIMIT" = "600Mi" ]; then
+  note "Metabase needs recovery (OOMKilled or limit≤600Mi) → patching to ${METABASE_MEM_LIMIT}"
   PATCH=$(printf '{"spec":{"template":{"spec":{"containers":[{"name":"metabase","resources":{"requests":{"memory":"256Mi","cpu":"100m"},"limits":{"memory":"%s","cpu":"1"}},"env":[{"name":"JAVA_OPTS","value":"%s"},{"name":"MB_JETTY_MAXTHREADS","value":"20"}]}]}}}}' \
     "$METABASE_MEM_LIMIT" "$METABASE_JAVA_OPTS")
   kubectl -n "$NS" patch deploy metabase --type=strategic -p "$PATCH" >/dev/null 2>&1 && \

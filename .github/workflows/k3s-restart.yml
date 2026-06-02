@@ -86,3 +86,5 @@ jobs:
             cat k3s.log 2>/dev/null || echo "(no log)"
             echo '```'
           } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
+
+# re-trigger-20260602a
