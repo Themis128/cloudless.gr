@@ -43,7 +43,7 @@ async function loadSsmParams(prefix: string): Promise<Map<string, string>> {
 }
 
 async function fireDeployNotification(prefix: string, params: Map<string, string>): Promise<void> {
-  console.warn(`[Instrumentation] Loaded ${params.size} SSM parameters from ${prefix}`);
+  console.log(`[Instrumentation] Loaded ${params.size} SSM parameters from ${prefix}`);
   const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "unknown";
   const stage = process.env.SST_STAGE ?? process.env.NODE_ENV ?? "production";
   if (version === "unknown" || version === lastNotifiedVersion) return;
