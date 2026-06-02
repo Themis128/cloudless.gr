@@ -1,5 +1,5 @@
 name: Cluster doctor (read-only diagnostics)
-# triggered 2026-06-02T06:28 — Pi runner offline, pi-origin.cloudless.gr unreachable
+# triggered 2026-06-02T07:28 — pi-origin CSP failure triage, React hydration check
 
 # Read-only visibility into the omv k3s cluster from CI. Runs scripts/cluster-
 # doctor.sh over Tailscale + KUBECONFIG_B64 and posts the snapshot as a comment
