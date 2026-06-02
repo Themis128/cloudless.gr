@@ -14,9 +14,10 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-// Mock next/link to render a plain anchor
-vi.mock("next/link", () => ({
-  default: ({
+// Mock @/i18n/navigation (locale-aware Link) to render a plain anchor.
+// StoreGrid uses Link from @/i18n/navigation since the migration from next/link.
+vi.mock("@/i18n/navigation", () => ({
+  Link: ({
     children,
     href,
     ...props
@@ -25,10 +26,12 @@ vi.mock("next/link", () => ({
     href: string;
     [key: string]: unknown;
   }) => (
-    <a href={href} {...props}>
+    <a href={String(href)} {...props}>
       {children}
     </a>
   ),
+  useRouter: () => ({ push: () => {}, replace: () => {}, back: () => {} }),
+  usePathname: () => "/",
 }));
 
 const mockProduct: StoreProduct = {

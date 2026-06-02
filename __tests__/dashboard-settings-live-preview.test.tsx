@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useAuth } from "@/context/AuthContext";
 
-// next/link is fine in jsdom; only the locale + auth hooks need mocking.
+// Mock @/i18n/navigation so the Link component doesn't need an IntlProvider.
+vi.mock("@/i18n/navigation", () => ({
+  Link: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
+    <a href={String(href)} {...props}>{children}</a>
+  ),
+  useRouter: () => ({ push: () => {}, replace: () => {}, back: () => {} }),
+  usePathname: () => "/",
+}));
 vi.mock("@/context/AuthContext", () => ({ useAuth: vi.fn() }));
 vi.mock("@/lib/use-locale", () => ({
   useCurrentLocale: () => ["en", () => {}],
