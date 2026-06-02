@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
