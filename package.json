@@ -41,6 +41,7 @@
     "notion:test": "tsx --tsconfig scripts/tsconfig.json scripts/notion-test.ts",
     "gh:secrets": "tsx --tsconfig scripts/tsconfig.json scripts/gh-secrets.ts",
     "ses:provision": "tsx --tsconfig scripts/tsconfig.json scripts/provision-ses-smtp.ts",
+    "domain:decommission": "bash scripts/domain-decommission.sh",
     "gsc:sync": "tsx --tsconfig scripts/tsconfig.json scripts/weekly-gsc-sync.ts",
     "newsletter:draft": "tsx --tsconfig scripts/tsconfig.json scripts/generate-weekly-article.ts",
     "newsletter:send": "tsx --tsconfig scripts/tsconfig.json scripts/publish-and-send-newsletter.ts",
