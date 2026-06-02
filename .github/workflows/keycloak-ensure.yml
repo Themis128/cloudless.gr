@@ -46,6 +46,8 @@ jobs:
 
       - name: Reconcile
         id: reconcile
+        env:
+          KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
         run: |
           set -uo pipefail
           bash scripts/keycloak-ensure.sh > ensure.log 2>&1

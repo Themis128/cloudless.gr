@@ -1,13 +1,13 @@
-name: keycloak-finalize-admin — set permanent admin password (no browser login needed)
-# re-triggered 2026-06-02d — fix pipe-masks-exit-code, add pod-lookup retry, re-run after apiserver recovery
+name: keycloak-finalize-admin — set permanent admin password (REST API, no kubectl)
+# re-triggered 2026-06-02e — rewritten to use Keycloak REST API; no Tailscale/kubectl needed
 
-# Sets a permanent admin password for tbaltzakis@cloudless.gr using the
-# Keycloak pod's own internal service admin credentials (never exposed, never
-# in git). Clears the UPDATE_PASSWORD required action so the admin can log in
-# immediately without being prompted to change the password first.
+# Sets a permanent admin password for tbaltzakis@cloudless.gr and grants
+# realm-management:realm-admin so the user can access auth.cloudless.gr/admin.
 #
-# Use after keycloak-bootstrap-admin sets a temporary password — this converts
-# it to a usable permanent credential without any browser interaction.
+# Uses the Keycloak REST admin API directly — auth.cloudless.gr must be reachable
+# (it always is). Works even when k3s apiserver or kubelet proxy is returning 502.
+#
+# Requires: ADMIN_BOOTSTRAP_PASSWORD secret (Keycloak internal admin password).
 
 on:
   push:
@@ -26,10 +26,16 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: keycloak-finalize-admin
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   finalize:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
       ADMIN_EMAIL: ${{ github.event.inputs.admin_email || 'tbaltzakis@cloudless.gr' }}
@@ -37,19 +43,11 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
-
-      - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-
-      - name: Finalize admin account (permanent password, clear UPDATE_PASSWORD)
+      - name: Finalize admin account (permanent password + realm-admin via REST API)
         shell: bash
+        env:
+          KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
+          ADMIN_EMAIL: ${{ github.event.inputs.admin_email || 'tbaltzakis@cloudless.gr' }}
         run: |
           set -o pipefail
           bash scripts/keycloak-finalize-admin.sh 2>&1 | tee finalize.log
@@ -61,7 +59,7 @@ jobs:
             echo "# Keycloak admin finalized — $(date -u '+%F %T')Z"
             echo ""
             echo "> Permanent password set. UPDATE_PASSWORD required action cleared."
-            echo "> Log in at **https://cloudless.gr** → Account or **https://auth.cloudless.gr**"
+            echo "> Log in at **https://cloudless.gr** → Account or **https://auth.cloudless.gr/admin**"
             echo ""
             echo '```'
             cat finalize.log 2>/dev/null || echo "(no log)"

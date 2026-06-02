@@ -1,86 +1,114 @@
 #!/usr/bin/env bash
 #
-# keycloak-finalize-admin.sh — set a permanent admin password, bypassing the
-# UPDATE_PASSWORD required action that a previous bootstrap-admin run created.
+# keycloak-finalize-admin.sh — set permanent admin password and grant realm-admin
+# via the Keycloak REST admin API.
 #
-# Uses the Keycloak pod's own KEYCLOAK_ADMIN/KEYCLOAK_ADMIN_PASSWORD env vars
-# (the internal service admin — credentials never leave the pod) to authenticate
-# via kcadm, then:
-#   1. Generates a strong random permanent password
-#   2. Sets it on ADMIN_EMAIL (no --temporary flag — no forced change on login)
-#   3. Clears any UPDATE_PASSWORD required action on the user
-#   4. Posts the new credentials to issue #382 so the human can log in and use them
+# No kubectl / kcadm / Tailscale required. Works even when the k3s apiserver or
+# the kubelet proxy is returning 502 Bad Gateway — auth.cloudless.gr only needs
+# to be publicly reachable (it always is).
 #
-# After this runs, the admin can log into auth.cloudless.gr immediately without
-# being forced to change the password.
+# What this does:
+#   1. Authenticates to the Keycloak admin REST API using KEYCLOAK_ADMIN_PASSWORD
+#   2. Generates and sets a strong permanent password on ADMIN_EMAIL
+#   3. Clears the UPDATE_PASSWORD required action (no forced change on login)
+#   4. Grants realm-management:realm-admin so the user can access /admin console
 #
-# Fix vs v1: uses separate non-interactive kubectl exec calls (no -i + heredoc)
-# to avoid websocket close 1006 (abnormal closure) that killed v1.
+# Required env:
+#   KEYCLOAK_ADMIN_PASSWORD   — Keycloak internal admin password (ADMIN_BOOTSTRAP_PASSWORD secret)
+#
+# Optional env:
+#   ADMIN_EMAIL               — target user (default: tbaltzakis@cloudless.gr)
+#   REALM                     — default: master
+#   KEYCLOAK_URL              — default: https://auth.cloudless.gr
+#   KEYCLOAK_ADMIN            — internal admin username (default: admin)
 
 set -uo pipefail
 
-NAMESPACE="${NAMESPACE:-keycloak}"
-DEPLOYMENT="${DEPLOYMENT:-keycloak}"
 REALM="${REALM:-master}"
+KEYCLOAK_URL="${KEYCLOAK_URL:-https://auth.cloudless.gr}"
+KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-tbaltzakis@cloudless.gr}"
-ISSUE="${ISSUE:-382}"
-K=/opt/keycloak/bin/kcadm.sh
 
-command -v kubectl >/dev/null 2>&1 || { echo "error: kubectl not found"; exit 1; }
+: "${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required (ADMIN_BOOTSTRAP_PASSWORD secret)}"
 
-# Retry pod lookup up to 5×10s in case the apiserver is briefly unavailable.
-POD=""
-for _i in 1 2 3 4 5; do
-  POD=$(kubectl -n "$NAMESPACE" get pod -l app="$DEPLOYMENT" \
-    -o jsonpath='{.items[0].metadata.name}' 2>&1)
-  # success if POD looks like a pod name (not an error message)
-  printf '%s' "$POD" | grep -qvE '^(error|Error|connection|the server)' && [ -n "$POD" ] && break
-  echo "pod lookup attempt $_i failed: $POD — retrying in 10s..."
-  POD=""
-  sleep 10
-done
-[ -n "$POD" ] || { echo "error: no $DEPLOYMENT pod in ns/$NAMESPACE after 5 attempts"; exit 1; }
-echo "POD=$POD"
+echo "== keycloak-finalize-admin $(date -u '+%F %T')Z =="
+echo "url=$KEYCLOAK_URL realm=$REALM target=$ADMIN_EMAIL"
 
-# Generate permanent password and print it first so it appears in the GitHub
-# Actions log (captured and posted to issue #382 by the workflow).
-# Private repo / private issue — acceptable security model.
+# --- 1) Authenticate ---
+TOKEN=$(curl -sf --max-time 15 \
+  -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "client_id=admin-cli" \
+  --data-urlencode "username=${KEYCLOAK_ADMIN}" \
+  --data-urlencode "password=${KEYCLOAK_ADMIN_PASSWORD}" \
+  --data-urlencode "grant_type=password" \
+  2>&1) || { echo "ADMIN_AUTH=failed (curl error: $TOKEN)"; exit 1; }
+TOKEN=$(printf '%s' "$TOKEN" | python3 -c \
+  'import sys,json; d=json.load(sys.stdin); print(d.get("access_token",""))' 2>/dev/null || true)
+[ -n "$TOKEN" ] || { echo "ADMIN_AUTH=failed (empty token — wrong password or Keycloak unreachable)"; exit 1; }
+echo "ADMIN_AUTH=ok"
+
+# --- 2) Generate and announce the permanent password ---
 PERM_PASSWORD="Cld-$(head -c 16 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 14)-Zz9!"
 echo "PERM_LOGIN email=${ADMIN_EMAIL} password=${PERM_PASSWORD}"
 echo "realm=${REALM}"
 
-# Step 1 — authenticate kcadm using the pod's own service-admin credentials.
-# No -i flag: non-interactive exec, no stdin, no websocket issue.
-kubectl -n "$NAMESPACE" exec "$POD" -- bash -c \
-  'AU="${KEYCLOAK_ADMIN:-${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}}"; AP="${KEYCLOAK_ADMIN_PASSWORD:-${KC_BOOTSTRAP_ADMIN_PASSWORD:-}}"; '"$K"' config credentials --server http://localhost:8080 --realm master --user "$AU" --password "$AP" >/dev/null 2>&1 && echo "ADMIN_AUTH=ok" || { echo "ADMIN_AUTH=failed"; exit 1; }'
-
-# Step 2 — look up the target user's ID.
-USERID=$(kubectl -n "$NAMESPACE" exec "$POD" -- \
-  "$K" get users -r "$REALM" -q "username=${ADMIN_EMAIL}" \
-  --format csv --noquotes 2>/dev/null \
-  | head -1 | cut -d, -f1)
+# --- 3) Find the target user by email ---
+USERID=$(curl -sf --max-time 15 -G \
+  --data-urlencode "email=${ADMIN_EMAIL}" \
+  --data-urlencode "exact=true" \
+  "${KEYCLOAK_URL}/admin/realms/${REALM}/users" \
+  -H "Authorization: Bearer ${TOKEN}" 2>/dev/null \
+  | python3 -c 'import sys,json; u=json.load(sys.stdin); print(u[0]["id"] if u else "")' 2>/dev/null || true)
 [ -n "$USERID" ] || { echo "USER_NOT_FOUND=${ADMIN_EMAIL}"; exit 1; }
 echo "USER_FOUND=$USERID"
 
-# Step 3 — set permanent password (--temporary=false → no forced change on login).
-kubectl -n "$NAMESPACE" exec "$POD" -- \
-  "$K" set-password -r "$REALM" --userid "$USERID" \
-  --new-password "$PERM_PASSWORD" --temporary=false \
-  && echo "PASSWORD=set_permanent" || { echo "PASSWORD=failed"; exit 1; }
+# --- 4) Set permanent password ---
+HTTP=$(curl -sf --max-time 15 -o /dev/null -w "%{http_code}" \
+  -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/users/${USERID}/reset-password" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "$(python3 -c "import json; print(json.dumps({'type':'password','value':'${PERM_PASSWORD}','temporary':False}))")")
+[ "$HTTP" = "204" ] && echo "PASSWORD=set_permanent" \
+  || { echo "PASSWORD=failed (HTTP ${HTTP})"; exit 1; }
 
-# Step 4 — clear UPDATE_PASSWORD required action.
-kubectl -n "$NAMESPACE" exec "$POD" -- \
-  "$K" update "users/$USERID" -r "$REALM" -s 'requiredActions=[]' \
-  && echo "REQUIRED_ACTIONS=cleared" || echo "REQUIRED_ACTIONS=clear_failed"
+# --- 5) Clear UPDATE_PASSWORD required action ---
+HTTP=$(curl -sf --max-time 15 -o /dev/null -w "%{http_code}" \
+  -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/users/${USERID}" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"requiredActions":[]}')
+[ "$HTTP" = "204" ] && echo "REQUIRED_ACTIONS=cleared" \
+  || echo "REQUIRED_ACTIONS=clear_failed (HTTP ${HTTP}) — non-fatal"
 
-# Step 5 — grant realm-admin role so the user can access the Keycloak Admin Console.
-# Without this the user sees "You do not have permission" at auth.cloudless.gr/admin.
-kubectl -n "$NAMESPACE" exec "$POD" -- \
-  "$K" add-roles -r "$REALM" --uusername "$ADMIN_EMAIL" \
-  --cclientid realm-management --rolename realm-admin 2>/dev/null \
-  && echo "REALM_ADMIN=granted" || echo "REALM_ADMIN=grant_failed_or_already_set"
+# --- 6) Find realm-management client ---
+CLIENT_ID=$(curl -sf --max-time 15 -G \
+  --data-urlencode "clientId=realm-management" \
+  "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
+  -H "Authorization: Bearer ${TOKEN}" 2>/dev/null \
+  | python3 -c 'import sys,json; c=json.load(sys.stdin); print(c[0]["id"] if c else "")' 2>/dev/null || true)
+[ -n "$CLIENT_ID" ] || { echo "REALM_ADMIN=realm-management_client_not_found (non-fatal)"; exit 0; }
+
+# --- 7) Get realm-admin role representation ---
+ROLE_JSON=$(curl -sf --max-time 15 \
+  "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${CLIENT_ID}/roles/realm-admin" \
+  -H "Authorization: Bearer ${TOKEN}" 2>/dev/null || true)
+ROLE_ID=$(printf '%s' "$ROLE_JSON" | python3 -c \
+  'import sys,json; d=json.load(sys.stdin); print(d["id"])' 2>/dev/null || true)
+[ -n "$ROLE_ID" ] || { echo "REALM_ADMIN=realm-admin_role_not_found (non-fatal)"; exit 0; }
+
+# --- 8) Assign realm-admin to the user ---
+HTTP=$(curl -sf --max-time 15 -o /dev/null -w "%{http_code}" \
+  -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users/${USERID}/role-mappings/clients/${CLIENT_ID}" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "[{\"id\":\"${ROLE_ID}\",\"name\":\"realm-admin\"}]")
+case "$HTTP" in
+  204) echo "REALM_ADMIN=granted" ;;
+  409) echo "REALM_ADMIN=already_granted" ;;
+  *)   echo "REALM_ADMIN=grant_failed (HTTP ${HTTP})" ;;
+esac
 
 echo ""
 echo "=== keycloak-finalize-admin complete ==="
-echo "PERMANENT_CREDENTIALS email=${ADMIN_EMAIL}"
-echo "(password logged above — check issue #${ISSUE} comment)"
+echo "Login at https://auth.cloudless.gr/admin — credentials above."
