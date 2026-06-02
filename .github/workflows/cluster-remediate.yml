@@ -61,7 +61,7 @@ jobs:
 
           echo "" >> ntfy.log
           echo "=== ntfy — recent logs (database lock check) ===" | tee -a ntfy.log
-          kubectl -n ntfy logs deployment/ntfy --tail=10 2>&1 | tee -a ntfy.log || true
+          timeout 20s kubectl -n ntfy logs deployment/ntfy --tail=10 2>&1 | tee -a ntfy.log || true
 
       - name: Fix Keycloak last-applied annotation
         run: |
