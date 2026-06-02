@@ -108,9 +108,18 @@ printf "envFrom secrets: "
 kubectl -n "$CLOUDLESS_NS" get deploy cloudless \
   -o jsonpath='{range .spec.template.spec.containers[*]}{range .envFrom[*]}{.secretRef.name}{" "}{end}{end}' \
   2>/dev/null
-printf "\nAUTH_URL=%s  AUTH_TRUST_HOST=%s\n" \
-  "$(kubectl -n "$CLOUDLESS_NS" get deploy cloudless -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="AUTH_URL")].value}' 2>/dev/null)" \
-  "$(kubectl -n "$CLOUDLESS_NS" get deploy cloudless -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="AUTH_TRUST_HOST")].value}' 2>/dev/null)"
+# AUTH_URL/AUTH_TRUST_HOST live in the cloudless-app-auth envFrom secret, not
+# in the deployment's direct .env array — read from the secret as the source of truth.
+_auth_url="$(kubectl -n "$CLOUDLESS_NS" get secret cloudless-app-auth \
+  -o jsonpath='{.data.AUTH_URL}' 2>/dev/null | base64 -d 2>/dev/null || true)"
+_auth_trust="$(kubectl -n "$CLOUDLESS_NS" get secret cloudless-app-auth \
+  -o jsonpath='{.data.AUTH_TRUST_HOST}' 2>/dev/null | base64 -d 2>/dev/null || true)"
+# Fall back to direct env check (in case the secret approach fails)
+[ -z "$_auth_url" ] && _auth_url="$(kubectl -n "$CLOUDLESS_NS" get deploy cloudless \
+  -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="AUTH_URL")].value}' 2>/dev/null)"
+[ -z "$_auth_trust" ] && _auth_trust="$(kubectl -n "$CLOUDLESS_NS" get deploy cloudless \
+  -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="AUTH_TRUST_HOST")].value}' 2>/dev/null)"
+printf "\nAUTH_URL=%s  AUTH_TRUST_HOST=%s\n" "$_auth_url" "$_auth_trust"
 
 section "cloudless app: pods"
 k -n "$CLOUDLESS_NS" get pods -o wide | fence

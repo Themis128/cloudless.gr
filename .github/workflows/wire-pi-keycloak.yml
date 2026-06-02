@@ -1,5 +1,5 @@
 name: Wire Pi Keycloak auth (k3s standby)
-# re-triggered 2026-06-02b — re-wire AUTH_URL + AUTH_TRUST_HOST (empty after keycloak ensure)
+# re-triggered 2026-06-02c — re-wire after confirming doctor reads from secret (not direct env)
 
 # Gives the k3s `cloudless` app working next-auth/Keycloak by sourcing
 # AUTH_SECRET/KEYCLOAK_* from SSM (same as the Lambda), storing them in a k8s
