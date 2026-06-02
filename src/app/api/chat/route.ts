@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { escapeHtml } from "@/lib/escape-html";
 import { runBedrockChatLoop } from "@/lib/bedrock-chat";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -108,6 +109,9 @@ function sseStreamFromText(text: string): ReadableStream<Uint8Array> {
 // ---------------------------------------------------------------------------
 
 export async function POST(request: NextRequest) {
+  const rl = rateLimit(`chat:${getClientIp(request)}`, 10, 60_000);
+  if (!rl.ok) return rl.response;
+
   let messages: { role: "user" | "assistant"; content: string }[];
   try {
     const body = await request.json();
