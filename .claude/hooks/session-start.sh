@@ -3,6 +3,8 @@
 #
 # Required session secrets (set in Claude Code web UI → session settings → Secrets):
 #   GITHUB_PAT           — GitHub Personal Access Token for git push/PR operations
+#   AWS_ACCESS_KEY_ID    — AWS credentials for SSM secret fetch (optional if role-based)
+#   AWS_SECRET_ACCESS_KEY
 #   TAILSCALE_AUTH_KEY   — ephemeral Tailscale auth key (tailscale.com/admin/settings/keys)
 #   OMV_SSH_KEY_CONTENTS — base64-encoded SSH private key (base64 -w0 ~/.ssh/id_ed25519)
 
@@ -13,9 +15,23 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
 
+SETTINGS_FILE="${HOME}/.claude/settings.json"
+
+# ── Helper: write a key=value into the settings.json env block ─────────────────
+inject_env() {
+  local key="$1" value="$2"
+  python3 - "$key" "$value" "$SETTINGS_FILE" << 'PY'
+import json, sys
+key, value, path = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(path) as f:
+  d = json.load(f)
+d.setdefault("env", {})[key] = value
+with open(path, "w") as f:
+  json.dump(d, f, indent=4)
+PY
+}
+
 # ── GitHub PAT ─────────────────────────────────────────────────────────────────
-# Auto-configure git credentials so every git push works without embedding
-# the token in remote URLs or being prompted for a password.
 
 if [ -n "${GITHUB_PAT:-}" ]; then
   echo "[session-start] Configuring git auth with GITHUB_PAT..."
@@ -26,9 +42,47 @@ echo "password=${GITHUB_PAT}"
 CRED_EOF
   chmod +x /tmp/gh-cred-helper.sh
   git config --global credential.helper "/tmp/gh-cred-helper.sh"
-  echo "[session-start] Git auth ready — git push will use GITHUB_PAT automatically."
+  echo "[session-start] Git auth ready."
 else
   echo "[session-start] GITHUB_PAT not set — git push will require manual auth." >&2
+fi
+
+# ── AWS SSM — fetch all /cloudless/production/* secrets ───────────────────────
+# Runs if AWS credentials are present (via session secrets or instance role).
+# Writes every fetched param into ~/.claude/settings.json env block so MCP
+# servers (Notion, HubSpot, etc.) and tools pick them up without extra config.
+
+SSM_PREFIX="/cloudless/production"
+
+if aws sts get-caller-identity --region us-east-1 &>/dev/null; then
+  echo "[session-start] AWS credentials found — fetching SSM params from ${SSM_PREFIX}..."
+  PARAMS=$(aws ssm get-parameters-by-path \
+    --path "$SSM_PREFIX" \
+    --with-decryption \
+    --recursive \
+    --query "Parameters[*].{Name:Name,Value:Value}" \
+    --output json \
+    --region us-east-1 2>/dev/null) || PARAMS="[]"
+
+  COUNT=$(echo "$PARAMS" | python3 -c "import sys,json; params=json.load(sys.stdin); [print(p['Name'].split('/')[-1]+'='+p['Value']) for p in params]" 2>/dev/null | wc -l)
+
+  echo "$PARAMS" | python3 - "$SETTINGS_FILE" "$SSM_PREFIX" << 'PY'
+import json, sys
+params_json, settings_path, prefix = sys.stdin.read(), sys.argv[1], sys.argv[2]
+params = json.loads(params_json)
+with open(settings_path) as f:
+  settings = json.load(f)
+env = settings.setdefault("env", {})
+for p in params:
+  key = p["Name"].replace(f"{prefix}/", "")
+  env[key] = p["Value"]
+with open(settings_path, "w") as f:
+  json.dump(settings, f, indent=4)
+PY
+
+  echo "[session-start] Injected ${COUNT} SSM params into settings.json env block."
+else
+  echo "[session-start] No AWS credentials — skipping SSM fetch." >&2
 fi
 
 # ── Tailscale ──────────────────────────────────────────────────────────────────
