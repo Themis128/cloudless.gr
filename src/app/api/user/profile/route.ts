@@ -63,6 +63,7 @@ export async function POST(req: Request) {
   try {
     const res = await globalThis.fetch(accountUrl, {
       headers: { ...authHeader, Accept: "application/json" },
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
       return NextResponse.json(
@@ -104,6 +105,7 @@ export async function POST(req: Request) {
       method: "POST",
       headers: { ...authHeader, "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10_000),
     });
     if (res.ok) {
       return NextResponse.json({ ok: true });

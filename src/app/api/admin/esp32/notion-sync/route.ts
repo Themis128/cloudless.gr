@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { safeEqual } from "@/lib/cron-auth";
+import { getConfig } from "@/lib/ssm-config";
 import {
   isEsp32NotionConfigured,
   getEsp32NotionConfig,
@@ -53,7 +54,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   // Allow either an authenticated admin OR a server-to-server cron call with
   // the shared secret. Cron path is used by cron-invoker.ts in Lambda.
-  const cronSecret = process.env.CRON_SECRET;
+  const cfg = await getConfig().catch(() => null);
+  const cronSecret = cfg?.CRON_SECRET ?? process.env.CRON_SECRET;
   const headerSecret = request.headers.get("x-cron-secret");
   const isCron =
     cronSecret &&
