@@ -32,8 +32,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
-      NOTION_ESP32_DEVICES_DB_ID: ${{ secrets.NOTION_ESP32_DEVICES_DB_ID }}
-      NOTION_ESP32_TELEMETRY_DB_ID: ${{ secrets.NOTION_ESP32_TELEMETRY_DB_ID }}
+      NOTION_ESP32_DEVICES_DB_ID: 022b2212-995b-4e29-8c3c-900297b435b9
+      NOTION_ESP32_TELEMETRY_DB_ID: 3214d53d-90ff-4b7a-81c3-f689a92ee167
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
