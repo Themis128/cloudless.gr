@@ -48,9 +48,10 @@ TOKEN=$(printf '%s' "$TOKEN" | python3 -c \
 [ -n "$TOKEN" ] || { echo "ADMIN_AUTH=failed (empty token — wrong password or Keycloak unreachable)"; exit 1; }
 echo "ADMIN_AUTH=ok"
 
-# --- 2) Generate and announce the permanent password ---
+# --- 2) Generate the permanent password and mask it from CI logs ---
 PERM_PASSWORD="Cld-$(head -c 16 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 14)-Zz9!"
-echo "PERM_LOGIN email=${ADMIN_EMAIL} password=${PERM_PASSWORD}"
+echo "::add-mask::$PERM_PASSWORD"
+echo "PERM_LOGIN email=${ADMIN_EMAIL} password=*** (masked — check SSM /cloudless/production/KEYCLOAK_ADMIN_PERMANENT_PASSWORD)"
 echo "realm=${REALM}"
 
 # --- 3) Find the target user by email ---
@@ -71,6 +72,20 @@ HTTP=$(curl -sf --max-time 15 -o /dev/null -w "%{http_code}" \
   -d "$(python3 -c "import json; print(json.dumps({'type':'password','value':'${PERM_PASSWORD}','temporary':False}))")")
 [ "$HTTP" = "204" ] && echo "PASSWORD=set_permanent" \
   || { echo "PASSWORD=failed (HTTP ${HTTP})"; exit 1; }
+
+# Store the new permanent password to SSM so it can be retrieved securely.
+# AWS credentials must be available (keycloak-finalize-admin.yml configures OIDC).
+if command -v aws >/dev/null 2>&1; then
+  aws ssm put-parameter \
+    --name /cloudless/production/KEYCLOAK_ADMIN_PERMANENT_PASSWORD \
+    --type SecureString \
+    --overwrite \
+    --value "$PERM_PASSWORD" \
+    --description "Permanent password for ${ADMIN_EMAIL} — set by keycloak-finalize-admin" \
+    --region us-east-1 >/dev/null 2>&1 \
+    && echo "SSM_WRITE=done (/cloudless/production/KEYCLOAK_ADMIN_PERMANENT_PASSWORD)" \
+    || echo "SSM_WRITE=skipped (no aws perms or param store unavailable — non-fatal)"
+fi
 
 # --- 5) Clear UPDATE_PASSWORD required action ---
 HTTP=$(curl -sf --max-time 15 -o /dev/null -w "%{http_code}" \
