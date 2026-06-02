@@ -43,21 +43,21 @@ jobs:
           set -uo pipefail
 
           echo "=== ntfy — current pods ===" | tee ntfy.log
-          kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log
+          timeout 15s kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log || true
 
           echo "" >> ntfy.log
-          echo "=== ntfy — deleting Error/Failed pods ===" | tee -a ntfy.log
-          STUCK=$(kubectl -n ntfy get pods 2>/dev/null | awk '/Error|Evicted/{print $1}')
+          echo "=== ntfy — deleting Error/Evicted pods (no-wait, force) ===" | tee -a ntfy.log
+          STUCK=$(timeout 10s kubectl -n ntfy get pods 2>/dev/null | awk '/Error|Evicted/{print $1}' || true)
           if [ -n "${STUCK}" ]; then
             echo "Deleting: ${STUCK}" | tee -a ntfy.log
-            echo "${STUCK}" | xargs kubectl -n ntfy delete pod --ignore-not-found 2>&1 | tee -a ntfy.log
+            echo "${STUCK}" | xargs kubectl -n ntfy delete pod --ignore-not-found --wait=false --grace-period=0 2>&1 | tee -a ntfy.log
           else
             echo "No Error/Evicted pods found" | tee -a ntfy.log
           fi
 
           echo "" >> ntfy.log
           echo "=== ntfy — after cleanup ===" | tee -a ntfy.log
-          kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log
+          timeout 15s kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log || true
 
           echo "" >> ntfy.log
           echo "=== ntfy — recent logs (database lock check) ===" | tee -a ntfy.log
@@ -96,7 +96,7 @@ jobs:
         if: always()
         run: |
           {
-            echo "# Cluster remediation round 2 — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo "# Cluster remediation round 3 — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
             echo ""
             echo "## ntfy stuck pod cleanup"
             echo '```'
