@@ -19,9 +19,9 @@ on:
   workflow_dispatch:
     inputs:
       metabase_mem_limit:
-        description: "Metabase memory limit (default: 600Mi)"
+        description: "Metabase memory limit (default: 1Gi)"
         required: false
-        default: "600Mi"
+        default: "1Gi"
 
 permissions:
   contents: read
@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
-      METABASE_MEM_LIMIT: ${{ github.event.inputs.metabase_mem_limit || '600Mi' }}
+      METABASE_MEM_LIMIT: ${{ github.event.inputs.metabase_mem_limit || '1Gi' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
