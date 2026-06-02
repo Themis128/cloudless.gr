@@ -35,6 +35,33 @@ if [ -n "$EXISTING_USER" ] && [ -n "$EXISTING_PASS" ]; then
   exit 0
 fi
 
+# 1b) Manual-bypass path: use pre-created credentials from workflow_dispatch inputs.
+#     This works without iam:CreateUser — only ssm:PutParameter is required.
+#     Run the workflow via dispatch with the credentials obtained from:
+#       AWS Console → SES → SMTP Settings → Create SMTP credentials
+MANUAL_USER="${SES_SMTP_USER_INPUT:-}"
+MANUAL_PASS="${SES_SMTP_PASSWORD_INPUT:-}"
+MANUAL_FROM="${SES_FROM_INPUT:-}"
+if [ -n "$MANUAL_USER" ] && [ -n "$MANUAL_PASS" ]; then
+  echo "→ Using pre-created SMTP credentials from workflow_dispatch inputs (skipping IAM)"
+  echo "::add-mask::$MANUAL_PASS"
+  aws ssm put-parameter --name "$P_USER" --type String --overwrite --value "$MANUAL_USER" \
+    --description "SES SMTP username — manually provisioned" >/dev/null
+  aws ssm put-parameter --name "$P_PASS" --type SecureString --overwrite --value "$MANUAL_PASS" \
+    --description "SES SMTP password (derived) — manually provisioned" >/dev/null
+  if [ -n "$MANUAL_FROM" ]; then
+    aws ssm put-parameter --name "$P_FROM" --type String --overwrite --value "$MANUAL_FROM" \
+      --description "SES verified From address — manually provisioned" >/dev/null
+    echo "  • set ${P_FROM}=${MANUAL_FROM}"
+  elif [ -z "$(ssm_get "$P_FROM")" ]; then
+    aws ssm put-parameter --name "$P_FROM" --type String --overwrite --value "$FROM_DEFAULT" \
+      --description "SES verified From address — default" >/dev/null
+    echo "  • set ${P_FROM}=${FROM_DEFAULT} (default)"
+  fi
+  echo "✓ SES SMTP credentials written to SSM (user=${MANUAL_USER}). Trigger keycloak-configure-email to apply."
+  exit 0
+fi
+
 echo "→ SES SMTP creds not in SSM; provisioning via IAM user '${IAM_USER}' (region ${REGION})"
 
 # 2) Ensure IAM user (idempotent).
