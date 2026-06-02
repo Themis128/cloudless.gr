@@ -24,7 +24,7 @@ export default function ServiceWorkerRegistration() {
           registrations.forEach((registration) => {
             registration.unregister();
           });
-        });
+        }).catch(() => {});
       }
       return;
     }
