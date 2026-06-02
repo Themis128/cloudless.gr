@@ -54,8 +54,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   // Allow either an authenticated admin OR a server-to-server cron call with
   // the shared secret. Cron path is used by cron-invoker.ts in Lambda.
-  const cfg = await getConfig().catch(() => null);
-  const cronSecret = cfg?.CRON_SECRET ?? process.env.CRON_SECRET;
+  const ssmCfg = await getConfig().catch(() => null);
+  const cronSecret = ssmCfg?.CRON_SECRET ?? process.env.CRON_SECRET;
   const headerSecret = request.headers.get("x-cron-secret");
   const isCron =
     cronSecret &&
