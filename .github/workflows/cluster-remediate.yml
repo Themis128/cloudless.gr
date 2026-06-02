@@ -1,4 +1,4 @@
-name: Cluster cleanup — stuck pods, CronJob residue, deployment restarts
+name: Cluster cleanup — stuck pods, CronJob residue, deployment restarts (retry)
 
 # Comprehensive cluster hygiene run triggered on push to this file.
 # Idempotent — safe to re-run. Posts results to tracking issue #382.
