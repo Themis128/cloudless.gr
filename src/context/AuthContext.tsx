@@ -19,6 +19,9 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   emailMarketing: false,
 };
 
+/** Same-origin route that reads (GET) and writes (POST) Keycloak profile attributes. */
+const PROFILE_ENDPOINT = "/api/user/profile";
+
 export interface AuthUser {
   username: string;
   email?: string;
@@ -85,7 +88,7 @@ function isAdminFromSession(user: { groups?: string[]; roles?: string[] }): bool
  */
 async function enrichWithProfile(base: AuthUser): Promise<AuthUser> {
   try {
-    const res = await globalThis.fetch("/api/user/profile");
+    const res = await globalThis.fetch(PROFILE_ENDPOINT);
     if (!res.ok) return base;
     const p = (await res.json()) as {
       name?: string;
@@ -235,7 +238,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Keycloak's Account API (auth.cloudless.gr) is cross-origin and is blocked
     // by CORS → the opaque "Failed to fetch". The server route uses the user's
     // access token to update Keycloak with no CORS constraint.
-    const res = await globalThis.fetch("/api/user/profile", {
+    const res = await globalThis.fetch(PROFILE_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(attrs),
@@ -265,7 +268,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser((prev) => (prev ? { ...prev, preferences: merged } : prev));
     // Persist via our same-origin route (browser → Keycloak is CORS-blocked).
     try {
-      await globalThis.fetch("/api/user/profile", {
+      await globalThis.fetch(PROFILE_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preferences: merged }),
