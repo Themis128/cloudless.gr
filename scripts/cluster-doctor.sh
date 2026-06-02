@@ -1,158 +1,280 @@
 #!/usr/bin/env bash
 #
-# cluster-doctor.sh — read-only diagnostics for the omv k3s cluster, with a
-# focus on why Keycloak (auth.cloudless.gr) might be down. [triggered 2026-06-02T-listwatch]
+# cluster-doctor.sh — comprehensive read-only diagnostics for the omv k3s cluster.
 #
-# Emits a Markdown report to stdout. Every kubectl call is best-effort (|| true)
-# so the report is always produced even when individual objects are missing.
-# Requires a kubectl context pointed at the cluster (the cluster-doctor.yml
-# workflow supplies one via Tailscale + KUBECONFIG_B64).
+# Covers every service tier:
+#   Tier 1 — Auth     : Keycloak, PostgreSQL
+#   Tier 2 — App      : cloudless, ntfy, n8n
+#   Tier 3 — Monitoring: Prometheus, Grafana, Alertmanager, Loki
+#   Tier 4 — Analytics : Metabase, DuckDB API
+#   Tier 5 — Infra    : Nodes, etcd-defrag, maintenance CronJobs
+#   Tier 6 — External : Public HTTP surfaces, GitHub runners
+#
+# Emits Markdown to stdout. Every kubectl/curl call is best-effort (|| true)
+# so the report always completes even when individual objects are missing.
 #
 # Usage:
 #   bash scripts/cluster-doctor.sh
-#   NAMESPACE=keycloak DEPLOYMENT=keycloak bash scripts/cluster-doctor.sh
+#
+# Env overrides:
+#   KC_NS, KC_DEPLOY, PROM_NS, ANALYTICS_NS, CLOUDLESS_NS, DISCOVERY
 
 set -uo pipefail
 
-NAMESPACE="${NAMESPACE:-keycloak}"
-DEPLOYMENT="${DEPLOYMENT:-keycloak}"
+KC_NS="${KC_NS:-keycloak}"
+KC_DEPLOY="${KC_DEPLOY:-keycloak}"
+PROM_NS="${PROM_NS:-monitoring}"
+ANALYTICS_NS="${ANALYTICS_NS:-analytics}"
+CLOUDLESS_NS="${CLOUDLESS_NS:-cloudless}"
 DISCOVERY="${DISCOVERY:-https://auth.cloudless.gr/realms/master/.well-known/openid-configuration}"
+GRAFANA_URL="${GRAFANA_URL:-https://grafana.cloudless.gr/api/health}"
+LAMBDA_URL="${LAMBDA_URL:-https://cloudless.gr/api/health}"
 
 k() { kubectl "$@" 2>&1 || true; }
 section() { printf "\n## %s\n\n" "$*"; }
 fence()  { printf '```\n'; cat; printf '```\n'; }
+http_check() { curl -sS -m 8 -o /dev/null -w '%{http_code}' "$1" 2>/dev/null || echo 000; }
+pod_states() {
+  local ns="$1" selector="$2"
+  kubectl -n "$ns" get pods -l "$selector" \
+    -o jsonpath='{range .items[*]}{.metadata.name}{":\n"}{range .status.containerStatuses[*]}{"  "}{.name}{": restarts="}{.restartCount}{" ready="}{.ready}{" waiting="}{.state.waiting.reason}{" lastExit="}{.lastState.terminated.reason}{"(exit "}{.lastState.terminated.exitCode}{")\n"}{end}{end}' \
+    2>&1 || true
+}
+deploy_limits() {
+  local ns="$1" deploy="$2"
+  kubectl -n "$ns" get deploy "$deploy" \
+    -o jsonpath='{range .spec.template.spec.containers[*]}{.name}{"\n  limits="}{.resources.limits}{"\n  requests="}{.resources.requests}{"\n"}{end}' \
+    2>/dev/null || true
+}
 
 printf "# Cluster snapshot — %s\n" "$(date -u '+%Y-%m-%d %H:%M:%SZ')"
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# TIER 1 — AUTH
+# ═══════════════════════════════════════════════════════════════════════════════
+
 section "auth.cloudless.gr"
-code=$(curl -sS -m 8 -o /dev/null -w '%{http_code}' "$DISCOVERY" 2>/dev/null || echo 000)
-printf "OIDC discovery: **HTTP %s** (200 = up)\n" "$code"
+kc_http=$(http_check "$DISCOVERY")
+printf "OIDC discovery: **HTTP %s** (200 = up)\n" "$kc_http"
+
+section "Keycloak: deployment"
+k -n "$KC_NS" get deploy "$KC_DEPLOY" -o wide | fence
+printf "Limits + heap:\n"
+deploy_limits "$KC_NS" "$KC_DEPLOY" | fence
+
+section "Keycloak: pods"
+k -n "$KC_NS" get pods -o wide | fence
+printf "Container states:\n"
+pod_states "$KC_NS" "app=${KC_DEPLOY}" | fence
+
+section "Keycloak: recent events"
+kubectl -n "$KC_NS" get events --sort-by=.lastTimestamp 2>/dev/null | tail -15 | fence
+
+section "Keycloak: logs (last 30 lines)"
+k -n "$KC_NS" logs "deploy/$KC_DEPLOY" --tail=30 | fence
+
+section "Keycloak: previous container logs (crash cause)"
+pod=$(kubectl -n "$KC_NS" get pods -l app="$KC_DEPLOY" -o name 2>/dev/null | head -1)
+[ -n "$pod" ] \
+  && k -n "$KC_NS" logs "$pod" --previous --tail=30 | fence \
+  || printf "_no pod found via label app=%s_\n" "$KC_DEPLOY"
+
+section "Keycloak: memory limit drift"
+live=$(kubectl -n "$KC_NS" get deploy "$KC_DEPLOY" \
+  -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' 2>&1)
+last_applied=$(kubectl -n "$KC_NS" get deploy "$KC_DEPLOY" \
+  -o jsonpath='{.metadata.annotations.kubectl\.kubernetes\.io/last-applied-configuration}' \
+  2>/dev/null | grep -oE '"memory":"[^"]*"' | tail -1)
+printf "live limit: %s\n" "$live"
+printf "last-applied limit: %s\n" "$last_applied"
+[ "$live" = "384Mi" ] && printf "\n**WARNING: Keycloak is still at 384Mi — will OOMKill. Run keycloak:restore.**\n"
+
+section "PostgreSQL (keycloak/postgres)"
+k -n "$KC_NS" get pods -l app=postgres -o wide | fence
+printf "Container states:\n"
+pod_states "$KC_NS" "app=postgres" | fence
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TIER 2 — APP SERVICES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+section "cloudless app (k3s standby — ns ${CLOUDLESS_NS})"
+k -n "$CLOUDLESS_NS" get deploy cloudless -o wide | fence
+printf "Limits + image:\n"
+kubectl -n "$CLOUDLESS_NS" get deploy cloudless \
+  -o jsonpath='{range .spec.template.spec.containers[*]}{.name}{"\n  image="}{.image}{"\n  limits="}{.resources.limits}{"\n  requests="}{.resources.requests}{"\n"}{end}' \
+  2>/dev/null | fence
+printf "envFrom secrets: "
+kubectl -n "$CLOUDLESS_NS" get deploy cloudless \
+  -o jsonpath='{range .spec.template.spec.containers[*]}{range .envFrom[*]}{.secretRef.name}{" "}{end}{end}' \
+  2>/dev/null
+printf "\nAUTH_URL=%s  AUTH_TRUST_HOST=%s\n" \
+  "$(kubectl -n "$CLOUDLESS_NS" get deploy cloudless -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="AUTH_URL")].value}' 2>/dev/null)" \
+  "$(kubectl -n "$CLOUDLESS_NS" get deploy cloudless -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="AUTH_TRUST_HOST")].value}' 2>/dev/null)"
+
+section "cloudless app: pods"
+k -n "$CLOUDLESS_NS" get pods -o wide | fence
+printf "Container states:\n"
+pod_states "$CLOUDLESS_NS" "app=cloudless" | fence
+
+section "ntfy (push notifications)"
+k -n ntfy get deploy -o wide 2>/dev/null | fence
+printf "Container states:\n"
+pod_states ntfy "app=ntfy" | fence
+printf "Limits:\n"
+deploy_limits ntfy ntfy 2>/dev/null | fence
+
+section "n8n (workflow automation)"
+k -n n8n get deploy -o wide 2>/dev/null | fence
+printf "Container states:\n"
+pod_states n8n "app=n8n" | fence
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TIER 3 — MONITORING STACK
+# ═══════════════════════════════════════════════════════════════════════════════
+
+section "Prometheus: pods"
+k -n "$PROM_NS" get pods -l app.kubernetes.io/name=prometheus -o wide | fence
+printf "Container states:\n"
+pod_states "$PROM_NS" "app.kubernetes.io/name=prometheus" | fence
+printf "Prometheus memory limit: %s\n" \
+  "$(kubectl -n "$PROM_NS" get sts -l app.kubernetes.io/name=prometheus \
+    -o jsonpath='{.items[0].spec.template.spec.containers[?(@.name=="prometheus")].resources.limits.memory}' 2>&1)"
+
+section "Prometheus: failing rules"
+kubectl -n "$PROM_NS" run "promq-$$" --image=curlimages/curl:8.11.1 \
+  --restart=Never --rm -i --quiet \
+  --command -- curl -sS --max-time 12 \
+  "http://prometheus-operated.${PROM_NS}.svc:9090/api/v1/rules" \
+  2>/dev/null > /tmp/promrules.json || true
+if [ -s /tmp/promrules.json ]; then
+  jq -r '
+    [ .data.groups[]
+      | .name as $g | .rules[]
+      | select((.health != "ok") or ((.lastError // "") != ""))
+      | "[\($g)] \(.name)  health=\(.health)\n    lastError: \(.lastError // "")"
+    ] as $bad
+    | if ($bad|length)==0 then "all rules healthy (no eval failures right now)"
+      else $bad[] end
+  ' /tmp/promrules.json 2>&1 | fence
+  printf "rule groups: %s, rules: %s\n" \
+    "$(jq '.data.groups|length' /tmp/promrules.json 2>/dev/null)" \
+    "$(jq '[.data.groups[].rules[]]|length' /tmp/promrules.json 2>/dev/null)"
+else
+  printf "_could not fetch /api/v1/rules_\n"
+fi
+
+section "Grafana"
+k -n "$PROM_NS" get deploy -l "app.kubernetes.io/name=grafana" -o wide 2>/dev/null | fence
+printf "Container states:\n"
+kubectl -n "$PROM_NS" get pods -l "app.kubernetes.io/name=grafana" \
+  -o jsonpath='{range .items[*]}{.metadata.name}{":\n"}{range .status.containerStatuses[*]}{"  "}{.name}{": restarts="}{.restartCount}{" ready="}{.ready}{" lastExit="}{.lastState.terminated.reason}{"\n"}{end}{end}' \
+  2>&1 | fence
+grafana_http=$(http_check "$GRAFANA_URL")
+printf "grafana.cloudless.gr/api/health: **HTTP %s** (200 = up)\n" "$grafana_http"
+
+section "Alertmanager"
+k -n "$PROM_NS" get pods -l "app.kubernetes.io/name=alertmanager" -o wide | fence
+printf "Container states:\n"
+pod_states "$PROM_NS" "app.kubernetes.io/name=alertmanager" | fence
+
+section "Loki"
+k -n "$PROM_NS" get statefulsets loki -o wide 2>/dev/null | fence
+printf "Container states:\n"
+kubectl -n "$PROM_NS" get pods -l "app.kubernetes.io/name=loki" \
+  -o jsonpath='{range .items[*]}{.metadata.name}{":\n"}{range .status.containerStatuses[*]}{"  "}{.name}{": restarts="}{.restartCount}{" ready="}{.ready}{" lastExit="}{.lastState.terminated.reason}{"\n"}{end}{end}' \
+  2>&1 | fence
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TIER 4 — ANALYTICS STACK
+# ═══════════════════════════════════════════════════════════════════════════════
+
+section "Metabase (analytics/metabase)"
+k -n "$ANALYTICS_NS" get deploy metabase -o wide 2>/dev/null | fence
+printf "Container states:\n"
+pod_states "$ANALYTICS_NS" "app=metabase" | fence
+printf "Limits:\n"
+deploy_limits "$ANALYTICS_NS" metabase 2>/dev/null | fence
+
+section "DuckDB API (analytics/duckdb-api)"
+k -n "$ANALYTICS_NS" get deploy duckdb-api -o wide 2>/dev/null | fence
+printf "Container states:\n"
+pod_states "$ANALYTICS_NS" "app=duckdb-api" | fence
+printf "Limits:\n"
+deploy_limits "$ANALYTICS_NS" duckdb-api 2>/dev/null | fence
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TIER 5 — INFRASTRUCTURE
+# ═══════════════════════════════════════════════════════════════════════════════
 
 section "Nodes"
 k get nodes -o wide | fence
 k top nodes | fence
 
-section "Node memory pressure / conditions"
+section "Node conditions + allocated resources"
 for n in $(kubectl get nodes -o name 2>/dev/null | sed 's#node/##'); do
   printf "### %s\n" "$n"
   kubectl describe node "$n" 2>/dev/null \
-    | grep -iE "MemoryPressure|DiskPressure|PIDPressure|Allocated resources|memory " \
-    | head -20 | fence
+    | grep -iE "MemoryPressure|DiskPressure|PIDPressure|Allocated resources:|memory\s|cpu\s" \
+    | head -15 | fence
 done
 
 section "Pods not Running/Completed (all namespaces)"
 k get pods -A --field-selector=status.phase!=Running 2>/dev/null \
   | grep -vE "Completed|Succeeded" | fence
 
-section "Keycloak: deployment"
-k -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o wide | fence
-printf "Resource limits/requests + heap env:\n"
-kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" \
-  -o jsonpath='{range .spec.template.spec.containers[*]}{.name}{"\n  limits="}{.resources.limits}{"\n  requests="}{.resources.requests}{"\n  env="}{range .env[*]}{.name}{"="}{.value}{" "}{end}{"\n"}{end}' \
+section "etcd-defrag: last 3 runs"
+k -n "$PROM_NS" get jobs -l app=etcd-defrag \
+  --sort-by=.metadata.creationTimestamp 2>/dev/null | tail -4 | fence
+printf "Last defrag log (tail 10):\n"
+k -n "$PROM_NS" logs -l app=etcd-defrag --tail=10 2>/dev/null | fence
+
+section "Maintenance CronJobs (recent failures)"
+k -n maintenance get cronjobs 2>/dev/null | fence
+k -n maintenance get jobs --sort-by=.metadata.creationTimestamp 2>/dev/null \
+  | tail -10 | fence
+printf "Recent failed jobs:\n"
+kubectl -n maintenance get jobs \
+  -o jsonpath='{range .items[?(@.status.failed>0)]}{.metadata.name}{" failed="}{.status.failed}{" start="}{.status.startTime}{"\n"}{end}' \
   2>/dev/null | fence
 
-section "Keycloak: pods"
-k -n "$NAMESPACE" get pods -o wide | fence
-printf "Container states (waiting/last-terminated reasons — look for OOMKilled / CrashLoopBackOff):\n"
-kubectl -n "$NAMESPACE" get pods -o jsonpath='{range .items[*]}{.metadata.name}{":\n"}{range .status.containerStatuses[*]}{"  restarts="}{.restartCount}{" ready="}{.ready}{" waiting="}{.state.waiting.reason}{" lastTerminated="}{.lastState.terminated.reason}{"(exit "}{.lastState.terminated.exitCode}{")\n"}{end}{end}' \
-  2>/dev/null | fence
+section "Cluster-alerts CronJob (Slack error notifier)"
+k -n "$PROM_NS" get cronjob cluster-alerts 2>/dev/null | fence
+k -n "$PROM_NS" get jobs -l app=cluster-alerts \
+  --sort-by=.metadata.creationTimestamp 2>/dev/null | tail -4 | fence
 
-section "Keycloak: recent events"
-kubectl -n "$NAMESPACE" get events --sort-by=.lastTimestamp 2>/dev/null | tail -25 | fence
+# ═══════════════════════════════════════════════════════════════════════════════
+# TIER 6 — EXTERNAL / OBSERVABILITY
+# ═══════════════════════════════════════════════════════════════════════════════
 
-section "Keycloak: logs (current, last 40 lines)"
-k -n "$NAMESPACE" logs "deploy/$DEPLOYMENT" --tail=40 | fence
-
-section "Keycloak: logs (previous container, last 40 lines — crash cause)"
-pod=$(kubectl -n "$NAMESPACE" get pods -l app="$DEPLOYMENT" -o name 2>/dev/null | head -1)
-[ -n "$pod" ] && k -n "$NAMESPACE" logs "$pod" --previous --tail=40 | fence || printf "_no pod found via label app=%s_\n" "$DEPLOYMENT"
-
-section "Identity & write permissions (can the CI kubeconfig recover Keycloak?)"
-printf "whoami: %s\n" "$(kubectl auth whoami 2>&1 | tr '\n' ' ')"
-for verb in get patch update; do
-  printf "  can-i %-6s deployments -n %s : %s\n" "$verb" "$NAMESPACE" "$(kubectl auth can-i "$verb" deployments -n "$NAMESPACE" 2>&1)"
+section "Public HTTP surfaces"
+for entry in \
+  "Lambda /api/health|${LAMBDA_URL}" \
+  "Lambda /api/auth/session|https://cloudless.gr/api/auth/session" \
+  "Keycloak OIDC|${DISCOVERY}" \
+  "Keycloak JWKS|https://auth.cloudless.gr/realms/master/protocol/openid-connect/certs" \
+  "Grafana|${GRAFANA_URL}"
+do
+  IFS='|' read -r label url <<< "$entry"
+  code=$(http_check "$url")
+  icon="✓"; [ "$code" != "200" ] && icon="✗"
+  printf "%s  %-35s HTTP %s\n" "$icon" "$label" "$code"
 done
-printf "  can-i patch  limitranges -n %s : %s\n" "$NAMESPACE" "$(kubectl auth can-i patch limitranges -n "$NAMESPACE" 2>&1)"
-printf "  can-i create deployments/rollout (restart) -n %s : %s\n" "$NAMESPACE" "$(kubectl auth can-i patch deployments -n "$NAMESPACE" --subresource=scale 2>&1)"
 
-section "Keycloak: rollout history (did a restart ever roll a new ReplicaSet?)"
-k -n "$NAMESPACE" rollout history "deploy/$DEPLOYMENT" | fence
+section "Identity & write permissions (can CI kubeconfig recover services?)"
+printf "whoami: %s\n" "$(kubectl auth whoami 2>&1 | tr '\n' ' ')"
+for ns in "$KC_NS" "$PROM_NS" "$ANALYTICS_NS" ntfy n8n; do
+  printf "  %-12s patch deployments: %s\n" "$ns" \
+    "$(kubectl auth can-i patch deployments -n "$ns" 2>&1)"
+done
 
-section "Keycloak deploy: ownership — who reconciles it (Helm/Argo/Flux)?"
-printf "managed-by label: %s\n" "$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>&1)"
-printf "ownerReferences:  %s\n" "$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.metadata.ownerReferences}' 2>&1)"
-printf "GitOps annotations:\n"
-kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.metadata.annotations}' 2>/dev/null \
-  | tr ',' '\n' | grep -iE "helm|argocd|fluxcd|kustomize\.toolkit|reconcile|managed-by" | fence
-printf "field managers (who last wrote each field):\n"
-kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{range .metadata.managedFields[*]}{.manager}{" ("}{.operation}{", "}{.apiVersion}{")\n"}{end}' 2>&1 | fence
-printf "live container[0] memory limit: %s\n" "$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' 2>&1)"
-printf "last-applied (kubectl apply) memory limit: %s\n" "$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.metadata.annotations.kubectl\.kubernetes\.io/last-applied-configuration}' 2>/dev/null | grep -oE '\"memory\":\"[0-9]+Mi\"' | tail -1)"
-
-# ── Prometheus health (PrometheusRuleFailures triage) ───────────────────────
-PROM_NS="${PROM_NS:-monitoring}"
-section "Prometheus: pods (restarts / OOM — is it starved like Keycloak was?)"
-k -n "$PROM_NS" get pods -l app.kubernetes.io/name=prometheus -o wide | fence
-printf "container states:\n"
-kubectl -n "$PROM_NS" get pods -l app.kubernetes.io/name=prometheus -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{range .status.containerStatuses[*]}{"  "}{.name}{": restarts="}{.restartCount}{" ready="}{.ready}{" lastTerminated="}{.lastState.terminated.reason}{"\n"}{end}{end}' 2>&1 | fence
-printf "prometheus container memory limit: %s\n" "$(kubectl -n "$PROM_NS" get sts -l app.kubernetes.io/name=prometheus -o jsonpath='{.items[0].spec.template.spec.containers[?(@.name=="prometheus")].resources.limits.memory}' 2>&1)"
-
-section "Prometheus: failing rules (health != ok) + lastError"
-# Curl the rules API from an in-cluster pod, parse with jq on the runner.
-kubectl -n "$PROM_NS" run "promq-$$" --image=curlimages/curl:8.11.1 --restart=Never --rm -i --quiet \
-  --command -- curl -sS --max-time 12 "http://prometheus-operated.${PROM_NS}.svc:9090/api/v1/rules" 2>/dev/null \
-  > /tmp/promrules.json || true
-if [ -s /tmp/promrules.json ]; then
-  jq -r '
-    [ .data.groups[]
-      | .name as $g
-      | .rules[]
-      | select((.health != "ok") or ((.lastError // "") != ""))
-      | "[\($g)] \(.name)  health=\(.health)  type=\(.type)\n    lastError: \(.lastError // "")"
-    ] as $bad
-    | if ($bad|length)==0 then "all rules healthy (no eval failures right now)"
-      else $bad[] end
-  ' /tmp/promrules.json 2>&1 | fence
-  printf "rule groups total: %s, rules total: %s\n" \
-    "$(jq '.data.groups|length' /tmp/promrules.json 2>/dev/null)" \
-    "$(jq '[.data.groups[].rules[]]|length' /tmp/promrules.json 2>/dev/null)"
+section "GitHub Actions runners"
+if command -v gh >/dev/null 2>&1 && [ -n "${GH_TOKEN:-}" ]; then
+  gh api repos/Themis128/cloudless.gr/actions/runners --jq \
+    '.runners[] | "  \(if .status=="online" then "✓" else "✗" end)  \(.name)  \(.status)  \(if .busy then "busy" else "idle" end)  labels=\([.labels[].name] | join(","))"' \
+    2>/dev/null || printf "  (gh auth or token missing)\n"
 else
-  printf "_could not fetch /api/v1/rules (empty response)_\n"
+  printf "  (GH_TOKEN not set — skipping runner check)\n"
 fi
 
-section "cloudless app: deployment (k3s standby E2E target — ns cloudless)"
-k -n cloudless get deploy cloudless -o wide | fence
-printf "Resource limits + image:\n"
-kubectl -n cloudless get deploy cloudless \
-  -o jsonpath='{range .spec.template.spec.containers[*]}{.name}{"\n  image="}{.image}{"\n  limits="}{.resources.limits}{"\n  requests="}{.resources.requests}{"\n"}{end}' \
-  2>/dev/null | fence
-printf "Env vars (pi-origin 403 triage — HOSTNAME, AUTH_URL, APP_VERSION, envFrom):\n"
-kubectl -n cloudless get deploy cloudless \
-  -o jsonpath='{range .spec.template.spec.containers[*]}{range .env[*]}{.name}{"="}{.value}{"\n"}{end}{end}' \
-  2>/dev/null | fence
-printf "envFrom secrets: "
-kubectl -n cloudless get deploy cloudless \
-  -o jsonpath='{range .spec.template.spec.containers[*]}{range .envFrom[*]}{.secretRef.name}{" "}{end}{end}' \
-  2>/dev/null
-printf "\n"
-
-section "cloudless app: all pods in ns cloudless"
-k -n cloudless get pods -o wide | fence
-printf "Container states:\n"
-kubectl -n cloudless get pods -o jsonpath='{range .items[*]}{.metadata.name}{":\n"}{range .status.containerStatuses[*]}{"  restarts="}{.restartCount}{" ready="}{.ready}{" waiting="}{.state.waiting.reason}{" lastTerminated="}{.lastState.terminated.reason}{"(exit "}{.lastState.terminated.exitCode}{")\n"}{end}{end}' \
-  2>/dev/null | fence
-
-section "cloudless app: recent events (ns cloudless)"
-kubectl -n cloudless get events --sort-by=.lastTimestamp 2>/dev/null | tail -20 | fence
-
-section "cloudless app: logs (last 40 lines)"
-k -n cloudless logs deploy/cloudless --tail=40 | fence
-
-section "cloudless app: logs (previous container, last 40 lines)"
-pod=$(kubectl -n cloudless get pods -l app=cloudless -o name 2>/dev/null | head -1)
-[ -n "$pod" ] && k -n cloudless logs "$pod" --previous --tail=40 | fence || printf "_no cloudless pod found_\n"
-
 printf "\n_End of snapshot._\n"
-
-# re-trigger-doctor-20260602d
-# triggered 2026-06-02 14:09:45Z
