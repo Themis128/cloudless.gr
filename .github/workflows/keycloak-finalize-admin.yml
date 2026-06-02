@@ -1,5 +1,5 @@
 name: keycloak-finalize-admin — set permanent admin password (no browser login needed)
-# re-triggered 2026-06-02c — add realm-admin role grant so user can access Keycloak Admin Console
+# re-triggered 2026-06-02d — fix pipe-masks-exit-code, add pod-lookup retry, re-run after apiserver recovery
 
 # Sets a permanent admin password for tbaltzakis@cloudless.gr using the
 # Keycloak pod's own internal service admin credentials (never exposed, never
@@ -49,7 +49,10 @@ jobs:
           chmod 600 ~/.kube/config
 
       - name: Finalize admin account (permanent password, clear UPDATE_PASSWORD)
-        run: bash scripts/keycloak-finalize-admin.sh 2>&1 | tee finalize.log
+        shell: bash
+        run: |
+          set -o pipefail
+          bash scripts/keycloak-finalize-admin.sh 2>&1 | tee finalize.log
 
       - name: Post new credentials to tracking issue
         if: always()
