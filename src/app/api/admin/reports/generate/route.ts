@@ -62,8 +62,11 @@ export async function POST(request: NextRequest) {
       throw new Error("clientName, dateStart, dateEnd required");
   } catch (e) {
     const _r = mapIntegrationError(e); if (_r) return _r;
+    // Surface only our own validation message; genericise anything else (e.g.
+    // a JSON.parse error) so raw exception text is never reflected to clients.
+    const isValidation = e instanceof Error && e.message.includes("required");
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Invalid input" },
+      { error: isValidation ? (e as Error).message : "Invalid input" },
       { status: 400 },
     );
   }
