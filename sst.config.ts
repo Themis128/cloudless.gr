@@ -277,7 +277,17 @@ export default {
     // ID is the well-known constant Z2FDTNDATAQYW2 for all alias records.
     // APIGW regional has its own well-known zone ID Z1UJRXOUMOOFQ8.
     if (isProd) {
-      const zoneId = "Z079608614L53CC4EAZM3"; // cloudless.gr hosted zone
+      // Resolve the hosted zone by name rather than hardcoding its ID. The
+      // cloudless.gr zone has been recreated before, leaving a stale literal
+      // (Z079608614L53CC4EAZM3) that failed the deploy with
+      // "reading Route 53 Hosted Zone … couldn't find resource". Awaiting the
+      // data source yields a concrete string, which the Route 53 record
+      // `import:` IDs below require (they cannot take a Pulumi Output).
+      const zone = await aws.route53.getZone({
+        name: "cloudless.gr",
+        privateZone: false,
+      });
+      const zoneId = zone.zoneId; // cloudless.gr hosted zone (resolved live)
       const healthCheckId = "3805ab54-0238-4ab1-870f-7ad9caf43a91"; // PRIMARY (CloudFront)
       const secondaryHealthCheckId = "1069b339-6066-4a5c-a1b1-6bc7c9376977"; // SECONDARY (APIGW frontend)
       const cfZoneId = "Z2FDTNDATAQYW2";
