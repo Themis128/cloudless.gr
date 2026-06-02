@@ -277,6 +277,21 @@ else
   printf "  (GH_TOKEN not set — skipping runner check)\n"
 fi
 
+section "pi-origin.cloudless.gr — full response headers"
+printf "GET https://pi-origin.cloudless.gr/api/health (showing all response headers):\n"
+curl -sI --max-time 10 https://pi-origin.cloudless.gr/api/health 2>/dev/null | fence \
+  || printf "  (curl failed or timed out)\n"
+printf "content-security-policy specifically: "
+csp_val=$(curl -sI --max-time 10 https://pi-origin.cloudless.gr/api/health 2>/dev/null \
+  | grep -i '^content-security-policy:' | head -1)
+[ -n "$csp_val" ] && printf "**PRESENT** — %s\n" "$csp_val" || printf "**MISSING**\n"
+
+section "Traefik middlewares (all namespaces)"
+k get middlewares.traefik.io --all-namespaces -o yaml 2>/dev/null | fence
+
+section "Traefik IngressRoutes (namespace: ${CLOUDLESS_NS})"
+k -n "$CLOUDLESS_NS" get ingressroutes.traefik.io -o yaml 2>/dev/null | fence
+
 printf "\n_End of snapshot._\n"
 
-# re-trigger-doctor-20260602f-memquota
+# re-trigger-doctor-20260602g-csp-probe
