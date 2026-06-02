@@ -203,7 +203,7 @@ export default function AdminCompaniesPage() {
           placeholder="Search by name, domain, or location…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="bg-void-light focus:border-neon-magenta/50 placeholder:text-slate-[...] w-full max-w-md rounded-lg border border-slate-800 px-4 py-3 font-mono text-sm text-white transition-colors"
+          className="bg-void-light focus:border-neon-magenta/50 w-full max-w-md rounded-lg border border-slate-800 px-4 py-3 font-mono text-sm text-white transition-colors placeholder:text-slate-600 focus:outline-none"
         />
       </div>
 
