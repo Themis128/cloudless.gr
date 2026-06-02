@@ -77,10 +77,14 @@ done
 TODAY=$(date -u '+%Y-%m-%d')
 
 build_blocks() {
-python3 -c "
+# Write blocks JSON to a temp file to avoid shell variable expansion issues
+# with special characters (em-dashes, arrows, etc.)
+local outfile="${1:-/tmp/notion-blocks.json}"
+python3 - "$TODAY" "$outfile" <<'PYEOF'
 import json, sys
 
 today = sys.argv[1]
+outfile = sys.argv[2]
 
 def p(text):
     return {'object':'block','type':'paragraph','paragraph':{'rich_text':[{'text':{'content':text}}]}}
@@ -176,14 +180,16 @@ blocks = [
     divider(),
     p(f'Auto-updated {today} by notion-update-cluster-docs.yml'),
 ]
-print(json.dumps({'children': blocks[:100]}))
-" "$TODAY"
+with open(outfile, 'w') as f:
+    json.dump({'children': blocks[:100]}, f)
+PYEOF
 }
 
 # ---------------------------------------------------------------------------
 # Step 3: Update existing page or create a new one
 # ---------------------------------------------------------------------------
-BLOCKS_JSON=$(build_blocks)
+BLOCKS_FILE="/tmp/notion-blocks-$$.json"
+build_blocks "$BLOCKS_FILE"
 
 if [ -n "$PAGE_ID" ]; then
   note "Found existing runbook page: ${PAGE_ID}"
@@ -231,8 +237,11 @@ for b in data.get('results', []):
 
   APPEND_RESULT=$(curl -sS -X PATCH "https://api.notion.com/v1/blocks/${PAGE_ID}/children" \
     "${HEADERS[@]}" \
-    -d "$BLOCKS_JSON")
-  STATUS=$(echo "$APPEND_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('object','error'))" 2>/dev/null || echo "error")
+    --data "@${BLOCKS_FILE}")
+  STATUS=$(echo "$APPEND_RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('object') or d.get('code','error'))" 2>/dev/null || echo "error")
+  if [ "$STATUS" = "error" ]; then
+    note "  Append ERROR: $(echo "$APPEND_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('message','unknown'))" 2>/dev/null)"
+  fi
   note "  Append status: ${STATUS}"
   ACTION="updated"
 
@@ -283,8 +292,9 @@ print(json.dumps(payload))
 
   APPEND_RESULT=$(curl -sS -X PATCH "https://api.notion.com/v1/blocks/${PAGE_ID}/children" \
     "${HEADERS[@]}" \
-    -d "$BLOCKS_JSON")
-  note "  Content appended"
+    --data "@${BLOCKS_FILE}")
+  STATUS=$(echo "$APPEND_RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('object') or d.get('code','error'))" 2>/dev/null || echo "error")
+  note "  Content appended (status: ${STATUS})"
   ACTION="created"
 fi
 
