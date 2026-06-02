@@ -35,13 +35,24 @@ if [ -n "$EXISTING_USER" ] && [ -n "$EXISTING_PASS" ]; then
   exit 0
 fi
 
-# 1b) Manual-bypass path: use pre-created credentials from workflow_dispatch inputs.
-#     This works without iam:CreateUser — only ssm:PutParameter is required.
-#     Run the workflow via dispatch with the credentials obtained from:
-#       AWS Console → SES → SMTP Settings → Create SMTP credentials
+# 1b-early) Path-push trigger with no dispatch inputs → don't attempt IAM, just print instructions.
+TRIGGERED_BY="${TRIGGERED_BY:-}"
 MANUAL_USER="${SES_SMTP_USER_INPUT:-}"
 MANUAL_PASS="${SES_SMTP_PASSWORD_INPUT:-}"
 MANUAL_FROM="${SES_FROM_INPUT:-}"
+if [ "$TRIGGERED_BY" = "push" ] && [ -z "$MANUAL_USER" ] && [ -z "$MANUAL_PASS" ]; then
+  echo "Path-push trigger, no workflow_dispatch inputs, and SSM creds not yet provisioned."
+  echo "To set up SES SMTP (Path B — no extra IAM needed):"
+  echo "  1. AWS Console → SES → SMTP Settings → Create SMTP credentials → save username + password"
+  echo "  2. GitHub → Actions → 'Provision SES SMTP credentials' → Run workflow"
+  echo "     smtp_user=<username>  smtp_password=<password>  from_email=noreply@cloudless.gr"
+  exit 0
+fi
+
+# 1c) Manual-bypass path: use pre-created credentials from workflow_dispatch inputs.
+#     This works without iam:CreateUser — only ssm:PutParameter is required.
+#     Run the workflow via dispatch with the credentials obtained from:
+#       AWS Console → SES → SMTP Settings → Create SMTP credentials
 if [ -n "$MANUAL_USER" ] && [ -n "$MANUAL_PASS" ]; then
   echo "→ Using pre-created SMTP credentials from workflow_dispatch inputs (skipping IAM)"
   echo "::add-mask::$MANUAL_PASS"
