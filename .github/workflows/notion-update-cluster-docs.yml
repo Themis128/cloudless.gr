@@ -26,6 +26,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+      CLUSTER_OPS_PAGE_ID: ${{ vars.CLUSTER_OPS_PAGE_ID }}
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
