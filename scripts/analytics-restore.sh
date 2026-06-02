@@ -6,15 +6,15 @@
 # What it does:
 #   1. Checks Metabase and DuckDB API pod states
 #   2. If Metabase is OOMKilled/CrashLooping, patches its memory limit up
-#      (default: 600Mi, current cap is 400Mi which is tight for the JVM)
+#      (default: 1Gi; JVM needs heap + ~200Mi non-heap — never cap below -Xmx)
 #   3. Restarts affected deployments and waits for Ready
 #   4. Reports before/after state
 #
 # Idempotent — safe to re-run. Only patches if the live state needs it.
 #
 # Env overrides:
-#   METABASE_MEM_LIMIT   (default: 600Mi)
-#   METABASE_JAVA_OPTS   (default: -Xmx480m -Xms128m)
+#   METABASE_MEM_LIMIT   (default: 1Gi)
+#   METABASE_JAVA_OPTS   (default: -Xmx768m -Xms128m)
 #   DUCKDB_MEM_LIMIT     (default: 1500Mi — already generous, only raise if needed)
 #   ANALYTICS_NS         (default: analytics)
 
