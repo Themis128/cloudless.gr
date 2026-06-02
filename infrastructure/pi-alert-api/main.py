@@ -436,7 +436,7 @@ SCRIPTS: dict[str, dict] = {
         "danger":      False,
     },
     "restart_cloudless_app": {
-        "label":       "Restart cloudless.online pod",
+        "label":       "Restart cloudless app pod",
         "description": "kubectl rollout restart deployment/cloudless-app -n cloudless",
         "danger":      False,
     },
