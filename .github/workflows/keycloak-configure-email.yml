@@ -65,20 +65,8 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
-
-      - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-
-      # This repo is OIDC-only (no static AWS keys); the original workflow used
-      # non-existent secrets.AWS_ACCESS_KEY_ID/SECRET, so the SSM reads always
-      # failed. Assume the same deploy role the rest of CI uses.
+      # Uses the Keycloak REST admin API — no Tailscale or kubectl required.
+      # Works even when the k3s API server is down or flapping.
       - name: Configure AWS credentials (OIDC)
         if: github.event.inputs.smtp_user == '' || github.event.inputs.smtp_password == ''
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
@@ -141,6 +129,7 @@ jobs:
           SMTP_USER: ${{ env.SMTP_USER }}
           SMTP_PASSWORD: ${{ env.SMTP_PASSWORD }}
           FROM_EMAIL: ${{ env.FROM_EMAIL }}
+          KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
         run: |
           set -uo pipefail
           bash scripts/keycloak-configure-email.sh 2>&1 | tee email-cfg.log

@@ -3,31 +3,35 @@
 # keycloak-configure-email.sh — configure Keycloak realm SMTP (AWS SES) and
 # enable email verification for new registrations.
 #
-# What this does:
-#   1. Sets the realm smtpServer block to use AWS SES SMTP
-#   2. Enables verifyEmail on the realm (new users must verify before signing in)
-#   3. Ensures the VERIFY_EMAIL required action is enabled + set as default
-#      (so it applies automatically to every new registration)
+# Uses the Keycloak REST admin API directly (no kubectl / no k3s API server
+# required). Works even when the cluster API server is down or flapping.
 #
-# Credentials are read from env vars. The CI workflow reads them from SSM or
-# from workflow_dispatch inputs and injects them before calling this script.
+# What this does:
+#   1. Authenticates to the Keycloak admin REST API
+#   2. Sets the realm smtpServer block to use AWS SES SMTP
+#   3. Enables verifyEmail on the realm (new users must verify before signing in)
+#   4. Enables the VERIFY_EMAIL required action as the default (auto-assigned to
+#      every new registration)
 #
 # Required env:
-#   SMTP_USER      — SES SMTP username (= IAM access key ID for the SES SMTP user)
-#   SMTP_PASSWORD  — SES SMTP password (derived SES SMTP credential, NOT the IAM secret key)
-#   FROM_EMAIL     — from address, e.g. noreply@cloudless.gr
+#   SMTP_USER             — SES SMTP username (IAM access key ID)
+#   SMTP_PASSWORD         — SES SMTP password (derived SES credential)
+#   FROM_EMAIL            — from address, e.g. noreply@cloudless.gr
+#   KEYCLOAK_ADMIN_PASSWORD — Keycloak admin password
 #
 # Optional env:
-#   SMTP_HOST      — default email-smtp.us-east-1.amazonaws.com
-#   SMTP_PORT      — default 587
-#   FROM_NAME      — display name, default "Cloudless"
-#   NAMESPACE, DEPLOYMENT, REALM
+#   KEYCLOAK_ADMIN        — admin username (default: admin)
+#   KEYCLOAK_URL          — base URL (default: https://auth.cloudless.gr)
+#   SMTP_HOST             — default email-smtp.us-east-1.amazonaws.com
+#   SMTP_PORT             — default 587
+#   FROM_NAME             — display name, default "Cloudless"
+#   REALM                 — default master
 
 set -uo pipefail
 
-NAMESPACE="${NAMESPACE:-keycloak}"
-DEPLOYMENT="${DEPLOYMENT:-keycloak}"
 REALM="${REALM:-master}"
+KEYCLOAK_URL="${KEYCLOAK_URL:-https://auth.cloudless.gr}"
+KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
 SMTP_HOST="${SMTP_HOST:-email-smtp.us-east-1.amazonaws.com}"
 SMTP_PORT="${SMTP_PORT:-587}"
 FROM_NAME="${FROM_NAME:-Cloudless}"
@@ -36,28 +40,26 @@ FROM_NAME="${FROM_NAME:-Cloudless}"
 : "${SMTP_USER:?SMTP_USER is required (SES SMTP IAM access key ID)}"
 : "${SMTP_PASSWORD:?SMTP_PASSWORD is required (derived SES SMTP credential)}"
 : "${FROM_EMAIL:?FROM_EMAIL is required (e.g. noreply@cloudless.gr)}"
+: "${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}"
 
-command -v kubectl >/dev/null 2>&1 || { echo "error: kubectl not found / no cluster access"; exit 1; }
-POD=$(kubectl -n "$NAMESPACE" get pod -l app="$DEPLOYMENT" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-[ -n "$POD" ] || { echo "error: no $DEPLOYMENT pod in ns/$NAMESPACE"; exit 1; }
 echo "== keycloak-configure-email $(date -u '+%F %T')Z =="
-echo "pod=$POD realm=$REALM smtp_host=$SMTP_HOST:$SMTP_PORT from=$FROM_EMAIL"
+echo "url=$KEYCLOAK_URL realm=$REALM smtp_host=$SMTP_HOST:$SMTP_PORT from=$FROM_EMAIL"
 
-kubectl -n "$NAMESPACE" exec -i "$POD" -- \
-  env RL="$REALM" \
-      SH="$SMTP_HOST" SP="$SMTP_PORT" SU="$SMTP_USER" SW="$SMTP_PASSWORD" \
-      FE="$FROM_EMAIL" FN="$FROM_NAME" \
-  bash -s <<'EOS'
-set -uo pipefail
-K=/opt/keycloak/bin/kcadm.sh
-AU="${KEYCLOAK_ADMIN:-${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}}"
-AP="${KEYCLOAK_ADMIN_PASSWORD:-${KC_BOOTSTRAP_ADMIN_PASSWORD:-}}"
-$K config credentials --server http://localhost:8080 --realm master --user "$AU" --password "$AP" >/dev/null 2>&1 \
-  || { echo "ADMIN_AUTH=failed"; exit 1; }
+# --- 1) Obtain admin access token ---
+TOKEN=$(curl -sf --max-time 15 \
+  -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "client_id=admin-cli" \
+  --data-urlencode "username=${KEYCLOAK_ADMIN}" \
+  --data-urlencode "password=${KEYCLOAK_ADMIN_PASSWORD}" \
+  --data-urlencode "grant_type=password" \
+  2>&1) || { echo "ADMIN_AUTH=failed (curl error: $TOKEN)"; exit 1; }
+TOKEN=$(printf '%s' "$TOKEN" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("access_token",""))' 2>/dev/null || true)
+[ -n "$TOKEN" ] || { echo "ADMIN_AUTH=failed (empty token — wrong password or Keycloak unreachable)"; exit 1; }
 echo "ADMIN_AUTH=ok"
 
-# Build the SMTP JSON block (Python to handle any special chars in the password)
-SMTP_JSON=$(python3 - "$SH" "$SP" "$SU" "$SW" "$FE" "$FN" <<'PY'
+# --- 2) Build smtpServer JSON ---
+SMTP_JSON=$(python3 - "$SMTP_HOST" "$SMTP_PORT" "$SMTP_USER" "$SMTP_PASSWORD" "$FROM_EMAIL" "$FROM_NAME" <<'PY'
 import sys, json
 host, port, user, pw, from_email, from_name = sys.argv[1:]
 print(json.dumps({
@@ -77,28 +79,49 @@ print(json.dumps({
 PY
 )
 
-# Apply the smtpServer block + enable verifyEmail
-$K update "realms/$RL" -s "smtpServer=$SMTP_JSON" >/dev/null 2>&1 \
-  && echo "SMTP=configured" || { echo "SMTP=failed"; exit 1; }
+# --- 3) Apply smtpServer config to realm ---
+HTTP=$(curl -sf --max-time 15 -o /dev/null -w "%{http_code}" \
+  -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{\"smtpServer\": ${SMTP_JSON}}")
+[ "$HTTP" = "204" ] && echo "SMTP=configured (HTTP 204)" \
+  || { echo "SMTP=failed (HTTP ${HTTP})"; exit 1; }
 
-$K update "realms/$RL" -s verifyEmail=true >/dev/null 2>&1 \
-  && echo "VERIFY_EMAIL=enabled" || echo "VERIFY_EMAIL=failed (non-fatal)"
+# --- 4) Enable verifyEmail on the realm ---
+HTTP=$(curl -sf --max-time 15 -o /dev/null -w "%{http_code}" \
+  -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"verifyEmail": true}')
+[ "$HTTP" = "204" ] && echo "VERIFY_EMAIL=enabled" \
+  || echo "VERIFY_EMAIL=failed (HTTP ${HTTP}) — non-fatal"
 
-# Ensure VERIFY_EMAIL required action is enabled and set as default
-# (default=true means it's automatically assigned to new registrations)
-$K update "realms/$RL/authentication/required-actions/VERIFY_EMAIL" \
-  -s enabled=true -s defaultAction=true >/dev/null 2>&1 \
-  && echo "REQUIRED_ACTION=enabled+default" || echo "REQUIRED_ACTION=update failed (non-fatal)"
+# --- 5) Enable VERIFY_EMAIL required action as default ---
+# GET current state first so we preserve all existing fields
+RA=$(curl -sf --max-time 15 \
+  "${KEYCLOAK_URL}/admin/realms/${REALM}/authentication/required-actions/VERIFY_EMAIL" \
+  -H "Authorization: Bearer ${TOKEN}" 2>/dev/null || true)
+if [ -n "$RA" ]; then
+  PATCHED=$(printf '%s' "$RA" | python3 -c \
+    'import sys,json; d=json.load(sys.stdin); d["enabled"]=True; d["defaultAction"]=True; print(json.dumps(d))')
+  HTTP=$(curl -sf --max-time 15 -o /dev/null -w "%{http_code}" \
+    -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/authentication/required-actions/VERIFY_EMAIL" \
+    -H "Authorization: Bearer ${TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d "$PATCHED")
+  [ "$HTTP" = "204" ] && echo "REQUIRED_ACTION=enabled+default" \
+    || echo "REQUIRED_ACTION=update failed (HTTP ${HTTP}) — non-fatal"
+else
+  echo "REQUIRED_ACTION=skipped (could not fetch current state)"
+fi
 
-echo "DONE"
-EOS
-
+echo ""
 echo "=== email verification configured ==="
 echo ""
 echo "What happens now:"
-echo "  1. New users who register at cloudless.gr will receive a verification email"
+echo "  1. New users who register at cloudless.gr receive a verification email"
 echo "  2. The email contains a link — clicking it verifies their account"
 echo "  3. Until verified, users cannot sign in to the application"
 echo ""
-echo "Test: register at https://cloudless.gr/auth/register with a real email address"
-echo "To test SMTP only: ./tools/keycloak-cli/keycloak.sh smtp-test"
+echo "Test: register at https://cloudless.gr/auth/register with a real email"

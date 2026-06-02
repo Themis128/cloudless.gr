@@ -14,6 +14,19 @@ name: Provision SES SMTP credentials
 
 on:
   workflow_dispatch:
+    inputs:
+      smtp_user:
+        description: "Pre-created SES SMTP username (access key ID from AWS Console → SES → SMTP Settings). Leave blank to auto-provision via IAM."
+        required: false
+        default: ""
+      smtp_password:
+        description: "Pre-created SES SMTP password (derived credential shown at creation time — NOT the IAM secret key). Leave blank to auto-provision."
+        required: false
+        default: ""
+      from_email:
+        description: "Verified From address, e.g. noreply@cloudless.gr. Leave blank to keep existing or use default."
+        required: false
+        default: ""
   push:
     branches: [main]
     paths:
@@ -50,6 +63,12 @@ jobs:
         id: provision
         env:
           AWS_REGION: us-east-1
+          # Manual-bypass: if the user provided pre-created SES SMTP creds via
+          # workflow_dispatch inputs, the script writes them straight to SSM and
+          # skips IAM user creation (works without iam:CreateUser permission).
+          SES_SMTP_USER_INPUT: ${{ github.event.inputs.smtp_user }}
+          SES_SMTP_PASSWORD_INPUT: ${{ github.event.inputs.smtp_password }}
+          SES_FROM_INPUT: ${{ github.event.inputs.from_email }}
         run: |
           # pipefail is required: without it, `script | tee` returns tee's exit
           # code (0) and masks the script's failure, falsely marking the job green.
