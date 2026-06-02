@@ -66,6 +66,7 @@ jobs:
           # Manual-bypass: if the user provided pre-created SES SMTP creds via
           # workflow_dispatch inputs, the script writes them straight to SSM and
           # skips IAM user creation (works without iam:CreateUser permission).
+          TRIGGERED_BY: ${{ github.event_name }}
           SES_SMTP_USER_INPUT: ${{ github.event.inputs.smtp_user }}
           SES_SMTP_PASSWORD_INPUT: ${{ github.event.inputs.smtp_password }}
           SES_FROM_INPUT: ${{ github.event.inputs.from_email }}
