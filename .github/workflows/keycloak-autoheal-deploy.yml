@@ -1,5 +1,8 @@
 name: Keycloak autoheal — deploy in-cluster self-healer
 
+# Re-triggered 2026-06-02 23:1x — verify the healer after the k3s restart, now
+# that the control plane is back and the image (alpine/k8s:1.35.5) is valid.
+#
 # Installs the in-cluster Keycloak self-healer (k8s/cluster-protection/
 # keycloak-autoheal.yaml) AND remediates the current state in one shot:
 #   1. apply the 768Mi source-of-truth manifest (immediate OOM fix + rollout)
