@@ -36,6 +36,8 @@ function SignUpForm() {
   const [step, setStep] = useState<"signup" | "check-email">("signup");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +63,24 @@ function SignUpForm() {
       setError(t("auth.signupFailed", "Sign up failed"));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      // The endpoint always returns ok (anti-enumeration), so a successful
+      // request is all we can confirm to the user.
+      await globalThis.fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      setResent(true);
+    } catch {
+      // Keep the button available so the user can retry.
+    } finally {
+      setResending(false);
     }
   };
 
@@ -113,6 +133,23 @@ function SignUpForm() {
                   "Click the link in the email to activate your account. After verification, you can sign in."
                 )}
               </p>
+              <div className="space-y-2">
+                <p className="font-mono text-xs text-slate-500">
+                  {t("auth.didntGetEmail", "Didn't get the email?")}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending || resent}
+                  className="bg-void-light/60 hover:border-neon-cyan/40 min-h-11 w-full rounded-lg border border-slate-700 py-2.5 font-mono text-sm text-slate-300 transition-all disabled:opacity-60"
+                >
+                  {resending
+                    ? t("auth.resending", "Resending…")
+                    : resent
+                      ? t("auth.verificationResent", "Verification email sent ✓")
+                      : t("auth.resendVerification", "Resend verification email")}
+                </button>
+              </div>
               <Link
                 href="/auth/login"
                 className="text-neon-cyan block font-mono text-sm hover:underline"
