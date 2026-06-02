@@ -223,7 +223,10 @@ do_r53() {
       c_warn "  health-check $hc — PERMISSION DENIED (add route53:GetHealthCheck to caller role)"
       continue
     fi
-    cfg="$(echo "$raw" | jq -r '.' 2>/dev/null || echo '{}')"
+    if ! cfg="$(echo "$raw" | jq -r '.' 2>/dev/null)"; then
+      c_warn "  health-check $hc — AWS error: $(echo "$raw" | head -1)"
+      continue
+    fi
     local typ interval str
     typ="$(echo "$cfg" | jq -r '.Type // "?"')"
     interval="$(echo "$cfg" | jq -r '.RequestInterval // "?"')"
