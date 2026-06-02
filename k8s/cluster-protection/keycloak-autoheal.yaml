@@ -99,10 +99,9 @@ spec:
         spec:
           serviceAccountName: keycloak-autoheal
           restartPolicy: Never
-          # Pin to omv — the node Keycloak runs on, where the kubectl image is
-          # already cached, so the healer never stalls on a first-time pull.
-          nodeSelector:
-            kubernetes.io/hostname: omv
+          # No nodeSelector: the healer talks to the API server (not the kubelet),
+          # so it can run on any node. Letting it schedule freely means it still
+          # works if the node Keycloak lives on is the one under pressure.
           # Tolerate the control-plane node taint if present — the healer must
           # be schedulable even when the cluster is under pressure.
           tolerations:
@@ -113,11 +112,13 @@ spec:
               type: RuntimeDefault
           containers:
             - name: heal
-              # Multi-arch (arm64) kubectl image with a shell. In-cluster config
-              # is auto-detected from the mounted ServiceAccount token — no
-              # kubeconfig needed. If this tag ever fails to pull, swap for
-              # rancher/kubectl:v1.31.4 (also multi-arch).
-              image: bitnami/kubectl:1.31
+              # alpine/k8s bundles kubectl + bash on a multi-arch (arm64) base.
+              # Chosen because it's ALREADY used by cluster-alerts.yaml on this
+              # cluster (proven to pull on the omv arm64 node) and matches the
+              # k3s 1.35 server. In-cluster config is auto-detected from the
+              # mounted ServiceAccount token — no kubeconfig needed.
+              # (Earlier bitnami/kubectl:1.31 was an invalid tag — never existed.)
+              image: alpine/k8s:1.35.5
               imagePullPolicy: IfNotPresent
               env:
                 # kubectl writes its discovery cache under $HOME/.kube — point it
