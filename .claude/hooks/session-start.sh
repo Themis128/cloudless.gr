@@ -110,27 +110,49 @@ PY
 
   echo "[session-start] Injected ${COUNT} SSM params into settings.json env block."
 elif [ -n "${GITHUB_PAT:-}" ]; then
-  # Fallback: read GitHub Variables (synced from SSM by sync-ssm-to-vars.yml)
+  # Fallback: read GitHub Variables (synced from SSM/Secrets by sync-*.yml workflows)
+  # Paginates through all pages (repo has >100 variables across 3 pages).
   echo "[session-start] No AWS credentials — fetching secrets from GitHub Variables..."
-  VARS=$(curl -s \
-    -H "Authorization: Bearer ${GITHUB_PAT}" \
-    -H "Accept: application/vnd.github+json" \
-    "https://api.github.com/repos/${GH_REPO}/actions/variables?per_page=100" \
-    2>/dev/null) || VARS='{"variables":[]}'
 
-  COUNT=$(echo "$VARS" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-vars_list = d.get('variables', [])
-print(len(vars_list))
-" 2>/dev/null || echo 0)
+  COUNT=$(python3 - "${GITHUB_PAT}" "${GH_REPO}" "${SETTINGS_FILE}" << 'PY'
+import json, sys, urllib.request
 
-  if [ "$COUNT" -gt 0 ]; then
-    echo "$VARS" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-print(json.dumps(d.get('variables', [])))
-" | inject_settings_env
+pat, repo, settings_path = sys.argv[1], sys.argv[2], sys.argv[3]
+all_vars = []
+page = 1
+
+while True:
+    url = f"https://api.github.com/repos/{repo}/actions/variables?per_page=100&page={page}"
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {pat}",
+        "Accept": "application/vnd.github+json",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            d = json.loads(r.read())
+    except Exception:
+        break
+    batch = d.get("variables", [])
+    if not batch:
+        break
+    all_vars.extend(batch)
+    page += 1
+
+with open(settings_path) as f:
+    settings = json.load(f)
+env = settings.setdefault("env", {})
+for v in all_vars:
+    key = v.get("name", "")
+    value = (v.get("value") or "").strip()
+    if key and value:
+        env[key] = value
+with open(settings_path, "w") as f:
+    json.dump(settings, f, indent=4)
+print(len(all_vars))
+PY
+  ) || COUNT=0
+
+  if [ "${COUNT:-0}" -gt 0 ]; then
     echo "[session-start] Injected ${COUNT} GitHub Variables into settings.json env block."
   else
     echo "[session-start] No GitHub Variables found — secrets not yet synced." >&2
