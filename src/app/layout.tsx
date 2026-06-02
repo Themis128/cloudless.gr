@@ -135,8 +135,16 @@ export default async function RootLayout({
         <HubSpotScript nonce={nonce} />
         {GA_ID ? (
           <>
-            {/* Consent Mode v2 — default to denied before user responds to banner */}
-            <Script id="gtag-consent-init" strategy="beforeInteractive" nonce={nonce}>{`
+            {/* Consent Mode v2 — default to denied before user responds to banner.
+                Plain <script> + suppressHydrationWarning avoids the dev-only nonce
+                attribute mismatch: Next.js renders beforeInteractive nonce on the
+                server but the client re-renders it as "" before hydration. */}
+            <script
+              id="gtag-consent-init"
+              nonce={nonce || undefined}
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{
+                __html: `
               window.dataLayer = window.dataLayer || [];
               function gtag(){window.dataLayer.push(arguments);}
               gtag('consent', 'default', {
@@ -144,7 +152,9 @@ export default async function RootLayout({
                 ad_storage: 'denied',
                 wait_for_update: 500
               });
-            `}</Script>
+            `,
+              }}
+            />
             <Script
               src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
               strategy="afterInteractive"
