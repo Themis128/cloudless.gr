@@ -25,11 +25,17 @@ test.describe("ECR / container image health", () => {
     const pBody = JSON.parse(primary.body);
     const sBody = JSON.parse(standby.body);
     expect(pBody.status).toBe(sBody.status);
-    if (pBody.sha && sBody.sha) {
-      expect(pBody.sha, `SHA drift: primary=${pBody.sha}, standby=${sBody.sha}`).toBe(sBody.sha);
+    // Exact SHA equality is NOT asserted here — the Pi image build takes ~10 min
+    // and the Pi legitimately lags one deploy behind Lambda during rollout windows.
+    // SHA drift with a grace window is tested by the dedicated sha-drift-detector.yml
+    // workflow; asserting equality here produces transient CI noise on every deploy.
+    // We verify both report a valid git SHA (proving APP_VERSION is wired up).
+    const shaRe = /^[0-9a-f]{7,40}$/i;
+    if (pBody.version) {
+      expect(pBody.version, `primary version is not a git SHA: ${pBody.version}`).toMatch(shaRe);
     }
-    if (pBody.version && sBody.version) {
-      expect(pBody.version, `Version drift: primary=${pBody.version}, standby=${sBody.version}`).toBe(sBody.version);
+    if (sBody.version) {
+      expect(sBody.version, `standby version is not a git SHA: ${sBody.version}`).toMatch(shaRe);
     }
   });
 
