@@ -54,6 +54,9 @@ concurrency:
   group: keycloak-configure-email
   cancel-in-progress: false
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   configure-email:
     runs-on: ubuntu-latest

@@ -178,15 +178,31 @@ do_config() {
 # --------------------------------------------------------------------------
 do_kms() {
   c_hdr "KMS (~\$2.13/mo) — audit customer-managed keys (\$1/key/mo)"
-  aws kms list-keys --region "$REGION" --output json | jq -r '.Keys[].KeyId' | while read -r kid; do
+  local key_list
+  key_list="$(aws kms list-keys --region "$REGION" --output json 2>&1)" || {
+    c_warn "  kms:ListKeys permission denied — add kms:ListKeys + kms:DescribeKey + kms:ListAliases to the caller role."
+    c_warn "  NOTE: \$2.13 charge may be API-call volume on AWS-managed keys, not CMK monthly fees."
+    c_warn "  Check: Cost Explorer → KMS → Usage Type (Request, GenerateDataKey, etc.)."
+    return
+  }
+  local found=0
+  while read -r kid; do
+    [[ -z "$kid" ]] && continue
     local meta mgr state alias
     meta="$(aws kms describe-key --key-id "$kid" --region "$REGION" --output json 2>/dev/null || echo '{}')"
-    mgr="$(echo "$meta" | jq -r '.KeyMetadata.KeyManager')"
+    mgr="$(echo "$meta" | jq -r '.KeyMetadata.KeyManager // "?"')"
     [[ "$mgr" != "CUSTOMER" ]] && continue   # AWS-managed keys are free; skip
+    found=1
     state="$(echo "$meta" | jq -r '.KeyMetadata.KeyState')"
     alias="$(aws kms list-aliases --key-id "$kid" --region "$REGION" --query 'Aliases[0].AliasName' --output text 2>/dev/null || echo '-')"
     echo "  CMK $kid  state=$state  alias=$alias  (\$1/mo)"
-  done
+  done <<< "$(echo "$key_list" | jq -r '.Keys[].KeyId')"
+  if [[ "$found" == "0" ]]; then
+    c_ok "  No customer-managed keys in $REGION."
+    c_warn "  NOTE: \$2.13 KMS charge is likely API-call volume on AWS-managed keys (not \$1/CMK/mo fees)."
+    c_warn "  Check Cost Explorer → KMS → Usage Type to confirm and identify the top calling service."
+    return
+  fi
   c_warn "For each CMK NOT referenced by SES/S3/Secrets Manager/SQS, schedule deletion (DESTRUCTIVE, 30-day window):"
   echo "    #   aws kms schedule-key-deletion --key-id <KEY> --pending-window-in-days 30 --region $REGION"
   echo "    # Prefer switching the consuming service to its free AWS-managed key first."
@@ -200,8 +216,14 @@ do_r53() {
   c_hdr "Route 53 (~\$4.22/mo) — audit zone + HA health checks"
   echo "  hosted zone $ZONE_ID = \$0.50/mo (unavoidable — it's your DNS)"
   for hc in "$PRIMARY_HC" "$SECONDARY_HC"; do
-    local cfg
-    cfg="$(aws route53 get-health-check --health-check-id "$hc" --query 'HealthCheck.HealthCheckConfig' --output json 2>/dev/null || echo '{}')"
+    local raw cfg
+    raw="$(aws route53 get-health-check --health-check-id "$hc" \
+          --query 'HealthCheck.HealthCheckConfig' --output json 2>&1)" || true
+    if echo "$raw" | grep -qi "AccessDenied\|not authorized\|is not authorized"; then
+      c_warn "  health-check $hc — PERMISSION DENIED (add route53:GetHealthCheck to caller role)"
+      continue
+    fi
+    cfg="$(echo "$raw" | jq -r '.' 2>/dev/null || echo '{}')"
     local typ interval str
     typ="$(echo "$cfg" | jq -r '.Type // "?"')"
     interval="$(echo "$cfg" | jq -r '.RequestInterval // "?"')"
