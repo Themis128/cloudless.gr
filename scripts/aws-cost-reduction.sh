@@ -224,7 +224,7 @@ do_r53() {
       continue
     fi
     if ! cfg="$(echo "$raw" | jq -r '.' 2>/dev/null)"; then
-      c_warn "  health-check $hc — AWS error: $(echo "$raw" | head -1)"
+      c_warn "  health-check $hc — AWS error: $(echo "$raw" | grep -m1 '.' || echo '(empty response)')"
       continue
     fi
     local typ interval str
