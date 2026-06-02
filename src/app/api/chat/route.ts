@@ -127,7 +127,11 @@ export async function POST(request: NextRequest) {
     const name = err instanceof Error ? err.name : "";
     // Log name + message only — never the full error object, which may carry
     // SDK request context (region, model ARN, partial auth headers) into logs.
-    console.error("[chat] bedrock loop failed:", name, err instanceof Error ? err.message : String(err));
+    console.error(
+      "[chat] bedrock loop failed:",
+      name,
+      err instanceof Error ? err.message : String(err)
+    );
     // Access/auth errors → config issue on our side; surface as 503.
     // Transient errors (throttling, model unavailable, etc.) → 502.
     if (name === "AccessDeniedException" || name === "UnauthorizedException") {
