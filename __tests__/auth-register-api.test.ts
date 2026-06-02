@@ -183,7 +183,7 @@ describe("POST /api/auth/register", () => {
     expect(body.error).toMatch(/already exists/i);
   });
 
-  it("returns 400 with Keycloak errorMessage on password policy violation", async () => {
+  it("returns a generic 400 on Keycloak failure without leaking its errorMessage", async () => {
     fetchMock.mockResolvedValueOnce(tokenOk()).mockResolvedValueOnce({
       ok: false,
       status: 400,
@@ -194,7 +194,9 @@ describe("POST /api/auth/register", () => {
     const res = await POST(req({ email: "a@b.com", password: "password1" }));
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("Password does not meet policy requirements");
+    // Sanitised: raw Keycloak realm/LDAP detail must NOT reach the caller.
+    expect(body.error).toBe("Registration failed");
+    expect(body.error).not.toContain("policy");
   });
 
   it("returns 400 with fallback message when Keycloak gives no errorMessage", async () => {
