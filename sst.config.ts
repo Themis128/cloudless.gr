@@ -278,8 +278,8 @@ export default {
     // APIGW regional has its own well-known zone ID Z1UJRXOUMOOFQ8.
     if (isProd) {
       const zoneId = "Z079608614L53CC4EAZM3"; // cloudless.gr hosted zone
-      const healthCheckId = "e239ad5c-dd17-40d7-8045-a153715168cf"; // PRIMARY (CloudFront)
-      const secondaryHealthCheckId = "30a69f1c-8d48-49bd-9067-cabec979478b"; // SECONDARY (APIGW frontend)
+      const healthCheckId = "3805ab54-0238-4ab1-870f-7ad9caf43a91"; // PRIMARY (CloudFront)
+      const secondaryHealthCheckId = "1069b339-6066-4a5c-a1b1-6bc7c9376977"; // SECONDARY (APIGW frontend)
       const cfZoneId = "Z2FDTNDATAQYW2";
       const apigwZoneId = "Z1UJRXOUMOOFQ8"; // APIGW regional, us-east-1
       const apexCfDomain = "d3k7muo3c6lw6s.cloudfront.net";
