@@ -259,6 +259,13 @@ for v in d.get('properties',{}).values():
     exit 1
   fi
 
+  # Explicitly unarchive the page before editing — Notion blocks edits if the
+  # page or a parent is archived, even when GET reports archived:false
+  curl -sS -X PATCH "https://api.notion.com/v1/pages/${PAGE_ID}" \
+    "${HEADERS[@]}" \
+    -d '{"archived": false}' >/dev/null
+  note "  Page unarchived (pre-edit)"
+
   # Delete existing blocks
   EXISTING=$(curl -sS "https://api.notion.com/v1/blocks/${PAGE_ID}/children?page_size=100" "${HEADERS[@]}")
   echo "$EXISTING" | python3 -c "
@@ -276,7 +283,9 @@ for b in data.get('results', []):
     --data "@${BLOCKS_FILE}")
   STATUS=$(echo "$APPEND_RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('object') or d.get('code','error'))" 2>/dev/null || echo "error")
   if [ "$STATUS" = "error" ]; then
-    note "  Append ERROR: $(echo "$APPEND_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('message','unknown'))" 2>/dev/null)"
+    ERRMSG=$(echo "$APPEND_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('message','unknown'))" 2>/dev/null)
+    note "  Append ERROR: ${ERRMSG}"
+    exit 1
   fi
   note "  Append status: ${STATUS}"
   ACTION="updated"
