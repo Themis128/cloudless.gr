@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # cluster-doctor.sh — read-only diagnostics for the omv k3s cluster, with a
-# focus on why Keycloak (auth.cloudless.gr) might be down. [triggered 2026-06-02]
+# focus on why Keycloak (auth.cloudless.gr) might be down. [triggered 2026-06-02T-listwatch]
 #
 # Emits a Markdown report to stdout. Every kubectl call is best-effort (|| true)
 # so the report is always produced even when individual objects are missing.
