@@ -20,11 +20,14 @@ export default function ServiceWorkerRegistration() {
     if (process.env.NODE_ENV !== "production") {
       // In development, avoid stale Turbopack/Next.js chunks from service worker cache.
       if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.getRegistrations().then((registrations) => {
-          registrations.forEach((registration) => {
-            registration.unregister();
-          });
-        }).catch(() => {});
+        navigator.serviceWorker
+          .getRegistrations()
+          .then((registrations) => {
+            registrations.forEach((registration) => {
+              registration.unregister();
+            });
+          })
+          .catch(() => {});
       }
       return;
     }
