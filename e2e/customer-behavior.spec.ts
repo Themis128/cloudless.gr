@@ -39,8 +39,12 @@ test.describe("Homepage", () => {
     test.skip(!!isMobile, "Navbar links hidden on mobile");
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    await page.getByRole("navigation").first().getByRole("link", { name: /services/i }).click();
-    await expect(page).toHaveURL(/\/services/, { timeout: 10000 });
+    const link = page.getByRole("navigation").first().getByRole("link", { name: /services/i });
+    await link.waitFor({ state: "visible" });
+    await Promise.all([
+      page.waitForURL(/\/services/, { timeout: 10000 }),
+      link.click(),
+    ]);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
@@ -48,8 +52,12 @@ test.describe("Homepage", () => {
     test.skip(!!isMobile, "Navbar links hidden on mobile");
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    await page.getByRole("navigation").first().getByRole("link", { name: /store/i }).click();
-    await expect(page).toHaveURL(/\/store/, { timeout: 10000 });
+    const link = page.getByRole("navigation").first().getByRole("link", { name: /store/i });
+    await link.waitFor({ state: "visible" });
+    await Promise.all([
+      page.waitForURL(/\/store/, { timeout: 10000 }),
+      link.click(),
+    ]);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
@@ -57,8 +65,12 @@ test.describe("Homepage", () => {
     test.skip(!!isMobile, "Navbar links hidden on mobile");
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    await page.getByRole("navigation").first().getByRole("link", { name: /blog/i }).click();
-    await expect(page).toHaveURL(/\/blog/, { timeout: 10000 });
+    const link = page.getByRole("navigation").first().getByRole("link", { name: /blog/i });
+    await link.waitFor({ state: "visible" });
+    await Promise.all([
+      page.waitForURL(/\/blog/, { timeout: 10000 }),
+      link.click(),
+    ]);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 });
