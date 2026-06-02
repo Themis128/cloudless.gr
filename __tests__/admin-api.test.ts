@@ -490,19 +490,19 @@ describe("POST /api/admin/users", () => {
   });
 
   it("returns 400 when action is missing", async () => {
-    const res = await postAction({ username: "user-1" });
+    const res = await postAction({ username: "00000000-0000-0000-0000-000000000001" });
     expect(res.status).toBe(400);
   });
 
   it("disable action succeeds", async () => {
-    const res = await postAction({ action: "disable", username: "user-1" });
+    const res = await postAction({ action: "disable", username: "00000000-0000-0000-0000-000000000001" });
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.success).toBe(true);
   });
 
   it("enable action succeeds", async () => {
-    const res = await postAction({ action: "enable", username: "user-1" });
+    const res = await postAction({ action: "enable", username: "00000000-0000-0000-0000-000000000001" });
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.success).toBe(true);
@@ -511,7 +511,7 @@ describe("POST /api/admin/users", () => {
   it("promote action succeeds", async () => {
     const res = await postAction({
       action: "promote",
-      username: "user-1",
+      username: "00000000-0000-0000-0000-000000000001",
       groupName: "admin",
     });
     expect(res.status).toBe(200);
@@ -520,7 +520,7 @@ describe("POST /api/admin/users", () => {
   });
 
   it("returns 400 for unknown action", async () => {
-    const res = await postAction({ action: "nuke", username: "user-1" });
+    const res = await postAction({ action: "nuke", username: "00000000-0000-0000-0000-000000000001" });
     expect(res.status).toBe(400);
   });
 });

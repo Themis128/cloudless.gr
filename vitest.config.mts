@@ -26,6 +26,13 @@ export default defineConfig({
         __dirname,
         "__tests__/stubs/next-server-stub.js",
       ),
+      // next-intl's react-client navigation helpers import `next/navigation`
+      // as a bare ESM specifier which Vitest can't resolve from the CJS dist.
+      // This stub provides no-op hook implementations for component tests.
+      "next/navigation": path.resolve(
+        __dirname,
+        "__tests__/stubs/next-navigation-stub.js",
+      ),
       // @aws-sdk/client-cognito-identity-provider is not installed; tests that
       // need it supply their own vi.mock() — the stub prevents Vite's import
       // analysis from failing when the route file is dynamically imported.
@@ -68,7 +75,7 @@ export default defineConfig({
       deps: {
         // next-auth imports next/server as bare ESM specifier. Inlining lets
         // Vitest pre-transform the import through its alias map.
-        inline: ["next-auth", "@auth/core"],
+        inline: ["next-auth", "@auth/core", "next-intl"],
       },
     },
     maxWorkers: 2,
