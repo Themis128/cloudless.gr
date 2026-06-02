@@ -33,10 +33,8 @@ REGION="${AWS_REGION:-us-east-1}"
 ACCOUNT="278585680617"
 DRY_RUN="${DRY_RUN:-1}"
 SSM_MIGRATE_PREFIX="${SSM_MIGRATE_PREFIX:-/cloudless/production/migrated}"
-# Route 53 (from sst.config.ts)
+# Route 53
 ZONE_ID="Z079608614L53CC4EAZM3"
-PRIMARY_HC="e239ad5c-dd17-40d7-8045-a153715168cf"
-SECONDARY_HC="30a69f1c-8d48-49bd-9067-cabec979478b"
 
 c_hdr() { printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
 c_ok()  { printf '\033[0;32m%s\033[0m\n' "$*"; }
@@ -215,24 +213,27 @@ do_kms() {
 do_r53() {
   c_hdr "Route 53 (~\$4.22/mo) — audit zone + HA health checks"
   echo "  hosted zone $ZONE_ID = \$0.50/mo (unavoidable — it's your DNS)"
-  for hc in "$PRIMARY_HC" "$SECONDARY_HC"; do
-    local raw cfg
-    raw="$(aws route53 get-health-check --health-check-id "$hc" \
-          --query 'HealthCheck.HealthCheckConfig' --output json 2>&1)" || true
-    if echo "$raw" | grep -qi "AccessDenied\|not authorized\|is not authorized"; then
-      c_warn "  health-check $hc — PERMISSION DENIED (add route53:GetHealthCheck to caller role)"
-      continue
+  local hc_json
+  hc_json="$(aws route53 list-health-checks --output json 2>&1)" || true
+  if echo "$hc_json" | grep -qi "AccessDenied\|not authorized\|is not authorized"; then
+    c_warn "  route53:ListHealthChecks denied — add it to the caller role to audit health checks."
+  else
+    local count
+    count="$(echo "$hc_json" | jq -r '.HealthChecks | length' 2>/dev/null || echo 0)"
+    if [[ "$count" == "0" ]]; then
+      c_ok "  No health checks found in account."
+    else
+      while IFS= read -r hc; do
+        local hc_id cfg typ interval str_match
+        hc_id="$(echo "$hc" | jq -r '.Id' | sed 's|.*/||')"
+        cfg="$(echo "$hc" | jq -c '.HealthCheckConfig')"
+        typ="$(echo "$cfg" | jq -r '.Type // "?"')"
+        interval="$(echo "$cfg" | jq -r '.RequestInterval // "?"')"
+        str_match="$(echo "$cfg" | jq -r 'if .SearchString then "string-match" else "no-match" end')"
+        echo "  health-check $hc_id  type=$typ interval=${interval}s $str_match"
+      done < <(echo "$hc_json" | jq -c '.HealthChecks[]' 2>/dev/null)
     fi
-    if ! cfg="$(echo "$raw" | jq -r '.' 2>/dev/null)"; then
-      c_warn "  health-check $hc — AWS error: $(echo "$raw" | grep -m1 '.' || echo '(empty response)')"
-      continue
-    fi
-    local typ interval str
-    typ="$(echo "$cfg" | jq -r '.Type // "?"')"
-    interval="$(echo "$cfg" | jq -r '.RequestInterval // "?"')"
-    str="$(echo "$cfg" | jq -r 'if .SearchString then "string-match" else "no-match" end')"
-    echo "  health-check $hc  type=$typ interval=${interval}s $str"
-  done
+  fi
   c_warn "Surcharges: HTTPS +\$1, string-match +\$1, fast(10s) interval +\$1 — each per check, per month."
   c_warn "Type & interval are IMMUTABLE on a health check. To drop fast-interval/string-match you must"
   c_warn "recreate the check and update its healthCheckId in sst.config.ts. Open a PR for that — do not"
