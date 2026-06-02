@@ -47,7 +47,11 @@ jobs:
         id: provision
         env:
           AWS_REGION: us-east-1
-        run: bash scripts/provision-ses-smtp.sh 2>&1 | tee provision.log
+        run: |
+          # pipefail is required: without it, `script | tee` returns tee's exit
+          # code (0) and masks the script's failure, falsely marking the job green.
+          set -o pipefail
+          bash scripts/provision-ses-smtp.sh 2>&1 | tee provision.log
 
       - name: Post result to tracking issue
         if: always()
