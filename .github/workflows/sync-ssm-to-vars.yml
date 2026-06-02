@@ -21,6 +21,7 @@ permissions:
   actions: write    # create/update repo variables
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   AWS_REGION: us-east-1
   SSM_PREFIX: /cloudless/production
 
