@@ -207,6 +207,22 @@ const nextAuthResult = hasAuthSecret
         },
       },
       session: { strategy: "jwt" },
+      // Suppress the benign next-auth "Configuration" error that fires on a bare
+      // GET to /api/auth/signin/keycloak (health probes, crawlers, link
+      // unfurlers). Real sign-in POSTs with CSRF and is unaffected. That log
+      // line is what the CloudWatch `CloudlessApp/ServerlessErrors` metric
+      // filter counts, so dropping it stops the noisy SERVERLESS-APP_MAIN-Errors
+      // alarm from flapping on non-events. We only swallow it when Keycloak is
+      // *actually* configured — if the env below is missing the error is a real
+      // misconfiguration and still logs (and still trips the metric).
+      logger: {
+        error(error: Error) {
+          const tag = `${error?.name ?? ""} ${(error as { type?: string })?.type ?? ""}`;
+          const kcConfigured = !!(KC_ISSUER && KC_CLIENT_ID && KC_CLIENT_SECRET);
+          if (tag.includes("Configuration") && kcConfigured) return;
+          console.error(`[auth][error] ${error?.message ?? error}`);
+        },
+      },
       pages: {
         signIn: "/auth/login",
         error: "/auth/login",
