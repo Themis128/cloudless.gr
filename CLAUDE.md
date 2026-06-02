@@ -6,11 +6,10 @@ These require access outside GitHub and cannot be automated from a cloud session
 
 | Item | Status | Action |
 |------|--------|--------|
-| `OMV_SSH_KEY` | **MISSING** | On Pi: `cat ~/.ssh/id_ed25519` → GitHub repo Settings → Secrets → `OMV_SSH_KEY`. Then `k3s-watchdog-deploy.yml` auto-triggers. |
-| SES SMTP | **MISSING** | AWS Console → SES → SMTP Settings → Create SMTP credentials. Then GitHub Actions → "Provision SES SMTP credentials" → Run workflow with `smtp_user` + `smtp_password` inputs. |
-| ESP32 Notion DBs | **DB ACCESS UNKNOWN** | Open ESP32 Devices + Telemetry databases in Notion → Share → invite Cloudless integration. Run `notion-discover-esp32.yml` to confirm. |
-| ESP32 page content | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. |
-| Admin password | **TEMP LOGIN in #382** | After `keycloak-bootstrap-admin.yml` run: login with temp credentials from issue #382, then Keycloak forces password update. |
+| `OMV_SSH_KEY` | **MISSING** | On Pi: `cat ~/.ssh/id_ed25519` → GitHub repo Settings → Secrets → `OMV_SSH_KEY`. Then `k3s-watchdog-deploy.yml` auto-triggers. See `.claude/skills/omv-ssh-key-setup/`. |
+| SES SMTP | **MISSING** | AWS Console → SES → SMTP Settings → Create SMTP credentials (one-time, save them). Then GitHub Actions → "Provision SES SMTP credentials" → Run workflow with `smtp_user` + `smtp_password` inputs. |
+| ESP32 page content | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. ESP32 Devices + Telemetry databases (IDs confirmed correct, integration has access) are **empty** — no data was ever populated there to restore. |
+| Admin password | **ACTION REQUIRED** | Temp login posted to GitHub issue #382 (2026-06-02 17:18Z). Login at auth.cloudless.gr with `tbaltzakis@cloudless.gr` + temp password from #382. Keycloak forces password change on first login. |
 
 ## Testing Policy
 
