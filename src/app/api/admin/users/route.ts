@@ -41,6 +41,7 @@ async function getAdminToken(): Promise<string> {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
+    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`Keycloak admin token failed: ${res.status}`);
   const data = (await res.json()) as { access_token: string };
@@ -55,6 +56,7 @@ function kcFetch(path: string, token: string, init?: RequestInit) {
       "Content-Type": "application/json",
       ...(init?.headers as Record<string, string> | undefined),
     },
+    signal: AbortSignal.timeout(10_000),
   });
 }
 
