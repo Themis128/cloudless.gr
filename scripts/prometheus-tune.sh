@@ -14,6 +14,11 @@
 # slimmed to cluster-health-only — see prometheus-slim.yaml). Disabling them
 # stops the failures AND lightens Prometheus CPU/memory.
 #
+# 2026-06-02: also addresses alerting #258 PrometheusKubernetesListWatchFailures
+# (Prometheus SD LIST/WATCH to the kube-apiserver timing out, 62/5min). Same root
+# cause — the heavy rule groups saturate Prometheus CPU and load the apiserver,
+# starving its service-discovery watches; removing them clears the SD timeouts.
+#
 # This deletes the PrometheusRule objects that contain the heavy groups. It is
 # idempotent (missing = already done) and reversible: a `helm upgrade` of the
 # kube-prometheus-stack recreates them, so the durable fix is the Helm values
