@@ -150,9 +150,14 @@ export async function POST(request: NextRequest) {
     // codeql[js/log-injection] -- error message sanitized (newlines stripped)
     console.error("Checkout error:", msg);
 
-    // Client errors: malformed body or unknown product → 400
-    if (/unknown product|json/i.test(msg)) {
-      return Response.json({ error: msg }, { status: 400 });
+    // Client errors: malformed body or unknown product → 400. Return a fixed,
+    // non-reflective message — never echo the raw exception text (which may
+    // carry internal product IDs / SDK internals) back to the caller.
+    if (/unknown product/i.test(msg)) {
+      return Response.json({ error: "Unknown product in cart." }, { status: 400 });
+    }
+    if (/json/i.test(msg)) {
+      return Response.json({ error: "Invalid request body." }, { status: 400 });
     }
 
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
