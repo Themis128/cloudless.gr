@@ -6,10 +6,11 @@ These require access outside GitHub and cannot be automated from a cloud session
 
 | Item | Status | Action |
 |------|--------|--------|
-| `OMV_SSH_KEY` | **SET** ✅ | Key for `tbaltzakis@omv` (host omv, user tbaltzakis). SSH workflows updated to `PI_USER: "tbaltzakis"`. k3s watchdog install pending (run `k3s-watchdog-deploy.yml`). |
-| SES SMTP | **IAM BLOCKED** | `GitHubActionsOIDC` role lacks `iam:CreateUser`. `grant-ses-iam-permissions.yml` tries `iam:PutRolePolicy` to self-grant. If that also fails: AWS Console → IAM → role `GitHubActionsOIDC` → add inline policy for `iam:CreateUser` scoped to `arn:aws:iam::278585680617:user/cloudless-ses-smtp`. Then touch `provision-ses-smtp.yml` to trigger. |
+| `OMV_SSH_KEY` | **SET** ✅ | Key for `tbaltzakis@omv` (host omv, user tbaltzakis). SSH workflows updated to `PI_USER: "tbaltzakis"`. k3s watchdog (`Restart=always`) deployed 2026-06-02T18:56Z — auto-restart active. |
+| SES SMTP | **IAM BLOCKED** | `GitHubActionsOIDC` role lacks `iam:CreateUser`. AWS Console → IAM → role `GitHubActionsOIDC` → add inline policy (exact JSON in issue #382 comment 2026-06-02T18:55Z). Then touch `provision-ses-smtp.yml` to trigger. |
 | ESP32 page content | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. ESP32 Devices + Telemetry databases (IDs confirmed correct, integration has access) are **empty** — no data was ever populated there to restore. |
-| Admin password | **ACTION REQUIRED** | Temp login posted to GitHub issue #382 (2026-06-02 17:18Z). Login at auth.cloudless.gr with `tbaltzakis@cloudless.gr` + temp password from #382. Keycloak forces password change on first login. |
+| Admin password | **PENDING VERIFICATION** | `keycloak-finalize-admin.yml` re-ran 2026-06-02T19:09Z with fixed exec pattern. Check issue #382 for new `PERM_LOGIN` credentials. Login at https://auth.cloudless.gr with `tbaltzakis@cloudless.gr` + password from latest finalize-admin comment. |
+| Cloudflare HA LB | **TOKEN NEEDED** | `setup-cloudflare-lb.yml` (merged PR #548) needs `CLOUDFLARE_API_TOKEN` — add as repo secret or SSM `/cloudless/production/CLOUDFLARE_API_TOKEN` with scopes: Zone:Read, Load Balancing Monitors/Pools+Load Balancers:Edit, DNS:Edit (zone cloudless.gr). Then `workflow_dispatch` or touch the workflow to apply. |
 
 ## Testing Policy
 
