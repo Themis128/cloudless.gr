@@ -61,15 +61,23 @@ jobs:
             | tee api-unreachable.log
           exit 1
 
-      - name: 1. Immediate fix — apply 768Mi source-of-truth manifest
+      - name: 1. Immediate fix — patch keycloak to 768Mi + -Xmx512m
         run: |
           set -uo pipefail
           echo "=== keycloak deploy BEFORE ===" | tee heal.log
           { kubectl -n keycloak get deploy keycloak \
             -o jsonpath='{.spec.template.spec.containers[0].resources}' 2>&1 || true; } | tee -a heal.log; echo | tee -a heal.log
           echo "" | tee -a heal.log
-          echo "== apply memory-relief (768Mi + -Xmx512m) ==" | tee -a heal.log
-          kubectl apply -f k8s/cluster-protection/memory-relief-2026-05-31.yaml 2>&1 | tee -a heal.log || true
+          echo "== ensure LimitRange ceiling (1Gi) ==" | tee -a heal.log
+          kubectl -n keycloak patch limitrange default-container-limits --type=merge -p \
+            '{"spec":{"limits":[{"type":"Container","max":{"memory":"1Gi","cpu":"2"},"default":{"memory":"512Mi","cpu":"1"},"defaultRequest":{"memory":"128Mi","cpu":"100m"}}]}}' 2>&1 | tee -a heal.log || true
+          echo "== patch keycloak deploy (768Mi + -Xmx512m) ==" | tee -a heal.log
+          # Direct strategic patch of just the keycloak Deployment — the
+          # memory-relief manifest holds PARTIAL deploy specs (no selector/image)
+          # meant as patches, so `kubectl apply` of the whole file is invalid.
+          kubectl -n keycloak patch deploy keycloak --type=strategic -p \
+            '{"spec":{"template":{"spec":{"containers":[{"name":"keycloak","resources":{"requests":{"memory":"384Mi","cpu":"100m"},"limits":{"memory":"768Mi","cpu":"1"}},"env":[{"name":"JAVA_OPTS_APPEND","value":"-Xms128m -Xmx512m -Djdk.reflect.useDirectMethodHandle=false -Dquarkus.http.limits.max-header-size=64K"}]}]}}}}' \
+            2>&1 | tee -a heal.log || true
 
       - name: 2. Install in-cluster self-healer (CronJob + RBAC)
         run: |
@@ -85,7 +93,17 @@ jobs:
           echo "" | tee -a heal.log
           echo "== kick $JOB from cronjob/keycloak-autoheal ==" | tee -a heal.log
           kubectl -n keycloak create job --from=cronjob/keycloak-autoheal "$JOB" 2>&1 | tee -a heal.log || true
-          kubectl -n keycloak wait --for=condition=complete "job/$JOB" --timeout=150s 2>&1 | tee -a heal.log || true
+          # First run pulls bitnami/kubectl onto the node — allow generous time.
+          kubectl -n keycloak wait --for=condition=complete "job/$JOB" --timeout=240s 2>&1 | tee -a heal.log || true
+          echo "" | tee -a heal.log
+          echo "== healer pod status (confirm the image pulled / ran) ==" | tee -a heal.log
+          kubectl -n keycloak get pods -l job-name="$JOB" -o wide 2>&1 | tee -a heal.log || true
+          POD=$(kubectl -n keycloak get pods -l job-name="$JOB" -o jsonpath='{.items[-1:].metadata.name}' 2>/dev/null || true)
+          if [ -n "$POD" ]; then
+            echo "-- waiting/last-state reasons --" | tee -a heal.log
+            kubectl -n keycloak get pod "$POD" \
+              -o jsonpath='{range .status.containerStatuses[*]}{.state}{" | last="}{.lastState}{"\n"}{end}' 2>&1 | tee -a heal.log || true
+          fi
           echo "" | tee -a heal.log
           echo "== healer logs ==" | tee -a heal.log
           kubectl -n keycloak logs "job/$JOB" --tail=40 2>&1 | tee -a heal.log || true
