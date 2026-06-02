@@ -63,6 +63,13 @@ kubectl -n "$NAMESPACE" exec "$POD" -- \
   "$K" update "users/$USERID" -r "$REALM" -s 'requiredActions=[]' \
   && echo "REQUIRED_ACTIONS=cleared" || echo "REQUIRED_ACTIONS=clear_failed"
 
+# Step 5 — grant realm-admin role so the user can access the Keycloak Admin Console.
+# Without this the user sees "You do not have permission" at auth.cloudless.gr/admin.
+kubectl -n "$NAMESPACE" exec "$POD" -- \
+  "$K" add-roles -r "$REALM" --uusername "$ADMIN_EMAIL" \
+  --cclientid realm-management --rolename realm-admin 2>/dev/null \
+  && echo "REALM_ADMIN=granted" || echo "REALM_ADMIN=grant_failed_or_already_set"
+
 echo ""
 echo "=== keycloak-finalize-admin complete ==="
 echo "PERMANENT_CREDENTIALS email=${ADMIN_EMAIL}"
