@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { resetRateLimitStore } from "@/lib/rate-limit";
 
 // ---------------------------------------------------------------------------
 // Hoist mocks
@@ -103,6 +104,10 @@ async function readSseText(res: Response): Promise<string> {
 describe("POST /api/chat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // /api/chat gained an in-handler rate limit (10/min/IP) backed by a
+    // module-level store. getClientIp returns a fixed IP in tests, so without
+    // resetting, requests accumulate across tests and later ones get 429.
+    resetRateLimitStore();
   });
 
   it("returns 400 when messages array is missing", async () => {
