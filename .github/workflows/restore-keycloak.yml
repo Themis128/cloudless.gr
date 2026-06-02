@@ -4,7 +4,9 @@ name: Restore Keycloak (one-shot recovery)
 # Keycloak OOM-crash-looping (384Mi container under a -Xmx512m heap). Directly
 # patches the keycloak Deployment to fit the heap and restarts it.
 #
-# Re-run trigger: 2026-06-01b — direct patch + self-reporting to issue #382.
+# Re-run trigger: 2026-06-02c — auth.cloudless.gr 503 (OIDC+JWKS), Keycloak OOM
+# CrashLoop persisting; */15 ensure cron not recovering it. Direct-patch to
+# 768Mi and restart; self-reports to issue #382.
 # Runs on a GitHub-hosted runner and reaches the omv k3s API over Tailscale +
 # KUBECONFIG_B64 — the same access path as deploy-pi.yml's rollout job. This is
 # deliberately NOT pinned to the self-hosted omv runners, so the recovery still
