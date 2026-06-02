@@ -254,7 +254,7 @@ main() {
   [[ "${DO_SECRETS:-0}"    == "1" ]] && do_secrets    || c_warn "Secrets:    set DO_SECRETS=1 to migrate to SSM."
   [[ "${DO_CONFIG:-0}"     == "1" ]] && do_config     || c_warn "Config:     set DO_CONFIG=1 to stop the recorder."
   [[ "${DO_SSM:-0}"        == "1" ]] && do_ssm        || c_warn "SSM:        set DO_SSM=1 to downgrade advanced params."
-  c_hdr "Done. Projected steady-state: ~\$7-8/mo net (from \$18.19). See docs/aws-cost-reduction.md."
+  c_hdr "Done. Projected steady-state: ~\$11-12/mo net (from \$18.19, WorkMail kept). See docs/aws-cost-reduction.md."
 }
 
 main "$@"
