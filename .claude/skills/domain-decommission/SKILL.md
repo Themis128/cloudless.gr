@@ -53,9 +53,11 @@ ending in the target domain, and hard-guards that id (see `PROTECTED_HEALTH_CHEC
   deletion historically needed a temporary inline-policy escalation on
   `cloudless-ops-role` — if apply returns `AccessDenied`, grant
   `route53:DeleteHealthCheck` (and revoke after).
-- **Cloudflare:** set `/cloudless/production/CLOUDFLARE_API_TOKEN` (scoped
-  `Zone:Read` + `Zone.DNS:Edit`) in SSM. Without it the Cloudflare step skips
-  with a warning (Route 53 still runs). The `cloudless.online` ACM cert is
+- **Cloudflare:** the workflow reads the token from the **`CLOUDFLARE_API_TOKEN`
+  repo secret** first (add it in GitHub → Settings → Secrets — no AWS access
+  needed), and falls back to SSM `/cloudless/production/CLOUDFLARE_API_TOKEN`.
+  Scope the token `Zone:Read` + `Zone.DNS:Edit`. Without either, the Cloudflare
+  step skips with a warning (Route 53 still runs). The `cloudless.online` ACM cert is
   Cloudflare-owned and **cannot** be deleted by us — leave it (see aws-iam-audit).
 - **In-cluster monitors live elsewhere.** The probes that actually generate the
   recurring alerts are in **other repos**, not cloudless.gr:

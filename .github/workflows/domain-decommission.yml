@@ -9,8 +9,9 @@ name: Domain decommission (Route 53 + Cloudflare)
 # apply=true — and even then the protected cloudless.gr HA secondary health
 # check (30a69f1c) is never touched (guarded in the script).
 #
-# Auth: OIDC deploy role (AWS_DEPLOY_ROLE_ARN) for Route 53; CLOUDFLARE_API_TOKEN
-# read from SSM /cloudless/production/* for the DNS-record cleanup.
+# Auth: OIDC deploy role (AWS_DEPLOY_ROLE_ARN) for Route 53. Cloudflare token
+# comes from the CLOUDFLARE_API_TOKEN repo secret (add in the GitHub UI — no AWS
+# needed), falling back to SSM /cloudless/production/CLOUDFLARE_API_TOKEN.
 
 on:
   workflow_dispatch:
@@ -61,6 +62,10 @@ jobs:
           DOMAIN: ${{ github.event.inputs.domain || 'cloudless.online' }}
           MODE: ${{ github.event.inputs.apply == 'true' && 'apply' || 'report' }}
           CONFIRM: ${{ github.event.inputs.apply == 'true' && '1' || '0' }}
+          # Cloudflare token: prefer a repo secret (add it in the GitHub UI — no
+          # AWS access needed); the script falls back to SSM
+          # /cloudless/production/CLOUDFLARE_API_TOKEN if this is empty.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -o pipefail
           bash scripts/domain-decommission.sh 2>&1 | tee decommission.log
