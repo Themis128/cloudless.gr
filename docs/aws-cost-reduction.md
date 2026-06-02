@@ -138,8 +138,26 @@ websites were never the expensive part.
 
 ## How to execute
 
-This session has **no `aws` CLI and the AWS API is blocked by the network
-policy**, so these changes can't be applied from here. Two paths:
+A ready-to-run, audit-first script implements every item:
+**[`scripts/aws-cost-reduction.sh`](../scripts/aws-cost-reduction.sh)**.
+
+- Run with **no flags** → audits only (prints current state + estimated savings,
+  changes nothing).
+- Each **reversible** cut is gated behind its own flag and `DRY_RUN=0`:
+  - `DO_CLOUDTRAIL=1` — drop Insights + data events, keep one free trail (item 2)
+  - `DO_SECRETS=1` — copy each secret to free SSM SecureString (item 3; add
+    `CONFIRM_DELETE=1` to schedule 30-day-recoverable deletion)
+  - `DO_CONFIG=1` — stop the Config recorder (item 4)
+  - `DO_SSM=1` — downgrade advanced parameters to free standard tier (item 7)
+- **Destructive / business-decision** items (WorkMail mailbox deletion, KMS key
+  deletion, Route 53 health-check recreation) are **audit-only** — the script
+  prints the exact command but never runs it.
+
+It refuses to mutate unless the caller is authenticated to account
+`278585680617`. Must run from a machine/CI with AWS reachability — **this repo's
+cloud Claude sessions can't reach the AWS API** (blocked by the network policy).
+
+Two paths overall:
 
 1. **Console / CLI** (fastest for the one-off cuts above) — run the deletes and
    reconfigurations directly. Items 1, 2, 4, 5, 6 are console actions.
