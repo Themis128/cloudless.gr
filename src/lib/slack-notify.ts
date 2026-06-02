@@ -173,6 +173,7 @@ export class SlackClient {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(8_000),
     });
 
     const data = (await res.json()) as SlackApiResponse;
@@ -195,6 +196,7 @@ export class SlackClient {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: payload.text, blocks: payload.blocks }),
+      signal: AbortSignal.timeout(8_000),
     });
 
     if (!res.ok) {

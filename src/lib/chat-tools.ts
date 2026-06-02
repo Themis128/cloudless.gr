@@ -199,14 +199,14 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
   const slotLabel = formatAthensSlot(start, end);
 
   // Fire-and-forget notifications — never block or fail the booking confirmation
-  void slackBookingNotify({
+  slackBookingNotify({
     name,
     email,
     start,
     notes,
     meetLink: result.htmlLink,
   }).catch((err) => console.warn("[chat-tools] slackBookingNotify failed:", err));
-  void sendBookingConfirmation({
+  sendBookingConfirmation({
     name,
     email,
     slotLabel,

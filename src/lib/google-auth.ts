@@ -41,6 +41,7 @@ export function createGoogleAuth(scope: string): () => Promise<string> {
         grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
         assertion: jwt,
       }),
+      signal: AbortSignal.timeout(8_000),
     });
 
     if (!res.ok) throw new Error(`Google token error: ${res.status}`);
