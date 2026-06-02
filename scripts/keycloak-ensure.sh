@@ -154,6 +154,56 @@ echo "$RECON"
 FIXES=$(printf '%s\n' "$RECON" | grep -c '^FIX ' || true)
 CHANGES=$((CHANGES + FIXES))
 
+# ── Phase 2b: realm-admin grant via REST API (kubectl-exec-independent) ─────
+# Guarantees realm-admin even when the kubelet proxy returns 502 on kubectl exec.
+# The kcadm grant in Phase 2 handles normal operation; this handles the 502 case.
+KEYCLOAK_URL="${KEYCLOAK_URL:-https://auth.cloudless.gr}"
+if [ -n "${KEYCLOAK_ADMIN_PASSWORD:-}" ]; then
+  RA_TOKEN=$(curl -sf --max-time 15 \
+    -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    --data-urlencode "client_id=admin-cli" \
+    --data-urlencode "username=admin" \
+    --data-urlencode "password=${KEYCLOAK_ADMIN_PASSWORD}" \
+    --data-urlencode "grant_type=password" 2>/dev/null \
+    | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("access_token",""))' 2>/dev/null || true)
+  if [ -n "$RA_TOKEN" ]; then
+    RA_UID=$(curl -sf --max-time 15 -G \
+      --data-urlencode "email=${ADMIN_EMAIL}" --data-urlencode "exact=true" \
+      "${KEYCLOAK_URL}/admin/realms/${REALM}/users" \
+      -H "Authorization: Bearer ${RA_TOKEN}" 2>/dev/null \
+      | python3 -c 'import sys,json; u=json.load(sys.stdin); print(u[0]["id"] if u else "")' 2>/dev/null || true)
+    RA_CID=$(curl -sf --max-time 15 -G \
+      --data-urlencode "clientId=realm-management" \
+      "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
+      -H "Authorization: Bearer ${RA_TOKEN}" 2>/dev/null \
+      | python3 -c 'import sys,json; c=json.load(sys.stdin); print(c[0]["id"] if c else "")' 2>/dev/null || true)
+    if [ -n "$RA_UID" ] && [ -n "$RA_CID" ]; then
+      RA_ROLE=$(curl -sf --max-time 15 \
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${RA_CID}/roles/realm-admin" \
+        -H "Authorization: Bearer ${RA_TOKEN}" 2>/dev/null || true)
+      RA_RID=$(printf '%s' "$RA_ROLE" | python3 -c \
+        'import sys,json; d=json.load(sys.stdin); print(d["id"])' 2>/dev/null || true)
+      if [ -n "$RA_RID" ]; then
+        RA_HTTP=$(curl -sf --max-time 15 -o /dev/null -w "%{http_code}" \
+          -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users/${RA_UID}/role-mappings/clients/${RA_CID}" \
+          -H "Authorization: Bearer ${RA_TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d "[{\"id\":\"${RA_RID}\",\"name\":\"realm-admin\"}]" 2>/dev/null || echo 000)
+        case "$RA_HTTP" in
+          204) note "realm-admin granted to ${ADMIN_EMAIL} via REST API" ;;
+          409) echo "REALM_ADMIN_REST=already_granted" ;;
+          *)   echo "REALM_ADMIN_REST=grant_failed (HTTP ${RA_HTTP})" ;;
+        esac
+      fi
+    fi
+  else
+    echo "REALM_ADMIN_REST=skipped (REST auth failed — KEYCLOAK_ADMIN_PASSWORD wrong or Keycloak unreachable)"
+  fi
+else
+  echo "REALM_ADMIN_REST=skipped (KEYCLOAK_ADMIN_PASSWORD not set in env)"
+fi
+
 # ── Phase 3: Pi `cloudless` app auth wiring (HA standby) ────────────────────
 # next-auth on the k3s app needs AUTH_SECRET/KEYCLOAK_*(realm master)/AUTH_TRUST_HOST
 # (cloudless-app-auth secret + envFrom). If the app stops serving the keycloak
