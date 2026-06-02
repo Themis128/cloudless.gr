@@ -27,9 +27,19 @@ ISSUE="${ISSUE:-382}"
 K=/opt/keycloak/bin/kcadm.sh
 
 command -v kubectl >/dev/null 2>&1 || { echo "error: kubectl not found"; exit 1; }
-POD=$(kubectl -n "$NAMESPACE" get pod -l app="$DEPLOYMENT" \
-  -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-[ -n "$POD" ] || { echo "error: no $DEPLOYMENT pod in ns/$NAMESPACE"; exit 1; }
+
+# Retry pod lookup up to 5×10s in case the apiserver is briefly unavailable.
+POD=""
+for _i in 1 2 3 4 5; do
+  POD=$(kubectl -n "$NAMESPACE" get pod -l app="$DEPLOYMENT" \
+    -o jsonpath='{.items[0].metadata.name}' 2>&1)
+  # success if POD looks like a pod name (not an error message)
+  printf '%s' "$POD" | grep -qvE '^(error|Error|connection|the server)' && [ -n "$POD" ] && break
+  echo "pod lookup attempt $_i failed: $POD — retrying in 10s..."
+  POD=""
+  sleep 10
+done
+[ -n "$POD" ] || { echo "error: no $DEPLOYMENT pod in ns/$NAMESPACE after 5 attempts"; exit 1; }
 echo "POD=$POD"
 
 # Generate permanent password and print it first so it appears in the GitHub

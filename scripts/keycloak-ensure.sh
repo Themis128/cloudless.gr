@@ -141,6 +141,11 @@ if [ -n "$USERID" ] && ! csv "groups/$GID/members" -r "$RL" --fields id | grep -
   $K update "users/$USERID/groups/$GID" -r "$RL" -s realm="$RL" -s userId="$USERID" -s groupId="$GID" -n >/dev/null 2>&1 \
     && echo "FIX admin membership: added $NU"
 fi
+
+# realm-admin client role — required to access Keycloak Admin Console at auth.cloudless.gr/admin
+# kcadm add-roles is idempotent: if the role is already granted it does nothing (exits 0).
+$K add-roles -r "$RL" --uusername "$NU" --cclientid realm-management --rolename realm-admin >/dev/null 2>&1 \
+  || echo "WARN realm-admin grant returned non-zero (role may already be granted or user missing)"
 echo "RECON_OK"
 EOS
 )
