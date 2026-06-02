@@ -67,7 +67,7 @@ acct_check() {
 }
 
 # --------------------------------------------------------------------------
-# 1. WorkMail  ($4.00/mo) — AUDIT ONLY (mailbox deletion is a business call)
+# 1. WorkMail  ($4.00/mo) — KEEP (required mailbox tbaltzakis@cloudless.gr)
 # --------------------------------------------------------------------------
 do_workmail() {
   c_hdr "WorkMail (\$4.00/mo) — audit"
@@ -85,12 +85,9 @@ do_workmail() {
     users="$(aws workmail list-users --organization-id "$org" --region "$wm_region" --output json 2>/dev/null || echo '{}')"
     echo "$users" | jq -r '.Users[]? | "    user \(.Email // .Name) state=\(.State) enabled=\(.UserRole // "?")"'
   done
-  c_warn "DECISION: is this mailbox actively read? Options (run manually):"
-  echo "    # forward-only alternative: Cloudflare Email Routing / ImprovMX -> Gmail (\$0)"
-  echo "    # then disable the user (stops the \$4/user charge, keeps the org):"
-  echo "    #   aws workmail deregister-from-work-mail --organization-id <ORG> --entity-id <USER> --region $wm_region"
-  echo "    # or delete the whole org (DESTRUCTIVE):"
-  echo "    #   aws workmail delete-organization --organization-id <ORG> --delete-directory --region $wm_region"
+  c_ok "KEEP: tbaltzakis@cloudless.gr is a required mailbox. WorkMail is a flat"
+  c_ok "      \$4/user/mo with no usage component — nothing to trim without dropping"
+  c_ok "      the mailbox. Treat the \$4.00 as fixed cost. No action taken."
 }
 
 # --------------------------------------------------------------------------
