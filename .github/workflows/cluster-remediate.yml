@@ -9,7 +9,7 @@ name: Cluster cleanup — stuck pods, CronJob residue, deployment restarts
 #   3. cloudless ns — rollout restart cloudless-manager + oauth2-proxy
 #                     (resets restart counters accumulated from node reboots)
 #   4. keycloak — re-pin last-applied annotation to match live 768Mi limit
-#                 (prevents a future `kubectl apply` from rolling back to 384Mi)
+#                 (prevents a future kubectl apply from rolling back to 384Mi)
 
 on:
   push:
@@ -43,169 +43,129 @@ jobs:
       - name: 1. ntfy — force-delete stuck Error/Evicted pods
         run: |
           set -uo pipefail
-          {
-            echo "## ntfy — force-delete stuck pods"
-            echo ""
-            echo "### before"
-            kubectl -n ntfy get pods -o wide 2>&1 || true
+          echo "=== ntfy — before ===" | tee ntfy.log
+          kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log || true
 
-            echo ""
-            STUCK=$(kubectl -n ntfy get pods --no-headers 2>/dev/null \
-              | awk '/Error|Evicted|OOMKilled/{print $1}' || true)
-            if [ -n "${STUCK}" ]; then
-              echo "Pods to delete: ${STUCK}"
-              for POD in ${STUCK}; do
-                # Strip finalizers first so kubelet can't block the delete.
-                kubectl -n ntfy patch pod "${POD}" \
-                  -p '{"metadata":{"finalizers":[]}}' \
-                  --type=merge 2>&1 || true
-                kubectl -n ntfy delete pod "${POD}" \
-                  --grace-period=0 --force --ignore-not-found 2>&1 || true
-              done
-            else
-              echo "No stuck pods found — already clean."
-            fi
+          echo "" | tee -a ntfy.log
+          STUCK=$(kubectl -n ntfy get pods --no-headers 2>/dev/null \
+            | awk '/Error|Evicted|OOMKilled/{print $1}' || true)
+          if [ -n "${STUCK}" ]; then
+            echo "Pods to delete: ${STUCK}" | tee -a ntfy.log
+            for POD in ${STUCK}; do
+              kubectl -n ntfy patch pod "${POD}" \
+                -p '{"metadata":{"finalizers":[]}}' \
+                --type=merge 2>&1 | tee -a ntfy.log || true
+              kubectl -n ntfy delete pod "${POD}" \
+                --grace-period=0 --force --ignore-not-found 2>&1 | tee -a ntfy.log || true
+            done
+          else
+            echo "No stuck pods — already clean." | tee -a ntfy.log
+          fi
 
-            echo ""
-            echo "### after"
-            sleep 5
-            kubectl -n ntfy get pods -o wide 2>&1 || true
+          echo "" | tee -a ntfy.log
+          echo "=== ntfy — after ===" | tee -a ntfy.log
+          sleep 5
+          kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log || true
 
-            echo ""
-            echo "### ntfy deployment logs (tail 10)"
-            kubectl -n ntfy logs deployment/ntfy --tail=10 2>&1 || true
-          } | tee ntfy.log
+          echo "" | tee -a ntfy.log
+          echo "=== ntfy deployment logs (tail 10) ===" | tee -a ntfy.log
+          kubectl -n ntfy logs deployment/ntfy --tail=10 2>&1 | tee -a ntfy.log || true
 
       - name: 2. maintenance — delete Error CronJob pods
         run: |
           set -uo pipefail
-          {
-            echo "## maintenance ns — Error CronJob pods"
-            echo ""
-            echo "### before"
-            kubectl -n maintenance get pods 2>&1 || true
+          echo "=== maintenance ns — before ===" | tee maintenance.log
+          kubectl -n maintenance get pods 2>&1 | tee -a maintenance.log || true
 
-            echo ""
-            STUCK=$(kubectl -n maintenance get pods --no-headers 2>/dev/null \
-              | awk '/Error|Evicted|OOMKilled/{print $1}' || true)
-            if [ -n "${STUCK}" ]; then
-              echo "Deleting: ${STUCK}"
-              echo "${STUCK}" | xargs kubectl -n maintenance delete pod \
-                --ignore-not-found --wait=false 2>&1 || true
-            else
-              echo "No Error pods in maintenance ns."
-            fi
+          echo "" | tee -a maintenance.log
+          STUCK=$(kubectl -n maintenance get pods --no-headers 2>/dev/null \
+            | awk '/Error|Evicted|OOMKilled/{print $1}' || true)
+          if [ -n "${STUCK}" ]; then
+            echo "Deleting: ${STUCK}" | tee -a maintenance.log
+            echo "${STUCK}" | xargs kubectl -n maintenance delete pod \
+              --ignore-not-found --wait=false 2>&1 | tee -a maintenance.log || true
+          else
+            echo "No Error pods in maintenance ns." | tee -a maintenance.log
+          fi
 
-            echo ""
-            echo "### after"
-            sleep 3
-            kubectl -n maintenance get pods 2>&1 || true
-          } | tee maintenance.log
+          echo "" | tee -a maintenance.log
+          echo "=== maintenance ns — after ===" | tee -a maintenance.log
+          sleep 3
+          kubectl -n maintenance get pods 2>&1 | tee -a maintenance.log || true
 
       - name: 3. cloudless ns — rollout restart cloudless-manager + oauth2-proxy
         run: |
           set -uo pipefail
-          {
-            echo "## cloudless ns — rollout restart"
-            echo ""
-            echo "### before"
-            kubectl -n cloudless get pods -o wide 2>&1 || true
+          echo "=== cloudless ns — before ===" | tee cloudless.log
+          kubectl -n cloudless get pods -o wide 2>&1 | tee -a cloudless.log || true
 
-            echo ""
-            for DEPLOY in cloudless-manager oauth2-proxy; do
-              echo "--- kubectl rollout restart deploy/${DEPLOY} -n cloudless ---"
-              kubectl -n cloudless rollout restart deploy/"${DEPLOY}" 2>&1 || true
-            done
+          echo "" | tee -a cloudless.log
+          for DEPLOY in cloudless-manager oauth2-proxy; do
+            echo "--- rollout restart ${DEPLOY} ---" | tee -a cloudless.log
+            kubectl -n cloudless rollout restart "deploy/${DEPLOY}" 2>&1 | tee -a cloudless.log || true
+          done
 
-            echo ""
-            echo "### waiting for rollouts to finish (90s)..."
-            for DEPLOY in cloudless-manager oauth2-proxy; do
-              kubectl -n cloudless rollout status deploy/"${DEPLOY}" \
-                --timeout=90s 2>&1 || true
-            done
+          echo "" | tee -a cloudless.log
+          echo "=== waiting for rollouts (90s each) ===" | tee -a cloudless.log
+          for DEPLOY in cloudless-manager oauth2-proxy; do
+            kubectl -n cloudless rollout status "deploy/${DEPLOY}" \
+              --timeout=90s 2>&1 | tee -a cloudless.log || true
+          done
 
-            echo ""
-            echo "### after"
-            kubectl -n cloudless get pods -o wide 2>&1 || true
-            echo ""
-            echo "### container states (restart counters should be 0)"
-            kubectl -n cloudless get pods -o jsonpath=\
-'{range .items[*]}{.metadata.name}{"\n"}{range .status.containerStatuses[*]}{"  restarts="}{.restartCount}{" ready="}{.ready}{"\n"}{end}{end}' \
-              2>&1 || true
-          } | tee cloudless.log
+          echo "" | tee -a cloudless.log
+          echo "=== cloudless ns — after ===" | tee -a cloudless.log
+          kubectl -n cloudless get pods -o wide 2>&1 | tee -a cloudless.log || true
 
       - name: 4. keycloak — fix last-applied annotation (384Mi → 768Mi)
         run: |
           set -uo pipefail
-          {
-            echo "## keycloak annotation"
-            echo ""
-            echo "### live limit (should be 768Mi)"
-            kubectl -n keycloak get deployment keycloak \
-              -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' \
-              2>&1 || true
+          echo "=== keycloak annotation ===" | tee keycloak.log
 
-            echo ""
-            echo "### last-applied limit (before patch)"
-            kubectl -n keycloak get deployment keycloak \
-              -o jsonpath='{.metadata.annotations.kubectl\.kubernetes\.io/last-applied-configuration}' \
-              2>/dev/null \
-              | python3 -c "
-import sys, json
-try:
-  d = json.load(sys.stdin)
-  c = d['spec']['template']['spec']['containers'][0]
-  print('memory limit:', c['resources']['limits']['memory'])
-except Exception as e:
-  print('parse error:', e)
-" 2>&1 || true
+          echo "" | tee -a keycloak.log
+          echo "live limit:" | tee -a keycloak.log
+          kubectl -n keycloak get deployment keycloak \
+            -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' \
+            2>&1 | tee -a keycloak.log || true
 
-            echo ""
-            echo "### patching annotation to 768Mi..."
-            KC_ANN=$(kubectl -n keycloak get deployment keycloak -o json 2>/dev/null \
-              | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-# Build a minimal last-applied-configuration that reflects the live state.
-c = d['spec']['template']['spec']['containers'][0]
-ann = {
-  'apiVersion': 'apps/v1',
-  'kind': 'Deployment',
-  'metadata': {'name': 'keycloak', 'namespace': 'keycloak', 'annotations': {}},
-  'spec': {'template': {'spec': {'containers': [{
-    'name': c['name'],
-    'image': c['image'],
-    'env': c.get('env', []),
-    'resources': c['resources'],
-  }]}}}
-}
-print(json.dumps(ann))
-" 2>/dev/null || echo '')
+          echo "" | tee -a keycloak.log
+          echo "last-applied limit (before):" | tee -a keycloak.log
+          kubectl -n keycloak get deployment keycloak \
+            -o jsonpath='{.metadata.annotations.kubectl\.kubernetes\.io/last-applied-configuration}' \
+            2>/dev/null \
+            | jq -r '.spec.template.spec.containers[0].resources.limits.memory' \
+            2>&1 | tee -a keycloak.log || true
 
-            if [ -n "${KC_ANN}" ]; then
-              kubectl -n keycloak annotate deployment keycloak \
-                "kubectl.kubernetes.io/last-applied-configuration=${KC_ANN}" \
-                --overwrite 2>&1 || true
-              echo "Annotation updated."
-            else
-              echo "Could not build annotation payload — skipping."
-            fi
+          echo "" | tee -a keycloak.log
+          echo "building annotation from live state..." | tee -a keycloak.log
+          KC_ANN=$(kubectl -n keycloak get deployment keycloak -o json 2>/dev/null \
+            | jq -c '{
+                apiVersion: "apps/v1",
+                kind: "Deployment",
+                metadata: {name: .metadata.name, namespace: .metadata.namespace, annotations: {}},
+                spec: {template: {spec: {containers: [{
+                  name: .spec.template.spec.containers[0].name,
+                  image: .spec.template.spec.containers[0].image,
+                  env: .spec.template.spec.containers[0].env,
+                  resources: .spec.template.spec.containers[0].resources
+                }]}}}
+              }' 2>/dev/null || true)
 
-            echo ""
-            echo "### last-applied limit (after patch)"
-            kubectl -n keycloak get deployment keycloak \
-              -o jsonpath='{.metadata.annotations.kubectl\.kubernetes\.io/last-applied-configuration}' \
-              2>/dev/null \
-              | python3 -c "
-import sys, json
-try:
-  d = json.load(sys.stdin)
-  c = d['spec']['template']['spec']['containers'][0]
-  print('memory limit:', c['resources']['limits']['memory'])
-except Exception as e:
-  print('parse error:', e)
-" 2>&1 || true
-          } | tee keycloak.log
+          if [ -n "${KC_ANN}" ]; then
+            kubectl -n keycloak annotate deployment keycloak \
+              "kubectl.kubernetes.io/last-applied-configuration=${KC_ANN}" \
+              --overwrite 2>&1 | tee -a keycloak.log || true
+            echo "annotation updated." | tee -a keycloak.log
+          else
+            echo "could not build annotation payload — skipping." | tee -a keycloak.log
+          fi
+
+          echo "" | tee -a keycloak.log
+          echo "last-applied limit (after):" | tee -a keycloak.log
+          kubectl -n keycloak get deployment keycloak \
+            -o jsonpath='{.metadata.annotations.kubectl\.kubernetes\.io/last-applied-configuration}' \
+            2>/dev/null \
+            | jq -r '.spec.template.spec.containers[0].resources.limits.memory' \
+            2>&1 | tee -a keycloak.log || true
 
       - name: Post results to tracking issue
         if: always()
