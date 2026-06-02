@@ -1,6 +1,6 @@
 ---
 name: ses-email-setup
-description: Set up AWS SES SMTP credentials and configure Keycloak email verification for cloudless.gr. Use when email verification is broken, new users don't receive verification emails, the provision-ses-smtp workflow is failing, keycloak-configure-email is failing, or the user asks to "enable email verification", "set up SES SMTP", "configure Keycloak email", or "fix email not sending". Covers both the automated (iam:CreateUser) and manual (dispatch inputs) credential paths.
+description: Set up AWS SES SMTP credentials and configure Keycloak email verification for cloudless.gr. Use when email verification is broken, new users don't receive verification emails, the provision-ses-smtp workflow is failing, keycloak-configure-email is failing, or the user asks to "enable email verification", "set up SES SMTP", "configure Keycloak email", or "fix email not sending". Covers both the automated (iam:CreateUser) and manual (dispatch inputs) credential paths. For the fastest cloud-session path, invoke the /ses-smtp command instead.
 ---
 
 # SES SMTP + Keycloak Email Verification — cloudless.gr
