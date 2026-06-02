@@ -20,6 +20,9 @@ name: Keycloak configure email verification
 #   It also re-runs on any push to main that touches this file or the script
 #   (push trigger below) — that path reads the credentials from SSM and is the
 #   idempotent way to (re)apply the SES SMTP config without the dispatch UI.
+#
+#   The SSM SES SMTP params are minted by provision-ses-smtp.yml (OIDC). Once
+#   that has run, a push here applies them to the realm + enables verifyEmail.
 
 on:
   workflow_dispatch:
