@@ -87,7 +87,7 @@ if [ -n "${PROM_STS:-}" ]; then
     log "  already 750Mi — skipping patch"
   else
     kubectl -n "$PROM_NS" patch sts "$PROM_STS" \
-      --type=strategic-merge-patch \
+      --type=strategic \
       -p '{"spec":{"template":{"spec":{"containers":[{"name":"prometheus","resources":{"limits":{"memory":"750Mi"},"requests":{"memory":"512Mi"}}}]}}}}' \
       && log "  patched → 750Mi limit / 512Mi request" \
       || log "  WARNING: StatefulSet patch failed"
