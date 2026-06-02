@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, within, fireEvent, cleanup } from "@testing-library/react";
+import { render, within, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { CartProvider } from "@/context/CartContext";
 import ProductIcon from "@/components/store/ProductIcon";
 import AddToCartButton from "@/components/store/AddToCartButton";
@@ -32,6 +32,13 @@ vi.mock("@/i18n/navigation", () => ({
   ),
   useRouter: () => ({ push: () => {}, replace: () => {}, back: () => {} }),
   usePathname: () => "/",
+}));
+
+// CartSlideOver checks out via fetchWithAuth, which reads the next-auth session
+// first. Stub getSession so checkout proceeds as an anonymous request (no token)
+// and the only fetch is the /api/checkout POST.
+vi.mock("next-auth/react", () => ({
+  getSession: vi.fn().mockResolvedValue(null),
 }));
 
 const mockProduct: StoreProduct = {
@@ -84,16 +91,12 @@ function findFilterButton(container: HTMLElement, label: string) {
 
 describe("ProductIcon", () => {
   it("renders the correct SVG icon for a known product ID", () => {
-    const { container } = render(
-      <ProductIcon productId="srv-cloud" category="service" />
-    );
+    const { container } = render(<ProductIcon productId="srv-cloud" category="service" />);
     expect(container.querySelector("svg")).toBeTruthy();
   });
 
   it("renders fallback for an unknown product ID", () => {
-    const { container } = render(
-      <ProductIcon productId="unknown-id" category="service" />
-    );
+    const { container } = render(<ProductIcon productId="unknown-id" category="service" />);
     expect(container.querySelector("svg")).toBeNull();
     expect(container.textContent).toBeTruthy();
   });
@@ -112,30 +115,21 @@ describe("ProductIcon", () => {
     ];
 
     for (const { id, cat } of knownIds) {
-      const { container, unmount } = render(
-        <ProductIcon productId={id} category={cat} />
-      );
-      expect(
-        container.querySelector("svg"),
-        `SVG missing for product ${id}`
-      ).toBeTruthy();
+      const { container, unmount } = render(<ProductIcon productId={id} category={cat} />);
+      expect(container.querySelector("svg"), `SVG missing for product ${id}`).toBeTruthy();
       unmount();
     }
   });
 
   it("applies cyber-grid for known products", () => {
-    const { container } = render(
-      <ProductIcon productId="srv-cloud" category="service" />
-    );
+    const { container } = render(<ProductIcon productId="srv-cloud" category="service" />);
     expect(container.querySelector(".cyber-grid")).toBeTruthy();
   });
 
   it("uses different fallback symbols per category", () => {
     const results: string[] = [];
     for (const cat of ["service", "digital", "physical"] as const) {
-      const { container, unmount } = render(
-        <ProductIcon productId="x" category={cat} />
-      );
+      const { container, unmount } = render(<ProductIcon productId="x" category={cat} />);
       results.push(container.textContent ?? "");
       unmount();
     }
@@ -277,9 +271,9 @@ describe("CartSlideOver", () => {
   });
 
   it("calls fetch on checkout click", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ url: null }), { status: 200 })
-    );
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify({ url: null }), { status: 200 }));
 
     const { container } = render(
       <Wrapper>
@@ -292,9 +286,13 @@ describe("CartSlideOver", () => {
     fireEvent.click(view.getByText("Add to Cart"));
     fireEvent.click(view.getByText("Checkout"));
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      "/api/checkout",
-      expect.objectContaining({ method: "POST" })
+    // Checkout goes through fetchWithAuth (await getSession → fetch), so the
+    // /api/checkout call lands a microtask later — wait for it.
+    await waitFor(() =>
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/checkout",
+        expect.objectContaining({ method: "POST" })
+      )
     );
 
     fetchSpy.mockRestore();
@@ -520,10 +518,9 @@ describe("StoreGrid", () => {
 
     const addButtons = within(container).getAllByText("Add to Cart");
     for (const btn of addButtons) {
-      expect(
-        btn.className.includes("active:"),
-        "Add to Cart button missing active: state"
-      ).toBe(true);
+      expect(btn.className.includes("active:"), "Add to Cart button missing active: state").toBe(
+        true
+      );
     }
   });
 });
