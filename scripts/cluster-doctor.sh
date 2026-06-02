@@ -126,6 +126,15 @@ printf "Resource limits + image:\n"
 kubectl -n cloudless get deploy cloudless \
   -o jsonpath='{range .spec.template.spec.containers[*]}{.name}{"\n  image="}{.image}{"\n  limits="}{.resources.limits}{"\n  requests="}{.resources.requests}{"\n"}{end}' \
   2>/dev/null | fence
+printf "Env vars (pi-origin 403 triage — HOSTNAME, AUTH_URL, APP_VERSION, envFrom):\n"
+kubectl -n cloudless get deploy cloudless \
+  -o jsonpath='{range .spec.template.spec.containers[*]}{range .env[*]}{.name}{"="}{.value}{"\n"}{end}{end}' \
+  2>/dev/null | fence
+printf "envFrom secrets: "
+kubectl -n cloudless get deploy cloudless \
+  -o jsonpath='{range .spec.template.spec.containers[*]}{range .envFrom[*]}{.secretRef.name}{" "}{end}{end}' \
+  2>/dev/null
+printf "\n"
 
 section "cloudless app: all pods in ns cloudless"
 k -n cloudless get pods -o wide | fence
