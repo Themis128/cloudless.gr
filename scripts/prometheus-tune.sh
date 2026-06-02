@@ -19,6 +19,17 @@
 # cause — the heavy rule groups saturate Prometheus CPU and load the apiserver,
 # starving its service-discovery watches; removing them clears the SD timeouts.
 #
+# 2026-06-02 (b): also strips the intrinsic overcommit alerts
+# (KubeMemoryOvercommit / KubeCPUOvercommit) from the kubernetes-resources
+# group. On this asymmetric 2-node cluster (omv 8GiB vs omv-ha ~1GiB) the HA
+# branch of the overcommit expression is permanently true — losing omv means
+# omv-ha can't hold the rescheduled requests — so the alert fires forever with
+# no actionable fix. Stripping the two alerts (keeping the rest of the group)
+# silences the noise via the kubectl/workflow path (the comprehensive
+# k8s/cluster-protection/apply-prometheus-rule-tuning.sh does the same over SSH,
+# which a cloud session can't use). Idempotent: re-stripping a missing alert
+# is a no-op.
+#
 # This deletes the PrometheusRule objects that contain the heavy groups. It is
 # idempotent (missing = already done) and reversible: a `helm upgrade` of the
 # kube-prometheus-stack recreates them, so the durable fix is the Helm values
@@ -61,6 +72,34 @@ for grp in "${HEAVY_GROUPS[@]}"; do
   done
 done
 log "deleted $deleted PrometheusRule object(s)."
+
+# ── Strip intrinsic overcommit alerts from the kubernetes-resources group ─────
+# KubeMemoryOvercommit / KubeCPUOvercommit are permanently true on this
+# asymmetric 2-node cluster (see header). Remove just those alerts; keep the
+# rest of every group they live in. Discover the owning PrometheusRule(s) by
+# alert presence so we don't hardcode the chart's object name.
+STRIP_ALERTS=("KubeMemoryOvercommit" "KubeCPUOvercommit")
+drop_json=$(printf '%s\n' "${STRIP_ALERTS[@]}" | jq -R . | jq -s .)
+mapfile -t res_crs < <(kubectl -n "$PROM_NS" get prometheusrule -o json 2>/dev/null \
+  | jq -r --argjson drop "$drop_json" \
+    '.items[] | select(any((.spec.groups // [])[].rules[]?; (.alert // "") as $a | ($drop | index($a)))) | .metadata.name' \
+  | sort -u)
+if [ "${#res_crs[@]}" -eq 0 ]; then
+  log "overcommit: no PrometheusRule contains ${STRIP_ALERTS[*]} (already stripped?)"
+else
+  for cr in "${res_crs[@]}"; do
+    [ -z "$cr" ] && continue
+    log "stripping ${STRIP_ALERTS[*]} from PrometheusRule '$cr'"
+    if kubectl -n "$PROM_NS" get prometheusrule "$cr" -o json \
+      | jq --argjson drop "$drop_json" \
+        '{spec: {groups: (.spec.groups | map(.rules |= map(select((.alert // "") as $a | ($drop | index($a)) | not))))}}' \
+      | kubectl -n "$PROM_NS" patch prometheusrule "$cr" --type=merge --patch-file=/dev/stdin; then
+      log "  ✓ patched '$cr'"
+    else
+      log "  WARNING: patch of '$cr' failed"
+    fi
+  done
+fi
 
 # Give Prometheus a moment to reload rules, then report remaining failures.
 sleep 20
