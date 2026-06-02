@@ -47,12 +47,40 @@ else
   echo "[session-start] GITHUB_PAT not set — git push will require manual auth." >&2
 fi
 
-# ── AWS SSM — fetch all /cloudless/production/* secrets ───────────────────────
-# Runs if AWS credentials are present (via session secrets or instance role).
-# Writes every fetched param into ~/.claude/settings.json env block so MCP
-# servers (Notion, HubSpot, etc.) and tools pick them up without extra config.
+# ── Secrets: SSM (primary) or GitHub Variables (fallback) ─────────────────────
+# Writes every secret into ~/.claude/settings.json env block so MCP servers
+# (Notion, HubSpot, etc.) and tools get them without per-session manual config.
+#
+# Priority:
+#   1. AWS SSM /cloudless/production/* — when AWS credentials are present
+#   2. GitHub Variables — when only GITHUB_PAT is available (synced by
+#      .github/workflows/sync-ssm-to-vars.yml on every push to main)
 
+SETTINGS_FILE="${HOME}/.claude/settings.json"
 SSM_PREFIX="/cloudless/production"
+GH_REPO="Themis128/cloudless.gr"
+
+inject_settings_env() {
+  # $1 = JSON array of {Name, Value} objects (SSM) or {name, value} (GH vars)
+  python3 - "$SETTINGS_FILE" << PY
+import json, sys
+path = sys.argv[1]
+raw = sys.stdin.read()
+params = json.loads(raw)
+with open(path) as f:
+  settings = json.load(f)
+env = settings.setdefault("env", {})
+for p in params:
+  key = p.get("Name", p.get("name", ""))
+  key = key.split("/")[-1]   # strip SSM prefix if present
+  value = p.get("Value", p.get("value", ""))
+  if key and value:
+    env[key] = value
+with open(path, "w") as f:
+  json.dump(settings, f, indent=4)
+print(f"Injected {len(params)} secrets into settings.json")
+PY
+}
 
 if aws sts get-caller-identity --region us-east-1 &>/dev/null; then
   echo "[session-start] AWS credentials found — fetching SSM params from ${SSM_PREFIX}..."
@@ -81,8 +109,34 @@ with open(settings_path, "w") as f:
 PY
 
   echo "[session-start] Injected ${COUNT} SSM params into settings.json env block."
+elif [ -n "${GITHUB_PAT:-}" ]; then
+  # Fallback: read GitHub Variables (synced from SSM by sync-ssm-to-vars.yml)
+  echo "[session-start] No AWS credentials — fetching secrets from GitHub Variables..."
+  VARS=$(curl -s \
+    -H "Authorization: Bearer ${GITHUB_PAT}" \
+    -H "Accept: application/vnd.github+json" \
+    "https://api.github.com/repos/${GH_REPO}/actions/variables?per_page=100" \
+    2>/dev/null) || VARS='{"variables":[]}'
+
+  COUNT=$(echo "$VARS" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+vars_list = d.get('variables', [])
+print(len(vars_list))
+" 2>/dev/null || echo 0)
+
+  if [ "$COUNT" -gt 0 ]; then
+    echo "$VARS" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+print(json.dumps(d.get('variables', [])))
+" | inject_settings_env
+    echo "[session-start] Injected ${COUNT} GitHub Variables into settings.json env block."
+  else
+    echo "[session-start] No GitHub Variables found — secrets not yet synced." >&2
+  fi
 else
-  echo "[session-start] No AWS credentials — skipping SSM fetch." >&2
+  echo "[session-start] No AWS credentials or GITHUB_PAT — skipping secrets fetch." >&2
 fi
 
 # ── Tailscale ──────────────────────────────────────────────────────────────────
