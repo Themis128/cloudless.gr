@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
 import { isValidEmail } from "@/lib/validation";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { getAdminToken, parseRealm, sendVerifyEmail } from "@/lib/keycloak-admin";
 
 /**
  * POST /api/auth/resend-verification
@@ -20,22 +21,6 @@ interface ResendBody {
 
 const UNAVAILABLE = NextResponse.json({ error: "Not available" }, { status: 503 });
 
-async function getAdminToken(tokenUrl: string, clientId: string, clientSecret: string) {
-  const res = await globalThis.fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: clientId,
-      client_secret: clientSecret,
-    }).toString(),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) throw new Error(`Admin token request failed: ${res.status}`);
-  const data = (await res.json()) as { access_token: string };
-  return data.access_token;
-}
-
 /** Best-effort: find an unverified user by email and re-send the verify email. */
 async function resendForEmail(
   kcBase: string,
@@ -43,10 +28,9 @@ async function resendForEmail(
   adminToken: string,
   email: string
 ): Promise<void> {
-  const auth = { Authorization: `Bearer ${adminToken}` };
   const searchRes = await globalThis.fetch(
     `${kcBase}/admin/realms/${realm}/users?email=${encodeURIComponent(email)}&exact=true`,
-    { headers: auth, signal: AbortSignal.timeout(10_000) }
+    { headers: { Authorization: `Bearer ${adminToken}` }, signal: AbortSignal.timeout(10_000) }
   );
   if (!searchRes.ok) return;
 
@@ -55,17 +39,7 @@ async function resendForEmail(
   // Only re-send when the account exists and is still unverified.
   if (!user || user.emailVerified) return;
 
-  const appClientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID ?? "cloudless-app";
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
-  const params = new URLSearchParams({ client_id: appClientId });
-  if (siteUrl) params.set("redirect_uri", `${siteUrl}/api/auth/callback/keycloak`);
-
-  await globalThis
-    .fetch(
-      `${kcBase}/admin/realms/${realm}/users/${user.id}/send-verify-email?${params.toString()}`,
-      { method: "PUT", headers: auth, signal: AbortSignal.timeout(8_000) }
-    )
-    .catch(() => {});
+  await sendVerifyEmail(kcBase, realm, adminToken, user.id).catch(() => {});
 }
 
 export async function POST(req: Request) {
@@ -74,9 +48,8 @@ export async function POST(req: Request) {
 
   const issuer = process.env.KEYCLOAK_ISSUER;
   if (!issuer) return UNAVAILABLE;
-  const realmMatch = issuer.match(/^(https?:\/\/[^/]+)\/realms\/([^/]+)$/);
-  if (!realmMatch) return UNAVAILABLE;
-  const [, kcBase, realm] = realmMatch;
+  const realm = parseRealm(issuer);
+  if (!realm) return UNAVAILABLE;
 
   let body: ResendBody;
   try {
@@ -99,7 +72,7 @@ export async function POST(req: Request) {
       config.KEYCLOAK_ADMIN_CLIENT_ID,
       config.KEYCLOAK_ADMIN_CLIENT_SECRET
     );
-    await resendForEmail(kcBase, realm, adminToken, body.email);
+    await resendForEmail(realm.kcBase, realm.realm, adminToken, body.email);
   } catch (err) {
     // Log but still return ok — never reveal whether the address exists, and
     // the caller can't act on an internal failure anyway.
