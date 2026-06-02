@@ -1,4 +1,5 @@
 name: Keycloak ensure (self-heal auth to last working state)
+# re-triggered 2026-06-02 — kick stalled cron (no schedule run since 18:17Z)
 
 # Reconciles auth to its known-good state (Keycloak up + memory fit, realm flags,
 # cloudless-app groups mapper, admin group + membership). Runs on a schedule so a

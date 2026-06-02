@@ -13,6 +13,9 @@
 #
 # After this runs, the admin can log into auth.cloudless.gr immediately without
 # being forced to change the password.
+#
+# Fix vs v1: uses separate non-interactive kubectl exec calls (no -i + heredoc)
+# to avoid websocket close 1006 (abnormal closure) that killed v1.
 
 set -uo pipefail
 
@@ -21,57 +24,46 @@ DEPLOYMENT="${DEPLOYMENT:-keycloak}"
 REALM="${REALM:-master}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-tbaltzakis@cloudless.gr}"
 ISSUE="${ISSUE:-382}"
+K=/opt/keycloak/bin/kcadm.sh
 
 command -v kubectl >/dev/null 2>&1 || { echo "error: kubectl not found"; exit 1; }
 POD=$(kubectl -n "$NAMESPACE" get pod -l app="$DEPLOYMENT" \
   -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 [ -n "$POD" ] || { echo "error: no $DEPLOYMENT pod in ns/$NAMESPACE"; exit 1; }
+echo "POD=$POD"
 
-# Generate permanent password. Print it FIRST (same pattern as bootstrap-admin)
-# so it appears in the log captured by the workflow and posted to issue #382.
-# This is a private repo / private issue — acceptable security model.
+# Generate permanent password and print it first so it appears in the GitHub
+# Actions log (captured and posted to issue #382 by the workflow).
+# Private repo / private issue — acceptable security model.
 PERM_PASSWORD="Cld-$(head -c 16 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 14)-Zz9!"
 echo "PERM_LOGIN email=${ADMIN_EMAIL} password=${PERM_PASSWORD}"
-echo "pod=${POD} realm=${REALM}"
+echo "realm=${REALM}"
 
-kubectl -n "$NAMESPACE" exec -i "$POD" -- \
-  env NU="$ADMIN_EMAIL" NP="$PERM_PASSWORD" RL="$REALM" bash -s <<'EOS'
-set -u
-K=/opt/keycloak/bin/kcadm.sh
+# Step 1 — authenticate kcadm using the pod's own service-admin credentials.
+# No -i flag: non-interactive exec, no stdin, no websocket issue.
+kubectl -n "$NAMESPACE" exec "$POD" -- bash -c \
+  'AU="${KEYCLOAK_ADMIN:-${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}}"; AP="${KEYCLOAK_ADMIN_PASSWORD:-${KC_BOOTSTRAP_ADMIN_PASSWORD:-}}"; '"$K"' config credentials --server http://localhost:8080 --realm master --user "$AU" --password "$AP" >/dev/null 2>&1 && echo "ADMIN_AUTH=ok" || { echo "ADMIN_AUTH=failed"; exit 1; }'
 
-# Authenticate using the pod's own internal admin (not the user's password)
-AU="${KEYCLOAK_ADMIN:-${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}}"
-AP="${KEYCLOAK_ADMIN_PASSWORD:-${KC_BOOTSTRAP_ADMIN_PASSWORD:-}}"
-$K config credentials \
-  --server http://localhost:8080 \
-  --realm master \
-  --user "$AU" \
-  --password "$AP" >/dev/null 2>&1 || { echo "ADMIN_AUTH=failed"; exit 1; }
-echo "ADMIN_AUTH=ok"
-
-# Get user ID
-USERID=$(  $K get users -r "$RL" -q username="$NU" --format csv --noquotes 2>/dev/null \
-         | head -1 | cut -d, -f1)
-[ -n "$USERID" ] || { echo "USER_NOT_FOUND=$NU"; exit 1; }
+# Step 2 — look up the target user's ID.
+USERID=$(kubectl -n "$NAMESPACE" exec "$POD" -- \
+  "$K" get users -r "$REALM" -q "username=${ADMIN_EMAIL}" \
+  --format csv --noquotes 2>/dev/null \
+  | head -1 | cut -d, -f1)
+[ -n "$USERID" ] || { echo "USER_NOT_FOUND=${ADMIN_EMAIL}"; exit 1; }
 echo "USER_FOUND=$USERID"
 
-# Set PERMANENT password (--temporary=false → no forced change on login)
-$K set-password -r "$RL" --userid "$USERID" \
-  --new-password "$NP" --temporary=false >/dev/null 2>&1 \
-  && echo "PASSWORD=set_permanent" || echo "PASSWORD=failed"
+# Step 3 — set permanent password (--temporary=false → no forced change on login).
+kubectl -n "$NAMESPACE" exec "$POD" -- \
+  "$K" set-password -r "$REALM" --userid "$USERID" \
+  --new-password "$PERM_PASSWORD" --temporary=false \
+  && echo "PASSWORD=set_permanent" || { echo "PASSWORD=failed"; exit 1; }
 
-# Clear UPDATE_PASSWORD required action if present
-$K update "users/$USERID" -r "$RL" -s 'requiredActions=[]' >/dev/null 2>&1 \
+# Step 4 — clear UPDATE_PASSWORD required action.
+kubectl -n "$NAMESPACE" exec "$POD" -- \
+  "$K" update "users/$USERID" -r "$REALM" -s 'requiredActions=[]' \
   && echo "REQUIRED_ACTIONS=cleared" || echo "REQUIRED_ACTIONS=clear_failed"
-
-# Confirm user state
-$K get "users/$USERID" -r "$RL" --format csv --noquotes 2>/dev/null \
-  | head -1 | grep -oE 'emailVerified=\w+|enabled=\w+' || true
-
-echo "DONE"
-EOS
 
 echo ""
 echo "=== keycloak-finalize-admin complete ==="
 echo "PERMANENT_CREDENTIALS email=${ADMIN_EMAIL}"
-echo "(password masked — check issue #${ISSUE} for login details)"
+echo "(password logged above — check issue #${ISSUE} comment)"
