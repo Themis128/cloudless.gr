@@ -18,6 +18,8 @@ interface KcAccount {
   attributes?: KcAttributes;
 }
 
+const JSON_MIME = "application/json";
+
 function splitName(name: string): { firstName: string; lastName?: string } {
   const [first, ...rest] = name.trim().split(/\s+/);
   return { firstName: first ?? "", lastName: rest.length ? rest.join(" ") : undefined };
@@ -48,7 +50,7 @@ export async function GET() {
 
   try {
     const res = await globalThis.fetch(`${KC_ISSUER}/account`, {
-      headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: JSON_MIME },
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
@@ -122,7 +124,7 @@ export async function POST(req: Request) {
   let current: KcAccount;
   try {
     const res = await globalThis.fetch(accountUrl, {
-      headers: { ...authHeader, Accept: "application/json" },
+      headers: { ...authHeader, Accept: JSON_MIME },
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
@@ -163,7 +165,7 @@ export async function POST(req: Request) {
   try {
     const res = await globalThis.fetch(accountUrl, {
       method: "POST",
-      headers: { ...authHeader, "Content-Type": "application/json" },
+      headers: { ...authHeader, "Content-Type": JSON_MIME },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(10_000),
     });
