@@ -6,10 +6,6 @@ let stripeInstance: Stripe | null = null;
 export async function getStripe(): Promise<Stripe | null> {
   if (stripeInstance) return stripeInstance;
 
-  // In test environments, skip real Stripe initialization to prevent network
-  // calls during unit tests (mirrors the ssm-config.ts NODE_ENV=test guard).
-  if (process.env.NODE_ENV === "test") return null;
-
   const config = await getConfig();
   if (!config.STRIPE_SECRET_KEY) return null;
 

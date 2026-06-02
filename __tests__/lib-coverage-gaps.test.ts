@@ -83,7 +83,8 @@ describe("notion-esp32.ts", () => {
 // ── store-products.ts ─────────────────────────────────────────────────────────
 
 describe("store-products.ts", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); vi.stubEnv("STRIPE_SECRET_KEY", ""); });
+  afterEach(() => { vi.unstubAllEnvs(); });
 
   it("getProductById returns undefined for unknown id", async () => {
     const { getProductById } = await import("@/lib/store-products");
