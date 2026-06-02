@@ -28,48 +28,84 @@ note() { printf "[notion-update] %s\n" "$*"; }
 note "=== notion-update-cluster-docs $(date -u '+%F %T')Z ==="
 
 # ---------------------------------------------------------------------------
-# Step 1: Search for existing cluster ops runbook page (exact matches only)
-# We only accept pages whose title unambiguously identifies a cluster ops doc.
-# We exclude pages about ESP32/ESPHome/hardware that happen to mention cluster.
+# Step 1: Find the canonical cluster ops runbook page.
+#
+# Priority order:
+#   a) CLUSTER_OPS_PAGE_ID env var (set as a GitHub repo variable) — direct lookup,
+#      avoids search entirely and prevents duplicate page creation
+#   b) Known page IDs from previous successful runs (direct GET, no search needed)
+#   c) Title search (last resort, only if direct lookups fail)
 # ---------------------------------------------------------------------------
-note "Searching Notion for existing cluster operations runbook..."
-
-EXCLUDE_WORDS='["esp32", "esphome", "sensor", "temperature", "humidity", "device", "firmware", "watchdog hardware", "iot"]'
-REQUIRED_PHRASES='["cluster operation", "k3s runbook", "cluster incident", "cluster doctor runbook", "cluster ops runbook"]'
+note "Locating cluster operations runbook page..."
 
 PAGE_ID=""
 PAGE_URL=""
 PAGE_TITLE=""
 
-for QUERY in "Cluster Operations Runbook" "Cluster Operations" "k3s Runbook" "Cluster Incident Response Runbook"; do
-  SEARCH_RESULT=$(curl -sS -X POST "https://api.notion.com/v1/search" \
-    "${HEADERS[@]}" \
-    -d "{\"query\": \"${QUERY}\", \"filter\": {\"value\": \"page\", \"property\": \"object\"}, \"page_size\": 10}")
+# Known page IDs from previous successful runs (most recent first)
+KNOWN_IDS=(
+  "${CLUSTER_OPS_PAGE_ID:-}"                   # repo variable — canonical
+  "3737d82c-410a-8130-b90d-c55017e86059"       # created 2026-06-02 run 2
+  "3737d82c-410a-81e5-bb2c-fcd31e49d57c"       # created 2026-06-02 run 1 (may be empty)
+)
 
-  MATCH=$(echo "$SEARCH_RESULT" | python3 -c "
+for KID in "${KNOWN_IDS[@]}"; do
+  [ -z "$KID" ] && continue
+  RESP=$(curl -sS "https://api.notion.com/v1/pages/${KID}" "${HEADERS[@]}")
+  OBJ=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin).get('object',''))" 2>/dev/null || echo "")
+  if [ "$OBJ" = "page" ]; then
+    ARCHIVED=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin).get('archived',True))" 2>/dev/null || echo "True")
+    if [ "$ARCHIVED" = "False" ]; then
+      PAGE_ID="$KID"
+      PAGE_URL=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin).get('url',''))" 2>/dev/null || echo "")
+      PAGE_TITLE=$(echo "$RESP" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+for v in d.get('properties',{}).values():
+    if v.get('type')=='title':
+        print(''.join(t.get('plain_text','') for t in v.get('title',[])))
+        break
+" 2>/dev/null || echo "known page")
+      note "  Found via direct lookup: ${PAGE_ID} (${PAGE_TITLE})"
+      break
+    fi
+  fi
+done
+
+# Fallback: title search (only if none of the known IDs worked)
+if [ -z "$PAGE_ID" ]; then
+  note "  No known page found — searching by title..."
+  for QUERY in "Cluster Operations Runbook" "Cluster Operations" "k3s Runbook"; do
+    SEARCH_RESULT=$(curl -sS -X POST "https://api.notion.com/v1/search" \
+      "${HEADERS[@]}" \
+      -d "{\"query\": \"${QUERY}\", \"filter\": {\"value\": \"page\", \"property\": \"object\"}, \"page_size\": 10}")
+
+    MATCH=$(echo "$SEARCH_RESULT" | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
 exclude = ['esp32', 'esphome', 'sensor', 'temperature', 'humidity', 'device', 'firmware', 'iot']
 required = ['cluster operation', 'k3s runbook', 'cluster incident', 'cluster doctor runbook', 'cluster ops runbook']
 for r in data.get('results', []):
+    if r.get('archived'): continue
     props = r.get('properties', {})
     for k, v in props.items():
         if v.get('type') == 'title':
             title = ''.join(t.get('plain_text','') for t in v.get('title',[])).lower()
-            if any(ex in title for ex in exclude):
-                continue
+            if any(ex in title for ex in exclude): continue
             if any(req in title for req in required):
                 print(r['id'] + '|' + r.get('url','') + '|' + title)
                 sys.exit(0)
 " 2>/dev/null || echo "")
 
-  if [ -n "$MATCH" ]; then
-    PAGE_ID=$(echo "$MATCH" | cut -d'|' -f1)
-    PAGE_URL=$(echo "$MATCH" | cut -d'|' -f2)
-    PAGE_TITLE=$(echo "$MATCH" | cut -d'|' -f3)
-    break
-  fi
-done
+    if [ -n "$MATCH" ]; then
+      PAGE_ID=$(echo "$MATCH" | cut -d'|' -f1)
+      PAGE_URL=$(echo "$MATCH" | cut -d'|' -f2)
+      PAGE_TITLE=$(echo "$MATCH" | cut -d'|' -f3)
+      note "  Found via search: ${PAGE_ID}"
+      break
+    fi
+  done
+fi
 
 # ---------------------------------------------------------------------------
 # Step 2: Build the runbook content as Notion blocks
