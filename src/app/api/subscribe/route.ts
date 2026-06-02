@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
     return Response.json({ success: true });
   } catch (error) {
-    console.error("Subscribe error:", error);
+    console.error("Subscribe error:", error instanceof Error ? error.message : String(error));
     return Response.json({ error: "Failed to subscribe. Please try again." }, { status: 500 });
   }
 }
