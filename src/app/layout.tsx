@@ -100,6 +100,7 @@ export default async function RootLayout({
       data-scroll-behavior="smooth"
       data-theme={theme}
       className={`${instrumentSans.variable} ${workSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <a href="#main-content" className="skip-nav">
