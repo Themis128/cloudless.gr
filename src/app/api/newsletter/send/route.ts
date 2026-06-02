@@ -1,6 +1,20 @@
+import { timingSafeEqual } from "node:crypto";
 import { sendEmail } from "@/lib/email";
 import { listNewsletterSubscribers } from "@/lib/hubspot";
 import { getConfig } from "@/lib/ssm-config";
+
+/** Constant-time secret compare — avoids leaking the token via response timing. */
+function secretsMatch(provided: string | null, expected: string): boolean {
+  if (!provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  try {
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
 
 // The publisher script renders this token into the newsletter footer; the
 // route swaps it for a per-recipient unsubscribe URL at send time.
@@ -67,7 +81,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!secret) {
     return Response.json({ error: "Newsletter sending is not configured." }, { status: 503 });
   }
-  if (request.headers.get("x-newsletter-secret") !== secret) {
+  if (!secretsMatch(request.headers.get("x-newsletter-secret"), secret)) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
 
