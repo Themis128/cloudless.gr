@@ -48,12 +48,25 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
+      - name: Wait for cluster API (tolerate transient tailnet blips)
+        run: |
+          set -uo pipefail
+          for i in 1 2 3 4 5 6; do
+            if kubectl get ns keycloak >/dev/null 2>&1; then
+              echo "cluster API reachable (attempt $i)"; exit 0
+            fi
+            echo "API not reachable (attempt $i) — retry in ${i}0s"; sleep "${i}0"
+          done
+          echo "ERROR: k3s API still unreachable after retries — control plane down or tailnet route lost." \
+            | tee api-unreachable.log
+          exit 1
+
       - name: 1. Immediate fix — apply 768Mi source-of-truth manifest
         run: |
           set -uo pipefail
           echo "=== keycloak deploy BEFORE ===" | tee heal.log
-          kubectl -n keycloak get deploy keycloak \
-            -o jsonpath='{.spec.template.spec.containers[0].resources}' 2>&1 | tee -a heal.log; echo | tee -a heal.log
+          { kubectl -n keycloak get deploy keycloak \
+            -o jsonpath='{.spec.template.spec.containers[0].resources}' 2>&1 || true; } | tee -a heal.log; echo | tee -a heal.log
           echo "" | tee -a heal.log
           echo "== apply memory-relief (768Mi + -Xmx512m) ==" | tee -a heal.log
           kubectl apply -f k8s/cluster-protection/memory-relief-2026-05-31.yaml 2>&1 | tee -a heal.log || true
@@ -85,8 +98,8 @@ jobs:
           kubectl -n keycloak rollout status deploy/keycloak --timeout=180s 2>&1 | tee -a heal.log || true
           echo "" | tee -a heal.log
           echo "=== keycloak deploy AFTER ===" | tee -a heal.log
-          kubectl -n keycloak get deploy keycloak \
-            -o jsonpath='{.spec.template.spec.containers[0].resources}' 2>&1 | tee -a heal.log; echo | tee -a heal.log
+          { kubectl -n keycloak get deploy keycloak \
+            -o jsonpath='{.spec.template.spec.containers[0].resources}' 2>&1 || true; } | tee -a heal.log; echo | tee -a heal.log
           echo "" | tee -a heal.log
           echo "=== pods ===" | tee -a heal.log
           kubectl -n keycloak get pods -l app=keycloak -o wide 2>&1 | tee -a heal.log || true
