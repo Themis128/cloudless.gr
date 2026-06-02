@@ -77,6 +77,34 @@ function isAdminFromSession(user: { groups?: string[]; roles?: string[] }): bool
   );
 }
 
+/**
+ * Pull the user's Keycloak profile attributes (company/phone/preferences) that
+ * the session token does not carry, merging them onto the base user. Returns
+ * the base unchanged on any failure so auth state never depends on it. Without
+ * this, the Profile/Settings forms render blank on every load even after a save.
+ */
+async function enrichWithProfile(base: AuthUser): Promise<AuthUser> {
+  try {
+    const res = await globalThis.fetch("/api/user/profile");
+    if (!res.ok) return base;
+    const p = (await res.json()) as {
+      name?: string;
+      company?: string;
+      phone?: string;
+      preferences?: Partial<UserPreferences>;
+    };
+    return {
+      ...base,
+      name: p.name ?? base.name,
+      company: p.company ?? base.company,
+      phone: p.phone ?? base.phone,
+      preferences: { ...base.preferences, ...(p.preferences ?? {}) },
+    };
+  } catch {
+    return base;
+  }
+}
+
 interface AuthProviderProps {
   readonly children: ReactNode;
 }
@@ -115,13 +143,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if (data?.user) {
-        setUser({
+        const base: AuthUser = {
           username: data.user.id ?? data.user.email ?? "",
           email: data.user.email ?? undefined,
           name: data.user.name ?? undefined,
           preferences: { ...DEFAULT_PREFERENCES },
-        });
+        };
         setIsAdmin(isAdminFromSession(data.user));
+        // Enrich with Keycloak profile attributes (company/phone/preferences)
+        // the session JWT doesn't carry, so saved values render instead of
+        // blanks. Best-effort — falls back to the session-only user.
+        setUser(await enrichWithProfile(base));
       } else {
         setUser(null);
         setIsAdmin(false);
