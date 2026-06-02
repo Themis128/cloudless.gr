@@ -1,0 +1,64 @@
+name: Provision SES SMTP credentials
+
+# One-shot provisioner for the SES SMTP credential Keycloak needs to send
+# registration verification emails. Uses the OIDC deploy role (no static keys,
+# no PAT). Idempotent: skips if the SSM params already exist.
+#
+# After it succeeds, trigger keycloak-configure-email.yml to apply the creds to
+# the realm (or it runs automatically on its own next push).
+#
+# Requires AWS_DEPLOY_ROLE_ARN to allow: iam:GetUser, iam:CreateUser,
+# iam:PutUserPolicy, iam:ListAccessKeys, iam:CreateAccessKey,
+# iam:DeleteAccessKey, ssm:GetParameter, ssm:PutParameter. If it lacks
+# iam:CreateUser the run fails cleanly with the exact missing permission.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/provision-ses-smtp.yml"
+      - "scripts/provision-ses-smtp.sh"
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+concurrency:
+  group: provision-ses-smtp
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Provision SES SMTP creds into SSM
+        id: provision
+        env:
+          AWS_REGION: us-east-1
+        run: bash scripts/provision-ses-smtp.sh 2>&1 | tee provision.log
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# SES SMTP provisioning — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Status:** ${{ job.status }}"
+            echo ""
+            echo '```'
+            cat provision.log 2>/dev/null || echo '(no log)'
+            echo '```'
+          } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
