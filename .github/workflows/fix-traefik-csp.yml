@@ -1,0 +1,60 @@
+name: Fix Traefik CSP middleware (one-shot)
+
+# Removes Content-Security-Policy from the Traefik secure-headers middleware
+# in the cloudless namespace so the Next.js app's own full CSP passes through.
+#
+# Root cause: Traefik customResponseHeaders was overwriting the Next.js CSP
+# with a simplified version that lacked object-src 'none' and *.sentry.io,
+# causing the k3s standby E2E smoke test (isLikelyAppResponse) to fail.
+#
+# Triggered by merging this file. Re-runnable via workflow_dispatch.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/fix-traefik-csp.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fix:
+    name: Patch secure-headers middleware
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Patch Traefik middleware
+        run: bash scripts/fix-traefik-csp.sh 2>&1 | tee fix.log
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          STATUS="success"
+          grep -q "ERROR:" fix.log 2>/dev/null && STATUS="failure" || true
+          {
+            echo "# Traefik CSP fix — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo "**Status:** $STATUS"
+            echo ""
+            echo '```'
+            cat fix.log 2>/dev/null || echo '(no log)'
+            echo '```'
+          } > fix-comment.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file fix-comment.md
