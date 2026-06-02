@@ -1,0 +1,52 @@
+name: notion-discover-esp32 — find ESP32 databases in Notion
+
+# Diagnostic: lists all Notion databases accessible to the integration,
+# searches for ESP32/devices/telemetry pages, and tests the hardcoded DB IDs
+# from notion-restore-esp32.sh. Results posted to issue #382.
+#
+# Run once to confirm whether the Notion integration can see the ESP32
+# databases. If the hardcoded IDs return "object_not_found", share those
+# databases with the Cloudless Notion integration in the Notion UI.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/notion-discover-esp32.yml"
+      - "scripts/notion-discover-esp32.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  discover:
+    name: Discover ESP32 databases in Notion
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Run notion-discover-esp32
+        id: discover
+        run: |
+          set -o pipefail
+          bash scripts/notion-discover-esp32.sh 2>&1 | tee discover.log
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# Notion ESP32 database discovery — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo "**Status:** ${{ job.status }}"
+            echo ""
+            echo '```'
+            cat discover.log 2>/dev/null || echo "(no log)"
+            echo '```'
+          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -

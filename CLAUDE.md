@@ -1,5 +1,17 @@
 # Claude Code — Project Memory
 
+## Pending One-Time Setup (human action required)
+
+These require access outside GitHub and cannot be automated from a cloud session.
+
+| Item | Status | Action |
+|------|--------|--------|
+| `OMV_SSH_KEY` | **MISSING** | On Pi: `cat ~/.ssh/id_ed25519` → GitHub repo Settings → Secrets → `OMV_SSH_KEY`. Then `k3s-watchdog-deploy.yml` auto-triggers. |
+| SES SMTP | **MISSING** | AWS Console → SES → SMTP Settings → Create SMTP credentials. Then GitHub Actions → "Provision SES SMTP credentials" → Run workflow with `smtp_user` + `smtp_password` inputs. |
+| ESP32 Notion DBs | **DB ACCESS UNKNOWN** | Open ESP32 Devices + Telemetry databases in Notion → Share → invite Cloudless integration. Run `notion-discover-esp32.yml` to confirm. |
+| ESP32 page content | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. |
+| Admin password | **TEMP LOGIN in #382** | After `keycloak-bootstrap-admin.yml` run: login with temp credentials from issue #382, then Keycloak forces password update. |
+
 ## Testing Policy
 
 **Never fix test failures by adding mock code.** When a test fails, fix the actual production code so the test passes naturally. Do not add `vi.mocked(...)`, `mockReturnValue`, `mockResolvedValue`, or any other mock overrides to patch a failing test. If the test expectation is wrong (e.g. it expects old behavior that changed), update the expectation — but never shim production behavior with mocks.
