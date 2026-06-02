@@ -117,7 +117,11 @@ export async function POST(req: Request) {
       await globalThis
         .fetch(
           `${kcBase}/admin/realms/${realm}/users/${userId}/send-verify-email?${params.toString()}`,
-          { method: "PUT", headers: { Authorization: `Bearer ${adminToken}` }, signal: AbortSignal.timeout(8_000) }
+          {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${adminToken}` },
+            signal: AbortSignal.timeout(8_000),
+          }
         )
         .catch(() => {});
     }
