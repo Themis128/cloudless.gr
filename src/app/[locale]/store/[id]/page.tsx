@@ -64,10 +64,7 @@ export default async function ProductPage({
       <section className="bg-void-light border-neon-cyan/10 border-b">
         <div className="mx-auto max-w-6xl px-6 py-4">
           <nav className="flex items-center gap-2 font-mono text-sm text-slate-500">
-            <Link
-              href="/store"
-              className="hover:text-neon-cyan text-xs transition-colors"
-            >
+            <Link href="/store" className="hover:text-neon-cyan text-xs transition-colors">
               Store
             </Link>
             <span className="text-slate-700">/</span>

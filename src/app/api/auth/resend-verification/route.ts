@@ -76,10 +76,7 @@ export async function POST(req: Request) {
   } catch (err) {
     // Log but still return ok — never reveal whether the address exists, and
     // the caller can't act on an internal failure anyway.
-    console.error(
-      "[auth/resend-verification]",
-      err instanceof Error ? err.message : String(err)
-    );
+    console.error("[auth/resend-verification]", err instanceof Error ? err.message : String(err));
   }
 
   return NextResponse.json({ ok: true });
