@@ -1,0 +1,85 @@
+name: k3s-watchdog-deploy — install Restart=always systemd override on Pi
+
+# Deploys scripts/k3s-watchdog-install.sh to the Pi via SSH.
+# The script writes a systemd drop-in that sets Restart=always + removes start
+# limits so k3s auto-recovers from crashes without manual intervention.
+#
+# Run this ONCE after any k3s crash to prevent future outages.
+#
+# Triggers:
+#   - Push to main touching this file or the install script
+#   - Manually via workflow_dispatch
+#
+# Requires: OMV_SSH_KEY repo secret — the private key for omv@100.113.41.119.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/k3s-watchdog-deploy.yml"
+      - "scripts/k3s-watchdog-install.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  deploy-watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PI_HOST: "100.113.41.119"
+      PI_USER: "omv"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Check OMV_SSH_KEY secret is set
+        run: |
+          if [ -z "${{ secrets.OMV_SSH_KEY }}" ]; then
+            echo "::error::OMV_SSH_KEY secret is not set."
+            echo "Add the Pi private key as a GitHub repo secret named OMV_SSH_KEY:"
+            echo "  GitHub → Settings → Secrets → Actions → New repository secret"
+            echo "  Name: OMV_SSH_KEY"
+            echo "  Value: contents of ~/.ssh/id_ed25519 (same as OMV_SSH_KEY_CONTENTS session secret)"
+            exit 1
+          fi
+          echo "OMV_SSH_KEY is set — proceeding"
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Copy watchdog install script to Pi
+        run: |
+          scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+            scripts/k3s-watchdog-install.sh \
+            "$PI_USER@$PI_HOST:/tmp/k3s-watchdog-install.sh"
+
+      - name: Run watchdog install on Pi
+        run: |
+          echo "=== k3s watchdog deploy $(date -u '+%F %T')Z ===" | tee watchdog-deploy.log
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "chmod +x /tmp/k3s-watchdog-install.sh && bash /tmp/k3s-watchdog-install.sh" \
+            2>&1 | tee -a watchdog-deploy.log
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# k3s watchdog deploy — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo '```'
+            cat watchdog-deploy.log 2>/dev/null || echo "(no log)"
+            echo '```'
+          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
