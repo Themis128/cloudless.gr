@@ -1,0 +1,131 @@
+name: k3s-ssh-restart — recover k3s API server via SSH when cluster tools fail
+
+# Triggered by pushing to this file. Runs on ubuntu-latest, connects to the Pi
+# via Tailscale, SSHes with OMV_SSH_KEY secret, restarts k3s, waits for the
+# API server to come back, and posts the full log to tracking issue #382.
+#
+# Use this when:
+#   - cluster-doctor shows "connection refused" on 100.113.41.119:6443
+#   - cluster-doctor shows "ServiceUnavailable" for all kubectl commands
+#   - PrometheusKubernetesListWatchFailures alert is firing
+#   - k3s-restart.yml (self-hosted runner path) queued forever (Pi runners offline)
+#
+# Requires: OMV_SSH_KEY repo secret — the private key for omv@100.113.41.119.
+# To add: GitHub → Settings → Secrets → Actions → New secret → OMV_SSH_KEY
+# Value: the private key contents (same as OMV_SSH_KEY_CONTENTS session secret).
+#
+# If OMV_SSH_KEY is not set, the SSH step will fail immediately with a clear
+# message; set the secret and re-trigger.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/k3s-ssh-restart.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  ssh-restart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PI_HOST: "100.113.41.119"
+      PI_USER: "omv"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Check OMV_SSH_KEY secret is set
+        run: |
+          if [ -z "${{ secrets.OMV_SSH_KEY }}" ]; then
+            echo "::error::OMV_SSH_KEY secret is not set."
+            echo "Add the Pi private key as a GitHub repo secret named OMV_SSH_KEY:"
+            echo "  GitHub → Settings → Secrets → Actions → New repository secret"
+            echo "  Name: OMV_SSH_KEY"
+            echo "  Value: contents of ~/.ssh/id_ed25519 (same as OMV_SSH_KEY_CONTENTS session secret)"
+            exit 1
+          fi
+          echo "OMV_SSH_KEY is set — proceeding"
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Verify Pi is reachable via Tailscale
+        run: |
+          echo "=== tailscale ping ===" | tee ssh-restart.log
+          tailscale ping --c=3 "$PI_HOST" 2>&1 | tee -a ssh-restart.log || true
+          echo "" | tee -a ssh-restart.log
+          echo "=== port 22 check ===" | tee -a ssh-restart.log
+          nc -zv -w5 "$PI_HOST" 22 2>&1 | tee -a ssh-restart.log \
+            && echo "port 22: OPEN" | tee -a ssh-restart.log \
+            || { echo "port 22: REFUSED — Pi may be down"; tee -a ssh-restart.log <<< "port 22 refused"; }
+          echo "" | tee -a ssh-restart.log
+          echo "=== port 6443 check (before) ===" | tee -a ssh-restart.log
+          nc -zv -w3 "$PI_HOST" 6443 2>&1 | tee -a ssh-restart.log \
+            && echo "port 6443: listening (k3s may already be up)" | tee -a ssh-restart.log \
+            || echo "port 6443: not listening (expected — k3s is down)" | tee -a ssh-restart.log
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Restart k3s via SSH
+        run: |
+          echo "" | tee -a ssh-restart.log
+          echo "=== SSH: k3s status BEFORE ===" | tee -a ssh-restart.log
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl status k3s --no-pager 2>&1 | head -15" \
+            2>&1 | tee -a ssh-restart.log || true
+
+          echo "" | tee -a ssh-restart.log
+          echo "=== SSH: restarting k3s ===" | tee -a ssh-restart.log
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl restart k3s 2>&1; echo restart_exit=\$?" \
+            2>&1 | tee -a ssh-restart.log
+
+      - name: Wait for k3s API to become healthy
+        run: |
+          echo "" | tee -a ssh-restart.log
+          echo "=== waiting for port 6443 (up to 90s) ===" | tee -a ssh-restart.log
+          for i in $(seq 1 18); do
+            if nc -zv -w3 "$PI_HOST" 6443 2>/dev/null; then
+              echo "port 6443 listening after ${i}×5s" | tee -a ssh-restart.log
+              break
+            fi
+            echo "  ${i}/18 — waiting 5s..." | tee -a ssh-restart.log
+            sleep 5
+          done
+
+          echo "" | tee -a ssh-restart.log
+          echo "=== SSH: k3s status AFTER ===" | tee -a ssh-restart.log
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl status k3s --no-pager 2>&1 | head -15; \
+             echo ''; \
+             sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get nodes 2>&1 | head -10; \
+             echo ''; \
+             echo 'non-running pods (if any):'; \
+             sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get pods -A \
+               --field-selector=status.phase!=Running,status.phase!=Succeeded 2>&1 | head -20" \
+            2>&1 | tee -a ssh-restart.log || true
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# k3s SSH restart — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo '```'
+            cat ssh-restart.log 2>/dev/null || echo "(no log)"
+            echo '```'
+          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
