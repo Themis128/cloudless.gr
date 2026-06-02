@@ -43,6 +43,7 @@ on:
       - "scripts/keycloak-configure-email.sh"
 
 permissions:
+  id-token: write # OIDC — assume AWS_DEPLOY_ROLE_ARN to read SES SMTP creds from SSM
   contents: read
   issues: write
 
@@ -69,14 +70,23 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
+      # This repo is OIDC-only (no static AWS keys); the original workflow used
+      # non-existent secrets.AWS_ACCESS_KEY_ID/SECRET, so the SSM reads always
+      # failed. Assume the same deploy role the rest of CI uses.
+      - name: Configure AWS credentials (OIDC)
+        if: github.event.inputs.smtp_user == '' || github.event.inputs.smtp_password == ''
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
       - name: Resolve SMTP credentials from inputs or SSM
         id: creds
         env:
           INPUT_SMTP_USER: ${{ github.event.inputs.smtp_user }}
           INPUT_SMTP_PASSWORD: ${{ github.event.inputs.smtp_password }}
           INPUT_FROM_EMAIL: ${{ github.event.inputs.from_email }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # AWS creds come from the OIDC step above (no static keys in this repo).
           AWS_DEFAULT_REGION: us-east-1
         run: |
           set -uo pipefail
