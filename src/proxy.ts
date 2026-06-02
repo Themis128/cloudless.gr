@@ -250,7 +250,6 @@ function addSecurityHeaders(response: NextResponse, nonce: string): void {
       "screen-wake-lock=()",
       "serial=()",
       "usb=()",
-      "web-share=(self)",
       "xr-spatial-tracking=()",
     ].join(", "),
   );
