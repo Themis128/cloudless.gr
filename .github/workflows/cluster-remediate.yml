@@ -1,10 +1,11 @@
 name: Cluster remediate (ntfy restart + Keycloak annotation fix)
 
-# Fixes two issues identified by cluster-doctor (2026-06-02):
-#   1. ntfy in Error/CrashLoop state (96Mi limit, 34 restarts)
-#      — patches memory to 192Mi if OOMKilled, then rolling-restarts
-#   2. Keycloak last-applied-configuration annotation stale
-#      — writes correct 768Mi annotation via kubectl patch (JSON Patch)
+# Round 2 (2026-06-02): ntfy rolling restart succeeded (new pod 1/1 Running).
+# Remaining work:
+#   1. Delete stuck old ntfy Error pod (9d old, 34 restarts, causes SQLite
+#      "database is locked" because it holds a file handle on the shared PVC)
+#   2. Fix Keycloak last-applied-configuration annotation (shows 1Gi, should
+#      be 768Mi to match the live container and the manifest)
 #
 # Trigger: push to main touching this file.
 
@@ -37,49 +38,30 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Fix ntfy
+      - name: Clean stuck ntfy Error pods
         run: |
           set -uo pipefail
 
-          echo "=== ntfy — before ===" | tee ntfy.log
+          echo "=== ntfy — current pods ===" | tee ntfy.log
           kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log
 
           echo "" >> ntfy.log
-          echo "=== ntfy — container states ===" | tee -a ntfy.log
-          kubectl -n ntfy get pods \
-            -o jsonpath='{range .items[*]}{.metadata.name}{":\n"}{range .status.containerStatuses[*]}{"  restarts="}{.restartCount}{" ready="}{.ready}{" lastExit="}{.lastState.terminated.exitCode}{" reason="}{.lastState.terminated.reason}{"\n"}{end}{end}' \
-            2>/dev/null | tee -a ntfy.log; echo
-
-          echo "" >> ntfy.log
-          echo "=== ntfy — recent logs ===" | tee -a ntfy.log
-          kubectl -n ntfy logs deployment/ntfy --tail=30 2>&1 | tee -a ntfy.log || true
-
-          OOMKILLED=$(kubectl -n ntfy get pods \
-            -o jsonpath='{range .items[*]}{range .status.containerStatuses[*]}{.lastState.terminated.reason}{"\n"}{end}{end}' \
-            2>/dev/null | grep -c OOMKilled || true)
-          EXIT137=$(kubectl -n ntfy get pods \
-            -o jsonpath='{range .items[*]}{range .status.containerStatuses[*]}{.lastState.terminated.exitCode}{"\n"}{end}{end}' \
-            2>/dev/null | grep -c '^137$' || true)
-
-          if [ "${OOMKILLED:-0}" -gt 0 ] || [ "${EXIT137:-0}" -gt 0 ]; then
-            echo "" >> ntfy.log
-            echo "=== ntfy — OOMKilled detected; patching memory 96Mi → 192Mi ===" | tee -a ntfy.log
-            kubectl -n ntfy patch deployment ntfy \
-              --type=strategic-merge-patch \
-              -p '{"spec":{"template":{"spec":{"containers":[{"name":"ntfy","resources":{"limits":{"memory":"192Mi","cpu":"200m"},"requests":{"memory":"48Mi","cpu":"10m"}}}]}}}}' \
-              2>&1 | tee -a ntfy.log
+          echo "=== ntfy — deleting Error/Failed pods ===" | tee -a ntfy.log
+          STUCK=$(kubectl -n ntfy get pods 2>/dev/null | awk '/Error|Evicted/{print $1}')
+          if [ -n "${STUCK}" ]; then
+            echo "Deleting: ${STUCK}" | tee -a ntfy.log
+            echo "${STUCK}" | xargs kubectl -n ntfy delete pod --ignore-not-found 2>&1 | tee -a ntfy.log
           else
-            echo "=== ntfy — no OOMKill detected; skipping memory patch ===" | tee -a ntfy.log
+            echo "No Error/Evicted pods found" | tee -a ntfy.log
           fi
 
           echo "" >> ntfy.log
-          echo "=== ntfy — rolling restart ===" | tee -a ntfy.log
-          kubectl -n ntfy rollout restart deployment/ntfy 2>&1 | tee -a ntfy.log
-          kubectl -n ntfy rollout status deployment/ntfy --timeout=3m 2>&1 | tee -a ntfy.log || true
+          echo "=== ntfy — after cleanup ===" | tee -a ntfy.log
+          kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log
 
           echo "" >> ntfy.log
-          echo "=== ntfy — after ===" | tee -a ntfy.log
-          kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log
+          echo "=== ntfy — recent logs (database lock check) ===" | tee -a ntfy.log
+          kubectl -n ntfy logs deployment/ntfy --tail=10 2>&1 | tee -a ntfy.log || true
 
       - name: Fix Keycloak last-applied annotation
         run: |
@@ -91,14 +73,14 @@ jobs:
             2>/dev/null \
             | python3 -c "import sys,json; d=json.load(sys.stdin); c=d['spec']['template']['spec']['containers'][0]; print('memory limit:', c['resources']['limits']['memory'])" \
             2>&1 | tee -a kc.log \
-            || echo "(no last-applied-configuration annotation)" | tee -a kc.log
+            || echo "(no annotation or parse error)" | tee -a kc.log
 
           echo "" >> kc.log
-          echo "=== Keycloak annotation — patching ===" | tee -a kc.log
-          python3 -c "import json; m={'apiVersion':'apps/v1','kind':'Deployment','metadata':{'annotations':{},'name':'keycloak','namespace':'keycloak'},'spec':{'template':{'spec':{'containers':[{'env':[{'name':'JAVA_OPTS_APPEND','value':'-Xms128m -Xmx512m -Djdk.reflect.useDirectMethodHandle=false -Dquarkus.http.limits.max-header-size=64K'}],'name':'keycloak','resources':{'limits':{'cpu':1,'memory':'768Mi'},'requests':{'cpu':'100m','memory':'384Mi'}}}]}}}}};p=[{'op':'add','path':'/metadata/annotations/kubectl.kubernetes.io~1last-applied-configuration','value':json.dumps(m)+chr(10)}];open('/tmp/kc-patch.json','w').write(json.dumps(p));print('patch written')"
-          kubectl -n keycloak patch deployment keycloak \
-            --type=json \
-            -p "$(cat /tmp/kc-patch.json)" \
+          echo "=== Keycloak annotation — patching to 768Mi ===" | tee -a kc.log
+          KC_ANN='{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"keycloak","namespace":"keycloak"},"spec":{"template":{"spec":{"containers":[{"env":[{"name":"JAVA_OPTS_APPEND","value":"-Xms128m -Xmx512m -Djdk.reflect.useDirectMethodHandle=false -Dquarkus.http.limits.max-header-size=64K"}],"name":"keycloak","resources":{"limits":{"cpu":1,"memory":"768Mi"},"requests":{"cpu":"100m","memory":"384Mi"}}}]}}}}'
+          kubectl -n keycloak annotate deployment keycloak \
+            "kubectl.kubernetes.io/last-applied-configuration=${KC_ANN}" \
+            --overwrite \
             2>&1 | tee -a kc.log
 
           echo "" >> kc.log
@@ -114,9 +96,9 @@ jobs:
         if: always()
         run: |
           {
-            echo "# Cluster remediation — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo "# Cluster remediation round 2 — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
             echo ""
-            echo "## ntfy"
+            echo "## ntfy stuck pod cleanup"
             echo '```'
             cat ntfy.log 2>/dev/null || echo "(no ntfy log)"
             echo '```'
