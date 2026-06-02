@@ -13,13 +13,27 @@ interface BudgetEntry {
 }
 
 describe("bundle optimization", () => {
-  it("layout.tsx lazy-loads CartSlideOver via next/dynamic", () => {
-    const src = readFileSync(
+  it("layout.tsx lazy-loads CartSlideOver via the ClientCartSlideOver boundary", () => {
+    // layout.tsx is a Server Component, so the ssr:false dynamic() boundary for
+    // CartSlideOver lives in the ClientCartSlideOver client wrapper (PR #481,
+    // fixes a React #418 hydration crash in prod). The layout must use that
+    // wrapper and never statically import the heavy CartSlideOver directly.
+    const layout = readFileSync(
       path.resolve("src/app/[locale]/layout.tsx"),
       "utf-8",
     );
-    expect(src).toContain("next/dynamic");
-    expect(src).not.toMatch(/^import CartSlideOver from/m);
+    expect(layout).toContain("ClientCartSlideOver");
+    expect(layout).not.toMatch(/^import CartSlideOver from/m);
+
+    // The optimization itself: CartSlideOver is still code-split via next/dynamic
+    // with ssr:false in the client wrapper.
+    const wrapper = readFileSync(
+      path.resolve("src/components/ClientCartSlideOver.tsx"),
+      "utf-8",
+    );
+    expect(wrapper).toContain("next/dynamic");
+    expect(wrapper).toMatch(/dynamic\(\(\) => import\("@\/components\/store\/CartSlideOver"\)/);
+    expect(wrapper).toContain("ssr: false");
   });
 
   it("ClientDecorators lazy-loads CommandPalette, NeonCursor, KonamiEasterEgg", () => {
