@@ -276,7 +276,21 @@ export default {
     // secondary when the PRIMARY health check fails. CloudFront's hosted zone
     // ID is the well-known constant Z2FDTNDATAQYW2 for all alias records.
     // APIGW regional has its own well-known zone ID Z1UJRXOUMOOFQ8.
-    if (isProd) {
+    //
+    // INCIDENT 2026-06-02: the cloudless.gr hosted zone Z079608614L53CC4EAZM3
+    // was deleted out-of-band (a casualty of concurrent R53 health-check /
+    // cost-cleanup work) between deploy #773 (14:26, last green) and #775
+    // (15:11). With the zone gone, every `import:` below fails to refresh
+    // ("reading Route 53 Hosted Zone ...: couldn't find resource") and blocks
+    // ALL production deploys. These records are therefore gated OFF by default
+    // so deploys can proceed; failover is currently handled at the
+    // Cloudflare/CloudFront layer (see .claude/commands/ha-failover.md).
+    //
+    // TO RE-ENABLE: recreate the hosted zone, update `zoneId` (a recreated zone
+    // gets a NEW id) and the `import:` IDs + `healthCheckId`s to match the live
+    // resources, then set the deploy env var ENABLE_R53_FAILOVER=1.
+    const enableR53Failover = process.env.ENABLE_R53_FAILOVER === "1";
+    if (isProd && enableR53Failover) {
       const zoneId = "Z079608614L53CC4EAZM3"; // cloudless.gr hosted zone
       const healthCheckId = "3805ab54-0238-4ab1-870f-7ad9caf43a91"; // PRIMARY (CloudFront)
       const secondaryHealthCheckId = "1069b339-6066-4a5c-a1b1-6bc7c9376977"; // SECONDARY (APIGW frontend)
