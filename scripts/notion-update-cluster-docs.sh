@@ -191,7 +191,33 @@ if [ -n "$PAGE_ID" ]; then
   note "  URL:   ${PAGE_URL}"
   note "  Replacing blocks..."
 
-  # Delete existing blocks first
+  # Safety check: confirm the page title before clearing.
+  # We already verified title matches during search, but double-check
+  # that we're not about to wipe an unrelated page.
+  LIVE_TITLE=$(curl -sS "https://api.notion.com/v1/pages/${PAGE_ID}" "${HEADERS[@]}" | \
+    python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+for v in d.get('properties',{}).values():
+    if v.get('type')=='title':
+        print(''.join(t.get('plain_text','') for t in v.get('title',[])).lower())
+        break
+" 2>/dev/null || echo "")
+  REQUIRED_PHRASES=("cluster operation" "k3s runbook" "cluster incident" "cluster doctor runbook" "cluster ops runbook")
+  SAFE=0
+  for PHRASE in "${REQUIRED_PHRASES[@]}"; do
+    if [[ "$LIVE_TITLE" == *"$PHRASE"* ]]; then
+      SAFE=1
+      break
+    fi
+  done
+  if [ "$SAFE" = "0" ]; then
+    note "  SAFETY ABORT: live page title '${LIVE_TITLE}' does not match cluster ops phrases."
+    note "  Refusing to overwrite. Check PAGE_ID or update REQUIRED_PHRASES."
+    exit 1
+  fi
+
+  # Delete existing blocks
   EXISTING=$(curl -sS "https://api.notion.com/v1/blocks/${PAGE_ID}/children?page_size=100" "${HEADERS[@]}")
   echo "$EXISTING" | python3 -c "
 import json, sys
