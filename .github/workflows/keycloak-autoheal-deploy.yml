@@ -1,0 +1,113 @@
+name: Keycloak autoheal — deploy in-cluster self-healer
+
+# Installs the in-cluster Keycloak self-healer (k8s/cluster-protection/
+# keycloak-autoheal.yaml) AND remediates the current state in one shot:
+#   1. apply the 768Mi source-of-truth manifest (immediate OOM fix + rollout)
+#   2. apply the autoheal CronJob + RBAC (prevents recurrence, runs every 5m
+#      on the cluster's own scheduler — no GitHub-cron / tailnet dependency)
+#   3. kick the healer once immediately
+#   4. report keycloak pod state + auth.cloudless.gr discovery to issue #382
+#
+# Idempotent — safe to re-run. Triggered on push to its own files, or manually.
+#
+# Auth: Tailscale (TS_AUTHKEY) + KUBECONFIG_B64 (system:admin), same as the
+# other cluster-ops workflows.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/keycloak-autoheal-deploy.yml"
+      - "k8s/cluster-protection/keycloak-autoheal.yaml"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: keycloak-autoheal-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: 1. Immediate fix — apply 768Mi source-of-truth manifest
+        run: |
+          set -uo pipefail
+          echo "=== keycloak deploy BEFORE ===" | tee heal.log
+          kubectl -n keycloak get deploy keycloak \
+            -o jsonpath='{.spec.template.spec.containers[0].resources}' 2>&1 | tee -a heal.log; echo | tee -a heal.log
+          echo "" | tee -a heal.log
+          echo "== apply memory-relief (768Mi + -Xmx512m) ==" | tee -a heal.log
+          kubectl apply -f k8s/cluster-protection/memory-relief-2026-05-31.yaml 2>&1 | tee -a heal.log || true
+
+      - name: 2. Install in-cluster self-healer (CronJob + RBAC)
+        run: |
+          set -uo pipefail
+          echo "" | tee -a heal.log
+          echo "== apply keycloak-autoheal ==" | tee -a heal.log
+          kubectl apply -f k8s/cluster-protection/keycloak-autoheal.yaml 2>&1 | tee -a heal.log || true
+
+      - name: 3. Run the healer once now
+        run: |
+          set -uo pipefail
+          JOB="kc-heal-init-$(date +%s)"
+          echo "" | tee -a heal.log
+          echo "== kick $JOB from cronjob/keycloak-autoheal ==" | tee -a heal.log
+          kubectl -n keycloak create job --from=cronjob/keycloak-autoheal "$JOB" 2>&1 | tee -a heal.log || true
+          kubectl -n keycloak wait --for=condition=complete "job/$JOB" --timeout=150s 2>&1 | tee -a heal.log || true
+          echo "" | tee -a heal.log
+          echo "== healer logs ==" | tee -a heal.log
+          kubectl -n keycloak logs "job/$JOB" --tail=40 2>&1 | tee -a heal.log || true
+
+      - name: 4. Verify keycloak recovered
+        run: |
+          set -uo pipefail
+          echo "" | tee -a heal.log
+          echo "== rollout status (3m) ==" | tee -a heal.log
+          kubectl -n keycloak rollout status deploy/keycloak --timeout=180s 2>&1 | tee -a heal.log || true
+          echo "" | tee -a heal.log
+          echo "=== keycloak deploy AFTER ===" | tee -a heal.log
+          kubectl -n keycloak get deploy keycloak \
+            -o jsonpath='{.spec.template.spec.containers[0].resources}' 2>&1 | tee -a heal.log; echo | tee -a heal.log
+          echo "" | tee -a heal.log
+          echo "=== pods ===" | tee -a heal.log
+          kubectl -n keycloak get pods -l app=keycloak -o wide 2>&1 | tee -a heal.log || true
+          echo "" | tee -a heal.log
+          echo "=== cronjob ===" | tee -a heal.log
+          kubectl -n keycloak get cronjob keycloak-autoheal 2>&1 | tee -a heal.log || true
+          echo "" | tee -a heal.log
+          DISC=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
+            https://auth.cloudless.gr/realms/master/.well-known/openid-configuration || echo "000")
+          echo "auth.cloudless.gr discovery: HTTP ${DISC} (200 = up)" | tee -a heal.log
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# Keycloak autoheal deploy — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Job:** ${{ job.status }}"
+            echo ""
+            echo '```'
+            cat heal.log 2>/dev/null || echo '(no log)'
+            echo '```'
+          } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md

@@ -137,12 +137,19 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
     admin, and posts the temp login to #382; the human logs in once and Keycloak
     forces `UPDATE_PASSWORD`. (A temporary password fails a direct-grant check —
     that's expected; no `LOGIN_VERIFIED`.) **Never commit a password to git.**
-- **Self-heal:** `pnpm keycloak:ensure` (`keycloak-ensure.yml`, **cron `*/15`**)
-  reconciles auth to the last-working state — OOM-recovers Keycloak (768Mi /
-  `-Xmx512m`), fixes realm flags + the `cloudless-app` groups mapper + admin
-  group/membership, **and restores the Pi `cloudless` app's auth wiring** (the
-  `cloudless-app-auth` secret + `envFrom`) if it stops serving the keycloak
-  provider; posts to #382 only when it corrects drift or auth is broken.
+- **Self-heal (GitHub layer):** `pnpm keycloak:ensure` (`keycloak-ensure.yml`,
+  **cron `*/15`**) reconciles auth to the last-working state — OOM-recovers
+  Keycloak (768Mi / `-Xmx512m`), fixes realm flags + the `cloudless-app` groups
+  mapper + admin group/membership, **and restores the Pi `cloudless` app's auth
+  wiring** (the `cloudless-app-auth` secret + `envFrom`) if it stops serving the
+  keycloak provider; posts to #382 only when it corrects drift or auth is broken.
+- **Self-heal (in-cluster layer):** `k8s/cluster-protection/keycloak-autoheal.yaml`
+  — a CronJob (`*/5`) + least-privilege RBAC in ns `keycloak` that runs the OOM
+  reconcile on the **cluster's own scheduler**, so it heals even when GitHub's
+  cron/CI or the tailnet is down (the gap that let the `*/15` cron stall). It
+  re-sizes the deploy to 768Mi + `-Xmx512m`, lifts the LimitRange ceiling, and
+  deletes OOM-stuck pods (only when the spec is already correct, so it never
+  masks a non-memory crash). Deploy/remediate with `keycloak-autoheal-deploy.yml`.
 - **Pi/k3s app auth (HA standby):** the `cloudless` deployment needs runtime env
   `AUTH_SECRET` + `KEYCLOAK_ISSUER`(**realm `master`**, not the stale SSM value
   `cloudless`) + `KEYCLOAK_CLIENT_ID`/`KEYCLOAK_CLIENT_SECRET` + **`AUTH_TRUST_HOST=true`**
