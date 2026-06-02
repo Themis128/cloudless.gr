@@ -153,4 +153,5 @@ jobs:
                 {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\"}},
                 {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
               ]
+            }"
             
