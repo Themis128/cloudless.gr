@@ -405,7 +405,7 @@ test.describe("Auth – Forgot Password page", () => {
     await page.goto("/auth/forgot-password");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("#forgot-email")).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole("button", { name: /send reset code/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /send reset link/i })).toBeVisible();
   });
 });
 
