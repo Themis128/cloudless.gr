@@ -24,6 +24,66 @@ function splitName(name: string): { firstName: string; lastName?: string } {
 }
 
 /**
+ * GET /api/user/profile
+ *
+ * Reads the signed-in user's Keycloak profile (name + company/phone/preferences
+ * attributes) so the dashboard can display previously-saved values. Without
+ * this, the session only carries name/email and the Profile/Settings forms
+ * render blank on every load — making saves look like they never stuck.
+ *
+ * Like POST, this must run server-side: a browser → Keycloak Account API call
+ * is cross-origin and CORS-blocked.
+ */
+export async function GET() {
+  const session = await auth();
+  const accessToken = session?.accessToken;
+  if (!session?.user || !accessToken) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const KC_ISSUER = process.env.KEYCLOAK_ISSUER ?? process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
+  if (!KC_ISSUER) {
+    return NextResponse.json({ error: "Auth not configured" }, { status: 500 });
+  }
+
+  try {
+    const res = await globalThis.fetch(`${KC_ISSUER}/account`, {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: "Could not read profile", status: res.status },
+        { status: 502 }
+      );
+    }
+    const acct = (await res.json()) as KcAccount;
+    const attrs = acct.attributes ?? {};
+    const name = [acct.firstName, acct.lastName].filter(Boolean).join(" ").trim();
+
+    let preferences: unknown;
+    const rawPrefs = attrs.preferences?.[0];
+    if (rawPrefs) {
+      try {
+        preferences = JSON.parse(rawPrefs);
+      } catch {
+        // Ignore malformed stored preferences — fall back to client defaults.
+      }
+    }
+
+    return NextResponse.json({
+      name: name || undefined,
+      email: acct.email ?? session.user.email ?? undefined,
+      company: attrs.company?.[0],
+      phone: attrs.phone?.[0],
+      preferences,
+    });
+  } catch {
+    return NextResponse.json({ error: "Could not reach auth server" }, { status: 502 });
+  }
+}
+
+/**
  * POST /api/user/profile
  *
  * Updates the signed-in user's Keycloak profile (name + company/phone
