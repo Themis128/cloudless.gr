@@ -212,7 +212,7 @@ describe("POST /api/admin/users", () => {
     const { POST } = await import("@/app/api/admin/users/route");
     const res = await POST(adminReq("http://localhost/api/admin/users", {
       method: "POST",
-      body: { action: "disable", username: "uuid-test-user" },
+      body: { action: "disable", username: "00000000-0000-0000-0000-000000000001" },
     }));
     const data = await res.json();
     expect(res.status).toBe(200);
@@ -223,7 +223,7 @@ describe("POST /api/admin/users", () => {
     const { POST } = await import("@/app/api/admin/users/route");
     const res = await POST(adminReq("http://localhost/api/admin/users", {
       method: "POST",
-      body: { action: "promote", username: "uuid-test-user" },
+      body: { action: "promote", username: "00000000-0000-0000-0000-000000000001" },
     }));
     const data = await res.json();
     expect(res.status).toBe(200);
@@ -234,7 +234,7 @@ describe("POST /api/admin/users", () => {
     const { POST } = await import("@/app/api/admin/users/route");
     const res = await POST(adminReq("http://localhost/api/admin/users", {
       method: "POST",
-      body: { action: "nuke", username: "uuid-test-user" },
+      body: { action: "nuke", username: "00000000-0000-0000-0000-000000000001" },
     }));
     const data = await res.json();
     expect(res.status).toBe(400);
