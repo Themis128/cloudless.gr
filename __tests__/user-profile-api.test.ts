@@ -89,3 +89,65 @@ describe("POST /api/user/profile", () => {
     expect((await res.json()).error).toMatch(/Failed to update profile/);
   });
 });
+
+describe("GET /api/user/profile", () => {
+  it("401 when there is no session/accessToken", async () => {
+    authMock.mockResolvedValue(null);
+    const { GET } = await import("@/app/api/user/profile/route");
+    const res = await GET();
+    expect(res.status).toBe(401);
+  });
+
+  it("reads name + company/phone/preferences back from Keycloak", async () => {
+    authMock.mockResolvedValue({ user: { id: "u1", email: "u@x.gr" }, accessToken: "tok" });
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          firstName: "Baltzakis",
+          lastName: "Themistoklis",
+          email: "u@x.gr",
+          attributes: {
+            company: ["cloudless.gr"],
+            phone: ["+30123"],
+            preferences: [JSON.stringify({ theme: "light", language: "el" })],
+          },
+        }),
+        { status: 200 }
+      )
+    );
+    const { GET } = await import("@/app/api/user/profile/route");
+    const res = await GET();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      name: "Baltzakis Themistoklis",
+      email: "u@x.gr",
+      company: "cloudless.gr",
+      phone: "+30123",
+      preferences: { theme: "light", language: "el" },
+    });
+  });
+
+  it("ignores malformed stored preferences and still returns the profile", async () => {
+    authMock.mockResolvedValue({ user: { id: "u1" }, accessToken: "tok" });
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ firstName: "A", attributes: { preferences: ["{not-json"] } }),
+        { status: 200 }
+      )
+    );
+    const { GET } = await import("@/app/api/user/profile/route");
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.name).toBe("A");
+    expect(body.preferences).toBeUndefined();
+  });
+
+  it("502 when the account cannot be read", async () => {
+    authMock.mockResolvedValue({ user: { id: "u1" }, accessToken: "tok" });
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(null, { status: 500 }));
+    const { GET } = await import("@/app/api/user/profile/route");
+    const res = await GET();
+    expect(res.status).toBe(502);
+  });
+});
