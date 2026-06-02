@@ -73,3 +73,30 @@ if [ -s /tmp/promrules.json ]; then
 else
   log "  (could not re-fetch /api/v1/rules)"
 fi
+
+# ── Bump Prometheus container memory limit (500Mi → 750Mi) to stop OOMKills ─
+log "Patching Prometheus StatefulSet memory limit to 750Mi..."
+PROM_STS=$(kubectl -n "$PROM_NS" get sts -l app.kubernetes.io/name=prometheus \
+  -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+if [ -n "${PROM_STS:-}" ]; then
+  CURRENT_MEM=$(kubectl -n "$PROM_NS" get sts "$PROM_STS" \
+    -o jsonpath='{.spec.template.spec.containers[?(@.name=="prometheus")].resources.limits.memory}' \
+    2>/dev/null || true)
+  log "  current limit: ${CURRENT_MEM:-unknown}"
+  if [ "${CURRENT_MEM:-}" = "750Mi" ]; then
+    log "  already 750Mi — skipping patch"
+  else
+    kubectl -n "$PROM_NS" patch sts "$PROM_STS" \
+      --type=strategic-merge-patch \
+      -p '{"spec":{"template":{"spec":{"containers":[{"name":"prometheus","resources":{"limits":{"memory":"750Mi"},"requests":{"memory":"512Mi"}}}]}}}}' \
+      && log "  patched → 750Mi limit / 512Mi request" \
+      || log "  WARNING: StatefulSet patch failed"
+    kubectl -n "$PROM_NS" rollout status sts/"$PROM_STS" --timeout=3m 2>&1 | tail -5 || true
+    NEW_MEM=$(kubectl -n "$PROM_NS" get sts "$PROM_STS" \
+      -o jsonpath='{.spec.template.spec.containers[?(@.name=="prometheus")].resources.limits.memory}' \
+      2>/dev/null || true)
+    log "  confirmed new limit: ${NEW_MEM:-unknown}"
+  fi
+else
+  log "  WARNING: no Prometheus StatefulSet found (label app.kubernetes.io/name=prometheus)"
+fi
