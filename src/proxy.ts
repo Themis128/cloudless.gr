@@ -78,6 +78,10 @@ const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
   "/api/contact": { windowMs: 60_000, max: 3 },
   "/api/subscribe": { windowMs: 60_000, max: 2 },
   "/api/unsubscribe": { windowMs: 60_000, max: 3 },
+  // Public, unauthenticated account creation: each call hits the Keycloak Admin
+  // API to create a user AND fires an SES verification email. Without a cap it
+  // is an email-bombing / SES-cost / user-table-flood vector. Keep it tight.
+  "/api/auth/register": { windowMs: 60_000, max: 3 },
   "/api/checkout": { windowMs: 60_000, max: 6 },
   "/api/calendar/book": { windowMs: 60_000, max: 3 },
   "/api/hubspot/ticket": { windowMs: 60_000, max: 3 },

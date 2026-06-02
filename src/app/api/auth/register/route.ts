@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
+import { isValidEmail } from "@/lib/validation";
 
 interface RegisterBody {
   email: string;
@@ -45,6 +46,11 @@ export async function POST(req: Request) {
   const { email, password, fullName } = body;
   if (!email || !password) {
     return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
+  }
+  // Reject malformed emails before they reach the Keycloak Admin API — prevents
+  // garbage usernames and stops unvalidated input from driving send-verify-email.
+  if (!isValidEmail(email)) {
+    return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
   }
   if (password.length < 8) {
     return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });

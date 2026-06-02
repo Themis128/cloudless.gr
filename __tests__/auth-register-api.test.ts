@@ -126,6 +126,14 @@ describe("POST /api/auth/register", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 for a malformed email (never reaches the Keycloak Admin API)", async () => {
+    const { POST } = await import("@/app/api/auth/register/route");
+    const res = await POST(req({ email: "not-an-email", password: "password1" }));
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toMatch(/invalid email/i);
+  });
+
   it("returns 400 when password is shorter than 8 characters", async () => {
     const { POST } = await import("@/app/api/auth/register/route");
     const res = await POST(req({ email: "a@b.com", password: "short" }));
