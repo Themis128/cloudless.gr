@@ -124,7 +124,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ users, count: users.length });
   } catch (err) {
-    console.error("Failed to list Keycloak users:", err instanceof Error ? err.message : String(err));
+    console.error(
+      "Failed to list Keycloak users:",
+      err instanceof Error ? err.message : String(err)
+    );
     return NextResponse.json({ error: "Failed to list users" }, { status: 500 });
   }
 }
@@ -189,7 +192,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (err) {
-    console.error("Failed to modify Keycloak user:", err instanceof Error ? err.message : String(err));
+    console.error(
+      "Failed to modify Keycloak user:",
+      err instanceof Error ? err.message : String(err)
+    );
     return NextResponse.json({ error: "Failed to modify user" }, { status: 500 });
   }
 }
