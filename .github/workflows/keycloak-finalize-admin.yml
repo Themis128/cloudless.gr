@@ -1,4 +1,5 @@
 name: keycloak-finalize-admin — set permanent admin password (no browser login needed)
+# re-triggered 2026-06-02b — fix websocket close 1006: replace -i heredoc with separate non-interactive exec calls
 
 # Sets a permanent admin password for tbaltzakis@cloudless.gr using the
 # Keycloak pod's own internal service admin credentials (never exposed, never
